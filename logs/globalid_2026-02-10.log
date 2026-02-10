@@ -1,0 +1,13 @@
+2026-02-10 23:19:25 | INFO     | src.core.logging:setup_logging:53 - Logging initialized - Level: INFO
+2026-02-10 23:19:25 | INFO     | __main__:test_logging:47 - 这是一条测试日志
+2026-02-10 23:19:25 | WARNING  | __main__:test_logging:49 - 警告日志
+2026-02-10 23:19:25 | ERROR    | src.core.cache:connect:34 - Redis connection failed: 'AppSettings' object has no attribute 'redis_url'
+2026-02-10 23:19:25 | INFO     | src.core.rate_limiter:__init__:22 - RateLimiter initialized: 5 requests per 10s
+2026-02-10 23:20:41 | INFO     | src.core.logging:setup_logging:53 - Logging initialized - Level: INFO
+2026-02-10 23:20:41 | INFO     | __main__:test_logging:47 - 这是一条测试日志
+2026-02-10 23:20:41 | WARNING  | __main__:test_logging:49 - 警告日志
+2026-02-10 23:20:41 | INFO     | src.core.database:get_engine:31 - Database engine created
+2026-02-10 23:20:42 | INFO     | src.core.cache:connect:32 - Redis connected
+2026-02-10 23:20:42 | INFO     | src.core.rate_limiter:__init__:22 - RateLimiter initialized: 5 requests per 10s
+2026-02-10 23:20:42 | WARNING  | src.core.rate_limiter:record_request:63 - Rate limit warning: 4/5
+2026-02-10 23:20:42 | WARNING  | src.core.rate_limiter:record_request:63 - Rate limit warning: 5/5
