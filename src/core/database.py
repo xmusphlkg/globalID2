@@ -1,5 +1,6 @@
 """GlobalID V2 数据库连接管理"""
 
+from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import declarative_base
@@ -45,6 +46,7 @@ def get_session_maker():
     return _session_maker
 
 
+@asynccontextmanager
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """获取数据库session"""
     session_maker = get_session_maker()

@@ -1,0 +1,56 @@
+# Database
+sqlalchemy>=2.0.0
+asyncpg
+psycopg2-binary
+alembic
+pgvector
+
+# Web
+fastapi
+uvicorn[standard]
+pydantic>=2.0.0
+
+# AI
+openai>=1.0.0
+anthropic
+
+# Data Processing
+pandas
+numpy
+openpyxl  # Excel support
+pyarrow  # Parquet support
+
+# Web Scraping
+requests
+beautifulsoup4
+lxml
+xmltodict
+
+# Visualization
+plotly
+kaleido  # For static image export
+
+# Report Generation
+markdown
+jinja2
+weasyprint  # For PDF generation
+
+# Email
+aiosmtplib
+
+# Cache
+redis
+aioredis
+
+# CLI
+typer
+rich
+
+# Utilities
+python-dotenv
+pyyaml
+python-dateutil
+
+# Testing
+pytest
+pytest-asyncio
