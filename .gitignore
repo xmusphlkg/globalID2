@@ -29,10 +29,10 @@ nosetests.xml
 coverage.xml
 
 # Project specific
-logs/
-exports/
-data/
-!data/.gitkeep
+/logs/
+/exports/
+/data/
+!/data/.gitkeep
 
 # System
 .DS_Store
