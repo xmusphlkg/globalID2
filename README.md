@@ -129,10 +129,30 @@ python main.py test
 
 ### 8. 爬取数据
 
+智能爬虫设计（参考1.0版本）：
+
 ```bash
-# 爬取中国疾病数据
-python main.py crawl --country CN --max-results 100
+# 智能爬取中国疾病数据（只爬取新数据）
+python main.py crawl --country CN
+
+# 指定数据源
+python main.py crawl --country CN --source cdc_weekly  # 只爬取CDC Weekly
+python main.py crawl --country CN --source nhc         # 只爬取国家疾控局
+python main.py crawl --country CN --source pubmed      # 只爬取PubMed
+
+# 强制爬取所有数据（忽略数据库检查）
+python main.py crawl --country CN --force
 ```
+
+**工作流程**：
+1. **阶段1（轻量级）**: 获取数据列表，提取标题和年月信息
+2. **阶段2（智能判断）**: 与数据库对比，识别哪些是新数据
+3. **阶段3（重量级）**: 只爬取和处理新数据的详细内容
+
+**优势**：
+- ⚡ 避免重复爬取已有数据
+- 💰 降低网络请求和存储成本
+- 🎯 精准定位需要更新的数据
 
 ### 9. 生成报告
 

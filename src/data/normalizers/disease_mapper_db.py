@@ -38,7 +38,7 @@ class DiseaseMapperDB:
     """
     
     def __init__(self, country_code: str):
-        self.country_code = country_code
+        self.country_code = country_code.upper() if country_code else country_code
         self._local_cache = {}  # 内存缓存
         self._standard_cache = {}
     

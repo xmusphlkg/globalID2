@@ -278,14 +278,63 @@ elif page == nav_labels[1]:
                             })
                         st.dataframe(pd.DataFrame(stats_data), width='stretch')
             else:
-                # 单个疾病分析
-                df = run_query(f"""
-                    SELECT time, cases, deaths, incidence_rate, mortality_rate
-                    FROM disease_records r
-                    JOIN diseases d ON r.disease_id=d.id
-                    WHERE d.name = '{disease}' AND r.country_id = {sel_country_id}
-                    ORDER BY time
-                """)
+                # 单个疾病分析 - 查询所有列
+                lang = st.session_state.get("lang", "en")
+                if lang == "zh":
+                    df = run_query(f"""
+                        SELECT 
+                            r.time, 
+                            r.cases, 
+                            r.deaths,
+                            r.recoveries,
+                            r.active_cases,
+                            r.new_cases,
+                            r.new_deaths,
+                            r.new_recoveries,
+                            r.incidence_rate, 
+                            r.mortality_rate,
+                            r.recovery_rate,
+                            r.region,
+                            r.city,
+                            r.data_source,
+                            r.data_quality,
+                            r.confidence_score,
+                            COALESCE(sd.standard_name_zh, d.name_en, d.name) as disease_name,
+                            c.name as country_name
+                        FROM disease_records r
+                        JOIN diseases d ON r.disease_id=d.id
+                        JOIN countries c ON r.country_id=c.id
+                        LEFT JOIN standard_diseases sd ON d.name = sd.disease_id
+                        WHERE d.name = '{disease}' AND r.country_id = {sel_country_id}
+                        ORDER BY time
+                    """)
+                else:
+                    df = run_query(f"""
+                        SELECT 
+                            r.time, 
+                            r.cases, 
+                            r.deaths,
+                            r.recoveries,
+                            r.active_cases,
+                            r.new_cases,
+                            r.new_deaths,
+                            r.new_recoveries,
+                            r.incidence_rate, 
+                            r.mortality_rate,
+                            r.recovery_rate,
+                            r.region,
+                            r.city,
+                            r.data_source,
+                            r.data_quality,
+                            r.confidence_score,
+                            d.name_en as disease_name,
+                            c.name as country_name
+                        FROM disease_records r
+                        JOIN diseases d ON r.disease_id=d.id
+                        JOIN countries c ON r.country_id=c.id
+                        WHERE d.name = '{disease}' AND r.country_id = {sel_country_id}
+                        ORDER BY time
+                    """)
                 if not df.empty:
                     total = int(df['cases'].sum())
                     deaths = int(df['deaths'].sum())
@@ -320,11 +369,68 @@ elif page == nav_labels[1]:
                         fig.update_layout(template='plotly_white', height=350)
                         st.plotly_chart(fig, width='stretch')
                     
+                    # 原始数据展示 - 显示所有列并提供筛选
                     with st.expander(t("raw_data"), expanded=False):
-                        st.dataframe(df, width='stretch')
-                        csv = df.to_csv(index=False)
-                        st.download_button(t("download_csv"), data=csv, 
-                                         file_name=f'{disease}_data.csv')
+                        st.subheader(t("raw_data_filter"))
+                        
+                        # 筛选控件
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            # 时间范围筛选
+                            time_filter_options = [
+                                (t("interval_all"), None),
+                                (t("interval_30d"), 30),
+                                (t("interval_90d"), 90),
+                                (t("interval_1y"), 365),
+                            ]
+                            time_labels = [opt[0] for opt in time_filter_options]
+                            selected_time = st.selectbox(t("time_range_filter"), time_labels, key="raw_time_filter")
+                            days_filter = dict(time_filter_options)[selected_time]
+                        
+                        with col2:
+                            # 数据源筛选
+                            sources = df['data_source'].unique().tolist() if 'data_source' in df.columns else []
+                            source_options = [t("all_sources")] + sources
+                            selected_source = st.selectbox(t("source_filter"), source_options, key="raw_source_filter")
+                        
+                        with col3:
+                            # 显示行数
+                            max_rows = st.number_input(t("rows_label"), 10, 1000, 100, step=10, key="raw_rows")
+                        
+                        # 应用筛选
+                        filtered_df = df.copy()
+                        
+                        # 时间筛选
+                        if days_filter:
+                            cutoff_date = pd.Timestamp.now() - pd.Timedelta(days=days_filter)
+                            filtered_df = filtered_df[pd.to_datetime(filtered_df['time']) > cutoff_date]
+                        
+                        # 数据源筛选
+                        if selected_source != t("all_sources"):
+                            filtered_df = filtered_df[filtered_df['data_source'] == selected_source]
+                        
+                        # 限制行数
+                        filtered_df = filtered_df.head(max_rows)
+                        
+                        # 格式化显示
+                        if not filtered_df.empty:
+                            display_df = filtered_df.copy()
+                            # 格式化时间列
+                            display_df['time'] = pd.to_datetime(display_df['time']).dt.strftime('%Y-%m-%d')
+                            
+                            st.info(f"{t('showing_records')}: {len(filtered_df)} / {len(df)}")
+                            st.dataframe(display_df, width='stretch', height=400)
+                            
+                            # 下载按钮
+                            csv = filtered_df.to_csv(index=False)
+                            st.download_button(
+                                t("download_csv"), 
+                                data=csv, 
+                                file_name=f'{disease}_raw_data_{pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")}.csv',
+                                key="raw_download"
+                            )
+                        else:
+                            st.warning(t("no_data_after_filter"))
                 else:
                     st.info(t('query_no_data'))
         else:
