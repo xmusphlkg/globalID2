@@ -1,0 +1,142 @@
+﻿disease_id,standard_name_en,standard_name_zh,category,icd_10,icd_11,description,source
+D001,Cholera,霍乱,,A00,,,ICD-10
+D002,Typhoid and paratyphoid fevers,伤寒和副伤寒,,A01,,,ICD-10
+D003,Shigellosis,细菌性痢疾,,A03,,,ICD-10
+D004,Other bacterial intestinal infections,其他细菌性肠道感染,,A04,,,ICD-10
+D005,Other bacterial foodborne intoxications,其他细菌性食物中毒,,A05,,,ICD-10
+D006,Amoebiasis,阿米巴病,,A06,,,ICD-10
+D007,Diarrhoea and gastroenteritis,腹泻和胃肠炎,,A09,,,ICD-10
+D008,Respiratory tuberculosis,肺结核,,A15,,,ICD-10
+D009,Plague,鼠疫,,A20,,,ICD-10
+D010,Anthrax,炭疽,,A22,,,ICD-10
+D011,Brucellosis,布鲁氏菌病,,A23,,,ICD-10
+D012,Glanders and melioidosis,鼻疽和类鼻疽,,A24,,,ICD-10
+D013,Leptospirosis,钩端螺旋体病,,A27,,,ICD-10
+D014,Leprosy,麻风病,,A30,,,ICD-10
+D015,Diphtheria,白喉,,A36,,,ICD-10
+D016,Whooping cough,百日咳,,A37,,,ICD-10
+D017,Scarlet fever,猩红热,,A38,,,ICD-10
+D018,Meningococcal infection,脑膜炎球菌感染,,A39,,,ICD-10
+D019,Streptococcal sepsis,链球菌败血症,,A40,,,ICD-10
+D020,Other sepsis,其他败血症,,A41,,,ICD-10
+D021,Congenital syphilis,先天性梅毒,,A50,,,ICD-10
+D022,Early syphilis,早期梅毒,,A51,,,ICD-10
+D023,Late syphilis,晚期梅毒,,A52,,,ICD-10
+D024,Other and unspecified syphilis,其他和未明示的梅毒,,A53,,,ICD-10
+D025,Gonococcal infection,淋球菌感染,,A54,,,ICD-10
+D026,Chlamydial lymphogranuloma,衣原体性淋巴肉芽肿,,A55,,,ICD-10
+D027,Other sexually transmitted chlamydial diseases,其他性传播衣原体病,,A56,,,ICD-10
+D028,Trichomoniasis,滴虫病,,A59,,,ICD-10
+D029,Anogenital herpesviral infection,肛门生殖器疱疹病毒感染,,A60,,,ICD-10
+D030,Other predominantly sexually transmitted diseases,其他主要通过性传播的疾病,,A63,,,ICD-10
+D031,Unspecified sexually transmitted disease,未明示的性传播疾病,,A64,,,ICD-10
+D032,Typhus fever,斑疹伤寒,,A75,,,ICD-10
+D033,Acute poliomyelitis,急性脊髓灰质炎,,A80,,,ICD-10
+D034,Rabies,狂犬病,,A82,,,ICD-10
+D035,Mosquito-borne viral encephalitis,蚊传病毒性脑炎,,A83,,,ICD-10
+D036,Tick-borne viral encephalitis,蜱传病毒性脑炎,,A84,,,ICD-10
+D037,Dengue fever,登革热,,A90,,,ICD-10
+D038,Dengue haemorrhagic fever,登革出血热,,A91,,,ICD-10
+D039,Other mosquito-borne viral fevers,其他蚊传病毒热,,A92,,,ICD-10
+D040,Yellow fever,黄热病,,A95,,,ICD-10
+D041,Arenaviral haemorrhagic fever,沙粒病毒出血热,,A96,,,ICD-10
+D042,Other viral haemorrhagic fevers,其他病毒性出血热,,A98,,,ICD-10
+D043,Herpesviral infections,疱疹病毒感染,,B00,,,ICD-10
+D044,Varicella,水痘,,B01,,,ICD-10
+D045,Zoster,带状疱疹,,B02,,,ICD-10
+D046,Smallpox,天花,,B03,,,ICD-10
+D047,Monkeypox,猴痘,,B04,,,ICD-10
+D048,Measles,麻疹,,B05,,,ICD-10
+D049,Rubella,风疹,,B06,,,ICD-10
+D050,Other viral infections characterized by skin lesions,其他以皮损为特征的病毒感染,,B08,,,ICD-10
+D051,Acute hepatitis A,急性甲型肝炎,,B15,,,ICD-10
+D052,Acute hepatitis B,急性乙型肝炎,,B16,,,ICD-10
+D053,Other acute viral hepatitis,其他急性病毒性肝炎,,B17,,,ICD-10
+D054,Chronic viral hepatitis,慢性病毒性肝炎,,B18,,,ICD-10
+D055,Unspecified viral hepatitis,未明示的病毒性肝炎,,B19,,,ICD-10
+D056,HIV disease,人类免疫缺陷病毒病,,B20,,,ICD-10
+D057,Mumps,流行性腮腺炎,,B26,,,ICD-10
+D058,Infectious mononucleosis,传染性单核细胞增多症,,B27,,,ICD-10
+D059,Viral conjunctivitis,病毒性结膜炎,,B30,,,ICD-10
+D060,Other viral diseases,其他病毒性疾病,,B33,,,ICD-10
+D061,Viral infection of unspecified site,未指定部位的病毒感染,,B34,,,ICD-10
+D062,Plasmodium falciparum malaria,恶性疟,,B50,,,ICD-10
+D063,Plasmodium vivax malaria,间日疟,,B51,,,ICD-10
+D064,Plasmodium malariae malaria,三日疟,,B52,,,ICD-10
+D065,Other parasitologically confirmed malaria,其他寄生虫学证实的疟疾,,B53,,,ICD-10
+D066,Unspecified malaria,未明示的疟疾,,B54,,,ICD-10
+D067,Leishmaniasis,利什曼病,,B55,,,ICD-10
+D068,African trypanosomiasis,非洲锥虫病,,B56,,,ICD-10
+D069,Chagas disease,恰加斯病,,B57,,,ICD-10
+D070,Toxoplasmosis,弓形体病,,B58,,,ICD-10
+D071,Schistosomiasis,血吸虫病,,B65,,,ICD-10
+D072,Other fluke infections,其他吸虫感染,,B66,,,ICD-10
+D073,Echinococcosis,包虫病,,B67,,,ICD-10
+D074,Taeniasis,绦虫病,,B68,,,ICD-10
+D075,Cysticercosis,囊虫病,,B69,,,ICD-10
+D076,Filariasis,丝虫病,,B74,,,ICD-10
+D077,SARS,严重急性呼吸综合征,,U04,,,ICD-10
+D078,COVID-19,新型冠状病毒肺炎,,U07.1,,,ICD-10
+D079,Anthrax,,Bacterial,,,,CDC
+D080,Arboviral diseases,,Viral,,,,CDC
+D081,Babesiosis,,Parasitic,,,,CDC
+D082,Botulism,,Bacterial,,,,CDC
+D083,Brucellosis,,Bacterial,,,,CDC
+D084,Campylobacteriosis,,Bacterial,,,,CDC
+D085,Chancroid,,Bacterial,,,,CDC
+D086,Chlamydia trachomatis infection,,Bacterial,,,,CDC
+D087,Cholera,,Bacterial,,,,CDC
+D088,Coccidioidomycosis,,Fungal,,,,CDC
+D089,Cryptosporidiosis,,Parasitic,,,,CDC
+D090,Cyclosporiasis,,Parasitic,,,,CDC
+D091,Dengue,,Viral,,,,CDC
+D092,Diphtheria,,Bacterial,,,,CDC
+D093,Ehrlichiosis and Anaplasmosis,,Bacterial,,,,CDC
+D094,Giardiasis,,Parasitic,,,,CDC
+D095,Gonorrhea,,Bacterial,,,,CDC
+D096,Haemophilus influenzae,,Bacterial,,,,CDC
+D097,Hansen disease (Leprosy),,Bacterial,,,,CDC
+D098,Hantavirus infection,,Viral,,,,CDC
+D099,Hemolytic uremic syndrome,,Bacterial,,,,CDC
+D100,Hepatitis A,,Viral,,,,CDC
+D101,Hepatitis B,,Viral,,,,CDC
+D102,Hepatitis C,,Viral,,,,CDC
+D103,HIV infection,,Viral,,,,CDC
+D104,Influenza-associated mortality,,Viral,,,,CDC
+D105,Invasive pneumococcal disease,,Bacterial,,,,CDC
+D106,Legionellosis,,Bacterial,,,,CDC
+D107,Listeriosis,,Bacterial,,,,CDC
+D108,Lyme disease,,Bacterial,,,,CDC
+D109,Malaria,,Parasitic,,,,CDC
+D110,Measles,,Viral,,,,CDC
+D111,Meningococcal disease,,Bacterial,,,,CDC
+D112,Mumps,,Viral,,,,CDC
+D113,Novel influenza A,,Viral,,,,CDC
+D114,Pertussis,,Bacterial,,,,CDC
+D115,Plague,,Bacterial,,,,CDC
+D116,Poliomyelitis,,Viral,,,,CDC
+D117,Psittacosis,,Bacterial,,,,CDC
+D118,Q fever,,Bacterial,,,,CDC
+D119,Rabies,,Viral,,,,CDC
+D120,Rubella,,Viral,,,,CDC
+D121,Salmonellosis,,Bacterial,,,,CDC
+D122,SARS-CoV,,Viral,,,,CDC
+D123,Shigellosis,,Bacterial,,,,CDC
+D124,Smallpox,,Viral,,,,CDC
+D125,Spotted fever rickettsiosis,,Bacterial,,,,CDC
+D126,Streptococcal disease,,Bacterial,,,,CDC
+D127,Syphilis,,Bacterial,,,,CDC
+D128,Tetanus,,Bacterial,,,,CDC
+D129,Toxic shock syndrome,,Bacterial,,,,CDC
+D130,Trichinellosis,,Parasitic,,,,CDC
+D131,Tuberculosis,,Bacterial,,,,CDC
+D132,Tularemia,,Bacterial,,,,CDC
+D133,Typhoid fever,,Bacterial,,,,CDC
+D134,Vancomycin resistance,,Bacterial,,,,CDC
+D135,Varicella,,Viral,,,,CDC
+D136,Vibriosis,,Bacterial,,,,CDC
+D137,Viral hemorrhagic fevers,,Viral,,,,CDC
+D138,West Nile virus,,Viral,,,,CDC
+D139,Yellow fever,,Viral,,,,CDC
+D140,Zika virus,,Viral,,,,CDC
+D141,COVID-19,,Viral,,,,CDC

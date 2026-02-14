@@ -27,6 +27,8 @@ logger = get_logger(__name__)
 def crawl(
     country: str = typer.Option("CN", help="Country code"),
     max_results: int = typer.Option(100, help="Maximum results to fetch"),
+    process: bool = typer.Option(True, help="Process and store data"),
+    save_raw: bool = typer.Option(False, help="Save raw HTML data"),
 ):
     """
     爬取疾病数据
@@ -34,13 +36,17 @@ def crawl(
     async def _crawl():
         await init_app()
         
-        console.print(f"[bold blue]Starting data crawl for {country}...[/bold blue]")
+        # 标准化国家代码为大写
+        country_code = country.upper()
+        
+        console.print(f"[bold blue]Starting data crawl for {country_code}...[/bold blue]")
         
         # 获取爬虫
-        if country == "CN":
+        if country_code == "CN":
             crawler = ChinaCDCCrawler()
         else:
-            console.print(f"[red]Unsupported country: {country}[/red]")
+            console.print(f"[red]Unsupported country: {country_code}[/red]")
+            console.print(f"[yellow]Available countries: CN[/yellow]")
             return
         
         # 爬取数据
@@ -52,11 +58,52 @@ def crawl(
         
         console.print(f"[green]✓ Fetched {len(results)} results[/green]")
         
+        # 显示预览
         for i, result in enumerate(results[:5], 1):
             console.print(f"  {i}. {result.title} ({result.date})")
         
         if len(results) > 5:
             console.print(f"  ... and {len(results) - 5} more")
+        
+        # 处理数据
+        if process and results:
+            console.print(f"\n[bold blue]Processing data...[/bold blue]")
+            
+            from src.data.processors import DataProcessor
+            
+            processor = DataProcessor(
+                output_dir=Path("data/processed") / country_code.lower(),
+                country_code=country_code.lower()
+            )
+            
+            with Progress() as progress:
+                task = progress.add_task("[cyan]Processing...", total=len(results))
+                
+                processed = await processor.process_crawler_results(
+                    results,
+                    save_to_file=True
+                )
+                progress.update(task, advance=len(results))
+            
+            console.print(f"[green]✓ Processed {len(processed)}/{len(results)} datasets[/green]")
+            
+            # 统计信息
+            if processed:
+                total_records = sum(len(df) for df in processed)
+                console.print(f"[green]✓ Total records: {total_records}[/green]")
+        
+        # 保存原始数据
+        if save_raw and results:
+            raw_dir = Path("data/raw") / country_code.lower()
+            raw_dir.mkdir(parents=True, exist_ok=True)
+            
+            for result in results:
+                if result.year_month:
+                    filename = f"{result.year_month}.html"
+                    filepath = raw_dir / filename
+                    filepath.write_text(result.content, encoding='utf-8')
+            
+            console.print(f"[green]✓ Saved raw data to {raw_dir}[/green]")
     
     asyncio.run(_crawl())
 

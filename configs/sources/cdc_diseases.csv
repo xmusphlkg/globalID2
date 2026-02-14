@@ -1,0 +1,64 @@
+﻿name,category
+Anthrax,Bacterial
+Arboviral diseases,Viral
+Babesiosis,Parasitic
+Botulism,Bacterial
+Brucellosis,Bacterial
+Campylobacteriosis,Bacterial
+Chancroid,Bacterial
+Chlamydia trachomatis infection,Bacterial
+Cholera,Bacterial
+Coccidioidomycosis,Fungal
+Cryptosporidiosis,Parasitic
+Cyclosporiasis,Parasitic
+Dengue,Viral
+Diphtheria,Bacterial
+Ehrlichiosis and Anaplasmosis,Bacterial
+Giardiasis,Parasitic
+Gonorrhea,Bacterial
+Haemophilus influenzae,Bacterial
+Hansen disease (Leprosy),Bacterial
+Hantavirus infection,Viral
+Hemolytic uremic syndrome,Bacterial
+Hepatitis A,Viral
+Hepatitis B,Viral
+Hepatitis C,Viral
+HIV infection,Viral
+Influenza-associated mortality,Viral
+Invasive pneumococcal disease,Bacterial
+Legionellosis,Bacterial
+Listeriosis,Bacterial
+Lyme disease,Bacterial
+Malaria,Parasitic
+Measles,Viral
+Meningococcal disease,Bacterial
+Mumps,Viral
+Novel influenza A,Viral
+Pertussis,Bacterial
+Plague,Bacterial
+Poliomyelitis,Viral
+Psittacosis,Bacterial
+Q fever,Bacterial
+Rabies,Viral
+Rubella,Viral
+Salmonellosis,Bacterial
+SARS-CoV,Viral
+Shigellosis,Bacterial
+Smallpox,Viral
+Spotted fever rickettsiosis,Bacterial
+Streptococcal disease,Bacterial
+Syphilis,Bacterial
+Tetanus,Bacterial
+Toxic shock syndrome,Bacterial
+Trichinellosis,Parasitic
+Tuberculosis,Bacterial
+Tularemia,Bacterial
+Typhoid fever,Bacterial
+Vancomycin resistance,Bacterial
+Varicella,Viral
+Vibriosis,Bacterial
+Viral hemorrhagic fevers,Viral
+West Nile virus,Viral
+Yellow fever,Viral
+Zika virus,Viral
+COVID-19,Viral

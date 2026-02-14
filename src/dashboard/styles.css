@@ -1,0 +1,71 @@
+/* Simple theme polish for the Streamlit dashboard */
+body {
+  background: #f7fafc;
+  color: #0f172a;
+}
+
+.stApp {
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+}
+
+
+/* Header/brand */
+.stAppHeader {
+  padding: 18px 24px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand .title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+/* Sidebar background and tone */
+.css-1d391kg.edgvbvh3 { /* streamlit sidebar container */
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+  border-radius: 8px;
+}
+
+/* Metric card polish */
+.stMetric {
+  border-radius: 10px;
+  background: linear-gradient(180deg, #ffffff, #fbfdff);
+  box-shadow: 0 3px 8px rgba(15,23,42,0.06);
+}
+
+/* Tighter table visuals */
+.stDataFrame table {
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.stDataFrame thead th {
+  background: #f1f5f9;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.stButton>button {
+  border-radius: 8px;
+  background: linear-gradient(180deg,#0ea5a4,#0284c7);
+  color: white;
+  border: none;
+}
+
+/* Small text contrasts */
+.stCaption,
+.css-1cpxqw2.egzxvld0 {
+  color: #6b7280;
+}
+
+/* Make charts container a bit more spacious */
+.element-container {
+  padding: 8px 10px;
+}
