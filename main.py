@@ -22,16 +22,21 @@ app = typer.Typer(help="GlobalID V2 - Global Infectious Disease Monitoring Syste
 console = Console()
 logger = get_logger(__name__)
 
-
 @app.command()
 def crawl(
     country: str = typer.Option("CN", help="Country code"),
-    max_results: int = typer.Option(100, help="Maximum results to fetch"),
+    source: str = typer.Option("all", help="Data source (cdc_weekly/nhc/pubmed/all)"),
     process: bool = typer.Option(True, help="Process and store data"),
     save_raw: bool = typer.Option(False, help="Save raw HTML data"),
+    force: bool = typer.Option(False, help="Force crawl all data (ignore database check)"),
 ):
     """
-    爬取疾病数据
+    智能爬取疾病数据（参考1.0版本设计）
+    
+    工作流程：
+    1. 获取数据列表（轻量级）
+    2. 与数据库对比，识别新数据
+    3. 只爬取新数据的详细内容（重量级）
     """
     async def _crawl():
         await init_app()
@@ -39,7 +44,9 @@ def crawl(
         # 标准化国家代码为大写
         country_code = country.upper()
         
-        console.print(f"[bold blue]Starting data crawl for {country_code}...[/bold blue]")
+        console.print(f"[bold blue]🚀 Starting intelligent data crawl for {country_code}...[/bold blue]")
+        if force:
+            console.print("[yellow]⚠️  Force mode: will crawl all data (ignoring database)[/yellow]")
         
         # 获取爬虫
         if country_code == "CN":
@@ -49,25 +56,28 @@ def crawl(
             console.print(f"[yellow]Available countries: CN[/yellow]")
             return
         
-        # 爬取数据
-        with Progress() as progress:
-            task = progress.add_task("[cyan]Crawling...", total=max_results)
-            
-            results = await crawler.crawl(max_results=max_results)
-            progress.update(task, advance=len(results))
+        # 智能爬取（三阶段）
+        console.print(f"\n[bold cyan]Phase 1/3: Fetching data list...[/bold cyan]")
+        results = await crawler.crawl(source=source, force=force)
         
-        console.print(f"[green]✓ Fetched {len(results)} results[/green]")
+        if not results:
+            console.print(f"[yellow]✓ No new data to crawl[/yellow]")
+            return
+        
+        console.print(f"[green]✓ Found {len(results)} new reports to process[/green]")
         
         # 显示预览
-        for i, result in enumerate(results[:5], 1):
-            console.print(f"  {i}. {result.title} ({result.date})")
+        console.print(f"\n[bold]New reports:[/bold]")
+        for i, result in enumerate(results[:10], 1):
+            date_str = result.date.strftime("%Y-%m") if result.date else "Unknown"
+            console.print(f"  {i}. {result.year_month} - {result.title[:80]}...")
         
-        if len(results) > 5:
-            console.print(f"  ... and {len(results) - 5} more")
+        if len(results) > 10:
+            console.print(f"  ... and {len(results) - 10} more")
         
         # 处理数据
         if process and results:
-            console.print(f"\n[bold blue]Processing data...[/bold blue]")
+            console.print(f"\n[bold cyan]Phase 2/3: Processing new data...[/bold cyan]")
             
             from src.data.processors import DataProcessor
             
@@ -94,16 +104,19 @@ def crawl(
         
         # 保存原始数据
         if save_raw and results:
+            console.print(f"\n[bold cyan]Phase 3/3: Saving raw data...[/bold cyan]")
             raw_dir = Path("data/raw") / country_code.lower()
             raw_dir.mkdir(parents=True, exist_ok=True)
             
             for result in results:
-                if result.year_month:
-                    filename = f"{result.year_month}.html"
+                if result.year_month and result.content:
+                    filename = f"{result.year_month.replace(' ', '_')}.html"
                     filepath = raw_dir / filename
                     filepath.write_text(result.content, encoding='utf-8')
             
             console.print(f"[green]✓ Saved raw data to {raw_dir}[/green]")
+        
+        console.print(f"\n[bold green]✨ Crawl completed successfully![/bold green]")
     
     asyncio.run(_crawl())
 

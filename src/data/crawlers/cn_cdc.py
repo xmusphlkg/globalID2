@@ -1,17 +1,25 @@
-"""
+"""  
 GlobalID V2 China Infectious Disease Data Crawlers
 
 从中国疾病预防控制中心(CDC)、卫健委等官方来源爬取传染病数据
+
+设计理念（参考1.0版本）：
+1. 先获取列表（轻量级）- fetch_list()
+2. 提取年月信息并与数据库对比 - check_new_data()
+3. 只爬取新数据的详细内容（重量级）- crawl_details()
 """
 import re
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Set, Dict
 from urllib.parse import urljoin
 
 import xmltodict
 from bs4 import BeautifulSoup
+from sqlalchemy import select, func
 
 from src.core import get_logger
+from src.core.database import get_db
+from src.domain import DiseaseRecord
 from .base import BaseCrawler, CrawlerResult
 
 logger = get_logger(__name__)
@@ -91,16 +99,17 @@ class ChinaCDCCrawler(BaseCrawler):
         
         return None
     
-    async def crawl(self, source: str = "all", **kwargs) -> List[CrawlerResult]:
+    async def fetch_list(self, source: str = "all", **kwargs) -> List[CrawlerResult]:
         """
-        爬取中国传染病数据
+        第一阶段：获取数据列表（轻量级操作）
+        只获取标题、URL、日期等元信息，不爬取详细内容
         
         Args:
             source: 数据源 ("cdc_weekly", "nhc", "pubmed", "all")
             **kwargs: 额外参数
             
         Returns:
-            爬取结果列表
+            元信息列表（不含详细内容）
         """
         results = []
         
@@ -108,31 +117,129 @@ class ChinaCDCCrawler(BaseCrawler):
             try:
                 cdc_results = self.crawl_cdc_weekly()
                 results.extend(cdc_results)
-                logger.info(f"CDC Weekly: 爬取到 {len(cdc_results)} 条记录")
+                logger.info(f"CDC Weekly: 发现 {len(cdc_results)} 个报告")
             except Exception as e:
-                logger.error(f"CDC Weekly 爬取失败: {e}")
+                logger.error(f"CDC Weekly 列表获取失败: {e}")
         
         if source in ("nhc", "gov", "all"):
             try:
                 gov_results = self.crawl_gov()
                 results.extend(gov_results)
-                logger.info(f"官方通报(GOV): 爬取到 {len(gov_results)} 条记录")
+                logger.info(f"国家疾控局: 发现 {len(gov_results)} 个报告")
             except Exception as e:
-                logger.error(f"官方通报(GOV)爬取失败: {e}")
+                logger.error(f"国家疾控局列表获取失败: {e}")
         
         if source in ("pubmed", "all"):
             try:
                 pubmed_results = self.crawl_pubmed_rss()
                 results.extend(pubmed_results)
-                logger.info(f"PubMed RSS: 爬取到 {len(pubmed_results)} 条记录")
+                logger.info(f"PubMed RSS: 发现 {len(pubmed_results)} 个报告")
             except Exception as e:
-                logger.error(f"PubMed RSS 爬取失败: {e}")
+                logger.error(f"PubMed RSS 列表获取失败: {e}")
         
         # 按日期排序
         results.sort(key=lambda x: x.date if x.date else datetime.min, reverse=True)
         
-        logger.info(f"总计爬取到 {len(results)} 条记录")
+        logger.info(f"总计发现 {len(results)} 个报告")
         return results
+    
+    async def check_new_data(self, list_results: List[CrawlerResult]) -> Dict[str, List[CrawlerResult]]:
+        """
+        第二阶段：检查哪些数据是新的（与数据库对比）
+        
+        逻辑（参考1.0版本）：
+        1. 查询数据库中最新的数据时间
+        2. 只爬取时间晚于数据库最新时间的报告
+        3. 这样实现真正的增量更新
+        
+        Args:
+            list_results: 从fetch_list获取的列表
+            
+        Returns:
+            字典，包含 'new' 和 'existing' 两个键
+        """
+        # 获取数据库中最新的数据时间
+        async with get_db() as session:
+            result = await session.execute(
+                select(func.max(DiseaseRecord.time)).select_from(DiseaseRecord)
+            )
+            max_time = result.scalar()
+        
+        if max_time:
+            max_date = max_time.date()
+            logger.info(f"数据库中最新数据时间: {max_date}")
+        else:
+            max_date = None
+            logger.info("数据库为空，将爬取所有数据")
+        
+        # 筛选出时间晚于数据库最新时间的报告
+        new_results = []
+        existing_results = []
+        
+        for result in list_results:
+            if result.date is None:
+                logger.warning(f"报告缺少日期信息，跳过: {result.title}")
+                continue
+            
+            result_date = result.date.date() if hasattr(result.date, 'date') else result.date
+            
+            # 如果数据库为空，或报告时间晚于数据库最新时间，则需要爬取
+            if max_date is None or result_date > max_date:
+                new_results.append(result)
+            else:
+                existing_results.append(result)
+        
+        logger.info(f"发现 {len(new_results)} 个新报告需要爬取（时间 > {max_date}）")
+        if new_results:
+            # 按月份汇总新数据
+            new_months = sorted(set(r.year_month for r in new_results if r.year_month))
+            logger.info(f"新数据月份: {new_months}")
+        
+        return {
+            'new': new_results,
+            'existing': existing_results
+        }
+    
+    async def crawl(self, source: str = "all", force: bool = False, **kwargs) -> List[CrawlerResult]:
+        """
+        智能爬取流程（参考1.0版本设计）：
+        1. 先获取列表（轻量级）
+        2. 与数据库对比
+        3. 只爬取新数据的详情（重量级）
+        
+        Args:
+            source: 数据源 ("cdc_weekly", "nhc", "pubmed", "all")
+            force: 是否强制爬取所有数据（忽略数据库检查）
+            **kwargs: 额外参数
+            
+        Returns:
+            爬取的新数据列表
+        """
+        # 第一阶段：获取列表
+        logger.info("[阶段1/3] 获取数据列表...")
+        list_results = await self.fetch_list(source=source, **kwargs)
+        
+        if not list_results:
+            logger.warning("未发现任何数据")
+            return []
+        
+        # 第二阶段：检查新数据
+        if force:
+            logger.info("[阶段2/3] 强制模式：将爬取所有数据")
+            new_results = list_results
+        else:
+            logger.info("[阶段3/3] 检查新数据...")
+            check_result = await self.check_new_data(list_results)
+            new_results = check_result['new']
+        
+        if not new_results:
+            logger.info("✓ 无新数据需要爬取")
+            return []
+        
+        # 第三阶段：爬取详情（这部分留给后续的processor处理）
+        logger.info(f"[阶段3/3] 将处理 {len(new_results)} 个新报告")
+        
+        return new_results
     
     def crawl_cdc_weekly(self) -> List[CrawlerResult]:
         """爬取 China CDC Weekly 数据"""
