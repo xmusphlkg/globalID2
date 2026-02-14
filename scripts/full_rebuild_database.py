@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """
-完整重建数据库 - 一体式脚本
+Complete Database Rebuild - All-in-One Script
 
-功能：
-1. 清空所有疾病相关表
-2. 从 CSV 导入标准疾病库和映射关系
-3. 同步 diseases 表
-4. 导入历史数据到 disease_records
-5. 验证数据完整性
+Features:
+1. Clear all disease-related tables
+2. Import standard diseases and mappings from CSV
+3. Sync diseases table
+4. Import historical data to disease_records
+5. Verify data integrity
 
-一次运行，全部完成！
+One-stop solution for complete database initialization!
 """
 import asyncio
 import sys
@@ -31,100 +31,116 @@ logger = get_logger(__name__)
 
 
 class DatabaseRebuilder:
-    def __init__(self, auto_confirm=False):
-        self.standard_file = ROOT / "configs/standard_diseases.csv"
-        self.mapping_file = ROOT / "configs/cn/disease_mapping.csv"
-        self.history_file = ROOT / "data/processed/history_merged.csv"
-        self.country_code = "CN"
+    def __init__(self, country_code='cn', auto_confirm=False):
+        """Initialize DatabaseRebuilder with country-specific configuration
+        
+        Args:
+            country_code: Country code (cn, us, au, jp, etc.), default: cn
+            auto_confirm: Skip confirmation prompt if True
+        """
+        self.country_code = country_code.upper()
+        self.country_code_lower = country_code.lower()
         self.auto_confirm = auto_confirm
         
+        # Configuration file paths
+        self.standard_file = ROOT / "configs/standard_diseases.csv"
+        self.mapping_file = ROOT / f"configs/{self.country_code_lower}/disease_mapping.csv"
+        self.history_file = ROOT / f"data/processed/{self.country_code_lower}/history_merged.csv"
+        
+        # Validate country configuration exists
+        if not self.mapping_file.parent.exists():
+            raise FileNotFoundError(
+                f"Country configuration not found: {self.mapping_file.parent}\n"
+                f"Available countries: {', '.join([d.name for d in (ROOT / 'configs').iterdir() if d.is_dir() and d.name != '__pycache__'])}"
+            )
+        
     async def run(self):
-        """执行完整的数据库重建流程"""
+        """Execute complete database rebuild workflow"""
         logger.info("=" * 80)
-        logger.info("🚀 完整数据库重建流程")
+        logger.info(f"🚀 Database Rebuild - Country: {self.country_code}")
         logger.info("=" * 80)
         
-        # 显示警告和统计信息
+        # Show warnings and statistics
         async with get_db() as db:
             await self._show_warning_and_stats(db)
             
-            # 询问确认
+            # Ask for confirmation
             if not self.auto_confirm:
                 if not self._confirm_rebuild():
-                    logger.info("❌ 用户取消操作")
+                    logger.info("❌ Operation cancelled by user")
                     return
             
             logger.info("\n" + "=" * 80)
-            logger.info("开始执行数据库重建...")
+            logger.info("Starting database rebuild...")
             logger.info("=" * 80)
             
-            # 步骤 1: 清空数据
+            # Step 1: Clear existing data
             await self.clear_data(db)
             
-            # 步骤 2: 导入标准疾病库
+            # Step 2: Import standard diseases
             await self.import_standard_diseases(db)
             
-            # 步骤 3: 导入疾病映射
+            # Step 3: Import disease mappings
             await self.import_disease_mappings(db)
             
-            # 步骤 4: 同步 diseases 表
+            # Step 4: Sync diseases table
             await self.sync_diseases_table(db)
             
-            # 步骤 5: 导入历史数据
+            # Step 5: Import historical data
             await self.import_history_data(db)
             
-            # 步骤 6: 验证结果
+            # Step 6: Verify results
             await self.verify_results(db)
             
         logger.info("\n" + "=" * 80)
-        logger.info("✅ 数据库重建完成！")
+        logger.info("✅ Database rebuild completed successfully!")
         logger.info("=" * 80)
     
     async def _show_warning_and_stats(self, db):
-        """显示警告信息和当前数据统计"""
-        logger.warning("\n⚠️  警告：此操作将清空以下数据表：")
-        logger.warning("   • disease_records (疾病记录)")
-        logger.warning("   • diseases (疾病)")
-        logger.warning("   • disease_mappings (疾病映射)")
-        logger.warning("   • standard_diseases (标准疾病库)")
+        """Display warning message and current data statistics"""
+        logger.warning("\n⚠️  WARNING: This operation will clear the following tables:")
+        logger.warning("   • disease_records")
+        logger.warning("   • diseases")
+        logger.warning("   • disease_mappings")
+        logger.warning("   • standard_diseases")
         
-        logger.info("\n📊 当前数据统计：")
+        logger.info("\n📊 Current Data Statistics:")
         
         tables = {
-            "disease_records": "疾病记录",
-            "diseases": "疾病",
-            "disease_mappings": "疾病映射",
-            "standard_diseases": "标准疾病"
+            "disease_records": "Disease Records",
+            "diseases": "Diseases",
+            "disease_mappings": "Disease Mappings",
+            "standard_diseases": "Standard Diseases"
         }
         
-        for table, name in tables.items():
+        for table, label in tables.items():
             try:
                 result = await db.execute(text(f"SELECT COUNT(*) FROM {table}"))
                 count = result.scalar()
-                logger.info(f"   • {name:12s}: {count:,} 条")
+                logger.info(f"   • {label:20s}: {count:,} records")
             except Exception:
-                logger.info(f"   • {name:12s}: (表不存在)")
+                logger.info(f"   • {label:20s}: (table not found)")
         
-        logger.info("\n📥 将要导入：")
-        logger.info(f"   • 标准疾病库: {self.standard_file.name}")
-        logger.info(f"   • 疾病映射: {self.mapping_file.name}")
-        logger.info(f"   • 历史数据: {self.history_file.name}")
+        logger.info("\n📥 Files to Import:")
+        logger.info(f"   • Standard Diseases: {self.standard_file.name}")
+        logger.info(f"   • Disease Mappings:  {self.mapping_file.name} (country: {self.country_code})")
+        logger.info(f"   • Historical Data:   {self.history_file.name}")
         
     def _confirm_rebuild(self):
-        """询问用户确认"""
+        """Ask user for confirmation"""
         logger.info("\n" + "=" * 80)
         try:
-            response = input("🔔 确认要继续吗？所有现有数据将被删除！(yes/no): ")
+            response = input("🔔 Confirm to continue? All existing data will be deleted! (yes/no): ")
             return response.lower() in ('yes', 'y')
         except (KeyboardInterrupt, EOFError):
-            print()  # 新行
+            print()  # new line
             return False
     
     async def clear_data(self, db):
-        """清空所有疾病相关数据"""
-        logger.info("\n📦 步骤 1/6: 清空现有数据...")
+        """Clear all disease-related data"""
+        logger.info("\n📦 Step 1/6: Clearing existing data...")
         
-        # 按照外键依赖顺序删除
+        # Delete in proper order to respect foreign key constraints
         tables = [
             "disease_records",
             "diseases", 
@@ -137,22 +153,22 @@ class DatabaseRebuilder:
             count = result.scalar()
             
             await db.execute(text(f"DELETE FROM {table}"))
-            logger.info(f"  ✓ 清空 {table}: 删除 {count} 条记录")
+            logger.info(f"  ✓ Cleared {table}: deleted {count:,} records")
         
         await db.commit()
-        logger.info("✓ 数据清空完成")
+        logger.info("✓ Data clearing completed")
     
     async def import_standard_diseases(self, db):
-        """导入标准疾病库"""
-        logger.info("\n📚 步骤 2/6: 导入标准疾病库...")
+        """Import standard disease library"""
+        logger.info("\n📚 Step 2/6: Importing standard diseases...")
         
         if not self.standard_file.exists():
-            raise FileNotFoundError(f"标准疾病文件不存在: {self.standard_file}")
+            raise FileNotFoundError(f"Standard disease file not found: {self.standard_file}")
         
         df = pd.read_csv(self.standard_file).fillna('')
-        logger.info(f"  读取 {len(df)} 条标准疾病")
+        logger.info(f"  Read {len(df):,} standard diseases")
         
-        # 调整 category 列允许 NULL
+        # Allow NULL in category column
         await db.execute(text("""
             ALTER TABLE standard_diseases 
             ALTER COLUMN category DROP NOT NULL
@@ -189,19 +205,19 @@ class DatabaseRebuilder:
             inserted += 1
         
         await db.commit()
-        logger.info(f"✓ 导入 {inserted} 条标准疾病")
+        logger.info(f"✓ Imported {inserted:,} standard diseases")
     
     async def import_disease_mappings(self, db):
-        """导入疾病映射关系"""
-        logger.info("\n🗺️  步骤 3/6: 导入疾病映射...")
+        """Import disease mapping relationships"""
+        logger.info(f"\n🗺️  Step 3/6: Importing disease mappings ({self.country_code})...")
         
         if not self.mapping_file.exists():
-            raise FileNotFoundError(f"映射文件不存在: {self.mapping_file}")
+            raise FileNotFoundError(f"Mapping file not found: {self.mapping_file}")
         
         df = pd.read_csv(self.mapping_file).fillna('')
-        logger.info(f"  读取 {len(df)} 条映射关系")
+        logger.info(f"  Read {len(df):,} mapping entries")
         
-        # 调整 category 列允许 NULL
+        # Allow NULL in category column
         await db.execute(text("""
             ALTER TABLE disease_mappings 
             ALTER COLUMN category DROP NOT NULL
@@ -212,7 +228,7 @@ class DatabaseRebuilder:
             disease_id = row['disease_id']
             local_name = row['local_name']
             
-            # 主要名称
+            # Primary mapping
             await db.execute(text("""
                 INSERT INTO disease_mappings 
                 (disease_id, country_code, local_name, is_primary, is_alias, priority, 
@@ -234,7 +250,7 @@ class DatabaseRebuilder:
             })
             inserted += 1
             
-            # 别名
+            # Aliases
             if row.get('aliases'):
                 aliases = [a.strip() for a in str(row['aliases']).split(',') if a.strip()]
                 for alias in aliases:
@@ -258,13 +274,13 @@ class DatabaseRebuilder:
                     inserted += 1
         
         await db.commit()
-        logger.info(f"✓ 导入 {inserted} 条映射关系")
+        logger.info(f"✓ Imported {inserted:,} mapping relationships")
     
     async def sync_diseases_table(self, db):
-        """同步 diseases 表"""
-        logger.info("\n🔄 步骤 4/6: 同步 diseases 表...")
+        """Synchronize diseases table"""
+        logger.info("\n🔄 Step 4/6: Synchronizing diseases table...")
         
-        # 从 standard_diseases 导入到 diseases
+        # Import from standard_diseases to diseases
         result = await db.execute(text("""
             INSERT INTO diseases (name, name_en, category, icd_10, icd_11, description, 
                                 aliases, keywords, metadata, is_active, created_at, updated_at)
@@ -294,37 +310,37 @@ class DatabaseRebuilder:
         
         count = len(result.fetchall())
         await db.commit()
-        logger.info(f"✓ 同步 {count} 条疾病到 diseases 表")
+        logger.info(f"✓ Synced {count:,} diseases to diseases table")
     
     async def import_history_data(self, db):
-        """导入历史数据（包含完整字段：data_source, incidence_rate, metadata等）"""
-        logger.info("\n📊 步骤 5/6: 导入历史数据...")
+        """Import historical data with complete fields (data_source, incidence_rate, metadata, etc.)"""
+        logger.info("\n📊 Step 5/6: Importing historical data...")
         
         if not self.history_file.exists():
-            logger.warning(f"历史数据文件不存在: {self.history_file}")
+            logger.warning(f"Historical data file not found: {self.history_file}")
             return
         
-        # 读取历史数据
+        # Read historical data
         df = pd.read_csv(self.history_file)
-        logger.info(f"  读取 {len(df)} 条历史记录")
+        logger.info(f"  Read {len(df):,} historical records")
         
-        # 获取中国的 country_id
-        result = await db.execute(text("SELECT id FROM countries WHERE code = 'CN'"))
+        # Get country_id for the configured country
+        result = await db.execute(text(f"SELECT id FROM countries WHERE code = :code"), {"code": self.country_code})
         country_row = result.fetchone()
         if not country_row:
-            logger.error("未找到中国的 country_id")
+            logger.error(f"Country not found in database: {self.country_code}")
             return
         country_id = country_row[0]
         
-        # 构建映射字典（支持归一化匹配）
+        # Build mapping dictionary (with normalization for tolerance)
         result = await db.execute(text("""
             SELECT dm.local_name, d.id
             FROM disease_mappings dm
             JOIN diseases d ON dm.disease_id = d.name
-            WHERE dm.country_code = 'CN' AND dm.is_active = true
-        """))
+            WHERE dm.country_code = :code AND dm.is_active = true
+        """), {"code": self.country_code})
         
-        # 使用归一化键提高匹配容错性
+        # Use normalized keys for better matching tolerance
         def _norm(s):
             try:
                 return s.strip().lower()
@@ -339,20 +355,20 @@ class DatabaseRebuilder:
             if normalized:
                 mapping_dict[normalized] = db_id
         
-        logger.info(f"  加载 {len(mapping_dict)} 个疾病映射（归一化）")
+        logger.info(f"  Loaded {len(mapping_dict):,} disease mappings (normalized)")
         
-        # 确定列名
+        # Determine column names
         date_col = self._find_column(df, ['Date', 'date', 'time', 'Time', 'YearMonthDay'])
-        disease_cn_col = self._find_column(df, ['DiseasesCN', 'disease_cn', '疾病名称', '病名'])
+        disease_cn_col = self._find_column(df, ['DiseasesCN', 'disease_cn', 'DiseaseName', 'DiseaseCN'])
         disease_en_col = self._find_column(df, ['Diseases', 'disease_en', 'Disease'])
-        cases_col = self._find_column(df, ['Cases', 'cases', 'case', '发病数'])
-        deaths_col = self._find_column(df, ['Deaths', 'deaths', 'death', '死亡数'])
+        cases_col = self._find_column(df, ['Cases', 'cases', 'case', 'CaseCount'])
+        deaths_col = self._find_column(df, ['Deaths', 'deaths', 'death', 'DeathCount'])
         
         if not all([date_col, disease_cn_col, cases_col, deaths_col]):
-            logger.error("CSV 缺少必要列")
+            logger.error("CSV missing required columns")
             return
         
-        # 批量导入数据（包含完整字段）
+        # Batch import data with complete fields
         inserted = 0
         skipped = 0
         batch_size = 1000
@@ -360,7 +376,7 @@ class DatabaseRebuilder:
         
         for idx, row in df.iterrows():
             try:
-                # 提取基本字段
+                # Extract basic fields
                 disease_cn = str(row[disease_cn_col]) if pd.notna(row[disease_cn_col]) else None
                 if not disease_cn or disease_cn == 'nan':
                     skipped += 1
@@ -368,7 +384,7 @@ class DatabaseRebuilder:
                 
                 disease_en = str(row[disease_en_col]) if disease_en_col and pd.notna(row[disease_en_col]) else None
                 
-                # 查找映射（使用归一化）
+                # Find mapping (using normalization)
                 db_disease_id = None
                 if disease_en:
                     db_disease_id = mapping_dict.get(_norm(disease_en))
@@ -379,7 +395,7 @@ class DatabaseRebuilder:
                     skipped += 1
                     continue
                 
-                # 解析日期
+                # Parse date
                 date_str = str(row[date_col])
                 try:
                     if '/' in date_str:
@@ -390,11 +406,11 @@ class DatabaseRebuilder:
                     skipped += 1
                     continue
                 
-                # 提取数值
+                # Extract numeric values
                 cases = int(row[cases_col]) if pd.notna(row[cases_col]) and str(row[cases_col]) not in ['', '-10', 'nan'] else 0
                 deaths = int(row[deaths_col]) if pd.notna(row[deaths_col]) and str(row[deaths_col]) not in ['', '-10', 'nan'] else 0
                 
-                # 提取额外字段
+                # Extract additional fields
                 incidence = None
                 if 'Incidence' in df.columns and pd.notna(row['Incidence']):
                     val = float(row['Incidence'])
@@ -406,17 +422,17 @@ class DatabaseRebuilder:
                     mortality = val if val >= 0 else None
                 
                 region = None
-                if 'ProvinceCN' in df.columns and pd.notna(row['ProvinceCN']) and str(row['ProvinceCN']) != '全国':
+                if 'ProvinceCN' in df.columns and pd.notna(row['ProvinceCN']) and str(row['ProvinceCN']) not in ['China', 'National', 'Nationwide']:
                     region = str(row['ProvinceCN'])
-                elif 'Province' in df.columns and pd.notna(row['Province']) and str(row['Province']) != 'China':
+                elif 'Province' in df.columns and pd.notna(row['Province']) and str(row['Province']) not in ['China', 'National', 'Nationwide']:
                     region = str(row['Province'])
                 
-                # 真实的数据来源
+                # Real data source from CSV
                 data_source = 'Historical Data Import'
                 if 'Source' in df.columns and pd.notna(row['Source']):
                     data_source = str(row['Source'])
                 
-                # 构建 metadata
+                # Build metadata object
                 metadata_obj = {
                     'source_csv': self.history_file.name,
                     'row_index': int(idx)
@@ -444,32 +460,32 @@ class DatabaseRebuilder:
                     'metadata': json.dumps(metadata_obj)
                 })
                 
-                # 批量插入
+                # Batch insert
                 if len(batch_data) >= batch_size:
                     inserted += await self._batch_insert_enhanced(db, batch_data)
                     batch_data = []
                     
                     if inserted % 5000 == 0:
-                        logger.info(f"  已导入 {inserted} 条记录...")
+                        logger.info(f"  Imported {inserted:,} records...")
                         
             except Exception as e:
                 skipped += 1
                 continue
         
-        # 插入剩余数据
+        # Insert remaining data
         if batch_data:
             inserted += await self._batch_insert_enhanced(db, batch_data)
         
         await db.commit()
-        logger.info(f"✓ 导入 {inserted} 条历史记录 (跳过 {skipped} 条)")
+        logger.info(f"✓ Imported {inserted:,} historical records (skipped {skipped:,})")
     
     async def _batch_insert(self, db, batch_data):
-        """批量插入数据"""
+        """Batch insert data"""
         if not batch_data:
             return 0
         
         try:
-            # 使用 executemany 批量插入
+            # Use executemany for batch insert
             await db.execute(text("""
                 INSERT INTO disease_records 
                 (time, disease_id, country_id, cases, deaths, new_cases, new_deaths,
@@ -482,10 +498,10 @@ class DatabaseRebuilder:
             """), batch_data)
             return len(batch_data)
         except Exception as e:
-            logger.warning(f"批量插入失败，尝试单条插入: {str(e)[:200]}")
-            # 回滚当前事务
+            logger.warning(f"Batch insert failed, trying individual inserts: {str(e)[:200]}")
+            # Rollback current transaction
             await db.rollback()
-            # 回退到单条插入
+            # Fallback to single inserts
             success = 0
             for data in batch_data:
                 try:
@@ -505,12 +521,12 @@ class DatabaseRebuilder:
             return success
     
     async def _batch_insert_enhanced(self, db, batch_data):
-        """批量插入数据（包含完整字段）"""
+        """Batch insert data with complete fields"""
         if not batch_data:
             return 0
         
         try:
-            # 使用 executemany 批量插入（包含所有字段）
+            # Use executemany for batch insert with all fields
             await db.execute(text("""
                 INSERT INTO disease_records 
                 (time, disease_id, country_id, cases, deaths, 
@@ -532,10 +548,10 @@ class DatabaseRebuilder:
             """), batch_data)
             return len(batch_data)
         except Exception as e:
-            logger.warning(f"批量插入失败，尝试单条插入: {str(e)[:200]}")
-            # 回滚当前事务
+            logger.warning(f"Batch insert failed, trying individual inserts: {str(e)[:200]}")
+            # Rollback current transaction
             await db.rollback()
-            # 回退到单条插入
+            # Fallback to single inserts
             success = 0
             for data in batch_data:
                 try:
@@ -565,35 +581,35 @@ class DatabaseRebuilder:
             return success
     
     def _find_column(self, df, candidates):
-        """查找列名"""
+        """Find column name from candidates"""
         for col in candidates:
             if col in df.columns:
                 return col
         return None
     
     async def verify_results(self, db):
-        """验证导入结果"""
-        logger.info("\n✅ 步骤 6/6: 验证数据...")
+        """Verify import results"""
+        logger.info("\n✅ Step 6/6: Verifying data...")
         
-        # 标准疾病数
+        # Standard diseases count
         result = await db.execute(text("SELECT COUNT(*) FROM standard_diseases"))
         std_count = result.scalar()
-        logger.info(f"  • 标准疾病库: {std_count} 条")
+        logger.info(f"  • Standard Diseases: {std_count:,} records")
         
-        # 映射关系数
+        # Mapping relationships count
         result = await db.execute(text("""
             SELECT COUNT(*), COUNT(DISTINCT disease_id) 
-            FROM disease_mappings WHERE country_code = 'CN'
-        """))
+            FROM disease_mappings WHERE country_code = :code
+        """), {"code": self.country_code})
         map_total, map_diseases = result.fetchone()
-        logger.info(f"  • 疾病映射: {map_total} 条映射，覆盖 {map_diseases} 个疾病")
+        logger.info(f"  • Disease Mappings ({self.country_code}): {map_total:,} mappings covering {map_diseases:,} diseases")
         
-        # diseases 表
+        # Diseases table
         result = await db.execute(text("SELECT COUNT(*) FROM diseases"))
         diseases_count = result.scalar()
-        logger.info(f"  • Diseases 表: {diseases_count} 条")
+        logger.info(f"  • Diseases Table: {diseases_count:,} records")
         
-        # 历史记录
+        # Historical records
         result = await db.execute(text("""
             SELECT 
                 COUNT(*) as total,
@@ -603,53 +619,50 @@ class DatabaseRebuilder:
             FROM disease_records
         """))
         rec = result.fetchone()
-        logger.info(f"  • 历史记录: {rec[0]} 条")
-        logger.info(f"  • 覆盖疾病: {rec[1]} 个")
-        logger.info(f"  • 时间范围: {rec[2]} 至 {rec[3]}")
-        
-        # 痢疾数据验证
-        result = await db.execute(text("""
-            SELECT d.name, sd.standard_name_zh, COUNT(*) as cnt
-            FROM disease_records r
-            JOIN diseases d ON r.disease_id = d.id
-            LEFT JOIN standard_diseases sd ON d.name = sd.disease_id
-            WHERE d.name = 'D024'
-            GROUP BY d.name, sd.standard_name_zh
-        """))
-        dysentery = result.fetchone()
-        if dysentery:
-            logger.info(f"\n  🎯 痢疾数据: {dysentery[1]} ({dysentery[0]}) - {dysentery[2]} 条记录")
-
+        logger.info(f"  • Historical Records: {rec[0]:,} records")
+        logger.info(f"  • Disease Coverage: {rec[1]:,} diseases")
+        logger.info(f"  • Time Range: {rec[2]} to {rec[3]}")
 
 async def main():
-    # 解析命令行参数
+    # Parse command-line arguments
     parser = argparse.ArgumentParser(
-        description='完整重建数据库（清空现有数据并重新导入）',
+        description='Complete Database Rebuild (clear existing data and re-import)',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-示例：
-  # 交互式运行（会询问确认）
+Examples:
+  # Interactive mode (prompts for confirmation)
   python scripts/full_rebuild_database.py
   
-  # 自动确认（跳过询问）
+  # Auto-confirm (skip prompt)
   python scripts/full_rebuild_database.py --yes
   
-注意：此操作会清空所有疾病相关数据，请谨慎使用！
+  # Rebuild with US data
+  python scripts/full_rebuild_database.py --country us
+  
+  # Auto-confirm with Japan data
+  python scripts/full_rebuild_database.py --country jp --yes
+  
+Warning: This operation will delete all disease-related data. Use with caution!
         """
+    )
+    parser.add_argument(
+        '--country', '-c',
+        default='cn',
+        help='Country code for data import (cn, us, au, jp, etc.). Default: cn'
     )
     parser.add_argument(
         '--yes', '-y',
         action='store_true',
-        help='自动确认，跳过询问（用于自动化脚本）'
+        help='Auto-confirm, skip prompt (for automation scripts)'
     )
     
     args = parser.parse_args()
     
     try:
-        rebuilder = DatabaseRebuilder(auto_confirm=args.yes)
+        rebuilder = DatabaseRebuilder(country_code=args.country, auto_confirm=args.yes)
         await rebuilder.run()
     except Exception as e:
-        logger.error(f"❌ 重建失败: {e}", exc_info=True)
+        logger.error(f"❌ Rebuild failed: {e}", exc_info=True)
         sys.exit(1)
 
 
