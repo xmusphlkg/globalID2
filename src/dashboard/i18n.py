@@ -90,6 +90,12 @@ TRANSLATIONS = {
         "no_gaps_found": "✓ No gaps in time series",
         "data_sources": "Data Source Distribution",
         "source_distribution": "Source Distribution",
+        "raw_data_filter": "Data Filter Options",
+        "all_sources": "All Sources",
+        "source_filter": "Data Source",
+        "showing_records": "Showing",
+        "no_data_after_filter": "No data matches the selected filters",
+        "time_range_filter": "Time Range",
     },
     "zh": {
         "app_title": "GlobalID 数据库",
@@ -178,6 +184,12 @@ TRANSLATIONS = {
         "no_gaps_found": "✓ 时间序列连续无间断",
         "data_sources": "数据来源分布",
         "source_distribution": "来源分布",
+        "raw_data_filter": "数据筛选选项",
+        "all_sources": "所有来源",
+        "source_filter": "数据来源",
+        "showing_records": "显示记录",
+        "no_data_after_filter": "没有符合筛选条件的数据",
+        "time_range_filter": "时间范围",
     },
 }
 

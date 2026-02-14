@@ -24,7 +24,6 @@ class IntegrationTest:
     def __init__(self):
         """初始化测试"""
         self.config = get_config()
-        self.db = None
     
     async def setup(self):
         """设置测试环境"""
@@ -32,7 +31,6 @@ class IntegrationTest:
         
         # 初始化应用
         await init_app()
-        self.db = get_database()
         
         logger.info("Test environment ready")
     
@@ -46,8 +44,9 @@ class IntegrationTest:
             from sqlalchemy import text
             
             # 测试连接
-            result = await self.db.execute(text("SELECT 1"))
-            assert result.scalar() == 1
+            async with get_database() as db:
+                result = await db.execute(text("SELECT 1"))
+                assert result.scalar() == 1
             
             logger.info("✓ Database connection successful")
             return True
@@ -89,74 +88,74 @@ class IntegrationTest:
         
         try:
             # 创建测试数据
-            
-            # 1. 创建国家
-            from sqlalchemy import select
-            
-            country_query = select(Country).where(Country.code == "CN")
-            country_result = await self.db.execute(country_query)
-            country = country_result.scalar_one_or_none()
-            
-            if not country:
-                country = Country(
-                    code="CN",
-                    name="China",
-                    language="zh",
-                    timezone="Asia/Shanghai",
-                    data_source_url="http://weekly.chinacdc.cn",
+            async with get_database() as db:
+                # 1. 创建国家
+                from sqlalchemy import select
+                
+                country_query = select(Country).where(Country.code == "CN")
+                country_result = await db.execute(country_query)
+                country = country_result.scalar_one_or_none()
+                
+                if not country:
+                    country = Country(
+                        code="CN",
+                        name="China",
+                        language="zh",
+                        timezone="Asia/Shanghai",
+                        data_source_url="http://weekly.chinacdc.cn",
+                    )
+                    db.add(country)
+                    await db.commit()
+                    await db.refresh(country)
+                    logger.info("  Created country: China")
+                else:
+                    logger.info("  Country already exists: China")
+                
+                # 2. 创建疾病
+                disease_query = select(Disease).where(Disease.name == "COVID-19")
+                disease_result = await db.execute(disease_query)
+                disease = disease_result.scalar_one_or_none()
+                
+                if not disease:
+                    disease = Disease(
+                        name="COVID-19",
+                        category="respiratory",
+                        icd_10="U07.1",
+                        aliases={"zh": ["新冠肺炎", "新型冠状病毒肺炎"], "en": ["COVID-19", "Coronavirus Disease 2019"]},
+                        keywords={"zh": ["新冠", "疫情"], "en": ["covid", "pandemic"]},
+                    )
+                    db.add(disease)
+                    await db.commit()
+                    await db.refresh(disease)
+                    logger.info("  Created disease: COVID-19")
+                else:
+                    logger.info("  Disease already exists: COVID-19")
+                
+                # 3. 创建疾病记录
+                now = datetime.utcnow()
+                record = DiseaseRecord(
+                    time=now,
+                    disease_id=disease.id,
+                    country_id=country.id,
+                    cases=1000,
+                    deaths=10,
+                    recoveries=950,
+                    incidence_rate=0.5,
+                    mortality_rate=0.01,
+                    recovery_rate=95.0,
+                    confidence_score=0.95,
+                    data_quality="high",
                 )
-                self.db.add(country)
-                await self.db.commit()
-                await self.db.refresh(country)
-                logger.info("  Created country: China")
-            else:
-                logger.info("  Country already exists: China")
+                db.add(record)
+                await db.commit()
+                
+                logger.info("  Created disease record")
             
-            # 2. 创建疾病
-            disease_query = select(Disease).where(Disease.name == "COVID-19")
-            disease_result = await self.db.execute(disease_query)
-            disease = disease_result.scalar_one_or_none()
-            
-            if not disease:
-                disease = Disease(
-                    name="COVID-19",
-                    category="respiratory",
-                    icd_10_code="U07.1",
-                    aliases={"zh": ["新冠肺炎", "新型冠状病毒肺炎"], "en": ["COVID-19", "Coronavirus Disease 2019"]},
-                    keywords={"zh": ["新冠", "疫情"], "en": ["covid", "pandemic"]},
-                )
-                self.db.add(disease)
-                await self.db.commit()
-                await self.db.refresh(disease)
-                logger.info("  Created disease: COVID-19")
-            else:
-                logger.info("  Disease already exists: COVID-19")
-            
-            # 3. 创建疾病记录
-            now = datetime.utcnow()
-            record = DiseaseRecord(
-                time=now,
-                disease_id=disease.id,
-                country_id=country.id,
-                cases=1000,
-                deaths=10,
-                recoveries=950,
-                incidence_rate=0.5,
-                mortality_rate=0.01,
-                fatality_rate=1.0,
-                confidence_score=0.95,
-                data_quality="high",
-            )
-            self.db.add(record)
-            await self.db.commit()
-            
-            logger.info("  Created disease record")
             logger.info("✓ Domain models test passed")
             return True
         
         except Exception as e:
             logger.error(f"✗ Domain models test failed: {e}")
-            await self.db.rollback()
             return False
     
     async def test_ai_agents(self):
@@ -230,13 +229,14 @@ class IntegrationTest:
             from sqlalchemy import select
             from src.domain import Country, Disease
             
-            country_query = select(Country).where(Country.code == "CN")
-            country_result = await self.db.execute(country_query)
-            country = country_result.scalar_one()
-            
-            disease_query = select(Disease).where(Disease.name == "COVID-19")
-            disease_result = await self.db.execute(disease_query)
-            disease = disease_result.scalar_one()
+            async with get_database() as db:
+                country_query = select(Country).where(Country.code == "CN")
+                country_result = await db.execute(country_query)
+                country = country_result.scalar_one()
+                
+                disease_query = select(Disease).where(Disease.name == "COVID-19")
+                disease_result = await db.execute(disease_query)
+                disease = disease_result.scalar_one()
             
             # 生成测试报告
             logger.info("Generating test report...")
