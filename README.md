@@ -64,51 +64,77 @@ SMTP_PASSWORD=your_password
 
 ### 3. 初始化数据库
 
+有两种方式初始化数据库：
+
+#### 方式一：快速初始化（仅创建表结构）
+
 ```bash
 python main.py init-database
 ```
 
-### 4. 迁移疾病数据到数据库
+这会创建所有必要的表结构，并添加少量示例数据（中国配置和3个常见疾病）。
+
+#### 方式二：完整重建（推荐，包含历史数据）
 
 ```bash
-# 将CSV配置的疾病数据导入数据库
-python scripts/migrate_diseases_to_db.py
-
-# 验证迁移结果
-python main.py disease stats
+# 完整重建数据库（包括标准疾病库、映射关系和历史数据）
+python scripts/full_rebuild_database.py
 ```
 
-💡 **为什么要用数据库？**
-- 疾病种类会不断增加（新疾病、变种、本地名称）
-- 支持动态添加，无需修改代码和重启服务
-- 多实例部署共享数据
-- 自动学习未知疾病
-- 详见：[docs/DISEASE_MANAGEMENT_STRATEGY.md](docs/DISEASE_MANAGEMENT_STRATEGY.md)
+这会执行以下操作：
+- 清空现有疾病相关数据
+- 从 `configs/standard_diseases.csv` 导入标准疾病库
+- 从 `configs/cn/disease_mapping.csv` 导入疾病映射关系
+- 同步 diseases 表
+- 从 `data/processed/history_merged.csv` 导入历史数据（包含完整字段：data_source, incidence_rate, mortality_rate, region, 详细metadata等）
+- 验证数据完整性
 
-### 5. 迁移历史数据（可选）
+**注意**：历史数据导入包含以下完整信息：
+- 基础数据：病例数、死亡数
+- 数据来源：真实的 data_source（来自 CSV 的 Source 列）
+- 元数据：DOI、URL、source_file、adcode 等引用信息
+- 扩展字段：incidence_rate、mortality_rate、region（如有）
+
+#### 检查数据库是否正确初始化：
 
 ```bash
-# 从旧系统导入历史数据
-python main.py migrate-data --data-path /path/to/old/data
-
-# 或直接运行迁移脚本
-python scripts/migrate_data.py /path/to/old/data
+python scripts/data_quality_check_cn.py
 ```
 
-### 6. 运行测试
+### 4. 刷新疾病映射（可选）
+
+如果修改了 CSV 配置文件，可以单独刷新映射关系：
+
+```bash
+# 交互式刷新
+python scripts/refresh_disease_mappings.py
+
+# 自动确认所有操作
+python scripts/refresh_disease_mappings.py --yes
+```
+
+### 5. 启动数据质量仪表盘
+
+```bash
+streamlit run src/dashboard/app.py
+```
+
+访问 http://localhost:8501 查看数据质量仪表盘。
+
+### 7. 运行测试
 
 ```bash
 python main.py test
 ```
 
-### 7. 爬取数据
+### 8. 爬取数据
 
 ```bash
 # 爬取中国疾病数据
 python main.py crawl --country CN --max-results 100
 ```
 
-### 8. 生成报告
+### 9. 生成报告
 
 ```bash
 # 生成周报
@@ -118,13 +144,76 @@ python main.py generate-report --country CN --report-type weekly --days 7
 python main.py generate-report --country CN --report-type weekly --send-email
 ```
 
-### 7. 完整流程
+### 10. 完整流程
 
 ```bash
 # 运行完整的爬取+生成流程
 python main.py run --full
 ```
-## 📦 数据迁移
+
+## 📦 数据库管理
+
+### 完整重建数据库
+
+推荐使用一体化脚本完成所有数据库初始化和数据导入：
+
+```bash
+python scripts/full_rebuild_database.py
+```
+
+执行步骤：
+1. 清空现有数据（disease_records, diseases, disease_mappings, standard_diseases）
+2. 导入标准疾病库（从 `configs/standard_diseases.csv`）
+3. 导入疾病映射关系（从 `configs/cn/disease_mapping.csv`）
+4. 同步 diseases 表（根据标准疾病库创建 diseases 记录）
+5. 导入历史数据（从 `data/processed/history_merged.csv`，约 8,785 条记录）
+   - 包含完整字段：cases, deaths, data_source, incidence_rate, mortality_rate, region
+   - 包含详细metadata：DOI, URL, source_file, adcode 等
+   - 使用 ON CONFLICT 处理重复数据
+6. 验证数据完整性
+
+**特点**：
+- 一次运行，全部完成
+- 批量插入优化性能
+- 归一化匹配提高容错性
+- 详细日志和进度显示
+
+### 单独操作
+
+如果需要单独执行某些操作：
+
+```bash
+# 仅刷新疾病映射关系
+python scripts/refresh_disease_mappings.py --yes
+
+# 数据质量检查
+python scripts/data_quality_check_cn.py
+
+# 生成数据库 schema
+python scripts/generate_schema.py
+```
+
+**注意**：历史数据导入功能已整合到 `full_rebuild_database.py` 中，无需单独运行。
+
+### 查看数据统计
+
+```bash
+# 使用数据质量仪表盘
+streamlit run src/dashboard/app.py
+
+# 访问 http://localhost:8501
+# - 主页：数据概览和趋势分析
+# - 疾病对比：多疾病对比分析  
+# - 数据质量：数据完整性检查
+# - SQL 查询：自定义查询
+```
+
+## 📦 数据迁移（已废弃）
+
+**注意**：以下命令已不再可用，请使用上述"数据库管理"部分的新方法。
+
+<details>
+<summary>旧的迁移方法（仅供参考）</summary>
 
 从旧系统（ID_CN）迁移历史数据：
 
@@ -146,6 +235,9 @@ python scripts/migrate_data.py
 - ✅ 批量导入（1000条/批次）
 - ✅ 进度显示
 - ✅ 统计报告
+
+</details>
+
 ## 🔧 核心组件
 
 ### 1. Domain Models（领域模型）

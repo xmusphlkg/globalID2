@@ -13,6 +13,8 @@
 """
 import asyncio
 import sys
+import json
+import argparse
 from pathlib import Path
 from datetime import datetime
 import pandas as pd
@@ -29,19 +31,33 @@ logger = get_logger(__name__)
 
 
 class DatabaseRebuilder:
-    def __init__(self):
+    def __init__(self, auto_confirm=False):
         self.standard_file = ROOT / "configs/standard_diseases.csv"
         self.mapping_file = ROOT / "configs/cn/disease_mapping.csv"
         self.history_file = ROOT / "data/processed/history_merged.csv"
         self.country_code = "CN"
+        self.auto_confirm = auto_confirm
         
     async def run(self):
         """执行完整的数据库重建流程"""
         logger.info("=" * 80)
-        logger.info("🚀 开始完整数据库重建流程")
+        logger.info("🚀 完整数据库重建流程")
         logger.info("=" * 80)
         
+        # 显示警告和统计信息
         async with get_db() as db:
+            await self._show_warning_and_stats(db)
+            
+            # 询问确认
+            if not self.auto_confirm:
+                if not self._confirm_rebuild():
+                    logger.info("❌ 用户取消操作")
+                    return
+            
+            logger.info("\n" + "=" * 80)
+            logger.info("开始执行数据库重建...")
+            logger.info("=" * 80)
+            
             # 步骤 1: 清空数据
             await self.clear_data(db)
             
@@ -63,6 +79,46 @@ class DatabaseRebuilder:
         logger.info("\n" + "=" * 80)
         logger.info("✅ 数据库重建完成！")
         logger.info("=" * 80)
+    
+    async def _show_warning_and_stats(self, db):
+        """显示警告信息和当前数据统计"""
+        logger.warning("\n⚠️  警告：此操作将清空以下数据表：")
+        logger.warning("   • disease_records (疾病记录)")
+        logger.warning("   • diseases (疾病)")
+        logger.warning("   • disease_mappings (疾病映射)")
+        logger.warning("   • standard_diseases (标准疾病库)")
+        
+        logger.info("\n📊 当前数据统计：")
+        
+        tables = {
+            "disease_records": "疾病记录",
+            "diseases": "疾病",
+            "disease_mappings": "疾病映射",
+            "standard_diseases": "标准疾病"
+        }
+        
+        for table, name in tables.items():
+            try:
+                result = await db.execute(text(f"SELECT COUNT(*) FROM {table}"))
+                count = result.scalar()
+                logger.info(f"   • {name:12s}: {count:,} 条")
+            except Exception:
+                logger.info(f"   • {name:12s}: (表不存在)")
+        
+        logger.info("\n📥 将要导入：")
+        logger.info(f"   • 标准疾病库: {self.standard_file.name}")
+        logger.info(f"   • 疾病映射: {self.mapping_file.name}")
+        logger.info(f"   • 历史数据: {self.history_file.name}")
+        
+    def _confirm_rebuild(self):
+        """询问用户确认"""
+        logger.info("\n" + "=" * 80)
+        try:
+            response = input("🔔 确认要继续吗？所有现有数据将被删除！(yes/no): ")
+            return response.lower() in ('yes', 'y')
+        except (KeyboardInterrupt, EOFError):
+            print()  # 新行
+            return False
     
     async def clear_data(self, db):
         """清空所有疾病相关数据"""
@@ -241,7 +297,7 @@ class DatabaseRebuilder:
         logger.info(f"✓ 同步 {count} 条疾病到 diseases 表")
     
     async def import_history_data(self, db):
-        """导入历史数据"""
+        """导入历史数据（包含完整字段：data_source, incidence_rate, metadata等）"""
         logger.info("\n📊 步骤 5/6: 导入历史数据...")
         
         if not self.history_file.exists():
@@ -260,15 +316,30 @@ class DatabaseRebuilder:
             return
         country_id = country_row[0]
         
-        # 构建映射字典
+        # 构建映射字典（支持归一化匹配）
         result = await db.execute(text("""
             SELECT dm.local_name, d.id
             FROM disease_mappings dm
             JOIN diseases d ON dm.disease_id = d.name
             WHERE dm.country_code = 'CN' AND dm.is_active = true
         """))
-        mapping_dict = {row[0]: row[1] for row in result}
-        logger.info(f"  加载 {len(mapping_dict)} 个疾病映射")
+        
+        # 使用归一化键提高匹配容错性
+        def _norm(s):
+            try:
+                return s.strip().lower()
+            except Exception:
+                return None
+        
+        mapping_dict = {}
+        for row in result:
+            local_name = row[0]
+            db_id = row[1]
+            normalized = _norm(local_name)
+            if normalized:
+                mapping_dict[normalized] = db_id
+        
+        logger.info(f"  加载 {len(mapping_dict)} 个疾病映射（归一化）")
         
         # 确定列名
         date_col = self._find_column(df, ['Date', 'date', 'time', 'Time', 'YearMonthDay'])
@@ -281,7 +352,7 @@ class DatabaseRebuilder:
             logger.error("CSV 缺少必要列")
             return
         
-        # 批量导入数据
+        # 批量导入数据（包含完整字段）
         inserted = 0
         skipped = 0
         batch_size = 1000
@@ -289,17 +360,20 @@ class DatabaseRebuilder:
         
         for idx, row in df.iterrows():
             try:
+                # 提取基本字段
                 disease_cn = str(row[disease_cn_col]) if pd.notna(row[disease_cn_col]) else None
                 if not disease_cn or disease_cn == 'nan':
                     skipped += 1
                     continue
                 
-                # 查找映射
-                db_disease_id = mapping_dict.get(disease_cn)
-                if not db_disease_id and disease_en_col:
-                    disease_en = str(row[disease_en_col]) if pd.notna(row[disease_en_col]) else None
-                    if disease_en:
-                        db_disease_id = mapping_dict.get(disease_en)
+                disease_en = str(row[disease_en_col]) if disease_en_col and pd.notna(row[disease_en_col]) else None
+                
+                # 查找映射（使用归一化）
+                db_disease_id = None
+                if disease_en:
+                    db_disease_id = mapping_dict.get(_norm(disease_en))
+                if not db_disease_id:
+                    db_disease_id = mapping_dict.get(_norm(disease_cn))
                 
                 if not db_disease_id:
                     skipped += 1
@@ -320,18 +394,59 @@ class DatabaseRebuilder:
                 cases = int(row[cases_col]) if pd.notna(row[cases_col]) and str(row[cases_col]) not in ['', '-10', 'nan'] else 0
                 deaths = int(row[deaths_col]) if pd.notna(row[deaths_col]) and str(row[deaths_col]) not in ['', '-10', 'nan'] else 0
                 
+                # 提取额外字段
+                incidence = None
+                if 'Incidence' in df.columns and pd.notna(row['Incidence']):
+                    val = float(row['Incidence'])
+                    incidence = val if val >= 0 else None
+                
+                mortality = None
+                if 'Mortality' in df.columns and pd.notna(row['Mortality']):
+                    val = float(row['Mortality'])
+                    mortality = val if val >= 0 else None
+                
+                region = None
+                if 'ProvinceCN' in df.columns and pd.notna(row['ProvinceCN']) and str(row['ProvinceCN']) != '全国':
+                    region = str(row['ProvinceCN'])
+                elif 'Province' in df.columns and pd.notna(row['Province']) and str(row['Province']) != 'China':
+                    region = str(row['Province'])
+                
+                # 真实的数据来源
+                data_source = 'Historical Data Import'
+                if 'Source' in df.columns and pd.notna(row['Source']):
+                    data_source = str(row['Source'])
+                
+                # 构建 metadata
+                metadata_obj = {
+                    'source_csv': self.history_file.name,
+                    'row_index': int(idx)
+                }
+                
+                if '__source_file' in df.columns and pd.notna(row.get('__source_file')):
+                    metadata_obj['source_file'] = str(row['__source_file'])
+                if 'DOI' in df.columns and pd.notna(row['DOI']):
+                    metadata_obj['doi'] = str(row['DOI'])
+                if 'URL' in df.columns and pd.notna(row['URL']):
+                    metadata_obj['url'] = str(row['URL'])
+                if 'ADCode' in df.columns and pd.notna(row['ADCode']):
+                    metadata_obj['adcode'] = str(int(row['ADCode']))
+                
                 batch_data.append({
                     'time': date_obj,
                     'disease_id': db_disease_id,
                     'country_id': country_id,
                     'cases': max(0, cases),
                     'deaths': max(0, deaths),
-                    'metadata': '{}'
+                    'incidence_rate': incidence,
+                    'mortality_rate': mortality,
+                    'region': region,
+                    'data_source': data_source,
+                    'metadata': json.dumps(metadata_obj)
                 })
                 
                 # 批量插入
                 if len(batch_data) >= batch_size:
-                    inserted += await self._batch_insert(db, batch_data)
+                    inserted += await self._batch_insert_enhanced(db, batch_data)
                     batch_data = []
                     
                     if inserted % 5000 == 0:
@@ -343,7 +458,7 @@ class DatabaseRebuilder:
         
         # 插入剩余数据
         if batch_data:
-            inserted += await self._batch_insert(db, batch_data)
+            inserted += await self._batch_insert_enhanced(db, batch_data)
         
         await db.commit()
         logger.info(f"✓ 导入 {inserted} 条历史记录 (跳过 {skipped} 条)")
@@ -382,6 +497,66 @@ class DatabaseRebuilder:
                         (:time, :disease_id, :country_id, :cases, :deaths, 0, 0, 0, 0, 0, :metadata)
                         ON CONFLICT (time, disease_id, country_id) DO UPDATE SET
                             cases = EXCLUDED.cases, deaths = EXCLUDED.deaths
+                    """), data)
+                    success += 1
+                except Exception as inner_e:
+                    await db.rollback()
+                    continue
+            return success
+    
+    async def _batch_insert_enhanced(self, db, batch_data):
+        """批量插入数据（包含完整字段）"""
+        if not batch_data:
+            return 0
+        
+        try:
+            # 使用 executemany 批量插入（包含所有字段）
+            await db.execute(text("""
+                INSERT INTO disease_records 
+                (time, disease_id, country_id, cases, deaths, 
+                 incidence_rate, mortality_rate, region, data_source,
+                 new_cases, new_deaths, recoveries, active_cases, new_recoveries, 
+                 metadata)
+                VALUES 
+                (:time, :disease_id, :country_id, :cases, :deaths, 
+                 :incidence_rate, :mortality_rate, :region, :data_source,
+                 0, 0, 0, 0, 0, :metadata)
+                ON CONFLICT (time, disease_id, country_id) DO UPDATE SET
+                    cases = EXCLUDED.cases, 
+                    deaths = EXCLUDED.deaths,
+                    incidence_rate = EXCLUDED.incidence_rate,
+                    mortality_rate = EXCLUDED.mortality_rate,
+                    region = EXCLUDED.region,
+                    data_source = EXCLUDED.data_source,
+                    metadata = EXCLUDED.metadata
+            """), batch_data)
+            return len(batch_data)
+        except Exception as e:
+            logger.warning(f"批量插入失败，尝试单条插入: {str(e)[:200]}")
+            # 回滚当前事务
+            await db.rollback()
+            # 回退到单条插入
+            success = 0
+            for data in batch_data:
+                try:
+                    await db.execute(text("""
+                        INSERT INTO disease_records 
+                        (time, disease_id, country_id, cases, deaths, 
+                         incidence_rate, mortality_rate, region, data_source,
+                         new_cases, new_deaths, recoveries, active_cases, new_recoveries, 
+                         metadata)
+                        VALUES 
+                        (:time, :disease_id, :country_id, :cases, :deaths, 
+                         :incidence_rate, :mortality_rate, :region, :data_source,
+                         0, 0, 0, 0, 0, :metadata)
+                        ON CONFLICT (time, disease_id, country_id) DO UPDATE SET
+                            cases = EXCLUDED.cases, 
+                            deaths = EXCLUDED.deaths,
+                            incidence_rate = EXCLUDED.incidence_rate,
+                            mortality_rate = EXCLUDED.mortality_rate,
+                            region = EXCLUDED.region,
+                            data_source = EXCLUDED.data_source,
+                            metadata = EXCLUDED.metadata
                     """), data)
                     success += 1
                 except Exception as inner_e:
@@ -447,8 +622,31 @@ class DatabaseRebuilder:
 
 
 async def main():
+    # 解析命令行参数
+    parser = argparse.ArgumentParser(
+        description='完整重建数据库（清空现有数据并重新导入）',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+示例：
+  # 交互式运行（会询问确认）
+  python scripts/full_rebuild_database.py
+  
+  # 自动确认（跳过询问）
+  python scripts/full_rebuild_database.py --yes
+  
+注意：此操作会清空所有疾病相关数据，请谨慎使用！
+        """
+    )
+    parser.add_argument(
+        '--yes', '-y',
+        action='store_true',
+        help='自动确认，跳过询问（用于自动化脚本）'
+    )
+    
+    args = parser.parse_args()
+    
     try:
-        rebuilder = DatabaseRebuilder()
+        rebuilder = DatabaseRebuilder(auto_confirm=args.yes)
         await rebuilder.run()
     except Exception as e:
         logger.error(f"❌ 重建失败: {e}", exc_info=True)

@@ -1,39 +1,95 @@
 # 快速开始指南
 
-## 当前进度
+## 系统要求
 
-✅ 所有功能代码已完成
-🔄 正在安装依赖...
-⏳ 待运行：数据迁移
+- Python 3.11+
+- PostgreSQL 14+
+- Redis (可选，用于缓存)
 
-## 手动运行步骤
+## 快速部署（5分钟）
 
-如果自动安装较慢，可以手动执行：
+### 1. 克隆并安装依赖
 
 ```bash
 cd /home/likangguo/globalID/globalID2
+source venv/bin/activate  # 如果已有虚拟环境
 
-# 1. 激活虚拟环境
+# 或创建新的虚拟环境
+python -m venv venv
 source venv/bin/activate
 
-# 2. 安装依赖
-pip install pgvector sqlalchemy asyncpg pandas typer rich python-dotenv pyyaml openpyxl
-
-# 3. 初始化数据库
-python main.py init-database
-
-# 4. 迁移历史数据（约2-5分钟）
-python main.py migrate-data
-
-# 5. 验证数据
-python -c "from src.core import *; from src.domain import *; import asyncio; async def c(): await init_app(); db=get_database(); from sqlalchemy import select, func; cnt=await db.scalar(select(func.count(DiseaseRecord.id))); print(f'Total records: {cnt}'); asyncio.run(c())"
+# 安装依赖
+pip install -r requirements.txt
 ```
 
-## 新增功能：数据文件导出
+### 2. 配置数据库
 
-每次更新时，除了生成报告，还可以导出清洗整理好的数据文件。
+确保 `.env` 文件包含正确的数据库连接：
 
-### 导出命令
+```env
+DATABASE_URL=postgresql+asyncpg://globalid:globalid_dev_password@localhost:5432/globalid
+```
+
+### 3. 初始化数据库（二选一）
+
+#### 方式 A：完整重建（推荐）
+
+一次性完成所有初始化和数据导入（包含 8,785 条历史记录）：
+
+```bash
+python scripts/full_rebuild_database.py
+```
+
+预计耗时：1-2 分钟
+
+#### 方式 B：快速初始化
+
+仅创建表结构和基础配置：
+
+```bash
+python main.py init-database
+```
+
+### 4. 启动数据质量仪表盘
+
+```bash
+streamlit run src/dashboard/app.py
+```
+
+访问：http://localhost:8501
+
+## 常用操作
+
+### 数据管理
+
+```bash
+# 完整重建数据库（推荐，包含所有步骤）
+python scripts/full_rebuild_database.py
+
+# 刷新疾病映射（修改 CSV 配置后）
+python scripts/refresh_disease_mappings.py --yes
+
+# 数据质量检查
+python scripts/data_quality_check_cn.py
+```
+
+**注意**：`full_rebuild_database.py` 已整合历史数据导入功能，包含完整字段和详细metadata。
+
+### 数据查看
+
+```bash
+# 启动仪表盘
+streamlit run src/dashboard/app.py
+
+# 功能：
+# - 数据概览和 KPI 指标
+# - 疾病趋势分析
+# - 疾病对比
+# - 数据质量检查
+# - 自定义 SQL 查询
+```
+
+### 数据导出
 
 ```bash
 # 导出最新数据（CSV + Excel）
@@ -48,6 +104,23 @@ python main.py export-data --country CN --period 2025-06
 # 创建数据包（ZIP）
 python main.py export-data --country CN --package
 ```
+
+## 当前数据统计
+
+完成完整重建后，系统包含：
+
+- **总记录数**：8,785 条疾病记录
+- **时间范围**：2010-01-01 至 2025-12-01
+- **疾病数量**：49 种（排除汇总项）
+- **数据来源**：
+  - China CDC: Notifiable Infectious Diseases Reports (5,408 条)
+  - China CDC Weekly: Notifiable Infectious Diseases Reports (2,059 条)
+  - GOV Data (1,318 条)
+
+## 故障排除
+  - GOV Data (1,318 条)
+
+## 故障排除
 
 ### 支持的格式
 
