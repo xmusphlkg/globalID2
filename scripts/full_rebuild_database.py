@@ -250,9 +250,17 @@ class DatabaseRebuilder:
             })
             inserted += 1
             
-            # Aliases
+            # Aliases (split by | or ,)
             if row.get('aliases'):
-                aliases = [a.strip() for a in str(row['aliases']).split(',') if a.strip()]
+                # Support both | and , as separators  
+                alias_str = str(row['aliases'])
+                # First try pipe separator (primary format in CSV)
+                if '|' in alias_str:
+                    aliases = [a.strip() for a in alias_str.split('|') if a.strip()]
+                else:
+                    # Fallback to comma separator
+                    aliases = [a.strip() for a in alias_str.split(',') if a.strip()]
+                
                 for alias in aliases:
                     await db.execute(text("""
                         INSERT INTO disease_mappings 
@@ -373,6 +381,7 @@ class DatabaseRebuilder:
         skipped = 0
         batch_size = 1000
         batch_data = []
+        error_diseases = set()  # Track diseases without mapping
         
         for idx, row in df.iterrows():
             try:
@@ -392,6 +401,9 @@ class DatabaseRebuilder:
                     db_disease_id = mapping_dict.get(_norm(disease_cn))
                 
                 if not db_disease_id:
+                    # Track unmapped diseases for reporting
+                    if disease_cn not in error_diseases:
+                        error_diseases.add(disease_cn)
                     skipped += 1
                     continue
                 
@@ -447,6 +459,13 @@ class DatabaseRebuilder:
                 if 'ADCode' in df.columns and pd.notna(row['ADCode']):
                     metadata_obj['adcode'] = str(int(row['ADCode']))
                 
+                # Prepare raw data for traceability
+                raw_obj = None
+                try:
+                    raw_obj = {k: (None if pd.isna(v) else v) for k, v in row.items()}
+                except Exception:
+                    pass
+                
                 batch_data.append({
                     'time': date_obj,
                     'disease_id': db_disease_id,
@@ -457,7 +476,8 @@ class DatabaseRebuilder:
                     'mortality_rate': mortality,
                     'region': region,
                     'data_source': data_source,
-                    'metadata': json.dumps(metadata_obj)
+                    'metadata': json.dumps(metadata_obj),
+                    'raw_data': json.dumps(raw_obj) if raw_obj else None
                 })
                 
                 # Batch insert
@@ -465,7 +485,10 @@ class DatabaseRebuilder:
                     inserted += await self._batch_insert_enhanced(db, batch_data)
                     batch_data = []
                     
-                    if inserted % 5000 == 0:
+                    # Progress update every 1000 records
+                    if inserted % 1000 == 0:
+                        await db.commit()
+                        logger.info(f"  Progress: {idx + 1:,}/{len(df):,} rows processed, {inserted:,} records imported, {skipped:,} skipped")
                         logger.info(f"  Imported {inserted:,} records...")
                         
             except Exception as e:
@@ -475,6 +498,14 @@ class DatabaseRebuilder:
         # Insert remaining data
         if batch_data:
             inserted += await self._batch_insert_enhanced(db, batch_data)
+        
+        # Report unmapped diseases
+        if error_diseases:
+            logger.warning(f"\n⚠️  {len(error_diseases)} diseases without mapping:")
+            for disease in sorted(error_diseases)[:20]:
+                logger.warning(f"    - {disease}")
+            if len(error_diseases) > 20:
+                logger.warning(f"    ... and {len(error_diseases) - 20} more")
         
         await db.commit()
         logger.info(f"✓ Imported {inserted:,} historical records (skipped {skipped:,})")
@@ -532,11 +563,11 @@ class DatabaseRebuilder:
                 (time, disease_id, country_id, cases, deaths, 
                  incidence_rate, mortality_rate, region, data_source,
                  new_cases, new_deaths, recoveries, active_cases, new_recoveries, 
-                 metadata)
+                 metadata, raw_data)
                 VALUES 
                 (:time, :disease_id, :country_id, :cases, :deaths, 
                  :incidence_rate, :mortality_rate, :region, :data_source,
-                 0, 0, 0, 0, 0, :metadata)
+                 0, 0, 0, 0, 0, :metadata, :raw_data)
                 ON CONFLICT (time, disease_id, country_id) DO UPDATE SET
                     cases = EXCLUDED.cases, 
                     deaths = EXCLUDED.deaths,
@@ -544,7 +575,8 @@ class DatabaseRebuilder:
                     mortality_rate = EXCLUDED.mortality_rate,
                     region = EXCLUDED.region,
                     data_source = EXCLUDED.data_source,
-                    metadata = EXCLUDED.metadata
+                    metadata = EXCLUDED.metadata,
+                    raw_data = EXCLUDED.raw_data
             """), batch_data)
             return len(batch_data)
         except Exception as e:
@@ -560,11 +592,11 @@ class DatabaseRebuilder:
                         (time, disease_id, country_id, cases, deaths, 
                          incidence_rate, mortality_rate, region, data_source,
                          new_cases, new_deaths, recoveries, active_cases, new_recoveries, 
-                         metadata)
+                         metadata, raw_data)
                         VALUES 
                         (:time, :disease_id, :country_id, :cases, :deaths, 
                          :incidence_rate, :mortality_rate, :region, :data_source,
-                         0, 0, 0, 0, 0, :metadata)
+                         0, 0, 0, 0, 0, :metadata, :raw_data)
                         ON CONFLICT (time, disease_id, country_id) DO UPDATE SET
                             cases = EXCLUDED.cases, 
                             deaths = EXCLUDED.deaths,
@@ -572,7 +604,8 @@ class DatabaseRebuilder:
                             mortality_rate = EXCLUDED.mortality_rate,
                             region = EXCLUDED.region,
                             data_source = EXCLUDED.data_source,
-                            metadata = EXCLUDED.metadata
+                            metadata = EXCLUDED.metadata,
+                            raw_data = EXCLUDED.raw_data
                     """), data)
                     success += 1
                 except Exception as inner_e:
