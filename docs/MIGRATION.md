@@ -1,224 +1,144 @@
-# 数据迁移指南
+# Migration Guide (Updated)
 
-## 概述
+## Overview
 
-历史数据还在旧系统 `ID_CN` 中，需要迁移到新的 GlobalID V2 系统。
+This document describes how to migrate historical data from the legacy ID_CN dataset into GlobalID V2. The recommended migration tool is `full_migration_v2.py` (an async script) which replaces older, deprecated scripts.
 
-## 数据源
+---
 
-旧系统数据位置：
-```
+## Data source
+
+Default data location (legacy system):
+
 /home/likangguo/globalID/ID_CN/Data/AllData/CN/
-├── 2024 May.csv
-├── 2024 June.csv
-├── 2024 July.csv
-├── ...
-├── 2025 June.csv
-└── latest.csv
-```
 
-数据格式示例：
-```csv
-Date,YearMonthDay,YearMonth,Diseases,DiseasesCN,Cases,Deaths,Incidence,Mortality,Province,Source
-2025-06-01,2025/06/01,2025 June,Hepatitis B,乙型肝炎,105033,38,-10,-10,China,GOV Data
-```
+Example CSV columns (ID_CN format):
 
-## 快速开始
+Date,YearMonthDay,YearMonth,Diseases,DiseasesCN,Cases,Deaths,Incidence,Mortality,Province,Source,URL
 
-### 方法 1：使用 CLI 命令（推荐）
+Sample row:
+
+2025-06-01,2025/06/01,2025 June,Hepatitis B,乙型肝炎,105033,38,-10,-10,China,GOV Data,http://example.com/record
+
+Notes:
+- The migration scripts expect ID_CN-style CSVs. Extra columns are allowed, but some older column names (e.g. `fatality_rate`) are no longer recognized by the current model.
+
+---
+
+## Quick start ✅
+
+1. Initialize the database schema and baseline data:
 
 ```bash
 cd /home/likangguo/globalID/globalID2
-
-# 1. 初始化数据库（如果还没有）
 python main.py init-database
-
-# 2. 迁移数据
-python main.py migrate-data
 ```
 
-### 方法 2：指定自定义路径
+2. Run the preferred migration script:
 
 ```bash
-python main.py migrate-data --data-path /path/to/your/data
+python full_migration_v2.py
 ```
 
-### 方法 3：直接运行脚本
+Notes:
+- `full_migration_v2.py` hard-codes the `data_dir` variable at the top; edit that path if your CSVs live elsewhere.
+- Alternatively, you can run `python auto_run.py` to execute a full automated setup (init -> migrate -> export). `auto_run.py` currently calls `scripts.migrate_data.DataMigration` — if that module is absent, prefer invoking `full_migration_v2.py` directly or update `auto_run.py` to call the new script.
+
+---
+
+## What the migration does (details)
+
+- Reads and concatenates all CSVs found in `data_dir`.
+- Performs deduplication (drop duplicates on `Date`, `Diseases`, `Province`).
+- **By default the script imports *national* rows only** — rows with `Province` values of `China`, `National`, or `全国`. This is intentional because the current `DiseaseRecord` primary key is (time, disease_id, country_id) and does not support storing multiple province-level records for the same disease/time.
+- Creates missing `Disease` entries and sets:
+  - `name` and `name_en` to the CSV disease name
+  - `category` to `Uncategorized` (default)
+  - `aliases` contains `DiseasesCN` when available
+  - `metadata_` includes `name_cn` if present
+- Creates or upserts `DiseaseRecord` entries with fields mapped as:
+  - `cases`, `deaths` (treat `-10` as missing / 0 where appropriate)
+  - `incidence_rate`, `mortality_rate` mapped from CSV columns (or None)
+  - `data_source` and `metadata_['url']` preserved when present
+  - `region` set to `None` for national records
+- Uses batching for performance (default `batch_size = 1000` in `full_migration_v2.py`).
+
+---
+
+## Breaking changes & common errors ⚠️
+
+1. Country `name_en` NOT NULL constraint
+   - The schema enforces `Country.name_en` as NOT NULL. Run `python main.py init-database` before migrating so the bootstrap step creates the `China` country with `name_en='China'`.
+   - If you see an IntegrityError mentioning `name_en`, initialize the DB or patch the country row to include `name_en`.
+
+2. `fatality_rate` / old column names
+   - Older CSVs or older scripts may reference `fatality_rate`. The current model expects `mortality_rate` (or computes mortality from deaths/cases). If migration fails with: `"'fatality_rate' is an invalid keyword argument for DiseaseRecord"`, either:
+     - remove/rename that column in the CSV, or
+     - update `full_migration_v2.py` to map `fatality_rate` → `mortality_rate` before creating `DiseaseRecord` objects.
+
+3. Provincial data not imported
+   - Current `full_migration_v2.py` filters to national rows. To import province-level data you must:
+     - decide whether `DiseaseRecord` should include `region` in its primary key, or
+     - store provincial rows as separate records under a different table/strategy. This requires schema changes.
+
+4. Memory / batch tuning
+   - If memory usage is high, reduce `batch_size` in `full_migration_v2.py` (e.g. 500).
+
+5. Logs
+   - Migration errors and warnings are logged to `logs/` (e.g., `logs/error_YYYY-MM-DD.log`). Check that file for row-level errors during debugging.
+
+---
+
+## Verifying results ✅
+
+Quick checks after migration:
+
+- Use the Python snippet to count DiseaseRecord entries:
 
 ```bash
-python scripts/migrate_data.py /home/likangguo/globalID/ID_CN/Data/AllData/CN
-```
-
-## 迁移过程
-
-1. **读取 CSV 文件**: 自动扫描目录中的所有 CSV 文件
-2. **解析数据**: 
-   - 日期格式转换
-   - 疾病名称标准化
-   - 数值清洗（处理 -10 缺失值）
-3. **创建疾病记录**: 
-   - 自动创建缺失的疾病
-   - 分类疾病（respiratory, hepatitis, etc.）
-4. **导入数据库**:
-   - 批量插入（1000条/批次）
-   - 跳过重复记录
-5. **显示统计**: 总记录数、疾病数、时间范围
-
-## 特性
-
-### ✅ 智能映射
-
-疾病名称自动映射到标准名称：
-- `Acquired immune deficiency syndrome` → `HIV/AIDS`
-- `Human infection with H5N1 virus` → `Avian Influenza H5N1`
-- `Epidemic hemorrhagic fever` → `Hemorrhagic Fever`
-
-### ✅ 数据清洗
-
-- 处理缺失值（-10 → NULL）
-- 计算病死率：`死亡数 / 病例数 * 100`
-- 标记数据质量：`high`（官方数据）
-- 设置可信度：`0.9`（政府数据源）
-
-### ✅ 去重处理
-
-基于以下组合检查重复：
-- 时间（Date）
-- 疾病（Disease）
-- 国家（Country）
-
-### ✅ 自动分类
-
-根据疾病名称自动分类：
-- `hepatitis`: 肝炎相关
-- `respiratory`: 呼吸道疾病
-- `immunodeficiency`: 免疫缺陷
-- `bacterial`: 细菌性疾病
-- `viral_exanthematous`: 病毒性出疹性疾病
-- `hemorrhagic`: 出血热
-- `neurological`: 神经系统疾病
-- `gastrointestinal`: 消化道疾病
-
-## 预期结果
-
-完成迁移后，您将看到：
-
-```
-Migration completed!
-  Imported: 85,432
-  Skipped: 1,234
-  Errors: 0
-
-Migration Statistics:
-  Total records: 85,432
-  Total diseases: 45
-  Date range: 2024-05-01 to 2025-06-01
-
-Top 10 diseases by records:
-  1. Hepatitis B: 12,345 records
-  2. HIV/AIDS: 8,765 records
-  3. Tuberculosis: 7,654 records
-  ...
-```
-
-## 验证迁移
-
-迁移完成后，验证数据：
-
-```bash
-# 运行测试
-python main.py test
-
-# 或查询数据库
-python -c "
+python - <<'PY'
+import asyncio
 from src.core import init_app, get_database
 from src.domain import DiseaseRecord
 from sqlalchemy import select, func
-import asyncio
 
 async def check():
     await init_app()
     db = get_database()
-    count = await db.scalar(select(func.count(DiseaseRecord.id)))
-    print(f'Total records: {count}')
+    total = await db.scalar(select(func.count(DiseaseRecord.id)))
+    print('Total DiseaseRecord rows:', total)
 
 asyncio.run(check())
-"
+PY
 ```
 
-## 常见问题
-
-### Q: 迁移需要多长时间？
-A: 约 2-5 分钟，取决于数据量（~85,000 条记录）
-
-### Q: 可以多次运行吗？
-A: 可以！默认跳过已存在的记录（`--skip-existing=True`）
-
-### Q: 如何重新导入？
-A: 1. 清空数据库表，或 2. 使用 `--skip-existing=False`（会报错重复）
-
-### Q: 数据源文件会被修改吗？
-A: 不会！脚本只读取 CSV 文件，不会修改源文件
-
-### Q: 支持哪些数据格式？
-A: 目前支持 ID_CN 的 CSV 格式。如需其他格式，请修改 `scripts/migrate_data.py`
-
-## 排错
-
-### 问题 1: 数据库连接失败
+- Run integration tests:
 
 ```bash
-# 检查数据库是否运行
-sudo systemctl status postgresql
-
-# 检查 .env 配置
-cat .env | grep DATABASE_URL
+python main.py test
 ```
 
-### 问题 2: 找不到 CSV 文件
+- Inspect top diseases via a SQL query or use the `DataExporter` to produce CSV/JSON for spot checks.
 
-```bash
-# 检查路径
-ls /home/likangguo/globalID/ID_CN/Data/AllData/CN/
+---
 
-# 使用绝对路径
-python main.py migrate-data --data-path /absolute/path/to/data
-```
+## How to adapt the script (tips) 💡
 
-### 问题 3: 内存不足
+- To point `full_migration_v2.py` at a different dataset, edit the `data_dir` variable near the top of the file.
+- To change deduplication or filtering behavior, modify the DataFrame preprocessing steps — e.g., remove the `national_df` filter to include provinces (but update schema or aggregation logic accordingly).
+- To map extra CSV columns into `metadata_`, add mapping logic when building `DiseaseRecord` objects.
 
-```bash
-# 编辑脚本，减小批量大小
-# 将 1000 改为 500
-vim scripts/migrate_data.py
-# 找到: if imported % 1000 == 0:
-# 改为: if imported % 500 == 0:
-```
+---
 
-## 下一步
+## Expected CLI output (example)
 
-迁移完成后：
+Migration will end with a summary similar to:
 
-1. ✅ 生成第一份报告
-   ```bash
-   python main.py generate-report --country CN --report-type monthly
-   ```
+Migration completed!
+  Processed: 84,523 records
+  New diseases added: 6
+  Failed rows: 0 (see logs/ for details)
 
-2. ✅ 运行完整测试
-   ```bash
-   python main.py test
-   ```
+---
 
-3. ✅ 设置定时任务
-   ```bash
-   # 每周自动生成报告
-   crontab -e
-   # 添加: 0 9 * * 1 cd /path/to/globalID2 && python main.py run --full
-   ```
-
-## 联系支持
-
-遇到问题？查看日志：
-```bash
-tail -f logs/globalid.log
-```
+last updated: February 11, 2026

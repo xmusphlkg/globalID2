@@ -1,0 +1,60 @@
+disease_id,local_name,local_code,category,aliases,notes,data_source
+D001,鼠疫,Plague,甲类,,,China CDC
+D002,霍乱,Cholera,甲类,,,China CDC
+D003,传染性非典型肺炎,SARS-CoV,乙类,非典|SARS,,China CDC
+D004,新型冠状病毒感染,COVID-19,乙类,新冠|新型冠状病毒肺炎|新冠肺炎|新型冠状病毒,,China CDC
+D005,艾滋病,AIDS,乙类,HIV|获得性免疫缺陷综合征,,China CDC
+D006,病毒性肝炎,Hepatitis,乙类,病毒性肝炎*|病毒性肝炎|肝炎,Viral Hepatitis,
+D007,甲型肝炎,Hepatitis A,乙类,甲肝,,China CDC
+D008,乙型肝炎,Hepatitis B,乙类,乙肝,,China CDC
+D009,丙型肝炎,Hepatitis C,乙类,丙肝|丙型肝炎,,China CDC
+D010,丁型肝炎,Hepatitis D,乙类,丁肝,,China CDC
+D011,戊型肝炎,Hepatitis E,乙类,戊肝,,China CDC
+D012,未分型肝炎,Other Hepatitis,乙类,肝炎未分型|肝炎（未分型）|成型肝炎,Unspecified Hepatitis,
+D013,脊髓灰质炎,Poliomyelitis,乙类,小儿麻痹症|灰质炎,,China CDC
+D014,人感染高致病性禽流感,H5N1,乙类,禽流感H5N1|人感染H5N1病毒,,China CDC
+D015,人感染H7N9禽流感,H7N9,乙类,禽流感H7N9|人感染H7N9病毒,,China CDC
+D016,人感染新亚型流感,Novel Influenza,乙类,,,China CDC
+D017,麻疹,Measles,乙类,,,China CDC
+D018,流行性出血热,Hemorrhagic Fever,乙类,肾综合征出血热|出血热,,China CDC
+D019,狂犬病,Rabies,乙类,疯狗病,,China CDC
+D020,流行性乙型脑炎,Japanese Encephalitis,乙类,乙脑,,China CDC
+D021,登革热,Dengue,乙类,,,China CDC
+D065,猴痘,Mpox,乙类,猴天花|Monkeypox,,China CDC
+D023,炭疽,Anthrax,乙类,,,China CDC
+D024,细菌性和阿米巴性痢疾,Dysentery,乙类,痢疾,,China CDC
+D025,肺结核,Tuberculosis,乙类,结核病|TB,,China CDC
+D026,伤寒和副伤寒,Typhoid,乙类,伤寒和副伤寒,,China CDC
+D027,流行性脑脊髓膜炎,Meningococcal Meningitis,乙类,流脑,,China CDC
+D028,百日咳,Pertussis,乙类,,,China CDC
+D029,白喉,Diphtheria,乙类,,,China CDC
+D030,新生儿破伤风,Neonatal Tetanus,乙类,,,China CDC
+D031,猩红热,Scarlet Fever,乙类,,,China CDC
+D032,布鲁氏菌病,Brucellosis,乙类,布病,,China CDC
+D033,淋病,Gonorrhea,乙类,淋球菌病|淋病,Gonorrhea,
+D034,梅毒,Syphilis,乙类,梅毒毒|梅毒,Syphilis,
+D035,钩端螺旋体病,Leptospirosis,乙类,钩体病,,China CDC
+D036,血吸虫病,Schistosomiasis,乙类,,,China CDC
+D037,疟疾,Malaria,乙类,,,China CDC
+D038,流行性感冒,Influenza,丙类,流感|感冒|甲型H1N1流感,,China CDC
+D039,流行性腮腺炎,Mumps,丙类,其它感染性腮腺炎|流行性腮腺炎,Mumps,
+D040,风疹,Rubella,丙类,德国麻疹,,China CDC
+D041,急性出血性结膜炎,Acute Hemorrhagic Conjunctivitis,丙类,红眼病,,China CDC
+D042,麻风病,Leprosy,丙类,,,China CDC
+D043,流行性和地方性斑疹伤寒,Typhus,丙类,斑疹伤寒,Typhus,
+D044,黑热病,Kala-azar,丙类,内脏利什曼病,,China CDC
+D045,包虫病,Echinococcosis,丙类,棘球蚴病,,China CDC
+D046,丝虫病,Filariasis,丙类,,,China CDC
+D047,其他感染性腹泻病,Infectious Diarrhea,丙类,感染性腹泻|其它感染性腹泻病,,China CDC
+D048,手足口病,HFMD,丙类,肠道病毒感染,,China CDC
+D049,中东呼吸综合征,MERS,监测,MERS-CoV|中东呼吸综合征MERS,,China CDC
+D050,埃博拉出血热,Ebola,监测,埃博拉,,China CDC
+D051,寨卡病毒病,Zika,监测,寨卡,,China CDC
+D052,基孔肯雅热,Chikungunya,监测,,,China CDC
+D053,拉沙热,Lassa,监测,,,China CDC
+D054,水痘,Varicella,监测,,,China CDC
+D055,肝吸虫病,Clonorchiasis,监测,华支睾吸虫病,,China CDC
+D056,人感染猪链球菌病,Streptococcus suis,监测,猪链球菌,,China CDC
+D057,发热伴血小板减少综合征,SFTS,监测,蜱虫病|新型布尼亚病毒,,China CDC
+D058,恙虫病,Scrub Typhus,乙类,恙虫病,,China CDC
+D999,甲乙丙类传染病总计,Total,汇总,合计|总计|甲乙类传染病合计|甲乙丙类传染病总计|甲乙丙类总计,,China CDC Summary

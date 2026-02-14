@@ -285,9 +285,25 @@ class ChinaCDCCrawler(BaseCrawler):
                 # 解析日期对象
                 date_obj = datetime.strptime(year_month, "%Y %B")
                 
+                # 获取原始PubMed URL
+                pubmed_url = item.get("link")
+                
+                # 从 dc:identifier 中提取 PMCID
+                pmc_url = None
+                identifiers = item.get("dc:identifier", [])
+                if not isinstance(identifiers, list):
+                    identifiers = [identifiers]
+                
+                pmcid = None
+                for identifier in identifiers:
+                    if isinstance(identifier, str) and identifier.startswith("pmc:PMC"):
+                        pmcid = identifier.replace("pmc:PMC", "")
+                        pmc_url = f"https://pmc.ncbi.nlm.nih.gov/articles/PMC{pmcid}/"
+                        break
+                
                 result = CrawlerResult(
                     title=title,
-                    url=item.get("link"),
+                    url=pmc_url or pubmed_url,  # 优先使用PMC URL
                     date=date_obj,
                     year_month=year_month,
                     metadata={
@@ -296,6 +312,8 @@ class ChinaCDCCrawler(BaseCrawler):
                         "doi": item.get("dc:identifier"),
                         "pub_date": item.get("pubDate"),
                         "language": "en",
+                        "pubmed_url": pubmed_url,  # 保存原始PubMed URL
+                        "pmcid": pmcid,  # 保存PMCID用于调试
                     },
                     raw_data=item,
                 )

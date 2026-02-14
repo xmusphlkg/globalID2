@@ -2,42 +2,57 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from sqlalchemy import create_engine, text
+from sqlalchemy import text
 import os
 from dotenv import load_dotenv
-
-# Page Config
-st.set_page_config(
-    page_title="GlobalID Dashboard",
-    page_icon="🌍",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
-
-# Load Config
-load_dotenv()
-
-# Database Connection
-@st.cache_resource
-def get_connection():
-    # Construct DB URL from env or use default (matching your project config)
-    # Defaulting to the one used in migration: postgresql+asyncpg is for async,
-    # Streamlit works better with sync drivers usually, or we adapt.
-    # We will use psycopg2 or standard driver if available, or pandas read_sql
-    # Since we installed asyncpg, we might need a sync driver or create engine with asyncpg and run sync
-    # Let's try standard URL.
-    default_url = "postgresql+asyncpg://globalid:globalid_dev_password@localhost:5432/globalid"
-    db_url = os.getenv("DATABASE_URL", default_url)
-    return db_url
-
-# Helper to run async query in sync streamlit
 import asyncio
 from sqlalchemy.ext.asyncio import create_async_engine
+import importlib.util
 
-async def get_data_async(query):
-    default_url = "postgresql+asyncpg://globalid:globalid_dev_password@localhost:5432/globalid"
-    db_url = os.getenv("DATABASE_URL", default_url)
-    engine = create_async_engine(db_url)
+load_dotenv()
+
+# Page config
+if "lang" not in st.session_state:
+    st.session_state["lang"] = "en"
+
+st.set_page_config(page_title="GlobalID Dashboard", page_icon="🌍", layout="wide")
+
+# If language is provided in query params, respect it
+try:
+    if "lang" in st.query_params:
+        st.session_state["lang"] = st.query_params["lang"]
+except Exception:
+    pass
+
+# Load i18n module from local file for stable imports (works when running via Streamlit)
+_i18n_path = os.path.join(os.path.dirname(__file__), "i18n.py")
+spec = importlib.util.spec_from_file_location("dashboard_i18n", _i18n_path)
+i18n = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(i18n)
+t = i18n.t
+
+
+def _load_css():
+    css_path = os.path.join(os.path.dirname(__file__), "styles.css")
+    try:
+        with open(css_path, "r", encoding="utf-8") as f:
+            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+    except Exception:
+        pass
+
+
+_load_css()
+
+
+
+# Database helpers
+@st.cache_resource
+def get_db_url():
+    default = "postgresql+asyncpg://globalid:globalid_dev_password@localhost:5432/globalid"
+    return os.getenv("DATABASE_URL", default)
+
+async def _fetch(query: str):
+    engine = create_async_engine(get_db_url())
     try:
         async with engine.connect() as conn:
             result = await conn.execute(text(query))
@@ -46,168 +61,723 @@ async def get_data_async(query):
         await engine.dispose()
     return df
 
-def run_query(query):
-    return asyncio.run(get_data_async(query))
+@st.cache_data(ttl=300, show_spinner=False)
+def _cached_run(query: str):
+    return asyncio.run(_fetch(query))
 
-# --- SIDEBAR ---
-st.sidebar.title("🌍 GlobalID Monitor")
-st.sidebar.markdown("---")
-page = st.sidebar.radio("Navigation", ["Overview", "Disease Analysis", "Data Explorer"])
+def run_query(query: str) -> pd.DataFrame:
+    try:
+        return _cached_run(query)
+    except Exception as e:
+        st.error(f"Database Error: {e}")
+        return pd.DataFrame()
 
-st.sidebar.header("Global Selection")
-# Country Selector
+def get_disease_list(country_id: int):
+    """获取疾病列表，返回疾病代码、名称和映射字典"""
+    df = run_query(f"""
+        SELECT DISTINCT d.name as code, d.name_en, sd.standard_name_zh
+        FROM diseases d
+        JOIN disease_records r ON d.id = r.disease_id
+        LEFT JOIN standard_diseases sd ON d.name = sd.disease_id
+        WHERE r.country_id = {country_id}
+          AND d.name NOT IN ('D999')
+        ORDER BY d.name
+    """)
+    if df.empty:
+        return [], {}
+    
+    # 根据当前语言选择显示名称
+    lang = st.session_state.get("lang", "en")
+    if lang == "zh":
+        df['display_name'] = df['standard_name_zh'].fillna(df['name_en'])
+    else:
+        df['display_name'] = df['name_en']
+    
+    # 创建显示名称到代码的映射
+    name_to_code = dict(zip(df['display_name'], df['code']))
+    
+    return df['display_name'].tolist(), name_to_code
+
+# Fetch country list (used in sidebar filter) and build redesigned sidebar
 try:
     c_df = run_query("SELECT id, name FROM countries ORDER BY name")
-    if not c_df.empty:
-        c_map = dict(zip(c_df['name'], c_df['id']))
-        def_idx = list(c_map.keys()).index('China') if 'China' in c_map else 0
-        sel_country = st.sidebar.selectbox("Country", list(c_map.keys()), index=def_idx)
-        sel_country_id = c_map[sel_country]
-    else:
-        sel_country = "Unknown" 
-        sel_country_id = None
-except Exception:
-    sel_country = "System"
-    sel_country_id = None
-    st.sidebar.error("Country table check failed")
+    country_list = list(c_df["name"]) if not c_df.empty else []
+    country_error = None
+except Exception as e:
+    c_df = pd.DataFrame()
+    country_list = []
+    country_error = str(e)
 
-# --- PAGE: OVERVIEW ---
-if page == "Overview":
-    st.title(f"🛡️ Infectious Disease Monitor - {sel_country}")
-    
-    # KPIs
-    col1, col2, col3, col4 = st.columns(4)
-    
-    # Fetch Basic Stats
-    try:
-        if sel_country_id:
-            # Using .iloc[0, 0] to access the scalar value safely from DataFrame
-            total_diseases = run_query(f"SELECT COUNT(DISTINCT disease_id) FROM disease_records WHERE country_id = {sel_country_id}").iloc[0, 0]
-            total_records = run_query(f"SELECT COUNT(*) FROM disease_records WHERE country_id = {sel_country_id}").iloc[0, 0]
-            latest_df = run_query(f"SELECT MAX(time) FROM disease_records WHERE country_id = {sel_country_id}")
-            latest_date = latest_df.iloc[0, 0] if not latest_df.empty else None
-            
-            # New Cases Last Month (approx)
-            if latest_date:
-                latest_str = latest_date.strftime('%Y-%m-%d')
-                prev_month = (latest_date - pd.DateOffset(months=1)).strftime('%Y-%m-%d')
-                # Only use 'Total' row for aggregate counts
-                cases_sql = f"""
-                    SELECT SUM(r.cases) 
-                    FROM disease_records r 
-                    JOIN diseases d ON r.disease_id = d.id 
-                    WHERE r.time > '{prev_month}' 
-                    AND d.name = 'Total'
-                    AND r.country_id = {sel_country_id}
-                """
-                recent_cases = run_query(cases_sql).iloc[0, 0] or 0
-            else:
-                recent_cases = 0
+with st.sidebar:
+    st.markdown(f"<div class=\"brand\">🌍 <span class=\"title\">{t('app_title')}</span><div class=\"subtitle\">{t('platform_desc')}</div></div>", unsafe_allow_html=True)
+    st.markdown("---")
+    nav_labels = t("nav")
+    page = st.radio(t("nav_heading"), nav_labels, key="nav_radio")
+    st.markdown("---")
+    with st.expander(t("filter_heading"), expanded=True):
+        if country_list:
+            # Preserve previous selection across language changes using session_state
+            default_index = 0
+            prev = st.session_state.get("sel_country")
+            if prev and prev in country_list:
+                default_index = country_list.index(prev)
+            sel = st.selectbox(t("select_country"), country_list, index=default_index, key="country_select")
+            st.session_state["sel_country"] = sel
+            sel_country_id = int(c_df.loc[c_df["name"] == sel, "id"].iloc[0])
+            sel_country = sel
+        
         else:
-            total_diseases = 0
-            total_records = 0
-            latest_date = None
-            recent_cases = 0
-
-        col1.metric("Monitored Diseases", total_diseases)
-        col2.metric("Total Records", f"{total_records:,}")
-        col3.metric("Last Update", str(latest_date.date()) if latest_date else "N/A")
-        col4.metric("Recent Cases (30d)", f"{int(recent_cases):,}")
-
-    except Exception as e:
-        st.error(f"Database Connection Error: {e}")
-        st.stop()
-
-    # Trend Chart (Total Only)
-    st.subheader(f"📈 Monthly Case Trend ({sel_country} Total)")
+            sel_country = None
+            sel_country_id = None
+            if country_error:
+                st.warning(t("no_countries") + f": {country_error}")
+            else:
+                st.warning(t("no_countries"))
+    with st.expander(t("language"), expanded=False):
+        lang_index = 1 if st.session_state.get("lang") == "zh" else 0
+        choice = st.selectbox(t("language"), [t("english"), t("chinese")], index=lang_index, key="ui_lang_select")
+        new_lang = "zh" if choice == t("chinese") else "en"
+        if new_lang != st.session_state.get("lang"):
+            st.session_state["lang"] = new_lang
+            st.query_params["lang"] = new_lang
+            st.rerun()
     
+    if st.button("🔄 " + ("Refresh Data" if st.session_state.get("lang") == "en" else "刷新数据"), type="primary"):
+        st.cache_data.clear()
+        st.rerun()
+
+    st.markdown("---")
+    st.caption(f"{t('version_text')}: v2.0")
+
+# Pages
+if page == nav_labels[0]:
+    # Overview
+    st.title(t("overview_title"))
+    st.write(f"**{t('current_country')}:** {sel_country or '—'}")
+
+    col1, col2, col3, col4 = st.columns(4)
     if sel_country_id:
+        try:
+            total_diseases = int(run_query(f"SELECT COUNT(DISTINCT disease_id) FROM disease_records WHERE country_id = {sel_country_id}").iloc[0,0] or 0)
+            total_records = int(run_query(f"SELECT COUNT(*) FROM disease_records WHERE country_id = {sel_country_id}").iloc[0,0] or 0)
+            latest = run_query(f"SELECT MAX(time) FROM disease_records WHERE country_id = {sel_country_id}")
+            latest_date = latest.iloc[0,0] if not latest.empty else None
+            # 修复：使用所有疾病的总和，而不是查询不存在的'Total'疾病
+            recent_cases = int(run_query(f"SELECT COALESCE(SUM(cases),0) FROM disease_records WHERE time > NOW()-INTERVAL '30 days' AND country_id={sel_country_id}").iloc[0,0] or 0)
+        except Exception as e:
+            st.error(t("connection_failed") + f": {e}")
+            total_diseases = total_records = recent_cases = 0
+            latest_date = None
+    else:
+        total_diseases = total_records = recent_cases = 0
+        latest_date = None
+
+    col1.metric(t("kpi_monitored"), f"{total_diseases}")
+    col2.metric(t("kpi_total"), f"{total_records:,}")
+    # 只显示日期，不显示时间
+    latest_date_str = pd.to_datetime(latest_date).strftime('%Y-%m-%d') if latest_date is not None else "N/A"
+    col3.metric(t("kpi_last"), latest_date_str)
+    col4.metric(t("kpi_recent"), f"{recent_cases:,}")
+
+    # Top疾病排名
+    st.subheader(f"{t('top_diseases_title')} ({t('interval_1y')})")
+    if sel_country_id:
+        lang = st.session_state.get("lang", "en")
+        if lang == "zh":
+            top_sql = f"""
+                SELECT COALESCE(sd.standard_name_zh, d.name_en, d.name) as name, 
+                       SUM(r.cases) as total_cases, 
+                       SUM(r.deaths) as total_deaths
+                FROM disease_records r
+                JOIN diseases d ON r.disease_id = d.id
+                LEFT JOIN standard_diseases sd ON d.name = sd.disease_id
+                WHERE r.country_id = {sel_country_id}
+                AND r.time > NOW() - INTERVAL '365 days'
+                GROUP BY sd.standard_name_zh, d.name_en, d.name
+                ORDER BY total_cases DESC
+                LIMIT 10
+            """
+        else:
+            top_sql = f"""
+                SELECT d.name_en as name, 
+                       SUM(r.cases) as total_cases, 
+                       SUM(r.deaths) as total_deaths
+                FROM disease_records r
+                JOIN diseases d ON r.disease_id = d.id
+                WHERE r.country_id = {sel_country_id}
+                AND r.time > NOW() - INTERVAL '365 days'
+                GROUP BY d.name_en
+                ORDER BY total_cases DESC
+                LIMIT 10
+            """
+        top_df = run_query(top_sql)
+        if not top_df.empty:
+            col_chart, col_table = st.columns([2, 1])
+            with col_chart:
+                fig = px.bar(top_df, x='total_cases', y='name', orientation='h',
+                           labels={'total_cases': t('cases'), 'name': t('disease_label')},
+                           template='plotly_white')
+                fig.update_layout(height=400, yaxis={'categoryorder':'total ascending'})
+                st.plotly_chart(fig, width='stretch')
+            with col_table:
+                st.dataframe(top_df, height=400, width='stretch')
+
+    st.subheader(t("trend_title"))
+    if sel_country_id:
+        # 选择时间范围和疾病
+        col_interval, col_disease = st.columns([1, 2])
+        with col_interval:
+            interval_options = [
+                (t("interval_30d"), "30"),
+                (t("interval_90d"), "90"),
+                (t("interval_1y"), "365"),
+                (t("interval_all"), "all"),
+                (t("custom_range"), "custom"),
+            ]
+            labels = [opt[0] for opt in interval_options]
+            choice = st.selectbox(t("interval_label"), labels, index=2)
+            sel_interval = dict(interval_options)[choice]
+            
+            custom_dates = None
+            if sel_interval == "custom":
+                custom_dates = st.date_input(t("date_range"), [])
+        
+        with col_disease:
+            # 获取疾病列表供用户选择
+            disease_names, disease_map = get_disease_list(sel_country_id)
+            if disease_names:
+                disease_options = [t("all_diseases")] + disease_names
+                selected_disease_display = st.selectbox(t("disease_filter"), disease_options)
+                # 转换显示名称为代码
+                if selected_disease_display == t("all_diseases"):
+                    selected_disease = None
+                else:
+                    selected_disease = disease_map.get(selected_disease_display)
+            else:
+                selected_disease_display = t("all_diseases")
+                selected_disease = None
+
+        if sel_interval == "all":
+            time_filter = ""
+        elif sel_interval == "custom":
+            if custom_dates and len(custom_dates) == 2:
+                time_filter = f"AND r.time >= '{custom_dates[0]}' AND r.time <= '{custom_dates[1]}'"
+            else:
+                # Default fallback if date not fully picked yet
+                time_filter = "AND r.time > NOW() - INTERVAL '30 days'"
+        else:
+            time_filter = f"AND r.time > NOW() - INTERVAL '{sel_interval} days'"
+        
+        # 根据选择的疾病构建查询
+        if selected_disease is None:
+            disease_filter = ""
+            group_by = "date_trunc('month', r.time)"
+        else:
+            disease_filter = f"AND d.name = '{selected_disease}'"
+            group_by = "date_trunc('month', r.time)"
+
         trend_sql = f"""
-            SELECT d.name, r.time, r.cases 
-            FROM disease_records r 
-            JOIN diseases d ON r.disease_id = d.id 
-            WHERE d.name = 'Total' 
-            AND r.country_id = {sel_country_id}
-            ORDER BY r.time ASC
+            SELECT {group_by} AS time_period, 
+                   SUM(r.cases) AS cases,
+                   SUM(r.deaths) AS deaths
+            FROM disease_records r
+            JOIN diseases d ON r.disease_id = d.id
+            WHERE r.country_id = {sel_country_id} {time_filter} {disease_filter}
+            GROUP BY time_period
+            ORDER BY time_period
         """
         trend_df = run_query(trend_sql)
-    else:
-        trend_df = pd.DataFrame()
-    
-    if not trend_df.empty:
-        fig = px.line(trend_df, x='time', y='cases', title=f'Epidemic Curve ({sel_country} Total)', markers=True)
-        st.plotly_chart(fig, use_container_width=True)
-    else:
-        st.info(f"No 'Total' data found for {sel_country}.")
-
-# --- PAGE: DISEASE ANALYSIS ---
-elif page == "Disease Analysis":
-    st.title(f"🔬 Deep Dive Analysis - {sel_country}")
-
-    if not sel_country_id:
-        st.error("Please select a country first.")
-        st.stop()
-    
-    # Disease Selector
-    d_list = run_query("SELECT name FROM diseases ORDER BY name")
-    
-    if not d_list.empty:
-        selected_disease = st.selectbox("Select Disease", d_list['name'])
-        
-        # Fetch Data
-        hist_sql = f"""
-            SELECT time, cases, deaths, incidence_rate, mortality_rate 
-            FROM disease_records r 
-            JOIN diseases d ON r.disease_id = d.id 
-            WHERE d.name = '{selected_disease}' 
-            AND r.country_id = {sel_country_id}
-            ORDER BY time
-        """
-        df = run_query(hist_sql)
-        
-        if not df.empty:
-            # Metrics
-            total = df['cases'].sum()
-            deaths = df['deaths'].sum()
-            rate = (deaths/total*100) if total else 0
+        if not trend_df.empty:
+            # 格式化时间列，只显示日期（用于图表显示）
+            trend_df_display = trend_df.copy()
+            trend_df_display['time_period'] = pd.to_datetime(trend_df['time_period']).dt.strftime('%Y-%m-%d')
             
-            m1, m2, m3 = st.columns(3)
-            m1.metric("Cumulative Cases", f"{int(total):,}")
-            m2.metric("Cumulative Deaths", f"{int(deaths):,}")
-            m3.metric("Case Fatality Rate (CFR)", f"{rate:.2f}%")
-            
-            # Dual Axis Plot
             fig = go.Figure()
-            fig.add_trace(go.Bar(x=df['time'], y=df['cases'], name='Cases', marker_color='#636EFA'))
-            fig.add_trace(go.Scatter(x=df['time'], y=df['incidence_rate'], name='Incidence Rate', yaxis='y2', line=dict(color='#EF553B')))
+            fig.add_trace(go.Bar(x=trend_df['time_period'], y=trend_df['cases'], 
+                                   name=t('cases'),
+                                   marker_color='#1f77b4'))
+            fig.add_trace(go.Bar(x=trend_df['time_period'], y=trend_df['deaths'], 
+                                   name=t('deaths'),
+                                   marker_color='#d62728'))
+            fig.update_layout(template='plotly_white', height=400,
+                            xaxis_title=t('time'), yaxis_title=t('count'),
+                            barmode='group')
+            st.plotly_chart(fig, width='stretch')
             
-            fig.update_layout(
-                title=f"{selected_disease} Trends",
-                yaxis=dict(title="Cases"),
-                yaxis2=dict(title="Incidence Rate", overlaying='y', side='right'),
-                xaxis=dict(title="Date"),
-                hovermode="x unified"
-            )
-            st.plotly_chart(fig, use_container_width=True)
-            
-            # Data Table
-            with st.expander("View Raw Data"):
-                st.dataframe(df)
+            with st.expander(t("raw_data"), expanded=False):
+                st.dataframe(trend_df_display, width='stretch')
+                csv = trend_df_display.to_csv(index=False)
+                st.download_button(t("download_csv"), data=csv, file_name='trend.csv')
         else:
-            st.warning("No records found for this disease.")
+            st.info(t('query_no_data'))
+    else:
+        st.info(t("select_country_prompt"))
 
-# --- PAGE: DATA EXPLORER ---
-elif page == "Data Explorer":
-    st.title("💾 Data Database Explorer")
-    
-    table = st.selectbox("Select Table", ["disease_records", "diseases", "countries"])
-    limit = st.slider("Rows limit", 100, 5000, 1000)
-    
-    if st.button("Load Data"):
-        query = f"SELECT * FROM {table} ORDER BY 1 DESC LIMIT {limit}"
-        df = run_query(query)
-        st.write(f"Showing top {len(df)} rows from `{table}`")
-        st.dataframe(df)
+elif page == nav_labels[1]:
+    st.title(t("nav")[1])
+    if not sel_country_id:
+        st.warning(t("select_country"))
+    else:
+        # 获取有数据的疾病列表
+        disease_names, disease_map = get_disease_list(sel_country_id)
+        if disease_names:
+            # 显示疾病数量
+            st.info(f"{t('available_diseases')}: {len(disease_names)}")
+            
+            # 疾病选择和对比
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                disease_display = st.selectbox(t("disease_label"), disease_names)
+                disease = disease_map.get(disease_display)
+            with col2:
+                compare_mode = st.checkbox(t("compare_diseases"))
+            
+            if compare_mode:
+                # 疾病对比模式
+                st.subheader(t("disease_comparison"))
+                diseases_to_compare_display = st.multiselect(t("select_diseases_to_compare"),
+                                                    disease_names,
+                                                    default=[disease_display])
+                diseases_to_compare = [disease_map.get(d) for d in diseases_to_compare_display]
+                if len(diseases_to_compare) >= 1:
+                    comparison_dfs = []
+                    for i, d_code in enumerate(diseases_to_compare):
+                        d_display = diseases_to_compare_display[i]
+                        df = run_query(f"""
+                            SELECT date_trunc('month', time) as month, 
+                                   SUM(cases) as cases, 
+                                   SUM(deaths) as deaths,
+                                   '{d_display}' as disease
+                            FROM disease_records r
+                            JOIN diseases d ON r.disease_id=d.id
+                            WHERE d.name = '{d_code}' AND r.country_id = {sel_country_id}
+                            GROUP BY month
+                            ORDER BY month
+                        """)
+                        comparison_dfs.append(df)
+                    
+                    combined_df = pd.concat(comparison_dfs, ignore_index=True)
+                    if not combined_df.empty:
+                        fig = px.line(combined_df, x='month', y='cases', color='disease',
+                                    labels={'month': t('time'), 'cases': t('cases')},
+                                    template='plotly_white')
+                        fig.update_layout(height=400)
+                        st.plotly_chart(fig, width='stretch')
+                        
+                        # 对比统计
+                        st.subheader(t("comparison_stats"))
+                        stats_data = []
+                        for d_name in diseases_to_compare:
+                            d_df = combined_df[combined_df['disease'] == d_name]
+                            total_cases = int(d_df['cases'].sum())
+                            total_deaths = int(d_df['deaths'].sum())
+                            cfr = (total_deaths/total_cases*100) if total_cases else 0
+                            stats_data.append({
+                                t('disease_label'): d_name,
+                                t('total_cases'): f"{total_cases:,}",
+                                t('total_deaths'): f"{total_deaths:,}",
+                                'CFR': f"{cfr:.2f}%"
+                            })
+                        st.dataframe(pd.DataFrame(stats_data), width='stretch')
+            else:
+                # 单个疾病分析
+                df = run_query(f"""
+                    SELECT time, cases, deaths, incidence_rate, mortality_rate
+                    FROM disease_records r
+                    JOIN diseases d ON r.disease_id=d.id
+                    WHERE d.name = '{disease}' AND r.country_id = {sel_country_id}
+                    ORDER BY time
+                """)
+                if not df.empty:
+                    total = int(df['cases'].sum())
+                    deaths = int(df['deaths'].sum())
+                    cfr = (deaths/total*100) if total else 0
+                    avg_monthly = int(df['cases'].mean())
+                    
+                    m1, m2, m3, m4 = st.columns(4)
+                    m1.metric(t("total_cases"), f"{total:,}")
+                    m2.metric(t("total_deaths"), f"{deaths:,}")
+                    m3.metric("CFR", f"{cfr:.2f}%")
+                    m4.metric(t("avg_monthly"), f"{avg_monthly:,}")
+                    
+                    # 图表选项卡
+                    tab1, tab2, tab3 = st.tabs([t("cases_trend"), t("deaths_trend"), t("rates")])
+                    
+                    with tab1:
+                        fig = px.area(df, x='time', y='cases', template='plotly_white')
+                        fig.update_layout(height=350)
+                        st.plotly_chart(fig, width='stretch')
+                    
+                    with tab2:
+                        fig = px.bar(df, x='time', y='deaths', template='plotly_white')
+                        fig.update_layout(height=350)
+                        st.plotly_chart(fig, width='stretch')
+                    
+                    with tab3:
+                        fig = go.Figure()
+                        fig.add_trace(go.Scatter(x=df['time'], y=df['incidence_rate'], 
+                                               name=t('incidence_rate'), mode='lines'))
+                        fig.add_trace(go.Scatter(x=df['time'], y=df['mortality_rate'], 
+                                               name=t('mortality_rate'), mode='lines'))
+                        fig.update_layout(template='plotly_white', height=350)
+                        st.plotly_chart(fig, width='stretch')
+                    
+                    with st.expander(t("raw_data"), expanded=False):
+                        st.dataframe(df, width='stretch')
+                        csv = df.to_csv(index=False)
+                        st.download_button(t("download_csv"), data=csv, 
+                                         file_name=f'{disease}_data.csv')
+                else:
+                    st.info(t('query_no_data'))
+        else:
+            st.info(t('query_no_data'))
 
-st.sidebar.markdown("---")
-st.sidebar.info("GlobalID V2 Dashboard\nPowered by Streamlit & TimescaleDB")
+elif page == nav_labels[2]:
+    st.title(t('data_browser_title'))
+    
+    # 快捷查询模板
+    st.subheader(t("quick_queries"))
+    query_templates = {
+        t("template_recent_data"): f"SELECT d.name, r.time, r.cases, r.deaths FROM disease_records r JOIN diseases d ON r.disease_id=d.id WHERE r.country_id={sel_country_id or 1} ORDER BY r.time DESC LIMIT 100",
+        t("template_disease_summary"): f"SELECT d.name, COUNT(*) as records, SUM(r.cases) as total_cases, SUM(r.deaths) as total_deaths FROM disease_records r JOIN diseases d ON r.disease_id=d.id WHERE r.country_id={sel_country_id or 1} GROUP BY d.name ORDER BY total_cases DESC",
+        t("template_disease_summary"): "time_completeness_check",  # 特殊标识符，表示这是疾病汇总统计
+        t("template_monthly_stats"): f"SELECT date_trunc('month', time) as month, SUM(cases) as cases, SUM(deaths) as deaths FROM disease_records WHERE country_id={sel_country_id or 1} GROUP BY month ORDER BY month DESC LIMIT 24",
+        t("template_data_quality"): f"SELECT COUNT(*) as total_records, COUNT(DISTINCT disease_id) as unique_diseases, MIN(time) as earliest, MAX(time) as latest, COUNT(CASE WHEN cases = 0 THEN 1 END) as zero_cases FROM disease_records WHERE country_id={sel_country_id or 1}"
+    }
+    
+    selected_template = st.selectbox(t("select_template"), list(query_templates.keys()))
+    
+    if selected_template == t("template_disease_summary"):
+        # 时间序列完整性检查 - 特殊处理
+        st.subheader(t("time_completeness"))
+        
+        # 选择疾病
+        disease_names, disease_map = get_disease_list(sel_country_id or 1)
+        
+        if disease_names:
+            disease_options = [t("all_diseases")] + disease_names
+            selected_disease_display = st.selectbox(t("disease_filter"), disease_options)
+            if selected_disease_display == t("all_diseases"):
+                selected_disease = None
+            else:
+                selected_disease = disease_map.get(selected_disease_display)
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                start_date = st.date_input(t("start_date"), value=pd.to_datetime("2020-01-01").date())
+            with col2:
+                end_date = st.date_input(t("end_date"), value=pd.to_datetime("today").date())
+            
+            if st.button(t("run_template")):
+                if start_date >= end_date:
+                    st.error("开始日期必须早于结束日期")
+                else:
+                    # 根据选择的疾病构建查询
+                    if selected_disease is None:
+                        # 检查所有疾病的数据完整性
+                        lang = st.session_state.get("lang", "en")
+                        if lang == "zh":
+                            completeness_query = f"""
+                                SELECT 
+                                    COALESCE(sd.standard_name_zh, d.name_en, d.name) as disease_name,
+                                    COUNT(DISTINCT date_trunc('month', r.time)) as data_months,
+                                    EXTRACT(EPOCH FROM (MAX(r.time) - MIN(r.time)))/2592000 as total_months_span,
+                                    MIN(r.time) as earliest_date,
+                                    MAX(r.time) as latest_date,
+                                    COUNT(*) as total_records
+                                FROM disease_records r
+                                JOIN diseases d ON r.disease_id = d.id
+                                LEFT JOIN standard_diseases sd ON d.name = sd.disease_id
+                                WHERE r.country_id = {sel_country_id or 1}
+                                AND r.time >= '{start_date}' AND r.time <= '{end_date}'
+                                GROUP BY d.id, sd.standard_name_zh, d.name_en, d.name
+                                ORDER BY disease_name
+                            """
+                        else:
+                            completeness_query = f"""
+                                SELECT 
+                                    d.name_en as disease_name,
+                                    COUNT(DISTINCT date_trunc('month', r.time)) as data_months,
+                                    EXTRACT(EPOCH FROM (MAX(r.time) - MIN(r.time)))/2592000 as total_months_span,
+                                    MIN(r.time) as earliest_date,
+                                    MAX(r.time) as latest_date,
+                                    COUNT(*) as total_records
+                                FROM disease_records r
+                                JOIN diseases d ON r.disease_id = d.id
+                                WHERE r.country_id = {sel_country_id or 1}
+                                AND r.time >= '{start_date}' AND r.time <= '{end_date}'
+                                GROUP BY d.id, d.name_en
+                                ORDER BY disease_name
+                            """
+                        completeness_data = run_query(completeness_query)
+                        
+                        if not completeness_data.empty:
+                            # 计算每个疾病的完整性
+                            results = []
+                            for _, row in completeness_data.iterrows():
+                                disease_name = row['disease_name']
+                                data_months = int(row['data_months'])
+                                total_months_span = float(row['total_months_span']) if row['total_months_span'] else 0
+                                earliest_date = row['earliest_date']
+                                latest_date = row['latest_date']
+                                total_records = int(row['total_records'])
+                                
+                                # 计算预期月份数
+                                expected_months = max(1, int(total_months_span) + 1) if total_months_span > 0 else 1
+                                completeness_rate = (data_months / expected_months * 100) if expected_months > 0 else 100
+                                
+                                results.append({
+                                    t('disease_label'): disease_name,
+                                    t('total_periods'): expected_months,
+                                    'Data Months': data_months,
+                                    t('completeness_rate'): f"{completeness_rate:.1f}%",
+                                    'Earliest Date': earliest_date.strftime('%Y-%m-%d') if earliest_date else 'N/A',
+                                    'Latest Date': latest_date.strftime('%Y-%m-%d') if latest_date else 'N/A',
+                                    t('total_records'): total_records
+                                })
+                            
+                            results_df = pd.DataFrame(results)
+                            st.dataframe(results_df, width='stretch')
+                            
+                            # 整体统计
+                            avg_completeness = results_df[t('completeness_rate')].str.rstrip('%').astype(float).mean()
+                            total_diseases = len(results_df)
+                            complete_diseases = len(results_df[results_df[t('completeness_rate')].str.rstrip('%').astype(float) == 100.0])
+                            
+                            col1, col2, col3 = st.columns(3)
+                            col1.metric("Total Diseases", f"{total_diseases}")
+                            col2.metric("Complete Diseases", f"{complete_diseases}")
+                            col3.metric("Avg Completeness", f"{avg_completeness:.1f}%")
+                            
+                            csv = results_df.to_csv(index=False)
+                            st.download_button(t('download_csv'), data=csv, file_name='disease_completeness_analysis.csv')
+                        else:
+                            st.info("所选时间范围内没有数据")
+                    
+                    else:
+                        # 检查单个疾病的时间序列完整性
+                        # 获取该疾病的所有数据月份
+                        months_query = f"""
+                            SELECT DISTINCT date_trunc('month', r.time) as month
+                            FROM disease_records r
+                            JOIN diseases d ON r.disease_id = d.id
+                            WHERE r.country_id = {sel_country_id or 1}
+                            AND d.name = '{selected_disease}'
+                            AND r.time >= '{start_date}' AND r.time <= '{end_date}'
+                            ORDER BY month
+                        """
+                        months_data = run_query(months_query)
+                        
+                        if not months_data.empty:
+                            existing_months = set(months_data['month'])
+                            
+                            # 生成连续的月份序列
+                            min_month = months_data['month'].min()
+                            max_month = months_data['month'].max()
+                            
+                            # 使用pandas生成连续月份
+                            all_months = pd.date_range(start=min_month, end=max_month, freq='MS')
+                            expected_months = set(all_months)
+                            
+                            # 找出缺失的月份
+                            missing_months = expected_months - existing_months
+                            
+                            total_expected = len(expected_months)
+                            total_missing = len(missing_months)
+                            completeness_rate = ((total_expected - total_missing) / total_expected * 100) if total_expected > 0 else 100
+                            
+                            col1, col2, col3 = st.columns(3)
+                            col1.metric(t("total_periods"), f"{total_expected}")
+                            col2.metric(t("missing_periods"), f"{total_missing}")
+                            col3.metric(t("completeness_rate"), f"{completeness_rate:.1f}%")
+                            
+                            if total_missing > 0:
+                                st.warning(f"发现 {total_missing} 个缺失的月份")
+                                st.subheader(t("missing_details"))
+                                missing_df = pd.DataFrame({'Missing Month': list(missing_months)})
+                                missing_df = missing_df.sort_values('Missing Month')
+                                st.dataframe(missing_df, width='stretch')
+                            else:
+                                st.success("时间序列连续，没有缺失的月份")
+                            
+                            # 显示数据分布
+                            st.subheader("数据分布详情")
+                            monthly_data_query = f"""
+                                SELECT 
+                                    date_trunc('month', r.time) as month,
+                                    COUNT(*) as records,
+                                    SUM(r.cases) as total_cases,
+                                    SUM(r.deaths) as total_deaths
+                                FROM disease_records r
+                                JOIN diseases d ON r.disease_id = d.id
+                                WHERE r.country_id = {sel_country_id or 1}
+                                AND d.name = '{selected_disease}'
+                                AND r.time >= '{start_date}' AND r.time <= '{end_date}'
+                                GROUP BY month
+                                ORDER BY month
+                            """
+                            monthly_data = run_query(monthly_data_query)
+                            if not monthly_data.empty:
+                                # 格式化月份列，只显示日期
+                                monthly_data = monthly_data.copy()
+                                monthly_data['month'] = pd.to_datetime(monthly_data['month']).dt.strftime('%Y-%m-%d')
+                                st.dataframe(monthly_data, width='stretch')
+                                
+                                # 可视化
+                                fig = go.Figure()
+                                fig.add_trace(go.Bar(
+                                    x=monthly_data['month'], 
+                                    y=monthly_data['records'],
+                                    name='Records per Month',
+                                    marker_color='lightblue'
+                                ))
+                                fig.update_layout(
+                                    title=f"Data Distribution for {selected_disease}",
+                                    xaxis_title=t("time"),
+                                    yaxis_title="Records",
+                                    height=300
+                                )
+                                st.plotly_chart(fig, width='stretch')
+                                
+                                csv = monthly_data.to_csv(index=False)
+                                st.download_button(t('download_csv'), data=csv, file_name=f'{selected_disease}_monthly_data.csv')
+                        else:
+                            st.info(f"疾病 '{selected_disease}' 在所选时间范围内没有数据")
+        else:
+            st.info("没有找到有数据的疾病")
+    
+    elif st.button(t("run_template")):
+        query = query_templates[selected_template]
+        try:
+            res = run_query(query)
+            if not res.empty:
+                st.success(f"{t('query_success')}: {len(res)} {t('rows')}")
+                st.dataframe(res, width='stretch')
+                csv = res.to_csv(index=False)
+                st.download_button(t('download_csv'), data=csv, file_name='query_result.csv')
+            else:
+                st.info(t('query_no_data'))
+        except Exception as e:
+            st.error(f"{t('query_failed')}: {e}")
+    
+    st.markdown("---")
+    
+    # 表格浏览器
+    st.subheader(t("table_browser"))
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        table = st.selectbox(t("table_label"), ["disease_records", "diseases", "countries", "standard_diseases", "disease_mappings"])
+    with col2:
+        limit = st.number_input(t("rows_label"), 10, 5000, 100, step=50)
+    
+    if st.button(t('load_table')):
+        df = run_query(f"SELECT * FROM {table} ORDER BY 1 DESC LIMIT {limit}")
+        st.write(f"📊 {len(df)} {t('rows')} from `{table}`")
+        st.dataframe(df, width='stretch')
+
+else:
+    st.title(t('data_quality_title'))
+    st.write(t('data_quality_desc'))
+    
+    if sel_country_id:
+        # 数据质量指标
+        col1, col2, col3 = st.columns(3)
+        
+        # 基本统计
+        basic_stats = run_query(f"""
+            SELECT 
+                COUNT(*) as total_records,
+                COUNT(DISTINCT disease_id) as unique_diseases,
+                MIN(time) as earliest_date,
+                MAX(time) as latest_date
+            FROM disease_records
+            WHERE country_id = {sel_country_id}
+        """)
+        
+        if not basic_stats.empty:
+            row = basic_stats.iloc[0]
+            col1.metric(t("total_records"), f"{row['total_records']:,}")
+            col2.metric(t("diseases_count"), f"{row['unique_diseases']}")
+            # 只显示日期，不显示时间
+            earliest = pd.to_datetime(row['earliest_date']).strftime('%Y-%m-%d')
+            latest = pd.to_datetime(row['latest_date']).strftime('%Y-%m-%d')
+            date_range = f"{earliest} to {latest}"
+            col3.metric(t("date_range"), date_range)
+        
+        # 数据质量检查
+        st.subheader(t("quality_checks"))
+        
+        # 1. 零值统计
+        zero_stats = run_query(f"""
+            SELECT 
+                COUNT(CASE WHEN cases = 0 THEN 1 END) as zero_cases,
+                COUNT(CASE WHEN deaths = 0 THEN 1 END) as zero_deaths,
+                COUNT(*) as total
+            FROM disease_records
+            WHERE country_id = {sel_country_id}
+        """)
+        
+        if not zero_stats.empty:
+            row = zero_stats.iloc[0]
+            zero_cases_pct = (row['zero_cases'] / row['total'] * 100) if row['total'] else 0
+            zero_deaths_pct = (row['zero_deaths'] / row['total'] * 100) if row['total'] else 0
+            
+            c1, c2 = st.columns(2)
+            c1.metric(t("zero_cases_records"), 
+                     f"{row['zero_cases']:,} ({zero_cases_pct:.1f}%)")
+            c2.metric(t("zero_deaths_records"), 
+                     f"{row['zero_deaths']:,} ({zero_deaths_pct:.1f}%)")
+        
+        # 2. 时间序列完整性
+        st.subheader(t("time_completeness"))
+        time_gaps = run_query(f"""
+            WITH months AS (
+                SELECT DISTINCT date_trunc('month', time) as month
+                FROM disease_records
+                WHERE country_id = {sel_country_id}
+                ORDER BY month
+            )
+            SELECT 
+                month,
+                LEAD(month) OVER (ORDER BY month) as next_month,
+                EXTRACT(EPOCH FROM (LEAD(month) OVER (ORDER BY month) - month))/2592000 as gap_months
+            FROM months
+        """)
+        
+        if not time_gaps.empty:
+            gaps = time_gaps[time_gaps['gap_months'] > 1]
+            if len(gaps) > 0:
+                st.warning(f"{t('found_gaps')}: {len(gaps)}")
+                # 格式化日期列，只显示日期，安全处理空值
+                gaps = gaps.copy()
+                gaps['month'] = pd.to_datetime(gaps['month']).dt.strftime('%Y-%m-%d')
+                # next_month 可能有 NaT 值，需要安全处理
+                gaps['next_month'] = gaps['next_month'].apply(
+                    lambda x: pd.to_datetime(x).strftime('%Y-%m-%d') if pd.notna(x) else 'N/A'
+                )
+                st.dataframe(gaps, width='stretch')
+            else:
+                st.success(t("no_gaps_found"))
+        
+        # 3. 数据来源分布
+        st.subheader(t("data_sources"))
+        source_dist = run_query(f"""
+            SELECT 
+                data_source,
+                COUNT(*) as count,
+                ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 2) as percentage
+            FROM disease_records
+            WHERE country_id = {sel_country_id}
+            GROUP BY data_source
+            ORDER BY count DESC
+        """)
+        
+        if not source_dist.empty:
+            fig = px.pie(source_dist, values='count', names='data_source', 
+                        title=t('source_distribution'))
+            st.plotly_chart(fig, width='stretch')
+            st.dataframe(source_dist, width='stretch')
+    else:
+        st.info(t("select_country_prompt"))
+
+# footer moved into redesigned sidebar
