@@ -1,0 +1,79 @@
+﻿code,name,name_zh
+A00,Cholera,霍乱
+A01,Typhoid and paratyphoid fevers,伤寒和副伤寒
+A03,Shigellosis,细菌性痢疾
+A04,Other bacterial intestinal infections,其他细菌性肠道感染
+A05,Other bacterial foodborne intoxications,其他细菌性食物中毒
+A06,Amoebiasis,阿米巴病
+A09,Diarrhoea and gastroenteritis,腹泻和胃肠炎
+A15,Respiratory tuberculosis,肺结核
+A20,Plague,鼠疫
+A22,Anthrax,炭疽
+A23,Brucellosis,布鲁氏菌病
+A24,Glanders and melioidosis,鼻疽和类鼻疽
+A27,Leptospirosis,钩端螺旋体病
+A30,Leprosy,麻风病
+A36,Diphtheria,白喉
+A37,Whooping cough,百日咳
+A38,Scarlet fever,猩红热
+A39,Meningococcal infection,脑膜炎球菌感染
+A40,Streptococcal sepsis,链球菌败血症
+A41,Other sepsis,其他败血症
+A50,Congenital syphilis,先天性梅毒
+A51,Early syphilis,早期梅毒
+A52,Late syphilis,晚期梅毒
+A53,Other and unspecified syphilis,其他和未明示的梅毒
+A54,Gonococcal infection,淋球菌感染
+A55,Chlamydial lymphogranuloma,衣原体性淋巴肉芽肿
+A56,Other sexually transmitted chlamydial diseases,其他性传播衣原体病
+A59,Trichomoniasis,滴虫病
+A60,Anogenital herpesviral infection,肛门生殖器疱疹病毒感染
+A63,Other predominantly sexually transmitted diseases,其他主要通过性传播的疾病
+A64,Unspecified sexually transmitted disease,未明示的性传播疾病
+A75,Typhus fever,斑疹伤寒
+A80,Acute poliomyelitis,急性脊髓灰质炎
+A82,Rabies,狂犬病
+A83,Mosquito-borne viral encephalitis,蚊传病毒性脑炎
+A84,Tick-borne viral encephalitis,蜱传病毒性脑炎
+A90,Dengue fever,登革热
+A91,Dengue haemorrhagic fever,登革出血热
+A92,Other mosquito-borne viral fevers,其他蚊传病毒热
+A95,Yellow fever,黄热病
+A96,Arenaviral haemorrhagic fever,沙粒病毒出血热
+A98,Other viral haemorrhagic fevers,其他病毒性出血热
+B00,Herpesviral infections,疱疹病毒感染
+B01,Varicella,水痘
+B02,Zoster,带状疱疹
+B03,Smallpox,天花
+B04,Monkeypox,猴痘
+B05,Measles,麻疹
+B06,Rubella,风疹
+B08,Other viral infections characterized by skin lesions,其他以皮损为特征的病毒感染
+B15,Acute hepatitis A,急性甲型肝炎
+B16,Acute hepatitis B,急性乙型肝炎
+B17,Other acute viral hepatitis,其他急性病毒性肝炎
+B18,Chronic viral hepatitis,慢性病毒性肝炎
+B19,Unspecified viral hepatitis,未明示的病毒性肝炎
+B20,HIV disease,人类免疫缺陷病毒病
+B26,Mumps,流行性腮腺炎
+B27,Infectious mononucleosis,传染性单核细胞增多症
+B30,Viral conjunctivitis,病毒性结膜炎
+B33,Other viral diseases,其他病毒性疾病
+B34,Viral infection of unspecified site,未指定部位的病毒感染
+B50,Plasmodium falciparum malaria,恶性疟
+B51,Plasmodium vivax malaria,间日疟
+B52,Plasmodium malariae malaria,三日疟
+B53,Other parasitologically confirmed malaria,其他寄生虫学证实的疟疾
+B54,Unspecified malaria,未明示的疟疾
+B55,Leishmaniasis,利什曼病
+B56,African trypanosomiasis,非洲锥虫病
+B57,Chagas disease,恰加斯病
+B58,Toxoplasmosis,弓形体病
+B65,Schistosomiasis,血吸虫病
+B66,Other fluke infections,其他吸虫感染
+B67,Echinococcosis,包虫病
+B68,Taeniasis,绦虫病
+B69,Cysticercosis,囊虫病
+B74,Filariasis,丝虫病
+U04,SARS,严重急性呼吸综合征
+U07.1,COVID-19,新型冠状病毒肺炎

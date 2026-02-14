@@ -68,7 +68,24 @@ SMTP_PASSWORD=your_password
 python main.py init-database
 ```
 
-### 4. 迁移历史数据（可选）
+### 4. 迁移疾病数据到数据库
+
+```bash
+# 将CSV配置的疾病数据导入数据库
+python scripts/migrate_diseases_to_db.py
+
+# 验证迁移结果
+python main.py disease stats
+```
+
+💡 **为什么要用数据库？**
+- 疾病种类会不断增加（新疾病、变种、本地名称）
+- 支持动态添加，无需修改代码和重启服务
+- 多实例部署共享数据
+- 自动学习未知疾病
+- 详见：[docs/DISEASE_MANAGEMENT_STRATEGY.md](docs/DISEASE_MANAGEMENT_STRATEGY.md)
+
+### 5. 迁移历史数据（可选）
 
 ```bash
 # 从旧系统导入历史数据
@@ -78,20 +95,20 @@ python main.py migrate-data --data-path /path/to/old/data
 python scripts/migrate_data.py /path/to/old/data
 ```
 
-### 5. 运行测试
+### 6. 运行测试
 
 ```bash
 python main.py test
 ```
 
-### 5. 爬取数据
+### 7. 爬取数据
 
 ```bash
 # 爬取中国疾病数据
 python main.py crawl --country CN --max-results 100
 ```
 
-### 6 生成报告
+### 8. 生成报告
 
 ```bash
 # 生成周报
