@@ -4,10 +4,16 @@ import plotly.express as px
 import plotly.graph_objects as go
 from sqlalchemy import text
 import os
+import sys
 from dotenv import load_dotenv
 import asyncio
 from sqlalchemy.ext.asyncio import create_async_engine
 import importlib.util
+
+# Add workspace root to sys.path for proper module imports
+_workspace_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+if _workspace_root not in sys.path:
+    sys.path.insert(0, _workspace_root)
 
 load_dotenv()
 
@@ -15,7 +21,7 @@ load_dotenv()
 if "lang" not in st.session_state:
     st.session_state["lang"] = "en"
 
-st.set_page_config(page_title="GlobalID Dashboard", page_icon="🌍", layout="wide")
+st.set_page_config(page_title="GlobalID Data Dashboard", page_icon="🌍", layout="wide")
 
 # If language is provided in query params, respect it
 try:
@@ -45,58 +51,9 @@ _load_css()
 
 
 
-# Database helpers
-@st.cache_resource
-def get_db_url():
-    default = "postgresql+asyncpg://globalid:globalid_dev_password@localhost:5432/globalid"
-    return os.getenv("DATABASE_URL", default)
-
-async def _fetch(query: str):
-    engine = create_async_engine(get_db_url())
-    try:
-        async with engine.connect() as conn:
-            result = await conn.execute(text(query))
-            df = pd.DataFrame(result.fetchall(), columns=result.keys())
-    finally:
-        await engine.dispose()
-    return df
-
-@st.cache_data(ttl=300, show_spinner=False)
-def _cached_run(query: str):
-    return asyncio.run(_fetch(query))
-
-def run_query(query: str) -> pd.DataFrame:
-    try:
-        return _cached_run(query)
-    except Exception as e:
-        st.error(f"Database Error: {e}")
-        return pd.DataFrame()
-
-def get_disease_list(country_id: int):
-    """获取疾病列表，返回疾病代码、名称和映射字典"""
-    df = run_query(f"""
-        SELECT DISTINCT d.name as code, d.name_en, sd.standard_name_zh
-        FROM diseases d
-        JOIN disease_records r ON d.id = r.disease_id
-        LEFT JOIN standard_diseases sd ON d.name = sd.disease_id
-        WHERE r.country_id = {country_id}
-          AND d.name NOT IN ('D999')
-        ORDER BY d.name
-    """)
-    if df.empty:
-        return [], {}
-    
-    # 根据当前语言选择显示名称
-    lang = st.session_state.get("lang", "en")
-    if lang == "zh":
-        df['display_name'] = df['standard_name_zh'].fillna(df['name_en'])
-    else:
-        df['display_name'] = df['name_en']
-    
-    # 创建显示名称到代码的映射
-    name_to_code = dict(zip(df['display_name'], df['code']))
-    
-    return df['display_name'].tolist(), name_to_code
+from src.dashboard.data import run_query, get_disease_list
+from src.dashboard.plots import plot_top_diseases, plot_trend_chart
+from src.dashboard.ui import render_sidebar
 
 # Fetch country list (used in sidebar filter) and build redesigned sidebar
 try:
@@ -108,46 +65,9 @@ except Exception as e:
     country_list = []
     country_error = str(e)
 
-with st.sidebar:
-    st.markdown(f"<div class=\"brand\">🌍 <span class=\"title\">{t('app_title')}</span><div class=\"subtitle\">{t('platform_desc')}</div></div>", unsafe_allow_html=True)
-    st.markdown("---")
-    nav_labels = t("nav")
-    page = st.radio(t("nav_heading"), nav_labels, key="nav_radio")
-    st.markdown("---")
-    with st.expander(t("filter_heading"), expanded=True):
-        if country_list:
-            # Preserve previous selection across language changes using session_state
-            default_index = 0
-            prev = st.session_state.get("sel_country")
-            if prev and prev in country_list:
-                default_index = country_list.index(prev)
-            sel = st.selectbox(t("select_country"), country_list, index=default_index, key="country_select")
-            st.session_state["sel_country"] = sel
-            sel_country_id = int(c_df.loc[c_df["name"] == sel, "id"].iloc[0])
-            sel_country = sel
-        
-        else:
-            sel_country = None
-            sel_country_id = None
-            if country_error:
-                st.warning(t("no_countries") + f": {country_error}")
-            else:
-                st.warning(t("no_countries"))
-    with st.expander(t("language"), expanded=False):
-        lang_index = 1 if st.session_state.get("lang") == "zh" else 0
-        choice = st.selectbox(t("language"), [t("english"), t("chinese")], index=lang_index, key="ui_lang_select")
-        new_lang = "zh" if choice == t("chinese") else "en"
-        if new_lang != st.session_state.get("lang"):
-            st.session_state["lang"] = new_lang
-            st.query_params["lang"] = new_lang
-            st.rerun()
-    
-    if st.button("🔄 " + ("Refresh Data" if st.session_state.get("lang") == "en" else "刷新数据"), type="primary"):
-        st.cache_data.clear()
-        st.rerun()
-
-    st.markdown("---")
-    st.caption(f"{t('version_text')}: v2.0")
+# Render the sidebar using the UI helper; this returns the selected
+# page/navigation labels and the selected country (name + id).
+page, nav_labels, sel_country, sel_country_id = render_sidebar(t, country_list, c_df, country_error)
 
 # Pages
 if page == nav_labels[0]:
@@ -212,15 +132,8 @@ if page == nav_labels[0]:
             """
         top_df = run_query(top_sql)
         if not top_df.empty:
-            col_chart, col_table = st.columns([2, 1])
-            with col_chart:
-                fig = px.bar(top_df, x='total_cases', y='name', orientation='h',
-                           labels={'total_cases': t('cases'), 'name': t('disease_label')},
-                           template='plotly_white')
-                fig.update_layout(height=400, yaxis={'categoryorder':'total ascending'})
-                st.plotly_chart(fig, width='stretch')
-            with col_table:
-                st.dataframe(top_df, height=400, width='stretch')
+            # Delegate rendering to plotting helpers to keep app.py small.
+            plot_top_diseases(top_df, t)
 
     st.subheader(t("trend_title"))
     if sel_country_id:
@@ -235,7 +148,7 @@ if page == nav_labels[0]:
                 (t("custom_range"), "custom"),
             ]
             labels = [opt[0] for opt in interval_options]
-            choice = st.selectbox(t("interval_label"), labels, index=2)
+            choice = st.selectbox(t("interval_label"), labels, index=3)
             sel_interval = dict(interval_options)[choice]
             
             custom_dates = None
@@ -270,7 +183,8 @@ if page == nav_labels[0]:
         
         # 根据选择的疾病构建查询
         if selected_disease is None:
-            disease_filter = ""
+            # 使用Total(D999)疾病数据，而不是求和所有疾病
+            disease_filter = "AND d.name = 'D999'"
             group_by = "date_trunc('month', r.time)"
         else:
             disease_filter = f"AND d.name = '{selected_disease}'"
@@ -288,26 +202,10 @@ if page == nav_labels[0]:
         """
         trend_df = run_query(trend_sql)
         if not trend_df.empty:
-            # 格式化时间列，只显示日期（用于图表显示）
+            # Prepare a display copy (formatted date) and delegate rendering.
             trend_df_display = trend_df.copy()
             trend_df_display['time_period'] = pd.to_datetime(trend_df['time_period']).dt.strftime('%Y-%m-%d')
-            
-            fig = go.Figure()
-            fig.add_trace(go.Bar(x=trend_df['time_period'], y=trend_df['cases'], 
-                                   name=t('cases'),
-                                   marker_color='#1f77b4'))
-            fig.add_trace(go.Bar(x=trend_df['time_period'], y=trend_df['deaths'], 
-                                   name=t('deaths'),
-                                   marker_color='#d62728'))
-            fig.update_layout(template='plotly_white', height=400,
-                            xaxis_title=t('time'), yaxis_title=t('count'),
-                            barmode='group')
-            st.plotly_chart(fig, width='stretch')
-            
-            with st.expander(t("raw_data"), expanded=False):
-                st.dataframe(trend_df_display, width='stretch')
-                csv = trend_df_display.to_csv(index=False)
-                st.download_button(t("download_csv"), data=csv, file_name='trend.csv')
+            plot_trend_chart(trend_df, t, trend_df_display)
         else:
             st.info(t('query_no_data'))
     else:
