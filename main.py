@@ -14,7 +14,7 @@ from rich.progress import Progress
 from sqlalchemy import select
 
 from src.core import get_config, get_database, get_logger, init_app
-from src.domain import Country, Disease, DiseaseRecord, ReportType
+from src.domain import Country, Disease, DiseaseRecord, ReportType, CrawlRun
 from src.data.crawlers import ChinaCDCCrawler
 from src.generation import ReportGenerator
 
@@ -27,7 +27,7 @@ def crawl(
     country: str = typer.Option("CN", help="Country code"),
     source: str = typer.Option("all", help="Data source (cdc_weekly/nhc/pubmed/all)"),
     process: bool = typer.Option(True, help="Process and store data"),
-    save_raw: bool = typer.Option(False, help="Save raw HTML data"),
+    save_raw: bool = typer.Option(False, help="Save raw pages as plain text"),
     force: bool = typer.Option(False, help="Force crawl all data (ignore database check)"),
 ):
     """
@@ -38,7 +38,11 @@ def crawl(
     2. 与数据库对比，识别新数据
     3. 只爬取新数据的详细内容（重量级）
     """
+    run_id = None
+    raw_dir = None
+
     async def _crawl():
+        nonlocal run_id, raw_dir
         await init_app()
         
         # 标准化国家代码为大写
@@ -56,11 +60,39 @@ def crawl(
             console.print(f"[yellow]Available countries: CN[/yellow]")
             return
         
+        run_id = None
+        raw_dir = None
+        try:
+            raw_dir = Path("data/raw") / country_code.lower()
+            async with get_database() as db:
+                run = CrawlRun(
+                    country_code=country_code,
+                    source=source,
+                    status="running",
+                    started_at=datetime.utcnow(),
+                    raw_dir=str(raw_dir) if save_raw else None,
+                    metadata_={"force": force, "process": process},
+                )
+                db.add(run)
+                await db.flush()
+                run_id = run.id
+        except Exception as e:
+            logger.warning(f"无法创建爬取运行记录: {e}")
+
         # 智能爬取（三阶段）
         console.print(f"\n[bold cyan]Phase 1/3: Fetching data list...[/bold cyan]")
         results = await crawler.crawl(source=source, force=force)
         
         if not results:
+            if run_id:
+                async with get_database() as db:
+                    run = await db.get(CrawlRun, run_id)
+                    if run:
+                        run.status = "completed"
+                        run.finished_at = datetime.utcnow()
+                        run.new_reports = 0
+                        run.processed_reports = 0
+                        run.total_records = 0
             console.print(f"[yellow]✓ No new data to crawl[/yellow]")
             return
         
@@ -76,6 +108,8 @@ def crawl(
             console.print(f"  ... and {len(results) - 10} more")
         
         # 处理数据
+        total_records = 0
+        processed = []
         if process and results:
             console.print(f"\n[bold cyan]Phase 2/3: Processing new data...[/bold cyan]")
             
@@ -91,7 +125,10 @@ def crawl(
                 
                 processed = await processor.process_crawler_results(
                     results,
-                    save_to_file=True
+                    save_to_file=True,
+                    save_raw=save_raw,
+                    crawl_run_id=run_id,
+                    raw_dir=raw_dir,
                 )
                 progress.update(task, advance=len(results))
             
@@ -102,23 +139,49 @@ def crawl(
                 total_records = sum(len(df) for df in processed)
                 console.print(f"[green]✓ Total records: {total_records}[/green]")
         
-        # 保存原始数据
-        if save_raw and results:
+        # 仅保存原始文本（不处理数据）
+        if save_raw and results and not process:
             console.print(f"\n[bold cyan]Phase 3/3: Saving raw data...[/bold cyan]")
-            raw_dir = Path("data/raw") / country_code.lower()
-            raw_dir.mkdir(parents=True, exist_ok=True)
-            
-            for result in results:
-                if result.year_month and result.content:
-                    filename = f"{result.year_month.replace(' ', '_')}.html"
-                    filepath = raw_dir / filename
-                    filepath.write_text(result.content, encoding='utf-8')
-            
-            console.print(f"[green]✓ Saved raw data to {raw_dir}[/green]")
+            from src.data.processors import DataProcessor
+
+            raw_dir = raw_dir or Path("data/raw") / country_code.lower()
+            processor = DataProcessor(
+                output_dir=Path("data/processed") / country_code.lower(),
+                country_code=country_code.lower(),
+            )
+            saved = await processor.save_raw_pages(
+                results,
+                crawl_run_id=run_id,
+                raw_dir=raw_dir,
+            )
+            console.print(f"[green]✓ Saved {saved} raw pages to {raw_dir}[/green]")
+
+        if run_id:
+            async with get_database() as db:
+                run = await db.get(CrawlRun, run_id)
+                if run:
+                    run.status = "completed"
+                    run.finished_at = datetime.utcnow()
+                    run.new_reports = len(results)
+                    run.processed_reports = len(processed) if process else 0
+                    run.total_records = total_records if process and processed else 0
         
         console.print(f"\n[bold green]✨ Crawl completed successfully![/bold green]")
     
-    asyncio.run(_crawl())
+    async def _crawl_with_error_handling():
+        try:
+            await _crawl()
+        except Exception as e:
+            if run_id:
+                async with get_database() as db:
+                    run = await db.get(CrawlRun, run_id)
+                    if run:
+                        run.status = "failed"
+                        run.finished_at = datetime.utcnow()
+                        run.error_message = str(e)
+            raise
+
+    asyncio.run(_crawl_with_error_handling())
 
 
 @app.command()
@@ -245,7 +308,7 @@ def init_database():
                     disease = Disease(
                         name=disease_data["name"],
                         category=disease_data["category"],
-                        icd_10_code=disease_data["icd_10"],
+                        icd_10=disease_data["icd_10"],
                     )
                     db.add(disease)
                     console.print(f"  ✓ Created disease: {disease_data['name']}")

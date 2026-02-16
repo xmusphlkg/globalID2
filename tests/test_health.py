@@ -7,6 +7,7 @@ GlobalID V2 - 测试核心功能
 import asyncio
 import sys
 from pathlib import Path
+import pytest
 
 # 添加项目根目录到 Python 路径
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -18,6 +19,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 console = Console()
 
 
+@pytest.mark.asyncio
 async def test_config():
     """测试配置加载"""
     console.print("\n[bold cyan]1. 测试配置加载[/bold cyan]")
@@ -35,6 +37,7 @@ async def test_config():
         return False
 
 
+@pytest.mark.asyncio
 async def test_logging():
     """测试日志系统"""
     console.print("\n[bold cyan]2. 测试日志系统[/bold cyan]")
@@ -56,6 +59,7 @@ async def test_logging():
         return False
 
 
+@pytest.mark.asyncio
 async def test_database():
     """测试数据库连接"""
     console.print("\n[bold cyan]3. 测试数据库连接[/bold cyan]")
@@ -91,6 +95,7 @@ async def test_database():
         return False
 
 
+@pytest.mark.asyncio
 async def test_redis():
     """测试 Redis 连接"""
     console.print("\n[bold cyan]4. 测试 Redis 缓存[/bold cyan]")
@@ -121,6 +126,7 @@ async def test_redis():
         return False
 
 
+@pytest.mark.asyncio
 async def test_rate_limiter():
     """测试速率限制器"""
     console.print("\n[bold cyan]5. 测试速率限制器[/bold cyan]")

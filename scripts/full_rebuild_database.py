@@ -31,21 +31,44 @@ logger = get_logger(__name__)
 
 
 class DatabaseRebuilder:
-    def __init__(self, country_code='cn', auto_confirm=False):
+    def __init__(self, country_code='cn', auto_confirm=False, rebuild_mode=None):
         """Initialize DatabaseRebuilder with country-specific configuration
         
         Args:
             country_code: Country code (cn, us, au, jp, etc.), default: cn
             auto_confirm: Skip confirmation prompt if True
+            rebuild_mode: Rebuild mode (full, mappings, history, custom), None for interactive
         """
         self.country_code = country_code.upper()
         self.country_code_lower = country_code.lower()
         self.auto_confirm = auto_confirm
+        self.rebuild_mode = rebuild_mode
+        
+        # 重建选项配置
+        self.rebuild_options = {
+            'clear_data': True,
+            'import_standard': True,
+            'import_mappings': True,
+            'sync_diseases': True,
+            'import_history': True,
+        }
         
         # Configuration file paths
         self.standard_file = ROOT / "configs/standard_diseases.csv"
         self.mapping_file = ROOT / f"configs/{self.country_code_lower}/disease_mapping.csv"
         self.history_file = ROOT / f"data/processed/{self.country_code_lower}/history_merged.csv"
+        
+        # 多语言映射文件
+        self.mapping_files = [
+            # 中文映射（主映射）
+            (self.mapping_file, f"{self.country_code}"),
+        ]
+        
+        # 检查并添加英文映射（独立目录，但文件名统一）
+        en_mapping_file = ROOT / "configs/en/disease_mapping.csv"
+        if en_mapping_file.exists():
+            self.mapping_files.append((en_mapping_file, f"{self.country_code}_EN"))
+            logger.info(f"Found English mapping file: {en_mapping_file}")
         
         # Validate country configuration exists
         if not self.mapping_file.parent.exists():
@@ -60,6 +83,15 @@ class DatabaseRebuilder:
         logger.info(f"🚀 Database Rebuild - Country: {self.country_code}")
         logger.info("=" * 80)
         
+        # 选择重建模式（如果未指定）
+        if self.rebuild_mode is None and not self.auto_confirm:
+            self.rebuild_mode = self._select_rebuild_mode()
+        elif self.rebuild_mode is None:
+            self.rebuild_mode = 'full'
+        
+        # 根据模式设置重建选项
+        self._configure_rebuild_options()
+        
         # Show warnings and statistics
         async with get_db() as db:
             await self._show_warning_and_stats(db)
@@ -71,38 +103,168 @@ class DatabaseRebuilder:
                     return
             
             logger.info("\n" + "=" * 80)
-            logger.info("Starting database rebuild...")
+            logger.info(f"Starting database rebuild... (Mode: {self.rebuild_mode})")
             logger.info("=" * 80)
             
-            # Step 1: Clear existing data
-            await self.clear_data(db)
+            # 根据配置执行步骤
+            step_num = 1
+            total_steps = sum(self.rebuild_options.values()) + 1  # +1 for verify
             
-            # Step 2: Import standard diseases
-            await self.import_standard_diseases(db)
+            # Step: Clear existing data
+            if self.rebuild_options['clear_data']:
+                logger.info(f"\n📦 Step {step_num}/{total_steps}: Clearing existing data...")
+                await self.clear_data(db)
+                step_num += 1
             
-            # Step 3: Import disease mappings
-            await self.import_disease_mappings(db)
+            # Step: Import standard diseases
+            if self.rebuild_options['import_standard']:
+                logger.info(f"\n📚 Step {step_num}/{total_steps}: Importing standard diseases...")
+                await self.import_standard_diseases(db)
+                step_num += 1
             
-            # Step 4: Sync diseases table
-            await self.sync_diseases_table(db)
+            # Step: Import disease mappings
+            if self.rebuild_options['import_mappings']:
+                logger.info(f"\n🗺️  Step {step_num}/{total_steps}: Importing disease mappings ({self.country_code})...")
+                await self.import_disease_mappings(db)
+                step_num += 1
             
-            # Step 5: Import historical data
-            await self.import_history_data(db)
+            # Step: Sync diseases table
+            if self.rebuild_options['sync_diseases']:
+                logger.info(f"\n🔄 Step {step_num}/{total_steps}: Synchronizing diseases table...")
+                await self.sync_diseases_table(db)
+                step_num += 1
             
-            # Step 6: Verify results
+            # Step: Import historical data
+            if self.rebuild_options['import_history']:
+                logger.info(f"\n📊 Step {step_num}/{total_steps}: Importing historical data...")
+                await self.import_history_data(db)
+                step_num += 1
+            
+            # Step: Verify results
+            logger.info(f"\n✅ Step {step_num}/{total_steps}: Verifying data...")
             await self.verify_results(db)
             
         logger.info("\n" + "=" * 80)
         logger.info("✅ Database rebuild completed successfully!")
         logger.info("=" * 80)
     
+    def _select_rebuild_mode(self):
+        """交互式选择重建模式"""
+        print("\n" + "=" * 80)
+        print("🔧 请选择重建模式:")
+        print("=" * 80)
+        print("1. 完整重建 (Full Rebuild)")
+        print("   • 清空所有表")
+        print("   • 导入标准疾病库")
+        print("   • 导入疾病映射（中文 + 英文）")
+        print("   • 同步疾病表")
+        print("   • 导入历史数据")
+        print()
+        print("2. 仅更新映射 (Mappings Only)")
+        print("   • 清空映射相关表（standard_diseases, disease_mappings, diseases）")
+        print("   • 导入标准疾病库")
+        print("   • 导入疾病映射（中文 + 英文）")
+        print("   • 同步疾病表")
+        print("   • 保留历史数据不动")
+        print()
+        print("3. 仅导入历史数据 (History Only)")
+        print("   • 仅清空 disease_records 表")
+        print("   • 重新导入历史数据")
+        print("   • 不修改映射表")
+        print()
+        print("4. 自定义选择 (Custom)")
+        print("   • 手动选择要执行的步骤")
+        print()
+        print("=" * 80)
+        
+        while True:
+            choice = input("请输入选项 (1-4) [默认: 1]: ").strip() or "1"
+            if choice in ['1', '2', '3', '4']:
+                mode_map = {'1': 'full', '2': 'mappings', '3': 'history', '4': 'custom'}
+                return mode_map[choice]
+            print("❌ 无效选项，请重新输入")
+    
+    def _configure_rebuild_options(self):
+        """根据重建模式配置选项"""
+        if self.rebuild_mode == 'full':
+            # 完整重建：所有步骤
+            self.rebuild_options = {
+                'clear_data': True,
+                'import_standard': True,
+                'import_mappings': True,
+                'sync_diseases': True,
+                'import_history': True,
+            }
+        
+        elif self.rebuild_mode == 'mappings':
+            # 仅更新映射：不导入历史数据
+            self.rebuild_options = {
+                'clear_data': True,
+                'import_standard': True,
+                'import_mappings': True,
+                'sync_diseases': True,
+                'import_history': False,
+            }
+        
+        elif self.rebuild_mode == 'history':
+            # 仅导入历史：只清空和导入 disease_records
+            self.rebuild_options = {
+                'clear_data': True,  # 会清空 disease_records 表
+                'import_standard': False,
+                'import_mappings': False,
+                'sync_diseases': False,
+                'import_history': True,
+            }
+        
+        elif self.rebuild_mode == 'custom':
+            # 自定义：交互式选择
+            self._select_custom_options()
+    
+    def _select_custom_options(self):
+        """交互式选择自定义步骤"""
+        print("\n" + "=" * 80)
+        print("🎯 自定义重建步骤:")
+        print("=" * 80)
+        
+        options = [
+            ('clear_data', '清空现有数据'),
+            ('import_standard', '导入标准疾病库'),
+            ('import_mappings', '导入疾病映射（中文 + 英文）'),
+            ('sync_diseases', '同步疾病表'),
+            ('import_history', '导入历史数据'),
+        ]
+        
+        for key, desc in options:
+            while True:
+                answer = input(f"  • {desc}? (y/n) [默认: y]: ").strip().lower() or 'y'
+                if answer in ['y', 'n', 'yes', 'no']:
+                    self.rebuild_options[key] = answer in ['y', 'yes']
+                    break
+                print("    ❌ 无效输入，请输入 y 或 n")
+        
+        print("=" * 80)
+        print("✓ 自定义配置完成")
+        print("=" * 80)
+    
     async def _show_warning_and_stats(self, db):
         """Display warning message and current data statistics"""
+        # 根据 rebuild_mode 显示将要清空的表
+        if self.rebuild_mode == 'history':
+            tables_to_clear = ["disease_records"]
+            preserved_tables = ["diseases", "disease_mappings", "standard_diseases", "crawl_runs", "crawl_raw_pages"]
+        elif self.rebuild_mode == 'mappings':
+            tables_to_clear = ["disease_mappings", "standard_diseases"]
+            preserved_tables = ["disease_records (历史数据)", "crawl_runs", "crawl_raw_pages"]
+        else:  # full or custom
+            tables_to_clear = ["disease_records", "diseases", "disease_mappings", "standard_diseases"]
+            preserved_tables = ["crawl_runs", "crawl_raw_pages"]
+        
         logger.warning("\n⚠️  WARNING: This operation will clear the following tables:")
-        logger.warning("   • disease_records")
-        logger.warning("   • diseases")
-        logger.warning("   • disease_mappings")
-        logger.warning("   • standard_diseases")
+        for table in tables_to_clear:
+            logger.warning(f"   • {table}")
+        
+        if preserved_tables:
+            logger.warning(f"   • (preserved) {', '.join(preserved_tables)}")
         
         logger.info("\n📊 Current Data Statistics:")
         
@@ -114,6 +276,20 @@ class DatabaseRebuilder:
         }
         
         for table, label in tables.items():
+            try:
+                result = await db.execute(text(f"SELECT COUNT(*) FROM {table}"))
+                count = result.scalar()
+                logger.info(f"   • {label:20s}: {count:,} records")
+            except Exception:
+                logger.info(f"   • {label:20s}: (table not found)")
+
+        preserved_tables = {
+            "crawl_runs": "Crawl Runs",
+            "crawl_raw_pages": "Crawl Raw Pages"
+        }
+
+        logger.info("\n📌 Preserved Tables:")
+        for table, label in preserved_tables.items():
             try:
                 result = await db.execute(text(f"SELECT COUNT(*) FROM {table}"))
                 count = result.scalar()
@@ -138,15 +314,25 @@ class DatabaseRebuilder:
     
     async def clear_data(self, db):
         """Clear all disease-related data"""
-        logger.info("\n📦 Step 1/6: Clearing existing data...")
-        
         # Delete in proper order to respect foreign key constraints
-        tables = [
-            "disease_records",
-            "diseases", 
-            "disease_mappings",
-            "standard_diseases"
-        ]
+        if self.rebuild_mode == 'history':
+            # 仅清空历史数据表
+            tables = ["disease_records"]
+        elif self.rebuild_mode == 'mappings':
+            # 仅清空映射相关表，保留 diseases 表以避免级联删除历史数据
+            # diseases 表会通过 sync_diseases_table 进行 UPSERT 更新
+            tables = [
+                "disease_mappings",
+                "standard_diseases"
+            ]
+        else:
+            # 完整重建 或 自定义模式：清空所有表
+            tables = [
+                "disease_records",
+                "diseases", 
+                "disease_mappings",
+                "standard_diseases"
+            ]
         
         for table in tables:
             result = await db.execute(text(f"SELECT COUNT(*) FROM {table}"))
@@ -160,8 +346,6 @@ class DatabaseRebuilder:
     
     async def import_standard_diseases(self, db):
         """Import standard disease library"""
-        logger.info("\n📚 Step 2/6: Importing standard diseases...")
-        
         if not self.standard_file.exists():
             raise FileNotFoundError(f"Standard disease file not found: {self.standard_file}")
         
@@ -208,14 +392,27 @@ class DatabaseRebuilder:
         logger.info(f"✓ Imported {inserted:,} standard diseases")
     
     async def import_disease_mappings(self, db):
-        """Import disease mapping relationships"""
-        logger.info(f"\n🗺️  Step 3/6: Importing disease mappings ({self.country_code})...")
+        """Import disease mapping relationships (支持多语言映射)"""
+        total_inserted = 0
         
-        if not self.mapping_file.exists():
-            raise FileNotFoundError(f"Mapping file not found: {self.mapping_file}")
+        # 处理所有映射文件（中文 + 英文）
+        for mapping_file, country_code in self.mapping_files:
+            if not mapping_file.exists():
+                logger.warning(f"  Mapping file not found: {mapping_file}, skipping...")
+                continue
+            
+            df = pd.read_csv(mapping_file).fillna('')
+            logger.info(f"  Loading {mapping_file.name} ({country_code}): {len(df):,} entries")
+            
+            inserted = await self._import_single_mapping_file(db, df, country_code)
+            total_inserted += inserted
         
-        df = pd.read_csv(self.mapping_file).fillna('')
-        logger.info(f"  Read {len(df):,} mapping entries")
+        await db.commit()
+        logger.info(f"✓ Imported {total_inserted:,} total mapping relationships")
+    
+    async def _import_single_mapping_file(self, db, df, country_code):
+        """导入单个映射文件"""
+        inserted = 0
         
         # Allow NULL in category column
         await db.execute(text("""
@@ -243,7 +440,7 @@ class DatabaseRebuilder:
                     updated_at = CURRENT_TIMESTAMP
             """), {
                 'disease_id': disease_id,
-                'country': self.country_code,
+                'country': country_code,
                 'local_name': local_name,
                 'category': row['category'] if row['category'] else None,
                 'source': row.get('data_source', row.get('source', 'Manual'))
@@ -274,20 +471,17 @@ class DatabaseRebuilder:
                             updated_at = CURRENT_TIMESTAMP
                     """), {
                         'disease_id': disease_id,
-                        'country': self.country_code,
+                        'country': country_code,
                         'alias': alias,
                         'category': row['category'] if row['category'] else None,
                         'source': row.get('source', 'Manual')
                     })
                     inserted += 1
         
-        await db.commit()
-        logger.info(f"✓ Imported {inserted:,} mapping relationships")
+        return inserted
     
     async def sync_diseases_table(self, db):
         """Synchronize diseases table"""
-        logger.info("\n🔄 Step 4/6: Synchronizing diseases table...")
-        
         # Import from standard_diseases to diseases
         result = await db.execute(text("""
             INSERT INTO diseases (name, name_en, category, icd_10, icd_11, description, 
@@ -657,42 +851,43 @@ class DatabaseRebuilder:
         logger.info(f"  • Time Range: {rec[2]} to {rec[3]}")
 
 async def main():
-    # Parse command-line arguments
     parser = argparse.ArgumentParser(
-        description='Complete Database Rebuild (clear existing data and re-import)',
+        description="Complete database rebuild for GlobalID system",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Interactive mode (prompts for confirmation)
-  python scripts/full_rebuild_database.py
-  
-  # Auto-confirm (skip prompt)
-  python scripts/full_rebuild_database.py --yes
-  
-  # Rebuild with US data
-  python scripts/full_rebuild_database.py --country us
-  
-  # Auto-confirm with Japan data
-  python scripts/full_rebuild_database.py --country jp --yes
-  
-Warning: This operation will delete all disease-related data. Use with caution!
+  python scripts/full_rebuild_database.py                        # Interactive mode
+  python scripts/full_rebuild_database.py --yes                  # Auto-confirm (full rebuild)
+  python scripts/full_rebuild_database.py --mode mappings        # Only rebuild mappings
+  python scripts/full_rebuild_database.py --mode history --yes   # Only reimport history data
+  python scripts/full_rebuild_database.py --country us           # Rebuild US data
         """
     )
+    
     parser.add_argument(
-        '--country', '-c',
+        '--country',
         default='cn',
-        help='Country code for data import (cn, us, au, jp, etc.). Default: cn'
+        help='Country code (default: cn)'
     )
     parser.add_argument(
         '--yes', '-y',
         action='store_true',
-        help='Auto-confirm, skip prompt (for automation scripts)'
+        help='Auto-confirm without prompting'
+    )
+    parser.add_argument(
+        '--mode', '-m',
+        choices=['full', 'mappings', 'history', 'custom'],
+        help='Rebuild mode: full (all), mappings (only mappings), history (only history), custom (interactive)'
     )
     
     args = parser.parse_args()
     
     try:
-        rebuilder = DatabaseRebuilder(country_code=args.country, auto_confirm=args.yes)
+        rebuilder = DatabaseRebuilder(
+            country_code=args.country,
+            auto_confirm=args.yes,
+            rebuild_mode=args.mode
+        )
         await rebuilder.run()
     except Exception as e:
         logger.error(f"❌ Rebuild failed: {e}", exc_info=True)

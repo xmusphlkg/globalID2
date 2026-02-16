@@ -66,6 +66,18 @@ class AISettings(BaseSettings):
     rate_limit: int = Field(default=50, description="每分钟请求限制")
 
 
+class EmailSettings(BaseSettings):
+    """邮件配置"""
+
+    smtp_host: str = Field(default="smtp.gmail.com", description="SMTP服务器")
+    smtp_port: int = Field(default=587, description="SMTP端口")
+    smtp_user: str = Field(default="", description="SMTP用户名")
+    smtp_password: str = Field(default="", description="SMTP密码")
+    from_address: str = Field(default="", description="发送方邮箱")
+    use_tls: bool = Field(default=True, description="使用TLS")
+    default_recipients: list[str] = Field(default_factory=list, description="默认收件人列表")
+
+
 class AppSettings(BaseSettings):
     """应用配置"""
 
@@ -97,6 +109,7 @@ class AppSettings(BaseSettings):
     redis: RedisSettings = Field(default_factory=RedisSettings)
     qdrant: QdrantSettings = Field(default_factory=QdrantSettings)
     ai: AISettings = Field(default_factory=AISettings)
+    email: EmailSettings = Field(default_factory=EmailSettings)
     
     @field_validator("log_dir", "data_dir", "raw_data_dir", "processed_data_dir", "cache_dir")
     @classmethod

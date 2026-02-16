@@ -7,6 +7,7 @@ from .base import Base, BaseModel, IDMixin, TimestampMixin
 from .country import Country
 from .disease import Disease
 from .disease_record import DiseaseRecord
+from .crawl import CrawlRun, CrawlRawPage
 from .report import Report, ReportSection, ReportStatus, ReportType
 
 __all__ = [
@@ -19,6 +20,8 @@ __all__ = [
     "Country",
     "Disease",
     "DiseaseRecord",
+    "CrawlRun",
+    "CrawlRawPage",
     "Report",
     "ReportSection",
     # Enums
