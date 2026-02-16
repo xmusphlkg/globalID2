@@ -1,0 +1,123 @@
+id,disease_id,country_code,local_name,local_code,is_primary,is_alias,priority,category,source,confidence_score,verified_by,verified_at,usage_count,last_used_at,is_active,created_by,created_at,updated_at,metadata
+2336,D001,CN,鼠疫,Plague,True,False,100,甲类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2337,D002,CN,霍乱,Cholera,True,False,100,甲类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2338,D003,CN,传染性非典型肺炎,SARS-CoV,True,False,100,乙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2339,D003,CN,非典,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2340,D003,CN,SARS,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2341,D004,CN,新型冠状病毒感染,COVID-19,True,False,100,乙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2342,D004,CN,新冠,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2343,D004,CN,新型冠状病毒肺炎,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2344,D004,CN,新冠肺炎,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2345,D004,CN,新型冠状病毒,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2346,D005,CN,艾滋病,AIDS,True,False,100,乙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2347,D005,CN,HIV,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2348,D005,CN,获得性免疫缺陷综合征,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2349,D006,CN,病毒性肝炎,Hepatitis,True,False,100,乙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2350,D006,CN,病毒性肝炎*,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2352,D006,CN,肝炎,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2353,D007,CN,甲型肝炎,Hepatitis A,True,False,100,乙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2354,D007,CN,甲肝,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2355,D008,CN,乙型肝炎,Hepatitis B,True,False,100,乙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2356,D008,CN,乙肝,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2357,D009,CN,丙型肝炎,Hepatitis C,True,False,100,乙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2358,D009,CN,丙肝,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2360,D010,CN,丁型肝炎,Hepatitis D,True,False,100,乙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2361,D010,CN,丁肝,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2362,D011,CN,戊型肝炎,Hepatitis E,True,False,100,乙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2363,D011,CN,戊肝,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2364,D012,CN,未分型肝炎,Other Hepatitis,True,False,100,乙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2365,D012,CN,肝炎未分型,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2366,D012,CN,肝炎（未分型）,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2367,D012,CN,成型肝炎,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2368,D013,CN,脊髓灰质炎,Poliomyelitis,True,False,100,乙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2369,D013,CN,小儿麻痹症,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2370,D013,CN,灰质炎,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2371,D014,CN,人感染高致病性禽流感,H5N1,True,False,100,乙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2372,D014,CN,禽流感H5N1,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2373,D014,CN,人感染H5N1病毒,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2374,D015,CN,人感染H7N9禽流感,H7N9,True,False,100,乙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2375,D015,CN,禽流感H7N9,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2376,D015,CN,人感染H7N9病毒,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2377,D016,CN,人感染新亚型流感,Novel Influenza,True,False,100,乙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2378,D017,CN,麻疹,Measles,True,False,100,乙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2379,D018,CN,流行性出血热,Hemorrhagic Fever,True,False,100,乙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2380,D018,CN,肾综合征出血热,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2381,D018,CN,出血热,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2382,D019,CN,狂犬病,Rabies,True,False,100,乙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2383,D019,CN,疯狗病,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2384,D020,CN,流行性乙型脑炎,Japanese Encephalitis,True,False,100,乙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2385,D020,CN,乙脑,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2386,D021,CN,登革热,Dengue,True,False,100,乙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2387,D065,CN,猴痘,Mpox,True,False,100,乙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2388,D065,CN,猴天花,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2389,D065,CN,Monkeypox,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2390,D023,CN,炭疽,Anthrax,True,False,100,乙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2391,D024,CN,细菌性和阿米巴性痢疾,Dysentery,True,False,100,乙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2392,D024,CN,痢疾,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2393,D025,CN,肺结核,Tuberculosis,True,False,100,乙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2394,D025,CN,结核病,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2395,D025,CN,TB,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2396,D026,CN,伤寒和副伤寒,Typhoid,True,False,100,乙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2397,D026,CN,伤寒,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2398,D027,CN,流行性脑脊髓膜炎,Meningococcal Meningitis,True,False,100,乙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2399,D027,CN,流脑,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2400,D028,CN,百日咳,Pertussis,True,False,100,乙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2401,D029,CN,白喉,Diphtheria,True,False,100,乙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2402,D030,CN,新生儿破伤风,Neonatal Tetanus,True,False,100,乙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2403,D031,CN,猩红热,Scarlet Fever,True,False,100,乙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2404,D032,CN,布鲁氏菌病,Brucellosis,True,False,100,乙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2405,D032,CN,布病,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2406,D033,CN,淋病,Gonorrhea,True,False,100,乙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2407,D033,CN,淋球菌病,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2409,D034,CN,梅毒,Syphilis,True,False,100,乙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2410,D034,CN,梅毒毒,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2412,D035,CN,钩端螺旋体病,Leptospirosis,True,False,100,乙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2413,D035,CN,钩体病,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2414,D036,CN,血吸虫病,Schistosomiasis,True,False,100,乙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2415,D037,CN,疟疾,Malaria,True,False,100,乙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2416,D038,CN,流行性感冒,Influenza,True,False,100,丙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2417,D038,CN,流感,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2418,D038,CN,感冒,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2419,D038,CN,甲型H1N1流感,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2420,D039,CN,流行性腮腺炎,Mumps,True,False,100,丙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2421,D039,CN,其它感染性腮腺炎,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2423,D040,CN,风疹,Rubella,True,False,100,丙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2424,D040,CN,德国麻疹,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2425,D041,CN,急性出血性结膜炎,Acute Hemorrhagic Conjunctivitis,True,False,100,丙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2426,D041,CN,红眼病,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2427,D042,CN,麻风病,Leprosy,True,False,100,丙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2428,D043,CN,流行性和地方性斑疹伤寒,Typhus,True,False,100,丙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2429,D043,CN,麻疹伤寒,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2430,D043,CN,斑疹伤寒,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2431,D044,CN,黑热病,Kala-azar,True,False,100,丙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2432,D044,CN,内脏利什曼病,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2433,D045,CN,包虫病,Echinococcosis,True,False,100,丙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2434,D045,CN,棘球蚴病,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2435,D046,CN,丝虫病,Filariasis,True,False,100,丙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2436,D047,CN,其他感染性腹泻病,Infectious Diarrhea,True,False,100,丙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2437,D047,CN,感染性腹泻,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2438,D047,CN,其它感染性腹泻病,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2439,D048,CN,手足口病,HFMD,True,False,100,丙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2440,D048,CN,肠道病毒感染,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2441,D049,CN,中东呼吸综合征,MERS,True,False,100,监测,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2442,D049,CN,MERS-CoV,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2443,D049,CN,中东呼吸综合征MERS,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2444,D050,CN,埃博拉出血热,Ebola,True,False,100,监测,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2445,D050,CN,埃博拉,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2446,D051,CN,寨卡病毒病,Zika,True,False,100,监测,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2447,D051,CN,寨卡,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2448,D052,CN,基孔肯雅热,Chikungunya,True,False,100,监测,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2449,D053,CN,拉沙热,Lassa,True,False,100,监测,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2450,D054,CN,水痘,Varicella,True,False,100,监测,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2451,D055,CN,肝吸虫病,Clonorchiasis,True,False,100,监测,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2452,D055,CN,华支睾吸虫病,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2453,D056,CN,人感染猪链球菌病,Streptococcus suis,True,False,100,监测,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2454,D056,CN,猪链球菌,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2455,D057,CN,发热伴血小板减少综合征,SFTS,True,False,100,监测,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2456,D057,CN,蜱虫病,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2457,D057,CN,新型布尼亚病毒,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2458,D058,CN,恙虫病,Scrub Typhus,True,False,100,乙类,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2460,D999,CN,甲乙丙类传染病总计,Total,True,False,100,汇总,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2461,D999,CN,合计,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2462,D999,CN,总计,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}
+2463,D999,CN,甲乙类传染病合计,,True,False,90,,migration,1.0,,,0,,True,migration,2026-02-14 09:59:18.018106,2026-02-14 09:59:18.018106,{}

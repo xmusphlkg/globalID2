@@ -1,0 +1,181 @@
+# ========================================
+# 原始数据文件元数据
+# ========================================
+# URL: https://pmc.ncbi.nlm.nih.gov/articles/PMC9906046/
+# 标题: Reported Cases and Deaths of National Notifiable Infectious Diseases - China, October 2022
+# 报告时间: 2022 October
+# 数据源: PubMed
+# 抓取时间: 2026-02-16 16:36:41
+# 内容哈希: 846522418d441c1a958ada7e0965445524cff79995008672d7737fd4e0531930
+# DOI: ['pmid:36779174', 'pmc:PMC9906046', 'doi:10.46234/ccdcw2022.220']
+# ========================================
+
+China CDC Wkly
+. 2022 Dec 30;4(52):1189–1190. doi:
+10.46234/ccdcw2022.220
+Reported Cases and Deaths of National Notifiable Infectious Diseases — China, October 2022
+Article notes
+Copyright and License information
+Keywords:
+infectious, diseases
+Copyright and License information: Editorial Office of CCDCW, Chinese Center for Disease Control and Prevention 2022
+This work is licensed under a Creative Commons Attribution-NonCommercial-Share Alike 4.0 Unported License. To view a copy of this license, visit
+http://creativecommons.org/licenses/by-nc-sa/4.0/
+PMC Copyright notice
+PMCID: PMC9906046  PMID:
+36779174
+Table 1.
+Diseases
+Cases
+Deaths
+* The number of deaths of acquired immune deficiency syndrome (AIDS) is the number of all-cause deaths reported in the month by cumulative reported AIDS patients.
+†
+According to the data from website of the National Health Commission of the People’s Republic of China, the number of COVID-19 cases in the whole country in October were 9,885 cases, which included 366 cases from Hong Kong Special Administrative Regions, Macao Special Administrative Regions, and Taiwan, and 165 imported foreign cases. No death were reported.
+§
+Infectious diarrhea excludes cholera, dysentery, typhoid fever and paratyphoid fever.
+The number of cases and cause-specific deaths refer to data recorded in National Notifiable Disease Reporting System in China, which includes both clinically-diagnosed cases and laboratory-confirmed cases. Only reported cases of the 31 provincial-level administrative divisions in the mainland of China are included in the table, whereas data of Hong Kong Special Administrative Region, Macau Special Administrative Region, and Taiwan, China are not included. Monthly statistics are calculated without annual verification, which were usually conducted in February of the next year for de-duplication and verification of reported cases in annual statistics. Therefore, 12-month cases could not be added together directly to calculate the cumulative cases because the individual information might be verified via National Notifiable Disease Reporting System according to information verification or field investigations by local CDCs.
+Plague
+0
+0
+Cholera
+3
+0
+SARS-CoV
+0
+0
+Acquired immune deficiency syndrome*
+3,965
+1,549
+Hepatitis
+109,020
+71
+Hepatitis A
+752
+0
+Hepatitis B
+90,015
+33
+Hepatitis C
+16,020
+36
+Hepatitis D
+10
+0
+Hepatitis E
+1,683
+2
+Other hepatitis
+540
+0
+Poliomyelitis
+0
+0
+Human infection with H5N1 virus
+0
+0
+Measles
+111
+0
+Epidemic hemorrhagic fever
+400
+2
+Rabies
+12
+6
+Japanese encephalitis
+27
+0
+Dengue
+326
+0
+Anthrax
+35
+0
+Dysentery
+2,559
+0
+Tuberculosis
+51,125
+304
+Typhoid fever and paratyphoid fever
+494
+1
+Meningococcal meningitis
+4
+0
+Pertussis
+2,594
+0
+Diphtheria
+0
+0
+Neonatal tetanus
+1
+0
+Scarlet fever
+1,383
+0
+Brucellosis
+2,535
+0
+Gonorrhea
+7,959
+1
+Syphilis
+39,054
+2
+Leptospirosis
+28
+0
+Schistosomiasis
+11
+0
+Malaria
+92
+0
+Human infection with H7N9 virus
+0
+0
+COVID-19
+†
+9,354
+0
+Influenza
+69,072
+1
+Mumps
+9,537
+0
+Rubella
+118
+0
+Acute hemorrhagic conjunctivitis
+2,009
+0
+Leprosy
+13
+0
+Typhus
+118
+0
+Kala azar
+16
+0
+Echinococcosis
+115
+0
+Filariasis
+0
+0
+Infectious diarrhea
+§
+61,743
+0
+Hand, foot and mouth disease
+47,395
+0
+Total
+421,228
+1,937
+Open in a new tab
+References

@@ -1,0 +1,184 @@
+# ========================================
+# 原始数据文件元数据
+# ========================================
+# URL: https://pmc.ncbi.nlm.nih.gov/articles/PMC10787338/
+# 标题: Reported Cases and Deaths of National Notifiable Infectious Diseases - China, November 2023
+# 报告时间: 2023 November
+# 数据源: PubMed
+# 抓取时间: 2026-02-16 16:36:29
+# 内容哈希: ef434da406a29084f6ba32d69e2264dc4ba32940066bdf8735760e76e6674029
+# DOI: ['pmid:38223657', 'pmc:PMC10787338', 'doi:10.46234/ccdcw2024.004']
+# ========================================
+
+China CDC Wkly
+. 2024 Jan 5;6(1):23–24. doi:
+10.46234/ccdcw2024.004
+Reported Cases and Deaths of National Notifiable Infectious Diseases — China, November 2023*
+Article notes
+Copyright and License information
+Keywords:
+infectious, diseases
+Copyright and License information: Editorial Office of CCDCW, Chinese Center for Disease Control and Prevention 2024
+This work is licensed under a Creative Commons Attribution-NonCommercial-Share Alike 4.0 Unported License. To view a copy of this license, visit
+http://creativecommons.org/licenses/by-nc-sa/4.0/
+PMC Copyright notice
+PMCID: PMC10787338  PMID:
+38223657
+Table 1.
+Diseases
+Cases
+Deaths
+* According to the National Bureau of Disease Control and Prevention, not included coronavirus disease 2019 (COVID-19).
+†
+The number of deaths of acquired immune deficiency syndrome (AIDS) is the number of all-cause deaths reported in the month by cumulative reported AIDS patients.
+§
+Since September 20, 2023, Monkey pox was included in the management of Class B infectious diseases.
+¶
+Infectious diarrhea excludes cholera, dysentery, typhoid fever and paratyphoid fever.
+The number of cases and cause-specific deaths refer to data recorded in National Notifiable Disease Reporting System in China, which includes both clinically-diagnosed cases and laboratory-confirmed cases. Only reported cases of the 31 provincial-level administrative divisions in Chinese mainland are included in the table, whereas data of Hong Kong Special Administrative Region, Macau Special Administrative Region, and Taiwan, China are not included. Monthly statistics are calculated without annual verification, which were usually conducted in February of the next year for de-duplication and verification of reported cases in annual statistics. Therefore, 12-month cases could not be added together directly to calculate the cumulative cases because the individual information might be verified via National Notifiable Disease Reporting System according to information verification or field investigations by local CDCs.
+Plague
+1
+0
+Cholera
+0
+0
+SARS-CoV
+0
+0
+Acquired immune deficiency syndrome
+†
+5,664
+1,955
+Hepatitis
+156,977
+327
+Hepatitis A
+1,056
+0
+Hepatitis B
+132,270
+35
+Hepatitis C
+20,280
+292
+Hepatitis D
+19
+0
+Hepatitis E
+2,751
+0
+Other hepatitis
+601
+0
+Poliomyelitis
+0
+0
+Human infection with H5N1 virus
+0
+0
+Measles
+78
+0
+Epidemic hemorrhagic fever
+1,320
+3
+Rabies
+12
+14
+Japanese encephalitis
+12
+2
+Dengue
+1,685
+0
+Anthrax
+36
+0
+Dysentery
+1,963
+1
+Tuberculosis
+57,432
+320
+Typhoid fever and paratyphoid fever
+377
+0
+Meningococcal meningitis
+12
+0
+Pertussis
+6,410
+2
+Diphtheria
+0
+0
+Neonatal tetanus
+1
+0
+Scarlet fever
+4,637
+0
+Brucellosis
+4,540
+0
+Gonorrhea
+10,065
+0
+Syphilis
+57,719
+1
+Leptospirosis
+25
+0
+Schistosomiasis
+3
+0
+Malaria
+183
+0
+Human infection with H7N9 virus
+0
+0
+Monkey pox
+§
+80
+0
+Influenza
+1,862,998
+1
+Mumps
+7,642
+0
+Rubella
+89
+0
+Acute hemorrhagic conjunctivitis
+4,940
+0
+Leprosy
+34
+0
+Typhus
+170
+0
+Kala azar
+19
+0
+Echinococcosis
+387
+0
+Filariasis
+0
+0
+Infectious diarrhea
+¶
+73,835
+0
+Hand, foot and mouth disease
+92,955
+0
+Total
+2,352,301
+2,626
+Open in a new tab
+References

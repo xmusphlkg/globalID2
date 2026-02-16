@@ -328,7 +328,25 @@ Format: Use numbered list (1. 2. 3. ...)"""
     def _summarize_data(data: Dict[str, Any]) -> str:
         """Summarize data as JSON string (truncated if long)."""
         import json
-        summary = json.dumps(data, ensure_ascii=False, indent=2)
+        import pandas as pd
+        from datetime import datetime
+        
+        def convert_timestamps(obj):
+            """Convert pandas Timestamp objects to strings recursively."""
+            if isinstance(obj, pd.Timestamp):
+                return obj.isoformat()
+            elif isinstance(obj, datetime):
+                return obj.isoformat()
+            elif isinstance(obj, dict):
+                return {key: convert_timestamps(value) for key, value in obj.items()}
+            elif isinstance(obj, list):
+                return [convert_timestamps(item) for item in obj]
+            else:
+                return obj
+        
+        # Convert timestamps before JSON serialization
+        converted_data = convert_timestamps(data)
+        summary = json.dumps(converted_data, ensure_ascii=False, indent=2)
         # Truncate if summary is too long
         if len(summary) > 1000:
             summary = summary[:1000] + "\n... (data truncated)"

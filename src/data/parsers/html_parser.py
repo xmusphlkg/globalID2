@@ -308,9 +308,10 @@ class HTMLTableParser(BaseParser):
         # 移除"合计"行
         data = data[~data["DiseasesCN"].str.contains("合计", na=False)]
         
-        # 清洗疾病名称
-        data["DiseasesCN"] = data["DiseasesCN"].str.replace(
-            r"[^\w\s\u4e00-\u9fa5]", "", regex=True
+        # 清洗疾病名称 - 只保留中文字符、字母、数字、空格
+        # 使用Unicode范围匹配中文: \u4e00-\u9fff
+        data["DiseasesCN"] = data["DiseasesCN"].apply(
+            lambda x: ''.join(c for c in str(x) if c.isalnum() or c.isspace() or '\u4e00' <= c <= '\u9fff')
         )
         data["DiseasesCN"] = data["DiseasesCN"].str.replace(
             "甲乙丙类总计", "合计", regex=False

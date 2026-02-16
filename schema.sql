@@ -199,7 +199,7 @@ CREATE TABLE crawl_raw_pages (
 	content_hash VARCHAR(64),
 	content_type VARCHAR(50),
 	fetched_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-	source VARCHAR(50),
+	source VARCHAR(100),
 	metadata JSON NOT NULL,
 	created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
 	updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,

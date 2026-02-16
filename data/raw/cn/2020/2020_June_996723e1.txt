@@ -1,0 +1,176 @@
+# ========================================
+# 原始数据文件元数据
+# ========================================
+# URL: https://pmc.ncbi.nlm.nih.gov/articles/PMC8428424/
+# 标题: Reported Cases and Deaths of National Notifiable Infectious Diseases - China, June, 2020
+# 报告时间: 2020 June
+# 数据源: PubMed
+# 抓取时间: 2026-02-16 16:37:08
+# 内容哈希: 996723e194d3e39694baec1af50b94652db6e1728926ee4d0d37018e05eb9ec8
+# DOI: ['pmid:34594718', 'pmc:PMC8428424', 'doi:10.46234/ccdcw2020.161']
+# ========================================
+
+China CDC Wkly
+. 2020 Jul 31;2(31):603–604. doi:
+10.46234/ccdcw2020.161
+Reported Cases and Deaths of National Notifiable Infectious Diseases — China, June, 2020
+Copyright and License information
+Copyright and License information: Editorial Office of CCDCW, Chinese Center for Disease Control and Prevention 2020
+This work is licensed under a Creative Commons Attribution-NonCommercial-Share Alike 4.0 Unported License. To view a copy of this license, visit
+http://creativecommons.org/licenses/by-nc-sa/4.0/
+PMC Copyright notice
+PMCID: PMC8428424  PMID:
+34594718
+Table 1.
+Diseases
+Cases
+Deaths
+*
+The data were from the website of the National Health Commission of the People’s Republic of China.
+†
+Infectious diarrhea excludes cholera, dysentery, typhoid fever and paratyphoid fever.
+The number of cases and cause-specific deaths refer to data recorded in National Notifiable Disease Reporting System in China, which includes both clinically-diagnosed cases and laboratory-confirmed cases. Only reported cases of the 31 provincial-level administrative divisions in the mainland of China are included in the table, whereas data of Hong Kong Special Administrative Region, Macau Special Administrative Region, and Taiwan are not included. Monthly statistics are calculated without annual verification, which were usually conducted in February of the next year for de-duplication and verification of reported cases in annual statistics. Therefore, 12-month cases could not be added together directly to calculate the cumulative cases because the individual information might be verified via National Notifiable Disease Reporting System according to information verification or field investigations by local CDCs.
+Plague
+0
+0
+Cholera
+0
+0
+SARS-CoV
+0
+0
+Acquired immune deficiency syndrome
+6,915
+1,811
+Hepatitis
+123,474
+50
+Hepatitis A
+1,249
+1
+Hepatitis B
+99,319
+36
+Hepatitis C
+20,367
+11
+Hepatitis D
+16
+0
+Hepatitis E
+1,708
+1
+Other hepatitis
+815
+1
+Poliomyelitis
+0
+0
+Human infection with H5N1 virus
+0
+0
+Measles
+91
+0
+Epidemic hemorrhagic fever
+826
+6
+Rabies
+17
+10
+Japanese encephalitis
+6
+0
+Dengue
+4
+0
+Anthrax
+18
+0
+Dysentery
+7,775
+0
+Tuberculosis
+84,952
+134
+Typhoid fever and paratyphoid fever
+832
+0
+Meningococcal meningitis
+3
+0
+Pertussis
+159
+1
+Diphtheria
+0
+0
+Neonatal tetanus
+1
+0
+Scarlet fever
+677
+0
+Brucellosis
+6,193
+0
+Gonorrhea
+9,292
+0
+Syphilis
+46,538
+5
+Leptospirosis
+12
+0
+Schistosomiasis
+6
+0
+Malaria
+74
+0
+Human infection with H7N9 virus
+0
+0
+COVID-19
+*
+517
+0
+Influenza
+15,640
+0
+Mumps
+11,995
+0
+Rubella
+114
+0
+Acute hemorrhagic conjunctivitis
+2,788
+0
+Leprosy
+41
+0
+Typhus
+113
+0
+Kala azar
+26
+0
+Echinococcosis
+264
+0
+Filariasis
+0
+0
+Infectious diarrhea
+†
+114,085
+2
+Hand, foot and mouth disease
+6260
+0
+Total
+439,708
+2,019
+Open in a new tab

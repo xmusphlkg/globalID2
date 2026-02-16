@@ -1,0 +1,45 @@
+﻿Date,YearMonthDay,YearMonth,Diseases,DiseasesCN,Cases,Deaths,Incidence,Mortality,ProvinceCN,Province,ADCode,DOI,URL,Source,disease_id,standard_name_en,standard_name_zh
+2019-12-01,2019/12/01,2019 December,Cholera,霍乱,0.0,0.0,-10,-10,全国,China,100000,pmid:34594831; pmc:PMC8393096,https://pmc.ncbi.nlm.nih.gov/articles/PMC8393096/,PubMed,D002,Cholera,霍乱
+2019-12-01,2019/12/01,2019 December,Cholera,霍乱,0.0,0.0,-10,-10,全国,China,100000,pmid:34594831; pmc:PMC8393096,https://pmc.ncbi.nlm.nih.gov/articles/PMC8393096/,PubMed,D002,Cholera,霍乱
+2019-12-01,2019/12/01,2019 December,HIV/AIDS,艾滋病,,,-10,-10,全国,China,100000,pmid:34594831; pmc:PMC8393096,https://pmc.ncbi.nlm.nih.gov/articles/PMC8393096/,PubMed,D005,HIV/AIDS,艾滋病
+2019-12-01,2019/12/01,2019 December,Viral Hepatitis,病毒性肝炎,,54.0,-10,-10,全国,China,100000,pmid:34594831; pmc:PMC8393096,https://pmc.ncbi.nlm.nih.gov/articles/PMC8393096/,PubMed,D006,Viral Hepatitis,病毒性肝炎
+2019-12-01,2019/12/01,2019 December,Hepatitis A,甲型肝炎,,1.0,-10,-10,全国,China,100000,pmid:34594831; pmc:PMC8393096,https://pmc.ncbi.nlm.nih.gov/articles/PMC8393096/,PubMed,D007,Hepatitis A,甲型肝炎
+2019-12-01,2019/12/01,2019 December,Hepatitis B,乙型肝炎,,43.0,-10,-10,全国,China,100000,pmid:34594831; pmc:PMC8393096,https://pmc.ncbi.nlm.nih.gov/articles/PMC8393096/,PubMed,D008,Hepatitis B,乙型肝炎
+2019-12-01,2019/12/01,2019 December,Hepatitis C,丙型肝炎,,7.0,-10,-10,全国,China,100000,pmid:34594831; pmc:PMC8393096,https://pmc.ncbi.nlm.nih.gov/articles/PMC8393096/,PubMed,D009,Hepatitis C,丙型肝炎
+2019-12-01,2019/12/01,2019 December,Hepatitis D,丁型肝炎,43.0,0.0,-10,-10,全国,China,100000,pmid:34594831; pmc:PMC8393096,https://pmc.ncbi.nlm.nih.gov/articles/PMC8393096/,PubMed,D010,Hepatitis D,丁型肝炎
+2019-12-01,2019/12/01,2019 December,Hepatitis E,戊型肝炎,,1.0,-10,-10,全国,China,100000,pmid:34594831; pmc:PMC8393096,https://pmc.ncbi.nlm.nih.gov/articles/PMC8393096/,PubMed,D011,Hepatitis E,戊型肝炎
+2019-12-01,2019/12/01,2019 December,Poliomyelitis,脊髓灰质炎,,2.0,-10,-10,全国,China,100000,pmid:34594831; pmc:PMC8393096,https://pmc.ncbi.nlm.nih.gov/articles/PMC8393096/,PubMed,D013,Poliomyelitis,脊髓灰质炎
+2019-12-01,2019/12/01,2019 December,Poliomyelitis,脊髓灰质炎,0.0,0.0,-10,-10,全国,China,100000,pmid:34594831; pmc:PMC8393096,https://pmc.ncbi.nlm.nih.gov/articles/PMC8393096/,PubMed,D013,Poliomyelitis,脊髓灰质炎
+2019-12-01,2019/12/01,2019 December,H5N1,人感染高致病性禽流感,0.0,0.0,-10,-10,全国,China,100000,pmid:34594831; pmc:PMC8393096,https://pmc.ncbi.nlm.nih.gov/articles/PMC8393096/,PubMed,D014,H5N1,人感染高致病性禽流感
+2019-12-01,2019/12/01,2019 December,Measles,麻疹,230.0,0.0,-10,-10,全国,China,100000,pmid:34594831; pmc:PMC8393096,https://pmc.ncbi.nlm.nih.gov/articles/PMC8393096/,PubMed,D017,Measles,麻疹
+2019-12-01,2019/12/01,2019 December,Rabies,狂犬病,19.0,30.0,-10,-10,全国,China,100000,pmid:34594831; pmc:PMC8393096,https://pmc.ncbi.nlm.nih.gov/articles/PMC8393096/,PubMed,D019,Rabies,狂犬病
+2019-12-01,2019/12/01,2019 December,Japanese Encephalitis,流行性乙型脑炎,12.0,1.0,-10,-10,全国,China,100000,pmid:34594831; pmc:PMC8393096,https://pmc.ncbi.nlm.nih.gov/articles/PMC8393096/,PubMed,D020,Japanese Encephalitis,流行性乙型脑炎
+2019-12-01,2019/12/01,2019 December,Dengue,登革热,268.0,0.0,-10,-10,全国,China,100000,pmid:34594831; pmc:PMC8393096,https://pmc.ncbi.nlm.nih.gov/articles/PMC8393096/,PubMed,D021,Dengue,登革热
+2019-12-01,2019/12/01,2019 December,Anthrax,炭疽,24.0,0.0,-10,-10,全国,China,100000,pmid:34594831; pmc:PMC8393096,https://pmc.ncbi.nlm.nih.gov/articles/PMC8393096/,PubMed,D023,Anthrax,炭疽
+2019-12-01,2019/12/01,2019 December,Dysentery,细菌性和阿米巴性痢疾,,0.0,-10,-10,全国,China,100000,pmid:34594831; pmc:PMC8393096,https://pmc.ncbi.nlm.nih.gov/articles/PMC8393096/,PubMed,D024,Dysentery,细菌性和阿米巴性痢疾
+2019-12-01,2019/12/01,2019 December,Tuberculosis,肺结核,,230.0,-10,-10,全国,China,100000,pmid:34594831; pmc:PMC8393096,https://pmc.ncbi.nlm.nih.gov/articles/PMC8393096/,PubMed,D025,Tuberculosis,肺结核
+2019-12-01,2019/12/01,2019 December,Typhoid and Paratyphoid fever,伤寒和副伤寒,571.0,0.0,-10,-10,全国,China,100000,pmid:34594831; pmc:PMC8393096,https://pmc.ncbi.nlm.nih.gov/articles/PMC8393096/,PubMed,D026,Typhoid and Paratyphoid fever,伤寒和副伤寒
+2019-12-01,2019/12/01,2019 December,Meningococcal Meningitis,流行性脑脊髓膜炎,15.0,1.0,-10,-10,全国,China,100000,pmid:34594831; pmc:PMC8393096,https://pmc.ncbi.nlm.nih.gov/articles/PMC8393096/,PubMed,D027,Meningococcal Meningitis,流行性脑脊髓膜炎
+2019-12-01,2019/12/01,2019 December,Pertussis,百日咳,,1.0,-10,-10,全国,China,100000,pmid:34594831; pmc:PMC8393096,https://pmc.ncbi.nlm.nih.gov/articles/PMC8393096/,PubMed,D028,Pertussis,百日咳
+2019-12-01,2019/12/01,2019 December,Diphtheria,白喉,0.0,0.0,-10,-10,全国,China,100000,pmid:34594831; pmc:PMC8393096,https://pmc.ncbi.nlm.nih.gov/articles/PMC8393096/,PubMed,D029,Diphtheria,白喉
+2019-12-01,2019/12/01,2019 December,Neonatal Tetanus,新生儿破伤风,3.0,0.0,-10,-10,全国,China,100000,pmid:34594831; pmc:PMC8393096,https://pmc.ncbi.nlm.nih.gov/articles/PMC8393096/,PubMed,D030,Neonatal Tetanus,新生儿破伤风
+2019-12-01,2019/12/01,2019 December,Scarlet fever,猩红热,,0.0,-10,-10,全国,China,100000,pmid:34594831; pmc:PMC8393096,https://pmc.ncbi.nlm.nih.gov/articles/PMC8393096/,PubMed,D031,Scarlet fever,猩红热
+2019-12-01,2019/12/01,2019 December,Brucellosis,布鲁氏菌病,,1.0,-10,-10,全国,China,100000,pmid:34594831; pmc:PMC8393096,https://pmc.ncbi.nlm.nih.gov/articles/PMC8393096/,PubMed,D032,Brucellosis,布鲁氏菌病
+2019-12-01,2019/12/01,2019 December,Gonorrhea,淋病,,0.0,-10,-10,全国,China,100000,pmid:34594831; pmc:PMC8393096,https://pmc.ncbi.nlm.nih.gov/articles/PMC8393096/,PubMed,D033,Gonorrhea,淋病
+2019-12-01,2019/12/01,2019 December,Syphilis,梅毒,,4.0,-10,-10,全国,China,100000,pmid:34594831; pmc:PMC8393096,https://pmc.ncbi.nlm.nih.gov/articles/PMC8393096/,PubMed,D034,Syphilis,梅毒
+2019-12-01,2019/12/01,2019 December,Leptospirosis,钩端螺旋体病,16.0,1.0,-10,-10,全国,China,100000,pmid:34594831; pmc:PMC8393096,https://pmc.ncbi.nlm.nih.gov/articles/PMC8393096/,PubMed,D035,Leptospirosis,钩端螺旋体病
+2019-12-01,2019/12/01,2019 December,Schistosomiasis,血吸虫病,12.0,0.0,-10,-10,全国,China,100000,pmid:34594831; pmc:PMC8393096,https://pmc.ncbi.nlm.nih.gov/articles/PMC8393096/,PubMed,D036,Schistosomiasis,血吸虫病
+2019-12-01,2019/12/01,2019 December,Malaria,疟疾,204.0,4.0,-10,-10,全国,China,100000,pmid:34594831; pmc:PMC8393096,https://pmc.ncbi.nlm.nih.gov/articles/PMC8393096/,PubMed,D037,Malaria,疟疾
+2019-12-01,2019/12/01,2019 December,H7N9,人感染H7N9禽流感,0.0,0.0,-10,-10,全国,China,100000,pmid:34594831; pmc:PMC8393096,https://pmc.ncbi.nlm.nih.gov/articles/PMC8393096/,PubMed,D015,H7N9,人感染H7N9禽流感
+2019-12-01,2019/12/01,2019 December,Influenza,流行性感冒,,16.0,-10,-10,全国,China,100000,pmid:34594831; pmc:PMC8393096,https://pmc.ncbi.nlm.nih.gov/articles/PMC8393096/,PubMed,D038,Influenza,流行性感冒
+2019-12-01,2019/12/01,2019 December,Mumps,流行性腮腺炎,,0.0,-10,-10,全国,China,100000,pmid:34594831; pmc:PMC8393096,https://pmc.ncbi.nlm.nih.gov/articles/PMC8393096/,PubMed,D039,Mumps,流行性腮腺炎
+2019-12-01,2019/12/01,2019 December,Rubella,风疹,,0.0,-10,-10,全国,China,100000,pmid:34594831; pmc:PMC8393096,https://pmc.ncbi.nlm.nih.gov/articles/PMC8393096/,PubMed,D040,Rubella,风疹
+2019-12-01,2019/12/01,2019 December,Acute Hemorrhagic Conjunctivitis,急性出血性结膜炎,,0.0,-10,-10,全国,China,100000,pmid:34594831; pmc:PMC8393096,https://pmc.ncbi.nlm.nih.gov/articles/PMC8393096/,PubMed,D041,Acute Hemorrhagic Conjunctivitis,急性出血性结膜炎
+2019-12-01,2019/12/01,2019 December,Leprosy,麻风病,43.0,0.0,-10,-10,全国,China,100000,pmid:34594831; pmc:PMC8393096,https://pmc.ncbi.nlm.nih.gov/articles/PMC8393096/,PubMed,D042,Leprosy,麻风病
+2019-12-01,2019/12/01,2019 December,Typhus,流行性和地方性斑疹伤寒,63.0,0.0,-10,-10,全国,China,100000,pmid:34594831; pmc:PMC8393096,https://pmc.ncbi.nlm.nih.gov/articles/PMC8393096/,PubMed,D043,Typhus,流行性和地方性斑疹伤寒
+2019-12-01,2019/12/01,2019 December,Kala-azar,黑热病,11.0,0.0,-10,-10,全国,China,100000,pmid:34594831; pmc:PMC8393096,https://pmc.ncbi.nlm.nih.gov/articles/PMC8393096/,PubMed,D044,Kala-azar,黑热病
+2019-12-01,2019/12/01,2019 December,Echinococcosis,包虫病,381.0,0.0,-10,-10,全国,China,100000,pmid:34594831; pmc:PMC8393096,https://pmc.ncbi.nlm.nih.gov/articles/PMC8393096/,PubMed,D045,Echinococcosis,包虫病
+2019-12-01,2019/12/01,2019 December,Filariasis,丝虫病,0.0,0.0,-10,-10,全国,China,100000,pmid:34594831; pmc:PMC8393096,https://pmc.ncbi.nlm.nih.gov/articles/PMC8393096/,PubMed,D046,Filariasis,丝虫病
+2019-12-01,2019/12/01,2019 December,Infectious Diarrhea,其他感染性腹泻病,,1.0,-10,-10,全国,China,100000,pmid:34594831; pmc:PMC8393096,https://pmc.ncbi.nlm.nih.gov/articles/PMC8393096/,PubMed,D047,Infectious Diarrhea,其他感染性腹泻病
+2019-12-01,2019/12/01,2019 December,Hand-Foot-Mouth Disease,手足口病,,0.0,-10,-10,全国,China,100000,pmid:34594831; pmc:PMC8393096,https://pmc.ncbi.nlm.nih.gov/articles/PMC8393096/,PubMed,D048,Hand-Foot-Mouth Disease,手足口病
+2019-12-01,2019/12/01,2019 December,Total,甲乙丙类传染病总计,,,-10,-10,全国,China,100000,pmid:34594831; pmc:PMC8393096,https://pmc.ncbi.nlm.nih.gov/articles/PMC8393096/,PubMed,D999,Total,甲乙丙类传染病总计
