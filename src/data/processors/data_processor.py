@@ -6,13 +6,18 @@ GlobalID V2 Data Processor
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
+import hashlib
+import re
 
 import pandas as pd
+from bs4 import BeautifulSoup
 
 from src.core import get_logger
+from src.core.database import get_db
+from src.domain import CrawlRawPage
 from src.data.crawlers.base import CrawlerResult
 from src.data.parsers.html_parser import HTMLTableParser
-from src.data.normalizers.disease_mapper_db import DiseaseMapperDB
+from src.data.normalizers.english_mapper import create_disease_mapper
 
 logger = get_logger(__name__)
 
@@ -55,6 +60,9 @@ class DataProcessor:
         self,
         results: List[CrawlerResult],
         save_to_file: bool = True,
+        save_raw: bool = False,
+        crawl_run_id: Optional[int] = None,
+        raw_dir: Optional[Path] = None,
     ) -> List[pd.DataFrame]:
         """
         处理爬虫结果
@@ -66,9 +74,6 @@ class DataProcessor:
         Returns:
             处理后的数据框列表
         """
-        # 初始化异步映射器
-        self.disease_mapper = DiseaseMapperDB(country_code=self.country_code)
-        
         processed_data = []
         
         for i, result in enumerate(results, 1):
@@ -90,11 +95,32 @@ class DataProcessor:
                 if not parse_result.success or not parse_result.has_data:
                     logger.warning(f"解析失败: {parse_result.error_message}")
                     continue
+
+                if save_raw and crawl_run_id and raw_dir and parse_result.raw_content:
+                    await self._save_raw_content(
+                        run_id=crawl_run_id,
+                        raw_dir=raw_dir,
+                        result=result,
+                        raw_html=parse_result.raw_content,
+                        fetched_at=parse_result.parse_date,
+                    )
+                
+                # 根据数据源创建合适的疾病映射器
+                data_source = result.metadata.get("source", "")
+                language = result.metadata.get("language", "en")
+                
+                # 新版多语言架构：支持国家和语言分离
+                disease_mapper = await create_disease_mapper(
+                    country_code=self.country_code or "CN",  # 使用处理器的国家代码
+                    language=language, 
+                    data_source=data_source
+                )
                 
                 # 标准化疾病名称
                 df = await self._normalize_disease_names(
                     parse_result.data,
-                    language=result.metadata.get("language", "en"),
+                    language=language,
+                    disease_mapper=disease_mapper,
                 )
                 
                 # 计算发病率和死亡率（如果有人口数据）
@@ -117,18 +143,67 @@ class DataProcessor:
         
         logger.info(f"成功处理 {len(processed_data)}/{len(results)} 条数据")
         
-        # 导出未识别的疾病（数据库版会自动记录到learning_suggestions表）
-        stats = await self.disease_mapper.get_statistics()
-        pending_count = stats.get('pending_suggestions', 0)
-        if pending_count > 0:
-            logger.warning(f"发现 {pending_count} 个待审核的未识别疾病，请运行: python scripts/disease_cli.py suggestions")
+        # 显示统计信息（使用最后一个映射器，或默认中文映射器）
+        try:
+            if 'disease_mapper' in locals():
+                stats = await disease_mapper.get_statistics()
+            else:
+                # 如果没有处理任何数据，使用默认映射器获取统计
+                default_mapper = await create_disease_mapper(
+                    country_code=self.country_code or "CN",
+                    language="zh"
+                )
+                stats = await default_mapper.get_statistics()
+            
+            pending_count = stats.get('pending_suggestions', 0)
+            if pending_count > 0:
+                logger.warning(f"发现 {pending_count} 个待审核的未识别疾病，请运行: python scripts/disease_cli.py suggestions")
+        except Exception as e:
+            logger.warning(f"获取统计信息失败: {e}")
         
         return processed_data
+
+    async def save_raw_pages(
+        self,
+        results: List[CrawlerResult],
+        crawl_run_id: int,
+        raw_dir: Path,
+    ) -> int:
+        """仅保存原始页面文本（不进行标准化处理）"""
+        saved = 0
+        for i, result in enumerate(results, 1):
+            try:
+                parse_result = self.parser.parse(
+                    result.url or result.content,
+                    url=result.url,
+                    title=result.title,
+                    date=result.date,
+                    year_month=result.year_month,
+                    source=result.metadata.get("source"),
+                    language=result.metadata.get("language", "en"),
+                    doi=result.metadata.get("doi"),
+                )
+
+                if parse_result.raw_content:
+                    await self._save_raw_content(
+                        run_id=crawl_run_id,
+                        raw_dir=raw_dir,
+                        result=result,
+                        raw_html=parse_result.raw_content,
+                        fetched_at=parse_result.parse_date,
+                    )
+                    saved += 1
+            except Exception as e:
+                logger.warning(f"原始内容保存失败: {result.title}, 错误: {e}")
+                continue
+
+        return saved
     
     async def _normalize_disease_names(
         self,
         df: pd.DataFrame,
         language: str = "en",
+        disease_mapper = None,
     ) -> pd.DataFrame:
         """
         标准化疾病名称
@@ -136,17 +211,25 @@ class DataProcessor:
         Args:
             df: 数据框
             language: 源语言 ("en" 或 "zh")
+            disease_mapper: 疾病映射器实例
             
         Returns:
             标准化后的数据框
         """
         logger.info(f"_normalize_disease_names 输入 DataFrame 形状: {df.shape}, 索引: {df.index}")
         
+        # 如果没有提供映射器，使用默认的
+        if disease_mapper is None:
+            disease_mapper = await create_disease_mapper(
+                country_code="CN",  # 默认中国
+                language=language
+            )
+        
         # 使用数据库映射器: 本地名称 -> 标准英文名 + disease_id
         source_col = "DiseasesCN" if language == "zh" else "Diseases"
         logger.info(f"使用源列: {source_col}")
         
-        df = await self.disease_mapper.map_dataframe(
+        df = await disease_mapper.map_dataframe(
             df,
             disease_col=source_col,
         )
@@ -178,6 +261,54 @@ class DataProcessor:
         
         logger.info(f"_normalize_disease_names 返回 DataFrame 形状: {df.shape}, 索引: {df.index}")
         return df
+
+    def _slugify(self, text: str) -> str:
+        safe = re.sub(r"[^A-Za-z0-9_-]+", "_", text).strip("_")
+        return safe or "page"
+
+    def _html_to_text(self, html: str) -> str:
+        soup = BeautifulSoup(html, "html.parser")
+        text = soup.get_text(separator="\n")
+        lines = [line.strip() for line in text.splitlines()]
+        cleaned = "\n".join(line for line in lines if line)
+        return cleaned
+
+    async def _save_raw_content(
+        self,
+        run_id: int,
+        raw_dir: Path,
+        result: CrawlerResult,
+        raw_html: str,
+        fetched_at: datetime,
+    ) -> None:
+        run_dir = raw_dir / str(run_id)
+        run_dir.mkdir(parents=True, exist_ok=True)
+
+        label = result.year_month or result.title or "report"
+        plain_text = self._html_to_text(raw_html)
+        content_hash = hashlib.sha256(plain_text.encode("utf-8")).hexdigest()
+        filename = f"{self._slugify(label)}_{content_hash[:8]}.txt"
+        file_path = run_dir / filename
+
+        file_path.write_text(plain_text, encoding="utf-8")
+
+        async with get_db() as db:
+            db.add(
+                CrawlRawPage(
+                    run_id=run_id,
+                    url=result.url or "",
+                    title=result.title,
+                    content_path=str(file_path),
+                    content_hash=content_hash,
+                    content_type="text/plain",
+                    fetched_at=fetched_at,
+                    source=result.metadata.get("source"),
+                    metadata_={
+                        "year_month": result.year_month,
+                        "has_url": bool(result.url),
+                    },
+                )
+            )
     
     def _calculate_rates(self, df: pd.DataFrame) -> pd.DataFrame:
         """

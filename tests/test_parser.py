@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 from datetime import datetime
 import pandas as pd
+import pytest
 
 # 添加项目根目录到Python路径
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -17,6 +18,7 @@ from src.data.crawlers.cn_cdc import ChinaCDCCrawler
 from src.data.processors import DataProcessor
 
 
+@pytest.mark.asyncio
 async def test_parser_basic():
     """测试基础解析功能"""
     print("=" * 60)
@@ -54,6 +56,7 @@ async def test_parser_basic():
         print("\n❌ 解析失败")
 
 
+@pytest.mark.asyncio
 async def test_crawler_integration():
     """测试爬虫集成"""
     print("\n" + "=" * 60)
@@ -98,6 +101,7 @@ async def test_crawler_integration():
         print("\n❌ 没有爬取到数据")
 
 
+@pytest.mark.asyncio
 async def test_disease_mapper():
     """测试疾病映射器（数据库版）"""
     print("\n" + "=" * 60)

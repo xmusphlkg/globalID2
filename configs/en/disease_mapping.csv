@@ -1,0 +1,142 @@
+disease_id,local_name,local_code,category,aliases,notes,data_source
+D001,Plague,A20,Bacterial,,From standard_diseases: 鼠疫,Standard Database + CN Mapping
+D002,Cholera,A00,Bacterial,,From standard_diseases: 霍乱,Standard Database + CN Mapping
+D003,SARS,U04,Viral,SARS|SARS-CoV,From standard_diseases: 传染性非典型肺炎,Standard Database + CN Mapping
+D004,COVID-19,U07.1,Viral,,From standard_diseases: 新型冠状病毒感染,Standard Database + CN Mapping
+D005,HIV/AIDS,B20-B24,Viral,AIDS|HIV,From standard_diseases: 艾滋病,Standard Database + CN Mapping
+D006,Viral Hepatitis,B15-B19,Viral,Hepatitis,From standard_diseases: 病毒性肝炎,Standard Database + CN Mapping
+D007,Hepatitis A,B15,Viral,,From standard_diseases: 甲型肝炎,Standard Database + CN Mapping
+D008,Hepatitis B,B16,Viral,,From standard_diseases: 乙型肝炎,Standard Database + CN Mapping
+D009,Hepatitis C,B17.1,Viral,,From standard_diseases: 丙型肝炎,Standard Database + CN Mapping
+D010,Hepatitis D,B17.0,Viral,,From standard_diseases: 丁型肝炎,Standard Database + CN Mapping
+D011,Hepatitis E,B17.2,Viral,,From standard_diseases: 戊型肝炎,Standard Database + CN Mapping
+D012,Other Hepatitis,B19,Viral,,From standard_diseases: 未分型肝炎,Standard Database + CN Mapping
+D013,Poliomyelitis,A80,Viral,,From standard_diseases: 脊髓灰质炎,Standard Database + CN Mapping
+D014,H5N1,J09,Viral,,From standard_diseases: 人感染高致病性禽流感,Standard Database + CN Mapping
+D015,H7N9,J09,Viral,,From standard_diseases: 人感染H7N9禽流感,Standard Database + CN Mapping
+D016,Novel Influenza,J09,Viral,,From standard_diseases: 人感染新亚型流感,Standard Database + CN Mapping
+D017,Measles,B05,Viral,,From standard_diseases: 麻疹,Standard Database + CN Mapping
+D018,Hemorrhagic Fever,A98.5,Viral,,From standard_diseases: 流行性出血热,Standard Database + CN Mapping
+D019,Rabies,A82,Viral,,From standard_diseases: 狂犬病,Standard Database + CN Mapping
+D020,Japanese Encephalitis,A83.0,Viral,,From standard_diseases: 流行性乙型脑炎,Standard Database + CN Mapping
+D021,Dengue,A90,Viral,,From standard_diseases: 登革热,Standard Database + CN Mapping
+D022,Meningococcal infection,A39,Bacterial,,From standard_diseases: 脑膜炎球菌感染,Standard Database + CN Mapping
+D023,Anthrax,A22,Bacterial,,From standard_diseases: 炭疽,Standard Database + CN Mapping
+D024,Dysentery,A03-A06,Bacterial,,From standard_diseases: 细菌性和阿米巴性痢疾,Standard Database + CN Mapping
+D025,Tuberculosis,A15-A19,Bacterial,TB,From standard_diseases: 肺结核,Standard Database + CN Mapping
+D026,Typhoid and Paratyphoid fever,A01,Bacterial,Typhoid,From standard_diseases: 伤寒和副伤寒,Standard Database + CN Mapping
+D027,Meningococcal Meningitis,A39,Bacterial,,From standard_diseases: 流行性脑脊髓膜炎,Standard Database + CN Mapping
+D028,Pertussis,A37,Bacterial,,From standard_diseases: 百日咳,Standard Database + CN Mapping
+D029,Diphtheria,A36,Bacterial,,From standard_diseases: 白喉,Standard Database + CN Mapping
+D030,Neonatal Tetanus,A33,Bacterial,,From standard_diseases: 新生儿破伤风,Standard Database + CN Mapping
+D031,Scarlet fever,A38,Bacterial,Scarlet Fever,From standard_diseases: 猩红热,Standard Database + CN Mapping
+D032,Brucellosis,A23,Bacterial,,From standard_diseases: 布鲁氏菌病,Standard Database + CN Mapping
+D033,Gonorrhea,A54,Bacterial,,From standard_diseases: 淋病,Standard Database + CN Mapping
+D034,Syphilis,A50-A53,Bacterial,,From standard_diseases: 梅毒,Standard Database + CN Mapping
+D035,Leptospirosis,A27,Bacterial,,From standard_diseases: 钩端螺旋体病,Standard Database + CN Mapping
+D036,Schistosomiasis,B65,Parasitic,,From standard_diseases: 血吸虫病,Standard Database + CN Mapping
+D037,Malaria,B50-B54,Parasitic,,From standard_diseases: 疟疾,Standard Database + CN Mapping
+D038,Influenza,J09-J11,Viral,,From standard_diseases: 流行性感冒,Standard Database + CN Mapping
+D039,Mumps,B26,Viral,,From standard_diseases: 流行性腮腺炎,Standard Database + CN Mapping
+D040,Rubella,B06,Viral,,From standard_diseases: 风疹,Standard Database + CN Mapping
+D041,Acute Hemorrhagic Conjunctivitis,B30.3,Viral,,From standard_diseases: 急性出血性结膜炎,Standard Database + CN Mapping
+D042,Leprosy,A30,Bacterial,,From standard_diseases: 麻风病,Standard Database + CN Mapping
+D043,Typhus,A75,Bacterial,,From standard_diseases: 流行性和地方性斑疹伤寒,Standard Database + CN Mapping
+D044,Kala-azar,B55,Parasitic,,From standard_diseases: 黑热病,Standard Database + CN Mapping
+D045,Echinococcosis,B67,Parasitic,,From standard_diseases: 包虫病,Standard Database + CN Mapping
+D046,Filariasis,B74,Parasitic,,From standard_diseases: 丝虫病,Standard Database + CN Mapping
+D047,Infectious Diarrhea,A09,Bacterial,,From standard_diseases: 其他感染性腹泻病,Standard Database + CN Mapping
+D048,Hand-Foot-Mouth Disease,B08.4,Viral,HFMD,From standard_diseases: 手足口病,Standard Database + CN Mapping
+D049,MERS,U00-U49,Viral,MERS-CoV,From standard_diseases: 中东呼吸综合征,Standard Database + CN Mapping
+D050,Ebola,A98.4,Viral,,From standard_diseases: 埃博拉出血热,Standard Database + CN Mapping
+D051,Zika,A92.5,Viral,,From standard_diseases: 寨卡病毒病,Standard Database + CN Mapping
+D052,Chikungunya,A92.0,Viral,,From standard_diseases: 基孔肯雅热,Standard Database + CN Mapping
+D053,Lassa,A96.2,Viral,,From standard_diseases: 拉沙热,Standard Database + CN Mapping
+D054,Varicella,B01,Viral,,From standard_diseases: 水痘,Standard Database + CN Mapping
+D055,Clonorchiasis,B66.1,Parasitic,,From standard_diseases: 肝吸虫病,Standard Database + CN Mapping
+D056,Streptococcus suis,A40.0,Bacterial,,From standard_diseases: 人感染猪链球菌病,Standard Database + CN Mapping
+D057,SFTS,A98.8,Viral,,From standard_diseases: 发热伴血小板减少综合征,Standard Database + CN Mapping
+D058,Scrub Typhus,A75.3,Bacterial,,From standard_diseases: 恙虫病,Standard Database + CN Mapping
+D059,Yellow fever,A95,Viral,,From standard_diseases: 黄热病,Standard Database + CN Mapping
+D060,Arenaviral haemorrhagic fever,A96,Viral,,From standard_diseases: 沙粒病毒出血热,Standard Database + CN Mapping
+D061,Other viral haemorrhagic fevers,A98,Viral,,From standard_diseases: 其他病毒性出血热,Standard Database + CN Mapping
+D062,Herpesviral infections,B00,Viral,,From standard_diseases: 疱疹病毒感染,Standard Database + CN Mapping
+D063,Zoster,B02,,,From standard_diseases: 带状疱疹,Standard Database + CN Mapping
+D064,Smallpox,B03,,,From standard_diseases: 天花,Standard Database + CN Mapping
+D065,Monkeypox,B04,Viral,Monkeypox|Mpox,From standard_diseases: 猴痘,Standard Database + CN Mapping
+D066,Other viral infections characterized by skin lesions,B08,,,From standard_diseases: 其他以皮损为特征的病毒感染,Standard Database + CN Mapping
+D067,Acute hepatitis A,B15,Viral,,From standard_diseases: 急性甲型肝炎,Standard Database + CN Mapping
+D068,Acute hepatitis B,B16,Viral,,From standard_diseases: 急性乙型肝炎,Standard Database + CN Mapping
+D069,Other acute viral hepatitis,B17,Viral,,From standard_diseases: 其他急性病毒性肝炎,Standard Database + CN Mapping
+D070,Chronic viral hepatitis,B18,Viral,,From standard_diseases: 慢性病毒性肝炎,Standard Database + CN Mapping
+D071,Unspecified viral hepatitis,B19,Viral,,From standard_diseases: 未明示的病毒性肝炎,Standard Database + CN Mapping
+D073,Infectious mononucleosis,B27,,,From standard_diseases: 传染性单核细胞增多症,Standard Database + CN Mapping
+D074,Viral conjunctivitis,B30,,,From standard_diseases: 病毒性结膜炎,Standard Database + CN Mapping
+D075,Other viral diseases,B33,,,From standard_diseases: 其他病毒性疾病,Standard Database + CN Mapping
+D076,Viral infection of unspecified site,B34,,,From standard_diseases: 未指定部位的病毒感染,Standard Database + CN Mapping
+D077,Plasmodium falciparum malaria,B50,Parasitic,,From standard_diseases: 恶性疟,Standard Database + CN Mapping
+D078,Plasmodium vivax malaria,B51,Parasitic,,From standard_diseases: 间日疟,Standard Database + CN Mapping
+D079,Plasmodium malariae malaria,B52,Parasitic,,From standard_diseases: 三日疟,Standard Database + CN Mapping
+D080,Other parasitologically confirmed malaria,B53,Parasitic,,From standard_diseases: 其他寄生虫学证实的疟疾,Standard Database + CN Mapping
+D081,Unspecified malaria,B54,Parasitic,,From standard_diseases: 未明示的疟疾,Standard Database + CN Mapping
+D082,Leishmaniasis,B55,Parasitic,,From standard_diseases: 利什曼病,Standard Database + CN Mapping
+D083,African trypanosomiasis,B56,Parasitic,,From standard_diseases: 非洲锥虫病,Standard Database + CN Mapping
+D084,Chagas disease,B57,Parasitic,,From standard_diseases: 恰加斯病,Standard Database + CN Mapping
+D085,Toxoplasmosis,B58,Parasitic,,From standard_diseases: 弓形体病,Standard Database + CN Mapping
+D086,Other fluke infections,B66,Parasitic,,From standard_diseases: 其他吸虫感染,Standard Database + CN Mapping
+D087,Taeniasis,B68,Parasitic,,From standard_diseases: 绦虫病,Standard Database + CN Mapping
+D088,Cysticercosis,B69,Parasitic,,From standard_diseases: 囊虫病,Standard Database + CN Mapping
+D089,Arboviral diseases,,Viral,,From standard_diseases: 虫媒病毒病,Standard Database + CN Mapping
+D090,Babesiosis,,Parasitic,,From standard_diseases: 巴贝西虫病,Standard Database + CN Mapping
+D091,Botulism,,Bacterial,,From standard_diseases: 肉毒杆菌中毒,Standard Database + CN Mapping
+D092,Campylobacteriosis,,Bacterial,,From standard_diseases: 弯曲杆菌病,Standard Database + CN Mapping
+D093,Chancroid,,Bacterial,,From standard_diseases: 软下疳,Standard Database + CN Mapping
+D094,Chlamydia trachomatis infection,,Bacterial,,From standard_diseases: 沙眼衣原体感染,Standard Database + CN Mapping
+D095,Coccidioidomycosis,,Fungal,,From standard_diseases: 球孢子菌病,Standard Database + CN Mapping
+D096,Cryptosporidiosis,,Parasitic,,From standard_diseases: 隐孢子虫病,Standard Database + CN Mapping
+D097,Cyclosporiasis,,Parasitic,,From standard_diseases: 环孢子虫病,Standard Database + CN Mapping
+D098,Ehrlichiosis and Anaplasmosis,,Bacterial,,From standard_diseases: 埃立克体病和无形体病,Standard Database + CN Mapping
+D099,Giardiasis,,Parasitic,,From standard_diseases: 贾第虫病,Standard Database + CN Mapping
+D100,Haemophilus influenzae,,Bacterial,,From standard_diseases: 流感嗜血杆菌,Standard Database + CN Mapping
+D102,Hantavirus infection,,Viral,,From standard_diseases: 汉坦病毒感染,Standard Database + CN Mapping
+D103,Hemolytic uremic syndrome,,Bacterial,,From standard_diseases: 溶血性尿毒症综合征,Standard Database + CN Mapping
+D104,Influenza-associated mortality,,Viral,,From standard_diseases: 流行性感冒相关死亡,Standard Database + CN Mapping
+D106,Invasive pneumococcal disease,,Bacterial,,From standard_diseases: 侵袭性肺炎球菌病,Standard Database + CN Mapping
+D107,Legionellosis,,Bacterial,,From standard_diseases: 军团菌病,Standard Database + CN Mapping
+D108,Listeriosis,,Bacterial,,From standard_diseases: 李斯特菌病,Standard Database + CN Mapping
+D109,Lyme disease,,Bacterial,,From standard_diseases: 莱姆病,Standard Database + CN Mapping
+D110,Meningococcal disease,,Bacterial,,From standard_diseases: 脑膜炎球菌病,Standard Database + CN Mapping
+D111,Novel influenza A,,Viral,,From standard_diseases: 新型甲型流感,Standard Database + CN Mapping
+D112,Psittacosis,,Bacterial,,From standard_diseases: 鹦鹉热,Standard Database + CN Mapping
+D113,Q fever,,Bacterial,,From standard_diseases: Q热,Standard Database + CN Mapping
+D114,Salmonellosis,,Bacterial,,From standard_diseases: 沙门氏菌病,Standard Database + CN Mapping
+D118,Spotted fever rickettsiosis,,Bacterial,,From standard_diseases: 斑点热立克次体病,Standard Database + CN Mapping
+D119,Streptococcal disease,,Bacterial,,From standard_diseases: 链球菌病,Standard Database + CN Mapping
+D120,Tetanus,,Bacterial,,From standard_diseases: 破伤风,Standard Database + CN Mapping
+D121,Toxic shock syndrome,,Bacterial,,From standard_diseases: 中毒性休克综合征,Standard Database + CN Mapping
+D122,Trichinellosis,,Parasitic,,From standard_diseases: 旋毛虫病,Standard Database + CN Mapping
+D123,Tularemia,,Bacterial,,From standard_diseases: 土拉菌病,Standard Database + CN Mapping
+D124,Typhoid fever,,Bacterial,,From standard_diseases: 伤寒,Standard Database + CN Mapping
+D125,Vancomycin resistance,,Bacterial,,From standard_diseases: 万古霉素耐药性,Standard Database + CN Mapping
+D126,Vibriosis,,Bacterial,,From standard_diseases: 弧菌病,Standard Database + CN Mapping
+D127,Viral hemorrhagic fevers,,Viral,,From standard_diseases: 病毒性出血热,Standard Database + CN Mapping
+D128,West Nile virus,,Viral,,From standard_diseases: 西尼罗病毒,Standard Database + CN Mapping
+D130,Zika virus,,Viral,,From standard_diseases: 寨卡病毒,Standard Database + CN Mapping
+D999,Total,,Summary,,From standard_diseases: 甲乙丙类传染病总计,Standard Database + CN Mapping
+D027,Meningococcal meningitis,A39,Bacterial,,Additional variant name,Manual Addition
+D005,Acquired immune deficiency syndrome,B20-B24,Viral,,Additional variant name,Manual Addition
+D026,Typhoid fever and paratyphoid fever,A01,Bacterial,,Additional variant name,Manual Addition
+D030,Neonatal tetanus,A33,Bacterial,,Specific neonatal form,Manual Addition
+D018,Epidemic hemorrhagic fever,A98.5,Viral,,Additional variant name,Manual Addition
+D020,Japanese encephalitis,A83.0,Viral,,Additional variant name,Manual Addition
+D044,Kala azar,B55,Parasitic,,Common name for Leishmaniasis,Manual Addition
+D041,Acute hemorrhagic conjunctivitis,B30.3,Viral,,Conjunctivitis variant,Manual Addition
+D047,Infectious diarrhea,A09,Bacterial,,Common diarrheal diseases,Manual Addition
+D048,Hand foot and mouth disease,B08.4,Viral,,Common HFMD name,Manual Addition
+D015,Human infection with H7N9 virus,J09,Viral,,Full descriptive name,Manual Addition
+D014,Human infection with H5N1 virus,J09,Viral,,Full descriptive name,Manual Addition
+D004,COVID19,U07.1,Viral,,Variant spelling without hyphen,Manual Addition
+D057,Monkey pox,B04,Viral,,Alternative spelling (Monkeypox),Manual Addition
+D002,SARSCoV,,Infectious,,Variant spelling without hyphen,Manual Addition
+D013,Other hepatitis,,Infectious,,Catch-all category for unspecified hepatitis,Manual Addition  
+D016,Human infection with noval influenza virus,,Infectious,,Common misspelling of 'novel',Manual Addition

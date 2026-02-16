@@ -238,6 +238,14 @@ python scripts/disease_cli.py stats
 - 等待人工审核
 
 ### 4. disease_audit_log (审计日志)
+
+### 5. crawl_runs (爬取运行记录)
+- 记录每次爬取的国家、数据源、状态、统计信息
+- 对应原始文件目录 `data/raw/<country>/<run_id>/...`
+
+### 6. crawl_raw_pages (原始页面索引)
+- 保存 URL、纯文本文件路径、哈希、抓取时间
+- 便于审计与追溯解析结果
 - 所有变更记录
 - 操作者追踪
 - 合规支持
