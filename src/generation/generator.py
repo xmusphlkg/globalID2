@@ -37,7 +37,6 @@ class ReportGenerator:
     def __init__(self):
         """初始化报告生成器"""
         self.config = get_config()
-        self.db = get_database()
         
         # 初始化各组件
         self.analyst = AnalystAgent()
@@ -61,6 +60,7 @@ class ReportGenerator:
         period_start: datetime,
         period_end: datetime,
         diseases: Optional[List[int]] = None,
+        db=None,
         **kwargs
     ) -> Report:
         """
@@ -72,6 +72,7 @@ class ReportGenerator:
             period_start: 起始时间
             period_end: 结束时间
             diseases: 疾病ID列表（None=全部）
+            db: 数据库会话（可选）
             **kwargs: 额外参数
             
         Returns:
@@ -79,8 +80,31 @@ class ReportGenerator:
         """
         logger.info(f"Starting report generation: {report_type} for country {country_id}")
         
+        # 如果没有提供db，创建一个新的会话
+        if db is None:
+            async with get_database() as db:
+                return await self._generate_with_db(
+                    db, country_id, report_type, period_start, period_end, diseases, **kwargs
+                )
+        else:
+            return await self._generate_with_db(
+                db, country_id, report_type, period_start, period_end, diseases, **kwargs
+            )
+    
+    async def _generate_with_db(
+        self,
+        db,
+        country_id: int,
+        report_type: ReportType,
+        period_start: datetime,
+        period_end: datetime,
+        diseases: Optional[List[int]] = None,
+        **kwargs
+    ) -> Report:
+        """内部方法：使用指定的数据库会话生成报告"""
         # 1. 创建报告记录
         report = await self._create_report_record(
+            db,
             country_id=country_id,
             report_type=report_type,
             period_start=period_start,
@@ -91,6 +115,7 @@ class ReportGenerator:
         try:
             # 2. 提取数据
             data = await self._extract_data(
+                db,
                 country_id=country_id,
                 period_start=period_start,
                 period_end=period_end,
@@ -101,11 +126,12 @@ class ReportGenerator:
                 logger.warning("No data found for report")
                 report.status = ReportStatus.FAILED
                 report.error_message = "No data available"
-                await self.db.commit()
+                await db.commit()
                 return report
             
             # 3. 生成章节
             sections = await self._generate_sections(
+                db,
                 report=report,
                 data=data,
                 **kwargs
@@ -116,11 +142,11 @@ class ReportGenerator:
                 sections = await self._review_sections(sections, data)
             
             # 5. 格式化并保存
-            await self._format_and_save(report, sections)
+            await self._format_and_save(db, report, sections)
             
             # 6. 导出数据文件（如果配置）
             if kwargs.get('export_data', True):
-                await self._export_data(report, country_id, period_start, period_end)
+                await self._export_data(db, report, country_id, period_start, period_end)
             
             # 7. 发送邮件（如果配置）
             if kwargs.get('send_email', False):
@@ -129,7 +155,7 @@ class ReportGenerator:
             # 7. 更新状态
             report.status = ReportStatus.COMPLETED
             report.completed_at = datetime.utcnow()
-            await self.db.commit()
+            await db.commit()
             
             logger.info(f"Report generation completed: {report.id}")
             return report
@@ -138,11 +164,12 @@ class ReportGenerator:
             logger.error(f"Report generation failed: {e}")
             report.status = ReportStatus.FAILED
             report.error_message = str(e)
-            await self.db.commit()
+            await db.commit()
             raise
     
     async def _create_report_record(
         self,
+        db,
         country_id: int,
         report_type: ReportType,
         period_start: datetime,
@@ -160,15 +187,16 @@ class ReportGenerator:
             generation_config=kwargs.get('config', {}),
         )
         
-        self.db.add(report)
-        await self.db.commit()
-        await self.db.refresh(report)
+        db.add(report)
+        await db.commit()
+        await db.refresh(report)
         
         logger.info(f"Created report record: {report.id}")
         return report
     
     async def _extract_data(
         self,
+        db,
         country_id: int,
         period_start: datetime,
         period_end: datetime,
@@ -191,7 +219,7 @@ class ReportGenerator:
             query = query.where(DiseaseRecord.disease_id.in_(diseases))
         
         # 执行查询
-        result = await self.db.execute(query)
+        result = await db.execute(query)
         records = result.scalars().all()
         
         # 转换为DataFrame
@@ -206,7 +234,7 @@ class ReportGenerator:
             'recoveries': r.recoveries,
             'incidence_rate': r.incidence_rate,
             'mortality_rate': r.mortality_rate,
-            'fatality_rate': r.fatality_rate,
+            'recovery_rate': r.recovery_rate,
         } for r in records])
         
         logger.info(f"Extracted {len(data)} records")
@@ -214,6 +242,7 @@ class ReportGenerator:
     
     async def _generate_sections(
         self,
+        db,
         report: Report,
         data: pd.DataFrame,
         **kwargs
@@ -240,7 +269,7 @@ class ReportGenerator:
             from src.domain import Disease
             
             disease_query = select(Disease).where(Disease.id == disease_id)
-            disease_result = await self.db.execute(disease_query)
+            disease_result = await db.execute(disease_query)
             disease = disease_result.scalar_one_or_none()
             
             if not disease:
@@ -283,7 +312,7 @@ class ReportGenerator:
                     order=len(sections) + 1,
                 )
                 
-                self.db.add(section)
+                db.add(section)
                 
                 sections.append({
                     'title': section.title,
@@ -292,7 +321,7 @@ class ReportGenerator:
                     'chart_html': chart_html,
                 })
         
-        await self.db.commit()
+        await db.commit()
         
         logger.info(f"Generated {len(sections)} sections")
         return sections
@@ -326,6 +355,7 @@ class ReportGenerator:
     
     async def _format_and_save(
         self,
+        db,
         report: Report,
         sections: List[Dict[str, Any]],
     ) -> None:
@@ -366,11 +396,12 @@ class ReportGenerator:
         except Exception as e:
             logger.warning(f"PDF generation failed: {e}")
         
-        await self.db.commit()
+        await db.commit()
         logger.info(f"Report files saved: {filename_prefix}")
     
     async def _export_data(
         self,
+        db,
         report: Report,
         country_id: int,
         period_start: datetime,
@@ -385,7 +416,7 @@ class ReportGenerator:
             from src.domain import Country
             
             country_query = select(Country).where(Country.id == country_id)
-            country_result = await self.db.execute(country_query)
+            country_result = await db.execute(country_query)
             country = country_result.scalar_one()
             
             # 导出数据
@@ -412,7 +443,7 @@ class ReportGenerator:
                 report.generation_config = {}
             report.generation_config['exported_data'] = export_info
             
-            await self.db.commit()
+            await db.commit()
             
             logger.info(f"Data exported: {len(exported_files) + len(latest_files)} files")
             
