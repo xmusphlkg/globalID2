@@ -98,22 +98,10 @@ python scripts/full_rebuild_database.py
 #### 检查数据库是否正确初始化：
 
 ```bash
-python scripts/data_quality_check_cn.py
+python scripts/cn_data_quality_check.py
 ```
 
-### 4. 刷新疾病映射（可选）
-
-如果修改了 CSV 配置文件，可以单独刷新映射关系：
-
-```bash
-# 交互式刷新
-python scripts/refresh_disease_mappings.py
-
-# 自动确认所有操作
-python scripts/refresh_disease_mappings.py --yes
-```
-
-### 5. 启动数据质量仪表盘
+#### 查看数据质量仪表盘：
 
 ```bash
 streamlit run src/dashboard/app.py
@@ -128,8 +116,6 @@ python main.py test
 ```
 
 ### 8. 爬取数据
-
-智能爬虫设计（参考1.0版本）：
 
 ```bash
 # 智能爬取中国疾病数据（只爬取新数据）

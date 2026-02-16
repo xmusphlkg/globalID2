@@ -16,6 +16,7 @@ from sqlalchemy import select
 from src.core import get_config, get_database, get_logger, init_app
 from src.domain import Country, Disease, DiseaseRecord, ReportType, CrawlRun
 from src.data.crawlers import ChinaCDCCrawler
+from src.data.processors import DataProcessor
 from src.generation import ReportGenerator
 
 app = typer.Typer(help="GlobalID V2 - Global Infectious Disease Monitoring System")
@@ -27,11 +28,11 @@ def crawl(
     country: str = typer.Option("CN", help="Country code"),
     source: str = typer.Option("all", help="Data source (cdc_weekly/nhc/pubmed/all)"),
     process: bool = typer.Option(True, help="Process and store data"),
-    save_raw: bool = typer.Option(False, help="Save raw pages as plain text"),
+    save_raw: bool = typer.Option(True, help="Save raw pages as plain text"),
     force: bool = typer.Option(False, help="Force crawl all data (ignore database check)"),
 ):
     """
-    智能爬取疾病数据（参考1.0版本设计）
+    智能爬取疾病数据
     
     工作流程：
     1. 获取数据列表（轻量级）
@@ -69,7 +70,7 @@ def crawl(
                     country_code=country_code,
                     source=source,
                     status="running",
-                    started_at=datetime.utcnow(),
+                    started_at=datetime.now(),
                     raw_dir=str(raw_dir) if save_raw else None,
                     metadata_={"force": force, "process": process},
                 )
@@ -89,7 +90,7 @@ def crawl(
                     run = await db.get(CrawlRun, run_id)
                     if run:
                         run.status = "completed"
-                        run.finished_at = datetime.utcnow()
+                        run.finished_at = datetime.now()
                         run.new_reports = 0
                         run.processed_reports = 0
                         run.total_records = 0
@@ -161,7 +162,7 @@ def crawl(
                 run = await db.get(CrawlRun, run_id)
                 if run:
                     run.status = "completed"
-                    run.finished_at = datetime.utcnow()
+                    run.finished_at = datetime.now()
                     run.new_reports = len(results)
                     run.processed_reports = len(processed) if process else 0
                     run.total_records = total_records if process and processed else 0
@@ -177,7 +178,7 @@ def crawl(
                     run = await db.get(CrawlRun, run_id)
                     if run:
                         run.status = "failed"
-                        run.finished_at = datetime.utcnow()
+                        run.finished_at = datetime.now()
                         run.error_message = str(e)
             raise
 
@@ -210,7 +211,7 @@ def generate_report(
                 return
             
             # 设置时间范围
-            period_end = datetime.utcnow()
+            period_end = datetime.now()
             period_start = period_end - timedelta(days=days)
             
             # 获取报告类型
@@ -266,8 +267,8 @@ def init_database():
         
         console.print("[green]✓ Database initialized[/green]")
         
-        # 创建初始数据
-        console.print("[blue]Creating initial data...[/blue]")
+        # 创建初始国家数据（不创建疾病测试数据）
+        console.print("[blue]Creating initial country data...[/blue]")
         
         # 创建初始数据（使用会话上下文）
         async with get_database() as db:
@@ -291,30 +292,11 @@ def init_database():
                 db.add(country)
                 await db.commit()
                 console.print("  ✓ Created country: China")
-        
-            # 创建常见疾病
-            diseases = [
-                {"name": "COVID-19", "category": "respiratory", "icd_10": "U07.1"},
-                {"name": "Influenza", "category": "respiratory", "icd_10": "J11"},
-                {"name": "Tuberculosis", "category": "respiratory", "icd_10": "A15"},
-            ]
-
-            for disease_data in diseases:
-                disease_query = select(Disease).where(Disease.name == disease_data["name"])
-                disease_result = await db.execute(disease_query)
-                disease = disease_result.scalar_one_or_none()
-
-                if not disease:
-                    disease = Disease(
-                        name=disease_data["name"],
-                        category=disease_data["category"],
-                        icd_10=disease_data["icd_10"],
-                    )
-                    db.add(disease)
-                    console.print(f"  ✓ Created disease: {disease_data['name']}")
+            else:
+                console.print("  ✓ Country China already exists")
 
             await db.commit()
-            console.print("[green]✓ Initial data created[/green]")
+            console.print("[green]✓ Initial country data ready[/green]")
     
     asyncio.run(_init())
 
@@ -397,6 +379,7 @@ def test():
 @app.command()
 def run(
     full: bool = typer.Option(False, help="Run full pipeline (crawl + generate)"),
+    force: bool = typer.Option(False, help="Skip data update and use latest available data"),
 ):
     """
     运行完整流程
@@ -407,39 +390,108 @@ def run(
         if full:
             console.print("[bold blue]Running full pipeline...[/bold blue]")
             
-            # 1. 爬取数据
-            console.print("\n[cyan]Step 1: Crawling data[/cyan]")
-            await _crawl()
+            # 1. 爬取数据（除非force=True）
+            period_start = None
+            period_end = None
             
-            # 2. 生成报告
+            if not force:
+                console.print("\n[cyan]Step 1: Crawling data[/cyan]")
+                period_start, period_end = await _crawl()
+            else:
+                console.print("\n[yellow]Step 1: Skipping data crawl (force mode)[/yellow]")
+                # 获取数据库中最新的数据时间
+                period_start, period_end = await _get_latest_data_period()
+                if period_start and period_end:
+                    console.print(f"  Using latest data period: {period_start.date()} to {period_end.date()}")
+                else:
+                    console.print("[red]No data found in database. Please run without --force first.[/red]")
+                    return
+            
+            # 2. 生成报告（基于爬取到的数据时间范围）
             console.print("\n[cyan]Step 2: Generating report[/cyan]")
-            await _generate()
+            await _generate(period_start, period_end)
             
             console.print("\n[green]✓ Pipeline completed![/green]")
         else:
             console.print("[yellow]Use --full to run the complete pipeline[/yellow]")
     
-    async def _crawl():
-        crawler = ChinaCDCCrawler()
-        results = await crawler.crawl(max_results=50)
-        console.print(f"  Fetched {len(results)} results")
+    async def _get_latest_data_period():
+        """从数据库获取最新的数据时间范围"""
+        from sqlalchemy import text
+        async with get_database() as db:
+            result = await db.execute(text("""
+                SELECT MIN(time) as min_time, MAX(time) as max_time
+                FROM disease_records
+                WHERE country_id = (SELECT id FROM countries WHERE code = 'CN')
+            """))
+            row = result.fetchone()
+            if row and row[0] and row[1]:
+                return row[0], row[1]
+        return None, None
     
-    async def _generate():
-        db = get_database()
+    async def _crawl():
+        """爬取新数据、处理并保存到数据库，返回数据时间范围"""
+        from src.data.processors import DataProcessor
         
-        country_query = select(Country).where(Country.code == "CN")
-        country_result = await db.execute(country_query)
-        country = country_result.scalar_one()
+        crawler = ChinaCDCCrawler()
+        # First try normal crawl
+        results = await crawler.crawl(source="all", force=False)
         
-        generator = ReportGenerator()
-        report = await generator.generate(
-            country_id=country.id,
-            report_type=ReportType.WEEKLY,
-            period_start=datetime.utcnow() - timedelta(days=7),
-            period_end=datetime.utcnow(),
-        )
+        # If no new data found, force crawl for pipeline testing
+        if not results:
+            console.print("   No new data found, using force mode for testing...")
+            results = await crawler.crawl(source="all", force=True)
         
-        console.print(f"  Report generated: {report.id}")
+        console.print(f"  Fetched {len(results)} results")
+        
+        # 处理数据并保存到数据库
+        if results:
+            processor = DataProcessor(
+                output_dir=Path("data/processed") / "cn",
+                country_code="cn"
+            )
+            
+            processed = await processor.process_crawler_results(
+                results,
+                save_to_file=True,
+                save_raw=True,
+                crawl_run_id=None,  # No need for crawl run tracking in auto mode
+                raw_dir=Path("data/raw/cn"),
+            )
+            console.print(f"  Processed {len(processed)} datasets with {sum(len(df) for df in processed)} total records")
+        
+        # 提取数据时间范围
+        dates = [r.date for r in results if r.date]
+        if dates:
+            min_date = min(dates)
+            max_date = max(dates)
+            return min_date, max_date
+        return None, None
+    
+    async def _generate(period_start=None, period_end=None):
+        """生成报告，如果没有指定时间范围，则使用最近90天"""
+        async with get_database() as db:
+            country_query = select(Country).where(Country.code == "CN")
+            country_result = await db.execute(country_query)
+            country = country_result.scalar_one()
+
+            # 如果没有指定时间范围，使用最近90天的数据
+            if period_start is None or period_end is None:
+                period_end = datetime.now()
+                period_start = period_end - timedelta(days=90)
+                console.print(f"  Using default time range: last 90 days")
+            else:
+                console.print(f"  Using data time range: {period_start.date()} to {period_end.date()}")
+
+            generator = ReportGenerator()
+            report = await generator.generate(
+                country_id=country.id,
+                report_type=ReportType.WEEKLY,
+                period_start=period_start,
+                period_end=period_end,
+            )
+
+            console.print(f"  Report generated: {report.id}")
     
     asyncio.run(_run())
 

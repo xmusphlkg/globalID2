@@ -158,16 +158,21 @@ class ChinaCDCCrawler(BaseCrawler):
         Returns:
             字典，包含 'new' 和 'existing' 两个键
         """
-        # 获取数据库中最新的数据时间
+        from datetime import date
+        today = date.today()
+        
+        # 获取数据库中最新的数据时间（排除未来日期）
         async with get_db() as session:
             result = await session.execute(
-                select(func.max(DiseaseRecord.time)).select_from(DiseaseRecord)
+                select(func.max(DiseaseRecord.time)).select_from(DiseaseRecord).where(
+                    DiseaseRecord.time <= today
+                )
             )
             max_time = result.scalar()
         
         if max_time:
             max_date = max_time.date()
-            logger.info(f"数据库中最新数据时间: {max_date}")
+            logger.info(f"数据库中最新数据时间: {max_date} (排除未来日期)")
         else:
             max_date = None
             logger.info("数据库为空，将爬取所有数据")

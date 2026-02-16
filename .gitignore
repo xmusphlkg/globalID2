@@ -31,7 +31,6 @@ coverage.xml
 # Project specific
 /logs/
 /exports/
-/data/
 !/data/.gitkeep
 
 # System

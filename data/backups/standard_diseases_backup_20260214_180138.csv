@@ -1,0 +1,125 @@
+id,disease_id,standard_name_en,standard_name_zh,category,icd_10,icd_11,description,symptoms,transmission,source,is_active,confidence_score,last_verified_at,created_by,created_at,updated_at,metadata
+2471,D001,Plague,鼠疫,Bacterial,A20,1B90,Bacterial infection caused by Yersinia pestis,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2472,D002,Cholera,霍乱,Bacterial,A00,1A00,Acute diarrheal disease caused by Vibrio cholerae,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2473,D003,SARS,传染性非典型肺炎,Viral,U04,1D65,Severe Acute Respiratory Syndrome,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2474,D004,COVID-19,新冠肺炎,Viral,U07.1,RA01,Coronavirus Disease 2019,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2475,D005,HIV/AIDS,艾滋病,Viral,B20-B24,1C62,Human Immunodeficiency Virus/Acquired Immune Deficiency Syndrome,,,China,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2476,D006,Shigellosis,志贺菌病,Bacterial,A03,1A03,,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2477,D007,Hepatitis A,甲型肝炎,Viral,B15,1E50.0,Hepatitis A virus infection,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2478,D008,Hepatitis B,乙型肝炎,Viral,B16,1E50.1,Hepatitis B virus infection,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2479,D009,Hepatitis C,丙型肝炎,Viral,B17.1,1E50.2,Hepatitis C virus infection,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2480,D010,Hepatitis D,丁型肝炎,Viral,B17.0,1E50.3,Hepatitis D virus infection,,,China CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2481,D011,Hepatitis E,戊型肝炎,Viral,B17.2,1E50.4,Hepatitis E virus infection,,,China CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2482,D012,Other Hepatitis,未分型肝炎,Viral,B19,1E50.Y,Unspecified viral hepatitis,,,China CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2483,D013,Poliomyelitis,脊髓灰质炎,Viral,A80,1C81,Polio caused by poliovirus,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2484,D014,H5N1,人感染高致病性禽流感,Viral,J09,1E30.0,Highly pathogenic avian influenza A(H5N1),,,China CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2485,D015,H7N9,人感染H7N9禽流感,Viral,J09,1E30.0,Avian influenza A(H7N9),,,China CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2486,D016,Novel Influenza,人感染新亚型流感,Viral,J09,1E30.0,Novel influenza A virus infections,,,China CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2487,D017,Measles,麻疹,Viral,B05,KA61,Highly contagious viral disease,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2488,D018,Hemorrhagic Fever,流行性出血热,Viral,A98.5,1D67.0,Hemorrhagic fever with renal syndrome,,,China CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2489,D019,Rabies,狂犬病,Viral,A82,1C82,Fatal viral disease transmitted by animal bites,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2490,D020,Japanese Encephalitis,流行性乙型脑炎,Viral,A83.0,1C83.0,Mosquito-borne viral encephalitis,,,China CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2491,D021,Dengue,登革热,Viral,A90,1D2Z.0,Mosquito-borne tropical disease,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2492,D022,Meningococcal infection,脑膜炎球菌感染,Bacterial,A39,1C20.1,,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2493,D023,Anthrax,炭疽,Bacterial,A22,1B91,Bacterial infection caused by Bacillus anthracis,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2494,D024,Dysentery,细菌性和阿米巴性痢疾,Bacterial,A03-A06,1A03-1A05,Intestinal infection causing diarrhea,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2495,D025,Tuberculosis,肺结核,Bacterial,A15-A19,1B10,Mycobacterium tuberculosis infection of lungs,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2496,D026,Typhoid and Paratyphoid fever,伤寒和副伤寒,Bacterial,A01,1B13,Enteric fever,,,China CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2497,D027,Meningococcal Meningitis,流行性脑脊髓膜炎,Bacterial,A39,1C20.1,Meningitis caused by meningococcus,,,China CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2498,D028,Pertussis,百日咳,Bacterial,A37,CA01,Whooping cough caused by Bordetella pertussis,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2499,D029,Diphtheria,白喉,Bacterial,A36,1C15,Bacterial infection of throat and airways,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2500,D030,Neonatal Tetanus,新生儿破伤风,Bacterial,A33,1C13,Tetanus in newborns,,,China CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2501,D031,Scarlet fever,猩红热,Bacterial,A38,1C1Z,Streptococcal infection,,,China CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2502,D032,Brucellosis,布鲁氏菌病,Bacterial,A23,1B92,Bacterial zoonotic disease,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2503,D033,Gonorrhea,淋病,Bacterial,A54,1A72,Sexually transmitted bacterial infection,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2504,D034,Syphilis,梅毒,Bacterial,A50-A53,1A70,Sexually transmitted bacterial infection,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2505,D035,Leptospirosis,钩端螺旋体病,Bacterial,A27,1B95,Bacterial infection from animal urine,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2506,D036,Schistosomiasis,血吸虫病,Parasitic,B65,1F86,Parasitic flatworm infection,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2507,D037,Malaria,疟疾,Parasitic,B50-B54,1F40,Mosquito-borne parasitic disease,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2508,D038,Influenza,流行性感冒,Viral,J09-J11,1E30,Seasonal flu,,,China,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2509,D039,Mumps,流行性腮腺炎,Viral,B26,KA62,Viral infection of salivary glands,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2510,D040,Rubella,风疹,Viral,B06,KA63,German measles,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2511,D041,Gonococcal infection,淋球菌感染,,A54,1A72,,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2512,D042,Leprosy,麻风病,Bacterial,A30,1B20,Mycobacterium leprae infection,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2513,D043,Chlamydial lymphogranuloma,衣原体性淋巴肉芽肿,,A55,1A73,,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2514,D044,Other sexually transmitted chlamydial diseases,其他性传播衣原体病,,A56,1A73,,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2515,D045,Echinococcosis,包虫病,Parasitic,B67,1F88,Hydatid disease,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2516,D046,Filariasis,丝虫病,Parasitic,B74,1F60,Parasitic worm infection,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2517,D047,Trichomoniasis,滴虫病,,A59,,,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2518,D048,Hand-Foot-Mouth Disease,手足口病,Viral,B08.4,KA05.40,Enterovirus infection common in children,,,China,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2519,D049,Other predominantly sexually transmitted diseases,其他主要通过性传播的疾病,,A63,,,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2520,D050,Unspecified sexually transmitted disease,未明示的性传播疾病,,A64,,,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2521,D051,Typhus fever,斑疹伤寒,,A75,1C30,,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2522,D052,Acute poliomyelitis,急性脊髓灰质炎,Viral,A80,1C81,,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2523,D053,Mosquito-borne viral encephalitis,蚊传病毒性脑炎,Viral,A83,1C83.0,,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2524,D054,Varicella,水痘,Viral,B01,KA62.0,Chickenpox,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2525,D055,Tick-borne viral encephalitis,蜱传病毒性脑炎,,A84,,,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2526,D056,Streptococcus suis,人感染猪链球菌病,Bacterial,A40.0,1C1Y,Swine streptococcosis,,,China CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2527,D057,SFTS,发热伴血小板减少综合征,Viral,A98.8,1D6Y,Severe fever with thrombocytopenia syndrome,,,China CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2528,D058,Scrub Typhus,恙虫病,Bacterial,A75.3,1C30.2,Tsutsugamushi disease,,,China CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2529,D059,Yellow fever,黄热病,Viral,A95,1D48,,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2530,D060,Arenaviral haemorrhagic fever,沙粒病毒出血热,Viral,A96,,,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2531,D061,Other viral haemorrhagic fevers,其他病毒性出血热,Viral,A98,,,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2532,D062,Herpesviral infections,疱疹病毒感染,Viral,B00,1E90,,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2533,D063,Zoster,带状疱疹,,B02,1E91,,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2534,D064,Smallpox,天花,,B03,,,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2535,D065,Monkeypox,猴痘,Viral,B04,1E71,,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2536,D066,Other viral infections characterized by skin lesions,其他以皮损为特征的病毒感染,,B08,,,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2537,D067,Acute hepatitis A,急性甲型肝炎,Viral,B15,1E50.0,,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2538,D068,Acute hepatitis B,急性乙型肝炎,Viral,B16,1E50.1,,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2539,D069,Other acute viral hepatitis,其他急性病毒性肝炎,Viral,B17,1E50.2,,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2540,D070,Chronic viral hepatitis,慢性病毒性肝炎,Viral,B18,1E50,,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2541,D071,Unspecified viral hepatitis,未明示的病毒性肝炎,Viral,B19,1E50.Y,,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2542,D073,Infectious mononucleosis,传染性单核细胞增多症,,B27,,,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2543,D074,Viral conjunctivitis,病毒性结膜炎,,B30,9A60,,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2544,D075,Other viral diseases,其他病毒性疾病,,B33,,,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2545,D076,Viral infection of unspecified site,未指定部位的病毒感染,,B34,,,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2546,D077,Plasmodium falciparum malaria,恶性疟,Parasitic,B50,1F40,,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2547,D078,Plasmodium vivax malaria,间日疟,Parasitic,B51,1F40,,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2548,D079,Plasmodium malariae malaria,三日疟,Parasitic,B52,1F40,,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2549,D080,Other parasitologically confirmed malaria,其他寄生虫学证实的疟疾,Parasitic,B53,1F40,,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2550,D081,Unspecified malaria,未明示的疟疾,Parasitic,B54,1F40,,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2551,D082,Leishmaniasis,利什曼病,Parasitic,B55,1F51,,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2552,D083,African trypanosomiasis,非洲锥虫病,Parasitic,B56,1F52,,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2553,D084,Chagas disease,恰加斯病,Parasitic,B57,1F53,,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2554,D085,Toxoplasmosis,弓形体病,Parasitic,B58,1F54,,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2555,D086,Other fluke infections,其他吸虫感染,Parasitic,B66,1F89,,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2556,D087,Taeniasis,绦虫病,Parasitic,B68,,,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2557,D088,Cysticercosis,囊虫病,Parasitic,B69,,,,,ICD-10,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2558,D089,Arboviral diseases,虫媒病毒病,Viral,,,,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2559,D090,Babesiosis,巴贝西虫病,Parasitic,,,,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2560,D091,Botulism,肉毒杆菌中毒,Bacterial,,,,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2561,D092,Campylobacteriosis,弯曲杆菌病,Bacterial,,,,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2562,D093,Chancroid,软下疳,Bacterial,,,,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2563,D094,Chlamydia trachomatis infection,沙眼衣原体感染,Bacterial,,,,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2564,D095,Coccidioidomycosis,球孢子菌病,Fungal,,,,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2565,D096,Cryptosporidiosis,隐孢子虫病,Parasitic,,,,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2566,D097,Cyclosporiasis,环孢子虫病,Parasitic,,,,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2567,D098,Ehrlichiosis and Anaplasmosis,埃立克体病和无形体病,Bacterial,,,,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2568,D099,Giardiasis,贾第虫病,Parasitic,,,,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2569,D100,Haemophilus influenzae,流感嗜血杆菌,Bacterial,,,,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2570,D102,Hantavirus infection,汉坦病毒感染,Viral,,,,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2571,D103,Hemolytic uremic syndrome,溶血性尿毒症综合征,Bacterial,,,,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2572,D104,Influenza-associated mortality,流行性感冒相关死亡,Viral,,,,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2573,D106,Invasive pneumococcal disease,侵袭性肺炎球菌病,Bacterial,,,,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2574,D107,Legionellosis,军团菌病,Bacterial,,,,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2575,D108,Listeriosis,李斯特菌病,Bacterial,,,,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2576,D109,Lyme disease,莱姆病,Bacterial,,,,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2577,D110,Meningococcal disease,脑膜炎球菌病,Bacterial,,,,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2578,D111,Novel influenza A,新型甲型流感,Viral,,,,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2579,D112,Psittacosis,鹦鹉热,Bacterial,,,,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2580,D113,Q fever,Q热,Bacterial,,,,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2581,D114,Salmonellosis,沙门氏菌病,Bacterial,,,,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2582,D118,Spotted fever rickettsiosis,斑点热立克次体病,Bacterial,,,,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2583,D119,Streptococcal disease,链球菌病,Bacterial,,,,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2584,D120,Tetanus,破伤风,Bacterial,,,,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2585,D121,Toxic shock syndrome,中毒性休克综合征,Bacterial,,,,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2586,D122,Trichinellosis,旋毛虫病,Parasitic,,,,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2587,D123,Tularemia,土拉菌病,Bacterial,,,,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2588,D124,Typhoid fever,伤寒,Bacterial,,,,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2589,D125,Vancomycin resistance,万古霉素耐药性,Bacterial,,,,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2590,D126,Vibriosis,弧菌病,Bacterial,,,,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2591,D127,Viral hemorrhagic fevers,病毒性出血热,Viral,,,,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2592,D128,West Nile virus,西尼罗病毒,Viral,,,,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2593,D130,Zika virus,寨卡病毒,Viral,,,,,,CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}
+2594,D999,Total,总计,Summary,,,Data summary or total,,,China CDC,True,1.0,,migration,2026-02-14 09:59:17.891107,2026-02-14 09:59:17.891107,{}

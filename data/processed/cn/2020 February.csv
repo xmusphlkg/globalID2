@@ -1,0 +1,47 @@
+﻿Date,YearMonthDay,YearMonth,Diseases,DiseasesCN,Cases,Deaths,Incidence,Mortality,ProvinceCN,Province,ADCode,DOI,URL,Source,disease_id,standard_name_en,standard_name_zh
+2020-02-01,2020/02/01,2020 February,Cholera,霍乱,0.0,0.0,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D002,Cholera,霍乱
+2020-02-01,2020/02/01,2020 February,Cholera,霍乱,0.0,0.0,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D002,Cholera,霍乱
+2020-02-01,2020/02/01,2020 February,HIV/AIDS,艾滋病,,971.0,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D005,HIV/AIDS,艾滋病
+2020-02-01,2020/02/01,2020 February,Viral Hepatitis,病毒性肝炎,,50.0,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D006,Viral Hepatitis,病毒性肝炎
+2020-02-01,2020/02/01,2020 February,Hepatitis A,甲型肝炎,,0.0,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D007,Hepatitis A,甲型肝炎
+2020-02-01,2020/02/01,2020 February,Hepatitis B,乙型肝炎,,37.0,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D008,Hepatitis B,乙型肝炎
+2020-02-01,2020/02/01,2020 February,Hepatitis C,丙型肝炎,,12.0,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D009,Hepatitis C,丙型肝炎
+2020-02-01,2020/02/01,2020 February,Hepatitis D,丁型肝炎,12.0,0.0,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D010,Hepatitis D,丁型肝炎
+2020-02-01,2020/02/01,2020 February,Hepatitis E,戊型肝炎,,1.0,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D011,Hepatitis E,戊型肝炎
+2020-02-01,2020/02/01,2020 February,Poliomyelitis,脊髓灰质炎,404.0,0.0,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D013,Poliomyelitis,脊髓灰质炎
+2020-02-01,2020/02/01,2020 February,Poliomyelitis,脊髓灰质炎,0.0,0.0,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D013,Poliomyelitis,脊髓灰质炎
+2020-02-01,2020/02/01,2020 February,H5N1,人感染高致病性禽流感,0.0,0.0,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D014,H5N1,人感染高致病性禽流感
+2020-02-01,2020/02/01,2020 February,Measles,麻疹,66.0,0.0,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D017,Measles,麻疹
+2020-02-01,2020/02/01,2020 February,Hemorrhagic Fever,流行性出血热,374.0,1.0,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D018,Hemorrhagic Fever,流行性出血热
+2020-02-01,2020/02/01,2020 February,Rabies,狂犬病,12.0,13.0,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D019,Rabies,狂犬病
+2020-02-01,2020/02/01,2020 February,Japanese Encephalitis,流行性乙型脑炎,0.0,0.0,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D020,Japanese Encephalitis,流行性乙型脑炎
+2020-02-01,2020/02/01,2020 February,Dengue,登革热,17.0,0.0,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D021,Dengue,登革热
+2020-02-01,2020/02/01,2020 February,Anthrax,炭疽,6.0,0.0,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D023,Anthrax,炭疽
+2020-02-01,2020/02/01,2020 February,Dysentery,细菌性和阿米巴性痢疾,,0.0,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D024,Dysentery,细菌性和阿米巴性痢疾
+2020-02-01,2020/02/01,2020 February,Tuberculosis,肺结核,,96.0,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D025,Tuberculosis,肺结核
+2020-02-01,2020/02/01,2020 February,Typhoid and Paratyphoid fever,伤寒和副伤寒,364.0,1.0,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D026,Typhoid and Paratyphoid fever,伤寒和副伤寒
+2020-02-01,2020/02/01,2020 February,Meningococcal Meningitis,流行性脑脊髓膜炎,3.0,0.0,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D027,Meningococcal Meningitis,流行性脑脊髓膜炎
+2020-02-01,2020/02/01,2020 February,Pertussis,百日咳,738.0,0.0,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D028,Pertussis,百日咳
+2020-02-01,2020/02/01,2020 February,Diphtheria,白喉,0.0,0.0,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D029,Diphtheria,白喉
+2020-02-01,2020/02/01,2020 February,Neonatal Tetanus,新生儿破伤风,3.0,0.0,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D030,Neonatal Tetanus,新生儿破伤风
+2020-02-01,2020/02/01,2020 February,Scarlet fever,猩红热,580.0,0.0,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D031,Scarlet fever,猩红热
+2020-02-01,2020/02/01,2020 February,Brucellosis,布鲁氏菌病,933.0,0.0,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D032,Brucellosis,布鲁氏菌病
+2020-02-01,2020/02/01,2020 February,Gonorrhea,淋病,,0.0,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D033,Gonorrhea,淋病
+2020-02-01,2020/02/01,2020 February,Syphilis,梅毒,,9.0,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D034,Syphilis,梅毒
+2020-02-01,2020/02/01,2020 February,Leptospirosis,钩端螺旋体病,2.0,0.0,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D035,Leptospirosis,钩端螺旋体病
+2020-02-01,2020/02/01,2020 February,Schistosomiasis,血吸虫病,2.0,1.0,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D036,Schistosomiasis,血吸虫病
+2020-02-01,2020/02/01,2020 February,Malaria,疟疾,126.0,2.0,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D037,Malaria,疟疾
+2020-02-01,2020/02/01,2020 February,H7N9,人感染H7N9禽流感,0.0,0.0,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D015,H7N9,人感染H7N9禽流感
+2020-02-01,2020/02/01,2020 February,COVID-19,新型冠状病毒感染,,,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D004,COVID-19,新型冠状病毒感染
+2020-02-01,2020/02/01,2020 February,Influenza,流行性感冒,,22.0,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D038,Influenza,流行性感冒
+2020-02-01,2020/02/01,2020 February,Mumps,流行性腮腺炎,,1.0,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D039,Mumps,流行性腮腺炎
+2020-02-01,2020/02/01,2020 February,Rubella,风疹,306.0,0.0,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D040,Rubella,风疹
+2020-02-01,2020/02/01,2020 February,Acute Hemorrhagic Conjunctivitis,急性出血性结膜炎,,2.0,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D041,Acute Hemorrhagic Conjunctivitis,急性出血性结膜炎
+2020-02-01,2020/02/01,2020 February,Leprosy,麻风病,21.0,0.0,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D042,Leprosy,麻风病
+2020-02-01,2020/02/01,2020 February,Typhus,流行性和地方性斑疹伤寒,41.0,0.0,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D043,Typhus,流行性和地方性斑疹伤寒
+2020-02-01,2020/02/01,2020 February,Kala-azar,黑热病,13.0,0.0,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D044,Kala-azar,黑热病
+2020-02-01,2020/02/01,2020 February,Echinococcosis,包虫病,91.0,0.0,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D045,Echinococcosis,包虫病
+2020-02-01,2020/02/01,2020 February,Filariasis,丝虫病,0.0,0.0,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D046,Filariasis,丝虫病
+2020-02-01,2020/02/01,2020 February,Infectious Diarrhea,其他感染性腹泻病,,1.0,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D047,Infectious Diarrhea,其他感染性腹泻病
+2020-02-01,2020/02/01,2020 February,Hand-Foot-Mouth Disease,手足口病,,0.0,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D048,Hand-Foot-Mouth Disease,手足口病
+2020-02-01,2020/02/01,2020 February,Total,甲乙丙类传染病总计,,,-10,-10,全国,China,100000,pmid:34594626; pmc:PMC8430421,https://pmc.ncbi.nlm.nih.gov/articles/PMC8430421/,PubMed,D999,Total,甲乙丙类传染病总计
