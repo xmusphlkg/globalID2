@@ -53,6 +53,7 @@ class WriterAgent(BaseAgent):
         disease_name: str = None,
         report_date: str = None,
         table_data_str: str = None,
+        raw_sources: Optional[List[Dict[str, Any]]] = None,
         **kwargs
     ) -> Dict[str, Any]:
         """
@@ -72,31 +73,33 @@ class WriterAgent(BaseAgent):
             Generated section content
         """
         logger.info(f"Writing section '{section_type}' in '{language}' with '{style}' style")
+
+        raw_context = self._format_raw_sources(raw_sources)
         
         # Use v1.0-style section generation
         # Pass through any revision instructions via kwargs so retries can modify content
         if section_type == "introduction":
-            content = await self._write_introduction(disease_name, language, **kwargs)
+            content = await self._write_introduction(disease_name, language, raw_context=raw_context, **kwargs)
         elif section_type == "highlights":
-            content = await self._write_highlights(analysis_data, disease_name, report_date, table_data_str, language, **kwargs)
+            content = await self._write_highlights(analysis_data, disease_name, report_date, table_data_str, language, raw_context=raw_context, **kwargs)
         elif section_type == "cases_analysis":
-            content = await self._write_cases_analysis(analysis_data, disease_name, table_data_str, language, **kwargs)
+            content = await self._write_cases_analysis(analysis_data, disease_name, table_data_str, language, raw_context=raw_context, **kwargs)
         elif section_type == "deaths_analysis":
-            content = await self._write_deaths_analysis(analysis_data, disease_name, table_data_str, language, **kwargs)
+            content = await self._write_deaths_analysis(analysis_data, disease_name, table_data_str, language, raw_context=raw_context, **kwargs)
         else:
             # Fallback to existing methods
             if section_type == "summary":
-                content = await self._write_summary(analysis_data, style, language)
+                content = await self._write_summary(analysis_data, style, language, raw_context=raw_context, **kwargs)
             elif section_type == "trend_analysis":
-                content = await self._write_trend_analysis(analysis_data, style, language)
+                content = await self._write_trend_analysis(analysis_data, style, language, raw_context=raw_context, **kwargs)
             elif section_type == "geographic_distribution":
-                content = await self._write_geographic_distribution(analysis_data, style, language)
+                content = await self._write_geographic_distribution(analysis_data, style, language, raw_context=raw_context, **kwargs)
             elif section_type == "key_findings":
-                content = await self._write_key_findings(analysis_data, style, language)
+                content = await self._write_key_findings(analysis_data, style, language, raw_context=raw_context, **kwargs)
             elif section_type == "recommendations":
-                content = await self._write_recommendations(analysis_data, style, language)
+                content = await self._write_recommendations(analysis_data, style, language, raw_context=raw_context, **kwargs)
             else:
-                content = await self._write_generic(section_type, analysis_data, style, language)
+                content = await self._write_generic(section_type, analysis_data, style, language, raw_context=raw_context, **kwargs)
         
         result = {
             "section_type": section_type,
@@ -114,6 +117,7 @@ class WriterAgent(BaseAgent):
         analysis_data: Dict[str, Any],
         style: str,
         language: str,
+        raw_context: str = "",
         **kwargs
     ) -> str:
         """Write summary"""
@@ -143,6 +147,9 @@ class WriterAgent(BaseAgent):
     - Structure: brief opening + key data highlights + trend summary
     - Language: {"Chinese" if language == "zh" else "English"}
     - Tone: objective, highlight main points"""
+
+        if raw_context:
+            prompt += f"\n\nRecent web signals (latest crawler pages):\n{raw_context}"
         
         system_prompt = self._get_system_prompt(language, style)
         
@@ -163,6 +170,7 @@ class WriterAgent(BaseAgent):
         analysis_data: Dict[str, Any],
         style: str,
         language: str,
+        raw_context: str = "",
         **kwargs
     ) -> str:
         """Write trend analysis"""
@@ -190,6 +198,9 @@ class WriterAgent(BaseAgent):
     - Structure: overall trend + detailed analysis + anomaly discussion
     - Language: {"Chinese" if language == "zh" else "English"}
     - Use professional terminology while remaining readable"""
+
+        if raw_context:
+            prompt += f"\n\nRecent web signals (latest crawler pages):\n{raw_context}"
         
         system_prompt = self._get_system_prompt(language, style)
         
@@ -209,6 +220,7 @@ class WriterAgent(BaseAgent):
         analysis_data: Dict[str, Any],
         style: str,
         language: str,
+        raw_context: str = "",
         **kwargs
     ) -> str:
         """Write geographic distribution analysis"""
@@ -222,6 +234,9 @@ class WriterAgent(BaseAgent):
     - Length: 200-400 words
     - Focus: regional differences, high-incidence areas, transmission patterns
     - Language: {"Chinese" if language == "zh" else "English"}"""
+
+        if raw_context:
+            prompt += f"\n\nRecent web signals (latest crawler pages):\n{raw_context}"
         
         system_prompt = self._get_system_prompt(language, style)
         
@@ -241,6 +256,7 @@ class WriterAgent(BaseAgent):
         analysis_data: Dict[str, Any],
         style: str,
         language: str,
+        raw_context: str = "",
         **kwargs
     ) -> str:
         """Write key findings"""
@@ -255,6 +271,9 @@ class WriterAgent(BaseAgent):
     - Each item: title + short explanation (1-2 sentences)
     - Language: {"Chinese" if language == "zh" else "English"}
     - Emphasize importance and practical implications"""
+
+        if raw_context:
+            prompt += f"\n\nRecent web signals (latest crawler pages):\n{raw_context}"
         
         system_prompt = self._get_system_prompt(language, style)
         
@@ -274,6 +293,7 @@ class WriterAgent(BaseAgent):
         analysis_data: Dict[str, Any],
         style: str,
         language: str,
+        raw_context: str = "",
         **kwargs
     ) -> str:
         """Write recommendations"""
@@ -292,6 +312,9 @@ class WriterAgent(BaseAgent):
     - Provide 2-3 actionable items per category
     - Language: {"Chinese" if language == "zh" else "English"}
     - Practical and aligned with public health practice"""
+
+        if raw_context:
+            prompt += f"\n\nRecent web signals (latest crawler pages):\n{raw_context}"
         
         system_prompt = self._get_system_prompt(language, style)
         
@@ -312,6 +335,7 @@ class WriterAgent(BaseAgent):
         analysis_data: Dict[str, Any],
         style: str,
         language: str,
+        raw_context: str = "",
         **kwargs
     ) -> str:
         """Generic write method"""
@@ -324,6 +348,9 @@ class WriterAgent(BaseAgent):
     - Writing style: {self._get_style_description(style)}
     - Language: {"Chinese" if language == "zh" else "English"}
     - Maintain professionalism and accuracy"""
+
+        if raw_context:
+            prompt += f"\n\nRecent web signals (latest crawler pages):\n{raw_context}"
         
         system_prompt = self._get_system_prompt(language, style)
         
@@ -374,12 +401,49 @@ class WriterAgent(BaseAgent):
     def _format_analysis_data(data: Dict[str, Any]) -> str:
         """Format analysis data"""
         import json
-        return json.dumps(data, ensure_ascii=False, indent=2)
+        import pandas as pd
+        from datetime import datetime
+        
+        def convert_timestamps(obj):
+            """Convert pandas Timestamp objects to strings recursively."""
+            if isinstance(obj, pd.Timestamp):
+                return obj.isoformat()
+            elif isinstance(obj, datetime):
+                return obj.isoformat()
+            elif isinstance(obj, dict):
+                return {key: convert_timestamps(value) for key, value in obj.items()}
+            elif isinstance(obj, list):
+                return [convert_timestamps(item) for item in obj]
+            else:
+                return obj
+        
+        # Convert timestamps before JSON serialization
+        converted_data = convert_timestamps(data)
+        return json.dumps(converted_data, ensure_ascii=False, indent=2)
+
+    @staticmethod
+    def _format_raw_sources(raw_sources: Optional[List[Dict[str, Any]]], max_entries: int = 3, max_chars: int = 450) -> str:
+        """Format latest raw crawler pages into concise bullet text for prompting"""
+        if not raw_sources:
+            return ""
+
+        lines = []
+        for src in raw_sources[:max_entries]:
+            snippet = (src.get('snippet') or src.get('text') or '')[:max_chars]
+            meta = f"{src.get('title') or 'Untitled'} | {src.get('source') or 'web'} | {src.get('fetched_at', '')}"
+            if src.get('url'):
+                meta += f" | {src['url']}"
+            lines.append(f"- {meta}\n  {snippet}")
+
+        return "\n".join(lines)
 
     # V1.0-style section writing methods
-    async def _write_introduction(self, disease_name: str, language: str, **kwargs) -> str:
+    async def _write_introduction(self, disease_name: str, language: str, raw_context: str = "", **kwargs) -> str:
         """Write introduction section (90-100 words)"""
         prompt = f"Give a brief introduction to {disease_name or 'the disease'}, not including any analysis or commentary. Word limit: 90-100 words."
+
+        if raw_context:
+            prompt += f"\n\nRecent web signals (latest crawler pages):\n{raw_context}"
 
         rev = kwargs.get('revision_instructions')
         if rev:
@@ -393,7 +457,7 @@ class WriterAgent(BaseAgent):
         return response.strip()
     
     async def _write_highlights(self, analysis_data: Dict, disease_name: str, 
-                               report_date: str, table_data_str: str, language: str, **kwargs) -> str:
+                               report_date: str, table_data_str: str, language: str, raw_context: str = "", **kwargs) -> str:
         """Write highlights section (100-110 words, 3-4 bullet points)"""
         data_context = table_data_str or str(analysis_data.get('insights', ''))
 
@@ -401,6 +465,9 @@ class WriterAgent(BaseAgent):
     Format as 3-4 bullet points, each followed by <br/>.
     Word count: 100-110 words.
     Data: {data_context}"""
+
+        if raw_context:
+            prompt += f"\n\nRecent web signals (latest crawler pages):\n{raw_context}"
 
         rev = kwargs.get('revision_instructions')
         if rev:
@@ -414,7 +481,7 @@ class WriterAgent(BaseAgent):
         return response.strip()
     
     async def _write_cases_analysis(self, analysis_data: Dict, disease_name: str, 
-                                   table_data_str: str, language: str, **kwargs) -> str:
+                                   table_data_str: str, language: str, raw_context: str = "", **kwargs) -> str:
         """Write cases analysis section (2-3 paragraphs)"""
         data_context = table_data_str or str(analysis_data.get('insights', ''))
 
@@ -422,6 +489,9 @@ class WriterAgent(BaseAgent):
     Write 2-3 flowing paragraphs without bullet points.
     Focus on case trends, patterns, and epidemiological insights.
     Data: {data_context}"""
+
+        if raw_context:
+            prompt += f"\n\nRecent web signals (latest crawler pages):\n{raw_context}"
 
         rev = kwargs.get('revision_instructions')
         if rev:
@@ -435,7 +505,7 @@ class WriterAgent(BaseAgent):
         return response.strip()
     
     async def _write_deaths_analysis(self, analysis_data: Dict, disease_name: str, 
-                                    table_data_str: str, language: str, **kwargs) -> str:
+                                    table_data_str: str, language: str, raw_context: str = "", **kwargs) -> str:
         """Write deaths analysis section (2-3 paragraphs)"""
         data_context = table_data_str or str(analysis_data.get('insights', ''))
 
@@ -443,6 +513,9 @@ class WriterAgent(BaseAgent):
     Write 2-3 flowing paragraphs without bullet points.
     Focus on mortality patterns, case-fatality ratios, and death trends.
     Data: {data_context}"""
+
+        if raw_context:
+            prompt += f"\n\nRecent web signals (latest crawler pages):\n{raw_context}"
 
         rev = kwargs.get('revision_instructions')
         if rev:

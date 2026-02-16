@@ -4,7 +4,7 @@ GlobalID V2 Report Generator
 报告生成器：整合所有组件生成完整报告
 """
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -129,17 +129,29 @@ class ReportGenerator:
                 await db.commit()
                 return report
             
+            # 2.1 获取近期爬取的原始页面，用于补充最新上下文
+            raw_sources = []
+            if kwargs.get('include_raw_context', True):
+                raw_sources = await self._fetch_recent_raw_pages(
+                    db=db,
+                    country_id=country_id,
+                    period_end=period_end,
+                    days_back=kwargs.get('raw_days_back', 45),
+                    limit=kwargs.get('raw_limit', 3),
+                )
+
             # 3. 生成章节
             sections = await self._generate_sections(
                 db,
                 report=report,
                 data=data,
+                raw_sources=raw_sources,
                 **kwargs
             )
             
             # 4. 审核内容
             if kwargs.get('enable_review', True):
-                sections = await self._review_sections(sections, data)
+                sections = await self._review_sections(sections, data, raw_sources)
             
             # 5. 格式化并保存
             await self._format_and_save(db, report, sections)
@@ -245,10 +257,20 @@ class ReportGenerator:
         db,
         report: Report,
         data: pd.DataFrame,
+        raw_sources: Optional[List[Dict[str, Any]]] = None,
         **kwargs
     ) -> List[Dict[str, Any]]:
-        """生成报告章节"""
-        logger.info("Generating report sections")
+        """生成报告章节（并行处理，支持进度恢复）"""
+        import asyncio
+        from sqlalchemy import select
+        from src.domain import Disease
+        from src.core import get_config
+        
+        logger.info("Generating report sections (parallel mode with progress recovery)")
+        
+        # 获取最大并行任务数配置
+        config = get_config()
+        max_parallel_tasks = config.report.max_parallel_tasks
         
         sections = []
         
@@ -260,14 +282,36 @@ class ReportGenerator:
             'recommendations',
         ])
         
+        # 检查已存在的章节（进度恢复）
+        existing_sections_query = select(ReportSection).where(
+            ReportSection.report_id == report.id
+        ).order_by(ReportSection.section_order)
+        existing_sections_result = await db.execute(existing_sections_query)
+        existing_sections = existing_sections_result.scalars().all()
+        
+        # 构建已存在章节的索引
+        existing_section_keys = set()
+        for section in existing_sections:
+            key = f"{section.title}"
+            existing_section_keys.add(key)
+            sections.append({
+                'title': section.title,
+                'content': section.content,
+                'type': section.section_type,
+                'chart_html': None,  # 从数据库加载的章节没有图表HTML
+            })
+        
+        if existing_sections:
+            logger.info(f"Found {len(existing_sections)} existing sections, resuming from where we left off")
+        
         # 对每种疾病进行分析
         disease_groups = data.groupby('disease_id')
         
+        # 创建并行任务列表
+        disease_info_list = []
+        
         for disease_id, disease_data in disease_groups:
             # 获取疾病信息
-            from sqlalchemy import select
-            from src.domain import Disease
-            
             disease_query = select(Disease).where(Disease.id == disease_id)
             disease_result = await db.execute(disease_query)
             disease = disease_result.scalar_one_or_none()
@@ -275,6 +319,36 @@ class ReportGenerator:
             if not disease:
                 continue
             
+            # 检查该疾病的所有章节是否已存在
+            disease_sections_exist = all(
+                f"{disease.name} - {section_type}" in existing_section_keys
+                for section_type in section_types
+            )
+            
+            if disease_sections_exist:
+                logger.info(f"Skipping disease {disease.name} - all sections already exist")
+                continue
+            
+            disease_info_list.append({
+                'disease': disease,
+                'data': disease_data,
+            })
+        
+        if not disease_info_list:
+            logger.info("All sections already exist, no new sections to generate")
+            return sections
+        
+        logger.info(f"Processing {len(disease_info_list)} diseases in parallel (max {max_parallel_tasks} concurrent tasks)")
+        
+        # 并行处理所有疾病
+        async def process_disease(disease_info):
+            """处理单个疾病的所有章节"""
+            disease = disease_info['disease']
+            disease_data = disease_info['data']
+            
+            # 过滤与该疾病相关的最新原始网页上下文
+            relevant_raw_sources = self._filter_raw_sources(raw_sources or [], disease.name)
+
             # 分析数据
             analysis_result = await self.analyst.process(
                 data=disease_data,
@@ -282,14 +356,24 @@ class ReportGenerator:
                 period_start=report.period_start,
                 period_end=report.period_end,
             )
+            # 附加原始网页上下文，供后续写作/审核参考
+            analysis_result["raw_sources"] = relevant_raw_sources
             
             # 生成各章节
+            disease_sections = []
             for section_type in section_types:
+                # 检查该章节是否已存在
+                section_key = f"{disease.name} - {section_type}"
+                if section_key in existing_section_keys:
+                    logger.info(f"Skipping section {section_key} - already exists")
+                    continue
+                
                 writer_result = await self.writer.process(
                     section_type=section_type,
                     analysis_data=analysis_result,
                     style=kwargs.get('style', 'formal'),
                     language=kwargs.get('language', 'zh'),
+                    raw_sources=relevant_raw_sources,
                 )
                 
                 # 生成图表（如果需要）
@@ -303,33 +387,65 @@ class ReportGenerator:
                     if chart:
                         chart_html = self.chart_generator.get_chart_html(chart)
                 
+                disease_sections.append({
+                    'disease_name': disease.name,
+                    'section_type': section_type,
+                    'content': writer_result['content'],
+                    'chart_html': chart_html,
+                })
+            
+            return disease_sections
+        
+        # 使用信号量限制并发任务数
+        semaphore = asyncio.Semaphore(max_parallel_tasks)
+        
+        async def process_with_semaphore(disease_info):
+            """使用信号量控制并发"""
+            async with semaphore:
+                return await process_disease(disease_info)
+        
+        # 并行执行所有疾病的处理（受信号量限制）
+        results = await asyncio.gather(*[process_with_semaphore(info) for info in disease_info_list])
+        
+        # 收集所有章节并保存到数据库（增量保存）
+        new_sections_count = 0
+        for disease_sections in results:
+            for section_data in disease_sections:
                 # 创建章节记录
                 section = ReportSection(
                     report_id=report.id,
-                    title=f"{disease.name} - {writer_result['section_type']}",
-                    content=writer_result['content'],
-                    section_type=section_type,
-                    order=len(sections) + 1,
+                    title=f"{section_data['disease_name']} - {section_data['section_type']}",
+                    content=section_data['content'],
+                    section_type=section_data['section_type'],
+                    section_order=len(sections) + 1,
                 )
                 
                 db.add(section)
+                new_sections_count += 1
                 
                 sections.append({
                     'title': section.title,
                     'content': section.content,
-                    'type': section_type,
-                    'chart_html': chart_html,
+                    'type': section_data['section_type'],
+                    'chart_html': section_data['chart_html'],
                 })
+                
+                # 每生成一个章节就提交一次，确保进度保存
+                if new_sections_count % 5 == 0:  # 每5个章节提交一次
+                    await db.commit()
+                    logger.info(f"Progress saved: {new_sections_count} new sections generated")
         
+        # 最后提交剩余的章节
         await db.commit()
         
-        logger.info(f"Generated {len(sections)} sections")
+        logger.info(f"Generated {new_sections_count} new sections (total: {len(sections)} sections)")
         return sections
     
     async def _review_sections(
         self,
         sections: List[Dict[str, Any]],
         original_data: pd.DataFrame,
+        raw_sources: Optional[List[Dict[str, Any]]] = None,
     ) -> List[Dict[str, Any]]:
         """审核章节内容"""
         logger.info("Reviewing sections")
@@ -340,7 +456,10 @@ class ReportGenerator:
             review_result = await self.reviewer.process(
                 content=section['content'],
                 content_type=section['type'],
-                original_data=original_data.to_dict(),
+                original_data={
+                    'structured_data': original_data.to_dict(),
+                    'raw_sources': raw_sources or [],
+                },
             )
             
             if review_result['approved']:
@@ -352,6 +471,87 @@ class ReportGenerator:
                 reviewed_sections.append(section)
         
         return reviewed_sections
+
+    def _filter_raw_sources(
+        self,
+        raw_sources: List[Dict[str, Any]],
+        disease_name: str,
+        limit: int = 3,
+    ) -> List[Dict[str, Any]]:
+        """基于疾病关键词筛选原始网页上下文，避免提示词过长"""
+        if not raw_sources:
+            return []
+
+        name_lower = (disease_name or "").lower()
+        matched = [
+            src for src in raw_sources
+            if name_lower and name_lower in (src.get('snippet', '') + src.get('text', '')).lower()
+        ]
+
+        ordered = matched if matched else raw_sources
+        return ordered[:limit]
+
+    async def _fetch_recent_raw_pages(
+        self,
+        db,
+        country_id: int,
+        period_end: datetime,
+        days_back: int = 45,
+        limit: int = 3,
+    ) -> List[Dict[str, Any]]:
+        """从数据库获取近期爬取的原始网页文本，供AI参考"""
+        try:
+            from sqlalchemy import select, desc
+            from src.domain import Country, CrawlRun, CrawlRawPage
+
+            country_query = select(Country).where(Country.id == country_id)
+            country = (await db.execute(country_query)).scalar_one_or_none()
+            if not country:
+                logger.warning(f"Country not found for id {country_id}, skip raw context")
+                return []
+
+            cutoff = period_end - timedelta(days=days_back)
+            query = (
+                select(CrawlRawPage)
+                .join(CrawlRun, CrawlRawPage.run_id == CrawlRun.id)
+                .where(
+                    CrawlRun.country_code == country.code,
+                    CrawlRawPage.fetched_at >= cutoff,
+                )
+                .order_by(desc(CrawlRawPage.fetched_at))
+                .limit(limit)
+            )
+
+            pages = (await db.execute(query)).scalars().all()
+            raw_sources = []
+
+            for page in pages:
+                snippet = ""
+                try:
+                    raw_text = Path(page.content_path).read_text(encoding='utf-8')
+                    snippet = raw_text[:1200]
+                except Exception as e:
+                    logger.warning(f"Failed to load raw page text {page.content_path}: {e}")
+
+                raw_sources.append({
+                    'title': page.title or Path(page.content_path).stem,
+                    'url': page.url,
+                    'source': page.source,
+                    'fetched_at': page.fetched_at.isoformat(),
+                    'path': page.content_path,
+                    'snippet': snippet,
+                })
+
+            if raw_sources:
+                logger.info(f"Loaded {len(raw_sources)} raw web pages for context")
+            else:
+                logger.info("No recent raw web pages found for context")
+
+            return raw_sources
+
+        except Exception as e:
+            logger.warning(f"Failed to fetch raw pages: {e}")
+            return []
     
     async def _format_and_save(
         self,

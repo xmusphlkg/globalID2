@@ -14,7 +14,7 @@ from bs4 import BeautifulSoup
 
 from src.core import get_logger
 from src.core.database import get_db
-from src.domain import CrawlRawPage
+from src.domain import CrawlRawPage, DiseaseRecord, Country
 from src.data.crawlers.base import CrawlerResult
 from src.data.parsers.html_parser import HTMLTableParser
 from src.data.normalizers.english_mapper import create_disease_mapper
@@ -136,6 +136,9 @@ class DataProcessor:
                 # 保存到文件
                 if save_to_file and result.year_month:
                     self._save_to_file(df, result.year_month)
+                
+                # 保存到数据库
+                await self._save_to_database(df, self.country_code)
                 
             except Exception as e:
                 logger.error(f"处理失败: {result.title}, 错误: {e}")
@@ -267,7 +270,24 @@ class DataProcessor:
         return safe or "page"
 
     def _html_to_text(self, html: str) -> str:
+        """提取HTML主要文本内容，去除导航栏、页眉等杂项"""
         soup = BeautifulSoup(html, "html.parser")
+        
+        # 移除常见的导航和页面结构元素
+        for element in soup.find_all(['nav', 'header', 'footer', 'aside', 'script', 'style']):
+            element.decompose()
+        
+        # 移除常见的导航类名
+        for element in soup.find_all(class_=lambda x: x and any(
+            nav in str(x).lower() for nav in ['nav', 'menu', 'sidebar', 'header', 'footer', 'breadcrumb']
+        )):
+            element.decompose()
+        
+        # 尝试找到主要内容区域
+        main_content = soup.find('main') or soup.find('article') or soup.find('div', class_=lambda x: x and 'content' in str(x).lower())
+        if main_content:
+            soup = main_content
+        
         text = soup.get_text(separator="\n")
         lines = [line.strip() for line in text.splitlines()]
         cleaned = "\n".join(line for line in lines if line)
@@ -281,16 +301,40 @@ class DataProcessor:
         raw_html: str,
         fetched_at: datetime,
     ) -> None:
-        run_dir = raw_dir / str(run_id)
-        run_dir.mkdir(parents=True, exist_ok=True)
+        # 使用年份作为文件夹名（从 year_month 提取，如 "2025 December" -> "2025"）
+        year_str = "unknown"
+        if result.year_month:
+            # 提取年份部分（支持 "2025 December", "2025-12", "202512" 等格式）
+            import re
+            year_match = re.search(r'(20\d{2})', result.year_month)
+            if year_match:
+                year_str = year_match.group(1)
+        
+        year_dir = raw_dir / year_str
+        year_dir.mkdir(parents=True, exist_ok=True)
 
         label = result.year_month or result.title or "report"
         plain_text = self._html_to_text(raw_html)
         content_hash = hashlib.sha256(plain_text.encode("utf-8")).hexdigest()
         filename = f"{self._slugify(label)}_{content_hash[:8]}.txt"
-        file_path = run_dir / filename
+        file_path = year_dir / filename
 
-        file_path.write_text(plain_text, encoding="utf-8")
+        # 添加元数据标签到文本开头
+        metadata_header = f"""# ========================================
+# 原始数据文件元数据
+# ========================================
+# URL: {result.url or 'N/A'}
+# 标题: {result.title or 'N/A'}
+# 报告时间: {result.year_month or 'N/A'}
+# 数据源: {result.metadata.get('source', 'N/A')}
+# 抓取时间: {fetched_at.strftime('%Y-%m-%d %H:%M:%S')}
+# 内容哈希: {content_hash}
+# DOI: {result.metadata.get('doi', 'N/A')}
+# ========================================
+
+"""
+        full_content = metadata_header + plain_text
+        file_path.write_text(full_content, encoding="utf-8")
 
         async with get_db() as db:
             db.add(
@@ -393,6 +437,92 @@ class DataProcessor:
             
         except Exception as e:
             logger.error(f"保存文件失败: {e}")
+    
+    async def _save_to_database(self, df: pd.DataFrame, country_code: str):
+        """
+        保存数据到数据库
+        
+        Args:
+            df: 数据框
+            country_code: 国家代码
+        """
+        if df.empty:
+            logger.warning("数据为空，跳过数据库保存")
+            return
+        
+        try:
+            async with get_db() as db:
+                # 获取国家ID
+                from sqlalchemy import select
+                from src.domain import Disease
+                country_query = select(Country).where(Country.code == country_code.upper())
+                country_result = await db.execute(country_query)
+                country = country_result.scalar_one_or_none()
+                
+                if not country:
+                    logger.warning(f"国家不存在: {country_code}")
+                    return
+                
+                # 准备记录列表
+                records_to_save = []
+                skipped_count = 0
+                
+                for _, row in df.iterrows():
+                    # 检查必需字段
+                    if 'disease_id' not in df.columns or pd.isna(row.get('disease_id')):
+                        skipped_count += 1
+                        continue
+                    
+                    if 'Date' not in df.columns or pd.isna(row.get('Date')):
+                        skipped_count += 1
+                        continue
+                    
+                    # disease_id是疾病代码（如"D001"），需要查询实际的数据库ID
+                    disease_code = str(row['disease_id'])
+                    disease_query = select(Disease).where(Disease.name == disease_code)
+                    disease_result = await db.execute(disease_query)
+                    disease = disease_result.scalar_one_or_none()
+                    
+                    if not disease:
+                        logger.warning(f"疾病不存在: {disease_code}")
+                        skipped_count += 1
+                        continue
+                    
+                    # 创建记录
+                    record = DiseaseRecord(
+                        time=pd.to_datetime(row['Date']),
+                        disease_id=disease.id,  # 使用数据库中的实际ID
+                        country_id=country.id,
+                        cases=int(row['Cases']) if pd.notna(row.get('Cases')) else None,
+                        deaths=int(row['Deaths']) if pd.notna(row.get('Deaths')) else None,
+                        incidence_rate=float(row['Incidence']) if pd.notna(row.get('Incidence')) else None,
+                        mortality_rate=float(row['Mortality']) if pd.notna(row.get('Mortality')) else None,
+                        data_source=row.get('Source'),
+                        metadata_={
+                            'disease_name_en': row.get('Diseases'),
+                            'disease_name_zh': row.get('DiseasesCN'),
+                            'province': row.get('Province'),
+                            'province_cn': row.get('ProvinceCN'),
+                            'year_month': row.get('YearMonth'),
+                            'disease_code': disease_code,
+                        }
+                    )
+                    records_to_save.append(record)
+                
+                if skipped_count > 0:
+                    logger.warning(f"跳过 {skipped_count} 条记录（缺少必需字段或疾病不存在）")
+                
+                # 批量保存
+                if records_to_save:
+                    db.add_all(records_to_save)
+                    await db.commit()
+                    logger.info(f"成功保存 {len(records_to_save)} 条记录到数据库")
+                else:
+                    logger.warning("没有有效记录可保存到数据库")
+                    
+        except Exception as e:
+            logger.error(f"保存到数据库失败: {e}")
+            raise
     
     def merge_data(
         self,

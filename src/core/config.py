@@ -150,6 +150,7 @@ class ReportSettings(BaseSettings):
     template_dir: str = Field(default="templates", description="模板目录")
     max_retries: int = Field(default=3, description="最大重试次数")
     enable_email: bool = Field(default=False, description="是否启用邮件发送")
+    max_parallel_tasks: int = Field(default=5, description="最大并行任务数")
 
 
 class AppSettings(BaseSettings):
