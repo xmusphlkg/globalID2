@@ -154,6 +154,10 @@ python main.py crawl --country CN --force
 - 💰 降低网络请求和存储成本
 - 🎯 精准定位需要更新的数据
 
+**原始内容存档**：
+- 原始网页转为纯文本保存到 `data/raw/<country>/<run_id>/...`
+- 数据库保存路径和哈希：`crawl_runs`, `crawl_raw_pages`
+
 ### 9. 生成报告
 
 ```bash

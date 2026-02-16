@@ -96,6 +96,10 @@ Web框架: FastAPI
   - 强大的查询能力
   - 可靠性高
 
+爬取审计与原始存档:
+    - 原始网页转纯文本保存到 data/raw/<country>/<run_id>/...
+    - 数据库记录运行和文件路径 (crawl_runs, crawl_raw_pages)
+
 文档数据库: MongoDB (可选)
 用途:
   - 原始爬取数据

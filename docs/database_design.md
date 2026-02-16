@@ -87,6 +87,8 @@ Indexes and performance:
 - `ai_interactions`: logs AI requests/responses, token usage and latency (hypertable suggested).
 - `validation_results`: stores validation outcomes for generated sections.
 - `human_review_queue`: tasks for manual human review.
+- `crawl_runs`: crawl run audit log (country, source, status, counts, timestamps, raw_dir).
+- `crawl_raw_pages`: file-backed raw page registry (url, content_path, hash, run_id).
 
 ## Migration and Import notes
 - The project includes `full_migration_v2.py` (preferred) for importing legacy CSVs. The older `scripts/migrate_data.py` was removed.
