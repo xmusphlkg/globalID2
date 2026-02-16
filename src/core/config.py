@@ -13,6 +13,13 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class DatabaseSettings(BaseSettings):
     """数据库配置"""
+    
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8", 
+        case_sensitive=False,
+        extra="ignore",
+    )
 
     url: str = Field(
         default="postgresql+asyncpg://globalid:globalid_dev_password@localhost:5432/globalid",
@@ -29,6 +36,13 @@ class DatabaseSettings(BaseSettings):
 
 class RedisSettings(BaseSettings):
     """Redis配置"""
+    
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8", 
+        case_sensitive=False,
+        extra="ignore",
+    )
 
     url: str = Field(default="redis://localhost:6379/0", description="Redis连接URL")
     encoding: str = Field(default="utf-8", description="编码")
@@ -37,6 +51,13 @@ class RedisSettings(BaseSettings):
 
 class QdrantSettings(BaseSettings):
     """Qdrant向量数据库配置"""
+    
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8", 
+        case_sensitive=False,
+        extra="ignore",
+    )
 
     url: str = Field(default="http://localhost:6333", description="Qdrant连接URL")
     api_key: str | None = Field(default=None, description="API密钥")
@@ -46,24 +67,61 @@ class QdrantSettings(BaseSettings):
 
 class AISettings(BaseSettings):
     """AI模型配置"""
+    
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8", 
+        case_sensitive=False,
+        extra="ignore",
+    )
 
+    # 提供商配置
+    default_provider: str = Field(default="glm", description="默认AI提供商(openai/anthropic/glm/qianwen/azure/custom)")
+    
+    # OpenAI配置
     openai_api_key: str = Field(default="", description="OpenAI API密钥")
+    openai_base_url: str = Field(default="https://api.openai.com/v1", description="OpenAI API基础URL")
+    
+    # Anthropic配置
     anthropic_api_key: str = Field(default="", description="Anthropic API密钥")
     
-    # 默认模型
-    default_model: str = Field(default="gpt-4-turbo", description="默认使用的模型")
-    fallback_model: str = Field(default="gpt-3.5-turbo", description="降级模型")
+    # GLM智谱AI配置
+    glm_api_key: str = Field(default="", description="GLM API密钥")
+    glm_base_url: str = Field(default="https://open.bigmodel.cn/api/paas/v4", description="GLM API基础URL")
+    
+    # 千问配置
+    qianwen_api_key: str = Field(default="", description="千问API密钥")
+    qianwen_base_url: str = Field(default="https://dashscope.aliyuncs.com/compatible-mode/v1", description="千问API基础URL")
+    
+    # Azure OpenAI配置
+    azure_api_key: str = Field(default="", description="Azure OpenAI API密钥")
+    azure_endpoint: str = Field(default="", description="Azure OpenAI端点")
+    azure_api_version: str = Field(default="2024-02-01", description="Azure API版本")
+    
+    # 自定义配置
+    custom_api_key: str = Field(default="", description="自定义API密钥")
+    custom_base_url: str = Field(default="", description="自定义API基础URL")
+    
+    # 默认模型配置  
+    default_model: str = Field(default="glm-4-7", description="默认使用的模型")
+    fallback_model: str = Field(default="glm-4-plus", description="降级模型")
     
     # 模型配置
     temperature: float = Field(default=0.7, ge=0.0, le=2.0, description="生成温度")
     max_tokens: int = Field(default=2000, gt=0, description="最大生成tokens")
     max_retries: int = Field(default=3, ge=1, le=5, description="最大重试次数")
+    # Reviewer threshold for approval (0.0-1.0)
+    reviewer_threshold: float = Field(default=0.7, ge=0.0, le=1.0, description="Reviewer approval threshold")
     
     # 成本控制
     enable_cache: bool = Field(default=True, description="是否启用缓存")
     cache_ttl: int = Field(default=168, description="缓存过期时间（小时）")
     enable_rate_limiting: bool = Field(default=True, description="是否启用限流")
     rate_limit: int = Field(default=50, description="每分钟请求限制")
+    
+    # 测试配置
+    enable_api_test: bool = Field(default=True, description="是否启用API连通性测试")
+    test_prompt: str = Field(default="测试成功", description="API测试提示")
 
 
 class EmailSettings(BaseSettings):
@@ -76,6 +134,22 @@ class EmailSettings(BaseSettings):
     from_address: str = Field(default="", description="发送方邮箱")
     use_tls: bool = Field(default=True, description="使用TLS")
     default_recipients: list[str] = Field(default_factory=list, description="默认收件人列表")
+
+
+class AppSettingsConfig(BaseSettings):
+    """应用基础配置"""
+
+    base_dir: Path = Field(default=Path("."), description="应用根目录")
+    output_dir: Path = Field(default=Path("exports"), description="输出目录")
+
+
+class ReportSettings(BaseSettings):
+    """报告配置"""
+
+    output_dir: str = Field(default="reports", description="报告输出目录")
+    template_dir: str = Field(default="templates", description="模板目录")
+    max_retries: int = Field(default=3, description="最大重试次数")
+    enable_email: bool = Field(default=False, description="是否启用邮件发送")
 
 
 class AppSettings(BaseSettings):
@@ -110,6 +184,8 @@ class AppSettings(BaseSettings):
     qdrant: QdrantSettings = Field(default_factory=QdrantSettings)
     ai: AISettings = Field(default_factory=AISettings)
     email: EmailSettings = Field(default_factory=EmailSettings)
+    app: AppSettingsConfig = Field(default_factory=AppSettingsConfig)
+    report: ReportSettings = Field(default_factory=ReportSettings)
     
     @field_validator("log_dir", "data_dir", "raw_data_dir", "processed_data_dir", "cache_dir")
     @classmethod
