@@ -40,3 +40,4 @@ Thumbs.db
 
 # Documentation
 site/
+tests/fixtures/ai_test_data/

@@ -1,7 +1,7 @@
 """
 GlobalID V2 Reviewer Agent
 
-审核 Agent：负责审核报告质量，提供改进建议
+Reviewer Agent: Responsible for reviewing report quality and providing improvement suggestions
 """
 from typing import Any, Dict, List, Optional
 
@@ -13,22 +13,47 @@ logger = get_logger(__name__)
 
 class ReviewerAgent(BaseAgent):
     """
-    审核 Agent
+    Reviewer Agent
     
-    职责：
-    1. 审核报告内容的准确性
-    2. 检查文本质量（语法、逻辑、可读性）
-    3. 验证数据引用的正确性
-    4. 提供改进建议
+    Responsibilities:
+    1. Review report content for accuracy
+    2. Check text quality (grammar, logic, readability)
+    3. Verify correctness of data references
+    4. Provide improvement suggestions
     """
     
     def __init__(self):
+        from src.core.config import get_config
+        config = get_config()
+
         super().__init__(
             name="Reviewer",
-            model="claude-3-5-sonnet-20241022",  # 使用Claude进行审核
-            temperature=0.2,  # 审核任务需要低温度（严格、客观）
+            model=config.ai.default_model,  # Use default model from config
+            temperature=0.2,  # Reviewing tasks need low temperature (strict, objective)
             max_tokens=2000,
         )
+
+        # Load reviewer-specific configuration
+        # reviewer_threshold can be set via .env or configuration (default 0.7)
+        self.reviewer_threshold = float(getattr(config.ai, "reviewer_threshold", 0.7))
+        # max_retries preference for writer-review loop, fallback to ai.max_retries
+        self.max_retries = int(getattr(config.ai, "max_retries", config.ai.max_retries))
+
+        # Load system prompt
+        self.system_prompt = self._load_system_prompt()
+    
+    def _load_system_prompt(self) -> str:
+        """Load system prompt"""
+        from pathlib import Path
+        
+        prompt_file = Path(__file__).parent.parent.parent.parent / "configs" / "prompts" / "reviewer_system_prompt.txt"
+        
+        try:
+            with open(prompt_file, 'r', encoding='utf-8') as f:
+                return f.read().strip()
+        except FileNotFoundError:
+            logger.warning(f"System prompt file not found: {prompt_file}")
+            return "You are a professional medical reviewer. Please review the provided content for accuracy, clarity, and completeness."
     
     async def process(
         self,
@@ -38,31 +63,31 @@ class ReviewerAgent(BaseAgent):
         **kwargs
     ) -> Dict[str, Any]:
         """
-        审核内容
+        Review content
         
         Args:
-            content: 待审核的内容
-            content_type: 内容类型（summary/analysis/report等）
-            original_data: 原始数据（用于事实核查）
-            **kwargs: 额外参数
+            content: Content to be reviewed
+            content_type: Content type (summary/analysis/report etc)
+            original_data: Original data (for fact checking)
+            **kwargs: Additional parameters
             
         Returns:
-            审核结果
+            Review results
         """
         logger.info(f"Reviewing {content_type} content ({len(content)} chars)")
         
-        # 1. 质量评分
+        # 1. Quality scoring
         quality_score = await self._assess_quality(content, content_type)
         
-        # 2. 事实核查（如果提供了原始数据）
+        # 2. Fact checking (if original data provided)
         fact_check = {}
         if original_data:
             fact_check = await self._fact_check(content, original_data)
         
-        # 3. 改进建议
+        # 3. Improvement suggestions
         suggestions = await self._generate_suggestions(content, content_type, quality_score)
         
-        # 4. 综合评估
+        # 4. Overall assessment
         overall_assessment = await self._overall_assessment(
             content,
             quality_score,
@@ -71,7 +96,7 @@ class ReviewerAgent(BaseAgent):
         )
         
         result = {
-            "approved": quality_score.get("overall", 0) >= 0.7,  # 70分以上通过
+            "approved": quality_score.get("overall", 0) >= self.reviewer_threshold,
             "quality_score": quality_score,
             "fact_check": fact_check,
             "suggestions": suggestions,
@@ -86,20 +111,20 @@ class ReviewerAgent(BaseAgent):
         content: str,
         content_type: str,
     ) -> Dict[str, float]:
-        """评估内容质量"""
-        prompt = f"""请作为专业审稿人，评估以下{content_type}内容的质量。
+        """Assess content quality"""
+        prompt = f"""As a professional medical reviewer, assess the quality of the following {content_type} content.
 
-内容：
+Content:
 {content}
 
-请从以下维度评分（0-1分）：
-1. 准确性（Accuracy）：内容是否准确、无误导
-2. 完整性（Completeness）：信息是否完整、全面
-3. 清晰性（Clarity）：表达是否清晰、易懂
-4. 逻辑性（Logic）：结构是否合理、逻辑连贯
-5. 专业性（Professionalism）：用词是否专业、恰当
+Please score the following dimensions (0.0-1.0):
+1. Accuracy: Content is accurate and not misleading
+2. Completeness: Information is complete and comprehensive
+3. Clarity: Expression is clear and understandable
+4. Logic: Structure is reasonable and logically coherent
+5. Professionalism: Professional and appropriate terminology
 
-请以JSON格式返回评分：
+Return scores in JSON format:
 {{
   "accuracy": 0.0-1.0,
   "completeness": 0.0-1.0,
@@ -107,20 +132,20 @@ class ReviewerAgent(BaseAgent):
   "logic": 0.0-1.0,
   "professionalism": 0.0-1.0,
   "overall": 0.0-1.0,
-  "reasoning": "简要说明评分理由"
+  "reasoning": "Brief explanation for the scores in English"
 }}"""
         
         try:
             response = await self.complete(
                 prompt=prompt,
-                system="你是一位严格的学术审稿人，擅长评估科学报告的质量。请客观公正地评分。",
+                system="You are a strict academic reviewer, skilled at evaluating the quality of scientific reports. Please provide objective and fair scoring.",
             )
             
-            # 解析JSON响应
+            # Parse JSON response
             import json
             import re
             
-            # 提取JSON部分
+            # Extract JSON part
             json_match = re.search(r'\{.*\}', response, re.DOTALL)
             if json_match:
                 scores = json.loads(json_match.group())
@@ -134,7 +159,7 @@ class ReviewerAgent(BaseAgent):
                     "logic": 0.7,
                     "professionalism": 0.7,
                     "overall": 0.7,
-                    "reasoning": "解析失败，使用默认分数",
+                    "reasoning": "Parsing failed, using default scores",
                 }
         
         except Exception as e:
@@ -146,7 +171,7 @@ class ReviewerAgent(BaseAgent):
                 "logic": 0.5,
                 "professionalism": 0.5,
                 "overall": 0.5,
-                "reasoning": f"评估失败: {str(e)}",
+                "reasoning": f"Assessment failed: {str(e)}",
             }
     
     async def _fact_check(
@@ -154,50 +179,50 @@ class ReviewerAgent(BaseAgent):
         content: str,
         original_data: Dict[str, Any],
     ) -> Dict[str, Any]:
-        """事实核查"""
-        # 提取内容中的数字
+        """Fact check the content against the original data."""
+        # Extract numbers from content
         import re
         numbers_in_content = re.findall(r'\d+(?:,\d+)*(?:\.\d+)?', content)
         
-        # 从原始数据中提取参考数字
+        # Extract reference numbers from original data
         reference_numbers = self._extract_numbers_from_data(original_data)
         
-        # 简单的匹配检查
+        # Simple matching check
         issues = []
-        for num in numbers_in_content[:10]:  # 只检查前10个数字
+        for num in numbers_in_content[:10]:  # only check the first 10 numbers
             num_clean = num.replace(',', '')
             try:
                 num_float = float(num_clean)
-                # 检查是否在参考数据的合理范围内
+                # Check if within 10% of any reference number
                 if reference_numbers and not any(
-                    abs(num_float - ref) / (ref + 1) < 0.1  # 10%误差
+                    abs(num_float - ref) / (ref + 1) < 0.1
                     for ref in reference_numbers
                 ):
-                    # 这个数字可能有问题，但不一定是错误
-                    pass
+                    # This number may be inconsistent with the reference data
+                    issues.append(f"Potential mismatch: {num}")
             except ValueError:
                 continue
         
-        # 使用AI进行语义级别的事实核查
-        prompt = f"""请核查以下内容是否与原始数据一致。
+        # Use AI for semantic-level fact checking
+        prompt = f"""Please fact-check if the following content is consistent with the original data.
 
-内容：
-{content[:1000]}  # 限制长度
+Content:
+{content[:1000]}  # Limit length
 
-原始数据摘要：
+Original data summary:
 {self._summarize_data(original_data)}
 
-请指出：
-1. 明显的数据错误或不一致
-2. 夸大或误导性的表述
-3. 缺失的重要信息
+Please identify:
+1. Obvious data errors or inconsistencies
+2. Exaggerated or misleading statements
+3. Missing important information
 
-如果没有问题，请回复"未发现明显问题"。"""
+If no issues found, please respond with "No significant issues found"."""
         
         try:
             response = await self.complete(
                 prompt=prompt,
-                system="你是一位细致的事实核查员，专注于发现数据和陈述中的不一致。",
+                system="You are a meticulous fact-checker, focused on finding inconsistencies in data and statements.",
             )
             
             return {
@@ -220,41 +245,41 @@ class ReviewerAgent(BaseAgent):
         content_type: str,
         quality_score: Dict[str, float],
     ) -> List[str]:
-        """生成改进建议"""
-        # 如果质量很高，不需要太多建议
+        """Generate improvement suggestions"""
+        # If quality is high, fewer suggestions needed
         if quality_score.get("overall", 0) >= 0.9:
-            return ["内容质量优秀，无需重大修改。"]
+            return ["Content quality is excellent, no major revisions needed."]
         
-        prompt = f"""作为资深编辑，请为以下{content_type}内容提供改进建议。
+        prompt = f"""As a senior editor, please provide improvement suggestions for the following {content_type} content.
 
-内容：
+Content:
 {content}
 
-当前质量评分：{quality_score.get('overall', 0):.2f}
+Current quality score: {quality_score.get('overall', 0):.2f}
 
-请提供3-5条具体的改进建议，每条建议应：
-- 指出具体问题
-- 说明为什么需要改进
-- 给出改进方向
+Please provide 3-5 specific improvement suggestions. Each suggestion should:
+- Point out specific issues
+- Explain why improvement is needed
+- Provide improvement direction
 
-格式：使用编号列表（1. 2. 3. ...）"""
+Format: Use numbered list (1. 2. 3. ...)"""
         
         try:
             response = await self.complete(
                 prompt=prompt,
-                system="你是一位经验丰富的科学编辑，擅长提供建设性的改进建议。",
+                system="You are an experienced scientific editor skilled at providing constructive improvement suggestions.",
             )
             
-            # 解析建议列表
+            # Parse suggestions list
             import re
             suggestions = re.findall(r'\d+\.\s*(.+?)(?=\d+\.|$)', response, re.DOTALL)
             suggestions = [s.strip() for s in suggestions if s.strip()]
-            
+
             return suggestions if suggestions else [response]
         
         except Exception as e:
             logger.error(f"Suggestion generation failed: {e}")
-            return ["建议生成失败，请人工审核。"]
+            return ["Suggestion generation failed, please review manually."]
     
     async def _overall_assessment(
         self,
@@ -263,27 +288,27 @@ class ReviewerAgent(BaseAgent):
         fact_check: Dict[str, Any],
         suggestions: List[str],
     ) -> str:
-        """综合评估"""
+        """Overall assessment"""
         overall = quality_score.get("overall", 0)
-        
+
         if overall >= 0.9:
-            assessment = "优秀：内容质量很高，可以直接使用。"
-        elif overall >= 0.7:
-            assessment = "良好：内容质量达标，建议略作修改后使用。"
+            assessment = "Excellent: high-quality content, ready to use."
+        elif overall >= max(self.reviewer_threshold, 0.7):
+            assessment = "Good: acceptable quality; minor edits recommended."
         elif overall >= 0.5:
-            assessment = "中等：内容需要较大改进才能使用。"
+            assessment = "Fair: substantial improvements needed before use."
         else:
-            assessment = "较差：内容质量不足，建议重新撰写。"
-        
-        # 添加事实核查结果
+            assessment = "Poor: content quality insufficient; consider rewriting."
+
+        # Append fact-check findings
         if fact_check.get("issues"):
-            assessment += f"\n注意：发现 {len(fact_check['issues'])} 个潜在的事实问题。"
-        
+            assessment += f"\nNote: {len(fact_check['issues'])} potential factual issues identified."
+
         return assessment
     
     @staticmethod
     def _extract_numbers_from_data(data: Dict[str, Any]) -> List[float]:
-        """从数据中提取数字"""
+        """Extract numeric values from nested data structures."""
         numbers = []
         
         def extract_recursive(obj):
@@ -301,10 +326,10 @@ class ReviewerAgent(BaseAgent):
     
     @staticmethod
     def _summarize_data(data: Dict[str, Any]) -> str:
-        """总结数据"""
+        """Summarize data as JSON string (truncated if long)."""
         import json
         summary = json.dumps(data, ensure_ascii=False, indent=2)
-        # 限制长度
+        # Truncate if summary is too long
         if len(summary) > 1000:
-            summary = summary[:1000] + "\n... (数据已截断)"
+            summary = summary[:1000] + "\n... (data truncated)"
         return summary

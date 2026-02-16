@@ -1,7 +1,7 @@
 """
 GlobalID V2 Writer Agent
 
-作家 Agent：负责撰写报告内容
+Writer Agent: Responsible for writing report content
 """
 from typing import Any, Dict, List, Optional
 
@@ -13,57 +13,90 @@ logger = get_logger(__name__)
 
 class WriterAgent(BaseAgent):
     """
-    作家 Agent
+    Writer Agent
     
-    职责：
-    1. 根据分析结果撰写报告章节
-    2. 生成不同风格的文本（正式、通俗、技术等）
-    3. 确保内容结构清晰、逻辑连贯
+    Responsibilities:
+    1. Write report sections based on analysis results
+    2. Generate text in different styles (formal, popular, technical, etc.)
+    3. Ensure content is well-structured and logically coherent
     """
     
     def __init__(self):
         super().__init__(
             name="Writer",
-            temperature=0.7,  # 写作任务需要适中的温度（平衡创造性和准确性）
+            temperature=0.7,  # Writing tasks need moderate temperature (balance creativity and accuracy)
             max_tokens=3000,
         )
+        
+        # Load system prompt
+        self.system_prompt = self._load_system_prompt()
+    
+    def _load_system_prompt(self) -> str:
+        """Load system prompt"""
+        from pathlib import Path
+        
+        prompt_file = Path(__file__).parent.parent.parent.parent / "configs" / "prompts" / "writer_system_prompt.txt"
+        
+        try:
+            with open(prompt_file, 'r', encoding='utf-8') as f:
+                return f.read().strip()
+        except FileNotFoundError:
+            logger.warning(f"System prompt file not found: {prompt_file}")
+            return "You are a professional medical writer. Write clear, accurate, and informative content based on the provided analysis."
     
     async def process(
         self,
         section_type: str,
         analysis_data: Dict[str, Any],
         style: str = "formal",
-        language: str = "zh",
+        language: str = "en",
+        disease_name: str = None,
+        report_date: str = None,
+        table_data_str: str = None,
         **kwargs
     ) -> Dict[str, Any]:
         """
-        撰写报告章节
+        Write report section following v1.0 structure
         
         Args:
-            section_type: 章节类型（summary/trend_analysis/geographic_distribution等）
-            analysis_data: 分析数据
-            style: 写作风格（formal/popular/technical）
-            language: 语言（zh/en）
-            **kwargs: 额外参数
+            section_type: Section type (introduction/highlights/cases_analysis/deaths_analysis)
+            analysis_data: Analysis data
+            style: Writing style (formal/popular/technical)
+            language: Language (zh/en)
+            disease_name: Name of the disease
+            report_date: Current report date
+            table_data_str: Formatted data for analysis
+            **kwargs: Additional parameters
             
         Returns:
-            生成的章节内容
+            Generated section content
         """
         logger.info(f"Writing section '{section_type}' in '{language}' with '{style}' style")
         
-        # 根据章节类型选择合适的撰写方法
-        if section_type == "summary":
-            content = await self._write_summary(analysis_data, style, language)
-        elif section_type == "trend_analysis":
-            content = await self._write_trend_analysis(analysis_data, style, language)
-        elif section_type == "geographic_distribution":
-            content = await self._write_geographic_distribution(analysis_data, style, language)
-        elif section_type == "key_findings":
-            content = await self._write_key_findings(analysis_data, style, language)
-        elif section_type == "recommendations":
-            content = await self._write_recommendations(analysis_data, style, language)
+        # Use v1.0-style section generation
+        # Pass through any revision instructions via kwargs so retries can modify content
+        if section_type == "introduction":
+            content = await self._write_introduction(disease_name, language, **kwargs)
+        elif section_type == "highlights":
+            content = await self._write_highlights(analysis_data, disease_name, report_date, table_data_str, language, **kwargs)
+        elif section_type == "cases_analysis":
+            content = await self._write_cases_analysis(analysis_data, disease_name, table_data_str, language, **kwargs)
+        elif section_type == "deaths_analysis":
+            content = await self._write_deaths_analysis(analysis_data, disease_name, table_data_str, language, **kwargs)
         else:
-            content = await self._write_generic(section_type, analysis_data, style, language)
+            # Fallback to existing methods
+            if section_type == "summary":
+                content = await self._write_summary(analysis_data, style, language)
+            elif section_type == "trend_analysis":
+                content = await self._write_trend_analysis(analysis_data, style, language)
+            elif section_type == "geographic_distribution":
+                content = await self._write_geographic_distribution(analysis_data, style, language)
+            elif section_type == "key_findings":
+                content = await self._write_key_findings(analysis_data, style, language)
+            elif section_type == "recommendations":
+                content = await self._write_recommendations(analysis_data, style, language)
+            else:
+                content = await self._write_generic(section_type, analysis_data, style, language)
         
         result = {
             "section_type": section_type,
@@ -81,37 +114,43 @@ class WriterAgent(BaseAgent):
         analysis_data: Dict[str, Any],
         style: str,
         language: str,
+        **kwargs
     ) -> str:
-        """撰写摘要"""
-        disease_name = analysis_data.get("disease_name", "未知疾病")
+        """Write summary"""
+        disease_name = analysis_data.get("disease_name", "Unknown Disease")
         stats = analysis_data.get("statistics", {})
         trends = analysis_data.get("trends", {})
         period = analysis_data.get("period", {})
         
-        prompt = f"""请撰写一份疾病监测报告的摘要章节。
+        prompt = f"""Write a concise summary section for a disease surveillance report.
 
-疾病：{disease_name}
-时间段：{period.get('start', '')} 至 {period.get('end', '')}
+    Disease: {disease_name}
+    Period: {period.get('start', '')} to {period.get('end', '')}
 
-关键数据：
-- 总病例数：{stats.get('total_cases', 'N/A')}
-- 平均病例数：{stats.get('avg_cases', 'N/A')}
-- 总死亡数：{stats.get('total_deaths', 'N/A')}
-- 病死率：{stats.get('fatality_rate', 'N/A')}%
+    Key metrics:
+    - Total cases: {stats.get('total_cases', 'N/A')}
+    - Average cases: {stats.get('avg_cases', 'N/A')}
+    - Total deaths: {stats.get('total_deaths', 'N/A')}
+    - Case fatality rate: {stats.get('fatality_rate', 'N/A')}%
 
-趋势：
-- 病例变化率：{trends.get('cases_change_rate', 'N/A')}%
-- 趋势方向：{trends.get('cases_trend', 'N/A')}
+    Trends:
+    - Cases change rate: {trends.get('cases_change_rate', 'N/A')}%
+    - Trend direction: {trends.get('cases_trend', 'N/A')}
 
-要求：
-- 写作风格：{self._get_style_description(style)}
-- 长度：200-300字
-- 结构：开头概述 + 数据亮点 + 趋势总结
-- 语言：{"中文" if language == "zh" else "英文"}
-- 客观准确，重点突出"""
+    Requirements:
+    - Writing style: {self._get_style_description(style)}
+    - Length: 200-300 words
+    - Structure: brief opening + key data highlights + trend summary
+    - Language: {"Chinese" if language == "zh" else "English"}
+    - Tone: objective, highlight main points"""
         
         system_prompt = self._get_system_prompt(language, style)
         
+        # Include any revision instructions if provided
+        rev = kwargs.get('revision_instructions')
+        if rev:
+            prompt += f"\n\nRevision instructions:\n{rev}"
+
         content = await self.complete(
             prompt=prompt,
             system=system_prompt,
@@ -124,35 +163,40 @@ class WriterAgent(BaseAgent):
         analysis_data: Dict[str, Any],
         style: str,
         language: str,
+        **kwargs
     ) -> str:
-        """撰写趋势分析"""
-        disease_name = analysis_data.get("disease_name", "未知疾病")
+        """Write trend analysis"""
+        disease_name = analysis_data.get("disease_name", "Unknown Disease")
         trends = analysis_data.get("trends", {})
         anomalies = analysis_data.get("anomalies", [])
         insights = analysis_data.get("insights", "")
         
-        prompt = f"""请撰写疾病趋势分析章节。
+        prompt = f"""Write a trend analysis section for the disease.
 
-疾病：{disease_name}
+    Disease: {disease_name}
 
-趋势数据：
-{self._format_dict(trends)}
+    Trend data:
+    {self._format_dict(trends)}
 
-异常情况：
-{len(anomalies)} 个异常值被检测到
+    Anomalies:
+    {len(anomalies)} anomalies detected
 
-AI洞察：
-{insights}
+    AI insights:
+    {insights}
 
-要求：
-- 写作风格：{self._get_style_description(style)}
-- 长度：300-500字
-- 结构：整体趋势 + 具体分析 + 异常讨论
-- 语言：{"中文" if language == "zh" else "英文"}
-- 使用专业术语，但保持可读性"""
+    Requirements:
+    - Writing style: {self._get_style_description(style)}
+    - Length: 300-500 words
+    - Structure: overall trend + detailed analysis + anomaly discussion
+    - Language: {"Chinese" if language == "zh" else "English"}
+    - Use professional terminology while remaining readable"""
         
         system_prompt = self._get_system_prompt(language, style)
         
+        rev = kwargs.get('revision_instructions')
+        if rev:
+            prompt += f"\n\nRevision instructions:\n{rev}"
+
         content = await self.complete(
             prompt=prompt,
             system=system_prompt,
@@ -165,21 +209,26 @@ AI洞察：
         analysis_data: Dict[str, Any],
         style: str,
         language: str,
+        **kwargs
     ) -> str:
-        """撰写地理分布分析"""
-        prompt = f"""请撰写疾病地理分布分析章节。
+        """Write geographic distribution analysis"""
+        prompt = f"""Write a geographic distribution analysis section.
 
-数据：
-{self._format_analysis_data(analysis_data)}
+    Data:
+    {self._format_analysis_data(analysis_data)}
 
-要求：
-- 写作风格：{self._get_style_description(style)}
-- 长度：200-400字
-- 重点：区域差异、高发地区、传播模式
-- 语言：{"中文" if language == "zh" else "英文"}"""
+    Requirements:
+    - Writing style: {self._get_style_description(style)}
+    - Length: 200-400 words
+    - Focus: regional differences, high-incidence areas, transmission patterns
+    - Language: {"Chinese" if language == "zh" else "English"}"""
         
         system_prompt = self._get_system_prompt(language, style)
         
+        rev = kwargs.get('revision_instructions')
+        if rev:
+            prompt += f"\n\nRevision instructions:\n{rev}"
+
         content = await self.complete(
             prompt=prompt,
             system=system_prompt,
@@ -192,22 +241,27 @@ AI洞察：
         analysis_data: Dict[str, Any],
         style: str,
         language: str,
+        **kwargs
     ) -> str:
-        """撰写关键发现"""
-        prompt = f"""请列出并阐述本次疾病监测的关键发现。
+        """Write key findings"""
+        prompt = f"""List and explain the key findings from this disease surveillance.
 
-分析数据：
-{self._format_analysis_data(analysis_data)}
+    Analysis data:
+    {self._format_analysis_data(analysis_data)}
 
-要求：
-- 写作风格：{self._get_style_description(style)}
-- 格式：编号列表（3-5条）
-- 每条：标题 + 简短说明（1-2句）
-- 语言：{"中文" if language == "zh" else "英文"}
-- 突出重要性和实际意义"""
+    Requirements:
+    - Writing style: {self._get_style_description(style)}
+    - Format: numbered list (3-5 items)
+    - Each item: title + short explanation (1-2 sentences)
+    - Language: {"Chinese" if language == "zh" else "English"}
+    - Emphasize importance and practical implications"""
         
         system_prompt = self._get_system_prompt(language, style)
         
+        rev = kwargs.get('revision_instructions')
+        if rev:
+            prompt += f"\n\nRevision instructions:\n{rev}"
+
         content = await self.complete(
             prompt=prompt,
             system=system_prompt,
@@ -220,26 +274,31 @@ AI洞察：
         analysis_data: Dict[str, Any],
         style: str,
         language: str,
+        **kwargs
     ) -> str:
-        """撰写建议"""
+        """Write recommendations"""
         trends = analysis_data.get("trends", {})
         anomalies = analysis_data.get("anomalies", [])
         
-        prompt = f"""基于疾病监测数据，请提出专业建议。
+        prompt = f"""Provide professional recommendations based on the surveillance data.
 
-当前态势：
-- 趋势：{trends.get('cases_trend', 'N/A')}
-- 异常：{"发现异常情况" if anomalies else "无明显异常"}
+    Current situation:
+    - Trend: {trends.get('cases_trend', 'N/A')}
+    - Anomalies: {"Anomalies detected" if anomalies else "No significant anomalies"}
 
-要求：
-- 写作风格：{self._get_style_description(style)}
-- 格式：分类建议（监测建议、预防建议、应对建议）
-- 每类2-3条具体建议
-- 语言：{"中文" if language == "zh" else "英文"}
-- 实用可行，符合公共卫生实践"""
+    Requirements:
+    - Writing style: {self._get_style_description(style)}
+    - Format: categorized recommendations (surveillance, prevention, response)
+    - Provide 2-3 actionable items per category
+    - Language: {"Chinese" if language == "zh" else "English"}
+    - Practical and aligned with public health practice"""
         
         system_prompt = self._get_system_prompt(language, style)
         
+        rev = kwargs.get('revision_instructions')
+        if rev:
+            prompt += f"\n\nRevision instructions:\n{rev}"
+
         content = await self.complete(
             prompt=prompt,
             system=system_prompt,
@@ -253,20 +312,25 @@ AI洞察：
         analysis_data: Dict[str, Any],
         style: str,
         language: str,
+        **kwargs
     ) -> str:
-        """通用撰写方法"""
-        prompt = f"""请撰写报告章节：{section_type}
+        """Generic write method"""
+        prompt = f"""Write the report section: {section_type}
 
-数据：
-{self._format_analysis_data(analysis_data)}
+    Data:
+    {self._format_analysis_data(analysis_data)}
 
-要求：
-- 写作风格：{self._get_style_description(style)}
-- 语言：{"中文" if language == "zh" else "英文"}
-- 保持专业性和准确性"""
+    Requirements:
+    - Writing style: {self._get_style_description(style)}
+    - Language: {"Chinese" if language == "zh" else "English"}
+    - Maintain professionalism and accuracy"""
         
         system_prompt = self._get_system_prompt(language, style)
         
+        rev = kwargs.get('revision_instructions')
+        if rev:
+            prompt += f"\n\nRevision instructions:\n{rev}"
+
         content = await self.complete(
             prompt=prompt,
             system=system_prompt,
@@ -276,40 +340,117 @@ AI洞察：
     
     @staticmethod
     def _get_style_description(style: str) -> str:
-        """获取风格描述"""
+        """Get style description"""
         styles = {
-            "formal": "正式、学术性强，适合专业报告",
-            "popular": "通俗易懂，适合公众阅读",
-            "technical": "技术性强，包含专业术语，适合专家",
+            "formal": "Formal and academic, suitable for professional reports",
+            "popular": "Accessible and easy to read for the general public",
+            "technical": "Highly technical with precise terminology for experts",
         }
-        return styles.get(style, "正式专业")
+        return styles.get(style, "Formal and professional")
     
     @staticmethod
     def _get_system_prompt(language: str, style: str) -> str:
-        """获取系统提示词"""
-        if language == "zh":
-            base = "你是一位经验丰富的公共卫生报告撰写专家，擅长将复杂的流行病学数据转化为清晰、准确、有洞察力的文字。"
-        else:
-            base = "You are an experienced public health report writer who excels at transforming complex epidemiological data into clear, accurate, and insightful text."
-        
+        """Get system prompt"""
+        base = "You are an experienced public health report writer who excels at transforming complex epidemiological data into clear, accurate, and insightful text."
+
         if style == "popular":
-            extra = "你的写作风格通俗易懂，能让普通读者理解专业内容。"
+            extra = "Write in an accessible style suitable for a general audience."
         elif style == "technical":
-            extra = "你的写作风格技术性强，面向专业人士，使用准确的专业术语。"
+            extra = "Use technical language and precise terminology for expert readers."
         else:
-            extra = "你的写作风格正式专业，适合官方报告和学术交流。"
-        
+            extra = "Use a formal, professional tone appropriate for official reports and academic communication."
+
+        # System prompts are primarily loaded from external files; this method returns a concise English guideline.
         return f"{base} {extra}"
     
     @staticmethod
     def _format_dict(d: Dict) -> str:
-        """格式化字典"""
+        """Format dictionary"""
         if not d:
-            return "无数据"
+            return "No data"
         return "\n".join([f"- {k}: {v}" for k, v in d.items()])
     
     @staticmethod
     def _format_analysis_data(data: Dict[str, Any]) -> str:
-        """格式化分析数据"""
+        """Format analysis data"""
         import json
         return json.dumps(data, ensure_ascii=False, indent=2)
+
+    # V1.0-style section writing methods
+    async def _write_introduction(self, disease_name: str, language: str, **kwargs) -> str:
+        """Write introduction section (90-100 words)"""
+        prompt = f"Give a brief introduction to {disease_name or 'the disease'}, not including any analysis or commentary. Word limit: 90-100 words."
+
+        rev = kwargs.get('revision_instructions')
+        if rev:
+            prompt += f"\n\nRevision instructions:\n{rev}"
+
+        response = await self.complete(
+            prompt=prompt,
+            system=self.system_prompt
+        )
+
+        return response.strip()
+    
+    async def _write_highlights(self, analysis_data: Dict, disease_name: str, 
+                               report_date: str, table_data_str: str, language: str, **kwargs) -> str:
+        """Write highlights section (100-110 words, 3-4 bullet points)"""
+        data_context = table_data_str or str(analysis_data.get('insights', ''))
+
+        prompt = f"""Analyze the provided data for {disease_name or 'the disease'} and provide a brief summary of key epidemiological trends and current disease situation as of {report_date or 'the current period'}.
+    Format as 3-4 bullet points, each followed by <br/>.
+    Word count: 100-110 words.
+    Data: {data_context}"""
+
+        rev = kwargs.get('revision_instructions')
+        if rev:
+            prompt += f"\n\nRevision instructions:\n{rev}"
+
+        response = await self.complete(
+            prompt=prompt,
+            system=self.system_prompt
+        )
+
+        return response.strip()
+    
+    async def _write_cases_analysis(self, analysis_data: Dict, disease_name: str, 
+                                   table_data_str: str, language: str, **kwargs) -> str:
+        """Write cases analysis section (2-3 paragraphs)"""
+        data_context = table_data_str or str(analysis_data.get('insights', ''))
+
+        prompt = f"""Provide deep cases analysis of reported data for {disease_name or 'the disease'}. 
+    Write 2-3 flowing paragraphs without bullet points.
+    Focus on case trends, patterns, and epidemiological insights.
+    Data: {data_context}"""
+
+        rev = kwargs.get('revision_instructions')
+        if rev:
+            prompt += f"\n\nRevision instructions:\n{rev}"
+
+        response = await self.complete(
+            prompt=prompt,
+            system=self.system_prompt
+        )
+
+        return response.strip()
+    
+    async def _write_deaths_analysis(self, analysis_data: Dict, disease_name: str, 
+                                    table_data_str: str, language: str, **kwargs) -> str:
+        """Write deaths analysis section (2-3 paragraphs)"""
+        data_context = table_data_str or str(analysis_data.get('insights', ''))
+
+        prompt = f"""Provide deep deaths analysis of reported data for {disease_name or 'the disease'}.
+    Write 2-3 flowing paragraphs without bullet points.
+    Focus on mortality patterns, case-fatality ratios, and death trends.
+    Data: {data_context}"""
+
+        rev = kwargs.get('revision_instructions')
+        if rev:
+            prompt += f"\n\nRevision instructions:\n{rev}"
+
+        response = await self.complete(
+            prompt=prompt,
+            system=self.system_prompt
+        )
+
+        return response.strip()

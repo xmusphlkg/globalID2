@@ -196,52 +196,52 @@ def generate_report(
     """
     async def _generate():
         await init_app()
-        db = get_database()
         
         console.print(f"[bold blue]Generating {report_type} report for {country}...[/bold blue]")
         
-        # 获取国家
-        country_query = select(Country).where(Country.code == country)
-        country_result = await db.execute(country_query)
-        country_obj = country_result.scalar_one_or_none()
-        
-        if not country_obj:
-            console.print(f"[red]Country not found: {country}[/red]")
-            return
-        
-        # 设置时间范围
-        period_end = datetime.utcnow()
-        period_start = period_end - timedelta(days=days)
-        
-        # 获取报告类型
-        report_type_enum = ReportType[report_type.upper()]
-        
-        # 生成报告
-        generator = ReportGenerator()
-        
-        with Progress() as progress:
-            task = progress.add_task("[cyan]Generating report...", total=100)
+        async with get_database() as db:
+            # 获取国家
+            country_query = select(Country).where(Country.code == country)
+            country_result = await db.execute(country_query)
+            country_obj = country_result.scalar_one_or_none()
             
-            report = await generator.generate(
-                country_id=country_obj.id,
-                report_type=report_type_enum,
-                period_start=period_start,
-                period_end=period_end,
-                send_email=send_email,
-            )
+            if not country_obj:
+                console.print(f"[red]Country not found: {country}[/red]")
+                return
             
-            progress.update(task, advance=100)
-        
-        console.print(f"[green]✓ Report generated successfully![/green]")
-        console.print(f"  ID: {report.id}")
-        console.print(f"  Status: {report.status}")
-        
-        if report.markdown_path:
-            console.print(f"  Markdown: {report.markdown_path}")
-        if report.html_path:
-            console.print(f"  HTML: {report.html_path}")
-        if report.pdf_path:
-            console.print(f"  PDF: {report.pdf_path}")
+            # 设置时间范围
+            period_end = datetime.utcnow()
+            period_start = period_end - timedelta(days=days)
+            
+            # 获取报告类型
+            report_type_enum = ReportType[report_type.upper()]
+            
+            # 生成报告
+            generator = ReportGenerator()
+            
+            with Progress() as progress:
+                task = progress.add_task("[cyan]Generating report...", total=100)
+                
+                report = await generator.generate(
+                    country_id=country_obj.id,
+                    report_type=report_type_enum,
+                    period_start=period_start,
+                    period_end=period_end,
+                    send_email=send_email,
+                )
+                
+                progress.update(task, advance=100)
+            
+            console.print(f"[green]✓ Report generated successfully![/green]")
+            console.print(f"  ID: {report.id}")
+            console.print(f"  Status: {report.status}")
+            
+            if report.markdown_path:
+                console.print(f"  Markdown: {report.markdown_path}")
+            if report.html_path:
+                console.print(f"  HTML: {report.html_path}")
+            if report.pdf_path:
+                console.print(f"  PDF: {report.pdf_path}")
     
     asyncio.run(_generate())
 

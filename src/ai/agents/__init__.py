@@ -1,7 +1,7 @@
 """
 GlobalID V2 AI Agents
 
-AI Agent模块，提供智能分析、撰写、审核功能
+AI agents package providing analysis, writing, and review functionality.
 """
 from .base import BaseAgent
 from .analyst import AnalystAgent

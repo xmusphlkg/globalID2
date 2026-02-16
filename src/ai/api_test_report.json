@@ -1,0 +1,37 @@
+{
+  "test_timestamp": "2026-02-16T14:20:46.727191",
+  "summary": {
+    "total_tests": 4,
+    "successful_tests": 1,
+    "success_rate": 0.25
+  },
+  "test_results": [
+    {
+      "provider": "glm",
+      "status": "skipped",
+      "reason": "API key not configured",
+      "timestamp": "2026-02-16T14:20:38.991375"
+    },
+    {
+      "provider": "qianwen",
+      "status": "success",
+      "model": "qwen-turbo",
+      "response": "太好了！测试成功是一个积极的信号，说明系统或流程运行正常。如果需要进一步操作或有其他问题，随时告诉我！ 😊",
+      "duration_seconds": 0.983259,
+      "tokens_used": 45,
+      "timestamp": "2026-02-16T14:20:40.431163"
+    },
+    {
+      "provider": "glm",
+      "status": "skipped",
+      "reason": "API key not configured",
+      "timestamp": "2026-02-16T14:20:40.431241"
+    },
+    {
+      "provider": "openai",
+      "status": "failed",
+      "error": "Error code: 401 - {'error': {'message': 'Incorrect API key provided: sk-test-***********************************************tion. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'code': 'invalid_api_key', 'param': None}, 'status': 401}",
+      "timestamp": "2026-02-16T14:20:46.726825"
+    }
+  ]
+}
