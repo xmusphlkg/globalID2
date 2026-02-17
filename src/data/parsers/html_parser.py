@@ -69,7 +69,7 @@ class HTMLTableParser(BaseParser):
         try:
             # 如果content是URL，则获取内容
             if content.startswith("http"):
-                self.logger.info(f"从URL获取内容: {content}")
+                self.logger.debug(f"Fetching from URL: {content}")
                 response = self.session.get(content, timeout=30)
                 response.raise_for_status()
                 html_content = response.text
@@ -93,9 +93,9 @@ class HTMLTableParser(BaseParser):
             
             # 提取第一个表格（通常是数据表格）
             table = tables[0]
-            self.logger.info(f"找到 {len(tables)} 个表格，使用第一个表格")
+            self.logger.debug(f"Found {len(tables)} table(s), using first one")
             df = self._extract_table_data(table)
-            self.logger.info(f"_extract_table_data 返回的 DataFrame 形状: {df.shape}")
+            self.logger.debug(f"Extracted DataFrame shape: {df.shape}")
             
             if df.empty:
                 return ParseResult(
@@ -177,19 +177,19 @@ class HTMLTableParser(BaseParser):
         
         # 创建DataFrame
         df = pd.DataFrame(data)
-        self.logger.info(f"创建的DataFrame形状: {df.shape}")
+        self.logger.debug(f"Created DataFrame shape: {df.shape}")
         
         # 确保只有3列，如果不是则截取前3列
         if len(df.columns) > 3:
-            self.logger.info(f"截取前3列，原有 {len(df.columns)} 列")
+            self.logger.debug(f"Truncating to 3 columns from {len(df.columns)}")
             df = df.iloc[:, :3]
         elif len(df.columns) < 3:
-            self.logger.warning(f"DataFrame 列数不足: {len(df.columns)}")
+            self.logger.warning(f"Insufficient columns: {len(df.columns)}")
             return pd.DataFrame()
         
         # 设置列名
         df.columns = ["Diseases", "Cases", "Deaths"]
-        self.logger.info(f"最终DataFrame形状: {df.shape}")
+        self.logger.debug(f"Final DataFrame shape: {df.shape}")
         
         return df
     
@@ -204,29 +204,25 @@ class HTMLTableParser(BaseParser):
         Returns:
             pd.DataFrame: 清洗后的数据
         """
-        self.logger.info(f"_clean_english_data 输入 DataFrame 形状: {df.shape}, 列: {list(df.columns)}")
+        self.logger.debug(f"_clean_english_data input DataFrame shape: {df.shape}")
         
         # 复制数据，避免修改原始数据
         data = df.iloc[1:].copy()  # 跳过表头行
-        self.logger.info(f"跳过表头后 DataFrame 形状: {data.shape}, 列: {list(data.columns)}")
+        self.logger.debug(f"After skipping header: {data.shape}")
         
         # 设置列名
         if len(data.columns) >= 3:
             data.columns = ["Diseases", "Cases", "Deaths"]
-            self.logger.info(f"设置列名后 DataFrame 形状: {data.shape}, 列: {list(data.columns)}")
         else:
-            self.logger.warning(f"列数不足: {len(data.columns)}")
+            self.logger.warning(f"Insufficient columns: {len(data.columns)}")
             return pd.DataFrame()
         
         # 清洗疾病名称（移除特殊字符）
         data["Diseases"] = data["Diseases"].str.replace(r"[^\w\s]", "", regex=True)
         data["Diseases"] = data["Diseases"].str.strip()
-        self.logger.info(f"清洗疾病名称后 DataFrame 形状: {data.shape}")
         
         # 添加额外的列
-        self.logger.info(f"metadata keys: {list(metadata.keys())}")
         date_value = metadata.get("date")
-        self.logger.info(f"metadata['date'] type: {type(date_value)}, value: {date_value}")
         
         try:
             # 处理DOI字段，如果是列表则转换为字符串
@@ -234,33 +230,19 @@ class HTMLTableParser(BaseParser):
             if isinstance(doi_value, list):
                 doi_value = "; ".join(doi_value)
             data["DOI"] = doi_value
-            self.logger.info("成功设置 DOI 列")
             data["URL"] = metadata.get("url", "")
-            self.logger.info("成功设置 URL 列")
             data["Date"] = date_value
-            self.logger.info("成功设置 Date 列")
             data["YearMonthDay"] = date_value.strftime("%Y/%m/%d") if date_value else ""
-            self.logger.info("成功设置 YearMonthDay 列")
             data["YearMonth"] = metadata.get("year_month", "")
-            self.logger.info("成功设置 YearMonth 列")
             data["Source"] = metadata.get("source", "")
-            self.logger.info("成功设置 Source 列")
             data["Province"] = "China"
-            self.logger.info("成功设置 Province 列")
             data["ProvinceCN"] = "全国"
-            self.logger.info("成功设置 ProvinceCN 列")
             data["ADCode"] = "100000"
-            self.logger.info("成功设置 ADCode 列")
             data["Incidence"] = -10  # 待计算
-            self.logger.info("成功设置 Incidence 列")
             data["Mortality"] = -10  # 待计算
-            self.logger.info("成功设置 Mortality 列")
-            
-            # DiseasesCN 列需要通过映射获取（在后续步骤处理）
-            data["DiseasesCN"] = ""
-            self.logger.info("成功设置 DiseasesCN 列")
+            data["DiseasesCN"] = ""  # 需要通过映射获取
         except Exception as e:
-            self.logger.error(f"添加列时出错: {e}")
+            self.logger.error(f"Error adding columns: {e}")
             raise
         
         # 重新排序列
@@ -278,9 +260,7 @@ class HTMLTableParser(BaseParser):
             if col not in data.columns:
                 data[col] = ""
         
-        self.logger.info(f"最终列: {list(data.columns)}")
-        self.logger.info(f"column_order: {column_order}")
-        self.logger.info(f"data.index: {data.index}")
+        self.logger.debug(f"Final columns: {list(data.columns)}")
         
         return data[column_order]
     
