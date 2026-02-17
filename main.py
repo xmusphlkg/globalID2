@@ -4,6 +4,7 @@ GlobalID V2 Main Entry Point
 主入口：运行完整的数据爬取 → 分析 → 报告生成流程
 """
 import asyncio
+import signal
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -14,7 +15,8 @@ from rich.progress import Progress
 from sqlalchemy import select
 
 from src.core import get_config, get_database, get_logger, init_app
-from src.domain import Country, Disease, DiseaseRecord, ReportType, CrawlRun
+from src.core.task_manager import task_manager
+from src.domain import Country, Disease, DiseaseRecord, ReportType, CrawlRun, TaskType, TaskPriority, TaskStatus, Task
 from src.data.crawlers import ChinaCDCCrawler
 from src.data.processors import DataProcessor
 from src.generation import ReportGenerator
@@ -41,17 +43,49 @@ def crawl(
     """
     run_id = None
     raw_dir = None
+    task = None
 
     async def _crawl():
-        nonlocal run_id, raw_dir
+        nonlocal run_id, raw_dir, task
         await init_app()
         
         # 标准化国家代码为大写
         country_code = country.upper()
         
+        # Create task record
+        task_name = f"Crawl {country_code} Data ({source})"
+        task_description = f"Source: {source}, Force: {'Yes' if force else 'No'}, Process: {'Yes' if process else 'No'}"
+        
+        task = await task_manager.create_task(
+            task_type=TaskType.CRAWL_DATA,
+            task_name=task_name,
+            priority=TaskPriority.HIGH if force else TaskPriority.NORMAL,
+            description=task_description,
+            input_data={
+                "country": country_code,
+                "source": source,
+                "force": force,
+                "process": process,
+                "save_raw": save_raw,
+            }
+        )
+        
         console.print(f"[bold blue]🚀 Starting intelligent data crawl for {country_code}...[/bold blue]")
+        console.print(f"[dim]Task UUID: {task.task_uuid}[/dim]")
         if force:
             console.print("[yellow]⚠️  Force mode: will crawl all data (ignoring database)[/yellow]")
+        
+        # 更新任务状态为运行中
+        await task_manager.update_task_status(task.task_uuid, TaskStatus.RUNNING)
+        
+        # Add startup log
+        await task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="info",
+            title="Crawl Task Started",
+            content=f"Country: {country_code}\nSource: {source}\nForce Mode: {force}\nProcess Data: {process}",
+            content_type="text"
+        )
         
         # 获取爬虫
         if country_code == "CN":
@@ -59,6 +93,11 @@ def crawl(
         else:
             console.print(f"[red]Unsupported country: {country_code}[/red]")
             console.print(f"[yellow]Available countries: CN[/yellow]")
+            await task_manager.update_task_status(
+                task.task_uuid,
+                TaskStatus.FAILED,
+                error_message=f"Unsupported country: {country_code}"
+            )
             return
         
         run_id = None
@@ -82,7 +121,23 @@ def crawl(
 
         # 智能爬取（三阶段）
         console.print(f"\n[bold cyan]Phase 1/3: Fetching data list...[/bold cyan]")
+        
+        # Log phase 1
+        await task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="info",
+            title="Phase 1/3: Fetching Data List",
+            content="Starting to fetch available data list...",
+            content_type="text"
+        )
+        
+        # Update progress: 10%
+        await task_manager.update_task_progress(task.task_uuid, 1, 10)
+        
         results = await crawler.crawl(source=source, force=force)
+        
+        # Update progress: 30%
+        await task_manager.update_task_progress(task.task_uuid, 3, 10)
         
         if not results:
             if run_id:
@@ -95,9 +150,45 @@ def crawl(
                         run.processed_reports = 0
                         run.total_records = 0
             console.print(f"[yellow]✓ No new data to crawl[/yellow]")
+            
+            # Log no new data
+            await task_manager.add_workbook_entry(
+                task.task_uuid,
+                entry_type="info",
+                title="Crawl Completed",
+                content="No new data found to crawl",
+                content_type="text"
+            )
+            
+            # 更新任务输出数据
+            async with get_database() as db:
+                task_obj = await db.get(Task, task.id)
+                if task_obj:
+                    task_obj.output_data = {"message": "No new data to crawl"}
+                    await db.commit()
+            
+            # Update progress to 100%
+            await task_manager.update_task_progress(task.task_uuid, 10, 10)
+            
+            await task_manager.update_task_status(
+                task.task_uuid,
+                TaskStatus.COMPLETED
+            )
             return
         
         console.print(f"[green]✓ Found {len(results)} new reports to process[/green]")
+        
+        # Log discovered data
+        await task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="success",
+            title="Data List Retrieved",
+            content=f"Found {len(results)} {'new ' if not force else ''}report(s) to process",
+            content_type="text"
+        )
+        
+        # Update progress: 40%
+        await task_manager.update_task_progress(task.task_uuid, 4, 10)
         
         # 显示预览
         console.print(f"\n[bold]New reports:[/bold]")
@@ -114,6 +205,18 @@ def crawl(
         if process and results:
             console.print(f"\n[bold cyan]Phase 2/3: Processing new data...[/bold cyan]")
             
+            # Log phase 2
+            await task_manager.add_workbook_entry(
+                task.task_uuid,
+                entry_type="info",
+                title="Phase 2/3: Processing Data",
+                content=f"Starting to process {len(results)} report(s)...",
+                content_type="text"
+            )
+            
+            # Update progress: 50%
+            await task_manager.update_task_progress(task.task_uuid, 5, 10)
+            
             from src.data.processors import DataProcessor
             
             processor = DataProcessor(
@@ -121,8 +224,27 @@ def crawl(
                 country_code=country_code.lower()
             )
             
+            # Progress callback for workbook logging
+            processed_count = 0
+            async def progress_callback(current, total, message):
+                nonlocal processed_count
+                processed_count = current
+                # Update progress between 50% and 80%
+                progress_pct = 50 + int((current / total) * 30)
+                await task_manager.update_task_progress(task.task_uuid, progress_pct // 10, 10)
+                
+                # Log every 10 reports or at key milestones
+                if current % 10 == 0 or current == total:
+                    await task_manager.add_workbook_entry(
+                        task.task_uuid,
+                        entry_type="info",
+                        title="Processing Progress",
+                        content=f"{current}/{total} reports processed",
+                        content_type="text"
+                    )
+            
             with Progress() as progress:
-                task = progress.add_task("[cyan]Processing...", total=len(results))
+                progress_task = progress.add_task("[cyan]Processing...", total=len(results))
                 
                 processed = await processor.process_crawler_results(
                     results,
@@ -130,8 +252,9 @@ def crawl(
                     save_raw=save_raw,
                     crawl_run_id=run_id,
                     raw_dir=raw_dir,
+                    progress_callback=progress_callback,
                 )
-                progress.update(task, advance=len(results))
+                progress.update(progress_task, advance=len(results))
             
             console.print(f"[green]✓ Processed {len(processed)}/{len(results)} datasets[/green]")
             
@@ -139,6 +262,18 @@ def crawl(
             if processed:
                 total_records = sum(len(df) for df in processed)
                 console.print(f"[green]✓ Total records: {total_records}[/green]")
+                
+                # Log processing result
+                await task_manager.add_workbook_entry(
+                    task.task_uuid,
+                    entry_type="success",
+                    title="Data Processing Completed",
+                    content=f"Successfully processed: {len(processed)}/{len(results)} dataset(s)\nTotal records: {total_records}",
+                    content_type="text"
+                )
+                
+                # Update progress: 80%
+                await task_manager.update_task_progress(task.task_uuid, 8, 10)
         
         # 仅保存原始文本（不处理数据）
         if save_raw and results and not process:
@@ -167,12 +302,90 @@ def crawl(
                     run.processed_reports = len(processed) if process else 0
                     run.total_records = total_records if process and processed else 0
         
+        # Log completion
+        await task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="success",
+            title="Crawl Task Completed",
+            content=f"New reports: {len(results)}\nProcessed datasets: {len(processed) if process else 0}\nTotal records: {total_records if process and processed else 0}",
+            content_type="text"
+        )
+        
+        # 更新任务输出数据和状态
+        async with get_database() as db:
+            task_obj = await db.get(Task, task.id)
+            if task_obj:
+                task_obj.output_data = {
+                    "new_reports": len(results),
+                    "processed_reports": len(processed) if process else 0,
+                    "total_records": total_records if process and processed else 0,
+                    "crawl_run_id": run_id,
+                }
+                await db.commit()
+        
+        # Update progress to 100%
+        await task_manager.update_task_progress(task.task_uuid, 10, 10)
+        
+        await task_manager.update_task_status(
+            task.task_uuid,
+            TaskStatus.COMPLETED
+        )
+        
         console.print(f"\n[bold green]✨ Crawl completed successfully![/bold green]")
+    
+    # Flag to track if task was cancelled
+    task_cancelled = False
+    
+    def signal_handler(signum, frame):
+        """Handle SIGINT (Ctrl+C) and SIGTERM signals"""
+        nonlocal task_cancelled
+        task_cancelled = True
+        console.print("\n[yellow]⚠️  Cancellation requested... cleaning up...[/yellow]")
+    
+    # Register signal handlers
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
     
     async def _crawl_with_error_handling():
         try:
             await _crawl()
+        except KeyboardInterrupt:
+            # Handle Ctrl+C interruption
+            console.print("\n[yellow]⚠️  Task interrupted by user[/yellow]")
+            
+            # Update CrawlRun status
+            if run_id:
+                async with get_database() as db:
+                    run = await db.get(CrawlRun, run_id)
+                    if run:
+                        run.status = "cancelled"
+                        run.finished_at = datetime.now()
+                        run.error_message = "Interrupted by user (Ctrl+C)"
+                        await db.commit()
+            
+            # Update task status to CANCELLED
+            if task:
+                # Add cancellation log
+                await task_manager.add_workbook_entry(
+                    task.task_uuid,
+                    entry_type="warning",
+                    title="Task Cancelled",
+                    content="Task was interrupted by user (Ctrl+C)",
+                    content_type="text"
+                )
+                
+                await task_manager.update_task_status(
+                    task.task_uuid,
+                    TaskStatus.CANCELLED,
+                    error_message="Interrupted by user"
+                )
+            
+            console.print("[yellow]✓ Task cancelled and status updated[/yellow]")
+            sys.exit(130)  # Standard exit code for SIGINT
+            
         except Exception as e:
+            # Handle other errors
+            # Update CrawlRun status
             if run_id:
                 async with get_database() as db:
                     run = await db.get(CrawlRun, run_id)
@@ -180,6 +393,27 @@ def crawl(
                         run.status = "failed"
                         run.finished_at = datetime.now()
                         run.error_message = str(e)
+                        await db.commit()
+            
+            # Update task status to FAILED
+            if task:
+                # Add error log
+                await task_manager.add_workbook_entry(
+                    task.task_uuid,
+                    entry_type="error",
+                    title="Task Failed",
+                    content=f"Error: {str(e)}",
+                    content_type="text"
+                )
+                
+                await task_manager.update_task_status(
+                    task.task_uuid,
+                    TaskStatus.FAILED,
+                    error_message=str(e)
+                )
+            
+            logger.error(f"Crawl failed: {e}")
+            console.print(f"[red]✗ Task failed: {e}[/red]")
             raise
 
     asyncio.run(_crawl_with_error_handling())

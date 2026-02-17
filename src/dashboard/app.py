@@ -51,9 +51,11 @@ _load_css()
 
 
 
-from src.dashboard.data import run_query, get_disease_list
-from src.dashboard.plots import plot_top_diseases, plot_trend_chart
-from src.dashboard.ui import render_sidebar
+# Import from modular structure
+from src.dashboard.common import run_query, render_sidebar
+from src.dashboard.disease import get_disease_list, plot_top_diseases, plot_trend_chart
+from src.dashboard.task import render_task_center
+from src.core.task_manager import task_manager
 
 # Fetch country list (used in sidebar filter) and build redesigned sidebar
 try:
@@ -678,6 +680,12 @@ elif page == nav_labels[2]:
         df = run_query(f"SELECT * FROM {table} ORDER BY 1 DESC LIMIT {limit}")
         st.write(f"📊 {len(df)} {t('rows')} from `{table}`")
         st.dataframe(df, width='stretch')
+
+elif page == t("task_management") or page == nav_labels[-1]:
+    try:
+        render_task_center(t, sel_country_id)
+    except Exception as e:
+        st.error(f"{t('connection_failed')}: {e}")
 
 else:
     st.title(t('data_quality_title'))
