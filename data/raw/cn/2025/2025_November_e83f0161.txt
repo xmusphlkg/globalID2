@@ -5,7 +5,7 @@
 # 标题: 2025年11月全国法定传染病疫情概况
 # 报告时间: 2025 November
 # 数据源: National Disease Control and Prevention Administration
-# 抓取时间: 2026-02-16 16:40:15
+# 抓取时间: 2026-02-17 12:47:08
 # 内容哈希: e83f0161fe2560f3d862c1dda11d1433b833348b47dad18ff23d89d0e6e9d93c
 # DOI: N/A
 # ========================================

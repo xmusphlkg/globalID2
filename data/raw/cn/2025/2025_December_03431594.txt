@@ -1,0 +1,197 @@
+# ========================================
+# 原始数据文件元数据
+# ========================================
+# URL: https://weekly.chinacdc.cn/en/article/doi/10.46234/ccdcw2026.032
+# 标题: Notifiable Infectious Diseases Reports: Reported Cases and Deaths of National Notifiable Infectious Diseases — China, December 2025*
+# 报告时间: 2025 December
+# 数据源: China CDC Weekly
+# 抓取时间: 2026-02-17 12:06:39
+# 内容哈希: 0343159435ebc523752fc2f5c0bc0ff43e693e77372f433a253841c62f10e0dc
+# DOI: 10.46234/ccdcw2026.032
+# ========================================
+
+Notifiable Infectious Diseases Reports: Reported Cases and Deaths of National Notifiable Infectious Diseases — China, December 2025*
+Online Date:
+February 13 2026
+Issue Date:
+February 13 2026
+doi:
+10.46234/ccdcw2026.032
+Diseases
+Cases
+Deaths
+Plague
+0
+0
+Cholera
+0
+0
+COVID-19
+15,129
+1
+SARS-CoV
+0
+0
+Acquired immune deficiency syndrome
+†
+4,560
+2,027
+Hepatitis
+128,222
+585
+Hepatitis A
+1,204
+0
+Hepatitis B
+109,580
+39
+Hepatitis C
+14,159
+545
+Hepatitis D
+33
+0
+Hepatitis E
+2,543
+1
+Other hepatitis
+703
+0
+Poliomyelitis
+0
+0
+Human infection with noval influenza virus
+3
+0
+Measles
+90
+0
+Epidemic hemorrhagic fever
+617
+6
+Rabies
+28
+30
+Japanese encephalitis
+1
+0
+Dengue
+151
+0
+Monkey pox
+§
+43
+0
+Anthrax
+23
+0
+Dysentery
+1,509
+0
+Tuberculosis
+52,826
+228
+Typhoid fever and paratyphoid fever
+349
+0
+Meningococcal meningitis
+29
+0
+Pertussis
+1,313
+0
+Diphtheria
+0
+0
+Neonatal tetanus
+0
+0
+Scarlet fever
+3,058
+0
+Brucellosis
+3,420
+0
+Gonorrhea
+10,547
+0
+Syphilis
+52,197
+3
+Leptospirosis
+20
+0
+Schistosomiasis
+3
+0
+Malaria
+393
+2
+Influenza
+6,727,614
+14
+Mumps
+6,471
+0
+Rubella
+38
+0
+Acute hemorrhagic conjunctivitis
+1,560
+0
+Leprosy
+15
+0
+Typhus
+65
+0
+Kala azar
+31
+0
+Echinococcosis
+373
+0
+Filariasis
+0
+0
+Hand, foot and mouth disease
+106,825
+0
+Infectious diarrhea
+¶
+118,529
+0
+Total
+7,236,052
+2,896
+* According to the National Bureau of Disease Control and Prevention.
+†
+The number of deaths of Acquired immune deficiency syndrome (AIDS) is the number of all-cause deaths reported in the month by cumulative reported AIDS patients..
+§
+Since September 20, 2023, Monkey pox was included in the management of Class B infectious diseases.
+¶
+Infectious diarrhea excludes cholera, dysentery, typhoid fever and paratyphoid fever.
+The number of cases and cause-specific deaths refer to data recorded in National Notifiable Disease Reporting System in China, which includes both clinically-diagnosed cases and laboratory-confirmed cases. Only reported cases of the 31 provincial-level administrative divisions in the Chinese mainland are included in the table, whereas data of Hong Kong Special Administrative Region, Macau Special Administrative Region, and Taiwan, China are not included. Monthly statistics are calculated without annual verification, which were usually conducted in February of the next year for de-duplication and verification of reported cases in annual statistics. Therefore, 12-month cases could not be added together directly to calculate the cumulative cases because the individual information might be verified via National Notifiable Disease Reporting System according to information verification or field investigations by local CDCs.
+Download:
+CSV
+通讯作者:
+陈斌, bchen63@163.com
+1.
+沈阳化工大学材料科学与工程学院 沈阳 110142
+本站搜索
+百度学术搜索
+万方数据库搜索
+CNKI搜索
+Get Citation
+PDF
+Article Metrics
+Article views(
+471
+)
+PDF downloads(
+0
+)
+Cited by(
+)
+Share
+Related

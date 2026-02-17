@@ -1,9 +1,4 @@
-"""Sidebar and UI helper functions for the dashboard.
-
-This module encapsulates the Streamlit sidebar layout and controls so
-`app.py` can focus on page logic. Functions here accept the
-translation helper `t` and the country list produced by the data layer.
-"""
+"""Shared UI components for the dashboard."""
 from typing import Tuple, Optional
 import streamlit as st
 import pandas as pd
@@ -12,13 +7,14 @@ import pandas as pd
 def render_sidebar(t, country_list: list, c_df: pd.DataFrame, country_error: Optional[str]):
     """Render the application sidebar and return selection values.
 
-    Parameters
-    - t: translation function (i18n.t)
-    - country_list: list of country names for the selectbox
-    - c_df: DataFrame of countries with at least columns `id` and `name`
-    - country_error: optional error message if fetching countries failed
+    Parameters:
+        t: translation function (i18n.t)
+        country_list: list of country names for the selectbox
+        c_df: DataFrame of countries with at least columns `id` and `name`
+        country_error: optional error message if fetching countries failed
 
-    Returns a tuple: (page, nav_labels, sel_country, sel_country_id)
+    Returns:
+        tuple: (page, nav_labels, sel_country, sel_country_id)
     """
     with st.sidebar:
         st.markdown(

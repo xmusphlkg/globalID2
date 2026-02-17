@@ -5,7 +5,7 @@
 # 标题: Reported Cases and Deaths of National Notifiable Infectious Diseases - China, May 2025
 # 报告时间: 2025 May
 # 数据源: PubMed
-# 抓取时间: 2026-02-16 16:36:11
+# 抓取时间: 2026-02-17 12:47:18
 # 内容哈希: ac69b6dbe21a306f9baa17f29ceeb388aaa8edf763f1ba5be0c7c70bdbe91a7c
 # DOI: ['pmid:40671702', 'pmc:PMC12259476', 'doi:10.46234/ccdcw2025.161']
 # ========================================

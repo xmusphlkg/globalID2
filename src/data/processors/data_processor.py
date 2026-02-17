@@ -3,11 +3,13 @@ GlobalID V2 Data Processor
 
 数据处理器，整合爬虫、解析器、标准化器的完整数据处理流程
 """
+import asyncio
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
 import hashlib
 import re
+import os
 
 import pandas as pd
 from bs4 import BeautifulSoup
@@ -54,7 +56,10 @@ class DataProcessor:
         self.parser = HTMLTableParser()
         # 注意：disease_mapper 将在异步方法中初始化
         
-        logger.info(f"数据处理器初始化完成 (country: {country_code}, 使用数据库映射器)")
+        # Get max concurrent tasks from env
+        self.max_concurrent = int(os.getenv('MAX_PARALLEL_TASKS', '5'))
+        
+        logger.debug(f"Data processor initialized (country: {country_code}, max_concurrent: {self.max_concurrent})")
     
     async def process_crawler_results(
         self,
@@ -63,24 +68,84 @@ class DataProcessor:
         save_raw: bool = False,
         crawl_run_id: Optional[int] = None,
         raw_dir: Optional[Path] = None,
+        progress_callback: Optional[callable] = None,
     ) -> List[pd.DataFrame]:
         """
-        处理爬虫结果
+        处理爬虫结果（支持并发）
         
         Args:
             results: 爬虫结果列表
             save_to_file: 是否保存到文件
+            progress_callback: 进度回调函数 callback(current, total, message)
             
         Returns:
             处理后的数据框列表
         """
-        processed_data = []
+        logger.info(f"Processing {len(results)} reports with {self.max_concurrent} concurrent tasks...")
         
-        for i, result in enumerate(results, 1):
+        # Create semaphore to limit concurrency
+        semaphore = asyncio.Semaphore(self.max_concurrent)
+        
+        # Process all results concurrently
+        tasks = [
+            self._process_single_result(
+                i, result, len(results), save_to_file, save_raw, 
+                crawl_run_id, raw_dir, semaphore, progress_callback
+            )
+            for i, result in enumerate(results, 1)
+        ]
+        
+        results_list = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # Filter out None and exceptions
+        processed_data = [r for r in results_list if r is not None and not isinstance(r, Exception)]
+        
+        # Count errors
+        errors = [r for r in results_list if isinstance(r, Exception)]
+        if errors:
+            logger.warning(f"Processing completed with {len(errors)} error(s)")
+        
+        logger.info(f"Successfully processed {len(processed_data)}/{len(results)} reports")
+        
+        # Display statistics
+        try:
+            if processed_data:
+                # Use the last mapper's statistics
+                default_mapper = await create_disease_mapper(
+                    country_code=self.country_code or "CN",
+                    language="zh"
+                )
+                stats = await default_mapper.get_statistics()
+                pending_count = stats.get('pending_suggestions', 0)
+                if pending_count > 0:
+                    logger.warning(f"Found {pending_count} unrecognized disease(s), run: python scripts/disease_cli.py suggestions")
+        except Exception as e:
+            logger.debug(f"Failed to get statistics: {e}")
+        
+        return processed_data
+    
+    async def _process_single_result(
+        self,
+        index: int,
+        result: CrawlerResult,
+        total: int,
+        save_to_file: bool,
+        save_raw: bool,
+        crawl_run_id: Optional[int],
+        raw_dir: Optional[Path],
+        semaphore: asyncio.Semaphore,
+        progress_callback: Optional[callable] = None,
+    ) -> Optional[pd.DataFrame]:
+        """Process a single crawler result"""
+        async with semaphore:
             try:
-                logger.info(f"处理 {i}/{len(results)}: {result.title}")
+                # Log progress
+                if progress_callback:
+                    await progress_callback(index, total, f"Processing: {result.year_month}")
+                else:
+                    logger.debug(f"[{index}/{total}] Processing: {result.title}")
                 
-                # 解析HTML表格
+                # Parse HTML table
                 parse_result = self.parser.parse(
                     result.url or result.content,
                     url=result.url,
@@ -93,8 +158,8 @@ class DataProcessor:
                 )
                 
                 if not parse_result.success or not parse_result.has_data:
-                    logger.warning(f"解析失败: {parse_result.error_message}")
-                    continue
+                    logger.debug(f"Parse failed: {parse_result.error_message}")
+                    return None
 
                 if save_raw and crawl_run_id and raw_dir and parse_result.raw_content:
                     await self._save_raw_content(
@@ -126,45 +191,23 @@ class DataProcessor:
                 # 计算发病率和死亡率（如果有人口数据）
                 df = self._calculate_rates(df)
                 
-                # 验证数据
+                # Validate data
                 if not self._validate_data(df):
-                    logger.warning(f"数据验证失败: {result.title}")
-                    continue
+                    logger.debug(f"Validation failed: {result.title}")
+                    return None
                 
-                processed_data.append(df)
-                
-                # 保存到文件
+                # Save to file
                 if save_to_file and result.year_month:
                     self._save_to_file(df, result.year_month)
                 
-                # 保存到数据库
+                # Save to database
                 await self._save_to_database(df, self.country_code)
                 
+                return df
+                
             except Exception as e:
-                logger.error(f"处理失败: {result.title}, 错误: {e}")
-                continue
-        
-        logger.info(f"成功处理 {len(processed_data)}/{len(results)} 条数据")
-        
-        # 显示统计信息（使用最后一个映射器，或默认中文映射器）
-        try:
-            if 'disease_mapper' in locals():
-                stats = await disease_mapper.get_statistics()
-            else:
-                # 如果没有处理任何数据，使用默认映射器获取统计
-                default_mapper = await create_disease_mapper(
-                    country_code=self.country_code or "CN",
-                    language="zh"
-                )
-                stats = await default_mapper.get_statistics()
-            
-            pending_count = stats.get('pending_suggestions', 0)
-            if pending_count > 0:
-                logger.warning(f"发现 {pending_count} 个待审核的未识别疾病，请运行: python scripts/disease_cli.py suggestions")
-        except Exception as e:
-            logger.warning(f"获取统计信息失败: {e}")
-        
-        return processed_data
+                logger.error(f"Processing failed [{index}/{total}]: {e}")
+                return None
 
     async def save_raw_pages(
         self,
@@ -219,7 +262,7 @@ class DataProcessor:
         Returns:
             标准化后的数据框
         """
-        logger.info(f"_normalize_disease_names 输入 DataFrame 形状: {df.shape}, 索引: {df.index}")
+        logger.debug(f"_normalize_disease_names input shape: {df.shape}")
         
         # 如果没有提供映射器，使用默认的
         if disease_mapper is None:
@@ -230,39 +273,32 @@ class DataProcessor:
         
         # 使用数据库映射器: 本地名称 -> 标准英文名 + disease_id
         source_col = "DiseasesCN" if language == "zh" else "Diseases"
-        logger.info(f"使用源列: {source_col}")
         
         df = await disease_mapper.map_dataframe(
             df,
             disease_col=source_col,
         )
         
-        logger.info(f"map_dataframe 返回 DataFrame 形状: {df.shape}, 索引: {df.index}")
-        logger.info(f"map_dataframe 返回的列: {list(df.columns)}")
+        logger.debug(f"map_dataframe returned shape: {df.shape}")
         
         # map_dataframe 已经添加了 disease_id, standard_name_en, standard_name_zh
         # 重命名标准列
         if 'standard_name_en' in df.columns:
-            logger.info(f"standard_name_en 列长度: {len(df['standard_name_en'])}, 前5个值: {df['standard_name_en'].head().tolist()}")
             df['Diseases'] = df['standard_name_en']
-            logger.info("成功设置 Diseases 列")
         if 'standard_name_zh' in df.columns:
-            logger.info(f"standard_name_zh 列长度: {len(df['standard_name_zh'])}, 前5个值: {df['standard_name_zh'].head().tolist()}")
             df['DiseasesCN'] = df['standard_name_zh']
-            logger.info("成功设置 DiseasesCN 列")
         
         # 移除映射失败的行（疾病名称为空）
         before_count = len(df)
-        logger.info(f"移除映射失败的行前: {before_count} 行")
         df = df[df["Diseases"].notna() & (df["Diseases"] != "")]
         after_count = len(df)
         
         if before_count > after_count:
             logger.warning(
-                f"移除了 {before_count - after_count} 行无法映射的数据"
+                f"Removed {before_count - after_count} unmapped row(s)"
             )
         
-        logger.info(f"_normalize_disease_names 返回 DataFrame 形状: {df.shape}, 索引: {df.index}")
+        logger.debug(f"_normalize_disease_names output shape: {df.shape}")
         return df
 
     def _slugify(self, text: str) -> str:
@@ -440,7 +476,7 @@ class DataProcessor:
     
     async def _save_to_database(self, df: pd.DataFrame, country_code: str):
         """
-        保存数据到数据库
+        保存数据到数据库（支持 upsert：如果记录已存在则更新，否则插入）
         
         Args:
             df: 数据框
@@ -463,8 +499,9 @@ class DataProcessor:
                     logger.warning(f"国家不存在: {country_code}")
                     return
                 
-                # 准备记录列表
-                records_to_save = []
+                # 准备记录统计
+                inserted_count = 0
+                updated_count = 0
                 skipped_count = 0
                 
                 for _, row in df.iterrows():
@@ -488,17 +525,24 @@ class DataProcessor:
                         skipped_count += 1
                         continue
                     
-                    # 创建记录
-                    record = DiseaseRecord(
-                        time=pd.to_datetime(row['Date']),
-                        disease_id=disease.id,  # 使用数据库中的实际ID
-                        country_id=country.id,
-                        cases=int(row['Cases']) if pd.notna(row.get('Cases')) else None,
-                        deaths=int(row['Deaths']) if pd.notna(row.get('Deaths')) else None,
-                        incidence_rate=float(row['Incidence']) if pd.notna(row.get('Incidence')) else None,
-                        mortality_rate=float(row['Mortality']) if pd.notna(row.get('Mortality')) else None,
-                        data_source=row.get('Source'),
-                        metadata_={
+                    # 检查记录是否已存在（基于复合主键：time, disease_id, country_id）
+                    record_time = pd.to_datetime(row['Date'])
+                    existing_query = select(DiseaseRecord).where(
+                        DiseaseRecord.time == record_time,
+                        DiseaseRecord.disease_id == disease.id,
+                        DiseaseRecord.country_id == country.id
+                    )
+                    existing_result = await db.execute(existing_query)
+                    existing_record = existing_result.scalar_one_or_none()
+                    
+                    # 准备记录数据
+                    record_data = {
+                        'cases': int(row['Cases']) if pd.notna(row.get('Cases')) else None,
+                        'deaths': int(row['Deaths']) if pd.notna(row.get('Deaths')) else None,
+                        'incidence_rate': float(row['Incidence']) if pd.notna(row.get('Incidence')) else None,
+                        'mortality_rate': float(row['Mortality']) if pd.notna(row.get('Mortality')) else None,
+                        'data_source': row.get('Source'),
+                        'metadata_': {
                             'disease_name_en': row.get('Diseases'),
                             'disease_name_zh': row.get('DiseasesCN'),
                             'province': row.get('Province'),
@@ -506,19 +550,35 @@ class DataProcessor:
                             'year_month': row.get('YearMonth'),
                             'disease_code': disease_code,
                         }
-                    )
-                    records_to_save.append(record)
+                    }
+                    
+                    if existing_record:
+                        # 更新已存在的记录
+                        for key, value in record_data.items():
+                            setattr(existing_record, key, value)
+                        updated_count += 1
+                    else:
+                        # 创建新记录
+                        new_record = DiseaseRecord(
+                            time=record_time,
+                            disease_id=disease.id,
+                            country_id=country.id,
+                            **record_data
+                        )
+                        db.add(new_record)
+                        inserted_count += 1
                 
+                # 提交事务
+                await db.commit()
+                
+                # 输出统计信息
                 if skipped_count > 0:
-                    logger.warning(f"跳过 {skipped_count} 条记录（缺少必需字段或疾病不存在）")
+                    logger.warning(f"Skipped {skipped_count} record(s) (missing required fields or disease not found)")
                 
-                # 批量保存
-                if records_to_save:
-                    db.add_all(records_to_save)
-                    await db.commit()
-                    logger.info(f"成功保存 {len(records_to_save)} 条记录到数据库")
+                if inserted_count > 0 or updated_count > 0:
+                    logger.info(f"Database operation completed: inserted {inserted_count}, updated {updated_count} record(s)")
                 else:
-                    logger.warning("没有有效记录可保存到数据库")
+                    logger.warning("No valid records to save to database")
                     
         except Exception as e:
             logger.error(f"保存到数据库失败: {e}")
