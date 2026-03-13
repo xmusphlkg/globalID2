@@ -53,6 +53,7 @@ _load_css()
 
 # Import from modular structure
 from src.dashboard.common import run_query, render_sidebar
+from src.dashboard.report_monitor import render_report_monitor
 from src.dashboard.disease import get_disease_list, plot_top_diseases, plot_trend_chart
 from src.dashboard.task import render_task_center
 from src.core.task_manager import task_manager
@@ -703,6 +704,12 @@ elif page == nav_labels[2]:
         st.write(f"📊 {len(df)} {t('rows')} from `{table}`")
         st.dataframe(df, width='stretch')
 
+elif page == "Report Monitor":
+    # Dedicated Report Monitor page
+    try:
+        render_report_monitor(t, sel_country_id)
+    except Exception as e:
+        st.error(f"{t('connection_failed')}: {e}")
 elif page == t("task_management") or page == nav_labels[-1]:
     try:
         render_task_center(t, sel_country_id)

@@ -4,7 +4,7 @@ import pandas as pd
 import json
 import os
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 from src.core.task_manager import task_manager
 from src.domain import (
@@ -75,7 +75,14 @@ def _render_task_table_with_actions(t, tasks: list, show_actions: bool = True, k
         if task.actual_duration:
             duration = f"{task.actual_duration}s"
         elif task.started_at and not task.completed_at:
-            duration = f"{int((datetime.now() - task.started_at).total_seconds())}s (running)"
+            # Use UTC-aware now to avoid naive/aware subtraction issues
+            now_utc = datetime.now(timezone.utc)
+            started = task.started_at
+            # Ensure both datetimes are timezone-aware
+            if started.tzinfo is None:
+                started = started.replace(tzinfo=timezone.utc)
+            duration_seconds = max(0, int((now_utc - started).total_seconds()))
+            duration = f"{duration_seconds}s (running)"
         
         # Create expander with key info in title
         with st.expander(
@@ -208,6 +215,13 @@ def _render_task_table_with_actions(t, tasks: list, show_actions: bool = True, k
                                             st.rerun()
                         else:
                             st.info("No diseases analyzed yet...")
+                    
+                        # Link to global Report Monitor for this report
+                        if st.button("🔍 Open in Report Monitor", key=f"{key_prefix}monitor_{task.task_uuid}"):
+                            st.session_state["report_monitor_selected_report_id"] = report_id
+                            # Switch nav to Report Monitor if available
+                            st.session_state["nav_radio"] = "Report Monitor"
+                            st.rerun()
                     except Exception as e:
                         st.warning(f"Could not load disease sections: {str(e)[:50]}")
             

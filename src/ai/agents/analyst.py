@@ -113,29 +113,54 @@ class AnalystAgent(BaseAgent):
         
         stats = {}
         
-        # Case statistics
-        if "case_count" in data.columns:
-            stats["total_cases"] = int(data["case_count"].sum())
-            stats["avg_cases"] = float(data["case_count"].mean())
-            stats["max_cases"] = int(data["case_count"].max())
-            stats["min_cases"] = int(data["case_count"].min())
-            stats["std_cases"] = float(data["case_count"].std())
+        # Case statistics (column is named 'cases' in the DataFrame)
+        if "cases" in data.columns:
+            stats["total_cases"] = int(data["cases"].sum())
+            stats["avg_cases"] = float(data["cases"].mean())
+            stats["max_cases"] = int(data["cases"].max())
+            stats["min_cases"] = int(data["cases"].min())
+            stats["std_cases"] = round(float(data["cases"].std()), 2)
         
-        # Death statistics
-        if "death_count" in data.columns:
-            stats["total_deaths"] = int(data["death_count"].sum())
-            stats["avg_deaths"] = float(data["death_count"].mean())
+        # Death statistics (column is named 'deaths' in the DataFrame)
+        if "deaths" in data.columns:
+            stats["total_deaths"] = int(data["deaths"].sum())
+            stats["avg_deaths"] = float(data["deaths"].mean())
             
             # Fatality rate
-            if "case_count" in data.columns and stats.get("total_cases", 0) > 0:
+            if stats.get("total_cases", 0) > 0:
                 stats["fatality_rate"] = round(
                     (stats["total_deaths"] / stats["total_cases"]) * 100, 2
                 )
         
+        # New cases / new deaths (incremental counts if available)
+        if "new_cases" in data.columns:
+            non_null = data["new_cases"].dropna()
+            if not non_null.empty:
+                stats["latest_new_cases"] = int(non_null.iloc[-1])
+                stats["avg_new_cases"] = round(float(non_null.mean()), 1)
+
+        if "new_deaths" in data.columns:
+            non_null = data["new_deaths"].dropna()
+            if not non_null.empty:
+                stats["latest_new_deaths"] = int(non_null.iloc[-1])
+
         # Incidence statistics
         if "incidence_rate" in data.columns:
-            stats["avg_incidence_rate"] = float(data["incidence_rate"].mean())
+            non_null = data["incidence_rate"].dropna()
+            if not non_null.empty:
+                stats["avg_incidence_rate"] = round(float(non_null.mean()), 4)
+                stats["max_incidence_rate"] = round(float(non_null.max()), 4)
         
+        # Data quality summary (if available)
+        if "data_quality" in data.columns:
+            quality_counts = data["data_quality"].value_counts().to_dict()
+            stats["data_quality_distribution"] = {str(k): int(v) for k, v in quality_counts.items()}
+        
+        if "confidence_score" in data.columns:
+            non_null = data["confidence_score"].dropna()
+            if not non_null.empty:
+                stats["avg_confidence_score"] = round(float(non_null.mean()), 2)
+
         return stats
     
     def _identify_trends(self, data: pd.DataFrame) -> Dict[str, Any]:
@@ -158,9 +183,9 @@ class AnalystAgent(BaseAgent):
         # Ensure data is sorted by time
         data = data.sort_values(time_col)
         
-        # Calculate case growth trends
-        if "case_count" in data.columns:
-            cases = data["case_count"].values
+        # Calculate case growth trends (column is 'cases' in the DataFrame)
+        if "cases" in data.columns:
+            cases = data["cases"].values
             if len(cases) >= 2:
                 # Calculate change rate
                 change_rate = ((cases[-1] - cases[0]) / (cases[0] + 1)) * 100
@@ -177,7 +202,20 @@ class AnalystAgent(BaseAgent):
                 # Calculate moving average
                 if len(cases) >= 4:
                     ma = pd.Series(cases).rolling(window=4).mean().values
-                    trends["moving_average"] = ma[-1] if len(ma) > 0 else None
+                    trends["moving_average"] = round(float(ma[-1]), 1) if len(ma) > 0 and ma[-1] == ma[-1] else None
+
+        # Deaths trend (if available)
+        if "deaths" in data.columns:
+            deaths = data["deaths"].values
+            if len(deaths) >= 2:
+                change_rate = ((deaths[-1] - deaths[0]) / (deaths[0] + 1)) * 100
+                trends["deaths_change_rate"] = round(change_rate, 2)
+                if change_rate > 10:
+                    trends["deaths_trend"] = "increasing"
+                elif change_rate < -10:
+                    trends["deaths_trend"] = "decreasing"
+                else:
+                    trends["deaths_trend"] = "stable"
         
         return trends
     
@@ -220,12 +258,17 @@ class AnalystAgent(BaseAgent):
         disease_name: str,
     ) -> str:
         """Use AI to generate data insights"""
+        # Determine time column
+        time_col = "time" if "time" in data.columns else ("date" if "date" in data.columns else None)
+        period_start_str = data[time_col].min().strftime('%Y-%m') if time_col and len(data) > 0 else 'Unknown'
+        period_end_str = data[time_col].max().strftime('%Y-%m') if time_col and len(data) > 0 else 'Unknown'
+
         # Construct English prompt
         prompt = f"""As an epidemiologist, analyze the following disease surveillance data and provide professional insights.
 
 Disease: {disease_name}
 Data records: {len(data)}
-Time period: {data['date'].min().strftime('%Y-%m') if 'date' in data.columns and len(data) > 0 else 'Unknown'} to {data['date'].max().strftime('%Y-%m') if 'date' in data.columns and len(data) > 0 else 'Unknown'}
+Time period: {period_start_str} to {period_end_str}
 
 Statistical Summary:
 {self._format_dict(stats)}
