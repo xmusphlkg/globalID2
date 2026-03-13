@@ -22,6 +22,7 @@ class ReportStatus(str, PyEnum):
     COMPLETED = "completed"  # 已完成
     FAILED = "failed"  # 失败
     REVIEWING = "reviewing"  # 审核中
+    APPROVED = "approved"  # 审核通过（可复用）
     PUBLISHED = "published"  # 已发布
 
 
@@ -40,6 +41,15 @@ class Report(BaseModel):
     存储生成的报告主体信息
     """
     __tablename__ = "reports"
+    
+    # 唯一标识
+    report_uuid: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        default=lambda: str(uuid4()),
+        nullable=False,
+        unique=True,
+        comment="报告唯一标识（UUID）",
+    )
     
     # 基本信息
     title: Mapped[str] = mapped_column(String(500), nullable=False, comment="报告标题")
@@ -233,6 +243,7 @@ class ReportSectionRun(BaseModel):
     max_tokens: Mapped[Optional[int]] = mapped_column(Integer, comment="最大tokens")
     token_usage = Column(JSON, nullable=False, default=dict, comment="token使用情况")
     quality_scores = Column(JSON, nullable=False, default=dict, comment="质量评分")
+    revision_count: Mapped[int] = mapped_column(Integer, default=0, comment="Number of writer revisions triggered by reviewer")
     error_message: Mapped[Optional[str]] = mapped_column(Text, comment="错误信息")
     started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), comment="开始时间")
     ended_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), comment="结束时间")

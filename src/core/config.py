@@ -105,6 +105,10 @@ class AISettings(BaseSettings):
     # 默认模型配置  
     default_model: str = Field(default="glm-4-7", description="默认使用的模型")
     fallback_model: str = Field(default="glm-4-plus", description="降级模型")
+    model_chain_raw: str = Field(
+        default="",
+        description="模型优先级列表，逗号分隔（高→低），为空则使用 default_model + fallback_model",
+    )
     
     # 模型配置
     temperature: float = Field(default=0.7, ge=0.0, le=2.0, description="生成温度")
@@ -122,6 +126,32 @@ class AISettings(BaseSettings):
     # 测试配置
     enable_api_test: bool = Field(default=True, description="是否启用API连通性测试")
     test_prompt: str = Field(default="测试成功", description="API测试提示")
+
+    @property
+    def model_chain(self) -> list[str]:
+        """
+        返回去重后的模型优先级列表。
+        
+        优先使用 model_chain_raw；如果未配置，则退回 [default_model, fallback_model]。
+        """
+        raw = self.model_chain_raw.strip()
+        candidates: list[str] = []
+        if raw:
+            parts = [m.strip() for m in raw.split(",") if m.strip()]
+            candidates.extend(parts)
+        else:
+            if self.default_model:
+                candidates.append(self.default_model)
+            if self.fallback_model and self.fallback_model != self.default_model:
+                candidates.append(self.fallback_model)
+
+        seen: set[str] = set()
+        ordered: list[str] = []
+        for m in candidates:
+            if m and m not in seen:
+                seen.add(m)
+                ordered.append(m)
+        return ordered
 
 
 class EmailSettings(BaseSettings):
@@ -182,6 +212,8 @@ class AppSettings(BaseSettings):
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
+        # Allow AI__FIELD_NAME in .env to populate the nested `ai: AISettings` sub-model
+        env_nested_delimiter="__",
     )
 
     # 基本信息

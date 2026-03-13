@@ -26,6 +26,11 @@ class BaseAgent(ABC):
     Supports multiple AI providers: OpenAI, Anthropic, QianWen, Azure, and more.
     """
     
+    # Shared set of models that have been marked as unavailable (quota/rate-limit, etc.)
+    # This is process-wide so that once one agent detects a hard quota failure,
+    # all subsequent agents will skip this model immediately.
+    DISABLED_MODELS: set[str] = set()
+    
     def __init__(
         self,
         name: str,
@@ -179,55 +184,119 @@ class BaseAgent(ABC):
             await self.rate_limiter.wait_if_needed()
             self.rate_limiter.record_request()
         
-        # 调用LLM
-        retry_count = 0
+        # 调用LLM（支持按优先级链路轮询多个模型）
+        chain = getattr(self.config.ai, "model_chain", None) or []
+        if chain:
+            # Skip models that have been globally disabled due to quota/limit failures
+            models_to_try = [m for m in chain if m not in BaseAgent.DISABLED_MODELS]
+        else:
+            # 后备策略：使用当前模型 + 配置中的 fallback_model
+            models_to_try = []
+            seen = set()
+            if self.model not in seen:
+                models_to_try.append(self.model)
+                seen.add(self.model)
+            fallback_model = getattr(self.config.ai, "fallback_model", None)
+            if fallback_model and fallback_model not in seen:
+                models_to_try.append(fallback_model)
+
         last_error = None
-        start_time = time.time()
-        
-        while retry_count < self.max_retries:
-            try:
-                # Determine which provider to use
-                provider = self.get_provider_for_model(self.model)
-                response_text, token_usage = await self._complete_with_provider(provider, prompt, system, **kwargs)
-                
-                # 记录对话历史
-                duration = time.time() - start_time
-                conversation_entry = {
-                    "agent": self.name.lower(),
-                    "timestamp": datetime.now().isoformat(),
-                    "prompt": prompt,
-                    "system_prompt": system,
-                    "response": response_text,
-                    "model": self.model,
-                    "provider": provider,
-                    "tokens": token_usage,
-                    "duration": round(duration, 2),
-                    "temperature": self.temperature,
-                    "max_tokens": self.max_tokens,
-                }
-                self.conversation_history.append(conversation_entry)
-                
-                # 缓存结果
-                if use_cache and self.config.ai.enable_cache:
-                    await self.cache.set(
-                        cache_key,
-                        response_text,
-                        ttl=self.config.ai.cache_ttl * 3600,  # 转换为秒
+        original_model = self.model
+
+        for model_name in models_to_try:
+            self.model = model_name
+            retry_count = 0
+            start_time = time.time()
+
+            while retry_count < self.max_retries:
+                try:
+                    # Determine which provider to use for this model
+                    provider = self.get_provider_for_model(self.model)
+                    response_text, token_usage = await self._complete_with_provider(
+                        provider, prompt, system, **kwargs
                     )
-                
-                return response_text
-                
-            except Exception as e:
-                last_error = e
-                retry_count += 1
-                logger.warning(f"Retry {retry_count}/{self.max_retries} after error: {e}")
-                
-                if retry_count < self.max_retries:
-                    await asyncio.sleep(2 ** retry_count)  # exponential backoff
-        
-        # All retries failed
-        logger.error(f"All retries failed for agent '{self.name}': {last_error}")
-        raise Exception(f"Agent completion failed after {self.max_retries} retries: {last_error}")
+
+                    # 记录对话历史
+                    duration = time.time() - start_time
+                    conversation_entry = {
+                        "agent": self.name.lower(),
+                        "timestamp": datetime.now().isoformat(),
+                        "prompt": prompt,
+                        "system_prompt": system,
+                        "response": response_text,
+                        "model": self.model,
+                        "provider": provider,
+                        "tokens": token_usage,
+                        "duration": round(duration, 2),
+                        "temperature": self.temperature,
+                        "max_tokens": self.max_tokens,
+                    }
+                    self.conversation_history.append(conversation_entry)
+
+                    # 缓存结果
+                    if use_cache and self.config.ai.enable_cache:
+                        await self.cache.set(
+                            cache_key,
+                            response_text,
+                            ttl=self.config.ai.cache_ttl * 3600,  # 转换为秒
+                        )
+
+                    # 成功立即返回
+                    self.model = original_model
+                    return response_text
+
+                except Exception as e:
+                    last_error = e
+                    retry_count += 1
+
+                    msg = str(e).lower()
+                    # 针对额度/限流型错误，不必在当前模型上耗尽所有重试，直接切到下一个模型
+                    quota_related = any(
+                        kw in msg
+                        for kw in [
+                            "insufficient_quota",
+                            "rate limit",
+                            "429",
+                            "quota",
+                            "too many requests",
+                            "allocationquota",
+                            "free tier",
+                        ]
+                    )
+
+                    logger.warning(
+                        f"Agent '{self.name}' error with model '{self.model}' "
+                        f"(attempt {retry_count}/{self.max_retries}): {e}"
+                    )
+
+                    if quota_related:
+                        logger.warning(
+                            f"Detected quota/rate-limit issue for model '{self.model}', "
+                            f"will switch to next model in chain if available."
+                        )
+                        # Mark this model as disabled globally so other agents skip it immediately
+                        if self.model not in BaseAgent.DISABLED_MODELS:
+                            BaseAgent.DISABLED_MODELS.add(self.model)
+                            logger.warning(
+                                f"Model '{self.model}' has been globally disabled for this process "
+                                f"due to quota/limit issues; all subsequent agents will skip it."
+                            )
+                        break
+
+                    if retry_count < self.max_retries:
+                        await asyncio.sleep(2 ** retry_count)  # exponential backoff
+
+            # 当前模型用尽重试仍失败，尝试下一个模型
+            logger.error(
+                f"Model '{self.model}' failed after {self.max_retries} retries for agent '{self.name}'."
+            )
+
+        # 所有模型都失败
+        self.model = original_model
+        logger.error(f"All models failed for agent '{self.name}': {last_error}")
+        raise Exception(
+            f"Agent completion failed after trying models {models_to_try}: {last_error}"
+        )
     
     async def _complete_with_provider(
         self, 
@@ -345,13 +414,14 @@ class BaseAgent(ABC):
         
         try:
             test_prompt = self.config.ai.test_prompt
-            response = await self._complete_with_provider(provider, test_prompt)
+            # _complete_with_provider returns (response_text, token_usage) tuple
+            response_text, _ = await self._complete_with_provider(provider, test_prompt)
             
             return {
                 'success': True,
                 'provider': provider,
                 'model': self.model,
-                'response': response[:100] + '...' if len(response) > 100 else response,
+                'response': response_text[:100] + '...' if len(response_text) > 100 else response_text,
                 'message': 'Connection test successful'
             }
         except Exception as e:
