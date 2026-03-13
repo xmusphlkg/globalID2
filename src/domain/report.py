@@ -6,8 +6,10 @@ GlobalID V2 Report Models
 from datetime import datetime
 from enum import Enum as PyEnum
 from typing import List, Optional
+from uuid import uuid4
 
-from sqlalchemy import Column, DateTime, Enum, ForeignKey, Index, Integer, JSON, String, Text
+from sqlalchemy import Column, DateTime, Enum, Float, ForeignKey, Index, Integer, JSON, String, Text
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import BaseModel
@@ -103,6 +105,12 @@ class Report(BaseModel):
         cascade="all, delete-orphan",
         order_by="ReportSection.section_order",
     )
+    section_runs: Mapped[List["ReportSectionRun"]] = relationship(
+        "ReportSectionRun",
+        back_populates="report",
+        cascade="all, delete-orphan",
+        order_by="ReportSectionRun.created_at",
+    )
     
     # 索引
     __table_args__ = (
@@ -162,6 +170,11 @@ class ReportSection(BaseModel):
     
     # 关系
     report: Mapped["Report"] = relationship("Report", back_populates="sections")
+    runs: Mapped[List["ReportSectionRun"]] = relationship(
+        "ReportSectionRun",
+        back_populates="section",
+        cascade="all, delete-orphan",
+    )
     
     # 索引
     __table_args__ = (
@@ -172,3 +185,120 @@ class ReportSection(BaseModel):
     
     def __repr__(self) -> str:
         return f"<ReportSection(id={self.id}, title='{self.title}', order={self.section_order})>"
+
+
+class ReportSectionRunStatus(str, PyEnum):
+    """报告章节运行状态"""
+    QUEUED = "queued"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+
+class ReportSectionRun(BaseModel):
+    """报告章节的运行记录（用于保存对话与质量分）"""
+    __tablename__ = "report_section_runs"
+
+    run_uuid: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        default=lambda: str(uuid4()),
+        nullable=False,
+        unique=True,
+        comment="运行唯一标识"
+    )
+    report_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("reports.id", ondelete="CASCADE"),
+        nullable=False,
+        comment="报告ID",
+    )
+    section_id: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        ForeignKey("report_sections.id", ondelete="CASCADE"),
+        nullable=True,
+        comment="章节ID",
+    )
+    section_type: Mapped[str] = mapped_column(String(50), nullable=False, comment="章节类型")
+    disease_name: Mapped[Optional[str]] = mapped_column(String(200), comment="疾病名称")
+    status: Mapped[str] = mapped_column(
+        Enum(ReportSectionRunStatus),
+        nullable=False,
+        default=ReportSectionRunStatus.QUEUED,
+        comment="运行状态",
+    )
+    provider: Mapped[Optional[str]] = mapped_column(String(100), comment="AI提供商")
+    model: Mapped[Optional[str]] = mapped_column(String(100), comment="使用模型")
+    temperature: Mapped[Optional[float]] = mapped_column(Float, comment="温度")
+    max_tokens: Mapped[Optional[int]] = mapped_column(Integer, comment="最大tokens")
+    token_usage = Column(JSON, nullable=False, default=dict, comment="token使用情况")
+    quality_scores = Column(JSON, nullable=False, default=dict, comment="质量评分")
+    error_message: Mapped[Optional[str]] = mapped_column(Text, comment="错误信息")
+    started_at: Mapped[Optional[datetime]] = mapped_column(DateTime, comment="开始时间")
+    ended_at: Mapped[Optional[datetime]] = mapped_column(DateTime, comment="结束时间")
+    metadata_ = Column("metadata", JSON, nullable=False, default=dict, comment="额外元数据")
+
+    report: Mapped["Report"] = relationship("Report", back_populates="section_runs")
+    section: Mapped["ReportSection"] = relationship("ReportSection", back_populates="runs")
+    conversations: Mapped[List["AIConversation"]] = relationship(
+        "AIConversation",
+        back_populates="run",
+        cascade="all, delete-orphan",
+    )
+
+    __table_args__ = (
+        Index("idx_section_run_report", "report_id"),
+        Index("idx_section_run_section", "section_id"),
+        Index("idx_section_run_status", "status"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<ReportSectionRun(id={self.id}, section_id={self.section_id}, status='{self.status}')>"
+
+
+class AIConversation(BaseModel):
+    """AI对话记录"""
+    __tablename__ = "ai_conversations"
+
+    run_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("report_section_runs.id", ondelete="CASCADE"),
+        nullable=False,
+        comment="所属运行ID",
+    )
+    report_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("reports.id", ondelete="CASCADE"),
+        nullable=False,
+        comment="报告ID",
+    )
+    section_id: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        ForeignKey("report_sections.id", ondelete="CASCADE"),
+        nullable=True,
+        comment="章节ID",
+    )
+    agent: Mapped[str] = mapped_column(String(50), nullable=False, comment="代理类型")
+    role: Mapped[Optional[str]] = mapped_column(String(50), comment="角色/阶段")
+    timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    prompt: Mapped[Optional[str]] = mapped_column(Text, comment="用户提示")
+    system_prompt: Mapped[Optional[str]] = mapped_column(Text, comment="系统提示")
+    response: Mapped[Optional[str]] = mapped_column(Text, comment="模型回复")
+    model: Mapped[Optional[str]] = mapped_column(String(100), comment="模型")
+    provider: Mapped[Optional[str]] = mapped_column(String(100), comment="提供商")
+    tokens = Column(JSON, nullable=False, default=dict, comment="token统计")
+    duration: Mapped[Optional[float]] = mapped_column(Float, comment="耗时秒")
+    temperature: Mapped[Optional[float]] = mapped_column(Float, comment="温度")
+    metadata_ = Column("metadata", JSON, nullable=False, default=dict, comment="额外元数据")
+
+    run: Mapped["ReportSectionRun"] = relationship("ReportSectionRun", back_populates="conversations")
+    section: Mapped["ReportSection"] = relationship("ReportSection")
+    report: Mapped["Report"] = relationship("Report")
+
+    __table_args__ = (
+        Index("idx_ai_conv_run", "run_id"),
+        Index("idx_ai_conv_section", "section_id"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<AIConversation(id={self.id}, run_id={self.run_id}, agent='{self.agent}')>"

@@ -4,8 +4,8 @@
 # URL: https://www.ndcpa.gov.cn/jbkzzx/c100016/common/content/content_1976561324014342144.html
 # 标题: 2025年9月全国法定传染病疫情概况
 # 报告时间: 2025 September
-# 数据源: National Disease Control and Prevention Administration
-# 抓取时间: 2026-02-17 12:47:12
+# 数据源: Gov Data
+# 抓取时间: 2026-02-17 16:19:30
 # 内容哈希: 0bc7e1aeea9a2c0f4911823036a844d4da6f8b3de3ef5193fb59e8a3511708bd
 # DOI: N/A
 # ========================================

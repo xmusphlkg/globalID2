@@ -4,8 +4,8 @@
 # URL: https://www.ndcpa.gov.cn/jbkzzx/c100016/common/content/content_1941024811541499904.html
 # 标题: 2025年6月全国法定传染病疫情概况
 # 报告时间: 2025 June
-# 数据源: National Disease Control and Prevention Administration
-# 抓取时间: 2026-02-17 12:47:15
+# 数据源: Gov Data
+# 抓取时间: 2026-02-17 16:19:33
 # 内容哈希: 771dba7c8ef61c7555a1529a030f1775f9ea2d3f17537ebe44e917e4ac032328
 # DOI: N/A
 # ========================================

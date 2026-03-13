@@ -11,6 +11,10 @@ venv/
 pip-log.txt
 pip-delete-this-directory.txt
 
+# Data
+data/raw/
+data/processed/
+
 # Jupyter Notebook
 .ipynb_checkpoints
 
@@ -40,3 +44,4 @@ Thumbs.db
 # Documentation
 site/
 tests/fixtures/ai_test_data/
+

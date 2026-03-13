@@ -1,0 +1,28 @@
+                                          Table "public.disease_mappings"
+      Column      |           Type           | Collation | Nullable |                   Default                    
+------------------+--------------------------+-----------+----------+----------------------------------------------
+ disease_id       | character varying(200)   |           | not null | 
+ country_code     | character varying(10)    |           | not null | 
+ local_name       | character varying(500)   |           | not null | 
+ is_primary       | boolean                  |           | not null | 
+ is_alias         | boolean                  |           | not null | 
+ priority         | integer                  |           | not null | 
+ usage_count      | integer                  |           | not null | 
+ confidence_score | double precision         |           | not null | 
+ category         | character varying(100)   |           |          | 
+ source           | character varying(100)   |           |          | 
+ metadata         | json                     |           | not null | 
+ is_active        | boolean                  |           | not null | 
+ id               | integer                  |           | not null | nextval('disease_mappings_id_seq'::regclass)
+ created_at       | timestamp with time zone |           | not null | 
+ updated_at       | timestamp with time zone |           | not null | 
+Indexes:
+    "disease_mappings_pkey" PRIMARY KEY, btree (id)
+    "idx_mapping_active" btree (is_active)
+    "idx_mapping_lookup" btree (country_code, local_name)
+    "idx_mapping_target" btree (disease_id)
+    "idx_mapping_unique" UNIQUE, btree (disease_id, country_code, local_name)
+Foreign-key constraints:
+    "disease_mappings_country_code_fkey" FOREIGN KEY (country_code) REFERENCES countries(code) ON DELETE CASCADE
+    "disease_mappings_disease_id_fkey" FOREIGN KEY (disease_id) REFERENCES diseases(name) ON DELETE CASCADE
+

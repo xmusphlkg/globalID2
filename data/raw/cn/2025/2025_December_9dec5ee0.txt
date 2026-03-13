@@ -4,8 +4,8 @@
 # URL: https://www.ndcpa.gov.cn/jbkzzx/c100016/common/content/content_2009510384572469248.html
 # 标题: 2025年12月全国法定传染病疫情概况
 # 报告时间: 2025 December
-# 数据源: National Disease Control and Prevention Administration
-# 抓取时间: 2026-02-17 12:47:09
+# 数据源: Gov Data
+# 抓取时间: 2026-02-17 16:19:27
 # 内容哈希: 9dec5ee0c5df092b70ff36ce9a3e209593fcecb048e9adcaeccc33dabba9d094
 # DOI: N/A
 # ========================================

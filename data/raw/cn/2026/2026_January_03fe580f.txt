@@ -4,8 +4,8 @@
 # URL: https://www.ndcpa.gov.cn/jbkzzx/c100016/common/content/content_2020779043559215104.html
 # 标题: 2026年1月全国传染病疫情概况
 # 报告时间: 2026 January
-# 数据源: National Disease Control and Prevention Administration
-# 抓取时间: 2026-02-17 12:47:08
+# 数据源: Gov Data
+# 抓取时间: 2026-02-17 16:19:26
 # 内容哈希: 03fe580fd55eb6a680d0a5565566a44e1b2a3658ab73d7d82db3383174c6b679
 # DOI: N/A
 # ========================================

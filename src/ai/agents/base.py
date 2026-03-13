@@ -7,7 +7,8 @@ import asyncio
 import json
 import time
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
 
 from openai import AsyncOpenAI
 from anthropic import AsyncAnthropic
@@ -57,6 +58,9 @@ class BaseAgent(ABC):
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.max_retries = self.config.ai.max_retries
+        
+        # 对话历史记录
+        self.conversation_history = []
         
         # 初始化客户端
         self.clients = {}
@@ -178,12 +182,30 @@ class BaseAgent(ABC):
         # 调用LLM
         retry_count = 0
         last_error = None
+        start_time = time.time()
         
         while retry_count < self.max_retries:
             try:
                 # Determine which provider to use
                 provider = self.get_provider_for_model(self.model)
-                response_text = await self._complete_with_provider(provider, prompt, system, **kwargs)
+                response_text, token_usage = await self._complete_with_provider(provider, prompt, system, **kwargs)
+                
+                # 记录对话历史
+                duration = time.time() - start_time
+                conversation_entry = {
+                    "agent": self.name.lower(),
+                    "timestamp": datetime.now().isoformat(),
+                    "prompt": prompt,
+                    "system_prompt": system,
+                    "response": response_text,
+                    "model": self.model,
+                    "provider": provider,
+                    "tokens": token_usage,
+                    "duration": round(duration, 2),
+                    "temperature": self.temperature,
+                    "max_tokens": self.max_tokens,
+                }
+                self.conversation_history.append(conversation_entry)
                 
                 # 缓存结果
                 if use_cache and self.config.ai.enable_cache:
@@ -213,8 +235,8 @@ class BaseAgent(ABC):
         prompt: str, 
         system: Optional[str] = None, 
         **kwargs
-    ) -> str:
-        """根据提供商调用相应的完成方法"""
+    ) -> Tuple[str, Dict[str, int]]:
+        """根据提供商调用相应的完成方法，返回(响应文本, token使用量)"""
         if provider == 'anthropic':
             return await self._complete_anthropic(prompt, system, **kwargs)
         elif provider in ['openai', 'glm', 'qianwen', 'azure', 'custom']:
@@ -228,7 +250,7 @@ class BaseAgent(ABC):
         prompt: str,
         system: Optional[str] = None,
         **kwargs
-    ) -> str:
+    ) -> Tuple[str, Dict[str, int]]:
         """Generate using an OpenAI-compatible API (supports QianWen, GLM, Azure, etc.)."""
         client = self.clients.get(provider)
         if not client:
@@ -248,15 +270,25 @@ class BaseAgent(ABC):
             temperature=self.temperature,
             max_tokens=self.max_tokens,
             **kwargs
-        )        
-        return response.choices[0].message.content
+        )
+        
+        # Extract token usage
+        token_usage = {}
+        if hasattr(response, 'usage') and response.usage:
+            token_usage = {
+                "prompt": response.usage.prompt_tokens,
+                "completion": response.usage.completion_tokens,
+                "total": response.usage.total_tokens,
+            }
+        
+        return response.choices[0].message.content, token_usage
     
     async def _complete_anthropic(
         self,
         prompt: str,
         system: Optional[str] = None,
         **kwargs
-    ) -> str:
+    ) -> Tuple[str, Dict[str, int]]:
         """Generate using the Anthropic API."""
         client = self.clients.get('anthropic')
         if not client:
@@ -271,7 +303,16 @@ class BaseAgent(ABC):
             **kwargs
         )
         
-        return response.content[0].text
+        # Extract token usage
+        token_usage = {}
+        if hasattr(response, 'usage') and response.usage:
+            token_usage = {
+                "prompt": response.usage.input_tokens,
+                "completion": response.usage.output_tokens,
+                "total": response.usage.input_tokens + response.usage.output_tokens,
+            }
+        
+        return response.content[0].text, token_usage
     
     def _map_model_name(self, provider: str, model: str) -> str:
         """Map generic model names to provider-specific names."""
@@ -327,6 +368,18 @@ class BaseAgent(ABC):
         import hashlib
         content = f"{self.name}:{self.model}:{system or ''}:{prompt}"
         return f"agent:{hashlib.md5(content.encode()).hexdigest()}"
+    
+    def get_conversation_history(self) -> List[Dict[str, Any]]:
+        """获取对话历史记录"""
+        return self.conversation_history.copy()
+    
+    def clear_conversation_history(self):
+        """清除对话历史记录"""
+        self.conversation_history = []
+    
+    def get_latest_conversation(self) -> Optional[Dict[str, Any]]:
+        """获取最新的对话记录"""
+        return self.conversation_history[-1] if self.conversation_history else None
     
     @abstractmethod
     async def process(self, **kwargs) -> Dict[str, Any]:

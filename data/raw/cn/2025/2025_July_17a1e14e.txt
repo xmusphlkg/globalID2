@@ -4,8 +4,8 @@
 # URL: https://www.ndcpa.gov.cn/jbkzzx/c100016/common/content/content_1952913634768621568.html
 # 标题: 2025年7月全国法定传染病疫情概况
 # 报告时间: 2025 July
-# 数据源: National Disease Control and Prevention Administration
-# 抓取时间: 2026-02-17 12:47:14
+# 数据源: Gov Data
+# 抓取时间: 2026-02-17 16:19:32
 # 内容哈希: 17a1e14eda75870ee734f290b64d714606dd36aa8f4d4f0fff39a1c93f18f3ad
 # DOI: N/A
 # ========================================
