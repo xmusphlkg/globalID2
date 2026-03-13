@@ -106,7 +106,7 @@ class WriterAgent(BaseAgent):
             "content": content,
             "style": style,
             "language": language,
-            "word_count": len(content),
+            "word_count": len(content.split()),
         }
         
         logger.info(f"Section '{section_type}' completed ({len(content)} chars)")

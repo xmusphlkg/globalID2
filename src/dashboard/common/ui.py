@@ -24,7 +24,9 @@ def render_sidebar(t, country_list: list, c_df: pd.DataFrame, country_error: Opt
         st.markdown("---")
 
         nav_labels = t("nav")
-        page = st.radio(t("nav_heading"), nav_labels, key="nav_radio")
+        # Extend navigation with a dedicated Report Monitor page
+        extended_nav_labels = list(nav_labels) + ["Report Monitor"]
+        page = st.radio(t("nav_heading"), extended_nav_labels, key="nav_radio")
         st.markdown("---")
 
         with st.expander(t("filter_heading"), expanded=True):

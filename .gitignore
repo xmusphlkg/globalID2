@@ -45,3 +45,4 @@ Thumbs.db
 site/
 tests/fixtures/ai_test_data/
 
+.cursor/debug-1117ae.log

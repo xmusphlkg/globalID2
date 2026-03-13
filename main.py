@@ -4,10 +4,13 @@ GlobalID V2 Main Entry Point
 主入口：运行完整的数据爬取 → 分析 → 报告生成流程
 """
 import asyncio
+import json
 import signal
 import sys
+import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import Optional
 
 import typer
 from rich.console import Console
@@ -24,6 +27,32 @@ from src.generation import ReportGenerator
 app = typer.Typer(help="GlobalID V2 - Global Infectious Disease Monitoring System")
 console = Console()
 logger = get_logger(__name__)
+
+DEBUG_LOG_PATH = Path(".cursor/debug-1117ae.log")
+
+
+def _agent_debug_log(run_id: str, hypothesis_id: str, location: str, message: str, data: dict) -> None:
+    """
+    Lightweight NDJSON logger for this debug session.
+    Writes to .cursor/debug-1117ae.log and never raises.
+    """
+    payload = {
+        "sessionId": "1117ae",
+        "runId": run_id,
+        "hypothesisId": hypothesis_id,
+        "location": location,
+        "message": message,
+        "data": data,
+        "timestamp": int(time.time() * 1000),
+    }
+    try:
+        DEBUG_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with DEBUG_LOG_PATH.open("a", encoding="utf-8") as f:
+            f.write(json.dumps(payload, ensure_ascii=False) + "\n")
+    except Exception:
+        # Never let debug logging break the main flow
+        return
+
 
 @app.command()
 def crawl(
@@ -425,9 +454,11 @@ def crawl(
 
 @app.command()
 def generate_report(
-    country: str = typer.Option("CN", help="Country code"),
-    report_type: str = typer.Option("weekly", help="Report type (daily/weekly/monthly)"),
-    days: int = typer.Option(7, help="Number of days to include"),
+    country: str = typer.Option("CN", help="Country code (e.g. CN)"),
+    report_type: str = typer.Option("monthly", help="Report type (daily/weekly/monthly)"),
+    days: int = typer.Option(365, help="Number of days to include (used when --period-start is not given)"),
+    period_start: Optional[str] = typer.Option(None, help="Start date YYYY-MM-DD (overrides --days)"),
+    period_end: Optional[str] = typer.Option(None, help="End date YYYY-MM-DD (defaults to today)"),
     send_email: bool = typer.Option(False, help="Send report via email"),
     enable_review: bool = typer.Option(True, help="Enable AI content review"),
 ):
@@ -454,43 +485,134 @@ def generate_report(
         
         await init_app()
         
-        # Create task
-        task_name = f"Generate {report_type.upper()} Report for {country}"
-        task_description = f"Period: {days} days, Review: {'Yes' if enable_review else 'No'}, Email: {'Yes' if send_email else 'No'}"
-        
-        task = await task_manager.create_task(
-            task_type=TaskType.GENERATE_REPORT,
-            task_name=task_name,
-            description=task_description,
-            priority=TaskPriority.NORMAL,
-            input_data={
-                "country": country,
-                "report_type": report_type,
-                "days": days,
-                "send_email": send_email,
-                "enable_review": enable_review,
-            }
-        )
-        
-        console.print(f"[bold blue]🚀 Starting AI report generation for {country}...[/bold blue]")
-        console.print(f"[dim]Task UUID: {task.task_uuid}[/dim]")
-        
-        # Log task start
-        await task_manager.add_workbook_entry(
-            task.task_uuid,
-            entry_type="info",
-            title="Report Generation Started",
-            content=f"Generating {report_type} report for {country} ({days} days)",
-            content_type="text"
-        )
-        
-        # Update to RUNNING
-        await task_manager.update_task_status(task.task_uuid, TaskStatus.RUNNING)
-        
-        # Update progress: 5%
-        await task_manager.update_task_progress(task.task_uuid, 1, 20)
-        
         async with get_database() as db:
+            # Normalize country code for lookups and logging
+            country_code = country.upper()
+
+            # ========== Phase 0: Try to reuse existing approved report ==========
+            # Compute effective period first so reuse and fresh generation share the same range
+            if period_end:
+                _period_end = datetime.fromisoformat(period_end).replace(tzinfo=timezone.utc)
+            else:
+                _period_end = datetime.now(timezone.utc)
+
+            if period_start:
+                _period_start = datetime.fromisoformat(period_start).replace(tzinfo=timezone.utc)
+            else:
+                _period_start = _period_end - timedelta(days=days)
+
+            effective_period_start = _period_start
+            effective_period_end = _period_end
+
+            reuse_report = None
+            try:
+                # Resolve country object
+                country_query = select(Country).where(Country.code == country_code)
+                country_result = await db.execute(country_query)
+                country_obj = country_result.scalar_one_or_none()
+
+                if country_obj:
+                    reuse_query = (
+                        select(Report)
+                        .where(
+                            Report.country_id == country_obj.id,
+                            Report.period_start == effective_period_start,
+                            Report.period_end == effective_period_end,
+                            Report.report_type == ReportType[report_type.upper()],
+                            Report.status == ReportStatus.APPROVED,
+                        )
+                        .order_by(Report.created_at.desc())
+                        .limit(1)
+                    )
+                    reuse_result = await db.execute(reuse_query)
+                    reuse_report = reuse_result.scalar_one_or_none()
+            except Exception as e:
+                logger.warning(f"Failed to check for reusable report: {e}")
+
+            # Create task (even if we end up reusing an existing report)
+            task_name = f"Generate {report_type.upper()} Report for {country_code}"
+            period_desc = f"{effective_period_start.date()} → {effective_period_end.date()}"
+            task_description = f"Period: {period_desc}, Review: {'Yes' if enable_review else 'No'}, Email: {'Yes' if send_email else 'No'}"
+            
+            task = await task_manager.create_task(
+                task_type=TaskType.GENERATE_REPORT,
+                task_name=task_name,
+                description=task_description,
+                priority=TaskPriority.NORMAL,
+                input_data={
+                    "country": country_code,
+                    "report_type": report_type,
+                    "days": days,
+                    "period_start": effective_period_start.isoformat(),
+                    "period_end": effective_period_end.isoformat(),
+                    "send_email": send_email,
+                    "enable_review": enable_review,
+                    "reused": bool(reuse_report),
+                }
+            )
+            
+            console.print(f"[bold blue]🚀 Starting AI report generation for {country_code}...[/bold blue]")
+            console.print(f"[dim]Task UUID: {task.task_uuid}[/dim]")
+            
+            # Log task start
+            await task_manager.add_workbook_entry(
+                task.task_uuid,
+                entry_type="info",
+                title="Report Generation Started",
+                content=f"Generating {report_type} report for {country_code} ({days} days)",
+                content_type="text"
+            )
+            
+            # If a reusable approved report exists, short-circuit the heavy generation
+            if reuse_report:
+                output_files = []
+                if reuse_report.markdown_path:
+                    output_files.append(f"Markdown: {reuse_report.markdown_path}")
+                if reuse_report.html_path:
+                    output_files.append(f"HTML: {reuse_report.html_path}")
+                if reuse_report.pdf_path:
+                    output_files.append(f"PDF: {reuse_report.pdf_path}")
+
+                await task_manager.add_workbook_entry(
+                    task.task_uuid,
+                    entry_type="success",
+                    title="Report Reused",
+                    content=(
+                        f"Reused approved report #{reuse_report.id} for "
+                        f"{country_code} {report_type} "
+                        f"({effective_period_start.date()} → {effective_period_end.date()})"
+                    ),
+                    content_type="text"
+                )
+
+                # Update task output and status
+                task_obj = await db.get(Task, task.id)
+                if task_obj:
+                    task_obj.output_data = {
+                        "report_id": reuse_report.id,
+                        "status": str(reuse_report.status),
+                        "files": output_files,
+                        "sections_count": len(reuse_report.sections) if hasattr(reuse_report, "sections") else 0,
+                        "reused": True,
+                    }
+                    await db.commit()
+
+                await task_manager.update_task_progress(task.task_uuid, 20, 20)
+                await task_manager.update_task_status(task.task_uuid, TaskStatus.COMPLETED)
+
+                console.print(f"[bold green]✨ Reused approved report #{reuse_report.id}![/bold green]")
+                console.print(f"  Status: {reuse_report.status}")
+                if output_files:
+                    for file_info in output_files:
+                        console.print(f"  {file_info}")
+                return
+
+            # No reusable report found → proceed with normal generation
+            await task_manager.update_task_status(task.task_uuid, TaskStatus.RUNNING)
+            
+            # Update progress: 5%
+            await task_manager.update_task_progress(task.task_uuid, 1, 20)
+        
             # ========== Phase 1: Data Preparation (5-15%) ==========
             console.print(f"\n[bold cyan]Phase 1/5: Preparing data...[/bold cyan]")
             await task_manager.add_workbook_entry(
@@ -517,15 +639,26 @@ def generate_report(
                 console.print(f"[red]Country not found: {country}[/red]")
                 raise ValueError(f"Country not found: {country}")
             
-            # Set time range
-            period_end = datetime.now(timezone.utc)
-            period_start = period_end - timedelta(days=days)
+            # Set time range: explicit dates take priority over --days
+            if period_end:
+                _period_end = datetime.fromisoformat(period_end).replace(tzinfo=timezone.utc)
+            else:
+                _period_end = datetime.now(timezone.utc)
+
+            if period_start:
+                _period_start = datetime.fromisoformat(period_start).replace(tzinfo=timezone.utc)
+            else:
+                _period_start = _period_end - timedelta(days=days)
+
+            # Use effective_* variables inside this coroutine to avoid shadowing outer parameters
+            effective_period_start = _period_start
+            effective_period_end = _period_end
             
             # Check if there's any data in the requested time range
             data_check_query = select(func.count()).select_from(DiseaseRecord).where(
                 DiseaseRecord.country_id == country_obj.id,
-                DiseaseRecord.time >= period_start,
-                DiseaseRecord.time <= period_end,
+                DiseaseRecord.time >= effective_period_start,
+                DiseaseRecord.time <= effective_period_end,
             )
             data_check_result = await db.execute(data_check_query)
             data_count = data_check_result.scalar()
@@ -543,10 +676,13 @@ def generate_report(
                     if latest_date.tzinfo is None:
                         latest_date = latest_date.replace(tzinfo=timezone.utc)
                     # Adjust period to use the latest available data
-                    period_end = latest_date
-                    period_start = period_end - timedelta(days=days)
+                    effective_period_end = latest_date
+                    effective_period_start = effective_period_end - timedelta(days=days)
                     
-                    warning_msg = f"No data in requested period. Using latest available data: {period_start.date()} to {period_end.date()}"
+                    warning_msg = (
+                        "No data in requested period. Using latest available data: "
+                        f"{effective_period_start.date()} to {effective_period_end.date()}"
+                    )
                     console.print(f"[yellow]⚠️  {warning_msg}[/yellow]")
                     
                     await task_manager.add_workbook_entry(
@@ -556,6 +692,23 @@ def generate_report(
                         content=warning_msg,
                         content_type="text"
                     )
+
+                    # region agent log
+                    _agent_debug_log(
+                        run_id="pre-ai-generate",
+                        hypothesis_id="A,B",
+                        location="main.py:565",
+                        message="Adjusted time range due to no data in requested period",
+                        data={
+                            "country": country,
+                            "original_period_start": _period_start.isoformat() if _period_start else None,
+                            "original_period_end": _period_end.isoformat() if _period_end else None,
+                            "adjusted_period_start": effective_period_start.isoformat() if effective_period_start else None,
+                            "adjusted_period_end": effective_period_end.isoformat() if effective_period_end else None,
+                            "requested_data_count": int(data_count or 0),
+                        },
+                    )
+                    # endregion
                 else:
                     error_msg = f"No disease data found for country {country_obj.name}. Please run crawl command first."
                     await task_manager.add_workbook_entry(
@@ -566,6 +719,21 @@ def generate_report(
                         content_type="text"
                     )
                     console.print(f"[red]✗ {error_msg}[/red]")
+
+                    # region agent log
+                    _agent_debug_log(
+                        run_id="pre-ai-generate",
+                        hypothesis_id="A",
+                        location="main.py:576",
+                        message="No disease data found for country",
+                        data={
+                            "country": country,
+                            "period_start": _period_start.isoformat() if _period_start else None,
+                            "period_end": _period_end.isoformat() if _period_end else None,
+                            "requested_data_count": int(data_count or 0),
+                        },
+                    )
+                    # endregion
                     raise ValueError(error_msg)
             
             # Get report type enum
@@ -575,7 +743,10 @@ def generate_report(
                 task.task_uuid,
                 entry_type="success",
                 title="Data Preparation Complete",
-                content=f"Country: {country_obj.name}\nPeriod: {period_start.date()} to {period_end.date()}",
+                content=(
+                    f"Country: {country_obj.name}\n"
+                    f"Period: {effective_period_start.date()} to {effective_period_end.date()}"
+                ),
                 content_type="text"
             )
             
@@ -625,11 +796,30 @@ def generate_report(
                     )
             
             # Generate report with callback
+
+            # region agent log
+            _agent_debug_log(
+                run_id="pre-ai-generate",
+                hypothesis_id="C,D",
+                location="main.py:643",
+                message="About to call ReportGenerator.generate",
+                data={
+                    "country_id": country_obj.id,
+                    "country_code": country,
+                    "report_type": report_type_enum.value,
+                    "period_start": effective_period_start.isoformat() if effective_period_start else None,
+                    "period_end": effective_period_end.isoformat() if effective_period_end else None,
+                    "send_email": send_email,
+                    "enable_review": enable_review,
+                },
+            )
+            # endregion
+
             report = await generator.generate(
                 country_id=country_obj.id,
                 report_type=report_type_enum,
-                period_start=period_start,
-                period_end=period_end,
+                period_start=effective_period_start,
+                period_end=effective_period_end,
                 send_email=send_email,
                 enable_review=enable_review,
                 progress_callback=ai_progress_callback,

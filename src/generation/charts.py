@@ -363,6 +363,152 @@ class ChartGenerator:
             logger.error(f"Failed to save chart: {e}")
             raise
     
+    def generate_dual_axis(
+        self,
+        data: pd.DataFrame,
+        x_col: str,
+        y1_col: str,
+        y2_col: str,
+        title: str,
+        y1_label: Optional[str] = None,
+        y2_label: Optional[str] = None,
+        **kwargs,
+    ) -> go.Figure:
+        """
+        生成双 Y 轴折线图（例如病例数 + 死亡数）
+
+        Args:
+            data: 数据 DataFrame
+            x_col: X 轴列名（时间）
+            y1_col: 左轴列名
+            y2_col: 右轴列名
+            title: 图表标题
+            y1_label: 左轴标签
+            y2_label: 右轴标签
+
+        Returns:
+            Plotly 图表对象（双轴）
+        """
+        logger.debug(f"Generating dual-axis chart: {title}")
+
+        fig = make_subplots(specs=[[{"secondary_y": True}]])
+
+        # Left axis – primary series (e.g. cases)
+        if y1_col in data.columns:
+            fig.add_trace(
+                go.Scatter(
+                    x=data[x_col],
+                    y=data[y1_col],
+                    mode="lines+markers",
+                    name=y1_label or y1_col,
+                    line=dict(color="#2196F3", width=2),
+                    marker=dict(size=5),
+                ),
+                secondary_y=False,
+            )
+
+        # Right axis – secondary series (e.g. deaths)
+        if y2_col in data.columns:
+            fig.add_trace(
+                go.Scatter(
+                    x=data[x_col],
+                    y=data[y2_col],
+                    mode="lines+markers",
+                    name=y2_label or y2_col,
+                    line=dict(color="#F44336", width=2, dash="dot"),
+                    marker=dict(size=5),
+                ),
+                secondary_y=True,
+            )
+
+        fig.update_layout(
+            title=title,
+            template=self.theme,
+            hovermode="x unified",
+            height=kwargs.get("height", self.default_height),
+            width=kwargs.get("width", self.default_width),
+        )
+        fig.update_yaxes(title_text=y1_label or y1_col, secondary_y=False)
+        fig.update_yaxes(title_text=y2_label or y2_col, secondary_y=True)
+
+        return fig
+
+    def generate_cases_incidence_subplots(
+        self,
+        data: pd.DataFrame,
+        x_col: str,
+        cases_col: str = "cases",
+        incidence_col: str = "incidence_rate",
+        title: str = "病例数与发病率",
+        **kwargs,
+    ) -> go.Figure:
+        """
+        生成双子图：上方病例柱状图，下方发病率折线图
+
+        Args:
+            data: 数据 DataFrame
+            x_col: X 轴列名（时间）
+            cases_col: 病例数列名
+            incidence_col: 发病率列名
+            title: 图表标题
+
+        Returns:
+            Plotly 图表对象（双子图）
+        """
+        logger.debug(f"Generating cases+incidence subplot: {title}")
+
+        has_incidence = incidence_col in data.columns and data[incidence_col].notna().any()
+
+        if has_incidence:
+            fig = make_subplots(
+                rows=2,
+                cols=1,
+                shared_xaxes=True,
+                subplot_titles=["病例数", "发病率"],
+                vertical_spacing=0.12,
+            )
+        else:
+            fig = make_subplots(rows=1, cols=1, subplot_titles=["病例数"])
+
+        # Cases bar chart (row 1)
+        if cases_col in data.columns:
+            fig.add_trace(
+                go.Bar(
+                    x=data[x_col],
+                    y=data[cases_col],
+                    name="病例数",
+                    marker_color="#2196F3",
+                ),
+                row=1,
+                col=1,
+            )
+
+        # Incidence rate line chart (row 2 if available)
+        if has_incidence:
+            fig.add_trace(
+                go.Scatter(
+                    x=data[x_col],
+                    y=data[incidence_col],
+                    mode="lines+markers",
+                    name="发病率",
+                    line=dict(color="#FF9800", width=2),
+                    marker=dict(size=5),
+                ),
+                row=2,
+                col=1,
+            )
+
+        fig.update_layout(
+            title=title,
+            template=self.theme,
+            hovermode="x unified",
+            height=kwargs.get("height", 600 if has_incidence else self.default_height),
+            width=kwargs.get("width", self.default_width),
+            showlegend=True,
+        )
+
+        return fig
+
     def get_chart_html(self, fig: go.Figure) -> str:
         """
         获取图表的HTML代码

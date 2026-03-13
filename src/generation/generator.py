@@ -36,20 +36,25 @@ class ReportGenerator:
     完整流程：
     1. 数据提取
     2. AI分析
-    3. 内容撰写
-    4. 质量审核
+    3. 内容撰写（含 Writer→Reviewer→Writer 修订循环）
+    4. 质量审核（并行）
     5. 格式化输出
     6. 邮件发送
     """
-    
+
+    # Disease codes to skip when generating reports (placeholder / aggregate codes)
+    SKIP_DISEASE_CODES: frozenset = frozenset({"D999"})
+
+    # Maximum writer-revision attempts per section before accepting the best draft
+    MAX_REVISIONS: int = 2
+
     def __init__(self):
         """初始化报告生成器"""
         self.config = get_config()
         
         # 初始化各组件
-        self.analyst = AnalystAgent()
-        self.writer = WriterAgent()
-        self.reviewer = ReviewerAgent()
+        # Note: AnalystAgent, WriterAgent, ReviewerAgent are instantiated per-task
+        # in process_disease() to prevent shared-state race conditions in parallel execution.
         self.chart_generator = ChartGenerator()
         self.data_exporter = DataExporter()
         self.formatter = ReportFormatter()
@@ -194,8 +199,36 @@ class ReportGenerator:
             if kwargs.get('send_email', False):
                 await self._send_email(report, sections)
             
-            # 8. 更新状态
-            report.status = ReportStatus.COMPLETED
+            # 8. 更新状态（根据审核结果决定是否标记为APPROVED）
+            enable_review = kwargs.get('enable_review', True)
+            if enable_review:
+                # 计算整体质量分，并判断是否所有章节均通过审核
+                all_verified = True
+                quality_scores: list[float] = []
+                for sec in sections:
+                    if not sec.get("is_verified", False):
+                        all_verified = False
+                    # 尝试从 quality_scores 中取一个总体分数（如 overall/score）
+                    qs = sec.get("quality_scores") or {}
+                    # 支持多种常见字段名
+                    for key in ("overall", "score", "quality", "final"):
+                        if isinstance(qs.get(key), (int, float)):
+                            quality_scores.append(float(qs[key]))
+                            break
+                avg_quality = sum(quality_scores) / len(quality_scores) if quality_scores else None
+                threshold = getattr(self.config.ai, "reviewer_threshold", 0.0)
+
+                if all_verified and (avg_quality is None or avg_quality >= threshold):
+                    report.status = ReportStatus.APPROVED
+                    report.quality_score = avg_quality
+                else:
+                    report.status = ReportStatus.COMPLETED
+                    # 仅当尚未有质量分时写入一个基础值
+                    if report.quality_score is None and avg_quality is not None:
+                        report.quality_score = avg_quality
+            else:
+                report.status = ReportStatus.COMPLETED
+
             report.completed_at = datetime.now(timezone.utc)
             await db.commit()
             
@@ -204,9 +237,19 @@ class ReportGenerator:
         
         except Exception as e:
             logger.error(f"Report generation failed: {e}")
-            report.status = ReportStatus.FAILED
-            report.error_message = str(e)
-            await db.commit()
+            # 先回滚当前事务（若事务已进入 aborted 状态，直接 commit 会触发二次错误）
+            try:
+                await db.rollback()
+            except Exception as rollback_err:
+                logger.error(f"Failed to rollback after report error: {rollback_err}")
+            # 用干净的事务写入失败状态
+            try:
+                report.status = ReportStatus.FAILED
+                report.error_message = str(e)
+                db.add(report)
+                await db.commit()
+            except Exception as commit_err:
+                logger.error(f"Failed to persist failed report status: {commit_err}")
             raise
     
     async def _create_report_record(
@@ -273,10 +316,15 @@ class ReportGenerator:
             'disease_id': r.disease_id,
             'cases': r.cases,
             'deaths': r.deaths,
+            'new_cases': r.new_cases,
+            'new_deaths': r.new_deaths,
             'recoveries': r.recoveries,
             'incidence_rate': r.incidence_rate,
             'mortality_rate': r.mortality_rate,
             'recovery_rate': r.recovery_rate,
+            'data_source': r.data_source,
+            'data_quality': r.data_quality,
+            'confidence_score': r.confidence_score,
         } for r in records])
         
         logger.info(f"Extracted {len(data)} records")
@@ -337,40 +385,89 @@ class ReportGenerator:
         if existing_sections:
             logger.info(f"Found {len(existing_sections)} existing sections, resuming from where we left off")
         
+        # 可选：尝试从已审核通过的报告中复用章节，减少重复AI调用
+        reuse_from_approved: bool = kwargs.get("reuse_from_approved", True)
+        reusable_sections: Dict[tuple, ReportSection] = {}
+        if reuse_from_approved:
+            try:
+                from src.domain import Report as ReportModel
+
+                # 查找同一国家 & 报告类型 & 时间范围覆盖当前报告的最新已批准报告
+                reuse_query = (
+                    select(ReportModel)
+                    .where(
+                        ReportModel.country_id == report.country_id,
+                        ReportModel.report_type == report.report_type,
+                        ReportModel.status == ReportStatus.APPROVED,
+                        ReportModel.period_start <= report.period_start,
+                        ReportModel.period_end >= report.period_end,
+                    )
+                    .order_by(ReportModel.created_at.desc())
+                    .limit(1)
+                )
+                reuse_result = await db.execute(reuse_query)
+                reuse_base = reuse_result.scalar_one_or_none()
+
+                if reuse_base:
+                    # 预加载这个已批准报告的所有章节，并按 (disease_name, section_type) 归类
+                    base_sections_q = (
+                        select(ReportSection)
+                        .where(ReportSection.report_id == reuse_base.id)
+                        .order_by(ReportSection.section_order)
+                    )
+                    base_sections = (await db.execute(base_sections_q)).scalars().all()
+                    for s in base_sections:
+                        parts = s.title.split(" - ")
+                        if len(parts) >= 2:
+                            key = (parts[0], s.section_type)
+                            if key not in reusable_sections:
+                                reusable_sections[key] = s
+                    logger.info(
+                        f"Found approved base report {reuse_base.id} with "
+                        f"{len(reusable_sections)} reusable section templates"
+                    )
+            except Exception as e:
+                logger.warning(f"Failed to load reusable sections from approved report: {e}")
+
         # 对每种疾病进行分析
         disease_groups = data.groupby('disease_id')
         
         # 创建并行任务列表
         disease_info_list = []
         
-        skip_disease_names = {"D999"}
+        # Batch-load all required disease objects to avoid N+1 queries
+        # numpy int64 must be cast to Python int for asyncpg compatibility
+        disease_ids_needed = [int(id_) for id_ in data['disease_id'].unique()]
+        diseases_result = await db.execute(select(Disease).where(Disease.id.in_(disease_ids_needed)))
+        disease_map: Dict[int, Any] = {d.id: d for d in diseases_result.scalars().all()}
 
         for disease_id, disease_data in disease_groups:
-            # 获取疾病信息
-            disease_query = select(Disease).where(Disease.id == disease_id)
-            disease_result = await db.execute(disease_query)
-            disease = disease_result.scalar_one_or_none()
-            
+            disease = disease_map.get(disease_id)
+
             if not disease:
                 continue
 
             # 跳过不需要分析的占位疾病
-            if disease.name in skip_disease_names:
+            if disease.name in self.SKIP_DISEASE_CODES:
                 logger.info(f"Skipping placeholder disease {disease.name} (id={disease_id})")
                 continue
-            
+
+            # Use the English display name for section titles; fall back to code
+            disease_display_name = disease.name_en or disease.name
+
             # 检查该疾病的所有章节是否已存在
             disease_sections_exist = all(
-                f"{disease.name} - {section_type}" in existing_section_keys
+                f"{disease_display_name} - {section_type}" in existing_section_keys
                 for section_type in section_types
             )
             
             if disease_sections_exist:
-                logger.info(f"Skipping disease {disease.name} - all sections already exist")
+                logger.info(f"Skipping disease {disease_display_name} - all sections already exist")
                 continue
             
             disease_info_list.append({
                 'disease': disease,
+                'disease_display_name': disease_display_name,
                 'data': disease_data,
             })
         
@@ -390,7 +487,7 @@ class ReportGenerator:
                     report_id=report.id,
                     section_id=None,
                     section_type=section_type,
-                    disease_name=disease.name,
+                    disease_name=info['disease_display_name'],
                     status=ReportSectionRunStatus.QUEUED,
                 )
                 db.add(run)
@@ -398,47 +495,100 @@ class ReportGenerator:
                 run_map[(disease.id, section_type)] = run.id
         await db.commit()
         
+        # 提前从 ORM 对象读取需要传入并行任务的纯 Python 值，
+        # 避免在 asyncio.gather 内部触发懒加载导致 MissingGreenlet 错误
+        report_id_val = report.id
+        report_period_start = report.period_start
+        report_period_end = report.period_end
+
         # Track completed diseases for progress
         completed_count = 0
         
         # 并行处理所有疾病
         async def process_disease(disease_info):
-            """处理单个疾病的所有章节"""
+            """处理单个疾病的所有章节（每个任务独立 Agent 实例，含修订循环）"""
             nonlocal completed_count
             
             disease = disease_info['disease']
+            disease_display_name = disease_info['disease_display_name']
             disease_data = disease_info['data']
             run_ids = {section_type: run_map.get((disease.id, section_type)) for section_type in section_types}
             
             # Progress callback for this disease
             if progress_callback:
-                await progress_callback(completed_count, total_diseases, f"Analyzing {disease.name}...")
+                await progress_callback(completed_count, total_diseases, f"Analyzing {disease_display_name}...")
             
             # 过滤与该疾病相关的最新原始网页上下文
-            relevant_raw_sources = self._filter_raw_sources(raw_sources or [], disease.name)
+            relevant_raw_sources = self._filter_raw_sources(raw_sources or [], disease_display_name)
 
-            # 清除之前的对话历史（每个疾病/section重新开始）
-            self.analyst.clear_conversation_history()
+            # 每个任务独立实例化 Analyst，避免并发竞态（shared state）
+            analyst = AnalystAgent()
             
             # 分析数据
-            analysis_result = await self.analyst.process(
+            analysis_result = await analyst.process(
                 data=disease_data,
-                disease_name=disease.name,
-                period_start=report.period_start,
-                period_end=report.period_end,
+                disease_name=disease_display_name,
+                period_start=report_period_start,
+                period_end=report_period_end,
             )
             
             # 获取analyst的对话历史
-            analyst_conversations = self.analyst.get_conversation_history()
+            analyst_conversations = analyst.get_conversation_history()
             
             # 附加原始网页上下文，供后续写作/审核参考
             analysis_result["raw_sources"] = relevant_raw_sources
             
-            # 生成各章节
+            # 生成各章节（每个任务独立 Writer + Reviewer 实例）
+            writer = WriterAgent()
+            reviewer = ReviewerAgent()
+            
             disease_sections = []
             for section_type in section_types:
+                # 如果启用了复用机制且存在可复用章节，则直接拷贝内容而不调用AI
+                if reuse_from_approved:
+                    reuse_key = (disease_display_name, section_type)
+                    base_section = reusable_sections.get(reuse_key)
+                    if base_section:
+                        section_started_at = datetime.now(timezone.utc)
+                        section_ended_at = datetime.now(timezone.utc)
+
+                        # 更新运行记录为完成
+                        run_id = run_ids.get(section_type)
+                        if run_id:
+                            await self._update_run_status(
+                                run_id,
+                                status=ReportSectionRunStatus.COMPLETED,
+                                started_at=section_started_at,
+                                ended_at=section_ended_at,
+                            )
+
+                        disease_sections.append(
+                            {
+                                "disease_name": disease_display_name,
+                                "section_type": section_type,
+                                "content": base_section.content,
+                                "chart_html": None,
+                                "ai_conversation": [],
+                                "started_at": section_started_at,
+                                "ended_at": section_ended_at,
+                                "token_usage": {},
+                                "model": None,
+                                "provider": None,
+                                "disease_id": disease.id,
+                                "run_id": run_id,
+                                "revision_count": 0,
+                                "writer_temperature": writer.temperature,
+                                "writer_max_tokens": writer.max_tokens,
+                            }
+                        )
+                        logger.info(
+                            f"Reused approved section for {disease_display_name} / {section_type} "
+                            f"from base report"
+                        )
+                        continue
+
                 # 检查该章节是否已存在
-                section_key = f"{disease.name} - {section_type}"
+                section_key = f"{disease_display_name} - {section_type}"
                 if section_key in existing_section_keys:
                     logger.info(f"Skipping section {section_key} - already exists")
                     continue
@@ -450,22 +600,50 @@ class ReportGenerator:
                 if run_id:
                     await self._update_run_status(run_id, status=ReportSectionRunStatus.RUNNING, started_at=section_started_at)
 
-                # 清除writer的对话历史（每个section重新开始）
-                self.writer.clear_conversation_history()
-                
-                writer_result = await self.writer.process(
-                    section_type=section_type,
-                    analysis_data=analysis_result,
-                    style=kwargs.get('style', 'formal'),
-                    language=kwargs.get('language', 'zh'),
-                    raw_sources=relevant_raw_sources,
-                )
-                
-                # 获取writer的对话历史
-                writer_conversations = self.writer.get_conversation_history()
-                
-                # 合并analyst和writer的对话历史
-                ai_conversation = analyst_conversations + writer_conversations
+                # Writer → Reviewer → Writer 修订循环（最多 MAX_REVISIONS 次）
+                revision_instructions = None
+                revision_count = 0
+                writer_result = None
+
+                for attempt in range(self.MAX_REVISIONS + 1):
+                    writer.clear_conversation_history()
+                    writer_result = await writer.process(
+                        section_type=section_type,
+                        analysis_data=analysis_result,
+                        style=kwargs.get('style', 'formal'),
+                        language=kwargs.get('language', 'en'),
+                        raw_sources=relevant_raw_sources,
+                        revision_instructions=revision_instructions,
+                    )
+
+                    # 内联快速审核
+                    reviewer.clear_conversation_history()
+                    try:
+                        review_result = await reviewer.process(
+                            content=writer_result['content'],
+                            content_type=section_type,
+                            original_data=analysis_result,
+                        )
+                    except Exception as review_err:
+                        logger.warning(f"Inline review failed for {disease_display_name}/{section_type}: {review_err}")
+                        break
+
+                    if review_result.get('approved', True) or attempt == self.MAX_REVISIONS:
+                        break
+
+                    # 未通过 → 准备修订指令进入下一轮
+                    suggestions = review_result.get('suggestions', [])
+                    revision_instructions = "\n".join(suggestions) if suggestions else None
+                    revision_count += 1
+                    logger.info(
+                        f"Section {disease_display_name}/{section_type} revision #{revision_count}: "
+                        f"{len(suggestions)} suggestion(s)"
+                    )
+
+                # 合并所有对话历史
+                writer_conversations = writer.get_conversation_history()
+                reviewer_inline_convs = reviewer.get_conversation_history()
+                ai_conversation = analyst_conversations + writer_conversations + reviewer_inline_convs
 
                 section_ended_at = datetime.now(timezone.utc)
                 token_usage = self._aggregate_tokens(ai_conversation)
@@ -478,15 +656,15 @@ class ReportGenerator:
                     chart = self._generate_section_chart(
                         section_type=section_type,
                         data=disease_data,
-                        disease_name=disease.name,
+                        disease_name=disease_display_name,
                     )
                     if chart:
                         chart_html = self.chart_generator.get_chart_html(chart)
                 
                 disease_sections.append({
-                    'disease_name': disease.name,
+                    'disease_name': disease_display_name,
                     'section_type': section_type,
-                    'content': writer_result['content'],
+                    'content': writer_result['content'] if writer_result else '',
                     'chart_html': chart_html,
                     'ai_conversation': ai_conversation,
                     'started_at': section_started_at,
@@ -496,12 +674,15 @@ class ReportGenerator:
                     'provider': provider_used,
                     'disease_id': disease.id,
                     'run_id': run_id,
+                    'revision_count': revision_count,
+                    'writer_temperature': writer.temperature,
+                    'writer_max_tokens': writer.max_tokens,
                 })
             
             # Update progress after completing this disease
             completed_count += 1
             if progress_callback:
-                await progress_callback(completed_count, total_diseases, f"Completed {disease.name}")
+                await progress_callback(completed_count, total_diseases, f"Completed {disease_display_name}")
             
             return disease_sections
         
@@ -522,7 +703,7 @@ class ReportGenerator:
             for section_data in disease_sections:
                 # 创建章节记录
                 section = ReportSection(
-                    report_id=report.id,
+                    report_id=report_id_val,
                     title=f"{section_data['disease_name']} - {section_data['section_type']}",
                     content=section_data['content'],
                     section_type=section_data['section_type'],
@@ -541,11 +722,12 @@ class ReportGenerator:
                         run.status = ReportSectionRunStatus.COMPLETED
                         run.provider = section_data.get('provider')
                         run.model = section_data.get('model')
-                        run.temperature = self.writer.temperature
-                        run.max_tokens = self.writer.max_tokens
+                        run.temperature = section_data.get('writer_temperature', 0.7)
+                        run.max_tokens = section_data.get('writer_max_tokens', 3000)
                         run.token_usage = section_data.get('token_usage', {})
                         run.started_at = run.started_at or section_data.get('started_at')
                         run.ended_at = section_data.get('ended_at')
+                        run.revision_count = section_data.get('revision_count', 0)
 
                 # 保存AI对话记录
                 for entry in section_data.get('ai_conversation', []):
@@ -597,6 +779,14 @@ class ReportGenerator:
         # 最后提交剩余的章节
         await db.commit()
         
+        # Report-level token rollup: aggregate all section token usage into Report.token_usage
+        total_tokens: Dict[str, int] = {"prompt": 0, "completion": 0, "total": 0}
+        for sec in sections:
+            for k in total_tokens:
+                total_tokens[k] += sec.get('token_usage', {}).get(k, 0)
+        report.token_usage = total_tokens
+        await db.commit()
+        
         logger.info(f"Generated {new_sections_count} new sections (total: {len(sections)} sections)")
         return sections
     
@@ -609,34 +799,43 @@ class ReportGenerator:
         raw_sources: Optional[List[Dict[str, Any]]] = None,
         progress_callback: Optional[callable] = None,
     ) -> List[Dict[str, Any]]:
-        """审核章节内容并更新数据库"""
+        """审核章节内容并更新数据库（AI调用并行，DB写入顺序执行）"""
         from sqlalchemy import select
         
-        logger.info("Reviewing sections")
+        logger.info(f"Reviewing {len(sections)} sections (parallel AI calls)")
         
-        reviewed_sections = []
         total_sections = len(sections)
-        
-        for i, section in enumerate(sections, 1):
-            # Progress callback
+        semaphore = asyncio.Semaphore(self.config.report.max_parallel_tasks)
+
+        # Phase 1: run all review AI calls in parallel (no DB writes here)
+        async def run_review(section: Dict[str, Any]):
+            """Execute reviewer AI call for one section (no DB access)."""
+            async with semaphore:
+                reviewer = ReviewerAgent()
+                try:
+                    review_result = await reviewer.process(
+                        content=section['content'],
+                        content_type=section['type'],
+                        original_data={
+                            'structured_data': original_data.to_dict(),
+                            'raw_sources': raw_sources or [],
+                        },
+                    )
+                    reviewer_conversations = reviewer.get_conversation_history()
+                except Exception as e:
+                    logger.error(f"Review failed for section '{section.get('title')}': {e}")
+                    review_result = {'approved': False, 'quality_score': {}, 'suggestions': [], 'assessment': str(e)}
+                    reviewer_conversations = []
+                return review_result, reviewer_conversations
+
+        review_tasks = await asyncio.gather(*[run_review(s) for s in sections])
+
+        # Phase 2: persist results sequentially (single DB session, no conflicts)
+        reviewed_sections = []
+        for i, (section, (review_result, reviewer_conversations)) in enumerate(zip(sections, review_tasks), 1):
             if progress_callback:
-                await progress_callback("review", i-1, total_sections, f"Reviewing section {i}/{total_sections}")
-            
-            # 清除reviewer的对话历史
-            self.reviewer.clear_conversation_history()
-            
-            review_result = await self.reviewer.process(
-                content=section['content'],
-                content_type=section['type'],
-                original_data={
-                    'structured_data': original_data.to_dict(),
-                    'raw_sources': raw_sources or [],
-                },
-            )
-            
-            # 获取reviewer的对话历史
-            reviewer_conversations = self.reviewer.get_conversation_history()
-            
+                await progress_callback("review", i - 1, total_sections, f"Saving review {i}/{total_sections}")
+
             # 从数据库获取对应的ReportSection
             query = select(ReportSection).where(
                 ReportSection.report_id == report.id,
@@ -654,13 +853,13 @@ class ReportGenerator:
                 run_query = (
                     select(ReportSectionRun)
                     .where(ReportSectionRun.section_id == db_section.id)
-                    .order_by(desc(ReportSectionRun.created_at))
+                    .order_by(ReportSectionRun.created_at.desc())
                     .limit(1)
                 )
                 run = (await db.execute(run_query)).scalar_one_or_none()
                 if run:
                     section['run_id'] = run.id
-            
+
             if db_section and run:
                 # 保存质量分
                 if 'quality_score' in review_result:
@@ -698,26 +897,23 @@ class ReportGenerator:
                 # 标记是否通过审核
                 db_section.is_verified = review_result.get('approved', False)
 
-                # 提交更新
                 await db.commit()
                 await db.refresh(db_section)
 
-                # 更新section字典
                 section['quality_scores'] = run.quality_scores
                 section['is_verified'] = db_section.is_verified
-            
-            if review_result['approved']:
-                reviewed_sections.append(section)
+
+            approved = review_result.get('approved', False)
+            if approved:
                 logger.debug(f"Section approved: {section['title']}")
             else:
-                logger.warning(f"Section needs revision: {section['title']}")
-                # 可以选择重新生成或保留原内容
-                reviewed_sections.append(section)
-            
-            # Update progress after each review
+                logger.warning(f"Section needs revision (kept as-is): {section['title']}")
+
+            reviewed_sections.append(section)
+
             if progress_callback:
                 await progress_callback("review", i, total_sections, f"Reviewed {i}/{total_sections}")
-        
+
         return reviewed_sections
 
     def _aggregate_tokens(self, conversations: List[Dict[str, Any]]) -> Dict[str, int]:
@@ -844,7 +1040,19 @@ class ReportGenerator:
         sections: List[Dict[str, Any]],
     ) -> None:
         """格式化并保存报告"""
+        from sqlalchemy import select
+        from src.domain import Country
+        
         logger.info("Formatting and saving report")
+
+        # 从数据库获取国家名称
+        country_name = "Unknown"
+        try:
+            country_obj = (await db.execute(select(Country).where(Country.id == report.country_id))).scalar_one_or_none()
+            if country_obj:
+                country_name = country_obj.name_en or country_obj.name or "Unknown"
+        except Exception as e:
+            logger.warning(f"Could not fetch country name: {e}")
         
         # 准备元数据
         metadata = {
@@ -852,7 +1060,7 @@ class ReportGenerator:
             'generated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             'period_start': report.period_start.strftime('%Y-%m-%d'),
             'period_end': report.period_end.strftime('%Y-%m-%d'),
-            'country': 'China',  # TODO: 从数据库获取
+            'country': country_name,
         }
         
         # 生成文件名前缀
@@ -979,20 +1187,38 @@ class ReportGenerator:
         disease_name: str,
     ):
         """为章节生成图表"""
+        if data.empty or 'time' not in data.columns:
+            return None
+
         if section_type == 'trend_analysis':
-            return self.chart_generator.generate_time_series(
-                data=data,
-                x_col='time',
-                y_cols=['cases'],
-                title=f"{disease_name} 病例趋势",
-                y_label='病例数',
-            )
+            # 双轴折线图：病例数（左轴）+ 死亡数（右轴）
+            has_deaths = 'deaths' in data.columns and data['deaths'].notna().any()
+            if has_deaths:
+                return self.chart_generator.generate_dual_axis(
+                    data=data.sort_values('time'),
+                    x_col='time',
+                    y1_col='cases',
+                    y2_col='deaths',
+                    title=f"{disease_name} 病例与死亡趋势",
+                    y1_label='病例数',
+                    y2_label='死亡数',
+                )
+            else:
+                return self.chart_generator.generate_time_series(
+                    data=data.sort_values('time'),
+                    x_col='time',
+                    y_cols=['cases'],
+                    title=f"{disease_name} 病例趋势",
+                    y_label='病例数',
+                )
         elif section_type == 'summary':
-            return self.chart_generator.generate_bar_chart(
-                data=data.tail(10),  # 最近10个数据点
+            # 双子图：病例柱状 + 发病率折线（如有数据）
+            return self.chart_generator.generate_cases_incidence_subplots(
+                data=data.sort_values('time').tail(24),  # 最近24个月
                 x_col='time',
-                y_col='cases',
-                title=f"{disease_name} 近期数据",
+                cases_col='cases',
+                incidence_col='incidence_rate',
+                title=f"{disease_name} 近期数据概览",
             )
         
         return None
