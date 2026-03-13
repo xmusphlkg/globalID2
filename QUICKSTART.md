@@ -75,6 +75,22 @@ python scripts/data_quality_check_cn.py
 
 **注意**：`full_rebuild_database.py` 已整合历史数据导入功能，包含完整字段和详细metadata。
 
+### 增量更新 / 补缺更新（非强制）
+`crawl` 默认是**非强制**（`--no-force`），会先拉取源列表，再与数据库对比，只处理需要更新的数据。
+
+另外支持按“月份缺口”做回填（`--fill-missing`，默认开启）：如果源列表里出现了某个月，但数据库里没有这个月的数据，会把该月也加入待处理列表。
+
+```bash
+# 仅预览将要更新的数据（不落库、不保存raw）
+python main.py crawl --country CN --source all --no-process --no-save-raw --no-force --fill-missing
+
+# 真正执行更新（处理并写入数据库）
+python main.py crawl --country CN --source all --process --save-raw --no-force --fill-missing
+```
+
+### 开发/排障小脚本
+根目录下的临时脚本已移动到 `scripts/dev/`（例如插入国家、快速验证数据库是否有数据）。
+
 ### 数据查看
 
 ```bash

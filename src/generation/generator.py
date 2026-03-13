@@ -4,7 +4,7 @@ GlobalID V2 Report Generator
 报告生成器：整合所有组件生成完整报告
 """
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -196,7 +196,7 @@ class ReportGenerator:
             
             # 8. 更新状态
             report.status = ReportStatus.COMPLETED
-            report.completed_at = datetime.utcnow()
+            report.completed_at = datetime.now(timezone.utc)
             await db.commit()
             
             logger.info(f"Report generation completed: {report.id}")
@@ -443,7 +443,7 @@ class ReportGenerator:
                     logger.info(f"Skipping section {section_key} - already exists")
                     continue
                 
-                section_started_at = datetime.utcnow()
+                section_started_at = datetime.now(timezone.utc)
 
                 # 更新运行状态为RUNNING
                 run_id = run_ids.get(section_type)
@@ -467,7 +467,7 @@ class ReportGenerator:
                 # 合并analyst和writer的对话历史
                 ai_conversation = analyst_conversations + writer_conversations
 
-                section_ended_at = datetime.utcnow()
+                section_ended_at = datetime.now(timezone.utc)
                 token_usage = self._aggregate_tokens(ai_conversation)
                 model_used = ai_conversation[-1].get("model") if ai_conversation else None
                 provider_used = ai_conversation[-1].get("provider") if ai_conversation else None
@@ -563,7 +563,7 @@ class ReportGenerator:
                         section_id=section.id,
                         agent=entry.get('agent') or 'unknown',
                         role=entry.get('role') or entry.get('agent'),
-                        timestamp=ts_parsed or datetime.utcnow(),
+                        timestamp=ts_parsed or datetime.now(timezone.utc),
                         prompt=entry.get('prompt'),
                         system_prompt=entry.get('system_prompt'),
                         response=entry.get('response'),
@@ -682,7 +682,7 @@ class ReportGenerator:
                         section_id=db_section.id,
                         agent=entry.get('agent') or 'reviewer',
                         role=entry.get('role') or entry.get('agent'),
-                        timestamp=ts_parsed or datetime.utcnow(),
+                        timestamp=ts_parsed or datetime.now(timezone.utc),
                         prompt=entry.get('prompt'),
                         system_prompt=entry.get('system_prompt'),
                         response=entry.get('response'),

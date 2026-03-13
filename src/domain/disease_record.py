@@ -21,7 +21,7 @@ class DiseaseRecord(Base):
     __tablename__ = "disease_records"
     
     # 主键（时间+疾病+国家的组合）
-    time: Mapped[datetime] = mapped_column(DateTime, primary_key=True, comment="记录时间")
+    time: Mapped[datetime] = mapped_column(DateTime(timezone=True), primary_key=True, comment="记录时间")
     disease_id: Mapped[int] = mapped_column(
         Integer,
         ForeignKey("diseases.id", ondelete="CASCADE"),
