@@ -18,7 +18,7 @@ class Base(DeclarativeBase):
 class TimestampMixin:
     """时间戳混入类"""
     
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
     updated_at = Column(
         DateTime,
         default=datetime.utcnow,

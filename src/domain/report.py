@@ -65,8 +65,8 @@ class Report(BaseModel):
     )
     
     # 时间范围
-    period_start: Mapped[datetime] = mapped_column(DateTime, nullable=False, comment="报告起始时间")
-    period_end: Mapped[datetime] = mapped_column(DateTime, nullable=False, comment="报告结束时间")
+    period_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, comment="报告起始时间")
+    period_end: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, comment="报告结束时间")
     
     # 报告内容
     summary: Mapped[Optional[str]] = mapped_column(Text, comment="摘要") 
@@ -82,10 +82,10 @@ class Report(BaseModel):
     # 质量评估
     quality_score: Mapped[Optional[float]] = mapped_column(comment="质量分数（0-1）")
     reviewed_by: Mapped[Optional[str]] = mapped_column(String(100), comment="审核人")
-    reviewed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, comment="审核时间")
+    reviewed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), comment="审核时间")
     
     # 发布信息
-    published_at: Mapped[Optional[datetime]] = mapped_column(DateTime, comment="发布时间")
+    published_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), comment="发布时间")
     published_url: Mapped[Optional[str]] = mapped_column(String(500), comment="发布URL")
     
     # 文件路径
@@ -234,8 +234,8 @@ class ReportSectionRun(BaseModel):
     token_usage = Column(JSON, nullable=False, default=dict, comment="token使用情况")
     quality_scores = Column(JSON, nullable=False, default=dict, comment="质量评分")
     error_message: Mapped[Optional[str]] = mapped_column(Text, comment="错误信息")
-    started_at: Mapped[Optional[datetime]] = mapped_column(DateTime, comment="开始时间")
-    ended_at: Mapped[Optional[datetime]] = mapped_column(DateTime, comment="结束时间")
+    started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), comment="开始时间")
+    ended_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), comment="结束时间")
     metadata_ = Column("metadata", JSON, nullable=False, default=dict, comment="额外元数据")
 
     report: Mapped["Report"] = relationship("Report", back_populates="section_runs")
@@ -280,7 +280,7 @@ class AIConversation(BaseModel):
     )
     agent: Mapped[str] = mapped_column(String(50), nullable=False, comment="代理类型")
     role: Mapped[Optional[str]] = mapped_column(String(50), comment="角色/阶段")
-    timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
     prompt: Mapped[Optional[str]] = mapped_column(Text, comment="用户提示")
     system_prompt: Mapped[Optional[str]] = mapped_column(Text, comment="系统提示")
     response: Mapped[Optional[str]] = mapped_column(Text, comment="模型回复")

@@ -6,7 +6,7 @@ GlobalID V2 Main Entry Point
 import asyncio
 import signal
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import typer
@@ -32,6 +32,10 @@ def crawl(
     process: bool = typer.Option(True, help="Process and store data"),
     save_raw: bool = typer.Option(True, help="Save raw pages as plain text"),
     force: bool = typer.Option(False, help="Force crawl all data (ignore database check)"),
+    fill_missing: bool = typer.Option(
+        True,
+        help="Also backfill missing months found in the source list (non-force).",
+    ),
 ):
     """
     智能爬取疾病数据
@@ -109,7 +113,7 @@ def crawl(
                     country_code=country_code,
                     source=source,
                     status="running",
-                    started_at=datetime.now(),
+                    started_at=datetime.now(timezone.utc),
                     raw_dir=str(raw_dir) if save_raw else None,
                     metadata_={"force": force, "process": process},
                 )
@@ -134,7 +138,7 @@ def crawl(
         # Update progress: 10%
         await task_manager.update_task_progress(task.task_uuid, 1, 10)
         
-        results = await crawler.crawl(source=source, force=force)
+        results = await crawler.crawl(source=source, force=force, fill_missing=fill_missing)
         
         # Update progress: 30%
         await task_manager.update_task_progress(task.task_uuid, 3, 10)
@@ -145,7 +149,7 @@ def crawl(
                     run = await db.get(CrawlRun, run_id)
                     if run:
                         run.status = "completed"
-                        run.finished_at = datetime.now()
+                        run.finished_at = datetime.now(timezone.utc)
                         run.new_reports = 0
                         run.processed_reports = 0
                         run.total_records = 0
@@ -297,7 +301,7 @@ def crawl(
                 run = await db.get(CrawlRun, run_id)
                 if run:
                     run.status = "completed"
-                    run.finished_at = datetime.now()
+                    run.finished_at = datetime.now(timezone.utc)
                     run.new_reports = len(results)
                     run.processed_reports = len(processed) if process else 0
                     run.total_records = total_records if process and processed else 0
@@ -359,7 +363,7 @@ def crawl(
                     run = await db.get(CrawlRun, run_id)
                     if run:
                         run.status = "cancelled"
-                        run.finished_at = datetime.now()
+                        run.finished_at = datetime.now(timezone.utc)
                         run.error_message = "Interrupted by user (Ctrl+C)"
                         await db.commit()
             
@@ -391,7 +395,7 @@ def crawl(
                     run = await db.get(CrawlRun, run_id)
                     if run:
                         run.status = "failed"
-                        run.finished_at = datetime.now()
+                        run.finished_at = datetime.now(timezone.utc)
                         run.error_message = str(e)
                         await db.commit()
             
@@ -514,7 +518,7 @@ def generate_report(
                 raise ValueError(f"Country not found: {country}")
             
             # Set time range
-            period_end = datetime.now()
+            period_end = datetime.now(timezone.utc)
             period_start = period_end - timedelta(days=days)
             
             # Check if there's any data in the requested time range
@@ -536,6 +540,8 @@ def generate_report(
                 latest_date = latest_result.scalar()
                 
                 if latest_date:
+                    if latest_date.tzinfo is None:
+                        latest_date = latest_date.replace(tzinfo=timezone.utc)
                     # Adjust period to use the latest available data
                     period_end = latest_date
                     period_start = period_end - timedelta(days=days)
@@ -1050,7 +1056,7 @@ def run(
 
             # 如果没有指定时间范围，使用最近90天的数据
             if period_start is None or period_end is None:
-                period_end = datetime.now()
+                period_end = datetime.now(timezone.utc)
                 period_start = period_end - timedelta(days=90)
                 console.print(f"  Using default time range: last 90 days")
             else:
