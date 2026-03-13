@@ -12,11 +12,11 @@ from pathlib import Path
 import typer
 from rich.console import Console
 from rich.progress import Progress
-from sqlalchemy import select
+from sqlalchemy import select, func
 
 from src.core import get_config, get_database, get_logger, init_app
 from src.core.task_manager import task_manager
-from src.domain import Country, Disease, DiseaseRecord, ReportType, CrawlRun, TaskType, TaskPriority, TaskStatus, Task
+from src.domain import Country, Disease, DiseaseRecord, ReportType, ReportStatus, CrawlRun, TaskType, TaskPriority, TaskStatus, Task
 from src.data.crawlers import ChinaCDCCrawler
 from src.data.processors import DataProcessor
 from src.generation import ReportGenerator
@@ -425,59 +425,398 @@ def generate_report(
     report_type: str = typer.Option("weekly", help="Report type (daily/weekly/monthly)"),
     days: int = typer.Option(7, help="Number of days to include"),
     send_email: bool = typer.Option(False, help="Send report via email"),
+    enable_review: bool = typer.Option(True, help="Enable AI content review"),
 ):
     """
-    生成疾病监测报告
+    Generate disease surveillance report with AI analysis
     """
+    # Task variables for signal handling
+    task = None
+    report_id = None
+    task_cancelled = False
+    
+    def signal_handler(signum, frame):
+        """Handle SIGINT (Ctrl+C) and SIGTERM signals"""
+        nonlocal task_cancelled
+        task_cancelled = True
+        console.print("\n[yellow]⚠️  Cancellation requested... cleaning up...[/yellow]")
+    
+    # Register signal handlers
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+    
     async def _generate():
+        nonlocal task, report_id
+        
         await init_app()
         
-        console.print(f"[bold blue]Generating {report_type} report for {country}...[/bold blue]")
+        # Create task
+        task_name = f"Generate {report_type.upper()} Report for {country}"
+        task_description = f"Period: {days} days, Review: {'Yes' if enable_review else 'No'}, Email: {'Yes' if send_email else 'No'}"
+        
+        task = await task_manager.create_task(
+            task_type=TaskType.GENERATE_REPORT,
+            task_name=task_name,
+            description=task_description,
+            priority=TaskPriority.NORMAL,
+            input_data={
+                "country": country,
+                "report_type": report_type,
+                "days": days,
+                "send_email": send_email,
+                "enable_review": enable_review,
+            }
+        )
+        
+        console.print(f"[bold blue]🚀 Starting AI report generation for {country}...[/bold blue]")
+        console.print(f"[dim]Task UUID: {task.task_uuid}[/dim]")
+        
+        # Log task start
+        await task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="info",
+            title="Report Generation Started",
+            content=f"Generating {report_type} report for {country} ({days} days)",
+            content_type="text"
+        )
+        
+        # Update to RUNNING
+        await task_manager.update_task_status(task.task_uuid, TaskStatus.RUNNING)
+        
+        # Update progress: 5%
+        await task_manager.update_task_progress(task.task_uuid, 1, 20)
         
         async with get_database() as db:
-            # 获取国家
+            # ========== Phase 1: Data Preparation (5-15%) ==========
+            console.print(f"\n[bold cyan]Phase 1/5: Preparing data...[/bold cyan]")
+            await task_manager.add_workbook_entry(
+                task.task_uuid,
+                entry_type="info",
+                title="Phase 1/5: Data Preparation",
+                content="Fetching country information and disease records...",
+                content_type="text"
+            )
+            
+            # Get country
             country_query = select(Country).where(Country.code == country)
             country_result = await db.execute(country_query)
             country_obj = country_result.scalar_one_or_none()
             
             if not country_obj:
+                await task_manager.add_workbook_entry(
+                    task.task_uuid,
+                    entry_type="error",
+                    title="Country Not Found",
+                    content=f"Country code '{country}' does not exist in database",
+                    content_type="text"
+                )
                 console.print(f"[red]Country not found: {country}[/red]")
-                return
+                raise ValueError(f"Country not found: {country}")
             
-            # 设置时间范围
+            # Set time range
             period_end = datetime.now()
             period_start = period_end - timedelta(days=days)
             
-            # 获取报告类型
+            # Check if there's any data in the requested time range
+            data_check_query = select(func.count()).select_from(DiseaseRecord).where(
+                DiseaseRecord.country_id == country_obj.id,
+                DiseaseRecord.time >= period_start,
+                DiseaseRecord.time <= period_end,
+            )
+            data_check_result = await db.execute(data_check_query)
+            data_count = data_check_result.scalar()
+            
+            # If no data in range, try to find the actual data range
+            if data_count == 0:
+                # Get the latest data date
+                latest_query = select(func.max(DiseaseRecord.time)).where(
+                    DiseaseRecord.country_id == country_obj.id
+                )
+                latest_result = await db.execute(latest_query)
+                latest_date = latest_result.scalar()
+                
+                if latest_date:
+                    # Adjust period to use the latest available data
+                    period_end = latest_date
+                    period_start = period_end - timedelta(days=days)
+                    
+                    warning_msg = f"No data in requested period. Using latest available data: {period_start.date()} to {period_end.date()}"
+                    console.print(f"[yellow]⚠️  {warning_msg}[/yellow]")
+                    
+                    await task_manager.add_workbook_entry(
+                        task.task_uuid,
+                        entry_type="warning",
+                        title="Time Range Adjusted",
+                        content=warning_msg,
+                        content_type="text"
+                    )
+                else:
+                    error_msg = f"No disease data found for country {country_obj.name}. Please run crawl command first."
+                    await task_manager.add_workbook_entry(
+                        task.task_uuid,
+                        entry_type="error",
+                        title="No Data Available",
+                        content=error_msg,
+                        content_type="text"
+                    )
+                    console.print(f"[red]✗ {error_msg}[/red]")
+                    raise ValueError(error_msg)
+            
+            # Get report type enum
             report_type_enum = ReportType[report_type.upper()]
             
-            # 生成报告
+            await task_manager.add_workbook_entry(
+                task.task_uuid,
+                entry_type="success",
+                title="Data Preparation Complete",
+                content=f"Country: {country_obj.name}\nPeriod: {period_start.date()} to {period_end.date()}",
+                content_type="text"
+            )
+            
+            # Update progress: 15%
+            await task_manager.update_task_progress(task.task_uuid, 3, 20)
+            console.print(f"[green]✓ Data preparation complete[/green]")
+            
+            # ========== Phase 2: Report Generation with AI Analysis (15-80%) ==========
+            console.print(f"\n[bold cyan]Phase 2/5: AI analysis and content generation...[/bold cyan]")
+            await task_manager.add_workbook_entry(
+                task.task_uuid,
+                entry_type="info",
+                title="Phase 2/5: AI Analysis & Generation",
+                content="Starting multi-agent AI workflow (Analyst → Writer → Reviewer)...",
+                content_type="text"
+            )
+            
+            # Initialize report generator
+            from src.generation import ReportGenerator
             generator = ReportGenerator()
             
-            with Progress() as progress:
-                task = progress.add_task("[cyan]Generating report...", total=100)
+            # Progress callback for detailed tracking
+            generation_step = 0
+            async def ai_progress_callback(stage, current, total, message):
+                nonlocal generation_step
+                generation_step += 1
                 
-                report = await generator.generate(
-                    country_id=country_obj.id,
-                    report_type=report_type_enum,
-                    period_start=period_start,
-                    period_end=period_end,
-                    send_email=send_email,
+                # Map stages to progress 15-80%
+                stage_progress = {
+                    "data_extraction": 15,
+                    "analysis": 40,
+                    "writing": 60,
+                    "review": 75,
+                }
+                base_progress = stage_progress.get(stage, 15)
+                progress_pct = base_progress + int((current / total) * 10) if total > 0 else base_progress
+                await task_manager.update_task_progress(task.task_uuid, progress_pct // 5, 20)
+                
+                # Log every major milestone
+                if current % 5 == 0 or current == total:
+                    await task_manager.add_workbook_entry(
+                        task.task_uuid,
+                        entry_type="info",
+                        title=f"{stage.replace('_', ' ').title()} Progress",
+                        content=f"{message} ({current}/{total})",
+                        content_type="text"
+                    )
+            
+            # Generate report with callback
+            report = await generator.generate(
+                country_id=country_obj.id,
+                report_type=report_type_enum,
+                period_start=period_start,
+                period_end=period_end,
+                send_email=send_email,
+                enable_review=enable_review,
+                progress_callback=ai_progress_callback,
+                db=db,
+            )
+            
+            report_id = report.id
+            
+            if report.status == ReportStatus.FAILED:
+                await task_manager.add_workbook_entry(
+                    task.task_uuid,
+                    entry_type="error",
+                    title="Report Generation Failed",
+                    content=f"Error: {report.error_message or 'Unknown error'}",
+                    content_type="text"
+                )
+                raise Exception(f"Report generation failed: {report.error_message}")
+            
+            await task_manager.add_workbook_entry(
+                task.task_uuid,
+                entry_type="success",
+                title="AI Generation Complete",
+                content=f"Report ID: {report.id}\nSections: {len(report.sections) if hasattr(report, 'sections') else 'N/A'}",
+                content_type="text"
+            )
+            
+            # Update progress: 80%
+            await task_manager.update_task_progress(task.task_uuid, 16, 20)
+            console.print(f"[green]✓ AI analysis and generation complete[/green]")
+            
+            # ========== Phase 3: Formatting & Export (80-90%) ==========
+            console.print(f"\n[bold cyan]Phase 3/5: Formatting and exporting...[/bold cyan]")
+            await task_manager.add_workbook_entry(
+                task.task_uuid,
+                entry_type="info",
+                title="Phase 3/5: Format & Export",
+                content="Generating Markdown, HTML, and PDF outputs...",
+                content_type="text"
+            )
+            
+            # Progress is tracked internally by generator
+            # Update progress: 90%
+            await task_manager.update_task_progress(task.task_uuid, 18, 20)
+            
+            output_files = []
+            if report.markdown_path:
+                output_files.append(f"Markdown: {report.markdown_path}")
+            if report.html_path:
+                output_files.append(f"HTML: {report.html_path}")
+            if report.pdf_path:
+                output_files.append(f"PDF: {report.pdf_path}")
+            
+            await task_manager.add_workbook_entry(
+                task.task_uuid,
+                entry_type="success",
+                title="Export Complete",
+                content="\n".join(output_files) if output_files else "No files exported",
+                content_type="text"
+            )
+            
+            console.print(f"[green]✓ Formatting and export complete[/green]")
+            
+            # ========== Phase 4: Email Notification (90-95%) ==========
+            if send_email:
+                console.print(f"\n[bold cyan]Phase 4/5: Sending email...[/bold cyan]")
+                await task_manager.add_workbook_entry(
+                    task.task_uuid,
+                    entry_type="info",
+                    title="Phase 4/5: Email Notification",
+                    content="Sending report via email...",
+                    content_type="text"
                 )
                 
-                progress.update(task, advance=100)
+                # Email is sent during generation
+                await task_manager.add_workbook_entry(
+                    task.task_uuid,
+                    entry_type="success",
+                    title="Email Sent",
+                    content="Report successfully delivered",
+                    content_type="text"
+                )
+                console.print(f"[green]✓ Email sent[/green]")
             
-            console.print(f"[green]✓ Report generated successfully![/green]")
-            console.print(f"  ID: {report.id}")
+            # Update progress: 95%
+            await task_manager.update_task_progress(task.task_uuid, 19, 20)
+            
+            # ========== Phase 5: Finalization (95-100%) ==========
+            console.print(f"\n[bold cyan]Phase 5/5: Finalizing...[/bold cyan]")
+            await task_manager.add_workbook_entry(
+                task.task_uuid,
+                entry_type="success",
+                title="Report Generation Completed",
+                content=f"Report ID: {report.id}\nStatus: {report.status}\nFiles: {len(output_files)}",
+                content_type="text"
+            )
+            
+            # Update task output
+            async with get_database() as db:
+                task_obj = await db.get(Task, task.id)
+                if task_obj:
+                    task_obj.output_data = {
+                        "report_id": report.id,
+                        "status": str(report.status),
+                        "files": output_files,
+                        "sections_count": len(report.sections) if hasattr(report, 'sections') else 0,
+                    }
+                    await db.commit()
+            
+            # Update progress to 100%
+            await task_manager.update_task_progress(task.task_uuid, 20, 20)
+            
+            await task_manager.update_task_status(
+                task.task_uuid,
+                TaskStatus.COMPLETED
+            )
+            
+            console.print(f"\n[bold green]✨ Report generation completed successfully![/bold green]")
+            console.print(f"  Report ID: {report.id}")
             console.print(f"  Status: {report.status}")
-            
-            if report.markdown_path:
-                console.print(f"  Markdown: {report.markdown_path}")
-            if report.html_path:
-                console.print(f"  HTML: {report.html_path}")
-            if report.pdf_path:
-                console.print(f"  PDF: {report.pdf_path}")
+            if output_files:
+                for file_info in output_files:
+                    console.print(f"  {file_info}")
     
+    async def _generate_with_error_handling():
+        try:
+            await _generate()
+        except KeyboardInterrupt:
+            # Handle Ctrl+C interruption
+            console.print("\n[yellow]⚠️  Report generation interrupted by user[/yellow]")
+            
+            # Update task status to CANCELLED
+            if task:
+                await task_manager.add_workbook_entry(
+                    task.task_uuid,
+                    entry_type="warning",
+                    title="Task Cancelled",
+                    content="Report generation was interrupted by user (Ctrl+C)",
+                    content_type="text"
+                )
+                
+                await task_manager.update_task_status(
+                    task.task_uuid,
+                    TaskStatus.CANCELLED,
+                    error_message="Interrupted by user"
+                )
+            
+            # Update report status if created
+            if report_id:
+                async with get_database() as db:
+                    from src.domain import Report, ReportStatus
+                    report = await db.get(Report, report_id)
+                    if report:
+                        report.status = ReportStatus.CANCELLED
+                        report.error_message = "Interrupted by user"
+                        await db.commit()
+            
+            console.print("[yellow]✓ Task cancelled and status updated[/yellow]")
+            sys.exit(130)
+            
+        except Exception as e:
+            # Handle other errors
+            console.print(f"\n[red]✗ Report generation failed: {e}[/red]")
+            
+            # Update task status to FAILED
+            if task:
+                await task_manager.add_workbook_entry(
+                    task.task_uuid,
+                    entry_type="error",
+                    title="Task Failed",
+                    content=f"Error: {str(e)}",
+                    content_type="text"
+                )
+                
+                await task_manager.update_task_status(
+                    task.task_uuid,
+                    TaskStatus.FAILED,
+                    error_message=str(e)
+                )
+            
+            # Update report status if created
+            if report_id:
+                async with get_database() as db:
+                    from src.domain import Report, ReportStatus
+                    report = await db.get(Report, report_id)
+                    if report:
+                        report.status = ReportStatus.FAILED
+                        report.error_message = str(e)
+                        await db.commit()
+            
+            logger.error(f"Report generation failed: {e}")
+            raise
+
+    asyncio.run(_generate_with_error_handling())
     asyncio.run(_generate())
 
 

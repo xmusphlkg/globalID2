@@ -59,7 +59,7 @@ class CrawlRawPage(BaseModel):
     content_hash: Mapped[Optional[str]] = mapped_column(String(64), comment="内容哈希")
     content_type: Mapped[Optional[str]] = mapped_column(String(50), comment="内容类型")
     fetched_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, comment="抓取时间")
-    source: Mapped[Optional[str]] = mapped_column(String(50), comment="数据源")
+    source: Mapped[Optional[str]] = mapped_column(String(100), comment="数据源")
     metadata_ = Column("metadata", JSON, nullable=False, default=dict, comment="额外元数据")
 
     run: Mapped["CrawlRun"] = relationship("CrawlRun", back_populates="raw_pages")

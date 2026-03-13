@@ -64,7 +64,8 @@ class DatabaseRebuilder:
             (self.mapping_file, f"{self.country_code}"),
         ]
         
-        # 检查并添加英文映射（独立目录，但文件名统一）
+        # 检查并添加英文映射（独立目录，使用 {country_code}_EN 格式）
+        # 英文映射使用 CN_EN 这样的格式存储，与中文映射分开
         en_mapping_file = ROOT / "configs/en/disease_mapping.csv"
         if en_mapping_file.exists():
             self.mapping_files.append((en_mapping_file, f"{self.country_code}_EN"))
@@ -108,7 +109,7 @@ class DatabaseRebuilder:
             
             # 根据配置执行步骤
             step_num = 1
-            total_steps = sum(self.rebuild_options.values()) + 1  # +1 for verify
+            total_steps = sum(self.rebuild_options.values()) + 2  # +1 for verify, +1 for ensure_country
             
             # Step: Clear existing data
             if self.rebuild_options['clear_data']:
@@ -116,10 +117,21 @@ class DatabaseRebuilder:
                 await self.clear_data(db)
                 step_num += 1
             
+            # Step: Ensure country exists
+            logger.info(f"\n🌍 Step {step_num}/{total_steps}: Ensuring country data exists...")
+            await self.ensure_country_exists(db)
+            step_num += 1
+            
             # Step: Import standard diseases
             if self.rebuild_options['import_standard']:
                 logger.info(f"\n📚 Step {step_num}/{total_steps}: Importing standard diseases...")
                 await self.import_standard_diseases(db)
+                step_num += 1
+            
+            # Step: Sync diseases table (must be before disease_mappings due to foreign key)
+            if self.rebuild_options['sync_diseases']:
+                logger.info(f"\n🔄 Step {step_num}/{total_steps}: Synchronizing diseases table...")
+                await self.sync_diseases_table(db)
                 step_num += 1
             
             # Step: Import disease mappings
@@ -128,18 +140,17 @@ class DatabaseRebuilder:
                 await self.import_disease_mappings(db)
                 step_num += 1
             
-            # Step: Sync diseases table
-            if self.rebuild_options['sync_diseases']:
-                logger.info(f"\n🔄 Step {step_num}/{total_steps}: Synchronizing diseases table...")
-                await self.sync_diseases_table(db)
-                step_num += 1
-            
             # Step: Import historical data
             if self.rebuild_options['import_history']:
                 logger.info(f"\n📊 Step {step_num}/{total_steps}: Importing historical data...")
                 await self.import_history_data(db)
                 step_num += 1
-            
+
+            # Step: Cleanup suggestions
+            logger.info(f"\n🧹 Step {step_num}/{total_steps}: Cleaning up invalid suggestions...")
+            await self.cleanup_suggestions()
+            step_num += 1
+
             # Step: Verify results
             logger.info(f"\n✅ Step {step_num}/{total_steps}: Verifying data...")
             await self.verify_results(db)
@@ -344,6 +355,79 @@ class DatabaseRebuilder:
         await db.commit()
         logger.info("✓ Data clearing completed")
     
+    async def ensure_country_exists(self, db):
+        """Ensure country data exists in database"""
+        # Check if country exists
+        result = await db.execute(text("SELECT id FROM countries WHERE code = :code"), {"code": self.country_code})
+        country = result.fetchone()
+        
+        if country:
+            logger.info(f"  ✓ Country {self.country_code} already exists (id: {country[0]})")
+            return
+        
+        # Country doesn't exist, create it
+        country_configs = {
+            'CN': {
+                'name': '中国',
+                'name_en': 'China',
+                'name_local': '中国',
+                'language': 'zh-CN',
+                'timezone': 'Asia/Shanghai',
+            },
+            'US': {
+                'name': '美国',
+                'name_en': 'United States',
+                'name_local': 'United States',
+                'language': 'en-US',
+                'timezone': 'America/New_York',
+            },
+            'AU': {
+                'name': '澳大利亚',
+                'name_en': 'Australia',
+                'name_local': 'Australia',
+                'language': 'en-AU',
+                'timezone': 'Australia/Sydney',
+            },
+            'JP': {
+                'name': '日本',
+                'name_en': 'Japan',
+                'name_local': '日本',
+                'language': 'ja-JP',
+                'timezone': 'Asia/Tokyo',
+            },
+        }
+        
+        # Get config or use default
+        config = country_configs.get(self.country_code, {
+            'name': self.country_code,
+            'name_en': self.country_code,
+            'name_local': self.country_code,
+            'language': 'en',
+            'timezone': 'UTC',
+        })
+        
+        await db.execute(text("""
+            INSERT INTO countries (
+                code, name, name_en, name_local, language, timezone,
+                crawler_config, parser_config, disease_mapping_rules, report_config,
+                is_active, metadata, created_at, updated_at
+            ) VALUES (
+                :code, :name, :name_en, :name_local, :language, :timezone,
+                '{}'::json, '{}'::json, '{}'::json, '{}'::json,
+                true, '{}'::json, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+            )
+        """), {
+            'code': self.country_code,
+            'name': config['name'],
+            'name_en': config['name_en'],
+            'name_local': config['name_local'],
+            'language': config['language'],
+            'timezone': config['timezone'],
+        })
+        
+        await db.commit()
+        logger.info(f"  ✓ Created country {self.country_code} ({config['name_en']})")
+    
     async def import_standard_diseases(self, db):
         """Import standard disease library"""
         if not self.standard_file.exists():
@@ -352,21 +436,17 @@ class DatabaseRebuilder:
         df = pd.read_csv(self.standard_file).fillna('')
         logger.info(f"  Read {len(df):,} standard diseases")
         
-        # Allow NULL in category column
-        await db.execute(text("""
-            ALTER TABLE standard_diseases 
-            ALTER COLUMN category DROP NOT NULL
-        """))
+        # Note: category column can be NULL in new schema
         
         inserted = 0
         for _, row in df.iterrows():
             await db.execute(text("""
                 INSERT INTO standard_diseases 
                 (disease_id, standard_name_en, standard_name_zh, category, icd_10, icd_11, 
-                 description, source, is_active)
+                 description, source, metadata, is_active, created_at, updated_at)
                 VALUES 
                 (:disease_id, :name_en, :name_zh, :category, :icd_10, :icd_11, 
-                 :description, :source, true)
+                 :description, :source, '{}'::json, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 ON CONFLICT (disease_id) DO UPDATE SET
                     standard_name_en = EXCLUDED.standard_name_en,
                     standard_name_zh = EXCLUDED.standard_name_zh,
@@ -395,6 +475,14 @@ class DatabaseRebuilder:
         """Import disease mapping relationships (支持多语言映射)"""
         total_inserted = 0
         
+        # 首先确保所有需要的country_code都存在（包括语言变体如CN_EN）
+        for mapping_file, country_code in self.mapping_files:
+            if not mapping_file.exists():
+                continue
+            
+            # 检查并创建country_code（如果不存在）
+            await self._ensure_country_code_exists(db, country_code)
+        
         # 处理所有映射文件（中文 + 英文）
         for mapping_file, country_code in self.mapping_files:
             if not mapping_file.exists():
@@ -410,6 +498,49 @@ class DatabaseRebuilder:
         await db.commit()
         logger.info(f"✓ Imported {total_inserted:,} total mapping relationships")
     
+    async def _ensure_country_code_exists(self, db, country_code: str):
+        """确保country_code存在（为语言变体创建虚拟记录）"""
+        # 检查是否已存在
+        result = await db.execute(
+            text("SELECT id FROM countries WHERE code = :code"),
+            {"code": country_code}
+        )
+        if result.fetchone():
+            return  # 已存在
+        
+        # 创建虚拟国家记录（如 CN_EN）
+        base_code = country_code.split('_')[0]  # CN_EN -> CN
+        language_suffix = country_code.split('_')[1] if '_' in country_code else ''
+        
+        config = {
+            'name': f"{base_code} ({language_suffix})" if language_suffix else base_code,
+            'name_en': f"{base_code} - {language_suffix} variant" if language_suffix else base_code,
+            'name_local': base_code,
+            'language': language_suffix.lower() if language_suffix else 'en',
+            'timezone': 'UTC',
+        }
+        
+        await db.execute(text("""
+            INSERT INTO countries (
+                code, name, name_en, name_local, language, timezone,
+                crawler_config, parser_config, disease_mapping_rules, report_config,
+                is_active, metadata, created_at, updated_at
+            ) VALUES (
+                :code, :name, :name_en, :name_local, :language, :timezone,
+                '{}'::json, '{}'::json, '{}'::json, '{}'::json,
+                true, '{}'::json, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+            )
+        """), {
+            'code': country_code,
+            'name': config['name'],
+            'name_en': config['name_en'],
+            'name_local': config['name_local'],
+            'language': config['language'],
+            'timezone': config['timezone'],
+        })
+        await db.commit()
+        logger.info(f"  ✓ Created virtual country code: {country_code}")
+    
     async def _import_single_mapping_file(self, db, df, country_code):
         """导入单个映射文件"""
         inserted = 0
@@ -420,6 +551,8 @@ class DatabaseRebuilder:
             ALTER COLUMN category DROP NOT NULL
         """))
         
+        # Note: category column can be NULL in new schema
+        
         inserted = 0
         for _, row in df.iterrows():
             disease_id = row['disease_id']
@@ -429,10 +562,10 @@ class DatabaseRebuilder:
             await db.execute(text("""
                 INSERT INTO disease_mappings 
                 (disease_id, country_code, local_name, is_primary, is_alias, priority, 
-                 category, source, is_active)
+                 usage_count, confidence_score, category, source, metadata, is_active, created_at, updated_at)
                 VALUES 
                 (:disease_id, :country, :local_name, true, false, 100, 
-                 :category, :source, true)
+                 0, 1.0, :category, :source, '{}'::json, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 ON CONFLICT (disease_id, country_code, local_name) DO UPDATE SET
                     is_primary = true,
                     category = EXCLUDED.category,
@@ -462,10 +595,10 @@ class DatabaseRebuilder:
                     await db.execute(text("""
                         INSERT INTO disease_mappings 
                         (disease_id, country_code, local_name, is_primary, is_alias, priority,
-                         category, source, is_active)
+                         usage_count, confidence_score, category, source, metadata, is_active, created_at, updated_at)
                         VALUES 
                         (:disease_id, :country, :alias, false, true, 50,
-                         :category, :source, true)
+                         0, 1.0, :category, :source, '{}'::json, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                         ON CONFLICT (disease_id, country_code, local_name) DO UPDATE SET
                             is_alias = true,
                             updated_at = CURRENT_TIMESTAMP
@@ -814,6 +947,54 @@ class DatabaseRebuilder:
                 return col
         return None
     
+    async def cleanup_suggestions(self):
+        """Cleanup invalid suggestions"""
+        # Import cleanup_suggestions function
+        import sys
+        from pathlib import Path
+        ROOT = Path(__file__).resolve().parents[1]
+        sys.path.insert(0, str(ROOT))
+
+        # Import and run cleanup_suggestions
+        from sqlalchemy import text
+        from src.core.database import get_session_maker
+
+        SessionMaker = get_session_maker()
+        async with SessionMaker() as db:
+            # 1. 删除空白建议
+            result = await db.execute(text(
+                "DELETE FROM disease_learning_suggestions "
+                "WHERE country_code = 'CN' AND COALESCE(local_name, '') = ''"
+            ))
+            blank_count = result.rowcount
+
+            # 2. 删除已有CN_EN映射的英文建议（清理所有country_code）
+            result = await db.execute(text('''
+                DELETE FROM disease_learning_suggestions
+                WHERE id IN (
+                    SELECT dls.id
+                    FROM disease_learning_suggestions dls
+                    JOIN disease_mappings dm ON dls.local_name = dm.local_name
+                    WHERE dm.country_code = 'CN_EN'
+                      AND dls.status = 'pending'
+                )
+            '''))
+            en_count = result.rowcount
+
+            await db.commit()
+
+            logger.info(f'  ✓ Deleted blank suggestions: {blank_count} records')
+            logger.info(f'  ✓ Deleted mapped English suggestions: {en_count} records')
+            logger.info(f'  ✓ Total deleted: {blank_count + en_count} records')
+
+            # 查看剩余
+            result = await db.execute(text(
+                "SELECT COUNT(*) FROM disease_learning_suggestions "
+                "WHERE country_code = 'CN' AND status = 'pending'"
+            ))
+            remaining = result.scalar()
+            logger.info(f'  📊 Remaining pending suggestions: {remaining} records')
+
     async def verify_results(self, db):
         """Verify import results"""
         logger.info("\n✅ Step 6/6: Verifying data...")

@@ -362,7 +362,7 @@ class ChinaCDCCrawler(BaseCrawler):
                     date=date_obj,
                     year_month=year_month,
                     metadata={
-                        "source": "National Disease Control and Prevention Administration",
+                        "source": "Gov Data",
                         "origin": "CN",
                         "language": "zh",
                     },
