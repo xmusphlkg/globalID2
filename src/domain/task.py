@@ -108,8 +108,8 @@ class Task(BaseModel):
     completed_steps: Mapped[int] = mapped_column(Integer, default=0, comment="Number of completed steps")
     
     # Timing information
-    started_at: Mapped[Optional[datetime]] = mapped_column(DateTime, comment="Task start time")
-    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, comment="Task completion time")
+    started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), comment="Task start time")
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), comment="Task completion time")
     estimated_duration: Mapped[Optional[int]] = mapped_column(Integer, comment="Estimated duration in seconds")
     actual_duration: Mapped[Optional[int]] = mapped_column(Integer, comment="Actual duration in seconds")
     

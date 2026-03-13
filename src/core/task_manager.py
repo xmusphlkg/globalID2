@@ -4,7 +4,7 @@ GlobalID V2 Task Manager
 任务管理器：管理任务的创建、执行、追踪和恢复
 """
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
 from sqlalchemy import select, and_
 from sqlalchemy.orm import selectinload
@@ -100,9 +100,9 @@ class TaskManager:
             task.status = status
             
             if status == TaskStatus.RUNNING and not task.started_at:
-                task.started_at = datetime.now()
+                task.started_at = datetime.now(timezone.utc)
             elif status in [TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED]:
-                task.completed_at = datetime.now()
+                task.completed_at = datetime.now(timezone.utc)
                 if task.started_at:
                     task.actual_duration = int((task.completed_at - task.started_at).total_seconds())
             

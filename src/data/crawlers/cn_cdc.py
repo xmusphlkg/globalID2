@@ -143,7 +143,12 @@ class ChinaCDCCrawler(BaseCrawler):
         logger.info(f"总计发现 {len(results)} 个报告")
         return results
     
-    async def check_new_data(self, list_results: List[CrawlerResult]) -> Dict[str, List[CrawlerResult]]:
+    async def check_new_data(
+        self,
+        list_results: List[CrawlerResult],
+        *,
+        fill_missing: bool = False,
+    ) -> Dict[str, List[CrawlerResult]]:
         """
         第二阶段：检查哪些数据是新的（与数据库对比）
         
@@ -169,6 +174,20 @@ class ChinaCDCCrawler(BaseCrawler):
                 )
             )
             max_time = result.scalar()
+
+            existing_year_months: Set[str] = set()
+            if fill_missing:
+                # Collect existing months to enable "gap backfill"
+                months_result = await session.execute(
+                    select(func.date_trunc("month", DiseaseRecord.time))
+                    .distinct()
+                    .where(DiseaseRecord.time <= today)
+                )
+                for (month_dt,) in months_result.fetchall():
+                    if month_dt is None:
+                        continue
+                    # Normalize to the same format used by crawler results: "YYYY Month"
+                    existing_year_months.add(month_dt.strftime("%Y %B"))
         
         if max_time:
             max_date = max_time.date()
@@ -177,7 +196,7 @@ class ChinaCDCCrawler(BaseCrawler):
             max_date = None
             logger.info("数据库为空，将爬取所有数据")
         
-        # 筛选出时间晚于数据库最新时间的报告
+        # 筛选出时间晚于数据库最新时间的报告（可选：补齐缺失月份）
         new_results = []
         existing_results = []
         
@@ -188,13 +207,18 @@ class ChinaCDCCrawler(BaseCrawler):
             
             result_date = result.date.date() if hasattr(result.date, 'date') else result.date
             
+            # If backfill is enabled, also fetch reports whose month is missing in DB.
+            is_missing_month = fill_missing and (result.year_month is not None) and (result.year_month not in existing_year_months)
+
             # 如果数据库为空，或报告时间晚于数据库最新时间，则需要爬取
-            if max_date is None or result_date > max_date:
+            if max_date is None or result_date > max_date or is_missing_month:
                 new_results.append(result)
             else:
                 existing_results.append(result)
         
-        logger.info(f"发现 {len(new_results)} 个新报告需要爬取（时间 > {max_date}）")
+        logger.info(
+            f"发现 {len(new_results)} 个报告需要爬取（新数据或补缺；max_date={max_date}；fill_missing={fill_missing}）"
+        )
         if new_results:
             # 按月份汇总新数据
             new_months = sorted(set(r.year_month for r in new_results if r.year_month))
@@ -205,7 +229,13 @@ class ChinaCDCCrawler(BaseCrawler):
             'existing': existing_results
         }
     
-    async def crawl(self, source: str = "all", force: bool = False, **kwargs) -> List[CrawlerResult]:
+    async def crawl(
+        self,
+        source: str = "all",
+        force: bool = False,
+        fill_missing: bool = False,
+        **kwargs,
+    ) -> List[CrawlerResult]:
         """
         智能爬取流程（参考1.0版本设计）：
         1. 先获取列表（轻量级）
@@ -234,7 +264,7 @@ class ChinaCDCCrawler(BaseCrawler):
             new_results = list_results
         else:
             logger.info("[阶段3/3] 检查新数据...")
-            check_result = await self.check_new_data(list_results)
+            check_result = await self.check_new_data(list_results, fill_missing=fill_missing)
             new_results = check_result['new']
         
         if not new_results:

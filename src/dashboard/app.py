@@ -67,6 +67,28 @@ except Exception as e:
     country_list = []
     country_error = str(e)
 
+# Pick a sensible default country (the one with most records).
+# This avoids landing on a country entry that has no disease_records.
+if country_list and not st.session_state.get("sel_country"):
+    try:
+        top_country = run_query(
+            """
+            SELECT c.name
+            FROM disease_records r
+            JOIN countries c ON c.id = r.country_id
+            GROUP BY c.name
+            ORDER BY COUNT(*) DESC
+            LIMIT 1
+            """
+        )
+        if not top_country.empty and str(top_country.iloc[0, 0]) in country_list:
+            st.session_state["sel_country"] = str(top_country.iloc[0, 0])
+        elif "中国" in country_list:
+            st.session_state["sel_country"] = "中国"
+    except Exception:
+        # If anything goes wrong, fall back to the selectbox default.
+        pass
+
 # Render the sidebar using the UI helper; this returns the selected
 # page/navigation labels and the selected country (name + id).
 page, nav_labels, sel_country, sel_country_id = render_sidebar(t, country_list, c_df, country_error)
@@ -711,9 +733,11 @@ else:
             col1.metric(t("total_records"), f"{row['total_records']:,}")
             col2.metric(t("diseases_count"), f"{row['unique_diseases']}")
             # 只显示日期，不显示时间
-            earliest = pd.to_datetime(row['earliest_date']).strftime('%Y-%m-%d')
-            latest = pd.to_datetime(row['latest_date']).strftime('%Y-%m-%d')
-            date_range = f"{earliest} to {latest}"
+            earliest_ts = pd.to_datetime(row["earliest_date"], errors="coerce")
+            latest_ts = pd.to_datetime(row["latest_date"], errors="coerce")
+            earliest = earliest_ts.strftime("%Y-%m-%d") if pd.notna(earliest_ts) else "N/A"
+            latest = latest_ts.strftime("%Y-%m-%d") if pd.notna(latest_ts) else "N/A"
+            date_range = f"{earliest} to {latest}" if earliest != "N/A" and latest != "N/A" else "N/A"
             col3.metric(t("date_range"), date_range)
         
         # 数据质量检查

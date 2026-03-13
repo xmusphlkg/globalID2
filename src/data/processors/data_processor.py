@@ -505,6 +505,9 @@ class DataProcessor:
                 updated_count = 0
                 skipped_count = 0
                 
+                # 用于跟踪同一批次中已处理的记录，避免重复插入导致 UniqueViolationError
+                processed_keys = set()
+                
                 # 使用 no_autoflush 避免过早的 flush
                 with db.no_autoflush:
                     for _, row in df.iterrows():
@@ -528,8 +531,21 @@ class DataProcessor:
                             skipped_count += 1
                             continue
                         
+                        # 检查是否在此批次中已处理
+                        record_time = pd.to_datetime(row['Date'])
+                        if record_time.tzinfo is None:
+                            record_time = record_time.tz_localize('UTC')
+                        record_key = (record_time, disease.id, country.id)
+                        if record_key in processed_keys:
+                            logger.debug(f"跳过重复记录: {record_key}")
+                            skipped_count += 1
+                            continue
+                        processed_keys.add(record_key)
+                        
                         # 检查记录是否已存在（基于复合主键：time, disease_id, country_id）
                         record_time = pd.to_datetime(row['Date'])
+                        if record_time.tzinfo is None:
+                            record_time = record_time.tz_localize('UTC')
                         existing_query = select(DiseaseRecord).where(
                             DiseaseRecord.time == record_time,
                             DiseaseRecord.disease_id == disease.id,
