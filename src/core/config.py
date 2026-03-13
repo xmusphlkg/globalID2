@@ -146,11 +146,32 @@ class AppSettingsConfig(BaseSettings):
 class ReportSettings(BaseSettings):
     """报告配置"""
 
+    model_config = SettingsConfigDict(env_prefix="")
+
     output_dir: str = Field(default="reports", description="报告输出目录")
     template_dir: str = Field(default="templates", description="模板目录")
     max_retries: int = Field(default=3, description="最大重试次数")
     enable_email: bool = Field(default=False, description="是否启用邮件发送")
-    max_parallel_tasks: int = Field(default=5, description="最大并行任务数")
+    max_parallel_tasks: int = Field(
+        default=10,
+        alias="MAX_PARALLEL_TASKS",
+        description="AI并行任务数"
+    )
+
+
+class CrawlerSettings(BaseSettings):
+    """爬虫配置"""
+
+    model_config = SettingsConfigDict(env_prefix="")
+
+    max_concurrent: int = Field(
+        default=2,
+        alias="MAX_CRAWLER_CONCURRENT",
+        description="爬虫并发数"
+    )
+    timeout: int = Field(default=30, description="请求超时时间（秒）")
+    max_retries: int = Field(default=3, description="最大重试次数")
+    delay: float = Field(default=1.0, description="请求延迟（秒）")
 
 
 class AppSettings(BaseSettings):
@@ -187,6 +208,7 @@ class AppSettings(BaseSettings):
     email: EmailSettings = Field(default_factory=EmailSettings)
     app: AppSettingsConfig = Field(default_factory=AppSettingsConfig)
     report: ReportSettings = Field(default_factory=ReportSettings)
+    crawler: CrawlerSettings = Field(default_factory=CrawlerSettings)
     
     @field_validator("log_dir", "data_dir", "raw_data_dir", "processed_data_dir", "cache_dir")
     @classmethod

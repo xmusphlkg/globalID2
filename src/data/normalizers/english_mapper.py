@@ -44,10 +44,13 @@ class EnglishDiseaseMapper(MultiLanguageDiseaseMapper):
     所有映射数据从CSV文件导入后存储在数据库中。
     使用 generate_english_mappings.py 生成CSV，
     使用 full_rebuild_database.py 导入到数据库。
+    
+    注意：英文映射使用 {country_code}_EN 格式存储（如 CN_EN），
+    与中文映射（CN）分开存储。
     """
     
     def __init__(self, country_code: str = "CN"):
-        # 英文映射器使用英语
+        # 英文映射器使用 {country_code}_EN 格式
         super().__init__(country_code=country_code, language_code="en")
         logger.info(f"English disease mapper initialized for {country_code} (loading from database)")
     

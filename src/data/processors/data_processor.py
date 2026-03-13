@@ -13,6 +13,7 @@ import os
 
 import pandas as pd
 from bs4 import BeautifulSoup
+import asyncpg
 
 from src.core import get_logger
 from src.core.database import get_db
@@ -39,25 +40,25 @@ class DataProcessor:
     def __init__(
         self,
         output_dir: Optional[Path] = None,
-        country_code: str = "cn",
+        country_code: str = "CN",
     ):
         """
         初始化数据处理器
         
         Args:
             output_dir: 输出目录
-            country_code: 国家代码（cn/us/uk等）
+            country_code: 国家代码（CN/US/UK等）
         """
         self.output_dir = output_dir or Path("data/processed")
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        self.country_code = country_code
+        self.country_code = country_code.upper()  # 确保大写
         
         # 初始化解析器和映射器
         self.parser = HTMLTableParser()
         # 注意：disease_mapper 将在异步方法中初始化
         
-        # Get max concurrent tasks from env
-        self.max_concurrent = int(os.getenv('MAX_PARALLEL_TASKS', '5'))
+        # Get max concurrent tasks from env (降低并发数避免死锁)
+        self.max_concurrent = int(os.getenv('MAX_CRAWLER_CONCURRENT', '2'))
         
         logger.debug(f"Data processor initialized (country: {country_code}, max_concurrent: {self.max_concurrent})")
     
@@ -504,72 +505,85 @@ class DataProcessor:
                 updated_count = 0
                 skipped_count = 0
                 
-                for _, row in df.iterrows():
-                    # 检查必需字段
-                    if 'disease_id' not in df.columns or pd.isna(row.get('disease_id')):
-                        skipped_count += 1
-                        continue
-                    
-                    if 'Date' not in df.columns or pd.isna(row.get('Date')):
-                        skipped_count += 1
-                        continue
-                    
-                    # disease_id是疾病代码（如"D001"），需要查询实际的数据库ID
-                    disease_code = str(row['disease_id'])
-                    disease_query = select(Disease).where(Disease.name == disease_code)
-                    disease_result = await db.execute(disease_query)
-                    disease = disease_result.scalar_one_or_none()
-                    
-                    if not disease:
-                        logger.warning(f"疾病不存在: {disease_code}")
-                        skipped_count += 1
-                        continue
-                    
-                    # 检查记录是否已存在（基于复合主键：time, disease_id, country_id）
-                    record_time = pd.to_datetime(row['Date'])
-                    existing_query = select(DiseaseRecord).where(
-                        DiseaseRecord.time == record_time,
-                        DiseaseRecord.disease_id == disease.id,
-                        DiseaseRecord.country_id == country.id
-                    )
-                    existing_result = await db.execute(existing_query)
-                    existing_record = existing_result.scalar_one_or_none()
-                    
-                    # 准备记录数据
-                    record_data = {
-                        'cases': int(row['Cases']) if pd.notna(row.get('Cases')) else None,
-                        'deaths': int(row['Deaths']) if pd.notna(row.get('Deaths')) else None,
-                        'incidence_rate': float(row['Incidence']) if pd.notna(row.get('Incidence')) else None,
-                        'mortality_rate': float(row['Mortality']) if pd.notna(row.get('Mortality')) else None,
-                        'data_source': row.get('Source'),
-                        'metadata_': {
-                            'disease_name_en': row.get('Diseases'),
-                            'disease_name_zh': row.get('DiseasesCN'),
-                            'province': row.get('Province'),
-                            'province_cn': row.get('ProvinceCN'),
-                            'year_month': row.get('YearMonth'),
-                            'disease_code': disease_code,
-                        }
-                    }
-                    
-                    if existing_record:
-                        # 更新已存在的记录
-                        for key, value in record_data.items():
-                            setattr(existing_record, key, value)
-                        updated_count += 1
-                    else:
-                        # 创建新记录
-                        new_record = DiseaseRecord(
-                            time=record_time,
-                            disease_id=disease.id,
-                            country_id=country.id,
-                            **record_data
+                # 使用 no_autoflush 避免过早的 flush
+                with db.no_autoflush:
+                    for _, row in df.iterrows():
+                        # 检查必需字段
+                        if 'disease_id' not in df.columns or pd.isna(row.get('disease_id')):
+                            skipped_count += 1
+                            continue
+                        
+                        if 'Date' not in df.columns or pd.isna(row.get('Date')):
+                            skipped_count += 1
+                            continue
+                        
+                        # disease_id是疾病代码（如"D001"），需要查询实际的数据库ID
+                        disease_code = str(row['disease_id'])
+                        disease_query = select(Disease).where(Disease.name == disease_code)
+                        disease_result = await db.execute(disease_query)
+                        disease = disease_result.scalar_one_or_none()
+                        
+                        if not disease:
+                            logger.warning(f"疾病不存在: {disease_code}")
+                            skipped_count += 1
+                            continue
+                        
+                        # 检查记录是否已存在（基于复合主键：time, disease_id, country_id）
+                        record_time = pd.to_datetime(row['Date'])
+                        existing_query = select(DiseaseRecord).where(
+                            DiseaseRecord.time == record_time,
+                            DiseaseRecord.disease_id == disease.id,
+                            DiseaseRecord.country_id == country.id
                         )
-                        db.add(new_record)
-                        inserted_count += 1
+                        existing_result = await db.execute(existing_query)
+                        existing_record = existing_result.scalar_one_or_none()
+                        
+                        # 准备记录数据
+                        record_data = {
+                            'cases': int(row['Cases']) if pd.notna(row.get('Cases')) else None,
+                            'deaths': int(row['Deaths']) if pd.notna(row.get('Deaths')) else None,
+                            'incidence_rate': float(row['Incidence']) if pd.notna(row.get('Incidence')) else None,
+                            'mortality_rate': float(row['Mortality']) if pd.notna(row.get('Mortality')) else None,
+                            'data_source': row.get('Source'),
+                            'metadata_': {
+                                'disease_name_en': row.get('Diseases'),
+                                'disease_name_zh': row.get('DiseasesCN'),
+                                'province': row.get('Province'),
+                                'province_cn': row.get('ProvinceCN'),
+                                'year_month': row.get('YearMonth'),
+                                'disease_code': disease_code,
+                            }
+                        }
+                        
+                        if existing_record:
+                            # 更新已存在的记录
+                            for key, value in record_data.items():
+                                setattr(existing_record, key, value)
+                            updated_count += 1
+                        else:
+                            # 创建新记录
+                            new_record = DiseaseRecord(
+                                time=record_time,
+                                disease_id=disease.id,
+                                country_id=country.id,
+                                **record_data
+                            )
+                            db.add(new_record)
+                            inserted_count += 1
                 
-                # 提交事务
-                await db.commit()
+                # 提交事务（添加死锁重试）
+                max_retries = 3
+                for attempt in range(max_retries):
+                    try:
+                        await db.commit()
+                        break
+                    except Exception as e:
+                        if 'DeadlockDetectedError' in str(type(e)) and attempt < max_retries - 1:
+                            logger.warning(f"Deadlock detected, retrying ({attempt + 1}/{max_retries})...")
+                            await asyncio.sleep(0.1 * (attempt + 1))  # 指数退避
+                            await db.rollback()
+                            continue
+                        raise
                 
                 # 输出统计信息
                 if skipped_count > 0:
