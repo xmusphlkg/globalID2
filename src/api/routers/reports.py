@@ -219,6 +219,7 @@ async def list_ai_interactions(
     report_uuid: Optional[str] = Query(None),
     agent: Optional[str] = Query(None),
     model: Optional[str] = Query(None),
+    disease: Optional[str] = Query(None),
     limit: int = Query(200, ge=1, le=1000),
     db: AsyncSession = Depends(get_db),
 ):
@@ -247,6 +248,8 @@ async def list_ai_interactions(
         q = q.where(AIConversation.agent == agent)
     if model:
         q = q.where(AIConversation.model == model)
+    if disease:
+        q = q.where(ReportSectionRun.disease_name.ilike(f"%{disease}%"))
 
     rows = (await db.execute(q)).all()
     return [
@@ -292,6 +295,7 @@ async def get_ai_interactions_summary(
     report_uuid: Optional[str] = Query(None),
     agent: Optional[str] = Query(None),
     model: Optional[str] = Query(None),
+    disease: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
 ):
     report_id = None
@@ -316,6 +320,8 @@ async def get_ai_interactions_summary(
         q = q.where(AIConversation.agent == agent)
     if model:
         q = q.where(AIConversation.model == model)
+    if disease:
+        q = q.where(ReportSectionRun.disease_name.ilike(f"%{disease}%"))
 
     rows = (await db.execute(q)).all()
 
