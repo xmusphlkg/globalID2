@@ -21,10 +21,10 @@ ENV/
 .env.*
 !.env.example
 !.env.*.example
-web/.env.local
-web/.env.development.local
-web/.env.test.local
-web/.env.production.local
+dashboard/.env.local
+dashboard/.env.development.local
+dashboard/.env.test.local
+dashboard/.env.production.local
 
 # Python tooling caches
 .pytest_cache/
@@ -43,14 +43,14 @@ coverage.xml
 .ipynb_checkpoints/
 
 # Next.js / Node.js frontend
-web/node_modules/
-web/.next/
-web/out/
-web/.turbo/
-web/.vercel/
-web/coverage/
-web/next-env.d.ts
-web/tmp-app/
+dashboard/node_modules/
+dashboard/.next/
+dashboard/out/
+dashboard/.turbo/
+dashboard/.vercel/
+dashboard/coverage/
+dashboard/next-env.d.ts
+dashboard/tmp-app/
 *.tsbuildinfo
 .eslintcache
 npm-debug.log*

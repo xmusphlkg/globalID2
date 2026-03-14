@@ -217,10 +217,10 @@ The dashboard provides three main pages:
 Install the required dependencies:
 
 ```bash
-./venv/bin/pip install streamlit plotly
+./venv/bin/pip install plotly
 ```
 
-Note: `plotly` is already in `requirements.txt`, but ensure `streamlit` is added if not present.
+Note: `plotly` is already in `requirements.txt`.
 
 ### Running the Dashboard
 
@@ -233,10 +233,11 @@ docker-compose up -d  # Start PostgreSQL/TimescaleDB
 2. Start the dashboard:
 
 ```bash
-./venv/bin/streamlit run src/dashboard/app.py
+cd dashboard
+npm run dev
 ```
 
-3. Access the dashboard in your browser (typically opens automatically at `http://localhost:8501`)
+3. Access the dashboard in your browser at `http://localhost:3000`
 
 ### Configuration
 
@@ -252,7 +253,7 @@ DATABASE_URL=postgresql+asyncpg://user:password@host:port/dbname
 
 ### Usage Notes
 
-- The dashboard uses async SQLAlchemy with `asyncpg` driver for efficient query execution
+- The backend API uses async SQLAlchemy with `asyncpg` driver for efficient query execution
 - Country and disease filters are dynamically populated from the database
 - 'Total' disease records are used for aggregate country-level statistics
 - All visualizations are interactive using Plotly (zoom, pan, hover details)
