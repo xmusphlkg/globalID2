@@ -5,11 +5,19 @@ export interface AIInteractionItem {
   id: number;
   report_id: number;
   report_uuid: string;
+  report_status: string | null;
   report_title: string;
   country_id: number;
   section_id: number | null;
+  section_type: string | null;
+  section_title: string | null;
+  disease_name: string | null;
   run_id: number;
+  run_uuid: string | null;
   run_status: string | null;
+  run_model: string | null;
+  run_provider: string | null;
+  run_temperature: number | null;
   agent: string | null;
   role: string | null;
   timestamp: string | null;
@@ -20,8 +28,10 @@ export interface AIInteractionItem {
   duration: number | null;
   quality_scores: Record<string, unknown> | null;
   quality_overall: number | null;
+  system_prompt: string | null;
   prompt: string | null;
   response: string | null;
+  temperature: number | null;
 }
 
 export interface AIInteractionSummary {

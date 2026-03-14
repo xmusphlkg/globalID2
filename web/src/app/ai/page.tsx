@@ -1,14 +1,16 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useAppStore } from "@/stores/app-store";
 import { t } from "@/lib/i18n";
 import { useTasks, useTaskDetail, useTaskWebSocket } from "@/lib/hooks/useTasks";
+import { useReports } from "@/lib/hooks/useReports";
 import { formatDate } from "@/lib/utils";
 import { CHART_TOKENS } from "@/lib/chart-theme";
 import { Chart } from "@/components/charts/Chart";
 import { TaskDetailPanel } from "@/components/tasks/TaskDetailPanel";
-import { Cpu, ChevronDown, Search } from "lucide-react";
+import { Cpu, ChevronDown, Search, MessageSquareText } from "lucide-react";
 import { Badge, Card, Flex, Grid, Text, Title, Color } from "@tremor/react";
 
 const AI_TYPES = "process_data,generate_report,generate_section,review_section";
@@ -40,6 +42,21 @@ const entryTone: Record<string, { border: string; bg: string }> = {
   error: { border: CHART_TOKENS.destructive, bg: CHART_TOKENS.destructiveSoft },
 };
 
+function parseReportId(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const num = Number(value);
+    if (Number.isFinite(num)) {
+      return num;
+    }
+  }
+
+  return null;
+}
+
 export default function AIPage() {
   const { lang } = useAppStore();
   const [statusFilter, setStatusFilter] = useState("");
@@ -57,6 +74,25 @@ export default function AIPage() {
   );
 
   const { data: taskDetail, isFetching: detailLoading } = useTaskDetail(expandedUuid);
+  const { data: reports } = useReports(null, undefined, 200);
+
+  const reportUuidById = useMemo(() => {
+    const mapping = new Map<number, string>();
+    (reports ?? []).forEach((report) => {
+      mapping.set(report.id, report.report_uuid);
+    });
+    return mapping;
+  }, [reports]);
+
+  const activeTaskReportUuid = useMemo(() => {
+    if (!taskDetail) return null;
+
+    const outputData = taskDetail.output_data as Record<string, unknown> | null;
+    const reportId = parseReportId(taskDetail.report_id) ?? parseReportId(outputData?.report_id);
+    if (!reportId) return null;
+
+    return reportUuidById.get(reportId) ?? null;
+  }, [reportUuidById, taskDetail]);
 
   const summary = useMemo(() => {
     const total = tasks?.length ?? 0;
@@ -94,6 +130,15 @@ export default function AIPage() {
         <Badge color="violet" className="w-fit">{t(lang, "mod_ai")}</Badge>
         <Title className="text-2xl">{t(lang, "ai_tasks")}</Title>
         <Text>{t(lang, "ai_tasks_subtitle")}</Text>
+        <div className="pt-1">
+          <Link
+            href="/ai/interactions"
+            className="inline-flex items-center gap-1 rounded-lg border border-violet-300/70 bg-violet-50 px-3 py-1.5 text-xs font-medium text-violet-700 transition hover:bg-violet-100 dark:border-violet-800 dark:bg-violet-950/25 dark:text-violet-300"
+          >
+            <MessageSquareText className="h-3.5 w-3.5" />
+            Open AI Interactions
+          </Link>
+        </div>
       </div>
 
       <Grid numItems={1} numItemsSm={2} numItemsLg={4} className="gap-4">
@@ -247,6 +292,17 @@ export default function AIPage() {
 
               {expandedUuid === task.task_uuid && (
                 <div className="border-t border-tremor-border px-4 py-3 text-[13px] dark:border-dark-tremor-border">
+                  {activeTaskReportUuid && expandedUuid === task.task_uuid && (
+                    <div className="mb-3">
+                      <Link
+                        href={`/ai/interactions?uuid=${encodeURIComponent(activeTaskReportUuid)}`}
+                        className="inline-flex items-center gap-1 rounded-lg border border-blue-300/70 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 transition hover:bg-blue-100 dark:border-blue-900 dark:bg-blue-950/25 dark:text-blue-300"
+                      >
+                        <MessageSquareText className="h-3.5 w-3.5" />
+                        View this report in chat workflow
+                      </Link>
+                    </div>
+                  )}
                   <TaskDetailPanel taskDetail={taskDetail} detailLoading={detailLoading} emptyMessage="Task detail unavailable." />
                 </div>
               )}
