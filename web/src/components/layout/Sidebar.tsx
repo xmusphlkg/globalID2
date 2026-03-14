@@ -68,6 +68,12 @@ export function Sidebar({ mobileOpen, onClose }: { mobileOpen?: boolean; onClose
   const path = usePathname();
   const { lang } = useAppStore();
 
+  const isActive = (href: string) => {
+    if (href === "/") return path === "/";
+    if (href === "/ai") return path === "/ai";
+    return path === href || path.startsWith(`${href}/`);
+  };
+
   const SidebarContent = (
     <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-tremor-background dark:bg-dark-tremor-background border-r border-tremor-border dark:border-dark-tremor-border px-6 pb-4">
       <div className="flex h-16 shrink-0 items-center">
@@ -76,9 +82,7 @@ export function Sidebar({ mobileOpen, onClose }: { mobileOpen?: boolean; onClose
       <nav className="flex flex-1 flex-col">
         <ul role="list" className="flex flex-1 flex-col gap-y-7">
           {navGroups.map((group) => {
-            const groupActive = group.items.some(
-              (item) => item.href === "/" ? path === "/" : path.startsWith(item.href)
-            );
+            const groupActive = group.items.some((item) => isActive(item.href));
 
             return (
               <li key={group.step}>
@@ -90,7 +94,7 @@ export function Sidebar({ mobileOpen, onClose }: { mobileOpen?: boolean; onClose
                 </div>
                 <ul role="list" className="-mx-2 space-y-1">
                   {group.items.map((item) => {
-                    const active = item.href === "/" ? path === "/" : path.startsWith(item.href);
+                    const active = isActive(item.href);
                     return (
                       <li key={item.href}>
                         <Link

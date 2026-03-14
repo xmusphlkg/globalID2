@@ -49,6 +49,7 @@ export interface AIInteractionFilters {
   reportUuid?: string;
   agent?: string;
   model?: string;
+  disease?: string;
   limit?: number;
 }
 
@@ -58,6 +59,7 @@ function buildQuery(filters: AIInteractionFilters): string {
   if (filters.reportUuid) params.set("report_uuid", filters.reportUuid);
   if (filters.agent) params.set("agent", filters.agent);
   if (filters.model) params.set("model", filters.model);
+  if (filters.disease) params.set("disease", filters.disease);
   if (filters.limit) params.set("limit", String(filters.limit));
   return params.toString();
 }
