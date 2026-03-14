@@ -8,22 +8,107 @@ import { MessageSquare, Search, ChevronDown } from "lucide-react";
 import { Chart } from "@/components/charts/Chart";
 import { CHART_TOKENS } from "@/lib/chart-theme";
 import { ApiError } from "@/lib/api";
+import { t } from "@/lib/i18n";
 import {
   useAIInteractions,
   useAIInteractionSummary,
   type AIInteractionItem,
 } from "@/lib/hooks/useAIInteractions";
 
-function queryErrorText(error: unknown): string {
+function queryErrorText(error: unknown, lang: "en" | "zh"): string {
+  const fallback = lang === "zh" ? "请检查后端 API 路由和服务状态。" : "Please check backend API route and server status.";
+
   if (error instanceof ApiError) {
-    return `Request failed (${error.status}). ${error.message || "Please check backend API route and server status."}`;
+    return `Request failed (${error.status}). ${error.message || fallback}`;
   }
 
   if (error instanceof Error) {
     return error.message;
   }
 
-  return "Failed to load AI interaction data.";
+  return lang === "zh" ? "加载 AI 交互数据失败。" : "Failed to load AI interaction data.";
+}
+
+function uiText(lang: "en" | "zh") {
+  if (lang === "zh") {
+    return {
+      unknown: "未知",
+      timestamp: "时间",
+      reportUuid: "报告 UUID",
+      runStatus: "运行状态",
+      runUuid: "运行 UUID",
+      duration: "耗时",
+      section: "章节",
+      runModel: "运行模型",
+      promptTemp: "提问温度",
+      systemPrompt: "系统提示词",
+      prompt: "提示词",
+      response: "回复",
+      tokens: "Token",
+      qualityScores: "质量评分详情",
+      unknownSection: "未知章节",
+      disease: "疾病",
+      model: "模型",
+      qualityShort: "质量",
+      interactions: "交互数",
+      totalTokens: "总 Token",
+      avgTokens: "平均 Token",
+      avgDuration: "平均耗时",
+      avgQuality: "平均质量",
+      byAgent: "按 Agent 统计",
+      byModel: "按模型统计",
+      filterByUuid: "按报告 UUID 过滤（或使用 ?uuid=...）",
+      allAgents: "全部 Agent",
+      allModels: "全部模型",
+      allDiseases: "全部疾病",
+      loadingErrorTitle: "无法加载交互数据",
+      noData: "暂无交互数据",
+      currentCountry: "当前国家筛选",
+      chatModePrefix: "已启用聊天流程视图，报告 UUID",
+      diseaseSuffix: "疾病",
+      loading: "加载交互数据中...",
+      subtitle: "查看提示词、回复、Token 消耗、耗时和质量评分，支持 ?uuid=...&disease=... 直达。",
+    } as const;
+  }
+
+  return {
+    unknown: "unknown",
+    timestamp: "Timestamp",
+    reportUuid: "Report UUID",
+    runStatus: "Run Status",
+    runUuid: "Run UUID",
+    duration: "Duration",
+    section: "Section",
+    runModel: "Run Model",
+    promptTemp: "Prompt Temp",
+    systemPrompt: "System Prompt",
+    prompt: "Prompt",
+    response: "Response",
+    tokens: "Tokens",
+    qualityScores: "Quality Scores",
+    unknownSection: "unknown section",
+    disease: "Disease",
+    model: "Model",
+    qualityShort: "Q",
+    interactions: "Interactions",
+    totalTokens: "Total Tokens",
+    avgTokens: "Avg Tokens",
+    avgDuration: "Avg Duration",
+    avgQuality: "Avg Quality",
+    byAgent: "By Agent",
+    byModel: "By Model",
+    filterByUuid: "Filter by report uuid (or use ?uuid=...)",
+    allAgents: "All agents",
+    allModels: "All models",
+    allDiseases: "All diseases",
+    loadingErrorTitle: "Unable to load interaction data",
+    noData: "No interaction data found",
+    currentCountry: "Current country filter",
+    chatModePrefix: "Chat workflow mode enabled for report UUID",
+    diseaseSuffix: "Disease",
+    loading: "Loading interactions...",
+    subtitle: "Inspect prompts, responses, token usage, durations and quality scoring. Support direct query with ?uuid=...&disease=...",
+  } as const;
 }
 
 function formatDateTime(value: string | null): string {
@@ -65,10 +150,12 @@ function InteractionRow({
   item,
   expanded,
   onToggle,
+  labels,
 }: {
   item: AIInteractionItem;
   expanded: boolean;
   onToggle: () => void;
+  labels: ReturnType<typeof uiText>;
 }) {
   return (
     <Card className="overflow-hidden p-0">
@@ -76,17 +163,17 @@ function InteractionRow({
         onClick={onToggle}
         className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm transition-colors hover:bg-tremor-background-subtle dark:hover:bg-dark-tremor-background-subtle"
       >
-        <Badge color="slate">{item.agent ?? "unknown"}</Badge>
+        <Badge color="slate">{item.agent ?? labels.unknown}</Badge>
         <span className="flex-1 truncate font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">
           {item.report_title}
         </span>
         <Badge color="indigo">{shortUuid(item.report_uuid)}</Badge>
         <Badge color="blue">{item.model ?? "-"}</Badge>
         <span className="w-24 text-right text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
-          {item.total_tokens} tokens
+          {item.total_tokens} {labels.tokens}
         </span>
         <span className="w-16 text-right text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
-          Q {qualityText(item.quality_overall)}
+          {labels.qualityShort} {qualityText(item.quality_overall)}
         </span>
         <span
           className="h-2.5 w-2.5 rounded-full"
@@ -102,49 +189,49 @@ function InteractionRow({
         <div className="border-t border-tremor-border px-4 py-3 dark:border-dark-tremor-border">
           <Grid numItems={1} numItemsLg={4} className="mb-3 gap-3">
             <Card className="p-3">
-              <Text>Timestamp</Text>
+              <Text>{labels.timestamp}</Text>
               <Text className="mt-1 text-xs text-tremor-content-strong dark:text-dark-tremor-content-strong">
                 {formatDateTime(item.timestamp)}
               </Text>
             </Card>
             <Card className="p-3">
-              <Text>Report UUID</Text>
+              <Text>{labels.reportUuid}</Text>
               <Text className="mt-1 break-all font-mono text-xs text-tremor-content-strong dark:text-dark-tremor-content-strong">
                 {item.report_uuid}
               </Text>
             </Card>
             <Card className="p-3">
-              <Text>Run Status</Text>
+              <Text>{labels.runStatus}</Text>
               <Text className="mt-1 text-xs text-tremor-content-strong dark:text-dark-tremor-content-strong">
                 {item.run_status ?? "-"}
               </Text>
             </Card>
             <Card className="p-3">
-              <Text>Run UUID</Text>
+              <Text>{labels.runUuid}</Text>
               <Text className="mt-1 break-all font-mono text-xs text-tremor-content-strong dark:text-dark-tremor-content-strong">
                 {item.run_uuid ?? "-"}
               </Text>
             </Card>
             <Card className="p-3">
-              <Text>Duration</Text>
+              <Text>{labels.duration}</Text>
               <Text className="mt-1 text-xs text-tremor-content-strong dark:text-dark-tremor-content-strong">
                 {item.duration != null ? `${item.duration.toFixed(2)}s` : "-"}
               </Text>
             </Card>
             <Card className="p-3">
-              <Text>Section</Text>
+              <Text>{labels.section}</Text>
               <Text className="mt-1 text-xs text-tremor-content-strong dark:text-dark-tremor-content-strong">
                 {item.section_type ?? "-"} {item.section_title ? `(${item.section_title})` : ""}
               </Text>
             </Card>
             <Card className="p-3">
-              <Text>Run Model</Text>
+              <Text>{labels.runModel}</Text>
               <Text className="mt-1 text-xs text-tremor-content-strong dark:text-dark-tremor-content-strong">
                 {item.run_provider ?? "-"} / {item.run_model ?? "-"}
               </Text>
             </Card>
             <Card className="p-3">
-              <Text>Prompt Temp</Text>
+              <Text>{labels.promptTemp}</Text>
               <Text className="mt-1 text-xs text-tremor-content-strong dark:text-dark-tremor-content-strong">
                 {item.temperature != null ? item.temperature.toFixed(2) : "-"}
               </Text>
@@ -153,31 +240,31 @@ function InteractionRow({
 
           <Grid numItems={1} numItemsLg={2} className="gap-3">
             <Card className="p-3">
-              <Text className="mb-2">System Prompt</Text>
+              <Text className="mb-2">{labels.systemPrompt}</Text>
               <pre className="max-h-56 overflow-auto whitespace-pre-wrap text-xs text-tremor-content dark:text-dark-tremor-content">
                 {item.system_prompt || "-"}
               </pre>
             </Card>
             <Card className="p-3">
-              <Text className="mb-2">Prompt</Text>
+              <Text className="mb-2">{labels.prompt}</Text>
               <pre className="max-h-56 overflow-auto whitespace-pre-wrap text-xs text-tremor-content dark:text-dark-tremor-content">
                 {item.prompt || "-"}
               </pre>
             </Card>
             <Card className="p-3">
-              <Text className="mb-2">Response</Text>
+              <Text className="mb-2">{labels.response}</Text>
               <pre className="max-h-56 overflow-auto whitespace-pre-wrap text-xs text-tremor-content dark:text-dark-tremor-content">
                 {item.response || "-"}
               </pre>
             </Card>
             <Card className="p-3">
-              <Text className="mb-2">Tokens</Text>
+              <Text className="mb-2">{labels.tokens}</Text>
               <pre className="max-h-48 overflow-auto whitespace-pre-wrap text-xs text-tremor-content dark:text-dark-tremor-content">
                 {jsonString(item.tokens)}
               </pre>
             </Card>
             <Card className="p-3">
-              <Text className="mb-2">Quality Scores</Text>
+              <Text className="mb-2">{labels.qualityScores}</Text>
               <pre className="max-h-48 overflow-auto whitespace-pre-wrap text-xs text-tremor-content dark:text-dark-tremor-content">
                 {jsonString(item.quality_scores)}
               </pre>
@@ -209,21 +296,27 @@ interface RunThread {
   messages: AIInteractionItem[];
 }
 
-function GroupedRunChat({ thread }: { thread: RunThread }) {
+function GroupedRunChat({
+  thread,
+  labels,
+}: {
+  thread: RunThread;
+  labels: ReturnType<typeof uiText>;
+}) {
   return (
     <Card className="space-y-4 p-4">
       <div className="space-y-2">
         <div className="flex flex-wrap items-center gap-2">
-          <Badge color="indigo">Report {shortUuid(thread.reportUuid)}</Badge>
-          <Badge color="slate">Run {shortUuid(thread.runUuid)}</Badge>
-          <Badge color="blue">{thread.sectionType ?? "unknown section"}</Badge>
+          <Badge color="indigo">{labels.reportUuid} {shortUuid(thread.reportUuid)}</Badge>
+          <Badge color="slate">{labels.runUuid} {shortUuid(thread.runUuid)}</Badge>
+          <Badge color="blue">{thread.sectionType ?? labels.unknownSection}</Badge>
           <Badge color="emerald">{thread.runStatus ?? "-"}</Badge>
         </div>
         <Text className="text-sm text-tremor-content-strong dark:text-dark-tremor-content-strong">
           {thread.reportTitle}
         </Text>
         <Text className="text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
-          {thread.sectionTitle ?? "-"} | Disease: {thread.diseaseName ?? "-"} | Model: {thread.runProvider ?? "-"}/{thread.runModel ?? "-"} | Q {qualityText(thread.qualityOverall)} | Tokens {thread.totalTokens}
+          {thread.sectionTitle ?? "-"} | {labels.disease}: {thread.diseaseName ?? "-"} | {labels.model}: {thread.runProvider ?? "-"}/{thread.runModel ?? "-"} | {labels.qualityShort} {qualityText(thread.qualityOverall)} | {labels.tokens} {thread.totalTokens}
         </Text>
         <Text className="text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
           {formatDateTime(thread.startedAt)} {"->"} {formatDateTime(thread.endedAt)}
@@ -237,7 +330,7 @@ function GroupedRunChat({ thread }: { thread: RunThread }) {
             <div key={item.id} className={`flex ${alignRight ? "justify-end" : "justify-start"}`}>
               <div className={`w-full max-w-4xl rounded-xl border p-3 ${alignRight ? "border-blue-200 bg-blue-50/70 dark:border-blue-900/70 dark:bg-blue-950/20" : "border-slate-200 bg-slate-50/70 dark:border-slate-800 dark:bg-slate-900/20"}`}>
                 <div className="mb-2 flex flex-wrap items-center gap-2">
-                  <Badge color="slate">{item.agent ?? "unknown"}</Badge>
+                  <Badge color="slate">{item.agent ?? labels.unknown}</Badge>
                   <Badge color="blue">{item.role ?? "-"}</Badge>
                   <Badge color="indigo">{item.model ?? "-"}</Badge>
                   <Text className="text-[11px] text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
@@ -247,35 +340,35 @@ function GroupedRunChat({ thread }: { thread: RunThread }) {
 
                 <details className="mb-2 rounded-md border border-tremor-border/70 px-2 py-1 dark:border-dark-tremor-border/70">
                   <summary className="cursor-pointer text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
-                    system prompt
+                    {labels.systemPrompt}
                   </summary>
                   <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap text-xs text-tremor-content dark:text-dark-tremor-content">
                     {item.system_prompt || "-"}
                   </pre>
                 </details>
 
-                <Text className="mb-1 text-xs font-medium">Prompt</Text>
+                <Text className="mb-1 text-xs font-medium">{labels.prompt}</Text>
                 <pre className="max-h-48 overflow-auto whitespace-pre-wrap rounded-md bg-white/80 p-2 text-xs text-tremor-content dark:bg-black/20 dark:text-dark-tremor-content">
                   {item.prompt || "-"}
                 </pre>
 
-                <Text className="mb-1 mt-2 text-xs font-medium">Response</Text>
+                <Text className="mb-1 mt-2 text-xs font-medium">{labels.response}</Text>
                 <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-md bg-white/80 p-2 text-xs text-tremor-content dark:bg-black/20 dark:text-dark-tremor-content">
                   {item.response || "-"}
                 </pre>
 
                 <div className="mt-2 flex flex-wrap items-center gap-3">
                   <Text className="text-[11px] text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
-                    tokens: {item.total_tokens}
+                    {labels.tokens}: {item.total_tokens}
                   </Text>
                   <Text className="text-[11px] text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
-                    duration: {item.duration != null ? `${item.duration.toFixed(2)}s` : "-"}
+                    {labels.duration}: {item.duration != null ? `${item.duration.toFixed(2)}s` : "-"}
                   </Text>
                   <Text className="text-[11px] text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
                     temp: {item.temperature != null ? item.temperature.toFixed(2) : "-"}
                   </Text>
                   <Text className="text-[11px] text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
-                    quality: {qualityText(item.quality_overall)}
+                    {labels.qualityShort}: {qualityText(item.quality_overall)}
                   </Text>
                 </div>
               </div>
@@ -291,29 +384,38 @@ function AIInteractionsPageContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { countryId, countryName } = useAppStore();
+  const { countryId, countryName, lang } = useAppStore();
+  const labels = useMemo(() => uiText(lang), [lang]);
   const searchParamsString = searchParams.toString();
   const initialUuid = (searchParams.get("uuid") ?? searchParams.get("report_uuid") ?? "").trim();
+  const initialDisease = (searchParams.get("disease") ?? "").trim();
 
   const [agentFilter, setAgentFilter] = useState("");
   const [modelFilter, setModelFilter] = useState("");
   const [reportUuidFilter, setReportUuidFilter] = useState(initialUuid);
+  const [diseaseFilter, setDiseaseFilter] = useState(initialDisease);
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(searchParamsString);
     const nextUuid = (params.get("uuid") ?? params.get("report_uuid") ?? "").trim();
+    const nextDisease = (params.get("disease") ?? "").trim();
     if (nextUuid !== reportUuidFilter) {
       setReportUuidFilter(nextUuid);
+    }
+    if (nextDisease !== diseaseFilter) {
+      setDiseaseFilter(nextDisease);
     }
   }, [searchParamsString]);
 
   useEffect(() => {
     const params = new URLSearchParams(searchParamsString);
     const currentUuid = (params.get("uuid") ?? "").trim();
+    const currentDisease = (params.get("disease") ?? "").trim();
     const nextUuid = reportUuidFilter.trim();
+    const nextDisease = diseaseFilter.trim();
 
-    if (nextUuid === currentUuid && !params.get("report_uuid")) {
+    if (nextUuid === currentUuid && nextDisease === currentDisease && !params.get("report_uuid")) {
       return;
     }
 
@@ -322,16 +424,22 @@ function AIInteractionsPageContent() {
     } else {
       params.delete("uuid");
     }
+    if (nextDisease) {
+      params.set("disease", nextDisease);
+    } else {
+      params.delete("disease");
+    }
     params.delete("report_uuid");
 
     const nextQuery = params.toString();
     router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
-  }, [pathname, reportUuidFilter, router, searchParamsString]);
+  }, [diseaseFilter, pathname, reportUuidFilter, router, searchParamsString]);
 
   const filters = {
     countryId,
     agent: agentFilter || undefined,
     model: modelFilter || undefined,
+    disease: diseaseFilter.trim() || undefined,
     reportUuid: reportUuidFilter.trim() || undefined,
     limit: 200,
   };
@@ -341,6 +449,7 @@ function AIInteractionsPageContent() {
     countryId,
     agent: agentFilter || undefined,
     model: modelFilter || undefined,
+    disease: diseaseFilter.trim() || undefined,
     reportUuid: reportUuidFilter.trim() || undefined,
   });
 
@@ -356,6 +465,14 @@ function AIInteractionsPageContent() {
     const values = new Set<string>();
     (interactions ?? []).forEach((item) => {
       if (item.model) values.add(item.model);
+    });
+    return Array.from(values).sort();
+  }, [interactions]);
+
+  const diseaseOptions = useMemo(() => {
+    const values = new Set<string>();
+    (interactions ?? []).forEach((item) => {
+      if (item.disease_name) values.add(item.disease_name);
     });
     return Array.from(values).sort();
   }, [interactions]);
@@ -417,30 +534,30 @@ function AIInteractionsPageContent() {
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 md:px-6">
       <div className="space-y-2">
-        <Badge color="violet" className="w-fit">AI Programs</Badge>
-        <Title className="text-2xl">AI Interactions</Title>
-        <Text>Inspect prompts, responses, token usage, durations and quality scoring. Support direct query with ?uuid=...</Text>
+        <Badge color="violet" className="w-fit">{t(lang, "mod_ai")}</Badge>
+        <Title className="text-2xl">{t(lang, "ai_interactions")}</Title>
+        <Text>{labels.subtitle}</Text>
       </div>
 
       <Grid numItems={1} numItemsSm={2} numItemsLg={5} className="gap-4">
         <Card>
-          <Text>Interactions</Text>
+          <Text>{labels.interactions}</Text>
           <Metric>{summary?.total_interactions ?? 0}</Metric>
         </Card>
         <Card>
-          <Text>Total Tokens</Text>
+          <Text>{labels.totalTokens}</Text>
           <Metric>{summary?.total_tokens ?? 0}</Metric>
         </Card>
         <Card>
-          <Text>Avg Tokens</Text>
+          <Text>{labels.avgTokens}</Text>
           <Metric>{Math.round(summary?.avg_tokens ?? 0)}</Metric>
         </Card>
         <Card>
-          <Text>Avg Duration</Text>
+          <Text>{labels.avgDuration}</Text>
           <Metric>{(summary?.avg_duration ?? 0).toFixed(2)}s</Metric>
         </Card>
         <Card>
-          <Text>Avg Quality</Text>
+          <Text>{labels.avgQuality}</Text>
           <Metric>{summary?.avg_quality != null ? summary.avg_quality.toFixed(2) : "-"}</Metric>
         </Card>
       </Grid>
@@ -448,7 +565,7 @@ function AIInteractionsPageContent() {
       {(byAgentData.length > 0 || byModelData.length > 0) && (
         <Grid numItems={1} numItemsLg={2} className="gap-4">
           <Card>
-            <Title className="mb-2">By Agent</Title>
+            <Title className="mb-2">{labels.byAgent}</Title>
             <Chart
               height={260}
               option={{
@@ -473,7 +590,7 @@ function AIInteractionsPageContent() {
           </Card>
 
           <Card>
-            <Title className="mb-2">By Model</Title>
+            <Title className="mb-2">{labels.byModel}</Title>
             <Chart
               height={260}
               option={{
@@ -507,7 +624,7 @@ function AIInteractionsPageContent() {
               type="text"
               value={reportUuidFilter}
               onChange={(e) => setReportUuidFilter(e.target.value)}
-              placeholder="Filter by report uuid (or use ?uuid=...)"
+              placeholder={labels.filterByUuid}
               className="w-full rounded-tremor-default border border-tremor-border bg-tremor-background py-2 pl-9 pr-3 text-sm text-tremor-content-strong shadow-tremor-input outline-none transition focus:border-tremor-brand-subtle focus:ring-2 focus:ring-tremor-brand-muted dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong"
             />
           </div>
@@ -517,7 +634,7 @@ function AIInteractionsPageContent() {
             onChange={(e) => setAgentFilter(e.target.value)}
             className="rounded-tremor-default border border-tremor-border bg-tremor-background px-3 py-2 text-sm text-tremor-content-strong shadow-tremor-input outline-none transition focus:border-tremor-brand-subtle focus:ring-2 focus:ring-tremor-brand-muted dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong"
           >
-            <option value="">All agents</option>
+            <option value="">{labels.allAgents}</option>
             {agentOptions.map((name) => (
               <option key={name} value={name}>{name}</option>
             ))}
@@ -528,8 +645,19 @@ function AIInteractionsPageContent() {
             onChange={(e) => setModelFilter(e.target.value)}
             className="rounded-tremor-default border border-tremor-border bg-tremor-background px-3 py-2 text-sm text-tremor-content-strong shadow-tremor-input outline-none transition focus:border-tremor-brand-subtle focus:ring-2 focus:ring-tremor-brand-muted dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong"
           >
-            <option value="">All models</option>
+            <option value="">{labels.allModels}</option>
             {modelOptions.map((name) => (
+              <option key={name} value={name}>{name}</option>
+            ))}
+          </select>
+
+          <select
+            value={diseaseFilter}
+            onChange={(e) => setDiseaseFilter(e.target.value)}
+            className="rounded-tremor-default border border-tremor-border bg-tremor-background px-3 py-2 text-sm text-tremor-content-strong shadow-tremor-input outline-none transition focus:border-tremor-brand-subtle focus:ring-2 focus:ring-tremor-brand-muted dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong"
+          >
+            <option value="">{labels.allDiseases}</option>
+            {diseaseOptions.map((name) => (
               <option key={name} value={name}>{name}</option>
             ))}
           </select>
@@ -546,9 +674,9 @@ function AIInteractionsPageContent() {
         <Card>
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <MessageSquare className="h-12 w-12 text-red-500" />
-            <Text className="mt-3 text-red-600">Unable to load interaction data</Text>
+            <Text className="mt-3 text-red-600">{labels.loadingErrorTitle}</Text>
             <Text className="mt-2 max-w-3xl text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
-              {queryErrorText(error)}
+              {queryErrorText(error, lang)}
             </Text>
           </div>
         </Card>
@@ -556,19 +684,19 @@ function AIInteractionsPageContent() {
         <Card>
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <MessageSquare className="h-12 w-12 text-tremor-content-subtle dark:text-dark-tremor-content-subtle" />
-            <Text className="mt-3">No interaction data found</Text>
+            <Text className="mt-3">{labels.noData}</Text>
             <Text className="mt-2 text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
-              Current country filter: {countryName || "All"}
+              {labels.currentCountry}: {countryName || "All"}
             </Text>
           </div>
         </Card>
       ) : reportUuidFilter.trim() ? (
         <div className="space-y-4">
           <Text className="text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
-            Chat workflow mode enabled for report UUID: {reportUuidFilter.trim()}
+            {labels.chatModePrefix}: {reportUuidFilter.trim()} {diseaseFilter.trim() ? `| ${labels.diseaseSuffix}: ${diseaseFilter.trim()}` : ""}
           </Text>
           {runThreads.map((thread) => (
-            <GroupedRunChat key={thread.runId} thread={thread} />
+            <GroupedRunChat key={thread.runId} thread={thread} labels={labels} />
           ))}
         </div>
       ) : (
@@ -579,6 +707,7 @@ function AIInteractionsPageContent() {
               item={item}
               expanded={expandedId === item.id}
               onToggle={() => setExpandedId(expandedId === item.id ? null : item.id)}
+              labels={labels}
             />
           ))}
         </div>
@@ -588,8 +717,11 @@ function AIInteractionsPageContent() {
 }
 
 export default function AIInteractionsPage() {
+  const { lang } = useAppStore();
+  const labels = uiText(lang);
+
   return (
-    <Suspense fallback={<div className="mx-auto w-full max-w-7xl px-4 py-6 text-sm text-tremor-content-subtle md:px-6">Loading interactions...</div>}>
+    <Suspense fallback={<div className="mx-auto w-full max-w-7xl px-4 py-6 text-sm text-tremor-content-subtle md:px-6">{labels.loading}</div>}>
       <AIInteractionsPageContent />
     </Suspense>
   );
