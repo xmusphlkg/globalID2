@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
-import { Sidebar } from "@/components/layout/Sidebar";
+import { TremorAppShell } from "@/components/layout/TremorAppShell";
 
 export const metadata: Metadata = {
   title: "GlobalID Dashboard",
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#f7f4ee",
+  themeColor: "#f8fafc", // Tremor background subtle
 };
 
 export default function RootLayout({
@@ -20,19 +20,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" className="h-full">
       <head>
         <link
           rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
         />
       </head>
-      <body>
+      <body className="h-full bg-tremor-background-subtle dark:bg-dark-tremor-background-subtle text-tremor-content-strong antialiased m-0">
         <Providers>
-          <div className="app-shell">
-            <Sidebar />
-            <main className="app-main">{children}</main>
-          </div>
+          <TremorAppShell>
+            {children}
+          </TremorAppShell>
         </Providers>
       </body>
     </html>
