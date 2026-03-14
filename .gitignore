@@ -1,48 +1,92 @@
-# Python
+# Python / FastAPI
 __pycache__/
-*.pyc
-*.pyo
+*.py[cod]
 *.pyd
+*.so
 .Python
+build/
+dist/
+.eggs/
+*.egg-info/
+pip-wheel-metadata/
+
+# Virtual environments
 env/
 venv/
+.venv/
+ENV/
+
+# Environment and secrets (backend + frontend)
 .env
-.venv
-pip-log.txt
-pip-delete-this-directory.txt
+.env.*
+!.env.example
+!.env.*.example
+web/.env.local
+web/.env.development.local
+web/.env.test.local
+web/.env.production.local
 
-# Data
-data/raw/
-data/processed/
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# VS Code
-.vscode/
-*.code-workspace
-
-# Pytest / Coverage
+# Python tooling caches
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.hypothesis/
+.tox/
+.nox/
 htmlcov/
 .coverage
 .coverage.*
 nosetests.xml
 coverage.xml
 
-# Project specific
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Next.js / Node.js frontend
+web/node_modules/
+web/.next/
+web/out/
+web/.turbo/
+web/.vercel/
+web/coverage/
+web/next-env.d.ts
+web/tmp-app/
+*.tsbuildinfo
+.eslintcache
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# IDE / Editor
+.vscode/
+*.code-workspace
+.idea/
+.cursor/
+
+# Project generated data and outputs
 /logs/
 /exports/
+/reports/
+/data/raw/
+/data/processed/
+/data/cache/
+/data/demo_output/
+/data/test_output/
+/data/recovered/
+/data/backups/
 !/data/.gitkeep
 
-# System
-.DS_Store
-Thumbs.db
-
-# Documentation
+# Documentation build artifacts / large fixtures
 site/
 tests/fixtures/ai_test_data/
 
-.cursor/debug-1117ae.log
+# Local databases and temp files
+*.db
+*.sqlite3
+*.tmp
+*.bak
+
+# System files
+.DS_Store
+Thumbs.db
