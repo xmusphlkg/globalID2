@@ -122,14 +122,18 @@ class WriterAgent(BaseAgent):
     ) -> str:
         """Write summary"""
         disease_name = analysis_data.get("disease_name", "Unknown Disease")
+        names_all = analysis_data.get("disease_names_all") or [disease_name]
+        disease_names_str = ", ".join(names_all) if isinstance(names_all, (list, tuple)) else str(names_all)
         stats = analysis_data.get("statistics", {})
         trends = analysis_data.get("trends", {})
         period = analysis_data.get("period", {})
-        
+        table_str = kwargs.get("table_data_str") or analysis_data.get("formatted_table", "")
+
         prompt = f"""Write a concise summary section for a disease surveillance report.
 
-    Disease: {disease_name}
-    Period: {period.get('start', '')} to {period.get('end', '')}
+    Disease (use this for display): {disease_name}
+    All known names/aliases (for reference): {disease_names_str}
+    Data period: {period.get('start', '')} to {period.get('end', '')}
 
     Key metrics:
     - Total cases: {stats.get('total_cases', 'N/A')}
@@ -139,7 +143,21 @@ class WriterAgent(BaseAgent):
 
     Trends:
     - Cases change rate: {trends.get('cases_change_rate', 'N/A')}%
-    - Trend direction: {trends.get('cases_trend', 'N/A')}
+    - Trend direction: {trends.get('cases_trend', 'N/A')}"""
+
+        if table_str:
+            prompt += f"""
+
+    Data table (cleaned, wide format by {analysis_data.get('data_frequency', 'monthly')} period):
+    {table_str}"""
+        prev_content = kwargs.get("previous_sections_content", "")
+        if prev_content:
+            prompt += f"""
+
+    Previous sections (trend analysis, key findings, highlights) for context:
+    {prev_content[:2000]}"""
+
+        prompt += """
 
     Requirements:
     - Writing style: {self._get_style_description(style)}
@@ -175,13 +193,18 @@ class WriterAgent(BaseAgent):
     ) -> str:
         """Write trend analysis"""
         disease_name = analysis_data.get("disease_name", "Unknown Disease")
+        names_all = analysis_data.get("disease_names_all") or [disease_name]
+        disease_names_str = ", ".join(names_all) if isinstance(names_all, (list, tuple)) else str(names_all)
         trends = analysis_data.get("trends", {})
         anomalies = analysis_data.get("anomalies", [])
         insights = analysis_data.get("insights", "")
-        
+        table_str = kwargs.get("table_data_str") or analysis_data.get("formatted_table", "")
+
         prompt = f"""Write a trend analysis section for the disease.
 
-    Disease: {disease_name}
+    Disease (use for display): {disease_name}
+    All known names: {disease_names_str}
+    Data period: {analysis_data.get("period", {}).get("start", "")} to {analysis_data.get("period", {}).get("end", "")}
 
     Trend data:
     {self._format_dict(trends)}
@@ -190,7 +213,15 @@ class WriterAgent(BaseAgent):
     {len(anomalies)} anomalies detected
 
     AI insights:
-    {insights}
+    {insights}"""
+
+        if table_str:
+            prompt += f"""
+
+    Data table (cleaned, wide format by {analysis_data.get('data_frequency', 'monthly')} period):
+    {table_str}"""
+
+        prompt += """
 
     Requirements:
     - Writing style: {self._get_style_description(style)}
@@ -259,11 +290,25 @@ class WriterAgent(BaseAgent):
         raw_context: str = "",
         **kwargs
     ) -> str:
-        """Write key findings"""
+        """Write key findings (based on trend analysis + data)"""
+        disease_name = analysis_data.get("disease_name", "Unknown Disease")
+        names_all = analysis_data.get("disease_names_all") or [disease_name]
+        disease_names_str = ", ".join(names_all) if isinstance(names_all, (list, tuple)) else str(names_all)
+        prev_content = kwargs.get("previous_sections_content", "")
         prompt = f"""List and explain the key findings from this disease surveillance.
 
+    Disease: {disease_name} (all names: {disease_names_str})
+    Data period: {analysis_data.get("period", {}).get("start", "")} to {analysis_data.get("period", {}).get("end", "")}"""
+        if prev_content:
+            prompt += f"""
+
+    Previous sections (trend analysis) for context:
+    {prev_content[:1500]}"""
+        analysis_subset = {k: v for k, v in analysis_data.items() if k not in ("raw_sources",)}
+        prompt += f"""
+
     Analysis data:
-    {self._format_analysis_data(analysis_data)}
+    {self._format_analysis_data(analysis_subset)}
 
     Requirements:
     - Writing style: {self._get_style_description(style)}
@@ -458,10 +503,20 @@ class WriterAgent(BaseAgent):
     
     async def _write_highlights(self, analysis_data: Dict, disease_name: str, 
                                report_date: str, table_data_str: str, language: str, raw_context: str = "", **kwargs) -> str:
-        """Write highlights section (100-110 words, 3-4 bullet points)"""
+        """Write highlights section (based on trend + key_findings + data)"""
+        names_all = analysis_data.get("disease_names_all") or [disease_name]
+        disease_names_str = ", ".join(names_all) if isinstance(names_all, (list, tuple)) else str(names_all)
+        prev_content = kwargs.get("previous_sections_content", "")
         data_context = table_data_str or str(analysis_data.get('insights', ''))
 
-        prompt = f"""Analyze the provided data for {disease_name or 'the disease'} and provide a brief summary of key epidemiological trends and current disease situation as of {report_date or 'the current period'}.
+        prompt = f"""Analyze the provided data for {disease_name or 'the disease'} (all names: {disease_names_str}) and provide a brief summary of key epidemiological trends and current disease situation as of {report_date or 'the current period'}.
+    Data period: {analysis_data.get("period", {}).get("start", "")} to {analysis_data.get("period", {}).get("end", "")}"""
+        if prev_content:
+            prompt += f"""
+
+    Previous sections (trend analysis, key findings) for context:
+    {prev_content[:2000]}"""
+        prompt += f"""
     Format as 3-4 bullet points, each followed by <br/>.
     Word count: 100-110 words.
     Data: {data_context}"""

@@ -347,7 +347,7 @@ Format: Use numbered list (1. 2. 3. ...)"""
         # Convert timestamps before JSON serialization
         converted_data = convert_timestamps(data)
         summary = json.dumps(converted_data, ensure_ascii=False, indent=2)
-        # Truncate if summary is too long
-        if len(summary) > 1000:
-            summary = summary[:1000] + "\n... (data truncated)"
+        # Truncate if summary is too long (保留清洗后的表格等关键信息)
+        if len(summary) > 3000:
+            summary = summary[:3000] + "\n... (data truncated)"
         return summary
