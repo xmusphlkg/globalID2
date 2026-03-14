@@ -231,9 +231,10 @@ async def list_ai_interactions(
             raise HTTPException(404, "Report not found")
 
     q = (
-        select(AIConversation, ReportSectionRun, Report)
+        select(AIConversation, ReportSectionRun, Report, ReportSection)
         .join(ReportSectionRun, AIConversation.run_id == ReportSectionRun.id)
         .join(Report, AIConversation.report_id == Report.id)
+        .outerjoin(ReportSection, AIConversation.section_id == ReportSection.id)
         .order_by(AIConversation.timestamp.desc())
         .limit(limit)
     )
@@ -253,11 +254,19 @@ async def list_ai_interactions(
             id=row.AIConversation.id,
             report_id=row.Report.id,
             report_uuid=str(row.Report.report_uuid),
+            report_status=row.Report.status,
             report_title=row.Report.title,
             country_id=row.Report.country_id,
             section_id=row.AIConversation.section_id,
+            section_type=row.ReportSectionRun.section_type,
+            section_title=row.ReportSection.title if row.ReportSection else None,
+            disease_name=row.ReportSectionRun.disease_name,
             run_id=row.ReportSectionRun.id,
+            run_uuid=row.ReportSectionRun.run_uuid,
             run_status=row.ReportSectionRun.status,
+            run_model=row.ReportSectionRun.model,
+            run_provider=row.ReportSectionRun.provider,
+            run_temperature=row.ReportSectionRun.temperature,
             agent=row.AIConversation.agent,
             role=row.AIConversation.role,
             timestamp=row.AIConversation.timestamp,
@@ -268,8 +277,10 @@ async def list_ai_interactions(
             duration=row.AIConversation.duration,
             quality_scores=row.ReportSectionRun.quality_scores,
             quality_overall=_extract_quality_overall(row.ReportSectionRun.quality_scores),
+            system_prompt=row.AIConversation.system_prompt,
             prompt=row.AIConversation.prompt,
             response=row.AIConversation.response,
+            temperature=row.AIConversation.temperature,
         )
         for row in rows
     ]

@@ -96,11 +96,19 @@ class AIInteractionOut(BaseModel):
     id: int
     report_id: int
     report_uuid: str
+    report_status: Optional[str] = None
     report_title: str
     country_id: int
     section_id: Optional[int] = None
+    section_type: Optional[str] = None
+    section_title: Optional[str] = None
+    disease_name: Optional[str] = None
     run_id: int
+    run_uuid: Optional[str] = None
     run_status: Optional[str] = None
+    run_model: Optional[str] = None
+    run_provider: Optional[str] = None
+    run_temperature: Optional[float] = None
     agent: Optional[str] = None
     role: Optional[str] = None
     timestamp: Optional[datetime] = None
@@ -111,8 +119,10 @@ class AIInteractionOut(BaseModel):
     duration: Optional[float] = None
     quality_scores: Optional[Dict[str, Any]] = None
     quality_overall: Optional[float] = None
+    system_prompt: Optional[str] = None
     prompt: Optional[str] = None
     response: Optional[str] = None
+    temperature: Optional[float] = None
 
 
 class AIInteractionSummaryOut(BaseModel):
