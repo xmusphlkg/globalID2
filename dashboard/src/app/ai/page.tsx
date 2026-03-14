@@ -11,7 +11,7 @@ import { CHART_TOKENS } from "@/lib/chart-theme";
 import { Chart } from "@/components/charts/Chart";
 import { TaskDetailPanel } from "@/components/tasks/TaskDetailPanel";
 import { Cpu, ChevronDown, Search, MessageSquareText } from "lucide-react";
-import { Badge, Card, Flex, Grid, Text, Title, Color } from "@tremor/react";
+import { Badge, Card, Grid, Text, Title, Color } from "@tremor/react";
 
 const AI_TYPES = "process_data,generate_report,generate_section,review_section";
 
@@ -33,13 +33,6 @@ const statusColors: Record<string, string> = {
   failed: CHART_TOKENS.destructive,
   cancelled: CHART_TOKENS.neutral,
   retrying: "#f97316",
-};
-
-const entryTone: Record<string, { border: string; bg: string }> = {
-  info: { border: CHART_TOKENS.info, bg: CHART_TOKENS.infoSoft },
-  success: { border: CHART_TOKENS.success, bg: CHART_TOKENS.successSoft },
-  warning: { border: CHART_TOKENS.warning, bg: CHART_TOKENS.warningSoft },
-  error: { border: CHART_TOKENS.destructive, bg: CHART_TOKENS.destructiveSoft },
 };
 
 function parseReportId(value: unknown): number | null {

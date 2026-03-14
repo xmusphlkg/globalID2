@@ -18,7 +18,7 @@
 - ✅ Service 层（CrawlService, ReportService, TaskManager）
 - ✅ FastAPI + Uvicorn 已在 `requirements.txt` 中
 - ✅ Redis 缓存层已实现（`src/core/cache.py`）
-- ✅ `src/api/` 目录已存在（空目录，预留了 API 位置）
+- ✅ `dashboard/api/` 目录已存在（API 已迁移到此路径）
 
 ---
 
@@ -70,7 +70,7 @@
 #### 0.1 API 项目结构
 
 ```
-src/api/
+dashboard/api/
 ├── __init__.py
 ├── main.py              # FastAPI app factory
 ├── deps.py              # 依赖注入(db session, auth)
@@ -172,14 +172,14 @@ GET /api/v1/quality/completeness?country_id=1&start=2020-01-01&end=2026-03-01
 
 ```bash
 # 在 globalID2/ 下创建前端项目
-npx create-next-app@latest web --typescript --tailwind --eslint --app --src-dir
-cd web
+npx create-next-app@latest dashboard --typescript --tailwind --eslint --app --src-dir
+cd dashboard
 ```
 
 #### 1.2 前端项目结构
 
 ```
-web/
+dashboard/
 ├── src/
 │   ├── app/
 │   │   ├── layout.tsx           # Root layout (providers, sidebar)
@@ -409,9 +409,9 @@ services:
     depends_on:
       - db
 
-  web:
+  dashboard:
     build:
-      context: ./web
+      context: ./dashboard
       dockerfile: Dockerfile
     ports:
       - "3000:3000"
@@ -428,7 +428,7 @@ server {
     listen 80;
     
     location / {
-        proxy_pass http://web:3000;
+        proxy_pass http://dashboard:3000;
     }
     
     location /api/ {
@@ -506,4 +506,4 @@ Week 3 (Day 11-14):
 3. 同时修复了现有的 SQL 注入安全隐患
 4. Streamlit dashboard 可以在迁移期间继续使用
 
-准备好后告诉我，我将从 `src/api/` 开始编写第一批 API 端点。
+准备好后告诉我，我将从 `dashboard/api/` 开始编写第一批 API 端点。

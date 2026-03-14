@@ -53,10 +53,11 @@ python main.py init-database
 ### 4. 启动数据质量仪表盘
 
 ```bash
-streamlit run src/dashboard/app.py
+cd dashboard
+npm run dev
 ```
 
-访问：http://localhost:8501
+访问：http://localhost:3000
 
 ## 常用操作
 
@@ -95,7 +96,7 @@ python main.py crawl --country CN --source all --process --save-raw --no-force -
 
 ```bash
 # 启动仪表盘
-streamlit run src/dashboard/app.py
+cd dashboard && npm run dev
 
 # 功能：
 # - 数据概览和 KPI 指标

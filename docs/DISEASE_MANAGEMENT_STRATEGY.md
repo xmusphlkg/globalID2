@@ -657,7 +657,7 @@ async def stats():
 ### 2. 管理API
 
 ```python
-# src/api/diseases.py
+# dashboard/api/routers/diseases.py
 
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel

@@ -1,0 +1,15 @@
+[00:03:38.611] Server  ERROR   ⨯ Error: ENOENT: no such file or directory, open '/home/likangguo/globalID/globalID2/web/.next/dev/server/app/ai/page/build-manifest.json'
+[00:03:38.632] Server  ERROR   ⨯ TurbopackInternalError: Failed to restore task data (corrupted database or bug): Data for <DiskFileSystem as FileSystem>::read (TaskId 230758))
+
+Debug info:
+- Failed to restore task data (corrupted database or bug): Data for <DiskFileSystem as FileSystem>::read (TaskId 230758))
+  
+  Caused by:
+      0: Looking up data for TaskId 230758 from database failed
+      1: Unable to open static sorted file referenced from 00001342.meta
+      2: Unable to open static sorted file 00001338.sst
+      3: No such file or directory (os error 2)
+[00:05:44.651] Server  ERROR   ⨯ Error: ENOENT: no such file or directory, open '/home/likangguo/globalID/globalID2/web/.next/dev/server/app/ai/page/build-manifest.json'
+[00:09:16.107] Browser ERROR   Failed to fetch RSC payload for http://localhost:3000/quality. Falling back to browser navigation. {}
+[00:09:16.107] Browser ERROR   Failed to fetch RSC payload for http://localhost:3000/explorer. Falling back to browser navigation. {}
+[00:09:18.222] Server  LOG     ○ Compiling /explorer ...
