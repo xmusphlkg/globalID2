@@ -1,0 +1,70 @@
+@import "tailwindcss";
+@source "../../node_modules/@tremor/react/dist/**/*.{js,cjs,mjs}";
+
+@theme {
+  --color-tremor-brand: #3b82f6;
+  --color-tremor-brand-muted: #bfdbfe;
+  --color-tremor-brand-subtle: #60a5fa;
+  --color-tremor-brand-inverted: #ffffff;
+
+  --color-tremor-background: #ffffff;
+  --color-tremor-background-subtle: #f8fafc;
+  --color-tremor-background-muted: #f1f5f9;
+  --color-tremor-background-emphasis: #334155;
+
+  --color-tremor-border: #e2e8f0;
+  --color-tremor-ring: #e2e8f0;
+
+  --color-tremor-content: #64748b;
+  --color-tremor-content-subtle: #94a3b8;
+  --color-tremor-content-emphasis: #334155;
+  --color-tremor-content-strong: #0f172a;
+  --color-tremor-content-inverted: #ffffff;
+
+  --color-dark-tremor-brand: #3b82f6;
+  --color-dark-tremor-brand-muted: #1e3a8a;
+  --color-dark-tremor-brand-subtle: #2563eb;
+  --color-dark-tremor-brand-inverted: #0f172a;
+
+  --color-dark-tremor-background: #0b1120;
+  --color-dark-tremor-background-subtle: #0f172a;
+  --color-dark-tremor-background-muted: #1e293b;
+  --color-dark-tremor-background-emphasis: #cbd5e1;
+
+  --color-dark-tremor-border: #1e293b;
+  --color-dark-tremor-ring: #1e293b;
+
+  --color-dark-tremor-content: #94a3b8;
+  --color-dark-tremor-content-subtle: #64748b;
+  --color-dark-tremor-content-emphasis: #cbd5e1;
+  --color-dark-tremor-content-strong: #f8fafc;
+  --color-dark-tremor-content-inverted: #0b1120;
+
+  --radius-tremor-small: 0.375rem;
+  --radius-tremor-default: 0.5rem;
+  --radius-tremor-full: 9999px;
+
+  --shadow-tremor-input: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-tremor-card: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-tremor-dropdown: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+
+  --shadow-dark-tremor-input: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-dark-tremor-card: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-dark-tremor-dropdown: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+
+  --text-tremor-default: 0.875rem;
+  --text-tremor-default--line-height: 1.25rem;
+  --text-tremor-title: 1.125rem;
+  --text-tremor-title--line-height: 1.75rem;
+  --text-tremor-metric: 1.875rem;
+  --text-tremor-metric--line-height: 2.25rem;
+}
+
+body {
+  @apply bg-tremor-background-subtle dark:bg-dark-tremor-background-subtle;
+  color: var(--color-tremor-content-strong);
+}
+
+.dark body {
+  color: var(--color-dark-tremor-content-strong);
+}
