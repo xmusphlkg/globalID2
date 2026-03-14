@@ -55,7 +55,7 @@ _load_css()
 from src.dashboard.common import run_query, render_sidebar
 from src.dashboard.report_monitor import render_report_monitor
 from src.dashboard.disease import get_disease_list, plot_top_diseases, plot_trend_chart
-from src.dashboard.task import render_task_center
+from src.dashboard.task import render_task_monitor
 from src.core.task_manager import task_manager
 
 # Fetch country list (used in sidebar filter) and build redesigned sidebar
@@ -712,7 +712,7 @@ elif page == "Report Monitor":
         st.error(f"{t('connection_failed')}: {e}")
 elif page == t("task_management") or page == nav_labels[-1]:
     try:
-        render_task_center(t, sel_country_id)
+        render_task_monitor(t, sel_country_id)
     except Exception as e:
         st.error(f"{t('connection_failed')}: {e}")
 

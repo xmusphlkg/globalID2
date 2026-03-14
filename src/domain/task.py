@@ -160,7 +160,7 @@ class Task(BaseModel):
     def update_progress(self, completed: int, total: int):
         """
         Update task progress
-        
+
         Args:
             completed: Number of completed steps
             total: Total number of steps
@@ -168,6 +168,12 @@ class Task(BaseModel):
         self.completed_steps = completed
         self.total_steps = total
         self.progress = int((completed / total) * 100) if total > 0 else 0
+
+    def set_progress(self, percent: int) -> None:
+        """Set task progress directly as a 0-100 integer percentage."""
+        self.progress = max(0, min(100, percent))
+        self.completed_steps = self.progress
+        self.total_steps = 100
 
 
 class TaskWorkbook(BaseModel):

@@ -60,10 +60,9 @@ async def _test_task_management_async():
     for i in range(1, 6):
         await task_manager.update_task_progress(
             task_uuid=task.task_uuid,
-            completed_steps=i,
-            total_steps=5
+            percent=i * 20,
         )
-        print(f"  Progress: {i}/5 ({i*20}%)")
+        print(f"  Progress: {i * 20}%")
     
     # 4. Add workbook entries
     print("\n4. Adding workbook entries...")

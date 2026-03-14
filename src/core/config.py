@@ -11,15 +11,19 @@ from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class DatabaseSettings(BaseSettings):
-    """数据库配置"""
-    
+class _BaseEnvSettings(BaseSettings):
+    """Shared base for all sub-settings that read from .env."""
+
     model_config = SettingsConfigDict(
         env_file=".env",
-        env_file_encoding="utf-8", 
+        env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
     )
+
+
+class DatabaseSettings(_BaseEnvSettings):
+    """数据库配置"""
 
     url: str = Field(
         default="postgresql+asyncpg://globalid:globalid_dev_password@localhost:5432/globalid",
@@ -34,30 +38,16 @@ class DatabaseSettings(BaseSettings):
     max_overflow: int = Field(default=20, description="最大溢出连接数")
 
 
-class RedisSettings(BaseSettings):
+class RedisSettings(_BaseEnvSettings):
     """Redis配置"""
-    
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8", 
-        case_sensitive=False,
-        extra="ignore",
-    )
 
     url: str = Field(default="redis://localhost:6379/0", description="Redis连接URL")
     encoding: str = Field(default="utf-8", description="编码")
     decode_responses: bool = Field(default=True, description="自动解码响应")
 
 
-class QdrantSettings(BaseSettings):
+class QdrantSettings(_BaseEnvSettings):
     """Qdrant向量数据库配置"""
-    
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8", 
-        case_sensitive=False,
-        extra="ignore",
-    )
 
     url: str = Field(default="http://localhost:6333", description="Qdrant连接URL")
     api_key: str | None = Field(default=None, description="API密钥")
@@ -65,15 +55,8 @@ class QdrantSettings(BaseSettings):
     vector_size: int = Field(default=1536, description="向量维度")
 
 
-class AISettings(BaseSettings):
+class AISettings(_BaseEnvSettings):
     """AI模型配置"""
-    
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8", 
-        case_sensitive=False,
-        extra="ignore",
-    )
 
     # 提供商配置
     default_provider: str = Field(default="glm", description="默认AI提供商(openai/anthropic/glm/qianwen/azure/custom)")
