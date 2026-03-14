@@ -6,8 +6,8 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.api.deps import get_db
-from src.api.schemas.country import CountryOut
+from ..deps import get_db
+from ..schemas.country import CountryOut
 from src.domain.country import Country
 
 router = APIRouter()

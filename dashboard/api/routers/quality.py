@@ -6,8 +6,8 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import case, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.api.deps import get_db
-from src.api.schemas.quality import CompletenessItem, DataSourceDist, QualityStats, TimeGap
+from ..deps import get_db
+from ..schemas.quality import CompletenessItem, DataSourceDist, QualityStats, TimeGap
 from src.domain.disease import Disease
 from src.domain.disease_record import DiseaseRecord
 from src.domain.standard_disease import StandardDisease

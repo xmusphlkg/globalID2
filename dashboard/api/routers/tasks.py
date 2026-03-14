@@ -6,8 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSock
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.api.deps import get_db
-from src.api.schemas.task import TaskCreateRequest, TaskDetailOut, TaskOut, WorkbookEntryOut
+from ..deps import get_db
+from ..schemas.task import TaskCreateRequest, TaskDetailOut, TaskOut, WorkbookEntryOut
 from src.domain.task import Task, TaskStatus, TaskType, TaskWorkbook
 
 router = APIRouter()

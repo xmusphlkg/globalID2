@@ -6,9 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.api.deps import get_db
-from src.api.schemas.disease import DiseaseListItem, DiseaseOut
-from src.api.schemas.disease_record import DiseaseRecordOut, TrendPoint
+from ..deps import get_db
+from ..schemas.disease import DiseaseListItem, DiseaseOut
+from ..schemas.disease_record import DiseaseRecordOut, TrendPoint
 from src.domain.disease import Disease
 from src.domain.disease_record import DiseaseRecord
 from src.domain.standard_disease import StandardDisease

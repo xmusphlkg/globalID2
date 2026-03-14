@@ -14,8 +14,12 @@
 
 ```
 globalID2/
+├── dashboard/          # 新 Dashboard（Next.js + API 目录）
+│   ├── src/            # Next.js 前端源码
+│   └── api/            # FastAPI 代码（已迁移）
 ├── src/
 │   ├── core/           # 核心功能（配置、数据库、缓存）
+│   ├── api/            # 兼容路径（软链接到 dashboard/api）
 │   ├── domain/         # 领域模型（疾病、国家、报告）
 │   ├── data/           # 数据层（爬虫、解析器）
 │   ├── ai/             # AI模块（分析师、作家、审核）
@@ -104,10 +108,27 @@ python scripts/cn_data_quality_check.py
 #### 查看数据质量仪表盘：
 
 ```bash
-streamlit run src/dashboard/app.py
+cd dashboard
+npm run dev
 ```
 
-访问 http://localhost:8501 查看数据质量仪表盘。
+访问 http://localhost:3000 查看 Web 仪表盘。
+
+#### 使用 Docker 一键启动完整 Dashboard 栈（推荐）
+
+```bash
+docker compose -f docker/dashboard-full-stack.yml up -d
+```
+
+启动后服务：
+- Dashboard: http://localhost:3000
+- API: http://localhost:8000/api/v1
+- PostgreSQL: localhost:5432
+- Redis: localhost:6379
+- Qdrant: localhost:6333
+
+说明：API 代码路径已切换为 `dashboard/api`，统一启动命令为
+`uvicorn dashboard.api.main:app`。
 
 ### 7. 运行测试
 
@@ -208,10 +229,10 @@ python scripts/generate_schema.py
 ### 查看数据统计
 
 ```bash
-# 使用数据质量仪表盘
-streamlit run src/dashboard/app.py
+# 使用 Web 仪表盘
+cd dashboard && npm run dev
 
-# 访问 http://localhost:8501
+# 访问 http://localhost:3000
 # - 主页：数据概览和趋势分析
 # - 疾病对比：多疾病对比分析  
 # - 数据质量：数据完整性检查
