@@ -119,22 +119,21 @@ class TaskManager:
     async def update_task_progress(
         self,
         task_uuid: str,
-        completed_steps: int,
-        total_steps: int,
+        percent: int,
     ) -> Optional[Task]:
-        """更新任务进度"""
+        """Update task progress to *percent* (0-100)."""
         async with get_db() as db:
             query = select(Task).where(Task.task_uuid == task_uuid)
             result = await db.execute(query)
             task = result.scalar_one_or_none()
-            
+
             if not task:
                 return None
-            
-            task.update_progress(completed_steps, total_steps)
+
+            task.set_progress(percent)
             await db.commit()
             await db.refresh(task)
-            
+
             logger.debug(f"Updated task {task_uuid} progress: {task.progress}%")
             return task
     

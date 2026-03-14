@@ -122,6 +122,12 @@ Old files remain in place to avoid breaking existing code until full migration i
 ./venv/bin/streamlit run src/dashboard/app.py
 ```
 
+Dedicated realtime task monitor:
+
+```bash
+./venv/bin/streamlit run src/dashboard/task_dashboard.py
+```
+
 ## Future Improvements
 
 1. Move disease page logic from `app.py` to `disease/ui.py`
