@@ -263,12 +263,14 @@ class AnalystAgent(BaseAgent):
         period_start_str = data[time_col].min().strftime('%Y-%m') if time_col and len(data) > 0 else 'Unknown'
         period_end_str = data[time_col].max().strftime('%Y-%m') if time_col and len(data) > 0 else 'Unknown'
 
-        # Construct English prompt
+        # Construct English prompt (report period from data range)
+        report_period = f"{period_start_str} to {period_end_str}"
         prompt = f"""As an epidemiologist, analyze the following disease surveillance data and provide professional insights.
 
 Disease: {disease_name}
-Data records: {len(data)}
-Time period: {period_start_str} to {period_end_str}
+Data records: {len(data)} (filtered to report period)
+Report period: {report_period}
+Data time range: {period_start_str} to {period_end_str}
 
 Statistical Summary:
 {self._format_dict(stats)}

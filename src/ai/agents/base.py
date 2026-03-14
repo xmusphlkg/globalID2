@@ -30,6 +30,9 @@ class BaseAgent(ABC):
     # This is process-wide so that once one agent detects a hard quota failure,
     # all subsequent agents will skip this model immediately.
     DISABLED_MODELS: set[str] = set()
+
+    # 启动时检查得到的可用模型列表（保持优先级顺序）。若不为 None，complete() 仅从该列表中选模型。
+    AVAILABLE_MODEL_CHAIN: Optional[List[str]] = None
     
     def __init__(
         self,
@@ -57,9 +60,17 @@ class BaseAgent(ABC):
             window_seconds=60,
         )
         
-        # 提供商和模型配置
+        # 提供商和模型配置：若配置了 model_chain，优先用链中首个模型，避免使用 default_model（如 glm-4-7）当用户未配置时
+        chain = getattr(self.config.ai, "model_chain", None) or []
+        effective_model = model
+        if effective_model is None and chain:
+            effective_model = chain[0]
+        self.model = effective_model or self.config.ai.default_model
         self.provider = provider or self.config.ai.default_provider
-        self.model = model or self.config.ai.default_model
+        # 根据模型名推断 provider，避免 qianwen 链却显示 glm 模型
+        inferred = self._infer_provider_from_model(self.model)
+        if inferred:
+            self.provider = inferred
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.max_retries = self.config.ai.max_retries
@@ -135,22 +146,27 @@ class BaseAgent(ABC):
             except Exception as e:
                 logger.warning(f"Failed to initialize custom client: {e}")
     
+    def _infer_provider_from_model(self, model: str) -> Optional[str]:
+        """根据模型名推断 provider，不依赖 self.provider。"""
+        if not model:
+            return None
+        model_lower = model.lower()
+        if any(k in model_lower for k in ['glm', 'chatglm', 'zhipu']):
+            return 'glm'
+        if any(k in model_lower for k in ['qwen', 'qianwen']):
+            return 'qianwen'
+        if any(k in model_lower for k in ['claude', 'anthropic']):
+            return 'anthropic'
+        if any(k in model_lower for k in ['gpt-4', 'gpt-3.5', 'text-davinci']):
+            return 'openai'
+        if 'azure' in model_lower:
+            return 'azure'
+        return None
+
     def get_provider_for_model(self, model: str) -> str:
         """Infer provider from model name."""
-        model_lower = model.lower()
-        
-        if any(keyword in model_lower for keyword in ['glm', 'chatglm', 'zhipu']):
-            return 'glm'
-        elif any(keyword in model_lower for keyword in ['qwen', 'qianwen', 'qianwen']):
-            return 'qianwen'
-        elif any(keyword in model_lower for keyword in ['claude', 'anthropic']):
-            return 'anthropic'
-        elif any(keyword in model_lower for keyword in ['gpt-4', 'gpt-3.5', 'text-davinci']):
-            return 'openai'
-        elif 'azure' in model_lower:
-            return 'azure'
-        else:
-            return self.provider
+        inferred = self._infer_provider_from_model(model)
+        return inferred if inferred else self.provider
     
     async def complete(
         self,
@@ -185,7 +201,10 @@ class BaseAgent(ABC):
             self.rate_limiter.record_request()
         
         # 调用LLM（支持按优先级链路轮询多个模型）
-        chain = getattr(self.config.ai, "model_chain", None) or []
+        # 若启动时已做过模型可用性检查，优先使用可用列表；否则用配置中的 model_chain 或 default + fallback
+        chain = BaseAgent.AVAILABLE_MODEL_CHAIN
+        if chain is None:
+            chain = getattr(self.config.ai, "model_chain", None) or []
         if chain:
             # Skip models that have been globally disabled due to quota/limit failures
             models_to_try = [m for m in chain if m not in BaseAgent.DISABLED_MODELS]

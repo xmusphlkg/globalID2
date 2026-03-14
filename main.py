@@ -23,6 +23,7 @@ from src.domain import Country, Disease, DiseaseRecord, ReportType, ReportStatus
 from src.data.crawlers import ChinaCDCCrawler
 from src.data.processors import DataProcessor
 from src.generation import ReportGenerator
+from src.ai.model_check import ensure_available_models_checked_async
 
 app = typer.Typer(help="GlobalID V2 - Global Infectious Disease Monitoring System")
 console = Console()
@@ -484,7 +485,13 @@ def generate_report(
         nonlocal task, report_id
         
         await init_app()
-        
+        # 启动时检查所有配置模型是否可用，后续仅从可用模型中选用
+        available = await ensure_available_models_checked_async()
+        if available:
+            console.print(f"[dim]可用模型（按优先级）: {', '.join(available)}[/dim]")
+        else:
+            console.print("[yellow]未进行模型可用性检查或未配置模型链，将使用默认/降级模型[/yellow]")
+
         async with get_database() as db:
             # Normalize country code for lookups and logging
             country_code = country.upper()
@@ -1178,6 +1185,7 @@ def run(
             
             # 2. 生成报告（基于爬取到的数据时间范围）
             console.print("\n[cyan]Step 2: Generating report[/cyan]")
+            await ensure_available_models_checked_async()
             await _generate(period_start, period_end)
             
             console.print("\n[green]✓ Pipeline completed![/green]")

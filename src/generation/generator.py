@@ -355,12 +355,12 @@ class ReportGenerator:
         
         sections = []
         
-        # 定义要生成的章节
+        # 定义要生成的章节（顺序：先 trend，再 highlight，最后 summary；highlight/summary 依赖前文）
         section_types = kwargs.get('section_types', [
-            'summary',
             'trend_analysis',
             'key_findings',
-            'recommendations',
+            'highlights',
+            'summary',
         ])
         
         # 检查已存在的章节（进度恢复）
@@ -375,11 +375,13 @@ class ReportGenerator:
         for section in existing_sections:
             key = f"{section.title}"
             existing_section_keys.add(key)
+            parts = (section.title or "").split(" - ")
             sections.append({
                 'title': section.title,
                 'content': section.content,
                 'type': section.section_type,
                 'chart_html': None,  # 从数据库加载的章节没有图表HTML
+                'disease_name': parts[0] if len(parts) >= 2 else "",
             })
         
         if existing_sections:
@@ -452,8 +454,8 @@ class ReportGenerator:
                 logger.info(f"Skipping placeholder disease {disease.name} (id={disease_id})")
                 continue
 
-            # Use the English display name for section titles; fall back to code
-            disease_display_name = disease.name_en or disease.name
+            # 使用人类可读的疾病名称（避免 D065 等编码）：优先 name_en，其次别名，最后 name
+            disease_display_name = self._get_disease_display_name(disease)
 
             # 检查该疾病的所有章节是否已存在
             disease_sections_exist = all(
@@ -524,7 +526,7 @@ class ReportGenerator:
             # 每个任务独立实例化 Analyst，避免并发竞态（shared state）
             analyst = AnalystAgent()
             
-            # 分析数据
+            # 分析数据（disease_data 已按 report 的 period_start/period_end 过滤）
             analysis_result = await analyst.process(
                 data=disease_data,
                 disease_name=disease_display_name,
@@ -532,16 +534,31 @@ class ReportGenerator:
                 period_end=report_period_end,
             )
             
+            # 附加疾病的所有可能名称与报告周期（供 Writer/Reviewer 使用）
+            analysis_result["disease_names_all"] = self._get_all_disease_names(disease)
+            analysis_result["report_period"] = {
+                "start": report_period_start.isoformat(),
+                "end": report_period_end.isoformat(),
+            }
+            
             # 获取analyst的对话历史
             analyst_conversations = analyst.get_conversation_history()
+            
+            # 数据清洗与宽表转换：长表→宽表 Markdown，按采集频率（月/周）聚合，供 AI 使用
+            from src.generation.data_cleaner import clean_and_format_for_ai
+            formatted = clean_and_format_for_ai(disease_data, time_col="time", max_rows=24)
+            analysis_result["formatted_table"] = formatted["markdown_table"]
+            analysis_result["data_frequency"] = formatted["frequency"]
+            analysis_result["table_period_range"] = formatted.get("period_range", "")
             
             # 附加原始网页上下文，供后续写作/审核参考
             analysis_result["raw_sources"] = relevant_raw_sources
             
-            # 生成各章节（每个任务独立 Writer + Reviewer 实例）
+            # 生成各章节（顺序执行以传递依赖：trend→key_findings→highlights→summary）
             writer = WriterAgent()
             reviewer = ReviewerAgent()
-            
+            previous_sections_content: List[str] = []
+
             disease_sections = []
             for section_type in section_types:
                 # 如果启用了复用机制且存在可复用章节，则直接拷贝内容而不调用AI
@@ -562,13 +579,16 @@ class ReportGenerator:
                                 ended_at=section_ended_at,
                             )
 
+                        reused_content = base_section.content
                         disease_sections.append(
                             {
                                 "disease_name": disease_display_name,
                                 "section_type": section_type,
-                                "content": base_section.content,
+                                "content": reused_content,
                                 "chart_html": None,
                                 "ai_conversation": [],
+                                "quality_scores": {},
+                                "data_sources": list(base_section.data_sources) if base_section.data_sources else [],
                                 "started_at": section_started_at,
                                 "ended_at": section_ended_at,
                                 "token_usage": {},
@@ -581,6 +601,7 @@ class ReportGenerator:
                                 "writer_max_tokens": writer.max_tokens,
                             }
                         )
+                        previous_sections_content.append(f"[{section_type}]\n{reused_content}")
                         logger.info(
                             f"Reused approved section for {disease_display_name} / {section_type} "
                             f"from base report"
@@ -605,6 +626,10 @@ class ReportGenerator:
                 revision_count = 0
                 writer_result = None
 
+                # 供 Writer 使用的清洗后宽表 Markdown（替代原始长表，避免日期过长、信息丢失）
+                table_data_str = analysis_result.get("formatted_table") or ""
+                prev_content_str = "\n\n---\n\n".join(previous_sections_content) if previous_sections_content else ""
+
                 for attempt in range(self.MAX_REVISIONS + 1):
                     writer.clear_conversation_history()
                     writer_result = await writer.process(
@@ -614,6 +639,9 @@ class ReportGenerator:
                         language=kwargs.get('language', 'en'),
                         raw_sources=relevant_raw_sources,
                         revision_instructions=revision_instructions,
+                        table_data_str=table_data_str,
+                        previous_sections_content=prev_content_str,
+                        report_date=report_period_end.strftime("%Y-%m-%d"),
                     )
 
                     # 内联快速审核
@@ -649,7 +677,8 @@ class ReportGenerator:
                 token_usage = self._aggregate_tokens(ai_conversation)
                 model_used = ai_conversation[-1].get("model") if ai_conversation else None
                 provider_used = ai_conversation[-1].get("provider") if ai_conversation else None
-                
+                quality_scores = review_result.get("quality_score", {}) if review_result else {}
+
                 # 生成图表（如果需要）
                 chart_html = None
                 if section_type in ['trend_analysis', 'summary']:
@@ -660,13 +689,41 @@ class ReportGenerator:
                     )
                     if chart:
                         chart_html = self.chart_generator.get_chart_html(chart)
+
+                # 序列化 raw_sources 为 data_sources（供 dashboard 展示）
+                data_sources = []
+                for src in (relevant_raw_sources or []):
+                    data_sources.append({
+                        "url": src.get("url"),
+                        "title": src.get("title", "")[:200],
+                        "snippet": (src.get("snippet") or src.get("text", ""))[:500],
+                    })
+                # 若无原始网页，用清洗后的宽表作为数据来源（避免 Data 标签显示「无记录」）
+                if not data_sources and analysis_result:
+                    table_md = analysis_result.get("formatted_table", "")
+                    freq = analysis_result.get("data_frequency", "monthly")
+                    period_range = analysis_result.get("table_period_range", "")
+                    stats = analysis_result.get("statistics", {})
+                    snippet = f"Frequency: {freq}, Period: {period_range}"
+                    if stats:
+                        snippet += f" | Total cases: {stats.get('total_cases')}, deaths: {stats.get('total_deaths')}"
+                    if table_md:
+                        snippet += "\n\n" + table_md[:800]
+                    data_sources.append({
+                        "url": None,
+                        "title": f"Surveillance data for {disease_display_name} ({freq})",
+                        "snippet": snippet[:1500],
+                    })
                 
+                section_content = writer_result['content'] if writer_result else ''
                 disease_sections.append({
                     'disease_name': disease_display_name,
                     'section_type': section_type,
-                    'content': writer_result['content'] if writer_result else '',
+                    'content': section_content,
                     'chart_html': chart_html,
                     'ai_conversation': ai_conversation,
+                    'quality_scores': quality_scores,
+                    'data_sources': data_sources,
                     'started_at': section_started_at,
                     'ended_at': section_ended_at,
                     'token_usage': token_usage,
@@ -678,6 +735,16 @@ class ReportGenerator:
                     'writer_temperature': writer.temperature,
                     'writer_max_tokens': writer.max_tokens,
                 })
+                # 累积已生成章节内容，供后续 highlight/summary 依赖
+                previous_sections_content.append(f"[{section_type}]\n{section_content}")
+
+                # Persist COMPLETED status immediately so dashboard shows correct state during generation
+                if run_id:
+                    await self._update_run_status(
+                        run_id,
+                        status=ReportSectionRunStatus.COMPLETED,
+                        ended_at=section_ended_at,
+                    )
             
             # Update progress after completing this disease
             completed_count += 1
@@ -708,6 +775,7 @@ class ReportGenerator:
                     content=section_data['content'],
                     section_type=section_data['section_type'],
                     section_order=len(sections) + 1,
+                    data_sources=section_data.get('data_sources', []),
                 )
 
                 db.add(section)
@@ -725,6 +793,7 @@ class ReportGenerator:
                         run.temperature = section_data.get('writer_temperature', 0.7)
                         run.max_tokens = section_data.get('writer_max_tokens', 3000)
                         run.token_usage = section_data.get('token_usage', {})
+                        run.quality_scores = section_data.get('quality_scores', {})
                         run.started_at = run.started_at or section_data.get('started_at')
                         run.ended_at = section_data.get('ended_at')
                         run.revision_count = section_data.get('revision_count', 0)
@@ -768,6 +837,8 @@ class ReportGenerator:
                     'ai_conversation': section_data.get('ai_conversation', []),
                     'section_id': section.id,
                     'run_id': run_id,
+                    'disease_id': section_data.get('disease_id'),
+                    'disease_name': section_data.get('disease_name'),
                     'token_usage': section_data.get('token_usage', {}),
                 })
                 
@@ -790,6 +861,56 @@ class ReportGenerator:
         logger.info(f"Generated {new_sections_count} new sections (total: {len(sections)} sections)")
         return sections
     
+    def _build_data_summary_for_review(self, df: pd.DataFrame, disease_name: str = "") -> Dict[str, Any]:
+        """从 DataFrame 构建清洗后的数据摘要，供 Reviewer 事实核查使用（避免传递原始 to_dict 的冗长格式）。"""
+        if df is None or df.empty:
+            return {"disease_name": disease_name, "statistics": {}, "trends": {}, "summary": "No data"}
+        try:
+            stats = {}
+            if "cases" in df.columns:
+                stats["total_cases"] = int(df["cases"].sum())
+                stats["avg_cases"] = round(float(df["cases"].mean()), 1)
+                stats["max_cases"] = int(df["cases"].max())
+                stats["min_cases"] = int(df["cases"].min())
+                if df["cases"].std() == df["cases"].std():
+                    stats["std_cases"] = round(float(df["cases"].std()), 2)
+            if "deaths" in df.columns:
+                stats["total_deaths"] = int(df["deaths"].sum())
+                if stats.get("total_cases", 0) > 0:
+                    stats["fatality_rate"] = round((stats["total_deaths"] / stats["total_cases"]) * 100, 2)
+            time_col = "time" if "time" in df.columns else ("date" if "date" in df.columns else None)
+            trends = {}
+            sorted_df = df
+            if time_col:
+                sorted_df = df.sort_values(time_col)
+            if time_col and "cases" in df.columns:
+                cases = sorted_df["cases"].values
+                if len(cases) >= 2:
+                    change_rate = ((cases[-1] - cases[0]) / (cases[0] + 1)) * 100
+                    trends["cases_change_rate"] = round(change_rate, 2)
+                    trends["cases_trend"] = "increasing" if change_rate > 10 else ("decreasing" if change_rate < -10 else "stable")
+                if len(cases) >= 4:
+                    ma = pd.Series(cases).rolling(window=min(4, len(cases))).mean().values
+                    if len(ma) > 0 and ma[-1] == ma[-1]:
+                        trends["moving_average"] = round(float(ma[-1]), 1)
+            period_str = ""
+            if time_col:
+                try:
+                    period_str = f"{sorted_df[time_col].min()} to {sorted_df[time_col].max()}"
+                except Exception:
+                    period_str = f"{len(df)} records"
+            return {
+                "disease_name": disease_name,
+                "statistics": stats,
+                "trends": trends,
+                "period": period_str,
+                "record_count": len(df),
+                "raw_sources": [],
+            }
+        except Exception as e:
+            logger.warning(f"Failed to build data summary for review: {e}")
+            return {"disease_name": disease_name, "statistics": {}, "trends": {}, "summary": f"Error: {e}"}
+
     async def _review_sections(
         self,
         db,
@@ -813,13 +934,26 @@ class ReportGenerator:
             async with semaphore:
                 reviewer = ReviewerAgent()
                 try:
+                    # 按疾病筛选数据并构建清洗后的摘要，避免传递原始 DataFrame.to_dict()
+                    disease_id = section.get("disease_id")
+                    disease_name = section.get("disease_name", "")
+                    section_df = original_data
+                    if disease_id is not None and "disease_id" in original_data.columns:
+                        section_df = original_data[original_data["disease_id"] == disease_id]
+                    data_summary = self._build_data_summary_for_review(section_df, disease_name)
+                    # 加入清洗后的宽表 Markdown，供事实核查
+                    from src.generation.data_cleaner import clean_and_format_for_ai
+                    formatted = clean_and_format_for_ai(section_df, time_col="time", max_rows=24)
+                    data_summary["formatted_table"] = formatted.get("markdown_table", "")
+                    data_summary["data_frequency"] = formatted.get("frequency", "monthly")
+                    data_summary["raw_sources"] = [
+                        {"url": s.get("url"), "title": (s.get("title") or "")[:200], "snippet": (s.get("snippet") or s.get("text", ""))[:300]}
+                        for s in (raw_sources or [])[:5]
+                    ]
                     review_result = await reviewer.process(
                         content=section['content'],
                         content_type=section['type'],
-                        original_data={
-                            'structured_data': original_data.to_dict(),
-                            'raw_sources': raw_sources or [],
-                        },
+                        original_data=data_summary,
                     )
                     reviewer_conversations = reviewer.get_conversation_history()
                 except Exception as e:
@@ -951,6 +1085,41 @@ class ReportGenerator:
                 await status_db.commit()
         except Exception as e:
             logger.warning(f"Failed to update run {run_id} status: {e}")
+
+    def _get_disease_display_name(self, disease) -> str:
+        """返回人类可读的疾病名称，避免 D065 等编码直接展示给 AI。优先 name_en，其次别名，最后 name。"""
+        import re
+        # 疾病编码模式（如 D065、B04）
+        code_pattern = re.compile(r"^[A-Z]\d{2,4}$", re.I)
+        if disease.name_en and disease.name_en.strip() and not code_pattern.match(disease.name_en.strip()):
+            return disease.name_en.strip()
+        aliases = getattr(disease, "aliases", None) or []
+        for a in aliases:
+            if isinstance(a, str) and a.strip() and not code_pattern.match(a.strip()):
+                return a.strip()
+        return disease.name or "Unknown"
+
+    def _get_all_disease_names(self, disease) -> List[str]:
+        """返回疾病的所有可能名称（供 AI 识别）：name_en, name, aliases, icd_10, keywords，去重且过滤纯编码。"""
+        import re
+        code_pattern = re.compile(r"^[A-Z]\d{2,4}$", re.I)
+        seen = set()
+        names = []
+        for val in [
+            getattr(disease, "name_en", None),
+            getattr(disease, "name", None),
+            getattr(disease, "icd_10", None),
+            getattr(disease, "icd_11", None),
+        ]:
+            if val and isinstance(val, str) and val.strip() and val.strip() not in seen:
+                seen.add(val.strip())
+                names.append(val.strip())
+        for lst_attr in ("aliases", "keywords"):
+            for item in (getattr(disease, lst_attr, None) or []):
+                if isinstance(item, str) and item.strip() and item.strip() not in seen:
+                    seen.add(item.strip())
+                    names.append(item.strip())
+        return names
 
     def _filter_raw_sources(
         self,
