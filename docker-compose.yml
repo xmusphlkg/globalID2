@@ -1,9 +1,6 @@
-version: '3.8'
-
 services:
   postgres:
     image: timescale/timescaledb-ha:pg15-latest
-    container_name: globalid_postgres
     environment:
       POSTGRES_DB: globalid
       POSTGRES_USER: globalid
@@ -12,7 +9,6 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./docker/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U globalid"]
       interval: 10s
@@ -23,7 +19,6 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: globalid_redis
     ports:
       - "6379:6379"
     volumes:
@@ -39,7 +34,6 @@ services:
 
   qdrant:
     image: qdrant/qdrant:latest
-    container_name: globalid_qdrant
     ports:
       - "6333:6333"
       - "6334:6334"

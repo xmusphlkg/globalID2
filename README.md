@@ -120,6 +120,21 @@ npm run dev
 docker compose -f docker/dashboard-full-stack.yml up -d
 ```
 
+如遇端口占用，可覆盖宿主机端口再启动：
+
+```bash
+API_PORT=18000 DASHBOARD_PORT=13000 POSTGRES_PORT=15432 REDIS_PORT=16379 \
+QDRANT_HTTP_PORT=16333 QDRANT_GRPC_PORT=16334 \
+docker compose -f docker/dashboard-full-stack.yml up -d
+```
+
+首次启动（或依赖升级）建议：
+
+```bash
+docker compose -f docker/dashboard-full-stack.yml pull
+docker compose -f docker/dashboard-full-stack.yml up -d --force-recreate
+```
+
 启动后服务：
 - Dashboard: http://localhost:3000
 - API: http://localhost:8000/api/v1
@@ -127,8 +142,43 @@ docker compose -f docker/dashboard-full-stack.yml up -d
 - Redis: localhost:6379
 - Qdrant: localhost:6333
 
+若使用了端口覆盖，请将以上端口替换为你设置的值（例如 API_PORT=18000）。
+
 说明：API 代码路径已切换为 `dashboard/api`，统一启动命令为
 `uvicorn dashboard.api.main:app`。
+
+常用 Docker 命令：
+
+```bash
+# 查看服务状态
+docker compose -f docker/dashboard-full-stack.yml ps
+
+# 查看日志（全部）
+docker compose -f docker/dashboard-full-stack.yml logs -f
+
+# 仅看 API 或 Dashboard 日志
+docker compose -f docker/dashboard-full-stack.yml logs -f api
+docker compose -f docker/dashboard-full-stack.yml logs -f dashboard
+
+# 停止并清理本栈容器
+docker compose -f docker/dashboard-full-stack.yml down
+```
+
+常见问题排查：
+
+```bash
+# 1) Docker 权限不足（permission denied /var/run/docker.sock）
+sudo docker compose -f docker/dashboard-full-stack.yml up -d
+
+# 2) 端口占用（3000/8000/5432/6379/6333）
+sudo lsof -i :3000 -i :8000 -i :5432 -i :6379 -i :6333
+
+# 3) Compose 配置自检
+docker compose -f docker/dashboard-full-stack.yml config -q
+```
+
+如果你已经通过根目录 `docker-compose.yml` 启动了基础组件（PostgreSQL/Redis/Qdrant），
+请先执行 `docker compose down`，再启动 `docker/dashboard-full-stack.yml`，避免端口冲突。
 
 ### 7. 运行测试
 

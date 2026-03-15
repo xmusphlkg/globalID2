@@ -10,10 +10,13 @@ sys.path.insert(0, str(ROOT))
 
 from sqlalchemy import text
 from src.core.database import get_session_maker
+from src.core.db_schema import ensure_disease_learning_suggestions_schema
 
 async def main():
     SessionMaker = get_session_maker()
     async with SessionMaker() as db:
+        await ensure_disease_learning_suggestions_schema(db)
+
         # 1. 删除空白建议
         result = await db.execute(text(
             "DELETE FROM disease_learning_suggestions "

@@ -9,6 +9,11 @@ import pandas as pd
 from sqlalchemy import text
 
 from src.core.database import get_db
+from src.core.db_schema import (
+    ensure_country_scope_for_code,
+    ensure_country_scope_schema,
+    ensure_disease_learning_suggestions_schema,
+)
 from src.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -100,6 +105,7 @@ class DiseaseMapperDB:
         """记录未知疾病到学习建议表"""
         try:
             async with get_db() as db:
+                await ensure_disease_learning_suggestions_schema(db)
                 await db.execute(text("""
                     INSERT INTO disease_learning_suggestions (
                         country_code, local_name,
@@ -302,6 +308,8 @@ class DiseaseMapperDB:
             新记录的ID
         """
         async with get_db() as db:
+            await ensure_country_scope_schema(db)
+            await ensure_country_scope_for_code(db, self.country_code)
             result = await db.execute(text("""
                 INSERT INTO disease_mappings (
                     disease_id, country_code, local_name, local_code,
@@ -371,6 +379,7 @@ class DiseaseMapperDB:
             alias_count = row[1] if row else 0
             
             # 待审核建议数
+            await ensure_disease_learning_suggestions_schema(db)
             result = await db.execute(
                 text("""
                     SELECT COUNT(*) FROM disease_learning_suggestions
@@ -392,6 +401,7 @@ class DiseaseMapperDB:
     async def get_unknown_diseases(self, limit: int = 20) -> List[Dict]:
         """获取未知疾病列表"""
         async with get_db() as db:
+            await ensure_disease_learning_suggestions_schema(db)
             result = await db.execute(
                 text("""
                     SELECT id, local_name, occurrence_count,

@@ -25,6 +25,17 @@ sys.path.insert(0, str(ROOT))
 
 from sqlalchemy import text
 from src.core.database import get_db
+from src.core.country_library import get_country_bootstrap_config, get_country_profile
+from src.core.mapping_paths import (
+    available_mapping_codes,
+    expected_mapping_file,
+    resolve_mapping_file,
+)
+from src.core.db_schema import (
+    ensure_country_scope,
+    ensure_country_scope_schema,
+    ensure_disease_learning_suggestions_schema,
+)
 from src.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -55,8 +66,15 @@ class DatabaseRebuilder:
         
         # Configuration file paths
         self.standard_file = ROOT / "configs/standard_diseases.csv"
-        self.mapping_file = ROOT / f"configs/{self.country_code_lower}/disease_mapping.csv"
+        self.mapping_file = resolve_mapping_file(ROOT, self.country_code_lower)
         self.history_file = ROOT / f"data/processed/{self.country_code_lower}/history_merged.csv"
+
+        expected_main_mapping = expected_mapping_file(ROOT, self.country_code_lower)
+        if self.mapping_file != expected_main_mapping:
+            logger.warning(
+                f"Using legacy mapping path: {self.mapping_file}. "
+                f"Please migrate to: {expected_main_mapping}"
+            )
         
         # 多语言映射文件
         self.mapping_files = [
@@ -66,16 +84,16 @@ class DatabaseRebuilder:
         
         # 检查并添加英文映射（独立目录，使用 {country_code}_EN 格式）
         # 英文映射使用 CN_EN 这样的格式存储，与中文映射分开
-        en_mapping_file = ROOT / "configs/en/disease_mapping.csv"
+        en_mapping_file = resolve_mapping_file(ROOT, "en")
         if en_mapping_file.exists():
             self.mapping_files.append((en_mapping_file, f"{self.country_code}_EN"))
             logger.info(f"Found English mapping file: {en_mapping_file}")
         
         # Validate country configuration exists
-        if not self.mapping_file.parent.exists():
+        if not self.mapping_file.exists():
             raise FileNotFoundError(
-                f"Country configuration not found: {self.mapping_file.parent}\n"
-                f"Available countries: {', '.join([d.name for d in (ROOT / 'configs').iterdir() if d.is_dir() and d.name != '__pycache__'])}"
+                f"Country mapping file not found: {expected_main_mapping}\n"
+                f"Available mapping codes: {', '.join(available_mapping_codes(ROOT))}"
             )
         
     async def run(self):
@@ -95,6 +113,8 @@ class DatabaseRebuilder:
         
         # Show warnings and statistics
         async with get_db() as db:
+            await ensure_country_scope_schema(db)
+            await db.commit()
             await self._show_warning_and_stats(db)
             
             # Ask for confirmation
@@ -148,7 +168,7 @@ class DatabaseRebuilder:
 
             # Step: Cleanup suggestions
             logger.info(f"\n🧹 Step {step_num}/{total_steps}: Cleaning up invalid suggestions...")
-            await self.cleanup_suggestions()
+            await self.cleanup_suggestions(db)
             step_num += 1
 
             # Step: Verify results
@@ -357,76 +377,129 @@ class DatabaseRebuilder:
     
     async def ensure_country_exists(self, db):
         """Ensure country data exists in database"""
-        # Check if country exists
-        result = await db.execute(text("SELECT id FROM countries WHERE code = :code"), {"code": self.country_code})
-        country = result.fetchone()
-        
-        if country:
-            logger.info(f"  ✓ Country {self.country_code} already exists (id: {country[0]})")
-            return
-        
-        # Country doesn't exist, create it
-        country_configs = {
-            'CN': {
-                'name': '中国',
-                'name_en': 'China',
-                'name_local': '中国',
-                'language': 'zh-CN',
-                'timezone': 'Asia/Shanghai',
+        await ensure_country_scope_schema(db)
+        profile = await self._ensure_canonical_country_exists(db, self.country_code)
+
+        await ensure_country_scope(
+            db,
+            scope_code=profile.code,
+            country_code=profile.code,
+            scope_type="canonical",
+            language_code=profile.language,
+            display_name=profile.name,
+            is_default=True,
+            is_active=True,
+            metadata={
+                "origin": "country_library",
+                "source": profile.source,
             },
-            'US': {
-                'name': '美国',
-                'name_en': 'United States',
-                'name_local': 'United States',
-                'language': 'en-US',
-                'timezone': 'America/New_York',
-            },
-            'AU': {
-                'name': '澳大利亚',
-                'name_en': 'Australia',
-                'name_local': 'Australia',
-                'language': 'en-AU',
-                'timezone': 'Australia/Sydney',
-            },
-            'JP': {
-                'name': '日本',
-                'name_en': 'Japan',
-                'name_local': '日本',
-                'language': 'ja-JP',
-                'timezone': 'Asia/Tokyo',
-            },
-        }
-        
-        # Get config or use default
-        config = country_configs.get(self.country_code, {
-            'name': self.country_code,
-            'name_en': self.country_code,
-            'name_local': self.country_code,
-            'language': 'en',
-            'timezone': 'UTC',
-        })
-        
+        )
+
+        await db.commit()
+
+    async def _ensure_canonical_country_exists(self, db, country_code: str):
+        """Ensure canonical country (ISO alpha-2) exists in countries table."""
+        canonical = country_code.upper()
+        profile = get_country_profile(canonical)
+        bootstrap = get_country_bootstrap_config(canonical)
+
+        result = await db.execute(
+            text("SELECT id FROM countries WHERE code = :code"),
+            {"code": canonical},
+        )
+        row = result.fetchone()
+        if row:
+            # Backfill known defaults to reduce sparse country rows.
+            await db.execute(text("""
+                UPDATE countries
+                SET
+                    name = COALESCE(NULLIF(name, ''), :name),
+                    name_en = COALESCE(NULLIF(name_en, ''), :name_en),
+                    name_local = COALESCE(NULLIF(name_local, ''), :name_local),
+                    language = COALESCE(NULLIF(language, ''), :language),
+                    timezone = COALESCE(NULLIF(timezone, ''), :timezone),
+                    data_source_url = COALESCE(NULLIF(data_source_url, ''), :data_source_url),
+                    data_source_type = COALESCE(NULLIF(data_source_type, ''), :data_source_type),
+                    crawler_config = CASE
+                        WHEN crawler_config IS NULL OR crawler_config::text = '{}' THEN CAST(:crawler_config AS json)
+                        ELSE crawler_config
+                    END,
+                    parser_config = CASE
+                        WHEN parser_config IS NULL OR parser_config::text = '{}' THEN CAST(:parser_config AS json)
+                        ELSE parser_config
+                    END,
+                    disease_mapping_rules = CASE
+                        WHEN disease_mapping_rules IS NULL OR disease_mapping_rules::text = '{}' THEN CAST(:disease_mapping_rules AS json)
+                        ELSE disease_mapping_rules
+                    END,
+                    report_config = CASE
+                        WHEN report_config IS NULL OR report_config::text = '{}' THEN CAST(:report_config AS json)
+                        ELSE report_config
+                    END,
+                    notes = COALESCE(NULLIF(notes, ''), :notes),
+                    metadata = CASE
+                        WHEN metadata IS NULL OR metadata::text = '{}' THEN CAST(:metadata AS json)
+                        ELSE metadata
+                    END,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE code = :code
+            """), {
+                "code": canonical,
+                "name": profile.name,
+                "name_en": profile.name_en,
+                "name_local": profile.name_local,
+                "language": profile.language,
+                "timezone": profile.timezone,
+                "data_source_url": bootstrap.get("data_source_url"),
+                "data_source_type": bootstrap.get("data_source_type"),
+                "crawler_config": json.dumps(bootstrap.get("crawler_config", {})),
+                "parser_config": json.dumps(bootstrap.get("parser_config", {})),
+                "disease_mapping_rules": json.dumps(bootstrap.get("disease_mapping_rules", {})),
+                "report_config": json.dumps(bootstrap.get("report_config", {})),
+                "notes": bootstrap.get("notes"),
+                "metadata": json.dumps({
+                    "standard_source": profile.source,
+                    "iso_alpha2": profile.code,
+                }),
+            })
+            logger.info(f"  ✓ Country {canonical} already exists (id: {row[0]})")
+            return profile
+
         await db.execute(text("""
             INSERT INTO countries (
                 code, name, name_en, name_local, language, timezone,
+                data_source_url, data_source_type,
                 crawler_config, parser_config, disease_mapping_rules, report_config,
-                is_active, metadata, created_at, updated_at
+                is_active, metadata, notes, created_at, updated_at
             ) VALUES (
                 :code, :name, :name_en, :name_local, :language, :timezone,
-                '{}'::json, '{}'::json, '{}'::json, '{}'::json,
-                true, '{}'::json, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+                :data_source_url, :data_source_type,
+                CAST(:crawler_config AS json), CAST(:parser_config AS json),
+                CAST(:disease_mapping_rules AS json), CAST(:report_config AS json),
+                true, CAST(:metadata AS json), :notes, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
             )
         """), {
-            'code': self.country_code,
-            'name': config['name'],
-            'name_en': config['name_en'],
-            'name_local': config['name_local'],
-            'language': config['language'],
-            'timezone': config['timezone'],
+            "code": profile.code,
+            "name": profile.name,
+            "name_en": profile.name_en,
+            "name_local": profile.name_local,
+            "language": profile.language,
+            "timezone": profile.timezone,
+            "data_source_url": bootstrap.get("data_source_url"),
+            "data_source_type": bootstrap.get("data_source_type"),
+            "crawler_config": json.dumps(bootstrap.get("crawler_config", {})),
+            "parser_config": json.dumps(bootstrap.get("parser_config", {})),
+            "disease_mapping_rules": json.dumps(bootstrap.get("disease_mapping_rules", {})),
+            "report_config": json.dumps(bootstrap.get("report_config", {})),
+            "metadata": json.dumps({
+                "standard_source": profile.source,
+                "iso_alpha2": profile.code,
+            }),
+            "notes": bootstrap.get("notes"),
         })
-        
         await db.commit()
-        logger.info(f"  ✓ Created country {self.country_code} ({config['name_en']})")
+        logger.info(f"  ✓ Created country {profile.code} ({profile.name_en}) from {profile.source}")
+        return profile
     
     async def import_standard_diseases(self, db):
         """Import standard disease library"""
@@ -499,47 +572,50 @@ class DatabaseRebuilder:
         logger.info(f"✓ Imported {total_inserted:,} total mapping relationships")
     
     async def _ensure_country_code_exists(self, db, country_code: str):
-        """确保country_code存在（为语言变体创建虚拟记录）"""
-        # 检查是否已存在
-        result = await db.execute(
-            text("SELECT id FROM countries WHERE code = :code"),
-            {"code": country_code}
-        )
-        if result.fetchone():
-            return  # 已存在
-        
-        # 创建虚拟国家记录（如 CN_EN）
-        base_code = country_code.split('_')[0]  # CN_EN -> CN
-        language_suffix = country_code.split('_')[1] if '_' in country_code else ''
-        
-        config = {
-            'name': f"{base_code} ({language_suffix})" if language_suffix else base_code,
-            'name_en': f"{base_code} - {language_suffix} variant" if language_suffix else base_code,
-            'name_local': base_code,
-            'language': language_suffix.lower() if language_suffix else 'en',
-            'timezone': 'UTC',
-        }
-        
-        await db.execute(text("""
-            INSERT INTO countries (
-                code, name, name_en, name_local, language, timezone,
-                crawler_config, parser_config, disease_mapping_rules, report_config,
-                is_active, metadata, created_at, updated_at
-            ) VALUES (
-                :code, :name, :name_en, :name_local, :language, :timezone,
-                '{}'::json, '{}'::json, '{}'::json, '{}'::json,
-                true, '{}'::json, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        """确保映射作用域代码存在（支持语言变体，如 CN_EN）"""
+        await ensure_country_scope_schema(db)
+
+        scope_code = country_code.upper()
+        is_variant = '_' in scope_code
+        base_code = scope_code.split('_', 1)[0]
+
+        profile = await self._ensure_canonical_country_exists(db, base_code)
+
+        if is_variant:
+            language_suffix = scope_code.split('_', 1)[1]
+            await ensure_country_scope(
+                db,
+                scope_code=scope_code,
+                country_code=base_code,
+                scope_type="language_variant",
+                language_code=language_suffix.lower(),
+                display_name=f"{base_code} ({language_suffix})",
+                is_default=False,
+                is_active=True,
+                metadata={
+                    "origin": "mapping_file",
+                    "base_country_code": base_code,
+                    "variant": language_suffix,
+                },
             )
-        """), {
-            'code': country_code,
-            'name': config['name'],
-            'name_en': config['name_en'],
-            'name_local': config['name_local'],
-            'language': config['language'],
-            'timezone': config['timezone'],
-        })
+        else:
+            await ensure_country_scope(
+                db,
+                scope_code=base_code,
+                country_code=base_code,
+                scope_type="canonical",
+                language_code=profile.language,
+                display_name=profile.name,
+                is_default=True,
+                is_active=True,
+                metadata={
+                    "origin": "country_library",
+                    "source": profile.source,
+                },
+            )
+
         await db.commit()
-        logger.info(f"  ✓ Created virtual country code: {country_code}")
+        logger.info(f"  ✓ Ensured mapping scope: {scope_code}")
     
     async def _import_single_mapping_file(self, db, df, country_code):
         """导入单个映射文件"""
@@ -947,53 +1023,44 @@ class DatabaseRebuilder:
                 return col
         return None
     
-    async def cleanup_suggestions(self):
+    async def cleanup_suggestions(self, db):
         """Cleanup invalid suggestions"""
-        # Import cleanup_suggestions function
-        import sys
-        from pathlib import Path
-        ROOT = Path(__file__).resolve().parents[1]
-        sys.path.insert(0, str(ROOT))
+        logger.info("  • Ensuring disease_learning_suggestions schema...")
+        await ensure_disease_learning_suggestions_schema(db)
 
-        # Import and run cleanup_suggestions
-        from sqlalchemy import text
-        from src.core.database import get_session_maker
+        # 1. 删除空白建议
+        result = await db.execute(text(
+            "DELETE FROM disease_learning_suggestions "
+            "WHERE country_code = 'CN' AND COALESCE(local_name, '') = ''"
+        ))
+        blank_count = result.rowcount
 
-        SessionMaker = get_session_maker()
-        async with SessionMaker() as db:
-            # 1. 删除空白建议
-            result = await db.execute(text(
-                "DELETE FROM disease_learning_suggestions "
-                "WHERE country_code = 'CN' AND COALESCE(local_name, '') = ''"
-            ))
-            blank_count = result.rowcount
+        # 2. 删除已有CN_EN映射的英文建议（清理所有country_code）
+        result = await db.execute(text('''
+            DELETE FROM disease_learning_suggestions
+            WHERE id IN (
+                SELECT dls.id
+                FROM disease_learning_suggestions dls
+                JOIN disease_mappings dm ON dls.local_name = dm.local_name
+                WHERE dm.country_code = 'CN_EN'
+                  AND dls.status = 'pending'
+            )
+        '''))
+        en_count = result.rowcount
 
-            # 2. 删除已有CN_EN映射的英文建议（清理所有country_code）
-            result = await db.execute(text('''
-                DELETE FROM disease_learning_suggestions
-                WHERE id IN (
-                    SELECT dls.id
-                    FROM disease_learning_suggestions dls
-                    JOIN disease_mappings dm ON dls.local_name = dm.local_name
-                    WHERE dm.country_code = 'CN_EN'
-                      AND dls.status = 'pending'
-                )
-            '''))
-            en_count = result.rowcount
+        await db.commit()
 
-            await db.commit()
+        logger.info(f'  ✓ Deleted blank suggestions: {blank_count} records')
+        logger.info(f'  ✓ Deleted mapped English suggestions: {en_count} records')
+        logger.info(f'  ✓ Total deleted: {blank_count + en_count} records')
 
-            logger.info(f'  ✓ Deleted blank suggestions: {blank_count} records')
-            logger.info(f'  ✓ Deleted mapped English suggestions: {en_count} records')
-            logger.info(f'  ✓ Total deleted: {blank_count + en_count} records')
-
-            # 查看剩余
-            result = await db.execute(text(
-                "SELECT COUNT(*) FROM disease_learning_suggestions "
-                "WHERE country_code = 'CN' AND status = 'pending'"
-            ))
-            remaining = result.scalar()
-            logger.info(f'  📊 Remaining pending suggestions: {remaining} records')
+        # 查看剩余
+        result = await db.execute(text(
+            "SELECT COUNT(*) FROM disease_learning_suggestions "
+            "WHERE country_code = 'CN' AND status = 'pending'"
+        ))
+        remaining = result.scalar()
+        logger.info(f'  📊 Remaining pending suggestions: {remaining} records')
 
     async def verify_results(self, db):
         """Verify import results"""
@@ -1071,7 +1138,7 @@ Examples:
         )
         await rebuilder.run()
     except Exception as e:
-        logger.error(f"❌ Rebuild failed: {e}", exc_info=True)
+        logger.exception("❌ Rebuild failed: {}", e)
         sys.exit(1)
 
 

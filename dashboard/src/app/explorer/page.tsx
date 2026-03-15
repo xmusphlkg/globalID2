@@ -21,6 +21,7 @@ export default function ExplorerPage() {
   const { lang } = useAppStore();
   const [table, setTable] = useState("diseases");
   const [page, setPage] = useState(0);
+  const [hideEmptyColumns, setHideEmptyColumns] = useState(true);
   const limit = 100;
 
   const { data: tables } = useQuery<{ tables: string[] }>({
@@ -39,8 +40,15 @@ export default function ExplorerPage() {
   });
 
   useEffect(() => setPage(0), [table]);
+  useEffect(() => {
+    // Countries has many optional fields; default to a cleaner view.
+    setHideEmptyColumns(table === "countries");
+  }, [table]);
 
-  const columns = result?.data?.[0] ? Object.keys(result.data[0]) : [];
+  const rawColumns = result?.data?.[0] ? Object.keys(result.data[0]) : [];
+  const columns = hideEmptyColumns
+    ? rawColumns.filter((col) => hasAnyValue(result?.data ?? [], col))
+    : rawColumns;
   const totalPages = result ? Math.ceil(result.total / limit) : 0;
 
   return (
@@ -67,6 +75,14 @@ export default function ExplorerPage() {
               {result.total.toLocaleString()} rows
             </Badge>
           )}
+          <label className="inline-flex items-center gap-2 text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+            <input
+              type="checkbox"
+              checked={hideEmptyColumns}
+              onChange={(e) => setHideEmptyColumns(e.target.checked)}
+            />
+            Hide empty columns
+          </label>
         </div>
       </Card>
 
@@ -139,6 +155,26 @@ export default function ExplorerPage() {
 
 function formatCell(v: unknown): string {
   if (v === null || v === undefined) return "—";
-  if (typeof v === "object") return JSON.stringify(v).slice(0, 80);
+  if (typeof v === "object") {
+    const text = JSON.stringify(v);
+    if (text === "{}" || text === "[]") return "—";
+    return text.slice(0, 80);
+  }
+  if (typeof v === "string" && v.trim() === "") return "—";
   return String(v);
+}
+
+function hasAnyValue(rows: Record<string, unknown>[], col: string): boolean {
+  for (const row of rows) {
+    const v = row[col];
+    if (v === null || v === undefined) continue;
+    if (typeof v === "string" && v.trim() === "") continue;
+    if (typeof v === "object") {
+      const text = JSON.stringify(v);
+      if (text === "{}" || text === "[]") continue;
+      return true;
+    }
+    return true;
+  }
+  return false;
 }

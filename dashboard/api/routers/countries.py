@@ -16,7 +16,12 @@ router = APIRouter()
 @router.get("/countries", response_model=List[CountryOut])
 async def list_countries(db: AsyncSession = Depends(get_db)):
     result = await db.execute(
-        select(Country).where(Country.is_active.is_(True)).order_by(Country.name)
+        select(Country)
+        .where(
+            Country.is_active.is_(True),
+            Country.code.op("~")(r"^[A-Z]{2}$"),
+        )
+        .order_by(Country.name)
     )
     return result.scalars().all()
 
