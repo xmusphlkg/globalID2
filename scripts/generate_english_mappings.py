@@ -16,6 +16,7 @@ sys.path.insert(0, str(ROOT))
 from sqlalchemy import text
 from src.core.database import get_db
 from src.core.logging import setup_logging, get_logger
+from src.core.mapping_paths import expected_mapping_file, mapping_dir, resolve_mapping_file
 
 logger = get_logger(__name__)
 
@@ -31,7 +32,7 @@ async def generate_english_mappings():
        - category → 疾病分类
        - icd_10 → ICD-10编码
     
-    2. 中文映射（configs/cn/disease_mapping.csv）：
+    2. 中文映射（configs/mapping/cn.csv）：
        - local_code → 如果是英文则作为别名
        - aliases → 提取其中的英文部分作为别名
     """
@@ -66,8 +67,8 @@ async def generate_english_mappings():
         logger.info(f"    - 包含字段: disease_id, standard_name_en, category, icd_10")
     
     # 2. 从中文映射读取英文别名来源
-    logger.info("\n步骤2: 从中文映射（configs/cn/disease_mapping.csv）读取英文别名...")
-    cn_mapping_file = ROOT / "configs" / "cn" / "disease_mapping.csv"
+    logger.info("\n步骤2: 从中文映射（configs/mapping/cn.csv）读取英文别名...")
+    cn_mapping_file = resolve_mapping_file(ROOT, "cn")
     cn_mappings = {}  # {disease_id: {'local_code': str, 'aliases': str}}
     
     if cn_mapping_file.exists():
@@ -88,9 +89,9 @@ async def generate_english_mappings():
     
     # 3. 准备输出目录
     logger.info("\n步骤3: 准备输出目录...")
-    output_dir = ROOT / "configs" / "en"
+    output_dir = mapping_dir(ROOT)
     output_dir.mkdir(parents=True, exist_ok=True)
-    output_file = output_dir / "disease_mapping.csv"
+    output_file = expected_mapping_file(ROOT, "en")
     logger.info(f"  ✓ 输出文件: {output_file}")
     
     # 4. 定义别名提取函数
@@ -186,7 +187,7 @@ async def generate_english_mappings():
     print(f"  • category         : 疾病分类")
     print(f"  • notes            : 中文名称参考 (standard_name_zh)")
     print()
-    print("【来自中文映射 configs/cn/disease_mapping.csv】")
+    print("【来自中文映射 configs/mapping/cn.csv】")
     print(f"  • aliases          : 英文别名（从local_code和aliases字段提取）")
     print(f"    - 提取 local_code 中的英文代码（如 SARS-CoV, AIDS, TB）")
     print(f"    - 提取 aliases 中的纯英文部分（自动过滤中文）")
@@ -203,7 +204,7 @@ async def generate_english_mappings():
     print()
     print("💡 维护提示:")
     print("  - 标准英文名称：维护 standard_diseases 表")
-    print("  - 英文别名：维护 configs/cn/disease_mapping.csv 的英文内容")
+    print("  - 英文别名：维护 configs/mapping/cn.csv 的英文内容")
     print("="*80 + "\n")
     
     return True

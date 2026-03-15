@@ -3,7 +3,7 @@ GlobalID V2 Disease Mapping Model
 """
 from typing import Optional
 
-from sqlalchemy import JSON, Column, Index, Integer, String, Boolean
+from sqlalchemy import JSON, Column, ForeignKey, Index, Integer, String, Boolean
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .base import BaseModel
@@ -22,7 +22,12 @@ class DiseaseMapping(BaseModel):
     disease_id: Mapped[str] = mapped_column(String(200), nullable=False, comment="目标疾病ID/名称")
     
     # 映射源
-    country_code: Mapped[str] = mapped_column(String(10), nullable=False, comment="国家代码 (例如: CN, US)")
+    country_code: Mapped[str] = mapped_column(
+        String(20),
+        ForeignKey("country_scopes.scope_code", ondelete="CASCADE"),
+        nullable=False,
+        comment="映射作用域代码 (例如: CN, CN_EN)",
+    )
     local_name: Mapped[str] = mapped_column(String(500), nullable=False, comment="本地名称/别名")
     
     # 映射属性

@@ -13,6 +13,7 @@ from dataclasses import dataclass
 import pandas as pd
 
 from src.core import get_logger
+from src.core.mapping_paths import resolve_mapping_file
 
 logger = get_logger(__name__)
 
@@ -64,13 +65,13 @@ class DiseaseMapper:
         初始化疾病映射器
         
         Args:
-            country_code: 国家代码（cn/us/uk等），对应configs/{country_code}/目录
+            country_code: 国家代码（cn/us/uk等），对应configs/mapping/{country_code}.csv
         """
         self.country_code = country_code
         
         # 文件路径
         self.standard_file = Path("configs/standard_diseases.csv")
-        self.mapping_file = Path(f"configs/{country_code}/disease_mapping.csv")
+        self.mapping_file = resolve_mapping_file(Path("."), country_code)
         
         # 标准疾病库（全局）
         self.standard_diseases: Dict[str, StandardDisease] = {}
@@ -320,7 +321,7 @@ class DiseaseMapper:
             
             with open(output_file, "w", encoding="utf-8") as f:
                 f.write(f"# 未识别的疾病名称 (country: {self.country_code})\n")
-                f.write("# 需要添加到映射文件: configs/{}/disease_mapping.csv\n".format(self.country_code))
+                f.write("# 需要添加到映射文件: configs/mapping/{}.csv\n".format(self.country_code.lower()))
                 f.write("disease_id,local_name,local_code,category,aliases,data_source,notes\n")
                 for disease in sorted(self.unknown_diseases):
                     f.write(f",{disease},,,,待审核\n")

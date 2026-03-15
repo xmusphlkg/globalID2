@@ -63,6 +63,11 @@ class Country(BaseModel):
         back_populates="country",
         cascade="all, delete-orphan",
     )
+    scopes: Mapped[list] = relationship(
+        "CountryScope",
+        primaryjoin="Country.code == CountryScope.country_code",
+        cascade="all, delete-orphan",
+    )
     
     # 索引
     __table_args__ = (
