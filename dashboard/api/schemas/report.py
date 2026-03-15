@@ -68,12 +68,21 @@ class ReportSectionOut(BaseModel):
 class ReportSectionRunOut(BaseModel):
     id: int
     run_uuid: Optional[str] = None
+    section_id: Optional[int] = None
     disease_name: Optional[str] = None
     section_type: Optional[str] = None
     status: str
     model: Optional[str] = None
     provider: Optional[str] = None
+    temperature: Optional[float] = None
+    max_tokens: Optional[int] = None
+    token_usage: Optional[Dict[str, Any]] = None
     quality_scores: Optional[Dict[str, Any]] = None
+    revision_count: int = 0
+    error_message: Optional[str] = None
+    started_at: Optional[datetime] = None
+    ended_at: Optional[datetime] = None
+    metadata: Optional[Dict[str, Any]] = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -94,6 +103,9 @@ class AIConversationOut(BaseModel):
 
 class AIInteractionOut(BaseModel):
     id: int
+    task_uuid: Optional[str] = None
+    task_name: Optional[str] = None
+    task_status: Optional[str] = None
     report_id: int
     report_uuid: str
     report_status: Optional[str] = None
@@ -133,3 +145,4 @@ class AIInteractionSummaryOut(BaseModel):
     avg_quality: Optional[float] = None
     by_agent: Dict[str, int]
     by_model: Dict[str, int]
+    task_uuid: Optional[str] = None

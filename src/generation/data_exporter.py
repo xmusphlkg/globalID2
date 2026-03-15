@@ -11,6 +11,7 @@ import pandas as pd
 from sqlalchemy import select
 
 from src.core import get_database, get_logger
+from src.core.missing_values import normalize_rate_value
 from src.domain import Country, Disease, DiseaseRecord
 
 logger = get_logger(__name__)
@@ -252,8 +253,8 @@ class DataExporter:
                 'Cases': record.cases,
                 'Deaths': record.deaths,
                 'Recoveries': record.recoveries,
-                'IncidenceRate': record.incidence_rate,
-                'MortalityRate': record.mortality_rate,
+                'IncidenceRate': normalize_rate_value(record.incidence_rate),
+                'MortalityRate': normalize_rate_value(record.mortality_rate),
                 'FatalityRate': (record.deaths / record.cases) if (record.cases and record.deaths) else 0.0,
                 'Country': row.country_name,
                 'DataQuality': record.data_quality,

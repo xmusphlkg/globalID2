@@ -4,14 +4,14 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useAppStore } from "@/stores/app-store";
 import { t } from "@/lib/i18n";
-import { useTasks, useTaskDetail, useTaskWebSocket, useExecuteTask } from "@/lib/hooks/useTasks";
+import { useTasks, useTaskDetail, useTaskWebSocket, useExecuteTask, useCancelTask } from "@/lib/hooks/useTasks";
 import { useStartAITask } from "@/lib/hooks/useAI";
 import { useReports } from "@/lib/hooks/useReports";
 import { formatDate } from "@/lib/utils";
 import { CHART_TOKENS } from "@/lib/chart-theme";
 import { Chart } from "@/components/charts/Chart";
 import { TaskDetailPanel } from "@/components/tasks/TaskDetailPanel";
-import { Cpu, ChevronDown, Search, MessageSquareText, Plus, X, Loader2, CheckCircle2, Settings2 } from "lucide-react";
+import { Cpu, ChevronDown, Search, MessageSquareText, Plus, X, Loader2, CheckCircle2, Settings2, Ban } from "lucide-react";
 import { Badge, Card, Grid, Text, Title, Color } from "@tremor/react";
 
 const AI_TYPES = "process_data,generate_report,generate_section,review_section";
@@ -55,6 +55,7 @@ function CreateAITaskModal({
   const [taskName, setTaskName] = useState("");
   const [description, setDescription] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [createdTaskUuid, setCreatedTaskUuid] = useState<string | null>(null);
   const { mutate: startAITask, isPending, isSuccess } = useStartAITask();
 
   const inputCls =
@@ -65,6 +66,7 @@ function CreateAITaskModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setCreatedTaskUuid(null);
 
     startAITask(
       {
@@ -78,7 +80,8 @@ function CreateAITaskModal({
         description: description.trim() || undefined,
       },
       {
-        onSuccess: () => {
+        onSuccess: (result) => {
+          setCreatedTaskUuid(result.task_uuid);
           setTimeout(onClose, 1200);
         },
         onError: (err: unknown) => {
@@ -112,6 +115,12 @@ function CreateAITaskModal({
             <span className="text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
               {lang === "zh" ? "可在下方任务列表实时追踪" : "Track progress in the task list below"}
             </span>
+            {createdTaskUuid && (
+              <div className="rounded-tremor-default border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-300">
+                <div className="font-medium">{lang === "zh" ? "任务 UUID" : "Task UUID"}</div>
+                <div className="mt-1 break-all font-mono">{createdTaskUuid}</div>
+              </div>
+            )}
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -235,6 +244,15 @@ function parseReportId(value: unknown): number | null {
   return null;
 }
 
+function parseReportUuid(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+}
+
 export default function AIPage() {
   const { lang, countryId } = useAppStore();
   const [statusFilter, setStatusFilter] = useState("");
@@ -243,7 +261,9 @@ export default function AIPage() {
   const [expandedUuid, setExpandedUuid] = useState<string | null>(null);
   const [createModalOpen, setCreateModalOpen] = useState(false);
 
-  useTaskWebSocket();
+  useTaskWebSocket({
+    extraQueryKeys: [["reports"], ["report-runs"], ["ai-interactions"], ["ai-interactions-summary"]],
+  });
 
   const { data: tasks, isLoading } = useTasks(
     statusFilter || undefined,
@@ -254,6 +274,7 @@ export default function AIPage() {
 
   const { data: taskDetail, isFetching: detailLoading } = useTaskDetail(expandedUuid);
   const { mutate: executeTask, isPending: executingTask } = useExecuteTask();
+  const { mutate: cancelTask, isPending: cancellingTask } = useCancelTask();
   const { data: reports } = useReports(null, undefined, 200);
 
   const reportUuidById = useMemo(() => {
@@ -268,6 +289,11 @@ export default function AIPage() {
     if (!taskDetail) return null;
 
     const outputData = taskDetail.output_data as Record<string, unknown> | null;
+    const reportUuid = parseReportUuid(outputData?.report_uuid);
+    if (reportUuid) {
+      return reportUuid;
+    }
+
     const reportId = parseReportId(taskDetail.report_id) ?? parseReportId(outputData?.report_id);
     if (!reportId) return null;
 
@@ -462,7 +488,13 @@ export default function AIPage() {
                 }
               >
                 <Badge color={statusBadge[task.status] ?? "slate"}>{task.status}</Badge>
-                <span className="flex-1 truncate font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">{task.task_name}</span>
+                {task.cancel_requested && task.status === "running" && <Badge color="amber">cancelling</Badge>}
+                <div className="min-w-0 flex-1">
+                  <div className="truncate font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">{task.task_name}</div>
+                  <div className="truncate font-mono text-[11px] text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+                    UUID: {task.task_uuid}
+                  </div>
+                </div>
                 <Badge color="slate">{task.task_type}</Badge>
                 <div className="w-24">
                   <div className="h-2 overflow-hidden rounded-full bg-tremor-background-muted dark:bg-dark-tremor-background-muted">
@@ -487,29 +519,41 @@ export default function AIPage() {
 
               {expandedUuid === task.task_uuid && (
                 <div className="border-t border-tremor-border px-4 py-3 text-[13px] dark:border-dark-tremor-border">
-                  {activeTaskReportUuid && expandedUuid === task.task_uuid && (
+                  {expandedUuid === task.task_uuid && (
                     <div className="mb-3">
                       <Link
-                        href={`/ai/interactions?uuid=${encodeURIComponent(activeTaskReportUuid)}`}
+                        href={`/ai/interactions?task=${encodeURIComponent(task.task_uuid)}${activeTaskReportUuid ? `&uuid=${encodeURIComponent(activeTaskReportUuid)}` : ""}`}
                         className="inline-flex items-center gap-1 rounded-lg border border-blue-300/70 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 transition hover:bg-blue-100 dark:border-blue-900 dark:bg-blue-950/25 dark:text-blue-300"
                       >
                         <MessageSquareText className="h-3.5 w-3.5" />
-                        View this report in chat workflow
+                        View this task in chat workflow
                       </Link>
                     </div>
                   )}
-                  {expandedUuid === task.task_uuid && ["pending", "queued", "failed"].includes(task.status) && (
-                    <div className="mb-3">
+                  <div className="mb-3 flex flex-wrap gap-2">
+                    {expandedUuid === task.task_uuid && ["pending", "queued", "failed", "cancelled"].includes(task.status) && (
                       <button
                         onClick={() => executeTask(task.task_uuid)}
                         disabled={executingTask}
                         className="inline-flex items-center gap-1 rounded-lg border border-amber-300/70 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-amber-900 dark:bg-amber-950/25 dark:text-amber-300"
                       >
                         {executingTask ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Cpu className="h-3.5 w-3.5" />}
-                        {lang === "zh" ? "执行任务" : "Execute Task"}
+                        {task.status === "cancelled" ? (lang === "zh" ? "从中断点继续" : "Resume Task") : (lang === "zh" ? "执行任务" : "Execute Task")}
                       </button>
-                    </div>
-                  )}
+                    )}
+                    {expandedUuid === task.task_uuid && ["pending", "queued", "running"].includes(task.status) && (
+                      <button
+                        onClick={() => cancelTask(task.task_uuid)}
+                        disabled={cancellingTask || task.cancel_requested}
+                        className="inline-flex items-center gap-1 rounded-lg border border-rose-300/70 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-900 dark:bg-rose-950/25 dark:text-rose-300"
+                      >
+                        {cancellingTask ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Ban className="h-3.5 w-3.5" />}
+                        {task.cancel_requested
+                          ? (lang === "zh" ? "取消请求已发送" : "Cancellation Requested")
+                          : (lang === "zh" ? "取消任务" : "Cancel Task")}
+                      </button>
+                    )}
+                  </div>
                   <TaskDetailPanel taskDetail={taskDetail} detailLoading={detailLoading} emptyMessage="Task detail unavailable." />
                 </div>
               )}

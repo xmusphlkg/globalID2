@@ -1,6 +1,7 @@
 """Reports router – list, detail, sections, conversations, AI insights."""
 
-from typing import List, Optional
+from datetime import datetime
+from typing import Any, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
@@ -18,6 +19,7 @@ from ..schemas.report import (
 )
 from src.domain.country import Country
 from src.domain.report import AIConversation, Report, ReportSection, ReportSectionRun
+from src.domain.task import Task
 
 router = APIRouter()
 
@@ -57,6 +59,96 @@ def _extract_quality_overall(quality_scores: Optional[dict]) -> Optional[float]:
         if v is not None:
             return v
     return None
+
+
+def _enum_value(value: Any) -> Any:
+    return getattr(value, "value", value)
+
+
+def _parse_task_datetime(value: Any) -> Optional[datetime]:
+    if not isinstance(value, str):
+        return None
+    normalized = value.strip()
+    if not normalized:
+        return None
+    if normalized.endswith("Z"):
+        normalized = f"{normalized[:-1]}+00:00"
+    try:
+        return datetime.fromisoformat(normalized)
+    except ValueError:
+        return None
+
+
+async def _resolve_task_report_id(task: Task, db: AsyncSession) -> Optional[int]:
+    if task.report_id is not None:
+        return task.report_id
+    if task.country_id is None:
+        return None
+
+    output_data = task.output_data if isinstance(task.output_data, dict) else {}
+    output_report_id = output_data.get("report_id")
+    if isinstance(output_report_id, int):
+        task.report_id = output_report_id
+        await db.commit()
+        return output_report_id
+
+    output_report_uuid = output_data.get("report_uuid")
+    if isinstance(output_report_uuid, str) and output_report_uuid.strip():
+        report_id = (
+            await db.execute(select(Report.id).where(Report.report_uuid == output_report_uuid.strip()))
+        ).scalar_one_or_none()
+        if report_id is not None:
+            task.report_id = report_id
+            await db.commit()
+            return report_id
+
+    input_data = task.input_data if isinstance(task.input_data, dict) else {}
+    report_type = input_data.get("report_type")
+    period_start = _parse_task_datetime(input_data.get("period_start"))
+    period_end = _parse_task_datetime(input_data.get("period_end"))
+
+    candidate_queries = []
+
+    exact_q = select(Report).where(Report.country_id == task.country_id)
+    has_exact_filters = False
+    if isinstance(report_type, str) and report_type.strip():
+        exact_q = exact_q.where(Report.report_type == report_type.strip())
+        has_exact_filters = True
+    if period_start is not None:
+        exact_q = exact_q.where(Report.period_start == period_start)
+        has_exact_filters = True
+    if period_end is not None:
+        exact_q = exact_q.where(Report.period_end == period_end)
+        has_exact_filters = True
+    if has_exact_filters:
+        candidate_queries.append(exact_q)
+
+    if isinstance(report_type, str) and report_type.strip():
+        candidate_queries.append(
+            select(Report).where(
+                Report.country_id == task.country_id,
+                Report.report_type == report_type.strip(),
+            )
+        )
+
+    candidate_queries.append(select(Report).where(Report.country_id == task.country_id))
+
+    report = None
+    for query in candidate_queries:
+        report = (
+            await db.execute(
+                query.order_by(Report.updated_at.desc(), Report.created_at.desc()).limit(1)
+            )
+        ).scalar_one_or_none()
+        if report is not None:
+            break
+
+    if report is None:
+        return None
+
+    task.report_id = report.id
+    await db.commit()
+    return report.id
 
 
 @router.get("/reports", response_model=List[ReportOut])
@@ -178,7 +270,30 @@ async def get_report_runs(report_uuid: str, db: AsyncSession = Depends(get_db)):
         .where(ReportSectionRun.report_id == report_id)
         .order_by(ReportSectionRun.created_at)
     )
-    return (await db.execute(q)).scalars().all()
+    runs = (await db.execute(q)).scalars().all()
+    return [
+        ReportSectionRunOut(
+            id=run.id,
+            run_uuid=run.run_uuid,
+            section_id=run.section_id,
+            disease_name=run.disease_name,
+            section_type=run.section_type,
+            status=run.status,
+            model=run.model,
+            provider=run.provider,
+            temperature=run.temperature,
+            max_tokens=run.max_tokens,
+            token_usage=run.token_usage,
+            quality_scores=run.quality_scores,
+            revision_count=run.revision_count,
+            error_message=run.error_message,
+            started_at=run.started_at,
+            ended_at=run.ended_at,
+            metadata=run.metadata_,
+            created_at=run.created_at,
+        )
+        for run in runs
+    ]
 
 
 @router.get(
@@ -216,6 +331,7 @@ async def get_section_conversations(
 @router.get("/ai/interactions", response_model=List[AIInteractionOut])
 async def list_ai_interactions(
     country_id: Optional[int] = Query(None),
+    task_uuid: Optional[str] = Query(None),
     report_uuid: Optional[str] = Query(None),
     agent: Optional[str] = Query(None),
     model: Optional[str] = Query(None),
@@ -223,13 +339,25 @@ async def list_ai_interactions(
     limit: int = Query(200, ge=1, le=1000),
     db: AsyncSession = Depends(get_db),
 ):
+    task = None
     report_id = None
+    if task_uuid:
+        task = (
+            await db.execute(select(Task).where(Task.task_uuid == task_uuid))
+        ).scalar_one_or_none()
+        if task is None:
+            raise HTTPException(404, "Task not found")
+        report_id = await _resolve_task_report_id(task, db)
+
     if report_uuid:
         report_id = (
             await db.execute(select(Report.id).where(Report.report_uuid == report_uuid))
         ).scalar_one_or_none()
         if report_id is None:
             raise HTTPException(404, "Report not found")
+
+    if task_uuid and report_id is None:
+        return []
 
     q = (
         select(AIConversation, ReportSectionRun, Report, ReportSection)
@@ -255,6 +383,9 @@ async def list_ai_interactions(
     return [
         AIInteractionOut(
             id=row.AIConversation.id,
+            task_uuid=task.task_uuid if task else None,
+            task_name=task.task_name if task else None,
+            task_status=_enum_value(task.status) if task and task.status is not None else None,
             report_id=row.Report.id,
             report_uuid=str(row.Report.report_uuid),
             report_status=row.Report.status,
@@ -292,19 +423,41 @@ async def list_ai_interactions(
 @router.get("/ai/interactions/summary", response_model=AIInteractionSummaryOut)
 async def get_ai_interactions_summary(
     country_id: Optional[int] = Query(None),
+    task_uuid: Optional[str] = Query(None),
     report_uuid: Optional[str] = Query(None),
     agent: Optional[str] = Query(None),
     model: Optional[str] = Query(None),
     disease: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
 ):
+    task = None
     report_id = None
+    if task_uuid:
+        task = (
+            await db.execute(select(Task).where(Task.task_uuid == task_uuid))
+        ).scalar_one_or_none()
+        if task is None:
+            raise HTTPException(404, "Task not found")
+        report_id = await _resolve_task_report_id(task, db)
+
     if report_uuid:
         report_id = (
             await db.execute(select(Report.id).where(Report.report_uuid == report_uuid))
         ).scalar_one_or_none()
         if report_id is None:
             raise HTTPException(404, "Report not found")
+
+    if task_uuid and report_id is None:
+        return AIInteractionSummaryOut(
+            total_interactions=0,
+            total_tokens=0,
+            avg_tokens=0,
+            avg_duration=0,
+            avg_quality=None,
+            by_agent={},
+            by_model={},
+            task_uuid=task.task_uuid if task else None,
+        )
 
     q = (
         select(AIConversation, ReportSectionRun, Report)
@@ -334,6 +487,7 @@ async def get_ai_interactions_summary(
             avg_quality=None,
             by_agent={},
             by_model={},
+            task_uuid=task.task_uuid if task else None,
         )
 
     total_tokens = 0
@@ -367,4 +521,5 @@ async def get_ai_interactions_summary(
         avg_quality=(sum(qualities) / len(qualities)) if qualities else None,
         by_agent=by_agent,
         by_model=by_model,
+        task_uuid=task.task_uuid if task else None,
     )

@@ -37,6 +37,7 @@ from src.core.db_schema import (
     ensure_disease_learning_suggestions_schema,
 )
 from src.core.logging import get_logger
+from src.core.missing_values import normalize_rate_value
 
 logger = get_logger(__name__)
 
@@ -875,8 +876,8 @@ class DatabaseRebuilder:
                     'country_id': country_id,
                     'cases': max(0, cases),
                     'deaths': max(0, deaths),
-                    'incidence_rate': incidence,
-                    'mortality_rate': mortality,
+                    'incidence_rate': normalize_rate_value(incidence),
+                    'mortality_rate': normalize_rate_value(mortality),
                     'region': region,
                     'data_source': data_source,
                     'metadata': json.dumps(metadata_obj),

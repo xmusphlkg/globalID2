@@ -8,17 +8,100 @@ task_manager → optional broadcast hook → WebSocket clients.
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime, timezone
 from typing import Any, Callable, Coroutine, Dict, Optional
+
+from sqlalchemy import select
 
 from src.core import get_database, get_logger, init_app
 from src.core.task_manager import task_manager
-from src.domain import Task, TaskStatus, TaskType
+from src.domain import Report, ReportSectionRun, ReportSectionRunStatus, ReportStatus, Task, TaskStatus, TaskType
 from src.services._lifecycle import task_lifecycle
 
 logger = get_logger(__name__)
 
 # Global set of currently-running task UUIDs (prevents double-execution)
 _running: set[str] = set()
+
+
+async def recover_interrupted_tasks_on_startup() -> int:
+    """Mark orphaned RUNNING tasks as cancelled after an API/server restart."""
+    message = (
+        "API server restarted while this task was running. "
+        "Resume the task to continue from the last checkpoint."
+    )
+    now = datetime.now(timezone.utc)
+    recovered: list[tuple[str, int]] = []
+
+    async with get_database() as db:
+        tasks = (
+            await db.execute(select(Task).where(Task.status == TaskStatus.RUNNING))
+        ).scalars().all()
+
+        for task in tasks:
+            task.status = TaskStatus.CANCELLED
+            task.completed_at = now
+            if task.started_at:
+                task.actual_duration = int((now - task.started_at).total_seconds())
+            task.last_error = message
+
+            report_id = task.report_id
+            output_data = task.output_data if isinstance(task.output_data, dict) else {}
+            if report_id is None and isinstance(output_data.get("report_id"), int):
+                report_id = int(output_data["report_id"])
+                task.report_id = report_id
+
+            if report_id is not None:
+                report = await db.get(Report, report_id)
+                if report and report.status in [
+                    ReportStatus.PENDING,
+                    ReportStatus.GENERATING,
+                    ReportStatus.REVIEWING,
+                ]:
+                    report.status = ReportStatus.FAILED
+                    report.error_message = message
+
+                pending_runs = (
+                    await db.execute(
+                        select(ReportSectionRun).where(
+                            ReportSectionRun.report_id == report_id,
+                            ReportSectionRun.status.in_([
+                                ReportSectionRunStatus.QUEUED,
+                                ReportSectionRunStatus.RUNNING,
+                            ]),
+                        )
+                    )
+                ).scalars().all()
+                for run in pending_runs:
+                    run.status = ReportSectionRunStatus.CANCELLED
+                    run.error_message = message
+                    run.ended_at = now
+
+            recovered.append((task.task_uuid, task.progress or 0))
+
+        await db.commit()
+
+    for task_uuid, progress in recovered:
+        await task_manager.add_workbook_entry(
+            task_uuid,
+            entry_type="warning",
+            title="Task Recovered After Restart",
+            content=message,
+            content_type="text",
+        )
+        await task_manager._broadcast(
+            {
+                "event": "task_status",
+                "task_uuid": task_uuid,
+                "status": TaskStatus.CANCELLED.value,
+                "progress": progress,
+            }
+        )
+
+    if recovered:
+        logger.warning(f"Recovered {len(recovered)} interrupted running task(s) after startup")
+
+    return len(recovered)
 
 
 async def execute_task(task_uuid: str) -> Dict[str, Any]:
@@ -37,11 +120,14 @@ async def execute_task(task_uuid: str) -> Dict[str, Any]:
     if task is None:
         raise ValueError(f"Task not found: {task_uuid}")
 
-    if task.status not in (TaskStatus.PENDING, TaskStatus.QUEUED, TaskStatus.FAILED):
+    if task.status not in (TaskStatus.PENDING, TaskStatus.QUEUED, TaskStatus.FAILED, TaskStatus.CANCELLED):
         raise ValueError(
             f"Task {task_uuid} has status '{task.status}' — "
-            "only pending/queued/failed tasks can be executed"
+            "only pending/queued/failed/cancelled tasks can be executed"
         )
+
+    if task.status == TaskStatus.CANCELLED or await task_manager.is_cancel_requested(task_uuid):
+        await task_manager.clear_task_cancel_request(task_uuid)
 
     _running.add(task_uuid)
     try:
@@ -142,11 +228,13 @@ async def _run_report(task: Task) -> Dict[str, Any]:
             days=days,
             enable_review=enable_review,
             send_email=send_email,
+            report_id_ref=report_id_ref,
         )
         report_id_ref[0] = result.report_id
 
         output = {
             "report_id": result.report_id,
+            "report_uuid": result.report_uuid,
             "status": result.status,
             "files": result.output_files,
             "sections_count": result.sections_count,
@@ -156,6 +244,7 @@ async def _run_report(task: Task) -> Dict[str, Any]:
         async with get_database() as db:
             task_obj = await db.get(Task, task.id)
             if task_obj:
+                task_obj.report_id = result.report_id
                 task_obj.output_data = output
                 await db.commit()
 

@@ -12,6 +12,7 @@ import plotly.express as px
 from plotly.subplots import make_subplots
 
 from src.core import get_logger
+from src.core.missing_values import normalize_rate_columns
 
 logger = get_logger(__name__)
 
@@ -456,6 +457,7 @@ class ChartGenerator:
             Plotly 图表对象（双子图）
         """
         logger.debug(f"Generating cases+incidence subplot: {title}")
+        data = normalize_rate_columns(data)
 
         has_incidence = incidence_col in data.columns and data[incidence_col].notna().any()
 

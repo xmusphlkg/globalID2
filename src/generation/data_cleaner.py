@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Literal, Optional, Tuple
 import pandas as pd
 
 from src.core import get_logger
+from src.core.missing_values import normalize_rate_columns
 
 logger = get_logger(__name__)
 
@@ -78,7 +79,7 @@ def long_to_wide(
     if not cols:
         cols = [c for c in df.columns if c not in (time_col, "disease_id") and df[c].dtype in ("int64", "float64")]
 
-    df = df.copy()
+    df = normalize_rate_columns(df)
     df[time_col] = pd.to_datetime(df[time_col])
 
     agg_dict = {}

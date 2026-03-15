@@ -3,6 +3,9 @@ import { apiFetch } from "@/lib/api";
 
 export interface AIInteractionItem {
   id: number;
+  task_uuid: string | null;
+  task_name: string | null;
+  task_status: string | null;
   report_id: number;
   report_uuid: string;
   report_status: string | null;
@@ -42,10 +45,12 @@ export interface AIInteractionSummary {
   avg_quality: number | null;
   by_agent: Record<string, number>;
   by_model: Record<string, number>;
+  task_uuid: string | null;
 }
 
 export interface AIInteractionFilters {
   countryId?: number | null;
+  taskUuid?: string;
   reportUuid?: string;
   agent?: string;
   model?: string;
@@ -53,9 +58,14 @@ export interface AIInteractionFilters {
   limit?: number;
 }
 
+interface AIInteractionQueryOptions {
+  refetchIntervalMs?: number | false;
+}
+
 function buildQuery(filters: AIInteractionFilters): string {
   const params = new URLSearchParams();
   if (filters.countryId) params.set("country_id", String(filters.countryId));
+  if (filters.taskUuid) params.set("task_uuid", filters.taskUuid);
   if (filters.reportUuid) params.set("report_uuid", filters.reportUuid);
   if (filters.agent) params.set("agent", filters.agent);
   if (filters.model) params.set("model", filters.model);
@@ -64,7 +74,7 @@ function buildQuery(filters: AIInteractionFilters): string {
   return params.toString();
 }
 
-export function useAIInteractions(filters: AIInteractionFilters) {
+export function useAIInteractions(filters: AIInteractionFilters, options: AIInteractionQueryOptions = {}) {
   return useQuery<AIInteractionItem[]>({
     queryKey: ["ai-interactions", filters],
     queryFn: () => {
@@ -72,10 +82,14 @@ export function useAIInteractions(filters: AIInteractionFilters) {
       return apiFetch(`/ai/interactions${query ? `?${query}` : ""}`);
     },
     staleTime: 30 * 1000,
+    refetchInterval: options.refetchIntervalMs,
   });
 }
 
-export function useAIInteractionSummary(filters: Omit<AIInteractionFilters, "limit">) {
+export function useAIInteractionSummary(
+  filters: Omit<AIInteractionFilters, "limit">,
+  options: AIInteractionQueryOptions = {},
+) {
   return useQuery<AIInteractionSummary>({
     queryKey: ["ai-interactions-summary", filters],
     queryFn: () => {
@@ -83,5 +97,6 @@ export function useAIInteractionSummary(filters: Omit<AIInteractionFilters, "lim
       return apiFetch(`/ai/interactions/summary${query ? `?${query}` : ""}`);
     },
     staleTime: 30 * 1000,
+    refetchInterval: options.refetchIntervalMs,
   });
 }
