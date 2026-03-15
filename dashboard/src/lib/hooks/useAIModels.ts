@@ -222,6 +222,14 @@ export function useTestAIModel() {
   });
 }
 
+export function useDeleteAIModel() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (modelId: number) => apiFetch(`/ai/models/${modelId}`, { method: "DELETE" }),
+    onSuccess: () => invalidateAIModelQueries(queryClient),
+  });
+}
+
 export function useCheckAllAIModels() {
   const queryClient = useQueryClient();
   return useMutation({

@@ -1,13 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useMemo, useState, type ReactNode } from "react";
+import { FormEvent, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Badge, Card, Grid, Metric, ProgressBar, Text, Title } from "@tremor/react";
 import {
   ArrowRight,
   CheckCircle2,
   CircleSlash,
   Cpu,
+  ChevronDown,
+  ChevronUp,
   GitBranch,
   KeyRound,
   ListTodo,
@@ -17,6 +19,7 @@ import {
   Search,
   Settings2,
   ShieldCheck,
+  Trash2,
 } from "lucide-react";
 import { ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -32,6 +35,7 @@ import {
   useCheckAllAIModels,
   useCreateAIModel,
   useCreateAIProvider,
+  useDeleteAIModel,
   useTestAIModel,
   useTestAIProvider,
   useUpdateAIModel,
@@ -39,12 +43,17 @@ import {
 } from "@/lib/hooks/useAIModels";
 
 const inputCls =
-  "w-full rounded-tremor-default border border-tremor-border bg-tremor-background px-3 py-2 text-sm text-tremor-content-emphasis outline-none focus:ring-2 focus:ring-tremor-brand-muted dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-emphasis";
+  "w-full rounded-tremor-default border border-tremor-border bg-tremor-background px-2.5 py-1.5 text-sm text-tremor-content-emphasis outline-none focus:ring-2 focus:ring-tremor-brand-muted dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-emphasis";
 
 const pillButtonCls =
-  "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition";
+  "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition";
 
 type HealthFilter = "all" | "healthy" | "attention" | "checking";
+
+type ToastState = {
+  type: "success" | "error";
+  message: string;
+};
 
 function statusColor(status: string): "slate" | "emerald" | "rose" | "amber" {
   const s = (status || "").toLowerCase();
@@ -155,6 +164,7 @@ export default function AIModelsPage() {
   const createModel = useCreateAIModel();
   const updateModel = useUpdateAIModel();
   const testModel = useTestAIModel();
+  const deleteModel = useDeleteAIModel();
   const checkAll = useCheckAllAIModels();
 
   const [providerForm, setProviderForm] = useState({
@@ -200,6 +210,12 @@ export default function AIModelsPage() {
 
   const [search, setSearch] = useState("");
   const [healthFilter, setHealthFilter] = useState<HealthFilter>("all");
+  const [showSetup, setShowSetup] = useState(false);
+  const [showRuntime, setShowRuntime] = useState(false);
+  const [compactProviders, setCompactProviders] = useState(true);
+  const [compactModels, setCompactModels] = useState(true);
+  const [deletingModelId, setDeletingModelId] = useState<number | null>(null);
+  const [toast, setToast] = useState<ToastState | null>(null);
 
   const copy = isZh
     ? {
@@ -297,6 +313,21 @@ export default function AIModelsPage() {
         rateLimitCount: "限流次数",
         lastRateLimit: "最近限流",
         routeCoolingHint: "命中 rate limit 后，模型中心会把当前路由冷却一段时间，并自动切换到下一个可用模型。",
+        setupPanelTitle: "新增与配置",
+        setupPanelDesc: "默认折叠输入区，减少视觉负担，需要时再展开。",
+        expandSetup: "展开新增区",
+        collapseSetup: "收起新增区",
+        expandRuntime: "展开运行时链路",
+        collapseRuntime: "收起运行时链路",
+        deleteModel: "删除",
+        deleting: "删除中...",
+        deleteModelConfirm: "确认删除模型",
+        deleteModelDefaultWarn: "这是默认模型，删除后系统会自动选择下一个模型作为默认。",
+        deleteModelSuccess: "模型已删除",
+        deleteModelFailed: "删除失败",
+        cardDensity: "卡片密度",
+        compact: "紧凑",
+        detailed: "详细",
       }
     : {
         subtitle: "Manage providers, model routes, and runtime priority in a single workspace so credential gaps, defaults, and health issues are obvious.",
@@ -393,7 +424,28 @@ export default function AIModelsPage() {
         rateLimitCount: "Rate-limit Count",
         lastRateLimit: "Last Rate-limit",
         routeCoolingHint: "When a route hits a rate limit, model center cools it down for a while and automatically moves to the next available model.",
+        setupPanelTitle: "Create and Configure",
+        setupPanelDesc: "Input forms are collapsed by default to reduce visual noise.",
+        expandSetup: "Expand Create Panel",
+        collapseSetup: "Collapse Create Panel",
+        expandRuntime: "Expand Runtime Chain",
+        collapseRuntime: "Collapse Runtime Chain",
+        deleteModel: "Delete",
+        deleting: "Deleting...",
+        deleteModelConfirm: "Delete model",
+        deleteModelDefaultWarn: "This is the default model. After deletion, the system will auto-pick another default.",
+        deleteModelSuccess: "Model deleted",
+        deleteModelFailed: "Delete failed",
+        cardDensity: "Card Density",
+        compact: "Compact",
+        detailed: "Detailed",
       };
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), 2800);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
 
   const providerOptions = useMemo(
     () =>
@@ -632,27 +684,56 @@ export default function AIModelsPage() {
     );
   };
 
+  const onDeleteModel = (model: AIModelItem) => {
+    const confirmText = isZh
+      ? `${copy.deleteModelConfirm} ${model.display_name} (${model.model_name})?${model.is_default ? `\n\n${copy.deleteModelDefaultWarn}` : ""}`
+      : `${copy.deleteModelConfirm} ${model.display_name} (${model.model_name})?${model.is_default ? `\n\n${copy.deleteModelDefaultWarn}` : ""}`;
+    if (!window.confirm(confirmText)) return;
+
+    if (editingModelId === model.id) {
+      setEditingModelId(null);
+    }
+    setDeletingModelId(model.id);
+    deleteModel.mutate(model.id, {
+      onSuccess: () => {
+        setToast({
+          type: "success",
+          message: `${copy.deleteModelSuccess}: ${model.display_name}`,
+        });
+      },
+      onError: (error) => {
+        setToast({
+          type: "error",
+          message: `${copy.deleteModelFailed}: ${mutationErrorText(error, lang)}`,
+        });
+      },
+      onSettled: () => {
+        setDeletingModelId(null);
+      },
+    });
+  };
+
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 md:px-6">
+    <div className="mx-auto w-full max-w-6xl space-y-4 px-4 py-4 md:px-6">
       <Card className="overflow-hidden border border-violet-200/60 bg-gradient-to-br from-violet-50 via-white to-sky-50 shadow-sm dark:border-violet-900/40 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-3xl space-y-3">
             <Badge color="violet" className="w-fit">{t(lang, "mod_ai")}</Badge>
             <div className="space-y-2">
-              <Title className="text-3xl tracking-tight">{t(lang, "ai_models")}</Title>
-              <Text className="max-w-2xl text-base leading-7">{copy.subtitle}</Text>
+              <Title className="text-2xl tracking-tight">{t(lang, "ai_models")}</Title>
+              <Text className="max-w-2xl text-sm leading-6">{copy.subtitle}</Text>
             </div>
             <div className="flex flex-wrap items-center gap-2 pt-1">
               <Link
                 href="/ai/tasks"
-                className="inline-flex items-center gap-1.5 rounded-xl border border-violet-300/70 bg-violet-50 px-3 py-2 text-xs font-medium text-violet-700 transition hover:bg-violet-100 dark:border-violet-800 dark:bg-violet-950/25 dark:text-violet-300"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-violet-300/70 bg-violet-50 px-3 py-1.5 text-xs font-medium text-violet-700 transition hover:bg-violet-100 dark:border-violet-800 dark:bg-violet-950/25 dark:text-violet-300"
               >
                 <ListTodo className="h-3.5 w-3.5" />
                 {copy.openTasks}
               </Link>
               <Link
                 href="/ai/interactions"
-                className="inline-flex items-center gap-1.5 rounded-xl border border-sky-300/70 bg-sky-50 px-3 py-2 text-xs font-medium text-sky-700 transition hover:bg-sky-100 dark:border-sky-900 dark:bg-sky-950/25 dark:text-sky-300"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-sky-300/70 bg-sky-50 px-3 py-1.5 text-xs font-medium text-sky-700 transition hover:bg-sky-100 dark:border-sky-900 dark:bg-sky-950/25 dark:text-sky-300"
               >
                 <MessageSquareText className="h-3.5 w-3.5" />
                 {copy.openInteractions}
@@ -660,7 +741,7 @@ export default function AIModelsPage() {
               <button
                 onClick={() => checkAll.mutate()}
                 disabled={checkAll.isPending}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-300/70 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-60 dark:border-emerald-900 dark:bg-emerald-950/25 dark:text-emerald-300"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-300/70 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-60 dark:border-emerald-900 dark:bg-emerald-950/25 dark:text-emerald-300"
               >
                 {checkAll.isPending ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <ShieldCheck className="h-3.5 w-3.5" />}
                 {copy.checkAllModels}
@@ -708,7 +789,7 @@ export default function AIModelsPage() {
               return (
                 <div
                   key={item.title}
-                  className="rounded-2xl border border-white/70 bg-white/80 p-4 shadow-sm backdrop-blur dark:border-white/5 dark:bg-white/5"
+                  className="rounded-2xl border border-white/70 bg-white/80 p-3 shadow-sm backdrop-blur dark:border-white/5 dark:bg-white/5"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -729,19 +810,38 @@ export default function AIModelsPage() {
         </div>
       </Card>
 
-      <Grid numItems={1} numItemsLg={2} className="gap-4">
-        <Card className="border border-tremor-border/80 shadow-sm dark:border-dark-tremor-border/80">
+      <Card className="border border-tremor-border/80 shadow-sm dark:border-dark-tremor-border/80">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <Title className="text-base">{copy.setupPanelTitle}</Title>
+            <Text className="mt-1 text-sm">{copy.setupPanelDesc}</Text>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowSetup((old) => !old)}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300/70 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900/30 dark:text-slate-300"
+          >
+            <Settings2 className="h-3.5 w-3.5" />
+            {showSetup ? copy.collapseSetup : copy.expandSetup}
+            {showSetup ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+          </button>
+        </div>
+      </Card>
+
+      {showSetup && (
+        <Grid numItems={1} numItemsLg={2} className="gap-3">
+          <Card className="border border-tremor-border/80 shadow-sm dark:border-dark-tremor-border/80">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <Title className="text-lg">{copy.providerFormTitle}</Title>
-              <Text className="mt-1">{copy.providerFormDesc}</Text>
+              <Title className="text-base">{copy.providerFormTitle}</Title>
+              <Text className="mt-1 text-sm">{copy.providerFormDesc}</Text>
             </div>
             <div className="rounded-2xl bg-violet-100 p-2.5 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300">
               <Plus className="h-5 w-5" />
             </div>
           </div>
 
-          <form className="mt-5 grid gap-3 md:grid-cols-2" onSubmit={onCreateProvider}>
+          <form className="mt-4 grid gap-3 md:grid-cols-2" onSubmit={onCreateProvider}>
             <input
               className={inputCls}
               placeholder={`${copy.providerKey} (e.g. openai-prod)`}
@@ -797,27 +897,27 @@ export default function AIModelsPage() {
               <button
                 type="submit"
                 disabled={createProvider.isPending}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-violet-600 px-3 py-2 text-xs font-medium text-white transition hover:bg-violet-700 disabled:opacity-60"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-violet-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-violet-700 disabled:opacity-60"
               >
                 <Plus className="h-3.5 w-3.5" />
                 {copy.createProvider}
               </button>
             </div>
           </form>
-        </Card>
+          </Card>
 
-        <Card className="border border-tremor-border/80 shadow-sm dark:border-dark-tremor-border/80">
+          <Card className="border border-tremor-border/80 shadow-sm dark:border-dark-tremor-border/80">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <Title className="text-lg">{copy.modelFormTitle}</Title>
-              <Text className="mt-1">{copy.modelFormDesc}</Text>
+              <Title className="text-base">{copy.modelFormTitle}</Title>
+              <Text className="mt-1 text-sm">{copy.modelFormDesc}</Text>
             </div>
             <div className="rounded-2xl bg-sky-100 p-2.5 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300">
               <Cpu className="h-5 w-5" />
             </div>
           </div>
 
-          <form className="mt-5 grid gap-3 md:grid-cols-2" onSubmit={onCreateModel}>
+          <form className="mt-4 grid gap-3 md:grid-cols-2" onSubmit={onCreateModel}>
             <select
               className={cn(inputCls, "md:col-span-2")}
               value={modelForm.provider_id || ""}
@@ -856,21 +956,22 @@ export default function AIModelsPage() {
               <button
                 type="submit"
                 disabled={createModel.isPending}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-sky-600 px-3 py-2 text-xs font-medium text-white transition hover:bg-sky-700 disabled:opacity-60"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-sky-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-sky-700 disabled:opacity-60"
               >
                 <Cpu className="h-3.5 w-3.5" />
                 {copy.createModel}
               </button>
             </div>
           </form>
-        </Card>
-      </Grid>
+          </Card>
+        </Grid>
+      )}
 
       <Card className="border border-tremor-border/80 shadow-sm dark:border-dark-tremor-border/80">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <Title className="text-lg">{copy.workspaceFilters}</Title>
-            <Text className="mt-1">{copy.workspaceFiltersDesc}</Text>
+            <Title className="text-base">{copy.workspaceFilters}</Title>
+            <Text className="mt-1 text-sm">{copy.workspaceFiltersDesc}</Text>
           </div>
           <div className="flex flex-wrap gap-2 text-xs">
             <Badge color="slate">{copy.filteredProviders}: {filteredProviders.length}</Badge>
@@ -920,12 +1021,19 @@ export default function AIModelsPage() {
       <section className="space-y-4" id="providers">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <Title className="text-lg">{copy.providersTitle}</Title>
-            <Text className="mt-1">{copy.providersDesc}</Text>
+            <Title className="text-base">{copy.providersTitle}</Title>
+            <Text className="mt-1 text-sm">{copy.providersDesc}</Text>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Badge color="emerald">{summary.activeProviders} {copy.activeProvidersMetric}</Badge>
             <Badge color="blue">{summary.configuredKeys} {copy.keysMetric}</Badge>
+            <button
+              type="button"
+              onClick={() => setCompactProviders((old) => !old)}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300/70 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900/30 dark:text-slate-300"
+            >
+              {copy.cardDensity}: {compactProviders ? copy.compact : copy.detailed}
+            </button>
           </div>
         </div>
 
@@ -941,7 +1049,7 @@ export default function AIModelsPage() {
           <div className="grid gap-4 xl:grid-cols-2">
             {filteredProviders.map((provider) => (
               <Card key={provider.id} className="border border-tremor-border/80 shadow-sm dark:border-dark-tremor-border/80">
-                <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
                       <Title className="text-base">{provider.display_name}</Title>
@@ -962,25 +1070,27 @@ export default function AIModelsPage() {
                   </div>
                 </div>
 
-                <div className="mt-4 grid gap-3 sm:grid-cols-2 2xl:grid-cols-5">
+                <div className={cn("mt-3 grid gap-2 sm:grid-cols-2", compactProviders ? "2xl:grid-cols-4" : "2xl:grid-cols-5")}>
                   <DetailField label={copy.baseUrl} value={provider.base_url || "-"} mono />
                   <DetailField label={copy.credential} value={provider.api_key_hint || copy.noCredential} mono />
                   <DetailField label={copy.priority} value={provider.priority} />
                   <DetailField label={copy.providerCount} value={modelCountByProvider.get(provider.id) ?? 0} />
-                  <DetailField
-                    label={provider.rate_limit_active ? copy.cooldownUntil : copy.lastCheck}
-                    value={provider.rate_limit_active ? formatDateTime(provider.rate_limit_cooldown_until) : formatDateTime(provider.last_checked_at)}
-                  />
+                  {!compactProviders && (
+                    <DetailField
+                      label={provider.rate_limit_active ? copy.cooldownUntil : copy.lastCheck}
+                      value={provider.rate_limit_active ? formatDateTime(provider.rate_limit_cooldown_until) : formatDateTime(provider.last_checked_at)}
+                    />
+                  )}
                 </div>
 
-                {provider.rate_limit_count > 0 && (
+                {!compactProviders && provider.rate_limit_count > 0 && (
                   <div className="mt-3 flex flex-wrap gap-2 text-xs">
                     <Badge color="amber">{copy.rateLimitCount}: {provider.rate_limit_count}</Badge>
                     {provider.last_rate_limit_at && <Badge color="slate">{copy.lastRateLimit}: {formatDateTime(provider.last_rate_limit_at)}</Badge>}
                   </div>
                 )}
 
-                {provider.last_check_message && (
+                {!compactProviders && provider.last_check_message && (
                   <div className="mt-4 rounded-2xl border border-tremor-border/80 bg-tremor-background-subtle/70 px-4 py-3 dark:border-dark-tremor-border/80 dark:bg-dark-tremor-background-subtle/70">
                     <Text className="text-xs font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">{copy.lastMessage}</Text>
                     <Text className="mt-1 text-sm">{provider.last_check_message}</Text>
@@ -1099,12 +1209,19 @@ export default function AIModelsPage() {
       <section className="space-y-4" id="models">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <Title className="text-lg">{copy.modelsTitle}</Title>
-            <Text className="mt-1">{copy.modelsDesc}</Text>
+            <Title className="text-base">{copy.modelsTitle}</Title>
+            <Text className="mt-1 text-sm">{copy.modelsDesc}</Text>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Badge color="emerald">{summary.enabledModels} {copy.modelsMetric}</Badge>
             <Badge color="blue">{summary.defaultModels} {copy.defaultsMetric}</Badge>
+            <button
+              type="button"
+              onClick={() => setCompactModels((old) => !old)}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300/70 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900/30 dark:text-slate-300"
+            >
+              {copy.cardDensity}: {compactModels ? copy.compact : copy.detailed}
+            </button>
           </div>
         </div>
 
@@ -1120,7 +1237,7 @@ export default function AIModelsPage() {
           <div className="grid gap-4 xl:grid-cols-2">
             {filteredModels.map((model) => (
               <Card key={model.id} className="border border-tremor-border/80 shadow-sm dark:border-dark-tremor-border/80">
-                <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center gap-2">
                       <Title className="text-base">{model.display_name}</Title>
@@ -1142,16 +1259,16 @@ export default function AIModelsPage() {
                   </div>
                 </div>
 
-                <div className="mt-4 grid gap-3 sm:grid-cols-2 2xl:grid-cols-6">
+                <div className={cn("mt-3 grid gap-2 sm:grid-cols-2", compactModels ? "2xl:grid-cols-3" : "2xl:grid-cols-6")}>
                   <DetailField label={copy.modelKey} value={model.model_key} mono />
                   <DetailField label={copy.modelType} value={model.model_type || "chat"} />
-                  <DetailField label={copy.apiStyle} value={model.api_style || copy.inheritProvider} />
-                  <DetailField label={copy.temperature} value={model.temperature == null ? "-" : model.temperature} />
-                  <DetailField label={copy.maxTokens} value={model.max_tokens == null ? "-" : model.max_tokens} />
+                  {!compactModels && <DetailField label={copy.apiStyle} value={model.api_style || copy.inheritProvider} />}
+                  {!compactModels && <DetailField label={copy.temperature} value={model.temperature == null ? "-" : model.temperature} />}
+                  {!compactModels && <DetailField label={copy.maxTokens} value={model.max_tokens == null ? "-" : model.max_tokens} />}
                   <DetailField label={copy.priority} value={model.priority} />
                 </div>
 
-                {model.rate_limit_count > 0 && (
+                {!compactModels && model.rate_limit_count > 0 && (
                   <div className="mt-3 flex flex-wrap gap-2 text-xs">
                     <Badge color="amber">{copy.rateLimitCount}: {model.rate_limit_count}</Badge>
                     {model.last_rate_limit_at && <Badge color="slate">{copy.lastRateLimit}: {formatDateTime(model.last_rate_limit_at)}</Badge>}
@@ -1159,7 +1276,7 @@ export default function AIModelsPage() {
                   </div>
                 )}
 
-                {model.last_check_message && (
+                {!compactModels && model.last_check_message && (
                   <div className="mt-4 rounded-2xl border border-tremor-border/80 bg-tremor-background-subtle/70 px-4 py-3 dark:border-dark-tremor-border/80 dark:bg-dark-tremor-background-subtle/70">
                     <Text className="text-xs font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">{copy.lastMessage}</Text>
                     <Text className="mt-1 text-sm">{model.last_check_message}</Text>
@@ -1203,6 +1320,14 @@ export default function AIModelsPage() {
                       {copy.setDefault}
                     </button>
                   )}
+                  <button
+                    onClick={() => onDeleteModel(model)}
+                    disabled={deleteModel.isPending && deletingModelId === model.id}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-rose-300/70 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 disabled:opacity-60 dark:border-rose-900 dark:bg-rose-950/20 dark:text-rose-300"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    {deleteModel.isPending && deletingModelId === model.id ? copy.deleting : copy.deleteModel}
+                  </button>
                 </div>
 
                 {editingModelId === model.id && (
@@ -1291,102 +1416,134 @@ export default function AIModelsPage() {
         )}
       </section>
 
-      <section id="runtime">
+      <section id="runtime" className="space-y-3">
         <Card className="border border-tremor-border/80 shadow-sm dark:border-dark-tremor-border/80">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <Title className="text-lg">{copy.runtimeTitle}</Title>
-              <Text className="mt-1">{copy.runtimeDesc}</Text>
+              <Title className="text-base">{copy.runtimeTitle}</Title>
+              <Text className="mt-1 text-sm">{copy.runtimeDesc}</Text>
             </div>
-
-            <div className="w-full max-w-sm rounded-2xl border border-tremor-border/70 bg-tremor-background-subtle/70 p-4 dark:border-dark-tremor-border/70 dark:bg-dark-tremor-background-subtle/70">
-              <div className="flex items-center justify-between text-xs font-medium text-tremor-content dark:text-dark-tremor-content">
-                <span>{copy.routeCoverage}</span>
-                <span>{summary.routeCoverage}%</span>
-              </div>
-              <ProgressBar
-                value={summary.routeCoverage}
-                color={summary.routeCoverage >= 100 ? "emerald" : summary.routeCoverage >= 60 ? "amber" : "rose"}
-                className="mt-3"
-              />
-              <Text className="mt-2 text-xs">
-                {summary.runtimeReady}/{summary.totalRoutes} {copy.routeReady}
-              </Text>
-            </div>
-          </div>
-
-          <div className="mt-4 space-y-3">
-            {loadingRuntimeRoutes ? (
-              <Text>{copy.loadingRoutes}</Text>
-            ) : runtimeRoutesError ? (
-              <div className="rounded-2xl border border-rose-200 bg-rose-50/90 px-4 py-3 dark:border-rose-900/60 dark:bg-rose-950/30">
-                <Text className="text-sm font-medium text-rose-700 dark:text-rose-300">{copy.runtimeErrorTitle}</Text>
-                <Text className="mt-1 text-sm text-rose-700 dark:text-rose-300">{queryErrorText(runtimeRoutesError, lang)}</Text>
-              </div>
-            ) : filteredRuntimeRoutes.length === 0 ? (
-              <Text>{copy.noRoutes}</Text>
-            ) : (
-              filteredRuntimeRoutes.map((route, index) => (
-                <div
-                  key={route.model_key}
-                  className="rounded-2xl border border-tremor-border/80 bg-white/80 px-4 py-4 shadow-sm dark:border-dark-tremor-border/80 dark:bg-white/5"
-                >
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white dark:bg-slate-100 dark:text-slate-900">
-                        {index + 1}
-                      </div>
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Title className="text-base">{route.model_name}</Title>
-                          {index === 0 && <Badge color="emerald">{copy.preferredRoute}</Badge>}
-                          <Badge color="blue">{route.provider_key}</Badge>
-                          <Badge color="slate">{route.api_style}</Badge>
-                        </div>
-                        <Text className="mt-1">{route.provider_name}</Text>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge color={route.has_api_key ? "emerald" : "rose"}>
-                        {route.has_api_key ? copy.routeReady : copy.noCredential}
-                      </Badge>
-                      <Badge color={route.available_for_routing ? "emerald" : route.rate_limit_active ? "amber" : "slate"}>
-                        {route.available_for_routing ? copy.routable : route.rate_limit_active ? copy.cooldown : copy.disabled}
-                      </Badge>
-                      {route.rate_limit_active && (
-                        <Badge color="amber">{formatDuration(route.rate_limit_remaining_seconds, lang)}</Badge>
-                      )}
-                      {route.priority != null && <Badge color="amber">P{route.priority}</Badge>}
-                    </div>
-                  </div>
-
-                  <div className="mt-4 grid gap-3 md:grid-cols-4">
-                    <DetailField label={copy.modelKey} value={route.model_key} mono />
-                    <DetailField label={copy.baseUrl} value={route.base_url || "-"} mono />
-                    <DetailField label={copy.credential} value={route.api_key_hint || copy.noCredential} mono />
-                    <DetailField label={copy.lastStatus} value={route.last_check_status || "unknown"} />
-                  </div>
-
-                  {route.rate_limit_count > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                      <Badge color="amber">{copy.rateLimitCount}: {route.rate_limit_count}</Badge>
-                      {route.last_rate_limit_at && <Badge color="slate">{copy.lastRateLimit}: {formatDateTime(route.last_rate_limit_at)}</Badge>}
-                      {route.rate_limit_active && <Badge color="amber">{copy.cooldownUntil}: {formatDateTime(route.rate_limit_cooldown_until)}</Badge>}
-                    </div>
-                  )}
-
-                  <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-tremor-background-subtle px-3 py-1 text-xs text-tremor-content dark:bg-dark-tremor-background-subtle dark:text-dark-tremor-content">
-                    <GitBranch className="h-3.5 w-3.5" />
-                    {route.rate_limit_active ? copy.routeCoolingHint : copy.routeHint}
-                    <ArrowRight className="h-3.5 w-3.5 opacity-70" />
-                  </div>
-                </div>
-              ))
-            )}
+            <button
+              type="button"
+              onClick={() => setShowRuntime((old) => !old)}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300/70 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900/30 dark:text-slate-300"
+            >
+              <GitBranch className="h-3.5 w-3.5" />
+              {showRuntime ? copy.collapseRuntime : copy.expandRuntime}
+              {showRuntime ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            </button>
           </div>
         </Card>
+
+        {showRuntime && (
+          <Card className="border border-tremor-border/80 shadow-sm dark:border-dark-tremor-border/80">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="w-full max-w-sm rounded-2xl border border-tremor-border/70 bg-tremor-background-subtle/70 p-4 dark:border-dark-tremor-border/70 dark:bg-dark-tremor-background-subtle/70">
+                <div className="flex items-center justify-between text-xs font-medium text-tremor-content dark:text-dark-tremor-content">
+                  <span>{copy.routeCoverage}</span>
+                  <span>{summary.routeCoverage}%</span>
+                </div>
+                <ProgressBar
+                  value={summary.routeCoverage}
+                  color={summary.routeCoverage >= 100 ? "emerald" : summary.routeCoverage >= 60 ? "amber" : "rose"}
+                  className="mt-3"
+                />
+                <Text className="mt-2 text-xs">
+                  {summary.runtimeReady}/{summary.totalRoutes} {copy.routeReady}
+                </Text>
+              </div>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              {loadingRuntimeRoutes ? (
+                <Text>{copy.loadingRoutes}</Text>
+              ) : runtimeRoutesError ? (
+                <div className="rounded-2xl border border-rose-200 bg-rose-50/90 px-4 py-3 dark:border-rose-900/60 dark:bg-rose-950/30">
+                  <Text className="text-sm font-medium text-rose-700 dark:text-rose-300">{copy.runtimeErrorTitle}</Text>
+                  <Text className="mt-1 text-sm text-rose-700 dark:text-rose-300">{queryErrorText(runtimeRoutesError, lang)}</Text>
+                </div>
+              ) : filteredRuntimeRoutes.length === 0 ? (
+                <Text>{copy.noRoutes}</Text>
+              ) : (
+                filteredRuntimeRoutes.map((route, index) => (
+                  <div
+                    key={route.model_key}
+                    className="rounded-2xl border border-tremor-border/80 bg-white/80 px-4 py-4 shadow-sm dark:border-dark-tremor-border/80 dark:bg-white/5"
+                  >
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white dark:bg-slate-100 dark:text-slate-900">
+                          {index + 1}
+                        </div>
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Title className="text-base">{route.model_name}</Title>
+                            {index === 0 && <Badge color="emerald">{copy.preferredRoute}</Badge>}
+                            <Badge color="blue">{route.provider_key}</Badge>
+                            <Badge color="slate">{route.api_style}</Badge>
+                          </div>
+                          <Text className="mt-1">{route.provider_name}</Text>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge color={route.has_api_key ? "emerald" : "rose"}>
+                          {route.has_api_key ? copy.routeReady : copy.noCredential}
+                        </Badge>
+                        <Badge color={route.available_for_routing ? "emerald" : route.rate_limit_active ? "amber" : "slate"}>
+                          {route.available_for_routing ? copy.routable : route.rate_limit_active ? copy.cooldown : copy.disabled}
+                        </Badge>
+                        {route.rate_limit_active && (
+                          <Badge color="amber">{formatDuration(route.rate_limit_remaining_seconds, lang)}</Badge>
+                        )}
+                        {route.priority != null && <Badge color="amber">P{route.priority}</Badge>}
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 md:grid-cols-4">
+                      <DetailField label={copy.modelKey} value={route.model_key} mono />
+                      <DetailField label={copy.baseUrl} value={route.base_url || "-"} mono />
+                      <DetailField label={copy.credential} value={route.api_key_hint || copy.noCredential} mono />
+                      <DetailField label={copy.lastStatus} value={route.last_check_status || "unknown"} />
+                    </div>
+
+                    {route.rate_limit_count > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                        <Badge color="amber">{copy.rateLimitCount}: {route.rate_limit_count}</Badge>
+                        {route.last_rate_limit_at && <Badge color="slate">{copy.lastRateLimit}: {formatDateTime(route.last_rate_limit_at)}</Badge>}
+                        {route.rate_limit_active && <Badge color="amber">{copy.cooldownUntil}: {formatDateTime(route.rate_limit_cooldown_until)}</Badge>}
+                      </div>
+                    )}
+
+                    <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-tremor-background-subtle px-3 py-1 text-xs text-tremor-content dark:bg-dark-tremor-background-subtle dark:text-dark-tremor-content">
+                      <GitBranch className="h-3.5 w-3.5" />
+                      {route.rate_limit_active ? copy.routeCoolingHint : copy.routeHint}
+                      <ArrowRight className="h-3.5 w-3.5 opacity-70" />
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </Card>
+        )}
       </section>
+
+      {toast && (
+        <div className="pointer-events-none fixed bottom-5 right-5 z-50">
+          <div
+            className={cn(
+              "max-w-sm rounded-xl border px-4 py-3 text-sm shadow-lg",
+              toast.type === "success"
+                ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/60 dark:text-emerald-200"
+                : "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/60 dark:text-rose-200",
+            )}
+            role="status"
+            aria-live="polite"
+          >
+            {toast.message}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

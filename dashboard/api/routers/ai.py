@@ -43,6 +43,15 @@ class AIStartRequest(BaseModel):
     enable_review: bool = Field(True, description="Enable reviewer agent")
     send_email: bool = Field(False, description="Send email after generation")
     reuse_from_failed: bool = Field(True, description="Reuse partial output from failed/generating tasks in same scope")
+    reuse_strategy: str = Field(
+        "auto",
+        description="Reuse strategy: auto | safe | resume | manual",
+    )
+    reuse_report_id: Optional[int] = Field(
+        None,
+        ge=1,
+        description="Optional explicit report ID when reuse_strategy=manual",
+    )
     priority: str = Field("normal", description="Task priority")
     task_name: Optional[str] = Field(None, description="Optional custom task name")
     description: Optional[str] = Field(None, description="Optional task description")
@@ -190,6 +199,7 @@ async def start_ai_task(
 
     report_type = _normalize_report_type(body.report_type)
     priority = _normalize_priority(body.priority)
+    reuse_strategy = _normalize_reuse_strategy(body.reuse_strategy)
 
     running_q = select(Task).where(
         Task.task_type == TaskType.GENERATE_REPORT,
@@ -210,7 +220,9 @@ async def start_ai_task(
         f"Language: {body.language}, "
         f"Review: {'Yes' if body.enable_review else 'No'}, "
         f"Email: {'Yes' if body.send_email else 'No'}, "
-        f"Reuse Failed: {'Yes' if body.reuse_from_failed else 'No'}"
+        f"Reuse Failed: {'Yes' if body.reuse_from_failed else 'No'}, "
+        f"Reuse Strategy: {reuse_strategy}, "
+        f"Reuse Report ID: {body.reuse_report_id or 'Auto'}"
     )
 
     language = (body.language or "en").strip().lower()
@@ -234,6 +246,8 @@ async def start_ai_task(
             "enable_review": body.enable_review,
             "send_email": body.send_email,
             "reuse_from_failed": body.reuse_from_failed,
+            "reuse_strategy": reuse_strategy,
+            "reuse_report_id": body.reuse_report_id,
         },
     )
 
@@ -425,6 +439,40 @@ async def update_model(model_id: int, body: ModelUpdateRequest, db: AsyncSession
     return _model_to_out(model)
 
 
+@router.delete("/ai/models/{model_id}")
+async def delete_model(model_id: int, db: AsyncSession = Depends(get_db)):
+    await bootstrap_model_center_from_env(force=False)
+
+    model = await db.get(AIModelConfig, model_id)
+    if model is None:
+        raise HTTPException(404, "Model not found")
+
+    deleted_model_key = model.model_key
+    was_default = bool(model.is_default)
+
+    await db.delete(model)
+    await db.flush()
+
+    replacement = None
+    if was_default:
+        replacement = (
+            await db.execute(
+                select(AIModelConfig)
+                .where(AIModelConfig.id != model_id)
+                .order_by(AIModelConfig.is_enabled.desc(), AIModelConfig.priority.asc(), AIModelConfig.id.asc())
+            )
+        ).scalars().first()
+        if replacement is not None:
+            replacement.is_default = True
+
+    await db.commit()
+    return {
+        "ok": True,
+        "deleted_model_key": deleted_model_key,
+        "new_default_model_key": replacement.model_key if replacement is not None else None,
+    }
+
+
 @router.post("/ai/models/{model_id}/test")
 async def test_model(model_id: int):
     await bootstrap_model_center_from_env(force=False)
@@ -488,6 +536,15 @@ def _normalize_priority(value: str) -> TaskPriority:
     except ValueError as exc:
         allowed = ", ".join([p.value for p in TaskPriority])
         raise HTTPException(422, f"Invalid priority '{value}'. Allowed values: {allowed}") from exc
+
+
+def _normalize_reuse_strategy(value: str) -> str:
+    normalized = (value or "auto").strip().lower()
+    allowed = {"auto", "safe", "resume", "manual"}
+    if normalized not in allowed:
+        joined = ", ".join(sorted(allowed))
+        raise HTTPException(422, f"Invalid reuse_strategy '{value}'. Allowed values: {joined}")
+    return normalized
 
 
 def _task_to_out(task: Task) -> TaskOut:
