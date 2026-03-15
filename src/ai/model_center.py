@@ -379,10 +379,23 @@ def is_rate_limit_error(error: Any) -> bool:
     response = getattr(error, "response", None)
     if status_code is None and response is not None:
         status_code = getattr(response, "status_code", None)
-    if status_code == 429:
+
+    try:
+        normalized_status = int(status_code) if status_code is not None else None
+    except (TypeError, ValueError):
+        normalized_status = None
+
+    if normalized_status == 429:
         return True
 
-    msg = str(error).lower()
+    # Some providers return throttling as HTTP 400 with provider-specific error code.
+    code_candidates = _extract_error_codes(error)
+    message = str(error)
+
+    if any(code in {"429", "2003", "insufficient_quota", "quota_exceeded", "rate_limit_exceeded"} for code in code_candidates):
+        return True
+
+    msg = message.lower()
     return any(
         keyword in msg
         for keyword in [
@@ -391,10 +404,82 @@ def is_rate_limit_error(error: Any) -> bool:
             "429",
             "quota",
             "too many requests",
+            "too frequent",
+            "request frequency",
+            "throttl",
+            "retry later",
             "allocationquota",
             "free tier",
+            "\u8bf7\u6c42\u9650\u9891",  # 请求限频
+            "\u9650\u9891",  # 限频
+            "\u9891\u7387\u9650\u5236",  # 频率限制
+            "\u7a0d\u540e\u91cd\u8bd5",  # 稍后重试
         ]
     )
+
+
+def _extract_error_codes(error: Any) -> List[str]:
+    codes: List[str] = []
+
+    direct_code = getattr(error, "code", None)
+    if direct_code is not None:
+        codes.append(str(direct_code).strip().lower())
+
+    body = getattr(error, "body", None)
+    if isinstance(body, dict):
+        body_code = body.get("code")
+        if body_code is not None:
+            codes.append(str(body_code).strip().lower())
+
+        nested = body.get("error")
+        if isinstance(nested, dict):
+            nested_code = nested.get("code")
+            if nested_code is not None:
+                codes.append(str(nested_code).strip().lower())
+
+    message = str(error)
+    code_match = re.search(r"['\"]code['\"]\s*:\s*['\"]?([A-Za-z0-9_-]+)", message)
+    if code_match:
+        codes.append(code_match.group(1).strip().lower())
+
+    return [c for c in codes if c]
+
+
+def is_model_unavailable_error(error: Any) -> bool:
+    """Detect unrecoverable model-level errors (missing model or no access)."""
+    status_code = getattr(error, "status_code", None)
+    response = getattr(error, "response", None)
+    if status_code is None and response is not None:
+        status_code = getattr(response, "status_code", None)
+
+    try:
+        normalized_status = int(status_code) if status_code is not None else None
+    except (TypeError, ValueError):
+        normalized_status = None
+
+    code_candidates = _extract_error_codes(error)
+    if any(code in {"model_not_found", "invalid_model", "model_access_denied"} for code in code_candidates):
+        return True
+
+    msg = str(error).lower()
+    message_hit = any(
+        keyword in msg
+        for keyword in [
+            "model not found",
+            "model does not exist",
+            "does not exist or you do not have access",
+            "you do not have access to it",
+            "invalid model",
+            "unsupported model",
+            "unknown model",
+        ]
+    )
+
+    # 404 + model-related message usually means route/model is invalid for this provider key.
+    if normalized_status == 404 and message_hit:
+        return True
+
+    return message_hit
 
 
 def extract_retry_after_seconds(error: Any) -> Optional[int]:
@@ -419,6 +504,9 @@ def extract_retry_after_seconds(error: Any) -> Optional[int]:
         r"try again in\s+(\d+(?:\.\d+)?)s",
         r"in\s+(\d+(?:\.\d+)?)\s*seconds",
         r"after\s+(\d+(?:\.\d+)?)\s*seconds",
+        r"(?:please\s*)?retry\s*(?:in\s*)?(\d+(?:\.\d+)?)\s*s",
+        r"(\d+(?:\.\d+)?)\s*\u79d2\s*(?:\u540e)?\s*(?:\u518d\u8bd5|\u91cd\u8bd5)",
+        r"\u8bf7\u5728\s*(\d+(?:\.\d+)?)\s*\u79d2\s*(?:\u540e)?\s*(?:\u91cd\u8bd5|\u518d\u8bd5)",
     ]
     for pattern in patterns:
         match = re.search(pattern, message, re.IGNORECASE)
@@ -455,6 +543,9 @@ async def get_runtime_routes() -> List[Dict[str, Any]]:
                 continue
 
             rate_limit_state = _combined_route_rate_limit_state(model, provider)
+            provider_status = str(provider.last_check_status or "").strip().lower()
+            model_status = str(model.last_check_status or "").strip().lower()
+            status_routable = provider_status != "unavailable" and model_status != "unavailable"
 
             routes.append(
                 {
@@ -475,7 +566,9 @@ async def get_runtime_routes() -> List[Dict[str, Any]]:
                     "max_tokens": model.max_tokens,
                     "has_api_key": bool(provider.api_key),
                     "last_check_status": model.last_check_status or provider.last_check_status,
-                    "available_for_routing": bool(provider.api_key) and not rate_limit_state["rate_limit_active"],
+                    "available_for_routing": bool(provider.api_key)
+                    and status_routable
+                    and not rate_limit_state["rate_limit_active"],
                     **rate_limit_state,
                 }
             )
@@ -574,6 +667,11 @@ async def mark_route_rate_limited(
     """Persist provider/model cooldown after a runtime rate-limit error."""
     route_extra_params = route.get("extra_params") or {}
     route_extra_config = route.get("extra_config") or {}
+    mark_provider_raw = route_extra_config.get("mark_provider_rate_limited", False)
+    if isinstance(mark_provider_raw, str):
+        mark_provider_rate_limited = mark_provider_raw.strip().lower() in {"1", "true", "yes", "on"}
+    else:
+        mark_provider_rate_limited = bool(mark_provider_raw)
     cooldown_seconds = retry_after_seconds
     if cooldown_seconds is None:
         cooldown_seconds = int(
@@ -596,10 +694,19 @@ async def mark_route_rate_limited(
             model.extra_params = _mark_payload_rate_limited(model.extra_params, cooldown_until, now)
 
         if provider is not None:
-            provider.last_check_status = "rate_limited"
-            provider.last_check_message = message
-            provider.last_checked_at = now
-            provider.extra_config = _mark_payload_rate_limited(provider.extra_config, cooldown_until, now)
+            if mark_provider_rate_limited:
+                provider.last_check_status = "rate_limited"
+                provider.last_check_message = message
+                provider.last_checked_at = now
+                provider.extra_config = _mark_payload_rate_limited(provider.extra_config, cooldown_until, now)
+            else:
+                # Default behavior: cooldown this model route only. This prevents one throttled model
+                # from blocking sibling models under the same provider/API key.
+                provider.extra_config = _clear_payload_rate_limit(provider.extra_config, now)
+                if str(provider.last_check_status or "").strip().lower() == "rate_limited":
+                    provider.last_check_status = "unknown"
+                    provider.last_check_message = "Provider cooldown cleared; using model-level cooldown only"
+                    provider.last_checked_at = now
 
         await db.commit()
 
@@ -607,6 +714,55 @@ async def mark_route_rate_limited(
         "cooldown_until": cooldown_until.isoformat(),
         "cooldown_seconds": max(1, int(cooldown_seconds)),
     }
+
+
+async def mark_route_unavailable(
+    route: Dict[str, Any],
+    message: str,
+) -> None:
+    """Persist model-level unavailable status when provider reports model_not_found/no_access."""
+    now = _utcnow()
+    async with get_db() as db:
+        model = await db.get(AIModelConfig, int(route["model_id"]))
+        if model is not None:
+            model.last_check_status = "unavailable"
+            model.last_check_message = message
+            model.last_checked_at = now
+            model.extra_params = _clear_payload_rate_limit(model.extra_params, now)
+            await db.commit()
+
+
+async def mark_model_unavailable_by_name(
+    model_name: str,
+    message: str,
+) -> int:
+    """Persist unavailable status by model name when runtime route metadata is missing."""
+    normalized = str(model_name or "").strip()
+    if not normalized:
+        return 0
+
+    now = _utcnow()
+    async with get_db() as db:
+        models = (
+            await db.execute(
+                select(AIModelConfig).where(
+                    AIModelConfig.model_name == normalized,
+                    AIModelConfig.is_enabled.is_(True),
+                )
+            )
+        ).scalars().all()
+
+        if not models:
+            return 0
+
+        for model in models:
+            model.last_check_status = "unavailable"
+            model.last_check_message = message
+            model.last_checked_at = now
+            model.extra_params = _clear_payload_rate_limit(model.extra_params, now)
+
+        await db.commit()
+        return len(models)
 
 
 async def clear_route_rate_limit(route: Dict[str, Any], message: str = "Connection successful") -> None:

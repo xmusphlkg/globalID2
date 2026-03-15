@@ -1,0 +1,24 @@
+As a professional medical reviewer, assess the quality of the following {content_type} content.
+
+Target language for descriptive outputs (like reasoning): {language}
+
+Content:
+{content}
+
+Please score according to these dimensions (0.0-1.0):
+1. Accuracy: Factually correct and not misleading
+2. Completeness: Information is complete
+3. Clarity: Clear expression
+4. Logic: Structure and logic
+5. Professionalism: Use of professional terminology and standards
+
+Return scores in JSON format:
+{{
+  "accuracy": 0.0-1.0,
+  "completeness": 0.0-1.0,
+  "clarity": 0.0-1.0,
+  "logic": 0.0-1.0,
+  "professionalism": 0.0-1.0,
+  "overall": 0.0-1.0,
+  "reasoning": "Brief explanation for the scores in {language}"
+}}

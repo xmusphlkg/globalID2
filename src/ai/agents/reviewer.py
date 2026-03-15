@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional
 
 from src.core import get_logger
 from .base import BaseAgent
+from .prompt_loader import render_prompt_template
 
 logger = get_logger(__name__)
 
@@ -60,6 +61,7 @@ class ReviewerAgent(BaseAgent):
         content: str,
         content_type: str,
         original_data: Optional[Dict[str, Any]] = None,
+        language: str = "en",
         **kwargs
     ) -> Dict[str, Any]:
         """
@@ -74,18 +76,29 @@ class ReviewerAgent(BaseAgent):
         Returns:
             Review results
         """
-        logger.info(f"Reviewing {content_type} content ({len(content)} chars)")
+        logger.info(f"Reviewing {content_type} content ({len(content)} chars, language={language})")
+
+        # Fast path: one-pass review (single LLM call) to reduce token consumption.
+        one_pass_result = await self._review_once(
+            content=content,
+            content_type=content_type,
+            original_data=original_data,
+            language=language,
+        )
+        if one_pass_result is not None:
+            logger.info(f"Review completed (one-pass): {'APPROVED' if one_pass_result['approved'] else 'NEEDS REVISION'}")
+            return one_pass_result
         
-        # 1. Quality scoring
-        quality_score = await self._assess_quality(content, content_type)
+        # Fallback path: legacy multi-step review if one-pass parsing fails.
+        quality_score = await self._assess_quality(content, content_type, language)
         
         # 2. Fact checking (if original data provided)
         fact_check = {}
         if original_data:
-            fact_check = await self._fact_check(content, original_data)
+            fact_check = await self._fact_check(content, original_data, language)
         
         # 3. Improvement suggestions
-        suggestions = await self._generate_suggestions(content, content_type, quality_score)
+        suggestions = await self._generate_suggestions(content, content_type, quality_score, language)
         
         # 4. Overall assessment
         overall_assessment = await self._overall_assessment(
@@ -93,6 +106,7 @@ class ReviewerAgent(BaseAgent):
             quality_score,
             fact_check,
             suggestions,
+            language,
         )
         
         result = {
@@ -101,44 +115,139 @@ class ReviewerAgent(BaseAgent):
             "fact_check": fact_check,
             "suggestions": suggestions,
             "assessment": overall_assessment,
+            "rewrite_instruction": "\n".join(suggestions[:3]) if suggestions else "",
         }
         
         logger.info(f"Review completed: {'APPROVED' if result['approved'] else 'NEEDS REVISION'}")
         return result
+
+    async def _review_once(
+        self,
+        content: str,
+        content_type: str,
+        original_data: Optional[Dict[str, Any]],
+        language: str = "en",
+    ) -> Optional[Dict[str, Any]]:
+        """One-pass unified review: quality + fact-check + suggestions in a single LLM call."""
+        data_summary = self._summarize_data(original_data or {})
+        if len(data_summary) > 2400:
+            data_summary = data_summary[:2400] + "\n... (data truncated)"
+
+        content_for_review = content if len(content) <= 2600 else content[:2600] + "\n... (content truncated)"
+
+        prompt = render_prompt_template(
+            "reviewer_one_pass_prompt.txt",
+            {
+                "content_type": content_type,
+                "content_for_review": content_for_review,
+                "data_summary": data_summary,
+                "language": language,
+            },
+            default_template=(
+                "You are a medical reviewer and fact-checker. Return JSON only.\n"
+                "Language: {language}\n"
+                "Content type: {content_type}\n"
+                "Content:\n{content_for_review}\n"
+                "Data summary:\n{data_summary}"
+            ),
+        )
+        system_msg = """You are a strict and verifiable medical reviewer. Output valid JSON only. All outputs must be logically sound but formatted per requested language."""
+
+        try:
+            response = await self.complete(prompt=prompt, system=system_msg)
+
+            import json
+            import re
+
+            json_match = re.search(r'\{[\s\S]*\}', response)
+            if not json_match:
+                logger.warning("One-pass review returned non-JSON output")
+                return None
+
+            parsed = json.loads(json_match.group(0))
+
+            quality_score = parsed.get("quality_score")
+            if not isinstance(quality_score, dict):
+                quality_score = {}
+
+            if not isinstance(quality_score.get("overall"), (int, float)):
+                dims = [
+                    quality_score.get("accuracy"),
+                    quality_score.get("completeness"),
+                    quality_score.get("clarity"),
+                    quality_score.get("logic"),
+                    quality_score.get("professionalism"),
+                ]
+                valid_dims = [float(v) for v in dims if isinstance(v, (int, float))]
+                if valid_dims:
+                    quality_score["overall"] = round(sum(valid_dims) / len(valid_dims), 3)
+                else:
+                    quality_score["overall"] = 0.5
+
+            fact_issues = parsed.get("fact_issues")
+            if not isinstance(fact_issues, list):
+                fact_issues = []
+            fact_issues = [str(item).strip() for item in fact_issues if str(item).strip()][:5]
+
+            suggestions = parsed.get("suggestions")
+            if not isinstance(suggestions, list):
+                suggestions = []
+            suggestions = [str(item).strip() for item in suggestions if str(item).strip()][:5]
+
+            rewrite_instruction = parsed.get("rewrite_instruction")
+            if not isinstance(rewrite_instruction, str) or not rewrite_instruction.strip():
+                rewrite_instruction = "\n".join(suggestions[:3]) if suggestions else ""
+
+            overall = float(quality_score.get("overall", 0.0))
+            approved_raw = parsed.get("approved")
+            approved = bool(approved_raw) if isinstance(approved_raw, bool) else overall >= self.reviewer_threshold
+
+            fact_check = {
+                "status": "checked",
+                "issues": fact_issues,
+                "ai_findings": parsed.get("fact_check_summary") or parsed.get("assessment") or "",
+                "numbers_checked": 0,
+            }
+
+            return {
+                "approved": approved,
+                "quality_score": quality_score,
+                "fact_check": fact_check,
+                "suggestions": suggestions,
+                "assessment": str(parsed.get("assessment") or ""),
+                "rewrite_instruction": rewrite_instruction,
+            }
+        except Exception as e:
+            logger.warning(f"One-pass review failed, fallback to legacy path: {e}")
+            return None
     
     async def _assess_quality(
         self,
         content: str,
         content_type: str,
+        language: str = "en",
     ) -> Dict[str, float]:
         """Assess content quality"""
-        prompt = f"""As a professional medical reviewer, assess the quality of the following {content_type} content.
-
-Content:
-{content}
-
-Please score the following dimensions (0.0-1.0):
-1. Accuracy: Content is accurate and not misleading
-2. Completeness: Information is complete and comprehensive
-3. Clarity: Expression is clear and understandable
-4. Logic: Structure is reasonable and logically coherent
-5. Professionalism: Professional and appropriate terminology
-
-Return scores in JSON format:
-{{
-  "accuracy": 0.0-1.0,
-  "completeness": 0.0-1.0,
-  "clarity": 0.0-1.0,
-  "logic": 0.0-1.0,
-  "professionalism": 0.0-1.0,
-  "overall": 0.0-1.0,
-  "reasoning": "Brief explanation for the scores in English"
-}}"""
+        prompt = render_prompt_template(
+            "reviewer_quality_prompt.txt",
+            {
+                "content_type": content_type,
+                "content": content,
+                "language": language,
+            },
+            default_template=(
+                "Assess quality for {content_type}.\n"
+                "Language: {language}\n"
+                "Content:\n{content}\n"
+                "Return JSON with accuracy, completeness, clarity, logic, professionalism, overall, reasoning."
+            ),
+        )
+        system_msg = "You are a strict academic reviewer, skilled at evaluating the quality of scientific reports. Please provide objective and fair scoring."
         
         try:
             response = await self.complete(
                 prompt=prompt,
-                system="You are a strict academic reviewer, skilled at evaluating the quality of scientific reports. Please provide objective and fair scoring.",
+                system=system_msg,
             )
             
             # Parse JSON response
@@ -159,7 +268,7 @@ Return scores in JSON format:
                     "logic": 0.7,
                     "professionalism": 0.7,
                     "overall": 0.7,
-                    "reasoning": "Parsing failed, using default scores",
+                    "reasoning": "解析失败，使用默认评分" if language == "zh" else "Parsing failed, using default scores",
                 }
         
         except Exception as e:
@@ -171,13 +280,14 @@ Return scores in JSON format:
                 "logic": 0.5,
                 "professionalism": 0.5,
                 "overall": 0.5,
-                "reasoning": f"Assessment failed: {str(e)}",
+                "reasoning": f"评分失败: {str(e)}" if language == "zh" else f"Assessment failed: {str(e)}",
             }
     
     async def _fact_check(
         self,
         content: str,
         original_data: Dict[str, Any],
+        language: str = "en",
     ) -> Dict[str, Any]:
         """Fact check the content against the original data."""
         # Extract numbers from content
@@ -204,25 +314,26 @@ Return scores in JSON format:
                 continue
         
         # Use AI for semantic-level fact checking
-        prompt = f"""Please fact-check if the following content is consistent with the original data.
-
-Content:
-{content[:1000]}  # Limit length
-
-Original data summary:
-{self._summarize_data(original_data)}
-
-Please identify:
-1. Obvious data errors or inconsistencies
-2. Exaggerated or misleading statements
-3. Missing important information
-
-If no issues found, please respond with "No significant issues found"."""
+        prompt = render_prompt_template(
+            "reviewer_fact_check_prompt.txt",
+            {
+                "content": content[:1000],
+                "data_summary": self._summarize_data(original_data),
+                "language": language,
+            },
+            default_template=(
+                "Fact-check consistency between content and source data.\n"
+                "Language: {language}\n"
+                "Content:\n{content}\n"
+                "Data summary:\n{data_summary}"
+            ),
+        )
+        system_msg = "You are a meticulous fact-checker, focused on finding inconsistencies in data and statements."
         
         try:
             response = await self.complete(
                 prompt=prompt,
-                system="You are a meticulous fact-checker, focused on finding inconsistencies in data and statements.",
+                system=system_msg,
             )
             
             return {
@@ -244,30 +355,35 @@ If no issues found, please respond with "No significant issues found"."""
         content: str,
         content_type: str,
         quality_score: Dict[str, float],
+        language: str = "en",
     ) -> List[str]:
         """Generate improvement suggestions"""
         # If quality is high, fewer suggestions needed
         if quality_score.get("overall", 0) >= 0.9:
-            return ["Content quality is excellent, no major revisions needed."]
-        
-        prompt = f"""As a senior editor, please provide improvement suggestions for the following {content_type} content.
+            return ["内容质量优秀，无需重大修改。"] if language == "zh" else ["Content quality is excellent, no major revisions needed."]
 
-Content:
-{content}
-
-Current quality score: {quality_score.get('overall', 0):.2f}
-
-Please provide 3-5 specific improvement suggestions. Each suggestion should:
-- Point out specific issues
-- Explain why improvement is needed
-- Provide improvement direction
-
-Format: Use numbered list (1. 2. 3. ...)"""
+        prompt = render_prompt_template(
+            "reviewer_suggestion_prompt.txt",
+            {
+                "content_type": content_type,
+                "content": content,
+                "quality_score": quality_score.get('overall', 0),
+                "language": language,
+            },
+            default_template=(
+                "Provide 3-5 actionable improvement suggestions.\n"
+                "Content type: {content_type}\n"
+                "Language: {language}\n"
+                "Current overall score: {quality_score}\n"
+                "Content:\n{content}"
+            ),
+        )
+        system_msg = "You are an experienced scientific editor skilled at providing constructive improvement suggestions."
         
         try:
             response = await self.complete(
                 prompt=prompt,
-                system="You are an experienced scientific editor skilled at providing constructive improvement suggestions.",
+                system=system_msg,
             )
             
             # Parse suggestions list
@@ -279,7 +395,7 @@ Format: Use numbered list (1. 2. 3. ...)"""
         
         except Exception as e:
             logger.error(f"Suggestion generation failed: {e}")
-            return ["Suggestion generation failed, please review manually."]
+            return ["建议生成失败，请人工复核。"] if language == "zh" else ["Suggestion generation failed, please review manually."]
     
     async def _overall_assessment(
         self,
@@ -287,22 +403,36 @@ Format: Use numbered list (1. 2. 3. ...)"""
         quality_score: Dict[str, float],
         fact_check: Dict[str, Any],
         suggestions: List[str],
+        language: str = "en",
     ) -> str:
         """Overall assessment"""
         overall = quality_score.get("overall", 0)
 
-        if overall >= 0.9:
-            assessment = "Excellent: high-quality content, ready to use."
-        elif overall >= max(self.reviewer_threshold, 0.7):
-            assessment = "Good: acceptable quality; minor edits recommended."
-        elif overall >= 0.5:
-            assessment = "Fair: substantial improvements needed before use."
+        if language == "zh":
+            if overall >= 0.9:
+                assessment = "优秀：内容质量高，可直接使用。"
+            elif overall >= max(self.reviewer_threshold, 0.7):
+                assessment = "良好：质量可接受，建议小幅修改。"
+            elif overall >= 0.5:
+                assessment = "一般：使用前需进行较大幅度修改。"
+            else:
+                assessment = "较差：内容质量不足，建议重写。"
         else:
-            assessment = "Poor: content quality insufficient; consider rewriting."
+            if overall >= 0.9:
+                assessment = "Excellent: high-quality content, ready to use."
+            elif overall >= max(self.reviewer_threshold, 0.7):
+                assessment = "Good: acceptable quality; minor edits recommended."
+            elif overall >= 0.5:
+                assessment = "Fair: substantial improvements needed before use."
+            else:
+                assessment = "Poor: content quality insufficient; consider rewriting."
 
         # Append fact-check findings
         if fact_check.get("issues"):
-            assessment += f"\nNote: {len(fact_check['issues'])} potential factual issues identified."
+            if language == "zh":
+                assessment += f"\n注意：识别到 {len(fact_check['issues'])} 个潜在事实问题。"
+            else:
+                assessment += f"\nNote: {len(fact_check['issues'])} potential factual issues identified."
 
         return assessment
     

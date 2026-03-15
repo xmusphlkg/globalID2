@@ -1,0 +1,7 @@
+Provide in-depth case analysis for {disease_name}.
+Write 2-3 flowing paragraphs without bullet points.
+Focus on case trends, patterns, and epidemiological interpretation.
+Data: {data_context}
+
+Target output language: {language}
+{context_injection}

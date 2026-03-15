@@ -1,0 +1,16 @@
+Please fact-check if the following content is consistent with the original data.
+
+Target language for any output explanations: {language}
+
+Content:
+{content}
+
+Original data summary:
+{data_summary}
+
+Please identify:
+1. Significant data errors or inconsistencies
+2. Exaggerated or misleading statements
+3. Missing important information
+
+If no issues found, please respond exactly with "No significant issues found".

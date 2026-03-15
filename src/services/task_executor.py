@@ -212,9 +212,11 @@ async def _run_report(task: Task) -> Dict[str, Any]:
     report_type = inp.get("report_type", "monthly")
     period_start = inp.get("period_start")
     period_end = inp.get("period_end")
+    language = inp.get("language", "en")
     days = inp.get("days", 365)
     enable_review = inp.get("enable_review", True)
     send_email = inp.get("send_email", False)
+    reuse_from_failed = inp.get("reuse_from_failed", True)
 
     report_id_ref = [None]
     async with task_lifecycle(task, report_id_ref=report_id_ref, exit_on_cancel=False):
@@ -225,9 +227,11 @@ async def _run_report(task: Task) -> Dict[str, Any]:
             report_type=report_type,
             period_start_iso=period_start,
             period_end_iso=period_end,
+            language=language,
             days=days,
             enable_review=enable_review,
             send_email=send_email,
+            reuse_from_failed=reuse_from_failed,
             report_id_ref=report_id_ref,
         )
         report_id_ref[0] = result.report_id

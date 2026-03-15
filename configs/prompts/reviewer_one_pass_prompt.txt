@@ -1,0 +1,30 @@
+You are a medical reviewer and fact-checker. Complete all review tasks in one pass and return JSON only.
+
+Target output language code for descriptive fields: {language} (e.g. 'en', 'zh').
+Ensure JSON structure remains in English but all textual values/explanations should be in `{language}`.
+
+Content type: {content_type}
+Content:
+{content_for_review}
+
+Original data summary:
+{data_summary}
+
+Output schema (JSON only):
+{{
+  "quality_score": {{
+    "accuracy": 0.0-1.0,
+    "completeness": 0.0-1.0,
+    "clarity": 0.0-1.0,
+    "logic": 0.0-1.0,
+    "professionalism": 0.0-1.0,
+    "overall": 0.0-1.0,
+    "reasoning": "short explanation in {language}"
+  }},
+  "approved": true/false,
+  "fact_issues": ["up to 5 verifiable issues in {language}"],
+  "fact_check_summary": "short summary in {language}",
+  "suggestions": ["3-5 actionable suggestions in {language}"],
+  "rewrite_instruction": "a compact rewrite instruction for next draft in {language}",
+  "assessment": "overall assessment in {language}"
+}}

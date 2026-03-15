@@ -4,11 +4,13 @@ import { apiFetch } from "@/lib/api";
 export interface StartAITaskPayload {
   country_id: number;
   report_type?: "daily" | "weekly" | "monthly" | "special";
+  language?: "zh" | "en";
   period_start?: string | null;
   period_end?: string | null;
   days?: number;
   enable_review?: boolean;
   send_email?: boolean;
+  reuse_from_failed?: boolean;
   priority?: "low" | "normal" | "high" | "urgent";
   task_name?: string;
   description?: string;

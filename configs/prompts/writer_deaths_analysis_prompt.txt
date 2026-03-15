@@ -1,0 +1,7 @@
+Provide in-depth deaths analysis for {disease_name}.
+Write 2-3 flowing paragraphs without bullet points.
+Focus on mortality patterns, case-fatality dynamics, and death trends.
+Data: {data_context}
+
+Target output language: {language}
+{context_injection}

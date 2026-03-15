@@ -1,0 +1,15 @@
+As a senior editor, please provide improvement suggestions for the following {content_type} content.
+
+Target language for suggestions: {language}
+
+Content:
+{content}
+
+Current quality score: {quality_score:.2f}
+
+Please provide 3-5 specific improvement suggestions. Each suggestion should:
+- Clearly point out the issue
+- Explain why it needs revision
+- Provide improvement direction
+
+Format: Use a numbered list (1. 2. 3. ...)
