@@ -14,6 +14,7 @@ from openai import AsyncOpenAI
 from anthropic import AsyncAnthropic
 
 from src.core import get_cache, get_config, get_logger, RateLimiter
+from src.ai.model_center import get_active_model_routes
 
 logger = get_logger(__name__)
 
@@ -33,6 +34,10 @@ class BaseAgent(ABC):
 
     # 启动时检查得到的可用模型列表（保持优先级顺序）。若不为 None，complete() 仅从该列表中选模型。
     AVAILABLE_MODEL_CHAIN: Optional[List[str]] = None
+    # 模型中心返回的运行时路由（含 provider/api_key/base_url），若存在则优先使用。
+    AVAILABLE_MODEL_ROUTES: Optional[List[Dict[str, Any]]] = None
+    # Route 级别禁用（provider:model），避免某条路由持续触发限流。
+    DISABLED_ROUTES: set[str] = set()
     
     def __init__(
         self,
@@ -200,40 +205,95 @@ class BaseAgent(ABC):
             await self.rate_limiter.wait_if_needed()
             self.rate_limiter.record_request()
         
-        # 调用LLM（支持按优先级链路轮询多个模型）
-        # 若启动时已做过模型可用性检查，优先使用可用列表；否则用配置中的 model_chain 或 default + fallback
-        chain = BaseAgent.AVAILABLE_MODEL_CHAIN
-        if chain is None:
-            chain = getattr(self.config.ai, "model_chain", None) or []
-        if chain:
-            # Skip models that have been globally disabled due to quota/limit failures
-            models_to_try = [m for m in chain if m not in BaseAgent.DISABLED_MODELS]
+        # 调用LLM（支持模型中心路由 + 配置链路双模式）
+        runtime_routes = BaseAgent.AVAILABLE_MODEL_ROUTES
+        if runtime_routes is None:
+            try:
+                runtime_routes = await get_active_model_routes()
+            except Exception as e:
+                logger.warning(f"Failed to load model-center routes, fallback to config chain: {e}")
+                runtime_routes = []
+
+        candidates: List[Dict[str, Any]] = []
+        if runtime_routes:
+            BaseAgent.AVAILABLE_MODEL_ROUTES = runtime_routes
+            for route in runtime_routes:
+                route_key = str(route.get("model_key") or route.get("model_name") or "")
+                model_name = str(route.get("model_name") or "")
+                if not route_key or not model_name:
+                    continue
+                if route_key in BaseAgent.DISABLED_ROUTES:
+                    continue
+                if model_name in BaseAgent.DISABLED_MODELS:
+                    continue
+                candidates.append(
+                    {
+                        "route_key": route_key,
+                        "model_name": model_name,
+                        "route": route,
+                    }
+                )
         else:
-            # 后备策略：使用当前模型 + 配置中的 fallback_model
-            models_to_try = []
-            seen = set()
-            if self.model not in seen:
-                models_to_try.append(self.model)
-                seen.add(self.model)
-            fallback_model = getattr(self.config.ai, "fallback_model", None)
-            if fallback_model and fallback_model not in seen:
-                models_to_try.append(fallback_model)
+            # 若模型中心无可用路由，则回退到配置链路。
+            chain = BaseAgent.AVAILABLE_MODEL_CHAIN
+            if chain is None:
+                chain = getattr(self.config.ai, "model_chain", None) or []
+            if chain:
+                for model_name in chain:
+                    if model_name in BaseAgent.DISABLED_MODELS:
+                        continue
+                    candidates.append(
+                        {
+                            "route_key": model_name,
+                            "model_name": model_name,
+                            "route": None,
+                        }
+                    )
+            else:
+                seen = set()
+                if self.model not in seen:
+                    candidates.append(
+                        {
+                            "route_key": self.model,
+                            "model_name": self.model,
+                            "route": None,
+                        }
+                    )
+                    seen.add(self.model)
+                fallback_model = getattr(self.config.ai, "fallback_model", None)
+                if fallback_model and fallback_model not in seen:
+                    candidates.append(
+                        {
+                            "route_key": fallback_model,
+                            "model_name": fallback_model,
+                            "route": None,
+                        }
+                    )
 
         last_error = None
         original_model = self.model
 
-        for model_name in models_to_try:
+        for candidate in candidates:
+            model_name = candidate["model_name"]
+            route = candidate["route"]
+            route_key = candidate["route_key"]
             self.model = model_name
             retry_count = 0
             start_time = time.time()
 
             while retry_count < self.max_retries:
                 try:
-                    # Determine which provider to use for this model
-                    provider = self.get_provider_for_model(self.model)
-                    response_text, token_usage = await self._complete_with_provider(
-                        provider, prompt, system, **kwargs
-                    )
+                    if route:
+                        provider = str(route.get("provider_key") or route.get("provider_name") or "runtime")
+                        response_text, token_usage = await self._complete_with_runtime_route(
+                            route, prompt, system, **kwargs
+                        )
+                    else:
+                        # Determine which provider to use for this model
+                        provider = self.get_provider_for_model(self.model)
+                        response_text, token_usage = await self._complete_with_provider(
+                            provider, prompt, system, **kwargs
+                        )
 
                     # 记录对话历史
                     duration = time.time() - start_time
@@ -300,6 +360,11 @@ class BaseAgent(ABC):
                                 f"Model '{self.model}' has been globally disabled for this process "
                                 f"due to quota/limit issues; all subsequent agents will skip it."
                             )
+                        if route_key not in BaseAgent.DISABLED_ROUTES:
+                            BaseAgent.DISABLED_ROUTES.add(route_key)
+                            logger.warning(
+                                f"Route '{route_key}' has been disabled for this process due to quota/limit issues."
+                            )
                         break
 
                     if retry_count < self.max_retries:
@@ -314,8 +379,76 @@ class BaseAgent(ABC):
         self.model = original_model
         logger.error(f"All models failed for agent '{self.name}': {last_error}")
         raise Exception(
-            f"Agent completion failed after trying models {models_to_try}: {last_error}"
+            f"Agent completion failed after trying models {[c['model_name'] for c in candidates]}: {last_error}"
         )
+
+    async def _complete_with_runtime_route(
+        self,
+        route: Dict[str, Any],
+        prompt: str,
+        system: Optional[str] = None,
+        **kwargs,
+    ) -> Tuple[str, Dict[str, int]]:
+        """Generate using model-center runtime route (provider+credential+style)."""
+        style = str(route.get("api_style") or "openai_compatible").lower()
+        model_name = str(route.get("model_name") or self.model)
+        route_temperature = route.get("temperature")
+        route_max_tokens = route.get("max_tokens")
+        temperature = self.temperature if route_temperature is None else float(route_temperature)
+        max_tokens = self.max_tokens if route_max_tokens is None else int(route_max_tokens)
+
+        if style == "anthropic":
+            client = AsyncAnthropic(api_key=route.get("api_key"))
+            response = await client.messages.create(
+                model=model_name,
+                system=system or "",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=temperature,
+                max_tokens=max_tokens,
+                **kwargs,
+            )
+
+            token_usage = {}
+            if hasattr(response, "usage") and response.usage:
+                token_usage = {
+                    "prompt": response.usage.input_tokens,
+                    "completion": response.usage.output_tokens,
+                    "total": response.usage.input_tokens + response.usage.output_tokens,
+                }
+            return response.content[0].text, token_usage
+
+        client = AsyncOpenAI(
+            api_key=route.get("api_key"),
+            base_url=route.get("base_url") or None,
+            default_headers=(route.get("extra_headers") or None),
+        )
+
+        messages = []
+        if system:
+            messages.append({"role": "system", "content": system})
+        messages.append({"role": "user", "content": prompt})
+
+        extra_params = dict(route.get("extra_params") or {})
+        for reserved in ("model", "messages", "temperature", "max_tokens"):
+            extra_params.pop(reserved, None)
+        extra_params.update(kwargs)
+
+        response = await client.chat.completions.create(
+            model=model_name,
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            **extra_params,
+        )
+
+        token_usage = {}
+        if hasattr(response, "usage") and response.usage:
+            token_usage = {
+                "prompt": response.usage.prompt_tokens,
+                "completion": response.usage.completion_tokens,
+                "total": response.usage.total_tokens,
+            }
+        return response.choices[0].message.content, token_usage
     
     async def _complete_with_provider(
         self, 

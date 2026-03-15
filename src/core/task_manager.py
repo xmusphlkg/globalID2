@@ -18,7 +18,21 @@ logger = get_logger(__name__)
 
 class TaskManager:
     """任务管理器"""
-    
+
+    def __init__(self):
+        self._broadcast_hook: Optional[Any] = None
+
+    def set_broadcast_hook(self, hook) -> None:
+        """Register an async callable(data: dict) for live WebSocket broadcasts."""
+        self._broadcast_hook = hook
+
+    async def _broadcast(self, data: dict) -> None:
+        if self._broadcast_hook is not None:
+            try:
+                await self._broadcast_hook(data)
+            except Exception as exc:
+                logger.debug(f"Broadcast hook error: {exc}")
+
     async def create_task(
         self,
         task_type: TaskType,
@@ -114,6 +128,12 @@ class TaskManager:
             await db.refresh(task)
             
             logger.info(f"Updated task {task_uuid}: {status}")
+            await self._broadcast({
+                "event": "task_status",
+                "task_uuid": task_uuid,
+                "status": str(status.value if hasattr(status, 'value') else status),
+                "progress": task.progress or 0,
+            })
             return task
     
     async def update_task_progress(
@@ -135,6 +155,11 @@ class TaskManager:
             await db.refresh(task)
 
             logger.debug(f"Updated task {task_uuid} progress: {task.progress}%")
+            await self._broadcast({
+                "event": "task_progress",
+                "task_uuid": task_uuid,
+                "progress": task.progress or 0,
+            })
             return task
     
     async def add_workbook_entry(

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch, wsUrl } from "@/lib/api";
 
 export interface TaskItem {
@@ -68,6 +68,19 @@ export function useTaskDetail(uuid: string | null) {
   });
 }
 
+export function useExecuteTask() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (taskUuid: string) =>
+      apiFetch(`/tasks/${taskUuid}/execute`, { method: "POST" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["task"] });
+    },
+  });
+}
+
 /**
  * Subscribe to real-time task updates via WebSocket.
  * Automatically invalidates the tasks query cache on each message.
@@ -75,27 +88,80 @@ export function useTaskDetail(uuid: string | null) {
 export function useTaskWebSocket() {
   const queryClient = useQueryClient();
   const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
-    const ws = new WebSocket(wsUrl("/tasks/ws"));
-    wsRef.current = ws;
+    let disposed = false;
 
-    ws.onmessage = () => {
-      // Invalidate so TanStack Query refetches.
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    const clearReconnectTimer = () => {
+      if (reconnectTimerRef.current !== null) {
+        window.clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
     };
 
-    ws.onclose = () => {
-      // Reconnect after a short delay.
-      setTimeout(() => {
+    const connect = () => {
+      const ws = new WebSocket(wsUrl("/tasks/ws"));
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        if (disposed) {
+          ws.close();
+        }
+      };
+
+      ws.onmessage = () => {
+        // Invalidate so TanStack Query refetches.
+        queryClient.invalidateQueries({ queryKey: ["tasks"] });
+        queryClient.invalidateQueries({ queryKey: ["task"] });
+      };
+
+      ws.onclose = () => {
         if (wsRef.current === ws) {
           wsRef.current = null;
         }
-      }, 3000);
+
+        if (disposed) {
+          return;
+        }
+
+        clearReconnectTimer();
+        reconnectTimerRef.current = window.setTimeout(() => {
+          reconnectTimerRef.current = null;
+          if (!disposed) {
+            connect();
+          }
+        }, 3000);
+      };
     };
 
+    connect();
+
     return () => {
-      ws.close();
+      disposed = true;
+      clearReconnectTimer();
+
+      const ws = wsRef.current;
+      wsRef.current = null;
+
+      if (!ws) {
+        return;
+      }
+
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.close();
+        return;
+      }
+
+      if (ws.readyState === WebSocket.CONNECTING) {
+        ws.addEventListener(
+          "open",
+          () => {
+            ws.close();
+          },
+          { once: true },
+        );
+      }
     };
   }, [queryClient]);
 }

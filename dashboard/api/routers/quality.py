@@ -121,7 +121,10 @@ async def quality_completeness(
         select(
             name_col,
             func.count(func.distinct(func.date_trunc("month", DiseaseRecord.time))).label("data_months"),
-            func.extract("epoch", func.max(DiseaseRecord.time) - func.min(DiseaseRecord.time)).op("/")(2592000).label("total_months_span"),
+            (
+                (func.extract("year", func.max(DiseaseRecord.time)) - func.extract("year", func.min(DiseaseRecord.time))) * 12
+                + (func.extract("month", func.max(DiseaseRecord.time)) - func.extract("month", func.min(DiseaseRecord.time)))
+            ).label("total_months_span"),
             func.min(DiseaseRecord.time).label("earliest_date"),
             func.max(DiseaseRecord.time).label("latest_date"),
             func.count().label("total_records"),

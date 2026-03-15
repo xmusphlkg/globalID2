@@ -8,6 +8,10 @@
 from typing import List, Optional
 
 from src.core import get_config, get_logger
+from src.ai.model_center import (
+    check_all_models,
+    get_active_model_routes,
+)
 
 logger = get_logger(__name__)
 
@@ -18,6 +22,26 @@ async def check_available_models() -> List[str]:
     若未配置 enable_api_test 或模型链为空，则返回完整链（不测试）。
     """
     config = get_config()
+
+    # Prefer runtime routes from model center (DB-backed).
+    routes = await get_active_model_routes()
+    if routes:
+        if not getattr(config.ai, "enable_api_test", True):
+            return [str(r.get("model_name")) for r in routes if r.get("model_name")]
+
+        results = await check_all_models()
+        available: List[str] = []
+        for item in results:
+            if item.get("success"):
+                model_name = str(item.get("model_name") or "")
+                if model_name and model_name not in available:
+                    available.append(model_name)
+                    logger.info(f"Model '{model_name}' is available.")
+            else:
+                logger.warning(f"Model check failed: {item.get('message', 'unknown')} ({item.get('model_name')})")
+        return available
+
+    # Backward-compatible fallback to env model_chain when model center is empty.
     chain = getattr(config.ai, "model_chain", None) or []
     if not chain:
         logger.warning("Model chain is empty, no model to check.")
@@ -60,6 +84,13 @@ def ensure_available_models_checked() -> Optional[List[str]]:
     if BaseAgent.AVAILABLE_MODEL_CHAIN is not None:
         return BaseAgent.AVAILABLE_MODEL_CHAIN
 
+    if BaseAgent.AVAILABLE_MODEL_ROUTES is None:
+        try:
+            BaseAgent.AVAILABLE_MODEL_ROUTES = asyncio.run(get_active_model_routes())
+        except Exception as e:
+            logger.warning(f"Failed to load model-center routes: {e}")
+            BaseAgent.AVAILABLE_MODEL_ROUTES = None
+
     try:
         loop = asyncio.get_running_loop()
     except RuntimeError:
@@ -93,6 +124,13 @@ async def ensure_available_models_checked_async() -> Optional[List[str]]:
 
     if BaseAgent.AVAILABLE_MODEL_CHAIN is not None:
         return BaseAgent.AVAILABLE_MODEL_CHAIN
+
+    if BaseAgent.AVAILABLE_MODEL_ROUTES is None:
+        try:
+            BaseAgent.AVAILABLE_MODEL_ROUTES = await get_active_model_routes()
+        except Exception as e:
+            logger.warning(f"Failed to load model-center routes asynchronously: {e}")
+            BaseAgent.AVAILABLE_MODEL_ROUTES = None
 
     available = await check_available_models()
     config = get_config()

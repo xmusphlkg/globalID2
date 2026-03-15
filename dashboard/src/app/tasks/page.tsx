@@ -96,7 +96,7 @@ export default function TasksPage() {
     () => ({
       tooltip: { trigger: "item" },
       legend: {
-        bottom: 0,
+        top: 0,
         textStyle: { color: CHART_TOKENS.axisText, fontSize: 11 },
       },
       series: [
