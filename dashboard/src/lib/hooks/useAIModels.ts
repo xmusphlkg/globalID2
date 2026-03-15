@@ -18,6 +18,11 @@ export interface AIProviderItem {
   last_check_status: string;
   last_check_message: string | null;
   last_checked_at: string | null;
+  rate_limit_active: boolean;
+  rate_limit_cooldown_until: string | null;
+  rate_limit_remaining_seconds: number;
+  rate_limit_count: number;
+  last_rate_limit_at: string | null;
 }
 
 export interface AIModelItem {
@@ -39,6 +44,12 @@ export interface AIModelItem {
   last_check_status: string;
   last_check_message: string | null;
   last_checked_at: string | null;
+  rate_limit_active: boolean;
+  rate_limit_scope: string | null;
+  rate_limit_cooldown_until: string | null;
+  rate_limit_remaining_seconds: number;
+  rate_limit_count: number;
+  last_rate_limit_at: string | null;
 }
 
 export interface AIRuntimeRoute {
@@ -53,6 +64,14 @@ export interface AIRuntimeRoute {
   has_api_key: boolean;
   api_key_hint: string | null;
   priority: number | null;
+  available_for_routing: boolean;
+  last_check_status: string | null;
+  rate_limit_active: boolean;
+  rate_limit_scope: string | null;
+  rate_limit_cooldown_until: string | null;
+  rate_limit_remaining_seconds: number;
+  rate_limit_count: number;
+  last_rate_limit_at: string | null;
 }
 
 export interface ProviderPayload {

@@ -14,6 +14,27 @@ export interface StartAITaskPayload {
   description?: string;
 }
 
+export interface StartAITaskResult {
+  id: number;
+  task_uuid: string;
+  task_name: string;
+  task_type: string;
+  status: string;
+  priority: string;
+  progress: number;
+  country_id: number | null;
+  report_id: number | null;
+  description: string | null;
+  last_error: string | null;
+  created_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+  actual_duration: number | null;
+  workbook_count: number;
+  cancel_requested: boolean;
+  cancel_requested_at: string | null;
+}
+
 export function useStartAITask() {
   const queryClient = useQueryClient();
 
@@ -22,7 +43,7 @@ export function useStartAITask() {
       apiFetch("/ai/start", {
         method: "POST",
         body: JSON.stringify(payload),
-      }),
+      }) as Promise<StartAITaskResult>,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       queryClient.invalidateQueries({ queryKey: ["task"] });

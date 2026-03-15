@@ -17,6 +17,7 @@ import asyncpg
 
 from src.core import get_logger
 from src.core.database import get_db
+from src.core.missing_values import normalize_rate_columns, normalize_rate_value
 from src.domain import CrawlRawPage, DiseaseRecord, Country
 from src.data.crawlers.base import CrawlerResult
 from src.data.parsers.html_parser import HTMLTableParser
@@ -402,13 +403,13 @@ class DataProcessor:
             添加了发病率和死亡率的数据框
         """
         # TODO: 从人口数据库获取人口数
-        # 目前保持-10作为占位符
+        # 当前未计算出的率保持为空值，而不是使用 -10 占位符。
         
         # 如果有人口数据，可以这样计算：
         # df["Incidence"] = df["Cases"] / population * 100000
         # df["Mortality"] = df["Deaths"] / population * 100000
         
-        return df
+        return normalize_rate_columns(df, copy=True)
     
     def _validate_data(self, df: pd.DataFrame) -> bool:
         """
@@ -558,8 +559,8 @@ class DataProcessor:
                         record_data = {
                             'cases': int(row['Cases']) if pd.notna(row.get('Cases')) else None,
                             'deaths': int(row['Deaths']) if pd.notna(row.get('Deaths')) else None,
-                            'incidence_rate': float(row['Incidence']) if pd.notna(row.get('Incidence')) else None,
-                            'mortality_rate': float(row['Mortality']) if pd.notna(row.get('Mortality')) else None,
+                            'incidence_rate': normalize_rate_value(row.get('Incidence')),
+                            'mortality_rate': normalize_rate_value(row.get('Mortality')),
                             'data_source': row.get('Source'),
                             'metadata_': {
                                 'disease_name_en': row.get('Diseases'),

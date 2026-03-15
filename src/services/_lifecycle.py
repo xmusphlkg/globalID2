@@ -12,6 +12,7 @@ from typing import Optional
 from src.core import get_database, get_logger
 from src.core.task_manager import task_manager
 from src.domain import Task, TaskStatus
+from src.services.exceptions import TaskCancelledError
 
 logger = get_logger(__name__)
 
@@ -52,23 +53,17 @@ async def task_lifecycle(task: Task, *, report_id_ref: Optional[list] = None, ex
 
     try:
         yield
+        if await task_manager.is_cancel_requested(task.task_uuid):
+            raise TaskCancelledError("Cancellation requested by user")
         await task_manager.update_task_status(task.task_uuid, TaskStatus.COMPLETED)
 
     except KeyboardInterrupt:
-        logger.warning(f"Task {task.task_uuid} cancelled by user")
-        await task_manager.add_workbook_entry(
-            task.task_uuid,
-            entry_type="warning",
-            title="Task Cancelled",
-            content="Interrupted by user (Ctrl+C)",
-            content_type="text",
-        )
-        await task_manager.update_task_status(
-            task.task_uuid,
-            TaskStatus.CANCELLED,
-            error_message="Interrupted by user",
-        )
-        await _mark_report(report_id_ref, "cancelled", "Interrupted by user")
+        await _handle_task_cancelled(task, report_id_ref, "Interrupted by user (Ctrl+C)")
+        if exit_on_cancel:
+            sys.exit(130)
+
+    except TaskCancelledError as exc:
+        await _handle_task_cancelled(task, report_id_ref, str(exc))
         if exit_on_cancel:
             sys.exit(130)
 
@@ -94,6 +89,23 @@ async def task_lifecycle(task: Task, *, report_id_ref: Optional[list] = None, ex
             signal.signal(signal.SIGTERM, old_sigterm)
 
 
+async def _handle_task_cancelled(task: Task, report_id_ref: Optional[list], message: str) -> None:
+    logger.warning(f"Task {task.task_uuid} cancelled: {message}")
+    await task_manager.add_workbook_entry(
+        task.task_uuid,
+        entry_type="warning",
+        title="Task Cancelled",
+        content=message,
+        content_type="text",
+    )
+    await task_manager.update_task_status(
+        task.task_uuid,
+        TaskStatus.CANCELLED,
+        error_message=message,
+    )
+    await _mark_report(report_id_ref, "cancelled", message)
+
+
 async def _mark_report(
     report_id_ref: Optional[list],
     new_status: str,
@@ -108,9 +120,7 @@ async def _mark_report(
         async with get_database() as db:
             report = await db.get(Report, report_id)
             if report:
-                report.status = (
-                    ReportStatus.CANCELLED if new_status == "cancelled" else ReportStatus.FAILED
-                )
+                report.status = ReportStatus.FAILED
                 report.error_message = error_message
                 await db.commit()
     except Exception as e:

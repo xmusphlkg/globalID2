@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+import re
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 from anthropic import AsyncAnthropic
@@ -16,10 +17,160 @@ from src.domain import AIModelConfig, AIProviderConfig
 logger = get_logger(__name__)
 
 _schema_ready = False
+_ROUTING_STATE_KEY = "routing_state"
 
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _parse_datetime(value: Any) -> Optional[datetime]:
+    if not value:
+        return None
+    if isinstance(value, datetime):
+        return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+    if not isinstance(value, str):
+        return None
+
+    normalized = value.strip()
+    if not normalized:
+        return None
+    if normalized.endswith("Z"):
+        normalized = f"{normalized[:-1]}+00:00"
+
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+
+
+def _extract_routing_state(payload: Any) -> Dict[str, Any]:
+    if not isinstance(payload, dict):
+        return {}
+    state = payload.get(_ROUTING_STATE_KEY)
+    return dict(state) if isinstance(state, dict) else {}
+
+
+def _write_routing_state(payload: Any, state: Dict[str, Any]) -> Dict[str, Any]:
+    updated = dict(payload or {}) if isinstance(payload, dict) else {}
+    if state:
+        updated[_ROUTING_STATE_KEY] = state
+    else:
+        updated.pop(_ROUTING_STATE_KEY, None)
+    return updated
+
+
+def _rate_limit_state(payload: Any, now: Optional[datetime] = None) -> Dict[str, Any]:
+    now = now or _utcnow()
+    state = _extract_routing_state(payload)
+    cooldown_until = _parse_datetime(state.get("cooldown_until"))
+    last_rate_limit_at = _parse_datetime(state.get("last_rate_limit_at"))
+    active = bool(cooldown_until and cooldown_until > now)
+    remaining_seconds = max(0, int((cooldown_until - now).total_seconds())) if active and cooldown_until else 0
+    try:
+        count = int(state.get("rate_limit_count") or 0)
+    except (TypeError, ValueError):
+        count = 0
+
+    return {
+        "cooldown_until": cooldown_until,
+        "cooldown_until_iso": cooldown_until.isoformat() if cooldown_until else None,
+        "last_rate_limit_at": last_rate_limit_at,
+        "last_rate_limit_at_iso": last_rate_limit_at.isoformat() if last_rate_limit_at else None,
+        "rate_limit_count": count,
+        "rate_limit_active": active,
+        "rate_limit_remaining_seconds": remaining_seconds,
+    }
+
+
+def _mark_payload_rate_limited(payload: Any, cooldown_until: datetime, occurred_at: datetime) -> Dict[str, Any]:
+    state = _extract_routing_state(payload)
+    try:
+        current_count = int(state.get("rate_limit_count") or 0)
+    except (TypeError, ValueError):
+        current_count = 0
+    state["cooldown_until"] = cooldown_until.isoformat()
+    state["last_rate_limit_at"] = occurred_at.isoformat()
+    state["rate_limit_count"] = current_count + 1
+    return _write_routing_state(payload, state)
+
+
+def _clear_payload_rate_limit(payload: Any, recovered_at: Optional[datetime] = None) -> Dict[str, Any]:
+    state = _extract_routing_state(payload)
+    if not state:
+        return dict(payload or {}) if isinstance(payload, dict) else {}
+
+    state.pop("cooldown_until", None)
+    if recovered_at is not None:
+        state["last_recovered_at"] = recovered_at.isoformat()
+    return _write_routing_state(payload, state)
+
+
+def _combined_route_rate_limit_state(model: AIModelConfig, provider: AIProviderConfig) -> Dict[str, Any]:
+    now = _utcnow()
+    model_state = _rate_limit_state(model.extra_params, now)
+    provider_state = _rate_limit_state(provider.extra_config, now)
+
+    active_states = []
+    if model_state["rate_limit_active"]:
+        active_states.append(("model", model_state))
+    if provider_state["rate_limit_active"]:
+        active_states.append(("provider", provider_state))
+
+    chosen_scope = None
+    chosen_state: Optional[Dict[str, Any]] = None
+    if active_states:
+        chosen_scope, chosen_state = max(
+            active_states,
+            key=lambda item: item[1]["rate_limit_remaining_seconds"],
+        )
+
+    last_model_rate_limit_at = model_state["last_rate_limit_at_iso"] if model_state["rate_limit_count"] > 0 else None
+    last_provider_rate_limit_at = provider_state["last_rate_limit_at_iso"] if provider_state["rate_limit_count"] > 0 else None
+
+    return {
+        "rate_limit_active": bool(chosen_state),
+        "rate_limit_scope": chosen_scope,
+        "rate_limit_cooldown_until": chosen_state["cooldown_until_iso"] if chosen_state else None,
+        "rate_limit_remaining_seconds": chosen_state["rate_limit_remaining_seconds"] if chosen_state else 0,
+        "rate_limit_count": chosen_state["rate_limit_count"] if chosen_state else model_state["rate_limit_count"],
+        "last_rate_limit_at": (
+            chosen_state["last_rate_limit_at_iso"]
+            if chosen_state
+            else last_model_rate_limit_at
+        ),
+        "model_rate_limit_count": model_state["rate_limit_count"],
+        "provider_rate_limit_count": provider_state["rate_limit_count"],
+        "model_last_rate_limit_at": last_model_rate_limit_at,
+        "provider_last_rate_limit_at": last_provider_rate_limit_at,
+    }
+
+
+def get_provider_rate_limit_state(provider: AIProviderConfig) -> Dict[str, Any]:
+    state = _rate_limit_state(provider.extra_config)
+    return {
+        "rate_limit_active": state["rate_limit_active"],
+        "rate_limit_cooldown_until": state["cooldown_until_iso"],
+        "rate_limit_remaining_seconds": state["rate_limit_remaining_seconds"],
+        "rate_limit_count": state["rate_limit_count"],
+        "last_rate_limit_at": state["last_rate_limit_at_iso"],
+    }
+
+
+def get_model_rate_limit_state(model: AIModelConfig, provider: Optional[AIProviderConfig] = None) -> Dict[str, Any]:
+    if provider is not None:
+        return _combined_route_rate_limit_state(model, provider)
+
+    state = _rate_limit_state(model.extra_params)
+    return {
+        "rate_limit_active": state["rate_limit_active"],
+        "rate_limit_scope": "model" if state["rate_limit_active"] else None,
+        "rate_limit_cooldown_until": state["cooldown_until_iso"],
+        "rate_limit_remaining_seconds": state["rate_limit_remaining_seconds"],
+        "rate_limit_count": state["rate_limit_count"],
+        "last_rate_limit_at": state["last_rate_limit_at_iso"],
+    }
 
 
 def _infer_provider_from_model(model_name: str) -> Optional[str]:
@@ -223,8 +374,64 @@ async def bootstrap_model_center_from_env(force: bool = False) -> None:
         logger.info("Model center bootstrapped from env")
 
 
-async def get_active_model_routes() -> List[Dict[str, Any]]:
-    """Return active model routes ordered by model priority."""
+def is_rate_limit_error(error: Any) -> bool:
+    status_code = getattr(error, "status_code", None)
+    response = getattr(error, "response", None)
+    if status_code is None and response is not None:
+        status_code = getattr(response, "status_code", None)
+    if status_code == 429:
+        return True
+
+    msg = str(error).lower()
+    return any(
+        keyword in msg
+        for keyword in [
+            "insufficient_quota",
+            "rate limit",
+            "429",
+            "quota",
+            "too many requests",
+            "allocationquota",
+            "free tier",
+        ]
+    )
+
+
+def extract_retry_after_seconds(error: Any) -> Optional[int]:
+    headers = None
+    response = getattr(error, "response", None)
+    if response is not None:
+        headers = getattr(response, "headers", None)
+    if headers is None:
+        headers = getattr(error, "headers", None)
+
+    if headers:
+        retry_after = headers.get("retry-after") or headers.get("Retry-After")
+        if retry_after is not None:
+            try:
+                return max(1, int(float(str(retry_after).strip())))
+            except (TypeError, ValueError):
+                pass
+
+    message = str(error)
+    patterns = [
+        r"retry after\s+(\d+(?:\.\d+)?)s",
+        r"try again in\s+(\d+(?:\.\d+)?)s",
+        r"in\s+(\d+(?:\.\d+)?)\s*seconds",
+        r"after\s+(\d+(?:\.\d+)?)\s*seconds",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, message, re.IGNORECASE)
+        if match:
+            try:
+                return max(1, int(float(match.group(1))))
+            except (TypeError, ValueError):
+                continue
+    return None
+
+
+async def get_runtime_routes() -> List[Dict[str, Any]]:
+    """Return all enabled runtime routes with routing availability metadata."""
     await bootstrap_model_center_from_env(force=False)
 
     async with get_db() as db:
@@ -244,14 +451,17 @@ async def get_active_model_routes() -> List[Dict[str, Any]]:
         routes: List[Dict[str, Any]] = []
         for model in rows:
             provider = model.provider
-            if not provider or not provider.api_key:
+            if not provider:
                 continue
+
+            rate_limit_state = _combined_route_rate_limit_state(model, provider)
 
             routes.append(
                 {
                     "model_id": model.id,
                     "model_key": model.model_key,
                     "model_name": model.model_name,
+                    "priority": model.priority,
                     "provider_id": provider.id,
                     "provider_key": provider.provider_key,
                     "provider_name": provider.provider_name,
@@ -263,10 +473,20 @@ async def get_active_model_routes() -> List[Dict[str, Any]]:
                     "extra_params": model.extra_params or {},
                     "temperature": model.temperature,
                     "max_tokens": model.max_tokens,
+                    "has_api_key": bool(provider.api_key),
+                    "last_check_status": model.last_check_status or provider.last_check_status,
+                    "available_for_routing": bool(provider.api_key) and not rate_limit_state["rate_limit_active"],
+                    **rate_limit_state,
                 }
             )
 
         return routes
+
+
+async def get_active_model_routes() -> List[Dict[str, Any]]:
+    """Return routable model routes ordered by model priority."""
+    routes = await get_runtime_routes()
+    return [route for route in routes if route.get("available_for_routing")]
 
 
 async def _test_openai_compatible(route: Dict[str, Any], model_name: str) -> None:
@@ -313,9 +533,10 @@ async def test_route_connection(route: Dict[str, Any]) -> Dict[str, Any]:
     except Exception as exc:
         return {
             "success": False,
-            "status": "unavailable",
+            "status": "rate_limited" if is_rate_limit_error(exc) else "unavailable",
             "message": str(exc),
             "model_name": model_name,
+            "retry_after_seconds": extract_retry_after_seconds(exc),
         }
 
 
@@ -327,6 +548,8 @@ async def update_model_check_result(model_id: int, status: str, message: str) ->
         model.last_check_status = status
         model.last_check_message = message
         model.last_checked_at = _utcnow()
+        if status == "available":
+            model.extra_params = _clear_payload_rate_limit(model.extra_params, model.last_checked_at)
         await db.commit()
 
 
@@ -338,6 +561,73 @@ async def update_provider_check_result(provider_id: int, status: str, message: s
         provider.last_check_status = status
         provider.last_check_message = message
         provider.last_checked_at = _utcnow()
+        if status == "available":
+            provider.extra_config = _clear_payload_rate_limit(provider.extra_config, provider.last_checked_at)
+        await db.commit()
+
+
+async def mark_route_rate_limited(
+    route: Dict[str, Any],
+    message: str,
+    retry_after_seconds: Optional[int] = None,
+) -> Dict[str, Any]:
+    """Persist provider/model cooldown after a runtime rate-limit error."""
+    route_extra_params = route.get("extra_params") or {}
+    route_extra_config = route.get("extra_config") or {}
+    cooldown_seconds = retry_after_seconds
+    if cooldown_seconds is None:
+        cooldown_seconds = int(
+            route_extra_params.get("rate_limit_cooldown_seconds")
+            or route_extra_config.get("rate_limit_cooldown_seconds")
+            or get_config().ai.rate_limit_cooldown_seconds
+        )
+
+    now = _utcnow()
+    cooldown_until = now + timedelta(seconds=max(1, int(cooldown_seconds)))
+
+    async with get_db() as db:
+        model = await db.get(AIModelConfig, int(route["model_id"]))
+        provider = await db.get(AIProviderConfig, int(route["provider_id"]))
+
+        if model is not None:
+            model.last_check_status = "rate_limited"
+            model.last_check_message = message
+            model.last_checked_at = now
+            model.extra_params = _mark_payload_rate_limited(model.extra_params, cooldown_until, now)
+
+        if provider is not None:
+            provider.last_check_status = "rate_limited"
+            provider.last_check_message = message
+            provider.last_checked_at = now
+            provider.extra_config = _mark_payload_rate_limited(provider.extra_config, cooldown_until, now)
+
+        await db.commit()
+
+    return {
+        "cooldown_until": cooldown_until.isoformat(),
+        "cooldown_seconds": max(1, int(cooldown_seconds)),
+    }
+
+
+async def clear_route_rate_limit(route: Dict[str, Any], message: str = "Connection successful") -> None:
+    """Clear persisted cooldown after a route has recovered."""
+    now = _utcnow()
+    async with get_db() as db:
+        model = await db.get(AIModelConfig, int(route["model_id"]))
+        provider = await db.get(AIProviderConfig, int(route["provider_id"]))
+
+        if model is not None:
+            model.last_check_status = "available"
+            model.last_check_message = message
+            model.last_checked_at = now
+            model.extra_params = _clear_payload_rate_limit(model.extra_params, now)
+
+        if provider is not None:
+            provider.last_check_status = "available"
+            provider.last_check_message = message
+            provider.last_checked_at = now
+            provider.extra_config = _clear_payload_rate_limit(provider.extra_config, now)
+
         await db.commit()
 
 
@@ -410,6 +700,12 @@ async def check_all_models() -> List[Dict[str, Any]]:
     results: List[Dict[str, Any]] = []
     for route in routes:
         result = await test_route_connection(route)
+        if result["status"] == "rate_limited":
+            await mark_route_rate_limited(
+                route,
+                result["message"],
+                retry_after_seconds=result.get("retry_after_seconds"),
+            )
         await update_model_check_result(route["model_id"], result["status"], result["message"])
         await update_provider_check_result(route["provider_id"], result["status"], result["message"])
         result.update(

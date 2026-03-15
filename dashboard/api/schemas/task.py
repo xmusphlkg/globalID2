@@ -22,6 +22,8 @@ class TaskOut(BaseModel):
     completed_at: Optional[datetime] = None
     actual_duration: Optional[float] = None
     workbook_count: int = 0
+    cancel_requested: bool = False
+    cancel_requested_at: Optional[datetime] = None
 
     model_config = {"from_attributes": True}
 
@@ -39,9 +41,16 @@ class WorkbookEntryOut(BaseModel):
     entry_type: str
     title: str
     content: Optional[str] = None
+    content_type: Optional[str] = None
+    prompt: Optional[str] = None
+    response: Optional[str] = None
     model_used: Optional[str] = None
     tokens_used: Optional[int] = None
+    cost: Optional[float] = None
     duration: Optional[float] = None
+    success: bool = True
+    error_message: Optional[str] = None
+    metadata: Dict[str, Any] = Field(default_factory=dict)
     created_at: datetime
 
     model_config = {"from_attributes": True}

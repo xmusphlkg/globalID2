@@ -19,6 +19,12 @@ from src.domain.task import Task, TaskPriority, TaskStatus, TaskType
 router = APIRouter()
 
 
+def _cancel_meta(task: Task) -> tuple[bool, Optional[str]]:
+    metadata = dict(task.metadata_ or {})
+    requested_at = metadata.get("cancel_requested_at")
+    return bool(metadata.get("cancel_requested")), requested_at if isinstance(requested_at, str) else None
+
+
 # ── Request schema ────────────────────────────────────────────────────────────
 
 class CrawlStartRequest(BaseModel):
@@ -112,10 +118,10 @@ async def execute_existing_task(
     )).scalar_one_or_none()
     if not task:
         raise HTTPException(404, "Task not found")
-    if task.status not in (TaskStatus.PENDING, TaskStatus.QUEUED, TaskStatus.FAILED):
+    if task.status not in (TaskStatus.PENDING, TaskStatus.QUEUED, TaskStatus.FAILED, TaskStatus.CANCELLED):
         raise HTTPException(
             409,
-            f"Task status is '{task.status}' — only pending/queued/failed tasks can be executed",
+            f"Task status is '{task.status}' — only pending/queued/failed/cancelled tasks can be executed",
         )
 
     background_tasks.add_task(_execute_in_background, task.task_uuid)
@@ -132,6 +138,7 @@ async def _execute_in_background(task_uuid: str) -> None:
 
 
 def _task_to_out(task: Task) -> TaskOut:
+    cancel_requested, cancel_requested_at = _cancel_meta(task)
     return TaskOut(
         id=task.id,
         task_uuid=task.task_uuid,
@@ -149,4 +156,6 @@ def _task_to_out(task: Task) -> TaskOut:
         completed_at=task.completed_at,
         actual_duration=task.actual_duration,
         workbook_count=0,
+        cancel_requested=cancel_requested,
+        cancel_requested_at=cancel_requested_at,
     )

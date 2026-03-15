@@ -12,6 +12,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from src.core import get_logger
+from src.core.missing_values import normalize_rate_columns
 from .base import BaseParser, ParseResult
 
 logger = get_logger(__name__)
@@ -238,8 +239,8 @@ class HTMLTableParser(BaseParser):
             data["Province"] = "China"
             data["ProvinceCN"] = "全国"
             data["ADCode"] = "100000"
-            data["Incidence"] = -10  # 待计算
-            data["Mortality"] = -10  # 待计算
+            data["Incidence"] = None
+            data["Mortality"] = None
             data["DiseasesCN"] = ""  # 需要通过映射获取
         except Exception as e:
             self.logger.error(f"Error adding columns: {e}")
@@ -262,7 +263,7 @@ class HTMLTableParser(BaseParser):
         
         self.logger.debug(f"Final columns: {list(data.columns)}")
         
-        return data[column_order]
+        return normalize_rate_columns(data[column_order], copy=False)
     
     def _clean_chinese_data(self, df: pd.DataFrame, metadata: Dict) -> pd.DataFrame:
         """
@@ -308,8 +309,8 @@ class HTMLTableParser(BaseParser):
         data["Province"] = "China"
         data["ProvinceCN"] = "全国"
         data["ADCode"] = "100000"
-        data["Incidence"] = -10
-        data["Mortality"] = -10
+        data["Incidence"] = None
+        data["Mortality"] = None
         
         # Diseases 列需要通过映射获取（在后续步骤处理）
         data["Diseases"] = ""
@@ -329,7 +330,7 @@ class HTMLTableParser(BaseParser):
             if col not in data.columns:
                 data[col] = ""
         
-        return data[column_order]
+        return normalize_rate_columns(data[column_order], copy=False)
     
     def _is_column_meaningful(self, series: pd.Series) -> bool:
         """

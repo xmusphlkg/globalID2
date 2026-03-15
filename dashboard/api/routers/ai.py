@@ -17,7 +17,9 @@ from src.ai.model_center import (
     check_all_models,
     check_model_by_id,
     check_provider_by_id,
-    get_active_model_routes,
+    get_model_rate_limit_state,
+    get_provider_rate_limit_state,
+    get_runtime_routes,
     mask_api_key,
 )
 from src.core.task_manager import task_manager
@@ -88,6 +90,11 @@ class ProviderOut(BaseModel):
     last_check_status: str
     last_check_message: Optional[str] = None
     last_checked_at: Optional[str] = None
+    rate_limit_active: bool = False
+    rate_limit_cooldown_until: Optional[str] = None
+    rate_limit_remaining_seconds: int = 0
+    rate_limit_count: int = 0
+    last_rate_limit_at: Optional[str] = None
 
 
 class ModelCreateRequest(BaseModel):
@@ -136,6 +143,12 @@ class ModelOut(BaseModel):
     last_check_status: str
     last_check_message: Optional[str] = None
     last_checked_at: Optional[str] = None
+    rate_limit_active: bool = False
+    rate_limit_scope: Optional[str] = None
+    rate_limit_cooldown_until: Optional[str] = None
+    rate_limit_remaining_seconds: int = 0
+    rate_limit_count: int = 0
+    last_rate_limit_at: Optional[str] = None
 
 
 class RuntimeRouteOut(BaseModel):
@@ -150,6 +163,14 @@ class RuntimeRouteOut(BaseModel):
     has_api_key: bool
     api_key_hint: Optional[str] = None
     priority: Optional[int] = None
+    available_for_routing: bool = False
+    last_check_status: Optional[str] = None
+    rate_limit_active: bool = False
+    rate_limit_scope: Optional[str] = None
+    rate_limit_cooldown_until: Optional[str] = None
+    rate_limit_remaining_seconds: int = 0
+    rate_limit_count: int = 0
+    last_rate_limit_at: Optional[str] = None
 
 
 @router.post("/ai/start", response_model=TaskOut, status_code=201)
@@ -408,7 +429,7 @@ async def test_all_models():
 
 @router.get("/ai/models/runtime", response_model=List[RuntimeRouteOut])
 async def list_runtime_routes():
-    routes = await get_active_model_routes()
+    routes = await get_runtime_routes()
     return [
         RuntimeRouteOut(
             model_id=int(route["model_id"]),
@@ -422,6 +443,14 @@ async def list_runtime_routes():
             has_api_key=bool(route.get("api_key")),
             api_key_hint=mask_api_key(route.get("api_key")),
             priority=route.get("priority"),
+            available_for_routing=bool(route.get("available_for_routing")),
+            last_check_status=route.get("last_check_status"),
+            rate_limit_active=bool(route.get("rate_limit_active")),
+            rate_limit_scope=route.get("rate_limit_scope"),
+            rate_limit_cooldown_until=route.get("rate_limit_cooldown_until"),
+            rate_limit_remaining_seconds=int(route.get("rate_limit_remaining_seconds") or 0),
+            rate_limit_count=int(route.get("rate_limit_count") or 0),
+            last_rate_limit_at=route.get("last_rate_limit_at"),
         )
         for route in routes
     ]
@@ -452,6 +481,9 @@ def _normalize_priority(value: str) -> TaskPriority:
 
 
 def _task_to_out(task: Task) -> TaskOut:
+    metadata = dict(task.metadata_ or {})
+    cancel_requested = bool(metadata.get("cancel_requested"))
+    cancel_requested_at = metadata.get("cancel_requested_at") if isinstance(metadata.get("cancel_requested_at"), str) else None
     return TaskOut(
         id=task.id,
         task_uuid=task.task_uuid,
@@ -469,10 +501,13 @@ def _task_to_out(task: Task) -> TaskOut:
         completed_at=task.completed_at,
         actual_duration=task.actual_duration,
         workbook_count=0,
+        cancel_requested=cancel_requested,
+        cancel_requested_at=cancel_requested_at,
     )
 
 
 def _provider_to_out(provider: AIProviderConfig) -> ProviderOut:
+    rate_limit_meta = get_provider_rate_limit_state(provider)
     return ProviderOut(
         id=provider.id,
         provider_key=provider.provider_key,
@@ -490,11 +525,17 @@ def _provider_to_out(provider: AIProviderConfig) -> ProviderOut:
         last_check_status=provider.last_check_status,
         last_check_message=provider.last_check_message,
         last_checked_at=provider.last_checked_at.isoformat() if provider.last_checked_at else None,
+        rate_limit_active=rate_limit_meta["rate_limit_active"],
+        rate_limit_cooldown_until=rate_limit_meta["rate_limit_cooldown_until"],
+        rate_limit_remaining_seconds=rate_limit_meta["rate_limit_remaining_seconds"],
+        rate_limit_count=rate_limit_meta["rate_limit_count"],
+        last_rate_limit_at=rate_limit_meta["last_rate_limit_at"],
     )
 
 
 def _model_to_out(model: AIModelConfig) -> ModelOut:
     provider = model.provider
+    rate_limit_meta = get_model_rate_limit_state(model, provider)
     return ModelOut(
         id=model.id,
         provider_id=model.provider_id,
@@ -514,4 +555,10 @@ def _model_to_out(model: AIModelConfig) -> ModelOut:
         last_check_status=model.last_check_status,
         last_check_message=model.last_check_message,
         last_checked_at=model.last_checked_at.isoformat() if model.last_checked_at else None,
+        rate_limit_active=rate_limit_meta["rate_limit_active"],
+        rate_limit_scope=rate_limit_meta.get("rate_limit_scope"),
+        rate_limit_cooldown_until=rate_limit_meta["rate_limit_cooldown_until"],
+        rate_limit_remaining_seconds=rate_limit_meta["rate_limit_remaining_seconds"],
+        rate_limit_count=rate_limit_meta["rate_limit_count"],
+        last_rate_limit_at=rate_limit_meta["last_rate_limit_at"],
     )

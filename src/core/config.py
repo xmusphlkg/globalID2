@@ -105,6 +105,8 @@ class AISettings(_BaseEnvSettings):
     cache_ttl: int = Field(default=168, description="缓存过期时间（小时）")
     enable_rate_limiting: bool = Field(default=True, description="是否启用限流")
     rate_limit: int = Field(default=50, description="每分钟请求限制")
+    rate_limit_cooldown_seconds: int = Field(default=300, gt=0, description="命中429/额度限制后的冷却秒数")
+    route_cache_ttl_seconds: int = Field(default=15, gt=0, description="模型中心运行时路由缓存秒数")
     
     # 测试配置
     enable_api_test: bool = Field(default=True, description="是否启用API连通性测试")
@@ -166,7 +168,7 @@ class ReportSettings(BaseSettings):
     max_retries: int = Field(default=3, description="最大重试次数")
     enable_email: bool = Field(default=False, description="是否启用邮件发送")
     max_parallel_tasks: int = Field(
-        default=10,
+        default=20,
         alias="MAX_PARALLEL_TASKS",
         description="AI并行任务数"
     )
