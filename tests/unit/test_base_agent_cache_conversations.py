@@ -35,6 +35,58 @@ class DummyAgent(BaseAgent):
         return "live-response", {"prompt": 4, "completion": 5, "total": 9}
 
 
+class UnavailableFallbackAgent(BaseAgent):
+    def __init__(self):
+        super().__init__(name="Fallback", model="bad-model", provider="dummy-provider")
+        self.provider_calls = 0
+        self.call_models = []
+
+    async def process(self, **kwargs):
+        return {}
+
+    async def _complete_with_provider(self, provider: str, prompt: str, system: str | None, **kwargs):
+        self.provider_calls += 1
+        self.call_models.append(self.model)
+        if self.model == "bad-model":
+            raise Exception(
+                "Error code: 404 - {'error': {'message': 'The model `bad-model` does not exist or you do not have access to it.', 'code': 'model_not_found'}}"
+            )
+        return "fallback-response", {"prompt": 2, "completion": 3, "total": 5}
+
+
+class QuotaRecoveryAgent(BaseAgent):
+    def __init__(self):
+        super().__init__(name="QuotaRecovery", model="hunyuan-pro", provider="dummy-provider")
+        self.provider_calls = 0
+
+    async def process(self, **kwargs):
+        return {}
+
+    async def _complete_with_provider(self, provider: str, prompt: str, system: str | None, **kwargs):
+        self.provider_calls += 1
+        if self.provider_calls < 3:
+            raise Exception(
+                "Error code: 400 - {'error': {'message': '请求限频，请稍后重试', 'code': '2003'}}"
+            )
+        return "quota-recovered", {"prompt": 1, "completion": 1, "total": 2}
+
+
+class ProbeFallbackAgent(BaseAgent):
+    def __init__(self):
+        super().__init__(name="ProbeFallback", model="qwen-flash-character", provider="dummy-provider")
+        self.call_models = []
+
+    async def process(self, **kwargs):
+        return {}
+
+    async def _complete_with_runtime_route(self, route, prompt: str, system: str | None = None, **kwargs):
+        model_name = str(route.get("model_name") or self.model)
+        self.call_models.append(model_name)
+        if model_name == "qwen-flash-character":
+            raise Exception("Error code: 400 - {'error': {'message': '请求限频，请稍后重试', 'code': '2003'}}")
+        return "glm-ok", {"prompt": 1, "completion": 1, "total": 2}
+
+
 @pytest.mark.asyncio
 async def test_cache_hit_records_conversation_history(monkeypatch):
     monkeypatch.setattr(BaseAgent, "_init_clients", lambda self: None)
@@ -92,3 +144,164 @@ async def test_live_completion_caches_structured_payload(monkeypatch):
     }
     assert len(agent.conversation_history) == 1
     assert agent.conversation_history[0]["tokens"]["total"] == 9
+
+
+@pytest.mark.asyncio
+async def test_empty_candidates_wait_then_probe(monkeypatch):
+    monkeypatch.setattr(BaseAgent, "_init_clients", lambda self: None)
+    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_ROUTES", [], raising=False)
+    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_ROUTES_LOADED_AT", time.time(), raising=False)
+    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_CHAIN", ["dummy-model"], raising=False)
+    monkeypatch.setattr(BaseAgent, "MODEL_COOLDOWNS", {"dummy-model": time.time() + 30}, raising=False)
+    monkeypatch.setattr(BaseAgent, "ROUTE_COOLDOWNS", {}, raising=False)
+
+    async def _empty_routes():
+        return []
+
+    waited = []
+
+    async def _fake_sleep(seconds):
+        waited.append(seconds)
+
+    monkeypatch.setattr("src.ai.agents.base.get_active_model_routes", _empty_routes)
+    monkeypatch.setattr("src.ai.agents.base.get_runtime_routes", _empty_routes)
+    monkeypatch.setattr("src.ai.agents.base.asyncio.sleep", _fake_sleep)
+
+    agent = DummyAgent()
+    monkeypatch.setattr(agent.config.ai, "enable_cache", False, raising=False)
+    monkeypatch.setattr(agent.config.ai, "enable_rate_limiting", False, raising=False)
+    monkeypatch.setattr(agent.config.ai, "rate_limit_cooldown_seconds", 30, raising=False)
+
+    result = await agent.complete(prompt="hello", system="system")
+
+    assert result == "live-response"
+    assert agent.provider_calls == 1
+    assert waited
+    assert waited[0] >= 1
+
+
+@pytest.mark.asyncio
+async def test_model_not_found_fast_falls_through_to_next_model(monkeypatch):
+    monkeypatch.setattr(BaseAgent, "_init_clients", lambda self: None)
+    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_ROUTES", [], raising=False)
+    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_ROUTES_LOADED_AT", time.time(), raising=False)
+    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_CHAIN", [], raising=False)
+    monkeypatch.setattr(BaseAgent, "MODEL_COOLDOWNS", {}, raising=False)
+    monkeypatch.setattr(BaseAgent, "ROUTE_COOLDOWNS", {}, raising=False)
+
+    persisted = []
+
+    async def _fake_mark_model_unavailable_by_name(model_name: str, message: str):
+        persisted.append((model_name, message))
+        return 1
+
+    monkeypatch.setattr(
+        "src.ai.agents.base.mark_model_unavailable_by_name",
+        _fake_mark_model_unavailable_by_name,
+    )
+
+    agent = UnavailableFallbackAgent()
+    monkeypatch.setattr(agent.config.ai, "enable_cache", False, raising=False)
+    monkeypatch.setattr(agent.config.ai, "enable_rate_limiting", False, raising=False)
+    monkeypatch.setattr(agent.config.ai, "fallback_model", "good-model", raising=False)
+
+    result = await agent.complete(prompt="hello", system="system")
+
+    assert result == "fallback-response"
+    assert agent.provider_calls == 2
+    assert agent.call_models == ["bad-model", "good-model"]
+    assert persisted
+    assert persisted[0][0] == "bad-model"
+
+
+@pytest.mark.asyncio
+async def test_quota_recovery_waits_long_and_retries_multiple_rounds(monkeypatch):
+    monkeypatch.setattr(BaseAgent, "_init_clients", lambda self: None)
+    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_ROUTES", [], raising=False)
+    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_ROUTES_LOADED_AT", time.time(), raising=False)
+    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_CHAIN", [], raising=False)
+    monkeypatch.setattr(BaseAgent, "MODEL_COOLDOWNS", {}, raising=False)
+    monkeypatch.setattr(BaseAgent, "ROUTE_COOLDOWNS", {}, raising=False)
+
+    waited = []
+
+    async def _fake_sleep(seconds):
+        waited.append(int(seconds))
+
+    async def _empty_routes():
+        return []
+
+    monkeypatch.setattr("src.ai.agents.base.get_active_model_routes", _empty_routes)
+    monkeypatch.setattr("src.ai.agents.base.get_runtime_routes", _empty_routes)
+    monkeypatch.setattr("src.ai.agents.base.asyncio.sleep", _fake_sleep)
+
+    agent = QuotaRecoveryAgent()
+    monkeypatch.setattr(agent.config.ai, "enable_cache", False, raising=False)
+    monkeypatch.setattr(agent.config.ai, "enable_rate_limiting", False, raising=False)
+    monkeypatch.setattr(agent.config.ai, "fallback_model", "", raising=False)
+    monkeypatch.setattr(agent.config.ai, "rate_limit_cooldown_seconds", 300, raising=False)
+    monkeypatch.setattr(agent.config.ai, "rate_limit_wait_cap_seconds", 900, raising=False)
+    monkeypatch.setattr(agent.config.ai, "rate_limit_recovery_max_rounds", 4, raising=False)
+
+    result = await agent.complete(prompt="hello", system="system")
+
+    assert result == "quota-recovered"
+    assert agent.provider_calls == 3
+    assert waited[:2] == [300, 300]
+
+
+@pytest.mark.asyncio
+async def test_probe_candidates_tries_later_model_when_first_is_rate_limited(monkeypatch):
+    monkeypatch.setattr(BaseAgent, "_init_clients", lambda self: None)
+    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_CHAIN", [], raising=False)
+    monkeypatch.setattr(BaseAgent, "MODEL_COOLDOWNS", {}, raising=False)
+    monkeypatch.setattr(BaseAgent, "ROUTE_COOLDOWNS", {}, raising=False)
+
+    runtime_routes = [
+        {
+            "model_key": "qianwen-default:qwen-flash-character",
+            "model_name": "qwen-flash-character",
+            "provider_key": "qianwen-default",
+            "provider_name": "qianwen",
+            "available_for_routing": False,
+            "last_check_status": "rate_limited",
+            "rate_limit_remaining_seconds": 120,
+        },
+        {
+            "model_key": "qianwen-default:glm-5",
+            "model_name": "glm-5",
+            "provider_key": "qianwen-default",
+            "provider_name": "qianwen",
+            "available_for_routing": False,
+            "last_check_status": "available",
+            "rate_limit_remaining_seconds": 120,
+        },
+    ]
+
+    async def _empty_active_routes():
+        return []
+
+    async def _all_runtime_routes():
+        return runtime_routes
+
+    waited = []
+
+    async def _fake_sleep(seconds):
+        waited.append(int(seconds))
+
+    monkeypatch.setattr("src.ai.agents.base.get_active_model_routes", _empty_active_routes)
+    monkeypatch.setattr("src.ai.agents.base.get_runtime_routes", _all_runtime_routes)
+    monkeypatch.setattr("src.ai.agents.base.asyncio.sleep", _fake_sleep)
+
+    agent = ProbeFallbackAgent()
+    monkeypatch.setattr(agent.config.ai, "enable_cache", False, raising=False)
+    monkeypatch.setattr(agent.config.ai, "enable_rate_limiting", False, raising=False)
+    monkeypatch.setattr(agent.config.ai, "rate_limit_cooldown_seconds", 120, raising=False)
+    monkeypatch.setattr(agent.config.ai, "rate_limit_wait_cap_seconds", 120, raising=False)
+    monkeypatch.setattr(agent.config.ai, "rate_limit_recovery_max_rounds", 0, raising=False)
+
+    result = await agent.complete(prompt="hello", system="system")
+
+    assert result == "glm-ok"
+    assert agent.call_models == ["qwen-flash-character", "glm-5"]
+    assert waited

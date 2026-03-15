@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional
 
 from src.core import get_logger
 from .base import BaseAgent
+from .prompt_loader import render_prompt_template
 
 logger = get_logger(__name__)
 
@@ -73,6 +74,11 @@ class WriterAgent(BaseAgent):
             Generated section content
         """
         logger.info(f"Writing section '{section_type}' in '{language}' with '{style}' style")
+
+        # Prefer section-scoped context when provided by orchestrator.
+        section_context = kwargs.pop("section_context", None)
+        if isinstance(section_context, dict) and section_context:
+            analysis_data = section_context
 
         raw_context = self._format_raw_sources(raw_sources)
         
@@ -157,7 +163,7 @@ class WriterAgent(BaseAgent):
     Previous sections (trend analysis, key findings, highlights) for context:
     {prev_content[:2000]}"""
 
-        prompt += """
+        prompt += f"""
 
     Requirements:
     - Writing style: {self._get_style_description(style)}
@@ -221,7 +227,7 @@ class WriterAgent(BaseAgent):
     Data table (cleaned, wide format by {analysis_data.get('data_frequency', 'monthly')} period):
     {table_str}"""
 
-        prompt += """
+        prompt += f"""
 
     Requirements:
     - Writing style: {self._get_style_description(style)}
@@ -432,8 +438,9 @@ class WriterAgent(BaseAgent):
         else:
             extra = "Use a formal, professional tone appropriate for official reports and academic communication."
 
-        # System prompts are primarily loaded from external files; this method returns a concise English guideline.
-        return f"{base} {extra}"
+        # Enforce target language explicitly to avoid language drift caused by mixed-language context.
+        target_language = "Chinese" if language == "zh" else "English"
+        return f"{base} {extra} Output must be strictly in {target_language}."
     
     @staticmethod
     def _format_dict(d: Dict) -> str:
@@ -467,7 +474,7 @@ class WriterAgent(BaseAgent):
         return json.dumps(converted_data, ensure_ascii=False, indent=2)
 
     @staticmethod
-    def _format_raw_sources(raw_sources: Optional[List[Dict[str, Any]]], max_entries: int = 3, max_chars: int = 450) -> str:
+    def _format_raw_sources(raw_sources: Optional[List[Dict[str, Any]]], max_entries: int = 2, max_chars: int = 280) -> str:
         """Format latest raw crawler pages into concise bullet text for prompting"""
         if not raw_sources:
             return ""
@@ -482,17 +489,32 @@ class WriterAgent(BaseAgent):
 
         return "\n".join(lines)
 
+    @staticmethod
+    def _build_context_injection(raw_context: str, revision_instructions: Optional[str]) -> str:
+        blocks: List[str] = []
+        if raw_context:
+            blocks.append(f"Recent web signals (latest crawler pages):\n{raw_context}")
+        if revision_instructions:
+            blocks.append(f"Revision instructions:\n{revision_instructions}")
+        return "\n\n".join(blocks)
+
     # V1.0-style section writing methods
     async def _write_introduction(self, disease_name: str, language: str, raw_context: str = "", **kwargs) -> str:
         """Write introduction section (90-100 words)"""
-        prompt = f"Give a brief introduction to {disease_name or 'the disease'}, not including any analysis or commentary. Word limit: 90-100 words."
-
-        if raw_context:
-            prompt += f"\n\nRecent web signals (latest crawler pages):\n{raw_context}"
-
-        rev = kwargs.get('revision_instructions')
-        if rev:
-            prompt += f"\n\nRevision instructions:\n{rev}"
+        context_injection = self._build_context_injection(raw_context, kwargs.get('revision_instructions'))
+        prompt = render_prompt_template(
+            "writer_introduction_prompt.txt",
+            {
+                "disease_name": disease_name or "the disease",
+                "language": "Chinese" if language == "zh" else "English",
+                "context_injection": context_injection,
+            },
+            default_template=(
+                "Give a brief introduction to {disease_name}, without analysis or commentary.\n"
+                "Word limit: 90-100 words.\n"
+                "Target output language: {language}\n{context_injection}"
+            ),
+        )
 
         response = await self.complete(
             prompt=prompt,
@@ -509,24 +531,37 @@ class WriterAgent(BaseAgent):
         prev_content = kwargs.get("previous_sections_content", "")
         data_context = table_data_str or str(analysis_data.get('insights', ''))
 
-        prompt = f"""Analyze the provided data for {disease_name or 'the disease'} (all names: {disease_names_str}) and provide a brief summary of key epidemiological trends and current disease situation as of {report_date or 'the current period'}.
-    Data period: {analysis_data.get("period", {}).get("start", "")} to {analysis_data.get("period", {}).get("end", "")}"""
+        previous_sections_injection = ""
         if prev_content:
-            prompt += f"""
+            previous_sections_injection = (
+                "Previous sections (trend analysis, key findings) for context:\n"
+                f"{prev_content[:2000]}"
+            )
 
-    Previous sections (trend analysis, key findings) for context:
-    {prev_content[:2000]}"""
-        prompt += f"""
-    Format as 3-4 bullet points, each followed by <br/>.
-    Word count: 100-110 words.
-    Data: {data_context}"""
-
-        if raw_context:
-            prompt += f"\n\nRecent web signals (latest crawler pages):\n{raw_context}"
-
-        rev = kwargs.get('revision_instructions')
-        if rev:
-            prompt += f"\n\nRevision instructions:\n{rev}"
+        context_injection = self._build_context_injection(raw_context, kwargs.get('revision_instructions'))
+        prompt = render_prompt_template(
+            "writer_highlights_prompt.txt",
+            {
+                "disease_name": disease_name or "the disease",
+                "disease_names_str": disease_names_str,
+                "report_date": report_date or "the current period",
+                "period_start": analysis_data.get("period", {}).get("start", ""),
+                "period_end": analysis_data.get("period", {}).get("end", ""),
+                "previous_sections_injection": previous_sections_injection,
+                "data_context": data_context,
+                "language": "Chinese" if language == "zh" else "English",
+                "context_injection": context_injection,
+            },
+            default_template=(
+                "Summarize key epidemiological highlights for {disease_name}.\n"
+                "Data period: {period_start} to {period_end}\n"
+                "{previous_sections_injection}\n"
+                "Format as 3-4 bullets with <br/>, 100-110 words.\n"
+                "Data: {data_context}\n"
+                "Target output language: {language}\n"
+                "{context_injection}"
+            ),
+        )
 
         response = await self.complete(
             prompt=prompt,
@@ -540,17 +575,23 @@ class WriterAgent(BaseAgent):
         """Write cases analysis section (2-3 paragraphs)"""
         data_context = table_data_str or str(analysis_data.get('insights', ''))
 
-        prompt = f"""Provide deep cases analysis of reported data for {disease_name or 'the disease'}. 
-    Write 2-3 flowing paragraphs without bullet points.
-    Focus on case trends, patterns, and epidemiological insights.
-    Data: {data_context}"""
-
-        if raw_context:
-            prompt += f"\n\nRecent web signals (latest crawler pages):\n{raw_context}"
-
-        rev = kwargs.get('revision_instructions')
-        if rev:
-            prompt += f"\n\nRevision instructions:\n{rev}"
+        context_injection = self._build_context_injection(raw_context, kwargs.get('revision_instructions'))
+        prompt = render_prompt_template(
+            "writer_cases_analysis_prompt.txt",
+            {
+                "disease_name": disease_name or "the disease",
+                "data_context": data_context,
+                "language": "Chinese" if language == "zh" else "English",
+                "context_injection": context_injection,
+            },
+            default_template=(
+                "Provide in-depth case analysis for {disease_name}.\n"
+                "Write 2-3 flowing paragraphs, no bullets.\n"
+                "Data: {data_context}\n"
+                "Target output language: {language}\n"
+                "{context_injection}"
+            ),
+        )
 
         response = await self.complete(
             prompt=prompt,
@@ -564,17 +605,23 @@ class WriterAgent(BaseAgent):
         """Write deaths analysis section (2-3 paragraphs)"""
         data_context = table_data_str or str(analysis_data.get('insights', ''))
 
-        prompt = f"""Provide deep deaths analysis of reported data for {disease_name or 'the disease'}.
-    Write 2-3 flowing paragraphs without bullet points.
-    Focus on mortality patterns, case-fatality ratios, and death trends.
-    Data: {data_context}"""
-
-        if raw_context:
-            prompt += f"\n\nRecent web signals (latest crawler pages):\n{raw_context}"
-
-        rev = kwargs.get('revision_instructions')
-        if rev:
-            prompt += f"\n\nRevision instructions:\n{rev}"
+        context_injection = self._build_context_injection(raw_context, kwargs.get('revision_instructions'))
+        prompt = render_prompt_template(
+            "writer_deaths_analysis_prompt.txt",
+            {
+                "disease_name": disease_name or "the disease",
+                "data_context": data_context,
+                "language": "Chinese" if language == "zh" else "English",
+                "context_injection": context_injection,
+            },
+            default_template=(
+                "Provide in-depth deaths analysis for {disease_name}.\n"
+                "Write 2-3 flowing paragraphs, no bullets.\n"
+                "Data: {data_context}\n"
+                "Target output language: {language}\n"
+                "{context_injection}"
+            ),
+        )
 
         response = await self.complete(
             prompt=prompt,

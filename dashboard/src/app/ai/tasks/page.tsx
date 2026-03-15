@@ -48,10 +48,12 @@ function CreateAITaskModal({
   onClose: () => void;
 }) {
   const [reportType, setReportType] = useState<"daily" | "weekly" | "monthly" | "special">("monthly");
+  const [reportLanguage, setReportLanguage] = useState<"en" | "zh">("en");
   const [priority, setPriority] = useState<"low" | "normal" | "high" | "urgent">("normal");
   const [days, setDays] = useState(365);
   const [enableReview, setEnableReview] = useState(true);
   const [sendEmail, setSendEmail] = useState(false);
+  const [reuseFromFailed, setReuseFromFailed] = useState(true);
   const [taskName, setTaskName] = useState("");
   const [description, setDescription] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -72,9 +74,11 @@ function CreateAITaskModal({
       {
         country_id: countryId,
         report_type: reportType,
+        language: reportLanguage,
         days,
         enable_review: enableReview,
         send_email: sendEmail,
+        reuse_from_failed: reuseFromFailed,
         priority,
         task_name: taskName.trim() || undefined,
         description: description.trim() || undefined,
@@ -131,6 +135,18 @@ function CreateAITaskModal({
                 <option value="weekly">weekly</option>
                 <option value="monthly">monthly</option>
                 <option value="special">special</option>
+              </select>
+            </div>
+
+            <div>
+              <label className={labelCls}>{lang === "zh" ? "报告语言" : "Report Language"}</label>
+              <select
+                value={reportLanguage}
+                onChange={(e) => setReportLanguage(e.target.value as "en" | "zh")}
+                className={inputCls}
+              >
+                <option value="en">English</option>
+                <option value="zh">中文</option>
               </select>
             </div>
 
@@ -197,6 +213,20 @@ function CreateAITaskModal({
                 />
                 {lang === "zh" ? "完成后发送邮件" : "Send email after completion"}
               </label>
+              <label className="flex cursor-pointer items-center gap-2.5 text-sm text-tremor-content-emphasis dark:text-dark-tremor-content-emphasis">
+                <input
+                  type="checkbox"
+                  checked={reuseFromFailed}
+                  onChange={(e) => setReuseFromFailed(e.target.checked)}
+                  className="h-4 w-4 rounded border-tremor-border text-tremor-brand focus:ring-tremor-brand-muted"
+                />
+                {lang === "zh" ? "从失败任务中复用已生成内容" : "Reuse generated content from failed tasks"}
+              </label>
+              <Text className="pl-6 text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+                {lang === "zh"
+                  ? "关闭后将强制重新生成，不继承失败/中断任务的中间结果。"
+                  : "Turn off to force a fresh run without resuming failed/interrupted partial output."}
+              </Text>
             </div>
 
             {error && (

@@ -5,6 +5,7 @@ AI Agent Base Class - Provides unified LLM interaction functionality with multi-
 """
 import asyncio
 import json
+import re
 import time
 from abc import ABC, abstractmethod
 from datetime import datetime
@@ -18,8 +19,12 @@ from src.ai.model_center import (
     clear_route_rate_limit,
     extract_retry_after_seconds,
     get_active_model_routes,
+    get_runtime_routes,
+    is_model_unavailable_error,
     is_rate_limit_error,
+    mark_model_unavailable_by_name,
     mark_route_rate_limited,
+    mark_route_unavailable,
 )
 
 logger = get_logger(__name__)
@@ -43,6 +48,15 @@ class BaseAgent(ABC):
     AVAILABLE_MODEL_ROUTES_LOADED_AT: Optional[float] = None
     # Route 级别冷却（provider:model），避免某条路由持续触发限流。
     ROUTE_COOLDOWNS: Dict[str, float] = {}
+    # Model-center internal metadata keys that must never be forwarded to completion APIs.
+    INTERNAL_COMPLETION_PARAM_KEYS = {
+        "routing_state",
+        "rate_limit_cooldown_seconds",
+        "cooldown_until",
+        "last_rate_limit_at",
+        "last_recovered_at",
+        "rate_limit_count",
+    }
     
     def __init__(
         self,
@@ -121,6 +135,125 @@ class BaseAgent(ABC):
     @classmethod
     def _mark_route_cooling_down(cls, route_key: str, cooldown_seconds: int) -> None:
         cls.ROUTE_COOLDOWNS[route_key] = time.time() + max(1, int(cooldown_seconds))
+
+    @classmethod
+    def _cooldown_remaining_seconds(cls, until: Optional[float]) -> int:
+        if not until:
+            return 0
+        return max(0, int(until - time.time()))
+
+    @classmethod
+    def _estimate_wait_seconds_for_empty_candidates(
+        cls,
+        runtime_routes: Optional[List[Dict[str, Any]]],
+        chain: Optional[List[str]],
+        wait_cap_seconds: int,
+    ) -> int:
+        """Estimate a bounded wait before retrying when all candidates are cooling down."""
+        cls._purge_expired_cooldowns()
+
+        waits: List[int] = []
+        if runtime_routes:
+            for route in runtime_routes:
+                route_key = str(route.get("model_key") or route.get("model_name") or "")
+                model_name = str(route.get("model_name") or "")
+
+                route_wait = cls._cooldown_remaining_seconds(cls.ROUTE_COOLDOWNS.get(route_key))
+                model_wait = cls._cooldown_remaining_seconds(cls.MODEL_COOLDOWNS.get(model_name))
+                if route_wait > 0:
+                    waits.append(route_wait)
+                if model_wait > 0:
+                    waits.append(model_wait)
+
+                try:
+                    db_wait = int(route.get("rate_limit_remaining_seconds") or 0)
+                except (TypeError, ValueError):
+                    db_wait = 0
+                if db_wait > 0:
+                    waits.append(db_wait)
+
+        for model_name in chain or []:
+            model_wait = cls._cooldown_remaining_seconds(cls.MODEL_COOLDOWNS.get(model_name))
+            if model_wait > 0:
+                waits.append(model_wait)
+
+        if not waits:
+            return 1
+
+        return max(1, min(min(waits), max(1, int(wait_cap_seconds))))
+
+    def _build_candidates(
+        self,
+        runtime_routes: Optional[List[Dict[str, Any]]],
+        ignore_local_cooldowns: bool = False,
+    ) -> Tuple[List[Dict[str, Any]], List[str]]:
+        candidates: List[Dict[str, Any]] = []
+        chain_used: List[str] = []
+
+        if runtime_routes:
+            for route in runtime_routes:
+                route_key = str(route.get("model_key") or route.get("model_name") or "")
+                model_name = str(route.get("model_name") or "")
+                if not route_key or not model_name:
+                    continue
+                route_status = str(route.get("last_check_status") or "").strip().lower()
+                if route_status == "unavailable":
+                    continue
+                if not ignore_local_cooldowns and not bool(route.get("available_for_routing", True)):
+                    continue
+                if not ignore_local_cooldowns and BaseAgent._is_route_cooling_down(route_key):
+                    continue
+                if not ignore_local_cooldowns and BaseAgent._is_model_cooling_down(model_name):
+                    continue
+                candidates.append(
+                    {
+                        "route_key": route_key,
+                        "model_name": model_name,
+                        "route": route,
+                    }
+                )
+            return candidates, chain_used
+
+        # 若模型中心无可用路由，则回退到配置链路。
+        chain = BaseAgent.AVAILABLE_MODEL_CHAIN
+        if chain is None:
+            chain = getattr(self.config.ai, "model_chain", None) or []
+        chain_used = list(chain)
+
+        if chain:
+            for model_name in chain:
+                if not ignore_local_cooldowns and BaseAgent._is_model_cooling_down(model_name):
+                    continue
+                candidates.append(
+                    {
+                        "route_key": model_name,
+                        "model_name": model_name,
+                        "route": None,
+                    }
+                )
+            return candidates, chain_used
+
+        seen = set()
+        if self.model not in seen:
+            candidates.append(
+                {
+                    "route_key": self.model,
+                    "model_name": self.model,
+                    "route": None,
+                }
+            )
+            seen.add(self.model)
+        fallback_model = getattr(self.config.ai, "fallback_model", None)
+        if fallback_model and fallback_model not in seen:
+            candidates.append(
+                {
+                    "route_key": fallback_model,
+                    "model_name": fallback_model,
+                    "route": None,
+                }
+            )
+
+        return candidates, chain_used
     
     def _init_clients(self):
         """Initialize clients for supported AI providers."""
@@ -206,6 +339,50 @@ class BaseAgent(ABC):
         inferred = self._infer_provider_from_model(model)
         return inferred if inferred else self.provider
 
+    @classmethod
+    def _sanitize_completion_params(cls, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Remove internal routing/rate-limit metadata before provider calls."""
+        sanitized: Dict[str, Any] = {}
+        for key, value in (params or {}).items():
+            if isinstance(key, str) and key in cls.INTERNAL_COMPLETION_PARAM_KEYS:
+                continue
+            if isinstance(key, str) and (key.startswith("routing_") or key.startswith("rate_limit_")):
+                continue
+            sanitized[key] = value
+        return sanitized
+
+    @staticmethod
+    def _extract_unexpected_kwarg(error: Exception) -> Optional[str]:
+        """Parse unexpected keyword argument name from Python TypeError."""
+        match = re.search(r"unexpected keyword argument '([^']+)'", str(error))
+        return match.group(1) if match else None
+
+    async def _safe_openai_completion_create(
+        self,
+        client: AsyncOpenAI,
+        request_payload: Dict[str, Any],
+        max_retries: int = 3,
+    ) -> Any:
+        """Call OpenAI-compatible completion API and auto-drop unsupported kwargs."""
+        payload = dict(request_payload or {})
+        for _ in range(max(1, max_retries)):
+            try:
+                return await client.chat.completions.create(**payload)
+            except TypeError as exc:
+                unexpected_kwarg = self._extract_unexpected_kwarg(exc)
+                if not unexpected_kwarg or unexpected_kwarg not in payload:
+                    raise
+
+                logger.warning(
+                    "Dropping unsupported completion argument '%s' for model '%s'",
+                    unexpected_kwarg,
+                    payload.get("model"),
+                )
+                payload.pop(unexpected_kwarg, None)
+
+        # Should be unreachable because loop returns or raises.
+        return await client.chat.completions.create(**payload)
+
     @staticmethod
     def _decode_cached_completion(cached: Any) -> Tuple[Optional[str], Dict[str, Any]]:
         if isinstance(cached, str):
@@ -264,6 +441,10 @@ class BaseAgent(ABC):
         Returns:
             Generated text
         """
+        # Internal retry guard for a one-shot quota recovery pass.
+        quota_recovery_attempted = bool(kwargs.pop("_quota_recovery_attempted", False))
+        quota_recovery_round = int(kwargs.pop("_quota_recovery_round", 0) or 0)
+
         # 检查缓存
         if use_cache and self.config.ai.enable_cache:
             cache_key = self._make_cache_key(prompt, system)
@@ -306,6 +487,11 @@ class BaseAgent(ABC):
         if runtime_routes is None or route_cache_expired:
             try:
                 runtime_routes = await get_active_model_routes()
+                if not runtime_routes:
+                    # Keep model-center source of truth even when all routes are cooling/rate-limited.
+                    all_runtime_routes = await get_runtime_routes()
+                    if all_runtime_routes:
+                        runtime_routes = all_runtime_routes
                 BaseAgent.AVAILABLE_MODEL_ROUTES = runtime_routes
                 BaseAgent.AVAILABLE_MODEL_ROUTES_LOADED_AT = time.time()
             except Exception as e:
@@ -314,62 +500,60 @@ class BaseAgent(ABC):
                 BaseAgent.AVAILABLE_MODEL_ROUTES = None
                 BaseAgent.AVAILABLE_MODEL_ROUTES_LOADED_AT = None
 
-        candidates: List[Dict[str, Any]] = []
-        if runtime_routes:
-            for route in runtime_routes:
-                route_key = str(route.get("model_key") or route.get("model_name") or "")
-                model_name = str(route.get("model_name") or "")
-                if not route_key or not model_name:
-                    continue
-                if BaseAgent._is_route_cooling_down(route_key):
-                    continue
-                if BaseAgent._is_model_cooling_down(model_name):
-                    continue
-                candidates.append(
-                    {
-                        "route_key": route_key,
-                        "model_name": model_name,
-                        "route": route,
-                    }
-                )
-        else:
-            # 若模型中心无可用路由，则回退到配置链路。
-            chain = BaseAgent.AVAILABLE_MODEL_CHAIN
-            if chain is None:
-                chain = getattr(self.config.ai, "model_chain", None) or []
-            if chain:
-                for model_name in chain:
-                    if BaseAgent._is_model_cooling_down(model_name):
-                        continue
-                    candidates.append(
-                        {
-                            "route_key": model_name,
-                            "model_name": model_name,
-                            "route": None,
-                        }
+        candidates, chain_used = self._build_candidates(runtime_routes, ignore_local_cooldowns=False)
+
+        if not candidates:
+            wait_cap_seconds = max(
+                3,
+                int(
+                    getattr(
+                        self.config.ai,
+                        "rate_limit_wait_cap_seconds",
+                        getattr(self.config.ai, "rate_limit_cooldown_seconds", 300),
                     )
-            else:
-                seen = set()
-                if self.model not in seen:
-                    candidates.append(
-                        {
-                            "route_key": self.model,
-                            "model_name": self.model,
-                            "route": None,
-                        }
-                    )
-                    seen.add(self.model)
-                fallback_model = getattr(self.config.ai, "fallback_model", None)
-                if fallback_model and fallback_model not in seen:
-                    candidates.append(
-                        {
-                            "route_key": fallback_model,
-                            "model_name": fallback_model,
-                            "route": None,
-                        }
+                ),
+            )
+            wait_seconds = BaseAgent._estimate_wait_seconds_for_empty_candidates(
+                runtime_routes=runtime_routes,
+                chain=chain_used,
+                wait_cap_seconds=wait_cap_seconds,
+            )
+            logger.warning(
+                f"No candidate model available for agent '{self.name}'. "
+                f"Will wait {wait_seconds}s, refresh routes, and retry candidate selection once "
+                f"(quota recovery round {quota_recovery_round})."
+            )
+            await asyncio.sleep(wait_seconds)
+
+            BaseAgent.AVAILABLE_MODEL_ROUTES = None
+            BaseAgent.AVAILABLE_MODEL_ROUTES_LOADED_AT = None
+            try:
+                runtime_routes = await get_active_model_routes()
+                if not runtime_routes:
+                    all_runtime_routes = await get_runtime_routes()
+                    if all_runtime_routes:
+                        runtime_routes = all_runtime_routes
+                BaseAgent.AVAILABLE_MODEL_ROUTES = runtime_routes
+                BaseAgent.AVAILABLE_MODEL_ROUTES_LOADED_AT = time.time()
+            except Exception as refresh_exc:
+                logger.warning(f"Failed to refresh model-center routes after cooldown wait: {refresh_exc}")
+                runtime_routes = []
+
+            candidates, chain_used = self._build_candidates(runtime_routes, ignore_local_cooldowns=False)
+
+            # 最后做一次安全探测：忽略本地进程冷却，尝试首个候选，避免直接抛出空链路错误。
+            if not candidates:
+                probe_candidates, _ = self._build_candidates(runtime_routes, ignore_local_cooldowns=True)
+                if probe_candidates:
+                    candidates = probe_candidates
+                    logger.warning(
+                        f"Candidate list still empty after wait/refresh. "
+                        f"Will probe {len(candidates)} model(s) by ignoring local cooldown markers."
                     )
 
         last_error = None
+        saw_quota_failure = False
+        quota_wait_candidates: List[int] = []
         original_model = self.model
 
         for candidate in candidates:
@@ -400,6 +584,10 @@ class BaseAgent(ABC):
                         response_text, token_usage = await self._complete_with_provider(
                             provider, prompt, system, **kwargs
                         )
+
+                    # Success means local cooldown markers should no longer block this model/route.
+                    BaseAgent.MODEL_COOLDOWNS.pop(model_name, None)
+                    BaseAgent.ROUTE_COOLDOWNS.pop(route_key, None)
 
                     # 记录对话历史
                     duration = time.time() - start_time
@@ -436,6 +624,7 @@ class BaseAgent(ABC):
                     retry_count += 1
 
                     quota_related = is_rate_limit_error(e)
+                    unavailable_related = is_model_unavailable_error(e)
                     retry_after_seconds = extract_retry_after_seconds(e)
                     cooldown_seconds = retry_after_seconds or int(
                         getattr(self.config.ai, "rate_limit_cooldown_seconds", 300)
@@ -447,6 +636,8 @@ class BaseAgent(ABC):
                     )
 
                     if quota_related:
+                        saw_quota_failure = True
+                        quota_wait_candidates.append(max(1, int(cooldown_seconds)))
                         logger.warning(
                             f"Detected quota/rate-limit issue for model '{self.model}', "
                             f"will cool down this route for {cooldown_seconds}s and switch to the next model if available."
@@ -469,6 +660,36 @@ class BaseAgent(ABC):
                         BaseAgent.AVAILABLE_MODEL_ROUTES_LOADED_AT = None
                         break
 
+                    if unavailable_related:
+                        unavailable_cooldown = max(300, int(getattr(self.config.ai, "rate_limit_cooldown_seconds", 300)))
+                        logger.warning(
+                            f"Detected unavailable model/permission issue for '{self.model}'. "
+                            f"Will skip this model for now and continue with the next candidate."
+                        )
+                        BaseAgent._mark_model_cooling_down(self.model, unavailable_cooldown)
+                        BaseAgent._mark_route_cooling_down(route_key, unavailable_cooldown)
+                        if route:
+                            try:
+                                await mark_route_unavailable(route, str(e))
+                            except Exception as unavailable_exc:
+                                logger.warning(
+                                    f"Failed to persist unavailable status for route '{route_key}': {unavailable_exc}"
+                                )
+                        else:
+                            try:
+                                updated = await mark_model_unavailable_by_name(self.model, str(e))
+                                if updated <= 0:
+                                    logger.warning(
+                                        f"No model-center records matched unavailable model '{self.model}'."
+                                    )
+                            except Exception as unavailable_exc:
+                                logger.warning(
+                                    f"Failed to persist unavailable status by model name '{self.model}': {unavailable_exc}"
+                                )
+                        BaseAgent.AVAILABLE_MODEL_ROUTES = None
+                        BaseAgent.AVAILABLE_MODEL_ROUTES_LOADED_AT = None
+                        break
+
                     if retry_count < self.max_retries:
                         await asyncio.sleep(2 ** retry_count)  # exponential backoff
 
@@ -479,9 +700,44 @@ class BaseAgent(ABC):
 
         # 所有模型都失败
         self.model = original_model
+
+        max_recovery_rounds = int(getattr(self.config.ai, "rate_limit_recovery_max_rounds", 1) or 1)
+        if saw_quota_failure and quota_recovery_round < max_recovery_rounds:
+            wait_cap_seconds = max(
+                3,
+                int(
+                    getattr(
+                        self.config.ai,
+                        "rate_limit_wait_cap_seconds",
+                        getattr(self.config.ai, "rate_limit_cooldown_seconds", 300),
+                    )
+                ),
+            )
+            raw_wait = min(quota_wait_candidates) if quota_wait_candidates else 1
+            wait_seconds = max(1, min(int(raw_wait), wait_cap_seconds))
+            logger.warning(
+                f"All candidate models failed and at least one error was quota-related. "
+                f"Will wait {wait_seconds}s and run recovery retry pass "
+                f"{quota_recovery_round + 1}/{max_recovery_rounds}."
+            )
+            await asyncio.sleep(wait_seconds)
+            BaseAgent.AVAILABLE_MODEL_ROUTES = None
+            BaseAgent.AVAILABLE_MODEL_ROUTES_LOADED_AT = None
+            return await self.complete(
+                prompt=prompt,
+                system=system,
+                use_cache=use_cache,
+                _quota_recovery_attempted=True,
+                _quota_recovery_round=quota_recovery_round + 1,
+                **kwargs,
+            )
+
         logger.error(f"All models failed for agent '{self.name}': {last_error}")
+        attempted_models = [c.get("model_name") for c in candidates if c.get("model_name")]
+        if not attempted_models and self.model:
+            attempted_models = [self.model]
         raise Exception(
-            f"Agent completion failed after trying models {[c['model_name'] for c in candidates]}: {last_error}"
+            f"Agent completion failed after trying models {attempted_models}: {last_error}"
         )
 
     async def _complete_with_runtime_route(
@@ -498,6 +754,7 @@ class BaseAgent(ABC):
         route_max_tokens = route.get("max_tokens")
         temperature = self.temperature if route_temperature is None else float(route_temperature)
         max_tokens = self.max_tokens if route_max_tokens is None else int(route_max_tokens)
+        sanitized_kwargs = self._sanitize_completion_params(dict(kwargs))
 
         if style == "anthropic":
             client = AsyncAnthropic(api_key=route.get("api_key"))
@@ -507,7 +764,7 @@ class BaseAgent(ABC):
                 messages=[{"role": "user", "content": prompt}],
                 temperature=temperature,
                 max_tokens=max_tokens,
-                **kwargs,
+                **sanitized_kwargs,
             )
 
             token_usage = {}
@@ -533,15 +790,17 @@ class BaseAgent(ABC):
         extra_params = dict(route.get("extra_params") or {})
         for reserved in ("model", "messages", "temperature", "max_tokens"):
             extra_params.pop(reserved, None)
-        extra_params.update(kwargs)
+        extra_params.update(sanitized_kwargs)
+        extra_params = self._sanitize_completion_params(extra_params)
 
-        response = await client.chat.completions.create(
-            model=model_name,
-            messages=messages,
-            temperature=temperature,
-            max_tokens=max_tokens,
+        request_payload = {
+            "model": model_name,
+            "messages": messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
             **extra_params,
-        )
+        }
+        response = await self._safe_openai_completion_create(client, request_payload)
 
         token_usage = {}
         if hasattr(response, "usage") and response.usage:
@@ -586,14 +845,15 @@ class BaseAgent(ABC):
         
         # Handle provider-specific model name mapping
         model = self._map_model_name(provider, self.model)
-        
-        response = await client.chat.completions.create(
-            model=model,
-            messages=messages,
-            temperature=self.temperature,
-            max_tokens=self.max_tokens,
-            **kwargs
-        )
+
+        request_payload = {
+            "model": model,
+            "messages": messages,
+            "temperature": self.temperature,
+            "max_tokens": self.max_tokens,
+            **self._sanitize_completion_params(dict(kwargs)),
+        }
+        response = await self._safe_openai_completion_create(client, request_payload)
         
         # Extract token usage
         token_usage = {}

@@ -1,0 +1,30 @@
+As an epidemiologist, analyze the following disease surveillance data and provide professional insights.
+
+Instruction language is English for consistency.
+Please output the final result in the requested language below.
+Target output language code: {language} (e.g. 'en' for English, 'zh' for Chinese).
+
+Disease: {disease_name}
+Data records: {data_len} (filtered to report period)
+Report period: {report_period}
+Data time range: {period_start_str} to {period_end_str}
+
+Statistical Summary:
+{stats}
+
+Trend Analysis:
+{trends}
+
+Anomaly Detection:
+{anomalies_str}
+
+Provide:
+1. Overall trend assessment (2-3 sentences)
+2. Key findings (3-5 bullet points)
+3. Public health implications (if any)
+
+Requirements:
+- Use concise professional epidemiological language
+- Base analysis strictly on provided data
+- Highlight important patterns and trends
+- The structural format remains, but output the content strictly in the target language: {language}.

@@ -12,6 +12,7 @@ import pandas as pd
 from src.core import get_logger
 from src.core.missing_values import normalize_rate_columns
 from .base import BaseAgent
+from .prompt_loader import render_prompt_template
 
 logger = get_logger(__name__)
 
@@ -90,6 +91,7 @@ class AnalystAgent(BaseAgent):
             trends=trends,
             anomalies=anomalies,
             disease_name=disease_name,
+            language=kwargs.get("language", "en"),
         )
         
         result = {
@@ -260,6 +262,7 @@ class AnalystAgent(BaseAgent):
         trends: Dict,
         anomalies: List,
         disease_name: str,
+        language: str = "en",
     ) -> str:
         """Use AI to generate data insights"""
         # Determine time column
@@ -267,34 +270,36 @@ class AnalystAgent(BaseAgent):
         period_start_str = data[time_col].min().strftime('%Y-%m') if time_col and len(data) > 0 else 'Unknown'
         period_end_str = data[time_col].max().strftime('%Y-%m') if time_col and len(data) > 0 else 'Unknown'
 
-        # Construct English prompt (report period from data range)
         report_period = f"{period_start_str} to {period_end_str}"
-        prompt = f"""As an epidemiologist, analyze the following disease surveillance data and provide professional insights.
 
-Disease: {disease_name}
-Data records: {len(data)} (filtered to report period)
-Report period: {report_period}
-Data time range: {period_start_str} to {period_end_str}
-
-Statistical Summary:
-{self._format_dict(stats)}
-
-Trend Analysis:
-{self._format_dict(trends)}
-
-Anomaly Detection:
-{f"Detected {len(anomalies)} anomalies" if anomalies else "No significant anomalies detected"}
-
-Provide:
-1. Overall trend assessment (2-3 sentences)
-2. Key findings (3-5 bullet points)
-3. Public health implications (if any)
-
-Requirements:
-- Use concise professional epidemiological language
-- Base analysis strictly on provided data
-- Highlight important patterns and trends
-- Write in English only"""
+        prompt = render_prompt_template(
+            "analyst_insight_prompt.txt",
+            {
+                "disease_name": disease_name,
+                "data_len": len(data),
+                "report_period": report_period,
+                "period_start_str": period_start_str,
+                "period_end_str": period_end_str,
+                "stats": self._format_dict(stats),
+                "trends": self._format_dict(trends),
+                "anomalies_str": (
+                    f"Detected {len(anomalies)} anomalies"
+                    if anomalies
+                    else "No significant anomalies detected"
+                ),
+                "language": language,
+            },
+            default_template=(
+                "As an epidemiologist, provide concise surveillance insights.\n"
+                "Disease: {disease_name}\n"
+                "Records: {data_len}\n"
+                "Period: {report_period}\n"
+                "Stats:\n{stats}\n"
+                "Trends:\n{trends}\n"
+                "Anomalies: {anomalies_str}\n"
+                "Output language code: {language}."
+            ),
+        )
         
         try:
             insights = await self.complete(
@@ -304,7 +309,7 @@ Requirements:
             return insights
         except Exception as e:
             logger.error(f"Failed to generate insights: {e}")
-            return "Data analysis completed, but AI insight generation failed."
+            return "数据分析已完成，但AI洞察生成失败。" if language == "zh" else "Data analysis completed, but AI insight generation failed."
     
     def _assess_data_quality(self, data: pd.DataFrame) -> Dict[str, Any]:
         """Assess data quality"""
