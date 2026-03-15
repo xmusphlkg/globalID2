@@ -126,6 +126,36 @@ async def execute_task(task_uuid: str) -> Dict[str, Any]:
             "only pending/queued/failed/cancelled tasks can be executed"
         )
 
+    # Resume semantics: re-executing a failed/cancelled report task should always
+    # reuse partial output from prior attempts, regardless of stale input_data.
+    if task.task_type == TaskType.GENERATE_REPORT and task.status in (TaskStatus.FAILED, TaskStatus.CANCELLED):
+        input_data = dict(task.input_data or {})
+        changed = False
+        if input_data.get("reuse_from_failed") is not True:
+            input_data["reuse_from_failed"] = True
+            changed = True
+        if (input_data.get("reuse_strategy") or "auto").strip().lower() not in ("resume", "manual"):
+            input_data["reuse_strategy"] = "resume"
+            changed = True
+        if changed:
+            async with get_database() as db:
+                task_obj = await db.get(Task, task.id)
+                if task_obj:
+                    task_obj.input_data = input_data
+                    await db.commit()
+            task.input_data = input_data
+            await task_manager.add_workbook_entry(
+                task_uuid,
+                entry_type="info",
+                title="Resume Mode Enabled",
+                content=(
+                    "Auto-enabled reuse_from_failed=true and reuse_strategy=resume for "
+                    "failed/cancelled task re-execution. Existing report sections will be reused "
+                    "where possible."
+                ),
+                content_type="text",
+            )
+
     if task.status == TaskStatus.CANCELLED or await task_manager.is_cancel_requested(task_uuid):
         await task_manager.clear_task_cancel_request(task_uuid)
 
@@ -217,6 +247,8 @@ async def _run_report(task: Task) -> Dict[str, Any]:
     enable_review = inp.get("enable_review", True)
     send_email = inp.get("send_email", False)
     reuse_from_failed = inp.get("reuse_from_failed", True)
+    reuse_strategy = inp.get("reuse_strategy", "auto")
+    reuse_report_id = inp.get("reuse_report_id")
 
     report_id_ref = [None]
     async with task_lifecycle(task, report_id_ref=report_id_ref, exit_on_cancel=False):
@@ -232,6 +264,8 @@ async def _run_report(task: Task) -> Dict[str, Any]:
             enable_review=enable_review,
             send_email=send_email,
             reuse_from_failed=reuse_from_failed,
+            reuse_strategy=reuse_strategy,
+            reuse_report_id=reuse_report_id,
             report_id_ref=report_id_ref,
         )
         report_id_ref[0] = result.report_id

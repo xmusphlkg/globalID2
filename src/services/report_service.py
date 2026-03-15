@@ -6,9 +6,10 @@ decoupling it from the CLI layer in main.py.
 """
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from sqlalchemy import func, select
 
@@ -18,6 +19,7 @@ from src.domain import (
     Country,
     DiseaseRecord,
     Report,
+    ReportSection,
     ReportStatus,
     ReportType,
     Task,
@@ -37,6 +39,18 @@ class ReportResult:
     reused: bool = False
 
 
+DataSignature = Tuple[int, int, Optional[datetime], Optional[datetime], str]
+
+
+@dataclass
+class ReuseCandidate:
+    report: Report
+    section_count: int
+    signature: DataSignature
+    score: float
+    reason: str
+
+
 class ReportService:
     """Orchestrates the multi-phase AI report-generation pipeline."""
 
@@ -52,6 +66,8 @@ class ReportService:
         enable_review: bool,
         send_email: bool,
         reuse_from_failed: bool = True,
+        reuse_strategy: str = "auto",
+        reuse_report_id: Optional[int] = None,
         report_id_ref: Optional[list] = None,
     ) -> ReportResult:
         """
@@ -114,84 +130,100 @@ class ReportService:
             )
             await task_manager.update_task_progress(task.task_uuid, 15)
 
-            resumable_report = None
-            if reuse_from_failed:
-                resumable_report = await self._resolve_task_attached_report(
-                    db,
-                    task,
-                    country_obj=country_obj,
-                    report_type=report_type_enum,
-                )
-                if resumable_report:
-                    if report_id_ref is not None:
-                        report_id_ref[0] = resumable_report.id
-                    await task_manager.link_task_report(task.task_uuid, resumable_report.id)
-                    await task_manager.add_workbook_entry(
-                        task.task_uuid,
-                        entry_type="warning",
-                        title="Resuming Attached Report",
-                        content=(
-                            f"Reusing existing report #{resumable_report.id} already attached to this task. "
-                            "Existing sections will be reused and only missing work will continue."
-                        ),
-                        content_type="text",
-                    )
-            else:
+            strategy = self._normalize_reuse_strategy(reuse_strategy)
+            if not reuse_from_failed:
                 await task_manager.add_workbook_entry(
                     task.task_uuid,
                     entry_type="info",
                     title="Resume Disabled",
                     content=(
                         "Reuse from failed tasks is disabled for this run. "
-                        "A fresh report will be generated instead of resuming previous failed work."
+                        "Only approved reports are eligible for reuse."
                     ),
                     content_type="text",
                 )
 
-            reuse = await self._find_reusable_report(
-                db, country_obj, report_type_enum, period_start, period_end
+            attached_report = None
+            if reuse_from_failed:
+                attached_report = await self._resolve_task_attached_report(
+                    db,
+                    task,
+                    country_obj=country_obj,
+                    report_type=report_type_enum,
+                )
+
+            selected_candidate, evaluated_candidates = await self._select_reuse_candidate(
+                db,
+                country=country_obj,
+                report_type=report_type_enum,
+                period_start=period_start,
+                period_end=period_end,
+                reuse_from_failed=reuse_from_failed,
+                reuse_strategy=strategy,
+                reuse_report_id=reuse_report_id,
+                attached_report=attached_report,
             )
-            if reuse:
-                if report_id_ref is not None:
-                    report_id_ref[0] = reuse.id
-                await task_manager.link_task_report(task.task_uuid, reuse.id)
-                output_files = self._collect_output_files(reuse)
+
+            if evaluated_candidates:
                 await task_manager.add_workbook_entry(
                     task.task_uuid,
-                    entry_type="success",
-                    title="Report Reused",
-                    content=(
-                        f"Reused approved report #{reuse.id} for "
-                        f"{country_code} {report_type} "
-                        f"({period_start.date()} → {period_end.date()})"
+                    entry_type="info",
+                    title="Reuse Candidates Evaluated",
+                    content="\n".join(
+                        self._format_candidate_summary(c) for c in evaluated_candidates[:8]
                     ),
                     content_type="text",
                 )
-                await task_manager.update_task_progress(task.task_uuid, 100)
-                return ReportResult(
-                    report_id=reuse.id,
-                    report_uuid=str(reuse.report_uuid),
-                    status=str(reuse.status),
-                    output_files=output_files,
-                    sections_count=len(reuse.sections) if hasattr(reuse, "sections") else 0,
-                    reused=True,
+
+            if strategy == "manual" and reuse_report_id is None:
+                await task_manager.add_workbook_entry(
+                    task.task_uuid,
+                    entry_type="warning",
+                    title="Manual Reuse Requires Report ID",
+                    content=(
+                        "Reuse strategy is manual but reuse_report_id is missing. "
+                        "Proceeding with fresh generation."
+                    ),
+                    content_type="text",
                 )
 
-            if reuse_from_failed and not resumable_report:
-                resumable_report = await self._find_resumable_report(
-                    db, country_obj, report_type_enum, period_start, period_end
-                )
-            if resumable_report and (report_id_ref is None or report_id_ref[0] != resumable_report.id):
+            resumable_report = None
+            if selected_candidate:
+                selected = selected_candidate.report
                 if report_id_ref is not None:
-                    report_id_ref[0] = resumable_report.id
-                await task_manager.link_task_report(task.task_uuid, resumable_report.id)
+                    report_id_ref[0] = selected.id
+                await task_manager.link_task_report(task.task_uuid, selected.id)
+
+                if self._status_str(selected.status) == ReportStatus.APPROVED.value:
+                    output_files = self._collect_output_files(selected)
+                    await task_manager.add_workbook_entry(
+                        task.task_uuid,
+                        entry_type="success",
+                        title="Report Reused",
+                        content=(
+                            f"Reused report #{selected.id} ({selected.status}) via strategy={strategy}.\n"
+                            f"Reason: {selected_candidate.reason}"
+                        ),
+                        content_type="text",
+                    )
+                    await task_manager.update_task_progress(task.task_uuid, 100)
+                    return ReportResult(
+                        report_id=selected.id,
+                        report_uuid=str(selected.report_uuid),
+                        status=str(selected.status),
+                        output_files=output_files,
+                        sections_count=selected_candidate.section_count,
+                        reused=True,
+                    )
+
+                resumable_report = selected
                 await task_manager.add_workbook_entry(
                     task.task_uuid,
                     entry_type="warning",
                     title="Resuming Partial Report",
                     content=(
-                        f"Found unfinished report #{resumable_report.id} for the same scope. "
-                        "Existing sections will be reused and only missing work will continue."
+                        f"Resuming report #{selected.id} ({selected.status}) via strategy={strategy}.\n"
+                        f"Reason: {selected_candidate.reason}"
                     ),
                     content_type="text",
                 )
@@ -292,7 +324,7 @@ class ReportService:
             await task_manager.update_task_progress(task.task_uuid, 95)
 
             # ── Phase 5: Finalise ─────────────────────────────────────────────
-            sections_count = len(report.sections) if hasattr(report, "sections") else 0
+            sections_count = await self._get_report_section_count(db, report.id)
             await task_manager.add_workbook_entry(
                 task.task_uuid,
                 entry_type="success",
@@ -319,6 +351,264 @@ class ReportService:
             raise ValueError(f"Country not found: {country_code}")
         return country
 
+    @staticmethod
+    def _normalize_reuse_strategy(value: str) -> str:
+        normalized = (value or "auto").strip().lower()
+        allowed = {"auto", "safe", "resume", "manual"}
+        if normalized not in allowed:
+            joined = ", ".join(sorted(allowed))
+            raise ValueError(f"Invalid reuse_strategy '{value}'. Allowed values: {joined}")
+        return normalized
+
+    async def _select_reuse_candidate(
+        self,
+        db,
+        *,
+        country: Country,
+        report_type: ReportType,
+        period_start: datetime,
+        period_end: datetime,
+        reuse_from_failed: bool,
+        reuse_strategy: str,
+        reuse_report_id: Optional[int],
+        attached_report: Optional[Report],
+    ) -> tuple[Optional[ReuseCandidate], list[ReuseCandidate]]:
+        target_signature = await self._compute_data_signature(
+            db,
+            country_id=country.id,
+            period_start=period_start,
+            period_end=period_end,
+        )
+
+        statuses: list[ReportStatus] = [ReportStatus.APPROVED]
+        if reuse_from_failed and reuse_strategy in {"auto", "resume", "manual"}:
+            statuses.extend([ReportStatus.GENERATING, ReportStatus.FAILED])
+
+        candidates = await self._collect_reuse_candidates(
+            db,
+            country=country,
+            report_type=report_type,
+            statuses=statuses,
+            target_signature=target_signature,
+            strategy=reuse_strategy,
+        )
+
+        if attached_report and attached_report.id not in {c.report.id for c in candidates}:
+            attached_sig = await self._compute_data_signature(
+                db,
+                country_id=country.id,
+                period_start=attached_report.period_start,
+                period_end=attached_report.period_end,
+            )
+            if attached_sig == target_signature:
+                attached_sections = await self._get_report_section_count(db, attached_report.id)
+                attached_candidate = ReuseCandidate(
+                    report=attached_report,
+                    section_count=attached_sections,
+                    signature=attached_sig,
+                    score=self._score_reuse_candidate(attached_report, attached_sections, reuse_strategy),
+                    reason="attached-to-task",
+                )
+                candidates.append(attached_candidate)
+
+        candidates.sort(key=lambda c: c.score, reverse=True)
+
+        if reuse_strategy == "manual":
+            if reuse_report_id is None:
+                return None, candidates
+            manual = next((c for c in candidates if c.report.id == reuse_report_id), None)
+            if manual:
+                manual.reason = f"manual-selected id={reuse_report_id}"
+                return manual, candidates
+
+            explicit = await db.get(Report, reuse_report_id)
+            if explicit is None:
+                raise ValueError(f"Manual reuse report not found: {reuse_report_id}")
+            if explicit.country_id != country.id or explicit.report_type != report_type:
+                raise ValueError(
+                    f"Report #{reuse_report_id} does not match country/type scope for current task"
+                )
+            explicit_sig = await self._compute_data_signature(
+                db,
+                country_id=country.id,
+                period_start=explicit.period_start,
+                period_end=explicit.period_end,
+            )
+            if explicit_sig != target_signature:
+                raise ValueError(
+                    f"Report #{reuse_report_id} does not match current analysis data signature"
+                )
+            if (
+                self._status_str(explicit.status)
+                in {ReportStatus.GENERATING.value, ReportStatus.FAILED.value}
+                and not reuse_from_failed
+            ):
+                raise ValueError(
+                    f"Report #{reuse_report_id} is {explicit.status} but reuse_from_failed is disabled"
+                )
+            explicit_sections = await self._get_report_section_count(db, explicit.id)
+            return ReuseCandidate(
+                report=explicit,
+                section_count=explicit_sections,
+                signature=explicit_sig,
+                score=self._score_reuse_candidate(explicit, explicit_sections, reuse_strategy),
+                reason=f"manual-selected id={reuse_report_id}",
+            ), candidates
+
+        if not candidates:
+            return None, []
+
+        if reuse_strategy == "safe":
+            safe_candidate = next(
+                (c for c in candidates if self._status_str(c.report.status) == ReportStatus.APPROVED.value),
+                None,
+            )
+            return safe_candidate, candidates
+
+        if reuse_strategy == "resume":
+            resume_candidate = next(
+                (
+                    c
+                    for c in candidates
+                    if self._status_str(c.report.status)
+                    in {ReportStatus.GENERATING.value, ReportStatus.FAILED.value}
+                ),
+                None,
+            )
+            return resume_candidate or candidates[0], candidates
+
+        # auto: highest score across approved/generating/failed after filters.
+        return candidates[0], candidates
+
+    async def _collect_reuse_candidates(
+        self,
+        db,
+        *,
+        country: Country,
+        report_type: ReportType,
+        statuses: list[ReportStatus],
+        target_signature: DataSignature,
+        strategy: str,
+    ) -> list[ReuseCandidate]:
+        if not statuses:
+            return []
+
+        rows = (
+            await db.execute(
+                select(Report, func.count(ReportSection.id).label("section_count"))
+                .outerjoin(ReportSection, ReportSection.report_id == Report.id)
+                .where(
+                    Report.country_id == country.id,
+                    Report.report_type == report_type,
+                    Report.status.in_(statuses),
+                )
+                .group_by(Report.id)
+                .order_by(Report.updated_at.desc(), Report.created_at.desc())
+                .limit(40)
+            )
+        ).all()
+
+        candidates: list[ReuseCandidate] = []
+        for row in rows:
+            report = row[0]
+            section_count = int(row[1] or 0)
+            sig = await self._compute_data_signature(
+                db,
+                country_id=country.id,
+                period_start=report.period_start,
+                period_end=report.period_end,
+            )
+            if sig != target_signature:
+                continue
+            if (
+                self._status_str(report.status) == ReportStatus.FAILED.value
+                and self._is_hard_failure(report.error_message)
+            ):
+                continue
+            candidates.append(
+                ReuseCandidate(
+                    report=report,
+                    section_count=section_count,
+                    signature=sig,
+                    score=self._score_reuse_candidate(report, section_count, strategy),
+                    reason="data-signature-match",
+                )
+            )
+        return candidates
+
+    @staticmethod
+    def _is_hard_failure(error_message: Optional[str]) -> bool:
+        text = (error_message or "").lower()
+        hard_markers = [
+            "no data",
+            "column",
+            "schema",
+            "validation",
+            "integrity",
+            "syntax",
+            "json decode",
+        ]
+        return any(marker in text for marker in hard_markers)
+
+    @staticmethod
+    def _status_str(status_value: object) -> str:
+        if isinstance(status_value, ReportStatus):
+            return status_value.value
+        if isinstance(status_value, str):
+            text = status_value.strip().lower()
+            if text.startswith("reportstatus."):
+                return text.split(".", 1)[1]
+            return text
+        return str(status_value).strip().lower()
+
+    def _score_reuse_candidate(self, report: Report, section_count: int, strategy: str) -> float:
+        status_value = self._status_str(report.status)
+        if strategy == "resume":
+            status_weight = {
+                "generating": 130,
+                "failed": 110,
+                "approved": 90,
+            }
+        else:
+            status_weight = {
+                "approved": 140,
+                "generating": 110,
+                "failed": 70,
+            }
+
+        score = float(status_weight.get(status_value, 0))
+        score += min(section_count, 100) * 0.5
+        if isinstance(report.quality_score, (int, float)):
+            score += float(report.quality_score) * 25
+
+        updated_at = report.updated_at or report.created_at
+        if isinstance(updated_at, datetime):
+            if updated_at.tzinfo is None:
+                updated_at = updated_at.replace(tzinfo=timezone.utc)
+            age_hours = max(0.0, (datetime.now(timezone.utc) - updated_at).total_seconds() / 3600.0)
+            score += max(0.0, 48.0 - age_hours) / 6.0
+
+        if status_value == "failed" and self._is_hard_failure(report.error_message):
+            score -= 100.0
+
+        return score
+
+    @staticmethod
+    def _format_candidate_summary(candidate: ReuseCandidate) -> str:
+        report = candidate.report
+        updated_at = report.updated_at or report.created_at
+        ts = updated_at.isoformat() if isinstance(updated_at, datetime) else "unknown"
+        sig = candidate.signature
+        return (
+            f"#{report.id} status={report.status} score={candidate.score:.2f} "
+            f"sections={candidate.section_count} quality={report.quality_score} updated={ts} "
+            f"records={sig[0]} diseases={sig[1]} fp={sig[4]} reason={candidate.reason}"
+        )
+
+    async def _get_report_section_count(self, db, report_id: int) -> int:
+        q = select(func.count()).select_from(ReportSection).where(ReportSection.report_id == report_id)
+        return int((await db.execute(q)).scalar() or 0)
+
     async def _find_reusable_report(
         self,
         db,
@@ -328,19 +618,14 @@ class ReportService:
         period_end: datetime,
     ) -> Optional[Report]:
         try:
-            q = (
-                select(Report)
-                .where(
-                    Report.country_id == country.id,
-                    Report.period_start == period_start,
-                    Report.period_end == period_end,
-                    Report.report_type == report_type,
-                    Report.status == ReportStatus.APPROVED,
-                )
-                .order_by(Report.created_at.desc())
-                .limit(1)
+            return await self._find_report_with_period_fallback(
+                db,
+                country=country,
+                report_type=report_type,
+                period_start=period_start,
+                period_end=period_end,
+                statuses=[ReportStatus.APPROVED],
             )
-            return (await db.execute(q)).scalar_one_or_none()
         except Exception as e:
             logger.warning(f"Failed to check for reusable report: {e}")
             return None
@@ -354,25 +639,176 @@ class ReportService:
         period_end: datetime,
     ) -> Optional[Report]:
         try:
-            q = (
-                select(Report)
-                .where(
-                    Report.country_id == country.id,
-                    Report.period_start == period_start,
-                    Report.period_end == period_end,
-                    Report.report_type == report_type,
-                    Report.status.in_([
-                        ReportStatus.GENERATING,
-                        ReportStatus.FAILED,
-                    ]),
-                )
-                .order_by(Report.updated_at.desc(), Report.created_at.desc())
-                .limit(1)
+            return await self._find_report_with_period_fallback(
+                db,
+                country=country,
+                report_type=report_type,
+                period_start=period_start,
+                period_end=period_end,
+                statuses=[
+                    ReportStatus.GENERATING,
+                    ReportStatus.FAILED,
+                ],
             )
-            return (await db.execute(q)).scalar_one_or_none()
         except Exception as e:
             logger.warning(f"Failed to check for resumable report: {e}")
             return None
+
+    @staticmethod
+    def _utc_day_bounds(dt: datetime) -> tuple[datetime, datetime]:
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        dt_utc = dt.astimezone(timezone.utc)
+        start = dt_utc.replace(hour=0, minute=0, second=0, microsecond=0)
+        end = start + timedelta(days=1)
+        return start, end
+
+    async def _find_report_with_period_fallback(
+        self,
+        db,
+        *,
+        country: Country,
+        report_type: ReportType,
+        period_start: datetime,
+        period_end: datetime,
+        statuses: list[ReportStatus],
+    ) -> Optional[Report]:
+        # First, prefer exact datetime match to avoid reusing near-miss ranges.
+        exact_q = (
+            select(Report)
+            .where(
+                Report.country_id == country.id,
+                Report.period_start == period_start,
+                Report.period_end == period_end,
+                Report.report_type == report_type,
+                Report.status.in_(statuses),
+            )
+            .order_by(Report.updated_at.desc(), Report.created_at.desc())
+            .limit(1)
+        )
+        exact = (await db.execute(exact_q)).scalar_one_or_none()
+        if exact:
+            return exact
+
+        # Data-centric match: compare actual analysis data signatures instead of
+        # relying on operation timestamp-derived period boundaries.
+        current_sig = await self._compute_data_signature(
+            db,
+            country_id=country.id,
+            period_start=period_start,
+            period_end=period_end,
+        )
+        if current_sig[0] > 0:
+            sig_match = await self._find_report_by_data_signature(
+                db,
+                country=country,
+                report_type=report_type,
+                statuses=statuses,
+                target_signature=current_sig,
+            )
+            if sig_match:
+                logger.info(
+                    "Matched report by data signature: "
+                    f"report_id={sig_match.id} country={country.code} "
+                    f"type={report_type} signature={current_sig}"
+                )
+                return sig_match
+
+        # Fallback: match by UTC calendar day to tolerate second-level drift.
+        start_day_start, start_day_end = self._utc_day_bounds(period_start)
+        end_day_start, end_day_end = self._utc_day_bounds(period_end)
+
+        fallback_q = (
+            select(Report)
+            .where(
+                Report.country_id == country.id,
+                Report.report_type == report_type,
+                Report.status.in_(statuses),
+                Report.period_start >= start_day_start,
+                Report.period_start < start_day_end,
+                Report.period_end >= end_day_start,
+                Report.period_end < end_day_end,
+            )
+            .order_by(Report.updated_at.desc(), Report.created_at.desc())
+            .limit(1)
+        )
+        matched = (await db.execute(fallback_q)).scalar_one_or_none()
+        if matched:
+            logger.info(
+                "Matched report by date fallback: "
+                f"report_id={matched.id} country={country.code} "
+                f"type={report_type} statuses={[str(s) for s in statuses]}"
+            )
+        return matched
+
+    async def _compute_data_signature(
+        self,
+        db,
+        *,
+        country_id: int,
+        period_start: datetime,
+        period_end: datetime,
+    ) -> DataSignature:
+        q = select(
+            func.count(),
+            func.count(func.distinct(DiseaseRecord.disease_id)),
+            func.min(DiseaseRecord.time),
+            func.max(DiseaseRecord.time),
+        ).where(
+            DiseaseRecord.country_id == country_id,
+            DiseaseRecord.time >= period_start,
+            DiseaseRecord.time <= period_end,
+        )
+        count_all, disease_count, min_time, max_time = (await db.execute(q)).one()
+
+        disease_ids = (
+            await db.execute(
+                select(DiseaseRecord.disease_id)
+                .where(
+                    DiseaseRecord.country_id == country_id,
+                    DiseaseRecord.time >= period_start,
+                    DiseaseRecord.time <= period_end,
+                )
+                .distinct()
+                .order_by(DiseaseRecord.disease_id.asc())
+            )
+        ).scalars().all()
+        disease_fp = hashlib.sha1(
+            ",".join(str(int(did)) for did in disease_ids).encode("utf-8")
+        ).hexdigest()[:12]
+
+        return int(count_all or 0), int(disease_count or 0), min_time, max_time, disease_fp
+
+    async def _find_report_by_data_signature(
+        self,
+        db,
+        *,
+        country: Country,
+        report_type: ReportType,
+        statuses: list[ReportStatus],
+        target_signature: DataSignature,
+    ) -> Optional[Report]:
+        candidates_q = (
+            select(Report)
+            .where(
+                Report.country_id == country.id,
+                Report.report_type == report_type,
+                Report.status.in_(statuses),
+            )
+            .order_by(Report.updated_at.desc(), Report.created_at.desc())
+            .limit(30)
+        )
+        candidates = (await db.execute(candidates_q)).scalars().all()
+        for candidate in candidates:
+            candidate_sig = await self._compute_data_signature(
+                db,
+                country_id=country.id,
+                period_start=candidate.period_start,
+                period_end=candidate.period_end,
+            )
+            if candidate_sig == target_signature:
+                return candidate
+        return None
 
     async def _resolve_task_attached_report(
         self,
@@ -395,7 +831,10 @@ class ReportService:
             return None
         if report.country_id != country_obj.id or report.report_type != report_type:
             return None
-        if report.status not in [ReportStatus.GENERATING, ReportStatus.FAILED]:
+        if self._status_str(report.status) not in {
+            ReportStatus.GENERATING.value,
+            ReportStatus.FAILED.value,
+        }:
             return None
         return report
 
