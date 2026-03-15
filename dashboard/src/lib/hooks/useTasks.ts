@@ -19,6 +19,8 @@ export interface TaskItem {
   completed_at: string | null;
   actual_duration: number | null;
   workbook_count: number;
+  cancel_requested: boolean;
+  cancel_requested_at: string | null;
 }
 
 export interface TaskDetail extends TaskItem {
@@ -34,9 +36,16 @@ export interface WorkbookEntry {
   entry_type: string;
   title: string;
   content: string | null;
+  content_type: string | null;
+  prompt: string | null;
+  response: string | null;
   model_used: string | null;
   tokens_used: number | null;
+  cost: number | null;
   duration: number | null;
+  success: boolean;
+  error_message: string | null;
+  metadata: Record<string, unknown>;
   created_at: string;
 }
 
@@ -77,6 +86,24 @@ export function useExecuteTask() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       queryClient.invalidateQueries({ queryKey: ["task"] });
+      queryClient.invalidateQueries({ queryKey: ["report-runs"] });
+    },
+  });
+}
+
+export function useCancelTask() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (taskUuid: string) =>
+      apiFetch(`/tasks/${taskUuid}/cancel`, { method: "POST" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["task"] });
+      queryClient.invalidateQueries({ queryKey: ["reports"] });
+      queryClient.invalidateQueries({ queryKey: ["report-runs"] });
+      queryClient.invalidateQueries({ queryKey: ["ai-interactions"] });
+      queryClient.invalidateQueries({ queryKey: ["ai-interactions-summary"] });
     },
   });
 }
@@ -85,10 +112,17 @@ export function useExecuteTask() {
  * Subscribe to real-time task updates via WebSocket.
  * Automatically invalidates the tasks query cache on each message.
  */
-export function useTaskWebSocket() {
+interface TaskWebSocketOptions {
+  extraQueryKeys?: ReadonlyArray<readonly unknown[]>;
+  pingIntervalMs?: number;
+}
+
+export function useTaskWebSocket(options: TaskWebSocketOptions = {}) {
   const queryClient = useQueryClient();
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<number | null>(null);
+  const pingTimerRef = useRef<number | null>(null);
+  const { extraQueryKeys = [], pingIntervalMs = 15000 } = options;
 
   useEffect(() => {
     let disposed = false;
@@ -100,6 +134,13 @@ export function useTaskWebSocket() {
       }
     };
 
+    const clearPingTimer = () => {
+      if (pingTimerRef.current !== null) {
+        window.clearInterval(pingTimerRef.current);
+        pingTimerRef.current = null;
+      }
+    };
+
     const connect = () => {
       const ws = new WebSocket(wsUrl("/tasks/ws"));
       wsRef.current = ws;
@@ -107,16 +148,28 @@ export function useTaskWebSocket() {
       ws.onopen = () => {
         if (disposed) {
           ws.close();
+          return;
         }
+
+        clearPingTimer();
+        pingTimerRef.current = window.setInterval(() => {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send("ping");
+          }
+        }, pingIntervalMs);
       };
 
       ws.onmessage = () => {
         // Invalidate so TanStack Query refetches.
         queryClient.invalidateQueries({ queryKey: ["tasks"] });
         queryClient.invalidateQueries({ queryKey: ["task"] });
+        extraQueryKeys.forEach((queryKey) => {
+          queryClient.invalidateQueries({ queryKey: [...queryKey] });
+        });
       };
 
       ws.onclose = () => {
+        clearPingTimer();
         if (wsRef.current === ws) {
           wsRef.current = null;
         }
@@ -140,6 +193,7 @@ export function useTaskWebSocket() {
     return () => {
       disposed = true;
       clearReconnectTimer();
+      clearPingTimer();
 
       const ws = wsRef.current;
       wsRef.current = null;
@@ -163,5 +217,5 @@ export function useTaskWebSocket() {
         );
       }
     };
-  }, [queryClient]);
+  }, [extraQueryKeys, pingIntervalMs, queryClient]);
 }

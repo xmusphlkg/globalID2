@@ -10,6 +10,7 @@ import { Chart } from "@/components/charts/Chart";
 import { CHART_TOKENS } from "@/lib/chart-theme";
 import { ApiError } from "@/lib/api";
 import { t } from "@/lib/i18n";
+import { useTaskWebSocket } from "@/lib/hooks/useTasks";
 import {
   useAIInteractions,
   useAIInteractionSummary,
@@ -35,6 +36,8 @@ function uiText(lang: "en" | "zh") {
     return {
       unknown: "未知",
       timestamp: "时间",
+      taskUuid: "任务 UUID",
+      taskStatus: "任务状态",
       reportUuid: "报告 UUID",
       runStatus: "运行状态",
       runUuid: "运行 UUID",
@@ -58,23 +61,28 @@ function uiText(lang: "en" | "zh") {
       avgQuality: "平均质量",
       byAgent: "按 Agent 统计",
       byModel: "按模型统计",
-      filterByUuid: "按报告 UUID 过滤（或使用 ?uuid=...）",
+      taskFilterPlaceholder: "按任务 UUID 过滤（支持 ?task=...）",
+      reportFilterPlaceholder: "按报告 UUID 过滤（兼容模式）",
       allAgents: "全部 Agent",
       allModels: "全部模型",
       allDiseases: "全部疾病",
       loadingErrorTitle: "无法加载交互数据",
       noData: "暂无交互数据",
       currentCountry: "当前国家筛选",
-      chatModePrefix: "已启用聊天流程视图，报告 UUID",
+      chatModePrefix: "已启用聊天流程视图，任务 UUID",
+      reportModePrefix: "兼容模式：按报告 UUID 查看",
       diseaseSuffix: "疾病",
       loading: "加载交互数据中...",
-      subtitle: "查看提示词、回复、Token 消耗、耗时和质量评分，支持 ?uuid=...&disease=... 直达。",
+      subtitle: "优先按任务实时查看提示词、回复、Token 消耗、耗时和质量评分，兼容 ?task=... 或 ?uuid=...&disease=... 直达。",
+      waitingForTaskBinding: "任务已创建，但暂时还没有可展示的 AI 交互；如果报告上下文刚生成，页面会自动刷新。",
     } as const;
   }
 
   return {
     unknown: "unknown",
     timestamp: "Timestamp",
+    taskUuid: "Task UUID",
+    taskStatus: "Task Status",
     reportUuid: "Report UUID",
     runStatus: "Run Status",
     runUuid: "Run UUID",
@@ -98,17 +106,20 @@ function uiText(lang: "en" | "zh") {
     avgQuality: "Avg Quality",
     byAgent: "By Agent",
     byModel: "By Model",
-    filterByUuid: "Filter by report uuid (or use ?uuid=...)",
+    taskFilterPlaceholder: "Filter by task UUID (supports ?task=...)",
+    reportFilterPlaceholder: "Filter by report UUID (compatibility mode)",
     allAgents: "All agents",
     allModels: "All models",
     allDiseases: "All diseases",
     loadingErrorTitle: "Unable to load interaction data",
     noData: "No interaction data found",
     currentCountry: "Current country filter",
-    chatModePrefix: "Chat workflow mode enabled for report UUID",
+    chatModePrefix: "Chat workflow mode enabled for task UUID",
+    reportModePrefix: "Compatibility mode: viewing by report UUID",
     diseaseSuffix: "Disease",
     loading: "Loading interactions...",
-    subtitle: "Inspect prompts, responses, token usage, durations and quality scoring. Support direct query with ?uuid=...&disease=...",
+    subtitle: "Inspect prompts, responses, token usage, durations and quality scoring in task-centric real time. Supports ?task=... and keeps ?uuid=...&disease=... for report mode.",
+    waitingForTaskBinding: "The task exists, but there are no AI interactions to show yet. If the report context was just created, this page will refresh automatically.",
   } as const;
 }
 
@@ -168,6 +179,7 @@ function InteractionRow({
         <span className="flex-1 truncate font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">
           {item.report_title}
         </span>
+        {item.task_uuid && <Badge color="amber">{shortUuid(item.task_uuid)}</Badge>}
         <Badge color="indigo">{shortUuid(item.report_uuid)}</Badge>
         <Badge color="blue">{item.model ?? "-"}</Badge>
         <span className="w-24 text-right text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
@@ -189,6 +201,18 @@ function InteractionRow({
       {expanded && (
         <div className="border-t border-tremor-border px-4 py-3 dark:border-dark-tremor-border">
           <Grid numItems={1} numItemsLg={4} className="mb-3 gap-3">
+            <Card className="p-3">
+              <Text>{labels.taskUuid}</Text>
+              <Text className="mt-1 break-all font-mono text-xs text-tremor-content-strong dark:text-dark-tremor-content-strong">
+                {item.task_uuid ?? "-"}
+              </Text>
+            </Card>
+            <Card className="p-3">
+              <Text>{labels.taskStatus}</Text>
+              <Text className="mt-1 text-xs text-tremor-content-strong dark:text-dark-tremor-content-strong">
+                {item.task_status ?? "-"}
+              </Text>
+            </Card>
             <Card className="p-3">
               <Text>{labels.timestamp}</Text>
               <Text className="mt-1 text-xs text-tremor-content-strong dark:text-dark-tremor-content-strong">
@@ -278,6 +302,9 @@ function InteractionRow({
 }
 
 interface RunThread {
+  taskUuid: string | null;
+  taskName: string | null;
+  taskStatus: string | null;
   runId: number;
   runUuid: string | null;
   reportUuid: string;
@@ -308,16 +335,17 @@ function GroupedRunChat({
     <Card className="space-y-4 p-4">
       <div className="space-y-2">
         <div className="flex flex-wrap items-center gap-2">
+          {thread.taskUuid && <Badge color="amber">{labels.taskUuid} {shortUuid(thread.taskUuid)}</Badge>}
           <Badge color="indigo">{labels.reportUuid} {shortUuid(thread.reportUuid)}</Badge>
           <Badge color="slate">{labels.runUuid} {shortUuid(thread.runUuid)}</Badge>
           <Badge color="blue">{thread.sectionType ?? labels.unknownSection}</Badge>
           <Badge color="emerald">{thread.runStatus ?? "-"}</Badge>
         </div>
         <Text className="text-sm text-tremor-content-strong dark:text-dark-tremor-content-strong">
-          {thread.reportTitle}
+          {thread.taskName || thread.reportTitle}
         </Text>
         <Text className="text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
-          {thread.sectionTitle ?? "-"} | {labels.disease}: {thread.diseaseName ?? "-"} | {labels.model}: {thread.runProvider ?? "-"}/{thread.runModel ?? "-"} | {labels.qualityShort} {qualityText(thread.qualityOverall)} | {labels.tokens} {thread.totalTokens}
+          {thread.sectionTitle ?? "-"} | {labels.disease}: {thread.diseaseName ?? "-"} | {labels.model}: {thread.runProvider ?? "-"}/{thread.runModel ?? "-"} | {labels.qualityShort} {qualityText(thread.qualityOverall)} | {labels.tokens} {thread.totalTokens} | {labels.taskStatus}: {thread.taskStatus ?? "-"}
         </Text>
         <Text className="text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
           {formatDateTime(thread.startedAt)} {"->"} {formatDateTime(thread.endedAt)}
@@ -388,19 +416,25 @@ function AIInteractionsPageContent() {
   const { countryId, countryName, lang } = useAppStore();
   const labels = useMemo(() => uiText(lang), [lang]);
   const searchParamsString = searchParams.toString();
+  const initialTaskUuid = (searchParams.get("task") ?? searchParams.get("task_uuid") ?? "").trim();
   const initialUuid = (searchParams.get("uuid") ?? searchParams.get("report_uuid") ?? "").trim();
   const initialDisease = (searchParams.get("disease") ?? "").trim();
 
   const [agentFilter, setAgentFilter] = useState("");
   const [modelFilter, setModelFilter] = useState("");
+  const [taskUuidFilter, setTaskUuidFilter] = useState(initialTaskUuid);
   const [reportUuidFilter, setReportUuidFilter] = useState(initialUuid);
   const [diseaseFilter, setDiseaseFilter] = useState(initialDisease);
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(searchParamsString);
+    const nextTaskUuid = (params.get("task") ?? params.get("task_uuid") ?? "").trim();
     const nextUuid = (params.get("uuid") ?? params.get("report_uuid") ?? "").trim();
     const nextDisease = (params.get("disease") ?? "").trim();
+    if (nextTaskUuid !== taskUuidFilter) {
+      setTaskUuidFilter(nextTaskUuid);
+    }
     if (nextUuid !== reportUuidFilter) {
       setReportUuidFilter(nextUuid);
     }
@@ -411,15 +445,22 @@ function AIInteractionsPageContent() {
 
   useEffect(() => {
     const params = new URLSearchParams(searchParamsString);
+    const currentTaskUuid = (params.get("task") ?? "").trim();
     const currentUuid = (params.get("uuid") ?? "").trim();
     const currentDisease = (params.get("disease") ?? "").trim();
+    const nextTaskUuid = taskUuidFilter.trim();
     const nextUuid = reportUuidFilter.trim();
     const nextDisease = diseaseFilter.trim();
 
-    if (nextUuid === currentUuid && nextDisease === currentDisease && !params.get("report_uuid")) {
+    if (nextTaskUuid === currentTaskUuid && nextUuid === currentUuid && nextDisease === currentDisease && !params.get("report_uuid") && !params.get("task_uuid")) {
       return;
     }
 
+    if (nextTaskUuid) {
+      params.set("task", nextTaskUuid);
+    } else {
+      params.delete("task");
+    }
     if (nextUuid) {
       params.set("uuid", nextUuid);
     } else {
@@ -431,13 +472,15 @@ function AIInteractionsPageContent() {
       params.delete("disease");
     }
     params.delete("report_uuid");
+    params.delete("task_uuid");
 
     const nextQuery = params.toString();
     router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
-  }, [diseaseFilter, pathname, reportUuidFilter, router, searchParamsString]);
+  }, [diseaseFilter, pathname, reportUuidFilter, router, searchParamsString, taskUuidFilter]);
 
   const filters = {
     countryId,
+    taskUuid: taskUuidFilter.trim() || undefined,
     agent: agentFilter || undefined,
     model: modelFilter || undefined,
     disease: diseaseFilter.trim() || undefined,
@@ -445,13 +488,24 @@ function AIInteractionsPageContent() {
     limit: 200,
   };
 
-  const { data: interactions, isLoading, isError, error } = useAIInteractions(filters);
+  useTaskWebSocket({
+    extraQueryKeys: [["ai-interactions"], ["ai-interactions-summary"], ["reports"]],
+  });
+
+  const liveRefreshMs = taskUuidFilter.trim() || reportUuidFilter.trim() ? 3000 : 5000;
+
+  const { data: interactions, isLoading, isError, error } = useAIInteractions(filters, {
+    refetchIntervalMs: liveRefreshMs,
+  });
   const { data: summary } = useAIInteractionSummary({
     countryId,
+    taskUuid: taskUuidFilter.trim() || undefined,
     agent: agentFilter || undefined,
     model: modelFilter || undefined,
     disease: diseaseFilter.trim() || undefined,
     reportUuid: reportUuidFilter.trim() || undefined,
+  }, {
+    refetchIntervalMs: liveRefreshMs,
   });
 
   const agentOptions = useMemo(() => {
@@ -507,6 +561,9 @@ function AIInteractionsPageContent() {
       const totalTokens = ordered.reduce((acc, row) => acc + row.total_tokens, 0);
 
       return {
+        taskUuid: first?.task_uuid ?? null,
+        taskName: first?.task_name ?? null,
+        taskStatus: first?.task_status ?? null,
         runId,
         runUuid: first?.run_uuid ?? null,
         reportUuid: first?.report_uuid ?? "",
@@ -531,6 +588,8 @@ function AIInteractionsPageContent() {
       return tb - ta;
     });
   }, [interactions]);
+
+  const interactionItems = interactions ?? [];
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 md:px-6">
@@ -639,12 +698,31 @@ function AIInteractionsPageContent() {
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-tremor-content-subtle dark:text-dark-tremor-content-subtle" />
             <input
               type="text"
-              value={reportUuidFilter}
-              onChange={(e) => setReportUuidFilter(e.target.value)}
-              placeholder={labels.filterByUuid}
+              value={taskUuidFilter}
+              placeholder={labels.taskFilterPlaceholder}
+              onChange={(e) => {
+                const value = e.target.value;
+                setTaskUuidFilter(value);
+                if (value.trim()) {
+                  setReportUuidFilter("");
+                }
+              }}
               className="w-full rounded-tremor-default border border-tremor-border bg-tremor-background py-2 pl-9 pr-3 text-sm text-tremor-content-strong shadow-tremor-input outline-none transition focus:border-tremor-brand-subtle focus:ring-2 focus:ring-tremor-brand-muted dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong"
             />
           </div>
+
+          {!taskUuidFilter.trim() && (
+            <div className="relative flex-1 min-w-[220px] max-w-md">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-tremor-content-subtle dark:text-dark-tremor-content-subtle" />
+              <input
+                type="text"
+                value={reportUuidFilter}
+                onChange={(e) => setReportUuidFilter(e.target.value)}
+                placeholder={labels.reportFilterPlaceholder}
+                className="w-full rounded-tremor-default border border-tremor-border bg-tremor-background py-2 pl-9 pr-3 text-sm text-tremor-content-strong shadow-tremor-input outline-none transition focus:border-tremor-brand-subtle focus:ring-2 focus:ring-tremor-brand-muted dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong"
+              />
+            </div>
+          )}
 
           <select
             value={agentFilter}
@@ -697,7 +775,49 @@ function AIInteractionsPageContent() {
             </Text>
           </div>
         </Card>
-      ) : !interactions || interactions.length === 0 ? (
+      ) : taskUuidFilter.trim() ? (
+        <div className="space-y-4">
+          <Text className="text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+            {labels.chatModePrefix}: {taskUuidFilter.trim()} {diseaseFilter.trim() ? `| ${labels.diseaseSuffix}: ${diseaseFilter.trim()}` : ""}
+          </Text>
+          {interactionItems.length === 0 ? (
+            <Card>
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <MessageSquare className="h-12 w-12 text-tremor-content-subtle dark:text-dark-tremor-content-subtle" />
+                <Text className="mt-3">{labels.waitingForTaskBinding}</Text>
+                <Text className="mt-2 text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+                  {labels.currentCountry}: {countryName || "All"}
+                </Text>
+              </div>
+            </Card>
+          ) : (
+            runThreads.map((thread) => (
+              <GroupedRunChat key={thread.runId} thread={thread} labels={labels} />
+            ))
+          )}
+        </div>
+      ) : reportUuidFilter.trim() ? (
+        <div className="space-y-4">
+          <Text className="text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+            {labels.reportModePrefix}: {reportUuidFilter.trim()} {diseaseFilter.trim() ? `| ${labels.diseaseSuffix}: ${diseaseFilter.trim()}` : ""}
+          </Text>
+          {interactionItems.length === 0 ? (
+            <Card>
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <MessageSquare className="h-12 w-12 text-tremor-content-subtle dark:text-dark-tremor-content-subtle" />
+                <Text className="mt-3">{labels.noData}</Text>
+                <Text className="mt-2 text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+                  {labels.currentCountry}: {countryName || "All"}
+                </Text>
+              </div>
+            </Card>
+          ) : (
+            runThreads.map((thread) => (
+              <GroupedRunChat key={thread.runId} thread={thread} labels={labels} />
+            ))
+          )}
+        </div>
+      ) : interactionItems.length === 0 ? (
         <Card>
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <MessageSquare className="h-12 w-12 text-tremor-content-subtle dark:text-dark-tremor-content-subtle" />
@@ -707,18 +827,9 @@ function AIInteractionsPageContent() {
             </Text>
           </div>
         </Card>
-      ) : reportUuidFilter.trim() ? (
-        <div className="space-y-4">
-          <Text className="text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
-            {labels.chatModePrefix}: {reportUuidFilter.trim()} {diseaseFilter.trim() ? `| ${labels.diseaseSuffix}: ${diseaseFilter.trim()}` : ""}
-          </Text>
-          {runThreads.map((thread) => (
-            <GroupedRunChat key={thread.runId} thread={thread} labels={labels} />
-          ))}
-        </div>
       ) : (
         <div className="space-y-3">
-          {interactions.map((item) => (
+          {interactionItems.map((item) => (
             <InteractionRow
               key={item.id}
               item={item}

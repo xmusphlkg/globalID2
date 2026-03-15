@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional
 import pandas as pd
 
 from src.core import get_logger
+from src.core.missing_values import normalize_rate_columns
 from .base import BaseAgent
 
 logger = get_logger(__name__)
@@ -71,6 +72,7 @@ class AnalystAgent(BaseAgent):
             Analysis result dictionary
         """
         logger.info(f"Analyzing disease '{disease_name}' from {period_start} to {period_end}")
+        data = normalize_rate_columns(data)
         
         # 1. Calculate statistical indicators
         stats = self._calculate_statistics(data)
@@ -110,6 +112,8 @@ class AnalystAgent(BaseAgent):
         """Calculate statistical indicators"""
         if data.empty:
             return {}
+
+        data = normalize_rate_columns(data)
         
         stats = {}
         
@@ -306,6 +310,8 @@ Requirements:
         """Assess data quality"""
         if data.empty:
             return {"score": 0.0, "issues": ["Data is empty"]}
+
+        data = normalize_rate_columns(data)
         
         quality = {
             "score": 1.0,

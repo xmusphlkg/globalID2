@@ -22,6 +22,7 @@ from src.domain import (
     ReportType,
     Task,
 )
+from src.services.exceptions import TaskCancelledError
 
 logger = get_logger(__name__)
 
@@ -29,6 +30,7 @@ logger = get_logger(__name__)
 @dataclass
 class ReportResult:
     report_id: int
+    report_uuid: str
     status: str
     output_files: List[str] = field(default_factory=list)
     sections_count: int = 0
@@ -48,6 +50,7 @@ class ReportService:
         days: int,
         enable_review: bool,
         send_email: bool,
+        report_id_ref: Optional[list] = None,
     ) -> ReportResult:
         """
         Run the full report-generation pipeline and return a summary.
@@ -74,14 +77,65 @@ class ReportService:
                 else period_end - timedelta(days=days)
             )
 
-            # ── Phase 0: Try to reuse an already-approved report ─────────────
+            # ── Phase 0: Resolve country / type and prepare data window ──────
             country_obj = await self._get_country(db, country_code)
             report_type_enum = ReportType[report_type.upper()]
+
+            # ── Phase 1: Data preparation (0 → 15 %) ─────────────────────────
+            await task_manager.add_workbook_entry(
+                task.task_uuid,
+                entry_type="info",
+                title="Phase 1/5: Data Preparation",
+                content="Fetching country and disease records...",
+                content_type="text",
+            )
+            await task_manager.update_task_progress(task.task_uuid, 5)
+
+            period_start, period_end = await self._adjust_period_to_available_data(
+                db, task, country_obj, period_start, period_end, days
+            )
+            await self._ensure_task_not_cancelled(task.task_uuid)
+
+            await task_manager.add_workbook_entry(
+                task.task_uuid,
+                entry_type="success",
+                title="Data Preparation Complete",
+                content=(
+                    f"Country: {country_obj.name}\n"
+                    f"Period: {period_start.date()} to {period_end.date()}"
+                ),
+                content_type="text",
+            )
+            await task_manager.update_task_progress(task.task_uuid, 15)
+
+            resumable_report = await self._resolve_task_attached_report(
+                db,
+                task,
+                country_obj=country_obj,
+                report_type=report_type_enum,
+            )
+            if resumable_report:
+                if report_id_ref is not None:
+                    report_id_ref[0] = resumable_report.id
+                await task_manager.link_task_report(task.task_uuid, resumable_report.id)
+                await task_manager.add_workbook_entry(
+                    task.task_uuid,
+                    entry_type="warning",
+                    title="Resuming Attached Report",
+                    content=(
+                        f"Reusing existing report #{resumable_report.id} already attached to this task. "
+                        "Existing sections will be reused and only missing work will continue."
+                    ),
+                    content_type="text",
+                )
 
             reuse = await self._find_reusable_report(
                 db, country_obj, report_type_enum, period_start, period_end
             )
             if reuse:
+                if report_id_ref is not None:
+                    report_id_ref[0] = reuse.id
+                await task_manager.link_task_report(task.task_uuid, reuse.id)
                 output_files = self._collect_output_files(reuse)
                 await task_manager.add_workbook_entry(
                     task.task_uuid,
@@ -97,37 +151,33 @@ class ReportService:
                 await task_manager.update_task_progress(task.task_uuid, 100)
                 return ReportResult(
                     report_id=reuse.id,
+                    report_uuid=str(reuse.report_uuid),
                     status=str(reuse.status),
                     output_files=output_files,
                     sections_count=len(reuse.sections) if hasattr(reuse, "sections") else 0,
                     reused=True,
                 )
 
-            # ── Phase 1: Data preparation (0 → 15 %) ─────────────────────────
-            await task_manager.add_workbook_entry(
-                task.task_uuid,
-                entry_type="info",
-                title="Phase 1/5: Data Preparation",
-                content="Fetching country and disease records...",
-                content_type="text",
-            )
-            await task_manager.update_task_progress(task.task_uuid, 5)
+            if not resumable_report:
+                resumable_report = await self._find_resumable_report(
+                    db, country_obj, report_type_enum, period_start, period_end
+                )
+            if resumable_report and (report_id_ref is None or report_id_ref[0] != resumable_report.id):
+                if report_id_ref is not None:
+                    report_id_ref[0] = resumable_report.id
+                await task_manager.link_task_report(task.task_uuid, resumable_report.id)
+                await task_manager.add_workbook_entry(
+                    task.task_uuid,
+                    entry_type="warning",
+                    title="Resuming Partial Report",
+                    content=(
+                        f"Found unfinished report #{resumable_report.id} for the same scope. "
+                        "Existing sections will be reused and only missing work will continue."
+                    ),
+                    content_type="text",
+                )
 
-            period_start, period_end = await self._adjust_period_to_available_data(
-                db, task, country_obj, period_start, period_end, days
-            )
-
-            await task_manager.add_workbook_entry(
-                task.task_uuid,
-                entry_type="success",
-                title="Data Preparation Complete",
-                content=(
-                    f"Country: {country_obj.name}\n"
-                    f"Period: {period_start.date()} to {period_end.date()}"
-                ),
-                content_type="text",
-            )
-            await task_manager.update_task_progress(task.task_uuid, 15)
+            await self._ensure_task_not_cancelled(task.task_uuid)
 
             # ── Phase 2: AI analysis + content generation (15 → 80 %) ────────
             await task_manager.add_workbook_entry(
@@ -164,16 +214,24 @@ class ReportService:
                 report_type=report_type_enum,
                 period_start=period_start,
                 period_end=period_end,
+                existing_report=resumable_report,
                 send_email=send_email,
                 enable_review=enable_review,
                 progress_callback=_ai_progress,
+                task_uuid=task.task_uuid,
                 db=db,
             )
+
+            if report_id_ref is not None:
+                report_id_ref[0] = report.id
+            await task_manager.link_task_report(task.task_uuid, report.id)
 
             if report.status == ReportStatus.FAILED:
                 raise RuntimeError(
                     f"Report generation failed: {report.error_message or 'Unknown error'}"
                 )
+
+            await self._ensure_task_not_cancelled(task.task_uuid)
 
             await task_manager.add_workbook_entry(
                 task.task_uuid,
@@ -226,6 +284,7 @@ class ReportService:
 
             return ReportResult(
                 report_id=report.id,
+                report_uuid=str(report.report_uuid),
                 status=str(report.status),
                 output_files=output_files,
                 sections_count=sections_count,
@@ -265,6 +324,60 @@ class ReportService:
         except Exception as e:
             logger.warning(f"Failed to check for reusable report: {e}")
             return None
+
+    async def _find_resumable_report(
+        self,
+        db,
+        country: Country,
+        report_type: ReportType,
+        period_start: datetime,
+        period_end: datetime,
+    ) -> Optional[Report]:
+        try:
+            q = (
+                select(Report)
+                .where(
+                    Report.country_id == country.id,
+                    Report.period_start == period_start,
+                    Report.period_end == period_end,
+                    Report.report_type == report_type,
+                    Report.status.in_([
+                        ReportStatus.GENERATING,
+                        ReportStatus.FAILED,
+                    ]),
+                )
+                .order_by(Report.updated_at.desc(), Report.created_at.desc())
+                .limit(1)
+            )
+            return (await db.execute(q)).scalar_one_or_none()
+        except Exception as e:
+            logger.warning(f"Failed to check for resumable report: {e}")
+            return None
+
+    async def _resolve_task_attached_report(
+        self,
+        db,
+        task: Task,
+        *,
+        country_obj: Country,
+        report_type: ReportType,
+    ) -> Optional[Report]:
+        report_id = task.report_id
+        output_data = task.output_data if isinstance(task.output_data, dict) else {}
+        if report_id is None and isinstance(output_data.get("report_id"), int):
+            report_id = int(output_data["report_id"])
+
+        if report_id is None:
+            return None
+
+        report = await db.get(Report, report_id)
+        if report is None:
+            return None
+        if report.country_id != country_obj.id or report.report_type != report_type:
+            return None
+        if report.status not in [ReportStatus.GENERATING, ReportStatus.FAILED]:
+            return None
+        return report
 
     async def _adjust_period_to_available_data(
         self,
@@ -325,3 +438,7 @@ class ReportService:
         if getattr(report, "pdf_path", None):
             files.append(f"PDF: {report.pdf_path}")
         return files
+
+    async def _ensure_task_not_cancelled(self, task_uuid: str) -> None:
+        if await task_manager.is_cancel_requested(task_uuid):
+            raise TaskCancelledError("Cancellation requested by user")

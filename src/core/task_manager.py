@@ -95,6 +95,10 @@ class TaskManager:
             query = select(Task).where(Task.id == task_id)
             result = await db.execute(query)
             return result.scalar_one_or_none()
+
+    @staticmethod
+    def _task_metadata(task: Task) -> Dict[str, Any]:
+        return dict(task.metadata_ or {})
     
     async def update_task_status(
         self,
@@ -111,18 +115,26 @@ class TaskManager:
             if not task:
                 return None
             
+            now = datetime.now(timezone.utc)
+            previous_status = task.status
             task.status = status
             
-            if status == TaskStatus.RUNNING and not task.started_at:
-                task.started_at = datetime.now(timezone.utc)
+            if status == TaskStatus.RUNNING:
+                task.started_at = now
+                task.completed_at = None
+                task.actual_duration = None
+                task.last_error = None
+                if previous_status in [TaskStatus.FAILED, TaskStatus.CANCELLED, TaskStatus.COMPLETED]:
+                    task.set_progress(0)
             elif status in [TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED]:
-                task.completed_at = datetime.now(timezone.utc)
+                task.completed_at = now
                 if task.started_at:
                     task.actual_duration = int((task.completed_at - task.started_at).total_seconds())
             
             if error_message:
                 task.last_error = error_message
-                task.retry_count += 1
+                if status in [TaskStatus.FAILED, TaskStatus.RETRYING]:
+                    task.retry_count += 1
             
             await db.commit()
             await db.refresh(task)
@@ -134,6 +146,104 @@ class TaskManager:
                 "status": str(status.value if hasattr(status, 'value') else status),
                 "progress": task.progress or 0,
             })
+            return task
+
+    async def request_task_cancel(
+        self,
+        task_uuid: str,
+        reason: str = "Cancelled by user",
+    ) -> Optional[Task]:
+        """Request cancellation for a task. Running tasks stop cooperatively at safe checkpoints."""
+        async with get_db() as db:
+            query = select(Task).where(Task.task_uuid == task_uuid)
+            result = await db.execute(query)
+            task = result.scalar_one_or_none()
+
+            if not task:
+                return None
+
+            if task.status in [TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED]:
+                return task
+
+            metadata = self._task_metadata(task)
+            if metadata.get("cancel_requested"):
+                return task
+
+            now = datetime.now(timezone.utc)
+            metadata["cancel_requested"] = True
+            metadata["cancel_requested_at"] = now.isoformat()
+            metadata["cancel_reason"] = reason
+            task.metadata_ = metadata
+
+            entry_title = "Cancellation Requested"
+            entry_content = reason
+            if task.status in [TaskStatus.PENDING, TaskStatus.QUEUED]:
+                task.status = TaskStatus.CANCELLED
+                task.completed_at = now
+                task.actual_duration = 0
+                task.last_error = reason
+                entry_title = "Task Cancelled"
+
+            await db.commit()
+            await db.refresh(task)
+
+            await self._broadcast({
+                "event": "task_cancel_requested",
+                "task_uuid": task_uuid,
+                "status": str(task.status.value if hasattr(task.status, 'value') else task.status),
+                "progress": task.progress or 0,
+                "cancel_requested": True,
+            })
+
+        await self.add_workbook_entry(
+            task_uuid,
+            entry_type="warning",
+            title=entry_title,
+            content=entry_content,
+            content_type="text",
+        )
+        return await self.get_task_by_uuid(task_uuid)
+
+    async def is_cancel_requested(self, task_uuid: str) -> bool:
+        """Check whether a task has a pending cancellation request."""
+        task = await self.get_task_by_uuid(task_uuid)
+        if not task:
+            return False
+        metadata = self._task_metadata(task)
+        return bool(metadata.get("cancel_requested")) or task.status == TaskStatus.CANCELLED
+
+    async def clear_task_cancel_request(self, task_uuid: str) -> Optional[Task]:
+        """Clear cancellation metadata before retrying a previously cancelled task."""
+        async with get_db() as db:
+            query = select(Task).where(Task.task_uuid == task_uuid)
+            result = await db.execute(query)
+            task = result.scalar_one_or_none()
+
+            if not task:
+                return None
+
+            metadata = self._task_metadata(task)
+            metadata.pop("cancel_requested", None)
+            metadata.pop("cancel_requested_at", None)
+            metadata.pop("cancel_reason", None)
+            task.metadata_ = metadata
+            await db.commit()
+            await db.refresh(task)
+            return task
+
+    async def link_task_report(self, task_uuid: str, report_id: int) -> Optional[Task]:
+        """Persist the active report id on a task so the UI can follow partial progress."""
+        async with get_db() as db:
+            query = select(Task).where(Task.task_uuid == task_uuid)
+            result = await db.execute(query)
+            task = result.scalar_one_or_none()
+
+            if not task:
+                return None
+
+            task.report_id = report_id
+            await db.commit()
+            await db.refresh(task)
             return task
     
     async def update_task_progress(

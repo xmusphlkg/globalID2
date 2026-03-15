@@ -63,6 +63,27 @@ export interface AIConversation {
   tokens: Record<string, unknown> | null;
 }
 
+export interface ReportSectionRun {
+  id: number;
+  run_uuid: string | null;
+  section_id: number | null;
+  disease_name: string | null;
+  section_type: string | null;
+  status: string;
+  model: string | null;
+  provider: string | null;
+  temperature: number | null;
+  max_tokens: number | null;
+  token_usage: Record<string, unknown> | null;
+  quality_scores: Record<string, unknown> | null;
+  revision_count: number;
+  error_message: string | null;
+  started_at: string | null;
+  ended_at: string | null;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+}
+
 export function useReports(
   countryId: number | null,
   status?: string,
@@ -100,5 +121,14 @@ export function useSectionConversations(
         `/reports/${reportUuid}/sections/${sectionId}/conversations`,
       ),
     enabled: !!reportUuid && !!sectionId,
+  });
+}
+
+export function useReportRuns(reportUuid: string | null) {
+  return useQuery<ReportSectionRun[]>({
+    queryKey: ["report-runs", reportUuid],
+    queryFn: () => apiFetch(`/reports/${reportUuid}/runs`),
+    enabled: !!reportUuid,
+    staleTime: 5 * 1000,
   });
 }

@@ -23,8 +23,13 @@ async def lifespan(app: FastAPI):
     # Wire task_manager broadcast hook → WebSocket hub
     from src.core.task_manager import task_manager
     from .routers.tasks import task_hub
+    from src.services.task_executor import recover_interrupted_tasks_on_startup
     task_manager.set_broadcast_hook(task_hub.broadcast)
     logger.info("Task broadcast hook registered")
+
+    recovered_count = await recover_interrupted_tasks_on_startup()
+    if recovered_count:
+        logger.warning(f"Recovered {recovered_count} interrupted task(s) during API startup")
 
     yield
     logger.info("API shutting down")

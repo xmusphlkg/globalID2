@@ -24,6 +24,7 @@ sys.path.append(os.getcwd())
 
 from src.core.database import get_db
 from src.core import get_logger
+from src.core.missing_values import normalize_rate_value
 from src.data.crawlers.cn_cdc import ChinaCDCCrawler
 from src.data.parsers.html_parser import HTMLTableParser
 from src.data.normalizers.disease_mapper_db import DiseaseMapperDB
@@ -737,8 +738,8 @@ class MissingDataFetcher:
                                 'country_id': country_id,
                                 'cases': cases,
                                 'deaths': deaths,
-                                'incidence_rate': incidence,
-                                'mortality_rate': mortality,
+                                'incidence_rate': normalize_rate_value(incidence),
+                                'mortality_rate': normalize_rate_value(mortality),
                                 'data_source': data_source,
                                 'metadata': json.dumps(metadata) if metadata else '{}'
                             })

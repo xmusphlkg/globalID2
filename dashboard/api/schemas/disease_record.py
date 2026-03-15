@@ -2,7 +2,9 @@
 
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
+
+from src.core.missing_values import normalize_rate_value
 
 
 class DiseaseRecordOut(BaseModel):
@@ -24,6 +26,11 @@ class DiseaseRecordOut(BaseModel):
     data_source: Optional[str] = None
     data_quality: Optional[str] = None
     confidence_score: Optional[float] = None
+
+    @field_validator("incidence_rate", "mortality_rate", mode="before")
+    @classmethod
+    def _normalize_missing_rates(cls, value: object) -> Optional[float]:
+        return normalize_rate_value(value)
 
     model_config = {"from_attributes": True}
 

@@ -8,9 +8,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..deps import get_db
 from ..schemas.task import TaskCreateRequest, TaskDetailOut, TaskOut, WorkbookEntryOut
+from src.core.task_manager import task_manager
 from src.domain.task import Task, TaskStatus, TaskType, TaskWorkbook
 
 router = APIRouter()
+
+
+def _cancel_meta(task: Task) -> tuple[bool, Optional[str]]:
+    metadata = dict(task.metadata_ or {})
+    requested_at = metadata.get("cancel_requested_at")
+    return bool(metadata.get("cancel_requested")), requested_at if isinstance(requested_at, str) else None
 
 # ---------- WebSocket hub ----------
 
@@ -96,6 +103,8 @@ async def list_tasks(
             completed_at=r.Task.completed_at,
             actual_duration=r.Task.actual_duration,
             workbook_count=r.workbook_count,
+            cancel_requested=_cancel_meta(r.Task)[0],
+            cancel_requested_at=_cancel_meta(r.Task)[1],
         )
         for r in rows
     ]
@@ -117,6 +126,8 @@ async def get_task(task_uuid: str, db: AsyncSession = Depends(get_db)):
 
     wb_count = len(wbs)
 
+    cancel_requested, cancel_requested_at = _cancel_meta(task)
+
     return TaskDetailOut(
         id=task.id,
         task_uuid=task.task_uuid,
@@ -134,6 +145,8 @@ async def get_task(task_uuid: str, db: AsyncSession = Depends(get_db)):
         completed_at=task.completed_at,
         actual_duration=task.actual_duration,
         workbook_count=wb_count,
+        cancel_requested=cancel_requested,
+        cancel_requested_at=cancel_requested_at,
         input_data=task.input_data,
         output_data=task.output_data,
         parent_task_id=task.parent_task_id,
@@ -144,9 +157,16 @@ async def get_task(task_uuid: str, db: AsyncSession = Depends(get_db)):
                 entry_type=w.entry_type,
                 title=w.title,
                 content=w.content,
+                content_type=w.content_type,
+                prompt=w.prompt,
+                response=w.response,
                 model_used=w.model_used,
                 tokens_used=w.tokens_used,
+                cost=w.cost,
                 duration=w.duration,
+                success=w.success,
+                error_message=w.error_message,
+                metadata=w.metadata_ or {},
                 created_at=w.created_at,
             )
             for w in wbs
@@ -177,6 +197,8 @@ async def create_task(body: TaskCreateRequest, db: AsyncSession = Depends(get_db
             "progress": task.progress or 0,
         }
     )
+    cancel_requested, cancel_requested_at = _cancel_meta(task)
+
     return TaskOut(
         id=task.id,
         task_uuid=task.task_uuid,
@@ -194,6 +216,43 @@ async def create_task(body: TaskCreateRequest, db: AsyncSession = Depends(get_db
         completed_at=task.completed_at,
         actual_duration=task.actual_duration,
         workbook_count=0,
+        cancel_requested=cancel_requested,
+        cancel_requested_at=cancel_requested_at,
+    )
+
+
+@router.post("/tasks/{task_uuid}/cancel", response_model=TaskOut, status_code=202)
+async def cancel_task(task_uuid: str, db: AsyncSession = Depends(get_db)):
+    task = (await db.execute(select(Task).where(Task.task_uuid == task_uuid))).scalar_one_or_none()
+    if not task:
+        raise HTTPException(404, "Task not found")
+    if task.status in (TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED):
+        raise HTTPException(409, f"Task status is '{task.status}' — this task can no longer be cancelled")
+
+    cancelled = await task_manager.request_task_cancel(task_uuid)
+    if not cancelled:
+        raise HTTPException(404, "Task not found")
+
+    cancel_requested, cancel_requested_at = _cancel_meta(cancelled)
+    return TaskOut(
+        id=cancelled.id,
+        task_uuid=cancelled.task_uuid,
+        task_name=cancelled.task_name,
+        task_type=cancelled.task_type,
+        status=cancelled.status,
+        priority=cancelled.priority,
+        progress=cancelled.progress or 0,
+        country_id=cancelled.country_id,
+        report_id=cancelled.report_id,
+        description=cancelled.description,
+        last_error=cancelled.last_error,
+        created_at=cancelled.created_at,
+        started_at=cancelled.started_at,
+        completed_at=cancelled.completed_at,
+        actual_duration=cancelled.actual_duration,
+        workbook_count=0,
+        cancel_requested=cancel_requested,
+        cancel_requested_at=cancel_requested_at,
     )
 
 
