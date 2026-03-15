@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.core.database import get_engine
 from src.core.logging import get_logger
 
-from .routers import countries, diseases, explorer, overview, quality, reports, sources, tasks
+from .routers import ai, countries, crawl, diseases, explorer, overview, quality, reports, sources, tasks
 
 logger = get_logger(__name__)
 
@@ -19,6 +19,13 @@ async def lifespan(app: FastAPI):
     logger.info("API starting up")
     # Ensure the engine is created eagerly so the pool is ready.
     get_engine()
+
+    # Wire task_manager broadcast hook → WebSocket hub
+    from src.core.task_manager import task_manager
+    from .routers.tasks import task_hub
+    task_manager.set_broadcast_hook(task_hub.broadcast)
+    logger.info("Task broadcast hook registered")
+
     yield
     logger.info("API shutting down")
 
@@ -51,6 +58,8 @@ def create_app() -> FastAPI:
     app.include_router(diseases.router, prefix=prefix, tags=["Diseases"])
     app.include_router(reports.router, prefix=prefix, tags=["Reports"])
     app.include_router(tasks.router, prefix=prefix, tags=["Tasks"])
+    app.include_router(crawl.router, prefix=prefix, tags=["Crawl"])
+    app.include_router(ai.router, prefix=prefix, tags=["AI"])
     app.include_router(quality.router, prefix=prefix, tags=["Quality"])
     app.include_router(sources.router, prefix=prefix, tags=["Sources"])
     app.include_router(explorer.router, prefix=prefix, tags=["Explorer"])

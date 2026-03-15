@@ -3,8 +3,7 @@
 import { useState } from "react";
 import { useAppStore } from "@/stores/app-store";
 import { t } from "@/lib/i18n";
-import { useSourcesFlow, useCreateCrawlTask } from "@/lib/hooks/useSources";
-import { useCountries } from "@/lib/hooks/useCountries";
+import { useSourcesFlow, useStartCrawl } from "@/lib/hooks/useSources";
 import { useTaskWebSocket } from "@/lib/hooks/useTasks";
 import { formatDate } from "@/lib/utils";
 import {
@@ -20,8 +19,6 @@ import {
   GitBranch,
   Download,
   Cog,
-  FileText,
-  Upload,
   Plus,
   X,
   ChevronRight,
@@ -38,6 +35,7 @@ const statusBadge: Record<string, Color> = {
   queued: "blue",
   running: "yellow",
   completed: "emerald",
+  skipped: "gray",
   failed: "rose",
   cancelled: "slate",
   retrying: "yellow",
@@ -47,21 +45,30 @@ function StageIcon({ stage, status }: { stage: string; status: string | null }) 
   const cls = "h-5 w-5 shrink-0";
   if (status === "running") return <Loader2 className={`${cls} animate-spin text-amber-500`} />;
   if (status === "completed") return <CheckCircle2 className={`${cls} text-emerald-500`} />;
+  if (status === "skipped") return <Circle className={`${cls} text-slate-400`} />;
   if (status === "failed") return <AlertCircle className={`${cls} text-rose-500`} />;
   // stage default icon
-  if (stage === "crawl") return <Download className={`${cls} text-blue-400`} />;
-  if (stage === "process") return <Cog className={`${cls} text-violet-400`} />;
-  if (stage === "report") return <FileText className={`${cls} text-teal-400`} />;
-  if (stage === "export") return <Upload className={`${cls} text-orange-400`} />;
+  if (stage === "fetch_list") return <Download className={`${cls} text-blue-400`} />;
+  if (stage === "incremental_check") return <GitBranch className={`${cls} text-violet-400`} />;
+  if (stage === "process_store") return <Cog className={`${cls} text-teal-400`} />;
+  if (stage === "finalize") return <Circle className={`${cls} text-orange-400`} />;
   return <Circle className={`${cls} text-tremor-content-subtle`} />;
 }
 
 const STAGE_LABEL_KEYS: Record<string, string> = {
-  crawl: "flow_stage_crawl",
-  process: "flow_stage_process",
-  report: "flow_stage_report",
-  export: "flow_stage_export",
+  fetch_list: "flow_stage_fetch_list",
+  incremental_check: "flow_stage_incremental_check",
+  process_store: "flow_stage_process_store",
+  finalize: "flow_stage_finalize",
 };
+
+function sourceLabel(lang: "en" | "zh", source?: string | null): string {
+  const s = (source || "all").toLowerCase();
+  if (s === "pubmed") return "PubMed";
+  if (s === "cdc_weekly") return "CDC Weekly";
+  if (s === "nhc") return lang === "zh" ? "国家卫健委" : "NHC";
+  return lang === "zh" ? "全部" : "All";
+}
 
 // ── Stage pill ───────────────────────────────────────────────────────────────
 function StagePill({
@@ -115,11 +122,9 @@ function StagePill({
 function FlowRow({
   flow,
   lang,
-  onCreateCrawl,
 }: {
   flow: DataSourceFlow;
   lang: "en" | "zh";
-  onCreateCrawl: (ds: string) => void;
 }) {
   return (
     <Card className="p-4 overflow-hidden">
@@ -137,6 +142,14 @@ function FlowRow({
               </span>
             )}
           </div>
+          {flow.latest_task_uuid && (
+            <div className="text-[11px] text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+              {lang === "zh" ? "最近任务" : "Latest task"}: {sourceLabel(lang, flow.latest_task_source)}
+              {" · "}
+              {flow.latest_task_status || "-"}
+              {flow.latest_task_time ? ` · ${formatDate(flow.latest_task_time)}` : ""}
+            </div>
+          )}
         </div>
 
         {/* Pipeline stages */}
@@ -150,17 +163,6 @@ function FlowRow({
             </div>
           ))}
         </div>
-
-        {/* Action */}
-        <div className="flex shrink-0">
-          <button
-            onClick={() => onCreateCrawl(flow.data_source)}
-            className="flex items-center justify-center gap-1.5 rounded-tremor-default bg-tremor-brand px-3 py-2 text-xs font-medium text-tremor-brand-inverted shadow-tremor-input transition hover:opacity-90 dark:bg-dark-tremor-brand dark:text-dark-tremor-brand-inverted w-full md:w-auto"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            {t(lang, "flow_create_crawl")}
-          </button>
-        </div>
       </div>
     </Card>
   );
@@ -169,41 +171,54 @@ function FlowRow({
 // ── Create crawl task modal ──────────────────────────────────────────────────
 function CreateCrawlModal({
   open,
-  dataSource,
   countryId,
   lang,
   onClose,
 }: {
   open: boolean;
-  dataSource: string;
   countryId: number;
   lang: "en" | "zh";
   onClose: () => void;
 }) {
-  const [taskName, setTaskName] = useState(`Crawl ${dataSource}`);
+  const [source, setSource] = useState("all");
   const [priority, setPriority] = useState("normal");
-  const [description, setDescription] = useState("");
-  const { mutate: createTask, isPending, isSuccess } = useCreateCrawlTask();
+  const [force, setForce] = useState(false);
+  const [process, setProcess] = useState(true);
+  const [fillMissing, setFillMissing] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { mutate: startCrawl, isPending, isSuccess } = useStartCrawl();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    createTask(
+    setError(null);
+    startCrawl(
       {
-        task_name: taskName,
         country_id: countryId,
+        source,
+        force,
+        process,
+        save_raw: true,
+        fill_missing: fillMissing,
         priority,
-        description: description || undefined,
-        input_data: { data_source: dataSource },
       },
       {
         onSuccess: () => {
-          setTimeout(onClose, 800);
+          setTimeout(onClose, 1200);
+        },
+        onError: (err: unknown) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          setError(msg);
         },
       },
     );
   };
 
   if (!open) return null;
+
+  const inputCls =
+    "w-full rounded-tremor-default border border-tremor-border bg-tremor-background px-3 py-2 text-sm text-tremor-content-emphasis outline-none focus:ring-2 focus:ring-tremor-brand-muted dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-emphasis";
+  const labelCls =
+    "mb-1 block text-xs font-medium text-tremor-content-emphasis dark:text-dark-tremor-content-emphasis";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
@@ -218,52 +233,68 @@ function CreateCrawlModal({
         <Title className="mb-4">{t(lang, "flow_new_crawl_task")}</Title>
 
         {isSuccess ? (
-          <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
-            <CheckCircle2 className="h-5 w-5" />
+          <div className="flex flex-col items-center gap-2 py-4 text-emerald-600 dark:text-emerald-400">
+            <CheckCircle2 className="h-8 w-8" />
             <span className="text-sm font-medium">{t(lang, "flow_task_created")}</span>
+            <span className="text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+              {lang === "zh" ? "任务已开始执行，可在任务页面查看进度" : "Task is now running. Check Tasks page for progress."}
+            </span>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Data source selector */}
             <div>
-              <label className="mb-1 block text-xs font-medium text-tremor-content-emphasis dark:text-dark-tremor-content-emphasis">
-                {t(lang, "task_name")}
+              <label className={labelCls}>
+                {lang === "zh" ? "数据源" : "Data Source"}
               </label>
-              <input
-                required
-                value={taskName}
-                onChange={(e) => setTaskName(e.target.value)}
-                className="w-full rounded-tremor-default border border-tremor-border bg-tremor-background px-3 py-2 text-sm text-tremor-content-emphasis outline-none focus:ring-2 focus:ring-tremor-brand-muted dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-emphasis"
-              />
+              <select value={source} onChange={(e) => setSource(e.target.value)} className={inputCls}>
+                <option value="all">{lang === "zh" ? "全部" : "All Sources"}</option>
+                <option value="cdc_weekly">CDC Weekly (English)</option>
+                <option value="nhc">{lang === "zh" ? "国家卫健委" : "NHC (Chinese)"}</option>
+                <option value="pubmed">PubMed RSS</option>
+              </select>
             </div>
 
+            {/* Priority */}
             <div>
-              <label className="mb-1 block text-xs font-medium text-tremor-content-emphasis dark:text-dark-tremor-content-emphasis">
-                {t(lang, "priority")}
-              </label>
-              <select
-                value={priority}
-                onChange={(e) => setPriority(e.target.value)}
-                className="w-full rounded-tremor-default border border-tremor-border bg-tremor-background px-3 py-2 text-sm text-tremor-content-emphasis outline-none focus:ring-2 focus:ring-tremor-brand-muted dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-emphasis"
-              >
+              <label className={labelCls}>{t(lang, "priority")}</label>
+              <select value={priority} onChange={(e) => setPriority(e.target.value)} className={inputCls}>
                 {["low", "normal", "high", "urgent"].map((p) => (
                   <option key={p} value={p}>{p}</option>
                 ))}
               </select>
             </div>
 
-            <div>
-              <label className="mb-1 block text-xs font-medium text-tremor-content-emphasis dark:text-dark-tremor-content-emphasis">
-                {t(lang, "flow_description")}
+            {/* Toggle options */}
+            <div className="space-y-2.5">
+              <label className="flex items-center gap-2.5 text-sm text-tremor-content-emphasis dark:text-dark-tremor-content-emphasis cursor-pointer">
+                <input type="checkbox" checked={process} onChange={(e) => setProcess(e.target.checked)}
+                  className="h-4 w-4 rounded border-tremor-border text-tremor-brand focus:ring-tremor-brand-muted" />
+                {lang === "zh" ? "获取后自动处理数据" : "Process data after crawl"}
               </label>
-              <textarea
-                rows={3}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="w-full rounded-tremor-default border border-tremor-border bg-tremor-background px-3 py-2 text-sm text-tremor-content-emphasis outline-none focus:ring-2 focus:ring-tremor-brand-muted dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-emphasis"
-              />
+              <label className="flex items-center gap-2.5 text-sm text-tremor-content-emphasis dark:text-dark-tremor-content-emphasis cursor-pointer">
+                <input type="checkbox" checked={fillMissing} onChange={(e) => setFillMissing(e.target.checked)}
+                  className="h-4 w-4 rounded border-tremor-border text-tremor-brand focus:ring-tremor-brand-muted" />
+                {lang === "zh" ? "回填缺失月份" : "Backfill missing months"}
+              </label>
+              <label className="flex items-center gap-2.5 text-sm text-tremor-content-emphasis dark:text-dark-tremor-content-emphasis cursor-pointer">
+                <input type="checkbox" checked={force} onChange={(e) => setForce(e.target.checked)}
+                  className="h-4 w-4 rounded border-tremor-border text-tremor-brand focus:ring-tremor-brand-muted" />
+                <span className={force ? "text-amber-600 dark:text-amber-400" : ""}>
+                  {lang === "zh" ? "强制模式（忽略数据库，重新爬取全部）" : "Force mode (ignore DB, re-crawl all)"}
+                </span>
+              </label>
             </div>
 
-            <div className="flex justify-end gap-3">
+            {/* Error message */}
+            {error && (
+              <div className="rounded-tremor-default border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-300">
+                {error}
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex justify-end gap-3 pt-1">
               <button
                 type="button"
                 onClick={onClose}
@@ -277,7 +308,7 @@ function CreateCrawlModal({
                 className="flex items-center gap-2 rounded-tremor-default bg-tremor-brand px-4 py-2 text-sm font-medium text-tremor-brand-inverted transition hover:opacity-90 disabled:opacity-60 dark:bg-dark-tremor-brand dark:text-dark-tremor-brand-inverted"
               >
                 {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-                {t(lang, "flow_submit")}
+                {lang === "zh" ? "开始爬取" : "Start Crawl"}
               </button>
             </div>
           </form>
@@ -291,14 +322,13 @@ function CreateCrawlModal({
 export default function SourcesFlowPage() {
   const { lang, countryId, countryName } = useAppStore();
   const { data: flows, isLoading } = useSourcesFlow(countryId);
-  const { data: countries } = useCountries();
 
-  const [modalSource, setModalSource] = useState<string | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
 
   useTaskWebSocket();
 
-  const openModal = (ds: string) => setModalSource(ds);
-  const closeModal = () => setModalSource(null);
+  const openModal = () => setModalOpen(true);
+  const closeModal = () => setModalOpen(false);
 
   // summary counts
   const totalSources = flows?.length ?? 0;
@@ -326,7 +356,7 @@ export default function SourcesFlowPage() {
           </div>
           {countryId && (
             <button
-              onClick={() => openModal("New Source")}
+              onClick={openModal}
               className="flex items-center gap-2 rounded-tremor-default bg-tremor-brand px-4 py-2 text-sm font-medium text-tremor-brand-inverted shadow-tremor-input transition hover:opacity-90 dark:bg-dark-tremor-brand dark:text-dark-tremor-brand-inverted"
             >
               <Plus className="h-4 w-4" />
@@ -386,7 +416,7 @@ export default function SourcesFlowPage() {
             <Title>{t(lang, "no_data")}</Title>
             <Text>{t(lang, "flow_no_sources_hint")}</Text>
             <button
-              onClick={() => openModal("New Source")}
+              onClick={openModal}
               className="mt-4 flex items-center gap-2 rounded-tremor-default bg-tremor-brand px-4 py-2 text-sm font-medium text-tremor-brand-inverted transition hover:opacity-90 dark:bg-dark-tremor-brand dark:text-dark-tremor-brand-inverted"
             >
               <Plus className="h-4 w-4" />
@@ -407,17 +437,15 @@ export default function SourcesFlowPage() {
               key={flow.data_source}
               flow={flow}
               lang={lang}
-              onCreateCrawl={openModal}
             />
           ))}
         </div>
       )}
 
       {/* Modal */}
-      {modalSource && countryId && (
+      {modalOpen && countryId && (
         <CreateCrawlModal
           open={true}
-          dataSource={modalSource}
           countryId={countryId}
           lang={lang}
           onClose={closeModal}

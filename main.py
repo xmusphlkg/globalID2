@@ -16,10 +16,6 @@ from sqlalchemy import select
 from src.core import get_database, get_logger, init_app
 from src.core.task_manager import task_manager
 from src.domain import Country, Disease, ReportType, TaskType, TaskPriority, TaskStatus, Task
-from src.data.crawlers import ChinaCDCCrawler
-from src.data.processors import DataProcessor
-from src.generation import ReportGenerator
-from src.ai.model_check import ensure_available_models_checked_async
 
 app = typer.Typer(help="GlobalID V2 - Global Infectious Disease Monitoring System")
 console = Console()
@@ -55,8 +51,12 @@ def crawl(
             task_name=f"Crawl {country_code} Data ({source})",
             priority=TaskPriority.HIGH if force else TaskPriority.NORMAL,
             description=f"Source: {source}, Force: {'Yes' if force else 'No'}, Process: {'Yes' if process else 'No'}",
-            input_data={"country": country_code, "source": source, "force": force,
-                        "process": process, "save_raw": save_raw},
+            input_data={
+                "country": country_code, "country_code": country_code,
+                "source": source, "force": force,
+                "process": process, "save_raw": save_raw,
+                "fill_missing": fill_missing,
+            },
         )
 
         console.print(f"[bold blue]🚀 Starting intelligent data crawl for {country_code}...[/bold blue]")
@@ -70,37 +70,16 @@ def crawl(
             content_type="text",
         )
 
-        from src.services import CrawlService, task_lifecycle
-        result = None
-        async with task_lifecycle(task):
-            service = CrawlService()
-            result = await service.execute(
-                task=task,
-                country_code=country_code,
-                source=source,
-                force=force,
-                process=process,
-                save_raw=save_raw,
-                fill_missing=fill_missing,
-            )
-            async with get_database() as db:
-                task_obj = await db.get(Task, task.id)
-                if task_obj:
-                    task_obj.output_data = {
-                        "new_reports": result.new_reports,
-                        "processed_reports": result.processed_reports,
-                        "total_records": result.total_records,
-                        "crawl_run_id": result.crawl_run_id,
-                    }
-                    await db.commit()
+        from src.services.task_executor import execute_task
+        output = await execute_task(task.task_uuid)
 
-        if result and result.new_reports == 0:
+        if output.get("new_reports", 0) == 0:
             console.print("[yellow]✓ No new data to crawl[/yellow]")
-        elif result:
+        else:
             console.print(
-                f"[green]✓ {result.new_reports} reports fetched, "
-                f"{result.processed_reports} processed, "
-                f"{result.total_records} records stored[/green]"
+                f"[green]✓ {output.get('new_reports', 0)} reports fetched, "
+                f"{output.get('processed_reports', 0)} processed, "
+                f"{output.get('total_records', 0)} records stored[/green]"
             )
         console.print("[bold green]✨ Crawl completed successfully![/bold green]")
 
@@ -129,7 +108,7 @@ def generate_report(
             description=f"Review: {'Yes' if enable_review else 'No'}, Email: {'Yes' if send_email else 'No'}",
             priority=TaskPriority.NORMAL,
             input_data={
-                "country": country_code,
+                "country": country_code, "country_code": country_code,
                 "report_type": report_type,
                 "days": days,
                 "period_start": period_start,
@@ -148,39 +127,14 @@ def generate_report(
             content_type="text",
         )
 
-        result = None
-        report_id_ref = [None]
-        from src.services import ReportService, task_lifecycle
-        async with task_lifecycle(task, report_id_ref=report_id_ref):
-            service = ReportService()
-            result = await service.execute(
-                task=task,
-                country_code=country_code,
-                report_type=report_type,
-                period_start_iso=period_start,
-                period_end_iso=period_end,
-                days=days,
-                enable_review=enable_review,
-                send_email=send_email,
-            )
-            report_id_ref[0] = result.report_id
-            async with get_database() as db:
-                task_obj = await db.get(Task, task.id)
-                if task_obj:
-                    task_obj.output_data = {
-                        "report_id": result.report_id,
-                        "status": result.status,
-                        "files": result.output_files,
-                        "sections_count": result.sections_count,
-                        "reused": result.reused,
-                    }
-                    await db.commit()
+        from src.services.task_executor import execute_task
+        output = await execute_task(task.task_uuid)
 
-        if result:
-            prefix = "Reused approved" if result.reused else "Generated"
-            console.print(f"[bold green]✨ {prefix} report #{result.report_id}![/bold green]")
-            console.print(f"  Status: {result.status}")
-            for f in result.output_files:
+        if output:
+            prefix = "Reused approved" if output.get("reused") else "Generated"
+            console.print(f"[bold green]✨ {prefix} report #{output.get('report_id')}![/bold green]")
+            console.print(f"  Status: {output.get('status')}")
+            for f in output.get("files", []):
                 console.print(f"  {f}")
 
     asyncio.run(_run())

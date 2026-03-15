@@ -47,6 +47,7 @@ class ChinaCDCCrawler(BaseCrawler):
             max_retries=3,
             delay=1.0,
         )
+        self.last_crawl_stats: Dict[str, object] = {}
     
     @staticmethod
     def extract_date_en(text: str) -> Optional[str]:
@@ -148,7 +149,7 @@ class ChinaCDCCrawler(BaseCrawler):
         list_results: List[CrawlerResult],
         *,
         fill_missing: bool = False,
-    ) -> Dict[str, List[CrawlerResult]]:
+    ) -> Dict[str, object]:
         """
         第二阶段：检查哪些数据是新的（与数据库对比）
         
@@ -200,6 +201,7 @@ class ChinaCDCCrawler(BaseCrawler):
         new_results = []
         existing_results = []
         
+        missing_months: Set[str] = set()
         for result in list_results:
             if result.date is None:
                 logger.warning(f"报告缺少日期信息，跳过: {result.title}")
@@ -209,6 +211,8 @@ class ChinaCDCCrawler(BaseCrawler):
             
             # If backfill is enabled, also fetch reports whose month is missing in DB.
             is_missing_month = fill_missing and (result.year_month is not None) and (result.year_month not in existing_year_months)
+            if is_missing_month and result.year_month:
+                missing_months.add(result.year_month)
 
             # 如果数据库为空，或报告时间晚于数据库最新时间，则需要爬取
             if max_date is None or result_date > max_date or is_missing_month:
@@ -226,7 +230,16 @@ class ChinaCDCCrawler(BaseCrawler):
         
         return {
             'new': new_results,
-            'existing': existing_results
+            'existing': existing_results,
+            'stats': {
+                'max_date': max_date.isoformat() if max_date else None,
+                'total_candidates': len(list_results),
+                'new_count': len(new_results),
+                'existing_count': len(existing_results),
+                'fill_missing': fill_missing,
+                'missing_months_count': len(missing_months),
+                'missing_months': sorted(missing_months),
+            },
         }
     
     async def crawl(
@@ -253,6 +266,12 @@ class ChinaCDCCrawler(BaseCrawler):
         # 第一阶段：获取列表
         logger.info("[阶段1/3] 获取数据列表...")
         list_results = await self.fetch_list(source=source, **kwargs)
+        self.last_crawl_stats = {
+            "source": source,
+            "force": force,
+            "fill_missing": fill_missing,
+            "total_candidates": len(list_results),
+        }
         
         if not list_results:
             logger.warning("未发现任何数据")
@@ -262,10 +281,19 @@ class ChinaCDCCrawler(BaseCrawler):
         if force:
             logger.info("[阶段2/3] 强制模式：将爬取所有数据")
             new_results = list_results
+            self.last_crawl_stats.update({
+                "mode": "force",
+                "new_count": len(new_results),
+                "existing_count": 0,
+                "max_date": None,
+                "missing_months_count": 0,
+                "missing_months": [],
+            })
         else:
             logger.info("[阶段3/3] 检查新数据...")
             check_result = await self.check_new_data(list_results, fill_missing=fill_missing)
             new_results = check_result['new']
+            self.last_crawl_stats.update(check_result.get("stats", {}))
         
         if not new_results:
             logger.info("✓ 无新数据需要爬取")

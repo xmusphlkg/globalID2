@@ -17,14 +17,15 @@ logger = get_logger(__name__)
 
 
 @asynccontextmanager
-async def task_lifecycle(task: Task, *, report_id_ref: Optional[list] = None):
+async def task_lifecycle(task: Task, *, report_id_ref: Optional[list] = None, exit_on_cancel: bool = True):
     """
     Async context manager that wraps one command execution.
 
     On entry  → sets task status to RUNNING.
     On normal exit → sets task status to COMPLETED.
     On KeyboardInterrupt → sets CANCELLED, marks associated report CANCELLED
-                           (if report_id_ref is provided), then sys.exit(130).
+                           (if report_id_ref is provided), then sys.exit(130)
+                           when *exit_on_cancel* is True (CLI mode).
     On Exception → sets FAILED, logs error to workbook, re-raises.
 
     Args:
@@ -33,14 +34,21 @@ async def task_lifecycle(task: Task, *, report_id_ref: Optional[list] = None):
                        report DB id.  Pass an empty list and update it inside
                        the ``async with`` block; the manager will read it on
                        failure to also mark the report as FAILED/CANCELLED.
+        exit_on_cancel: If True (default/CLI), call sys.exit(130) on
+                        KeyboardInterrupt.  Set False for API background tasks
+                        to avoid killing the server process.
     """
     await task_manager.update_task_status(task.task_uuid, TaskStatus.RUNNING)
 
-    def _noop(signum, frame):
-        # Raise KeyboardInterrupt so the except branch below fires
-        raise KeyboardInterrupt()
+    # Only install signal handlers when running in CLI mode (main thread)
+    import threading
+    is_main_thread = threading.current_thread() is threading.main_thread()
 
-    old_sigterm = signal.signal(signal.SIGTERM, _noop)
+    old_sigterm = None
+    if is_main_thread and exit_on_cancel:
+        def _noop(signum, frame):
+            raise KeyboardInterrupt()
+        old_sigterm = signal.signal(signal.SIGTERM, _noop)
 
     try:
         yield
@@ -61,7 +69,8 @@ async def task_lifecycle(task: Task, *, report_id_ref: Optional[list] = None):
             error_message="Interrupted by user",
         )
         await _mark_report(report_id_ref, "cancelled", "Interrupted by user")
-        sys.exit(130)
+        if exit_on_cancel:
+            sys.exit(130)
 
     except Exception as exc:
         logger.error(f"Task {task.task_uuid} failed: {exc}")
@@ -81,7 +90,8 @@ async def task_lifecycle(task: Task, *, report_id_ref: Optional[list] = None):
         raise
 
     finally:
-        signal.signal(signal.SIGTERM, old_sigterm)
+        if old_sigterm is not None:
+            signal.signal(signal.SIGTERM, old_sigterm)
 
 
 async def _mark_report(

@@ -15,6 +15,10 @@ export interface DataSourceFlow {
   data_source: string;
   record_count: number;
   latest_date: string | null;
+  latest_task_uuid?: string | null;
+  latest_task_source?: string | null;
+  latest_task_status?: string | null;
+  latest_task_time?: string | null;
   stages: StageInfo[];
 }
 
@@ -35,6 +39,46 @@ export interface CreateCrawlTaskPayload {
   input_data?: Record<string, unknown>;
 }
 
+/** Start a crawl that actually executes (not just creates a DB record). */
+export interface StartCrawlPayload {
+  country_id: number;
+  source?: string;
+  force?: boolean;
+  process?: boolean;
+  save_raw?: boolean;
+  fill_missing?: boolean;
+  priority?: string;
+}
+
+export function useStartCrawl() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: StartCrawlPayload) =>
+      apiFetch("/crawl/start", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sources-flow"] });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    },
+  });
+}
+
+/** Execute an existing pending/failed task. */
+export function useExecuteTask() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (taskUuid: string) =>
+      apiFetch(`/tasks/${taskUuid}/execute`, { method: "POST" }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sources-flow"] });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    },
+  });
+}
+
+/** Legacy: create a task record only (no execution). */
 export function useCreateCrawlTask() {
   const queryClient = useQueryClient();
   return useMutation({

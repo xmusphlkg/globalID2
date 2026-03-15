@@ -22,6 +22,7 @@ from .standard_disease import StandardDisease
 from .disease_mapping import DiseaseMapping
 from .disease_learning_suggestion import DiseaseLearningSuggestion
 from .country_scope import CountryScope
+from .ai_model_center import AIProviderConfig, AIModelConfig
 
 __all__ = [
     # Base classes
@@ -53,4 +54,6 @@ __all__ = [
     "DiseaseMapping",
     "DiseaseLearningSuggestion",
     "CountryScope",
+    "AIProviderConfig",
+    "AIModelConfig",
 ]
