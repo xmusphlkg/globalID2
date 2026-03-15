@@ -106,7 +106,22 @@ class AISettings(_BaseEnvSettings):
     enable_rate_limiting: bool = Field(default=True, description="是否启用限流")
     rate_limit: int = Field(default=50, description="每分钟请求限制")
     rate_limit_cooldown_seconds: int = Field(default=300, gt=0, description="命中429/额度限制后的冷却秒数")
+    rate_limit_wait_cap_seconds: int = Field(
+        default=900,
+        gt=0,
+        description="限流恢复阶段单次最大等待秒数（建议大于等于冷却时间）",
+    )
+    rate_limit_recovery_max_rounds: int = Field(
+        default=4,
+        ge=0,
+        le=20,
+        description="当全部候选因限流失败时，允许的恢复重试轮数",
+    )
     route_cache_ttl_seconds: int = Field(default=15, gt=0, description="模型中心运行时路由缓存秒数")
+    prompt_auto_reload: bool = Field(
+        default=False,
+        description="是否启用提示词模板热刷新（开发环境建议开启）",
+    )
     
     # 测试配置
     enable_api_test: bool = Field(default=True, description="是否启用API连通性测试")

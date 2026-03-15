@@ -38,9 +38,11 @@ class AIStartRequest(BaseModel):
     report_type: str = Field("monthly", description="Report type: daily / weekly / monthly / special")
     period_start: Optional[str] = Field(None, description="ISO datetime, optional")
     period_end: Optional[str] = Field(None, description="ISO datetime, optional")
+    language: str = Field("en", description="Report language: zh or en")
     days: int = Field(365, ge=1, le=3650, description="Fallback period in days")
     enable_review: bool = Field(True, description="Enable reviewer agent")
     send_email: bool = Field(False, description="Send email after generation")
+    reuse_from_failed: bool = Field(True, description="Reuse partial output from failed/generating tasks in same scope")
     priority: str = Field("normal", description="Task priority")
     task_name: Optional[str] = Field(None, description="Optional custom task name")
     description: Optional[str] = Field(None, description="Optional task description")
@@ -205,9 +207,15 @@ async def start_ai_task(
     task_name = body.task_name or f"Generate {report_type.upper()} Report for {country_code}"
     description = body.description or (
         f"Report Type: {report_type}, Days: {body.days}, "
+        f"Language: {body.language}, "
         f"Review: {'Yes' if body.enable_review else 'No'}, "
-        f"Email: {'Yes' if body.send_email else 'No'}"
+        f"Email: {'Yes' if body.send_email else 'No'}, "
+        f"Reuse Failed: {'Yes' if body.reuse_from_failed else 'No'}"
     )
+
+    language = (body.language or "en").strip().lower()
+    if language not in {"zh", "en"}:
+        raise HTTPException(422, "Invalid language, expected 'zh' or 'en'")
 
     task = await task_manager.create_task(
         task_type=TaskType.GENERATE_REPORT,
@@ -221,9 +229,11 @@ async def start_ai_task(
             "report_type": report_type,
             "period_start": body.period_start,
             "period_end": body.period_end,
+            "language": language,
             "days": body.days,
             "enable_review": body.enable_review,
             "send_email": body.send_email,
+            "reuse_from_failed": body.reuse_from_failed,
         },
     )
 

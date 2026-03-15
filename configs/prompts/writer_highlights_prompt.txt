@@ -1,0 +1,11 @@
+Analyze the provided data for {disease_name} (all names: {disease_names_str}) and summarize key epidemiological trends as of {report_date}.
+Data period: {period_start} to {period_end}
+
+{previous_sections_injection}
+
+Format as 3-4 bullet points, each followed by <br/>.
+Word count: 100-110 words.
+Data: {data_context}
+
+Target output language: {language}
+{context_injection}

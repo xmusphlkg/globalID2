@@ -47,9 +47,11 @@ class ReportService:
         report_type: str,
         period_start_iso: Optional[str],
         period_end_iso: Optional[str],
+        language: str,
         days: int,
         enable_review: bool,
         send_email: bool,
+        reuse_from_failed: bool = True,
         report_id_ref: Optional[list] = None,
     ) -> ReportResult:
         """
@@ -60,6 +62,10 @@ class ReportService:
         """
         from src.ai.model_check import ensure_available_models_checked_async
         from src.generation import ReportGenerator
+
+        language = (language or "en").strip().lower()
+        if language not in {"zh", "en"}:
+            language = "en"
 
         # Check model availability once
         await ensure_available_models_checked_async()
@@ -108,23 +114,36 @@ class ReportService:
             )
             await task_manager.update_task_progress(task.task_uuid, 15)
 
-            resumable_report = await self._resolve_task_attached_report(
-                db,
-                task,
-                country_obj=country_obj,
-                report_type=report_type_enum,
-            )
-            if resumable_report:
-                if report_id_ref is not None:
-                    report_id_ref[0] = resumable_report.id
-                await task_manager.link_task_report(task.task_uuid, resumable_report.id)
+            resumable_report = None
+            if reuse_from_failed:
+                resumable_report = await self._resolve_task_attached_report(
+                    db,
+                    task,
+                    country_obj=country_obj,
+                    report_type=report_type_enum,
+                )
+                if resumable_report:
+                    if report_id_ref is not None:
+                        report_id_ref[0] = resumable_report.id
+                    await task_manager.link_task_report(task.task_uuid, resumable_report.id)
+                    await task_manager.add_workbook_entry(
+                        task.task_uuid,
+                        entry_type="warning",
+                        title="Resuming Attached Report",
+                        content=(
+                            f"Reusing existing report #{resumable_report.id} already attached to this task. "
+                            "Existing sections will be reused and only missing work will continue."
+                        ),
+                        content_type="text",
+                    )
+            else:
                 await task_manager.add_workbook_entry(
                     task.task_uuid,
-                    entry_type="warning",
-                    title="Resuming Attached Report",
+                    entry_type="info",
+                    title="Resume Disabled",
                     content=(
-                        f"Reusing existing report #{resumable_report.id} already attached to this task. "
-                        "Existing sections will be reused and only missing work will continue."
+                        "Reuse from failed tasks is disabled for this run. "
+                        "A fresh report will be generated instead of resuming previous failed work."
                     ),
                     content_type="text",
                 )
@@ -158,7 +177,7 @@ class ReportService:
                     reused=True,
                 )
 
-            if not resumable_report:
+            if reuse_from_failed and not resumable_report:
                 resumable_report = await self._find_resumable_report(
                     db, country_obj, report_type_enum, period_start, period_end
                 )
@@ -214,6 +233,7 @@ class ReportService:
                 report_type=report_type_enum,
                 period_start=period_start,
                 period_end=period_end,
+                language=language,
                 existing_report=resumable_report,
                 send_email=send_email,
                 enable_review=enable_review,

@@ -1,0 +1,5 @@
+Give a brief introduction to {disease_name}, without analysis or commentary.
+Word limit: 90-100 words.
+
+Target output language: {language}
+{context_injection}

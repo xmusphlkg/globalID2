@@ -254,11 +254,24 @@ class ReportGenerator:
             
             await notify_progress("writing", 1, 1, f"Generated {len(sections)} sections")
             
-            # 4. 审核内容
-            if kwargs.get('enable_review', True):
+            # 4. 可选后置审核（默认关闭）：主流程已在写作阶段完成内联审核与修订
+            enable_review = kwargs.get('enable_review', True)
+            enable_post_review = kwargs.get('enable_post_review', False)
+            if enable_review and enable_post_review:
                 await notify_progress("review", 0, len(sections), "Starting content review...")
-                sections = await self._review_sections(db, report, sections, data, raw_sources, progress_callback=notify_progress, task_uuid=task_uuid)
+                sections = await self._review_sections(
+                    db,
+                    report,
+                    sections,
+                    data,
+                    raw_sources,
+                    progress_callback=notify_progress,
+                    task_uuid=task_uuid,
+                    language=kwargs.get('language', 'en'),
+                )
                 await notify_progress("review", len(sections), len(sections), "Review complete")
+            elif enable_review:
+                await notify_progress("review", len(sections), len(sections), "Inline review completed during writing")
             
             # 5. 格式化并保存
             await self._ensure_task_not_cancelled(task_uuid, report.id)
@@ -273,7 +286,6 @@ class ReportGenerator:
                 await self._send_email(report, sections)
             
             # 8. 更新状态（根据审核结果决定是否标记为APPROVED）
-            enable_review = kwargs.get('enable_review', True)
             if enable_review:
                 # 计算整体质量分，并判断是否所有章节均通过审核
                 all_verified = True
@@ -440,6 +452,8 @@ class ReportGenerator:
         
         # Extract progress callback
         progress_callback = kwargs.get('progress_callback', None)
+        review_language = kwargs.get('language', 'en')
+        enable_inline_review = kwargs.get('enable_review', True)
         
         # 获取最大并行任务数配置
         config = get_config()
@@ -475,10 +489,27 @@ class ReportGenerator:
                 'type': section.section_type,
                 'chart_html': None,  # 从数据库加载的章节没有图表HTML
                 'disease_name': parts[0] if len(parts) >= 2 else "",
+                'is_verified': bool(section.is_verified),
+                'quality_scores': {},
             })
         
         if existing_sections:
             logger.info(f"Found {len(existing_sections)} existing sections, resuming from where we left off")
+            await self._log_task_event(
+                task_uuid,
+                entry_type="warning",
+                title="Resuming Existing Sections",
+                content=(
+                    f"Found {len(existing_sections)} existing sections in report #{report.id}. "
+                    "These sections will be reused directly; only missing sections will call AI agents."
+                ),
+                metadata={
+                    "scope": "report",
+                    "event": "resume_existing_sections",
+                    "report_id": report.id,
+                    "existing_sections": int(len(existing_sections)),
+                },
+            )
         
         # 可选：尝试从已审核通过的报告中复用章节，减少重复AI调用
         reuse_from_approved: bool = kwargs.get("reuse_from_approved", True)
@@ -520,6 +551,22 @@ class ReportGenerator:
                     logger.info(
                         f"Found approved base report {reuse_base.id} with "
                         f"{len(reusable_sections)} reusable section templates"
+                    )
+                    await self._log_task_event(
+                        task_uuid,
+                        entry_type="info",
+                        title="Approved Templates Loaded",
+                        content=(
+                            f"Loaded {len(reusable_sections)} reusable section templates "
+                            f"from approved report #{reuse_base.id}."
+                        ),
+                        metadata={
+                            "scope": "report",
+                            "event": "approved_templates_loaded",
+                            "report_id": report.id,
+                            "base_report_id": reuse_base.id,
+                            "template_count": int(len(reusable_sections)),
+                        },
                     )
             except Exception as e:
                 logger.warning(f"Failed to load reusable sections from approved report: {e}")
@@ -645,6 +692,7 @@ class ReportGenerator:
                 disease_name=disease_display_name,
                 period_start=report_period_start,
                 period_end=report_period_end,
+                language=review_language,
             )
             
             # 附加疾病的所有可能名称与报告周期（供 Writer/Reviewer 使用）
@@ -690,11 +738,32 @@ class ReportGenerator:
             
             # 附加原始网页上下文，供后续写作/审核参考
             analysis_result["raw_sources"] = relevant_raw_sources
+
+            # 审核统一使用清洗后的结构化摘要，避免混用原始长表/中间对象
+            review_data_summary = self._build_data_summary_for_review(disease_data, disease_display_name)
+            review_data_summary["formatted_table"] = formatted.get("markdown_table", "")
+            review_data_summary["data_frequency"] = formatted.get("frequency", "monthly")
+            review_data_summary["raw_sources"] = [
+                {
+                    "url": src.get("url"),
+                    "title": (src.get("title") or "")[:200],
+                    "snippet": (src.get("snippet") or src.get("text", ""))[:500],
+                }
+                for src in (relevant_raw_sources or [])[:5]
+            ]
+            review_data_summary["report_period"] = analysis_result.get("report_period", {})
+
+            # Shared blackboard context for this disease: all agents read slices from here.
+            shared_context = self._build_shared_context(
+                disease_name=disease_display_name,
+                analysis_result=analysis_result,
+                review_data_summary=review_data_summary,
+            )
             
             # 生成各章节（顺序执行以传递依赖：trend→key_findings→highlights→summary）
             writer = WriterAgent()
             reviewer = ReviewerAgent()
-            previous_sections_content: List[str] = []
+            previous_section_summaries: List[str] = []
 
             disease_sections = []
             for section_type in section_types:
@@ -737,9 +806,12 @@ class ReportGenerator:
                                 "revision_count": 0,
                                 "writer_temperature": writer.temperature,
                                 "writer_max_tokens": writer.max_tokens,
+                                "is_verified": bool(base_section.is_verified),
                             }
                         )
-                        previous_sections_content.append(f"[{section_type}]\n{reused_content}")
+                        previous_section_summaries.append(
+                            f"[{section_type}] {self._summarize_section_text(reused_content)}"
+                        )
                         logger.info(
                             f"Reused approved section for {disease_display_name} / {section_type} "
                             f"from base report"
@@ -800,20 +872,32 @@ class ReportGenerator:
                 revision_instructions = None
                 revision_count = 0
                 writer_result = None
-                review_result = None
+                review_result = {
+                    "approved": True,
+                    "quality_score": {},
+                    "suggestions": [],
+                    "assessment": "Inline review disabled",
+                    "rewrite_instruction": "",
+                }
 
-                # 供 Writer 使用的清洗后宽表 Markdown（替代原始长表，避免日期过长、信息丢失）
-                table_data_str = analysis_result.get("formatted_table") or ""
-                prev_content_str = "\n\n---\n\n".join(previous_sections_content) if previous_sections_content else ""
+                section_context = self._build_section_context(
+                    shared_context=shared_context,
+                    section_type=section_type,
+                    previous_section_summaries=previous_section_summaries,
+                )
 
-                for attempt in range(self.MAX_REVISIONS + 1):
+                table_data_str = section_context.get("formatted_table") or ""
+                prev_content_str = section_context.get("previous_sections_content") or ""
+
+                max_attempts = (self.MAX_REVISIONS + 1) if enable_inline_review else 1
+                for attempt in range(max_attempts):
                     await self._ensure_task_not_cancelled(task_uuid, report.id)
                     writer.clear_conversation_history()
                     writer_result = await writer.process(
                         section_type=section_type,
-                        analysis_data=analysis_result,
+                        analysis_data=section_context,
                         style=kwargs.get('style', 'formal'),
-                        language=kwargs.get('language', 'en'),
+                        language=review_language,
                         raw_sources=relevant_raw_sources,
                         revision_instructions=revision_instructions,
                         table_data_str=table_data_str,
@@ -821,28 +905,37 @@ class ReportGenerator:
                         report_date=report_period_end.strftime("%Y-%m-%d"),
                     )
 
-                    # 内联快速审核
+                    if not enable_inline_review:
+                        break
+
+                    # 内联快速审核（使用清洗后的 review_data_summary）
                     reviewer.clear_conversation_history()
                     try:
                         review_result = await reviewer.process(
                             content=writer_result['content'],
                             content_type=section_type,
-                            original_data=analysis_result,
+                            original_data=shared_context.get("review_packet", review_data_summary),
+                            language=review_language,
                         )
                     except Exception as review_err:
                         logger.warning(f"Inline review failed for {disease_display_name}/{section_type}: {review_err}")
                         break
 
-                    if review_result.get('approved', True) or attempt == self.MAX_REVISIONS:
+                    if review_result.get('approved', True) or attempt == (max_attempts - 1):
                         break
 
                     # 未通过 → 准备修订指令进入下一轮
-                    suggestions = review_result.get('suggestions', [])
-                    revision_instructions = "\n".join(suggestions) if suggestions else None
+                    rewrite_instruction = review_result.get('rewrite_instruction')
+                    if isinstance(rewrite_instruction, str) and rewrite_instruction.strip():
+                        revision_instructions = rewrite_instruction.strip()
+                    else:
+                        suggestions = review_result.get('suggestions', [])
+                        revision_instructions = "\n".join(suggestions) if suggestions else None
                     revision_count += 1
+                    suggestion_count = len(review_result.get('suggestions', []) or [])
                     logger.info(
                         f"Section {disease_display_name}/{section_type} revision #{revision_count}: "
-                        f"{len(suggestions)} suggestion(s)"
+                        f"{suggestion_count} suggestion(s)"
                     )
 
                 # 合并所有对话历史
@@ -954,9 +1047,12 @@ class ReportGenerator:
                     'revision_count': revision_count,
                     'writer_temperature': writer.temperature,
                     'writer_max_tokens': writer.max_tokens,
+                    'is_verified': bool(review_result.get('approved', True)) if enable_inline_review else True,
                 })
                 # 累积已生成章节内容，供后续 highlight/summary 依赖
-                previous_sections_content.append(f"[{section_type}]\n{section_content}")
+                previous_section_summaries.append(
+                    f"[{section_type}] {self._summarize_section_text(section_content)}"
+                )
 
                 # Persist COMPLETED status immediately so dashboard shows correct state during generation
                 if run_id:
@@ -1064,6 +1160,7 @@ class ReportGenerator:
                 section_type=section_data['section_type'],
                 section_order=len(sections) + 1,
                 data_sources=section_data.get('data_sources', []),
+                is_verified=bool(section_data.get('is_verified', False)),
             )
 
             db.add(section)
@@ -1130,6 +1227,8 @@ class ReportGenerator:
                 'disease_id': section_data.get('disease_id'),
                 'disease_name': section_data.get('disease_name'),
                 'token_usage': section_data.get('token_usage', {}),
+                'quality_scores': section_data.get('quality_scores', {}),
+                'is_verified': bool(section_data.get('is_verified', False)),
             })
             new_sections_count += 1
 
@@ -1226,6 +1325,90 @@ class ReportGenerator:
             logger.warning(f"Failed to build data summary for review: {e}")
             return {"disease_name": disease_name, "statistics": {}, "trends": {}, "summary": f"Error: {e}"}
 
+    @staticmethod
+    def _summarize_section_text(text: str, max_chars: int = 260) -> str:
+        """Build a compact section summary for cross-section context passing."""
+        if not text:
+            return ""
+        compact = " ".join(str(text).split())
+        if len(compact) <= max_chars:
+            return compact
+        return compact[:max_chars] + "..."
+
+    def _build_shared_context(
+        self,
+        disease_name: str,
+        analysis_result: Dict[str, Any],
+        review_data_summary: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Create a disease-level blackboard context consumed by writer/reviewer slices."""
+        period = analysis_result.get("period") or {}
+        stats = analysis_result.get("statistics") or {}
+        trends = analysis_result.get("trends") or {}
+        anomalies = analysis_result.get("anomalies") or []
+        insights = analysis_result.get("insights") or ""
+        formatted_table = analysis_result.get("formatted_table") or ""
+        data_frequency = analysis_result.get("data_frequency") or "monthly"
+        raw_sources = analysis_result.get("raw_sources") or []
+
+        return {
+            "disease_name": disease_name,
+            "disease_names_all": analysis_result.get("disease_names_all") or [disease_name],
+            "period": {
+                "start": period.get("start", ""),
+                "end": period.get("end", ""),
+            },
+            "report_period": analysis_result.get("report_period") or {},
+            "statistics": stats,
+            "trends": trends,
+            "anomalies": anomalies[:5],
+            "insights": self._summarize_section_text(insights, max_chars=900),
+            "formatted_table": formatted_table[:1600],
+            "data_frequency": data_frequency,
+            "raw_sources": [
+                {
+                    "url": src.get("url"),
+                    "title": (src.get("title") or "")[:180],
+                    "snippet": (src.get("snippet") or src.get("text", ""))[:260],
+                }
+                for src in raw_sources[:3]
+            ],
+            "review_packet": review_data_summary,
+        }
+
+    def _build_section_context(
+        self,
+        shared_context: Dict[str, Any],
+        section_type: str,
+        previous_section_summaries: List[str],
+    ) -> Dict[str, Any]:
+        """Build minimal section-specific writer context from shared blackboard."""
+        previous_compact = "\n".join(previous_section_summaries[-3:]) if previous_section_summaries else ""
+
+        section_context = {
+            "disease_name": shared_context.get("disease_name"),
+            "disease_names_all": shared_context.get("disease_names_all") or [],
+            "period": shared_context.get("period") or {},
+            "report_period": shared_context.get("report_period") or {},
+            "statistics": shared_context.get("statistics") or {},
+            "trends": shared_context.get("trends") or {},
+            "anomalies": shared_context.get("anomalies") or [],
+            "insights": shared_context.get("insights") or "",
+            "formatted_table": shared_context.get("formatted_table") or "",
+            "data_frequency": shared_context.get("data_frequency") or "monthly",
+            "raw_sources": shared_context.get("raw_sources") or [],
+            "section_type": section_type,
+            "previous_sections_content": previous_compact,
+        }
+
+        # Further trim noisy fields for sections that do not need full table context.
+        if section_type in ("key_findings", "highlights"):
+            section_context["formatted_table"] = (section_context.get("formatted_table") or "")[:1000]
+        if section_type == "summary":
+            section_context["formatted_table"] = (section_context.get("formatted_table") or "")[:1300]
+
+        return section_context
+
     async def _review_sections(
         self,
         db,
@@ -1235,6 +1418,7 @@ class ReportGenerator:
         raw_sources: Optional[List[Dict[str, Any]]] = None,
         progress_callback: Optional[callable] = None,
         task_uuid: Optional[str] = None,
+        language: str = "en",
     ) -> List[Dict[str, Any]]:
         """审核章节内容并更新数据库（AI调用并行，DB写入顺序执行）"""
         from sqlalchemy import select
@@ -1271,6 +1455,7 @@ class ReportGenerator:
                         content=section['content'],
                         content_type=section['type'],
                         original_data=data_summary,
+                        language=language,
                     )
                     reviewer_conversations = reviewer.get_conversation_history()
                 except Exception as e:
