@@ -14,6 +14,8 @@ export interface ReportListItem {
   quality_score: number | null;
   generation_time: number | null;
   section_count: number;
+  primary_disease?: string | null;
+  disease_names?: string[];
   created_at: string;
 }
 

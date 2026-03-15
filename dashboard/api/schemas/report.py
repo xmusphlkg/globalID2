@@ -18,6 +18,8 @@ class ReportOut(BaseModel):
     quality_score: Optional[float] = None
     generation_time: Optional[float] = None
     section_count: int = 0
+    primary_disease: Optional[str] = None
+    disease_names: List[str] = []
     created_at: datetime
 
     model_config = {"from_attributes": True}

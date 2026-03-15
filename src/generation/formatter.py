@@ -103,12 +103,14 @@ class ReportFormatter:
             lines.append("")
             
             content = section.get('content', '')
-            lines.append(content)
+            safe_content = content if isinstance(content, str) else ("" if content is None else str(content))
+            lines.append(safe_content)
             lines.append("")
             
             # 如果有图表
-            if 'chart_path' in section:
-                lines.append(f"![{section_title} 图表]({section['chart_path']})")
+            chart_path = section.get('chart_path')
+            if chart_path:
+                lines.append(f"![{section_title} 图表]({chart_path})")
                 lines.append("")
             
             lines.append("---")
@@ -120,7 +122,7 @@ class ReportFormatter:
         lines.append(f"*本报告由 GlobalID V2 自动生成*")
         lines.append("")
         
-        markdown_text = "\n".join(lines)
+        markdown_text = "\n".join("" if item is None else str(item) for item in lines)
         
         logger.info(f"Markdown formatted: {len(markdown_text)} characters")
         return markdown_text
@@ -233,17 +235,20 @@ class ReportFormatter:
             
             # 将Markdown内容转换为HTML
             content = section.get('content', '')
-            content_html = markdown.markdown(content, extensions=self.md_extensions)
+            safe_content = content if isinstance(content, str) else ("" if content is None else str(content))
+            content_html = markdown.markdown(safe_content, extensions=self.md_extensions)
             html_parts.append(content_html)
             
             # 图表
-            if 'chart_html' in section:
+            chart_html = section.get('chart_html')
+            chart_path = section.get('chart_path')
+            if chart_html:
                 html_parts.append('<div class="chart">')
-                html_parts.append(section['chart_html'])
+                html_parts.append(chart_html if isinstance(chart_html, str) else str(chart_html))
                 html_parts.append('</div>')
-            elif 'chart_path' in section:
+            elif chart_path:
                 html_parts.append('<div class="chart">')
-                html_parts.append(f'<img src="{section["chart_path"]}" alt="{section.get("title", "图表")}" style="max-width:100%;">')
+                html_parts.append(f'<img src="{chart_path}" alt="{section.get("title", "图表")}" style="max-width:100%;">')
                 html_parts.append('</div>')
             
             html_parts.append('</div>')
@@ -260,7 +265,7 @@ class ReportFormatter:
 </html>
 """)
         
-        html = "\n".join(html_parts)
+        html = "\n".join("" if part is None else str(part) for part in html_parts)
         
         logger.info(f"HTML formatted: {len(html)} characters")
         return html

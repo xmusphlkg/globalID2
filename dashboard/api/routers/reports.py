@@ -1,5 +1,6 @@
 """Reports router – list, detail, sections, conversations, AI insights."""
 
+from collections import defaultdict
 from datetime import datetime
 from typing import Any, List, Optional
 
@@ -178,6 +179,25 @@ async def list_reports(
 
     rows = (await db.execute(q)).all()
 
+    disease_map: dict[int, list[str]] = {}
+    report_ids = [r.Report.id for r in rows]
+    if report_ids:
+        run_rows = (
+            await db.execute(
+                select(ReportSectionRun.report_id, ReportSectionRun.disease_name)
+                .where(ReportSectionRun.report_id.in_(report_ids))
+            )
+        ).all()
+        grouped_diseases: dict[int, set[str]] = defaultdict(set)
+        for report_id, disease_name in run_rows:
+            normalized = (disease_name or "").strip()
+            if normalized:
+                grouped_diseases[int(report_id)].add(normalized)
+        disease_map = {
+            report_id: sorted(list(names))
+            for report_id, names in grouped_diseases.items()
+        }
+
     return [
         ReportOut(
             id=r.Report.id,
@@ -192,6 +212,8 @@ async def list_reports(
             quality_score=r.Report.quality_score,
             generation_time=r.Report.generation_time,
             section_count=r.section_count,
+            primary_disease=(disease_map.get(r.Report.id) or [None])[0],
+            disease_names=disease_map.get(r.Report.id, []),
             created_at=r.Report.created_at,
         )
         for r in rows
