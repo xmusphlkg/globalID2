@@ -1,0 +1,27 @@
+{
+  "_DEFAULT": {
+    "data_source_type": "web"
+  },
+  "CN": {
+    "data_source_url": "http://weekly.chinacdc.cn",
+    "crawler_config": {
+      "sources": [
+        "cdc_weekly",
+        "nhc",
+        "pubmed_rss"
+      ]
+    },
+    "parser_config": {
+      "primary": "china_cdc_weekly"
+    },
+    "disease_mapping_rules": {
+      "strategy": "db_first",
+      "fallback": "learning_suggestions"
+    },
+    "report_config": {
+      "default_type": "WEEKLY",
+      "lang": "zh-CN"
+    },
+    "notes": "Auto bootstrapped by country library"
+  }
+}

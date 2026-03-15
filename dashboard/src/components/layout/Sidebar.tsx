@@ -12,6 +12,7 @@ import {
   Cpu,
   Send,
   Search as SearchIcon,
+  GitBranch,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -32,6 +33,7 @@ const navGroups: NavGroup[] = [
     icon: Download,
     items: [
       { href: "/sources", labelKey: "crawl_tasks", icon: Download },
+      { href: "/sources/flow", labelKey: "flow_nav_label", icon: GitBranch },
     ],
   },
   {
@@ -71,7 +73,18 @@ export function Sidebar({ mobileOpen, onClose }: { mobileOpen?: boolean; onClose
   const isActive = (href: string) => {
     if (href === "/") return path === "/";
     if (href === "/ai") return path === "/ai";
-    return path === href || path.startsWith(`${href}/`);
+    // For general routes, match exactly
+    if (path === href) return true;
+    
+    // For nested routes, make sure we only highlight the parent if we're in a sub-path
+    // that ISN'T explicitly listed in the sidebar.
+    // e.g. /sources/flow is its own item, so /sources shouldn't be active for it.
+    const isPrefixMatch = path.startsWith(`${href}/`);
+    const isExplicitlyHandledChild = navGroups.some(g => 
+      g.items.some(i => i.href !== href && path.startsWith(i.href))
+    );
+    
+    return isPrefixMatch && !isExplicitlyHandledChild;
   };
 
   const SidebarContent = (
@@ -155,3 +168,4 @@ export function Sidebar({ mobileOpen, onClose }: { mobileOpen?: boolean; onClose
     </>
   );
 }
+console.log('Sidebar imported');

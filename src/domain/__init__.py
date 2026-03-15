@@ -20,6 +20,8 @@ from .report import (
 from .task import Task, TaskWorkbook, TaskDependency, TaskStatus, TaskType, TaskPriority
 from .standard_disease import StandardDisease
 from .disease_mapping import DiseaseMapping
+from .disease_learning_suggestion import DiseaseLearningSuggestion
+from .country_scope import CountryScope
 
 __all__ = [
     # Base classes
@@ -49,4 +51,6 @@ __all__ = [
     "TaskPriority",
     "StandardDisease",
     "DiseaseMapping",
+    "DiseaseLearningSuggestion",
+    "CountryScope",
 ]

@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.core.database import get_engine
 from src.core.logging import get_logger
 
-from .routers import countries, diseases, explorer, overview, quality, reports, tasks
+from .routers import countries, diseases, explorer, overview, quality, reports, sources, tasks
 
 logger = get_logger(__name__)
 
@@ -52,9 +52,11 @@ def create_app() -> FastAPI:
     app.include_router(reports.router, prefix=prefix, tags=["Reports"])
     app.include_router(tasks.router, prefix=prefix, tags=["Tasks"])
     app.include_router(quality.router, prefix=prefix, tags=["Quality"])
+    app.include_router(sources.router, prefix=prefix, tags=["Sources"])
     app.include_router(explorer.router, prefix=prefix, tags=["Explorer"])
 
     @app.get("/api/v1/health", tags=["Health"])
+    @app.get("/health", tags=["Health"])
     async def health():
         return {"status": "ok"}
 
