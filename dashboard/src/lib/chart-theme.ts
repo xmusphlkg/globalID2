@@ -49,6 +49,7 @@ export const CHART_DEFAULTS: Record<string, unknown> = {
     containLabel: true,
   },
   legend: {
+    top: 0,
     textStyle: { fontSize: 12, color: "#5b7077" },
     icon: "roundRect",
     itemWidth: 12,

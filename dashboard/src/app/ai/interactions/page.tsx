@@ -1,10 +1,11 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAppStore } from "@/stores/app-store";
 import { Badge, Card, Grid, Metric, Text, Title } from "@tremor/react";
-import { MessageSquare, Search, ChevronDown } from "lucide-react";
+import { MessageSquare, Search, ChevronDown, ListTodo, Settings2 } from "lucide-react";
 import { Chart } from "@/components/charts/Chart";
 import { CHART_TOKENS } from "@/lib/chart-theme";
 import { ApiError } from "@/lib/api";
@@ -537,6 +538,22 @@ function AIInteractionsPageContent() {
         <Badge color="violet" className="w-fit">{t(lang, "mod_ai")}</Badge>
         <Title className="text-2xl">{t(lang, "ai_interactions")}</Title>
         <Text>{labels.subtitle}</Text>
+        <div className="flex flex-wrap items-center gap-2 pt-1">
+          <Link
+            href="/ai/tasks"
+            className="inline-flex items-center gap-1 rounded-lg border border-violet-300/70 bg-violet-50 px-3 py-1.5 text-xs font-medium text-violet-700 transition hover:bg-violet-100 dark:border-violet-800 dark:bg-violet-950/25 dark:text-violet-300"
+          >
+            <ListTodo className="h-3.5 w-3.5" />
+            Open AI Tasks
+          </Link>
+          <Link
+            href="/ai/models"
+            className="inline-flex items-center gap-1 rounded-lg border border-sky-300/70 bg-sky-50 px-3 py-1.5 text-xs font-medium text-sky-700 transition hover:bg-sky-100 dark:border-sky-900 dark:bg-sky-950/25 dark:text-sky-300"
+          >
+            <Settings2 className="h-3.5 w-3.5" />
+            Open AI Models
+          </Link>
+        </div>
       </div>
 
       <Grid numItems={1} numItemsSm={2} numItemsLg={5} className="gap-4">

@@ -4,12 +4,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BarChart3,
+  Home,
   Activity,
   FileText,
   Database,
   ShieldCheck,
   Download,
   Cpu,
+  Settings2,
   Send,
   Search as SearchIcon,
   GitBranch,
@@ -26,14 +28,16 @@ interface NavGroup {
   items: { href: string; labelKey: LangKey; icon: React.ElementType }[];
 }
 
+const topLevelItems: NavGroup["items"] = [{ href: "/", labelKey: "home", icon: Home }];
+
 const navGroups: NavGroup[] = [
   {
     step: 1,
     titleKey: "mod_sources",
     icon: Download,
     items: [
-      { href: "/sources", labelKey: "crawl_tasks", icon: Download },
       { href: "/sources/flow", labelKey: "flow_nav_label", icon: GitBranch },
+      { href: "/sources/tasks", labelKey: "crawl_tasks", icon: Download },
     ],
   },
   {
@@ -41,10 +45,10 @@ const navGroups: NavGroup[] = [
     titleKey: "mod_database",
     icon: Database,
     items: [
-      { href: "/", labelKey: "dashboard", icon: BarChart3 },
-      { href: "/diseases", labelKey: "diseases", icon: Activity },
-      { href: "/explorer", labelKey: "explorer", icon: SearchIcon },
-      { href: "/quality", labelKey: "quality", icon: ShieldCheck },
+      { href: "/data/dashboard", labelKey: "dashboard", icon: BarChart3 },
+      { href: "/data/diseases", labelKey: "diseases", icon: Activity },
+      { href: "/data/explorer", labelKey: "explorer", icon: SearchIcon },
+      { href: "/data/quality", labelKey: "quality", icon: ShieldCheck },
     ],
   },
   {
@@ -52,7 +56,8 @@ const navGroups: NavGroup[] = [
     titleKey: "mod_ai",
     icon: Cpu,
     items: [
-      { href: "/ai", labelKey: "ai_tasks", icon: Cpu },
+      { href: "/ai/models", labelKey: "ai_models", icon: Settings2 },
+      { href: "/ai/tasks", labelKey: "ai_tasks", icon: Cpu },
       { href: "/ai/interactions", labelKey: "ai_interactions", icon: SearchIcon },
     ],
   },
@@ -71,8 +76,8 @@ export function Sidebar({ mobileOpen, onClose }: { mobileOpen?: boolean; onClose
   const { lang } = useAppStore();
 
   const isActive = (href: string) => {
-    if (href === "/") return path === "/";
-    if (href === "/ai") return path === "/ai";
+    if (href === "/data/dashboard") return path === "/data/dashboard";
+    if (href === "/ai/tasks") return path === "/ai" || path === "/ai/tasks";
     // For general routes, match exactly
     if (path === href) return true;
     
@@ -94,6 +99,36 @@ export function Sidebar({ mobileOpen, onClose }: { mobileOpen?: boolean; onClose
       </div>
       <nav className="flex flex-1 flex-col">
         <ul role="list" className="flex flex-1 flex-col gap-y-7">
+          <li>
+            <ul role="list" className="-mx-2 space-y-1">
+              {topLevelItems.map((item) => {
+                const active = isActive(item.href);
+                return (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      onClick={onClose}
+                      className={cn(
+                        active
+                          ? "bg-tremor-brand-muted/20 text-tremor-brand dark:bg-dark-tremor-brand-muted/20 dark:text-dark-tremor-brand font-medium"
+                          : "text-tremor-content hover:bg-tremor-background-subtle hover:text-tremor-content-strong dark:text-dark-tremor-content dark:hover:bg-dark-tremor-background-subtle dark:hover:text-dark-tremor-content-strong",
+                        "group flex gap-x-3 rounded-tremor-default p-2 text-sm leading-6 transition-colors"
+                      )}
+                    >
+                      <item.icon
+                        className={cn(
+                          active ? "text-tremor-brand dark:text-dark-tremor-brand" : "text-tremor-content-subtle group-hover:text-tremor-content-strong dark:text-dark-tremor-content-subtle dark:group-hover:text-dark-tremor-content-strong",
+                          "h-5 w-5 shrink-0"
+                        )}
+                        aria-hidden="true"
+                      />
+                      {t(lang, item.labelKey)}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </li>
           {navGroups.map((group) => {
             const groupActive = group.items.some((item) => isActive(item.href));
 
@@ -168,4 +203,3 @@ export function Sidebar({ mobileOpen, onClose }: { mobileOpen?: boolean; onClose
     </>
   );
 }
-console.log('Sidebar imported');

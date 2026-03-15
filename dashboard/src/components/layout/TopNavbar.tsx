@@ -2,15 +2,28 @@
 
 import { useEffect } from "react";
 import { useAppStore } from "@/stores/app-store";
-import { useCountries } from "@/lib/hooks/useCountries";
+import { getCountryDisplayName, useCountries } from "@/lib/hooks/useCountries";
 import { Menu, Globe, Languages } from "lucide-react";
 
 export function TopNavbar({ onMenuClick }: { onMenuClick?: () => void }) {
-  const { lang, setLang, countryId, setCountry } = useAppStore();
-  const { data: countries } = useCountries();
+  const { lang, setLang, countryId, countryName, setCountry } = useAppStore();
+  const { data: countries, isLoading, error } = useCountries();
 
   useEffect(() => {
-    if (countryId || !countries || countries.length === 0) {
+    if (!countries || countries.length === 0) {
+      return;
+    }
+
+    if (countryId) {
+      const selected = countries.find((country) => country.id === countryId);
+      if (!selected) {
+        return;
+      }
+
+      const displayName = getCountryDisplayName(selected, lang);
+      if (countryName !== displayName) {
+        setCountry(selected.id, displayName);
+      }
       return;
     }
 
@@ -18,8 +31,11 @@ export function TopNavbar({ onMenuClick }: { onMenuClick?: () => void }) {
     const preferred = countries.find((country) => preferredCodes.has(country.code.toUpperCase()));
     const fallback = countries.find((country) => country.is_active) ?? countries[0];
     const next = preferred ?? fallback;
-    setCountry(next.id, next.name);
-  }, [countryId, countries, setCountry]);
+    setCountry(next.id, getCountryDisplayName(next, lang));
+  }, [countryId, countryName, countries, lang, setCountry]);
+
+  const selectorValue = countryId ? String(countryId) : "";
+  const selectorDisabled = isLoading || !!error || !countries || countries.length === 0;
 
   return (
     <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-tremor-border bg-tremor-background px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8 dark:border-dark-tremor-border dark:bg-dark-tremor-background">
@@ -42,17 +58,23 @@ export function TopNavbar({ onMenuClick }: { onMenuClick?: () => void }) {
             <Globe className="h-4 w-4 text-tremor-content-subtle" />
             <select
               title="Select Country"
-              value={countryId ? String(countryId) : ""}
+              value={selectorValue}
+              disabled={selectorDisabled}
               onChange={(e) => {
                 const nextId = Number(e.target.value);
                 const c = countries?.find((country) => country.id === nextId);
-                if (c) setCountry(c.id, c.name);
+                if (c) setCountry(c.id, getCountryDisplayName(c, lang));
               }}
               className="block w-full rounded-tremor-default border-tremor-border bg-tremor-background py-1.5 pl-3 pr-8 text-sm text-tremor-content-strong shadow-tremor-input focus:border-tremor-brand focus:ring-tremor-brand sm:leading-6 dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong dark:focus:border-dark-tremor-brand dark:focus:ring-dark-tremor-brand"
             >
+              {isLoading ? <option value="">Loading countries...</option> : null}
+              {error ? <option value="">Countries unavailable</option> : null}
+              {!isLoading && !error && (!countries || countries.length === 0) ? (
+                <option value="">No countries</option>
+              ) : null}
               {countries?.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name}
+                  {getCountryDisplayName(c, lang)}
                 </option>
               ))}
             </select>
