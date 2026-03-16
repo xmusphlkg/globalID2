@@ -1,0 +1,18 @@
+{
+  "disease_id": "D096",
+  "name_en": "Cryptosporidiosis",
+  "name_zh": "隐孢子虫病",
+  "category": "Parasitic",
+  "icd_10": "",
+  "icd_11": "",
+  "description": "",
+  "slug": "cryptosporidiosis",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

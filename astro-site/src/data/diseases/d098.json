@@ -1,0 +1,18 @@
+{
+  "disease_id": "D098",
+  "name_en": "Ehrlichiosis and Anaplasmosis",
+  "name_zh": "埃立克体病和无形体病",
+  "category": "Bacterial",
+  "icd_10": "",
+  "icd_11": "",
+  "description": "",
+  "slug": "ehrlichiosis-and-anaplasmosis",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

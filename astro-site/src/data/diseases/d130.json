@@ -1,0 +1,18 @@
+{
+  "disease_id": "D130",
+  "name_en": "Zika virus",
+  "name_zh": "寨卡病毒",
+  "category": "Viral",
+  "icd_10": "",
+  "icd_11": "",
+  "description": "",
+  "slug": "zika-virus",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

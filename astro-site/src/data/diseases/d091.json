@@ -1,0 +1,18 @@
+{
+  "disease_id": "D091",
+  "name_en": "Botulism",
+  "name_zh": "肉毒杆菌中毒",
+  "category": "Bacterial",
+  "icd_10": "",
+  "icd_11": "",
+  "description": "",
+  "slug": "botulism",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

@@ -1,0 +1,18 @@
+{
+  "disease_id": "D110",
+  "name_en": "Meningococcal disease",
+  "name_zh": "脑膜炎球菌病",
+  "category": "Bacterial",
+  "icd_10": "",
+  "icd_11": "",
+  "description": "",
+  "slug": "meningococcal-disease",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

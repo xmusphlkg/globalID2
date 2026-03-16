@@ -1,0 +1,18 @@
+{
+  "disease_id": "D075",
+  "name_en": "Other viral diseases",
+  "name_zh": "其他病毒性疾病",
+  "category": "",
+  "icd_10": "B33",
+  "icd_11": "",
+  "description": "",
+  "slug": "other-viral-diseases",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

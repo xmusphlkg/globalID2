@@ -1,6 +1,7 @@
 # Makefile for GlobalID V2
 
-.PHONY: help install up down restart logs ps test test-health clean format lint check
+.PHONY: help install up down restart logs ps test test-health clean format lint check \
+        site-data site-install site-dev site-build site-preview site-publish
 
 help:
 	@echo "GlobalID V2 - 开发命令"
@@ -19,6 +20,14 @@ help:
 	@echo "  make format       格式化代码"
 	@echo "  make lint         代码检查"
 	@echo "  make check        完整检查（格式+类型+测试）"
+	@echo ""
+	@echo "静态站点 (Cloudflare Pages):"
+	@echo "  make site-install  安装 Astro/npm 依赖"
+	@echo "  make site-data     导出数据库数据到 JSON 文件"
+	@echo "  make site-dev      启动本地开发预览"
+	@echo "  make site-build    生产构建"
+	@echo "  make site-preview  预览生产构建"
+	@echo "  make site-publish  一键导出数据 + 构建"
 	@echo ""
 	@echo "清理:"
 	@echo "  make clean        清理临时文件"
@@ -50,25 +59,25 @@ ps:
 
 install:
 	@echo "安装依赖..."
-	poetry install
+	python3 -m venv venv && venv/bin/pip install -r requirements.txt
 	@echo "依赖安装完成"
 
 test:
 	@echo "运行测试..."
-	poetry run pytest -v
+	venv/bin/pytest -v
 
 test-health:
 	@echo "运行健康检查..."
-	poetry run python tests/test_health.py
+	venv/bin/python3 tests/test_health.py
 
 format:
 	@echo "格式化代码..."
-	poetry run black src tests
+	venv/bin/black src tests
 	@echo "代码格式化完成"
 
 lint:
 	@echo "代码检查..."
-	poetry run ruff check src tests
+	venv/bin/ruff check src tests
 	@echo "检查完成"
 
 check:
@@ -76,11 +85,45 @@ check:
 	@make format
 	@make lint
 	@echo "类型检查..."
-	poetry run mypy src
+	venv/bin/mypy src
 	@make test
 	@echo "所有检查完成"
 
 # ========== 清理命令 ==========
+
+# ========== 静态站点 (Cloudflare Pages) ==========
+
+site-data:
+	@echo "导出站点数据到 astro-site/src/data/ ..."
+	venv/bin/python3 scripts/generate_site_data.py
+	@echo "数据导出完成"
+
+site-install:
+	@echo "安装 Astro 依赖..."
+	cd astro-site && npm install
+	@echo "Astro 依赖安装完成"
+
+site-dev:
+	@echo "启动 Astro 开发服务器..."
+	cd astro-site && npm run dev
+
+site-build:
+	@echo "构建静态站点..."
+	cd astro-site && npm run build
+	@echo "构建完成，输出目录: astro-site/dist/"
+
+site-preview:
+	@echo "预览生产构建..."
+	cd astro-site && npm run preview
+
+# 完整的端到端发布流程: 导出数据 → 构建 → 提示推送
+site-publish: site-data site-build
+	@echo ""
+	@echo "✓ 站点已构建完毕"
+	@echo "请执行以下命令推送到 Cloudflare Pages:"
+	@echo "  git add astro-site/src/data astro-site/dist"
+	@echo "  git commit -m 'chore: update site data and rebuild'"
+	@echo "  git push"
 
 clean:
 	@echo "清理临时文件..."

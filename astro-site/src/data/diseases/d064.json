@@ -1,0 +1,18 @@
+{
+  "disease_id": "D064",
+  "name_en": "Smallpox",
+  "name_zh": "天花",
+  "category": "",
+  "icd_10": "B03",
+  "icd_11": "",
+  "description": "",
+  "slug": "smallpox",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

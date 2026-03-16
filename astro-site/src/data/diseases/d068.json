@@ -1,0 +1,18 @@
+{
+  "disease_id": "D068",
+  "name_en": "Acute hepatitis B",
+  "name_zh": "急性乙型肝炎",
+  "category": "Viral",
+  "icd_10": "B16",
+  "icd_11": "1E50.1",
+  "description": "",
+  "slug": "acute-hepatitis-b",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

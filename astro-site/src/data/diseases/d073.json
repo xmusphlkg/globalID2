@@ -1,0 +1,18 @@
+{
+  "disease_id": "D073",
+  "name_en": "Infectious mononucleosis",
+  "name_zh": "传染性单核细胞增多症",
+  "category": "",
+  "icd_10": "B27",
+  "icd_11": "",
+  "description": "",
+  "slug": "infectious-mononucleosis",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

@@ -1,0 +1,18 @@
+{
+  "disease_id": "D111",
+  "name_en": "Novel influenza A",
+  "name_zh": "新型甲型流感",
+  "category": "Viral",
+  "icd_10": "",
+  "icd_11": "",
+  "description": "",
+  "slug": "novel-influenza-a",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

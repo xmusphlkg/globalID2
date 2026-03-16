@@ -1,0 +1,18 @@
+{
+  "disease_id": "D063",
+  "name_en": "Zoster",
+  "name_zh": "带状疱疹",
+  "category": "",
+  "icd_10": "B02",
+  "icd_11": "1E91",
+  "description": "",
+  "slug": "zoster",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

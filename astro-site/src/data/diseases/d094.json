@@ -1,0 +1,18 @@
+{
+  "disease_id": "D094",
+  "name_en": "Chlamydia trachomatis infection",
+  "name_zh": "沙眼衣原体感染",
+  "category": "Bacterial",
+  "icd_10": "",
+  "icd_11": "",
+  "description": "",
+  "slug": "chlamydia-trachomatis-infection",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

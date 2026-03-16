@@ -1,0 +1,18 @@
+{
+  "disease_id": "D092",
+  "name_en": "Campylobacteriosis",
+  "name_zh": "弯曲杆菌病",
+  "category": "Bacterial",
+  "icd_10": "",
+  "icd_11": "",
+  "description": "",
+  "slug": "campylobacteriosis",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

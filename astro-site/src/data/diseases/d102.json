@@ -1,0 +1,18 @@
+{
+  "disease_id": "D102",
+  "name_en": "Hantavirus infection",
+  "name_zh": "汉坦病毒感染",
+  "category": "Viral",
+  "icd_10": "",
+  "icd_11": "",
+  "description": "",
+  "slug": "hantavirus-infection",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

@@ -1,0 +1,48 @@
+{
+  "disease_id": "D052",
+  "name_en": "Chikungunya",
+  "name_zh": "基孔肯雅热",
+  "category": "Viral",
+  "icd_10": "A92.0",
+  "icd_11": "1D46",
+  "description": "Chikungunya virus disease",
+  "slug": "chikungunya",
+  "country_series": {
+    "CN": {
+      "dates": [
+        "2026-01-01",
+        "2026-02-01"
+      ],
+      "cases": [
+        4,
+        2
+      ],
+      "deaths": [
+        0,
+        0
+      ],
+      "incidence_rates": [
+        -10.0,
+        -10.0
+      ],
+      "total_cases": 6,
+      "total_deaths": 0
+    }
+  },
+  "global_monthly": {
+    "months": [
+      "2026-01",
+      "2026-02"
+    ],
+    "cases": [
+      4,
+      2
+    ],
+    "deaths": [
+      0,
+      0
+    ]
+  },
+  "total_cases": 6,
+  "total_deaths": 0
+}

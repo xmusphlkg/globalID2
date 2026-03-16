@@ -1,0 +1,18 @@
+{
+  "disease_id": "D090",
+  "name_en": "Babesiosis",
+  "name_zh": "巴贝西虫病",
+  "category": "Parasitic",
+  "icd_10": "",
+  "icd_11": "",
+  "description": "",
+  "slug": "babesiosis",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

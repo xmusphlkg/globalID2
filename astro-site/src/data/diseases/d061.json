@@ -1,0 +1,18 @@
+{
+  "disease_id": "D061",
+  "name_en": "Other viral haemorrhagic fevers",
+  "name_zh": "其他病毒性出血热",
+  "category": "Viral",
+  "icd_10": "A98",
+  "icd_11": "",
+  "description": "",
+  "slug": "other-viral-haemorrhagic-fevers",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

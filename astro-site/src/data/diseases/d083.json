@@ -1,0 +1,18 @@
+{
+  "disease_id": "D083",
+  "name_en": "African trypanosomiasis",
+  "name_zh": "非洲锥虫病",
+  "category": "Parasitic",
+  "icd_10": "B56",
+  "icd_11": "1F52",
+  "description": "",
+  "slug": "african-trypanosomiasis",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

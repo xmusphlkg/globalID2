@@ -1,0 +1,18 @@
+{
+  "disease_id": "D059",
+  "name_en": "Yellow fever",
+  "name_zh": "黄热病",
+  "category": "Viral",
+  "icd_10": "A95",
+  "icd_11": "1D48",
+  "description": "",
+  "slug": "yellow-fever",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

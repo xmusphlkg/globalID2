@@ -1,0 +1,48 @@
+{
+  "disease_id": "D055",
+  "name_en": "Clonorchiasis",
+  "name_zh": "肝吸虫病",
+  "category": "Parasitic",
+  "icd_10": "B66.1",
+  "icd_11": "1F89.0",
+  "description": "Clonorchiasis",
+  "slug": "clonorchiasis",
+  "country_series": {
+    "CN": {
+      "dates": [
+        "2026-01-01",
+        "2026-02-01"
+      ],
+      "cases": [
+        9408,
+        6270
+      ],
+      "deaths": [
+        0,
+        0
+      ],
+      "incidence_rates": [
+        -10.0,
+        -10.0
+      ],
+      "total_cases": 15678,
+      "total_deaths": 0
+    }
+  },
+  "global_monthly": {
+    "months": [
+      "2026-01",
+      "2026-02"
+    ],
+    "cases": [
+      9408,
+      6270
+    ],
+    "deaths": [
+      0,
+      0
+    ]
+  },
+  "total_cases": 15678,
+  "total_deaths": 0
+}

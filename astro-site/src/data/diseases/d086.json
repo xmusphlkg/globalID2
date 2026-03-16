@@ -1,0 +1,18 @@
+{
+  "disease_id": "D086",
+  "name_en": "Other fluke infections",
+  "name_zh": "其他吸虫感染",
+  "category": "Parasitic",
+  "icd_10": "B66",
+  "icd_11": "1F89",
+  "description": "",
+  "slug": "other-fluke-infections",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

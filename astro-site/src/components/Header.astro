@@ -1,0 +1,158 @@
+---
+// src/components/Header.astro
+const navLinks = [
+  { href: '/', label: 'Home', labelZh: '首页' },
+  { href: '/countries/', label: 'Countries', labelZh: '国家' },
+  { href: '/diseases/', label: 'Diseases', labelZh: '疾病' },
+];
+
+const currentPath = Astro.url.pathname;
+---
+
+<header
+  class="site-header sticky top-0 z-50 border-b backdrop-blur-md"
+>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between h-16">
+      <!-- Logo -->
+      <a href="/" class="flex items-center gap-3 group">
+        <div
+          class="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-teal-500 flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-brand-500/25 group-hover:shadow-brand-500/40 transition-shadow"
+        >
+          G
+        </div>
+        <div class="flex flex-col leading-tight">
+          <span class="text-slate-100 font-semibold text-sm tracking-wide">GlobalID</span>
+          <span class="text-slate-500 text-xs" data-lang-en="Disease Surveillance" data-lang-zh="疾病监测">Disease Surveillance</span>
+        </div>
+      </a>
+
+      <!-- Desktop nav -->
+      <nav class="hidden md:flex items-center gap-1">
+        {
+          navLinks.map(({ href, label, labelZh }) => (
+            <a
+              href={href}
+              class:list={[
+                'nav-link focus-ring',
+                (currentPath === href || (href !== '/' && currentPath.startsWith(href)))
+                  ? 'nav-link-active'
+                  : '',
+              ]}
+            >
+              <span data-lang-en={label} data-lang-zh={labelZh}>{label}</span>
+            </a>
+          ))
+        }
+      </nav>
+
+      <!-- Right: theme + language toggle + mobile menu -->
+      <div class="flex items-center gap-3">
+        <button
+          id="theme-toggle"
+          class="text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-600 transition-all focus-ring"
+          aria-label="Toggle color theme"
+          title="切换主题 / Toggle Theme"
+        >
+          <span id="theme-toggle-label">Light</span>
+        </button>
+
+        <button
+          id="lang-toggle"
+          class="text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-600 transition-all focus-ring"
+          aria-label="Toggle language"
+          title="切换语言 / Switch Language"
+        >
+          <span id="lang-toggle-label">中文</span>
+        </button>
+
+        <!-- Mobile menu toggle -->
+        <button
+          id="mobile-menu-toggle"
+          class="md:hidden p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors focus-ring"
+          aria-label="Toggle navigation menu"
+        >
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile nav -->
+    <div id="mobile-menu" class="hidden md:hidden border-t border-slate-800 py-3 pb-4 space-y-1">
+      {
+        navLinks.map(({ href, label, labelZh }) => (
+          <a
+            href={href}
+            class:list={[
+              'block nav-link focus-ring',
+              (currentPath === href || (href !== '/' && currentPath.startsWith(href)))
+                ? 'nav-link-active'
+                : '',
+            ]}
+          >
+            <span data-lang-en={label} data-lang-zh={labelZh}>{label}</span>
+          </a>
+        ))
+      }
+    </div>
+  </div>
+</header>
+
+<script>
+  // Theme + language toggle
+  const themeBtn = document.getElementById('theme-toggle');
+  const themeLabel = document.getElementById('theme-toggle-label');
+  const toggleBtn = document.getElementById('lang-toggle');
+  const toggleLabel = document.getElementById('lang-toggle-label');
+  const mobileMenuBtn = document.getElementById('mobile-menu-toggle');
+  const mobileMenu = document.getElementById('mobile-menu');
+
+  function getPreferredTheme(): 'light' | 'dark' {
+    const storedTheme = localStorage.getItem('theme');
+    if (storedTheme === 'light' || storedTheme === 'dark') return storedTheme;
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+
+  function applyTheme(theme: 'light' | 'dark') {
+    document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+    if (themeLabel) themeLabel.textContent = theme === 'dark' ? 'Light' : 'Dark';
+  }
+
+  let currentTheme = getPreferredTheme();
+  applyTheme(currentTheme);
+
+  themeBtn?.addEventListener('click', () => {
+    currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    localStorage.setItem('theme', currentTheme);
+    applyTheme(currentTheme);
+  });
+
+  let currentLang = localStorage.getItem('lang') || 'en';
+  updateLang(currentLang);
+
+  toggleBtn?.addEventListener('click', () => {
+    currentLang = currentLang === 'en' ? 'zh' : 'en';
+    localStorage.setItem('lang', currentLang);
+    updateLang(currentLang);
+  });
+
+  function updateLang(lang: string) {
+    document.documentElement.setAttribute('data-lang', lang);
+    if (toggleLabel) toggleLabel.textContent = lang === 'en' ? '中文' : 'EN';
+
+    // Update all elements with data-lang-en / data-lang-zh attributes
+    document.querySelectorAll('[data-lang-en]').forEach((el) => {
+      const target = lang === 'zh'
+        ? el.getAttribute('data-lang-zh')
+        : el.getAttribute('data-lang-en');
+      if (target) el.textContent = target;
+    });
+  }
+
+  mobileMenuBtn?.addEventListener('click', () => {
+    mobileMenu?.classList.toggle('hidden');
+  });
+</script>

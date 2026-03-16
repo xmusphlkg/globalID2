@@ -1,0 +1,18 @@
+{
+  "disease_id": "D097",
+  "name_en": "Cyclosporiasis",
+  "name_zh": "环孢子虫病",
+  "category": "Parasitic",
+  "icd_10": "",
+  "icd_11": "",
+  "description": "",
+  "slug": "cyclosporiasis",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

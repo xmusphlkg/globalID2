@@ -1,0 +1,18 @@
+{
+  "disease_id": "D118",
+  "name_en": "Spotted fever rickettsiosis",
+  "name_zh": "斑点热立克次体病",
+  "category": "Bacterial",
+  "icd_10": "",
+  "icd_11": "",
+  "description": "",
+  "slug": "spotted-fever-rickettsiosis",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

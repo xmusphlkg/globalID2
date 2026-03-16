@@ -1,0 +1,18 @@
+{
+  "disease_id": "D062",
+  "name_en": "Herpesviral infections",
+  "name_zh": "疱疹病毒感染",
+  "category": "Viral",
+  "icd_10": "B00",
+  "icd_11": "1E90",
+  "description": "",
+  "slug": "herpesviral-infections",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

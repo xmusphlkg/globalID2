@@ -1,0 +1,48 @@
+{
+  "disease_id": "D053",
+  "name_en": "Lassa",
+  "name_zh": "拉沙热",
+  "category": "Viral",
+  "icd_10": "A96.2",
+  "icd_11": "1D61",
+  "description": "Lassa fever",
+  "slug": "lassa",
+  "country_series": {
+    "CN": {
+      "dates": [
+        "2026-01-01",
+        "2026-02-01"
+      ],
+      "cases": [
+        1,
+        0
+      ],
+      "deaths": [
+        0,
+        0
+      ],
+      "incidence_rates": [
+        -10.0,
+        -10.0
+      ],
+      "total_cases": 1,
+      "total_deaths": 0
+    }
+  },
+  "global_monthly": {
+    "months": [
+      "2026-01",
+      "2026-02"
+    ],
+    "cases": [
+      1,
+      0
+    ],
+    "deaths": [
+      0,
+      0
+    ]
+  },
+  "total_cases": 1,
+  "total_deaths": 0
+}

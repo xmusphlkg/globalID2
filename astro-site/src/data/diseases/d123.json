@@ -1,0 +1,18 @@
+{
+  "disease_id": "D123",
+  "name_en": "Tularemia",
+  "name_zh": "土拉菌病",
+  "category": "Bacterial",
+  "icd_10": "",
+  "icd_11": "",
+  "description": "",
+  "slug": "tularemia",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

@@ -1,0 +1,18 @@
+{
+  "disease_id": "D084",
+  "name_en": "Chagas disease",
+  "name_zh": "恰加斯病",
+  "category": "Parasitic",
+  "icd_10": "B57",
+  "icd_11": "1F53",
+  "description": "",
+  "slug": "chagas-disease",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

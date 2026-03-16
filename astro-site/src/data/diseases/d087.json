@@ -1,0 +1,18 @@
+{
+  "disease_id": "D087",
+  "name_en": "Taeniasis",
+  "name_zh": "绦虫病",
+  "category": "Parasitic",
+  "icd_10": "B68",
+  "icd_11": "",
+  "description": "",
+  "slug": "taeniasis",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

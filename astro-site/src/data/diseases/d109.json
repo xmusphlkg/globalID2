@@ -1,0 +1,18 @@
+{
+  "disease_id": "D109",
+  "name_en": "Lyme disease",
+  "name_zh": "莱姆病",
+  "category": "Bacterial",
+  "icd_10": "",
+  "icd_11": "",
+  "description": "",
+  "slug": "lyme-disease",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

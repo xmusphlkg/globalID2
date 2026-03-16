@@ -1,0 +1,18 @@
+{
+  "disease_id": "D076",
+  "name_en": "Viral infection of unspecified site",
+  "name_zh": "未指定部位的病毒感染",
+  "category": "",
+  "icd_10": "B34",
+  "icd_11": "",
+  "description": "",
+  "slug": "viral-infection-of-unspecified-site",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

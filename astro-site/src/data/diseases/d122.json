@@ -1,0 +1,18 @@
+{
+  "disease_id": "D122",
+  "name_en": "Trichinellosis",
+  "name_zh": "旋毛虫病",
+  "category": "Parasitic",
+  "icd_10": "",
+  "icd_11": "",
+  "description": "",
+  "slug": "trichinellosis",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

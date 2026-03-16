@@ -1,0 +1,18 @@
+{
+  "disease_id": "D125",
+  "name_en": "Vancomycin resistance",
+  "name_zh": "万古霉素耐药性",
+  "category": "Bacterial",
+  "icd_10": "",
+  "icd_11": "",
+  "description": "",
+  "slug": "vancomycin-resistance",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

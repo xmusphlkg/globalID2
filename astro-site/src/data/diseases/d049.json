@@ -1,0 +1,48 @@
+{
+  "disease_id": "D049",
+  "name_en": "MERS",
+  "name_zh": "中东呼吸综合征",
+  "category": "Viral",
+  "icd_10": "U00-U49",
+  "icd_11": "1D65.1",
+  "description": "Middle East Respiratory Syndrome",
+  "slug": "mers",
+  "country_series": {
+    "CN": {
+      "dates": [
+        "2026-01-01",
+        "2026-02-01"
+      ],
+      "cases": [
+        0,
+        0
+      ],
+      "deaths": [
+        0,
+        0
+      ],
+      "incidence_rates": [
+        -10.0,
+        -10.0
+      ],
+      "total_cases": 0,
+      "total_deaths": 0
+    }
+  },
+  "global_monthly": {
+    "months": [
+      "2026-01",
+      "2026-02"
+    ],
+    "cases": [
+      0,
+      0
+    ],
+    "deaths": [
+      0,
+      0
+    ]
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

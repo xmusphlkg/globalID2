@@ -1,0 +1,18 @@
+{
+  "disease_id": "D103",
+  "name_en": "Hemolytic uremic syndrome",
+  "name_zh": "溶血性尿毒症综合征",
+  "category": "Bacterial",
+  "icd_10": "",
+  "icd_11": "",
+  "description": "",
+  "slug": "hemolytic-uremic-syndrome",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

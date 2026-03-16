@@ -1,0 +1,48 @@
+{
+  "disease_id": "D051",
+  "name_en": "Zika",
+  "name_zh": "寨卡病毒病",
+  "category": "Viral",
+  "icd_10": "A92.5",
+  "icd_11": "1D47",
+  "description": "Zika virus disease",
+  "slug": "zika",
+  "country_series": {
+    "CN": {
+      "dates": [
+        "2026-01-01",
+        "2026-02-01"
+      ],
+      "cases": [
+        0,
+        2
+      ],
+      "deaths": [
+        0,
+        0
+      ],
+      "incidence_rates": [
+        -10.0,
+        -10.0
+      ],
+      "total_cases": 2,
+      "total_deaths": 0
+    }
+  },
+  "global_monthly": {
+    "months": [
+      "2026-01",
+      "2026-02"
+    ],
+    "cases": [
+      0,
+      2
+    ],
+    "deaths": [
+      0,
+      0
+    ]
+  },
+  "total_cases": 2,
+  "total_deaths": 0
+}

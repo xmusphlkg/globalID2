@@ -1,0 +1,315 @@
+---
+// src/pages/countries/[country]/reports/[id].astro — Individual report page
+import ReportLayout from '../../../../layouts/ReportLayout.astro';
+import EpidemicCurve from '../../../../components/charts/EpidemicCurve';
+import ReportComparisonTable from '../../../../components/charts/ReportComparisonTable';
+import type { DiseaseComparison } from '../../../../components/charts/ReportComparisonTable';
+import { readFileSync, existsSync } from 'fs';
+import { resolve } from 'path';
+
+export async function getStaticPaths() {
+  const reportsPath = resolve('./src/data/reports/index.json');
+  if (!existsSync(reportsPath)) return [];
+  const reports = JSON.parse(readFileSync(reportsPath, 'utf-8')) as any[];
+  return reports.map(r => ({
+    params: {
+      country: (r.country_code ?? 'cn').toLowerCase(),
+      id: String(r.id),
+    },
+  }));
+}
+
+const { country, id } = Astro.params;
+const reportPath = resolve(`./src/data/reports/${id}.json`);
+
+let report: any = null;
+if (existsSync(reportPath)) {
+  report = JSON.parse(readFileSync(reportPath, 'utf-8'));
+}
+
+// Get neighboring reports for prev/next nav
+const reportsIndexPath = resolve('./src/data/reports/index.json');
+let prevReport: any = null;
+let nextReport: any = null;
+if (existsSync(reportsIndexPath)) {
+  const allReports = (JSON.parse(readFileSync(reportsIndexPath, 'utf-8')) as any[])
+    .filter(r => r.country_code?.toLowerCase() === country)
+    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+  const idx = allReports.findIndex(r => String(r.id) === id);
+  if (idx > 0) prevReport = allReports[idx - 1];
+  if (idx < allReports.length - 1) nextReport = allReports[idx + 1];
+}
+
+// Country time-series for chart context (load only if we also have disease_series)
+const countryPath = resolve(`./src/data/countries/${country}.json`);
+let countrySeries: any = null;
+if (existsSync(countryPath) && report?.period_start && report?.period_end) {
+  const cData = JSON.parse(readFileSync(countryPath, 'utf-8'));
+  // Filter series to just the report window
+  const startMs = new Date(report.period_start).getTime();
+  const endMs = new Date(report.period_end).getTime();
+  const filteredSeries: Record<string, any> = {};
+  for (const [did, s] of Object.entries(cData.disease_series ?? {})) {
+    const ds = s as any;
+    const indices = ds.dates
+      .map((d: string, i: number) => ({ d, i }))
+      .filter(({ d }: { d: string }) => {
+        const t = new Date(d).getTime();
+        return t >= startMs && t <= endMs;
+      });
+    if (indices.length > 0 && ds.cases.some((c: number) => c > 0)) {
+      filteredSeries[did] = {
+        ...ds,
+        dates: indices.map(({ d }: { d: string }) => d),
+        cases: indices.map(({ i }: { i: number }) => ds.cases[i]),
+        deaths: indices.map(({ i }: { i: number }) => ds.deaths[i]),
+        incidence_rates: indices.map(({ i }: { i: number }) => ds.incidence_rates[i]),
+      };
+    }
+  }
+  if (Object.keys(filteredSeries).length > 0) countrySeries = filteredSeries;
+}
+
+// Build disease comparison rows for the report's current month vs prev month/year
+let comparisonRows: DiseaseComparison[] = [];
+let compCurrentYM = '';
+let compPrevYM = '';
+let compPrevYearYM = '';
+
+if (existsSync(countryPath)) {
+  const cData = JSON.parse(readFileSync(countryPath, 'utf-8'));
+  // Use the latest date with data across non-summary diseases, not the report period_end
+  // (monthly data lags 1-2 months behind report generation date)
+  const allSeries = Object.values(cData.disease_series ?? {}) as any[];
+  const latestDate = allSeries
+    .filter((s: any) => s.category !== 'Summary')
+    .flatMap((s: any) => s.dates as string[])
+    .sort()
+    .at(-1);
+
+  if (latestDate) {
+    const [ly, lm] = latestDate.split('-');
+    compCurrentYM = `${ly}-${lm}`;
+    const pd = new Date(+ly, +lm - 2, 1);
+    compPrevYM = `${pd.getFullYear()}-${String(pd.getMonth() + 1).padStart(2, '0')}`;
+    compPrevYearYM = `${+ly - 1}-${lm}`;
+
+    for (const s of allSeries) {
+      // Skip aggregate/summary rows
+      if (s.category === 'Summary') continue;
+      function getForYM(ym: string, arr: number[]): number {
+        const idx = (s.dates as string[]).findIndex((d: string) => d.startsWith(ym));
+        return idx >= 0 ? (arr[idx] ?? 0) : 0;
+      }
+      comparisonRows.push({
+        disease_id: s.disease_id,
+        name_en: s.name_en,
+        name_zh: s.name_zh,
+        category: s.category,
+        slug: s.slug,
+        cases: getForYM(compCurrentYM, s.cases),
+        deaths: getForYM(compCurrentYM, s.deaths),
+        cases_prev_month: getForYM(compPrevYM, s.cases),
+        deaths_prev_month: getForYM(compPrevYM, s.deaths),
+        cases_prev_year: getForYM(compPrevYearYM, s.cases),
+        deaths_prev_year: getForYM(compPrevYearYM, s.deaths),
+      });
+    }
+    comparisonRows.sort((a, b) => b.cases - a.cases);
+  }
+}
+
+function fmtDate(d: string) {
+  return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+const scoreColor = !report?.quality_score ? 'text-slate-500'
+  : report.quality_score >= 0.85 ? 'text-green-400'
+  : report.quality_score >= 0.65 ? 'text-amber-400'
+  : 'text-red-400';
+
+const countryName = report?.country_name ?? country.toUpperCase();
+---
+
+<ReportLayout
+  title={report?.title ?? `Report #${id}`}
+  description={`Surveillance report for ${countryName}. ${report?.period_start ? `Period: ${report.period_start} to ${report.period_end}` : ''}`}
+  breadcrumbs={[
+    { label: 'Countries', href: '/countries/' },
+    { label: countryName, href: `/countries/${country}/` },
+    { label: 'Reports', href: `/countries/${country}/reports/` },
+    { label: `#${id}` },
+  ]}
+>
+  <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
+
+    {!report ? (
+      <div class="text-center py-24 text-slate-500">
+        Report #{id} not found. <a href={`/countries/${country}/reports/`} class="text-brand-400 hover:underline">← Back to reports</a>
+      </div>
+    ) : (
+      <>
+        <!-- Report header card -->
+        <div class="card p-8">
+          <div class="flex items-start justify-between flex-wrap gap-4 mb-6">
+            <div>
+              <div class="flex items-center gap-3 mb-3 flex-wrap">
+                <span class="text-xs font-medium px-2.5 py-1 rounded-full bg-brand-500/15 text-brand-300 ring-1 ring-brand-500/30">
+                  {report.report_type}
+                </span>
+                <span class="text-sm text-slate-500">{countryName}</span>
+                {report.ai_model_used && (
+                  <span class="text-xs text-slate-600 font-mono">{report.ai_model_used}</span>
+                )}
+              </div>
+              <h1 class="text-3xl font-bold text-slate-100 leading-tight">{report.title}</h1>
+            </div>
+            {report.quality_score != null && (
+              <div class="text-center">
+                <div class={`text-3xl font-bold ${scoreColor}`}>
+                  {(report.quality_score * 100).toFixed(0)}%
+                </div>
+                <div class="text-xs text-slate-600 mt-1" data-lang-en="Quality Score" data-lang-zh="质量评分">Quality Score</div>
+              </div>
+            )}
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+            {report.period_start && (
+              <div class="flex items-center gap-2 text-slate-500">
+                <svg class="w-4 h-4 text-slate-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span>
+                  <span data-lang-en="Period" data-lang-zh="报告周期">Period</span>:&nbsp;
+                  <span class="text-slate-300">{fmtDate(report.period_start)} → {fmtDate(report.period_end)}</span>
+                </span>
+              </div>
+            )}
+            {report.created_at && (
+              <div class="flex items-center gap-2 text-slate-500">
+                <svg class="w-4 h-4 text-slate-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>
+                  <span data-lang-en="Generated" data-lang-zh="生成时间">Generated</span>:&nbsp;
+                  <span class="text-slate-300">{fmtDate(report.created_at)}</span>
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <!-- Key Findings -->
+        {report.key_findings && Object.keys(report.key_findings).length > 0 && (
+          <div>
+            <h2 class="text-xl font-semibold text-slate-100 mb-4" data-lang-en="Key Findings" data-lang-zh="关键发现">Key Findings</h2>
+            <div class="card p-6">
+              <ul class="space-y-2">
+                {(Array.isArray(report.key_findings) ? report.key_findings : Object.values(report.key_findings)).map((finding: any) => (
+                  <li class="flex gap-3 text-slate-400 text-sm">
+                    <span class="text-teal-400 flex-shrink-0 mt-0.5">→</span>
+                    <span>{typeof finding === 'string' ? finding : JSON.stringify(finding)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+
+        <!-- Epidemic Curve for report window -->
+        {countrySeries && (
+          <div>
+            <h2 class="text-xl font-semibold text-slate-100 mb-4" data-lang-en="Epidemic Curve (Report Period)" data-lang-zh="流行曲线（报告周期）">
+              Epidemic Curve (Report Period)
+            </h2>
+            <EpidemicCurve
+              client:only="react"
+              series={countrySeries}
+              topN={10}
+              height={380}
+            />
+          </div>
+        )}
+
+        <!-- Disease Comparison Table -->
+        {comparisonRows.length > 0 && (
+          <div>
+            <h2 class="text-xl font-semibold text-slate-100 mb-2" data-lang-en="Disease Comparison" data-lang-zh="疾病对比">
+              Disease Comparison
+            </h2>
+            <p class="text-sm text-slate-500 mb-4">
+              <span data-lang-en="Cases and deaths for" data-lang-zh="病例与死亡：">Cases and deaths for </span>
+              <span class="text-slate-300 font-mono">{compCurrentYM}</span>
+              <span data-lang-en=" compared to previous month and previous year." data-lang-zh="，与上月及去年同期对比。"> compared to previous month and previous year.</span>
+            </p>
+            <ReportComparisonTable
+              client:only="react"
+              rows={comparisonRows}
+              currentMonth={compCurrentYM}
+              prevMonth={compPrevYM}
+              prevYearMonth={compPrevYearYM}
+            />
+          </div>
+        )}
+
+        <!-- Report Sections -->
+        {report.sections && report.sections.length > 0 && (
+          <div>
+            <h2 class="text-xl font-semibold text-slate-100 mb-6" data-lang-en="Report Content" data-lang-zh="报告内容">
+              Report Content
+            </h2>
+            <div class="space-y-8">
+              {report.sections.map((section: any) => (
+                <div class="card p-8">
+                  {section.title && (
+                    <h3 class="text-slate-100 font-semibold text-lg mb-4 pb-3 border-b border-slate-700/60">
+                      {section.title}
+                    </h3>
+                  )}
+                  {section.content_html ? (
+                    <div
+                      class="prose prose-invert prose-sm max-w-none prose-headings:text-slate-200 prose-p:text-slate-300 prose-li:text-slate-300 prose-strong:text-slate-100 prose-a:text-brand-400"
+                      set:html={section.content_html}
+                    />
+                  ) : section.content ? (
+                    <div class="prose prose-invert prose-sm max-w-none">
+                      <p class="text-slate-300 whitespace-pre-wrap">{section.content}</p>
+                    </div>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <!-- Prev / Next navigation -->
+        <div class="flex items-center justify-between pt-6 border-t border-slate-800">
+          {prevReport ? (
+            <a
+              href={`/countries/${country}/reports/${prevReport.id}/`}
+              class="flex items-center gap-2 text-sm text-slate-400 hover:text-brand-400 transition-colors group"
+            >
+              <svg class="w-4 h-4 group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+              </svg>
+              <span class="max-w-[200px] truncate">{prevReport.title}</span>
+            </a>
+          ) : <span />}
+
+          {nextReport ? (
+            <a
+              href={`/countries/${country}/reports/${nextReport.id}/`}
+              class="flex items-center gap-2 text-sm text-slate-400 hover:text-brand-400 transition-colors group text-right"
+            >
+              <span class="max-w-[200px] truncate">{nextReport.title}</span>
+              <svg class="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </a>
+          ) : <span />}
+        </div>
+      </>
+    )}
+  </div>
+</ReportLayout>

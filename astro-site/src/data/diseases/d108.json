@@ -1,0 +1,18 @@
+{
+  "disease_id": "D108",
+  "name_en": "Listeriosis",
+  "name_zh": "李斯特菌病",
+  "category": "Bacterial",
+  "icd_10": "",
+  "icd_11": "",
+  "description": "",
+  "slug": "listeriosis",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

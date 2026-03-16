@@ -1,0 +1,18 @@
+{
+  "disease_id": "D079",
+  "name_en": "Plasmodium malariae malaria",
+  "name_zh": "三日疟",
+  "category": "Parasitic",
+  "icd_10": "B52",
+  "icd_11": "1F40",
+  "description": "",
+  "slug": "plasmodium-malariae-malaria",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

@@ -1,0 +1,18 @@
+{
+  "disease_id": "D071",
+  "name_en": "Unspecified viral hepatitis",
+  "name_zh": "未明示的病毒性肝炎",
+  "category": "Viral",
+  "icd_10": "B19",
+  "icd_11": "1E50.Y",
+  "description": "",
+  "slug": "unspecified-viral-hepatitis",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

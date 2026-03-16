@@ -1,0 +1,83 @@
+{
+  "disease_id": "D016",
+  "name_en": "Novel Influenza",
+  "name_zh": "人感染新亚型流感",
+  "category": "Viral",
+  "icd_10": "J09",
+  "icd_11": "1E30.0",
+  "description": "Novel influenza A virus infections",
+  "slug": "novel-influenza",
+  "country_series": {
+    "CN": {
+      "dates": [
+        "2025-08-01",
+        "2025-09-01",
+        "2025-10-01",
+        "2025-11-01",
+        "2025-12-01",
+        "2026-01-01",
+        "2026-02-01"
+      ],
+      "cases": [
+        2,
+        5,
+        4,
+        3,
+        3,
+        3,
+        4
+      ],
+      "deaths": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "incidence_rates": [
+        null,
+        null,
+        null,
+        null,
+        -10.0,
+        -10.0,
+        -10.0
+      ],
+      "total_cases": 24,
+      "total_deaths": 0
+    }
+  },
+  "global_monthly": {
+    "months": [
+      "2025-08",
+      "2025-09",
+      "2025-10",
+      "2025-11",
+      "2025-12",
+      "2026-01",
+      "2026-02"
+    ],
+    "cases": [
+      2,
+      5,
+      4,
+      3,
+      3,
+      3,
+      4
+    ],
+    "deaths": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "total_cases": 24,
+  "total_deaths": 0
+}

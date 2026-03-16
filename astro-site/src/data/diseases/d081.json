@@ -1,0 +1,18 @@
+{
+  "disease_id": "D081",
+  "name_en": "Unspecified malaria",
+  "name_zh": "未明示的疟疾",
+  "category": "Parasitic",
+  "icd_10": "B54",
+  "icd_11": "1F40",
+  "description": "",
+  "slug": "unspecified-malaria",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

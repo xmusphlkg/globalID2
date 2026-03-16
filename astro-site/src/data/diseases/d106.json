@@ -1,0 +1,18 @@
+{
+  "disease_id": "D106",
+  "name_en": "Invasive pneumococcal disease",
+  "name_zh": "侵袭性肺炎球菌病",
+  "category": "Bacterial",
+  "icd_10": "",
+  "icd_11": "",
+  "description": "",
+  "slug": "invasive-pneumococcal-disease",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

@@ -1,0 +1,18 @@
+{
+  "disease_id": "D121",
+  "name_en": "Toxic shock syndrome",
+  "name_zh": "中毒性休克综合征",
+  "category": "Bacterial",
+  "icd_10": "",
+  "icd_11": "",
+  "description": "",
+  "slug": "toxic-shock-syndrome",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

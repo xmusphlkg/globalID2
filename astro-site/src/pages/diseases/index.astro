@@ -1,0 +1,152 @@
+---
+// src/pages/diseases/index.astro — Disease directory
+import ReportLayout from '../../layouts/ReportLayout.astro';
+import DiseaseCard from '../../components/DiseaseCard.astro';
+import diseasesRaw from '../../data/diseases/index.json';
+
+const diseases = diseasesRaw as any[];
+const categories = ['Viral', 'Bacterial', 'Parasitic', 'Fungal'];
+
+const byCategory: Record<string, any[]> = {};
+for (const d of diseases) {
+  const cat = d.category ?? 'Other';
+  if (!byCategory[cat]) byCategory[cat] = [];
+  byCategory[cat].push(d);
+}
+
+const catZh: Record<string, string> = {
+  Viral: '病毒性', Bacterial: '细菌性', Parasitic: '寄生虫', Fungal: '真菌性',
+};
+const catCounts = Object.fromEntries(
+  categories.map(c => [c, (byCategory[c] ?? []).length])
+);
+---
+
+<ReportLayout
+  title="Disease Directory"
+  description={`Browse ${diseases.length} infectious diseases tracked by GlobalID`}
+  breadcrumbs={[{ label: 'Diseases' }]}
+>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+
+    <!-- Header + category tabs (client-side filtering) -->
+    <div class="mb-10">
+      <h1 class="text-3xl font-bold text-slate-100 mb-3" data-lang-en="Disease Directory" data-lang-zh="疾病目录">
+        Disease Directory
+      </h1>
+      <p class="text-slate-500">
+        <span data-lang-en={`${diseases.length} infectious diseases tracked across categories`} data-lang-zh={`追踪 ${diseases.length} 种传染病，按分类组织`}>
+          {diseases.length} infectious diseases tracked across categories
+        </span>
+      </p>
+    </div>
+
+    <!-- Search + filter toolbar (progressive enhancement via <details>) -->
+    <div class="mb-8 flex flex-wrap items-center gap-3">
+      <input
+        id="disease-search"
+        type="search"
+        placeholder="Search diseases…"
+        class="w-full sm:w-72 px-3 py-2 text-sm rounded-lg bg-slate-800 border border-slate-700 text-slate-300 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-500"
+      />
+      <div class="flex items-center gap-2 flex-wrap" id="cat-filters">
+        <button class="cat-filter-btn active px-3 py-1.5 text-xs rounded-full border border-brand-500 bg-brand-600 text-white font-medium" data-cat="All">
+          All ({diseases.length})
+        </button>
+        {categories.map(cat => (
+          <button
+            class="cat-filter-btn px-3 py-1.5 text-xs rounded-full border border-slate-700 text-slate-400 hover:border-slate-600 font-medium transition-all"
+            data-cat={cat}
+          >
+            <span data-lang-en={cat} data-lang-zh={catZh[cat] ?? cat}>{cat}</span>
+            &nbsp;({catCounts[cat] ?? 0})
+          </button>
+        ))}
+      </div>
+    </div>
+
+    <!-- Disease grid (each section has data-cat for client hiding) -->
+    {categories.map(cat => {
+      const catDiseases = byCategory[cat] ?? [];
+      return (
+        <div class="cat-section mb-12" data-cat={cat}>
+          <h2 class="text-slate-400 text-xs font-semibold uppercase tracking-widest mb-5 flex items-center gap-2">
+            <span data-lang-en={cat} data-lang-zh={catZh[cat] ?? cat}>{cat}</span>
+            <span class="text-slate-700">({catDiseases.length})</span>
+          </h2>
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4" id={`grid-${cat.toLowerCase()}`}>
+            {catDiseases.map(d => (
+              <div class="disease-card-wrap" data-name-en={d.name_en.toLowerCase()} data-name-zh={d.name_zh}>
+                <DiseaseCard
+                  diseaseId={d.disease_id}
+                  nameEn={d.name_en}
+                  nameZh={d.name_zh}
+                  category={d.category}
+                  icd10={d.icd_10}
+                  description={d.description}
+                  slug={d.slug}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    })}
+
+    <div id="no-results" class="hidden text-center py-16 text-slate-500">
+      No diseases found matching your search.
+    </div>
+  </div>
+</ReportLayout>
+
+<script>
+  const searchInput = document.getElementById('disease-search') as HTMLInputElement;
+  const filterBtns = document.querySelectorAll<HTMLButtonElement>('.cat-filter-btn');
+  const sections = document.querySelectorAll<HTMLElement>('.cat-section');
+  const noResults = document.getElementById('no-results')!;
+
+  let activeCat = 'All';
+
+  filterBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      activeCat = btn.dataset.cat ?? 'All';
+      filterBtns.forEach(b => {
+        const isActive = b.dataset.cat === activeCat;
+        b.classList.toggle('active', isActive);
+        b.classList.toggle('border-brand-500', isActive);
+        b.classList.toggle('bg-brand-600', isActive);
+        b.classList.toggle('text-white', isActive);
+        b.classList.toggle('border-slate-700', !isActive);
+        b.classList.toggle('text-slate-400', !isActive);
+      });
+      applyFilters();
+    });
+  });
+
+  searchInput?.addEventListener('input', applyFilters);
+
+  function applyFilters() {
+    const q = searchInput?.value.toLowerCase() ?? '';
+    let anyVisible = false;
+
+    sections.forEach(section => {
+      const cat = section.dataset.cat ?? '';
+      const showSection = activeCat === 'All' || activeCat === cat;
+      if (!showSection) { section.classList.add('hidden'); return; }
+
+      let sectionHasVisible = false;
+      section.querySelectorAll<HTMLElement>('.disease-card-wrap').forEach(card => {
+        const nameEn = card.dataset.nameEn ?? '';
+        const nameZh = card.dataset.nameZh ?? '';
+        const matches = !q || nameEn.includes(q) || nameZh.includes(q);
+        card.classList.toggle('hidden', !matches);
+        if (matches) sectionHasVisible = true;
+      });
+
+      section.classList.toggle('hidden', !sectionHasVisible);
+      if (sectionHasVisible) anyVisible = true;
+    });
+
+    noResults.classList.toggle('hidden', anyVisible);
+  }
+</script>

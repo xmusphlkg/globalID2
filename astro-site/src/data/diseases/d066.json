@@ -1,0 +1,18 @@
+{
+  "disease_id": "D066",
+  "name_en": "Other viral infections characterized by skin lesions",
+  "name_zh": "其他以皮损为特征的病毒感染",
+  "category": "",
+  "icd_10": "B08",
+  "icd_11": "",
+  "description": "",
+  "slug": "other-viral-infections-characterized-by-skin-lesions",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

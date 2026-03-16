@@ -1,0 +1,18 @@
+{
+  "disease_id": "D080",
+  "name_en": "Other parasitologically confirmed malaria",
+  "name_zh": "其他寄生虫学证实的疟疾",
+  "category": "Parasitic",
+  "icd_10": "B53",
+  "icd_11": "1F40",
+  "description": "",
+  "slug": "other-parasitologically-confirmed-malaria",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

@@ -1,0 +1,18 @@
+{
+  "disease_id": "D070",
+  "name_en": "Chronic viral hepatitis",
+  "name_zh": "慢性病毒性肝炎",
+  "category": "Viral",
+  "icd_10": "B18",
+  "icd_11": "1E50",
+  "description": "",
+  "slug": "chronic-viral-hepatitis",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

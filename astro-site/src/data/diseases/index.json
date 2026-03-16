@@ -1,0 +1,1242 @@
+[
+  {
+    "disease_id": "D001",
+    "name_en": "Plague",
+    "name_zh": "鼠疫",
+    "category": "Bacterial",
+    "icd_10": "A20",
+    "icd_11": "1B90",
+    "description": "Bacterial infection caused by Yersinia pestis",
+    "slug": "plague"
+  },
+  {
+    "disease_id": "D002",
+    "name_en": "Cholera",
+    "name_zh": "霍乱",
+    "category": "Bacterial",
+    "icd_10": "A00",
+    "icd_11": "1A00",
+    "description": "Acute diarrheal disease caused by Vibrio cholerae",
+    "slug": "cholera"
+  },
+  {
+    "disease_id": "D003",
+    "name_en": "SARS",
+    "name_zh": "传染性非典型肺炎",
+    "category": "Viral",
+    "icd_10": "U04",
+    "icd_11": "1D65",
+    "description": "Severe Acute Respiratory Syndrome",
+    "slug": "sars"
+  },
+  {
+    "disease_id": "D004",
+    "name_en": "COVID-19",
+    "name_zh": "新型冠状病毒感染",
+    "category": "Viral",
+    "icd_10": "U07.1",
+    "icd_11": "RA01",
+    "description": "Coronavirus Disease 2019",
+    "slug": "covid-19"
+  },
+  {
+    "disease_id": "D005",
+    "name_en": "HIV/AIDS",
+    "name_zh": "艾滋病",
+    "category": "Viral",
+    "icd_10": "B20-B24",
+    "icd_11": "1C62",
+    "description": "Human Immunodeficiency Virus/Acquired Immune Deficiency Syndrome",
+    "slug": "hiv-aids"
+  },
+  {
+    "disease_id": "D006",
+    "name_en": "Viral Hepatitis",
+    "name_zh": "病毒性肝炎",
+    "category": "Viral",
+    "icd_10": "B15-B19",
+    "icd_11": "1E50",
+    "description": "Viral hepatitis (aggregate category)",
+    "slug": "viral-hepatitis"
+  },
+  {
+    "disease_id": "D007",
+    "name_en": "Hepatitis A",
+    "name_zh": "甲型肝炎",
+    "category": "Viral",
+    "icd_10": "B15",
+    "icd_11": "1E50.0",
+    "description": "Hepatitis A virus infection",
+    "slug": "hepatitis-a"
+  },
+  {
+    "disease_id": "D008",
+    "name_en": "Hepatitis B",
+    "name_zh": "乙型肝炎",
+    "category": "Viral",
+    "icd_10": "B16",
+    "icd_11": "1E50.1",
+    "description": "Hepatitis B virus infection",
+    "slug": "hepatitis-b"
+  },
+  {
+    "disease_id": "D009",
+    "name_en": "Hepatitis C",
+    "name_zh": "丙型肝炎",
+    "category": "Viral",
+    "icd_10": "B17.1",
+    "icd_11": "1E50.2",
+    "description": "Hepatitis C virus infection",
+    "slug": "hepatitis-c"
+  },
+  {
+    "disease_id": "D010",
+    "name_en": "Hepatitis D",
+    "name_zh": "丁型肝炎",
+    "category": "Viral",
+    "icd_10": "B17.0",
+    "icd_11": "1E50.3",
+    "description": "Hepatitis D virus infection",
+    "slug": "hepatitis-d"
+  },
+  {
+    "disease_id": "D011",
+    "name_en": "Hepatitis E",
+    "name_zh": "戊型肝炎",
+    "category": "Viral",
+    "icd_10": "B17.2",
+    "icd_11": "1E50.4",
+    "description": "Hepatitis E virus infection",
+    "slug": "hepatitis-e"
+  },
+  {
+    "disease_id": "D012",
+    "name_en": "Other Hepatitis",
+    "name_zh": "未分型肝炎",
+    "category": "Viral",
+    "icd_10": "B19",
+    "icd_11": "1E50.Y",
+    "description": "Unspecified viral hepatitis",
+    "slug": "other-hepatitis"
+  },
+  {
+    "disease_id": "D013",
+    "name_en": "Poliomyelitis",
+    "name_zh": "脊髓灰质炎",
+    "category": "Viral",
+    "icd_10": "A80",
+    "icd_11": "1C81",
+    "description": "Polio caused by poliovirus",
+    "slug": "poliomyelitis"
+  },
+  {
+    "disease_id": "D014",
+    "name_en": "H5N1",
+    "name_zh": "人感染高致病性禽流感",
+    "category": "Viral",
+    "icd_10": "J09",
+    "icd_11": "1E30.0",
+    "description": "Highly pathogenic avian influenza A(H5N1)",
+    "slug": "h5n1"
+  },
+  {
+    "disease_id": "D015",
+    "name_en": "H7N9",
+    "name_zh": "人感染H7N9禽流感",
+    "category": "Viral",
+    "icd_10": "J09",
+    "icd_11": "1E30.0",
+    "description": "Avian influenza A(H7N9)",
+    "slug": "h7n9"
+  },
+  {
+    "disease_id": "D016",
+    "name_en": "Novel Influenza",
+    "name_zh": "人感染新亚型流感",
+    "category": "Viral",
+    "icd_10": "J09",
+    "icd_11": "1E30.0",
+    "description": "Novel influenza A virus infections",
+    "slug": "novel-influenza"
+  },
+  {
+    "disease_id": "D017",
+    "name_en": "Measles",
+    "name_zh": "麻疹",
+    "category": "Viral",
+    "icd_10": "B05",
+    "icd_11": "KA61",
+    "description": "Highly contagious viral disease",
+    "slug": "measles"
+  },
+  {
+    "disease_id": "D018",
+    "name_en": "Hemorrhagic Fever",
+    "name_zh": "流行性出血热",
+    "category": "Viral",
+    "icd_10": "A98.5",
+    "icd_11": "1D67.0",
+    "description": "Hemorrhagic fever with renal syndrome",
+    "slug": "hemorrhagic-fever"
+  },
+  {
+    "disease_id": "D019",
+    "name_en": "Rabies",
+    "name_zh": "狂犬病",
+    "category": "Viral",
+    "icd_10": "A82",
+    "icd_11": "1C82",
+    "description": "Fatal viral disease transmitted by animal bites",
+    "slug": "rabies"
+  },
+  {
+    "disease_id": "D020",
+    "name_en": "Japanese Encephalitis",
+    "name_zh": "流行性乙型脑炎",
+    "category": "Viral",
+    "icd_10": "A83.0",
+    "icd_11": "1C83.0",
+    "description": "Mosquito-borne viral encephalitis",
+    "slug": "japanese-encephalitis"
+  },
+  {
+    "disease_id": "D021",
+    "name_en": "Dengue",
+    "name_zh": "登革热",
+    "category": "Viral",
+    "icd_10": "A90",
+    "icd_11": "1D2Z.0",
+    "description": "Mosquito-borne tropical disease",
+    "slug": "dengue"
+  },
+  {
+    "disease_id": "D022",
+    "name_en": "Meningococcal infection",
+    "name_zh": "脑膜炎球菌感染",
+    "category": "Bacterial",
+    "icd_10": "A39",
+    "icd_11": "1C20.1",
+    "description": "",
+    "slug": "meningococcal-infection"
+  },
+  {
+    "disease_id": "D023",
+    "name_en": "Anthrax",
+    "name_zh": "炭疽",
+    "category": "Bacterial",
+    "icd_10": "A22",
+    "icd_11": "1B91",
+    "description": "Bacterial infection caused by Bacillus anthracis",
+    "slug": "anthrax"
+  },
+  {
+    "disease_id": "D024",
+    "name_en": "Dysentery",
+    "name_zh": "细菌性和阿米巴性痢疾",
+    "category": "Bacterial",
+    "icd_10": "A03-A06",
+    "icd_11": "1A03-1A05",
+    "description": "Intestinal infection causing diarrhea",
+    "slug": "dysentery"
+  },
+  {
+    "disease_id": "D025",
+    "name_en": "Tuberculosis",
+    "name_zh": "肺结核",
+    "category": "Bacterial",
+    "icd_10": "A15-A19",
+    "icd_11": "1B10",
+    "description": "Mycobacterium tuberculosis infection of lungs",
+    "slug": "tuberculosis"
+  },
+  {
+    "disease_id": "D026",
+    "name_en": "Typhoid and Paratyphoid fever",
+    "name_zh": "伤寒和副伤寒",
+    "category": "Bacterial",
+    "icd_10": "A01",
+    "icd_11": "1B13",
+    "description": "Enteric fever",
+    "slug": "typhoid-and-paratyphoid-fever"
+  },
+  {
+    "disease_id": "D027",
+    "name_en": "Meningococcal Meningitis",
+    "name_zh": "流行性脑脊髓膜炎",
+    "category": "Bacterial",
+    "icd_10": "A39",
+    "icd_11": "1C20.1",
+    "description": "Meningitis caused by meningococcus",
+    "slug": "meningococcal-meningitis"
+  },
+  {
+    "disease_id": "D028",
+    "name_en": "Pertussis",
+    "name_zh": "百日咳",
+    "category": "Bacterial",
+    "icd_10": "A37",
+    "icd_11": "CA01",
+    "description": "Whooping cough caused by Bordetella pertussis",
+    "slug": "pertussis"
+  },
+  {
+    "disease_id": "D029",
+    "name_en": "Diphtheria",
+    "name_zh": "白喉",
+    "category": "Bacterial",
+    "icd_10": "A36",
+    "icd_11": "1C15",
+    "description": "Bacterial infection of throat and airways",
+    "slug": "diphtheria"
+  },
+  {
+    "disease_id": "D030",
+    "name_en": "Neonatal Tetanus",
+    "name_zh": "新生儿破伤风",
+    "category": "Bacterial",
+    "icd_10": "A33",
+    "icd_11": "1C13",
+    "description": "Tetanus in newborns",
+    "slug": "neonatal-tetanus"
+  },
+  {
+    "disease_id": "D031",
+    "name_en": "Scarlet fever",
+    "name_zh": "猩红热",
+    "category": "Bacterial",
+    "icd_10": "A38",
+    "icd_11": "1C1Z",
+    "description": "Streptococcal infection",
+    "slug": "scarlet-fever"
+  },
+  {
+    "disease_id": "D032",
+    "name_en": "Brucellosis",
+    "name_zh": "布鲁氏菌病",
+    "category": "Bacterial",
+    "icd_10": "A23",
+    "icd_11": "1B92",
+    "description": "Bacterial zoonotic disease",
+    "slug": "brucellosis"
+  },
+  {
+    "disease_id": "D033",
+    "name_en": "Gonorrhea",
+    "name_zh": "淋病",
+    "category": "Bacterial",
+    "icd_10": "A54",
+    "icd_11": "1A72",
+    "description": "Sexually transmitted bacterial infection",
+    "slug": "gonorrhea"
+  },
+  {
+    "disease_id": "D034",
+    "name_en": "Syphilis",
+    "name_zh": "梅毒",
+    "category": "Bacterial",
+    "icd_10": "A50-A53",
+    "icd_11": "1A70",
+    "description": "Sexually transmitted bacterial infection",
+    "slug": "syphilis"
+  },
+  {
+    "disease_id": "D035",
+    "name_en": "Leptospirosis",
+    "name_zh": "钩端螺旋体病",
+    "category": "Bacterial",
+    "icd_10": "A27",
+    "icd_11": "1B95",
+    "description": "Bacterial infection from animal urine",
+    "slug": "leptospirosis"
+  },
+  {
+    "disease_id": "D036",
+    "name_en": "Schistosomiasis",
+    "name_zh": "血吸虫病",
+    "category": "Parasitic",
+    "icd_10": "B65",
+    "icd_11": "1F86",
+    "description": "Parasitic flatworm infection",
+    "slug": "schistosomiasis"
+  },
+  {
+    "disease_id": "D037",
+    "name_en": "Malaria",
+    "name_zh": "疟疾",
+    "category": "Parasitic",
+    "icd_10": "B50-B54",
+    "icd_11": "1F40",
+    "description": "Mosquito-borne parasitic disease",
+    "slug": "malaria"
+  },
+  {
+    "disease_id": "D038",
+    "name_en": "Influenza",
+    "name_zh": "流行性感冒",
+    "category": "Viral",
+    "icd_10": "J09-J11",
+    "icd_11": "1E30",
+    "description": "Seasonal flu",
+    "slug": "influenza"
+  },
+  {
+    "disease_id": "D039",
+    "name_en": "Mumps",
+    "name_zh": "流行性腮腺炎",
+    "category": "Viral",
+    "icd_10": "B26",
+    "icd_11": "KA62",
+    "description": "Viral infection of salivary glands",
+    "slug": "mumps"
+  },
+  {
+    "disease_id": "D040",
+    "name_en": "Rubella",
+    "name_zh": "风疹",
+    "category": "Viral",
+    "icd_10": "B06",
+    "icd_11": "KA63",
+    "description": "German measles",
+    "slug": "rubella"
+  },
+  {
+    "disease_id": "D041",
+    "name_en": "Acute Hemorrhagic Conjunctivitis",
+    "name_zh": "急性出血性结膜炎",
+    "category": "Viral",
+    "icd_10": "B30.3",
+    "icd_11": "9A60.1",
+    "description": "Acute hemorrhagic conjunctivitis",
+    "slug": "acute-hemorrhagic-conjunctivitis"
+  },
+  {
+    "disease_id": "D042",
+    "name_en": "Leprosy",
+    "name_zh": "麻风病",
+    "category": "Bacterial",
+    "icd_10": "A30",
+    "icd_11": "1B20",
+    "description": "Mycobacterium leprae infection",
+    "slug": "leprosy"
+  },
+  {
+    "disease_id": "D043",
+    "name_en": "Typhus",
+    "name_zh": "流行性和地方性斑疹伤寒",
+    "category": "Bacterial",
+    "icd_10": "A75",
+    "icd_11": "1C30",
+    "description": "Epidemic and endemic typhus",
+    "slug": "typhus"
+  },
+  {
+    "disease_id": "D044",
+    "name_en": "Kala-azar",
+    "name_zh": "黑热病",
+    "category": "Parasitic",
+    "icd_10": "B55",
+    "icd_11": "1F51",
+    "description": "Visceral leishmaniasis",
+    "slug": "kala-azar"
+  },
+  {
+    "disease_id": "D045",
+    "name_en": "Echinococcosis",
+    "name_zh": "包虫病",
+    "category": "Parasitic",
+    "icd_10": "B67",
+    "icd_11": "1F88",
+    "description": "Hydatid disease",
+    "slug": "echinococcosis"
+  },
+  {
+    "disease_id": "D046",
+    "name_en": "Filariasis",
+    "name_zh": "丝虫病",
+    "category": "Parasitic",
+    "icd_10": "B74",
+    "icd_11": "1F60",
+    "description": "Parasitic worm infection",
+    "slug": "filariasis"
+  },
+  {
+    "disease_id": "D047",
+    "name_en": "Infectious Diarrhea",
+    "name_zh": "其他感染性腹泻病",
+    "category": "Bacterial",
+    "icd_10": "A09",
+    "icd_11": "1A11",
+    "description": "Other infectious diarrhea",
+    "slug": "infectious-diarrhea"
+  },
+  {
+    "disease_id": "D048",
+    "name_en": "Hand-Foot-Mouth Disease",
+    "name_zh": "手足口病",
+    "category": "Viral",
+    "icd_10": "B08.4",
+    "icd_11": "KA05.40",
+    "description": "Enterovirus infection common in children",
+    "slug": "hand-foot-mouth-disease"
+  },
+  {
+    "disease_id": "D049",
+    "name_en": "MERS",
+    "name_zh": "中东呼吸综合征",
+    "category": "Viral",
+    "icd_10": "U00-U49",
+    "icd_11": "1D65.1",
+    "description": "Middle East Respiratory Syndrome",
+    "slug": "mers"
+  },
+  {
+    "disease_id": "D050",
+    "name_en": "Ebola",
+    "name_zh": "埃博拉出血热",
+    "category": "Viral",
+    "icd_10": "A98.4",
+    "icd_11": "1D60",
+    "description": "Ebola virus disease",
+    "slug": "ebola"
+  },
+  {
+    "disease_id": "D051",
+    "name_en": "Zika",
+    "name_zh": "寨卡病毒病",
+    "category": "Viral",
+    "icd_10": "A92.5",
+    "icd_11": "1D47",
+    "description": "Zika virus disease",
+    "slug": "zika"
+  },
+  {
+    "disease_id": "D052",
+    "name_en": "Chikungunya",
+    "name_zh": "基孔肯雅热",
+    "category": "Viral",
+    "icd_10": "A92.0",
+    "icd_11": "1D46",
+    "description": "Chikungunya virus disease",
+    "slug": "chikungunya"
+  },
+  {
+    "disease_id": "D053",
+    "name_en": "Lassa",
+    "name_zh": "拉沙热",
+    "category": "Viral",
+    "icd_10": "A96.2",
+    "icd_11": "1D61",
+    "description": "Lassa fever",
+    "slug": "lassa"
+  },
+  {
+    "disease_id": "D054",
+    "name_en": "Varicella",
+    "name_zh": "水痘",
+    "category": "Viral",
+    "icd_10": "B01",
+    "icd_11": "KA62.0",
+    "description": "Chickenpox",
+    "slug": "varicella"
+  },
+  {
+    "disease_id": "D055",
+    "name_en": "Clonorchiasis",
+    "name_zh": "肝吸虫病",
+    "category": "Parasitic",
+    "icd_10": "B66.1",
+    "icd_11": "1F89.0",
+    "description": "Clonorchiasis",
+    "slug": "clonorchiasis"
+  },
+  {
+    "disease_id": "D056",
+    "name_en": "Streptococcus suis",
+    "name_zh": "人感染猪链球菌病",
+    "category": "Bacterial",
+    "icd_10": "A40.0",
+    "icd_11": "1C1Y",
+    "description": "Swine streptococcosis",
+    "slug": "streptococcus-suis"
+  },
+  {
+    "disease_id": "D057",
+    "name_en": "SFTS",
+    "name_zh": "发热伴血小板减少综合征",
+    "category": "Viral",
+    "icd_10": "A98.8",
+    "icd_11": "1D6Y",
+    "description": "Severe fever with thrombocytopenia syndrome",
+    "slug": "sfts"
+  },
+  {
+    "disease_id": "D058",
+    "name_en": "Scrub Typhus",
+    "name_zh": "恙虫病",
+    "category": "Bacterial",
+    "icd_10": "A75.3",
+    "icd_11": "1C30.2",
+    "description": "Tsutsugamushi disease",
+    "slug": "scrub-typhus"
+  },
+  {
+    "disease_id": "D059",
+    "name_en": "Yellow fever",
+    "name_zh": "黄热病",
+    "category": "Viral",
+    "icd_10": "A95",
+    "icd_11": "1D48",
+    "description": "",
+    "slug": "yellow-fever"
+  },
+  {
+    "disease_id": "D060",
+    "name_en": "Arenaviral haemorrhagic fever",
+    "name_zh": "沙粒病毒出血热",
+    "category": "Viral",
+    "icd_10": "A96",
+    "icd_11": "",
+    "description": "",
+    "slug": "arenaviral-haemorrhagic-fever"
+  },
+  {
+    "disease_id": "D061",
+    "name_en": "Other viral haemorrhagic fevers",
+    "name_zh": "其他病毒性出血热",
+    "category": "Viral",
+    "icd_10": "A98",
+    "icd_11": "",
+    "description": "",
+    "slug": "other-viral-haemorrhagic-fevers"
+  },
+  {
+    "disease_id": "D062",
+    "name_en": "Herpesviral infections",
+    "name_zh": "疱疹病毒感染",
+    "category": "Viral",
+    "icd_10": "B00",
+    "icd_11": "1E90",
+    "description": "",
+    "slug": "herpesviral-infections"
+  },
+  {
+    "disease_id": "D063",
+    "name_en": "Zoster",
+    "name_zh": "带状疱疹",
+    "category": "",
+    "icd_10": "B02",
+    "icd_11": "1E91",
+    "description": "",
+    "slug": "zoster"
+  },
+  {
+    "disease_id": "D064",
+    "name_en": "Smallpox",
+    "name_zh": "天花",
+    "category": "",
+    "icd_10": "B03",
+    "icd_11": "",
+    "description": "",
+    "slug": "smallpox"
+  },
+  {
+    "disease_id": "D065",
+    "name_en": "Monkeypox",
+    "name_zh": "猴痘",
+    "category": "Viral",
+    "icd_10": "B04",
+    "icd_11": "1E71",
+    "description": "",
+    "slug": "monkeypox"
+  },
+  {
+    "disease_id": "D066",
+    "name_en": "Other viral infections characterized by skin lesions",
+    "name_zh": "其他以皮损为特征的病毒感染",
+    "category": "",
+    "icd_10": "B08",
+    "icd_11": "",
+    "description": "",
+    "slug": "other-viral-infections-characterized-by-skin-lesions"
+  },
+  {
+    "disease_id": "D067",
+    "name_en": "Acute hepatitis A",
+    "name_zh": "急性甲型肝炎",
+    "category": "Viral",
+    "icd_10": "B15",
+    "icd_11": "1E50.0",
+    "description": "",
+    "slug": "acute-hepatitis-a"
+  },
+  {
+    "disease_id": "D068",
+    "name_en": "Acute hepatitis B",
+    "name_zh": "急性乙型肝炎",
+    "category": "Viral",
+    "icd_10": "B16",
+    "icd_11": "1E50.1",
+    "description": "",
+    "slug": "acute-hepatitis-b"
+  },
+  {
+    "disease_id": "D069",
+    "name_en": "Other acute viral hepatitis",
+    "name_zh": "其他急性病毒性肝炎",
+    "category": "Viral",
+    "icd_10": "B17",
+    "icd_11": "1E50.2",
+    "description": "",
+    "slug": "other-acute-viral-hepatitis"
+  },
+  {
+    "disease_id": "D070",
+    "name_en": "Chronic viral hepatitis",
+    "name_zh": "慢性病毒性肝炎",
+    "category": "Viral",
+    "icd_10": "B18",
+    "icd_11": "1E50",
+    "description": "",
+    "slug": "chronic-viral-hepatitis"
+  },
+  {
+    "disease_id": "D071",
+    "name_en": "Unspecified viral hepatitis",
+    "name_zh": "未明示的病毒性肝炎",
+    "category": "Viral",
+    "icd_10": "B19",
+    "icd_11": "1E50.Y",
+    "description": "",
+    "slug": "unspecified-viral-hepatitis"
+  },
+  {
+    "disease_id": "D073",
+    "name_en": "Infectious mononucleosis",
+    "name_zh": "传染性单核细胞增多症",
+    "category": "",
+    "icd_10": "B27",
+    "icd_11": "",
+    "description": "",
+    "slug": "infectious-mononucleosis"
+  },
+  {
+    "disease_id": "D074",
+    "name_en": "Viral conjunctivitis",
+    "name_zh": "病毒性结膜炎",
+    "category": "",
+    "icd_10": "B30",
+    "icd_11": "9A60",
+    "description": "",
+    "slug": "viral-conjunctivitis"
+  },
+  {
+    "disease_id": "D075",
+    "name_en": "Other viral diseases",
+    "name_zh": "其他病毒性疾病",
+    "category": "",
+    "icd_10": "B33",
+    "icd_11": "",
+    "description": "",
+    "slug": "other-viral-diseases"
+  },
+  {
+    "disease_id": "D076",
+    "name_en": "Viral infection of unspecified site",
+    "name_zh": "未指定部位的病毒感染",
+    "category": "",
+    "icd_10": "B34",
+    "icd_11": "",
+    "description": "",
+    "slug": "viral-infection-of-unspecified-site"
+  },
+  {
+    "disease_id": "D077",
+    "name_en": "Plasmodium falciparum malaria",
+    "name_zh": "恶性疟",
+    "category": "Parasitic",
+    "icd_10": "B50",
+    "icd_11": "1F40",
+    "description": "",
+    "slug": "plasmodium-falciparum-malaria"
+  },
+  {
+    "disease_id": "D078",
+    "name_en": "Plasmodium vivax malaria",
+    "name_zh": "间日疟",
+    "category": "Parasitic",
+    "icd_10": "B51",
+    "icd_11": "1F40",
+    "description": "",
+    "slug": "plasmodium-vivax-malaria"
+  },
+  {
+    "disease_id": "D079",
+    "name_en": "Plasmodium malariae malaria",
+    "name_zh": "三日疟",
+    "category": "Parasitic",
+    "icd_10": "B52",
+    "icd_11": "1F40",
+    "description": "",
+    "slug": "plasmodium-malariae-malaria"
+  },
+  {
+    "disease_id": "D080",
+    "name_en": "Other parasitologically confirmed malaria",
+    "name_zh": "其他寄生虫学证实的疟疾",
+    "category": "Parasitic",
+    "icd_10": "B53",
+    "icd_11": "1F40",
+    "description": "",
+    "slug": "other-parasitologically-confirmed-malaria"
+  },
+  {
+    "disease_id": "D081",
+    "name_en": "Unspecified malaria",
+    "name_zh": "未明示的疟疾",
+    "category": "Parasitic",
+    "icd_10": "B54",
+    "icd_11": "1F40",
+    "description": "",
+    "slug": "unspecified-malaria"
+  },
+  {
+    "disease_id": "D082",
+    "name_en": "Leishmaniasis",
+    "name_zh": "利什曼病",
+    "category": "Parasitic",
+    "icd_10": "B55",
+    "icd_11": "1F51",
+    "description": "",
+    "slug": "leishmaniasis"
+  },
+  {
+    "disease_id": "D083",
+    "name_en": "African trypanosomiasis",
+    "name_zh": "非洲锥虫病",
+    "category": "Parasitic",
+    "icd_10": "B56",
+    "icd_11": "1F52",
+    "description": "",
+    "slug": "african-trypanosomiasis"
+  },
+  {
+    "disease_id": "D084",
+    "name_en": "Chagas disease",
+    "name_zh": "恰加斯病",
+    "category": "Parasitic",
+    "icd_10": "B57",
+    "icd_11": "1F53",
+    "description": "",
+    "slug": "chagas-disease"
+  },
+  {
+    "disease_id": "D085",
+    "name_en": "Toxoplasmosis",
+    "name_zh": "弓形体病",
+    "category": "Parasitic",
+    "icd_10": "B58",
+    "icd_11": "1F54",
+    "description": "",
+    "slug": "toxoplasmosis"
+  },
+  {
+    "disease_id": "D086",
+    "name_en": "Other fluke infections",
+    "name_zh": "其他吸虫感染",
+    "category": "Parasitic",
+    "icd_10": "B66",
+    "icd_11": "1F89",
+    "description": "",
+    "slug": "other-fluke-infections"
+  },
+  {
+    "disease_id": "D087",
+    "name_en": "Taeniasis",
+    "name_zh": "绦虫病",
+    "category": "Parasitic",
+    "icd_10": "B68",
+    "icd_11": "",
+    "description": "",
+    "slug": "taeniasis"
+  },
+  {
+    "disease_id": "D088",
+    "name_en": "Cysticercosis",
+    "name_zh": "囊虫病",
+    "category": "Parasitic",
+    "icd_10": "B69",
+    "icd_11": "",
+    "description": "",
+    "slug": "cysticercosis"
+  },
+  {
+    "disease_id": "D089",
+    "name_en": "Arboviral diseases",
+    "name_zh": "虫媒病毒病",
+    "category": "Viral",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "",
+    "slug": "arboviral-diseases"
+  },
+  {
+    "disease_id": "D090",
+    "name_en": "Babesiosis",
+    "name_zh": "巴贝西虫病",
+    "category": "Parasitic",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "",
+    "slug": "babesiosis"
+  },
+  {
+    "disease_id": "D091",
+    "name_en": "Botulism",
+    "name_zh": "肉毒杆菌中毒",
+    "category": "Bacterial",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "",
+    "slug": "botulism"
+  },
+  {
+    "disease_id": "D092",
+    "name_en": "Campylobacteriosis",
+    "name_zh": "弯曲杆菌病",
+    "category": "Bacterial",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "",
+    "slug": "campylobacteriosis"
+  },
+  {
+    "disease_id": "D093",
+    "name_en": "Chancroid",
+    "name_zh": "软下疳",
+    "category": "Bacterial",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "",
+    "slug": "chancroid"
+  },
+  {
+    "disease_id": "D094",
+    "name_en": "Chlamydia trachomatis infection",
+    "name_zh": "沙眼衣原体感染",
+    "category": "Bacterial",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "",
+    "slug": "chlamydia-trachomatis-infection"
+  },
+  {
+    "disease_id": "D095",
+    "name_en": "Coccidioidomycosis",
+    "name_zh": "球孢子菌病",
+    "category": "Fungal",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "",
+    "slug": "coccidioidomycosis"
+  },
+  {
+    "disease_id": "D096",
+    "name_en": "Cryptosporidiosis",
+    "name_zh": "隐孢子虫病",
+    "category": "Parasitic",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "",
+    "slug": "cryptosporidiosis"
+  },
+  {
+    "disease_id": "D097",
+    "name_en": "Cyclosporiasis",
+    "name_zh": "环孢子虫病",
+    "category": "Parasitic",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "",
+    "slug": "cyclosporiasis"
+  },
+  {
+    "disease_id": "D098",
+    "name_en": "Ehrlichiosis and Anaplasmosis",
+    "name_zh": "埃立克体病和无形体病",
+    "category": "Bacterial",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "",
+    "slug": "ehrlichiosis-and-anaplasmosis"
+  },
+  {
+    "disease_id": "D099",
+    "name_en": "Giardiasis",
+    "name_zh": "贾第虫病",
+    "category": "Parasitic",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "",
+    "slug": "giardiasis"
+  },
+  {
+    "disease_id": "D100",
+    "name_en": "Haemophilus influenzae",
+    "name_zh": "流感嗜血杆菌",
+    "category": "Bacterial",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "",
+    "slug": "haemophilus-influenzae"
+  },
+  {
+    "disease_id": "D102",
+    "name_en": "Hantavirus infection",
+    "name_zh": "汉坦病毒感染",
+    "category": "Viral",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "",
+    "slug": "hantavirus-infection"
+  },
+  {
+    "disease_id": "D103",
+    "name_en": "Hemolytic uremic syndrome",
+    "name_zh": "溶血性尿毒症综合征",
+    "category": "Bacterial",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "",
+    "slug": "hemolytic-uremic-syndrome"
+  },
+  {
+    "disease_id": "D104",
+    "name_en": "Influenza-associated mortality",
+    "name_zh": "流行性感冒相关死亡",
+    "category": "Viral",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "",
+    "slug": "influenza-associated-mortality"
+  },
+  {
+    "disease_id": "D106",
+    "name_en": "Invasive pneumococcal disease",
+    "name_zh": "侵袭性肺炎球菌病",
+    "category": "Bacterial",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "",
+    "slug": "invasive-pneumococcal-disease"
+  },
+  {
+    "disease_id": "D107",
+    "name_en": "Legionellosis",
+    "name_zh": "军团菌病",
+    "category": "Bacterial",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "",
+    "slug": "legionellosis"
+  },
+  {
+    "disease_id": "D108",
+    "name_en": "Listeriosis",
+    "name_zh": "李斯特菌病",
+    "category": "Bacterial",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "",
+    "slug": "listeriosis"
+  },
+  {
+    "disease_id": "D109",
+    "name_en": "Lyme disease",
+    "name_zh": "莱姆病",
+    "category": "Bacterial",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "",
+    "slug": "lyme-disease"
+  },
+  {
+    "disease_id": "D110",
+    "name_en": "Meningococcal disease",
+    "name_zh": "脑膜炎球菌病",
+    "category": "Bacterial",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "",
+    "slug": "meningococcal-disease"
+  },
+  {
+    "disease_id": "D111",
+    "name_en": "Novel influenza A",
+    "name_zh": "新型甲型流感",
+    "category": "Viral",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "",
+    "slug": "novel-influenza-a"
+  },
+  {
+    "disease_id": "D112",
+    "name_en": "Psittacosis",
+    "name_zh": "鹦鹉热",
+    "category": "Bacterial",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "",
+    "slug": "psittacosis"
+  },
+  {
+    "disease_id": "D113",
+    "name_en": "Q fever",
+    "name_zh": "Q热",
+    "category": "Bacterial",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "",
+    "slug": "q-fever"
+  },
+  {
+    "disease_id": "D114",
+    "name_en": "Salmonellosis",
+    "name_zh": "沙门氏菌病",
+    "category": "Bacterial",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "",
+    "slug": "salmonellosis"
+  },
+  {
+    "disease_id": "D118",
+    "name_en": "Spotted fever rickettsiosis",
+    "name_zh": "斑点热立克次体病",
+    "category": "Bacterial",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "",
+    "slug": "spotted-fever-rickettsiosis"
+  },
+  {
+    "disease_id": "D119",
+    "name_en": "Streptococcal disease",
+    "name_zh": "链球菌病",
+    "category": "Bacterial",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "",
+    "slug": "streptococcal-disease"
+  },
+  {
+    "disease_id": "D120",
+    "name_en": "Tetanus",
+    "name_zh": "破伤风",
+    "category": "Bacterial",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "",
+    "slug": "tetanus"
+  },
+  {
+    "disease_id": "D121",
+    "name_en": "Toxic shock syndrome",
+    "name_zh": "中毒性休克综合征",
+    "category": "Bacterial",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "",
+    "slug": "toxic-shock-syndrome"
+  },
+  {
+    "disease_id": "D122",
+    "name_en": "Trichinellosis",
+    "name_zh": "旋毛虫病",
+    "category": "Parasitic",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "",
+    "slug": "trichinellosis"
+  },
+  {
+    "disease_id": "D123",
+    "name_en": "Tularemia",
+    "name_zh": "土拉菌病",
+    "category": "Bacterial",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "",
+    "slug": "tularemia"
+  },
+  {
+    "disease_id": "D124",
+    "name_en": "Typhoid fever",
+    "name_zh": "伤寒",
+    "category": "Bacterial",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "",
+    "slug": "typhoid-fever"
+  },
+  {
+    "disease_id": "D125",
+    "name_en": "Vancomycin resistance",
+    "name_zh": "万古霉素耐药性",
+    "category": "Bacterial",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "",
+    "slug": "vancomycin-resistance"
+  },
+  {
+    "disease_id": "D126",
+    "name_en": "Vibriosis",
+    "name_zh": "弧菌病",
+    "category": "Bacterial",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "",
+    "slug": "vibriosis"
+  },
+  {
+    "disease_id": "D127",
+    "name_en": "Viral hemorrhagic fevers",
+    "name_zh": "病毒性出血热",
+    "category": "Viral",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "",
+    "slug": "viral-hemorrhagic-fevers"
+  },
+  {
+    "disease_id": "D128",
+    "name_en": "West Nile virus",
+    "name_zh": "西尼罗病毒",
+    "category": "Viral",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "",
+    "slug": "west-nile-virus"
+  },
+  {
+    "disease_id": "D130",
+    "name_en": "Zika virus",
+    "name_zh": "寨卡病毒",
+    "category": "Viral",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "",
+    "slug": "zika-virus"
+  },
+  {
+    "disease_id": "D999",
+    "name_en": "Total",
+    "name_zh": "甲乙丙类传染病总计",
+    "category": "Summary",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "Aggregate total for reporting",
+    "slug": "total"
+  }
+]

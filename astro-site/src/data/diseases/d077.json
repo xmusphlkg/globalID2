@@ -1,0 +1,18 @@
+{
+  "disease_id": "D077",
+  "name_en": "Plasmodium falciparum malaria",
+  "name_zh": "恶性疟",
+  "category": "Parasitic",
+  "icd_10": "B50",
+  "icd_11": "1F40",
+  "description": "",
+  "slug": "plasmodium-falciparum-malaria",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

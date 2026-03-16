@@ -1,0 +1,18 @@
+{
+  "disease_id": "D104",
+  "name_en": "Influenza-associated mortality",
+  "name_zh": "流行性感冒相关死亡",
+  "category": "Viral",
+  "icd_10": "",
+  "icd_11": "",
+  "description": "",
+  "slug": "influenza-associated-mortality",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

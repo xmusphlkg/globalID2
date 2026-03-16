@@ -1,0 +1,18 @@
+{
+  "disease_id": "D114",
+  "name_en": "Salmonellosis",
+  "name_zh": "沙门氏菌病",
+  "category": "Bacterial",
+  "icd_10": "",
+  "icd_11": "",
+  "description": "",
+  "slug": "salmonellosis",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

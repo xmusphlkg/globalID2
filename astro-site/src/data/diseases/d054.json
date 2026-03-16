@@ -1,0 +1,48 @@
+{
+  "disease_id": "D054",
+  "name_en": "Varicella",
+  "name_zh": "水痘",
+  "category": "Viral",
+  "icd_10": "B01",
+  "icd_11": "KA62.0",
+  "description": "Chickenpox",
+  "slug": "varicella",
+  "country_series": {
+    "CN": {
+      "dates": [
+        "2026-01-01",
+        "2026-02-01"
+      ],
+      "cases": [
+        58927,
+        33256
+      ],
+      "deaths": [
+        1,
+        0
+      ],
+      "incidence_rates": [
+        -10.0,
+        -10.0
+      ],
+      "total_cases": 92183,
+      "total_deaths": 1
+    }
+  },
+  "global_monthly": {
+    "months": [
+      "2026-01",
+      "2026-02"
+    ],
+    "cases": [
+      58927,
+      33256
+    ],
+    "deaths": [
+      1,
+      0
+    ]
+  },
+  "total_cases": 92183,
+  "total_deaths": 1
+}

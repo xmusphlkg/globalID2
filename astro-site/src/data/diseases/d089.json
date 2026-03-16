@@ -1,0 +1,18 @@
+{
+  "disease_id": "D089",
+  "name_en": "Arboviral diseases",
+  "name_zh": "虫媒病毒病",
+  "category": "Viral",
+  "icd_10": "",
+  "icd_11": "",
+  "description": "",
+  "slug": "arboviral-diseases",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

@@ -1,0 +1,18 @@
+{
+  "disease_id": "D088",
+  "name_en": "Cysticercosis",
+  "name_zh": "囊虫病",
+  "category": "Parasitic",
+  "icd_10": "B69",
+  "icd_11": "",
+  "description": "",
+  "slug": "cysticercosis",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

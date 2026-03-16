@@ -1,0 +1,18 @@
+{
+  "disease_id": "D095",
+  "name_en": "Coccidioidomycosis",
+  "name_zh": "球孢子菌病",
+  "category": "Fungal",
+  "icd_10": "",
+  "icd_11": "",
+  "description": "",
+  "slug": "coccidioidomycosis",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

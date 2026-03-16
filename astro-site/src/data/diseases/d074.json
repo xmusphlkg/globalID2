@@ -1,0 +1,18 @@
+{
+  "disease_id": "D074",
+  "name_en": "Viral conjunctivitis",
+  "name_zh": "病毒性结膜炎",
+  "category": "",
+  "icd_10": "B30",
+  "icd_11": "9A60",
+  "description": "",
+  "slug": "viral-conjunctivitis",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

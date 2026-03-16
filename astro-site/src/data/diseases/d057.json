@@ -1,0 +1,48 @@
+{
+  "disease_id": "D057",
+  "name_en": "SFTS",
+  "name_zh": "发热伴血小板减少综合征",
+  "category": "Viral",
+  "icd_10": "A98.8",
+  "icd_11": "1D6Y",
+  "description": "Severe fever with thrombocytopenia syndrome",
+  "slug": "sfts",
+  "country_series": {
+    "CN": {
+      "dates": [
+        "2026-01-01",
+        "2026-02-01"
+      ],
+      "cases": [
+        1,
+        1
+      ],
+      "deaths": [
+        0,
+        1
+      ],
+      "incidence_rates": [
+        -10.0,
+        -10.0
+      ],
+      "total_cases": 2,
+      "total_deaths": 1
+    }
+  },
+  "global_monthly": {
+    "months": [
+      "2026-01",
+      "2026-02"
+    ],
+    "cases": [
+      1,
+      1
+    ],
+    "deaths": [
+      0,
+      1
+    ]
+  },
+  "total_cases": 2,
+  "total_deaths": 1
+}
