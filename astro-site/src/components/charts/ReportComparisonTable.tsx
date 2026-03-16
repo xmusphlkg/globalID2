@@ -120,7 +120,7 @@ export default function ReportComparisonTable({ rows, currentMonth, prevMonth, p
           onChange={e => setSearch(e.target.value)}
         />
         <label className="flex items-center gap-2 text-sm text-slate-400 cursor-pointer select-none">
-          <input type="checkbox" className="rounded border-slate-600 bg-slate-800 text-brand-500 focus:ring-brand-500" checked={showAll} onChange={e => setShowAll(e.target.checked)} />
+          <input type="checkbox" className="site-control-input rounded border text-brand-500 focus:ring-brand-500" checked={showAll} onChange={e => setShowAll(e.target.checked)} />
           <span data-lang-en="Show zero-case diseases" data-lang-zh="显示零病例疾病">
             Show zero-case diseases
           </span>

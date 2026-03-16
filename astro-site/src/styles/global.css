@@ -105,6 +105,30 @@
     background-color: rgb(var(--bg-soft) / 0.55);
   }
 
+  .site-action-secondary {
+    border-color: rgb(var(--border));
+    color: rgb(var(--text));
+    background-color: transparent;
+  }
+
+  .site-action-secondary:hover {
+    border-color: rgb(var(--border-soft));
+    color: rgb(var(--text-strong));
+    background-color: rgb(var(--bg-soft) / 0.5);
+  }
+
+  .site-toggle-btn {
+    border-color: rgb(var(--border));
+    color: rgb(var(--text-muted));
+    background-color: transparent;
+  }
+
+  .site-toggle-btn:hover {
+    border-color: rgb(var(--border-soft));
+    color: rgb(var(--text-strong));
+    background-color: rgb(var(--bg-soft) / 0.45);
+  }
+
   .site-table-head {
     background-color: rgb(var(--bg-soft) / 0.75);
   }
@@ -120,6 +144,10 @@
   .site-table-total-row {
     background-color: rgb(var(--bg-soft) / 0.95);
     border-top-color: rgb(var(--border-soft));
+  }
+
+  .site-count-muted {
+    color: rgb(var(--text-faint));
   }
 
   /* Card component */
@@ -200,14 +228,17 @@
 
   html[data-theme='light'] .border-slate-800,
   html[data-theme='light'] .border-slate-800\/80,
+  html[data-theme='light'] .border-slate-600\/50,
   html[data-theme='light'] .border-slate-700,
   html[data-theme='light'] .border-slate-700\/50,
   html[data-theme='light'] .border-slate-700\/60 {
     border-color: rgb(203 213 225) !important;
   }
 
+  html[data-theme='light'] .bg-slate-700\/50,
   html[data-theme='light'] .bg-slate-800,
   html[data-theme='light'] .bg-slate-800\/30,
+  html[data-theme='light'] .bg-slate-800\/40,
   html[data-theme='light'] .bg-slate-800\/60 {
     background-color: rgb(241 245 249) !important;
   }

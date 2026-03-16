@@ -1,10 +1,10 @@
 // src/components/charts/MonthlyBar.tsx
-// Plotly bar chart showing monthly case/death counts for a single disease,
+// ECharts bar chart showing monthly case/death counts for a single disease,
 // with year-over-year grouped bars for comparison.
 
 import React, { useState, useMemo, useEffect } from 'react';
-import Plot from 'react-plotly.js';
-import type { Data, Layout } from 'plotly.js';
+import EChartsReact from 'echarts-for-react/lib/core';
+import echarts from '../../lib/echarts';
 
 interface MonthlyData {
   months: string[];   // "YYYY-MM" strings
@@ -96,65 +96,60 @@ export default function MonthlyBar({ data, title, height = 380 }: Props) {
     return byYear;
   }, [data, metric]);
 
-  const traces: Data[] = Object.entries(grouped).map(([year, { months, values }], idx) => ({
-    type: 'bar',
-    name: year,
-    x: months,
-    y: values,
-    marker: { color: chartColors.palette[idx % chartColors.palette.length], opacity: 0.85 },
-    hovertemplate: `<b>${year}</b> - %{x}<br>${lang === 'zh' ? (metric === 'cases' ? '病例数' : '死亡数') : (metric === 'cases' ? 'Cases' : 'Deaths')}: <b>%{y:,}</b><extra></extra>`,
-  }));
+  const metricLabel = lang === 'zh' ? (metric === 'cases' ? '病例数' : '死亡数') : (metric === 'cases' ? 'Cases' : 'Deaths');
 
-  const layout: Partial<Layout> = {
-    title: title
-      ? { text: title, font: { color: chartColors.title, size: 14 }, x: 0, pad: { l: 0 } }
-      : undefined,
-    paper_bgcolor: 'rgba(0,0,0,0)',
-    plot_bgcolor: 'rgba(0,0,0,0)',
-    font: { family: 'Inter, system-ui, sans-serif', color: chartColors.font, size: 12 },
-    height,
-    margin: { l: 55, r: 20, t: title ? 45 : 15, b: 50 },
-    barmode: 'group',
-    bargap: 0.15,
-    bargroupgap: 0.05,
-    xaxis: {
-      gridcolor: chartColors.grid,
-      linecolor: chartColors.line,
-      tickcolor: chartColors.tick,
-      tickfont: { size: 11, color: chartColors.font },
-      categoryarray: MONTH_NAMES,
-    },
-    yaxis: {
-      gridcolor: chartColors.grid,
-      linecolor: chartColors.line,
-      tickcolor: chartColors.tick,
-      tickfont: { size: 11, color: chartColors.font },
-      title: {
-        text: lang === 'zh'
-          ? (metric === 'cases' ? '病例数' : '死亡数')
-          : (metric === 'cases' ? 'Cases' : 'Deaths'),
-        font: { size: 11, color: chartColors.font },
-      },
-      rangemode: 'tozero',
+  const option = useMemo(() => ({
+    backgroundColor: 'transparent',
+    title: title ? { text: title, textStyle: { color: chartColors.title, fontSize: 14 }, left: 0, top: 0 } : undefined,
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' },
+      backgroundColor: chartColors.hoverBg,
+      borderColor: chartColors.hoverBorder,
+      textStyle: { color: chartColors.hoverFont, fontSize: 12 },
+      formatter: (params: any[]) =>
+        params.map(p => `<b>${p.seriesName}</b> - ${p.name}<br/>${metricLabel}: <b>${p.value?.toLocaleString() ?? 0}</b>`).join('<br/>'),
     },
     legend: {
-      bgcolor: chartColors.legendBg,
-      bordercolor: chartColors.legendBorder,
-      borderwidth: 1,
-      font: { size: 11, color: chartColors.font },
-      orientation: 'h',
-      xanchor: 'left',
-      yanchor: 'bottom',
-      y: -0.3,
-      x: 0,
+      bottom: 0,
+      left: 0,
+      orient: 'horizontal' as const,
+      textStyle: { color: chartColors.font, fontSize: 11 },
+      backgroundColor: chartColors.legendBg,
+      borderColor: chartColors.legendBorder,
+      borderWidth: 1,
     },
-    hovermode: 'closest',
-    hoverlabel: {
-      bgcolor: chartColors.hoverBg,
-      bordercolor: chartColors.hoverBorder,
-      font: { color: chartColors.hoverFont, size: 12 },
+    grid: { left: 55, right: 20, top: title ? 45 : 15, bottom: 60 },
+    xAxis: {
+      type: 'category' as const,
+      data: MONTH_NAMES,
+      axisLabel: { color: chartColors.font, fontSize: 11 },
+      axisLine: { lineStyle: { color: chartColors.line } },
+      axisTick: { lineStyle: { color: chartColors.tick } },
+      splitLine: { lineStyle: { color: chartColors.grid } },
     },
-  };
+    yAxis: {
+      type: 'value' as const,
+      name: metricLabel,
+      nameTextStyle: { color: chartColors.font, fontSize: 11 },
+      axisLabel: { color: chartColors.font, fontSize: 11 },
+      axisLine: { lineStyle: { color: chartColors.line } },
+      axisTick: { lineStyle: { color: chartColors.tick } },
+      splitLine: { lineStyle: { color: chartColors.grid } },
+      min: 0,
+    },
+    series: Object.entries(grouped).map(([year, { months, values }], idx) => ({
+      name: year,
+      type: 'bar' as const,
+      data: MONTH_NAMES.map(mon => {
+        const i = months.indexOf(mon);
+        return i >= 0 ? values[i] : 0;
+      }),
+      itemStyle: { color: chartColors.palette[idx % chartColors.palette.length], opacity: 0.85 },
+    })),
+  }), [grouped, chartColors, title, metricLabel]);
+
+  const hasData = Object.keys(grouped).length > 0;
 
   return (
     <div className="card p-4">
@@ -177,17 +172,16 @@ export default function MonthlyBar({ data, title, height = 380 }: Props) {
         ))}
       </div>
 
-      {traces.length === 0 ? (
+      {!hasData ? (
         <div className="flex items-center justify-center h-40 text-slate-500 text-sm">
           {lang === 'zh' ? '暂无数据' : 'No data available'}
         </div>
       ) : (
-        <Plot
-          data={traces}
-          layout={layout}
-          config={{ displayModeBar: 'hover', responsive: true, modeBarButtonsToRemove: ['lasso2d', 'select2d'] }}
+        <EChartsReact
+          echarts={echarts}
+          option={option}
+          notMerge
           style={{ width: '100%', height }}
-          useResizeHandler
         />
       )}
     </div>

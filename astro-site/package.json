@@ -13,16 +13,17 @@
     "@astrojs/sitemap": "^3.2.0",
     "@astrojs/tailwind": "^5.1.2",
     "astro": "^4.16.0",
-    "plotly.js-dist-min": "^2.35.2",
+    "echarts": "^6.0.0",
+    "echarts-for-react": "^3.0.6",
+    "marked": "^9.1.6",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-plotly.js": "^2.6.0"
+    "tslib": "^2.8.1"
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.15",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
-    "@types/react-plotly.js": "^2.6.3",
     "autoprefixer": "^10.4.20",
     "tailwindcss": "^3.4.16",
     "typescript": "^5.7.2"

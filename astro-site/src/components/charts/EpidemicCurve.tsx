@@ -1,10 +1,10 @@
 // src/components/charts/EpidemicCurve.tsx
-// Interactive Plotly time-series chart for disease cases/deaths/incidence rates.
+// ECharts time-series chart for disease cases/deaths/incidence rates.
 // Accepts pre-structured trace data from the Python export.
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import Plot from 'react-plotly.js';
-import type { Data, Layout } from 'plotly.js';
+import EChartsReact from 'echarts-for-react/lib/core';
+import echarts from '../../lib/echarts';
 
 interface DiseaseSeries {
   disease_id: string;
@@ -114,66 +114,78 @@ export default function EpidemicCurve({ series, title, topN = 10, diseasIds, hei
     return ids;
   }, [series, diseasIds, topN]);
 
-  const traces: Data[] = getSeries().map((id, idx) => {
-    const s = series[id];
-    const yData = metric === 'incidence_rates' ? s.incidence_rates : s[metric];
-    return {
-      type: 'scatter',
-      mode: 'lines',
-      name: lang === 'zh' ? s.name_zh : s.name_en,
-      x: s.dates,
-      y: yData as number[],
-      line: {
-        color: chartColors.palette[idx % chartColors.palette.length],
-        width: 2,
-      },
-      hovertemplate: `<b>%{fullData.name}</b><br>%{x}<br>${METRIC_LABELS[metric][lang]}: <b>%{y:,}</b><extra></extra>`,
-    };
-  });
+  const activeIds = getSeries();
 
-  const layout: Partial<Layout> = {
+  const option = useMemo(() => ({
+    backgroundColor: 'transparent',
     title: title
-      ? { text: title, font: { color: chartColors.title, size: 15 }, x: 0, pad: { l: 0 } }
+      ? { text: title, textStyle: { color: chartColors.title, fontSize: 15 }, left: 0, top: 0 }
       : undefined,
-    paper_bgcolor: 'rgba(0,0,0,0)',
-    plot_bgcolor: 'rgba(0,0,0,0)',
-    font: { family: 'Inter, system-ui, sans-serif', color: chartColors.font, size: 12 },
-    height,
-    margin: { l: 55, r: 20, t: 60, b: 40 },
-    xaxis: {
-      gridcolor: chartColors.grid,
-      linecolor: chartColors.line,
-      tickcolor: chartColors.tick,
-      tickfont: { size: 11, color: chartColors.font },
-      rangeslider: { visible: true, bgcolor: chartColors.rangesliderBg, thickness: 0.06 },
-      type: 'date',
-    },
-    yaxis: {
-      gridcolor: chartColors.grid,
-      linecolor: chartColors.line,
-      tickcolor: chartColors.tick,
-      tickfont: { size: 11, color: chartColors.font },
-      title: { text: METRIC_LABELS[metric][lang], font: { size: 11 } },
-      rangemode: 'tozero',
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: chartColors.hoverBg,
+      borderColor: chartColors.hoverBorder,
+      textStyle: { color: chartColors.hoverFont, fontSize: 12 },
+      formatter: (params: any[]) => {
+        const date = params[0]?.axisValueLabel ?? params[0]?.axisValue ?? '';
+        return [
+          `<b>${date}</b>`,
+          ...params.map(p => `${p.marker}${p.seriesName}: <b>${(p.value?.[1] ?? p.value)?.toLocaleString() ?? 0}</b>`),
+        ].join('<br/>');
+      },
     },
     legend: {
-      bgcolor: chartColors.legendBg,
-      bordercolor: chartColors.legendBorder,
-      borderwidth: 1,
-      font: { size: 11, color: chartColors.font },
-      orientation: 'h',
-      xanchor: 'left',
-      yanchor: 'bottom',
-      y: 1.02,
-      x: 0,
+      top: title ? 30 : 0,
+      left: 0,
+      orient: 'horizontal' as const,
+      textStyle: { color: chartColors.font, fontSize: 11 },
+      backgroundColor: chartColors.legendBg,
+      borderColor: chartColors.legendBorder,
+      borderWidth: 1,
     },
-    hovermode: 'closest',
-    hoverlabel: {
-      bgcolor: chartColors.hoverBg,
-      bordercolor: chartColors.hoverBorder,
-      font: { color: chartColors.hoverFont, size: 12 },
+    grid: { left: 55, right: 20, top: title ? 80 : 50, bottom: 60 },
+    xAxis: {
+      type: 'time' as const,
+      axisLabel: { color: chartColors.font, fontSize: 11 },
+      axisLine: { lineStyle: { color: chartColors.line } },
+      axisTick: { lineStyle: { color: chartColors.tick } },
+      splitLine: { lineStyle: { color: chartColors.grid } },
     },
-  };
+    yAxis: {
+      type: 'value' as const,
+      name: METRIC_LABELS[metric][lang],
+      nameTextStyle: { color: chartColors.font, fontSize: 11 },
+      axisLabel: { color: chartColors.font, fontSize: 11 },
+      axisLine: { lineStyle: { color: chartColors.line } },
+      axisTick: { lineStyle: { color: chartColors.tick } },
+      splitLine: { lineStyle: { color: chartColors.grid } },
+      min: 0,
+    },
+    dataZoom: [
+      {
+        type: 'slider' as const,
+        bottom: 5,
+        height: 18,
+        backgroundColor: chartColors.rangesliderBg,
+        borderColor: chartColors.line,
+        textStyle: { color: chartColors.font, fontSize: 10 },
+        fillerColor: theme === 'light' ? 'rgba(37,99,235,0.15)' : 'rgba(96,165,250,0.15)',
+      },
+    ],
+    series: activeIds.map((id, idx) => {
+      const s = series[id];
+      const yData = metric === 'incidence_rates' ? s.incidence_rates : s[metric];
+      return {
+        name: lang === 'zh' ? s.name_zh : s.name_en,
+        type: 'line' as const,
+        smooth: false,
+        showSymbol: false,
+        lineStyle: { color: chartColors.palette[idx % chartColors.palette.length], width: 2 },
+        itemStyle: { color: chartColors.palette[idx % chartColors.palette.length] },
+        data: s.dates.map((d, i) => [d, yData[i] ?? null]),
+      };
+    }),
+  }), [activeIds, series, metric, lang, chartColors, title, theme]);
 
   return (
     <div className="card p-4">
@@ -195,15 +207,14 @@ export default function EpidemicCurve({ series, title, topN = 10, diseasIds, hei
         <span className="ml-auto text-xs text-slate-600">Top {topN} diseases</span>
       </div>
 
-      {traces.length === 0 ? (
+      {activeIds.length === 0 ? (
         <div className="flex items-center justify-center h-40 text-slate-500 text-sm">No data available</div>
       ) : (
-        <Plot
-          data={traces}
-          layout={layout}
-          config={{ displayModeBar: 'hover', responsive: true, modeBarButtonsToRemove: ['lasso2d', 'select2d'] }}
+        <EChartsReact
+          echarts={echarts}
+          option={option}
+          notMerge
           style={{ width: '100%', height }}
-          useResizeHandler
         />
       )}
     </div>

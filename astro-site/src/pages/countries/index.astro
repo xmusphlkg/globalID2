@@ -1,53 +1,136 @@
 ---
-// src/pages/countries/index.astro — Country list
+// src/pages/countries/index.astro — Country coverage map
 import ReportLayout from '../../layouts/ReportLayout.astro';
 import CountryCard from '../../components/CountryCard.astro';
-import WorldMap from '../../components/charts/WorldMap';
+import CountryFlag from '../../components/CountryFlag.astro';
+import CountriesMapView from '../../components/charts/CountriesMapView';
 import metaRaw from '../../data/meta.json';
 
 const meta = metaRaw as any;
-const countries = meta.countries ?? [];
-const activeCodes: string[] = countries.map((c: any) => (c.code as string).toUpperCase());
+const supportedCountries = (meta.countries ?? []) as Array<{
+  code: string; name: string; language: string;
+  total_cases: number; total_deaths: number; disease_count: number;
+  date_range: { start: string | null; end: string | null };
+}>;
+
+const metaByCode = Object.fromEntries(
+  supportedCountries.map(c => [c.code.toUpperCase(), c])
+) as Record<string, typeof supportedCountries[0]>;
+
+// All 10 countries from support_map.js
+const ALL_COUNTRIES = [
+  { code: 'CN', name: 'China',          status: 'Supported' },
+  { code: 'TH', name: 'Thailand',       status: 'Scheduled' },
+  { code: 'AU', name: 'Australia',      status: 'Scheduled' },
+  { code: 'US', name: 'United States',  status: 'Scheduled' },
+  { code: 'GB', name: 'United Kingdom', status: 'Scheduled' },
+  { code: 'KR', name: 'South Korea',    status: 'Scheduled' },
+  { code: 'NZ', name: 'New Zealand',    status: 'Scheduled' },
+  { code: 'SE', name: 'Sweden',         status: 'Scheduled' },
+  { code: 'JP', name: 'Japan',          status: 'Scheduled' },
+  { code: 'SG', name: 'Singapore',      status: 'Scheduled' },
+];
+
+const FLAGS: Record<string, string> = {
+  CN: '🇨🇳', TH: '🇹🇭', AU: '🇦🇺', US: '🇺🇸', GB: '🇬🇧',
+  KR: '🇰🇷', NZ: '🇳🇿', SE: '🇸🇪', JP: '🇯🇵', SG: '🇸🇬',
+};
 ---
 
 <ReportLayout
   title="Countries"
-  description="Disease surveillance data by country."
+  description="Global disease surveillance coverage by country."
   breadcrumbs={[{ label: 'Countries' }]}
 >
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-    <div class="mb-10">
-      <h1 class="text-3xl font-bold text-slate-100 mb-3" data-lang-en="Countries" data-lang-zh="国家">Countries</h1>
-      <p class="text-slate-500" data-lang-en="Disease surveillance data organized by country." data-lang-zh="按国家组织的疾病监测数据。">
-        Disease surveillance data organized by country.
-      </p>
-    </div>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
 
-    <!-- World map -->
-    <div class="card p-4 mb-10">
-      <WorldMap client:only="react" activeCodes={activeCodes} height={400} />
-    </div>
-
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-      {countries.map((c: any) => (
-        <CountryCard
-          code={c.code}
-          name={c.name}
-          totalCases={c.total_cases}
-          totalDeaths={c.total_deaths}
-          diseaseCount={c.disease_count}
-          dateRange={c.date_range}
-        />
-      ))}
-    </div>
-
-    {countries.length === 0 && (
-      <div class="text-center py-24 text-slate-500">
-        <p data-lang-en="No country data available. Run the data export script first." data-lang-zh="暂无国家数据，请先运行数据导出脚本。">
-          No country data available. Run the data export script first.
+    <!-- Page header ──────────────────────────────────────────────────────── -->
+    <div class="mb-8 flex items-center gap-4">
+      <img src="/logo.png" alt="GlobalID logo" class="h-12 w-auto flex-shrink-0" />
+      <div>
+        <h1 class="text-3xl font-bold text-slate-100 mb-1"
+            data-lang-en="Disease Surveillance Coverage"
+            data-lang-zh="疾病监测覆盖范围">
+          Disease Surveillance Coverage
+        </h1>
+        <p class="text-slate-500 text-sm"
+           data-lang-en="Global infectious disease surveillance data organized by country."
+           data-lang-zh="全球传染病监测数据（按国家组织）。">
+          Global infectious disease surveillance data organized by country.
         </p>
-        <code class="mt-4 block text-xs text-slate-700">python scripts/generate_site_data.py</code>
       </div>
-    )}
+    </div>
+
+    <!-- Coverage map ─────────────────────────────────────────────────────── -->
+    <div class="card p-4 mb-10 relative">
+      <!-- Legend -->
+      <div class="absolute top-4 right-5 flex gap-5 text-xs text-slate-400 z-20 pointer-events-none">
+        <span class="flex items-center gap-1.5">
+          <span class="inline-block w-2.5 h-2.5 rounded-full bg-teal-500"></span>
+          <span data-lang-en="Supported" data-lang-zh="已支持">Supported</span>
+        </span>
+        <span class="flex items-center gap-1.5">
+          <span class="inline-block w-2.5 h-2.5 rounded-full bg-slate-500"></span>
+          <span data-lang-en="Scheduled" data-lang-zh="规划中">Scheduled</span>
+        </span>
+      </div>
+
+      <CountriesMapView
+        client:only="react"
+        metaCountries={supportedCountries}
+        height={480}
+      />
+    </div>
+
+    <!-- Country cards ────────────────────────────────────────────────────── -->
+    <h2 class="text-lg font-semibold text-slate-300 mb-5"
+        data-lang-en="Coverage Countries" data-lang-zh="覆盖国家">
+      Coverage Countries
+    </h2>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      {ALL_COUNTRIES.map((c) => {
+        const m = metaByCode[c.code];
+        if (m) {
+          return (
+            <CountryCard
+              code={m.code}
+              name={m.name}
+              totalCases={m.total_cases}
+              totalDeaths={m.total_deaths}
+              diseaseCount={m.disease_count}
+              dateRange={m.date_range}
+            />
+          );
+        }
+
+        // Scheduled country card
+        return (
+          <div class="card p-5 opacity-60 border-slate-700/40 select-none transition-all">
+            <div class="flex items-start justify-between mb-3">
+              <div class="flex items-center gap-3">
+                <CountryFlag code={c.code} name={c.name} sizeClass="w-9 h-7" />
+                <div>
+                  <h3 class="text-slate-300 font-semibold text-base">{c.name}</h3>
+                  <span class="text-slate-600 text-xs font-mono">{c.code}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-1">
+              <span class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded
+                           border border-slate-700 text-slate-500">
+                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span data-lang-en="Scheduled" data-lang-zh="规划中">Scheduled</span>
+              </span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+
   </div>
 </ReportLayout>

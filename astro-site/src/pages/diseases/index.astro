@@ -47,7 +47,7 @@ const catCounts = Object.fromEntries(
         id="disease-search"
         type="search"
         placeholder="Search diseases…"
-        class="w-full sm:w-72 px-3 py-2 text-sm rounded-lg bg-slate-800 border border-slate-700 text-slate-300 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-500"
+        class="site-control-input w-full sm:w-72 px-3 py-2 text-sm rounded-lg border focus:outline-none focus:ring-2 focus:ring-brand-500"
       />
       <div class="flex items-center gap-2 flex-wrap" id="cat-filters">
         <button class="cat-filter-btn active px-3 py-1.5 text-xs rounded-full border border-brand-500 bg-brand-600 text-white font-medium" data-cat="All">
@@ -55,7 +55,7 @@ const catCounts = Object.fromEntries(
         </button>
         {categories.map(cat => (
           <button
-            class="cat-filter-btn px-3 py-1.5 text-xs rounded-full border border-slate-700 text-slate-400 hover:border-slate-600 font-medium transition-all"
+            class="cat-filter-btn site-control-pill px-3 py-1.5 text-xs rounded-full border font-medium transition-all"
             data-cat={cat}
           >
             <span data-lang-en={cat} data-lang-zh={catZh[cat] ?? cat}>{cat}</span>
@@ -72,7 +72,7 @@ const catCounts = Object.fromEntries(
         <div class="cat-section mb-12" data-cat={cat}>
           <h2 class="text-slate-400 text-xs font-semibold uppercase tracking-widest mb-5 flex items-center gap-2">
             <span data-lang-en={cat} data-lang-zh={catZh[cat] ?? cat}>{cat}</span>
-            <span class="text-slate-700">({catDiseases.length})</span>
+            <span class="site-count-muted">({catDiseases.length})</span>
           </h2>
           <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4" id={`grid-${cat.toLowerCase()}`}>
             {catDiseases.map(d => (
@@ -116,8 +116,7 @@ const catCounts = Object.fromEntries(
         b.classList.toggle('border-brand-500', isActive);
         b.classList.toggle('bg-brand-600', isActive);
         b.classList.toggle('text-white', isActive);
-        b.classList.toggle('border-slate-700', !isActive);
-        b.classList.toggle('text-slate-400', !isActive);
+        b.classList.toggle('site-control-pill', !isActive);
       });
       applyFilters();
     });
