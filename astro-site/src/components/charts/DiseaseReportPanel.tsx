@@ -1,7 +1,6 @@
 // src/components/charts/DiseaseReportPanel.tsx
 // Per-disease analysis panel for the report page.
-// Renders text sections (trend_analysis, key_findings, highlights, summary)
-// plus EpidemicCurve and MonthlyBar filtered to the report period.
+// The inline expansion intentionally shows charts only.
 
 import React, { useState, useEffect, useMemo } from 'react';
 import EChartsReact from 'echarts-for-react/lib/core';
@@ -40,14 +39,6 @@ interface Props {
   countryCode: string;
   reportId: number | string;
 }
-
-const SECTION_ORDER = ['summary', 'trend_analysis', 'key_findings', 'highlights'];
-const SECTION_LABELS: Record<string, { en: string; zh: string; icon: string }> = {
-  summary:        { en: 'Summary',        zh: '摘要',     icon: '📋' },
-  trend_analysis: { en: 'Trend Analysis', zh: '趋势分析', icon: '📈' },
-  key_findings:   { en: 'Key Findings',   zh: '关键发现', icon: '🔍' },
-  highlights:     { en: 'Highlights',     zh: '要点',     icon: '✨' },
-};
 
 const CATEGORY_COLORS: Record<string, string> = {
   Viral:     'bg-blue-500/15 text-blue-400 ring-1 ring-blue-500/25',
@@ -298,11 +289,6 @@ function DiseaseCard({ disease, defaultOpen, theme, lang, countryCode, reportId 
 }) {
   const [open, setOpen] = useState(defaultOpen);
 
-  const sortedSections = useMemo(() =>
-    [...disease.sections].sort(
-      (a, b) => SECTION_ORDER.indexOf(a.section_type) - SECTION_ORDER.indexOf(b.section_type)
-    ), [disease.sections]);
-
   const badgeClass = CATEGORY_COLORS[disease.category] ?? 'bg-slate-500/15 text-slate-400 ring-1 ring-slate-500/25';
   const detailHref = disease.slug ? `/countries/${countryCode}/reports/${reportId}/${disease.slug}/` : null;
 
@@ -413,54 +399,6 @@ function DiseaseCard({ disease, defaultOpen, theme, lang, countryCode, reportId 
             </div>
           )}
 
-          {/* Text sections */}
-          {sortedSections.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {sortedSections.map(sec => {
-                const meta = SECTION_LABELS[sec.section_type] ?? { en: sec.section_type, zh: sec.section_type, icon: '📄' };
-                return (
-                  <div key={sec.section_type}
-                    className="rounded-xl p-4"
-                    style={{
-                      background: theme === 'light' ? '#f8fafc' : '#0d1b2e',
-                      border: `1px solid ${theme === 'light' ? '#e2e8f0' : '#1e293b'}`,
-                    }}
-                  >
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-base">{meta.icon}</span>
-                      <h5 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                        {lang === 'zh' ? meta.zh : meta.en}
-                      </h5>
-                    </div>
-                    {sec.content_html ? (
-                      <div
-                        className="prose prose-sm max-w-none text-slate-400 leading-relaxed"
-                        style={{ fontSize: '13px' }}
-                        dangerouslySetInnerHTML={{ __html: sec.content_html }}
-                      />
-                    ) : (
-                      <p className="text-slate-400 text-sm leading-relaxed whitespace-pre-wrap">
-                        {sec.content}
-                      </p>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Link to global disease page */}
-          <div className="pt-2">
-            <a
-              href={`/diseases/${disease.slug}/`}
-              className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-brand-400 transition-colors"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-              </svg>
-              {lang === 'zh' ? '查看完整历史数据' : 'View full global history'}
-            </a>
-          </div>
         </div>
       )}
     </div>
