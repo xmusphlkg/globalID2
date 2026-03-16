@@ -13,20 +13,14 @@ export default defineConfig({
     inlineStylesheets: 'auto',
   },
   vite: {
-    resolve: {
-      alias: {
-        // react-plotly.js requires plotly.js/dist/plotly; redirect to the minified dist bundle
-        'plotly.js/dist/plotly': 'plotly.js-dist-min',
-      },
-    },
     optimizeDeps: {
-      include: ['react-plotly.js', 'plotly.js-dist-min'],
+      include: ['echarts', 'echarts-for-react', 'tslib'],
     },
     build: {
       rollupOptions: {
         output: {
           manualChunks: {
-            plotly: ['plotly.js-dist-min'],
+            echarts: ['echarts/core', 'echarts/charts', 'echarts/components', 'echarts/renderers'],
           },
         },
       },

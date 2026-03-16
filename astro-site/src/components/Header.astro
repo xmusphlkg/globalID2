@@ -16,11 +16,11 @@ const currentPath = Astro.url.pathname;
     <div class="flex items-center justify-between h-16">
       <!-- Logo -->
       <a href="/" class="flex items-center gap-3 group">
-        <div
-          class="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-teal-500 flex items-center justify-center text-white font-bold text-sm shadow-lg shadow-brand-500/25 group-hover:shadow-brand-500/40 transition-shadow"
-        >
-          G
-        </div>
+        <img
+          src="/logo.png"
+          alt="GlobalID"
+          class="w-8 h-8 rounded-lg object-contain shadow-lg group-hover:opacity-90 transition-opacity"
+        />
         <div class="flex flex-col leading-tight">
           <span class="text-slate-100 font-semibold text-sm tracking-wide">GlobalID</span>
           <span class="text-slate-500 text-xs" data-lang-en="Disease Surveillance" data-lang-zh="疾病监测">Disease Surveillance</span>
@@ -50,7 +50,7 @@ const currentPath = Astro.url.pathname;
       <div class="flex items-center gap-3">
         <button
           id="theme-toggle"
-          class="text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-600 transition-all focus-ring"
+          class="site-toggle-btn text-xs font-medium px-3 py-1.5 rounded-lg border transition-all focus-ring"
           aria-label="Toggle color theme"
           title="切换主题 / Toggle Theme"
         >
@@ -59,7 +59,7 @@ const currentPath = Astro.url.pathname;
 
         <button
           id="lang-toggle"
-          class="text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-600 transition-all focus-ring"
+          class="site-toggle-btn text-xs font-medium px-3 py-1.5 rounded-lg border transition-all focus-ring"
           aria-label="Toggle language"
           title="切换语言 / Switch Language"
         >
@@ -69,7 +69,7 @@ const currentPath = Astro.url.pathname;
         <!-- Mobile menu toggle -->
         <button
           id="mobile-menu-toggle"
-          class="md:hidden p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors focus-ring"
+          class="site-toggle-btn md:hidden p-2 rounded-lg border transition-colors focus-ring"
           aria-label="Toggle navigation menu"
         >
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

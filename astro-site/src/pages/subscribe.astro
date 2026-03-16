@@ -1,0 +1,52 @@
+---
+// src/pages/subscribe.astro — Subscribe page
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="Subscribe"
+  description="Subscribe to GlobalID disease surveillance alerts via Microsoft Form."
+>
+  <!-- Hero -->
+  <section class="relative overflow-hidden py-16 sm:py-20">
+    <div class="absolute inset-0 -z-10">
+      <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[350px] bg-teal-600/10 rounded-full blur-3xl" />
+    </div>
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-400 text-xs font-medium mb-6">
+        <span class="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse" />
+        <span data-lang-en="NIDS — Notifiable Infectious Disease Surveillance" data-lang-zh="NIDS — 法定传染病监测项目">NIDS — Notifiable Infectious Disease Surveillance</span>
+      </div>
+      <h1 class="text-4xl sm:text-5xl font-bold text-slate-100 tracking-tight mb-6">
+        <span data-lang-en="Subscribe Alerts" data-lang-zh="订阅提醒">Subscribe Alerts</span>
+      </h1>
+      <p class="text-lg text-slate-400 leading-relaxed">
+        <span data-lang-en="NIDS monitors notifiable infectious diseases globally. Fill out the form below to receive alerts when new reports are published and to share your feedback." data-lang-zh="NIDS 在全球范围内监测法定传染病。请填写以下表单，以便在新报告发布时接收提醒，并分享您的反馈。">
+          NIDS monitors notifiable infectious diseases globally. Fill out the form below to receive alerts when new reports are published and to share your feedback.
+        </span>
+      </p>
+    </div>
+  </section>
+
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+
+    <!-- MS Form embed -->
+    <section class="mb-16">
+      <div class="rounded-2xl border border-slate-700/50 bg-slate-800/30 overflow-hidden" style="min-height:800px;">
+        <iframe
+          src="https://forms.office.com/Pages/ResponsePage.aspx?id=6-Sl81f1K0auaA_vKW7hg57W8blB75tHvQVpO5Wc8kVUNVJZQ0dPWEw3RFA0REtRTzBWMkdUMFkzUC4u&embed=true"
+          frameborder="0"
+          marginwidth="0"
+          marginheight="0"
+          allowfullscreen
+          style="width:100%; height:100%; min-height:800px; border:none;"
+          title="GlobalID Subscription Form"
+        ></iframe>
+      </div>
+      <p class="text-slate-700 text-xs mt-3 text-center" data-lang-en="Form provided via Microsoft Forms." data-lang-zh="表单由 Microsoft Forms 提供。">
+        Form provided via Microsoft Forms.
+      </p>
+    </section>
+
+  </div>
+</BaseLayout>
