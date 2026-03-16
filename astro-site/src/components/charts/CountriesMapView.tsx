@@ -35,22 +35,22 @@ const ALL_COUNTRIES: CountryDef[] = [
 
 // Box offset (dx, dy) from dot centre → box centre, tuned for a ~900 px wide chart.
 // Positive dx → box to the right; negative dx → box to the left.
-// Spread out aggressively to avoid overlap in the crowded East-Asia cluster.
+// Spread out to avoid overlap in the crowded East-Asia cluster, keeping boxes looking neat.
 const BASE_OFFSETS: Record<string, [number, number]> = {
   // East Asia cluster — spread in all four directions
-  CN: [ 145,  -20],
-  TH: [-125,   20],
-  KR: [ 105,  -85],
-  JP: [ 150, -135],
-  SG: [-125,   80],
+  CN: [  -60,  0],   // Top-Right / Top
+  TH: [ -60,   0],   // Left, slightly down
+  KR: [  -60,  -95],   // Right, very far up
+  JP: [ 95, 0],   // Right, max up
+  SG: [-60,   60],   // Left, far down
   // Oceania
-  AU: [  55,   95],
-  NZ: [-130,   60],
+  AU: [  80,  -40],   // Right, down
+  NZ: [ 80,   0],   // Left
   // Europe
-  GB: [-135,  -20],
-  SE: [-125,  -85],
+  GB: [-110,  -40],   // Far left
+  SE: [-110,  -85],   // Far upper-left
   // Americas
-  US: [-140,  -35],
+  US: [-120,  -35],   // Far left
 };
 
 function fmtNum(n: number) {
@@ -136,7 +136,9 @@ export default function CountriesMapView({ metaCountries = [], height = 450 }: P
     const ch = rect?.height ?? 450;
     const scale = Math.max(0.5, cw / 900);
 
+    const hw = BOX_W / 2; const hh = BOX_H / 2;
     const pos: DotPos[] = [];
+    
     for (const c of ALL_COUNTRIES) {
       const pt = inst.convertToPixel({ geoIndex: 0 }, [c.lng, c.lat]) as [number, number] | null;
       if (!pt) continue;
@@ -144,16 +146,18 @@ export default function CountriesMapView({ metaCountries = [], height = 450 }: P
       // Raw box centre
       let bx = pt[0] + bdx * scale;
       let by = pt[1] + bdy * scale;
-      // Clamp so box stays inside container
-      const hw = BOX_W / 2; const hh = BOX_H / 2;
+      
+      // Initial Clamp so box stays inside container
       bx = Math.max(hw + 4, Math.min(cw - hw - 4, bx));
       by = Math.max(hh + 4, Math.min(ch - hh - 4, by));
+      
       pos.push({
         iso2: c.iso2, status: c.status, name: c.name,
         px: pt[0], py: pt[1], bx, by,
         meta: metaByCode[c.iso2],
       });
     }
+
     setDotPositions(pos);
   }, [metaByCode]);
 

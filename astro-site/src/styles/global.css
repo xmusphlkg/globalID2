@@ -258,6 +258,36 @@
     @apply bg-gradient-to-r from-brand-400 to-teal-400 bg-clip-text text-transparent;
   }
 
+  /* Journal markdown typography for disease detail page */
+  .journal-markdown strong,
+  .journal-markdown b {
+    color: rgb(15 23 42);
+    font-weight: 700;
+  }
+
+  .journal-markdown h1,
+  .journal-markdown h2,
+  .journal-markdown h3,
+  .journal-markdown h4,
+  .journal-markdown h5,
+  .journal-markdown h6 {
+    color: rgb(15 23 42);
+  }
+
+  html[data-theme='dark'] .journal-markdown strong,
+  html[data-theme='dark'] .journal-markdown b {
+    color: rgb(241 245 249);
+  }
+
+  html[data-theme='dark'] .journal-markdown h1,
+  html[data-theme='dark'] .journal-markdown h2,
+  html[data-theme='dark'] .journal-markdown h3,
+  html[data-theme='dark'] .journal-markdown h4,
+  html[data-theme='dark'] .journal-markdown h5,
+  html[data-theme='dark'] .journal-markdown h6 {
+    color: rgb(241 245 249);
+  }
+
   .border-gradient {
     background: linear-gradient(#1e293b, #1e293b) padding-box,
       linear-gradient(to right, theme('colors.brand.500'), theme('colors.teal.500')) border-box;
