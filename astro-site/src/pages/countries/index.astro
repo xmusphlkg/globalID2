@@ -1,0 +1,53 @@
+---
+// src/pages/countries/index.astro — Country list
+import ReportLayout from '../../layouts/ReportLayout.astro';
+import CountryCard from '../../components/CountryCard.astro';
+import WorldMap from '../../components/charts/WorldMap';
+import metaRaw from '../../data/meta.json';
+
+const meta = metaRaw as any;
+const countries = meta.countries ?? [];
+const activeCodes: string[] = countries.map((c: any) => (c.code as string).toUpperCase());
+---
+
+<ReportLayout
+  title="Countries"
+  description="Disease surveillance data by country."
+  breadcrumbs={[{ label: 'Countries' }]}
+>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div class="mb-10">
+      <h1 class="text-3xl font-bold text-slate-100 mb-3" data-lang-en="Countries" data-lang-zh="国家">Countries</h1>
+      <p class="text-slate-500" data-lang-en="Disease surveillance data organized by country." data-lang-zh="按国家组织的疾病监测数据。">
+        Disease surveillance data organized by country.
+      </p>
+    </div>
+
+    <!-- World map -->
+    <div class="card p-4 mb-10">
+      <WorldMap client:only="react" activeCodes={activeCodes} height={400} />
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      {countries.map((c: any) => (
+        <CountryCard
+          code={c.code}
+          name={c.name}
+          totalCases={c.total_cases}
+          totalDeaths={c.total_deaths}
+          diseaseCount={c.disease_count}
+          dateRange={c.date_range}
+        />
+      ))}
+    </div>
+
+    {countries.length === 0 && (
+      <div class="text-center py-24 text-slate-500">
+        <p data-lang-en="No country data available. Run the data export script first." data-lang-zh="暂无国家数据，请先运行数据导出脚本。">
+          No country data available. Run the data export script first.
+        </p>
+        <code class="mt-4 block text-xs text-slate-700">python scripts/generate_site_data.py</code>
+      </div>
+    )}
+  </div>
+</ReportLayout>

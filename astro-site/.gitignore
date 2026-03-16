@@ -1,0 +1,7 @@
+# .gitignore for astro-site
+node_modules/
+dist/
+.astro/
+.env
+.env.production
+*.log

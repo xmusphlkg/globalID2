@@ -1,0 +1,51 @@
+---
+// src/components/DiseaseCard.astro
+interface Props {
+  diseaseId: string;
+  nameEn: string;
+  nameZh: string;
+  category: string;
+  icd10?: string;
+  description?: string;
+  slug: string;
+}
+
+const { diseaseId, nameEn, nameZh, category, icd10, description, slug } = Astro.props;
+
+const categoryStyles: Record<string, string> = {
+  Viral: 'badge-viral',
+  Bacterial: 'badge-bacterial',
+  Parasitic: 'badge-parasitic',
+  Fungal: 'badge-fungal',
+};
+const badgeClass = categoryStyles[category] ?? 'badge-other';
+
+const categoryZh: Record<string, string> = {
+  Viral: '病毒性', Bacterial: '细菌性', Parasitic: '寄生虫', Fungal: '真菌性',
+};
+---
+
+<a
+  href={`/diseases/${slug}/`}
+  class="card p-5 hover:border-slate-600 hover:shadow-xl hover:shadow-brand-500/5 transition-all duration-200 block group h-full flex flex-col"
+>
+  <div class="flex items-start justify-between mb-3">
+    <span class={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${badgeClass}`}>
+      <span data-lang-en={category} data-lang-zh={categoryZh[category] ?? category}>{category}</span>
+    </span>
+    {icd10 && (
+      <span class="text-xs font-mono text-slate-600">{icd10}</span>
+    )}
+  </div>
+
+  <h3 class="text-slate-100 font-semibold text-base mb-1 group-hover:text-brand-400 transition-colors leading-tight">
+    <span data-lang-en={nameEn} data-lang-zh={nameZh}>{nameEn}</span>
+  </h3>
+  <p class="text-slate-500 text-sm mb-3">
+    <span data-lang-en={nameZh} data-lang-zh={nameEn}>{nameZh}</span>
+  </p>
+
+  {description && (
+    <p class="text-slate-600 text-xs leading-relaxed mt-auto line-clamp-2">{description}</p>
+  )}
+</a>

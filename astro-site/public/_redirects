@@ -1,0 +1,6 @@
+# Cloudflare Pages redirect rules
+# https://developers.cloudflare.com/pages/configuration/redirects/
+
+# Trailing slash normalization (Astro handles this, but keep as safety net)
+/countries  /countries/  301
+/diseases   /diseases/   301

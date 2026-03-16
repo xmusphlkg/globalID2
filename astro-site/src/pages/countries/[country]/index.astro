@@ -1,0 +1,185 @@
+---
+// src/pages/countries/[country]/index.astro — Country detail page
+import ReportLayout from '../../../layouts/ReportLayout.astro';
+import StatBar from '../../../components/StatBar.astro';
+import ReportCard from '../../../components/ReportCard.astro';
+import CountryFlag from '../../../components/CountryFlag.astro';
+import EpidemicCurve from '../../../components/charts/EpidemicCurve';
+import DiseaseHeatmap from '../../../components/charts/DiseaseHeatmap';
+import ComparisonTable from '../../../components/charts/ComparisonTable';
+import { readFileSync, existsSync } from 'fs';
+import { resolve } from 'path';
+
+export async function getStaticPaths() {
+  const metaPath = resolve('./src/data/meta.json');
+  const meta = JSON.parse(readFileSync(metaPath, 'utf-8')) as any;
+  return (meta.countries ?? []).map((c: any) => ({
+    params: { country: c.code.toLowerCase() },
+  }));
+}
+
+const { country } = Astro.params;
+const dataPath = resolve(`./src/data/countries/${country}.json`);
+const reportsIndexPath = resolve('./src/data/reports/index.json');
+
+let countryData: any = null;
+let reports: any[] = [];
+
+if (existsSync(dataPath)) {
+  countryData = JSON.parse(readFileSync(dataPath, 'utf-8'));
+}
+if (existsSync(reportsIndexPath)) {
+  const allReports = JSON.parse(readFileSync(reportsIndexPath, 'utf-8')) as any[];
+  reports = allReports
+    .filter(r => r.country_code?.toLowerCase() === country)
+    .slice(0, 6);
+}
+
+function fmtNum(n: number | null | undefined) {
+  if (!n) return '0';
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
+  if (n >= 1_000) return (n / 1_000).toFixed(0) + 'K';
+  return n.toLocaleString();
+}
+
+const stats = countryData
+  ? [
+      { label: 'Total Cases', labelZh: '累计病例', value: fmtNum(countryData.total_cases), accent: 'amber' as const },
+      { label: 'Total Deaths', labelZh: '累计死亡', value: fmtNum(countryData.total_deaths), accent: 'red' as const },
+      { label: 'Diseases Tracked', labelZh: '追踪疾病数', value: countryData.disease_count ?? 0, accent: 'teal' as const },
+      { label: 'Reports', labelZh: '已生成报告', value: reports.length > 0 ? '—' : '0', accent: 'blue' as const },
+    ]
+  : [];
+
+// Prepare disease rows for comparison table
+const diseaseRows = countryData
+  ? Object.values(countryData.disease_series as Record<string, any>)
+  : [];
+---
+
+<ReportLayout
+  title={countryData?.country_name ?? country.toUpperCase()}
+  description={`Disease surveillance data for ${countryData?.country_name ?? country.toUpperCase()}`}
+  breadcrumbs={[
+    { label: 'Countries', href: '/countries/' },
+    { label: countryData?.country_name ?? country.toUpperCase() },
+  ]}
+>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-14">
+
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
+      <div>
+        <div class="flex items-center gap-3 mb-2">
+          <CountryFlag
+            code={countryData?.country_code ?? country.toUpperCase()}
+            name={countryData?.country_name ?? country.toUpperCase()}
+            sizeClass="w-10 h-8"
+          />
+          <h1 class="text-4xl font-bold text-slate-100">
+            {countryData?.country_name ?? country.toUpperCase()}
+          </h1>
+        </div>
+        {countryData?.date_range && (
+          <p class="text-slate-500 text-sm">
+            <span data-lang-en="Coverage" data-lang-zh="数据区间">Coverage</span>:&nbsp;
+            {countryData.date_range.start} → {countryData.date_range.end ?? 'present'}
+          </p>
+        )}
+      </div>
+      <a
+        href={`/countries/${country}/reports/`}
+        class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-700 hover:border-brand-500 text-slate-300 hover:text-brand-300 text-sm font-medium transition-all"
+      >
+        <span data-lang-en="View All Reports" data-lang-zh="查看所有报告">View All Reports</span>
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+      </a>
+    </div>
+
+    <!-- Stats -->
+    {stats.length > 0 && <StatBar stats={stats} />}
+
+    <!-- Epidemic Curve -->
+    <div>
+      <h2 class="text-xl font-semibold text-slate-100 mb-4" data-lang-en="Epidemic Curve — Top 10 Diseases" data-lang-zh="流行曲线 — 前 10 种疾病">
+        Epidemic Curve — Top 10 Diseases
+      </h2>
+      {countryData?.disease_series ? (
+        <EpidemicCurve
+          client:only="react"
+          series={countryData.disease_series}
+          topN={10}
+          height={420}
+        />
+      ) : (
+        <div class="card p-8 text-center text-slate-500">No time-series data available</div>
+      )}
+    </div>
+
+    <!-- Heatmap -->
+    <div>
+      <h2 class="text-xl font-semibold text-slate-100 mb-1" data-lang-en="Disease × Month Heatmap" data-lang-zh="疾病 × 月份热图">
+        Disease × Month Heatmap
+      </h2>
+      <p class="text-slate-500 text-sm mb-4" data-lang-en="All diseases across the full surveillance period (log scale)" data-lang-zh="整个监测周期内所有疾病（对数刻度）">
+        All diseases across the full surveillance period (log scale)
+      </p>
+      {countryData?.heatmap?.z?.length ? (
+        <DiseaseHeatmap
+          client:only="react"
+          data={countryData.heatmap}
+          height={600}
+        />
+      ) : (
+        <div class="card p-8 text-center text-slate-500">No heatmap data available</div>
+      )}
+    </div>
+
+    <!-- Comparison Table -->
+    <div>
+      <h2 class="text-xl font-semibold text-slate-100 mb-4" data-lang-en="Disease Comparison Table" data-lang-zh="疾病对比表格">
+        Disease Comparison Table
+      </h2>
+      {diseaseRows.length > 0 ? (
+        <ComparisonTable
+          client:only="react"
+          rows={diseaseRows}
+          countryCode={country}
+        />
+      ) : (
+        <div class="card p-8 text-center text-slate-500">No disease data available</div>
+      )}
+    </div>
+
+    <!-- Recent Reports -->
+    {reports.length > 0 && (
+      <div>
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-xl font-semibold text-slate-100" data-lang-en="Recent Reports" data-lang-zh="近期报告">
+            Recent Reports
+          </h2>
+          <a href={`/countries/${country}/reports/`} class="text-sm text-brand-400 hover:text-brand-300 transition-colors">
+            <span data-lang-en="View all →" data-lang-zh="查看全部 →">View all →</span>
+          </a>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {reports.map((r: any) => (
+            <ReportCard
+              id={r.id}
+              title={r.title}
+              reportType={r.report_type}
+              periodStart={r.period_start}
+              periodEnd={r.period_end}
+              createdAt={r.created_at}
+              countryCode={r.country_code}
+              countryName={r.country_name}
+              qualityScore={r.quality_score}
+            />
+          ))}
+        </div>
+      </div>
+    )}
+  </div>
+</ReportLayout>

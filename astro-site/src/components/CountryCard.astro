@@ -1,0 +1,67 @@
+---
+// src/components/CountryCard.astro
+import CountryFlag from './CountryFlag.astro';
+
+interface Props {
+  code: string;
+  name: string;
+  totalCases?: number;
+  totalDeaths?: number;
+  diseaseCount?: number;
+  dateRange?: { start: string | null; end: string | null };
+}
+
+const { code, name, totalCases = 0, totalDeaths = 0, diseaseCount = 0, dateRange } = Astro.props;
+
+function fmtNum(n: number) {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
+  if (n >= 1_000) return (n / 1_000).toFixed(0) + 'K';
+  return n.toLocaleString();
+}
+
+const href = `/countries/${code.toLowerCase()}/`;
+---
+
+<a
+  href={href}
+  class="card p-6 hover:border-slate-600 hover:shadow-xl hover:shadow-brand-500/5 transition-all duration-200 block group"
+>
+  <div class="flex items-start justify-between mb-4">
+    <div class="flex items-center gap-3">
+      <CountryFlag code={code} name={name} />
+      <div>
+        <h3 class="text-slate-100 font-semibold text-lg group-hover:text-brand-400 transition-colors">
+          {name}
+        </h3>
+        <span class="text-slate-600 text-xs font-mono">{code}</span>
+      </div>
+    </div>
+    <svg class="w-4 h-4 text-slate-700 group-hover:text-brand-400 transition-colors mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+    </svg>
+  </div>
+
+  <div class="grid grid-cols-3 gap-3">
+    <div class="text-center">
+      <div class="text-xl font-bold tabular-nums text-slate-200">{fmtNum(totalCases)}</div>
+      <div class="text-xs text-slate-600 mt-0.5" data-lang-en="Total Cases" data-lang-zh="累计病例">Total Cases</div>
+    </div>
+    <div class="text-center">
+      <div class="text-xl font-bold tabular-nums text-red-400">{fmtNum(totalDeaths)}</div>
+      <div class="text-xs text-slate-600 mt-0.5" data-lang-en="Deaths" data-lang-zh="死亡">Deaths</div>
+    </div>
+    <div class="text-center">
+      <div class="text-xl font-bold tabular-nums text-teal-400">{diseaseCount}</div>
+      <div class="text-xs text-slate-600 mt-0.5" data-lang-en="Diseases" data-lang-zh="疾病数">Diseases</div>
+    </div>
+  </div>
+
+  {dateRange?.start && (
+    <div class="mt-4 pt-3 border-t border-slate-700/50">
+      <span class="text-xs text-slate-600">
+        <span data-lang-en="Data range" data-lang-zh="数据区间">Data range</span>:&nbsp;
+        {dateRange.start} → {dateRange.end ?? 'present'}
+      </span>
+    </div>
+  )}
+</a>

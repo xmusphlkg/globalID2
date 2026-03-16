@@ -1,0 +1,38 @@
+---
+interface Props {
+  code: string;
+  name?: string;
+  sizeClass?: string;
+}
+
+const { code, name = 'Country flag', sizeClass = 'w-9 h-7' } = Astro.props;
+
+const normalized = (code || '')
+  .trim()
+  .toUpperCase()
+  .replace('UK', 'GB');
+
+const iso2 = /^[A-Z]{2}$/.test(normalized) ? normalized : 'UN';
+const cdnCode = iso2.toLowerCase();
+
+function toFlagEmoji(countryCode: string) {
+  if (!/^[A-Z]{2}$/.test(countryCode)) return '🌐';
+  return String.fromCodePoint(
+    ...Array.from(countryCode).map((char) => 127397 + char.charCodeAt(0)),
+  );
+}
+
+const fallbackEmoji = toFlagEmoji(iso2);
+---
+
+<span class={`inline-flex items-center justify-center overflow-hidden rounded-md ring-1 ring-slate-700/60 bg-slate-800/30 ${sizeClass}`}>
+  <img
+    src={`https://flagcdn.com/w80/${cdnCode}.png`}
+    alt={name}
+    loading="lazy"
+    decoding="async"
+    class="w-full h-full object-cover"
+    onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex';"
+  />
+  <span class="hidden text-base leading-none" role="img" aria-label={name}>{fallbackEmoji}</span>
+</span>

@@ -1,0 +1,180 @@
+---
+// src/pages/diseases/[disease].astro — Individual disease detail page
+import ReportLayout from '../../layouts/ReportLayout.astro';
+import MonthlyBar from '../../components/charts/MonthlyBar';
+import EpidemicCurve from '../../components/charts/EpidemicCurve';
+import { readFileSync, existsSync } from 'fs';
+import { resolve } from 'path';
+
+export async function getStaticPaths() {
+  const diseasesPath = resolve('./src/data/diseases/index.json');
+  if (!existsSync(diseasesPath)) return [];
+  const diseases = JSON.parse(readFileSync(diseasesPath, 'utf-8')) as any[];
+  return diseases.map(d => ({
+    params: { disease: d.slug },
+    props: { diseaseId: d.disease_id },
+  }));
+}
+
+const { disease } = Astro.params;
+const { diseaseId } = Astro.props as { diseaseId: string };
+
+const dataPath = resolve(`./src/data/diseases/${diseaseId.toLowerCase()}.json`);
+let diseaseData: any = null;
+if (existsSync(dataPath)) {
+  diseaseData = JSON.parse(readFileSync(dataPath, 'utf-8'));
+}
+
+const categoryZh: Record<string, string> = {
+  Viral: '病毒性', Bacterial: '细菌性', Parasitic: '寄生虫', Fungal: '真菌性',
+};
+
+const categoryStyles: Record<string, string> = {
+  Viral: 'bg-blue-500/15 text-blue-300 ring-1 ring-blue-500/30',
+  Bacterial: 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30',
+  Parasitic: 'bg-green-500/15 text-green-300 ring-1 ring-green-500/30',
+  Fungal: 'bg-purple-500/15 text-purple-300 ring-1 ring-purple-500/30',
+};
+
+const badgeClass = categoryStyles[diseaseData?.category] ?? 'bg-slate-500/15 text-slate-300 ring-1 ring-slate-500/30';
+
+function fmtNum(n: number | null | undefined) {
+  if (!n) return '0';
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
+  if (n >= 1_000) return (n / 1_000).toFixed(0) + 'K';
+  return n.toLocaleString();
+}
+
+// Find peak month
+let peakMonth = '—';
+if (diseaseData?.global_monthly?.cases?.length > 0) {
+  const maxIdx = diseaseData.global_monthly.cases.reduce(
+    (maxI: number, v: number, i: number, arr: number[]) => v > arr[maxI] ? i : maxI,
+    0
+  );
+  peakMonth = diseaseData.global_monthly.months[maxIdx] ?? '—';
+}
+
+// Build single-disease EpidemicCurve-compatible series from country_series
+const countrySeriesForCurve: Record<string, any> = {};
+for (const [cc, cs] of Object.entries(diseaseData?.country_series ?? {})) {
+  const s = cs as any;
+  countrySeriesForCurve[cc] = {
+    disease_id: diseaseId,
+    name_en: cc.toUpperCase(),
+    name_zh: cc.toUpperCase(),
+    dates: s.dates,
+    cases: s.cases,
+    deaths: s.deaths,
+    incidence_rates: s.incidence_rates ?? s.dates.map(() => null),
+    total_cases: s.total_cases,
+  };
+}
+---
+
+<ReportLayout
+  title={diseaseData?.name_en ?? disease}
+  description={diseaseData?.description ?? `Disease surveillance data for ${diseaseData?.name_en ?? disease}`}
+  breadcrumbs={[
+    { label: 'Diseases', href: '/diseases/' },
+    { label: diseaseData?.name_en ?? disease },
+  ]}
+>
+  <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
+
+    {!diseaseData ? (
+      <div class="text-center py-24 text-slate-500">
+        Disease data not found. <a href="/diseases/" class="text-brand-400 hover:underline">← Back to directory</a>
+      </div>
+    ) : (
+      <>
+        <!-- Disease header -->
+        <div class="card p-8">
+          <div class="flex items-start justify-between flex-wrap gap-4 mb-5">
+            <span class={`inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ${badgeClass}`}>
+              <span data-lang-en={diseaseData.category} data-lang-zh={categoryZh[diseaseData.category] ?? diseaseData.category}>
+                {diseaseData.category}
+              </span>
+            </span>
+            <div class="flex items-center gap-3 text-xs text-slate-600 font-mono">
+              {diseaseData.icd_10 && <span>ICD-10: {diseaseData.icd_10}</span>}
+              {diseaseData.icd_11 && <span>ICD-11: {diseaseData.icd_11}</span>}
+            </div>
+          </div>
+
+          <h1 class="text-4xl font-bold text-slate-100 mb-2">
+            <span data-lang-en={diseaseData.name_en} data-lang-zh={diseaseData.name_zh}>
+              {diseaseData.name_en}
+            </span>
+          </h1>
+          <p class="text-slate-500 text-lg mb-5">
+            <span data-lang-en={diseaseData.name_zh} data-lang-zh={diseaseData.name_en}>
+              {diseaseData.name_zh}
+            </span>
+          </p>
+
+          {diseaseData.description && (
+            <p class="text-slate-400 text-sm leading-relaxed border-t border-slate-700/50 pt-5">
+              {diseaseData.description}
+            </p>
+          )}
+
+          <!-- Summary stats -->
+          <div class="grid grid-cols-3 gap-6 mt-6 pt-6 border-t border-slate-700/50">
+            <div class="text-center">
+              <div class="text-2xl font-bold tabular-nums text-slate-200">{fmtNum(diseaseData.total_cases)}</div>
+              <div class="text-xs text-slate-600 mt-1" data-lang-en="Total Cases" data-lang-zh="累计病例">Total Cases</div>
+            </div>
+            <div class="text-center">
+              <div class="text-2xl font-bold tabular-nums text-red-400">{fmtNum(diseaseData.total_deaths)}</div>
+              <div class="text-xs text-slate-600 mt-1" data-lang-en="Total Deaths" data-lang-zh="累计死亡">Total Deaths</div>
+            </div>
+            <div class="text-center">
+              <div class="text-2xl font-bold tabular-nums text-amber-400">{peakMonth}</div>
+              <div class="text-xs text-slate-600 mt-1" data-lang-en="Peak Month" data-lang-zh="峰值月份">Peak Month</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Epidemic Curve (per country) -->
+        {Object.keys(countrySeriesForCurve).length > 0 && (
+          <div>
+            <h2 class="text-xl font-semibold text-slate-100 mb-4" data-lang-en="Full Historical Trend" data-lang-zh="完整历史趋势">
+              Full Historical Trend
+            </h2>
+            <EpidemicCurve
+              client:only="react"
+              series={countrySeriesForCurve}
+              topN={Object.keys(countrySeriesForCurve).length}
+              height={380}
+            />
+          </div>
+        )}
+
+        <!-- Monthly Bar (year-over-year) -->
+        {diseaseData.global_monthly?.months?.length > 0 && (
+          <div>
+            <h2 class="text-xl font-semibold text-slate-100 mb-4" data-lang-en="Year-over-Year Monthly Comparison" data-lang-zh="逐年月度对比">
+              Year-over-Year Monthly Comparison
+            </h2>
+            <MonthlyBar
+              client:only="react"
+              data={diseaseData.global_monthly}
+              height={360}
+            />
+          </div>
+        )}
+
+        <!-- Back link -->
+        <div class="pt-4 border-t border-slate-800">
+          <a href="/diseases/" class="text-sm text-slate-500 hover:text-brand-400 transition-colors flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+            <span data-lang-en="Back to Disease Directory" data-lang-zh="返回疾病目录">Back to Disease Directory</span>
+          </a>
+        </div>
+      </>
+    )}
+  </div>
+</ReportLayout>

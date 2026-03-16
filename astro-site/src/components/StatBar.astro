@@ -1,0 +1,36 @@
+---
+// src/components/StatBar.astro
+// Horizontal stats banner displayed on homepage and country pages.
+interface Stat {
+  label: string;
+  labelZh: string;
+  value: string | number;
+  accent?: 'blue' | 'teal' | 'red' | 'amber';
+}
+
+interface Props {
+  stats: Stat[];
+}
+
+const { stats } = Astro.props;
+
+const accentColor: Record<string, string> = {
+  blue: 'text-brand-400',
+  teal: 'text-teal-400',
+  red: 'text-red-400',
+  amber: 'text-amber-400',
+};
+---
+
+<div class="site-stat-grid grid grid-cols-2 sm:grid-cols-4 gap-px rounded-xl overflow-hidden border">
+  {stats.map(({ label, labelZh, value, accent = 'blue' }) => (
+    <div class="site-stat-item px-6 py-5 text-center">
+      <div class={`text-3xl font-bold tabular-nums ${accentColor[accent] ?? 'text-brand-400'}`}>
+        {value}
+      </div>
+      <div class="text-sm text-slate-500 mt-1">
+        <span data-lang-en={label} data-lang-zh={labelZh}>{label}</span>
+      </div>
+    </div>
+  ))}
+</div>
