@@ -385,7 +385,9 @@ function SectionBlock({ section, theme }: {
         borderLeft: `3px solid ${accentColor}`,
         background: isLight ? '#fafbfd' : 'rgba(15,23,42,0.6)',
         borderRadius: '0 12px 12px 0',
-        border: `1px solid ${borderColor}`,
+        borderStyle: 'solid',
+        borderWidth: '1px',
+        borderColor,
         borderLeftWidth: '3px',
         borderLeftColor: accentColor,
       }}
@@ -400,7 +402,7 @@ function SectionBlock({ section, theme }: {
       </div>
       {section.content_html ? (
         <div
-          className="prose prose-sm max-w-none"
+          className="prose prose-sm max-w-none journal-markdown"
           style={{
             color: isLight ? '#334155' : '#cbd5e1',
             lineHeight: '1.8',
