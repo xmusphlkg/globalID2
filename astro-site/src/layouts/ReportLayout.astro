@@ -1,0 +1,44 @@
+---
+// src/layouts/ReportLayout.astro
+import BaseLayout from './BaseLayout.astro';
+
+interface Props {
+  title: string;
+  description?: string;
+  breadcrumbs?: Array<{ label: string; href?: string }>;
+}
+
+const { title, description, breadcrumbs = [] } = Astro.props;
+---
+
+<BaseLayout title={title} description={description}>
+  <!-- Breadcrumb -->
+  {breadcrumbs.length > 0 && (
+    <nav class="site-breadcrumb border-b backdrop-blur-sm sticky top-16 z-40">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+        <ol class="flex items-center gap-2 text-sm text-slate-500">
+          <li>
+            <a href="/" class="hover:text-slate-300 transition-colors">Home</a>
+          </li>
+          {breadcrumbs.map((crumb, i) => (
+            <>
+              <li class="text-slate-700">/</li>
+              <li>
+                {crumb.href && i < breadcrumbs.length - 1 ? (
+                  <a href={crumb.href} class="hover:text-slate-300 transition-colors">
+                    {crumb.label}
+                  </a>
+                ) : (
+                  <span class="text-slate-300">{crumb.label}</span>
+                )}
+              </li>
+            </>
+          ))}
+        </ol>
+      </div>
+    </nav>
+  )}
+
+  <!-- Page content -->
+  <slot />
+</BaseLayout>

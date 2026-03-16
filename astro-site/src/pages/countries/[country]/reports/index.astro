@@ -1,0 +1,88 @@
+---
+// src/pages/countries/[country]/reports/index.astro — Report list for a country
+import ReportLayout from '../../../../layouts/ReportLayout.astro';
+import ReportCard from '../../../../components/ReportCard.astro';
+import { readFileSync, existsSync } from 'fs';
+import { resolve } from 'path';
+
+export async function getStaticPaths() {
+  const metaPath = resolve('./src/data/meta.json');
+  const meta = JSON.parse(readFileSync(metaPath, 'utf-8')) as any;
+  return (meta.countries ?? []).map((c: any) => ({
+    params: { country: c.code.toLowerCase() },
+  }));
+}
+
+const { country } = Astro.params;
+
+const reportsPath = resolve('./src/data/reports/index.json');
+let reports: any[] = [];
+if (existsSync(reportsPath)) {
+  const all = JSON.parse(readFileSync(reportsPath, 'utf-8')) as any[];
+  reports = all.filter(r => r.country_code?.toLowerCase() === country);
+}
+
+const countryName = reports[0]?.country_name ?? country.toUpperCase();
+
+// Group by report type
+const byType: Record<string, any[]> = {};
+for (const r of reports) {
+  const t = r.report_type ?? 'UNKNOWN';
+  if (!byType[t]) byType[t] = [];
+  byType[t].push(r);
+}
+---
+
+<ReportLayout
+  title={`${countryName} Reports`}
+  description={`All surveillance reports for ${countryName}`}
+  breadcrumbs={[
+    { label: 'Countries', href: '/countries/' },
+    { label: countryName, href: `/countries/${country}/` },
+    { label: 'Reports' },
+  ]}
+>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div class="mb-10">
+      <h1 class="text-3xl font-bold text-slate-100 mb-2">
+        {countryName}&nbsp;<span class="text-slate-500 font-normal" data-lang-en="Reports" data-lang-zh="报告">Reports</span>
+      </h1>
+      <p class="text-slate-500 text-sm">
+        {reports.length}&nbsp;<span data-lang-en="reports generated" data-lang-zh="份已生成报告">reports generated</span>
+      </p>
+    </div>
+
+    {Object.entries(byType).map(([type, reps]) => (
+      <div class="mb-12">
+        <h2 class="text-slate-400 text-xs font-semibold uppercase tracking-widest mb-5 flex items-center gap-2">
+          <span class="inline-block w-2 h-2 rounded-full bg-brand-500" />
+          {type.charAt(0) + type.slice(1).toLowerCase()} Reports
+          <span class="text-slate-600 font-normal">({reps.length})</span>
+        </h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {reps.map((r: any) => (
+            <ReportCard
+              id={r.id}
+              title={r.title}
+              reportType={r.report_type}
+              periodStart={r.period_start}
+              periodEnd={r.period_end}
+              createdAt={r.created_at}
+              countryCode={r.country_code}
+              countryName={r.country_name}
+              qualityScore={r.quality_score}
+            />
+          ))}
+        </div>
+      </div>
+    ))}
+
+    {reports.length === 0 && (
+      <div class="text-center py-24 text-slate-500">
+        <p data-lang-en="No reports available for this country." data-lang-zh="该国家暂无报告。">
+          No reports available for this country.
+        </p>
+      </div>
+    )}
+  </div>
+</ReportLayout>

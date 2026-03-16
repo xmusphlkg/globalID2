@@ -1,0 +1,183 @@
+---
+// src/pages/index.astro — Homepage
+import BaseLayout from '../layouts/BaseLayout.astro';
+import StatBar from '../components/StatBar.astro';
+import CountryCard from '../components/CountryCard.astro';
+import DiseaseCard from '../components/DiseaseCard.astro';
+import ReportCard from '../components/ReportCard.astro';
+
+import metaRaw from '../data/meta.json';
+import diseasesRaw from '../data/diseases/index.json';
+import reportsRaw from '../data/reports/index.json';
+
+const meta = metaRaw as any;
+const diseases = diseasesRaw as any[];
+const reports = (reportsRaw as any[]).slice(0, 6);
+
+function fmtNum(n: number) {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
+  if (n >= 1_000) return (n / 1_000).toFixed(0) + 'K';
+  return n.toLocaleString();
+}
+
+// Aggregate stats across all countries
+const totalCases = (meta.countries ?? []).reduce((s: number, c: any) => s + (c.total_cases ?? 0), 0);
+const totalDeaths = (meta.countries ?? []).reduce((s: number, c: any) => s + (c.total_deaths ?? 0), 0);
+
+const stats = [
+  { label: 'Countries', labelZh: '国家数', value: meta.total_countries ?? '—', accent: 'teal' as const },
+  { label: 'Diseases Tracked', labelZh: '追踪疾病', value: meta.total_diseases ?? '—', accent: 'blue' as const },
+  { label: 'Total Cases', labelZh: '累计病例', value: fmtNum(totalCases), accent: 'amber' as const },
+  { label: 'Reports Generated', labelZh: '已生成报告', value: meta.total_reports ?? '—', accent: 'teal' as const },
+];
+
+// Spotlight: top disease categories
+const categories = ['Viral', 'Bacterial', 'Parasitic', 'Fungal'];
+const catZh: Record<string, string> = { Viral: '病毒性', Bacterial: '细菌性', Parasitic: '寄生虫', Fungal: '真菌性' };
+---
+
+<BaseLayout
+  title="Home"
+  description="GlobalID — AI-powered global infectious disease surveillance and reporting."
+>
+  <!-- Hero ────────────────────────────────── -->
+  <section class="relative overflow-hidden py-20 sm:py-28">
+    <!-- Background gradient -->
+    <div class="absolute inset-0 -z-10">
+      <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-brand-600/10 rounded-full blur-3xl" />
+      <div class="absolute top-20 right-0 w-[400px] h-[400px] bg-teal-600/8 rounded-full blur-3xl" />
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="max-w-3xl">
+        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-400 text-xs font-medium mb-6">
+          <span class="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse" />
+          <span data-lang-en="Automated surveillance · AI-powered analysis" data-lang-zh="自动监测 · AI 驱动分析">
+            Automated surveillance · AI-powered analysis
+          </span>
+        </div>
+
+        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-bold text-slate-100 leading-tight tracking-tight mb-6">
+          <span data-lang-en="Global Infectious" data-lang-zh="全球传染病">Global Infectious</span>
+          <br />
+          <span class="text-gradient" data-lang-en="Disease Surveillance" data-lang-zh="监测与报告">Disease Surveillance</span>
+        </h1>
+
+        <p class="text-lg sm:text-xl text-slate-400 leading-relaxed max-w-2xl mb-10">
+          <span data-lang-en="Monitor, analyze, and report on 130+ infectious diseases across countries. Charts, data, and AI-generated reports — all in one place." data-lang-zh="跨国家监测、分析并报告 130+ 种传染病。图表、数据与 AI 生成报告，一站式获取。">
+            Monitor, analyze, and report on 130+ infectious diseases across countries.
+            Charts, data, and AI-generated reports — all in one place.
+          </span>
+        </p>
+
+        <div class="flex flex-wrap gap-4">
+          <a
+            href="/countries/"
+            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-medium text-sm transition-colors shadow-lg shadow-brand-600/25"
+          >
+            <span data-lang-en="Browse Countries" data-lang-zh="浏览国家">Browse Countries</span>
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </a>
+          <a
+            href="/diseases/"
+            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-700 hover:border-slate-600 text-slate-300 hover:text-slate-100 font-medium text-sm transition-colors"
+          >
+            <span data-lang-en="Disease Directory" data-lang-zh="疾病目录">Disease Directory</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stats ────────────────────────────────── -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+    <StatBar stats={stats} />
+  </section>
+
+  <!-- Countries ────────────────────────────── -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+    <div class="flex items-center justify-between mb-8">
+      <h2 class="section-heading" data-lang-en="Countries" data-lang-zh="国家">Countries</h2>
+      <a href="/countries/" class="text-sm text-brand-400 hover:text-brand-300 transition-colors">
+        <span data-lang-en="View all →" data-lang-zh="查看全部 →">View all →</span>
+      </a>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      {(meta.countries ?? []).map((c: any) => (
+        <CountryCard
+          code={c.code}
+          name={c.name}
+          totalCases={c.total_cases}
+          totalDeaths={c.total_deaths}
+          diseaseCount={c.disease_count}
+          dateRange={c.date_range}
+        />
+      ))}
+    </div>
+  </section>
+
+  <!-- Diseases ────────────────────────────── -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+    <div class="flex items-center justify-between mb-8">
+      <h2 class="section-heading" data-lang-en="Disease Directory" data-lang-zh="疾病目录">Disease Directory</h2>
+      <a href="/diseases/" class="text-sm text-brand-400 hover:text-brand-300 transition-colors">
+        <span data-lang-en="Browse all 130+ →" data-lang-zh="浏览全部 130+ →">Browse all 130+ →</span>
+      </a>
+    </div>
+
+    <!-- Category section -->
+    {categories.map(cat => {
+      const catDiseases = diseases.filter(d => d.category === cat).slice(0, 4);
+      if (!catDiseases.length) return null;
+      return (
+        <div class="mb-10">
+          <h3 class="text-slate-400 text-sm font-semibold uppercase tracking-widest mb-4 flex items-center gap-2">
+            <span data-lang-en={cat} data-lang-zh={catZh[cat] ?? cat}>{cat}</span>
+          </h3>
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            {catDiseases.map(d => (
+              <DiseaseCard
+                diseaseId={d.disease_id}
+                nameEn={d.name_en}
+                nameZh={d.name_zh}
+                category={d.category}
+                icd10={d.icd_10}
+                description={d.description}
+                slug={d.slug}
+              />
+            ))}
+          </div>
+        </div>
+      );
+    })}
+  </section>
+
+  <!-- Latest Reports ───────────────────────── -->
+  {reports.length > 0 && (
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
+      <div class="flex items-center justify-between mb-8">
+        <h2 class="section-heading" data-lang-en="Latest Reports" data-lang-zh="最新报告">Latest Reports</h2>
+        <a href={`/countries/${(reports[0]?.country_code ?? 'cn').toLowerCase()}/reports/`} class="text-sm text-brand-400 hover:text-brand-300 transition-colors">
+          <span data-lang-en="View all →" data-lang-zh="查看全部 →">View all →</span>
+        </a>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {reports.map((r: any) => (
+          <ReportCard
+            id={r.id}
+            title={r.title}
+            reportType={r.report_type}
+            periodStart={r.period_start}
+            periodEnd={r.period_end}
+            createdAt={r.created_at}
+            countryCode={r.country_code}
+            countryName={r.country_name}
+            qualityScore={r.quality_score}
+          />
+        ))}
+      </div>
+    </section>
+  )}
+</BaseLayout>
