@@ -1,9 +1,9 @@
 // src/components/charts/DiseaseHeatmap.tsx
-// Plotly heatmap: diseases (y) × months (x) with log-scaled case counts.
+// ECharts heatmap: diseases (y) × months (x) with log-scaled case counts.
 
 import React, { useEffect, useMemo, useState } from 'react';
-import Plot from 'react-plotly.js';
-import type { Data, Layout } from 'plotly.js';
+import EChartsReact from 'echarts-for-react/lib/core';
+import echarts from '../../lib/echarts';
 
 interface HeatmapData {
   diseases: string[];
@@ -70,80 +70,72 @@ export default function DiseaseHeatmap({ data, height = 600 }: Props) {
     );
   }
 
-  // Custom hover text: convert log scale back to raw cases
-  const customdata = data.z.map((row) =>
-    row.map((logVal) => Math.round(Math.pow(10, logVal) - 1))
-  );
+  // Flatten z matrix into ECharts [colIndex, rowIndex, value] format
+  const heatmapData = useMemo(() => {
+    const result: [number, number, number][] = [];
+    data.z.forEach((row, rowIdx) => {
+      row.forEach((logVal, colIdx) => {
+        result.push([colIdx, rowIdx, logVal]);
+      });
+    });
+    return result;
+  }, [data.z]);
 
-  const traces: Data[] = [
-    {
-      type: 'heatmap',
-      x: data.months,
-      y: data.disease_labels,
-      z: data.z,
-      customdata,
-      colorscale: [
-        [0, '#0f172a'],
-        [0.1, '#1e3a5f'],
-        [0.3, '#1d4ed8'],
-        [0.5, '#0ea5e9'],
-        [0.7, '#14b8a6'],
-        [0.85, '#f59e0b'],
-        [1, '#ef4444'],
-      ] as unknown as string,
-      zmin: 0,
-      zsmooth: false,
-      hoverongaps: false,
-      hovertemplate:
-        '<b>%{y}</b><br>%{x}<br>' +
-        (lang === 'zh' ? '病例数' : 'Cases') +
-        ': <b>%{customdata:,}</b><extra></extra>',
-      colorbar: {
-        title: {
-          text: lang === 'zh' ? 'log₁₀(病例+1)' : 'log₁₀(cases+1)',
-          font: { color: chartColors.font, size: 11 },
-          side: 'right',
-        },
-        tickfont: { color: chartColors.font, size: 10 },
-        outlinecolor: chartColors.colorbarBorder,
-        bordercolor: chartColors.colorbarBorder,
-        bgcolor: 'rgba(0,0,0,0)',
-        thickness: 12,
+  const dynamicHeight = Math.max(height, data.disease_labels.length * 18 + 120);
+
+  const option = useMemo(() => ({
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'item',
+      backgroundColor: chartColors.hoverBg,
+      borderColor: chartColors.hoverBorder,
+      textStyle: { color: chartColors.hoverFont, fontSize: 12 },
+      formatter: (p: any) => {
+        const rawCases = Math.round(Math.pow(10, p.value[2]) - 1);
+        const disease = data.disease_labels[p.value[1]];
+        const month = data.months[p.value[0]];
+        return `<b>${disease}</b><br/>${month}<br/>${lang === 'zh' ? '病例数' : 'Cases'}: <b>${rawCases.toLocaleString()}</b>`;
       },
     },
-  ];
-
-  const layout: Partial<Layout> = {
-    paper_bgcolor: 'rgba(0,0,0,0)',
-    plot_bgcolor: 'rgba(0,0,0,0)',
-    font: { family: 'Inter, system-ui, sans-serif', color: chartColors.font, size: 11 },
-    height: Math.max(height, data.disease_labels.length * 18 + 100),
-    margin: { l: 200, r: 80, t: 20, b: 80 },
-    xaxis: {
-      gridcolor: chartColors.grid,
-      linecolor: chartColors.line,
-      tickcolor: chartColors.tick,
-      tickangle: -45,
-      tickfont: { size: 10, color: chartColors.font },
-      // Show every 3rd month label to avoid crowding
-      dtick: 'M3',
-      tickformat: "%b '%y",
-      type: 'date' as const,
+    grid: { left: 200, right: 90, top: 20, bottom: 80 },
+    xAxis: {
+      type: 'category' as const,
+      data: data.months,
+      splitArea: { show: false },
+      axisLabel: { color: chartColors.font, fontSize: 10, rotate: -45 },
+      axisLine: { lineStyle: { color: chartColors.line } },
+      axisTick: { lineStyle: { color: chartColors.tick } },
+      // Show every 3rd month to avoid crowding
+      interval: 2,
     },
-    yaxis: {
-      gridcolor: chartColors.grid,
-      linecolor: chartColors.line,
-      tickcolor: chartColors.tick,
-      tickfont: { size: 11, color: chartColors.font },
-      automargin: true,
+    yAxis: {
+      type: 'category' as const,
+      data: data.disease_labels,
+      splitArea: { show: false },
+      axisLabel: { color: chartColors.font, fontSize: 11 },
+      axisLine: { lineStyle: { color: chartColors.line } },
+      axisTick: { lineStyle: { color: chartColors.tick } },
     },
-    hovermode: 'closest',
-    hoverlabel: {
-      bgcolor: chartColors.hoverBg,
-      bordercolor: chartColors.hoverBorder,
-      font: { color: chartColors.hoverFont, size: 12 },
+    visualMap: {
+      min: 0,
+      max: Math.max(...data.z.flat().filter(v => isFinite(v))),
+      calculable: false,
+      orient: 'vertical' as const,
+      right: 10,
+      top: 20,
+      bottom: 80,
+      text: [lang === 'zh' ? '高' : 'High', lang === 'zh' ? '低' : 'Low'],
+      textStyle: { color: chartColors.font, fontSize: 10 },
+      inRange: {
+        color: ['#0f172a', '#1e3a5f', '#1d4ed8', '#0ea5e9', '#14b8a6', '#f59e0b', '#ef4444'],
+      },
     },
-  };
+    series: [{
+      type: 'heatmap' as const,
+      data: heatmapData,
+      emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.5)' } },
+    }],
+  }), [data, lang, chartColors, heatmapData]);
 
   return (
     <div className="card p-4 overflow-x-auto">
@@ -152,12 +144,11 @@ export default function DiseaseHeatmap({ data, height = 600 }: Props) {
           ? '颜色越深代表病例数越多（对数刻度）。暗黑格表示零病例。'
           : 'Darker cells = more cases (log scale). Black = zero cases.'}
       </p>
-      <Plot
-        data={traces}
-        layout={layout}
-        config={{ displayModeBar: 'hover', responsive: true, modeBarButtonsToRemove: ['lasso2d', 'select2d'] }}
-        style={{ width: '100%' }}
-        useResizeHandler
+      <EChartsReact
+        echarts={echarts}
+        option={option}
+        notMerge
+        style={{ width: '100%', height: dynamicHeight }}
       />
     </div>
   );

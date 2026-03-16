@@ -1,36 +1,43 @@
-import React, { useEffect, useRef } from 'react';
+// src/components/charts/WorldMap.tsx
+// ECharts geo choropleth world map — polished dark/light theme.
+// GeoJSON served from /data/world.json (public/data/).
+// For China-compliant deployment, replace with DataV GeoAtlas world GeoJSON:
+//   https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json
+
+import React, { useEffect, useState, useMemo } from 'react';
+import EChartsReact from 'echarts-for-react/lib/core';
+import echarts from '../../lib/echarts';
 
 interface WorldMapProps {
-  /** ISO-2 country codes that are actively covered */
   activeCodes: string[];
   height?: number;
 }
 
-// ISO-2 → ISO-3 mapping (only major countries needed)
-const ISO2_TO_3: Record<string, string> = {
-  CN: 'CHN', US: 'USA', JP: 'JPN', KR: 'KOR', IN: 'IND',
-  TH: 'THA', VN: 'VNM', SG: 'SGP', AU: 'AUS', NZ: 'NZL',
-  FR: 'FRA', DE: 'DEU', GB: 'GBR', IT: 'ITA', ES: 'ESP',
-  BR: 'BRA', ZA: 'ZAF', NG: 'NGA', MX: 'MEX', CA: 'CAN',
-  RU: 'RUS', ID: 'IDN', PK: 'PAK', BD: 'BGD', PH: 'PHL',
-  MY: 'MYS', EG: 'EGY', TR: 'TUR', AR: 'ARG', CO: 'COL',
-  KE: 'KEN', ET: 'ETH', GH: 'GHA', TZ: 'TZA', UA: 'UKR',
-  PL: 'POL', NL: 'NLD', SE: 'SWE', NO: 'NOR', CH: 'CHE',
-};
-
-// Countries planned for future coverage (ISO-2)
 const PLANNED_COUNTRIES = [
   'US', 'JP', 'KR', 'IN', 'TH', 'VN', 'SG', 'AU',
   'FR', 'DE', 'GB', 'BR', 'ZA', 'NG', 'MX', 'CA',
   'RU', 'ID', 'PK', 'BD',
 ];
 
-export default function WorldMap({ activeCodes, height = 420 }: WorldMapProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [theme, setTheme] = React.useState<'light' | 'dark'>(() => {
+const ISO2_TO_NAME: Record<string, string> = {
+  CN: 'China', US: 'United States', JP: 'Japan', KR: 'Korea', IN: 'India',
+  TH: 'Thailand', VN: 'Vietnam', SG: 'Singapore', AU: 'Australia', NZ: 'New Zealand',
+  FR: 'France', DE: 'Germany', GB: 'United Kingdom', IT: 'Italy', ES: 'Spain',
+  BR: 'Brazil', ZA: 'South Africa', NG: 'Nigeria', MX: 'Mexico', CA: 'Canada',
+  RU: 'Russia', ID: 'Indonesia', PK: 'Pakistan', BD: 'Bangladesh', PH: 'Philippines',
+  MY: 'Malaysia', EG: 'Egypt', TR: 'Turkey', AR: 'Argentina', CO: 'Colombia',
+  KE: 'Kenya', ET: 'Ethiopia', GH: 'Ghana', TZ: 'Tanzania', UA: 'Ukraine',
+  PL: 'Poland', NL: 'Netherlands', SE: 'Sweden', NO: 'Norway', CH: 'Switzerland',
+};
+
+const MAP_NAME = 'world';
+
+export default function WorldMap({ activeCodes, height = 440 }: WorldMapProps) {
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     if (typeof document === 'undefined') return 'dark';
     return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
   });
+  const [mapReady, setMapReady] = useState(false);
 
   useEffect(() => {
     if (typeof document === 'undefined') return;
@@ -43,131 +50,168 @@ export default function WorldMap({ activeCodes, height = 420 }: WorldMapProps) {
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
-
-    async function renderMap() {
-      // @ts-ignore
-      const Plotly = await import('plotly.js-dist-min');
-      if (cancelled || !containerRef.current) return;
-
-      const activeSet = new Set(activeCodes.map(c => c.toUpperCase()));
-      const plannedSet = new Set(
-        PLANNED_COUNTRIES.filter(c => !activeSet.has(c))
+    if (echarts.getMap(MAP_NAME)) { setMapReady(true); return; }
+    fetch('/data/world.json')
+      .then(r => r.json())
+      .then(geoJson => { echarts.registerMap(MAP_NAME, geoJson); setMapReady(true); })
+      .catch(() =>
+        fetch('https://cdn.jsdelivr.net/npm/echarts@5/map/json/world.json')
+          .then(r => r.json())
+          .then(geoJson => { echarts.registerMap(MAP_NAME, geoJson); setMapReady(true); })
       );
+  }, []);
 
-      const isLight = theme === 'light';
-      const colors = {
-        planned: isLight ? '#93c5fd' : '#1e3a5f',
-        active: isLight ? '#0d9488' : '#0d9488',
-        markerLine: isLight ? '#f8fafc' : '#0f172a',
-        land: isLight ? '#e2e8f0' : '#1e293b',
-        ocean: isLight ? '#f8fafc' : '#0f172a',
-        country: isLight ? '#cbd5e1' : '#1e3a5f',
-      };
+  const option = useMemo(() => {
+    if (!mapReady) return {};
+    const isLight = theme === 'light';
 
-      // Build arrays for choropleth
-      const locations: string[] = [];
-      const zValues: number[] = [];
-      const hoverTexts: string[] = [];
+    const c = isLight ? {
+      ocean:   '#dbeafe',
+      land:    '#f1f5f9',
+      border:  '#e2e8f0',
+      active:  '#0d9488',
+      activeBorder: '#0f766e',
+      planned: '#3b82f6',
+      plannedFill: '#bfdbfe',
+      hover:   '#0ea5e9',
+      text:    '#334155',
+      tooltip: { bg: '#ffffff', border: '#cbd5e1', text: '#0f172a' },
+    } : {
+      ocean:   '#0f172a',
+      land:    '#1e293b',
+      border:  '#0f172a',
+      active:  '#0d9488',
+      activeBorder: '#14b8a6',
+      planned: '#1d4ed8',
+      plannedFill: '#1e3a5f',
+      hover:   '#0ea5e9',
+      text:    '#94a3b8',
+      tooltip: { bg: '#1e293b', border: '#334155', text: '#e2e8f0' },
+    };
 
-      // Active countries → value 2
-      for (const iso2 of activeSet) {
-        const iso3 = ISO2_TO_3[iso2];
-        if (!iso3) continue;
-        locations.push(iso3);
-        zValues.push(2);
-        hoverTexts.push(`${iso2} — Active`);
-      }
+    const activeSet = new Set(activeCodes.map(x => x.toUpperCase()));
+    const plannedSet = new Set(PLANNED_COUNTRIES.filter(x => !activeSet.has(x)));
 
-      // Planned countries → value 1
-      for (const iso2 of plannedSet) {
-        const iso3 = ISO2_TO_3[iso2];
-        if (!iso3) continue;
-        locations.push(iso3);
-        zValues.push(1);
-        hoverTexts.push(`${iso2} — Planned`);
-      }
+    const activeData = [...activeSet]
+      .filter(x => ISO2_TO_NAME[x])
+      .map(x => ({ name: ISO2_TO_NAME[x], value: 2, iso2: x }));
+    const plannedData = [...plannedSet]
+      .filter(x => ISO2_TO_NAME[x])
+      .map(x => ({ name: ISO2_TO_NAME[x], value: 1, iso2: x }));
 
-      const trace: any = {
-        type: 'choropleth',
-        locationmode: 'ISO-3',
-        locations,
-        z: zValues,
-        text: hoverTexts,
-        hoverinfo: 'text',
-        colorscale: [
-          [0, colors.planned],
-          [0.5, colors.planned],
-          [0.5, colors.active],
-          [1, colors.active],
-        ],
-        zmin: 0,
-        zmax: 2,
-        showscale: false,
-        marker: {
-          line: {
-            color: colors.markerLine,
-            width: 0.5,
+    return {
+      backgroundColor: c.ocean,
+      tooltip: {
+        trigger: 'item',
+        backgroundColor: c.tooltip.bg,
+        borderColor: c.tooltip.border,
+        borderWidth: 1,
+        padding: [8, 12],
+        textStyle: { color: c.tooltip.text, fontSize: 13, fontFamily: 'Inter, system-ui, sans-serif' },
+        formatter: (p: any) => {
+          if (!p.data) return `<span style="color:${c.tooltip.text}">${p.name}</span>`;
+          const icon = p.data.value === 2 ? '🟢' : '🔵';
+          const status = p.data.value === 2 ? '<b style="color:#0d9488">Active Coverage</b>' : '<b style="color:#3b82f6">Planned</b>';
+          return `${icon} <b>${p.name}</b> (${p.data.iso2})<br/>${status}`;
+        },
+      },
+      visualMap: {
+        show: false,
+        min: 0, max: 2,
+        inRange: { color: [c.land, c.plannedFill, c.active] },
+      },
+      series: [{
+        type: 'map' as const,
+        map: MAP_NAME,
+        roam: false,
+        // Slight zoom/center to give the map breathing room
+        layoutCenter: ['50%', '54%'],
+        layoutSize: '100%',
+        label: { show: false },
+        emphasis: {
+          label: { show: false },
+          itemStyle: {
+            areaColor: c.hover,
+            borderColor: c.hover,
+            borderWidth: 1,
+            shadowBlur: isLight ? 8 : 12,
+            shadowColor: isLight ? 'rgba(14,165,233,0.3)' : 'rgba(14,165,233,0.5)',
           },
         },
-      };
-
-      const layout: any = {
-        geo: {
-          showframe: false,
-          showcoastlines: false,
-          showland: true,
-          landcolor: colors.land,
-          showocean: true,
-          oceancolor: colors.ocean,
-          showlakes: false,
-          showcountries: true,
-          countrycolor: colors.country,
-          bgcolor: 'transparent',
-          projection: { type: 'natural earth' },
+        select: { disabled: true },
+        itemStyle: {
+          areaColor: c.land,
+          borderColor: c.border,
+          borderWidth: isLight ? 0.5 : 0.3,
         },
-        paper_bgcolor: 'transparent',
-        plot_bgcolor: 'transparent',
-        margin: { l: 0, r: 0, t: 0, b: 0 },
-        height,
-        dragmode: false,
-      };
+        data: [
+          ...activeData.map(d => ({
+            ...d,
+            itemStyle: {
+              areaColor: c.active,
+              borderColor: c.activeBorder,
+              borderWidth: 1,
+              shadowBlur: isLight ? 0 : 8,
+              shadowColor: isLight ? 'transparent' : 'rgba(13,148,136,0.6)',
+            },
+          })),
+          ...plannedData.map(d => ({
+            ...d,
+            itemStyle: {
+              areaColor: c.plannedFill,
+              borderColor: c.planned,
+              borderWidth: isLight ? 0.8 : 0.5,
+            },
+          })),
+        ],
+      }],
+    };
+  }, [mapReady, theme, activeCodes]);
 
-      const config: any = {
-        displayModeBar: false,
-        responsive: true,
-        scrollZoom: false,
-      };
+  if (!mapReady) {
+    return (
+      <div style={{ height }} className="flex items-center justify-center text-slate-500 text-sm rounded-2xl">
+        <span className="inline-flex items-center gap-2">
+          <svg className="animate-spin w-4 h-4 text-teal-500" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+          </svg>
+          Loading map…
+        </span>
+      </div>
+    );
+  }
 
-      await Plotly.newPlot(containerRef.current!, [trace], layout, config);
-    }
-
-    renderMap();
-    return () => { cancelled = true; };
-  }, [activeCodes, height, theme]);
+  const isLight = theme === 'light';
 
   return (
-    <div>
-      <div ref={containerRef} style={{ width: '100%', height }} />
+    <div className="relative rounded-2xl overflow-hidden"
+      style={{
+        background: isLight
+          ? 'linear-gradient(135deg, #f0f9ff 0%, #dbeafe 100%)'
+          : 'linear-gradient(135deg, #0f172a 0%, #0d1b2e 100%)',
+        boxShadow: isLight
+          ? 'inset 0 1px 0 rgba(255,255,255,0.6), 0 4px 24px rgba(59,130,246,0.08)'
+          : 'inset 0 1px 0 rgba(255,255,255,0.04)',
+      }}
+    >
+      <EChartsReact
+        echarts={echarts}
+        option={option}
+        notMerge
+        style={{ width: '100%', height }}
+      />
       {/* Legend */}
-      <div className="flex items-center justify-center gap-6 mt-3 text-xs text-slate-400 flex-wrap">
-        <span className="flex items-center gap-1.5">
-          <span className="inline-block w-3 h-3 rounded-sm" style={{ background: '#0d9488' }} />
-          <span data-lang-en="Active Coverage" data-lang-zh="已覆盖">Active Coverage</span>
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-5 text-xs flex-wrap justify-center">
+        <span className="flex items-center gap-2 px-3 py-1.5 rounded-full backdrop-blur-sm"
+          style={{ background: isLight ? 'rgba(255,255,255,0.8)' : 'rgba(15,23,42,0.75)', border: `1px solid ${isLight ? '#e2e8f0' : '#334155'}` }}>
+          <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: '#0d9488', boxShadow: '0 0 6px rgba(13,148,136,0.7)' }} />
+          <span style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} data-lang-en="Active Coverage" data-lang-zh="已覆盖">Active Coverage</span>
         </span>
-        <span className="flex items-center gap-1.5">
-          <span className="inline-block w-3 h-3 rounded-sm" style={{ background: theme === 'light' ? '#93c5fd' : '#1e3a5f' }} />
-          <span data-lang-en="Planned" data-lang-zh="计划中">Planned</span>
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span
-            className="inline-block w-3 h-3 rounded-sm"
-            style={{
-              background: theme === 'light' ? '#e2e8f0' : '#1e293b',
-              border: `1px solid ${theme === 'light' ? '#cbd5e1' : '#334155'}`,
-            }}
-          />
-          <span data-lang-en="Not Covered" data-lang-zh="暂未覆盖">Not Covered</span>
+        <span className="flex items-center gap-2 px-3 py-1.5 rounded-full backdrop-blur-sm"
+          style={{ background: isLight ? 'rgba(255,255,255,0.8)' : 'rgba(15,23,42,0.75)', border: `1px solid ${isLight ? '#e2e8f0' : '#334155'}` }}>
+          <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: isLight ? '#bfdbfe' : '#1e3a5f', border: `1px solid ${isLight ? '#3b82f6' : '#1d4ed8'}` }} />
+          <span style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} data-lang-en="Planned" data-lang-zh="计划中">Planned</span>
         </span>
       </div>
     </div>

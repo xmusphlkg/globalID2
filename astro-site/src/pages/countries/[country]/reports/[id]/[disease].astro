@@ -1,0 +1,149 @@
+---
+// src/pages/countries/[country]/reports/[id]/[disease].astro
+// Individual disease detail page within a report — journal publication style.
+import ReportLayout from '../../../../../layouts/ReportLayout.astro';
+import DiseaseDetailView from '../../../../../components/charts/DiseaseDetailView';
+import { readFileSync, existsSync } from 'fs';
+import { resolve } from 'path';
+import { marked } from 'marked';
+
+// Configure marked for clean HTML output
+marked.setOptions({ gfm: true, breaks: true });
+
+export async function getStaticPaths() {
+  const reportsIndexPath = resolve('./src/data/reports/index.json');
+  if (!existsSync(reportsIndexPath)) return [];
+  const reportsIndex = JSON.parse(readFileSync(reportsIndexPath, 'utf-8')) as any[];
+
+  const paths: any[] = [];
+
+  for (const reportMeta of reportsIndex) {
+    const country = (reportMeta.country_code ?? 'cn').toLowerCase();
+    const reportPath = resolve(`./src/data/reports/${reportMeta.id}.json`);
+    const countryPath = resolve(`./src/data/countries/${country}.json`);
+    if (!existsSync(reportPath) || !existsSync(countryPath)) continue;
+
+    const reportData = JSON.parse(readFileSync(reportPath, 'utf-8'));
+    const cData = JSON.parse(readFileSync(countryPath, 'utf-8'));
+
+    // Build slug → disease_id mapping from country series
+    const slugMap: Record<string, string> = {};
+    for (const [did, s] of Object.entries(cData.disease_series as Record<string, any>)) {
+      if (s.slug) slugMap[s.name_en] = s.slug;
+    }
+
+    // Find all diseases present in report sections
+    const seen = new Set<string>();
+    for (const sec of (reportData.sections ?? [])) {
+      const diseaseName: string = sec.title.split(' - ').slice(0, -1).join(' - ');
+      const slug = slugMap[diseaseName];
+      if (slug && !seen.has(slug)) {
+        seen.add(slug);
+        paths.push({
+          params: {
+            country,
+            id: String(reportMeta.id),
+            disease: slug,
+          },
+        });
+      }
+    }
+  }
+
+  return paths;
+}
+
+const { country, id, disease } = Astro.params;
+
+const reportPath = resolve(`./src/data/reports/${id}.json`);
+const countryPath = resolve(`./src/data/countries/${country}.json`);
+
+let report: any = null;
+let diseaseMeta: any = null;
+let sections: any[] = [];
+let fullSeries: any = null;
+
+if (existsSync(reportPath) && existsSync(countryPath)) {
+  report = JSON.parse(readFileSync(reportPath, 'utf-8'));
+  const cData = JSON.parse(readFileSync(countryPath, 'utf-8'));
+
+  // Find disease by slug in country series
+  for (const [did, s] of Object.entries(cData.disease_series as Record<string, any>)) {
+    if (s.slug === disease) {
+      diseaseMeta = {
+        disease_id: did,
+        name_en: s.name_en,
+        name_zh: s.name_zh ?? '',
+        category: s.category ?? '',
+        slug: s.slug,
+      };
+      fullSeries = {
+        dates: s.dates as string[],
+        cases: s.cases as number[],
+        deaths: s.deaths as number[],
+        incidence_rates: (s.incidence_rates as (number | null)[]) ?? [],
+        total_cases: (s.cases as number[]).reduce((a: number, b: number) => a + b, 0),
+        total_deaths: (s.deaths as number[]).reduce((a: number, b: number) => a + b, 0),
+      };
+      break;
+    }
+  }
+
+  // Extract sections for this disease
+  if (diseaseMeta) {
+    sections = (report.sections ?? [])
+      .filter((sec: any) => {
+        const sName: string = sec.title.split(' - ').slice(0, -1).join(' - ');
+        return sName === diseaseMeta.name_en;
+      })
+      .map((sec: any) => ({
+        ...sec,
+        content_html: sec.content_html ?? marked(sec.content ?? '') as string,
+      }));
+  }
+}
+
+function fmtDate(d: string) {
+  return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+const pageTitle = diseaseMeta
+  ? `${diseaseMeta.name_en} — Report #${id}`
+  : `Disease Detail — Report #${id}`;
+
+const countryName = report?.country_name ?? country.toUpperCase();
+---
+
+<ReportLayout
+  title={pageTitle}
+  description={`${diseaseMeta?.name_en ?? 'Disease'} surveillance analysis from ${countryName} report #${id}.`}
+  breadcrumbs={[
+    { label: 'Countries', href: '/countries/' },
+    { label: countryName, href: `/countries/${country}/` },
+    { label: 'Reports', href: `/countries/${country}/reports/` },
+    { label: `#${id}`, href: `/countries/${country}/reports/${id}/` },
+    { label: diseaseMeta?.name_en ?? disease },
+  ]}
+>
+  {!diseaseMeta || !report ? (
+    <div class="max-w-4xl mx-auto px-4 py-24 text-center text-slate-500">
+      Disease not found.
+      <a href={`/countries/${country}/reports/${id}/`} class="text-brand-400 hover:underline ml-2">← Back to report</a>
+    </div>
+  ) : (
+    <DiseaseDetailView
+      client:only="react"
+      diseaseMeta={diseaseMeta}
+      sections={sections}
+      series={fullSeries}
+      reportMeta={{
+        id: Number(id),
+        title: report.title,
+        period_start: report.period_start,
+        period_end: report.period_end,
+        country_name: countryName,
+        country_code: country,
+      }}
+    />
+  )}
+</ReportLayout>

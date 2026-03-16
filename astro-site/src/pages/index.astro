@@ -20,164 +20,520 @@ function fmtNum(n: number) {
   return n.toLocaleString();
 }
 
-// Aggregate stats across all countries
-const totalCases = (meta.countries ?? []).reduce((s: number, c: any) => s + (c.total_cases ?? 0), 0);
+const totalCases  = (meta.countries ?? []).reduce((s: number, c: any) => s + (c.total_cases  ?? 0), 0);
 const totalDeaths = (meta.countries ?? []).reduce((s: number, c: any) => s + (c.total_deaths ?? 0), 0);
 
 const stats = [
-  { label: 'Countries', labelZh: '国家数', value: meta.total_countries ?? '—', accent: 'teal' as const },
-  { label: 'Diseases Tracked', labelZh: '追踪疾病', value: meta.total_diseases ?? '—', accent: 'blue' as const },
-  { label: 'Total Cases', labelZh: '累计病例', value: fmtNum(totalCases), accent: 'amber' as const },
-  { label: 'Reports Generated', labelZh: '已生成报告', value: meta.total_reports ?? '—', accent: 'teal' as const },
+  { label: 'Countries',         labelZh: '国家数',    value: meta.total_countries ?? '—', accent: 'teal'  as const },
+  { label: 'Diseases Tracked',  labelZh: '追踪疾病',  value: meta.total_diseases  ?? '—', accent: 'blue'  as const },
+  { label: 'Total Cases',       labelZh: '累计病例',  value: fmtNum(totalCases),           accent: 'amber' as const },
+  { label: 'Reports Generated', labelZh: '已生成报告', value: meta.total_reports  ?? '—', accent: 'teal'  as const },
 ];
 
-// Spotlight: top disease categories
 const categories = ['Viral', 'Bacterial', 'Parasitic', 'Fungal'];
-const catZh: Record<string, string> = { Viral: '病毒性', Bacterial: '细菌性', Parasitic: '寄生虫', Fungal: '真菌性' };
+const catZh: Record<string, string> = {
+  Viral: '病毒性', Bacterial: '细菌性', Parasitic: '寄生虫', Fungal: '真菌性',
+};
+
+const features = [
+  {
+    icon: 'M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z',
+    color: 'teal',
+    titleEn: 'Real-time Surveillance',   titleZh: '实时监测',
+    descEn:  'Automated scrapers refresh data monthly as official bulletins are published.',
+    descZh:  '自动爬虫随官方公报发布每月刷新数据。',
+  },
+  {
+    icon: 'M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5',
+    color: 'blue',
+    titleEn: 'AI-powered Analysis',  titleZh: 'AI 驱动分析',
+    descEn:  'Large language models generate bilingual epidemiological reports with trend insights.',
+    descZh:  '大型语言模型生成含趋势洞察的中英双语流行病学报告。',
+  },
+  {
+    icon: 'M10.5 6a7.5 7.5 0 107.5 7.5h-7.5V6z M13.5 10.5H21A7.5 7.5 0 0013.5 3v7.5z',
+    color: 'amber',
+    titleEn: 'Interactive Charts', titleZh: '交互图表',
+    descEn:  'Line charts, bar charts, and heatmaps reveal seasonal patterns and outbreak signals.',
+    descZh:  '折线图、柱状图和热力图揭示季节规律与疫情信号。',
+  },
+  {
+    icon: 'M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 2.625c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125m16.5 5.625c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125',
+    color: 'purple',
+    titleEn: 'Open Data',  titleZh: '开放数据',
+    descEn:  'All data sourced from official health authorities — transparent, free, and reproducible.',
+    descZh:  '全部数据来源于官方卫生机构，透明、免费、可复现。',
+  },
+];
 ---
 
 <BaseLayout
   title="Home"
   description="GlobalID — AI-powered global infectious disease surveillance and reporting."
 >
-  <!-- Hero ────────────────────────────────── -->
-  <section class="relative overflow-hidden py-20 sm:py-28">
-    <!-- Background gradient -->
-    <div class="absolute inset-0 -z-10">
-      <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-brand-600/10 rounded-full blur-3xl" />
-      <div class="absolute top-20 right-0 w-[400px] h-[400px] bg-teal-600/8 rounded-full blur-3xl" />
-    </div>
 
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="max-w-3xl">
-        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-400 text-xs font-medium mb-6">
-          <span class="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse" />
-          <span data-lang-en="Automated surveillance · AI-powered analysis" data-lang-zh="自动监测 · AI 驱动分析">
-            Automated surveillance · AI-powered analysis
+<!-- ═══════════════════════════ HERO ═══════════════════════════ -->
+<section class="relative overflow-hidden min-h-[92vh] flex items-center">
+
+  <!-- Animated background layers -->
+  <div class="absolute inset-0 -z-10 pointer-events-none">
+    <!-- Base gradient -->
+    <div class="absolute inset-0 hero-bg" />
+    <!-- Animated orbs -->
+    <div class="orb orb-1" />
+    <div class="orb orb-2" />
+    <div class="orb orb-3" />
+    <!-- Subtle grid -->
+    <div class="absolute inset-0 hero-grid opacity-[0.03]" />
+    <!-- Noise texture -->
+    <div class="absolute inset-0 opacity-[0.015] hero-noise" />
+  </div>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32 w-full relative z-10">
+    <div class="grid lg:grid-cols-2 gap-16 items-center">
+
+      <!-- Left: copy -->
+      <div class="animate-fade-up">
+        <!-- Badge -->
+        <div class="inline-flex items-center gap-2.5 px-4 py-2 rounded-full hero-badge mb-8">
+          <span class="relative flex h-2 w-2">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75" />
+            <span class="relative inline-flex h-2 w-2 rounded-full bg-teal-400" />
+          </span>
+          <span class="text-xs font-semibold tracking-wide text-teal-300" data-lang-en="Live Surveillance · AI Analysis" data-lang-zh="实时监测 · AI 分析">
+            Live Surveillance · AI Analysis
           </span>
         </div>
 
-        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-bold text-slate-100 leading-tight tracking-tight mb-6">
-          <span data-lang-en="Global Infectious" data-lang-zh="全球传染病">Global Infectious</span>
-          <br />
-          <span class="text-gradient" data-lang-en="Disease Surveillance" data-lang-zh="监测与报告">Disease Surveillance</span>
+        <!-- Heading -->
+        <h1 class="text-5xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight leading-[1.08] mb-6">
+          <span class="text-slate-100 block" data-lang-en="Global" data-lang-zh="全球传染病">Global</span>
+          <span class="hero-gradient-text block" data-lang-en="Infectious Disease" data-lang-zh="智能监测">Infectious Disease</span>
+          <span class="text-slate-300 text-4xl sm:text-5xl lg:text-5xl font-semibold block mt-1" data-lang-en="Surveillance" data-lang-zh="报告平台">Surveillance</span>
         </h1>
 
-        <p class="text-lg sm:text-xl text-slate-400 leading-relaxed max-w-2xl mb-10">
-          <span data-lang-en="Monitor, analyze, and report on 130+ infectious diseases across countries. Charts, data, and AI-generated reports — all in one place." data-lang-zh="跨国家监测、分析并报告 130+ 种传染病。图表、数据与 AI 生成报告，一站式获取。">
-            Monitor, analyze, and report on 130+ infectious diseases across countries.
-            Charts, data, and AI-generated reports — all in one place.
-          </span>
+        <!-- Subtext -->
+        <p class="text-lg text-slate-400 leading-relaxed max-w-lg mb-10" data-lang-en="Monitor 130+ infectious diseases across countries with AI-generated reports, interactive charts, and real-time trend detection — all open source." data-lang-zh="跨国监测 130+ 种传染病，配备 AI 生成报告、交互图表和实时趋势检测 — 全部开源。">
+          Monitor 130+ infectious diseases across countries with AI-generated reports,
+          interactive charts, and real-time trend detection — all open source.
         </p>
 
-        <div class="flex flex-wrap gap-4">
-          <a
-            href="/countries/"
-            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-medium text-sm transition-colors shadow-lg shadow-brand-600/25"
-          >
-            <span data-lang-en="Browse Countries" data-lang-zh="浏览国家">Browse Countries</span>
+        <!-- CTAs -->
+        <div class="flex flex-wrap gap-3 relative z-20">
+          <a href="/countries/"
+            class="hero-cta-primary group inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition-all relative z-20 pointer-events-auto">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span data-lang-en="Browse Countries" data-lang-zh="浏览国家">Browse Countries</span>
+            <svg class="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
             </svg>
           </a>
-          <a
-            href="/diseases/"
-            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-700 hover:border-slate-600 text-slate-300 hover:text-slate-100 font-medium text-sm transition-colors"
-          >
+          <a href="/diseases/"
+            class="hero-cta-secondary inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition-all relative z-20 pointer-events-auto">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
             <span data-lang-en="Disease Directory" data-lang-zh="疾病目录">Disease Directory</span>
           </a>
+          <a href="https://github.com/xmusphlkg/globalID2" target="_blank" rel="noopener noreferrer"
+            class="hero-cta-ghost inline-flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm transition-all relative z-20 pointer-events-auto">
+            <!-- GitHub icon -->
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844a9.59 9.59 0 012.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+            </svg>
+            <span>GitHub</span>
+          </a>
+        </div>
+
+        <!-- Trust badges -->
+        <div class="flex flex-wrap items-center gap-5 mt-10 pt-8 border-t border-slate-800/60">
+          {[
+            { icon: '🔬', en: 'Official health data', zh: '官方卫生数据' },
+            { icon: '🤖', en: 'AI-powered reports',   zh: 'AI 生成报告' },
+            { icon: '🌏', en: 'Bilingual EN / ZH',    zh: '中英双语' },
+            { icon: '📖', en: 'Open source',          zh: '开源项目' },
+          ].map(b => (
+            <span class="flex items-center gap-1.5 text-xs text-slate-500">
+              <span>{b.icon}</span>
+              <span data-lang-en={b.en} data-lang-zh={b.zh}>{b.en}</span>
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <!-- Right: animated feature cards -->
+      <div class="hidden lg:block animate-fade-up-delay">
+        <div class="grid grid-cols-2 gap-4">
+          {features.map((f, i) => (
+            <div class={`feature-card feature-card-${f.color} p-5 rounded-2xl`}
+              style={`animation-delay: ${i * 120}ms`}>
+              <div class={`w-10 h-10 rounded-xl feature-icon-${f.color} flex items-center justify-center mb-4`}>
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d={f.icon} />
+                </svg>
+              </div>
+              <h3 class="text-slate-200 font-semibold text-sm mb-1.5"
+                data-lang-en={f.titleEn} data-lang-zh={f.titleZh}>{f.titleEn}</h3>
+              <p class="text-slate-500 text-xs leading-relaxed"
+                data-lang-en={f.descEn} data-lang-zh={f.descZh}>{f.descEn}</p>
+            </div>
+          ))}
+        </div>
+
+        <!-- Floating data card -->
+        <div class="mt-4 floating-stat-card rounded-2xl p-4 flex items-center gap-4">
+          <div class="w-10 h-10 rounded-xl bg-teal-500/15 border border-teal-500/25 flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5 text-teal-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+            </svg>
+          </div>
+          <div>
+            <div class="text-xs text-slate-500 mb-0.5" data-lang-en="Tracking this month" data-lang-zh="本月追踪">Tracking this month</div>
+            <div class="font-bold text-slate-100">
+              <span class="text-teal-400">{meta.total_diseases ?? 124}</span>
+              <span class="text-slate-400 text-sm font-normal ml-1.5" data-lang-en="diseases across" data-lang-zh="种疾病覆盖">diseases across</span>
+              <span class="text-blue-400 ml-1.5">{meta.total_countries ?? 1}</span>
+              <span class="text-slate-400 text-sm font-normal ml-1.5" data-lang-en="countries" data-lang-zh="个国家">countries</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
-  </section>
+  </div>
 
-  <!-- Stats ────────────────────────────────── -->
-  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
-    <StatBar stats={stats} />
-  </section>
+  <!-- Scroll indicator -->
+  <div class="absolute bottom-8 left-1/2 -translate-x-1/2 scroll-indicator">
+    <svg class="w-6 h-6 text-slate-600 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+    </svg>
+  </div>
+</section>
 
-  <!-- Countries ────────────────────────────── -->
-  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
-    <div class="flex items-center justify-between mb-8">
+<!-- ═══════════════════════ STATS ════════════════════════ -->
+<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+  <StatBar stats={stats} />
+</section>
+
+<!-- ══════════════════════ COUNTRIES ═════════════════════ -->
+<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+  <div class="flex items-center justify-between mb-8">
+    <div>
       <h2 class="section-heading" data-lang-en="Countries" data-lang-zh="国家">Countries</h2>
-      <a href="/countries/" class="text-sm text-brand-400 hover:text-brand-300 transition-colors">
-        <span data-lang-en="View all →" data-lang-zh="查看全部 →">View all →</span>
+      <p class="text-sm text-slate-500 mt-1" data-lang-en="Surveillance coverage by country" data-lang-zh="各国监测覆盖情况">Surveillance coverage by country</p>
+    </div>
+    <a href="/countries/" class="text-sm text-brand-400 hover:text-brand-300 transition-colors inline-flex items-center gap-1">
+      <span data-lang-en="View all" data-lang-zh="查看全部">View all</span>
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+    </a>
+  </div>
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+    {(meta.countries ?? []).map((c: any) => (
+      <CountryCard
+        code={c.code}
+        name={c.name}
+        totalCases={c.total_cases}
+        totalDeaths={c.total_deaths}
+        diseaseCount={c.disease_count}
+        dateRange={c.date_range}
+      />
+    ))}
+  </div>
+</section>
+
+<!-- ══════════════════════ DISEASES ══════════════════════ -->
+<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
+  <div class="flex items-center justify-between mb-8">
+    <div>
+      <h2 class="section-heading" data-lang-en="Disease Directory" data-lang-zh="疾病目录">Disease Directory</h2>
+      <p class="text-sm text-slate-500 mt-1" data-lang-en="Categorised by pathogen type" data-lang-zh="按病原体类型分类">Categorised by pathogen type</p>
+    </div>
+    <a href="/diseases/" class="text-sm text-brand-400 hover:text-brand-300 transition-colors inline-flex items-center gap-1">
+      <span data-lang-en="Browse all 130+ →" data-lang-zh="浏览全部 130+ →">Browse all 130+ →</span>
+    </a>
+  </div>
+
+  {categories.map(cat => {
+    const catDiseases = diseases.filter(d => d.category === cat).slice(0, 4);
+    if (!catDiseases.length) return null;
+    const catColors = {
+      Viral: 'text-blue-400',
+      Bacterial: 'text-amber-400',
+      Parasitic: 'text-green-400',
+      Fungal: 'text-purple-400',
+    } as { [k: string]: string };
+    return (
+      <div class="mb-10">
+        <h3 class={`text-sm font-bold uppercase tracking-widest mb-4 flex items-center gap-2 ${catColors[cat] ?? 'text-slate-400'}`}>
+          <span data-lang-en={cat} data-lang-zh={catZh[cat] ?? cat}>{cat}</span>
+        </h3>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          {catDiseases.map(d => (
+            <DiseaseCard
+              diseaseId={d.disease_id}
+              nameEn={d.name_en}
+              nameZh={d.name_zh}
+              category={d.category}
+              icd10={d.icd_10}
+              description={d.description}
+              slug={d.slug}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  })}
+</section>
+
+<!-- ═══════════════════ LATEST REPORTS ══════════════════ -->
+{reports.length > 0 && (
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-28">
+    <div class="flex items-center justify-between mb-8">
+      <div>
+        <h2 class="section-heading" data-lang-en="Latest Reports" data-lang-zh="最新报告">Latest Reports</h2>
+        <p class="text-sm text-slate-500 mt-1" data-lang-en="AI-generated epidemiological analyses" data-lang-zh="AI 生成的流行病学分析">AI-generated epidemiological analyses</p>
+      </div>
+      <a href={`/countries/${(reports[0]?.country_code ?? 'cn').toLowerCase()}/reports/`} class="text-sm text-brand-400 hover:text-brand-300 transition-colors inline-flex items-center gap-1">
+        <span data-lang-en="View all" data-lang-zh="查看全部">View all</span>
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
       </a>
     </div>
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-      {(meta.countries ?? []).map((c: any) => (
-        <CountryCard
-          code={c.code}
-          name={c.name}
-          totalCases={c.total_cases}
-          totalDeaths={c.total_deaths}
-          diseaseCount={c.disease_count}
-          dateRange={c.date_range}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      {reports.map((r: any) => (
+        <ReportCard
+          id={r.id}
+          title={r.title}
+          reportType={r.report_type}
+          periodStart={r.period_start}
+          periodEnd={r.period_end}
+          createdAt={r.created_at}
+          countryCode={r.country_code}
+          countryName={r.country_name}
+          qualityScore={r.quality_score}
         />
       ))}
     </div>
   </section>
+)}
 
-  <!-- Diseases ────────────────────────────── -->
-  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
-    <div class="flex items-center justify-between mb-8">
-      <h2 class="section-heading" data-lang-en="Disease Directory" data-lang-zh="疾病目录">Disease Directory</h2>
-      <a href="/diseases/" class="text-sm text-brand-400 hover:text-brand-300 transition-colors">
-        <span data-lang-en="Browse all 130+ →" data-lang-zh="浏览全部 130+ →">Browse all 130+ →</span>
+<!-- ══════════════════════ OPEN SOURCE CTA ══════════════════ -->
+<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-28">
+  <div class="relative overflow-hidden rounded-3xl oss-cta p-10 sm:p-14 text-center">
+    <!-- Background decoration -->
+    <div class="absolute inset-0 -z-10 pointer-events-none">
+      <div class="absolute top-0 left-1/3 w-64 h-64 bg-teal-600/10 rounded-full blur-3xl" />
+      <div class="absolute bottom-0 right-1/3 w-48 h-48 bg-brand-600/10 rounded-full blur-3xl" />
+    </div>
+    <!-- GitHub mark -->
+    <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-slate-800/80 border border-slate-700/50 mb-6 mx-auto">
+      <svg class="w-8 h-8 text-slate-200" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844a9.59 9.59 0 012.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+      </svg>
+    </div>
+    <h2 class="text-3xl sm:text-4xl font-bold text-slate-100 mb-4" data-lang-en="Open Source &amp; Free" data-lang-zh="开源 · 免费">
+      Open Source &amp; Free
+    </h2>
+    <p class="text-slate-400 max-w-xl mx-auto mb-8 leading-relaxed" data-lang-en="GlobalID is fully open source. You can explore the code, contribute improvements, or deploy your own instance." data-lang-zh="GlobalID 完全开源。您可以浏览代码、贡献改进，或部署自己的实例。">
+      GlobalID is fully open source. You can explore the code, contribute improvements, or deploy your own instance.
+    </p>
+    <div class="flex flex-wrap gap-3 justify-center">
+      <a href="https://github.com/xmusphlkg/globalID2" target="_blank" rel="noopener noreferrer"
+        class="inline-flex items-center gap-2.5 px-6 py-3 rounded-xl bg-slate-200 hover:bg-white text-slate-900 font-semibold text-sm transition-all shadow-lg shadow-slate-900/30">
+        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844a9.59 9.59 0 012.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+        </svg>
+        <span data-lang-en="View on GitHub" data-lang-zh="查看 GitHub">View on GitHub</span>
+      </a>
+      <a href="/about/"
+        class="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-slate-700 hover:border-slate-500 text-slate-300 hover:text-slate-100 font-semibold text-sm transition-all">
+        <span data-lang-en="Learn more" data-lang-zh="了解更多">Learn more</span>
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
       </a>
     </div>
+  </div>
+</section>
 
-    <!-- Category section -->
-    {categories.map(cat => {
-      const catDiseases = diseases.filter(d => d.category === cat).slice(0, 4);
-      if (!catDiseases.length) return null;
-      return (
-        <div class="mb-10">
-          <h3 class="text-slate-400 text-sm font-semibold uppercase tracking-widest mb-4 flex items-center gap-2">
-            <span data-lang-en={cat} data-lang-zh={catZh[cat] ?? cat}>{cat}</span>
-          </h3>
-          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {catDiseases.map(d => (
-              <DiseaseCard
-                diseaseId={d.disease_id}
-                nameEn={d.name_en}
-                nameZh={d.name_zh}
-                category={d.category}
-                icd10={d.icd_10}
-                description={d.description}
-                slug={d.slug}
-              />
-            ))}
-          </div>
-        </div>
-      );
-    })}
-  </section>
-
-  <!-- Latest Reports ───────────────────────── -->
-  {reports.length > 0 && (
-    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
-      <div class="flex items-center justify-between mb-8">
-        <h2 class="section-heading" data-lang-en="Latest Reports" data-lang-zh="最新报告">Latest Reports</h2>
-        <a href={`/countries/${(reports[0]?.country_code ?? 'cn').toLowerCase()}/reports/`} class="text-sm text-brand-400 hover:text-brand-300 transition-colors">
-          <span data-lang-en="View all →" data-lang-zh="查看全部 →">View all →</span>
-        </a>
-      </div>
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {reports.map((r: any) => (
-          <ReportCard
-            id={r.id}
-            title={r.title}
-            reportType={r.report_type}
-            periodStart={r.period_start}
-            periodEnd={r.period_end}
-            createdAt={r.created_at}
-            countryCode={r.country_code}
-            countryName={r.country_name}
-            qualityScore={r.quality_score}
-          />
-        ))}
-      </div>
-    </section>
-  )}
 </BaseLayout>
+
+<style>
+/* ─── Hero background ─── */
+.hero-bg {
+  background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(59,130,246,0.12) 0%, transparent 70%),
+              radial-gradient(ellipse 60% 50% at 80% 50%, rgba(20,184,166,0.07) 0%, transparent 60%),
+              rgb(var(--bg));
+}
+
+html[data-theme='light'] .hero-bg {
+  background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(59,130,246,0.08) 0%, transparent 70%),
+              radial-gradient(ellipse 60% 50% at 80% 50%, rgba(20,184,166,0.05) 0%, transparent 60%),
+              rgb(var(--bg));
+}
+
+/* Animated orbs */
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  animation: orb-drift 20s ease-in-out infinite;
+}
+.orb-1 {
+  width: 600px; height: 600px;
+  top: -200px; left: -100px;
+  background: radial-gradient(circle, rgba(59,130,246,0.06) 0%, transparent 70%);
+  animation-delay: 0s;
+}
+.orb-2 {
+  width: 500px; height: 500px;
+  top: 100px; right: -150px;
+  background: radial-gradient(circle, rgba(20,184,166,0.05) 0%, transparent 70%);
+  animation-delay: -7s;
+}
+.orb-3 {
+  width: 400px; height: 400px;
+  bottom: -100px; left: 30%;
+  background: radial-gradient(circle, rgba(139,92,246,0.04) 0%, transparent 70%);
+  animation-delay: -14s;
+}
+@keyframes orb-drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%       { transform: translate(30px, -20px) scale(1.05); }
+  66%       { transform: translate(-20px, 15px) scale(0.97); }
+}
+
+/* Grid texture */
+.hero-grid {
+  background-image:
+    linear-gradient(rgba(148,163,184,1) 1px, transparent 1px),
+    linear-gradient(to right, rgba(148,163,184,1) 1px, transparent 1px);
+  background-size: 50px 50px;
+}
+
+.hero-noise {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+}
+
+/* Hero badge */
+.hero-badge {
+  background: rgba(20,184,166,0.08);
+  border: 1px solid rgba(20,184,166,0.2);
+  backdrop-filter: blur(8px);
+}
+
+/* Gradient heading */
+.hero-gradient-text {
+  background: linear-gradient(135deg, #60a5fa 0%, #34d399 50%, #a78bfa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* CTA buttons */
+.hero-cta-primary {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: white;
+  box-shadow: 0 4px 24px rgba(59,130,246,0.3), 0 1px 0 rgba(255,255,255,0.1) inset;
+}
+.hero-cta-primary:hover {
+  background: linear-gradient(135deg, #60a5fa, #3b82f6);
+  box-shadow: 0 6px 28px rgba(59,130,246,0.4), 0 1px 0 rgba(255,255,255,0.1) inset;
+  transform: translateY(-1px);
+}
+.hero-cta-secondary {
+  background: rgba(30,41,59,0.6);
+  border: 1px solid rgba(51,65,85,0.8);
+  color: rgb(203,213,225);
+  backdrop-filter: blur(8px);
+}
+.hero-cta-secondary:hover {
+  background: rgba(51,65,85,0.7);
+  border-color: rgba(71,85,105,1);
+  color: white;
+  transform: translateY(-1px);
+}
+.hero-cta-ghost {
+  color: rgb(100,116,139);
+  border: 1px solid rgba(51,65,85,0.5);
+}
+.hero-cta-ghost:hover {
+  color: rgb(148,163,184);
+  border-color: rgba(71,85,105,0.8);
+}
+
+html[data-theme='light'] .hero-cta-secondary {
+  background: rgba(255,255,255,0.8);
+  border-color: #e2e8f0;
+  color: #334155;
+}
+html[data-theme='light'] .hero-cta-secondary:hover {
+  background: white;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+html[data-theme='light'] .hero-cta-ghost {
+  color: #94a3b8;
+  border-color: #e2e8f0;
+}
+
+/* Feature cards */
+.feature-card {
+  border: 1px solid rgba(51,65,85,0.6);
+  background: rgba(15,23,42,0.7);
+  backdrop-filter: blur(12px);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  animation: fade-up 0.5s ease both;
+}
+.feature-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.3);
+}
+html[data-theme='light'] .feature-card {
+  background: rgba(255,255,255,0.85);
+  border-color: rgba(226,232,240,0.8);
+}
+
+.feature-icon-teal   { background: rgba(20,184,166,0.12);  border: 1px solid rgba(20,184,166,0.25);   color: rgb(52,211,153); }
+.feature-icon-blue   { background: rgba(59,130,246,0.12);  border: 1px solid rgba(59,130,246,0.25);   color: rgb(96,165,250); }
+.feature-icon-amber  { background: rgba(245,158,11,0.12);  border: 1px solid rgba(245,158,11,0.25);   color: rgb(251,191,36); }
+.feature-icon-purple { background: rgba(139,92,246,0.12);  border: 1px solid rgba(139,92,246,0.25);   color: rgb(167,139,250); }
+
+/* Floating stat card */
+.floating-stat-card {
+  background: rgba(15,23,42,0.85);
+  border: 1px solid rgba(51,65,85,0.6);
+  backdrop-filter: blur(16px);
+  animation: float 6s ease-in-out infinite;
+}
+html[data-theme='light'] .floating-stat-card {
+  background: rgba(255,255,255,0.9);
+  border-color: rgba(226,232,240,0.8);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-6px); }
+}
+
+/* OSS CTA */
+.oss-cta {
+  background: rgba(15,23,42,0.7);
+  border: 1px solid rgba(51,65,85,0.6);
+  backdrop-filter: blur(16px);
+}
+html[data-theme='light'] .oss-cta {
+  background: rgba(255,255,255,0.85);
+  border-color: rgba(226,232,240,0.8);
+}
+
+/* Entrance animations */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-up       { animation: fade-up 0.6s ease both; pointer-events: auto; }
+.animate-fade-up-delay { animation: fade-up 0.6s 0.15s ease both; pointer-events: auto; }
+
+/* Scroll indicator */
+.scroll-indicator { opacity: 0.4; }
+.scroll-indicator:hover { opacity: 0.7; }
+</style>

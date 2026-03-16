@@ -1,9 +1,8 @@
 ---
 // src/pages/countries/[country]/reports/[id].astro — Individual report page
 import ReportLayout from '../../../../layouts/ReportLayout.astro';
-import EpidemicCurve from '../../../../components/charts/EpidemicCurve';
-import ReportComparisonTable from '../../../../components/charts/ReportComparisonTable';
-import type { DiseaseComparison } from '../../../../components/charts/ReportComparisonTable';
+import DiseaseReportPanel from '../../../../components/charts/DiseaseReportPanel';
+import type { DiseaseReportData } from '../../../../components/charts/DiseaseReportPanel';
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
 
@@ -70,16 +69,11 @@ if (existsSync(countryPath) && report?.period_start && report?.period_end) {
   if (Object.keys(filteredSeries).length > 0) countrySeries = filteredSeries;
 }
 
-// Build disease comparison rows for the report's current month vs prev month/year
-let comparisonRows: DiseaseComparison[] = [];
-let compCurrentYM = '';
-let compPrevYM = '';
-let compPrevYearYM = '';
+// Build per-disease panel data (comparison stats + sections + series)
+let diseasePanelData: DiseaseReportData[] = [];
 
 if (existsSync(countryPath)) {
   const cData = JSON.parse(readFileSync(countryPath, 'utf-8'));
-  // Use the latest date with data across non-summary diseases, not the report period_end
-  // (monthly data lags 1-2 months behind report generation date)
   const allSeries = Object.values(cData.disease_series ?? {}) as any[];
   const latestDate = allSeries
     .filter((s: any) => s.category !== 'Summary')
@@ -89,19 +83,28 @@ if (existsSync(countryPath)) {
 
   if (latestDate) {
     const [ly, lm] = latestDate.split('-');
-    compCurrentYM = `${ly}-${lm}`;
+    const compCurrentYM = `${ly}-${lm}`;
     const pd = new Date(+ly, +lm - 2, 1);
-    compPrevYM = `${pd.getFullYear()}-${String(pd.getMonth() + 1).padStart(2, '0')}`;
-    compPrevYearYM = `${+ly - 1}-${lm}`;
+    const compPrevYM = `${pd.getFullYear()}-${String(pd.getMonth() + 1).padStart(2, '0')}`;
+    const compPrevYearYM = `${+ly - 1}-${lm}`;
+
+    // Build a map: disease name (en) → report sections
+    const sectionsByDiseaseName: Record<string, any[]> = {};
+    for (const sec of (report?.sections ?? [])) {
+      const name = sec.title?.split(' - ').slice(0, -1).join(' - ') ?? '';
+      if (!sectionsByDiseaseName[name]) sectionsByDiseaseName[name] = [];
+      sectionsByDiseaseName[name].push(sec);
+    }
 
     for (const s of allSeries) {
-      // Skip aggregate/summary rows
       if (s.category === 'Summary') continue;
       function getForYM(ym: string, arr: number[]): number {
         const idx = (s.dates as string[]).findIndex((d: string) => d.startsWith(ym));
         return idx >= 0 ? (arr[idx] ?? 0) : 0;
       }
-      comparisonRows.push({
+      // Report-period series (already computed above in countrySeries)
+      const reportSeries = countrySeries?.[s.disease_id] ?? null;
+      diseasePanelData.push({
         disease_id: s.disease_id,
         name_en: s.name_en,
         name_zh: s.name_zh,
@@ -110,12 +113,18 @@ if (existsSync(countryPath)) {
         cases: getForYM(compCurrentYM, s.cases),
         deaths: getForYM(compCurrentYM, s.deaths),
         cases_prev_month: getForYM(compPrevYM, s.cases),
-        deaths_prev_month: getForYM(compPrevYM, s.deaths),
         cases_prev_year: getForYM(compPrevYearYM, s.cases),
-        deaths_prev_year: getForYM(compPrevYearYM, s.deaths),
+        sections: sectionsByDiseaseName[s.name_en] ?? [],
+        series: reportSeries ? {
+          dates: reportSeries.dates,
+          cases: reportSeries.cases,
+          deaths: reportSeries.deaths,
+          incidence_rates: reportSeries.incidence_rates,
+          total_cases: reportSeries.total_cases ?? 0,
+        } : undefined,
       });
     }
-    comparisonRows.sort((a, b) => b.cases - a.cases);
+    diseasePanelData.sort((a, b) => b.cases - a.cases);
   }
 }
 
@@ -217,69 +226,23 @@ const countryName = report?.country_name ?? country.toUpperCase();
           </div>
         )}
 
-        <!-- Epidemic Curve for report window -->
-        {countrySeries && (
+        <!-- Per-disease analysis panel (replaces separate Epidemic Curve + Comparison Table + Report Sections) -->
+        {diseasePanelData.length > 0 && (
           <div>
-            <h2 class="text-xl font-semibold text-slate-100 mb-4" data-lang-en="Epidemic Curve (Report Period)" data-lang-zh="流行曲线（报告周期）">
-              Epidemic Curve (Report Period)
+            <h2 class="text-xl font-semibold text-slate-100 mb-2" data-lang-en="Disease Analysis" data-lang-zh="疾病分析">
+              Disease Analysis
             </h2>
-            <EpidemicCurve
-              client:only="react"
-              series={countrySeries}
-              topN={10}
-              height={380}
-            />
-          </div>
-        )}
-
-        <!-- Disease Comparison Table -->
-        {comparisonRows.length > 0 && (
-          <div>
-            <h2 class="text-xl font-semibold text-slate-100 mb-2" data-lang-en="Disease Comparison" data-lang-zh="疾病对比">
-              Disease Comparison
-            </h2>
-            <p class="text-sm text-slate-500 mb-4">
-              <span data-lang-en="Cases and deaths for" data-lang-zh="病例与死亡：">Cases and deaths for </span>
-              <span class="text-slate-300 font-mono">{compCurrentYM}</span>
-              <span data-lang-en=" compared to previous month and previous year." data-lang-zh="，与上月及去年同期对比。"> compared to previous month and previous year.</span>
+            <p class="text-sm text-slate-500 mb-5">
+              <span data-lang-en="Click any disease to expand its trend charts and AI analysis." data-lang-zh="点击疾病名称可展开趋势图表和 AI 分析。">
+                Click any disease to expand its trend charts and AI analysis.
+              </span>
             </p>
-            <ReportComparisonTable
+            <DiseaseReportPanel
               client:only="react"
-              rows={comparisonRows}
-              currentMonth={compCurrentYM}
-              prevMonth={compPrevYM}
-              prevYearMonth={compPrevYearYM}
+              diseases={diseasePanelData}
+              countryCode={country}
+              reportId={id}
             />
-          </div>
-        )}
-
-        <!-- Report Sections -->
-        {report.sections && report.sections.length > 0 && (
-          <div>
-            <h2 class="text-xl font-semibold text-slate-100 mb-6" data-lang-en="Report Content" data-lang-zh="报告内容">
-              Report Content
-            </h2>
-            <div class="space-y-8">
-              {report.sections.map((section: any) => (
-                <div class="card p-8">
-                  {section.title && (
-                    <h3 class="text-slate-100 font-semibold text-lg mb-4 pb-3 border-b border-slate-700/60">
-                      {section.title}
-                    </h3>
-                  )}
-                  {section.content_html ? (
-                    <div
-                      class="prose prose-invert prose-sm max-w-none prose-headings:text-slate-200 prose-p:text-slate-300 prose-li:text-slate-300 prose-strong:text-slate-100 prose-a:text-brand-400"
-                      set:html={section.content_html}
-                    />
-                  ) : section.content ? (
-                    <div class="prose prose-invert prose-sm max-w-none">
-                      <p class="text-slate-300 whitespace-pre-wrap">{section.content}</p>
-                    </div>
-                  ) : null}
-                </div>
-              ))}
-            </div>
           </div>
         )}
 
