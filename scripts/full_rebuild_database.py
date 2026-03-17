@@ -414,9 +414,10 @@ class DatabaseRebuilder:
             await db.execute(text("""
                 UPDATE countries
                 SET
-                    name = COALESCE(NULLIF(name, ''), :name),
-                    name_en = COALESCE(NULLIF(name_en, ''), :name_en),
-                    name_local = COALESCE(NULLIF(name_local, ''), :name_local),
+                    -- Keep canonical country naming consistent with country library.
+                    name = :name,
+                    name_en = :name_en,
+                    name_local = :name_local,
                     language = COALESCE(NULLIF(language, ''), :language),
                     timezone = COALESCE(NULLIF(timezone, ''), :timezone),
                     data_source_url = COALESCE(NULLIF(data_source_url, ''), :data_source_url),
