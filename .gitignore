@@ -66,6 +66,7 @@ pnpm-debug.log*
 
 # Project generated data and outputs
 /logs/
+/logs/*.pid
 /exports/
 /reports/
 /data/raw/
