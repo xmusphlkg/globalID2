@@ -14,7 +14,7 @@ D012,未分型肝炎,Other Hepatitis,乙类,肝炎未分型|肝炎（未分型�
 D013,脊髓灰质炎,Poliomyelitis,乙类,小儿麻痹症|灰质炎,,China CDC
 D014,人感染高致病性禽流感,H5N1,乙类,禽流感H5N1|人感染H5N1病毒,,China CDC
 D015,人感染H7N9禽流感,H7N9,乙类,禽流感H7N9|人感染H7N9病毒,,China CDC
-D016,人感染新亚型流感,Novel Influenza,乙类,,,China CDC
+D016,人感染新亚型流感,Novel influenza A,乙类,新型甲型流感|Novel influenza A,China CDC,
 D017,麻疹,Measles,乙类,,,China CDC
 D018,流行性出血热,Hemorrhagic Fever,乙类,肾综合征出血热|出血热,,China CDC
 D019,狂犬病,Rabies,乙类,疯狗病,,China CDC
@@ -25,7 +25,7 @@ D023,炭疽,Anthrax,乙类,,,China CDC
 D024,细菌性和阿米巴性痢疾,Dysentery,乙类,痢疾,,China CDC
 D025,肺结核,Tuberculosis,乙类,结核病|TB,,China CDC
 D026,伤寒和副伤寒,Typhoid,乙类,伤寒和副伤寒,,China CDC
-D027,流行性脑脊髓膜炎,Meningococcal Meningitis,乙类,流脑,,China CDC
+D110,流行性脑脊髓膜炎,Meningococcal disease,乙类,流脑|脑膜炎球菌感染|脑膜炎球菌病,China CDC,
 D028,百日咳,Pertussis,乙类,,,China CDC
 D029,白喉,Diphtheria,乙类,,,China CDC
 D030,新生儿破伤风,Neonatal Tetanus,乙类,,,China CDC
@@ -49,7 +49,7 @@ D047,其他感染性腹泻病,Infectious Diarrhea,丙类,感染性腹泻|其它�
 D048,手足口病,HFMD,丙类,肠道病毒感染,,China CDC
 D049,中东呼吸综合征,MERS,监测,MERS-CoV|中东呼吸综合征MERS,,China CDC
 D050,埃博拉出血热,Ebola,监测,埃博拉,,China CDC
-D051,寨卡病毒病,Zika,监测,寨卡,,China CDC
+D051,寨卡病毒病,Zika virus disease,监测,寨卡|寨卡病毒|Zika|Zika virus,China CDC,
 D052,基孔肯雅热,Chikungunya,监测,,,China CDC
 D053,拉沙热,Lassa,监测,,,China CDC
 D054,水痘,Varicella,监测,,,China CDC

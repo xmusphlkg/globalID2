@@ -52,15 +52,17 @@ export interface WorkbookEntry {
 export function useTasks(
   status?: string,
   taskType?: string,
+  countryId?: number | null,
   search?: string,
   limit = 50,
 ) {
   return useQuery<TaskItem[]>({
-    queryKey: ["tasks", status, taskType, search, limit],
+    queryKey: ["tasks", status, taskType, countryId, search, limit],
     queryFn: () => {
       const params = new URLSearchParams({ limit: String(limit) });
       if (status) params.set("status", status);
       if (taskType) params.set("task_type", taskType);
+      if (countryId) params.set("country_id", String(countryId));
       if (search) params.set("search", search);
       return apiFetch(`/tasks?${params}`);
     },

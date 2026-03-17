@@ -25,7 +25,10 @@ logger = get_logger(__name__)
 @app.command()
 def crawl(
     country: str = typer.Option("CN", help="Country code"),
-    source: str = typer.Option("all", help="Data source (cdc_weekly/nhc/pubmed/all)"),
+    source: str = typer.Option(
+        "all",
+        help="Data source (CN: cdc_weekly/nhc/pubmed/all; US: all; JP: jp_idwr/local; AU: all/location/external)",
+    ),
     process: bool = typer.Option(True, help="Process and store data"),
     save_raw: bool = typer.Option(True, help="Save raw pages as plain text"),
     force: bool = typer.Option(False, help="Force crawl all data (ignore database check)"),
@@ -253,6 +256,42 @@ def export_data(
                 console.print(f"  - {fmt.upper()}: {path}")
     
     asyncio.run(_export())
+
+
+@app.command()
+def import_wpp_population(
+    input_file: str = typer.Option(
+        "data/processed/wpp/unpopulation_dataportal_20260317220803.csv",
+        help="WPP CSV file path",
+    ),
+    dry_run: bool = typer.Option(False, help="Parse and validate only, no DB writes"),
+):
+    """Import WPP annual population data into population_records."""
+
+    async def _run() -> None:
+        await init_app()
+        from scripts.import_wpp_population import import_rows, load_rows
+
+        path = Path(input_file)
+        if not path.is_absolute():
+            path = Path.cwd() / path
+        if not path.exists():
+            console.print(f"[red]Input CSV not found: {path}[/red]")
+            raise typer.Exit(code=1)
+
+        console.print(f"[bold blue]Loading WPP CSV: {path}[/bold blue]")
+        rows = load_rows(path)
+        if not rows:
+            console.print("[red]No valid WPP rows found with current filter rules[/red]")
+            raise typer.Exit(code=1)
+
+        await import_rows(rows, dry_run=dry_run)
+        if dry_run:
+            console.print("[yellow]✓ Dry-run finished[/yellow]")
+        else:
+            console.print("[green]✓ WPP population import completed[/green]")
+
+    asyncio.run(_run())
 
 
 @app.command()

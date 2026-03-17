@@ -1,7 +1,7 @@
 # Makefile for GlobalID V2
 
 .PHONY: help install up down restart logs ps test test-health clean format lint check \
-        site-data site-install site-dev site-build site-preview site-publish
+	site-data site-install site-dev site-build site-preview site-publish wpp-import
 
 help:
 	@echo "GlobalID V2 - 开发命令"
@@ -28,6 +28,7 @@ help:
 	@echo "  make site-build    生产构建"
 	@echo "  make site-preview  预览生产构建"
 	@echo "  make site-publish  一键导出数据 + 构建"
+	@echo "  make wpp-import    导入 WPP 人口数据到数据库"
 	@echo ""
 	@echo "清理:"
 	@echo "  make clean        清理临时文件"
@@ -124,6 +125,11 @@ site-publish: site-data site-build
 	@echo "  git add astro-site/src/data astro-site/dist"
 	@echo "  git commit -m 'chore: update site data and rebuild'"
 	@echo "  git push"
+
+wpp-import:
+	@echo "导入 WPP 人口数据..."
+	venv/bin/python3 scripts/import_wpp_population.py
+	@echo "WPP 人口数据导入完成"
 
 clean:
 	@echo "清理临时文件..."

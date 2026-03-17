@@ -1,0 +1,107 @@
+disease_id,local_name,local_code,category,aliases,notes,data_source
+D041,Acute hemorrhagic conjunctivitis,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D134,Aseptic meningitis,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D135,Bacterial meningitis,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D004,COVID-19,,Sentinel,SARS-CoV-2|Coronavirus Disease 2019,JP weekly mapping (TOTAL),JP NIID Weekly
+D054,Chickenpox,,Sentinel,Varicella,JP weekly mapping (TOTAL),JP NIID Weekly
+D136,Chlamydial pneumonia,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D137,Epidemic keratoconjunctivitis,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D138,Erythema infectiosum (Fifth disease),,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D119,Group A streptococcal pharyngitis,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D048,Hand-foot-and-mouth disease,,Sentinel,Hand-Foot-Mouth Disease|HFMD,JP weekly mapping (TOTAL),JP NIID Weekly
+D139,Herpangina,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D047,Infectious gastroenteritis,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D047,Infectious gastroenteritis (Rotavirus),,Sentinel,Rotavirus gastroenteritis,JP weekly mapping (TOTAL),JP NIID Weekly
+D038,Influenza,,Sentinel,Flu,JP weekly mapping (TOTAL),JP NIID Weekly
+D039,Mumps,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D140,Mycoplasma pneumonia,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D028,Pertussis (Whooping cough),,Sentinel,Pertussis|Whooping cough,JP weekly mapping (TOTAL),JP NIID Weekly
+D141,Pharyngoconjunctival fever,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D142,Respiratory syncytial virus infection (RSV),,Sentinel,RSV infection,JP weekly mapping (TOTAL),JP NIID Weekly
+D143,Roseola (Exanthem subitum),,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D013,Acute poliomyelitis,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D024,Amoebic dysentery,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D023,Anthrax,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D024,Bacterial dysentery,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D091,Botulism,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D032,Brucellosis,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D052,Chikungunya fever,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D002,Cholera,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D095,Coccidioidomycosis,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D096,Cryptosporidiosis,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D021,Dengue fever,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D029,Diphtheria,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D050,Ebola hemorrhagic fever,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D045,Echinococcosis,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D115,Enterohemorrhagic E. coli infection (EHEC),,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D099,Giardiasis,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D007,Hepatitis A,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D011,Hepatitis E,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D020,Japanese encephalitis,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D053,Lassa fever,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D107,Legionellosis,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D035,Leptospirosis,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D109,Lyme disease,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D037,Malaria,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D017,Measles,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D116,Melioidosis,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D026,Paratyphoid fever,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D001,Plague,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D112,Psittacosis (Ornithosis),,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D113,Q fever,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D019,Rabies,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D040,Rubella,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D058,Scrub typhus (Tsutsugamushi disease),,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D064,Smallpox,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D034,Syphilis,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D120,Tetanus,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D025,Tuberculosis,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D123,Tularemia,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D124,Typhoid fever,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D132,Vancomycin-resistant Staphylococcus aureus infection,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D006,Viral hepatitis,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D059,Yellow fever,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D005,AIDS,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D018,Hemorrhagic fever with renal syndrome,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D003,SARS (Severe Acute Respiratory Syndrome),,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D128,West Nile fever,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D016,Avian influenza (excluding H5N1),,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D057,Severe fever with thrombocytopenia syndrome (SFTS),,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D106,Invasive pneumococcal disease,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D014,Avian influenza (H5N1),,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D015,Avian influenza (H7N9),,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D049,MERS (Middle East respiratory syndrome),,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D051,Zika virus infection,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D133,Carbapenem-resistant Enterobacterales infection,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D065,Mpox,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D102,Hantavirus pulmonary syndrome,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D100,Invasive Haemophilus influenzae infection,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D110,Invasive meningococcal disease,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D054,Chickenpox (hospitalized cases),,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D040,Congenital rubella syndrome,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D062,Herpes B (Macacine herpesvirus 1) infection,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D116,Pseudoglanders,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D118,Japanese spotted fever,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D118,Rocky Mountain spotted fever,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D119,Severe invasive group A streptococcal infection,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D043,Typhus (Rickettsial),,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D125,Vancomycin-resistant Enterococcus infection,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D127,Crimean-Congo hemorrhagic fever,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D127,Marburg hemorrhagic fever,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D127,Omsk hemorrhagic fever,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D127,South American hemorrhagic fever,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D127,Rift Valley fever,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D089,Eastern equine encephalitis,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D089,Western equine encephalitis,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D089,Venezuelan equine encephalitis,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D089,Ticks-borne encephalitis,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D089,Casanul forest disease,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D075,Hendra virus infection,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D075,Nipah virus infection,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D019,Lissavirus infection,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D133,Drug-resistant Acinetobacter infection,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D013,Acute flaccid paralysis,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D089,Acute encephalitis,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D144,Creutzfeldt-Jakob disease,,Sentinel,CJD,JP weekly mapping (TOTAL),JP NIID Weekly
+D145,Relapsing fever,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly
+D146,Disseminated cryptococcosis,,Sentinel,,JP weekly mapping (TOTAL),JP NIID Weekly

@@ -11,7 +11,7 @@ Usage:
 import asyncio
 import sys
 import os
-from datetime import datetime, date
+from datetime import datetime, date, time, timezone
 from pathlib import Path
 from typing import List, Dict, Optional, Tuple
 import argparse
@@ -51,6 +51,47 @@ class MissingDataFetcher:
         await self._load_mapping_dict()
         
         logger.info("初始化完成")
+
+    @staticmethod
+    def _normalize_report_time(value) -> datetime | None:
+        """Use report calendar day directly and anchor it to UTC midnight."""
+        ts = pd.to_datetime(value, errors='coerce')
+        if pd.isna(ts):
+            return None
+        return datetime.combine(ts.date(), time.min, tzinfo=timezone.utc)
+
+    @staticmethod
+    async def _cleanup_adjacent_duplicate_snapshots(db, country_id: int) -> int:
+        """Remove adjacent-day duplicate snapshots with identical counts for same disease/country."""
+        result = await db.execute(
+            text(
+                """
+                WITH candidate AS (
+                    SELECT
+                        a.ctid AS old_ctid,
+                        b.ctid AS new_ctid,
+                        EXTRACT(DAY FROM b.time::date) AS new_day
+                    FROM disease_records a
+                    JOIN disease_records b
+                        ON b.country_id = a.country_id
+                        AND b.disease_id = a.disease_id
+                        AND b.time::date = a.time::date + 1
+                        AND COALESCE(b.cases, -1) = COALESCE(a.cases, -1)
+                        AND COALESCE(b.deaths, -1) = COALESCE(a.deaths, -1)
+                    WHERE a.country_id = :country_id
+                ),
+                targets AS (
+                    SELECT CASE WHEN new_day = 1 THEN old_ctid ELSE new_ctid END AS del_ctid
+                    FROM candidate
+                )
+                DELETE FROM disease_records d
+                USING targets t
+                WHERE d.ctid = t.del_ctid
+                """
+            ),
+            {"country_id": country_id},
+        )
+        return result.rowcount or 0
     
     async def _load_mapping_dict(self):
         """加载疾病映射字典（包括中文名和英文名）"""
@@ -630,11 +671,11 @@ class MissingDataFetcher:
                     # 解析时间
                     time_val = None
                     if 'Date' in row and pd.notna(row['Date']):
-                        time_val = pd.to_datetime(row['Date'], errors='coerce')
+                        time_val = self._normalize_report_time(row['Date'])
                     elif 'YearMonthDay' in row and pd.notna(row['YearMonthDay']):
-                        time_val = pd.to_datetime(row['YearMonthDay'], errors='coerce')
+                        time_val = self._normalize_report_time(row['YearMonthDay'])
                     
-                    if pd.isna(time_val):
+                    if time_val is None:
                         logger.debug(f"无法解析时间: {row.get('Date')} / {row.get('YearMonthDay')}")
                         skipped += 1
                         continue
@@ -751,8 +792,11 @@ class MissingDataFetcher:
                     continue
             
             if not dry_run:
+                cleaned = await self._cleanup_adjacent_duplicate_snapshots(db, country_id)
                 await db.commit()
                 logger.info(f"✓ 成功插入 {inserted} 条缺失记录")
+                if cleaned > 0:
+                    logger.info(f"✓ 自动清理相邻重复快照 {cleaned} 条")
             else:
                 logger.info(f"[DRY RUN] 模拟插入 {inserted} 条记录")
             

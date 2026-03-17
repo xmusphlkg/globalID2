@@ -30,6 +30,14 @@ pip install -r requirements.txt
 DATABASE_URL=postgresql+asyncpg://globalid:globalid_dev_password@localhost:5432/globalid
 ```
 
+如果数据库是通过 Docker 启动的，当前配置会把数据保存在固定 Docker volume 中，重启电脑后数据仍会保留；数据库容器也会在 Docker 开机自启时自动拉起。
+
+不要执行下面这条命令，除非你就是要删除数据库数据：
+
+```bash
+docker compose down -v
+```
+
 ### 3. 初始化数据库（二选一）
 
 #### 方式 A：完整重建（推荐）
@@ -66,6 +74,20 @@ npm run dev
 ```bash
 # 完整重建数据库（推荐，包含所有步骤）
 python scripts/full_rebuild_database.py
+
+# 导入日本周报历史数据（默认仅导入 Reporting Area=総数）
+python scripts/import_jp_weekly_history.py
+
+# 覆盖式重导（先清空 JP 历史数据再导入）
+python scripts/import_jp_weekly_history.py --replace-existing
+
+# JP 任务式更新（接入任务管理/workbook/crawl_runs）
+# 本地模式（source=local）：直接使用 data/raw/jp/weekly_cases_standardized.csv
+python main.py crawl --country JP --source local --process --no-save-raw
+
+# 外部脚本模式（source=jp_idwr）：调用 /home/likangguo/globalID/ID_JP/ScriptGetdata 更新后入库
+# 备注：是否执行外部脚本由 --source 决定，不依赖 --save-raw
+python main.py crawl --country JP --source jp_idwr --process --save-raw
 
 # 刷新疾病映射（修改 CSV 配置后）
 python scripts/refresh_disease_mappings.py --yes

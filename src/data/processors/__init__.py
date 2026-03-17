@@ -5,7 +5,14 @@ GlobalID V2 Data Processors
 """
 
 from .data_processor import DataProcessor
+from .jp_weekly_updater import JPWeeklyUpdater
+from .us_weekly_updater import USWeeklyUpdater
+from .au_weekly_updater import AUMonthlyUpdater, AUWeeklyUpdater
 
 __all__ = [
     "DataProcessor",
+    "JPWeeklyUpdater",
+    "USWeeklyUpdater",
+    "AUMonthlyUpdater",
+    "AUWeeklyUpdater",
 ]

@@ -103,9 +103,12 @@ const diseaseRows = countryData
 
     <!-- Epidemic Curve -->
     <div>
-      <h2 class="text-xl font-semibold text-slate-100 mb-4" data-lang-en="Epidemic Curve — Top 10 Diseases" data-lang-zh="流行曲线 — 前 10 种疾病">
+      <h2 class="text-xl font-semibold text-slate-100 mb-1" data-lang-en="Epidemic Curve — Top 10 Diseases" data-lang-zh="流行曲线 — 前 10 种疾病">
         Epidemic Curve — Top 10 Diseases
       </h2>
+      <p class="text-slate-500 text-sm mb-4" data-lang-en="Default metric uses weekly-equivalent case normalization for fairer cross-country comparison." data-lang-zh="默认指标采用周等价病例折算，以提升跨国比较公平性。">
+        Default metric uses weekly-equivalent case normalization for fairer cross-country comparison.
+      </p>
       {countryData?.disease_series ? (
         <EpidemicCurve
           client:only="react"
@@ -123,8 +126,8 @@ const diseaseRows = countryData
       <h2 class="text-xl font-semibold text-slate-100 mb-1" data-lang-en="Disease × Month Heatmap" data-lang-zh="疾病 × 月份热图">
         Disease × Month Heatmap
       </h2>
-      <p class="text-slate-500 text-sm mb-4" data-lang-en="All diseases across the full surveillance period (log scale)" data-lang-zh="整个监测周期内所有疾病（对数刻度）">
-        All diseases across the full surveillance period (log scale)
+      <p class="text-slate-500 text-sm mb-4" data-lang-en="All diseases across the full surveillance period using calendar-month aggregation (log scale)." data-lang-zh="整个监测周期内所有疾病，按自然月聚合（对数刻度）。">
+        All diseases across the full surveillance period using calendar-month aggregation (log scale).
       </p>
       {countryData?.heatmap?.z?.length ? (
         <DiseaseHeatmap
@@ -139,9 +142,12 @@ const diseaseRows = countryData
 
     <!-- Comparison Table -->
     <div>
-      <h2 class="text-xl font-semibold text-slate-100 mb-4" data-lang-en="Disease Comparison Table" data-lang-zh="疾病对比表格">
+      <h2 class="text-xl font-semibold text-slate-100 mb-1" data-lang-en="Disease Comparison Table" data-lang-zh="疾病对比表格">
         Disease Comparison Table
       </h2>
+      <p class="text-slate-500 text-sm mb-4" data-lang-en="Totals and latest values come from reported series; compare with weekly-equivalent trend in the curve above." data-lang-zh="总量与最新值来自报告序列；可结合上方周等价趋势进行对比。">
+        Totals and latest values come from reported series; compare with weekly-equivalent trend in the curve above.
+      </p>
       {diseaseRows.length > 0 ? (
         <ComparisonTable
           client:only="react"

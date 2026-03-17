@@ -14,18 +14,16 @@ D012,Other Hepatitis,B19,Viral,,From standard_diseases: 未分型肝炎,Standard
 D013,Poliomyelitis,A80,Viral,,From standard_diseases: 脊髓灰质炎,Standard Database + CN Mapping
 D014,H5N1,J09,Viral,,From standard_diseases: 人感染高致病性禽流感,Standard Database + CN Mapping
 D015,H7N9,J09,Viral,,From standard_diseases: 人感染H7N9禽流感,Standard Database + CN Mapping
-D016,Novel Influenza,J09,Viral,,From standard_diseases: 人感染新亚型流感,Standard Database + CN Mapping
+D016,Novel influenza A,J09,Viral,Novel Influenza|Novel influenza A,Canonical cross-country influenza alias set,Standard Database + CN Mapping
 D017,Measles,B05,Viral,,From standard_diseases: 麻疹,Standard Database + CN Mapping
 D018,Hemorrhagic Fever,A98.5,Viral,,From standard_diseases: 流行性出血热,Standard Database + CN Mapping
 D019,Rabies,A82,Viral,,From standard_diseases: 狂犬病,Standard Database + CN Mapping
 D020,Japanese Encephalitis,A83.0,Viral,,From standard_diseases: 流行性乙型脑炎,Standard Database + CN Mapping
 D021,Dengue,A90,Viral,,From standard_diseases: 登革热,Standard Database + CN Mapping
-D022,Meningococcal infection,A39,Bacterial,,From standard_diseases: 脑膜炎球菌感染,Standard Database + CN Mapping
 D023,Anthrax,A22,Bacterial,,From standard_diseases: 炭疽,Standard Database + CN Mapping
 D024,Dysentery,A03-A06,Bacterial,,From standard_diseases: 细菌性和阿米巴性痢疾,Standard Database + CN Mapping
 D025,Tuberculosis,A15-A19,Bacterial,TB,From standard_diseases: 肺结核,Standard Database + CN Mapping
 D026,Typhoid and Paratyphoid fever,A01,Bacterial,Typhoid,From standard_diseases: 伤寒和副伤寒,Standard Database + CN Mapping
-D027,Meningococcal Meningitis,A39,Bacterial,,From standard_diseases: 流行性脑脊髓膜炎,Standard Database + CN Mapping
 D028,Pertussis,A37,Bacterial,,From standard_diseases: 百日咳,Standard Database + CN Mapping
 D029,Diphtheria,A36,Bacterial,,From standard_diseases: 白喉,Standard Database + CN Mapping
 D030,Neonatal Tetanus,A33,Bacterial,,From standard_diseases: 新生儿破伤风,Standard Database + CN Mapping
@@ -49,7 +47,7 @@ D047,Infectious Diarrhea,A09,Bacterial,,From standard_diseases: 其他感染性�
 D048,Hand-Foot-Mouth Disease,B08.4,Viral,HFMD,From standard_diseases: 手足口病,Standard Database + CN Mapping
 D049,MERS,U00-U49,Viral,MERS-CoV,From standard_diseases: 中东呼吸综合征,Standard Database + CN Mapping
 D050,Ebola,A98.4,Viral,,From standard_diseases: 埃博拉出血热,Standard Database + CN Mapping
-D051,Zika,A92.5,Viral,,From standard_diseases: 寨卡病毒病,Standard Database + CN Mapping
+D051,Zika virus disease,A92.5,Viral,Zika|Zika virus,Canonical cross-country Zika alias set,Standard Database + CN Mapping
 D052,Chikungunya,A92.0,Viral,,From standard_diseases: 基孔肯雅热,Standard Database + CN Mapping
 D053,Lassa,A96.2,Viral,,From standard_diseases: 拉沙热,Standard Database + CN Mapping
 D054,Varicella,B01,Viral,,From standard_diseases: 水痘,Standard Database + CN Mapping
@@ -98,18 +96,22 @@ D097,Cyclosporiasis,,Parasitic,,From standard_diseases: 环孢子虫病,Standard
 D098,Ehrlichiosis and Anaplasmosis,,Bacterial,,From standard_diseases: 埃立克体病和无形体病,Standard Database + CN Mapping
 D099,Giardiasis,,Parasitic,,From standard_diseases: 贾第虫病,Standard Database + CN Mapping
 D100,Haemophilus influenzae,,Bacterial,,From standard_diseases: 流感嗜血杆菌,Standard Database + CN Mapping
+D101,Candida auris infection,,Fungal,"Candida auris|Candida auris, clinical",From standard_diseases: 耳念珠菌感染,Standard Database + US Mapping
 D102,Hantavirus infection,,Viral,,From standard_diseases: 汉坦病毒感染,Standard Database + CN Mapping
 D103,Hemolytic uremic syndrome,,Bacterial,,From standard_diseases: 溶血性尿毒症综合征,Standard Database + CN Mapping
 D104,Influenza-associated mortality,,Viral,,From standard_diseases: 流行性感冒相关死亡,Standard Database + CN Mapping
+D105,Shigellosis,,Bacterial,,From standard_diseases: 志贺菌病,Standard Database + US Mapping
 D106,Invasive pneumococcal disease,,Bacterial,,From standard_diseases: 侵袭性肺炎球菌病,Standard Database + CN Mapping
 D107,Legionellosis,,Bacterial,,From standard_diseases: 军团菌病,Standard Database + CN Mapping
 D108,Listeriosis,,Bacterial,,From standard_diseases: 李斯特菌病,Standard Database + CN Mapping
 D109,Lyme disease,,Bacterial,,From standard_diseases: 莱姆病,Standard Database + CN Mapping
-D110,Meningococcal disease,,Bacterial,,From standard_diseases: 脑膜炎球菌病,Standard Database + CN Mapping
-D111,Novel influenza A,,Viral,,From standard_diseases: 新型甲型流感,Standard Database + CN Mapping
+D110,Meningococcal disease,,Bacterial,Meningococcal infection|Meningococcal Meningitis,Canonical cross-country meningococcal alias set,Standard Database + CN Mapping
 D112,Psittacosis,,Bacterial,,From standard_diseases: 鹦鹉热,Standard Database + CN Mapping
 D113,Q fever,,Bacterial,,From standard_diseases: Q热,Standard Database + CN Mapping
 D114,Salmonellosis,,Bacterial,,From standard_diseases: 沙门氏菌病,Standard Database + CN Mapping
+D115,Shiga toxin-producing Escherichia coli infection,,Bacterial,"Shiga toxin-producing Escherichia coli (STEC)|STEC",From standard_diseases: 产志贺毒素大肠杆菌感染,Standard Database + US Mapping
+D116,Melioidosis,,Bacterial,,From standard_diseases: 类鼻疽,Standard Database + US Mapping
+D117,Cronobacter invasive infection,,Bacterial,"Cronobacter invasive infection|Cronobacter invasive infection, infants, Confirmed|Cronobacter invasive infection, infants, Probable",From standard_diseases: 克罗诺杆菌侵袭性感染,Standard Database + US Mapping
 D118,Spotted fever rickettsiosis,,Bacterial,,From standard_diseases: 斑点热立克次体病,Standard Database + CN Mapping
 D119,Streptococcal disease,,Bacterial,,From standard_diseases: 链球菌病,Standard Database + CN Mapping
 D120,Tetanus,,Bacterial,,From standard_diseases: 破伤风,Standard Database + CN Mapping
@@ -121,5 +123,18 @@ D125,Vancomycin resistance,,Bacterial,,From standard_diseases: 万古霉素耐�
 D126,Vibriosis,,Bacterial,,From standard_diseases: 弧菌病,Standard Database + CN Mapping
 D127,Viral hemorrhagic fevers,,Viral,,From standard_diseases: 病毒性出血热,Standard Database + CN Mapping
 D128,West Nile virus,,Viral,,From standard_diseases: 西尼罗病毒,Standard Database + CN Mapping
-D130,Zika virus,,Viral,,From standard_diseases: 寨卡病毒,Standard Database + CN Mapping
+D129,Oropouche virus disease,,Viral,"Oropouche|Oropouche, non-congenital",From standard_diseases: 奥罗普切病毒病,Standard Database + US Mapping
+D131,Vancomycin-intermediate Staphylococcus aureus infection,,Bacterial,"Vancomycin-intermediate Staphylococcus aureus|Vancomycin-intermediate Staphylococcus aureus (VISA)|VISA",From standard_diseases: 万古霉素中介金黄色葡萄球菌感染,Standard Database + US Mapping
+D132,Vancomycin-resistant Staphylococcus aureus infection,,Bacterial,"Vancomycin-resistant Staphylococcus aureus|Vancomycin-resistant Staphylococcus aureus (VRSA)|VRSA",From standard_diseases: 万古霉素耐药金黄色葡萄球菌感染,Standard Database + US Mapping
+D133,Carbapenemase-producing organism infection,,Bacterial,"Carbapenemase-Producing Organisms (CPO)|Carbapenemase-Producing Organisms (CPO), Total|Carbapenemase-Producing Organisms (CPO),Total|Carbapenemase-producing carbapenem-resistant Enterobacteriaceae",From standard_diseases: 产碳青霉烯酶微生物感染,Standard Database + US Mapping
+D134,Aseptic meningitis,,Viral,,From standard_diseases: 无菌性脑膜炎,Standard Database + JP Mapping
+D135,Bacterial meningitis,,Bacterial,,From standard_diseases: 细菌性脑膜炎,Standard Database + JP Mapping
+D136,Chlamydial pneumonia,,Bacterial,,From standard_diseases: 衣原体肺炎,Standard Database + JP Mapping
+D137,Epidemic keratoconjunctivitis,,Viral,,From standard_diseases: 流行性角结膜炎,Standard Database + JP Mapping
+D138,Erythema infectiosum (Fifth disease),,Viral,Fifth disease,From standard_diseases: 传染性红斑（第五病）,Standard Database + JP Mapping
+D139,Herpangina,,Viral,,From standard_diseases: 疱疹性咽峡炎,Standard Database + JP Mapping
+D140,Mycoplasma pneumonia,,Bacterial,,From standard_diseases: 支原体肺炎,Standard Database + JP Mapping
+D141,Pharyngoconjunctival fever,,Viral,,From standard_diseases: 咽结膜热,Standard Database + JP Mapping
+D142,Respiratory syncytial virus infection (RSV),,Viral,RSV infection|Respiratory syncytial virus infection,From standard_diseases: 呼吸道合胞病毒感染,Standard Database + JP Mapping
+D143,Roseola (Exanthem subitum),,Viral,Roseola|Exanthem subitum,From standard_diseases: 幼儿急疹（突发性发疹）,Standard Database + JP Mapping
 D999,Total,,Summary,,From standard_diseases: 甲乙丙类传染病总计,Standard Database + CN Mapping

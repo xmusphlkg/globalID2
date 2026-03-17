@@ -54,6 +54,7 @@ task_hub = _ConnectionHub()
 async def list_tasks(
     status: Optional[str] = Query(None, description="Comma-separated statuses"),
     task_type: Optional[str] = Query(None, description="Comma-separated types"),
+    country_id: Optional[int] = Query(None, ge=1, description="Filter by country id"),
     search: Optional[str] = Query(None),
     limit: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
@@ -75,6 +76,8 @@ async def list_tasks(
     if task_type:
         vals = [t.strip() for t in task_type.split(",") if t.strip()]
         q = q.where(Task.task_type.in_(vals))
+    if country_id is not None:
+        q = q.where(Task.country_id == country_id)
     if search:
         like = f"%{search}%"
         q = q.where(

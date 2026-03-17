@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -187,10 +187,9 @@ class RuntimeRouteOut(BaseModel):
 @router.post("/ai/start", response_model=TaskOut, status_code=201)
 async def start_ai_task(
     body: AIStartRequest,
-    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ):
-    """Create a GENERATE_REPORT task and execute it in the background."""
+    """Create a GENERATE_REPORT task and enqueue it for external worker execution."""
     country = (
         await db.execute(select(Country).where(Country.id == body.country_id))
     ).scalar_one_or_none()
@@ -251,7 +250,7 @@ async def start_ai_task(
         },
     )
 
-    background_tasks.add_task(_execute_in_background, task.task_uuid)
+    task = await task_manager.update_task_status(task.task_uuid, TaskStatus.QUEUED) or task
 
     return _task_to_out(task)
 
@@ -512,12 +511,6 @@ async def list_runtime_routes():
         )
         for route in routes
     ]
-
-
-async def _execute_in_background(task_uuid: str) -> None:
-    from src.services.task_executor import execute_task_background
-
-    await execute_task_background(task_uuid)
 
 
 def _normalize_report_type(value: str) -> str:

@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from time import perf_counter
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from src.core import get_database, get_logger
 from src.core.task_manager import task_manager
@@ -47,10 +47,43 @@ class CrawlService:
         Raises on unrecoverable errors (caller handles via task_lifecycle).
         """
         from src.data.crawlers import ChinaCDCCrawler
-        from src.data.processors import DataProcessor
+        from src.data.processors import AUMonthlyUpdater, DataProcessor, JPWeeklyUpdater, USWeeklyUpdater
 
-        if country_code != "CN":
-            raise ValueError(f"Unsupported country: {country_code}. Available: CN")
+        if country_code not in ("CN", "US", "JP", "AU"):
+            raise ValueError(f"Unsupported country: {country_code}. Available: CN, US, JP, AU")
+
+        if country_code == "US":
+            return await self._execute_us_weekly(
+                task=task,
+                source=source,
+                force=force,
+                process=process,
+                save_raw=save_raw,
+                fill_missing=fill_missing,
+                updater=USWeeklyUpdater(),
+            )
+
+        if country_code == "JP":
+            return await self._execute_jp_weekly(
+                task=task,
+                source=source,
+                force=force,
+                process=process,
+                save_raw=save_raw,
+                fill_missing=fill_missing,
+                updater=JPWeeklyUpdater(),
+            )
+
+        if country_code == "AU":
+            return await self._execute_au_monthly(
+                task=task,
+                source=source,
+                force=force,
+                process=process,
+                save_raw=save_raw,
+                fill_missing=fill_missing,
+                updater=AUMonthlyUpdater(),
+            )
 
         crawler = ChinaCDCCrawler()
         raw_dir = Path("data/raw") / country_code.lower()
@@ -114,6 +147,7 @@ class CrawlService:
 
         source_counts = self._source_distribution(results)
         source_summary = ", ".join(f"{k}: {v}" for k, v in source_counts.items()) or "none"
+        total_candidates = int(crawl_stats.get("total_candidates") or 0)
 
         await task_manager.add_workbook_entry(
             task.task_uuid,
@@ -121,8 +155,9 @@ class CrawlService:
             title="Phase 1/3 Complete",
             content=(
                 f"Source filter: {source}\n"
-                f"Candidate reports found: {len(results)}\n"
-                f"Distribution: {source_summary}\n"
+            f"Source candidates found: {total_candidates}\n"
+            f"Reports selected for processing: {len(results)}\n"
+            f"Selected distribution: {source_summary}\n"
                 f"DB latest date: {max_date}\n"
                 f"Missing months in DB: {missing_count}\n"
                 f"Missing month sample: {missing_preview}\n"
@@ -260,6 +295,512 @@ class CrawlService:
         await task_manager.update_task_progress(task.task_uuid, 100)
 
         return CrawlResult(len(results), processed_count, total_records, run_id)
+
+    async def _execute_us_weekly(
+        self,
+        *,
+        task: Task,
+        source: str,
+        force: bool,
+        process: bool,
+        save_raw: bool,
+        fill_missing: bool,
+        updater,
+    ) -> CrawlResult:
+        run_started = perf_counter()
+        raw_dir = Path("data/raw") / "us"
+        run_id: Optional[int] = None
+
+        await task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="info",
+            title="Crawl Configuration",
+            content=(
+                "Country: US\n"
+                f"Source: {source}\n"
+                f"Force: {'Yes' if force else 'No'}\n"
+                f"Process: {'Yes' if process else 'No'}\n"
+                f"Save Raw: {'Yes' if save_raw else 'No'}\n"
+                f"Fill Missing: {'Yes' if fill_missing else 'No'}"
+            ),
+            content_type="text",
+        )
+
+        try:
+            async with get_database() as db:
+                run = CrawlRun(
+                    country_code="US",
+                    source=source,
+                    status="running",
+                    started_at=datetime.now(timezone.utc),
+                    raw_dir=str(raw_dir) if save_raw else None,
+                    metadata_={"force": force, "process": process},
+                )
+                db.add(run)
+                await db.flush()
+                run_id = run.id
+        except Exception as e:
+            logger.warning(f"Could not create CrawlRun record: {e}")
+
+        await task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="info",
+            title="Phase 1/3: Fetching Data List",
+            content="Fetching latest US NNDSS TOTAL rows from CDC API...",
+            content_type="text",
+        )
+        await task_manager.update_task_progress(task.task_uuid, 10)
+
+        phase1_started = perf_counter()
+        fetched = updater.fetch_latest()
+        phase1_elapsed = perf_counter() - phase1_started
+        source_latest = fetched.latest_date.isoformat() if fetched.latest_date else "none"
+        source_rows = len(fetched.rows)
+
+        await task_manager.update_task_progress(task.task_uuid, 30)
+        await task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="success",
+            title="Phase 1/3 Complete",
+            content=(
+                f"Source rows fetched: {source_rows}\n"
+                f"Source latest week date: {source_latest}\n"
+                f"Source endpoint: {fetched.source_ref}\n"
+                f"Duration: {phase1_elapsed:.1f}s"
+            ),
+            content_type="text",
+        )
+
+        await task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="info",
+            title="Phase 2/3: Checking Incremental Updates",
+            content="Comparing source latest week with US latest date in database...",
+            content_type="text",
+        )
+        await task_manager.update_task_progress(task.task_uuid, 50)
+
+        imported = 0
+        skipped_unmapped = 0
+        imported_new_data = False
+        db_latest_text = "none"
+
+        async with get_database() as db:
+            db_latest = await updater.get_db_latest_date(db)
+            db_latest_text = db_latest.isoformat() if db_latest else "none"
+
+            if not process:
+                imported_new_data = False
+                imported = 0
+            else:
+                import_result = await updater.import_rows(
+                    db,
+                    fetched.rows,
+                    db_latest_date=db_latest,
+                    source_latest_date=fetched.latest_date,
+                    force=force,
+                )
+                imported = import_result.inserted_or_updated
+                skipped_unmapped = import_result.skipped_unmapped
+                imported_new_data = import_result.imported_new_data
+
+        await task_manager.update_task_progress(task.task_uuid, 80)
+        await task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="success",
+            title="Phase 2/3 Complete",
+            content=(
+                f"DB latest date: {db_latest_text}\n"
+                f"Source latest date: {source_latest}\n"
+                f"Imported rows: {imported}\n"
+                f"Skipped unmapped rows: {skipped_unmapped}"
+            ),
+            content_type="text",
+        )
+
+        await task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="info",
+            title="Phase 3/3: Finalizing",
+            content="Finalizing US weekly update and crawl run summary...",
+            content_type="text",
+        )
+
+        if not process:
+            summary_message = "Process disabled, fetched source rows only."
+        elif imported_new_data:
+            summary_message = "New US weekly data imported successfully."
+        elif force:
+            summary_message = "Force mode completed; no rows were upserted after filtering/mapping."
+        else:
+            summary_message = "No newer US weekly data detected, import skipped."
+
+        await self._finish_crawl_run(
+            run_id,
+            new_reports=imported,
+            processed=1 if process else 0,
+            records=imported,
+        )
+
+        await task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="success",
+            title="Crawl Completed",
+            content=(
+                f"Summary: {summary_message}\n"
+                f"Fetched rows: {source_rows}\n"
+                f"Imported rows: {imported}\n"
+                f"Duration: {perf_counter() - run_started:.1f}s"
+            ),
+            content_type="text",
+        )
+        await task_manager.update_task_progress(task.task_uuid, 100)
+
+        return CrawlResult(imported, 1 if process else 0, imported, run_id)
+
+    async def _execute_jp_weekly(
+        self,
+        *,
+        task: Task,
+        source: str,
+        force: bool,
+        process: bool,
+        save_raw: bool,
+        fill_missing: bool,
+        updater,
+    ) -> CrawlResult:
+        run_started = perf_counter()
+        raw_dir = Path("data/raw") / "jp"
+        run_id: Optional[int] = None
+
+        await task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="info",
+            title="Crawl Configuration",
+            content=(
+                "Country: JP\n"
+                f"Source: {source}\n"
+                f"Force: {'Yes' if force else 'No'}\n"
+                f"Process: {'Yes' if process else 'No'}\n"
+                f"Save Raw: {'Yes' if save_raw else 'No'}\n"
+                f"Fill Missing: {'Yes' if fill_missing else 'No'}"
+            ),
+            content_type="text",
+        )
+
+        try:
+            async with get_database() as db:
+                run = CrawlRun(
+                    country_code="JP",
+                    source=source,
+                    status="running",
+                    started_at=datetime.now(timezone.utc),
+                    raw_dir=str(raw_dir) if save_raw else None,
+                    metadata_={"force": force, "process": process},
+                )
+                db.add(run)
+                await db.flush()
+                run_id = run.id
+        except Exception as e:
+            logger.warning(f"Could not create CrawlRun record: {e}")
+
+        await task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="info",
+            title="Phase 1/3: Refreshing JP Source",
+            content="Loading JP crawler output CSV and preparing incremental update rows...",
+            content_type="text",
+        )
+        await task_manager.update_task_progress(task.task_uuid, 10)
+
+        phase1_started = perf_counter()
+        fetched = updater.refresh_source(source=source, run_external=False, force=force)
+        phase1_elapsed = perf_counter() - phase1_started
+        source_latest = fetched.source_latest_date.isoformat() if fetched.source_latest_date else "none"
+        source_rows = len(fetched.rows)
+
+        await task_manager.update_task_progress(task.task_uuid, 30)
+        await task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="success",
+            title="Phase 1/3 Complete",
+            content=(
+                f"Source rows prepared (TOTAL): {source_rows}\n"
+                f"Source latest week date: {source_latest}\n"
+                f"Standardized CSV: {fetched.source_csv}\n"
+                f"Duration: {phase1_elapsed:.1f}s"
+            ),
+            content_type="text",
+        )
+
+        if fetched.script_logs:
+            await task_manager.add_workbook_entry(
+                task.task_uuid,
+                entry_type="info",
+                title="JP Update Logs",
+                content="\n\n".join(fetched.script_logs[-8:]),
+                content_type="text",
+            )
+
+        await task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="info",
+            title="Phase 2/3: Checking Incremental Updates",
+            content="Comparing JP source latest week with JP latest date in database...",
+            content_type="text",
+        )
+        await task_manager.update_task_progress(task.task_uuid, 50)
+
+        imported = 0
+        skipped_unmapped = 0
+        imported_new_data = False
+        db_latest_text = "none"
+
+        async with get_database() as db:
+            db_latest = await updater.get_db_latest_date(db)
+            db_latest_text = db_latest.isoformat() if db_latest else "none"
+
+            if not process:
+                imported_new_data = False
+                imported = 0
+            else:
+                import_result = await updater.import_rows(
+                    db,
+                    fetched.rows,
+                    db_latest_date=db_latest,
+                    source_latest_date=fetched.source_latest_date,
+                    force=force,
+                )
+                imported = import_result.inserted_or_updated
+                skipped_unmapped = import_result.skipped_unmapped
+                imported_new_data = import_result.imported_new_data
+
+        await task_manager.update_task_progress(task.task_uuid, 80)
+        await task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="success",
+            title="Phase 2/3 Complete",
+            content=(
+                f"DB latest date: {db_latest_text}\n"
+                f"Source latest date: {source_latest}\n"
+                f"Imported rows: {imported}\n"
+                f"Skipped unmapped rows: {skipped_unmapped}"
+            ),
+            content_type="text",
+        )
+
+        await task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="info",
+            title="Phase 3/3: Finalizing",
+            content="Finalizing JP weekly update and crawl run summary...",
+            content_type="text",
+        )
+
+        if not process:
+            summary_message = "Process disabled, refreshed JP source only."
+        elif imported_new_data:
+            summary_message = "New JP weekly data imported successfully."
+        elif force:
+            summary_message = "Force mode completed; no rows were upserted after filtering/mapping."
+        else:
+            summary_message = "No newer JP weekly data detected, import skipped."
+
+        await self._finish_crawl_run(
+            run_id,
+            new_reports=imported,
+            processed=1 if process else 0,
+            records=imported,
+        )
+
+        await task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="success",
+            title="Crawl Completed",
+            content=(
+                f"Summary: {summary_message}\n"
+                f"Prepared rows: {source_rows}\n"
+                f"Imported rows: {imported}\n"
+                f"Duration: {perf_counter() - run_started:.1f}s"
+            ),
+            content_type="text",
+        )
+        await task_manager.update_task_progress(task.task_uuid, 100)
+
+        return CrawlResult(imported, 1 if process else 0, imported, run_id)
+
+    async def _execute_au_monthly(
+        self,
+        *,
+        task: Task,
+        source: str,
+        force: bool,
+        process: bool,
+        save_raw: bool,
+        fill_missing: bool,
+        updater,
+    ) -> CrawlResult:
+        run_started = perf_counter()
+        raw_dir = Path("data/raw") / "au"
+        run_id: Optional[int] = None
+
+        await task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="info",
+            title="Crawl Configuration",
+            content=(
+                "Country: AU\n"
+                f"Source: {source}\n"
+                f"Force: {'Yes' if force else 'No'}\n"
+                f"Process: {'Yes' if process else 'No'}\n"
+                f"Save Raw: {'Yes' if save_raw else 'No'}\n"
+                f"Fill Missing: {'Yes' if fill_missing else 'No'}"
+            ),
+            content_type="text",
+        )
+
+        try:
+            async with get_database() as db:
+                run = CrawlRun(
+                    country_code="AU",
+                    source=source,
+                    status="running",
+                    started_at=datetime.now(timezone.utc),
+                    raw_dir=str(raw_dir) if save_raw else None,
+                    metadata_={"force": force, "process": process},
+                )
+                db.add(run)
+                await db.flush()
+                run_id = run.id
+        except Exception as e:
+            logger.warning(f"Could not create CrawlRun record: {e}")
+
+        await task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="info",
+            title="Phase 1/3: Refreshing AU Source",
+            content="Loading AU crawler output CSV and preparing incremental update rows...",
+            content_type="text",
+        )
+        await task_manager.update_task_progress(task.task_uuid, 10)
+
+        phase1_started = perf_counter()
+        fetched = updater.refresh_source(source=source, run_external=False)
+        phase1_elapsed = perf_counter() - phase1_started
+        source_latest = fetched.source_latest_date.isoformat() if fetched.source_latest_date else "none"
+        source_rows = len(fetched.rows)
+
+        await task_manager.update_task_progress(task.task_uuid, 30)
+        await task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="success",
+            title="Phase 1/3 Complete",
+            content=(
+                f"Source rows prepared (national monthly): {source_rows}\n"
+                f"Source latest month date: {source_latest}\n"
+                f"National CSV: {fetched.source_csv}\n"
+                f"Duration: {phase1_elapsed:.1f}s"
+            ),
+            content_type="text",
+        )
+
+        if fetched.script_logs:
+            await task_manager.add_workbook_entry(
+                task.task_uuid,
+                entry_type="info",
+                title="AU Pipeline Logs",
+                content="\n".join(fetched.script_logs[-10:]),
+                content_type="text",
+            )
+
+        await task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="info",
+            title="Phase 2/3: Checking Incremental Updates",
+            content="Comparing AU source latest month with AU latest date in database...",
+            content_type="text",
+        )
+        await task_manager.update_task_progress(task.task_uuid, 50)
+
+        imported = 0
+        skipped_unmapped = 0
+        imported_new_data = False
+        db_latest_text = "none"
+
+        async with get_database() as db:
+            db_latest = await updater.get_db_latest_date(db)
+            db_latest_text = db_latest.isoformat() if db_latest else "none"
+
+            if not process:
+                imported_new_data = False
+                imported = 0
+            else:
+                import_result = await updater.import_rows(
+                    db,
+                    fetched.rows,
+                    db_latest_date=db_latest,
+                    source_latest_date=fetched.source_latest_date,
+                    force=force,
+                )
+                imported = import_result.inserted_or_updated
+                skipped_unmapped = import_result.skipped_unmapped
+                imported_new_data = import_result.imported_new_data
+
+            await db.commit()
+
+        await task_manager.update_task_progress(task.task_uuid, 80)
+        await task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="success",
+            title="Phase 2/3 Complete",
+            content=(
+                f"DB latest date: {db_latest_text}\n"
+                f"Source latest date: {source_latest}\n"
+                f"Imported rows: {imported}\n"
+                f"Skipped unmapped rows: {skipped_unmapped}"
+            ),
+            content_type="text",
+        )
+
+        await task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="info",
+            title="Phase 3/3: Finalizing",
+            content="Finalizing AU monthly update and crawl run summary...",
+            content_type="text",
+        )
+
+        if not process:
+            summary_message = "Process disabled, refreshed AU source only."
+        elif imported_new_data:
+            summary_message = "New AU monthly data imported successfully."
+        elif force:
+            summary_message = "Force mode completed; no rows were upserted after filtering/mapping."
+        else:
+            summary_message = "No newer AU monthly data detected, import skipped."
+
+        await self._finish_crawl_run(
+            run_id,
+            new_reports=imported,
+            processed=1 if process else 0,
+            records=imported,
+        )
+
+        await task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="success",
+            title="Crawl Completed",
+            content=(
+                f"Summary: {summary_message}\n"
+                f"Prepared rows: {source_rows}\n"
+                f"Imported rows: {imported}\n"
+                f"Duration: {perf_counter() - run_started:.1f}s"
+            ),
+            content_type="text",
+        )
+        await task_manager.update_task_progress(task.task_uuid, 100)
+
+        return CrawlResult(imported, 1 if process else 0, imported, run_id)
 
     @staticmethod
     def _source_distribution(results) -> Dict[str, int]:
