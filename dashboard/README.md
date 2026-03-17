@@ -52,20 +52,26 @@ By default this starts both:
 Common commands:
 
 ```bash
-./scripts/dashboard.sh start         # Start both backend and frontend
+./scripts/dashboard.sh start         # Start API + worker + frontend
 ./scripts/dashboard.sh start api     # Start only the API
+./scripts/dashboard.sh start worker  # Start only the task worker
 ./scripts/dashboard.sh start web     # Start only the frontend
-./scripts/dashboard.sh stop          # Stop both backend and frontend
-./scripts/dashboard.sh restart       # Restart both backend and frontend
+./scripts/dashboard.sh stop          # Stop API + worker + frontend
+./scripts/dashboard.sh restart       # Restart API + worker + frontend
 ./scripts/dashboard.sh status        # Show current status
 ./scripts/dashboard.sh logs api      # Tail API logs
+./scripts/dashboard.sh logs worker   # Tail task worker logs
 ./scripts/dashboard.sh logs web      # Tail frontend logs
+DASHBOARD_API_RELOAD=1 ./scripts/dashboard.sh start api  # API hot reload for development
 ```
 
 Log files are written to:
 
 - `logs/dashboard-api.log`
+- `logs/dashboard-worker.log`
 - `logs/dashboard-web.log`
+
+The dashboard now uses a separate worker process for task execution. API endpoints only queue tasks (status becomes `queued`), and the worker executes them independently. This prevents long-running tasks from being interrupted by API reloads.
 
 ## Manual Startup
 
@@ -77,6 +83,12 @@ Run this from the repository root:
 
 ```bash
 source venv/bin/activate
+uvicorn dashboard.api.main:app --host 0.0.0.0 --port 8000
+```
+
+Use hot reload only when actively editing backend code:
+
+```bash
 uvicorn dashboard.api.main:app --reload --host 0.0.0.0 --port 8000
 ```
 

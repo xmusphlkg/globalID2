@@ -17,13 +17,21 @@
         9408,
         6270
       ],
+      "weekly_equiv_cases": [
+        2124.3870967741937,
+        1415.8064516129032
+      ],
       "deaths": [
         0,
         0
       ],
       "incidence_rates": [
-        -10.0,
-        -10.0
+        0.6658578944447973,
+        0.44376371154005945
+      ],
+      "incidence_sources": [
+        "wpp_computed",
+        "wpp_computed"
       ],
       "total_cases": 15678,
       "total_deaths": 0

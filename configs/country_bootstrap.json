@@ -23,5 +23,92 @@
       "lang": "zh-CN"
     },
     "notes": "Auto bootstrapped by country library"
+  },
+  "US": {
+    "data_source_url": "https://data.cdc.gov/browse?category=NNDSS",
+    "data_source_type": "api",
+    "crawler_config": {
+      "sources": [
+        "nndss_api"
+      ],
+      "cadence": "weekly",
+      "reporting_area": "TOTAL"
+    },
+    "parser_config": {
+      "primary": "us_nndss_weekly"
+    },
+    "disease_mapping_rules": {
+      "strategy": "db_first",
+      "fallback": "learning_suggestions"
+    },
+    "report_config": {
+      "default_type": "WEEKLY",
+      "lang": "en-US"
+    },
+    "notes": "CDC NNDSS weekly provisional data, bootstrapped for national TOTAL ingestion"
+  },
+  "JP": {
+    "data_source_url": "https://id-info.jihs.go.jp/en/surveillance/idwr/rapid/index.html",
+    "data_source_type": "web",
+    "crawler_config": {
+      "sources": [
+        "jp_idwr"
+      ],
+      "cadence": "weekly",
+      "reporting_area": "総数",
+      "weekly_csv_url": "",
+      "max_candidate_csvs": 5,
+      "refresh_recent_years": 2
+    },
+    "parser_config": {
+      "primary": "jp_weekly_internal_crawler"
+    },
+    "disease_mapping_rules": {
+      "strategy": "db_first",
+      "fallback": "learning_suggestions"
+    },
+    "report_config": {
+      "default_type": "WEEKLY",
+      "lang": "ja-JP"
+    },
+    "notes": "NIID weekly data via internal globalID2 crawler (TOTAL-only ingestion)"
+  },
+  "AU": {
+    "data_source_url": "https://www.health.gov.au/topics/national-notifiable-diseases-surveillance-system-nndss",
+    "data_source_type": "microsoft_bi",
+    "crawler_config": {
+      "sources": [
+        "au_nindss"
+      ],
+      "cadence": "monthly",
+      "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
+      "capacity_id": "86715F84-E812-421E-972F-2211ACC9903A",
+      "report_id": "bc027587-5e9e-4920-bf03-a45fd3079f25",
+      "dataset_id": "3471d96b-c14c-403f-b3a6-016f1deac28e",
+      "model_id": 3305775,
+      "query_url": "https://86715f84e812421e972f2211acc9903a.pbidedicated.windows.net/webapi/capacities/86715F84-E812-421E-972F-2211ACC9903A/workloads/QES/QueryExecutionService/automatic/public/query",
+      "query_payload": {
+        "version": "1.0.0",
+        "queries": [],
+        "modelId": 3305775,
+        "cancelRequests": true
+      },
+      "auth_token": "",
+      "headers": {
+        "X-PowerBI-ReportId": "bc027587-5e9e-4920-bf03-a45fd3079f25"
+      }
+    },
+    "parser_config": {
+      "primary": "au_nindss_internal_crawler"
+    },
+    "disease_mapping_rules": {
+      "strategy": "db_first",
+      "fallback": "learning_suggestions"
+    },
+    "report_config": {
+      "default_type": "MONTHLY",
+      "lang": "en-AU"
+    },
+    "notes": "NINDSS Microsoft BI feed aggregated to national via internal globalID2 crawler"
   }
 }

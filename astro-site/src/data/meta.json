@@ -1,19 +1,55 @@
 {
-  "generated_at": "2026-03-17T03:39:12.867657+00:00",
-  "total_countries": 1,
-  "total_diseases": 124,
+  "generated_at": "2026-03-17T14:22:16.924791+00:00",
+  "total_countries": 4,
+  "total_diseases": 155,
   "total_reports": 1,
   "countries": [
+    {
+      "code": "AU",
+      "name": "Australia",
+      "language": "en-AU",
+      "total_cases": 19924806,
+      "total_deaths": 0,
+      "disease_count": 66,
+      "date_range": {
+        "start": "2000-01-01",
+        "end": "2025-12-01"
+      }
+    },
     {
       "code": "CN",
       "name": "China",
       "language": "zh-CN",
-      "total_cases": 361961033,
-      "total_deaths": 708874,
+      "total_cases": 347360707,
+      "total_deaths": 702497,
       "disease_count": 59,
       "date_range": {
-        "start": "2009-12-01",
+        "start": "2010-01-01",
         "end": "2026-02-01"
+      }
+    },
+    {
+      "code": "JP",
+      "name": "Japan",
+      "language": "ja-JP",
+      "total_cases": 32569320,
+      "total_deaths": 0,
+      "disease_count": 86,
+      "date_range": {
+        "start": "2012-09-14",
+        "end": "2025-12-05"
+      }
+    },
+    {
+      "code": "US",
+      "name": "United States",
+      "language": "en-US",
+      "total_cases": 513242,
+      "total_deaths": 0,
+      "disease_count": 60,
+      "date_range": {
+        "start": "2022-01-07",
+        "end": "2026-03-07"
       }
     }
   ]

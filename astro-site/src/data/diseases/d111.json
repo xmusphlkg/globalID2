@@ -1,12 +1,12 @@
 {
   "disease_id": "D111",
-  "name_en": "Novel influenza A",
-  "name_zh": "新型甲型流感",
+  "name_en": "Novel influenza A (deprecated duplicate)",
+  "name_zh": "新型甲型流感（废弃重复ID）",
   "category": "Viral",
   "icd_10": "",
   "icd_11": "",
-  "description": "",
-  "slug": "novel-influenza-a",
+  "description": "Deprecated duplicate of D016; do not use for new mappings",
+  "slug": "novel-influenza-a-(deprecated-duplicate)",
   "country_series": {},
   "global_monthly": {
     "months": [],

@@ -298,6 +298,7 @@ export default function AIPage() {
   const { data: tasks, isLoading } = useTasks(
     statusFilter || undefined,
     typeFilter || AI_TYPES,
+    countryId,
     search || undefined,
     100,
   );

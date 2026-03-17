@@ -17,20 +17,19 @@ interface CountryDef {
   name: string;
   lat: number;
   lng: number;
-  status: 'Supported' | 'Scheduled';
 }
 
 const ALL_COUNTRIES: CountryDef[] = [
-  { iso2: 'CN', name: 'China',          lat: 35,    lng: 104,   status: 'Supported' },
-  { iso2: 'TH', name: 'Thailand',       lat: 15.5,  lng: 100.5, status: 'Scheduled' },
-  { iso2: 'AU', name: 'Australia',      lat: -25,   lng: 133,   status: 'Scheduled' },
-  { iso2: 'US', name: 'United States',  lat: 39,    lng: -98,   status: 'Scheduled' },
-  { iso2: 'GB', name: 'United Kingdom', lat: 54,    lng: -3,    status: 'Scheduled' },
-  { iso2: 'KR', name: 'South Korea',    lat: 36.5,  lng: 127.5, status: 'Scheduled' },
-  { iso2: 'NZ', name: 'New Zealand',    lat: -41,   lng: 171,   status: 'Scheduled' },
-  { iso2: 'SE', name: 'Sweden',         lat: 62,    lng: 18,    status: 'Scheduled' },
-  { iso2: 'JP', name: 'Japan',          lat: 36,    lng: 138,   status: 'Scheduled' },
-  { iso2: 'SG', name: 'Singapore',      lat: 1.35,  lng: 103.8, status: 'Scheduled' },
+  { iso2: 'CN', name: 'China',          lat: 35,    lng: 104 },
+  { iso2: 'TH', name: 'Thailand',       lat: 15.5,  lng: 100.5 },
+  { iso2: 'AU', name: 'Australia',      lat: -25,   lng: 133 },
+  { iso2: 'US', name: 'United States',  lat: 39,    lng: -98 },
+  { iso2: 'GB', name: 'United Kingdom', lat: 54,    lng: -3 },
+  { iso2: 'KR', name: 'South Korea',    lat: 36.5,  lng: 127.5 },
+  { iso2: 'NZ', name: 'New Zealand',    lat: -41,   lng: 171 },
+  { iso2: 'SE', name: 'Sweden',         lat: 62,    lng: 18 },
+  { iso2: 'JP', name: 'Japan',          lat: 36,    lng: 138 },
+  { iso2: 'SG', name: 'Singapore',      lat: 1.35,  lng: 103.8 },
 ];
 
 // Box offset (dx, dy) from dot centre → box centre, tuned for a ~900 px wide chart.
@@ -99,6 +98,18 @@ export default function CountriesMapView({ metaCountries = [], height = 450 }: P
     [metaCountries],
   );
 
+  const countriesWithStatus = useMemo(
+    () => ALL_COUNTRIES.map((c) => {
+      const meta = metaByCode[c.iso2];
+      return {
+        ...c,
+        name: meta?.name ?? c.name,
+        status: (meta ? 'Supported' : 'Scheduled') as 'Supported' | 'Scheduled',
+      };
+    }),
+    [metaByCode],
+  );
+
   // Theme detection ──────────────────────────────────────────────────────────
   useEffect(() => {
     if (typeof document === 'undefined') return;
@@ -139,7 +150,7 @@ export default function CountriesMapView({ metaCountries = [], height = 450 }: P
     const hw = BOX_W / 2; const hh = BOX_H / 2;
     const pos: DotPos[] = [];
     
-    for (const c of ALL_COUNTRIES) {
+    for (const c of countriesWithStatus) {
       const pt = inst.convertToPixel({ geoIndex: 0 }, [c.lng, c.lat]) as [number, number] | null;
       if (!pt) continue;
       const [bdx, bdy] = BASE_OFFSETS[c.iso2] ?? [80, -30];
@@ -159,7 +170,7 @@ export default function CountriesMapView({ metaCountries = [], height = 450 }: P
     }
 
     setDotPositions(pos);
-  }, [metaByCode]);
+  }, [countriesWithStatus, metaByCode]);
 
   // Recalculate positions after the map is fully laid out ───────────────────
   useEffect(() => {
@@ -207,7 +218,7 @@ export default function CountriesMapView({ metaCountries = [], height = 450 }: P
         {
           type: 'scatter',
           coordinateSystem: 'geo',
-          data: ALL_COUNTRIES.map(c => ({
+          data: countriesWithStatus.map(c => ({
             value: [c.lng, c.lat],
             name: c.name,
             status: c.status,
@@ -238,7 +249,7 @@ export default function CountriesMapView({ metaCountries = [], height = 450 }: P
         formatter: (p: any) => `<b>${p.data.name}</b><br/>${p.data.status}`,
       },
     };
-  }, [theme, mapReady, isLight]);
+  }, [theme, mapReady, isLight, countriesWithStatus]);
 
   const handleEvents = useMemo(() => ({
     finished: () => setTimeout(computePositions, 600),

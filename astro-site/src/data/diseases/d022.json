@@ -5,7 +5,7 @@
   "category": "Bacterial",
   "icd_10": "A39",
   "icd_11": "1C20.1",
-  "description": "",
+  "description": "Deprecated duplicate for cross-country surveillance; use D110 as the canonical meningococcal ID",
   "slug": "meningococcal-infection",
   "country_series": {},
   "global_monthly": {

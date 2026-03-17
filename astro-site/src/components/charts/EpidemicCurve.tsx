@@ -13,8 +13,10 @@ interface DiseaseSeries {
   category?: string;
   dates: string[];
   cases: number[];
+  weekly_equiv_cases: number[];
   deaths: number[];
   incidence_rates: (number | null)[];
+  incidence_sources?: (string | null)[];
   total_cases: number;
 }
 
@@ -28,9 +30,10 @@ interface Props {
   height?: number;
 }
 
-type Metric = 'cases' | 'deaths' | 'incidence_rates';
+type Metric = 'weekly_equiv_cases' | 'cases' | 'deaths' | 'incidence_rates';
 
 const METRIC_LABELS: Record<Metric, { en: string; zh: string }> = {
+  weekly_equiv_cases: { en: 'Weekly Equivalent Cases', zh: '周等价病例数' },
   cases: { en: 'Cases', zh: '病例数' },
   deaths: { en: 'Deaths', zh: '死亡数' },
   incidence_rates: { en: 'Incidence Rate (per 100k)', zh: '发病率（每10万）' },
@@ -49,7 +52,7 @@ const LIGHT_PALETTE = [
 ];
 
 export default function EpidemicCurve({ series, title, topN = 10, diseasIds, height = 420 }: Props) {
-  const [metric, setMetric] = useState<Metric>('cases');
+  const [metric, setMetric] = useState<Metric>('weekly_equiv_cases');
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     if (typeof document === 'undefined') return 'dark';
     return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
@@ -116,6 +119,35 @@ export default function EpidemicCurve({ series, title, topN = 10, diseasIds, hei
 
   const activeIds = getSeries();
 
+  const incidenceSourceStats = useMemo(() => {
+    let wppComputed = 0;
+    let fallbackOriginal = 0;
+    for (const id of activeIds) {
+      const sources = series[id]?.incidence_sources ?? [];
+      for (const src of sources) {
+        if (src === 'wpp_computed') {
+          wppComputed += 1;
+        } else if (src === 'original_db') {
+          fallbackOriginal += 1;
+        }
+      }
+    }
+    return { wppComputed, fallbackOriginal };
+  }, [activeIds, series]);
+
+  const incidenceNoteStyles = useMemo(() => {
+    if (theme === 'light') {
+      return {
+        boxClass: 'mb-3 rounded-lg border px-3 py-2 text-xs border-teal-200 bg-teal-50 text-teal-800',
+        fallbackClass: 'block mt-1 text-amber-700',
+      };
+    }
+    return {
+      boxClass: 'mb-3 rounded-lg border px-3 py-2 text-xs border-teal-700/30 bg-teal-900/10 text-teal-200',
+      fallbackClass: 'block mt-1 text-amber-300',
+    };
+  }, [theme]);
+
   const option = useMemo(() => ({
     backgroundColor: 'transparent',
     title: title
@@ -174,7 +206,11 @@ export default function EpidemicCurve({ series, title, topN = 10, diseasIds, hei
     ],
     series: activeIds.map((id, idx) => {
       const s = series[id];
-      const yData = metric === 'incidence_rates' ? s.incidence_rates : s[metric];
+      const yData = metric === 'incidence_rates'
+        ? s.incidence_rates
+        : metric === 'weekly_equiv_cases'
+          ? s.weekly_equiv_cases
+          : s[metric];
       return {
         name: lang === 'zh' ? s.name_zh : s.name_en,
         type: 'line' as const,
@@ -206,6 +242,21 @@ export default function EpidemicCurve({ series, title, topN = 10, diseasIds, hei
         ))}
         <span className="ml-auto text-xs text-slate-600">Top {topN} diseases</span>
       </div>
+
+      {metric === 'incidence_rates' && (
+        <div className={incidenceNoteStyles.boxClass}>
+          {lang === 'zh'
+            ? '提示：发病率在网页生成阶段按 WPP 人口（每10万人）计算；若某些年份缺少人口数据，则回退显示数据库原始发病率。'
+            : 'Note: Incidence rate is computed during site generation using WPP population (per 100k). If population is missing for some years, values fall back to original database incidence.'}
+          {incidenceSourceStats.fallbackOriginal > 0 && (
+            <span className={incidenceNoteStyles.fallbackClass}>
+              {lang === 'zh'
+                ? `当前视图含 ${incidenceSourceStats.fallbackOriginal} 个回退点。`
+                : `${incidenceSourceStats.fallbackOriginal} fallback points are present in this view.`}
+            </span>
+          )}
+        </div>
+      )}
 
       {activeIds.length === 0 ? (
         <div className="flex items-center justify-center h-40 text-slate-500 text-sm">No data available</div>

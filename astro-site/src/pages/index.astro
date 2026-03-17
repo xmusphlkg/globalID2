@@ -75,18 +75,115 @@ const features = [
 <!-- ═══════════════════════════ HERO ═══════════════════════════ -->
 <section class="relative overflow-hidden min-h-[92vh] flex items-center">
 
-  <!-- Animated background layers -->
-  <div class="absolute inset-0 -z-10 pointer-events-none">
+  <!-- Animated background layers: Global Radar Surveillance -->
+  <div class="absolute inset-0 -z-10 pointer-events-none overflow-hidden">
     <!-- Base gradient -->
     <div class="absolute inset-0 hero-bg" />
-    <!-- Animated orbs -->
-    <div class="orb orb-1" />
-    <div class="orb orb-2" />
-    <div class="orb orb-3" />
-    <!-- Subtle grid -->
-    <div class="absolute inset-0 hero-grid opacity-[0.03]" />
-    <!-- Noise texture -->
-    <div class="absolute inset-0 opacity-[0.015] hero-noise" />
+
+    <!-- Abstract Global Radar Element -->
+    <div class="absolute right-[-20%] top-1/2 -translate-y-1/2 w-[600px] h-[600px] md:w-[800px] md:h-[800px] lg:right-0 opacity-80 dark:opacity-40">
+      <!-- Glow behind the radar -->
+      <div class="absolute inset-0 rounded-full bg-brand-500/10 blur-[100px]" />
+      
+      <!-- SVG Network representing the Globe -->
+      <svg viewBox="0 0 400 400" class="w-full h-full absolute inset-0 animate-[spin_60s_linear_infinite]">
+        <style>
+          .radar-pulse { animation: radar-pulse-ring 3s cubic-bezier(0.215, 0.61, 0.355, 1) infinite; }
+          @keyframes radar-pulse-ring {
+            0% { transform: scale(0.8); opacity: 0.8; }
+            100% { transform: scale(3.5); opacity: 0; }
+          }
+        </style>
+
+        <!-- Vectors for Pathogen Icons -->
+        <defs>
+          <g id="icon-virus" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="0" cy="0" r="3" fill="currentColor" opacity="0.3" class="animate-pulse" />
+            <circle cx="0" cy="0" r="3" />
+            <!-- Spikes -->
+            <path d="M0 -3 L0 -5 M0 3 L0 5 M-3 0 L-5 0 M3 0 L5 0 M-2 -2 L-3.5 -3.5 M2 2 L3.5 3.5 M-2 2 L-3.5 3.5 M2 -2 L3.5 -3.5" />
+            <circle cx="0" cy="-5" r="0.5" fill="currentColor" />
+            <circle cx="0" cy="5" r="0.5" fill="currentColor" />
+            <circle cx="-5" cy="0" r="0.5" fill="currentColor" />
+            <circle cx="5" cy="0" r="0.5" fill="currentColor" />
+            <circle cx="-3.5" cy="-3.5" r="0.5" fill="currentColor" />
+            <circle cx="3.5" cy="3.5" r="0.5" fill="currentColor" />
+            <circle cx="-3.5" cy="3.5" r="0.5" fill="currentColor" />
+            <circle cx="3.5" cy="-3.5" r="0.5" fill="currentColor" />
+          </g>
+          
+          <g id="icon-bacteria" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <!-- Capsule -->
+            <rect x="-2.5" y="-4.5" width="5" height="9" rx="2.5" fill="currentColor" opacity="0.3" class="animate-pulse" />
+            <rect x="-2.5" y="-4.5" width="5" height="9" rx="2.5" />
+            <!-- Flagella -->
+            <path d="M-1,4.5 Q-3,6.5 0,8 T-1,11" />
+            <path d="M1,4.5 Q3,7 0,9 T1,12" />
+          </g>
+
+          <g id="icon-parasite" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+             <!-- Worm shape -->
+             <path d="M-4,-4 C-2,-6 2,-5 4,-2 C5,0 4,3 2,4 C-1,6 -3,4 -4,6" fill="currentColor" opacity="0.3" class="animate-pulse" />
+             <path d="M-4,-4 C-2,-6 2,-5 4,-2 C5,0 4,3 2,4 C-1,6 -3,4 -4,6" />
+          </g>
+        </defs>
+        
+        <!-- Lat/Long abstract rings -->
+        <circle cx="200" cy="200" r="180" fill="none" stroke="currentColor" stroke-width="0.5" class="text-brand-600/30 dark:text-brand-500/30" stroke-dasharray="4 6" />
+        <circle cx="200" cy="200" r="130" fill="none" stroke="currentColor" stroke-width="0.5" class="text-brand-600/20 dark:text-brand-500/20" />
+        <circle cx="200" cy="200" r="80"  fill="none" stroke="currentColor" stroke-width="0.5" class="text-brand-600/30 dark:text-brand-500/30" stroke-dasharray="2 4" />
+        
+        <!-- Surveillance Connection Lines -->
+        <g stroke="currentColor" stroke-width="0.75" class="text-brand-600/20 dark:text-brand-400/20">
+          <line x1="200" y1="20"  x2="310" y2="80" />
+          <line x1="310" y1="80"  x2="340" y2="200" />
+          <line x1="340" y1="200" x2="260" y2="310" />
+          <line x1="260" y1="310" x2="140" y2="310" />
+          <line x1="140" y1="310" x2="60"  y2="200" />
+          <line x1="60"  y1="200" x2="90"  y2="80" />
+          <line x1="90"  y1="80"  x2="200" y2="20" />
+
+          <!-- Inner connections -->
+          <line x1="310" y1="80"  x2="140" y2="310" />
+          <line x1="90"  y1="80"  x2="260" y2="310" />
+          <line x1="60"  y1="200" x2="340" y2="200" />
+        </g>
+        
+        <!-- Outbreak/Monitoring Nodes (Icons with Pulsing rings) -->
+        <g class="text-teal-600 dark:text-teal-400" transform="translate(310, 80)">
+          <use href="#icon-virus" transform="scale(1) rotate(15)" />
+          <circle cx="0" cy="0" r="10" fill="none" stroke="currentColor" stroke-width="1.2" class="radar-pulse" />
+        </g>
+        <g class="text-rose-600 dark:text-rose-400" transform="translate(340, 200)">
+          <use href="#icon-bacteria" transform="scale(0.9) rotate(-20)" />
+          <circle cx="0" cy="0" r="12" fill="none" stroke="currentColor" stroke-width="1.2" class="radar-pulse" style="animation-delay: 1.2s;" />
+        </g>
+        <g class="text-amber-600 dark:text-amber-400" transform="translate(140, 310)">
+          <use href="#icon-parasite" transform="scale(1.1) rotate(45)" />
+          <circle cx="0" cy="0" r="10" fill="none" stroke="currentColor" stroke-width="1.2" class="radar-pulse" style="animation-delay: 0.5s;" />
+        </g>
+        <g class="text-blue-600 dark:text-blue-400" transform="translate(60, 200)">
+          <use href="#icon-virus" transform="scale(0.8) rotate(-10)" />
+          <circle cx="0" cy="0" r="8" fill="none" stroke="currentColor" stroke-width="1.2" class="radar-pulse" style="animation-delay: 2.1s;" />
+        </g>
+        <g class="text-purple-600 dark:text-purple-400" transform="translate(90, 80)">
+          <use href="#icon-bacteria" transform="scale(1) rotate(60)" />
+          <circle cx="0" cy="0" r="11" fill="none" stroke="currentColor" stroke-width="1.2" class="radar-pulse" style="animation-delay: 0.8s;" />
+        </g>
+        <g class="text-indigo-600 dark:text-brand-300" transform="translate(260, 310)">
+          <use href="#icon-virus" transform="scale(0.8) rotate(30)" />
+          <circle cx="0" cy="0" r="9" fill="none" stroke="currentColor" stroke-width="1.2" class="radar-pulse" style="animation-delay: 1.7s;" />
+        </g>
+      </svg>
+      
+      <!-- Radar Sweep Effect -->
+      <div class="absolute inset-0 rounded-full border border-brand-500/20"></div>
+      <div class="absolute inset-0 rounded-full bg-[conic-gradient(from_0deg,transparent_75%,rgba(20,184,166,0.15)_100%)] animate-[spin_4s_linear_infinite]"></div>
+    </div>
+    
+    <!-- Subtle grid & noise -->
+    <div class="absolute inset-0 hero-grid opacity-[0.04]" />
+    <div class="absolute inset-0 opacity-[0.02] hero-noise" />
   </div>
 
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32 w-full relative z-10">
@@ -95,13 +192,14 @@ const features = [
       <!-- Left: copy -->
       <div class="animate-fade-up">
         <!-- Badge -->
-        <div class="inline-flex items-center gap-2.5 px-4 py-2 rounded-full hero-badge mb-8">
-          <span class="relative flex h-2 w-2">
+        <div class="inline-flex items-center gap-2.5 px-4 py-2 rounded-full hero-badge mb-8 border border-brand-500/20 bg-brand-500/10 shadow-[0_0_15px_rgba(20,184,166,0.1)] transition-all hover:bg-brand-500/20">
+          <span class="relative flex h-2.5 w-2.5 items-center justify-center">
             <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75" />
-            <span class="relative inline-flex h-2 w-2 rounded-full bg-teal-400" />
+            <span class="relative inline-flex h-2 w-2 rounded-full bg-teal-500" />
           </span>
-          <span class="text-xs font-semibold tracking-wide text-teal-300" data-lang-en="Live Surveillance · AI Analysis" data-lang-zh="实时监测 · AI 分析">
-            Live Surveillance · AI Analysis
+          <span class="text-xs font-semibold tracking-wide text-teal-300 flex items-center gap-1.5" data-lang-en="System Active: Continuously Monitoring" data-lang-zh="系统运行中：持续监测">
+            System Active: Continuously Monitoring 
+            <span class="animate-pulse w-1.5 h-3 bg-teal-400/80 inline-block align-middle rounded-sm"></span>
           </span>
         </div>
 
@@ -113,8 +211,8 @@ const features = [
         </h1>
 
         <!-- Subtext -->
-        <p class="text-lg text-slate-400 leading-relaxed max-w-lg mb-10" data-lang-en="Monitor 130+ infectious diseases across countries with AI-generated reports, interactive charts, and real-time trend detection — all open source." data-lang-zh="跨国监测 130+ 种传染病，配备 AI 生成报告、交互图表和实时趋势检测 — 全部开源。">
-          Monitor 130+ infectious diseases across countries with AI-generated reports,
+        <p class="text-lg text-slate-400 leading-relaxed max-w-lg mb-10" data-lang-en="Monitor 150+ infectious diseases across countries with AI-generated reports, interactive charts, and real-time trend detection — all open source." data-lang-zh="跨国监测 150+ 种传染病，配备 AI 生成报告、交互图表和实时趋势检测 — 全部开源。">
+          Monitor 150+ infectious diseases across countries with AI-generated reports,
           interactive charts, and real-time trend detection — all open source.
         </p>
 
@@ -250,7 +348,7 @@ const features = [
       <p class="text-sm text-slate-500 mt-1" data-lang-en="Categorised by pathogen type" data-lang-zh="按病原体类型分类">Categorised by pathogen type</p>
     </div>
     <a href="/diseases/" class="text-sm text-brand-400 hover:text-brand-300 transition-colors inline-flex items-center gap-1">
-      <span data-lang-en="Browse all 130+ →" data-lang-zh="浏览全部 130+ →">Browse all 130+ →</span>
+      <span data-lang-en="Browse all 150+ →" data-lang-zh="浏览全部 150+ →">Browse all 150+ →</span>
     </a>
   </div>
 

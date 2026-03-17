@@ -73,6 +73,17 @@
     background-color: rgb(var(--header-bg) / 0.9);
   }
 
+  .site-update-banner {
+    border-color: rgb(var(--border));
+    color: rgb(180 83 9);
+    background-color: rgb(254 243 199);
+  }
+
+  html[data-theme='dark'] .site-update-banner {
+    color: rgb(253 230 138);
+    background-color: rgb(113 63 18 / 0.75);
+  }
+
   .site-breadcrumb {
     border-color: rgb(var(--border));
     background-color: rgb(var(--header-bg) / 0.8);

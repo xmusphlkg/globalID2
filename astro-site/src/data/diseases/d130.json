@@ -5,7 +5,7 @@
   "category": "Viral",
   "icd_10": "",
   "icd_11": "",
-  "description": "",
+  "description": "Deprecated duplicate of D051; do not use for new mappings",
   "slug": "zika-virus",
   "country_series": {},
   "global_monthly": {

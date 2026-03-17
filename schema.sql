@@ -14,14 +14,40 @@ CREATE TYPE tasktype AS ENUM ('CRAWL_DATA', 'PROCESS_DATA', 'GENERATE_REPORT', '
 CREATE TYPE taskstatus AS ENUM ('PENDING', 'QUEUED', 'RUNNING', 'COMPLETED', 'FAILED', 'CANCELLED', 'RETRYING');
 CREATE TYPE taskpriority AS ENUM ('LOW', 'NORMAL', 'HIGH', 'URGENT');
 CREATE TYPE reportsectionrunstatus AS ENUM ('QUEUED', 'RUNNING', 'COMPLETED', 'FAILED', 'CANCELLED');
--- CREATE TYPE dataquality AS ENUM ('HIGH', 'MEDIUM', 'LOW', 'UNCERTAIN');  -- Commented out: using VARCHAR instead
+
+CREATE TABLE ai_provider_configs (
+	provider_key VARCHAR(120) NOT NULL, 
+	provider_name VARCHAR(80) NOT NULL, 
+	display_name VARCHAR(200) NOT NULL, 
+	api_style VARCHAR(50) NOT NULL, 
+	base_url VARCHAR(500), 
+	api_key TEXT, 
+	organization VARCHAR(200), 
+	extra_headers JSON NOT NULL, 
+	extra_config JSON NOT NULL, 
+	is_active BOOLEAN NOT NULL, 
+	priority INTEGER NOT NULL, 
+	last_check_status VARCHAR(30) NOT NULL, 
+	last_check_message TEXT, 
+	last_checked_at TIMESTAMP WITH TIME ZONE, 
+	id SERIAL NOT NULL, 
+	created_at TIMESTAMP WITH TIME ZONE NOT NULL, 
+	updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL, 
+	PRIMARY KEY (id), 
+	UNIQUE (provider_key)
+)
+
+;
+CREATE INDEX idx_ai_provider_active ON ai_provider_configs (is_active);
+CREATE INDEX idx_ai_provider_name ON ai_provider_configs (provider_name);
+CREATE INDEX idx_ai_provider_priority ON ai_provider_configs (priority);
 
 CREATE TABLE countries (
 	code VARCHAR(10) NOT NULL, 
 	name VARCHAR(100) NOT NULL, 
 	name_en VARCHAR(100) NOT NULL, 
 	name_local VARCHAR(100), 
-	language VARCHAR(10) NOT NULL, 
+	language VARCHAR(20) NOT NULL, 
 	timezone VARCHAR(50) NOT NULL, 
 	data_source_url VARCHAR(500), 
 	data_source_type VARCHAR(50), 
@@ -31,12 +57,12 @@ CREATE TABLE countries (
 	disease_mapping_rules JSON NOT NULL, 
 	report_config JSON NOT NULL, 
 	is_active BOOLEAN NOT NULL, 
-	last_crawl_time TIMESTAMP WITH TIME ZONE, 
+	last_crawl_time VARCHAR(50), 
 	metadata JSON NOT NULL, 
 	notes TEXT, 
 	id SERIAL NOT NULL, 
 	created_at TIMESTAMP WITH TIME ZONE NOT NULL, 
-	updated_at TIMESTAMP WITH TIME ZONE NOT NULL, 
+	updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL, 
 	PRIMARY KEY (id), 
 	UNIQUE (code)
 )
@@ -59,9 +85,8 @@ CREATE TABLE crawl_runs (
 	error_message TEXT, 
 	id SERIAL NOT NULL, 
 	created_at TIMESTAMP WITH TIME ZONE NOT NULL, 
-	updated_at TIMESTAMP WITH TIME ZONE NOT NULL, 
-	PRIMARY KEY (id), 
-	FOREIGN KEY(country_code) REFERENCES countries (code) ON DELETE CASCADE
+	updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL, 
+	PRIMARY KEY (id)
 )
 
 ;
@@ -85,7 +110,7 @@ CREATE TABLE diseases (
 	is_active BOOLEAN NOT NULL, 
 	id SERIAL NOT NULL, 
 	created_at TIMESTAMP WITH TIME ZONE NOT NULL, 
-	updated_at TIMESTAMP WITH TIME ZONE NOT NULL, 
+	updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL, 
 	PRIMARY KEY (id), 
 	UNIQUE (name)
 )
@@ -109,7 +134,7 @@ CREATE TABLE standard_diseases (
 	is_active BOOLEAN NOT NULL, 
 	id SERIAL NOT NULL, 
 	created_at TIMESTAMP WITH TIME ZONE NOT NULL, 
-	updated_at TIMESTAMP WITH TIME ZONE NOT NULL, 
+	updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL, 
 	PRIMARY KEY (id), 
 	UNIQUE (disease_id)
 )
@@ -119,70 +144,71 @@ CREATE INDEX idx_std_disease_category ON standard_diseases (category);
 CREATE INDEX idx_std_disease_id ON standard_diseases (disease_id);
 CREATE INDEX idx_std_disease_name_en ON standard_diseases (standard_name_en);
 
-CREATE TABLE disease_mappings (
-	disease_id VARCHAR(200) NOT NULL, 
-	country_code VARCHAR(10) NOT NULL, 
-	local_name VARCHAR(500) NOT NULL, 
-	is_primary BOOLEAN NOT NULL, 
-	is_alias BOOLEAN NOT NULL, 
+CREATE TABLE ai_models (
+	provider_id INTEGER NOT NULL, 
+	model_key VARCHAR(200) NOT NULL, 
+	model_name VARCHAR(120) NOT NULL, 
+	display_name VARCHAR(200) NOT NULL, 
+	model_type VARCHAR(50) NOT NULL, 
+	api_style VARCHAR(50), 
+	temperature FLOAT, 
+	max_tokens INTEGER, 
+	extra_params JSON NOT NULL, 
+	is_enabled BOOLEAN NOT NULL, 
+	is_default BOOLEAN NOT NULL, 
 	priority INTEGER NOT NULL, 
-	usage_count INTEGER NOT NULL, 
-	confidence_score FLOAT NOT NULL, 
-	category VARCHAR(100), 
-	source VARCHAR(100), 
-	metadata JSON NOT NULL, 
-	is_active BOOLEAN NOT NULL, 
+	last_check_status VARCHAR(30) NOT NULL, 
+	last_check_message TEXT, 
+	last_checked_at TIMESTAMP WITH TIME ZONE, 
 	id SERIAL NOT NULL, 
 	created_at TIMESTAMP WITH TIME ZONE NOT NULL, 
-	updated_at TIMESTAMP WITH TIME ZONE NOT NULL, 
+	updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL, 
 	PRIMARY KEY (id), 
-	FOREIGN KEY(disease_id) REFERENCES diseases (name) ON DELETE CASCADE, 
-	FOREIGN KEY(country_code) REFERENCES countries (code) ON DELETE CASCADE
+	FOREIGN KEY(provider_id) REFERENCES ai_provider_configs (id) ON DELETE CASCADE, 
+	UNIQUE (model_key)
 )
 
 ;
-CREATE INDEX idx_mapping_active ON disease_mappings (is_active);
-CREATE INDEX idx_mapping_lookup ON disease_mappings (country_code, local_name);
-CREATE INDEX idx_mapping_target ON disease_mappings (disease_id);
-CREATE UNIQUE INDEX idx_mapping_unique ON disease_mappings (disease_id, country_code, local_name);
+CREATE INDEX idx_ai_model_enabled ON ai_models (is_enabled);
+CREATE INDEX idx_ai_model_priority ON ai_models (priority);
+CREATE INDEX idx_ai_model_provider ON ai_models (provider_id);
 
-CREATE TABLE disease_learning_suggestions (
+CREATE TABLE country_scopes (
+	scope_code VARCHAR(20) NOT NULL, 
 	country_code VARCHAR(10) NOT NULL, 
-	local_name VARCHAR(200) NOT NULL, 
-	suggested_disease_id VARCHAR(100), 
-	occurrence_count INTEGER DEFAULT 1, 
-	status VARCHAR(20) DEFAULT 'pending', 
-	first_seen_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP, 
-	last_seen_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP, 
-	reviewed_by VARCHAR(100), 
-	reviewed_at TIMESTAMP WITH TIME ZONE, 
-	notes TEXT, 
+	scope_type VARCHAR(30) NOT NULL, 
+	language_code VARCHAR(20), 
+	display_name VARCHAR(120), 
+	is_default BOOLEAN NOT NULL, 
+	is_active BOOLEAN NOT NULL, 
+	metadata JSON NOT NULL, 
 	id SERIAL NOT NULL, 
-	created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP, 
-	updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP, 
+	created_at TIMESTAMP WITH TIME ZONE NOT NULL, 
+	updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL, 
 	PRIMARY KEY (id), 
-	UNIQUE (country_code, local_name), 
+	UNIQUE (scope_code), 
 	FOREIGN KEY(country_code) REFERENCES countries (code) ON DELETE CASCADE
 )
 
 ;
-CREATE INDEX idx_learning_country ON disease_learning_suggestions (country_code);
-CREATE INDEX idx_learning_status ON disease_learning_suggestions (status);
-CREATE INDEX idx_learning_occurrence ON disease_learning_suggestions (occurrence_count DESC);
+CREATE INDEX idx_country_scope_active ON country_scopes (is_active);
+CREATE INDEX idx_country_scope_code ON country_scopes (scope_code);
+CREATE INDEX idx_country_scope_country ON country_scopes (country_code);
+CREATE INDEX idx_country_scope_type ON country_scopes (scope_type);
 
 CREATE TABLE crawl_raw_pages (
 	run_id INTEGER NOT NULL, 
 	url VARCHAR(1000) NOT NULL, 
 	title VARCHAR(500), 
 	content_path VARCHAR(500) NOT NULL, 
-	content_hash VARCHAR(64) NOT NULL, 
+	content_hash VARCHAR(64), 
 	content_type VARCHAR(50), 
 	fetched_at TIMESTAMP WITH TIME ZONE NOT NULL, 
 	source VARCHAR(100), 
 	metadata JSON NOT NULL, 
 	id SERIAL NOT NULL, 
 	created_at TIMESTAMP WITH TIME ZONE NOT NULL, 
-	updated_at TIMESTAMP WITH TIME ZONE NOT NULL, 
+	updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL, 
 	PRIMARY KEY (id), 
 	CONSTRAINT uq_crawl_raw_pages_run_url UNIQUE (run_id, url), 
 	FOREIGN KEY(run_id) REFERENCES crawl_runs (id) ON DELETE CASCADE
@@ -193,8 +219,37 @@ CREATE INDEX idx_crawl_raw_page_hash ON crawl_raw_pages (content_hash);
 CREATE INDEX idx_crawl_raw_page_run ON crawl_raw_pages (run_id);
 CREATE INDEX idx_crawl_raw_page_url ON crawl_raw_pages (url);
 
+CREATE TABLE disease_learning_suggestions (
+	country_code VARCHAR(10) NOT NULL, 
+	local_name VARCHAR(500) NOT NULL, 
+	source_url TEXT, 
+	context TEXT, 
+	occurrence_count INTEGER NOT NULL, 
+	suggested_disease_id VARCHAR(100), 
+	suggested_standard_name VARCHAR(200), 
+	ai_confidence FLOAT, 
+	ai_reasoning TEXT, 
+	status VARCHAR(20) NOT NULL, 
+	reviewed_by VARCHAR(100), 
+	review_notes TEXT, 
+	final_disease_id VARCHAR(100), 
+	final_mapping_id INTEGER, 
+	id SERIAL NOT NULL, 
+	created_at TIMESTAMP WITH TIME ZONE NOT NULL, 
+	updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(country_code) REFERENCES countries (code) ON DELETE CASCADE
+)
+
+;
+CREATE INDEX idx_learning_confidence ON disease_learning_suggestions (ai_confidence);
+CREATE INDEX idx_learning_country ON disease_learning_suggestions (country_code);
+CREATE INDEX idx_learning_occurrence ON disease_learning_suggestions (occurrence_count);
+CREATE INDEX idx_learning_status ON disease_learning_suggestions (status);
+CREATE UNIQUE INDEX idx_learning_unique_country_local ON disease_learning_suggestions (country_code, local_name);
+
 CREATE TABLE disease_records (
-	time TIMESTAMP WITHOUT TIME ZONE NOT NULL, 
+	time TIMESTAMP WITH TIME ZONE NOT NULL, 
 	disease_id INTEGER NOT NULL, 
 	country_id INTEGER NOT NULL, 
 	cases INTEGER, 
@@ -221,14 +276,32 @@ CREATE TABLE disease_records (
 
 ;
 CREATE INDEX idx_record_country ON disease_records (country_id);
-CREATE INDEX idx_record_country_time ON disease_records (country_id, time);
 CREATE INDEX idx_record_disease ON disease_records (disease_id);
-CREATE INDEX idx_record_disease_time ON disease_records (disease_id, time);
 CREATE INDEX idx_record_region ON disease_records (region);
 CREATE INDEX idx_record_time ON disease_records (time);
 CREATE INDEX idx_record_time_disease_country ON disease_records (time, disease_id, country_id);
 
+CREATE TABLE population_records (
+	country_id INTEGER NOT NULL, 
+	year INTEGER NOT NULL, 
+	population FLOAT NOT NULL, 
+	source VARCHAR(100) NOT NULL, 
+	metadata JSON NOT NULL, 
+	id SERIAL NOT NULL, 
+	created_at TIMESTAMP WITH TIME ZONE NOT NULL, 
+	updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL, 
+	PRIMARY KEY (id), 
+	CONSTRAINT uq_population_country_year UNIQUE (country_id, year), 
+	FOREIGN KEY(country_id) REFERENCES countries (id) ON DELETE CASCADE
+)
+
+;
+CREATE INDEX idx_population_country ON population_records (country_id);
+CREATE INDEX idx_population_country_year ON population_records (country_id, year);
+CREATE INDEX idx_population_year ON population_records (year);
+
 CREATE TABLE reports (
+	report_uuid UUID NOT NULL, 
 	title VARCHAR(500) NOT NULL, 
 	report_type reporttype NOT NULL, 
 	status reportstatus NOT NULL, 
@@ -254,8 +327,9 @@ CREATE TABLE reports (
 	error_message TEXT, 
 	id SERIAL NOT NULL, 
 	created_at TIMESTAMP WITH TIME ZONE NOT NULL, 
-	updated_at TIMESTAMP WITH TIME ZONE NOT NULL, 
+	updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL, 
 	PRIMARY KEY (id), 
+	UNIQUE (report_uuid), 
 	FOREIGN KEY(country_id) REFERENCES countries (id) ON DELETE CASCADE
 )
 
@@ -265,7 +339,32 @@ CREATE INDEX idx_report_country_period ON reports (country_id, period_start, per
 CREATE INDEX idx_report_period ON reports (period_start, period_end);
 CREATE INDEX idx_report_status ON reports (status);
 CREATE INDEX idx_report_type ON reports (report_type);
-CREATE INDEX idx_report_type_status ON reports (report_type, status);
+
+CREATE TABLE disease_mappings (
+	disease_id VARCHAR(200) NOT NULL, 
+	country_code VARCHAR(20) NOT NULL, 
+	local_name VARCHAR(500) NOT NULL, 
+	is_primary BOOLEAN NOT NULL, 
+	is_alias BOOLEAN NOT NULL, 
+	priority INTEGER NOT NULL, 
+	usage_count INTEGER NOT NULL, 
+	confidence_score FLOAT NOT NULL, 
+	category VARCHAR(100), 
+	source VARCHAR(100), 
+	metadata JSON NOT NULL, 
+	is_active BOOLEAN NOT NULL, 
+	id SERIAL NOT NULL, 
+	created_at TIMESTAMP WITH TIME ZONE NOT NULL, 
+	updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(country_code) REFERENCES country_scopes (scope_code) ON DELETE CASCADE
+)
+
+;
+CREATE INDEX idx_mapping_active ON disease_mappings (is_active);
+CREATE INDEX idx_mapping_lookup ON disease_mappings (country_code, local_name);
+CREATE INDEX idx_mapping_target ON disease_mappings (disease_id);
+CREATE UNIQUE INDEX idx_mapping_unique ON disease_mappings (disease_id, country_code, local_name);
 
 CREATE TABLE report_sections (
 	report_id INTEGER NOT NULL, 
@@ -286,7 +385,7 @@ CREATE TABLE report_sections (
 	metadata JSON NOT NULL, 
 	id SERIAL NOT NULL, 
 	created_at TIMESTAMP WITH TIME ZONE NOT NULL, 
-	updated_at TIMESTAMP WITH TIME ZONE NOT NULL, 
+	updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL, 
 	PRIMARY KEY (id), 
 	FOREIGN KEY(report_id) REFERENCES reports (id) ON DELETE CASCADE
 )
@@ -322,7 +421,7 @@ CREATE TABLE tasks (
 	metadata JSON NOT NULL, 
 	id SERIAL NOT NULL, 
 	created_at TIMESTAMP WITH TIME ZONE NOT NULL, 
-	updated_at TIMESTAMP WITH TIME ZONE NOT NULL, 
+	updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL, 
 	PRIMARY KEY (id), 
 	UNIQUE (task_uuid), 
 	FOREIGN KEY(country_id) REFERENCES countries (id) ON DELETE SET NULL, 
@@ -352,13 +451,14 @@ CREATE TABLE report_section_runs (
 	max_tokens INTEGER, 
 	token_usage JSON NOT NULL, 
 	quality_scores JSON NOT NULL, 
+	revision_count INTEGER NOT NULL, 
 	error_message TEXT, 
 	started_at TIMESTAMP WITH TIME ZONE, 
 	ended_at TIMESTAMP WITH TIME ZONE, 
 	metadata JSON NOT NULL, 
 	id SERIAL NOT NULL, 
 	created_at TIMESTAMP WITH TIME ZONE NOT NULL, 
-	updated_at TIMESTAMP WITH TIME ZONE NOT NULL, 
+	updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL, 
 	PRIMARY KEY (id), 
 	UNIQUE (run_uuid), 
 	FOREIGN KEY(report_id) REFERENCES reports (id) ON DELETE CASCADE, 
@@ -378,17 +478,15 @@ CREATE TABLE task_dependencies (
 	metadata JSON NOT NULL, 
 	id SERIAL NOT NULL, 
 	created_at TIMESTAMP WITH TIME ZONE NOT NULL, 
-	updated_at TIMESTAMP WITH TIME ZONE NOT NULL, 
+	updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL, 
 	PRIMARY KEY (id), 
 	FOREIGN KEY(task_id) REFERENCES tasks (id) ON DELETE CASCADE, 
-	FOREIGN KEY(depends_on_task_id) REFERENCES tasks (id) ON DELETE CASCADE, 
-	CONSTRAINT chk_no_self_reference CHECK (task_id != depends_on_task_id)
+	FOREIGN KEY(depends_on_task_id) REFERENCES tasks (id) ON DELETE CASCADE
 )
 
 ;
 CREATE INDEX idx_dependency_depends ON task_dependencies (depends_on_task_id);
 CREATE INDEX idx_dependency_task ON task_dependencies (task_id);
-CREATE UNIQUE INDEX idx_dependency_unique ON task_dependencies (task_id, depends_on_task_id);
 
 CREATE TABLE task_workbook (
 	task_id INTEGER NOT NULL, 
@@ -408,7 +506,7 @@ CREATE TABLE task_workbook (
 	metadata JSON NOT NULL, 
 	id SERIAL NOT NULL, 
 	created_at TIMESTAMP WITH TIME ZONE NOT NULL, 
-	updated_at TIMESTAMP WITH TIME ZONE NOT NULL, 
+	updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL, 
 	PRIMARY KEY (id), 
 	FOREIGN KEY(task_id) REFERENCES tasks (id) ON DELETE CASCADE, 
 	UNIQUE (entry_uuid)
@@ -438,7 +536,7 @@ CREATE TABLE ai_conversations (
 	metadata JSON NOT NULL, 
 	id SERIAL NOT NULL, 
 	created_at TIMESTAMP WITH TIME ZONE NOT NULL, 
-	updated_at TIMESTAMP WITH TIME ZONE NOT NULL, 
+	updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL, 
 	PRIMARY KEY (id), 
 	FOREIGN KEY(run_id) REFERENCES report_section_runs (id) ON DELETE CASCADE, 
 	FOREIGN KEY(report_id) REFERENCES reports (id) ON DELETE CASCADE, 
@@ -446,7 +544,5 @@ CREATE TABLE ai_conversations (
 )
 
 ;
-CREATE INDEX idx_ai_conv_report_timestamp ON ai_conversations (report_id, timestamp);
 CREATE INDEX idx_ai_conv_run ON ai_conversations (run_id);
 CREATE INDEX idx_ai_conv_section ON ai_conversations (section_id);
-CREATE INDEX idx_ai_conv_timestamp ON ai_conversations (timestamp);

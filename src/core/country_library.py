@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 import json
 from pathlib import Path
+import re
 
 try:
     import pycountry
@@ -71,6 +72,86 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
             "lang": "zh-CN",
         },
         "notes": "Auto bootstrapped by country library",
+    },
+    "US": {
+        "data_source_url": "https://data.cdc.gov/browse?category=NNDSS",
+        "data_source_type": "api",
+        "crawler_config": {
+            "sources": ["nndss_api"],
+            "cadence": "weekly",
+            "reporting_area": "TOTAL",
+        },
+        "parser_config": {
+            "primary": "us_nndss_weekly",
+        },
+        "disease_mapping_rules": {
+            "strategy": "db_first",
+            "fallback": "learning_suggestions",
+        },
+        "report_config": {
+            "default_type": "WEEKLY",
+            "lang": "en-US",
+        },
+        "notes": "CDC NNDSS weekly provisional data, bootstrapped for national TOTAL ingestion",
+    },
+    "JP": {
+        "data_source_url": "https://www.niid.go.jp/niid/ja/data.html",
+        "data_source_type": "web",
+        "crawler_config": {
+            "sources": ["jp_idwr"],
+            "cadence": "weekly",
+            "reporting_area": "総数",
+            "weekly_csv_url": "",
+            "max_candidate_csvs": 5,
+        },
+        "parser_config": {
+            "primary": "jp_weekly_internal_crawler",
+        },
+        "disease_mapping_rules": {
+            "strategy": "db_first",
+            "fallback": "learning_suggestions",
+        },
+        "report_config": {
+            "default_type": "WEEKLY",
+            "lang": "ja-JP",
+        },
+        "notes": "NIID weekly data via internal globalID2 crawler (TOTAL-only ingestion)",
+    },
+    "AU": {
+        "data_source_url": "https://www.health.gov.au/topics/national-notifiable-diseases-surveillance-system-nndss",
+        "data_source_type": "microsoft_bi",
+        "crawler_config": {
+            "sources": ["au_nindss"],
+            "cadence": "monthly",
+            "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
+            "capacity_id": "86715F84-E812-421E-972F-2211ACC9903A",
+            "report_id": "bc027587-5e9e-4920-bf03-a45fd3079f25",
+            "dataset_id": "3471d96b-c14c-403f-b3a6-016f1deac28e",
+            "model_id": 3305775,
+            "query_url": "",
+            "query_payload": {
+                "version": "1.0.0",
+                "queries": [],
+                "modelId": 3305775,
+                "cancelRequests": True,
+            },
+            "auth_token": "",
+            "headers": {
+                "X-PowerBI-ReportId": "bc027587-5e9e-4920-bf03-a45fd3079f25",
+            },
+        },
+        "parser_config": {
+            "primary": "au_nindss_internal_crawler",
+        },
+        "disease_mapping_rules": {
+            "strategy": "db_first",
+            "fallback": "learning_suggestions",
+        },
+        "report_config": {
+            "default_type": "MONTHLY",
+            "lang": "en-AU",
+        },
+        "notes": "NINDSS Microsoft BI feed aggregated to national via internal globalID2 crawler",
     },
 }
 
@@ -164,3 +245,42 @@ def get_country_bootstrap_config(code: str) -> dict:
     merged = _deep_merge_dict(fallback, default_cfg)
     merged = _deep_merge_dict(merged, country_cfg)
     return merged
+
+
+def get_standard_country_codes() -> list[str]:
+    """Return sorted country codes declared in the standard library.
+
+    This union includes hardcoded overrides and bootstrap config entries.
+    Special config keys such as "_DEFAULT" are ignored.
+    """
+    registry = _load_country_bootstrap_registry()
+    registry_codes = {
+        code
+        for code in registry.keys()
+        if code and code != "_DEFAULT"
+    }
+    codes = set(COUNTRY_OVERRIDES.keys()) | set(COUNTRY_BOOTSTRAP_CONFIGS.keys()) | registry_codes
+    return sorted(codes)
+
+
+def validate_standard_country_registry() -> list[str]:
+    """Return human-readable validation warnings for standard country definitions."""
+    warnings: list[str] = []
+
+    hardcoded = set(COUNTRY_OVERRIDES.keys())
+    fallback = set(COUNTRY_BOOTSTRAP_CONFIGS.keys())
+    registry = _load_country_bootstrap_registry()
+    configured = {k for k in registry.keys() if k != "_DEFAULT"}
+
+    pattern = re.compile(r"^[A-Z]{2}$")
+    for code in sorted(hardcoded | fallback | configured):
+        if not pattern.match(code):
+            warnings.append(f"invalid country code format: {code}")
+
+    # These sets can drift over time; flag it explicitly for maintainers.
+    for code in sorted(hardcoded - (fallback | configured)):
+        warnings.append(f"{code} exists in COUNTRY_OVERRIDES but has no bootstrap config")
+    for code in sorted((fallback | configured) - hardcoded):
+        warnings.append(f"{code} has bootstrap config but no COUNTRY_OVERRIDES profile")
+
+    return warnings

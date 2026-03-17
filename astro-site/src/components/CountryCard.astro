@@ -20,6 +20,7 @@ function fmtNum(n: number) {
 }
 
 const href = `/countries/${code.toLowerCase()}/`;
+const deathsDisplay = totalDeaths > 0 ? fmtNum(totalDeaths) : '-';
 ---
 
 <a
@@ -47,7 +48,7 @@ const href = `/countries/${code.toLowerCase()}/`;
       <div class="text-xs text-slate-600 mt-0.5" data-lang-en="Total Cases" data-lang-zh="累计病例">Total Cases</div>
     </div>
     <div class="text-center">
-      <div class="text-xl font-bold tabular-nums text-red-400">{fmtNum(totalDeaths)}</div>
+      <div class="text-xl font-bold tabular-nums text-red-400">{deathsDisplay}</div>
       <div class="text-xs text-slate-600 mt-0.5" data-lang-en="Deaths" data-lang-zh="死亡">Deaths</div>
     </div>
     <div class="text-center">

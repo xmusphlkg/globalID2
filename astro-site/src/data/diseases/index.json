@@ -151,13 +151,13 @@
   },
   {
     "disease_id": "D016",
-    "name_en": "Novel Influenza",
+    "name_en": "Novel influenza A",
     "name_zh": "人感染新亚型流感",
     "category": "Viral",
     "icd_10": "J09",
     "icd_11": "1E30.0",
-    "description": "Novel influenza A virus infections",
-    "slug": "novel-influenza"
+    "description": "Canonical cross-country ID for novel influenza A virus infections",
+    "slug": "novel-influenza-a"
   },
   {
     "disease_id": "D017",
@@ -216,7 +216,7 @@
     "category": "Bacterial",
     "icd_10": "A39",
     "icd_11": "1C20.1",
-    "description": "",
+    "description": "Deprecated duplicate for cross-country surveillance; use D110 as the canonical meningococcal ID",
     "slug": "meningococcal-infection"
   },
   {
@@ -266,7 +266,7 @@
     "category": "Bacterial",
     "icd_10": "A39",
     "icd_11": "1C20.1",
-    "description": "Meningitis caused by meningococcus",
+    "description": "Deprecated duplicate for cross-country surveillance; use D110 as the canonical meningococcal ID",
     "slug": "meningococcal-meningitis"
   },
   {
@@ -501,13 +501,13 @@
   },
   {
     "disease_id": "D051",
-    "name_en": "Zika",
+    "name_en": "Zika virus disease",
     "name_zh": "寨卡病毒病",
     "category": "Viral",
     "icd_10": "A92.5",
     "icd_11": "1D47",
-    "description": "Zika virus disease",
-    "slug": "zika"
+    "description": "Canonical cross-country ID for Zika virus disease",
+    "slug": "zika-virus-disease"
   },
   {
     "disease_id": "D052",
@@ -990,6 +990,16 @@
     "slug": "haemophilus-influenzae"
   },
   {
+    "disease_id": "D101",
+    "name_en": "Candida auris infection",
+    "name_zh": "耳念珠菌感染",
+    "category": "Fungal",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "Emerging multidrug-resistant Candida auris infection used in CDC surveillance",
+    "slug": "candida-auris-infection"
+  },
+  {
     "disease_id": "D102",
     "name_en": "Hantavirus infection",
     "name_zh": "汉坦病毒感染",
@@ -1018,6 +1028,16 @@
     "icd_11": "",
     "description": "",
     "slug": "influenza-associated-mortality"
+  },
+  {
+    "disease_id": "D105",
+    "name_en": "Shigellosis",
+    "name_zh": "志贺菌病",
+    "category": "Bacterial",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "Shigella infection used in CDC enteric disease surveillance",
+    "slug": "shigellosis"
   },
   {
     "disease_id": "D106",
@@ -1066,18 +1086,18 @@
     "category": "Bacterial",
     "icd_10": "",
     "icd_11": "",
-    "description": "",
+    "description": "Canonical cross-country ID covering meningococcal surveillance mappings",
     "slug": "meningococcal-disease"
   },
   {
     "disease_id": "D111",
-    "name_en": "Novel influenza A",
-    "name_zh": "新型甲型流感",
+    "name_en": "Novel influenza A (deprecated duplicate)",
+    "name_zh": "新型甲型流感（废弃重复ID）",
     "category": "Viral",
     "icd_10": "",
     "icd_11": "",
-    "description": "",
-    "slug": "novel-influenza-a"
+    "description": "Deprecated duplicate of D016; do not use for new mappings",
+    "slug": "novel-influenza-a-(deprecated-duplicate)"
   },
   {
     "disease_id": "D112",
@@ -1108,6 +1128,36 @@
     "icd_11": "",
     "description": "",
     "slug": "salmonellosis"
+  },
+  {
+    "disease_id": "D115",
+    "name_en": "Shiga toxin-producing Escherichia coli infection",
+    "name_zh": "产志贺毒素大肠杆菌感染",
+    "category": "Bacterial",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "Shiga toxin-producing Escherichia coli infection used in CDC surveillance",
+    "slug": "shiga-toxin-producing-escherichia-coli-infection"
+  },
+  {
+    "disease_id": "D116",
+    "name_en": "Melioidosis",
+    "name_zh": "类鼻疽",
+    "category": "Bacterial",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "Burkholderia pseudomallei infection used in CDC surveillance",
+    "slug": "melioidosis"
+  },
+  {
+    "disease_id": "D117",
+    "name_en": "Cronobacter invasive infection",
+    "name_zh": "克罗诺杆菌侵袭性感染",
+    "category": "Bacterial",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "Invasive Cronobacter infection, primarily monitored in infants",
+    "slug": "cronobacter-invasive-infection"
   },
   {
     "disease_id": "D118",
@@ -1220,14 +1270,274 @@
     "slug": "west-nile-virus"
   },
   {
+    "disease_id": "D129",
+    "name_en": "Oropouche virus disease",
+    "name_zh": "奥罗普切病毒病",
+    "category": "Viral",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "Oropouche virus disease used in CDC arboviral surveillance",
+    "slug": "oropouche-virus-disease"
+  },
+  {
     "disease_id": "D130",
     "name_en": "Zika virus",
     "name_zh": "寨卡病毒",
     "category": "Viral",
     "icd_10": "",
     "icd_11": "",
-    "description": "",
+    "description": "Deprecated duplicate of D051; do not use for new mappings",
     "slug": "zika-virus"
+  },
+  {
+    "disease_id": "D131",
+    "name_en": "Vancomycin-intermediate Staphylococcus aureus infection",
+    "name_zh": "万古霉素中介金黄色葡萄球菌感染",
+    "category": "Bacterial",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "Vancomycin-intermediate Staphylococcus aureus infection (VISA)",
+    "slug": "vancomycin-intermediate-staphylococcus-aureus-infection"
+  },
+  {
+    "disease_id": "D132",
+    "name_en": "Vancomycin-resistant Staphylococcus aureus infection",
+    "name_zh": "万古霉素耐药金黄色葡萄球菌感染",
+    "category": "Bacterial",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "Vancomycin-resistant Staphylococcus aureus infection (VRSA)",
+    "slug": "vancomycin-resistant-staphylococcus-aureus-infection"
+  },
+  {
+    "disease_id": "D133",
+    "name_en": "Carbapenemase-producing organism infection",
+    "name_zh": "产碳青霉烯酶微生物感染",
+    "category": "Bacterial",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "Carbapenemase-producing organism surveillance concept used by CDC",
+    "slug": "carbapenemase-producing-organism-infection"
+  },
+  {
+    "disease_id": "D134",
+    "name_en": "Aseptic meningitis",
+    "name_zh": "无菌性脑膜炎",
+    "category": "Viral",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "JP weekly sentinel surveillance concept",
+    "slug": "aseptic-meningitis"
+  },
+  {
+    "disease_id": "D135",
+    "name_en": "Bacterial meningitis",
+    "name_zh": "细菌性脑膜炎",
+    "category": "Bacterial",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "JP weekly sentinel surveillance concept",
+    "slug": "bacterial-meningitis"
+  },
+  {
+    "disease_id": "D136",
+    "name_en": "Chlamydial pneumonia",
+    "name_zh": "衣原体肺炎",
+    "category": "Bacterial",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "JP weekly sentinel surveillance concept",
+    "slug": "chlamydial-pneumonia"
+  },
+  {
+    "disease_id": "D137",
+    "name_en": "Epidemic keratoconjunctivitis",
+    "name_zh": "流行性角结膜炎",
+    "category": "Viral",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "JP weekly sentinel surveillance concept",
+    "slug": "epidemic-keratoconjunctivitis"
+  },
+  {
+    "disease_id": "D138",
+    "name_en": "Erythema infectiosum (Fifth disease)",
+    "name_zh": "传染性红斑（第五病）",
+    "category": "Viral",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "JP weekly sentinel surveillance concept",
+    "slug": "erythema-infectiosum-(fifth-disease)"
+  },
+  {
+    "disease_id": "D139",
+    "name_en": "Herpangina",
+    "name_zh": "疱疹性咽峡炎",
+    "category": "Viral",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "JP weekly sentinel surveillance concept",
+    "slug": "herpangina"
+  },
+  {
+    "disease_id": "D140",
+    "name_en": "Mycoplasma pneumonia",
+    "name_zh": "支原体肺炎",
+    "category": "Bacterial",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "JP weekly sentinel surveillance concept",
+    "slug": "mycoplasma-pneumonia"
+  },
+  {
+    "disease_id": "D141",
+    "name_en": "Pharyngoconjunctival fever",
+    "name_zh": "咽结膜热",
+    "category": "Viral",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "JP weekly sentinel surveillance concept",
+    "slug": "pharyngoconjunctival-fever"
+  },
+  {
+    "disease_id": "D142",
+    "name_en": "Respiratory syncytial virus infection (RSV)",
+    "name_zh": "呼吸道合胞病毒感染",
+    "category": "Viral",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "JP weekly sentinel surveillance concept",
+    "slug": "respiratory-syncytial-virus-infection-(rsv)"
+  },
+  {
+    "disease_id": "D143",
+    "name_en": "Roseola (Exanthem subitum)",
+    "name_zh": "幼儿急疹（突发性发疹）",
+    "category": "Viral",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "JP weekly sentinel surveillance concept",
+    "slug": "roseola-(exanthem-subitum)"
+  },
+  {
+    "disease_id": "D144",
+    "name_en": "Creutzfeldt-Jakob disease",
+    "name_zh": "克雅氏病",
+    "category": "Prion",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "JP weekly surveillance concept",
+    "slug": "creutzfeldt-jakob-disease"
+  },
+  {
+    "disease_id": "D145",
+    "name_en": "Relapsing fever",
+    "name_zh": "回归热",
+    "category": "Bacterial",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "JP weekly surveillance concept",
+    "slug": "relapsing-fever"
+  },
+  {
+    "disease_id": "D146",
+    "name_en": "Disseminated cryptococcosis",
+    "name_zh": "播散性隐球菌病",
+    "category": "Fungal",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "JP weekly surveillance concept",
+    "slug": "disseminated-cryptococcosis"
+  },
+  {
+    "disease_id": "D147",
+    "name_en": "Barmah Forest virus infection",
+    "name_zh": "巴马森林病毒感染",
+    "category": "Viral",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "AU NINDSS surveillance concept",
+    "slug": "barmah-forest-virus-infection"
+  },
+  {
+    "disease_id": "D148",
+    "name_en": "Donovanosis",
+    "name_zh": "肉芽肿性腹股沟病",
+    "category": "Bacterial",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "AU NINDSS surveillance concept",
+    "slug": "donovanosis"
+  },
+  {
+    "disease_id": "D149",
+    "name_en": "Flavivirus infection (unspecified)",
+    "name_zh": "黄病毒感染（未特指）",
+    "category": "Viral",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "AU NINDSS surveillance concept",
+    "slug": "flavivirus-infection-(unspecified)"
+  },
+  {
+    "disease_id": "D150",
+    "name_en": "Gonococcal infection",
+    "name_zh": "淋球菌感染",
+    "category": "Bacterial",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "AU NINDSS surveillance concept",
+    "slug": "gonococcal-infection"
+  },
+  {
+    "disease_id": "D151",
+    "name_en": "Haemolytic uraemic syndrome (HUS)",
+    "name_zh": "溶血性尿毒综合征",
+    "category": "Other",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "AU NINDSS surveillance concept",
+    "slug": "haemolytic-uraemic-syndrome-(hus)"
+  },
+  {
+    "disease_id": "D152",
+    "name_en": "Murray Valley encephalitis virus infection",
+    "name_zh": "墨累谷脑炎病毒感染",
+    "category": "Viral",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "AU NINDSS surveillance concept",
+    "slug": "murray-valley-encephalitis-virus-infection"
+  },
+  {
+    "disease_id": "D153",
+    "name_en": "Non-tuberculous mycobacterial infection",
+    "name_zh": "非结核分枝杆菌感染",
+    "category": "Bacterial",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "AU NINDSS surveillance concept",
+    "slug": "non-tuberculous-mycobacterial-infection"
+  },
+  {
+    "disease_id": "D154",
+    "name_en": "Ross River virus infection",
+    "name_zh": "罗斯河病毒感染",
+    "category": "Viral",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "AU NINDSS surveillance concept",
+    "slug": "ross-river-virus-infection"
+  },
+  {
+    "disease_id": "D155",
+    "name_en": "Yersiniosis",
+    "name_zh": "耶尔森菌病",
+    "category": "Bacterial",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "AU NINDSS surveillance concept",
+    "slug": "yersiniosis"
   },
   {
     "disease_id": "D999",

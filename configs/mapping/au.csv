@@ -1,0 +1,73 @@
+disease_id,local_name,local_code,category,aliases,notes,data_source
+D023,Anthrax,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D019,Australian bat lyssavirus infection,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D016,Avian influenza in humans (AIH),,National,,AU NINDSS mapping,AU NINDSS Monthly
+D147,Barmah Forest virus infection,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D091,Botulism,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D032,Brucellosis,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D144,CJD,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D004,COVID-19,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D092,Campylobacteriosis,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D093,Chancroid,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D052,Chikungunya virus infection,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D094,Chlamydial infection,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D002,Cholera,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D096,Cryptosporidiosis,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D021,Dengue virus infection,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D029,Diphtheria,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D148,Donovanosis,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D149,Flavivirus infection (unspecified),,National,,AU NINDSS mapping,AU NINDSS Monthly
+D150,Gonococcal infection,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D151,Haemolytic uraemic syndrome (HUS),,National,,AU NINDSS mapping,AU NINDSS Monthly
+D100,Haemophilus influenzae type b,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D006,Hepatitis (NEC),,National,,AU NINDSS mapping,AU NINDSS Monthly
+D007,Hepatitis A,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D068,Hepatitis B (newly acquired),,National,,AU NINDSS mapping,AU NINDSS Monthly
+D008,Hepatitis B (unspecified),,National,,AU NINDSS mapping,AU NINDSS Monthly
+D009,Hepatitis C (newly acquired),,National,,AU NINDSS mapping,AU NINDSS Monthly
+D009,Hepatitis C (unspecified),,National,,AU NINDSS mapping,AU NINDSS Monthly
+D010,Hepatitis D,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D011,Hepatitis E,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D045,Hydatid infection,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D038,Influenza (laboratory confirmed),,National,,AU NINDSS mapping,AU NINDSS Monthly
+D119,Invasive Group A Streptococcal disease (iGAS),,National,,AU NINDSS mapping,AU NINDSS Monthly
+D020,Japanese encephalitis virus infection,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D107,Legionellosis,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D042,Leprosy,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D035,Leptospirosis,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D108,Listeriosis,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D037,Malaria,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D017,Measles,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D110,Meningococcal disease (invasive),,National,,AU NINDSS mapping,AU NINDSS Monthly
+D065,Mpox,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D039,Mumps,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D152,Murray Valley encephalitis virus infection,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D153,NON TB MYCO,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D112,Ornithosis,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D026,Paratyphoid,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D028,Pertussis,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D106,Pneumococcal disease (invasive),,National,,AU NINDSS mapping,AU NINDSS Monthly
+D013,Poliovirus infection,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D113,Q fever,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D142,Respiratory syncytial virus (RSV),,National,,AU NINDSS mapping,AU NINDSS Monthly
+D154,Ross River virus infection,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D047,Rotavirus,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D040,Rubella,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D040,Rubella congenital,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D115,STEC,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D114,Salmonellosis,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D105,Shigellosis,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D034,Syphilis,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D034,Syphilis < 2 years,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D034,Syphilis > 2 years or unspecified duration,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D034,Syphilis congenital,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D120,Tetanus,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D025,Tuberculosis,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D123,Tularaemia,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D124,Typhoid Fever,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D054,Varicella zoster (chickenpox),,National,,AU NINDSS mapping,AU NINDSS Monthly
+D063,Varicella zoster (shingles),,National,,AU NINDSS mapping,AU NINDSS Monthly
+D054,Varicella zoster (unspecified),,National,,AU NINDSS mapping,AU NINDSS Monthly
+D126,Vibrio parahaemolyticus infection,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D128,West Nile/Kunjin virus infection,,National,,AU NINDSS mapping,AU NINDSS Monthly
+D155,Yersiniosis (NEC),,National,,AU NINDSS mapping,AU NINDSS Monthly

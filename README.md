@@ -148,6 +148,16 @@ This starts:
 - Redis on `localhost:6379`
 - Qdrant on `localhost:6333`
 
+Infrastructure data is stored in fixed Docker volumes:
+
+- `globalid_postgres_data`
+- `globalid_redis_data`
+- `globalid_qdrant_data`
+
+These volumes survive host reboots. The containers also use `restart: unless-stopped`, so they will start again automatically after the machine reboots as long as Docker starts on boot.
+
+Do not run `docker compose down -v` unless you explicitly want to delete persisted data.
+
 3. Initialize the database schema.
 
 ```bash
@@ -174,6 +184,25 @@ If you want the database, API, and dashboard together:
 ```bash
 docker compose -f docker/dashboard-full-stack.yml up -d
 ```
+
+This stack uses the same fixed Docker volumes as the base infra stack, so switching between the two compose files will keep the same PostgreSQL, Redis, and Qdrant data.
+
+If you already used Docker before this change, your existing database may still be in an older auto-generated volume such as `globalID2_postgres_data` or `docker_postgres_data`. You can inspect existing PostgreSQL volumes with:
+
+```bash
+docker volume ls | grep postgres
+```
+
+If needed, copy the old PostgreSQL data into the new shared volume before restarting the stack:
+
+```bash
+docker run --rm \
+	-v OLD_VOLUME:/from \
+	-v globalid_postgres_data:/to \
+	alpine sh -c "cd /from && cp -a . /to"
+```
+
+Replace `OLD_VOLUME` with the volume name you find on your machine.
 
 Default services:
 
@@ -213,6 +242,12 @@ Available top-level commands:
 Run the backend directly from the repository root:
 
 ```bash
+uvicorn dashboard.api.main:app --host 0.0.0.0 --port 8000
+```
+
+For development hot reload only:
+
+```bash
 uvicorn dashboard.api.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
@@ -220,6 +255,14 @@ Health endpoints:
 
 - `GET /health`
 - `GET /api/v1/health`
+
+### Task worker (recommended)
+
+Run task execution in a separate process so API reloads do not interrupt running tasks:
+
+```bash
+python -m src.services.task_worker
+```
 
 ### Next.js dashboard
 
@@ -245,6 +288,9 @@ python scripts/generate_site_data.py
 cd astro-site
 npm install
 npm run dev
+
+npm run build
+npx wrangler pages deploy dist
 ```
 
 ## Common Workflows
@@ -259,6 +305,22 @@ python scripts/full_rebuild_database.py --yes
 
 The rebuild script can:
 
+### Import Japan weekly historical data (TOTAL/総数)
+
+If you have JP historical weekly data at `data/raw/jp/weekly_cases_standardized.csv`,
+use the dedicated importer. By default it ingests only `Reporting Area=総数` rows to
+avoid prefecture-level primary-key collisions in `disease_records`.
+
+```bash
+python scripts/import_jp_weekly_history.py
+```
+
+Replace existing JP disease records before import:
+
+```bash
+python scripts/import_jp_weekly_history.py --replace-existing
+```
+
 - clear disease-related tables
 - bootstrap country records
 - import standard diseases from `configs/standard_diseases.csv`
@@ -266,6 +328,26 @@ The rebuild script can:
 - sync the `diseases` table
 - import historical data from `data/processed/<country>/history_merged.csv`
 - verify final counts
+
+For the US NNDSS weekly dataset, prepare the normalized historical file first:
+
+```bash
+python3 scripts/us_prepare_nndss_history.py --input-csv data/raw/us/NNDSS_Weekly_Data_20260317.csv
+python3 scripts/full_rebuild_database.py --country us --yes
+```
+
+To refresh US national weekly data from the CDC API and merge it into the processed history file:
+
+```bash
+python3 scripts/us_prepare_nndss_history.py
+python3 scripts/full_rebuild_database.py --country us --mode history --yes
+```
+
+US-specific notes:
+
+- the current US integration uses CDC NNDSS `TOTAL` rows only, which fit the existing `(time, disease_id, country_id)` primary key
+- CDC NNDSS weekly numbers are provisional and can be revised after first publication, so scheduled updates should upsert and overwrite existing recent weeks rather than append-only
+- state-level US ingestion would require a schema extension because multiple states can produce the same `(week, disease, country)` key
 
 ### Crawl data incrementally
 
@@ -282,6 +364,7 @@ python main.py crawl --country CN --source cdc_weekly
 python main.py crawl --country CN --source nhc
 python main.py crawl --country CN --source pubmed
 python main.py crawl --country CN --force
+python main.py crawl --country US --source nndss_api
 ```
 
 Behavior summary:
@@ -290,6 +373,12 @@ Behavior summary:
 - comparison against database state
 - detailed crawl only for new or missing content
 - optional raw-page text archiving in `data/raw/`
+
+US incremental notes:
+
+- US now follows the same task and crawl workflow as CN (`TaskManager` -> `CrawlService` -> workbook/progress updates)
+- the US update gate compares source latest week date with database latest US date
+- data is imported only when source has a newer week (unless `--force` is used)
 
 ### Generate an AI-assisted report
 

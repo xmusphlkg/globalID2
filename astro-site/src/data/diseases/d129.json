@@ -1,0 +1,89 @@
+{
+  "disease_id": "D129",
+  "name_en": "Oropouche virus disease",
+  "name_zh": "奥罗普切病毒病",
+  "category": "Viral",
+  "icd_10": "",
+  "icd_11": "",
+  "description": "Oropouche virus disease used in CDC arboviral surveillance",
+  "slug": "oropouche-virus-disease",
+  "country_series": {
+    "US": {
+      "dates": [
+        "2026-01-09",
+        "2026-01-16",
+        "2026-01-23",
+        "2026-01-30",
+        "2026-02-27",
+        "2026-03-06",
+        "2026-03-07"
+      ],
+      "cases": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "weekly_equiv_cases": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "deaths": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "incidence_rates": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "incidence_sources": [
+        "wpp_computed",
+        "wpp_computed",
+        "wpp_computed",
+        "wpp_computed",
+        "wpp_computed",
+        "wpp_computed",
+        "wpp_computed"
+      ],
+      "total_cases": 0,
+      "total_deaths": 0
+    }
+  },
+  "global_monthly": {
+    "months": [
+      "2026-01",
+      "2026-02",
+      "2026-03"
+    ],
+    "cases": [
+      0,
+      0,
+      0
+    ],
+    "deaths": [
+      0,
+      0,
+      0
+    ]
+  },
+  "total_cases": 0,
+  "total_deaths": 0
+}

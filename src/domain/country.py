@@ -26,7 +26,7 @@ class Country(BaseModel):
     name_local: Mapped[Optional[str]] = mapped_column(String(100), comment="当地语言名称")
     
     # 语言和时区
-    language: Mapped[str] = mapped_column(String(10), nullable=False, default="en", comment="主要语言代码")
+    language: Mapped[str] = mapped_column(String(20), nullable=False, default="en", comment="主要语言代码（BCP-47）")
     timezone: Mapped[str] = mapped_column(String(50), nullable=False, default="UTC", comment="时区")
     
     # 数据源配置
@@ -66,6 +66,11 @@ class Country(BaseModel):
     scopes: Mapped[list] = relationship(
         "CountryScope",
         primaryjoin="Country.code == CountryScope.country_code",
+        cascade="all, delete-orphan",
+    )
+    population_records: Mapped[list] = relationship(
+        "PopulationRecord",
+        back_populates="country",
         cascade="all, delete-orphan",
     )
     

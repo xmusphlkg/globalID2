@@ -15,7 +15,7 @@ from urllib.parse import urljoin
 
 import xmltodict
 from bs4 import BeautifulSoup
-from sqlalchemy import select, func
+from sqlalchemy import select, func, text
 
 from src.core import get_logger
 from src.core.database import get_db
@@ -167,22 +167,35 @@ class ChinaCDCCrawler(BaseCrawler):
         from datetime import date
         today = date.today()
         
-        # 获取数据库中最新的数据时间（排除未来日期）
+        # 获取数据库中最新的数据时间（仅CN，排除未来日期）
         async with get_db() as session:
-            result = await session.execute(
-                select(func.max(DiseaseRecord.time)).select_from(DiseaseRecord).where(
-                    DiseaseRecord.time <= today
-                )
+            country_result = await session.execute(
+                text("SELECT id FROM countries WHERE code = :code"),
+                {"code": "CN"},
             )
-            max_time = result.scalar()
+            country_row = country_result.fetchone()
+            country_id = country_row[0] if country_row else None
+
+            max_time = None
+            if country_id is not None:
+                result = await session.execute(
+                    select(func.max(DiseaseRecord.time)).select_from(DiseaseRecord).where(
+                        DiseaseRecord.country_id == country_id,
+                        DiseaseRecord.time <= today,
+                    )
+                )
+                max_time = result.scalar()
 
             existing_year_months: Set[str] = set()
-            if fill_missing:
+            if fill_missing and country_id is not None:
                 # Collect existing months to enable "gap backfill"
                 months_result = await session.execute(
                     select(func.date_trunc("month", DiseaseRecord.time))
                     .distinct()
-                    .where(DiseaseRecord.time <= today)
+                    .where(
+                        DiseaseRecord.country_id == country_id,
+                        DiseaseRecord.time <= today,
+                    )
                 )
                 for (month_dt,) in months_result.fetchall():
                     if month_dt is None:

@@ -14,18 +14,18 @@ D012,Other Hepatitis,未分型肝炎,Viral,B19,1E50.Y,Unspecified viral hepatiti
 D013,Poliomyelitis,脊髓灰质炎,Viral,A80,1C81,Polio caused by poliovirus,CDC
 D014,H5N1,人感染高致病性禽流感,Viral,J09,1E30.0,Highly pathogenic avian influenza A(H5N1),China CDC
 D015,H7N9,人感染H7N9禽流感,Viral,J09,1E30.0,Avian influenza A(H7N9),China CDC
-D016,Novel Influenza,人感染新亚型流感,Viral,J09,1E30.0,Novel influenza A virus infections,China CDC
+D016,Novel influenza A,人感染新亚型流感,Viral,J09,1E30.0,"Canonical cross-country ID for novel influenza A virus infections",China CDC
 D017,Measles,麻疹,Viral,B05,KA61,Highly contagious viral disease,ICD-10
 D018,Hemorrhagic Fever,流行性出血热,Viral,A98.5,1D67.0,Hemorrhagic fever with renal syndrome,China CDC
 D019,Rabies,狂犬病,Viral,A82,1C82,Fatal viral disease transmitted by animal bites,ICD-10
 D020,Japanese Encephalitis,流行性乙型脑炎,Viral,A83.0,1C83.0,Mosquito-borne viral encephalitis,China CDC
 D021,Dengue,登革热,Viral,A90,1D2Z.0,Mosquito-borne tropical disease,CDC
-D022,Meningococcal infection,脑膜炎球菌感染,Bacterial,A39,1C20.1,,ICD-10
+D022,Meningococcal infection,脑膜炎球菌感染,Bacterial,A39,1C20.1,"Deprecated duplicate for cross-country surveillance; use D110 as the canonical meningococcal ID",ICD-10
 D023,Anthrax,炭疽,Bacterial,A22,1B91,Bacterial infection caused by Bacillus anthracis,ICD-10
 D024,Dysentery,细菌性和阿米巴性痢疾,Bacterial,A03-A06,1A03-1A05,Intestinal infection causing diarrhea,ICD-10
 D025,Tuberculosis,肺结核,Bacterial,A15-A19,1B10,Mycobacterium tuberculosis infection of lungs,CDC
 D026,Typhoid and Paratyphoid fever,伤寒和副伤寒,Bacterial,A01,1B13,Enteric fever,China CDC
-D027,Meningococcal Meningitis,流行性脑脊髓膜炎,Bacterial,A39,1C20.1,Meningitis caused by meningococcus,China CDC
+D027,Meningococcal Meningitis,流行性脑脊髓膜炎,Bacterial,A39,1C20.1,"Deprecated duplicate for cross-country surveillance; use D110 as the canonical meningococcal ID",China CDC
 D028,Pertussis,百日咳,Bacterial,A37,CA01,Whooping cough caused by Bordetella pertussis,CDC
 D029,Diphtheria,白喉,Bacterial,A36,1C15,Bacterial infection of throat and airways,ICD-10
 D030,Neonatal Tetanus,新生儿破伤风,Bacterial,A33,1C13,Tetanus in newborns,China CDC
@@ -49,7 +49,7 @@ D047,Infectious Diarrhea,其他感染性腹泻病,Bacterial,A09,1A11,Other infec
 D048,Hand-Foot-Mouth Disease,手足口病,Viral,B08.4,KA05.40,Enterovirus infection common in children,China
 D049,MERS,中东呼吸综合征,Viral,U00-U49,1D65.1,Middle East Respiratory Syndrome,China CDC
 D050,Ebola,埃博拉出血热,Viral,A98.4,1D60,Ebola virus disease,China CDC
-D051,Zika,寨卡病毒病,Viral,A92.5,1D47,Zika virus disease,China CDC
+D051,Zika virus disease,寨卡病毒病,Viral,A92.5,1D47,"Canonical cross-country ID for Zika virus disease",China CDC
 D052,Chikungunya,基孔肯雅热,Viral,A92.0,1D46,Chikungunya virus disease,China CDC
 D053,Lassa,拉沙热,Viral,A96.2,1D61,Lassa fever,China CDC
 D054,Varicella,水痘,Viral,B01,KA62.0,Chickenpox,ICD-10
@@ -98,18 +98,23 @@ D097,Cyclosporiasis,环孢子虫病,Parasitic,,,,CDC
 D098,Ehrlichiosis and Anaplasmosis,埃立克体病和无形体病,Bacterial,,,,CDC
 D099,Giardiasis,贾第虫病,Parasitic,,,,CDC
 D100,Haemophilus influenzae,流感嗜血杆菌,Bacterial,,,,CDC
+D101,Candida auris infection,耳念珠菌感染,Fungal,,,"Emerging multidrug-resistant Candida auris infection used in CDC surveillance",CDC
 D102,Hantavirus infection,汉坦病毒感染,Viral,,,,CDC
 D103,Hemolytic uremic syndrome,溶血性尿毒症综合征,Bacterial,,,,CDC
 D104,Influenza-associated mortality,流行性感冒相关死亡,Viral,,,,CDC
+D105,Shigellosis,志贺菌病,Bacterial,,,"Shigella infection used in CDC enteric disease surveillance",CDC
 D106,Invasive pneumococcal disease,侵袭性肺炎球菌病,Bacterial,,,,CDC
 D107,Legionellosis,军团菌病,Bacterial,,,,CDC
 D108,Listeriosis,李斯特菌病,Bacterial,,,,CDC
 D109,Lyme disease,莱姆病,Bacterial,,,,CDC
-D110,Meningococcal disease,脑膜炎球菌病,Bacterial,,,,CDC
-D111,Novel influenza A,新型甲型流感,Viral,,,,CDC
+D110,Meningococcal disease,脑膜炎球菌病,Bacterial,,,"Canonical cross-country ID covering meningococcal surveillance mappings",CDC
+D111,Novel influenza A (deprecated duplicate),新型甲型流感（废弃重复ID）,Viral,,,"Deprecated duplicate of D016; do not use for new mappings",CDC
 D112,Psittacosis,鹦鹉热,Bacterial,,,,CDC
 D113,Q fever,Q热,Bacterial,,,,CDC
 D114,Salmonellosis,沙门氏菌病,Bacterial,,,,CDC
+D115,Shiga toxin-producing Escherichia coli infection,产志贺毒素大肠杆菌感染,Bacterial,,,"Shiga toxin-producing Escherichia coli infection used in CDC surveillance",CDC
+D116,Melioidosis,类鼻疽,Bacterial,,,"Burkholderia pseudomallei infection used in CDC surveillance",CDC
+D117,Cronobacter invasive infection,克罗诺杆菌侵袭性感染,Bacterial,,,"Invasive Cronobacter infection, primarily monitored in infants",CDC
 D118,Spotted fever rickettsiosis,斑点热立克次体病,Bacterial,,,,CDC
 D119,Streptococcal disease,链球菌病,Bacterial,,,,CDC
 D120,Tetanus,破伤风,Bacterial,,,,CDC
@@ -121,5 +126,31 @@ D125,Vancomycin resistance,万古霉素耐药性,Bacterial,,,,CDC
 D126,Vibriosis,弧菌病,Bacterial,,,,CDC
 D127,Viral hemorrhagic fevers,病毒性出血热,Viral,,,,CDC
 D128,West Nile virus,西尼罗病毒,Viral,,,,CDC
-D130,Zika virus,寨卡病毒,Viral,,,,CDC
+D129,Oropouche virus disease,奥罗普切病毒病,Viral,,,"Oropouche virus disease used in CDC arboviral surveillance",CDC
+D130,Zika virus,寨卡病毒,Viral,,,"Deprecated duplicate of D051; do not use for new mappings",CDC
+D131,Vancomycin-intermediate Staphylococcus aureus infection,万古霉素中介金黄色葡萄球菌感染,Bacterial,,,"Vancomycin-intermediate Staphylococcus aureus infection (VISA)",CDC
+D132,Vancomycin-resistant Staphylococcus aureus infection,万古霉素耐药金黄色葡萄球菌感染,Bacterial,,,"Vancomycin-resistant Staphylococcus aureus infection (VRSA)",CDC
+D133,Carbapenemase-producing organism infection,产碳青霉烯酶微生物感染,Bacterial,,,"Carbapenemase-producing organism surveillance concept used by CDC",CDC
+D134,Aseptic meningitis,无菌性脑膜炎,Viral,,,"JP weekly sentinel surveillance concept",JP NIID
+D135,Bacterial meningitis,细菌性脑膜炎,Bacterial,,,"JP weekly sentinel surveillance concept",JP NIID
+D136,Chlamydial pneumonia,衣原体肺炎,Bacterial,,,"JP weekly sentinel surveillance concept",JP NIID
+D137,Epidemic keratoconjunctivitis,流行性角结膜炎,Viral,,,"JP weekly sentinel surveillance concept",JP NIID
+D138,Erythema infectiosum (Fifth disease),传染性红斑（第五病）,Viral,,,"JP weekly sentinel surveillance concept",JP NIID
+D139,Herpangina,疱疹性咽峡炎,Viral,,,"JP weekly sentinel surveillance concept",JP NIID
+D140,Mycoplasma pneumonia,支原体肺炎,Bacterial,,,"JP weekly sentinel surveillance concept",JP NIID
+D141,Pharyngoconjunctival fever,咽结膜热,Viral,,,"JP weekly sentinel surveillance concept",JP NIID
+D142,Respiratory syncytial virus infection (RSV),呼吸道合胞病毒感染,Viral,,,"JP weekly sentinel surveillance concept",JP NIID
+D143,Roseola (Exanthem subitum),幼儿急疹（突发性发疹）,Viral,,,"JP weekly sentinel surveillance concept",JP NIID
+D144,Creutzfeldt-Jakob disease,克雅氏病,Prion,,,"JP weekly surveillance concept",JP NIID
+D145,Relapsing fever,回归热,Bacterial,,,"JP weekly surveillance concept",JP NIID
+D146,Disseminated cryptococcosis,播散性隐球菌病,Fungal,,,"JP weekly surveillance concept",JP NIID
+D147,Barmah Forest virus infection,巴马森林病毒感染,Viral,,,"AU NINDSS surveillance concept",AU NINDSS
+D148,Donovanosis,肉芽肿性腹股沟病,Bacterial,,,"AU NINDSS surveillance concept",AU NINDSS
+D149,Flavivirus infection (unspecified),黄病毒感染（未特指）,Viral,,,"AU NINDSS surveillance concept",AU NINDSS
+D150,Gonococcal infection,淋球菌感染,Bacterial,,,"AU NINDSS surveillance concept",AU NINDSS
+D151,Haemolytic uraemic syndrome (HUS),溶血性尿毒综合征,Other,,,"AU NINDSS surveillance concept",AU NINDSS
+D152,Murray Valley encephalitis virus infection,墨累谷脑炎病毒感染,Viral,,,"AU NINDSS surveillance concept",AU NINDSS
+D153,Non-tuberculous mycobacterial infection,非结核分枝杆菌感染,Bacterial,,,"AU NINDSS surveillance concept",AU NINDSS
+D154,Ross River virus infection,罗斯河病毒感染,Viral,,,"AU NINDSS surveillance concept",AU NINDSS
+D155,Yersiniosis,耶尔森菌病,Bacterial,,,"AU NINDSS surveillance concept",AU NINDSS
 D999,Total,甲乙丙类传染病总计,Summary,,,Aggregate total for reporting,China CDC

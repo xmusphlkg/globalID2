@@ -33,6 +33,7 @@ export default function CrawlTasksPage() {
   const { data: tasks, isLoading } = useTasks(
     statusFilter || undefined,
     CRAWL_TYPES,
+    countryId,
     search || undefined,
     100,
   );
