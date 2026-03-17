@@ -26,25 +26,25 @@ class CountryProfile:
 
 COUNTRY_OVERRIDES: dict[str, dict[str, str]] = {
     "CN": {
-        "name": "中国",
+        "name": "China",
         "name_local": "中国",
         "language": "zh-CN",
         "timezone": "Asia/Shanghai",
     },
     "US": {
-        "name": "美国",
+        "name": "United States",
         "name_local": "United States",
         "language": "en-US",
         "timezone": "America/New_York",
     },
     "AU": {
-        "name": "澳大利亚",
+        "name": "Australia",
         "name_local": "Australia",
         "language": "en-AU",
         "timezone": "Australia/Sydney",
     },
     "JP": {
-        "name": "日本",
+        "name": "Japan",
         "name_local": "日本",
         "language": "ja-JP",
         "timezone": "Asia/Tokyo",

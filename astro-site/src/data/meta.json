@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-03-16T12:20:12.883812+00:00",
+  "generated_at": "2026-03-17T03:39:12.867657+00:00",
   "total_countries": 1,
   "total_diseases": 124,
   "total_reports": 1,
   "countries": [
     {
       "code": "CN",
-      "name": "中国",
+      "name": "China",
       "language": "zh-CN",
       "total_cases": 361961033,
       "total_deaths": 708874,

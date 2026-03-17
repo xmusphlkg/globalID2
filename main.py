@@ -175,6 +175,7 @@ def init_database():
                     code="CN",
                     name="China",
                     name_en="China",
+                    name_local="中国",
                     language="zh",
                     timezone="Asia/Shanghai",
                     data_source_url="http://weekly.chinacdc.cn",
@@ -186,7 +187,12 @@ def init_database():
                 await db.commit()
                 console.print("  ✓ Created country: China")
             else:
-                console.print("  ✓ Country China already exists")
+                # Keep CN display fields consistent on re-initialization.
+                country.name = "China"
+                country.name_en = "China"
+                country.name_local = "中国"
+                await db.commit()
+                console.print("  ✓ Country China refreshed")
 
             await db.commit()
             console.print("[green]✓ Initial country data ready[/green]")
