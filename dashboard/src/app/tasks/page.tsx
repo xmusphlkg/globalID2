@@ -32,7 +32,7 @@ const statusColors: Record<string, string> = {
 };
 
 export default function TasksPage() {
-  const { lang } = useAppStore();
+  const { lang, countryId } = useAppStore();
   const [statusFilter, setStatusFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
   const [search, setSearch] = useState("");
@@ -43,6 +43,7 @@ export default function TasksPage() {
   const { data: tasks, isLoading } = useTasks(
     statusFilter || undefined,
     typeFilter || undefined,
+    countryId,
     search || undefined,
     100,
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAppStore } from "@/stores/app-store";
 import { t } from "@/lib/i18n";
 import { useSourcesFlow, useStartCrawl } from "@/lib/hooks/useSources";
@@ -64,10 +64,32 @@ const STAGE_LABEL_KEYS: Record<string, string> = {
 
 function sourceLabel(lang: "en" | "zh", source?: string | null): string {
   const s = (source || "all").toLowerCase();
+  if (s === "nndss_api") return "US CDC NNDSS";
+  if (s === "jp_weekly") return "JP NIID Weekly";
   if (s === "pubmed") return "PubMed";
   if (s === "cdc_weekly") return "CDC Weekly";
   if (s === "nhc") return lang === "zh" ? "国家卫健委" : "NHC";
   return lang === "zh" ? "全部" : "All";
+}
+
+function isUSCountry(countryName: string): boolean {
+  const name = countryName.trim().toLowerCase();
+  return name === "us" || name === "usa" || name.includes("united states") || name.includes("美国");
+}
+
+function isCNCountry(countryName: string): boolean {
+  const name = countryName.trim().toLowerCase();
+  return name === "cn" || name.includes("china") || name.includes("中国");
+}
+
+function isJPCountry(countryName: string): boolean {
+  const name = countryName.trim().toLowerCase();
+  return name === "jp" || name.includes("japan") || name.includes("日本");
+}
+
+function isAUCountry(countryName: string): boolean {
+  const name = countryName.trim().toLowerCase();
+  return name === "au" || name.includes("australia") || name.includes("澳大利亚");
 }
 
 // ── Stage pill ───────────────────────────────────────────────────────────────
@@ -172,14 +194,21 @@ function FlowRow({
 function CreateCrawlModal({
   open,
   countryId,
+  countryName,
   lang,
   onClose,
 }: {
   open: boolean;
   countryId: number;
+  countryName: string;
   lang: "en" | "zh";
   onClose: () => void;
 }) {
+  const usMode = isUSCountry(countryName);
+  const cnMode = isCNCountry(countryName);
+  const jpMode = isJPCountry(countryName);
+  const auMode = isAUCountry(countryName);
+  const supportedMode = usMode || cnMode || jpMode || auMode;
   const [source, setSource] = useState("all");
   const [priority, setPriority] = useState("normal");
   const [force, setForce] = useState(false);
@@ -187,6 +216,34 @@ function CreateCrawlModal({
   const [fillMissing, setFillMissing] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { mutate: startCrawl, isPending, isSuccess } = useStartCrawl();
+
+  const sourceOptions = usMode
+    ? [{ value: "nndss_api", label: "US CDC NNDSS API" }]
+    : cnMode
+      ? [
+        { value: "all", label: lang === "zh" ? "全部" : "All Sources" },
+        { value: "cdc_weekly", label: "CDC Weekly (English)" },
+        { value: "nhc", label: lang === "zh" ? "国家卫健委" : "NHC (Chinese)" },
+        { value: "pubmed", label: "PubMed RSS" },
+      ]
+      : jpMode
+        ? [
+          { value: "jp_idwr", label: "JP NIID Weekly" },
+          { value: "local", label: lang === "zh" ? "本地文件" : "Local File" },
+        ]
+        : auMode
+          ? [
+            { value: "all", label: lang === "zh" ? "全部" : "All" },
+            { value: "location", label: lang === "zh" ? "按地区" : "By Location" },
+            { value: "external", label: lang === "zh" ? "外部脚本" : "External Pipeline" },
+          ]
+      : [];
+
+  useEffect(() => {
+    if (sourceOptions.length > 0) {
+      setSource(sourceOptions[0].value);
+    }
+  }, [countryName]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -242,16 +299,23 @@ function CreateCrawlModal({
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
+            {!supportedMode && (
+              <div className="rounded-tremor-default border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+                {lang === "zh"
+                  ? "当前国家的自动爬取流程尚未配置，请先完成该国家 crawler 设计后再创建任务。"
+                  : "Automated crawl workflow is not configured for this country yet. Please complete crawler design first."}
+              </div>
+            )}
+
             {/* Data source selector */}
             <div>
               <label className={labelCls}>
                 {lang === "zh" ? "数据源" : "Data Source"}
               </label>
-              <select value={source} onChange={(e) => setSource(e.target.value)} className={inputCls}>
-                <option value="all">{lang === "zh" ? "全部" : "All Sources"}</option>
-                <option value="cdc_weekly">CDC Weekly (English)</option>
-                <option value="nhc">{lang === "zh" ? "国家卫健委" : "NHC (Chinese)"}</option>
-                <option value="pubmed">PubMed RSS</option>
+              <select value={source} onChange={(e) => setSource(e.target.value)} className={inputCls} disabled={!supportedMode}>
+                {sourceOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
               </select>
             </div>
 
@@ -272,11 +336,13 @@ function CreateCrawlModal({
                   className="h-4 w-4 rounded border-tremor-border text-tremor-brand focus:ring-tremor-brand-muted" />
                 {lang === "zh" ? "获取后自动处理数据" : "Process data after crawl"}
               </label>
-              <label className="flex items-center gap-2.5 text-sm text-tremor-content-emphasis dark:text-dark-tremor-content-emphasis cursor-pointer">
-                <input type="checkbox" checked={fillMissing} onChange={(e) => setFillMissing(e.target.checked)}
-                  className="h-4 w-4 rounded border-tremor-border text-tremor-brand focus:ring-tremor-brand-muted" />
-                {lang === "zh" ? "回填缺失月份" : "Backfill missing months"}
-              </label>
+              {!usMode && (
+                <label className="flex items-center gap-2.5 text-sm text-tremor-content-emphasis dark:text-dark-tremor-content-emphasis cursor-pointer">
+                  <input type="checkbox" checked={fillMissing} onChange={(e) => setFillMissing(e.target.checked)}
+                    className="h-4 w-4 rounded border-tremor-border text-tremor-brand focus:ring-tremor-brand-muted" />
+                  {lang === "zh" ? "回填缺失月份" : "Backfill missing months"}
+                </label>
+              )}
               <label className="flex items-center gap-2.5 text-sm text-tremor-content-emphasis dark:text-dark-tremor-content-emphasis cursor-pointer">
                 <input type="checkbox" checked={force} onChange={(e) => setForce(e.target.checked)}
                   className="h-4 w-4 rounded border-tremor-border text-tremor-brand focus:ring-tremor-brand-muted" />
@@ -304,7 +370,7 @@ function CreateCrawlModal({
               </button>
               <button
                 type="submit"
-                disabled={isPending}
+                disabled={isPending || !supportedMode}
                 className="flex items-center gap-2 rounded-tremor-default bg-tremor-brand px-4 py-2 text-sm font-medium text-tremor-brand-inverted transition hover:opacity-90 disabled:opacity-60 dark:bg-dark-tremor-brand dark:text-dark-tremor-brand-inverted"
               >
                 {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -321,6 +387,12 @@ function CreateCrawlModal({
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function SourcesFlowPage() {
   const { lang, countryId, countryName } = useAppStore();
+    const countrySupported =
+      isUSCountry(countryName) ||
+      isCNCountry(countryName) ||
+      isJPCountry(countryName) ||
+      isAUCountry(countryName);
+
   const { data: flows, isLoading } = useSourcesFlow(countryId);
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -354,7 +426,7 @@ export default function SourcesFlowPage() {
             </h1>
             <Text>{t(lang, "flow_subtitle")}</Text>
           </div>
-          {countryId && (
+          {countryId && countrySupported && (
             <button
               onClick={openModal}
               className="flex items-center gap-2 rounded-tremor-default bg-tremor-brand px-4 py-2 text-sm font-medium text-tremor-brand-inverted shadow-tremor-input transition hover:opacity-90 dark:bg-dark-tremor-brand dark:text-dark-tremor-brand-inverted"
@@ -365,6 +437,16 @@ export default function SourcesFlowPage() {
           )}
         </div>
       </div>
+
+      {countryId && !countrySupported && (
+        <Card>
+          <Text>
+            {lang === "zh"
+              ? "当前国家的自动爬取工作流尚未设计，flow 仅展示已入库数据来源。"
+              : "Automated crawl workflow is not designed for this country yet. Flow currently shows ingested source data only."}
+          </Text>
+        </Card>
+      )}
 
       {/* KPI row */}
       <Grid numItemsSm={2} numItemsLg={4} className="gap-4">
@@ -447,6 +529,7 @@ export default function SourcesFlowPage() {
         <CreateCrawlModal
           open={true}
           countryId={countryId}
+          countryName={countryName}
           lang={lang}
           onClose={closeModal}
         />

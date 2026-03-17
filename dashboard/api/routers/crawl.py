@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-import asyncio
 from typing import Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,7 +29,7 @@ def _cancel_meta(task: Task) -> tuple[bool, Optional[str]]:
 class CrawlStartRequest(BaseModel):
     """Body for POST /crawl/start."""
     country_id: int = Field(..., ge=1, description="Country DB id")
-    source: str = Field("all", description="Crawl source: cdc_weekly / nhc / pubmed / all")
+    source: str = Field("all", description="Crawl source: nndss_api / cdc_weekly / nhc / pubmed / all")
     force: bool = Field(False, description="Ignore DB and re-crawl everything")
     process: bool = Field(True, description="Also run data processing after fetch")
     save_raw: bool = Field(True, description="Archive original HTML pages")
@@ -48,13 +47,12 @@ class TaskExecuteRequest(BaseModel):
 @router.post("/crawl/start", response_model=TaskOut, status_code=201)
 async def start_crawl(
     body: CrawlStartRequest,
-    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Create a crawl task AND immediately start executing it in the background.
+    Create a crawl task and enqueue it for external worker execution.
 
-    Returns the task object right away (status = pending → will move to running).
+    Returns quickly with task status set to queued.
     """
     # Resolve country code from country_id
     country = (await db.execute(
@@ -98,8 +96,8 @@ async def start_crawl(
         },
     )
 
-    # Schedule background execution
-    background_tasks.add_task(_execute_in_background, task.task_uuid)
+    # Queue the task for the external worker process.
+    task = await task_manager.update_task_status(task.task_uuid, TaskStatus.QUEUED) or task
 
     return _task_to_out(task)
 
@@ -107,11 +105,10 @@ async def start_crawl(
 @router.post("/tasks/{task_uuid}/execute", response_model=TaskOut, status_code=202)
 async def execute_existing_task(
     task_uuid: str,
-    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Execute an existing pending/failed task in the background.
+    Queue an existing task for external worker execution.
     """
     task = (await db.execute(
         select(Task).where(Task.task_uuid == task_uuid)
@@ -124,17 +121,9 @@ async def execute_existing_task(
             f"Task status is '{task.status}' — only pending/queued/failed/cancelled tasks can be executed",
         )
 
-    background_tasks.add_task(_execute_in_background, task.task_uuid)
+    task = await task_manager.update_task_status(task.task_uuid, TaskStatus.QUEUED) or task
 
     return _task_to_out(task)
-
-
-# ── Helpers ───────────────────────────────────────────────────────────────────
-
-async def _execute_in_background(task_uuid: str) -> None:
-    """Wrap the task executor; import lazily to avoid circular imports."""
-    from src.services.task_executor import execute_task_background
-    await execute_task_background(task_uuid)
 
 
 def _task_to_out(task: Task) -> TaskOut:

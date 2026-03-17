@@ -21,15 +21,22 @@ const metaByCode = Object.fromEntries(
 const ALL_COUNTRIES = [
   { code: 'CN', name: 'China',          status: 'Supported' },
   { code: 'TH', name: 'Thailand',       status: 'Scheduled' },
-  { code: 'AU', name: 'Australia',      status: 'Scheduled' },
-  { code: 'US', name: 'United States',  status: 'Scheduled' },
+  { code: 'AU', name: 'Australia',      status: 'Supported' },
+  { code: 'US', name: 'United States',  status: 'Supported' },
   { code: 'GB', name: 'United Kingdom', status: 'Scheduled' },
   { code: 'KR', name: 'South Korea',    status: 'Scheduled' },
   { code: 'NZ', name: 'New Zealand',    status: 'Scheduled' },
   { code: 'SE', name: 'Sweden',         status: 'Scheduled' },
-  { code: 'JP', name: 'Japan',          status: 'Scheduled' },
+  { code: 'JP', name: 'Japan',          status: 'Supported' },
   { code: 'SG', name: 'Singapore',      status: 'Scheduled' },
 ];
+
+const ORDERED_COUNTRIES = [...ALL_COUNTRIES].sort((a, b) => {
+  const aSupported = Boolean(metaByCode[a.code]) || a.status === 'Supported';
+  const bSupported = Boolean(metaByCode[b.code]) || b.status === 'Supported';
+  if (aSupported === bSupported) return 0;
+  return aSupported ? -1 : 1;
+});
 
 const FLAGS: Record<string, string> = {
   CN: '🇨🇳', TH: '🇹🇭', AU: '🇦🇺', US: '🇺🇸', GB: '🇬🇧',
@@ -89,7 +96,7 @@ const FLAGS: Record<string, string> = {
     </h2>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-      {ALL_COUNTRIES.map((c) => {
+      {ORDERED_COUNTRIES.map((c) => {
         const m = metaByCode[c.code];
         if (m) {
           return (
@@ -100,6 +107,18 @@ const FLAGS: Record<string, string> = {
               totalDeaths={m.total_deaths}
               diseaseCount={m.disease_count}
               dateRange={m.date_range}
+            />
+          );
+        }
+
+        if (c.status === 'Supported') {
+          return (
+            <CountryCard
+              code={c.code}
+              name={c.name}
+              totalCases={0}
+              totalDeaths={0}
+              diseaseCount={0}
             />
           );
         }

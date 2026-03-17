@@ -1,6 +1,7 @@
 services:
   postgres:
     image: timescale/timescaledb-ha:pg15-latest
+    restart: unless-stopped
     environment:
       POSTGRES_DB: globalid
       POSTGRES_USER: globalid
@@ -19,6 +20,7 @@ services:
 
   redis:
     image: redis:7-alpine
+    restart: unless-stopped
     command: redis-server --appendonly yes
     ports:
       - "${REDIS_PORT:-6379}:6379"
@@ -34,6 +36,7 @@ services:
 
   qdrant:
     image: qdrant/qdrant:latest
+    restart: unless-stopped
     ports:
       - "${QDRANT_HTTP_PORT:-6333}:6333"
       - "${QDRANT_GRPC_PORT:-6334}:6334"
@@ -89,8 +92,11 @@ services:
 
 volumes:
   postgres_data:
+    name: globalid_postgres_data
   redis_data:
+    name: globalid_redis_data
   qdrant_data:
+    name: globalid_qdrant_data
 
 networks:
   globalid-network:

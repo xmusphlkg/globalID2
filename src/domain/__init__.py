@@ -22,6 +22,7 @@ from .standard_disease import StandardDisease
 from .disease_mapping import DiseaseMapping
 from .disease_learning_suggestion import DiseaseLearningSuggestion
 from .country_scope import CountryScope
+from .population_record import PopulationRecord
 from .ai_model_center import AIProviderConfig, AIModelConfig
 
 __all__ = [
@@ -54,6 +55,7 @@ __all__ = [
     "DiseaseMapping",
     "DiseaseLearningSuggestion",
     "CountryScope",
+    "PopulationRecord",
     "AIProviderConfig",
     "AIModelConfig",
 ]

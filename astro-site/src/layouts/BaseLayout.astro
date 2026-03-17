@@ -67,6 +67,16 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
   </head>
   <body class="min-h-screen flex flex-col">
     <Header />
+    <div class="site-update-banner border-b" role="status" aria-live="polite">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 text-sm font-medium text-center">
+        <span
+          data-lang-en="Data is currently being updated. Some features may be temporarily unstable."
+          data-lang-zh="网站正在更新数据，部分功能可能暂时不稳定。"
+        >
+          Data is currently being updated. Some features may be temporarily unstable.
+        </span>
+      </div>
+    </div>
     <main class="flex-1">
       <slot />
     </main>

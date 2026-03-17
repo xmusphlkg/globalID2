@@ -4,7 +4,7 @@ GlobalID V2 Data Processor
 数据处理器，整合爬虫、解析器、标准化器的完整数据处理流程
 """
 import asyncio
-from datetime import datetime
+from datetime import datetime, time, timezone
 from pathlib import Path
 from typing import Dict, List, Optional
 import hashlib
@@ -14,6 +14,7 @@ import os
 import pandas as pd
 from bs4 import BeautifulSoup
 import asyncpg
+from sqlalchemy import text
 
 from src.core import get_logger
 from src.core.database import get_db
@@ -505,6 +506,14 @@ class DataProcessor:
                 inserted_count = 0
                 updated_count = 0
                 skipped_count = 0
+
+                def _normalize_report_time(value) -> datetime:
+                    """Use report calendar day directly and anchor it to UTC midnight."""
+                    ts = pd.to_datetime(value, errors='coerce')
+                    if pd.isna(ts):
+                        raise ValueError(f"Invalid report time: {value}")
+                    report_date = ts.date()
+                    return datetime.combine(report_date, time.min, tzinfo=timezone.utc)
                 
                 # 用于跟踪同一批次中已处理的记录，避免重复插入导致 UniqueViolationError
                 processed_keys = set()
@@ -533,9 +542,7 @@ class DataProcessor:
                             continue
                         
                         # 检查是否在此批次中已处理
-                        record_time = pd.to_datetime(row['Date'])
-                        if record_time.tzinfo is None:
-                            record_time = record_time.tz_localize('UTC')
+                        record_time = _normalize_report_time(row['Date'])
                         record_key = (record_time, disease.id, country.id)
                         if record_key in processed_keys:
                             logger.debug(f"跳过重复记录: {record_key}")
@@ -544,9 +551,7 @@ class DataProcessor:
                         processed_keys.add(record_key)
                         
                         # 检查记录是否已存在（基于复合主键：time, disease_id, country_id）
-                        record_time = pd.to_datetime(row['Date'])
-                        if record_time.tzinfo is None:
-                            record_time = record_time.tz_localize('UTC')
+                        record_time = _normalize_report_time(row['Date'])
                         existing_query = select(DiseaseRecord).where(
                             DiseaseRecord.time == record_time,
                             DiseaseRecord.disease_id == disease.id,
@@ -592,6 +597,7 @@ class DataProcessor:
                 max_retries = 3
                 for attempt in range(max_retries):
                     try:
+                        dedup_deleted = await self._cleanup_adjacent_duplicate_snapshots(db, country.id)
                         await db.commit()
                         break
                     except Exception as e:
@@ -608,12 +614,46 @@ class DataProcessor:
                 
                 if inserted_count > 0 or updated_count > 0:
                     logger.info(f"Database operation completed: inserted {inserted_count}, updated {updated_count} record(s)")
+                    if dedup_deleted > 0:
+                        logger.info(f"Post-import cleanup removed {dedup_deleted} adjacent duplicate snapshot record(s)")
                 else:
                     logger.warning("No valid records to save to database")
                     
         except Exception as e:
             logger.error(f"保存到数据库失败: {e}")
             raise
+
+    async def _cleanup_adjacent_duplicate_snapshots(self, db, country_id: int) -> int:
+        """Remove adjacent-day duplicate snapshots with identical counts for same disease/country."""
+        result = await db.execute(
+            text(
+                """
+                WITH candidate AS (
+                    SELECT
+                        a.ctid AS old_ctid,
+                        b.ctid AS new_ctid,
+                        EXTRACT(DAY FROM b.time::date) AS new_day
+                    FROM disease_records a
+                    JOIN disease_records b
+                        ON b.country_id = a.country_id
+                        AND b.disease_id = a.disease_id
+                        AND b.time::date = a.time::date + 1
+                        AND COALESCE(b.cases, -1) = COALESCE(a.cases, -1)
+                        AND COALESCE(b.deaths, -1) = COALESCE(a.deaths, -1)
+                    WHERE a.country_id = :country_id
+                ),
+                targets AS (
+                    SELECT CASE WHEN new_day = 1 THEN old_ctid ELSE new_ctid END AS del_ctid
+                    FROM candidate
+                )
+                DELETE FROM disease_records d
+                USING targets t
+                WHERE d.ctid = t.del_ctid
+                """
+            ),
+            {"country_id": country_id},
+        )
+        return result.rowcount or 0
     
     def merge_data(
         self,

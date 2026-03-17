@@ -37,6 +37,10 @@ def _scope_from_data_source(data_source: Optional[str]) -> str:
     exact = {
         "china cdc: notifiable infectious diseases reports": "cdc_weekly",
         "china cdc weekly: notifiable infectious diseases reports": "cdc_weekly",
+        "us cdc nndss": "nndss_api",
+        "us cdc nndss weekly": "nndss_api",
+        "japan niid weekly sentinel": "jp_weekly",
+        "jp niid weekly sentinel": "jp_weekly",
         "gov data": "nhc",
         "pubmed": "pubmed",
     }
@@ -46,6 +50,10 @@ def _scope_from_data_source(data_source: Optional[str]) -> str:
     # Fallback heuristics for historical / future labels.
     if "pubmed" in text:
         return "pubmed"
+    if "niid" in text or "japan" in text:
+        return "jp_weekly"
+    if "nndss" in text:
+        return "nndss_api"
     if "gov" in text or "ndcpa" in text or "卫健" in text or "疾控局" in text:
         return "nhc"
     if "cdc" in text or "weekly" in text:
@@ -62,6 +70,10 @@ def _canonical_data_source_label(data_source: Optional[str]) -> str:
 
 
 def _scope_display_label(scope: str) -> str:
+    if scope == "nndss_api":
+        return "US CDC NNDSS"
+    if scope == "jp_weekly":
+        return "JP NIID Weekly"
     if scope == "pubmed":
         return "PubMed"
     if scope == "nhc":
@@ -77,7 +89,7 @@ def _scope_from_task(task: Task) -> str:
     source = (inp.get("source") or "").strip().lower() if isinstance(inp, dict) else ""
     if source == "gov":
         source = "nhc"
-    if source in {"cdc_weekly", "nhc", "pubmed", "all"}:
+    if source in {"nndss_api", "jp_weekly", "cdc_weekly", "nhc", "pubmed", "all"}:
         return source
 
     # Backward compatibility: old tasks only stored data_source text.
@@ -87,6 +99,10 @@ def _scope_from_task(task: Task) -> str:
     name = (task.task_name or "").lower()
     if "pubmed" in name:
         return "pubmed"
+    if "niid" in name or "japan" in name:
+        return "jp_weekly"
+    if "nndss" in name:
+        return "nndss_api"
     if "gov" in name or "nhc" in name:
         return "nhc"
     if "cdc" in name or "weekly" in name:

@@ -16,7 +16,7 @@ import sys
 import json
 import argparse
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, time, timezone
 import pandas as pd
 from typing import Dict, Set
 
@@ -333,6 +333,14 @@ class DatabaseRebuilder:
         logger.info(f"   • Standard Diseases: {self.standard_file.name}")
         logger.info(f"   • Disease Mappings:  {self.mapping_file.name} (country: {self.country_code})")
         logger.info(f"   • Historical Data:   {self.history_file.name}")
+
+    @staticmethod
+    def _normalize_report_time(value) -> datetime | None:
+        """Use report calendar day directly and anchor it to UTC midnight."""
+        ts = pd.to_datetime(value, errors='coerce')
+        if pd.isna(ts):
+            return None
+        return datetime.combine(ts.date(), time.min, tzinfo=timezone.utc)
         
     def _confirm_rebuild(self):
         """Ask user for confirmation"""
@@ -343,35 +351,101 @@ class DatabaseRebuilder:
         except (KeyboardInterrupt, EOFError):
             print()  # new line
             return False
+
+    async def _get_country_id(self, db):
+        """Resolve country_id for the current country code."""
+        result = await db.execute(
+            text("SELECT id FROM countries WHERE code = :code"),
+            {"code": self.country_code},
+        )
+        row = result.fetchone()
+        return row[0] if row else None
+
+    async def _count_country_records(self, db, table: str):
+        """Count rows affected by a scoped rebuild action."""
+        if table == "disease_records":
+            country_id = await self._get_country_id(db)
+            if country_id is None:
+                return 0
+            result = await db.execute(
+                text("SELECT COUNT(*) FROM disease_records WHERE country_id = :country_id"),
+                {"country_id": country_id},
+            )
+            return result.scalar() or 0
+
+        if table == "disease_mappings":
+            result = await db.execute(
+                text(
+                    "SELECT COUNT(*) FROM disease_mappings "
+                    "WHERE split_part(country_code, '_', 1) = :code"
+                ),
+                {"code": self.country_code},
+            )
+            return result.scalar() or 0
+
+        if table == "disease_learning_suggestions":
+            result = await db.execute(
+                text("SELECT COUNT(*) FROM disease_learning_suggestions WHERE country_code = :code"),
+                {"code": self.country_code},
+            )
+            return result.scalar() or 0
+
+        result = await db.execute(text(f"SELECT COUNT(*) FROM {table}"))
+        return result.scalar() or 0
+
+    async def _delete_country_records(self, db, table: str):
+        """Delete only the rows owned by the current country scope."""
+        if table == "disease_records":
+            country_id = await self._get_country_id(db)
+            if country_id is None:
+                return 0
+            result = await db.execute(
+                text("DELETE FROM disease_records WHERE country_id = :country_id"),
+                {"country_id": country_id},
+            )
+            return result.rowcount or 0
+
+        if table == "disease_mappings":
+            result = await db.execute(
+                text(
+                    "DELETE FROM disease_mappings "
+                    "WHERE split_part(country_code, '_', 1) = :code"
+                ),
+                {"code": self.country_code},
+            )
+            return result.rowcount or 0
+
+        if table == "disease_learning_suggestions":
+            result = await db.execute(
+                text("DELETE FROM disease_learning_suggestions WHERE country_code = :code"),
+                {"code": self.country_code},
+            )
+            return result.rowcount or 0
+
+        result = await db.execute(text(f"DELETE FROM {table}"))
+        return result.rowcount or 0
     
     async def clear_data(self, db):
         """Clear all disease-related data"""
-        # Delete in proper order to respect foreign key constraints
+        # In a multi-country database, clearing must stay scoped to the target country.
         if self.rebuild_mode == 'history':
-            # 仅清空历史数据表
             tables = ["disease_records"]
         elif self.rebuild_mode == 'mappings':
-            # 仅清空映射相关表，保留 diseases 表以避免级联删除历史数据
-            # diseases 表会通过 sync_diseases_table 进行 UPSERT 更新
-            tables = [
-                "disease_mappings",
-                "standard_diseases"
-            ]
+            tables = ["disease_mappings"]
         else:
-            # 完整重建 或 自定义模式：清空所有表
             tables = [
                 "disease_records",
-                "diseases", 
                 "disease_mappings",
-                "standard_diseases"
+                "disease_learning_suggestions",
             ]
         
         for table in tables:
-            result = await db.execute(text(f"SELECT COUNT(*) FROM {table}"))
-            count = result.scalar()
-            
-            await db.execute(text(f"DELETE FROM {table}"))
-            logger.info(f"  ✓ Cleared {table}: deleted {count:,} records")
+            count = await self._count_country_records(db, table)
+            deleted = await self._delete_country_records(db, table)
+            logger.info(
+                f"  ✓ Cleared {table} for {self.country_code}: deleted {deleted:,} records"
+                + (f" (matched {count:,})" if count != deleted else "")
+            )
         
         await db.commit()
         logger.info("✓ Data clearing completed")
@@ -814,12 +888,8 @@ class DatabaseRebuilder:
                 
                 # Parse date
                 date_str = str(row[date_col])
-                try:
-                    if '/' in date_str:
-                        date_obj = datetime.strptime(date_str, '%Y/%m/%d')
-                    else:
-                        date_obj = datetime.strptime(date_str, '%Y-%m-%d')
-                except:
+                date_obj = self._normalize_report_time(date_str)
+                if date_obj is None:
                     skipped += 1
                     continue
                 
@@ -913,7 +983,43 @@ class DatabaseRebuilder:
                 logger.warning(f"    ... and {len(error_diseases) - 20} more")
         
         await db.commit()
+        cleaned = await self._cleanup_adjacent_duplicate_snapshots(db, country_id)
+        if cleaned > 0:
+            await db.commit()
+            logger.info(f"✓ Removed {cleaned:,} adjacent duplicate snapshot record(s)")
         logger.info(f"✓ Imported {inserted:,} historical records (skipped {skipped:,})")
+
+    async def _cleanup_adjacent_duplicate_snapshots(self, db, country_id: int) -> int:
+        """Remove adjacent-day duplicate snapshots with identical counts for same disease/country."""
+        result = await db.execute(
+            text(
+                """
+                WITH candidate AS (
+                    SELECT
+                        a.ctid AS old_ctid,
+                        b.ctid AS new_ctid,
+                        EXTRACT(DAY FROM b.time::date) AS new_day
+                    FROM disease_records a
+                    JOIN disease_records b
+                        ON b.country_id = a.country_id
+                        AND b.disease_id = a.disease_id
+                        AND b.time::date = a.time::date + 1
+                        AND COALESCE(b.cases, -1) = COALESCE(a.cases, -1)
+                        AND COALESCE(b.deaths, -1) = COALESCE(a.deaths, -1)
+                    WHERE a.country_id = :country_id
+                ),
+                targets AS (
+                    SELECT CASE WHEN new_day = 1 THEN old_ctid ELSE new_ctid END AS del_ctid
+                    FROM candidate
+                )
+                DELETE FROM disease_records d
+                USING targets t
+                WHERE d.ctid = t.del_ctid
+                """
+            ),
+            {"country_id": country_id},
+        )
+        return result.rowcount or 0
     
     async def _batch_insert(self, db, batch_data):
         """Batch insert data"""
@@ -1033,21 +1139,24 @@ class DatabaseRebuilder:
         # 1. 删除空白建议
         result = await db.execute(text(
             "DELETE FROM disease_learning_suggestions "
-            "WHERE country_code = 'CN' AND COALESCE(local_name, '') = ''"
-        ))
+            "WHERE country_code = :code AND COALESCE(local_name, '') = ''"
+        ), {"code": self.country_code})
         blank_count = result.rowcount
 
-        # 2. 删除已有CN_EN映射的英文建议（清理所有country_code）
+        variant_scope = f"{self.country_code}_EN"
+
+        # 2. 删除已有语言变体映射的建议（例如 CN_EN / US_EN）
         result = await db.execute(text('''
             DELETE FROM disease_learning_suggestions
             WHERE id IN (
                 SELECT dls.id
                 FROM disease_learning_suggestions dls
                 JOIN disease_mappings dm ON dls.local_name = dm.local_name
-                WHERE dm.country_code = 'CN_EN'
+                WHERE dm.country_code = :variant_scope
+                  AND dls.country_code = :code
                   AND dls.status = 'pending'
             )
-        '''))
+        '''), {"variant_scope": variant_scope, "code": self.country_code})
         en_count = result.rowcount
 
         await db.commit()
@@ -1059,8 +1168,8 @@ class DatabaseRebuilder:
         # 查看剩余
         result = await db.execute(text(
             "SELECT COUNT(*) FROM disease_learning_suggestions "
-            "WHERE country_code = 'CN' AND status = 'pending'"
-        ))
+            "WHERE country_code = :code AND status = 'pending'"
+        ), {"code": self.country_code})
         remaining = result.scalar()
         logger.info(f'  📊 Remaining pending suggestions: {remaining} records')
 
@@ -1076,7 +1185,8 @@ class DatabaseRebuilder:
         # Mapping relationships count
         result = await db.execute(text("""
             SELECT COUNT(*), COUNT(DISTINCT disease_id) 
-            FROM disease_mappings WHERE country_code = :code
+            FROM disease_mappings
+            WHERE split_part(country_code, '_', 1) = :code
         """), {"code": self.country_code})
         map_total, map_diseases = result.fetchone()
         logger.info(f"  • Disease Mappings ({self.country_code}): {map_total:,} mappings covering {map_diseases:,} diseases")
@@ -1094,7 +1204,10 @@ class DatabaseRebuilder:
                 MIN(time) as earliest,
                 MAX(time) as latest
             FROM disease_records
-        """))
+            WHERE country_id = (
+                SELECT id FROM countries WHERE code = :code
+            )
+        """), {"code": self.country_code})
         rec = result.fetchone()
         logger.info(f"  • Historical Records: {rec[0]:,} records")
         logger.info(f"  • Disease Coverage: {rec[1]:,} diseases")

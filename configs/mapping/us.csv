@@ -1,15 +1,74 @@
 disease_id,local_name,local_code,category,aliases,data_source,notes
-D004,COVID-19,COVID-19,Notifiable,Coronavirus Disease 2019|SARS-CoV-2|2019-nCoV,US CDC,
-D005,AIDS,AIDS,Notifiable,HIV|Human Immunodeficiency Virus|Acquired Immunodeficiency Syndrome,US CDC,
-D006,Hepatitis,Hepatitis,Notifiable,Viral Hepatitis,US CDC,
-D007,Hepatitis A,Hepatitis A,Notifiable,Hep A,US CDC,
-D008,Hepatitis B,Hepatitis B,Notifiable,Hep B,US CDC,
-D009,Hepatitis C,Hepatitis C,Notifiable,Hep C|HCV,US CDC,
-D017,Measles,Measles,Notifiable,Rubeola,US CDC,
-D019,Rabies,Rabies,Notifiable,Hydrophobia,US CDC,
-D021,Dengue,Dengue Fever,Notifiable,Breakbone Fever,US CDC,
+D001,Plague,Plague,Notifiable,,US CDC,
+D002,Cholera,Cholera,Notifiable,"Cholera (toxigenic Vibrio cholerae O1 or O139)",US CDC,
+D004,COVID-19,COVID-19,Notifiable,Coronavirus Disease 2019|SARS-CoV-2|2019-nCoV,US CDC,No authoritative national weekly case-total label in current feed
+D005,AIDS,AIDS,Notifiable,HIV|Human Immunodeficiency Virus|Acquired Immunodeficiency Syndrome,US CDC,No direct TOTAL match in current weekly feed
+D006,Hepatitis,Hepatitis,Notifiable,Viral Hepatitis,US CDC,Aggregate fallback only
+D007,Hepatitis A,Hepatitis A,Notifiable,"Hep A|Hepatitis A, acute|Hepatitis, A, acute",US CDC,Keep acute primary label only
+D008,Hepatitis B,Hepatitis B,Notifiable,"Hep B|Hepatitis B, acute",US CDC,Keep acute primary label only
+D009,Hepatitis C,Hepatitis C,Notifiable,"Hep C|HCV|Hepatitis C, acute, Confirmed|Hepatitis C, acute, confirmed",US CDC,Keep acute primary label only
+D013,Poliomyelitis,Poliomyelitis,Notifiable,"Poliomyelitis, paralytic",US CDC,Keep paralytic primary label only
+D017,Measles,Measles,Notifiable,Rubeola,US CDC,Removed imported/indigenous subtype split
+D019,Rabies,Rabies,Notifiable,"Hydrophobia|Rabies, Human|Rabies, human",US CDC,Keep human rabies only
+D021,Dengue,Dengue,Notifiable,"Dengue Fever|Breakbone Fever|Dengue",US CDC,Keep plain dengue label only
+D023,Anthrax,Anthrax,Notifiable,,US CDC,
+D026,Typhoid and Paratyphoid fever,Typhoid and Paratyphoid fever,Notifiable,Salmonella Paratyphi infection,US CDC,Keep paratyphi surveillance label only
 D025,Tuberculosis,Tuberculosis,Notifiable,TB|Mycobacterium tuberculosis,US CDC,
-D034,Syphilis,Syphilis,Notifiable,Treponema pallidum,US CDC,
+D028,Pertussis,Pertussis,Notifiable,Whooping cough,US CDC,
+D032,Brucellosis,Brucellosis,Notifiable,,US CDC,
+D033,Gonorrhea,Gonorrhea,Notifiable,,US CDC,
+D034,Syphilis,Syphilis,Notifiable,Treponema pallidum,US CDC,Removed congenital/primary-secondary subtype split
+D035,Leptospirosis,Leptospirosis,Notifiable,,US CDC,
 D037,Malaria,Malaria,Notifiable,Plasmodium,US CDC,
-D038,Influenza,Influenza,Notifiable,Flu|Seasonal Flu,US CDC,
-D054,Varicella,Chickenpox,Notifiable,Varicella|Varicella-Zoster,US CDC,
+D038,Influenza,Influenza,Notifiable,Flu|Seasonal Flu,US CDC,No authoritative seasonal influenza case-total label in current feed
+D039,Mumps,Mumps,Notifiable,,US CDC,
+D040,Rubella,Rubella,Notifiable,German measles,US CDC,Removed congenital syndrome subtype
+D042,Leprosy,Leprosy,Notifiable,"Leprosy (Hansen's disease)|Hansen's disease",US CDC,Keep Hansen's disease label as the US surveillance synonym
+D050,Ebola,Ebola,Notifiable,"Ebola hemorrhagic fever",US CDC,Keep direct disease label only
+D051,Zika,Zika virus disease,Notifiable,"Zika virus disease, non-congenital|Zika virus",US CDC,Keep non-congenital primary label only
+D052,Chikungunya,Chikungunya,Notifiable,"Chikungunya virus diseases|Arboviral diseases, Chikungunya virus disease",US CDC,Keep direct disease label only
+D053,Lassa,Lassa,Notifiable,"Lassa fever",US CDC,Keep direct disease label only
+D054,Varicella,Varicella,Notifiable,"Chickenpox|Varicella|Varicella-Zoster|Varicella (Chickenpox)|Varicella disease",US CDC,
+D059,Yellow fever,Yellow fever,Notifiable,,US CDC,
+D064,Smallpox,Smallpox,Notifiable,,US CDC,
+D065,Monkeypox,Mpox,Notifiable,Mpox|Monkeypox,US CDC,
+D090,Babesiosis,Babesiosis,Notifiable,,US CDC,
+D091,Botulism,Botulism,Notifiable,,US CDC,Removed foodborne/infant/other subtype split
+D092,Campylobacteriosis,Campylobacteriosis,Notifiable,,US CDC,
+D093,Chancroid,Chancroid,Notifiable,,US CDC,
+D094,Chlamydia trachomatis infection,Chlamydia trachomatis infection,Notifiable,,US CDC,
+D095,Coccidioidomycosis,Coccidioidomycosis,Notifiable,"Coccidioidomycosis, Total|Coccidioidomycosis, total",US CDC,Keep total label only
+D096,Cryptosporidiosis,Cryptosporidiosis,Notifiable,,US CDC,
+D097,Cyclosporiasis,Cyclosporiasis,Notifiable,,US CDC,
+D098,Ehrlichiosis and Anaplasmosis,Ehrlichiosis and Anaplasmosis,Notifiable,,US CDC,Removed species-level subtype split
+D099,Giardiasis,Giardiasis,Notifiable,,US CDC,
+D100,Haemophilus influenzae,Haemophilus influenzae,Notifiable,"Haemophilus influenzae, invasive disease, All ages, all serotypes|Haemophilus influenzae",US CDC,Keep all-ages total label only
+D101,Candida auris infection,Candida auris,Notifiable,"Candida auris|Candida auris, clinical",US CDC,Keep clinical case label only and leave screening labels unmapped
+D102,Hantavirus infection,Hantavirus infection,Notifiable,Hantavirus pulmonary syndrome,US CDC,Keep hantavirus pulmonary syndrome label only
+D104,Influenza-associated mortality,Influenza-associated mortality,Notifiable,Influenza-associated pediatric mortality,US CDC,Keep pediatric mortality surveillance label only
+D103,Hemolytic uremic syndrome,Hemolytic uremic syndrome,Notifiable,"Hemolytic uremic syndrome post-diarrheal|Hemolytic uremic syndrome postdiarrheal",US CDC,
+D105,Shigellosis,Shigellosis,Notifiable,,US CDC,
+D106,Invasive pneumococcal disease,Invasive pneumococcal disease,Notifiable,"Invasive pneumococcal disease, all ages, Confirmed|Invasive pneumococcal disease",US CDC,Keep all-ages primary label only
+D107,Legionellosis,Legionellosis,Notifiable,,US CDC,
+D108,Listeriosis,Listeriosis,Notifiable,"Listeriosis confirmed|Listeriosis, Confirmed",US CDC,Keep confirmed primary label only
+D109,Lyme disease,Lyme disease,Notifiable,,US CDC,
+D110,Meningococcal disease,Meningococcal disease,Notifiable,"Meningococcal disease, All serogroups|Meningococcal disease",US CDC,Keep all-serogroups total label only
+D016,Novel influenza A,Novel influenza A,Notifiable,"Novel Influenza A virus infections, Total|Novel influenza A|Novel Influenza A virus infections",US CDC,Canonicalized from deprecated D111
+D112,Psittacosis,Psittacosis,Notifiable,"Psittacosis (Ornithosis)",US CDC,
+D113,Q fever,Q fever,Notifiable,"Q fever, Total|Q fever, total",US CDC,Keep total label only
+D114,Salmonellosis,Salmonellosis,Notifiable,"Salmonellosis (excluding S. Typhi infection and S. Paratyphi infection)|Salmonellosis (excluding Salmonella Typhi infection and Salmonella Paratyphi infection)",US CDC,
+D115,Shiga toxin-producing Escherichia coli infection,STEC,Notifiable,"Shiga toxin-producing Escherichia coli (STEC)|STEC",US CDC,
+D116,Melioidosis,Melioidosis,Notifiable,,US CDC,
+D117,Cronobacter invasive infection,Cronobacter invasive infection,Notifiable,"Cronobacter invasive infection, infants, Confirmed|Cronobacter invasive infection, infants, Probable",US CDC,Keep infant invasive infection labels only
+D120,Tetanus,Tetanus,Notifiable,,US CDC,
+D121,Toxic shock syndrome,Toxic shock syndrome,Notifiable,,US CDC,Removed streptococcal/non-streptococcal subtype split
+D122,Trichinellosis,Trichinellosis,Notifiable,,US CDC,
+D123,Tularemia,Tularemia,Notifiable,,US CDC,
+D124,Typhoid fever,Typhoid fever,Notifiable,"Salmonella Typhi infection|Salmonella enterica Typhi (S.Typhi) infection",US CDC,Keep typhi primary label only
+D126,Vibriosis,Vibriosis,Notifiable,"Vibriosis (any species of the family Vibrionaceae, other than toxigenic Vibrio cholerae O1 or O139), Confirmed|Vibriosis, confirmed",US CDC,Keep confirmed primary label only
+D127,Viral hemorrhagic fevers,Viral hemorrhagic fevers,Notifiable,,US CDC,Removed per-virus subtype split
+D128,West Nile virus,West Nile virus,Notifiable,"Arboviral diseases, West Nile virus disease",US CDC,Keep direct disease label only
+D129,"Oropouche, non-congenital",Oropouche,Notifiable,Oropouche virus disease|Oropouche,US CDC,Keep non-congenital disease label as the authoritative US weekly series
+D131,Vancomycin-intermediate Staphylococcus aureus infection,VISA,Notifiable,"Vancomycin-intermediate Staphylococcus aureus|Vancomycin-intermediate Staphylococcus aureus (VISA)|VISA",US CDC,
+D132,Vancomycin-resistant Staphylococcus aureus infection,VRSA,Notifiable,"Vancomycin-resistant Staphylococcus aureus|Vancomycin-resistant Staphylococcus aureus (VRSA)|VRSA",US CDC,
+D133,Carbapenemase-producing organism infection,CPO,Notifiable,"Carbapenemase-Producing Organisms (CPO)|Carbapenemase-Producing Organisms (CPO), Total|Carbapenemase-Producing Organisms (CPO),Total|Carbapenemase-producing carbapenem-resistant Enterobacteriaceae",US CDC,Aggregate CDC resistance surveillance label
