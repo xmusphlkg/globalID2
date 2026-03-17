@@ -14,7 +14,7 @@ export interface Country {
 
 export function getCountryDisplayName(country: Country, lang: "en" | "zh") {
   if (lang === "zh") {
-    return country.name_local || country.name || country.name_en;
+    return country.name_en || country.name || country.name_local || country.code;
   }
 
   return country.name_en || country.name || country.name_local || country.code;
