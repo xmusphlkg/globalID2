@@ -4,6 +4,7 @@ GlobalID V2 Core Configuration
 统一的配置管理，支持环境变量和配置文件
 """
 from functools import lru_cache
+import json
 from pathlib import Path
 from typing import Any
 
@@ -157,13 +158,44 @@ class AISettings(_BaseEnvSettings):
 class EmailSettings(BaseSettings):
     """邮件配置"""
 
-    smtp_host: str = Field(default="smtp.gmail.com", description="SMTP服务器")
-    smtp_port: int = Field(default=587, description="SMTP端口")
-    smtp_user: str = Field(default="", description="SMTP用户名")
-    smtp_password: str = Field(default="", description="SMTP密码")
-    from_address: str = Field(default="", description="发送方邮箱")
-    use_tls: bool = Field(default=True, description="使用TLS")
-    default_recipients: list[str] = Field(default_factory=list, description="默认收件人列表")
+    default_recipients_raw: str = Field(default="", description="默认收件人，逗号分隔")
+
+    @property
+    def default_recipients(self) -> list[str]:
+        return [item.strip() for item in self.default_recipients_raw.split(",") if item.strip()]
+
+
+class AutomationSettings(_BaseEnvSettings):
+    """数据流自动化与失败通知配置"""
+
+    enabled: bool = Field(default=False, description="是否启用自动化调度")
+    timezone: str = Field(default="UTC", description="自动化调度时区")
+    poll_interval_seconds: int = Field(default=30, ge=5, description="自动化轮询间隔秒数")
+    default_retry_threshold: int = Field(default=3, ge=1, le=20, description="失败告警触发阈值")
+    jobs_json: str = Field(default="[]", description="自动化任务 JSON 列表")
+    admin_emails_raw: str = Field(default="", description="管理员邮箱，逗号分隔")
+    graph_enabled: bool = Field(default=False, description="是否启用 Microsoft Graph 邮件通知")
+    graph_tenant_id: str = Field(default="", description="Azure tenant id")
+    graph_client_id: str = Field(default="", description="Azure client id")
+    graph_client_secret: str = Field(default="", description="Azure client secret")
+    graph_sender_user_id: str = Field(default="", description="Microsoft Graph 发件人 user id")
+
+    @property
+    def admin_emails(self) -> list[str]:
+        return [item.strip() for item in self.admin_emails_raw.split(",") if item.strip()]
+
+    @property
+    def jobs(self) -> list[dict[str, Any]]:
+        raw = self.jobs_json.strip()
+        if not raw:
+            return []
+        try:
+            loaded = json.loads(raw)
+        except json.JSONDecodeError:
+            return []
+        if not isinstance(loaded, list):
+            return []
+        return [item for item in loaded if isinstance(item, dict)]
 
 
 class AppSettingsConfig(BaseSettings):
@@ -238,6 +270,7 @@ class AppSettings(BaseSettings):
     qdrant: QdrantSettings = Field(default_factory=QdrantSettings)
     ai: AISettings = Field(default_factory=AISettings)
     email: EmailSettings = Field(default_factory=EmailSettings)
+    automation: AutomationSettings = Field(default_factory=AutomationSettings)
     app: AppSettingsConfig = Field(default_factory=AppSettingsConfig)
     report: ReportSettings = Field(default_factory=ReportSettings)
     crawler: CrawlerSettings = Field(default_factory=CrawlerSettings)
@@ -247,6 +280,18 @@ class AppSettings(BaseSettings):
     def ensure_path_exists(cls, v: Path) -> Path:
         """确保目录存在"""
         v.mkdir(parents=True, exist_ok=True)
+        return v
+
+    @field_validator("debug", mode="before")
+    @classmethod
+    def normalize_debug(cls, v: Any) -> Any:
+        """兼容历史环境变量值，如 DEBUG=release。"""
+        if isinstance(v, str):
+            normalized = v.strip().lower()
+            if normalized in {"release", "prod", "production", "false", "0", "off", "no"}:
+                return False
+            if normalized in {"debug", "dev", "development", "true", "1", "on", "yes"}:
+                return True
         return v
     
     @property

@@ -41,7 +41,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from src.core.logging import setup_logging
-from src.data.crawlers.cn_cdc import ChinaCDCCrawler
+from src.data.crawlers.cn import ChinaCDCCrawler
 from src.data.processors import DataProcessor
 from src.data.normalizers.english_mapper import create_disease_mapper
 

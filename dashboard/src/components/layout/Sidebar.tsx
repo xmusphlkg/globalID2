@@ -38,6 +38,7 @@ const navGroups: NavGroup[] = [
     items: [
       { href: "/sources/flow", labelKey: "flow_nav_label", icon: GitBranch },
       { href: "/sources/tasks", labelKey: "crawl_tasks", icon: Download },
+      { href: "/sources/automation", labelKey: "automation", icon: Settings2 },
     ],
   },
   {

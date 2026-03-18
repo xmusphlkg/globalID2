@@ -188,8 +188,8 @@ async def fetch_disease_records(session, country_code: str, use_population_table
         text(
             f"""
             SELECT
-                dr.time::date AS "date",
-                to_char(dr.time, 'YYYY-MM') AS year_month,
+                timezone('UTC', dr.time)::date AS "date",
+                to_char(timezone('UTC', dr.time), 'YYYY-MM') AS year_month,
                 dm.disease_id,
                 COALESCE(dr.cases, 0)::bigint AS cases,
                 COALESCE(dr.deaths, 0)::bigint AS deaths,
@@ -204,7 +204,7 @@ async def fetch_disease_records(session, country_code: str, use_population_table
                 AND dm.country_code = c.code
             {population_join}
             WHERE c.code = :code
-            ORDER BY dr.time::date ASC, dm.disease_id
+            ORDER BY timezone('UTC', dr.time)::date ASC, dm.disease_id
             """
         ),
         {"code": country_code},
@@ -263,8 +263,8 @@ async def fetch_disease_records_direct(session, country_code: str, use_populatio
         text(
             f"""
             SELECT
-                dr.time::date AS "date",
-                to_char(dr.time, 'YYYY-MM') AS year_month,
+                timezone('UTC', dr.time)::date AS "date",
+                to_char(timezone('UTC', dr.time), 'YYYY-MM') AS year_month,
                 d.name                 AS disease_id,
                 COALESCE(dr.cases, 0)::bigint AS cases,
                 COALESCE(dr.deaths, 0)::bigint AS deaths,
@@ -278,7 +278,7 @@ async def fetch_disease_records_direct(session, country_code: str, use_populatio
             JOIN diseases d ON d.id = dr.disease_id
             {population_join}
             WHERE c.code = :code
-            ORDER BY dr.time::date ASC, d.name
+            ORDER BY timezone('UTC', dr.time)::date ASC, d.name
             """
         ),
         {"code": country_code},
@@ -301,7 +301,7 @@ async def fetch_country_frequency_meta(session, country_code: str) -> dict:
     rows = await session.execute(
         text(
             """
-            SELECT DISTINCT dr.time::date AS report_date
+            SELECT DISTINCT timezone('UTC', dr.time)::date AS report_date
             FROM disease_records dr
             JOIN countries c ON c.id = dr.country_id
             WHERE c.code = :code

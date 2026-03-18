@@ -40,6 +40,7 @@ from src.core.logging import get_logger
 from src.core.missing_values import normalize_rate_value
 
 logger = get_logger(__name__)
+REPORT_TIME_UTC = time(hour=12)
 
 
 class DatabaseRebuilder:
@@ -336,11 +337,11 @@ class DatabaseRebuilder:
 
     @staticmethod
     def _normalize_report_time(value) -> datetime | None:
-        """Use report calendar day directly and anchor it to UTC midnight."""
+        """Use report calendar day directly and anchor it to stable UTC noon."""
         ts = pd.to_datetime(value, errors='coerce')
         if pd.isna(ts):
             return None
-        return datetime.combine(ts.date(), time.min, tzinfo=timezone.utc)
+        return datetime.combine(ts.date(), REPORT_TIME_UTC, tzinfo=timezone.utc)
         
     def _confirm_rebuild(self):
         """Ask user for confirmation"""

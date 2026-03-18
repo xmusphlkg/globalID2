@@ -14,7 +14,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.core.logging import setup_logging
-from src.data.crawlers.cn_cdc import ChinaCDCCrawler
+from src.data.crawlers.cn import ChinaCDCCrawler
 from src.data.processors import DataProcessor
 
 

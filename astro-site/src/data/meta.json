@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-17T14:22:16.924791+00:00",
+  "generated_at": "2026-03-18T03:08:46.361376+00:00",
   "total_countries": 4,
   "total_diseases": 155,
   "total_reports": 1,
@@ -32,23 +32,23 @@
       "code": "JP",
       "name": "Japan",
       "language": "ja-JP",
-      "total_cases": 32569320,
+      "total_cases": 78157437,
       "total_deaths": 0,
       "disease_count": 86,
       "date_range": {
         "start": "2012-09-14",
-        "end": "2025-12-05"
+        "end": "2025-12-06"
       }
     },
     {
       "code": "US",
       "name": "United States",
       "language": "en-US",
-      "total_cases": 513242,
+      "total_cases": 4243088,
       "total_deaths": 0,
       "disease_count": 60,
       "date_range": {
-        "start": "2022-01-07",
+        "start": "2022-01-08",
         "end": "2026-03-07"
       }
     }

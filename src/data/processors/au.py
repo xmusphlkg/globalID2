@@ -1,8 +1,10 @@
 """AU monthly updater.
 
-This updater only handles incremental updates from crawler outputs that already
-exist inside globalID2 (data/raw/au/australia_national_data.csv).
-It does not run external scripts or external data pipelines.
+AU disease data is dynamically revised — the NINDSS counts for past months
+are updated as more notifications come in.  Therefore every run upserts all
+returned rows unconditionally (no date-gate), and the default fetch window is
+the most recent 3 months.  When ``fill_missing=True`` the service layer also
+back-fills any (year, month) pairs absent from the database.
 """
 
 from __future__ import annotations
@@ -10,9 +12,9 @@ from __future__ import annotations
 import csv
 import json
 from dataclasses import dataclass
-from datetime import date, datetime, time, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -90,12 +92,30 @@ class AUMonthlyUpdater:
         self.source_name = source_name
         self.output_csv = output_csv
 
-    def refresh_source(self, *, source: str = "au", run_external: bool = False) -> AUUpdateFetchResult:
+    def refresh_source(
+        self,
+        *,
+        source: str = "au",
+        run_external: bool = False,
+        force: bool = False,
+        months: Optional[List[Tuple[int, int]]] = None,
+    ) -> AUUpdateFetchResult:
+        """Fetch AU data from the NINDSS Power BI dashboard.
+
+        Args:
+            source:       Ignored (kept for interface parity with JP/US).
+            run_external: Ignored (Playwright runs in-process).
+            force:        Re-fetch even if data appears up-to-date.
+            months:       Explicit (year, month) pairs to request.  When None
+                          the crawler defaults to the most recent 3 months.
+        """
         logs: List[str] = []
         crawler = AustraliaNINDSSCrawler()
-        fetch_summary = crawler.crawl_monthly_national_csv(self.output_csv)
+        fetch_summary = crawler.crawl_monthly_national_csv(self.output_csv, months=months)
         logs.append(
-            f"[crawler] fetched/aggregated {fetch_summary.row_count} rows from {fetch_summary.csv_url}; latest={fetch_summary.latest_date}"
+            f"[crawler] fetched {fetch_summary.row_count} rows; "
+            f"months={'all 3 recent' if months is None else len(months)}; "
+            f"latest={fetch_summary.latest_date}"
         )
 
         rows = self._load_rows(self.output_csv)
@@ -170,6 +190,23 @@ class AUMonthlyUpdater:
             return None
         return max_time.date()
 
+    async def get_db_months(self, db: AsyncSession) -> Set[Tuple[int, int]]:
+        """Return the set of (year, month) pairs already in the disease_records table for AU."""
+        result = await db.execute(
+            text(
+                """
+                SELECT DISTINCT
+                    EXTRACT(YEAR  FROM dr.time)::int AS yr,
+                    EXTRACT(MONTH FROM dr.time)::int AS mo
+                FROM disease_records dr
+                JOIN countries c ON c.id = dr.country_id
+                WHERE c.code = :code
+                """
+            ),
+            {"code": self.country_code},
+        )
+        return {(int(row[0]), int(row[1])) for row in result.fetchall()}
+
     async def _get_country_id(self, db: AsyncSession) -> int:
         result = await db.execute(text("SELECT id FROM countries WHERE code = :code"), {"code": self.country_code})
         row = result.fetchone()
@@ -206,10 +243,16 @@ class AUMonthlyUpdater:
         source_latest_date: Optional[date],
         force: bool = False,
     ) -> AUUpdateImportResult:
-        if not rows:
-            return AUUpdateImportResult(0, 0, db_latest_date, source_latest_date, False)
+        """
+        Upsert AU disease rows into the database.
 
-        if not force and db_latest_date is not None and source_latest_date is not None and source_latest_date <= db_latest_date:
+        AU data is dynamically revised, so ALL rows returned by the crawler
+        are always upserted (ON CONFLICT DO UPDATE) regardless of whether
+        they are older than ``db_latest_date``.  The ``force`` flag and
+        ``db_latest_date`` are kept for interface parity with JP/US but do
+        not gate which rows are written.
+        """
+        if not rows:
             return AUUpdateImportResult(0, 0, db_latest_date, source_latest_date, False)
 
         country_id = await self._get_country_id(db)
@@ -225,8 +268,7 @@ class AUMonthlyUpdater:
             except ValueError:
                 continue
 
-            if not force and db_latest_date is not None and day.date() <= db_latest_date:
-                continue
+            # AU data is dynamically revised — always upsert, never skip by date.
 
             label = _norm_text(row.get("RawDiseaseLabel", ""))
             disease_id = mapping_dict.get(label.lower())
