@@ -1,0 +1,468 @@
+"""Env-driven automation scheduler and task failure notifications."""
+
+from __future__ import annotations
+
+import asyncio
+from dataclasses import asdict, dataclass, field
+from datetime import datetime, time, timedelta
+import html
+import json
+from pathlib import Path
+from typing import Any, Optional
+from zoneinfo import ZoneInfo
+
+from sqlalchemy import select
+
+from src.core import get_config, get_database, get_logger
+from src.domain import AutomationJob, Country, Task, TaskWorkbook
+from src.services.crawl_task_service import crawl_task_service
+from src.services.graph_email_service import graph_email_service
+
+logger = get_logger(__name__)
+
+
+def _iso(value: Optional[datetime]) -> Optional[str]:
+    return value.isoformat() if value else None
+
+
+@dataclass
+class AutomationJobConfig:
+    job_id: str
+    name: str
+    country_code: str
+    source: str = "all"
+    enabled: bool = True
+    priority: str = "normal"
+    process: bool = True
+    save_raw: bool = True
+    fill_missing: bool = True
+    force: bool = False
+    retry_threshold: int = 3
+    interval_minutes: Optional[int] = None
+    daily_time: Optional[str] = None
+    timezone: Optional[str] = None
+
+    @classmethod
+    def from_dict(cls, payload: dict[str, Any], default_tz: str, default_retry_threshold: int) -> "AutomationJobConfig":
+        job_id = str(payload.get("job_id") or payload.get("id") or "").strip()
+        country_code = str(payload.get("country_code") or "").strip().upper()
+        if not job_id:
+            raise ValueError("automation job is missing job_id")
+        if not country_code:
+            raise ValueError(f"automation job '{job_id}' is missing country_code")
+        return cls(
+            job_id=job_id,
+            name=str(payload.get("name") or job_id).strip(),
+            country_code=country_code,
+            source=str(payload.get("source") or "all").strip().lower(),
+            enabled=bool(payload.get("enabled", True)),
+            priority=str(payload.get("priority") or "normal").strip().lower(),
+            process=bool(payload.get("process", True)),
+            save_raw=bool(payload.get("save_raw", True)),
+            fill_missing=bool(payload.get("fill_missing", True)),
+            force=bool(payload.get("force", False)),
+            retry_threshold=int(payload.get("retry_threshold") or default_retry_threshold),
+            interval_minutes=(
+                int(payload["interval_minutes"])
+                if payload.get("interval_minutes") is not None
+                else None
+            ),
+            daily_time=(
+                str(payload.get("daily_time")).strip()
+                if payload.get("daily_time")
+                else None
+            ),
+            timezone=str(payload.get("timezone") or default_tz).strip(),
+        )
+
+
+@dataclass
+class AutomationJobState:
+    next_run_at: Optional[datetime] = None
+    last_started_at: Optional[datetime] = None
+    last_finished_at: Optional[datetime] = None
+    last_status: str = "idle"
+    last_error: Optional[str] = None
+    last_task_uuid: Optional[str] = None
+    run_count: int = 0
+    skipped_count: int = 0
+
+
+class AutomationService:
+    def __init__(self) -> None:
+        self._task: Optional[asyncio.Task] = None
+        self._stop_event: Optional[asyncio.Event] = None
+        self._lock = asyncio.Lock()
+        self._storage_lock = asyncio.Lock()
+        self._storage_ready = False
+        self._states: dict[str, AutomationJobState] = {}
+        self._last_tick_at: Optional[datetime] = None
+
+    def _config(self):
+        return get_config().automation
+
+    def _jobs(self) -> list[AutomationJobConfig]:
+        raise RuntimeError("Use load_jobs() for async automation job access")
+
+    async def ensure_storage(self) -> None:
+        if self._storage_ready:
+            return
+        async with self._storage_lock:
+            if self._storage_ready:
+                return
+            from src.core.database import get_engine
+            from src.domain import Base
+
+            engine = get_engine()
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all, tables=[AutomationJob.__table__])
+
+            await self._seed_jobs_from_env_if_needed()
+            self._storage_ready = True
+
+    async def _seed_jobs_from_env_if_needed(self) -> None:
+        cfg = self._config()
+        if not cfg.jobs:
+            return
+        async with get_database() as db:
+            existing = (
+                await db.execute(select(AutomationJob.id).limit(1))
+            ).scalar_one_or_none()
+            if existing is not None:
+                return
+
+            for raw_job in cfg.jobs:
+                try:
+                    job = AutomationJobConfig.from_dict(
+                        raw_job,
+                        default_tz=cfg.timezone,
+                        default_retry_threshold=cfg.default_retry_threshold,
+                    )
+                except Exception as exc:
+                    logger.warning("Ignoring invalid automation seed job %s: %s", raw_job, exc)
+                    continue
+                db.add(
+                    AutomationJob(
+                        job_id=job.job_id,
+                        name=job.name,
+                        country_code=job.country_code,
+                        source=job.source,
+                        enabled=job.enabled,
+                        priority=job.priority,
+                        process=job.process,
+                        save_raw=job.save_raw,
+                        fill_missing=job.fill_missing,
+                        force=job.force,
+                        retry_threshold=job.retry_threshold,
+                        interval_minutes=job.interval_minutes,
+                        daily_time=job.daily_time,
+                        timezone=job.timezone,
+                    )
+                )
+            await db.commit()
+
+    async def load_jobs(self) -> list[AutomationJobConfig]:
+        cfg = self._config()
+        async with get_database() as db:
+            rows = (
+                await db.execute(
+                    select(AutomationJob).order_by(AutomationJob.country_code.asc(), AutomationJob.job_id.asc())
+                )
+            ).scalars().all()
+
+        jobs: list[AutomationJobConfig] = []
+        for row in rows:
+            jobs.append(
+                AutomationJobConfig(
+                    job_id=row.job_id,
+                    name=row.name,
+                    country_code=row.country_code,
+                    source=row.source,
+                    enabled=row.enabled,
+                    priority=row.priority,
+                    process=row.process,
+                    save_raw=row.save_raw,
+                    fill_missing=row.fill_missing,
+                    force=row.force,
+                    retry_threshold=row.retry_threshold,
+                    interval_minutes=row.interval_minutes,
+                    daily_time=row.daily_time,
+                    timezone=row.timezone or cfg.timezone,
+                )
+            )
+        return jobs
+
+    async def start(self) -> None:
+        cfg = self._config()
+        if not cfg.enabled:
+            logger.info("Automation scheduler disabled by configuration")
+            return
+        await self.ensure_storage()
+        if self._task and not self._task.done():
+            return
+        self._stop_event = asyncio.Event()
+        for job in await self.load_jobs():
+            state = self._states.setdefault(job.job_id, AutomationJobState())
+            if state.next_run_at is None and job.enabled:
+                state.next_run_at = self._compute_next_run(job)
+        loaded_jobs = await self.load_jobs()
+        self._task = asyncio.create_task(self._run_loop(), name="globalid-automation-scheduler")
+        logger.info("Automation scheduler started with %s configured job(s)", len(loaded_jobs))
+
+    async def stop(self) -> None:
+        if self._stop_event is not None:
+            self._stop_event.set()
+        if self._task is not None:
+            try:
+                await self._task
+            except asyncio.CancelledError:
+                pass
+        self._task = None
+        self._stop_event = None
+
+    async def _run_loop(self) -> None:
+        cfg = self._config()
+        assert self._stop_event is not None
+        while not self._stop_event.is_set():
+            self._last_tick_at = datetime.utcnow()
+            try:
+                for job in await self.load_jobs():
+                    if not job.enabled:
+                        continue
+                    state = self._states.setdefault(job.job_id, AutomationJobState())
+                    now = datetime.now(ZoneInfo(job.timezone or cfg.timezone))
+                    if state.next_run_at is None:
+                        state.next_run_at = self._compute_next_run(job, now=now)
+                    if state.next_run_at and now >= state.next_run_at:
+                        await self.trigger_job(job.job_id, manual=False)
+            except Exception as exc:
+                logger.exception("Automation scheduler tick failed: %s", exc)
+            await asyncio.sleep(cfg.poll_interval_seconds)
+
+    async def trigger_job(self, job_id: str, *, manual: bool) -> dict[str, Any]:
+        async with self._lock:
+            job = next((item for item in await self.load_jobs() if item.job_id == job_id), None)
+            if job is None:
+                raise ValueError(f"Automation job not found: {job_id}")
+
+            tz_name = job.timezone or self._config().timezone
+            now = datetime.now(ZoneInfo(tz_name))
+            state = self._states.setdefault(job.job_id, AutomationJobState())
+            state.last_started_at = now
+            state.last_error = None
+            state.last_status = "running"
+
+            try:
+                result = await crawl_task_service.enqueue_crawl_task(
+                    country_code=job.country_code,
+                    source=job.source,
+                    force=job.force,
+                    process=job.process,
+                    save_raw=job.save_raw,
+                    fill_missing=job.fill_missing,
+                    priority=job.priority,
+                    metadata={
+                        "automation_job_id": job.job_id,
+                        "automation_job_name": job.name,
+                        "scheduled_trigger": not manual,
+                        "manual_trigger": manual,
+                        "retry_threshold": job.retry_threshold,
+                    },
+                )
+                state.last_finished_at = datetime.now(ZoneInfo(tz_name))
+                state.last_task_uuid = result.task.task_uuid
+                if result.created:
+                    state.run_count += 1
+                    state.last_status = "queued"
+                    state.next_run_at = self._compute_next_run(job, now=state.last_finished_at)
+                    return {
+                        "job_id": job.job_id,
+                        "status": "queued",
+                        "task_uuid": result.task.task_uuid,
+                    }
+
+                state.skipped_count += 1
+                state.last_status = "skipped"
+                state.last_error = result.skipped_reason or "Task already running"
+                state.next_run_at = self._compute_next_run(job, now=state.last_finished_at)
+                return {
+                    "job_id": job.job_id,
+                    "status": "skipped",
+                    "task_uuid": result.task.task_uuid,
+                    "reason": result.skipped_reason,
+                }
+            except Exception as exc:
+                state.last_finished_at = datetime.now(ZoneInfo(tz_name))
+                state.last_status = "failed"
+                state.last_error = str(exc)
+                state.next_run_at = self._compute_next_run(job, now=state.last_finished_at)
+                logger.error("Automation job %s failed: %s", job.job_id, exc)
+                raise
+
+    def snapshot(self) -> dict[str, Any]:
+        raise RuntimeError("Use snapshot_async() for automation config snapshots")
+
+    async def snapshot_async(self) -> dict[str, Any]:
+        cfg = self._config()
+        await self.ensure_storage()
+        jobs = await self.load_jobs()
+        jobs_payload: list[dict[str, Any]] = []
+        for job in jobs:
+            state = self._states.setdefault(job.job_id, AutomationJobState())
+            jobs_payload.append(
+                {
+                    **asdict(job),
+                    "next_run_at": _iso(state.next_run_at),
+                    "last_started_at": _iso(state.last_started_at),
+                    "last_finished_at": _iso(state.last_finished_at),
+                    "last_status": state.last_status,
+                    "last_error": state.last_error,
+                    "last_task_uuid": state.last_task_uuid,
+                    "run_count": state.run_count,
+                    "skipped_count": state.skipped_count,
+                }
+            )
+        return {
+            "enabled": cfg.enabled,
+            "timezone": cfg.timezone,
+            "poll_interval_seconds": cfg.poll_interval_seconds,
+            "default_retry_threshold": cfg.default_retry_threshold,
+            "admin_emails": cfg.admin_emails,
+            "email_enabled": graph_email_service.is_configured(),
+            "last_tick_at": _iso(self._last_tick_at),
+            "jobs": jobs_payload,
+        }
+
+    async def notify_task_failure_if_needed(self, task_uuid: str) -> None:
+        cfg = self._config()
+        if not cfg.admin_emails or not graph_email_service.is_configured():
+            return
+
+        async with get_database() as db:
+            task = (await db.execute(select(Task).where(Task.task_uuid == task_uuid))).scalar_one_or_none()
+            if task is None:
+                return
+
+            metadata = dict(task.metadata_ or {})
+            if metadata.get("failure_notification_sent_at"):
+                return
+
+            retry_threshold = int(
+                (task.input_data or {}).get("retry_threshold")
+                or cfg.default_retry_threshold
+            )
+            if int(task.retry_count or 0) < retry_threshold:
+                return
+
+            workbook_entries = (
+                await db.execute(
+                    select(TaskWorkbook)
+                    .where(TaskWorkbook.task_id == task.id)
+                    .order_by(TaskWorkbook.created_at.asc())
+                )
+            ).scalars().all()
+            country = await db.get(Country, task.country_id) if task.country_id else None
+
+            body = self._build_failure_email_html(
+                task=task,
+                country=country.code if country else None,
+                workbook_entries=workbook_entries,
+                retry_threshold=retry_threshold,
+            )
+            sent = graph_email_service.send_email(
+                recipients=cfg.admin_emails,
+                subject=f"[GlobalID] Task failed after retries: {task.task_name}",
+                body_html=body,
+            )
+            if not sent:
+                return
+
+            metadata["failure_notification_sent_at"] = datetime.utcnow().isoformat()
+            task.metadata_ = metadata
+            await db.commit()
+
+    def _build_failure_email_html(
+        self,
+        *,
+        task: Task,
+        country: Optional[str],
+        workbook_entries: list[TaskWorkbook],
+        retry_threshold: int,
+    ) -> str:
+        latest_entries = workbook_entries[-12:]
+        entry_blocks = []
+        for entry in latest_entries:
+            title = html.escape(entry.title or entry.entry_type or "log")
+            content = html.escape((entry.content or "").strip())[:4000]
+            entry_blocks.append(
+                f"<li><strong>{title}</strong><br/><pre style='white-space:pre-wrap'>{content}</pre></li>"
+            )
+        log_tail = html.escape(self._read_recent_error_log())
+        input_data = html.escape(json.dumps(task.input_data or {}, ensure_ascii=False, indent=2))
+        last_error = html.escape(task.last_error or "Unknown error")
+        country_text = html.escape(country or "-")
+        return f"""
+<html>
+  <body style="font-family:Segoe UI,Arial,sans-serif;line-height:1.5;color:#1f2937">
+    <h2 style="margin-bottom:8px">GlobalID task failure alert</h2>
+    <p>The task exceeded the configured retry threshold and needs attention.</p>
+    <table cellpadding="6" cellspacing="0" style="border-collapse:collapse">
+      <tr><td><strong>Task</strong></td><td>{html.escape(task.task_name)}</td></tr>
+      <tr><td><strong>Task UUID</strong></td><td><code>{html.escape(task.task_uuid)}</code></td></tr>
+      <tr><td><strong>Type</strong></td><td>{html.escape(str(task.task_type))}</td></tr>
+      <tr><td><strong>Status</strong></td><td>{html.escape(str(task.status))}</td></tr>
+      <tr><td><strong>Country</strong></td><td>{country_text}</td></tr>
+      <tr><td><strong>Retry Count</strong></td><td>{int(task.retry_count or 0)} / threshold {retry_threshold}</td></tr>
+      <tr><td><strong>Priority</strong></td><td>{html.escape(str(task.priority))}</td></tr>
+      <tr><td><strong>Created</strong></td><td>{html.escape(str(task.created_at or '-'))}</td></tr>
+      <tr><td><strong>Started</strong></td><td>{html.escape(str(task.started_at or '-'))}</td></tr>
+      <tr><td><strong>Completed</strong></td><td>{html.escape(str(task.completed_at or '-'))}</td></tr>
+      <tr><td><strong>Last Error</strong></td><td>{last_error}</td></tr>
+    </table>
+    <h3>Input</h3>
+    <pre style='white-space:pre-wrap;background:#f8fafc;padding:12px;border-radius:8px'>{input_data}</pre>
+    <h3>Recent workbook entries</h3>
+    <ol>{''.join(entry_blocks) or '<li>No workbook entries found.</li>'}</ol>
+    <h3>Recent error log tail</h3>
+    <pre style='white-space:pre-wrap;background:#111827;color:#f9fafb;padding:12px;border-radius:8px'>{log_tail}</pre>
+  </body>
+</html>
+"""
+
+    def _compute_next_run(
+        self,
+        job: AutomationJobConfig,
+        *,
+        now: Optional[datetime] = None,
+    ) -> Optional[datetime]:
+        timezone_name = job.timezone or self._config().timezone
+        zone = ZoneInfo(timezone_name)
+        current = now.astimezone(zone) if now else datetime.now(zone)
+        if job.interval_minutes:
+            return current + timedelta(minutes=max(1, job.interval_minutes))
+        if job.daily_time:
+            hour_text, minute_text = job.daily_time.split(":", 1)
+            scheduled = datetime.combine(
+                current.date(),
+                time(hour=int(hour_text), minute=int(minute_text), tzinfo=zone),
+            )
+            if scheduled <= current:
+                scheduled += timedelta(days=1)
+            return scheduled
+        return current + timedelta(days=1)
+
+    def _read_recent_error_log(self) -> str:
+        log_dir = Path(get_config().log_dir)
+        candidates = sorted(log_dir.glob("error_*.log"))
+        if not candidates:
+            return "No error log file found."
+        latest = candidates[-1]
+        try:
+            with latest.open("r", encoding="utf-8", errors="ignore") as handle:
+                lines = handle.readlines()
+            return "".join(lines[-120:]).strip() or f"{latest.name} is empty."
+        except Exception as exc:
+            return f"Failed to read error log {latest.name}: {exc}"
+
+
+automation_service = AutomationService()

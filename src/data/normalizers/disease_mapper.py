@@ -1,10 +1,10 @@
 """
 GlobalID V2 Disease Mapper
 
-国际化疾病名称映射器
-- 使用标准疾病库 (standard_diseases.csv) 作为全局唯一标准
-- 支持多国家本地名称映射到标准disease_id
-- 适配不同国家的疾病命名差异
+Internationalised disease-name mapper backed by CSV files.
+- Uses the standard disease library (standard_diseases.csv) as the global reference.
+- Supports per-country local-name mappings to standard disease_id values.
+- Adapts to naming differences across countries and languages.
 """
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
@@ -20,7 +20,7 @@ logger = get_logger(__name__)
 
 @dataclass
 class StandardDisease:
-    """标准疾病信息"""
+    """Standard (global) disease record."""
     disease_id: str
     standard_name_en: str
     standard_name_zh: str
@@ -32,7 +32,7 @@ class StandardDisease:
 
 @dataclass
 class LocalMapping:
-    """本地疾病映射信息"""
+    """Per-country local disease name mapping."""
     disease_id: str
     local_name: str
     local_code: str
@@ -42,62 +42,64 @@ class LocalMapping:
 
 class DiseaseMapper:
     """
-    国际化疾病名称映射器
-    
-    设计理念：
-    1. 标准疾病库：全局唯一的疾病标准（disease_id + standard_name_en）
-    2. 国家映射表：各国本地名称 -> 标准disease_id
-    3. 支持多语言、多变体，最终统一到标准ID
-    
-    使用示例：
+    Internationalised disease-name mapper (CSV-backed).
+
+    Design:
+    1. Standard disease library: a global, unique set of diseases (disease_id + standard_name_en).
+    2. Per-country mapping table: local names → standard disease_id.
+    3. Supports multiple languages and name variants, normalised to a single ID.
+
+    Example::
+
         mapper = DiseaseMapper(country_code="cn")
-        
-        # 中国本地名称 -> 标准疾病
-        disease_id = mapper.map_local_to_id("新冠肺炎")  # -> "D004"
-        standard_name = mapper.get_standard_name(disease_id)  # -> "COVID-19"
-        
-        # 反向查询
-        local_name = mapper.map_id_to_local("D004")  # -> "新型冠状病毒感染"
+
+        # Local name → standard disease
+        disease_id = mapper.map_local_to_id("新冠肺炎")  # → "D004"
+        standard_name = mapper.get_standard_name(disease_id)  # → "COVID-19"
+
+        # Reverse lookup
+        local_name = mapper.map_id_to_local("D004")  # → "新型冠状病毒感染"
     """
     
     def __init__(self, country_code: str = "cn"):
         """
-        初始化疾病映射器
-        
+        Initialise the mapper.
+
         Args:
-            country_code: 国家代码（cn/us/uk等），对应configs/mapping/{country_code}.csv
+            country_code: Country code (cn/us/uk/…), determines which
+                          ``configs/mapping/<country_code>.csv`` is loaded.
         """
         self.country_code = country_code
         
-        # 文件路径
+        # File paths
         self.standard_file = Path("configs/standard_diseases.csv")
         self.mapping_file = resolve_mapping_file(Path("."), country_code)
         
-        # 标准疾病库（全局）
+        # Standard disease library (global)
         self.standard_diseases: Dict[str, StandardDisease] = {}
-        
-        # 本地映射表（国家特定）
+
+        # Per-country local mapping table
         self.local_mappings: Dict[str, LocalMapping] = {}
-        
-        # 快速查找索引
-        self.local_to_id: Dict[str, str] = {}  # 本地名称 -> disease_id
-        self.id_to_local: Dict[str, str] = {}  # disease_id -> 本地官方名称
-        
-        # 未识别的疾病（需要人工审核）
+
+        # Fast-lookup indices
+        self.local_to_id: Dict[str, str] = {}  # local name → disease_id
+        self.id_to_local: Dict[str, str] = {}  # disease_id → primary local name
+
+        # Unrecognised disease names (need manual review)
         self.unknown_diseases: Set[str] = set()
         
-        # 加载数据
+        # Load data
         self._load_standard_diseases()
         self._load_local_mappings()
 
     def get_standard_disease(self, disease_id: str) -> Optional[StandardDisease]:
-        """获取标准疾病信息"""
+        """Return the :class:`StandardDisease` for the given disease_id."""
         return self.standard_diseases.get(disease_id)
-    
+
     def _load_standard_diseases(self):
-        """加载标准疾病库"""
+        """Load the global standard disease library from CSV."""
         if not self.standard_file.exists():
-            logger.error(f"标准疾病库文件不存在: {self.standard_file}")
+            logger.error(f"[Normalizer] Standard disease file not found | path={self.standard_file}")
             return
         
         try:
@@ -115,17 +117,17 @@ class DiseaseMapper:
                 )
                 self.standard_diseases[disease.disease_id] = disease
             
-            logger.info(f"✅ 加载标准疾病库: {len(self.standard_diseases)} 条疾病")
-            
+            logger.info(f"[Normalizer] Standard disease library loaded | count={len(self.standard_diseases)}")
+
         except Exception as e:
-            logger.error(f"加载标准疾病库失败: {e}")
+            logger.error(f"[Normalizer] Failed to load standard disease library | error={e}")
             import traceback
             traceback.print_exc()
     
     def _load_local_mappings(self):
-        """加载国家特定的本地映射表"""
+        """Load the per-country local name mapping table from CSV."""
         if not self.mapping_file.exists():
-            logger.error(f"国家映射文件不存在: {self.mapping_file}")
+            logger.error(f"[Normalizer] Country mapping file not found | path={self.mapping_file}")
             return
         
         try:
@@ -135,7 +137,7 @@ class DiseaseMapper:
                 disease_id = str(row['disease_id']).strip()
                 local_name = str(row['local_name']).strip()
                 
-                # 解析别名
+                # Parse aliases
                 aliases_str = str(row.get('aliases', ''))
                 aliases = []
                 if aliases_str and aliases_str != 'nan':
@@ -151,58 +153,60 @@ class DiseaseMapper:
                 
                 self.local_mappings[local_name] = mapping
                 
-                # 建立索引
+                # Build lookup indices
                 self.local_to_id[local_name] = disease_id
                 self.id_to_local[disease_id] = local_name
-                
-                # 添加别名映射
+
+                # Add alias mappings
                 for alias in aliases:
                     self.local_to_id[alias] = disease_id
             
-            logger.info(f"✅ 加载国家映射 ({self.country_code.upper()}): {len(self.local_mappings)} 条主映射, "
-                       f"总计 {len(self.local_to_id)} 个可识别名称（含别名）")
-            
+            logger.info(
+                f"[Normalizer][{self.country_code.upper()}] Mappings loaded"
+                f" | primary={len(self.local_mappings)} total={len(self.local_to_id)}"
+            )
+
         except Exception as e:
-            logger.error(f"加载国家映射失败: {e}")
+            logger.error(f"[Normalizer] Failed to load country mapping | country={self.country_code} error={e}")
             import traceback
             traceback.print_exc()
     
     def map_local_to_id(self, local_name: str) -> Optional[str]:
         """
-        将本地疾病名称映射为标准disease_id
-        
+        Map a local disease name to a standard disease_id.
+
         Args:
-            local_name: 本地疾病名称（如"新冠肺炎"、"COVID-19"）
-            
+            local_name: Local disease name (e.g. "新冠肺炎" or "COVID-19").
+
         Returns:
-            标准disease_id（如"D004"），未找到返回None
+            Standard disease_id (e.g. "D004"), or None if not found.
         """
         local_name = local_name.strip()
         
-        # 精确匹配
+        # Exact match
         if local_name in self.local_to_id:
             return self.local_to_id[local_name]
-        
-        # 模糊匹配（移除常见前后缀）
+
+        # Fuzzy match: strip common prefixes/suffixes
         cleaned_name = self._clean_disease_name(local_name)
         if cleaned_name in self.local_to_id:
             return self.local_to_id[cleaned_name]
         
-        # 记录未识别的疾病
+        # Record unrecognised disease name
         self.unknown_diseases.add(local_name)
-        logger.warning(f"❌ 未找到本地疾病映射 ({self.country_code}): {local_name}")
+        logger.warning(f"[Normalizer][{self.country_code}] Unknown disease | name={local_name!r}")
         return None
     
     def get_standard_name(self, disease_id: str, lang: str = "en") -> Optional[str]:
         """
-        获取标准疾病名称
-        
+        Return the standard name for a disease_id.
+
         Args:
-            disease_id: 疾病ID（如"D004"）
-            lang: 语言（"en"或"zh"）
-            
+            disease_id: Disease ID (e.g. "D004").
+            lang:       Language ("en" or "zh").
+
         Returns:
-            标准名称，未找到返回None
+            Standard name string, or None if not found.
         """
         if disease_id not in self.standard_diseases:
             return None
@@ -212,26 +216,26 @@ class DiseaseMapper:
     
     def map_id_to_local(self, disease_id: str) -> Optional[str]:
         """
-        将标准disease_id映射为本地官方名称
-        
+        Map a standard disease_id to the primary local name.
+
         Args:
-            disease_id: 疾病ID（如"D004"）
-            
+            disease_id: Disease ID (e.g. "D004").
+
         Returns:
-            本地官方名称，未找到返回None
+            Primary local name, or None if not found.
         """
         return self.id_to_local.get(disease_id)
     
     def map_local_to_standard(self, local_name: str, lang: str = "en") -> Optional[str]:
         """
-        本地名称 -> 标准名称（一步到位）
-        
+        Convenience: map a local name directly to a standard name.
+
         Args:
-            local_name: 本地疾病名称
-            lang: 目标语言（"en"或"zh"）
-            
+            local_name: Local disease name.
+            lang:       Target language ("en" or "zh").
+
         Returns:
-            标准疾病名称，未找到返回None
+            Standard disease name, or None if not found.
         """
         disease_id = self.map_local_to_id(local_name)
         if not disease_id:
@@ -241,45 +245,46 @@ class DiseaseMapper:
     
     def get_disease_info(self, disease_id: str) -> Optional[StandardDisease]:
         """
-        获取完整的疾病信息
-        
+        Return the full :class:`StandardDisease` for a disease_id.
+
         Args:
-            disease_id: 疾病ID
-            
+            disease_id: Disease ID.
+
         Returns:
-            StandardDisease对象，未找到返回None
+            :class:`StandardDisease` or None.
         """
         return self.standard_diseases.get(disease_id)
     
-    def map_dataframe(self, 
-                     df: pd.DataFrame, 
-                     source_col: str, 
-                     target_col: str = None,
-                     add_id_col: bool = True,
-                     add_standard_col: bool = True) -> pd.DataFrame:
+    def map_dataframe(
+            self,
+            df: pd.DataFrame,
+            source_col: str,
+            target_col: str = None,
+            add_id_col: bool = True,
+            add_standard_col: bool = True) -> pd.DataFrame:
         """
-        批量映射DataFrame中的疾病名称
-        
+        Batch-map disease names in a DataFrame.
+
         Args:
-            df: 数据框
-            source_col: 源列名（本地疾病名称）
-            target_col: 目标列名（标准英文名），默认为"Diseases"
-            add_id_col: 是否添加disease_id列
-            add_standard_col: 是否添加标准英文名列
-            
+            df:              Input DataFrame.
+            source_col:      Column containing local disease names.
+            target_col:      Column for the standard English name (default: "Diseases").
+            add_id_col:      If True, add a ``disease_id`` column.
+            add_standard_col: If True, add a standard English name column.
+
         Returns:
-            映射后的数据框
+            DataFrame with mapping columns added.
         """
         if target_col is None:
             target_col = "Diseases"
         
-        # 映射到disease_id
+        # Map to disease_id
         if add_id_col:
             df['disease_id'] = df[source_col].apply(
                 lambda x: self.map_local_to_id(x) if pd.notna(x) and x else None
             )
         
-        # 映射到标准英文名
+        # Map to standard English name
         if add_standard_col:
             df[target_col] = df[source_col].apply(
                 lambda x: self.map_local_to_standard(x, lang="en") if pd.notna(x) and x else None
@@ -289,14 +294,15 @@ class DiseaseMapper:
     
     def add_temporary_mapping(self, local_name: str, disease_id: str, aliases: List[str] = None):
         """
-        临时添加映射（仅在内存中，不持久化）
-        
-        用于处理新发现的疾病变体，需要后续更新标准文件。
-        
+        Add a temporary in-memory mapping (not persisted to disk).
+
+        Use this for newly discovered disease variants that need to be reviewed
+        and eventually added to the standard mapping files.
+
         Args:
-            local_name: 本地名称
-            disease_id: 标准疾病ID
-            aliases: 别名列表
+            local_name: Local disease name.
+            disease_id: Standard disease ID.
+            aliases:    Optional list of aliases.
         """
         self.local_to_id[local_name] = disease_id
         
@@ -304,35 +310,35 @@ class DiseaseMapper:
             for alias in aliases:
                 self.local_to_id[alias] = disease_id
         
-        logger.info(f"临时添加映射: {local_name} -> {disease_id}")
+        logger.info(f"[Normalizer] Temporary mapping added | local={local_name!r} disease_id={disease_id}")
     
     def get_unknown_diseases(self) -> Set[str]:
-        """获取未识别的疾病列表"""
+        """Return a copy of the unrecognised disease name set."""
         return self.unknown_diseases.copy()
-    
+
     def export_unknown_diseases(self, output_file: Path):
-        """导出未识别的疾病到文件（供人工审核）"""
+        """Export unrecognised disease names to a CSV file for manual review."""
         if not self.unknown_diseases:
-            logger.info("没有未识别的疾病")
+            logger.info("[Normalizer] No unknown diseases to export")
             return
         
         try:
             output_file.parent.mkdir(parents=True, exist_ok=True)
             
             with open(output_file, "w", encoding="utf-8") as f:
-                f.write(f"# 未识别的疾病名称 (country: {self.country_code})\n")
-                f.write("# 需要添加到映射文件: configs/mapping/{}.csv\n".format(self.country_code.lower()))
+                f.write(f"# Unrecognised disease names (country: {self.country_code})\n")
+                f.write("# Add to: configs/mapping/{}.csv\n".format(self.country_code.lower()))
                 f.write("disease_id,local_name,local_code,category,aliases,data_source,notes\n")
                 for disease in sorted(self.unknown_diseases):
-                    f.write(f",{disease},,,,待审核\n")
-            
-            logger.info(f"导出 {len(self.unknown_diseases)} 个未识别疾病到: {output_file}")
-            
+                    f.write(f",{disease},,,,pending_review\n")
+
+            logger.info(f"[Normalizer] Unknown diseases exported | count={len(self.unknown_diseases)} file={output_file}")
+
         except Exception as e:
-            logger.error(f"导出未识别疾病失败: {e}")
+            logger.error(f"[Normalizer] Failed to export unknown diseases | error={e}")
     
     def get_statistics(self) -> Dict:
-        """获取映射统计信息"""
+        """Return mapper statistics as a dictionary."""
         return {
             "country_code": self.country_code,
             "standard_diseases_count": len(self.standard_diseases),
@@ -344,21 +350,21 @@ class DiseaseMapper:
     @staticmethod
     def _clean_disease_name(name: str) -> str:
         """
-        清理疾病名称（移除常见前后缀）
-        
+        Strip common noise from a disease name for fuzzy matching.
+
         Args:
-            name: 疾病名称
-            
+            name: Raw disease name.
+
         Returns:
-            清理后的名称
+            Cleaned name.
         """
         import re
         
-        # 移除括号内容
+        # Remove bracketed content
         name = re.sub(r"\([^)]*\)", "", name)
         name = re.sub(r"（[^）]*）", "", name)
-        
-        # 移除常见后缀
+
+        # Strip common Chinese disease suffixes
         suffixes = ["病", "症", "热"]
         for suffix in suffixes:
             if name.endswith(suffix) and len(name) > 2:

@@ -1,7 +1,7 @@
 """
-GlobalID V2 Database-based Disease Mapper
+GlobalID V2 Database-backed Disease Mapper
 
-从PostgreSQL数据库读取疾病映射（支持动态更新）
+Reads disease mappings from PostgreSQL and supports dynamic updates at runtime.
 """
 from typing import Optional, Dict, List
 from dataclasses import dataclass
@@ -21,7 +21,7 @@ logger = get_logger(__name__)
 
 @dataclass
 class DiseaseInfo:
-    """疾病信息"""
+    """Standard disease information record."""
     disease_id: str
     standard_name_en: str
     standard_name_zh: str
@@ -33,31 +33,31 @@ class DiseaseInfo:
 
 class DiseaseMapperDB:
     """
-    数据库版疾病映射器
-    
-    优势:
-    - 支持动态添加疾病
-    - 多实例共享数据
-    - 自动学习未知疾病
-    - 记录使用统计
+    PostgreSQL-backed disease mapper.
+
+    Advantages over the CSV-based mapper:
+    - Dynamic disease additions at runtime
+    - Shared data across multiple instances
+    - Automatic learning: unknown names are recorded
+    - Usage-count statistics
     """
     
     def __init__(self, country_code: str):
         self.country_code = country_code.upper() if country_code else country_code
-        self._local_cache = {}  # 内存缓存
-        self._standard_cache = {}
+        self._local_cache = {}   # in-memory cache for local-name lookups
+        self._standard_cache = {}  # in-memory cache for standard-name lookups
     
     async def map_local_to_id(self, local_name: str) -> Optional[str]:
         """
-        本地名称 → disease_id
-        
+        Map a local disease name to a standard disease_id.
+
         Args:
-            local_name: 本地疾病名称
-            
+            local_name: Local disease name.
+
         Returns:
-            disease_id 或 None
+            ``disease_id`` string, or None if not found.
         """
-        # 检查内存缓存
+        # Check in-memory cache
         cache_key = f"{self.country_code}:{local_name}"
         if cache_key in self._local_cache:
             return self._local_cache[cache_key]
@@ -91,7 +91,7 @@ class DiseaseMapperDB:
                     """), {"country": self.country_code, "name": local_name})
                     await db.commit()
                 except Exception as e:
-                    logger.debug(f"更新使用统计失败: {e}")
+                    logger.debug(f"[Normalizer] Usage count update failed | error={e}")
                 
                 # 缓存结果
                 self._local_cache[cache_key] = disease_id
@@ -102,7 +102,7 @@ class DiseaseMapperDB:
                 return None
     
     async def _record_unknown_disease(self, local_name: str):
-        """记录未知疾病到学习建议表"""
+        """Record an unrecognised disease name into the learning suggestions table."""
         try:
             async with get_db() as db:
                 await ensure_disease_learning_suggestions_schema(db)
@@ -119,19 +119,19 @@ class DiseaseMapperDB:
                 """), {"country": self.country_code, "name": local_name})
                 await db.commit()
         except Exception as e:
-            logger.debug(f"记录未知疾病失败: {e}")
+            logger.debug(f"[Normalizer] Failed to record unknown disease | error={e}")
     
     async def get_standard_info(self, disease_id: str) -> Optional[DiseaseInfo]:
         """
-        disease_id → 标准信息
-        
+        Return the full standard information for a disease_id.
+
         Args:
-            disease_id: 疾病ID (如 D004)
-            
+            disease_id: Disease ID (e.g. D004).
+
         Returns:
-            DiseaseInfo 或 None
+            :class:`DiseaseInfo` or None.
         """
-        # 检查缓存
+        # Check cache
         if disease_id in self._standard_cache:
             return self._standard_cache[disease_id]
         
@@ -158,7 +158,7 @@ class DiseaseMapperDB:
                     description=row[6]
                 )
                 
-                # 缓存结果
+                # Cache result
                 self._standard_cache[disease_id] = info
                 return info
             
@@ -170,14 +170,14 @@ class DiseaseMapperDB:
         lang: str = "en"
     ) -> Optional[str]:
         """
-        获取标准名称
-        
+        Return the standard name for a disease_id.
+
         Args:
-            disease_id: 疾病ID
-            lang: 语言 (en/zh)
-            
+            disease_id: Disease ID.
+            lang:       Language ("en" or "zh").
+
         Returns:
-            标准名称 或 None
+            Standard name string, or None.
         """
         info = await self.get_standard_info(disease_id)
         if info:
@@ -192,16 +192,16 @@ class DiseaseMapperDB:
         add_standard_name: bool = True
     ) -> pd.DataFrame:
         """
-        批量映射DataFrame
-        
+        Batch-map disease names in a DataFrame.
+
         Args:
-            df: 数据框
-            disease_col: 疾病名称列
-            add_id_col: 是否添加disease_id列
-            add_standard_name: 是否添加标准名称列
-            
+            df:               Input DataFrame.
+            disease_col:      Column containing disease names.
+            add_id_col:       If True, add a ``disease_id`` column.
+            add_standard_name: If True, add ``standard_name_en`` and ``standard_name_zh`` columns.
+
         Returns:
-            处理后的数据框
+            DataFrame with mapping columns added.
         """
         result_df = df.copy()
         
@@ -245,17 +245,17 @@ class DiseaseMapperDB:
         **kwargs
     ) -> int:
         """
-        添加新疾病到标准库
-        
+        Add a new disease to the standard library.
+
         Args:
-            disease_id: 疾病ID (如 D142)
-            standard_name_en: 英文标准名
-            standard_name_zh: 中文标准名
-            category: 分类 (Viral/Bacterial/Parasitic/Fungal)
-            **kwargs: 其他字段 (icd_10, icd_11, description, created_by, source)
-            
+            disease_id:       Disease ID (e.g. D142).
+            standard_name_en: English standard name.
+            standard_name_zh: Chinese standard name.
+            category:         Category (Viral/Bacterial/Parasitic/Fungal).
+            **kwargs:         Extra fields (icd_10, icd_11, description, created_by, source).
+
         Returns:
-            新记录的ID
+            Database row ID of the new record.
         """
         async with get_db() as db:
             result = await db.execute(text("""
@@ -287,7 +287,7 @@ class DiseaseMapperDB:
             # 清除缓存
             self._standard_cache.pop(disease_id, None)
             
-            logger.info(f"✅ 新疾病添加成功: {disease_id} - {standard_name_en}")
+            logger.info(f"[Normalizer] Disease added | disease_id={disease_id} name={standard_name_en}")
             return record_id
     
     async def add_mapping(
@@ -297,15 +297,15 @@ class DiseaseMapperDB:
         **kwargs
     ) -> int:
         """
-        添加国家映射
-        
+        Add a local-name → disease_id mapping for this country.
+
         Args:
-            disease_id: 疾病ID
-            local_name: 本地名称
-            **kwargs: 其他字段 (local_code, is_primary, is_alias, category, source, created_by)
-            
+            disease_id:  Standard disease ID.
+            local_name:  Local disease name.
+            **kwargs:    Extra fields (local_code, is_primary, is_alias, category, source, created_by).
+
         Returns:
-            新记录的ID
+            Database row ID of the new record.
         """
         async with get_db() as db:
             await ensure_country_scope_schema(db)
@@ -341,11 +341,11 @@ class DiseaseMapperDB:
             cache_key = f"{self.country_code}:{local_name}"
             self._local_cache.pop(cache_key, None)
             
-            logger.info(f"✅ 映射添加成功: {local_name} → {disease_id}")
+            logger.info(f"[Normalizer][{self.country_code}] Mapping added | local={local_name!r} disease_id={disease_id}")
             return record_id
     
     async def get_statistics(self) -> Dict:
-        """获取统计信息"""
+        """Return mapping statistics for this country."""
         async with get_db() as db:
             # 标准疾病数
             result = await db.execute(
@@ -399,7 +399,7 @@ class DiseaseMapperDB:
             }
     
     async def get_unknown_diseases(self, limit: int = 20) -> List[Dict]:
-        """获取未知疾病列表"""
+        """Return pending disease learning suggestions for this country."""
         async with get_db() as db:
             await ensure_disease_learning_suggestions_schema(db)
             result = await db.execute(
@@ -432,56 +432,54 @@ class DiseaseMapperDB:
             ]
     
     def clear_cache(self):
-        """清除内存缓存"""
+        """Clear all in-memory caches."""
         self._local_cache.clear()
         self._standard_cache.clear()
-        logger.info("🗑️  缓存已清除")
+        logger.info("[Normalizer] Cache cleared")
 
 
-# 兼容接口：支持同步调用（用于Data Processor）
+# Synchronous wrapper for non-async callers
 class DiseaseMapperDBSync:
-    """同步包装器（用于兼容现有代码）"""
-    
+    """Synchronous wrapper around :class:`DiseaseMapperDB`.
+
+    Safely calls the async mapper from a synchronous context.
+    Uses ``concurrent.futures.ThreadPoolExecutor`` to run ``asyncio.run()``
+    in a worker thread, avoiding event-loop deadlocks when called from inside
+    a running async context.
+    """
+
     def __init__(self, country_code: str):
         self.mapper = DiseaseMapperDB(country_code)
         self.country_code = country_code
-    
+
+    @staticmethod
+    def _run(coro):
+        """在线程池中安全执行协程（兼容有/无运行事件循环两种情况）。"""
+        import asyncio
+        import concurrent.futures
+
+        try:
+            asyncio.get_running_loop()
+            # 当前线程已有事件循环（如在 async 函数内）—— 在子线程中 run
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                return pool.submit(asyncio.run, coro).result()
+        except RuntimeError:
+            # 当前线程没有运行中的事件循环，直接 run
+            return asyncio.run(coro)
+
     def map_local_to_id(self, local_name: str) -> Optional[str]:
-        """同步版本"""
-        import asyncio
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        
-        return loop.run_until_complete(self.mapper.map_local_to_id(local_name))
-    
+        """Synchronous version of :meth:`DiseaseMapperDB.map_local_to_id`."""
+        return self._run(self.mapper.map_local_to_id(local_name))
+
     def get_standard_name(self, disease_id: str, lang: str = "en") -> Optional[str]:
-        """同步版本"""
-        import asyncio
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        
-        return loop.run_until_complete(self.mapper.get_standard_name(disease_id, lang))
-    
+        """Synchronous version of :meth:`DiseaseMapperDB.get_standard_name`."""
+        return self._run(self.mapper.get_standard_name(disease_id, lang))
+
     def map_dataframe(
         self,
         df: pd.DataFrame,
         disease_col: str = "disease_name",
-        add_id_col: bool = True
+        add_id_col: bool = True,
     ) -> pd.DataFrame:
-        """同步版本"""
-        import asyncio
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-        
-        return loop.run_until_complete(
-            self.mapper.map_dataframe(df, disease_col, add_id_col)
-        )
+        """Synchronous version of :meth:`DiseaseMapperDB.map_dataframe`."""
+        return self._run(self.mapper.map_dataframe(df, disease_col, add_id_col))

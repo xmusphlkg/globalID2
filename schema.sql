@@ -42,6 +42,33 @@ CREATE INDEX idx_ai_provider_active ON ai_provider_configs (is_active);
 CREATE INDEX idx_ai_provider_name ON ai_provider_configs (provider_name);
 CREATE INDEX idx_ai_provider_priority ON ai_provider_configs (priority);
 
+CREATE TABLE automation_jobs (
+	job_id VARCHAR(100) NOT NULL, 
+	name VARCHAR(255) NOT NULL, 
+	country_code VARCHAR(2) NOT NULL, 
+	source VARCHAR(50) NOT NULL, 
+	enabled BOOLEAN NOT NULL, 
+	priority VARCHAR(20) NOT NULL, 
+	process BOOLEAN NOT NULL, 
+	save_raw BOOLEAN NOT NULL, 
+	fill_missing BOOLEAN NOT NULL, 
+	force BOOLEAN NOT NULL, 
+	retry_threshold INTEGER NOT NULL, 
+	interval_minutes INTEGER, 
+	daily_time VARCHAR(5), 
+	timezone VARCHAR(100), 
+	notes TEXT, 
+	id SERIAL NOT NULL, 
+	created_at TIMESTAMP WITH TIME ZONE NOT NULL, 
+	updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL, 
+	PRIMARY KEY (id), 
+	UNIQUE (job_id)
+)
+
+;
+CREATE INDEX idx_automation_jobs_country ON automation_jobs (country_code);
+CREATE INDEX idx_automation_jobs_enabled ON automation_jobs (enabled);
+
 CREATE TABLE countries (
 	code VARCHAR(10) NOT NULL, 
 	name VARCHAR(100) NOT NULL, 

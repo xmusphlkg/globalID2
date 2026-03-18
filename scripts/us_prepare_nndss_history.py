@@ -148,7 +148,7 @@ def first_value(row: dict[str, object], *keys: str) -> str:
 
 
 def parse_numeric(value: str) -> str:
-    text = normalize_text(value)
+    text = normalize_text(value).replace(",", "")
     if not text:
         return ""
     try:

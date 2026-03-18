@@ -22,12 +22,90 @@ export interface DataSourceFlow {
   stages: StageInfo[];
 }
 
+export interface AutomationJob {
+  job_id: string;
+  name: string;
+  country_code: string;
+  source: string;
+  enabled: boolean;
+  priority: string;
+  process: boolean;
+  save_raw: boolean;
+  fill_missing: boolean;
+  force: boolean;
+  retry_threshold: number;
+  interval_minutes?: number | null;
+  daily_time?: string | null;
+  timezone?: string | null;
+  notes?: string | null;
+  next_run_at?: string | null;
+  last_started_at?: string | null;
+  last_finished_at?: string | null;
+  last_status: string;
+  last_error?: string | null;
+  last_task_uuid?: string | null;
+  run_count: number;
+  skipped_count: number;
+}
+
+export interface AutomationJobInput {
+  job_id: string;
+  name: string;
+  country_code: string;
+  source: string;
+  enabled: boolean;
+  priority: string;
+  process: boolean;
+  save_raw: boolean;
+  fill_missing: boolean;
+  force: boolean;
+  retry_threshold: number;
+  interval_minutes?: number | null;
+  daily_time?: string | null;
+  timezone?: string | null;
+  notes?: string | null;
+}
+
+export interface AutomationConfig {
+  enabled: boolean;
+  timezone: string;
+  poll_interval_seconds: number;
+  default_retry_threshold: number;
+  admin_emails: string[];
+  email_enabled: boolean;
+  last_tick_at?: string | null;
+  jobs: AutomationJob[];
+}
+
+export interface AutomationTriggerResult {
+  job_id: string;
+  status: string;
+  task_uuid?: string | null;
+  reason?: string | null;
+}
+
 export function useSourcesFlow(countryId: number | null) {
   return useQuery<DataSourceFlow[]>({
     queryKey: ["sources-flow", countryId],
     queryFn: () => apiFetch(`/sources/flow?country_id=${countryId}`),
     enabled: !!countryId,
     staleTime: 15 * 1000,
+  });
+}
+
+export function useAutomationConfig() {
+  return useQuery<AutomationConfig>({
+    queryKey: ["sources-automation"],
+    queryFn: () => apiFetch("/sources/automation"),
+    staleTime: 15 * 1000,
+  });
+}
+
+export function useAutomationJobs() {
+  return useQuery<AutomationJob[]>({
+    queryKey: ["sources-automation-jobs"],
+    queryFn: () => apiFetch("/sources/automation/jobs"),
+    staleTime: 10 * 1000,
   });
 }
 
@@ -61,6 +139,65 @@ export function useStartCrawl() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sources-flow"] });
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    },
+  });
+}
+
+export function useRunAutomationJob() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (jobId: string) =>
+      apiFetch<AutomationTriggerResult>(`/sources/automation/jobs/${jobId}/run`, {
+        method: "POST",
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sources-automation"] });
+      queryClient.invalidateQueries({ queryKey: ["sources-flow"] });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    },
+  });
+}
+
+export function useCreateAutomationJob() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: AutomationJobInput) =>
+      apiFetch<AutomationJob>("/sources/automation/jobs", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sources-automation"] });
+      queryClient.invalidateQueries({ queryKey: ["sources-automation-jobs"] });
+    },
+  });
+}
+
+export function useUpdateAutomationJob() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ jobId, payload }: { jobId: string; payload: Partial<AutomationJobInput> }) =>
+      apiFetch<AutomationJob>(`/sources/automation/jobs/${jobId}`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sources-automation"] });
+      queryClient.invalidateQueries({ queryKey: ["sources-automation-jobs"] });
+    },
+  });
+}
+
+export function useDeleteAutomationJob() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (jobId: string) =>
+      apiFetch(`/sources/automation/jobs/${jobId}`, {
+        method: "DELETE",
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sources-automation"] });
+      queryClient.invalidateQueries({ queryKey: ["sources-automation-jobs"] });
     },
   });
 }

@@ -14,6 +14,7 @@ from ..schemas.task import TaskOut
 from src.core.task_manager import task_manager
 from src.domain.country import Country
 from src.domain.task import Task, TaskPriority, TaskStatus, TaskType
+from src.services.crawl_task_service import crawl_task_service
 
 router = APIRouter()
 
@@ -54,52 +55,30 @@ async def start_crawl(
 
     Returns quickly with task status set to queued.
     """
-    # Resolve country code from country_id
-    country = (await db.execute(
-        select(Country).where(Country.id == body.country_id)
-    )).scalar_one_or_none()
+    country = (await db.execute(select(Country).where(Country.id == body.country_id))).scalar_one_or_none()
     if not country:
         raise HTTPException(404, f"Country not found: {body.country_id}")
-    country_code = country.code.upper()
 
-    # Check for already-running crawl tasks for this country
-    running_q = select(Task).where(
-        Task.task_type == TaskType.CRAWL_DATA,
-        Task.country_id == body.country_id,
-        Task.status.in_([TaskStatus.RUNNING, TaskStatus.QUEUED]),
-    )
-    running = (await db.execute(running_q)).scalar_one_or_none()
-    if running:
+    try:
+        result = await crawl_task_service.enqueue_crawl_task(
+            country_id=body.country_id,
+            source=body.source,
+            force=body.force,
+            process=body.process,
+            save_raw=body.save_raw,
+            fill_missing=body.fill_missing,
+            priority=body.priority,
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+    if not result.created:
         raise HTTPException(
             409,
-            f"A crawl task is already running for this country (task {running.task_uuid})",
+            f"A crawl task is already running for this country (task {result.task.task_uuid})",
         )
 
-    # Create the task via task_manager (so UUID is generated properly)
-    task = await task_manager.create_task(
-        task_type=TaskType.CRAWL_DATA,
-        task_name=f"Crawl {country_code} Data ({body.source})",
-        country_id=body.country_id,
-        priority=TaskPriority(body.priority) if body.priority else TaskPriority.NORMAL,
-        description=(
-            f"Source: {body.source}, Force: {'Yes' if body.force else 'No'}, "
-            f"Process: {'Yes' if body.process else 'No'}"
-        ),
-        input_data={
-            "country": country_code,
-            "country_code": country_code,
-            "source": body.source,
-            "force": body.force,
-            "process": body.process,
-            "save_raw": body.save_raw,
-            "fill_missing": body.fill_missing,
-        },
-    )
-
-    # Queue the task for the external worker process.
-    task = await task_manager.update_task_status(task.task_uuid, TaskStatus.QUEUED) or task
-
-    return _task_to_out(task)
+    return _task_to_out(result.task)
 
 
 @router.post("/tasks/{task_uuid}/execute", response_model=TaskOut, status_code=202)

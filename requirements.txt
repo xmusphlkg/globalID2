@@ -23,6 +23,7 @@ pyarrow  # Parquet support
 
 # Web Scraping
 requests
+playwright
 beautifulsoup4
 lxml
 xmltodict
@@ -35,9 +36,6 @@ kaleido  # For static image export
 markdown
 jinja2
 weasyprint  # For PDF generation
-
-# Email
-aiosmtplib
 
 # Cache
 redis
