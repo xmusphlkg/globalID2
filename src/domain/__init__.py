@@ -24,6 +24,7 @@ from .disease_learning_suggestion import DiseaseLearningSuggestion
 from .country_scope import CountryScope
 from .population_record import PopulationRecord
 from .ai_model_center import AIProviderConfig, AIModelConfig
+from .automation_job import AutomationJob
 
 __all__ = [
     # Base classes
@@ -58,4 +59,5 @@ __all__ = [
     "PopulationRecord",
     "AIProviderConfig",
     "AIModelConfig",
+    "AutomationJob",
 ]

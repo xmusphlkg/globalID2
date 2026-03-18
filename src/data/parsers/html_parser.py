@@ -1,7 +1,12 @@
 """
 GlobalID V2 HTML Table Parser
 
-解析HTML页面中的表格数据，支持中英文格式
+Parses HTML pages containing infectious disease data tables. Supports both
+English (Diseases / Cases / Deaths) and Chinese (疾病名称 / 病例数 / 死亡数) formats.
+
+Design principles:
+  - parse(html_content)  accepts HTML strings only (single responsibility).
+  - fetch_and_parse(url) is the explicit method that owns network I/O.
 """
 import re
 from datetime import datetime
@@ -17,66 +22,74 @@ from .base import BaseParser, ParseResult
 
 logger = get_logger(__name__)
 
+_FETCH_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/120.0.0.0 Safari/537.36"
+    ),
+    "Accept": (
+        "text/html,application/xhtml+xml,application/xml;"
+        "q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8"
+    ),
+    "Accept-Language": "en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7",
+    "DNT": "1",
+    "Connection": "keep-alive",
+    "Upgrade-Insecure-Requests": "1",
+}
+
 
 class HTMLTableParser(BaseParser):
     """
-    HTML表格解析器
-    
-    用于解析中国CDC和政府网站的传染病数据表格
-    支持两种格式：
-    1. 英文格式：Diseases, Cases, Deaths
-    2. 中文格式：疾病名称, 病例数, 死亡数
+    HTML table parser for infectious disease reports.
+
+    Parses 3-column tables (Disease / Cases / Deaths) from China CDC and
+    government websites. Supports both English and Chinese source formats.
+
+    ``parse()`` accepts HTML strings only.
+    Use ``fetch_and_parse(url)`` when you need to download and parse in one call.
     """
-    
+
     def __init__(self):
         super().__init__()
-        self.session = requests.Session()
-        self.session.headers.update({
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-            "Accept-Language": "en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7",
-            "Accept-Encoding": "gzip, deflate, br",
-            "DNT": "1",
-            "Connection": "keep-alive",
-            "Upgrade-Insecure-Requests": "1",
-            "Sec-Fetch-Dest": "document",
-            "Sec-Fetch-Mode": "navigate",
-            "Sec-Fetch-Site": "none",
-            "Sec-Fetch-User": "?1",
-            "Cache-Control": "max-age=0",
-        })
-    
+        # Session is created lazily in fetch_and_parse only
+        self._session: Optional[requests.Session] = None
+
+    @property
+    def _http_session(self) -> requests.Session:
+        """Lazy-init HTTP session for fetch_and_parse."""
+        if self._session is None:
+            self._session = requests.Session()
+            self._session.headers.update(_FETCH_HEADERS)
+        return self._session
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Public API
+    # ──────────────────────────────────────────────────────────────────────────
+
     def parse(self, content: str, **kwargs) -> ParseResult:
         """
-        解析HTML内容，提取表格数据
-        
+        Parse an HTML string and extract table data.
+
         Args:
-            content: HTML内容或URL
-            **kwargs: 额外参数
-                - url: 源URL
-                - title: 页面标题
-                - date: 报告日期
-                - year_month: 年月字符串
-                - source: 数据源
-                - language: 语言（'en' 或 'zh'）
-                
+            content: Pre-fetched HTML string (URLs are not accepted here).
+            **kwargs:
+                - url:        Record the data source URL.
+                - title:      Page title.
+                - date:       Report date.
+                - year_month: Year-month string (e.g. "2025 January").
+                - source:     Data source name.
+                - language:   Language (``'en'`` or ``'zh'``).
+
         Returns:
-            ParseResult: 解析结果
+            :class:`ParseResult`
         """
         url = kwargs.get("url", "")
         title = kwargs.get("title", "")
         language = kwargs.get("language", "en")
-        
+
+        html_content = content
         try:
-            # 如果content是URL，则获取内容
-            if content.startswith("http"):
-                self.logger.debug(f"Fetching from URL: {content}")
-                response = self.session.get(content, timeout=30)
-                response.raise_for_status()
-                html_content = response.text
-                url = content
-            else:
-                html_content = content
             
             # 解析HTML
             soup = BeautifulSoup(html_content, "html.parser")
@@ -88,7 +101,7 @@ class HTMLTableParser(BaseParser):
                     source_url=url,
                     source_title=title,
                     success=False,
-                    error_message="未找到表格",
+                    error_message="No table found in HTML",
                     metadata=kwargs,
                 )
             
@@ -103,7 +116,7 @@ class HTMLTableParser(BaseParser):
                     source_url=url,
                     source_title=title,
                     success=False,
-                    error_message="表格为空",
+                    error_message="Table is empty",
                     metadata=kwargs,
                 )
             
@@ -120,7 +133,7 @@ class HTMLTableParser(BaseParser):
                     source_title=title,
                     data=cleaned_df,
                     success=False,
-                    error_message="数据验证失败",
+                    error_message="Data validation failed",
                     metadata=kwargs,
                 )
             
@@ -134,7 +147,7 @@ class HTMLTableParser(BaseParser):
             )
             
         except Exception as e:
-            self.logger.error(f"解析失败: {e}")
+            self.logger.error(f"[HTMLTableParser] Parse failed | error={e}")
             return ParseResult(
                 source_url=url,
                 source_title=title,
@@ -145,13 +158,13 @@ class HTMLTableParser(BaseParser):
     
     def _extract_table_data(self, table) -> pd.DataFrame:
         """
-        从BeautifulSoup table对象中提取数据
-        
+        Extract row data from a BeautifulSoup table element.
+
         Args:
-            table: BeautifulSoup table对象
-            
+            table: BeautifulSoup ``<table>`` element.
+
         Returns:
-            pd.DataFrame: 表格数据
+            DataFrame with columns ``["Diseases", "Cases", "Deaths"]``.
         """
         data = []
         
@@ -164,12 +177,12 @@ class HTMLTableParser(BaseParser):
                 if cells:
                     row = []
                     for td in cells:
-                        # 移除上标标签（通常是注释标记）
+                        # Remove superscript tags (usually footnote markers)
                         for sup in td.find_all("sup"):
                             sup.decompose()
                         text = td.get_text(strip=True)
                         row.append(text)
-                    # 只保留有3列的行（跳过注释行）
+                    # Keep only 3-column rows (skip footnote rows)
                     if len(row) == 3:
                         data.append(row)
         
@@ -180,7 +193,7 @@ class HTMLTableParser(BaseParser):
         df = pd.DataFrame(data)
         self.logger.debug(f"Created DataFrame shape: {df.shape}")
         
-        # 确保只有3列，如果不是则截取前3列
+        # Ensure exactly 3 columns; truncate if more
         if len(df.columns) > 3:
             self.logger.debug(f"Truncating to 3 columns from {len(df.columns)}")
             df = df.iloc[:, :3]
@@ -196,19 +209,19 @@ class HTMLTableParser(BaseParser):
     
     def _clean_english_data(self, df: pd.DataFrame, metadata: Dict) -> pd.DataFrame:
         """
-        清洗英文格式的数据
-        
+        Clean an English-format table DataFrame.
+
         Args:
-            df: 原始数据
-            metadata: 元数据（包含date, url等）
-            
+            df:       Raw DataFrame from ``_extract_table_data``.
+            metadata: Crawl metadata (date, url, source, …).
+
         Returns:
-            pd.DataFrame: 清洗后的数据
+            Cleaned DataFrame with standardised columns.
         """
         self.logger.debug(f"_clean_english_data input DataFrame shape: {df.shape}")
         
         # 复制数据，避免修改原始数据
-        data = df.iloc[1:].copy()  # 跳过表头行
+        data = df.iloc[1:].copy()  # skip header row
         self.logger.debug(f"After skipping header: {data.shape}")
         
         # 设置列名
@@ -241,7 +254,7 @@ class HTMLTableParser(BaseParser):
             data["ADCode"] = "100000"
             data["Incidence"] = None
             data["Mortality"] = None
-            data["DiseasesCN"] = ""  # 需要通过映射获取
+            data["DiseasesCN"] = ""  # populated via mapping in a later step
         except Exception as e:
             self.logger.error(f"Error adding columns: {e}")
             raise
@@ -267,30 +280,29 @@ class HTMLTableParser(BaseParser):
     
     def _clean_chinese_data(self, df: pd.DataFrame, metadata: Dict) -> pd.DataFrame:
         """
-        清洗中文格式的数据
-        
+        Clean a Chinese-format table DataFrame.
+
         Args:
-            df: 原始数据
-            metadata: 元数据
-            
+            df:       Raw DataFrame from ``_extract_table_data``.
+            metadata: Crawl metadata (date, url, source, …).
+
         Returns:
-            pd.DataFrame: 清洗后的数据
+            Cleaned DataFrame with standardised columns.
         """
-        # 复制数据
-        data = df.iloc[1:].copy()  # 跳过表头行
+        data = df.iloc[1:].copy()  # skip header row
         
         # 设置列名
         if len(data.columns) >= 3:
             data.columns = ["DiseasesCN", "Cases", "Deaths"]
         else:
-            self.logger.warning(f"列数不足: {len(data.columns)}")
+            self.logger.warning(f"Insufficient columns: {len(data.columns)}")
             return pd.DataFrame()
         
-        # 移除"合计"行
+        # Remove summary rows ("合计" = total)
         data = data[~data["DiseasesCN"].str.contains("合计", na=False)]
-        
-        # 清洗疾病名称 - 只保留中文字符、字母、数字、空格
-        # 使用Unicode范围匹配中文: \u4e00-\u9fff
+
+        # Keep only CJK characters, ASCII alphanumerics, and spaces
+        # Unicode CJK range: \u4e00-\u9fff
         data["DiseasesCN"] = data["DiseasesCN"].apply(
             lambda x: ''.join(c for c in str(x) if c.isalnum() or c.isspace() or '\u4e00' <= c <= '\u9fff')
         )
@@ -312,7 +324,7 @@ class HTMLTableParser(BaseParser):
         data["Incidence"] = None
         data["Mortality"] = None
         
-        # Diseases 列需要通过映射获取（在后续步骤处理）
+        # "Diseases" column is populated via mapping in a later step
         data["Diseases"] = ""
         
         # 重新排序列
@@ -334,13 +346,13 @@ class HTMLTableParser(BaseParser):
     
     def _is_column_meaningful(self, series: pd.Series) -> bool:
         """
-        检查列是否有意义（不全是空值或无用数据）
-        
+        Check whether a column has at least one meaningful non-empty value.
+
         Args:
-            series: pandas Series
-            
+            series: pandas Series to inspect.
+
         Returns:
-            bool: 是否有意义
+            True if at least one value is non-null and non-trivial.
         """
         # 检查是否所有值都是空或只包含空白字符
         non_empty = series.dropna()
@@ -359,52 +371,70 @@ class HTMLTableParser(BaseParser):
     
     def validate(self, data: pd.DataFrame) -> bool:
         """
-        验证解析结果
-        
+        Validate a parsed DataFrame.
+
         Args:
-            data: 解析得到的数据
-            
+            data: Parsed DataFrame to validate.
+
         Returns:
-            bool: 是否有效
+            True if the data passes all quality checks.
         """
         if data.empty:
-            self.logger.warning("数据为空")
+            self.logger.warning("[HTMLTableParser] Validation failed: empty DataFrame")
             return False
         
         # 检查必需的列
         required_columns = ["Diseases", "DiseasesCN", "Cases", "Deaths"]
         for col in required_columns:
             if col not in data.columns:
-                self.logger.warning(f"缺少列: {col}")
+                self.logger.warning(f"[HTMLTableParser] Missing required column: {col}")
                 return False
-        
-        # 检查至少有一列有数据
+
+        # At least one disease name column must have data
         if data["Diseases"].notna().sum() == 0 and data["DiseasesCN"].notna().sum() == 0:
-            self.logger.warning("疾病名称列均为空")
+            self.logger.warning("[HTMLTableParser] Both disease name columns are empty")
             return False
         
         # 检查Cases和Deaths列的类型（应该是数字或可转换为数字）
         for col in ["Cases", "Deaths"]:
             if col in data.columns:
                 try:
-                    # 尝试转换为数值类型
                     pd.to_numeric(data[col], errors="coerce")
                 except Exception as e:
-                    self.logger.warning(f"列 {col} 无法转换为数值: {e}")
+                    self.logger.warning(f"[HTMLTableParser] Column {col} cannot be converted to numeric: {e}")
                     return False
         
         return True
     
-    def parse_from_url(self, url: str, **kwargs) -> ParseResult:
+    def fetch_and_parse(self, url: str, **kwargs) -> ParseResult:
         """
-        从URL解析数据（便捷方法）
-        
+        Fetch HTML from a URL and parse it.
+
+        This method explicitly owns the network I/O, replacing the old
+        pattern of passing a URL as the ``content`` argument to ``parse()``.
+
         Args:
-            url: 页面URL
-            **kwargs: 额外参数
-            
+            url:      Page URL to fetch.
+            **kwargs: Same optional arguments as ``parse()``.
+
         Returns:
-            ParseResult: 解析结果
+            :class:`ParseResult`
         """
-        kwargs["url"] = url
-        return self.parse(url, **kwargs)
+        kwargs.setdefault("url", url)
+        try:
+            self.logger.debug(f"Fetching from URL: {url}")
+            response = self._http_session.get(url, timeout=30)
+            response.raise_for_status()
+            return self.parse(response.text, **kwargs)
+        except requests.RequestException as exc:
+            return ParseResult(
+                source_url=url,
+                source_title=kwargs.get("title", ""),
+                success=False,
+                error_message=f"HTTP request failed: {exc}",
+                metadata=kwargs,
+            )
+
+    def parse_from_url(self, url: str, **kwargs) -> ParseResult:
+        """Backward-compatible alias for :meth:`fetch_and_parse`."""
+        return self.fetch_and_parse(url, **kwargs)

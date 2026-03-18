@@ -8,7 +8,7 @@ cd "$(dirname "$0")/.."
 # Parse arguments
 COUNTRY="CN"
 VERBOSE=""
-TEST_TYPE="all"  # all, crawlers, ai, integration
+TEST_TYPE="all"  # all, crawlers, ai, integration, email
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -29,7 +29,7 @@ while [[ $# -gt 0 ]]; do
             echo
             echo "Options:"
             echo "  --country COUNTRY   Country code to test (default: CN)"
-            echo "  --type TYPE         Test type: all, crawlers, ai, integration (default: all)"
+            echo "  --type TYPE         Test type: all, crawlers, ai, ai-real, ai-api, integration, email (default: all)"
             echo "  --verbose, -v       Show detailed output" 
             echo "  --help, -h          Show this help message"
             echo
@@ -39,7 +39,8 @@ while [[ $# -gt 0 ]]; do
             echo "  ai           Run AI report generation tests only"
             echo "  ai-real      Run AI tests with real database data"
             echo "  ai-api       Test AI API connections"
-            echo "  integration  Run integration tests only" 
+            echo "  integration  Run integration tests only"
+            echo "  email        Validate Microsoft Graph config and send a test email"
             echo
             echo "Examples:"
             echo "  $0                    # Run all tests for CN with minimal output"
@@ -122,6 +123,14 @@ case $TEST_TYPE in
         echo "🔄 Running Integration Tests..."
         TOTAL_TESTS=1
         if run_test "Integration Tests" "./venv/bin/python tests/test_integration.py"; then
+            ((PASSED_TESTS++))
+        fi
+        ;;
+
+    "email")
+        echo "✉️ Running Microsoft Graph Email Test..."
+        TOTAL_TESTS=1
+        if run_test "Graph Email Configuration" "./venv/bin/python scripts/test_email_config.py"; then
             ((PASSED_TESTS++))
         fi
         ;;

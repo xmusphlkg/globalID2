@@ -12,6 +12,7 @@ from typing import Optional
 from src.core import get_database, get_logger
 from src.core.task_manager import task_manager
 from src.domain import Task, TaskStatus
+from src.services.automation_service import automation_service
 from src.services.exceptions import TaskCancelledError
 
 logger = get_logger(__name__)
@@ -81,6 +82,10 @@ async def task_lifecycle(task: Task, *, report_id_ref: Optional[list] = None, ex
             TaskStatus.FAILED,
             error_message=str(exc),
         )
+        try:
+            await automation_service.notify_task_failure_if_needed(task.task_uuid)
+        except Exception as notify_exc:
+            logger.warning(f"Failure notification skipped for {task.task_uuid}: {notify_exc}")
         await _mark_report(report_id_ref, "failed", str(exc))
         raise
 

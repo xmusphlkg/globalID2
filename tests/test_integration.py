@@ -277,7 +277,7 @@ class IntegrationTest:
             return False
     
     async def test_email_service(self):
-        """测试6：邮件服务（仅测试配置）"""
+        """测试6：邮件服务（仅测试 Graph 配置）"""
         logger.info("=" * 60)
         logger.info("TEST 6: Email Service")
         logger.info("=" * 60)
@@ -288,15 +288,15 @@ class IntegrationTest:
             email_service = EmailService()
             
             # 测试连接（不实际发送）
-            logger.info("Testing SMTP connection...")
+            logger.info("Testing Microsoft Graph email connection...")
             # connection_ok = email_service.test_connection()
             
             # if connection_ok:
-            #     logger.info("  ✓ SMTP connection successful")
+            #     logger.info("  ✓ Microsoft Graph connection successful")
             # else:
-            #     logger.warning("  ⚠ SMTP connection failed (may need configuration)")
+            #     logger.warning("  ⚠ Microsoft Graph connection failed (may need configuration)")
             
-            logger.info("  ⚠ Email test skipped (requires SMTP configuration)")
+            logger.info("  ⚠ Email test skipped (requires Microsoft Graph configuration)")
             logger.info("✓ Email service test passed (skipped)")
             return True
         

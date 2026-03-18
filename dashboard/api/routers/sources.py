@@ -2,14 +2,24 @@
 
 from typing import Dict, List, Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..deps import get_db
-from ..schemas.sources import DataSourceFlow, StageInfo
+from ..schemas.sources import (
+    AutomationConfigOut,
+    AutomationJobCreate,
+    AutomationJobOut,
+    AutomationJobUpdate,
+    AutomationTriggerResult,
+    DataSourceFlow,
+    StageInfo,
+)
+from src.domain import AutomationJob
 from src.domain.disease_record import DiseaseRecord
 from src.domain.task import Task, TaskType, TaskWorkbook
+from src.services.automation_service import automation_service
 
 router = APIRouter()
 
@@ -371,3 +381,158 @@ async def get_sources_flow(
         )
 
     return result
+
+
+@router.get("/sources/automation", response_model=AutomationConfigOut)
+async def get_sources_automation():
+    return AutomationConfigOut(**(await automation_service.snapshot_async()))
+
+
+@router.get("/sources/automation/jobs", response_model=List[AutomationJobOut])
+async def list_automation_jobs(db: AsyncSession = Depends(get_db)):
+    await automation_service.ensure_storage()
+    rows = (
+        await db.execute(
+            select(AutomationJob).order_by(AutomationJob.country_code.asc(), AutomationJob.job_id.asc())
+        )
+    ).scalars().all()
+    snapshot = await automation_service.snapshot_async()
+    state_by_job = {item["job_id"]: item for item in snapshot["jobs"]}
+    return [
+        _automation_job_out(row, state_by_job.get(row.job_id))
+        for row in rows
+    ]
+
+
+@router.post("/sources/automation/jobs", response_model=AutomationJobOut, status_code=201)
+async def create_automation_job(body: AutomationJobCreate, db: AsyncSession = Depends(get_db)):
+    await automation_service.ensure_storage()
+    _validate_automation_schedule(body.interval_minutes, body.daily_time)
+    existing = (
+        await db.execute(select(AutomationJob).where(AutomationJob.job_id == body.job_id))
+    ).scalar_one_or_none()
+    if existing:
+        raise HTTPException(409, f"Automation job already exists: {body.job_id}")
+
+    job = AutomationJob(
+        job_id=body.job_id.strip(),
+        name=body.name.strip(),
+        country_code=body.country_code.strip().upper(),
+        source=(body.source or "all").strip().lower(),
+        enabled=body.enabled,
+        priority=(body.priority or "normal").strip().lower(),
+        process=body.process,
+        save_raw=body.save_raw,
+        fill_missing=body.fill_missing,
+        force=body.force,
+        retry_threshold=body.retry_threshold,
+        interval_minutes=body.interval_minutes,
+        daily_time=body.daily_time,
+        timezone=body.timezone,
+        notes=body.notes,
+    )
+    db.add(job)
+    await db.commit()
+    await db.refresh(job)
+    snapshot = await automation_service.snapshot_async()
+    state_by_job = {item["job_id"]: item for item in snapshot["jobs"]}
+    return _automation_job_out(job, state_by_job.get(job.job_id))
+
+
+@router.put("/sources/automation/jobs/{job_id}", response_model=AutomationJobOut)
+async def update_automation_job(job_id: str, body: AutomationJobUpdate, db: AsyncSession = Depends(get_db)):
+    await automation_service.ensure_storage()
+    job = (
+        await db.execute(select(AutomationJob).where(AutomationJob.job_id == job_id))
+    ).scalar_one_or_none()
+    if not job:
+        raise HTTPException(404, f"Automation job not found: {job_id}")
+
+    updates = body.model_dump(exclude_unset=True)
+    next_interval = updates["interval_minutes"] if "interval_minutes" in updates else job.interval_minutes
+    next_daily = updates["daily_time"] if "daily_time" in updates else job.daily_time
+    _validate_automation_schedule(next_interval, next_daily)
+
+    for field, value in updates.items():
+        if field == "country_code":
+            value = value.strip().upper()
+        elif field in {"source", "priority"} and isinstance(value, str):
+            value = value.strip().lower()
+        elif field in {"name", "timezone", "notes"} and isinstance(value, str):
+            value = value.strip()
+        setattr(job, field, value)
+
+    await db.commit()
+    await db.refresh(job)
+    snapshot = await automation_service.snapshot_async()
+    state_by_job = {item["job_id"]: item for item in snapshot["jobs"]}
+    return _automation_job_out(job, state_by_job.get(job.job_id))
+
+
+@router.delete("/sources/automation/jobs/{job_id}")
+async def delete_automation_job(job_id: str, db: AsyncSession = Depends(get_db)):
+    await automation_service.ensure_storage()
+    job = (
+        await db.execute(select(AutomationJob).where(AutomationJob.job_id == job_id))
+    ).scalar_one_or_none()
+    if not job:
+        raise HTTPException(404, f"Automation job not found: {job_id}")
+    await db.delete(job)
+    await db.commit()
+    return {"ok": True, "job_id": job_id}
+
+
+@router.post("/sources/automation/jobs/{job_id}/run", response_model=AutomationTriggerResult, status_code=202)
+async def run_automation_job(job_id: str):
+    try:
+        result = await automation_service.trigger_job(job_id, manual=True)
+    except ValueError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    return AutomationTriggerResult(**result)
+
+
+def _validate_automation_schedule(interval_minutes: int | None, daily_time: str | None) -> None:
+    if interval_minutes is None and not daily_time:
+        raise HTTPException(400, "Automation job requires either interval_minutes or daily_time")
+    if interval_minutes is not None and interval_minutes <= 0:
+        raise HTTPException(400, "interval_minutes must be greater than 0")
+    if daily_time:
+        parts = daily_time.split(":")
+        if len(parts) != 2:
+            raise HTTPException(400, "daily_time must be in HH:MM format")
+        try:
+            hour = int(parts[0])
+            minute = int(parts[1])
+        except ValueError as exc:
+            raise HTTPException(400, "daily_time must be numeric HH:MM") from exc
+        if not (0 <= hour <= 23 and 0 <= minute <= 59):
+            raise HTTPException(400, "daily_time must be a valid HH:MM value")
+
+
+def _automation_job_out(job: AutomationJob, state: dict | None) -> AutomationJobOut:
+    state = state or {}
+    return AutomationJobOut(
+        job_id=job.job_id,
+        name=job.name,
+        country_code=job.country_code,
+        source=job.source,
+        enabled=job.enabled,
+        priority=job.priority,
+        process=job.process,
+        save_raw=job.save_raw,
+        fill_missing=job.fill_missing,
+        force=job.force,
+        retry_threshold=job.retry_threshold,
+        interval_minutes=job.interval_minutes,
+        daily_time=job.daily_time,
+        timezone=job.timezone,
+        notes=job.notes,
+        next_run_at=state.get("next_run_at"),
+        last_started_at=state.get("last_started_at"),
+        last_finished_at=state.get("last_finished_at"),
+        last_status=state.get("last_status", "idle"),
+        last_error=state.get("last_error"),
+        last_task_uuid=state.get("last_task_uuid"),
+        run_count=state.get("run_count", 0),
+        skipped_count=state.get("skipped_count", 0),
+    )

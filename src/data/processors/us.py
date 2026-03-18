@@ -1,7 +1,7 @@
-"""US NNDSS weekly updater.
+"""US processor — normalise and import US NNDSS weekly data.
 
-Handles incremental updates from crawler/API fetched rows only.
-Historical import/rebuild responsibilities are intentionally excluded.
+HTTP fetching is delegated to crawlers/us.py (USNNDSSCrawler).
+This module handles row normalisation, gating, and PostgreSQL upsert.
 """
 
 from __future__ import annotations
@@ -12,24 +12,17 @@ import json
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, timezone
 from typing import Dict, Iterable, List, Optional, Tuple
-from urllib import request
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core import get_logger
+from src.data.crawlers.us import USNNDSSCrawler, DEFAULT_CSV_API_URL
 logger = get_logger(__name__)
 
 DEFAULT_REPORTING_AREA = "TOTAL"
 DEFAULT_SOURCE_NAME = "US CDC NNDSS"
-DEFAULT_CSV_API_URL = (
-    "https://data.cdc.gov/resource/x9gk-5huc.csv"
-    "?$select=states,year,week,label,m1,m1_flag,m2,m2_flag,m3,m3_flag,m4,m4_flag,location1,location2,sort_order,geocode"
-    "&$where=upper(states)='TOTAL'"
-    "&$order=sort_order"
-)
-USER_AGENT = "Mozilla/5.0 (GlobalID NNDSS sync)"
-SOCRATA_PAGE_SIZE = 50000
+REPORT_TIME_UTC = time(hour=12)
 
 
 
@@ -66,7 +59,7 @@ def _first_value(row: Dict[str, object], *keys: str) -> str:
 
 
 def _parse_numeric(value: str) -> str:
-    text = _normalize_text(value)
+    text = _normalize_text(value).replace(",", "")
     if not text:
         return ""
     try:
@@ -79,7 +72,7 @@ def _parse_numeric(value: str) -> str:
 
 
 def _parse_int(value: str) -> Optional[int]:
-    text = _normalize_text(value)
+    text = _normalize_text(value).replace(",", "")
     if not text:
         return None
     try:
@@ -203,7 +196,7 @@ class USWeeklyUpdater:
         self.source_name = source_name
 
     def fetch_latest(self) -> USUpdateFetchResult:
-        raw_rows, source_ref = self._fetch_csv_rows_paginated()
+        raw_rows, source_ref = USNNDSSCrawler().fetch_raw_pages()
 
         normalized_rows = _normalize_rows(
             raw_rows,
@@ -220,31 +213,6 @@ class USWeeklyUpdater:
             update_mode="api_sync",
             latest_date=latest_date,
         )
-
-    def _fetch_csv_rows_paginated(self) -> Tuple[List[Dict[str, object]], str]:
-        all_rows: List[Dict[str, object]] = []
-        offset = 0
-
-        while True:
-            page_url = f"{DEFAULT_CSV_API_URL}&$limit={SOCRATA_PAGE_SIZE}&$offset={offset}"
-            req = request.Request(page_url, headers={"User-Agent": USER_AGENT})
-            with request.urlopen(req, timeout=60) as response:
-                payload = response.read()
-
-            text_payload = payload.decode("utf-8-sig")
-            page_rows = list(csv.DictReader(io.StringIO(text_payload)))
-            if not page_rows:
-                break
-
-            all_rows.extend(page_rows)
-            if len(page_rows) < SOCRATA_PAGE_SIZE:
-                break
-            offset += SOCRATA_PAGE_SIZE
-
-        if not all_rows:
-            raise RuntimeError("Unable to fetch CDC NNDSS TOTAL rows from CSV endpoint")
-
-        return all_rows, DEFAULT_CSV_API_URL
 
     async def get_db_latest_date(self, db: AsyncSession) -> Optional[date]:
         result = await db.execute(
@@ -333,7 +301,11 @@ class USWeeklyUpdater:
                 continue
 
             try:
-                day = datetime.strptime(date_text, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+                day = datetime.combine(
+                    datetime.strptime(date_text, "%Y-%m-%d").date(),
+                    REPORT_TIME_UTC,
+                    tzinfo=timezone.utc,
+                )
             except ValueError:
                 continue
 

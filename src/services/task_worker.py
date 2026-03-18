@@ -11,10 +11,10 @@ import os
 import signal
 from typing import Optional
 
-from sqlalchemy import select
+from sqlalchemy import case, select
 
 from src.core import get_database, get_logger
-from src.domain import Task, TaskStatus
+from src.domain import Task, TaskPriority, TaskStatus
 from src.services.task_executor import execute_task, recover_interrupted_tasks_on_startup
 
 logger = get_logger(__name__)
@@ -31,10 +31,16 @@ async def _claim_next_task_uuid() -> Optional[str]:
     - queued  -> queued
     """
     async with get_database() as db:
+        priority_rank = case(
+            (Task.priority == TaskPriority.URGENT, 0),
+            (Task.priority == TaskPriority.HIGH, 1),
+            (Task.priority == TaskPriority.NORMAL, 2),
+            else_=3,
+        )
         result = await db.execute(
             select(Task)
             .where(Task.status.in_([TaskStatus.PENDING, TaskStatus.QUEUED]))
-            .order_by(Task.created_at.asc())
+            .order_by(priority_rank.asc(), Task.created_at.asc())
             .limit(1)
         )
         task = result.scalar_one_or_none()

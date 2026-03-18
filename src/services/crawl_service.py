@@ -678,17 +678,59 @@ class CrawlService:
         await task_manager.add_workbook_entry(
             task.task_uuid,
             entry_type="info",
-            title="Phase 1/3: Refreshing AU Source",
-            content="Loading AU crawler output CSV and preparing incremental update rows...",
+            title="Phase 1/3: Fetching AU Source",
+            content=(
+                "Launching Playwright to capture Power BI token, then fetching NINDSS data...\n"
+                f"Mode: {'fill missing months' if fill_missing else 'recent 3 months'}"
+                + (" + force re-fetch" if force else "")
+            ),
             content_type="text",
         )
         await task_manager.update_task_progress(task.task_uuid, 10)
 
+        # Determine which months to request from the crawler.
+        # AU data is dynamically revised, so we always re-fetch the most recent
+        # 3 months.  When fill_missing=True we also add any (year, month) pairs
+        # that are completely absent from the database.
+        months_to_fetch = None  # None → crawler will default to last 3 months
+        if fill_missing or force:
+            from datetime import date as _date
+            now_dt = datetime.now()
+            # Always include last 3 months
+            recent: list = []
+            for delta in range(3):
+                m = now_dt.month - delta
+                y = now_dt.year
+                if m <= 0:
+                    m += 12
+                    y -= 1
+                recent.append((y, m))
+            months_set = set(recent)
+
+            if fill_missing:
+                # Also pick up historical months missing from the DB
+                async with get_database() as db:
+                    existing_months = await updater.get_db_months(db)
+                # Build the full expected range: 2000 → current month
+                start_year = 2000
+                for fy in range(start_year, now_dt.year + 1):
+                    for fm in range(1, 13 if fy < now_dt.year else now_dt.month + 1):
+                        if (fy, fm) not in existing_months:
+                            months_set.add((fy, fm))
+
+            months_to_fetch = sorted(months_set)
+
         phase1_started = perf_counter()
-        fetched = updater.refresh_source(source=source, run_external=False)
+        fetched = updater.refresh_source(
+            source=source,
+            run_external=False,
+            force=force,
+            months=months_to_fetch,
+        )
         phase1_elapsed = perf_counter() - phase1_started
         source_latest = fetched.source_latest_date.isoformat() if fetched.source_latest_date else "none"
         source_rows = len(fetched.rows)
+        months_fetched_count = len(months_to_fetch) if months_to_fetch is not None else 3
 
         await task_manager.update_task_progress(task.task_uuid, 30)
         await task_manager.add_workbook_entry(
@@ -696,6 +738,7 @@ class CrawlService:
             entry_type="success",
             title="Phase 1/3 Complete",
             content=(
+                f"Months requested: {months_fetched_count}\n"
                 f"Source rows prepared (national monthly): {source_rows}\n"
                 f"Source latest month date: {source_latest}\n"
                 f"National CSV: {fetched.source_csv}\n"
@@ -716,8 +759,11 @@ class CrawlService:
         await task_manager.add_workbook_entry(
             task.task_uuid,
             entry_type="info",
-            title="Phase 2/3: Checking Incremental Updates",
-            content="Comparing AU source latest month with AU latest date in database...",
+            title="Phase 2/3: Upserting AU Data",
+            content=(
+                "AU data is dynamically revised — upserting all fetched rows "
+                f"({source_rows}) into the database unconditionally..."
+            ),
             content_type="text",
         )
         await task_manager.update_task_progress(task.task_uuid, 50)
@@ -756,7 +802,7 @@ class CrawlService:
             content=(
                 f"DB latest date: {db_latest_text}\n"
                 f"Source latest date: {source_latest}\n"
-                f"Imported rows: {imported}\n"
+                f"Upserted rows: {imported}\n"
                 f"Skipped unmapped rows: {skipped_unmapped}"
             ),
             content_type="text",
@@ -773,11 +819,11 @@ class CrawlService:
         if not process:
             summary_message = "Process disabled, refreshed AU source only."
         elif imported_new_data:
-            summary_message = "New AU monthly data imported successfully."
+            summary_message = f"AU data upserted: {imported} rows across {months_fetched_count} month(s) updated in database."
         elif force:
-            summary_message = "Force mode completed; no rows were upserted after filtering/mapping."
+            summary_message = "Force mode completed; no rows were upserted (possibly all skipped due to mapping)."
         else:
-            summary_message = "No newer AU monthly data detected, import skipped."
+            summary_message = "AU source refreshed; no rows matched disease mapping (check mapping config)."
 
         await self._finish_crawl_run(
             run_id,

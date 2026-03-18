@@ -1,7 +1,7 @@
 """
 GlobalID V2 Data Parsers
 
-解析爬取的数据，提取结构化信息
+Parse crawled data and extract structured information.
 """
 
 from .base import BaseParser, ParseResult

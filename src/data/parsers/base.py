@@ -1,7 +1,7 @@
 """
 GlobalID V2 Base Parser
 
-基础解析器类，定义通用的解析接口
+Abstract base class defining the common parser interface.
 """
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -17,26 +17,26 @@ logger = get_logger(__name__)
 
 @dataclass
 class ParseResult:
-    """解析结果数据类"""
-    
-    # 基本信息
+    """Parse result dataclass: holds the extracted DataFrame and parse metadata."""
+
+    # Basic identifiers
     source_url: str
     source_title: str
     parse_date: datetime = field(default_factory=datetime.now)
-    
-    # 解析出的数据
+
+    # Extracted data
     data: Optional[pd.DataFrame] = None
     raw_content: Optional[str] = None
-    
-    # 元数据
+
+    # Metadata
     metadata: Dict[str, Any] = field(default_factory=dict)
-    
-    # 解析状态
+
+    # Parse status
     success: bool = True
     error_message: Optional[str] = None
-    
+
     def to_dict(self) -> Dict[str, Any]:
-        """转换为字典"""
+        """Serialise to a plain dictionary."""
         return {
             "source_url": self.source_url,
             "source_title": self.source_title,
@@ -49,82 +49,82 @@ class ParseResult:
     
     @property
     def has_data(self) -> bool:
-        """是否包含有效数据"""
+        """True if the result contains a non-empty DataFrame."""
         return self.data is not None and not self.data.empty
 
 
 class BaseParser(ABC):
     """
-    基础解析器类
-    
-    定义解析器的通用接口和功能
+    Abstract base parser.
+
+    Defines the common interface for all parsers.
     """
     
     def __init__(self):
-        """初始化解析器"""
+        """Initialise parser with a module-scoped logger."""
         self.logger = get_logger(self.__class__.__name__)
     
     @abstractmethod
     def parse(self, content: str, **kwargs) -> ParseResult:
         """
-        解析内容
-        
+        Parse raw content into a :class:`ParseResult`.
+
         Args:
-            content: 待解析的内容（HTML、PDF等）
-            **kwargs: 额外参数
-            
+            content:  Raw content string (HTML, CSV, etc.).
+            **kwargs: Extra parameters (url, title, date, year_month, …).
+
         Returns:
-            ParseResult: 解析结果
+            :class:`ParseResult`
         """
         pass
-    
+
     @abstractmethod
     def validate(self, data: pd.DataFrame) -> bool:
         """
-        验证解析结果
-        
+        Validate a parsed DataFrame.
+
         Args:
-            data: 解析得到的数据
-            
+            data: Parsed DataFrame to validate.
+
         Returns:
-            bool: 是否有效
+            True if the data meets minimum quality requirements.
         """
         pass
     
     def _is_column_meaningful(self, column: pd.Series, threshold: float = 0.1) -> bool:
         """
-        检查列是否包含有意义的数据
-        
+        Check whether a column contains meaningful (non-trivial) data.
+
         Args:
-            column: pandas Series
-            threshold: 非空行比例阈值
-            
+            column:    pandas Series to inspect.
+            threshold: Minimum fraction of non-empty rows required.
+
         Returns:
-            bool: 是否有意义
+            True if the column passes the threshold.
         """
         if len(column) == 0:
             return False
-        
-        # 计算非空非空字符串的比例
+
+        # Fraction of non-null, non-empty-string values
         non_empty = column.replace("", pd.NA).notna().sum()
         ratio = non_empty / len(column)
-        
+
         return ratio > threshold
     
     def _clean_text(self, text: str) -> str:
         """
-        清理文本
-        
+        Clean a text string by collapsing internal whitespace.
+
         Args:
-            text: 原始文本
-            
+            text: Raw text.
+
         Returns:
-            str: 清理后的文本
+            Cleaned text with leading/trailing whitespace removed.
         """
         if not isinstance(text, str):
             return str(text) if text is not None else ""
-        
-        # 去除多余空白
+
+        # Collapse whitespace
         text = " ".join(text.split())
-        
+
         return text.strip()

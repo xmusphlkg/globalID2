@@ -62,6 +62,81 @@ find_port_pid() {
   fi
 }
 
+pid_cmdline() {
+  local pid="$1"
+  ps -p "$pid" -o args= 2>/dev/null || true
+}
+
+is_managed_api_pid() {
+  local pid="$1"
+  local cmd
+  cmd="$(pid_cmdline "$pid")"
+  [[ "$cmd" == *"dashboard.api.main:app"* ]]
+}
+
+is_managed_worker_pid() {
+  local pid="$1"
+  local cmd
+  cmd="$(pid_cmdline "$pid")"
+  [[ "$cmd" == *"src.services.task_worker"* ]]
+}
+
+is_managed_web_pid() {
+  local pid="$1"
+  local cmd
+  cmd="$(pid_cmdline "$pid")"
+  [[ "$cmd" == *"dashboard/node_modules/.bin/next"* && "$cmd" == *"dev"* && "$cmd" == *"--port 3000"* ]]
+}
+
+find_worker_pid() {
+  ps -eo pid=,args= 2>/dev/null | awk '/src\.services\.task_worker/ && !/awk/ {print $1; exit}'
+}
+
+find_web_pid() {
+  local port_pid
+  port_pid="$(find_port_pid 3000)"
+  if [[ -n "$port_pid" ]] && is_managed_web_pid "$port_pid"; then
+    echo "$port_pid"
+    return
+  fi
+  ps -eo pid=,args= 2>/dev/null | awk '/dashboard\/node_modules\/\.bin\/next/ && /dev/ && /--port 3000/ && !/awk/ {print $1; exit}'
+}
+
+find_managed_service_pid() {
+  local service="$1"
+  case "$service" in
+    api)
+      local port_pid
+      port_pid="$(find_port_pid 8000)"
+      if [[ -n "$port_pid" ]] && is_managed_api_pid "$port_pid"; then
+        echo "$port_pid"
+      fi
+      ;;
+    worker)
+      find_worker_pid
+      ;;
+    web)
+      find_web_pid
+      ;;
+  esac
+}
+
+adopt_managed_pid_if_needed() {
+  local service="$1"
+  local pid_file="$2"
+  local pid
+  pid="$(read_pid "$pid_file")"
+  if [[ -n "$pid" ]] && pid_is_running "$pid"; then
+    return
+  fi
+
+  local managed_pid
+  managed_pid="$(find_managed_service_pid "$service")"
+  if [[ -n "$managed_pid" ]] && pid_is_running "$managed_pid"; then
+    echo "$managed_pid" > "$pid_file"
+  fi
+}
+
 pid_is_running() {
   local pid="$1"
   [[ -n "$pid" ]] && kill -0 "$pid" >/dev/null 2>&1
@@ -134,11 +209,20 @@ resolve_python() {
 }
 
 start_api() {
+  adopt_managed_pid_if_needed "api" "$API_PID_FILE"
   cleanup_pid_file_if_stale "$API_PID_FILE"
   local pid
   pid="$(read_pid "$API_PID_FILE")"
   if [[ -n "$pid" ]] && pid_is_running "$pid"; then
     echo "API is already running (PID $pid)"
+    return
+  fi
+
+  local port_pid
+  port_pid="$(find_port_pid 8000)"
+  if [[ -n "$port_pid" ]] && is_managed_api_pid "$port_pid"; then
+    echo "$port_pid" > "$API_PID_FILE"
+    echo "API is already running (PID $port_pid)"
     return
   fi
 
@@ -173,6 +257,7 @@ start_api() {
 }
 
 start_web() {
+  adopt_managed_pid_if_needed "web" "$WEB_PID_FILE"
   cleanup_pid_file_if_stale "$WEB_PID_FILE"
   local pid
   pid="$(read_pid "$WEB_PID_FILE")"
@@ -184,6 +269,14 @@ start_web() {
   if [[ ! -d "$DASHBOARD_DIR/node_modules" ]]; then
     echo "dashboard/node_modules not found. Run 'cd dashboard && npm install' first." >&2
     exit 1
+  fi
+
+  local port_pid
+  port_pid="$(find_port_pid 3000)"
+  if [[ -n "$port_pid" ]] && is_managed_web_pid "$port_pid"; then
+    echo "$port_pid" > "$WEB_PID_FILE"
+    echo "Dashboard web is already running (PID $port_pid)"
+    return
   fi
 
   ensure_port_free 3000
@@ -207,11 +300,20 @@ start_web() {
 }
 
 start_worker() {
+  adopt_managed_pid_if_needed "worker" "$WORKER_PID_FILE"
   cleanup_pid_file_if_stale "$WORKER_PID_FILE"
   local pid
   pid="$(read_pid "$WORKER_PID_FILE")"
   if [[ -n "$pid" ]] && pid_is_running "$pid"; then
     echo "Task worker is already running (PID $pid)"
+    return
+  fi
+
+  local managed_pid
+  managed_pid="$(find_managed_service_pid "worker")"
+  if [[ -n "$managed_pid" ]] && pid_is_running "$managed_pid"; then
+    echo "$managed_pid" > "$WORKER_PID_FILE"
+    echo "Task worker is already running (PID $managed_pid)"
     return
   fi
 
@@ -239,13 +341,20 @@ start_worker() {
 stop_one() {
   local name="$1"
   local pid_file="$2"
+  local service="$3"
 
+  adopt_managed_pid_if_needed "$service" "$pid_file"
   cleanup_pid_file_if_stale "$pid_file"
   local pid
   pid="$(read_pid "$pid_file")"
   if [[ -z "$pid" ]]; then
-    echo "$name is not running"
-    return
+    pid="$(find_managed_service_pid "$service")"
+    if [[ -n "$pid" ]] && pid_is_running "$pid"; then
+      echo "$pid" > "$pid_file"
+    else
+      echo "$name is not running"
+      return
+    fi
   fi
 
   if ! pid_is_running "$pid"; then
@@ -277,7 +386,9 @@ status_one() {
   local pid_file="$2"
   local url="$3"
   local port="$4"
+  local service="$5"
 
+  adopt_managed_pid_if_needed "$service" "$pid_file"
   cleanup_pid_file_if_stale "$pid_file"
   local pid
   pid="$(read_pid "$pid_file")"
@@ -347,16 +458,17 @@ dispatch_start() {
 
 dispatch_stop() {
   case "$1" in
-    api) stop_one "API" "$API_PID_FILE" ;;
-    worker) stop_one "Task worker" "$WORKER_PID_FILE" ;;
-    web) stop_one "Dashboard web" "$WEB_PID_FILE" ;;
+    api) stop_one "API" "$API_PID_FILE" "api" ;;
+    worker) stop_one "Task worker" "$WORKER_PID_FILE" "worker" ;;
+    web) stop_one "Dashboard web" "$WEB_PID_FILE" "web" ;;
   esac
 }
 
 dispatch_status() {
   case "$1" in
-    api) status_one "API" "$API_PID_FILE" "http://localhost:8000/api/v1/health" 8000 ;;
+    api) status_one "API" "$API_PID_FILE" "http://localhost:8000/api/v1/health" 8000 "api" ;;
     worker)
+      adopt_managed_pid_if_needed "worker" "$WORKER_PID_FILE"
       cleanup_pid_file_if_stale "$WORKER_PID_FILE"
       local pid
       pid="$(read_pid "$WORKER_PID_FILE")"
@@ -366,7 +478,7 @@ dispatch_status() {
         echo "Task worker: stopped"
       fi
       ;;
-    web) status_one "Dashboard web" "$WEB_PID_FILE" "http://localhost:3000" 3000 ;;
+    web) status_one "Dashboard web" "$WEB_PID_FILE" "http://localhost:3000" 3000 "web" ;;
   esac
 }
 
