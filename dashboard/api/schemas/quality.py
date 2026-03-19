@@ -16,9 +16,10 @@ class QualityStats(BaseModel):
 
 
 class TimeGap(BaseModel):
-    month: str
-    next_month: Optional[str] = None
-    gap_months: float = 0.0
+    period_start: str
+    next_period: Optional[str] = None
+    gap_periods: float = 0.0
+    period_unit: str = "month"
 
 
 class DataSourceDist(BaseModel):
@@ -29,9 +30,10 @@ class DataSourceDist(BaseModel):
 
 class CompletenessItem(BaseModel):
     disease_name: str
-    data_months: int = 0
-    expected_months: int = 0
+    data_periods: int = 0
+    expected_periods: int = 0
     completeness_rate: float = 0.0
     earliest_date: Optional[str] = None
     latest_date: Optional[str] = None
     total_records: int = 0
+    period_unit: str = "month"

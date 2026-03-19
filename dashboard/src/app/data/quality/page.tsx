@@ -15,6 +15,22 @@ import { formatNumber } from "@/lib/utils";
 import { ShieldCheck, Database, CalendarDays, Clock } from "lucide-react";
 import { Badge, Card, ProgressBar, Text, Title } from "@tremor/react";
 
+function cadenceLabel(unit: string, mode: "noun" | "plural" | "adjective" = "noun") {
+  if (unit === "week") {
+    if (mode === "plural") return "Weeks";
+    if (mode === "adjective") return "Weekly";
+    return "Week";
+  }
+  if (unit === "biweek") {
+    if (mode === "plural") return "Biweeks";
+    if (mode === "adjective") return "Biweekly";
+    return "Biweek";
+  }
+  if (mode === "plural") return "Months";
+  if (mode === "adjective") return "Monthly";
+  return "Month";
+}
+
 export default function QualityPage() {
   const { lang, countryId } = useAppStore();
 
@@ -27,6 +43,12 @@ export default function QualityPage() {
     undefined,
     lang,
   );
+  const gapUnit = gaps?.[0]?.period_unit ?? "month";
+  const completenessUnits = Array.from(new Set((completeness ?? []).map((item) => item.period_unit)));
+  const mixedCadence = completenessUnits.length > 1;
+  const cadenceSummary = mixedCadence
+    ? "Adaptive"
+    : cadenceLabel(completenessUnits[0] ?? gapUnit, "adjective");
 
   if (!countryId) {
     return (
@@ -45,7 +67,7 @@ export default function QualityPage() {
       <div className="space-y-2">
         <Badge color="blue" className="w-fit">{t(lang, "mod_database")}</Badge>
         <Title className="text-2xl">{t(lang, "quality")}</Title>
-        <Text>Data quality metrics and completeness analysis</Text>
+        <Text>Data quality metrics and completeness analysis ({cadenceSummary} periods)</Text>
       </div>
 
       {stats && (
@@ -122,12 +144,12 @@ export default function QualityPage() {
                   type: "time",
                   axisLabel: { rotate: 0, fontSize: 11, hideOverlap: true },
                 },
-                yAxis: { type: "value", name: "Gap (months)", splitLine: { lineStyle: { type: "dashed", color: CHART_TOKENS.gridLine } } },
+                yAxis: { type: "value", name: `Gap (${cadenceLabel(gapUnit, "plural").toLowerCase()})`, splitLine: { lineStyle: { type: "dashed", color: CHART_TOKENS.gridLine } } },
                 dataZoom: [{ type: "inside" }, { type: "slider", height: 20 }],
                 series: [
                   {
                     type: "bar",
-                    data: gaps.map((g) => [g.month, g.gap_months]),
+                    data: gaps.map((g) => [g.period_start, g.gap_periods]),
                     barMaxWidth: 24,
                     itemStyle: { borderRadius: [4, 4, 0, 0] },
                   },
@@ -174,8 +196,9 @@ export default function QualityPage() {
                 <thead className="bg-tremor-background-subtle dark:bg-dark-tremor-background-subtle">
                   <tr>
                     <th className="px-3 py-2.5 text-left text-xs font-semibold text-tremor-content-subtle dark:text-dark-tremor-content-subtle">Disease</th>
-                    <th className="px-3 py-2.5 text-right text-xs font-semibold text-tremor-content-subtle dark:text-dark-tremor-content-subtle">Data Months</th>
-                    <th className="px-3 py-2.5 text-right text-xs font-semibold text-tremor-content-subtle dark:text-dark-tremor-content-subtle">Expected</th>
+                    <th className="px-3 py-2.5 text-left text-xs font-semibold text-tremor-content-subtle dark:text-dark-tremor-content-subtle">Cadence</th>
+                    <th className="px-3 py-2.5 text-right text-xs font-semibold text-tremor-content-subtle dark:text-dark-tremor-content-subtle">Data Periods</th>
+                    <th className="px-3 py-2.5 text-right text-xs font-semibold text-tremor-content-subtle dark:text-dark-tremor-content-subtle">Expected Periods</th>
                     <th className="px-3 py-2.5 text-right text-xs font-semibold text-tremor-content-subtle dark:text-dark-tremor-content-subtle">Rate</th>
                     <th className="px-3 py-2.5 text-right text-xs font-semibold text-tremor-content-subtle dark:text-dark-tremor-content-subtle">Records</th>
                     <th className="px-3 py-2.5 text-left text-xs font-semibold text-tremor-content-subtle dark:text-dark-tremor-content-subtle">Earliest</th>
@@ -186,8 +209,9 @@ export default function QualityPage() {
                   {completeness.map((c, i) => (
                     <tr key={i} className="hover:bg-tremor-background-subtle/50 dark:hover:bg-dark-tremor-background-subtle/50">
                       <td className="px-3 py-2 text-sm font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">{c.disease_name}</td>
-                      <td className="px-3 py-2 text-right text-sm text-tremor-content dark:text-dark-tremor-content">{c.data_months}</td>
-                      <td className="px-3 py-2 text-right text-sm text-tremor-content dark:text-dark-tremor-content">{c.expected_months}</td>
+                      <td className="px-3 py-2 text-sm text-tremor-content dark:text-dark-tremor-content">{cadenceLabel(c.period_unit, "adjective")}</td>
+                      <td className="px-3 py-2 text-right text-sm text-tremor-content dark:text-dark-tremor-content">{c.data_periods}</td>
+                      <td className="px-3 py-2 text-right text-sm text-tremor-content dark:text-dark-tremor-content">{c.expected_periods}</td>
                       <td className="px-3 py-2 text-right">
                         <Badge color={
                           c.completeness_rate >= 90
