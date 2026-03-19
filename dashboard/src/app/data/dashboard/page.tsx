@@ -12,6 +12,7 @@ import { CHART_TOKENS } from "@/lib/chart-theme";
 import { formatDate } from "@/lib/utils";
 import { Activity, Database, CalendarDays, TrendingUp, FileText } from "lucide-react";
 import { Card, Title, Text, Grid, Col, Badge, Flex, Select, SelectItem, List, ListItem } from "@tremor/react";
+import { formatNumber } from "@/lib/utils";
 
 const intervals = [
   { labelKey: "interval_30d", value: 30 },
@@ -41,8 +42,25 @@ export default function DataDashboardPage() {
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 md:px-6">
       <div className="mb-8">
-         <Title className="text-2xl">{t(lang, "dashboard")}</Title>
-         <Text>Disease surveillance overview and release pipeline snapshot</Text>
+         <div className="page-intro rounded-[24px] border border-tremor-border bg-[linear-gradient(135deg,rgba(15,118,110,0.08),rgba(255,255,255,0.92)_50%,rgba(20,184,166,0.08))] p-6">
+           <div className="flex flex-wrap items-start justify-between gap-4">
+             <div>
+               <Title className="text-2xl">{t(lang, "dashboard")}</Title>
+               <Text>Disease surveillance overview and release pipeline snapshot</Text>
+             </div>
+             <div className="rounded-2xl border border-tremor-border bg-white/80 px-4 py-3 shadow-sm">
+               <Text className="text-xs font-semibold uppercase tracking-[0.18em] text-tremor-content-subtle">
+                 {lang === "zh" ? "当前聚焦" : "Current focus"}
+               </Text>
+               <p className="mt-2 text-sm font-semibold text-tremor-content-strong">
+                 {diseaseCode
+                   ? diseases?.find((d) => d.code === diseaseCode)?.display_name || diseaseCode
+                   : t(lang, "all_diseases")}
+               </p>
+               <Text className="mt-1">{interval ? `${interval}d` : t(lang, "interval_all")}</Text>
+             </div>
+           </div>
+         </div>
       </div>
 
       <Grid numItems={1} numItemsSm={2} numItemsLg={4} className="gap-6 mb-6">
@@ -135,6 +153,31 @@ export default function DataDashboardPage() {
 
         <Col numColSpan={1} numColSpanLg={3}>
           <div className="space-y-6">
+             <Card>
+               <Title>{t(lang, "top_diseases")}</Title>
+               {summary?.top_diseases?.length ? (
+                 <div className="mt-4 space-y-3">
+                   {summary.top_diseases.slice(0, 5).map((disease, index) => (
+                     <div key={`${disease.name}-${index}`} className="rounded-2xl border border-tremor-border bg-tremor-background px-3 py-3">
+                       <div className="flex items-center justify-between gap-3">
+                         <div>
+                           <p className="text-sm font-semibold text-tremor-content-strong">{disease.name}</p>
+                           <p className="text-xs text-tremor-content">
+                             {formatNumber(disease.total_cases)} {t(lang, "cases")} · {formatNumber(disease.total_deaths)} {t(lang, "deaths")}
+                           </p>
+                         </div>
+                         <Badge color={index === 0 ? "emerald" : "slate"}>{index + 1}</Badge>
+                       </div>
+                     </div>
+                   ))}
+                 </div>
+               ) : (
+                 <div className="mt-4 rounded-2xl border border-dashed border-tremor-border px-4 py-6 text-center">
+                   <Text>{t(lang, "no_data")}</Text>
+                 </div>
+               )}
+             </Card>
+
              <Card>
                <Title>{t(lang, "release_snapshot")}</Title>
                <List className="mt-4">

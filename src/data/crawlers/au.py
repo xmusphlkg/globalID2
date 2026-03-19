@@ -18,6 +18,7 @@ Public interface
 """
 from __future__ import annotations
 
+import asyncio
 import base64
 import csv
 import gzip
@@ -25,10 +26,11 @@ import html as html_lib
 import io
 import json
 import re
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import parse_qs, unquote, urlparse
@@ -65,8 +67,17 @@ def _norm_text(value: object) -> str:
 
 
 def _parse_int(value: object) -> Optional[int]:
+    if value is None:
+        return None
     try:
-        return int(str(value).strip())
+        text = str(value).strip().strip("'\"").replace(",", "")
+        if text.endswith(("L", "l")):
+            text = text[:-1]
+        if not text:
+            return None
+        if "." in text:
+            return int(float(text))
+        return int(text)
     except (ValueError, TypeError):
         return None
 
@@ -80,7 +91,8 @@ def _find_dm0(obj: Any) -> Optional[List[Dict]]:
                 return res
     elif isinstance(obj, list):
         if obj and isinstance(obj[0], dict):
-            if any(any(k == "G0" or k.startswith("C") for k in item.keys()) for item in obj):
+            dm0_like_keys = {"G0", "G", "G1", "G2", "C", "M0", "M", "V", "X", "R"}
+            if any(any(k in dm0_like_keys for k in item.keys()) for item in obj):
                 return obj
         for item in obj:
             res = _find_dm0(item)
@@ -121,7 +133,9 @@ def _parse_dm0_to_state_counts(dm0: List[Dict], raw: Dict, year: Any) -> Dict[st
                                         break
                         else:
                             val = xi
-                        results[st] = int(val) if val is not None else 0
+                        results[st] = _parse_int(val) if val is not None else 0
+                        if results[st] is None:
+                            results[st] = 0
                     return results
     except Exception:
         pass
@@ -149,11 +163,12 @@ def _parse_dm0_to_state_counts(dm0: List[Dict], raw: Dict, year: Any) -> Dict[st
                 if k == "C" and isinstance(v, (list, tuple)):
                     continue
                 if k.startswith("M") or (k.startswith("C") and not isinstance(v, (list, tuple))):
-                    try:
-                        value = int(v)
-                    except Exception:
+                    parsed = _parse_int(v)
+                    if parsed is not None:
+                        value = parsed
+                    else:
                         try:
-                            value = float(v)
+                            value = float(str(v).strip().strip("'\"").replace(",", ""))
                         except Exception:
                             value = v
                     break
@@ -192,11 +207,12 @@ def _parse_dm0_to_state_counts(dm0: List[Dict], raw: Dict, year: Any) -> Dict[st
         if isinstance(value, (list, tuple)):
             value = value[1] if len(value) >= 2 else (value[0] if value else None)
         if isinstance(value, str):
-            try:
-                value = int(value)
-            except Exception:
+            parsed = _parse_int(value)
+            if parsed is not None:
+                value = parsed
+            else:
                 try:
-                    value = float(value)
+                    value = float(value.strip().strip("'\"").replace(",", ""))
                 except Exception:
                     pass
         if value is None:
@@ -238,7 +254,12 @@ class AustraliaNINDSSCrawler(BaseCrawler):
     case counts by state, aggregating to national totals.
     """
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        *,
+        save_raw: bool = False,
+        raw_dir: Optional[Path] = None,
+    ) -> None:
         super().__init__(
             user_agent="Mozilla/5.0 (compatible; GlobalID/2.0; AU-NINDSS)",
             timeout=60,
@@ -259,6 +280,9 @@ class AustraliaNINDSSCrawler(BaseCrawler):
         )
         self._config: Optional[Dict[str, Any]] = None
         self._http: Optional[requests.Session] = None
+        self.save_raw = save_raw
+        self.raw_dir = Path(raw_dir) if raw_dir is not None else None
+        self._runtime_hints: Dict[str, Any] = {}
 
     # ── Authentication ────────────────────────────────────────────────────────
 
@@ -277,8 +301,10 @@ class AustraliaNINDSSCrawler(BaseCrawler):
           1) intercept live browser traffic via Playwright
           2) extract embed token/config from dashboard HTML
         """
-        if self._load_config_via_playwright():
-            return True
+        for attempt in range(1, 3):
+            if self._load_config_via_playwright():
+                return True
+            logger.warning(f"[AU-NINDSS] Playwright token capture attempt {attempt}/2 failed")
         logger.warning(
             "[AU-NINDSS] Playwright token capture unavailable or did not observe a query request; "
             "falling back to HTML embed config extraction"
@@ -296,6 +322,64 @@ class AustraliaNINDSSCrawler(BaseCrawler):
         logger.info(
             f"[AU-NINDSS] Starting browser token capture | dashboard={self.dashboard_url}"
         )
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            pass
+        else:
+            return self._load_config_via_playwright_threaded()
+
+        captured = self._capture_playwright_runtime_config()
+        if not captured:
+            return False
+
+        return self._set_runtime_config(
+            token=captured.get("token", ""),
+            api_url=captured.get("url", ""),
+            report_id=captured.get("report_id") or _REPORT_ID,
+            dataset_id=_DATASET_ID,
+            model_id=_MODEL_ID,
+            log_source="playwright",
+            runtime_hints=captured.get("runtime_hints"),
+        )
+
+    def _load_config_via_playwright_threaded(self) -> bool:
+        captured: Dict[str, Any] = {}
+        errors: List[BaseException] = []
+
+        def runner() -> None:
+            try:
+                captured.update(self._capture_playwright_runtime_config() or {})
+            except BaseException as exc:
+                errors.append(exc)
+
+        thread = threading.Thread(
+            target=runner,
+            name="au-nindss-playwright",
+            daemon=True,
+        )
+        thread.start()
+        thread.join()
+
+        if errors:
+            exc = errors[0]
+            logger.error(f"[AU-NINDSS] Browser token capture failed | error={exc}")
+            return False
+        if not captured:
+            return False
+
+        logger.info("[AU-NINDSS] Playwright token capture executed in helper thread")
+        return self._set_runtime_config(
+            token=captured.get("token", ""),
+            api_url=captured.get("url", ""),
+            report_id=captured.get("report_id") or _REPORT_ID,
+            dataset_id=_DATASET_ID,
+            model_id=_MODEL_ID,
+            log_source="playwright-thread",
+            runtime_hints=captured.get("runtime_hints"),
+        )
+
+    def _capture_playwright_runtime_config(self) -> Optional[Dict[str, Any]]:
         captured: Dict[str, Any] = {}
         try:
             from playwright.sync_api import sync_playwright
@@ -312,6 +396,16 @@ class AustraliaNINDSSCrawler(BaseCrawler):
                             captured["token"] = auth
                             captured["url"] = req.url
                             captured["report_id"] = headers.get("x-powerbi-reportid", _REPORT_ID)
+                        runtime_hints = self._extract_runtime_hints_from_post_data(
+                            getattr(req, "post_data", None)
+                        )
+                        if runtime_hints:
+                            merged_hints = captured.setdefault("runtime_hints", {})
+                            if self._should_replace_location_hint(
+                                merged_hints.get("location"),
+                                runtime_hints.get("location"),
+                            ):
+                                merged_hints["location"] = runtime_hints["location"]
 
                 page.on("request", on_request)
                 page.goto(self.dashboard_url, timeout=90_000)
@@ -345,19 +439,124 @@ class AustraliaNINDSSCrawler(BaseCrawler):
             return False
         except Exception as exc:
             logger.error(f"[AU-NINDSS] Browser token capture failed | error={exc}")
-            return False
+            return None
 
         if not captured.get("token"):
             logger.error("[AU-NINDSS] Timed out waiting for token from browser traffic")
-            return False
+            return None
 
-        return self._set_runtime_config(
-            token=captured.get("token", ""),
-            api_url=captured.get("url", ""),
-            report_id=captured.get("report_id") or _REPORT_ID,
-            dataset_id=_DATASET_ID,
-            model_id=_MODEL_ID,
-            log_source="playwright",
+        self._maybe_save_auth_capture(captured)
+        return captured
+
+    def _extract_runtime_hints_from_post_data(self, post_data: Optional[str]) -> Dict[str, Any]:
+        if not post_data:
+            return {}
+        try:
+            payload = json.loads(post_data)
+        except Exception:
+            return {}
+
+        queries = payload.get("queries", [])
+        for query_entry in queries:
+            commands = (
+                query_entry.get("Query", {})
+                .get("Commands", [])
+            )
+            for command in commands:
+                semantic = command.get("SemanticQueryDataShapeCommand", {})
+                query = semantic.get("Query", {})
+                from_items = query.get("From", [])
+                entities = {
+                    _norm_text(item.get("Name")): _norm_text(item.get("Entity"))
+                    for item in from_items
+                    if isinstance(item, dict)
+                }
+                location_alias = next(
+                    (name for name, entity in entities.items() if entity == "DELTALOAD_DATAMART LOCATION_DIM"),
+                    "",
+                )
+                fact_alias = next(
+                    (
+                        name
+                        for name, entity in entities.items()
+                        if entity == "DELTALOAD_DATAMART NOTIFIABLE_EVENT_FACT"
+                    ),
+                    "",
+                )
+                disease_alias = next(
+                    (name for name, entity in entities.items() if entity == "DELTALOAD_DATAMART DISEASE_DIM"),
+                    "",
+                )
+                case_alias = next(
+                    (name for name, entity in entities.items() if entity == "DELTALOAD_DATAMART CASE_DIM"),
+                    "",
+                )
+                if not location_alias or not fact_alias:
+                    continue
+
+                state_seen = False
+                measure_property = ""
+                for select_item in query.get("Select", []):
+                    column = select_item.get("Column", {})
+                    column_expr = column.get("Expression", {}).get("SourceRef", {})
+                    if (
+                        _norm_text(column_expr.get("Source")) == location_alias
+                        and _norm_text(column.get("Property")) == "STATE"
+                    ):
+                        state_seen = True
+                    measure = select_item.get("Measure", {})
+                    measure_expr = measure.get("Expression", {}).get("SourceRef", {})
+                    if _norm_text(measure_expr.get("Source")) == fact_alias:
+                        measure_property = _norm_text(measure.get("Property"))
+
+                if state_seen and measure_property:
+                    score = 0
+                    if measure_property == "Count_Notification":
+                        score += 10
+                    if measure_property.lower() == "count_notification":
+                        score += 5
+                    if not any("HierarchyLevel" in item for item in query.get("Select", [])):
+                        score += 3
+                    return {
+                        "location": {
+                            "fact_alias": fact_alias,
+                            "location_alias": location_alias,
+                            "disease_alias": disease_alias or "d11",
+                            "case_alias": case_alias or "d3",
+                            "state_property": "STATE",
+                            "measure_property": measure_property,
+                            "_score": score,
+                        }
+                    }
+        return {}
+
+    @staticmethod
+    def _should_replace_location_hint(
+        current: Optional[Dict[str, Any]],
+        candidate: Optional[Dict[str, Any]],
+    ) -> bool:
+        if not isinstance(candidate, dict):
+            return False
+        if not isinstance(current, dict):
+            return True
+        return int(candidate.get("_score", 0)) > int(current.get("_score", 0))
+
+    def _maybe_save_auth_capture(self, captured: Dict[str, Any]) -> None:
+        if not self.save_raw or self.raw_dir is None:
+            return
+        auth_dir = self.raw_dir / "_auth"
+        auth_dir.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "captured_at": datetime.now(timezone.utc).isoformat(),
+            "dashboard_url": self.dashboard_url,
+            "api_url": captured.get("url"),
+            "report_id": captured.get("report_id") or _REPORT_ID,
+            "runtime_hints": captured.get("runtime_hints", {}),
+            "token_prefix": _norm_text(captured.get("token"))[:24],
+        }
+        (auth_dir / "latest_capture.json").write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2),
+            encoding="utf-8",
         )
 
     def _load_config_via_html(self) -> bool:
@@ -500,6 +699,7 @@ class AustraliaNINDSSCrawler(BaseCrawler):
         dataset_id: Any,
         model_id: Any,
         log_source: str,
+        runtime_hints: Optional[Dict[str, Any]] = None,
     ) -> bool:
         token = _norm_text(token)
         if token.lower().startswith("bearer "):
@@ -521,6 +721,7 @@ class AustraliaNINDSSCrawler(BaseCrawler):
             "datasetId": _norm_text(dataset_id) or _DATASET_ID,
             "modelId": parsed_model_id if parsed_model_id is not None else _MODEL_ID,
         }
+        self._runtime_hints = runtime_hints or self._runtime_hints or {}
         if not self._http:
             self._http = self._make_http_session()
 
@@ -528,6 +729,13 @@ class AustraliaNINDSSCrawler(BaseCrawler):
             f"[AU-NINDSS] Token/config loaded via {log_source} | "
             f"token_prefix={token[:15]}... api_url={api_url[:60]}..."
         )
+        location_measure = (
+            self._runtime_hints.get("location", {}).get("measure_property")
+            if isinstance(self._runtime_hints.get("location"), dict)
+            else None
+        )
+        if location_measure:
+            logger.info(f"[AU-NINDSS] Runtime location measure detected | measure={location_measure}")
         return True
 
     # ── Query execution ───────────────────────────────────────────────────────
@@ -658,6 +866,17 @@ class AustraliaNINDSSCrawler(BaseCrawler):
     def _build_location_payload(
         self, year: str, quarter: str, month_name: str, disease: str
     ) -> Dict[str, Any]:
+        location_hints = (
+            self._runtime_hints.get("location", {})
+            if isinstance(self._runtime_hints.get("location"), dict)
+            else {}
+        )
+        fact_alias = _norm_text(location_hints.get("fact_alias")) or "d1"
+        location_alias = _norm_text(location_hints.get("location_alias")) or "d"
+        disease_alias = _norm_text(location_hints.get("disease_alias")) or "d11"
+        case_alias = _norm_text(location_hints.get("case_alias")) or "d3"
+        state_property = _norm_text(location_hints.get("state_property")) or "STATE"
+        measure_property = _norm_text(location_hints.get("measure_property")) or "Count_Notification"
         return {
             "version": "1.0.0",
             "queries": [{
@@ -667,44 +886,44 @@ class AustraliaNINDSSCrawler(BaseCrawler):
                             "Query": {
                                 "Version": 2,
                                 "From": [
-                                    {"Name": "d1", "Entity": "DELTALOAD_DATAMART NOTIFIABLE_EVENT_FACT", "Type": 0},
-                                    {"Name": "d",  "Entity": "DELTALOAD_DATAMART LOCATION_DIM", "Type": 0},
-                                    {"Name": "d11","Entity": "DELTALOAD_DATAMART DISEASE_DIM", "Type": 0},
-                                    {"Name": "d3", "Entity": "DELTALOAD_DATAMART CASE_DIM", "Type": 0},
+                                    {"Name": fact_alias, "Entity": "DELTALOAD_DATAMART NOTIFIABLE_EVENT_FACT", "Type": 0},
+                                    {"Name": location_alias,  "Entity": "DELTALOAD_DATAMART LOCATION_DIM", "Type": 0},
+                                    {"Name": disease_alias, "Entity": "DELTALOAD_DATAMART DISEASE_DIM", "Type": 0},
+                                    {"Name": case_alias, "Entity": "DELTALOAD_DATAMART CASE_DIM", "Type": 0},
                                 ],
                                 "Select": [
                                     {
                                         "Column": {
-                                            "Expression": {"SourceRef": {"Source": "d"}},
-                                            "Property": "STATE",
+                                            "Expression": {"SourceRef": {"Source": location_alias}},
+                                            "Property": state_property,
                                         },
                                         "Name": "DELTALOAD_DATAMART LOCATION_DIM.STATE",
                                     },
                                     {
                                         "Measure": {
-                                            "Expression": {"SourceRef": {"Source": "d1"}},
-                                            "Property": "Count_Notification_ForGraph",
+                                            "Expression": {"SourceRef": {"Source": fact_alias}},
+                                            "Property": measure_property,
                                         },
-                                        "Name": "DELTALOAD_DATAMART NOTIFIABLE_EVENT_FACT.M_Notification_ForGraph",
+                                        "Name": "DELTALOAD_DATAMART NOTIFIABLE_EVENT_FACT.M_Notification",
                                     },
                                 ],
                                 "Where": [
                                     {"Condition": {"Not": {"Expression": {"In": {
-                                        "Expressions": [{"Column": {"Expression": {"SourceRef": {"Source": "d"}}, "Property": "STATE"}}],
+                                        "Expressions": [{"Column": {"Expression": {"SourceRef": {"Source": location_alias}}, "Property": state_property}}],
                                         "Values": [
                                             [{"Literal": {"Value": "'AUS'"}}],
                                             [{"Literal": {"Value": "'Unknown'"}}],
                                         ],
                                     }}}}},
                                     {"Condition": {"In": {
-                                        "Expressions": [{"Column": {"Expression": {"SourceRef": {"Source": "d11"}}, "Property": "DISEASE NAME"}}],
+                                        "Expressions": [{"Column": {"Expression": {"SourceRef": {"Source": disease_alias}}, "Property": "DISEASE NAME"}}],
                                         "Values": [[{"Literal": {"Value": f"'{disease}'"}}]],
                                     }}},
                                     {"Condition": {"In": {
                                         "Expressions": [
-                                            {"Column": {"Expression": {"SourceRef": {"Source": "d1"}}, "Property": "DIAGNOSIS_YEAR_HIERARCHY"}},
-                                            {"Column": {"Expression": {"SourceRef": {"Source": "d1"}}, "Property": "DIAGNOSIS_QUARTER"}},
-                                            {"Column": {"Expression": {"SourceRef": {"Source": "d1"}}, "Property": "DIAGNOSIS_MONTHNAME"}},
+                                            {"Column": {"Expression": {"SourceRef": {"Source": fact_alias}}, "Property": "DIAGNOSIS_YEAR_HIERARCHY"}},
+                                            {"Column": {"Expression": {"SourceRef": {"Source": fact_alias}}, "Property": "DIAGNOSIS_QUARTER"}},
+                                            {"Column": {"Expression": {"SourceRef": {"Source": fact_alias}}, "Property": "DIAGNOSIS_MONTHNAME"}},
                                         ],
                                         "Values": [[
                                             {"Literal": {"Value": f"'{year}'"}},
@@ -714,11 +933,11 @@ class AustraliaNINDSSCrawler(BaseCrawler):
                                     }}},
                                     {"Condition": {"Comparison": {
                                         "ComparisonKind": 1,
-                                        "Left": {"Column": {"Expression": {"SourceRef": {"Source": "d1"}}, "Property": "DAX_Year"}},
+                                        "Left": {"Column": {"Expression": {"SourceRef": {"Source": fact_alias}}, "Property": "DAX_Year"}},
                                         "Right": {"Literal": {"Value": "1990L"}},
                                     }}},
                                     {"Condition": {"In": {
-                                        "Expressions": [{"Column": {"Expression": {"SourceRef": {"Source": "d3"}}, "Property": "CONFIRMATION_STATUS"}}],
+                                        "Expressions": [{"Column": {"Expression": {"SourceRef": {"Source": case_alias}}, "Property": "CONFIRMATION_STATUS"}}],
                                         "Values": [
                                             [{"Literal": {"Value": "'Confirmed'"}}],
                                             [{"Literal": {"Value": "'Probable'"}}],
@@ -742,6 +961,38 @@ class AustraliaNINDSSCrawler(BaseCrawler):
             "cancelRequests": True,
         }
 
+    def _archive_month_fetch(
+        self,
+        *,
+        year: int,
+        month: int,
+        disease: str,
+        payload: Dict[str, Any],
+        raw: Optional[Dict[str, Any]],
+        parsed_counts: Optional[Dict[str, int]],
+    ) -> None:
+        if not self.save_raw or self.raw_dir is None:
+            return
+        month_dir = self.raw_dir / f"{year}" / f"{month:02d}"
+        month_dir.mkdir(parents=True, exist_ok=True)
+        safe_name = re.sub(r'[^A-Za-z0-9._-]+', "_", disease).strip("_") or "unknown_disease"
+        archive = {
+            "fetched_at": datetime.now(timezone.utc).isoformat(),
+            "disease": disease,
+            "year": year,
+            "month": month,
+            "dashboard_url": self.dashboard_url,
+            "api_url": self._config.get("apiUrl") if self._config else None,
+            "runtime_hints": self._runtime_hints,
+            "request_payload": payload,
+            "response_json": raw,
+            "parsed_counts": parsed_counts,
+        }
+        (month_dir / f"{safe_name}.json").write_text(
+            json.dumps(archive, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+
     def _fetch_month_disease(
         self, year: int, month: int, disease: str
     ) -> Optional[Dict[str, int]]:
@@ -751,8 +1002,25 @@ class AustraliaNINDSSCrawler(BaseCrawler):
         payload = self._build_location_payload(str(year), quarter, mname, disease)
         dm0, raw = self._execute_payload(payload)
         if dm0 is None or raw is None:
+            self._archive_month_fetch(
+                year=year,
+                month=month,
+                disease=disease,
+                payload=payload,
+                raw=raw,
+                parsed_counts=None,
+            )
             return None
-        return _parse_dm0_to_state_counts(dm0, raw, str(year))
+        parsed_counts = _parse_dm0_to_state_counts(dm0, raw, str(year))
+        self._archive_month_fetch(
+            year=year,
+            month=month,
+            disease=disease,
+            payload=payload,
+            raw=raw,
+            parsed_counts=parsed_counts,
+        )
+        return parsed_counts
 
     # ── Internal sync fetch (shared by crawl() and crawl_monthly_national_csv) ─
 
@@ -793,8 +1061,9 @@ class AustraliaNINDSSCrawler(BaseCrawler):
                             if k.upper() not in _SKIP_STATES
                             and isinstance(v, (int, float))
                         )
-                        if national > 0:
-                            totals[(y, m, dis)] = int(national)
+                        # Preserve explicit zero-count disease/month rows.
+                        # A confirmed 0 is materially different from "missing".
+                        totals[(y, m, dis)] = int(national)
                 except Exception as exc:
                     logger.debug(
                         f"[AU-NINDSS] fetch failed | "
@@ -826,7 +1095,7 @@ class AustraliaNINDSSCrawler(BaseCrawler):
     def _crawl_sync(self, years: Optional[List[int]] = None) -> List[CrawlerResult]:
         if not self._load_config():
             raise RuntimeError(
-                "AU NINDSS: failed to capture Power BI auth token via Playwright"
+                "AU NINDSS: failed to capture Power BI auth token via Playwright after retries"
             )
 
         diseases = self.get_all_diseases()
@@ -899,7 +1168,7 @@ class AustraliaNINDSSCrawler(BaseCrawler):
         """
         if not self._load_config():
             raise RuntimeError(
-                "AU NINDSS: failed to capture Power BI auth token via Playwright"
+                "AU NINDSS: failed to capture Power BI auth token via Playwright after retries"
             )
 
         diseases = self.get_all_diseases()

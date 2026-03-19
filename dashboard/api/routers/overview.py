@@ -3,6 +3,7 @@
 All queries use parameterised binds to prevent SQL injection.
 """
 
+from statistics import median
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Query
@@ -17,6 +18,41 @@ from src.domain.disease_record import DiseaseRecord
 from src.domain.standard_disease import StandardDisease
 
 router = APIRouter()
+
+
+async def _infer_country_frequency(country_id: int, db: AsyncSession) -> str:
+    times_q = (
+        select(DiseaseRecord.time)
+        .where(DiseaseRecord.country_id == country_id)
+        .distinct()
+        .order_by(DiseaseRecord.time.desc())
+        .limit(16)
+    )
+    times = [row[0] for row in (await db.execute(times_q)).all()]
+    if len(times) < 3:
+        return "month"
+
+    gaps = []
+    for previous, current in zip(times, times[1:]):
+        gap = abs((previous - current).days)
+        if gap > 0:
+            gaps.append(gap)
+
+    if not gaps:
+        return "month"
+
+    return "week" if median(gaps) <= 10 else "month"
+
+
+async def _country_has_total_disease(country_id: int, db: AsyncSession) -> bool:
+    q = (
+        select(func.count())
+        .select_from(DiseaseRecord)
+        .join(Disease, DiseaseRecord.disease_id == Disease.id)
+        .where(DiseaseRecord.country_id == country_id, Disease.name == "D999")
+    )
+    count = (await db.execute(q)).scalar_one()
+    return bool(count)
 
 
 @router.get("/overview/summary", response_model=OverviewSummary)
@@ -100,7 +136,8 @@ async def overview_trend(
 ):
     """Monthly trend data for a given country and (optional) disease."""
 
-    time_period = func.date_trunc("month", DiseaseRecord.time).label("time_period")
+    bucket = await _infer_country_frequency(country_id, db)
+    time_period = func.date_trunc(bucket, DiseaseRecord.time).label("time_period")
 
     q = (
         select(
@@ -112,8 +149,12 @@ async def overview_trend(
         .where(DiseaseRecord.country_id == country_id)
     )
 
-    code = disease_code or "D999"
-    q = q.where(Disease.name == code)
+    if disease_code:
+        q = q.where(Disease.name == disease_code)
+    else:
+        has_total = await _country_has_total_disease(country_id, db)
+        if has_total:
+            q = q.where(Disease.name == "D999")
 
     if interval is not None:
         q = q.where(

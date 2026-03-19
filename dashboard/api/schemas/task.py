@@ -14,6 +14,8 @@ class TaskOut(BaseModel):
     priority: str
     progress: int = 0
     country_id: Optional[int] = None
+    country_code: Optional[str] = None
+    country_name: Optional[str] = None
     report_id: Optional[int] = None
     description: Optional[str] = None
     last_error: Optional[str] = None
@@ -72,3 +74,15 @@ class TaskStatusUpdate(BaseModel):
     progress: int = 0
     last_error: Optional[str] = None
     updated_at: str
+
+
+class WorkerStatusOut(BaseModel):
+    worker_process_running: bool
+    worker_pid: Optional[int] = None
+    queued_tasks: int = 0
+    running_tasks: int = 0
+    retrying_tasks: int = 0
+    active_tasks: int = 0
+    latest_created_at: Optional[datetime] = None
+    latest_started_at: Optional[datetime] = None
+    latest_completed_at: Optional[datetime] = None

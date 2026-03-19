@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAppStore } from "@/stores/app-store";
 import { t } from "@/lib/i18n";
 import { useSourcesFlow, useStartCrawl } from "@/lib/hooks/useSources";
 import { useTaskWebSocket } from "@/lib/hooks/useTasks";
 import { formatDate } from "@/lib/utils";
+import { getSourceDisplayLabel, getSourceOptionsForCountry } from "@/lib/source-labels";
 import {
   Badge,
   Card,
@@ -62,16 +63,6 @@ const STAGE_LABEL_KEYS: Record<string, string> = {
   finalize: "flow_stage_finalize",
 };
 
-function sourceLabel(lang: "en" | "zh", source?: string | null): string {
-  const s = (source || "all").toLowerCase();
-  if (s === "nndss_api") return "US CDC NNDSS";
-  if (s === "jp_weekly") return "JP NIID Weekly";
-  if (s === "pubmed") return "PubMed";
-  if (s === "cdc_weekly") return "CDC Weekly";
-  if (s === "nhc") return lang === "zh" ? "国家卫健委" : "NHC";
-  return lang === "zh" ? "全部" : "All";
-}
-
 function isUSCountry(countryName: string): boolean {
   const name = countryName.trim().toLowerCase();
   return name === "us" || name === "usa" || name.includes("united states") || name.includes("美国");
@@ -90,6 +81,22 @@ function isJPCountry(countryName: string): boolean {
 function isAUCountry(countryName: string): boolean {
   const name = countryName.trim().toLowerCase();
   return name === "au" || name.includes("australia") || name.includes("澳大利亚");
+}
+
+function getCrawlSourceOptions(countryName: string, lang: "en" | "zh") {
+  if (isUSCountry(countryName)) {
+    return getSourceOptionsForCountry("US", lang);
+  }
+  if (isCNCountry(countryName)) {
+    return getSourceOptionsForCountry("CN", lang);
+  }
+  if (isJPCountry(countryName)) {
+    return getSourceOptionsForCountry("JP", lang);
+  }
+  if (isAUCountry(countryName)) {
+    return getSourceOptionsForCountry("AU", lang);
+  }
+  return [];
 }
 
 // ── Stage pill ───────────────────────────────────────────────────────────────
@@ -153,6 +160,12 @@ function FlowRow({
       <div className="flex flex-col md:flex-row md:items-center gap-4">
         {/* Source name + stats */}
         <div className="w-full md:w-[320px] flex-shrink-0 space-y-1.5">
+          {flow.country_name ? (
+            <div className="flex items-center gap-2">
+              <Badge color="teal">{flow.country_code || flow.country_name}</Badge>
+              <Text className="text-xs">{flow.country_name}</Text>
+            </div>
+          ) : null}
           <Title className="text-sm font-semibold break-words whitespace-normal leading-tight">{flow.data_source}</Title>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
             <span className="inline-flex items-center gap-1 text-tremor-content dark:text-dark-tremor-content">
@@ -166,7 +179,7 @@ function FlowRow({
           </div>
           {flow.latest_task_uuid && (
             <div className="text-[11px] text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
-              {lang === "zh" ? "最近任务" : "Latest task"}: {sourceLabel(lang, flow.latest_task_source)}
+              {lang === "zh" ? "最近任务" : "Latest task"}: {getSourceDisplayLabel(flow.latest_task_source, lang, flow.country_code)}
               {" · "}
               {flow.latest_task_status || "-"}
               {flow.latest_task_time ? ` · ${formatDate(flow.latest_task_time)}` : ""}
@@ -213,37 +226,18 @@ function CreateCrawlModal({
   const [priority, setPriority] = useState("normal");
   const [force, setForce] = useState(false);
   const [process, setProcess] = useState(true);
+  const [saveRaw, setSaveRaw] = useState(true);
   const [fillMissing, setFillMissing] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { mutate: startCrawl, isPending, isSuccess } = useStartCrawl();
 
-  const sourceOptions = usMode
-    ? [{ value: "nndss_api", label: "US CDC NNDSS API" }]
-    : cnMode
-      ? [
-        { value: "all", label: lang === "zh" ? "全部" : "All Sources" },
-        { value: "cdc_weekly", label: "CDC Weekly (English)" },
-        { value: "nhc", label: lang === "zh" ? "国家卫健委" : "NHC (Chinese)" },
-        { value: "pubmed", label: "PubMed RSS" },
-      ]
-      : jpMode
-        ? [
-          { value: "jp_idwr", label: "JP NIID Weekly" },
-          { value: "local", label: lang === "zh" ? "本地文件" : "Local File" },
-        ]
-        : auMode
-          ? [
-            { value: "all", label: lang === "zh" ? "全部" : "All" },
-            { value: "location", label: lang === "zh" ? "按地区" : "By Location" },
-            { value: "external", label: lang === "zh" ? "外部脚本" : "External Pipeline" },
-          ]
-      : [];
+  const sourceOptions = getCrawlSourceOptions(countryName, lang);
 
   useEffect(() => {
     if (sourceOptions.length > 0) {
       setSource(sourceOptions[0].value);
     }
-  }, [countryName]);
+  }, [sourceOptions]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -254,7 +248,7 @@ function CreateCrawlModal({
         source,
         force,
         process,
-        save_raw: true,
+        save_raw: saveRaw,
         fill_missing: fillMissing,
         priority,
       },
@@ -336,6 +330,11 @@ function CreateCrawlModal({
                   className="h-4 w-4 rounded border-tremor-border text-tremor-brand focus:ring-tremor-brand-muted" />
                 {lang === "zh" ? "获取后自动处理数据" : "Process data after crawl"}
               </label>
+              <label className="flex items-center gap-2.5 text-sm text-tremor-content-emphasis dark:text-dark-tremor-content-emphasis cursor-pointer">
+                <input type="checkbox" checked={saveRaw} onChange={(e) => setSaveRaw(e.target.checked)}
+                  className="h-4 w-4 rounded border-tremor-border text-tremor-brand focus:ring-tremor-brand-muted" />
+                {lang === "zh" ? "保存 raw 原始抓取数据（默认）" : "Save raw fetched data (default)"}
+              </label>
               {!usMode && (
                 <label className="flex items-center gap-2.5 text-sm text-tremor-content-emphasis dark:text-dark-tremor-content-emphasis cursor-pointer">
                   <input type="checkbox" checked={fillMissing} onChange={(e) => setFillMissing(e.target.checked)}
@@ -387,17 +386,24 @@ function CreateCrawlModal({
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function SourcesFlowPage() {
   const { lang, countryId, countryName } = useAppStore();
-    const countrySupported =
-      isUSCountry(countryName) ||
-      isCNCountry(countryName) ||
-      isJPCountry(countryName) ||
-      isAUCountry(countryName);
+  const [scopeMode, setScopeMode] = useState<"selected" | "all">("selected");
+  const effectiveCountryId = scopeMode === "all" ? null : countryId;
+  const effectiveCountryName =
+    scopeMode === "all"
+      ? (lang === "zh" ? "全部国家" : "All countries")
+      : countryName;
+  const countrySupported =
+    scopeMode === "all" ||
+    isUSCountry(countryName) ||
+    isCNCountry(countryName) ||
+    isJPCountry(countryName) ||
+    isAUCountry(countryName);
 
-  const { data: flows, isLoading } = useSourcesFlow(countryId);
+  const { data: flows, isLoading, error } = useSourcesFlow(effectiveCountryId);
 
   const [modalOpen, setModalOpen] = useState(false);
 
-  useTaskWebSocket();
+  useTaskWebSocket({ extraQueryKeys: [["sources-flow"]] });
 
   const openModal = () => setModalOpen(true);
   const closeModal = () => setModalOpen(false);
@@ -413,6 +419,23 @@ export default function SourcesFlowPage() {
   const completedFlows = flows?.filter((f) =>
     f.stages.every((s) => !s.status || s.status === "completed"),
   ).length ?? 0;
+  const flowsByCountry = useMemo(() => {
+    const groups = new Map<string, DataSourceFlow[]>();
+    for (const flow of flows ?? []) {
+      const key = flow.country_code || flow.country_name || "Unknown";
+      const current = groups.get(key) ?? [];
+      current.push(flow);
+      groups.set(key, current);
+    }
+    return Array.from(groups.entries())
+      .map(([key, items]) => ({
+        key,
+        countryName: items[0]?.country_name || key,
+        countryCode: items[0]?.country_code || null,
+        items: items.sort((a, b) => b.record_count - a.record_count),
+      }))
+      .sort((a, b) => a.countryName.localeCompare(b.countryName));
+  }, [flows]);
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 md:px-6">
@@ -436,9 +459,23 @@ export default function SourcesFlowPage() {
             </button>
           )}
         </div>
+        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-tremor-border bg-tremor-background p-1.5 shadow-sm">
+          <button
+            onClick={() => setScopeMode("selected")}
+            className={`rounded-xl px-4 py-2 text-sm font-medium transition ${scopeMode === "selected" ? "bg-tremor-brand text-tremor-brand-inverted" : "text-tremor-content-strong"}`}
+          >
+            {lang === "zh" ? "当前国家" : "Selected country"}
+          </button>
+          <button
+            onClick={() => setScopeMode("all")}
+            className={`rounded-xl px-4 py-2 text-sm font-medium transition ${scopeMode === "all" ? "bg-tremor-brand text-tremor-brand-inverted" : "text-tremor-content-strong"}`}
+          >
+            {lang === "zh" ? "全部国家" : "All countries"}
+          </button>
+        </div>
       </div>
 
-      {countryId && !countrySupported && (
+      {scopeMode === "selected" && countryId && !countrySupported && (
         <Card>
           <Text>
             {lang === "zh"
@@ -477,7 +514,7 @@ export default function SourcesFlowPage() {
       </Grid>
 
       {/* Country guard */}
-      {!countryId ? (
+      {scopeMode === "selected" && !countryId ? (
         <Card>
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <GitBranch className="mb-4 h-12 w-12 text-tremor-content-subtle dark:text-dark-tremor-content-subtle" />
@@ -491,6 +528,21 @@ export default function SourcesFlowPage() {
             <div key={i} className="h-24 w-full animate-pulse rounded-tremor-default bg-tremor-background-muted dark:bg-dark-tremor-background-muted" />
           ))}
         </div>
+      ) : error ? (
+        <Card>
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <AlertCircle className="mb-4 h-12 w-12 text-rose-500" />
+            <Title>{lang === "zh" ? "加载失败" : "Failed to load flow"}</Title>
+            <Text className="max-w-2xl">
+              {error instanceof Error ? error.message : (lang === "zh" ? "请求数据时发生错误。" : "An error occurred while loading data.")}
+            </Text>
+            <Text className="mt-2 text-xs text-tremor-content">
+              {lang === "zh"
+                ? "如果你刚刚更新了 dashboard 代码，请重启 API 服务；旧版 API 不支持 all countries 聚合接口。"
+                : "If you just updated the dashboard code, restart the API service. Older API builds do not support the all-countries flow endpoint."}
+            </Text>
+          </div>
+        </Card>
       ) : !flows || flows.length === 0 ? (
         <Card>
           <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -508,19 +560,44 @@ export default function SourcesFlowPage() {
         </Card>
       ) : (
         <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <GitBranch className="h-5 w-5 text-tremor-brand dark:text-dark-tremor-brand" />
-            <Title>
-              {countryName} — {flows.length} {t(lang, "flow_sources_count")}
-            </Title>
-          </div>
-          {flows.map((flow) => (
-            <FlowRow
-              key={flow.data_source}
-              flow={flow}
-              lang={lang}
-            />
-          ))}
+          {scopeMode === "all" ? (
+            flowsByCountry.map((group) => (
+              <section key={group.key} className="space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <GitBranch className="h-5 w-5 text-tremor-brand dark:text-dark-tremor-brand" />
+                  <Title>
+                    {group.countryName} {group.countryCode ? `(${group.countryCode})` : ""}
+                  </Title>
+                  <Text className="text-sm text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+                    {group.items.length} {t(lang, "flow_sources_count")}
+                  </Text>
+                </div>
+                {group.items.map((flow) => (
+                  <FlowRow
+                    key={`${group.key}-${flow.data_source}`}
+                    flow={flow}
+                    lang={lang}
+                  />
+                ))}
+              </section>
+            ))
+          ) : (
+            <>
+              <div className="flex items-center gap-2">
+                <GitBranch className="h-5 w-5 text-tremor-brand dark:text-dark-tremor-brand" />
+                <Title>
+                  {effectiveCountryName} — {flows.length} {t(lang, "flow_sources_count")}
+                </Title>
+              </div>
+              {flows.map((flow) => (
+                <FlowRow
+                  key={flow.data_source}
+                  flow={flow}
+                  lang={lang}
+                />
+              ))}
+            </>
+          )}
         </div>
       )}
 

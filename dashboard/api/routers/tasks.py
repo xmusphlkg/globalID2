@@ -1,5 +1,7 @@
-"""Tasks router – list, detail, create, WebSocket live updates."""
+"""Tasks router – list, detail, create, worker status, WebSocket live updates."""
 
+import os
+from pathlib import Path
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
@@ -7,8 +9,9 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..deps import get_db
-from ..schemas.task import TaskCreateRequest, TaskDetailOut, TaskOut, WorkbookEntryOut
+from ..schemas.task import TaskCreateRequest, TaskDetailOut, TaskOut, WorkbookEntryOut, WorkerStatusOut
 from src.core.task_manager import task_manager
+from src.domain.country import Country
 from src.domain.task import Task, TaskStatus, TaskType, TaskWorkbook
 
 router = APIRouter()
@@ -18,6 +21,30 @@ def _cancel_meta(task: Task) -> tuple[bool, Optional[str]]:
     metadata = dict(task.metadata_ or {})
     requested_at = metadata.get("cancel_requested_at")
     return bool(metadata.get("cancel_requested")), requested_at if isinstance(requested_at, str) else None
+
+
+def _worker_pid_path() -> Path:
+    return Path(__file__).resolve().parents[3] / "logs" / "dashboard-worker.pid"
+
+
+def _read_worker_pid() -> Optional[int]:
+    pid_path = _worker_pid_path()
+    if not pid_path.exists():
+        return None
+    try:
+        return int(pid_path.read_text().strip())
+    except Exception:
+        return None
+
+
+def _is_pid_running(pid: Optional[int]) -> bool:
+    if not pid:
+        return False
+    try:
+        os.kill(pid, 0)
+        return True
+    except OSError:
+        return False
 
 # ---------- WebSocket hub ----------
 
@@ -62,10 +89,13 @@ async def list_tasks(
     q = (
         select(
             Task,
+            Country.code.label("country_code"),
+            Country.name_en.label("country_name"),
             func.count(TaskWorkbook.id).label("workbook_count"),
         )
+        .outerjoin(Country, Country.id == Task.country_id)
         .outerjoin(TaskWorkbook, TaskWorkbook.task_id == Task.id)
-        .group_by(Task.id)
+        .group_by(Task.id, Country.code, Country.name_en)
         .order_by(Task.created_at.desc())
         .limit(limit)
     )
@@ -98,6 +128,8 @@ async def list_tasks(
             priority=r.Task.priority,
             progress=r.Task.progress or 0,
             country_id=r.Task.country_id,
+            country_code=r.country_code,
+            country_name=r.country_name,
             report_id=r.Task.report_id,
             description=r.Task.description,
             last_error=r.Task.last_error,
@@ -113,10 +145,45 @@ async def list_tasks(
     ]
 
 
+@router.get("/tasks/worker-status", response_model=WorkerStatusOut)
+async def get_worker_status(db: AsyncSession = Depends(get_db)):
+    counts_q = select(
+        func.count().filter(Task.status == TaskStatus.QUEUED).label("queued_tasks"),
+        func.count().filter(Task.status == TaskStatus.RUNNING).label("running_tasks"),
+        func.count().filter(Task.status == TaskStatus.RETRYING).label("retrying_tasks"),
+        func.max(Task.created_at).label("latest_created_at"),
+        func.max(Task.started_at).label("latest_started_at"),
+        func.max(Task.completed_at).label("latest_completed_at"),
+    )
+    row = (await db.execute(counts_q)).one()
+
+    worker_pid = _read_worker_pid()
+    worker_process_running = _is_pid_running(worker_pid)
+    running = int(row.running_tasks or 0)
+    retrying = int(row.retrying_tasks or 0)
+
+    return WorkerStatusOut(
+        worker_process_running=worker_process_running,
+        worker_pid=worker_pid if worker_process_running else None,
+        queued_tasks=int(row.queued_tasks or 0),
+        running_tasks=running,
+        retrying_tasks=retrying,
+        active_tasks=running + retrying,
+        latest_created_at=row.latest_created_at,
+        latest_started_at=row.latest_started_at,
+        latest_completed_at=row.latest_completed_at,
+    )
+
+
 @router.get("/tasks/{task_uuid}", response_model=TaskDetailOut)
 async def get_task(task_uuid: str, db: AsyncSession = Depends(get_db)):
-    q = select(Task).where(Task.task_uuid == task_uuid)
-    task = (await db.execute(q)).scalar_one_or_none()
+    q = (
+        select(Task, Country.code.label("country_code"), Country.name_en.label("country_name"))
+        .outerjoin(Country, Country.id == Task.country_id)
+        .where(Task.task_uuid == task_uuid)
+    )
+    row = (await db.execute(q)).one_or_none()
+    task = row.Task if row else None
     if not task:
         raise HTTPException(404, "Task not found")
 
@@ -140,6 +207,8 @@ async def get_task(task_uuid: str, db: AsyncSession = Depends(get_db)):
         priority=task.priority,
         progress=task.progress or 0,
         country_id=task.country_id,
+        country_code=row.country_code,
+        country_name=row.country_name,
         report_id=task.report_id,
         description=task.description,
         last_error=task.last_error,
@@ -179,7 +248,7 @@ async def get_task(task_uuid: str, db: AsyncSession = Depends(get_db)):
 
 @router.post("/tasks", response_model=TaskOut, status_code=201)
 async def create_task(body: TaskCreateRequest, db: AsyncSession = Depends(get_db)):
-    task = Task(
+    task = await task_manager.create_task(
         task_type=body.task_type,
         task_name=body.task_name,
         country_id=body.country_id,
@@ -187,9 +256,6 @@ async def create_task(body: TaskCreateRequest, db: AsyncSession = Depends(get_db
         description=body.description,
         input_data=body.input_data or {},
     )
-    db.add(task)
-    await db.commit()
-    await db.refresh(task)
 
     # Broadcast the creation to subscribers
     await task_hub.broadcast(
@@ -211,6 +277,8 @@ async def create_task(body: TaskCreateRequest, db: AsyncSession = Depends(get_db
         priority=task.priority,
         progress=task.progress or 0,
         country_id=task.country_id,
+        country_code=None,
+        country_name=None,
         report_id=task.report_id,
         description=task.description,
         last_error=task.last_error,
@@ -246,6 +314,8 @@ async def cancel_task(task_uuid: str, db: AsyncSession = Depends(get_db)):
         priority=cancelled.priority,
         progress=cancelled.progress or 0,
         country_id=cancelled.country_id,
+        country_code=None,
+        country_name=None,
         report_id=cancelled.report_id,
         description=cancelled.description,
         last_error=cancelled.last_error,

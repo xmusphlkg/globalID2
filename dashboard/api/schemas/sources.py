@@ -20,6 +20,9 @@ class DataSourceFlow(BaseModel):
     """Full data-ingestion flow for one data source inside a country."""
 
     data_source: str
+    country_id: Optional[int] = None
+    country_code: Optional[str] = None
+    country_name: Optional[str] = None
     record_count: int = 0
     latest_date: Optional[str] = None
     latest_task_uuid: Optional[str] = None

@@ -58,7 +58,7 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
         "data_source_url": "http://weekly.chinacdc.cn",
         "data_source_type": "web",
         "crawler_config": {
-            "sources": ["cdc_weekly", "nhc", "pubmed_rss"],
+            "sources": ["cdc_weekly", "nhc", "pubmed"],
         },
         "parser_config": {
             "primary": "china_cdc_weekly",
@@ -98,7 +98,7 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
         "data_source_url": "https://www.niid.go.jp/niid/ja/data.html",
         "data_source_type": "web",
         "crawler_config": {
-            "sources": ["jp_idwr"],
+            "sources": ["jp_weekly"],
             "cadence": "weekly",
             "reporting_area": "総数",
             "weekly_csv_url": "",
@@ -121,7 +121,7 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
         "data_source_url": "https://www.health.gov.au/topics/national-notifiable-diseases-surveillance-system-nndss",
         "data_source_type": "microsoft_bi",
         "crawler_config": {
-            "sources": ["au_nindss"],
+            "sources": ["all"],
             "cadence": "monthly",
             "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
             "capacity_id": "86715F84-E812-421E-972F-2211ACC9903A",

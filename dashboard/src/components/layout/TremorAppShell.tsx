@@ -1,22 +1,33 @@
 "use client";
 
 import { useState } from "react";
+import { useAppStore } from "@/stores/app-store";
 import { Sidebar } from "./Sidebar";
 import { TopNavbar } from "./TopNavbar";
 
 export function TremorAppShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { sidebarCollapsed, setSidebarCollapsed } = useAppStore();
+  const desktopSidebarWidth = sidebarCollapsed ? "lg:pl-20" : "lg:pl-72";
 
   return (
-    <div className="h-full w-full bg-tremor-background-subtle dark:bg-dark-tremor-background-subtle text-tremor-content-strong dark:text-dark-tremor-content-strong min-h-screen pt-0 m-0">
-      <Sidebar mobileOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+    <div className="m-0 min-h-screen w-full bg-tremor-background-subtle pt-0 text-tremor-content-strong">
+      <Sidebar
+        mobileOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        collapsed={sidebarCollapsed}
+      />
 
-      <div className="lg:pl-72 flex flex-col min-h-screen">
-        <TopNavbar onMenuClick={() => setSidebarOpen(true)} />
-        
+      <div className={`flex min-h-screen flex-col ${desktopSidebarWidth}`}>
+        <TopNavbar
+          onMenuClick={() => setSidebarOpen(true)}
+          sidebarCollapsed={sidebarCollapsed}
+          onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
+        />
+
         <main className="flex-1 pb-10">
-          <div className="px-4 sm:px-6 lg:px-8 py-8 w-full max-w-7xl mx-auto">
-             {children}
+          <div className={`mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 ${sidebarCollapsed ? "lg:px-6" : "lg:px-8"}`}>
+            {children}
           </div>
         </main>
       </div>

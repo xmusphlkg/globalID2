@@ -30,10 +30,10 @@ def _cancel_meta(task: Task) -> tuple[bool, Optional[str]]:
 class CrawlStartRequest(BaseModel):
     """Body for POST /crawl/start."""
     country_id: int = Field(..., ge=1, description="Country DB id")
-    source: str = Field("all", description="Crawl source: nndss_api / cdc_weekly / nhc / pubmed / all")
+    source: str = Field("all", description="Crawl source: nndss_api / cdc_weekly / nhc / pubmed / jp_weekly / all")
     force: bool = Field(False, description="Ignore DB and re-crawl everything")
     process: bool = Field(True, description="Also run data processing after fetch")
-    save_raw: bool = Field(True, description="Archive original HTML pages")
+    save_raw: bool = Field(True, description="Archive original fetched payloads / raw source artifacts")
     fill_missing: bool = Field(True, description="Backfill missing months")
     priority: str = Field("normal", description="Task priority")
 

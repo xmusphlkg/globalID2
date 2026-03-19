@@ -24,10 +24,10 @@ export default function RootLayout({
       <head>
         <link
           rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
         />
       </head>
-      <body className="h-full bg-tremor-background-subtle dark:bg-dark-tremor-background-subtle text-tremor-content-strong antialiased m-0">
+      <body className="h-full bg-tremor-background-subtle text-tremor-content-strong antialiased m-0">
         <Providers>
           <TremorAppShell>
             {children}

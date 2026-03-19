@@ -85,9 +85,9 @@ python scripts/import_jp_weekly_history.py --replace-existing
 # 本地模式（source=local）：直接使用 data/raw/jp/weekly_cases_standardized.csv
 python main.py crawl --country JP --source local --process --no-save-raw
 
-# 外部脚本模式（source=jp_idwr）：调用 /home/likangguo/globalID/ID_JP/ScriptGetdata 更新后入库
-# 备注：是否执行外部脚本由 --source 决定，不依赖 --save-raw
-python main.py crawl --country JP --source jp_idwr --process --save-raw
+# 爬虫模式（source=jp_weekly）：调用 globalID2 内置 JP crawler 更新后入库
+# 备注：是否保留抓取到的原始文件由 --save-raw 决定
+python main.py crawl --country JP --source jp_weekly --process --save-raw
 
 # 刷新疾病映射（修改 CSV 配置后）
 python scripts/refresh_disease_mappings.py --yes
