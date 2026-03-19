@@ -1,0 +1,18 @@
+{
+  "captured_at": "2026-03-19T02:55:50.729427+00:00",
+  "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
+  "api_url": "https://86715f84e812421e972f2211acc9903a.pbidedicated.windows.net/webapi/capacities/86715F84-E812-421E-972F-2211ACC9903A/workloads/QES/QueryExecutionService/automatic/public/query",
+  "report_id": "bc027587-5e9e-4920-bf03-a45fd3079f25",
+  "runtime_hints": {
+    "location": {
+      "fact_alias": "d1",
+      "location_alias": "d",
+      "disease_alias": "d2",
+      "case_alias": "d3",
+      "state_property": "STATE",
+      "measure_property": "Count_Notification",
+      "_score": 18
+    }
+  },
+  "token_prefix": "MWCToken eyJhbGciOiJSU0E"
+}

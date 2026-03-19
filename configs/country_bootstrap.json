@@ -8,7 +8,7 @@
       "sources": [
         "cdc_weekly",
         "nhc",
-        "pubmed_rss"
+        "pubmed"
       ]
     },
     "parser_config": {
@@ -52,7 +52,7 @@
     "data_source_type": "web",
     "crawler_config": {
       "sources": [
-        "jp_idwr"
+        "jp_weekly"
       ],
       "cadence": "weekly",
       "reporting_area": "総数",
@@ -78,7 +78,7 @@
     "data_source_type": "microsoft_bi",
     "crawler_config": {
       "sources": [
-        "au_nindss"
+        "all"
       ],
       "cadence": "monthly",
       "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",

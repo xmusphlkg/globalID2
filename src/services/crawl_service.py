@@ -103,6 +103,7 @@ class CrawlService:
             ),
             content_type="text",
         )
+        await self._add_raw_archive_entry(task.task_uuid, save_raw=save_raw, raw_dir=raw_dir)
 
         # ── Create CrawlRun record ────────────────────────────────────────────
         run_id: Optional[int] = None
@@ -325,6 +326,7 @@ class CrawlService:
             ),
             content_type="text",
         )
+        await self._add_raw_archive_entry(task.task_uuid, save_raw=save_raw, raw_dir=raw_dir)
 
         try:
             async with get_database() as db:
@@ -487,6 +489,7 @@ class CrawlService:
             ),
             content_type="text",
         )
+        await self._add_raw_archive_entry(task.task_uuid, save_raw=save_raw, raw_dir=raw_dir)
 
         try:
             async with get_database() as db:
@@ -658,6 +661,7 @@ class CrawlService:
             ),
             content_type="text",
         )
+        await self._add_raw_archive_entry(task.task_uuid, save_raw=save_raw, raw_dir=raw_dir)
 
         try:
             async with get_database() as db:
@@ -726,6 +730,8 @@ class CrawlService:
             run_external=False,
             force=force,
             months=months_to_fetch,
+            save_raw=save_raw,
+            raw_dir=raw_dir if save_raw else None,
         )
         phase1_elapsed = perf_counter() - phase1_started
         source_latest = fetched.source_latest_date.isoformat() if fetched.source_latest_date else "none"
@@ -858,6 +864,24 @@ class CrawlService:
         return dict(sorted(counts.items(), key=lambda kv: kv[0]))
 
     # ── Helpers ───────────────────────────────────────────────────────────────
+
+    async def _add_raw_archive_entry(
+        self,
+        task_uuid: str,
+        *,
+        save_raw: bool,
+        raw_dir: Path,
+    ) -> None:
+        await task_manager.add_workbook_entry(
+            task_uuid,
+            entry_type="info",
+            title="Raw Archive",
+            content=(
+                f"Save raw enabled: {'Yes' if save_raw else 'No'}\n"
+                + (f"Archive path: {raw_dir}" if save_raw else "Archive path: disabled")
+            ),
+            content_type="text",
+        )
 
     async def _finish_crawl_run(
         self,

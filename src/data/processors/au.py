@@ -21,12 +21,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core import get_logger
 from src.data.crawlers import AustraliaNINDSSCrawler
+from src.data.crawlers.au import AUFetchSummary
 
 logger = get_logger(__name__)
 
 ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_OUTPUT_CSV = ROOT / "data/current/au/australia_national_data.csv"
 DEFAULT_SOURCE_NAME = "Australia NINDSS (location aggregated)"
+_ARCHIVE_SKIP_STATES = {"AUS", "UNKNOWN", "TOTAL", "ALL"}
 
 
 @dataclass
@@ -92,6 +94,148 @@ class AUMonthlyUpdater:
         self.source_name = source_name
         self.output_csv = output_csv
 
+    @staticmethod
+    def _default_recent_months() -> List[Tuple[int, int]]:
+        now = datetime.now()
+        months_to_fetch: List[Tuple[int, int]] = []
+        for delta in range(3):
+            month = now.month - delta
+            year = now.year
+            if month <= 0:
+                month += 12
+                year -= 1
+            months_to_fetch.append((year, month))
+        return sorted(set(months_to_fetch))
+
+    def _resolve_requested_months(
+        self, months: Optional[List[Tuple[int, int]]]
+    ) -> List[Tuple[int, int]]:
+        return sorted(set(months)) if months is not None else self._default_recent_months()
+
+    def _rows_cover_months(
+        self,
+        rows: List[Dict[str, str]],
+        months: List[Tuple[int, int]],
+    ) -> bool:
+        requested = set(months)
+        present = {
+            (parsed.year, parsed.month)
+            for row in rows
+            if (parsed := _parse_date(row)) is not None
+        }
+        return requested.issubset(present)
+
+    def _filter_rows_for_months(
+        self,
+        rows: List[Dict[str, str]],
+        months: List[Tuple[int, int]],
+    ) -> List[Dict[str, str]]:
+        requested = set(months)
+        return [
+            row
+            for row in rows
+            if (parsed := _parse_date(row)) is not None
+            and (parsed.year, parsed.month) in requested
+        ]
+
+    def _write_rows_to_output_csv(self, rows: List[Dict[str, str]]) -> AUFetchSummary:
+        ordered_rows = sorted(rows, key=lambda r: (r["Date"], r["RawDiseaseLabel"]))
+        self.output_csv.parent.mkdir(parents=True, exist_ok=True)
+        fieldnames = [
+            "",
+            "Disease",
+            "DiseaseFull",
+            "Group",
+            "Year",
+            "Month",
+            "Date",
+            "Cases",
+            "Population",
+            "Incidence",
+        ]
+
+        latest_date = self._latest_row_date(ordered_rows)
+        with self.output_csv.open("w", encoding="utf-8", newline="") as handle:
+            writer = csv.DictWriter(handle, fieldnames=fieldnames)
+            writer.writeheader()
+            for idx, row in enumerate(ordered_rows, start=1):
+                parsed_date = _parse_date(row)
+                if parsed_date is None:
+                    continue
+                writer.writerow(
+                    {
+                        "": str(idx),
+                        "Disease": row["RawDiseaseLabel"],
+                        "DiseaseFull": row.get("DiseaseFull") or row["RawDiseaseLabel"],
+                        "Group": row.get("Group", ""),
+                        "Year": str(parsed_date.year),
+                        "Month": str(parsed_date.month),
+                        "Date": parsed_date.isoformat(),
+                        "Cases": str(max(0, _parse_int(row.get("Cases")) or 0)),
+                        "Population": row.get("Population", ""),
+                        "Incidence": row.get("Incidence", ""),
+                    }
+                )
+
+        return AUFetchSummary(
+            row_count=len(ordered_rows),
+            latest_date=latest_date,
+            csv_url=self.source_name,
+        )
+
+    def _build_rows_from_raw_archive(
+        self,
+        archive_root: Path,
+        months: List[Tuple[int, int]],
+    ) -> Optional[List[Dict[str, str]]]:
+        if not archive_root.exists():
+            return None
+
+        restored_rows: List[Dict[str, str]] = []
+        for year, month in months:
+            month_dir = archive_root / f"{year}" / f"{month:02d}"
+            files = sorted(month_dir.glob("*.json"))
+            if not files:
+                return None
+
+            for archive_file in files:
+                try:
+                    payload = json.loads(archive_file.read_text(encoding="utf-8"))
+                except Exception:
+                    return None
+
+                disease = _norm_text(payload.get("disease")) or _norm_text(
+                    payload.get("Disease")
+                )
+                parsed_counts = payload.get("parsed_counts")
+                if not disease or not isinstance(parsed_counts, dict):
+                    return None
+
+                national_total = 0
+                for state, value in parsed_counts.items():
+                    if _norm_text(state).upper() in _ARCHIVE_SKIP_STATES:
+                        continue
+                    parsed_value = _parse_int(value)
+                    if parsed_value is not None:
+                        national_total += parsed_value
+
+                restored_rows.append(
+                    {
+                        "Date": date(year, month, 1).isoformat(),
+                        "RawDiseaseLabel": disease,
+                        "DiseaseFull": disease,
+                        "Cases": str(max(0, national_total)),
+                        "Group": "national_total",
+                        "Incidence": "",
+                        "Population": "",
+                        "Source": self.source_name,
+                        "__source_file": archive_file.name,
+                    }
+                )
+
+        restored_rows.sort(key=lambda row: (row["Date"], row["RawDiseaseLabel"]))
+        return restored_rows
+
     def refresh_source(
         self,
         *,
@@ -99,6 +243,8 @@ class AUMonthlyUpdater:
         run_external: bool = False,
         force: bool = False,
         months: Optional[List[Tuple[int, int]]] = None,
+        save_raw: bool = False,
+        raw_dir: Optional[Path] = None,
     ) -> AUUpdateFetchResult:
         """Fetch AU data from the NINDSS Power BI dashboard.
 
@@ -110,15 +256,67 @@ class AUMonthlyUpdater:
                           the crawler defaults to the most recent 3 months.
         """
         logs: List[str] = []
-        crawler = AustraliaNINDSSCrawler()
-        fetch_summary = crawler.crawl_monthly_national_csv(self.output_csv, months=months)
-        logs.append(
-            f"[crawler] fetched {fetch_summary.row_count} rows; "
-            f"months={'all 3 recent' if months is None else len(months)}; "
-            f"latest={fetch_summary.latest_date}"
+        requested_months = self._resolve_requested_months(months)
+        archive_root = Path(raw_dir) if raw_dir is not None else ROOT / "data/raw" / self.country_code.lower()
+        prior_rows: List[Dict[str, str]] = []
+        if self.output_csv.exists():
+            try:
+                prior_rows = self._load_rows(self.output_csv)
+            except Exception as exc:
+                logs.append(f"[cache] unable to read existing CSV snapshot: {type(exc).__name__}: {exc}")
+
+        crawler = AustraliaNINDSSCrawler(save_raw=save_raw, raw_dir=raw_dir)
+        live_rows: List[Dict[str, str]] = []
+        live_error: Optional[Exception] = None
+
+        try:
+            fetch_summary = crawler.crawl_monthly_national_csv(self.output_csv, months=months)
+            logs.append(
+                f"[crawler] fetched {fetch_summary.row_count} rows; "
+                f"months={'all 3 recent' if months is None else len(months)}; "
+                f"latest={fetch_summary.latest_date}"
+            )
+            if save_raw and raw_dir is not None:
+                logs.append(f"[crawler] raw archived under {raw_dir}")
+            live_rows = self._filter_rows_for_months(self._load_rows(self.output_csv), requested_months)
+        except Exception as exc:
+            live_error = exc
+            logs.append(f"[crawler] live fetch failed: {type(exc).__name__}: {exc}")
+
+        archive_rows = self._build_rows_from_raw_archive(archive_root, requested_months)
+        archive_candidate = (
+            self._filter_rows_for_months(archive_rows, requested_months)
+            if archive_rows and self._rows_cover_months(archive_rows, requested_months)
+            else []
+        )
+        prior_candidate = (
+            self._filter_rows_for_months(prior_rows, requested_months)
+            if prior_rows and self._rows_cover_months(prior_rows, requested_months)
+            else []
         )
 
-        rows = self._load_rows(self.output_csv)
+        candidates: List[Tuple[str, List[Dict[str, str]], int]] = []
+        if live_rows:
+            candidates.append(("live fetch", live_rows, 2))
+        if archive_candidate:
+            candidates.append(("raw archive", archive_candidate, 1))
+        if prior_candidate:
+            candidates.append(("previous CSV snapshot", prior_candidate, 0))
+
+        if not candidates:
+            if live_error is not None:
+                raise live_error
+            raise RuntimeError("AU crawler produced no usable rows")
+
+        selected_label, rows, _ = max(candidates, key=lambda item: (len(item[1]), item[2]))
+
+        if selected_label != "live fetch":
+            summary = self._write_rows_to_output_csv(rows)
+            logs.append(
+                f"[recovery] using {selected_label} with {summary.row_count} rows "
+                f"for {len(requested_months)} requested months"
+            )
+
         latest = self._latest_row_date(rows)
 
         return AUUpdateFetchResult(

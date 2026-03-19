@@ -2,23 +2,24 @@
 @source "../../node_modules/@tremor/react/dist/**/*.{js,cjs,mjs}";
 
 @theme {
-  --color-tremor-brand: #3b82f6;
-  --color-tremor-brand-muted: #bfdbfe;
-  --color-tremor-brand-subtle: #60a5fa;
+  --font-sans: "IBM Plex Sans", sans-serif;
+  --color-tremor-brand: #0f766e;
+  --color-tremor-brand-muted: #99f6e4;
+  --color-tremor-brand-subtle: #14b8a6;
   --color-tremor-brand-inverted: #ffffff;
 
-  --color-tremor-background: #ffffff;
-  --color-tremor-background-subtle: #f8fafc;
-  --color-tremor-background-muted: #f1f5f9;
-  --color-tremor-background-emphasis: #334155;
+  --color-tremor-background: #fcfdfc;
+  --color-tremor-background-subtle: #f3f7f5;
+  --color-tremor-background-muted: #e8f0ec;
+  --color-tremor-background-emphasis: #17322e;
 
-  --color-tremor-border: #e2e8f0;
-  --color-tremor-ring: #e2e8f0;
+  --color-tremor-border: #d7e3dd;
+  --color-tremor-ring: #9ec9be;
 
-  --color-tremor-content: #64748b;
-  --color-tremor-content-subtle: #94a3b8;
-  --color-tremor-content-emphasis: #334155;
-  --color-tremor-content-strong: #0f172a;
+  --color-tremor-content: #4f6b64;
+  --color-tremor-content-subtle: #738a84;
+  --color-tremor-content-emphasis: #25423d;
+  --color-tremor-content-strong: #0f2a25;
   --color-tremor-content-inverted: #ffffff;
 
   --color-dark-tremor-brand: #3b82f6;
@@ -61,10 +62,40 @@
 }
 
 body {
-  @apply bg-tremor-background-subtle dark:bg-dark-tremor-background-subtle;
+  @apply bg-tremor-background-subtle;
   color: var(--color-tremor-content-strong);
+  font-family: var(--font-sans);
+  background-image:
+    radial-gradient(circle at top left, rgba(20, 184, 166, 0.08), transparent 24rem),
+    radial-gradient(circle at top right, rgba(13, 148, 136, 0.06), transparent 20rem),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(243, 247, 245, 0.96));
 }
 
-.dark body {
-  color: var(--color-dark-tremor-content-strong);
+a {
+  text-decoration: none;
+}
+
+::selection {
+  background: rgba(15, 118, 110, 0.16);
+}
+
+.glass-panel {
+  background: rgba(252, 253, 252, 0.78);
+  backdrop-filter: blur(10px);
+}
+
+.page-intro {
+  position: relative;
+  overflow: hidden;
+}
+
+.page-intro::after {
+  content: "";
+  position: absolute;
+  inset: auto -4rem -4rem auto;
+  width: 12rem;
+  height: 12rem;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(20, 184, 166, 0.16), transparent 70%);
+  pointer-events: none;
 }

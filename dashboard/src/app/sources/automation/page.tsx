@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Badge, Button, Card, Grid, Metric, Text, Title } from "@tremor/react";
 import { useAppStore } from "@/stores/app-store";
 import { t } from "@/lib/i18n";
@@ -16,6 +16,7 @@ import {
 } from "@/lib/hooks/useSources";
 import { useTaskWebSocket } from "@/lib/hooks/useTasks";
 import { getCountryDisplayName, type Country, useCountries } from "@/lib/hooks/useCountries";
+import { getSourceDisplayLabel, getSourceOptionsForCountry } from "@/lib/source-labels";
 import { AlertTriangle, Bot, Clock3, Mail, Pencil, Play, Plus, Sparkles, Trash2 } from "lucide-react";
 
 const defaultForm: AutomationJobInput = {
@@ -39,9 +40,16 @@ const defaultForm: AutomationJobInput = {
 const presetTemplates = [
   { id: "cn", job_id: "cn-daily", name: "CN Daily Crawl", country_code: "CN", source: "all", daily_time: "08:00" },
   { id: "us", job_id: "us-daily", name: "US Daily Crawl", country_code: "US", source: "nndss_api", daily_time: "08:15" },
-  { id: "jp", job_id: "jp-daily", name: "JP Daily Crawl", country_code: "JP", source: "jp_idwr", daily_time: "08:30" },
+  { id: "jp", job_id: "jp-daily", name: "JP Daily Crawl", country_code: "JP", source: "jp_weekly", daily_time: "08:30" },
   { id: "au", job_id: "au-daily", name: "AU Daily Crawl", country_code: "AU", source: "all", daily_time: "08:45" },
 ] as const;
+
+const crawlOptionLabels: Record<string, { en: string; zh: string }> = {
+  process: { en: "Process data after crawl", zh: "抓取后自动处理数据" },
+  save_raw: { en: "Save raw fetched data", zh: "保存 raw 原始抓取数据" },
+  fill_missing: { en: "Backfill missing months", zh: "回填缺失月份" },
+  force: { en: "Force re-fetch", zh: "强制重新抓取" },
+};
 
 function formatDateTime(value?: string | null): string {
   if (!value) return "-";
@@ -167,14 +175,13 @@ export default function SourcesAutomationPage() {
     if (editingJobId === job.job_id) resetForm();
   };
 
-  const sources = [
-    { value: "all", label: "all" },
-    { value: "nndss_api", label: "nndss_api" },
-    { value: "jp_idwr", label: "jp_idwr" },
-    { value: "cdc_weekly", label: "cdc_weekly" },
-    { value: "nhc", label: "nhc" },
-    { value: "pubmed", label: "pubmed" },
-  ];
+  const sources = getSourceOptionsForCountry(form.country_code, lang);
+
+  useEffect(() => {
+    if (!sources.some((option) => option.value === form.source) && sources[0]) {
+      setForm((prev) => ({ ...prev, source: sources[0].value }));
+    }
+  }, [form.source, sources]);
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 md:px-6">
@@ -382,13 +389,13 @@ export default function SourcesAutomationPage() {
                   ["fill_missing", form.fill_missing],
                   ["force", form.force],
                 ] as Array<[string, boolean]>).map(([key, value]) => (
-                  <label key={key} className="flex items-center gap-2">
+                  <label key={key} className="flex items-center gap-2 rounded-tremor-default border border-tremor-border px-3 py-2 dark:border-dark-tremor-border">
                     <input
                       type="checkbox"
                       checked={Boolean(value)}
                       onChange={(e) => setForm((prev) => ({ ...prev, [key]: e.target.checked }))}
                     />
-                    <span>{key}</span>
+                    <span>{crawlOptionLabels[key]?.[lang] ?? key}</span>
                   </label>
                 ))}
               </div>
@@ -425,7 +432,7 @@ export default function SourcesAutomationPage() {
                         <Title>{job.name}</Title>
                         <Badge color={job.enabled ? "emerald" : "slate"}>{job.enabled ? "enabled" : "disabled"}</Badge>
                         <Badge color="slate">{job.country_code}</Badge>
-                        <Badge color="blue">{job.source}</Badge>
+                        <Badge color="blue">{getSourceDisplayLabel(job.source, lang, job.country_code)}</Badge>
                       </div>
                       <Text>{scheduleLabel(job)}</Text>
                     </div>

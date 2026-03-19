@@ -55,8 +55,8 @@ export function useQualityGaps(countryId: number | null) {
 export function useQualitySources(countryId: number | null) {
   return useQuery<DataSourceDist[]>({
     queryKey: ["quality", "sources", countryId],
-    queryFn: () => apiFetch(`/quality/sources?country_id=${countryId}`),
-    enabled: !!countryId,
+    queryFn: () =>
+      apiFetch(countryId ? `/quality/sources?country_id=${countryId}` : "/quality/sources"),
     staleTime: 5 * 60 * 1000,
   });
 }

@@ -13,6 +13,9 @@ export interface StageInfo {
 
 export interface DataSourceFlow {
   data_source: string;
+  country_id?: number | null;
+  country_code?: string | null;
+  country_name?: string | null;
   record_count: number;
   latest_date: string | null;
   latest_task_uuid?: string | null;
@@ -87,8 +90,8 @@ export interface AutomationTriggerResult {
 export function useSourcesFlow(countryId: number | null) {
   return useQuery<DataSourceFlow[]>({
     queryKey: ["sources-flow", countryId],
-    queryFn: () => apiFetch(`/sources/flow?country_id=${countryId}`),
-    enabled: !!countryId,
+    queryFn: () =>
+      apiFetch(countryId ? `/sources/flow?country_id=${countryId}` : "/sources/flow"),
     staleTime: 15 * 1000,
   });
 }

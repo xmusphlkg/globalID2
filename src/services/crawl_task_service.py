@@ -8,6 +8,7 @@ from typing import Any, Optional
 from sqlalchemy import select
 
 from src.core import get_database
+from src.core.source_scopes import canonicalize_task_source
 from src.core.task_manager import task_manager
 from src.domain import Country, Task, TaskPriority, TaskStatus, TaskType
 
@@ -58,21 +59,22 @@ class CrawlTaskService:
                     skipped_reason="already_running",
                 )
 
+        normalized_source = canonicalize_task_source(source, country_code=country.code)
         normalized_priority = self._normalize_priority(priority)
         task = await task_manager.create_task(
             task_type=TaskType.CRAWL_DATA,
-            task_name=f"Crawl {country.code.upper()} Data ({source})",
+            task_name=f"Crawl {country.code.upper()} Data ({normalized_source})",
             country_id=country.id,
             priority=normalized_priority,
             description=description
             or (
-                f"Source: {source}, Force: {'Yes' if force else 'No'}, "
+                f"Source: {normalized_source}, Force: {'Yes' if force else 'No'}, "
                 f"Process: {'Yes' if process else 'No'}"
             ),
             input_data={
                 "country": country.code.upper(),
                 "country_code": country.code.upper(),
-                "source": source,
+                "source": normalized_source,
                 "force": force,
                 "process": process,
                 "save_raw": save_raw,

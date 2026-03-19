@@ -37,6 +37,7 @@ import asyncio
 import logging
 import os
 import sys
+import threading
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -185,10 +186,12 @@ async def test_task_manager_create_and_retrieve(app_ready):
     )
     assert task.task_uuid
     assert task.status == TaskStatus.PENDING
+    assert task.country_id is not None
 
     retrieved = await task_manager.get_task_by_uuid(task.task_uuid)
     assert retrieved is not None
     assert retrieved.task_uuid == task.task_uuid
+    assert retrieved.country_id == task.country_id
 
     print(f"\n  ✅ Task created | uuid={task.task_uuid} status={task.status.value}")
 
@@ -233,9 +236,9 @@ def test_processors_importable():
 
 COUNTRY_SOURCES = {
     "CN": "cdc_weekly",  # lightest CN source — single HTTP GET
-    "JP": "jp_idwr",
+    "JP": "jp_weekly",
     "AU": "all",
-    "US": "all",
+    "US": "nndss_api",
 }
 
 # Skip network tests if explicitly disabled (e.g. CI without external access)
@@ -311,6 +314,404 @@ async def test_au_crawl_monthly(app_ready):
 
 
 @pytest.mark.asyncio
+async def test_au_playwright_capture_uses_thread_inside_async_loop():
+    """AU Playwright capture should hop to a helper thread when called in an asyncio loop."""
+    from src.data.crawlers.au import AustraliaNINDSSCrawler
+
+    crawler = AustraliaNINDSSCrawler()
+    thread_names: list[str] = []
+
+    def fake_capture():
+        thread_names.append(threading.current_thread().name)
+        return {
+            "token": "MWCToken fake-token",
+            "url": "https://example.invalid/webapi/capacities/test/public/query",
+            "report_id": "report-123",
+        }
+
+    crawler._capture_playwright_runtime_config = fake_capture  # type: ignore[method-assign]
+
+    ok = crawler._load_config_via_playwright()
+
+    assert ok is True
+    assert thread_names
+    assert thread_names[0] != threading.current_thread().name
+    assert crawler._config is not None
+    assert crawler._config["accessToken"] == "MWCToken fake-token"
+
+
+def test_au_dm0_helpers_handle_powerbi_numeric_strings():
+    from src.data.crawlers.au import _find_dm0, _parse_dm0_to_state_counts
+
+    raw = {
+        "results": [{
+            "result": {
+                "data": {
+                    "dsr": {
+                        "DS": [{
+                            "SH": [{
+                                "DM1": [
+                                    {"G1": "ACT"},
+                                    {"G1": "NSW"},
+                                    {"G1": "QLD"},
+                                ]
+                            }]
+                        }]
+                    }
+                }
+            }
+        }]
+    }
+    dm0 = [{
+        "G0": "2026",
+        "X": [{"M0": "'37'"}, {"M0": "'2,448'"}, {"M0": "0L"}],
+    }]
+
+    parsed = _parse_dm0_to_state_counts(dm0, raw, "2026")
+
+    assert parsed == {"ACT": 37, "NSW": 2448, "QLD": 0}
+    assert _find_dm0([{"Code": "CouldNotResolveSemanticQueryDefinition"}]) is None
+
+
+def test_source_scope_aliases_cover_cn_jp_au_legacy_values():
+    from src.core.source_scopes import canonicalize_task_source
+
+    assert canonicalize_task_source("gov", country_code="CN") == "nhc"
+    assert canonicalize_task_source("pubmed_rss", country_code="CN") == "pubmed"
+    assert canonicalize_task_source("jp_idwr", country_code="JP") == "jp_weekly"
+    assert canonicalize_task_source("au_nindss", country_code="AU") == "all"
+    assert canonicalize_task_source("location", country_code="AU") == "all"
+    assert canonicalize_task_source("external", country_code="AU") == "all"
+
+
+def test_au_runtime_hints_can_be_extracted_from_live_query_shape():
+    import json
+    from src.data.crawlers.au import AustraliaNINDSSCrawler
+
+    crawler = AustraliaNINDSSCrawler()
+    payload = {
+        "queries": [{
+            "Query": {
+                "Commands": [{
+                    "SemanticQueryDataShapeCommand": {
+                        "Query": {
+                            "From": [
+                                {"Name": "d", "Entity": "DELTALOAD_DATAMART LOCATION_DIM"},
+                                {"Name": "d1", "Entity": "DELTALOAD_DATAMART NOTIFIABLE_EVENT_FACT"},
+                                {"Name": "d2", "Entity": "DELTALOAD_DATAMART DISEASE_DIM"},
+                                {"Name": "d3", "Entity": "DELTALOAD_DATAMART CASE_DIM"},
+                            ],
+                            "Select": [
+                                {
+                                    "Column": {
+                                        "Expression": {"SourceRef": {"Source": "d"}},
+                                        "Property": "STATE",
+                                    }
+                                },
+                                {
+                                    "Measure": {
+                                        "Expression": {"SourceRef": {"Source": "d1"}},
+                                        "Property": "Count_Notification",
+                                    }
+                                },
+                            ],
+                        }
+                    }
+                }]
+            }
+        }]
+    }
+
+    hints = crawler._extract_runtime_hints_from_post_data(json.dumps(payload))
+
+    assert hints["location"]["measure_property"] == "Count_Notification"
+    assert hints["location"]["location_alias"] == "d"
+    assert hints["location"]["fact_alias"] == "d1"
+
+
+def test_au_fetch_months_concurrent_preserves_explicit_zero_totals():
+    from src.data.crawlers.au import AustraliaNINDSSCrawler
+
+    crawler = AustraliaNINDSSCrawler()
+
+    def fake_fetch_month_disease(year: int, month: int, disease: str):
+        return {"ACT": 0, "NSW": 0}
+
+    crawler._fetch_month_disease = fake_fetch_month_disease  # type: ignore[method-assign]
+
+    totals = crawler._fetch_months_concurrent([(2026, 3)], ["Anthrax"])
+
+    assert totals == {(2026, 3, "Anthrax"): 0}
+
+
+def test_au_raw_archive_writes_json(tmp_path):
+    from src.data.crawlers.au import AustraliaNINDSSCrawler
+
+    crawler = AustraliaNINDSSCrawler(save_raw=True, raw_dir=tmp_path)
+    crawler._config = {"apiUrl": "https://example.invalid/query"}
+    crawler._runtime_hints = {"location": {"measure_property": "Count_Notification"}}
+
+    crawler._archive_month_fetch(
+        year=2026,
+        month=3,
+        disease="COVID-19",
+        payload={"foo": "bar"},
+        raw={"results": []},
+        parsed_counts={"NSW": 12},
+    )
+
+    archived = tmp_path / "2026" / "03" / "COVID-19.json"
+    assert archived.exists()
+    assert '"measure_property": "Count_Notification"' in archived.read_text(encoding="utf-8")
+
+
+def test_au_refresh_source_falls_back_to_raw_archive(tmp_path, monkeypatch: pytest.MonkeyPatch):
+    import json
+
+    from src.data.processors.au import AUMonthlyUpdater
+
+    raw_root = tmp_path / "raw"
+    month_dir = raw_root / "2026" / "03"
+    month_dir.mkdir(parents=True, exist_ok=True)
+    (month_dir / "Anthrax.json").write_text(
+        json.dumps({"disease": "Anthrax", "parsed_counts": {"NSW": 0, "AUS": 999}}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    (month_dir / "Cholera.json").write_text(
+        json.dumps({"disease": "Cholera", "parsed_counts": {"QLD": 5, "TOTAL": 888}}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+    def fake_crawl_monthly_national_csv(self, output_csv, months=None):
+        raise RuntimeError("network down")
+
+    monkeypatch.setattr(
+        "src.data.processors.au.AustraliaNINDSSCrawler.crawl_monthly_national_csv",
+        fake_crawl_monthly_national_csv,
+    )
+
+    updater = AUMonthlyUpdater(output_csv=tmp_path / "au.csv")
+    result = updater.refresh_source(months=[(2026, 3)], raw_dir=raw_root)
+
+    assert {row["RawDiseaseLabel"]: row["Cases"] for row in result.rows} == {
+        "Anthrax": "0",
+        "Cholera": "5",
+    }
+    assert any("using raw archive" in line for line in result.script_logs)
+    assert result.source_csv.exists()
+
+
+def test_au_refresh_source_falls_back_to_previous_csv_snapshot(tmp_path, monkeypatch: pytest.MonkeyPatch):
+    from src.data.processors.au import AUMonthlyUpdater
+
+    output_csv = tmp_path / "au.csv"
+    updater = AUMonthlyUpdater(output_csv=output_csv)
+    updater._write_rows_to_output_csv(
+        [
+            {
+                "Date": "2026-03-01",
+                "RawDiseaseLabel": "Anthrax",
+                "DiseaseFull": "Anthrax",
+                "Cases": "0",
+                "Group": "national_total",
+                "Incidence": "",
+                "Population": "",
+                "Source": updater.source_name,
+                "__source_file": "cached.csv",
+            },
+            {
+                "Date": "2026-03-01",
+                "RawDiseaseLabel": "Cholera",
+                "DiseaseFull": "Cholera",
+                "Cases": "7",
+                "Group": "national_total",
+                "Incidence": "",
+                "Population": "",
+                "Source": updater.source_name,
+                "__source_file": "cached.csv",
+            },
+        ]
+    )
+
+    def fake_crawl_monthly_national_csv(self, output_csv, months=None):
+        raise RuntimeError("temporary upstream outage")
+
+    monkeypatch.setattr(
+        "src.data.processors.au.AustraliaNINDSSCrawler.crawl_monthly_national_csv",
+        fake_crawl_monthly_national_csv,
+    )
+
+    result = updater.refresh_source(months=[(2026, 3)], raw_dir=tmp_path / "missing-raw")
+
+    assert {row["RawDiseaseLabel"]: row["Cases"] for row in result.rows} == {
+        "Anthrax": "0",
+        "Cholera": "7",
+    }
+    assert any("previous CSV snapshot" in line for line in result.script_logs)
+
+
+def test_au_refresh_source_replaces_partial_live_csv_with_more_complete_archive(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    import json
+    from datetime import date
+
+    from src.data.crawlers.au import AUFetchSummary
+    from src.data.processors.au import AUMonthlyUpdater
+
+    raw_root = tmp_path / "raw"
+    month_dir = raw_root / "2026" / "03"
+    month_dir.mkdir(parents=True, exist_ok=True)
+    (month_dir / "Anthrax.json").write_text(
+        json.dumps({"disease": "Anthrax", "parsed_counts": {"NSW": 0}}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    (month_dir / "Cholera.json").write_text(
+        json.dumps({"disease": "Cholera", "parsed_counts": {"QLD": 9}}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+    updater = AUMonthlyUpdater(output_csv=tmp_path / "au.csv")
+
+    def fake_crawl_monthly_national_csv(self, output_csv, months=None):
+        updater._write_rows_to_output_csv(
+            [
+                {
+                    "Date": "2026-03-01",
+                    "RawDiseaseLabel": "Anthrax",
+                    "DiseaseFull": "Anthrax",
+                    "Cases": "0",
+                    "Group": "national_total",
+                    "Incidence": "",
+                    "Population": "",
+                    "Source": updater.source_name,
+                    "__source_file": "live.csv",
+                }
+            ]
+        )
+        return AUFetchSummary(row_count=1, latest_date=date(2026, 3, 1), csv_url="live")
+
+    monkeypatch.setattr(
+        "src.data.processors.au.AustraliaNINDSSCrawler.crawl_monthly_national_csv",
+        fake_crawl_monthly_national_csv,
+    )
+
+    result = updater.refresh_source(months=[(2026, 3)], raw_dir=raw_root)
+
+    assert {row["RawDiseaseLabel"]: row["Cases"] for row in result.rows} == {
+        "Anthrax": "0",
+        "Cholera": "9",
+    }
+    assert any("using raw archive" in line for line in result.script_logs)
+
+
+@pytest.mark.asyncio
+async def test_sources_flow_includes_task_only_rows_without_disease_records(app_ready):
+    import uuid
+
+    from dashboard.api.routers.sources import get_sources_flow
+    from src.core import get_session_maker
+    from src.domain import Country, Task, TaskPriority, TaskStatus, TaskType
+
+    code = f"T{uuid.uuid4().hex[:6].upper()}"
+
+    async with get_session_maker()() as db:
+        country = Country(
+            code=code,
+            name="Test Flow Country",
+            name_en="Test Flow Country",
+            language="en",
+            timezone="UTC",
+        )
+        db.add(country)
+        await db.flush()
+
+        db.add(
+            Task(
+                task_type=TaskType.CRAWL_DATA,
+                task_name="Test crawl for source flow",
+                status=TaskStatus.PENDING,
+                priority=TaskPriority.NORMAL,
+                country_id=country.id,
+                input_data={
+                    "country": code,
+                    "country_code": code,
+                    "source": "cdc_weekly",
+                },
+            )
+        )
+        await db.flush()
+
+        flows = await get_sources_flow(country_id=country.id, db=db)
+
+        assert len(flows) == 1
+        assert flows[0].country_code == code
+        assert flows[0].data_source == "China CDC Weekly"
+        assert flows[0].record_count == 0
+        assert flows[0].latest_task_source == "cdc_weekly"
+        assert flows[0].latest_task_status == "pending"
+        assert flows[0].stages[0].status == "pending"
+
+        await db.rollback()
+
+
+@pytest.mark.asyncio
+async def test_quality_sources_merges_canonical_labels(app_ready):
+    import uuid
+
+    from dashboard.api.routers.quality import quality_sources
+    from src.core import get_session_maker
+    from src.domain import Country, Disease, DiseaseRecord
+
+    suffix = uuid.uuid4().hex[:8]
+
+    async with get_session_maker()() as db:
+        country = Country(
+            code=f"Q{suffix[:6].upper()}",
+            name="Test Quality Country",
+            name_en="Test Quality Country",
+            language="en",
+            timezone="UTC",
+        )
+        disease = Disease(
+            name=f"test-disease-{suffix}",
+            category="test",
+        )
+        db.add_all([country, disease])
+        await db.flush()
+
+        db.add_all(
+            [
+                DiseaseRecord(
+                    time=datetime(2099, 1, 1, tzinfo=timezone.utc),
+                    disease_id=disease.id,
+                    country_id=country.id,
+                    cases=1,
+                    data_source="Gov Data",
+                ),
+                DiseaseRecord(
+                    time=datetime(2099, 2, 1, tzinfo=timezone.utc),
+                    disease_id=disease.id,
+                    country_id=country.id,
+                    cases=2,
+                    data_source="GOV Data",
+                ),
+            ]
+        )
+        await db.flush()
+
+        rows = await quality_sources(country_id=country.id, db=db)
+
+        assert len(rows) == 1
+        assert rows[0].data_source == "NHC"
+        assert rows[0].count == 2
+        assert rows[0].percentage == 100.0
+
+        await db.rollback()
+
+
+@pytest.mark.asyncio
 @_skip_network
 async def test_us_fetch_raw_pages(app_ready):
     """US crawler fetch_raw_pages returns paginated NNDSS rows."""
@@ -372,6 +773,7 @@ async def test_crawl_service_dispatch(country: str, app_ready):
             "fill_missing": False,
         },
     )
+    assert task.country_id is not None
 
     cap = LoguruCapture().install()
     try:
@@ -438,6 +840,7 @@ async def test_crawl_service_dispatch_slow(country: str, app_ready):
             "fill_missing": False,
         },
     )
+    assert task.country_id is not None
 
     cap = LoguruCapture().install()
     try:

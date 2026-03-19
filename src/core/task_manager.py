@@ -11,7 +11,7 @@ from sqlalchemy.orm import selectinload
 
 from src.core.database import get_db
 from src.core.logging import get_logger
-from src.domain import Task, TaskWorkbook, TaskStatus, TaskType, TaskPriority
+from src.domain import Country, Task, TaskWorkbook, TaskStatus, TaskType, TaskPriority
 
 logger = get_logger(__name__)
 
@@ -63,6 +63,9 @@ class TaskManager:
             创建的任务对象
         """
         async with get_db() as db:
+            if country_id is None:
+                country_id = await self._infer_country_id(db, input_data)
+
             task = Task(
                 task_type=task_type,
                 task_name=task_name,
@@ -81,6 +84,34 @@ class TaskManager:
             
             logger.info(f"Created task: {task.task_uuid} - {task_name}")
             return task
+
+    @staticmethod
+    async def _infer_country_id(db, input_data: Optional[Dict[str, Any]]) -> Optional[int]:
+        """Best-effort recovery for legacy callers that only pass country code in input_data."""
+        if not isinstance(input_data, dict):
+            return None
+
+        raw_country = (
+            input_data.get("country_id")
+            or input_data.get("country_code")
+            or input_data.get("country")
+        )
+        if raw_country is None:
+            return None
+
+        if isinstance(raw_country, int):
+            return raw_country
+
+        text = str(raw_country).strip()
+        if not text:
+            return None
+
+        if text.isdigit():
+            return int(text)
+
+        code = text.upper()
+        result = await db.execute(select(Country.id).where(Country.code == code))
+        return result.scalar_one_or_none()
     
     async def get_task_by_uuid(self, task_uuid: str) -> Optional[Task]:
         """通过UUID获取任务"""
