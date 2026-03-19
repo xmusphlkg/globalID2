@@ -18,14 +18,20 @@ Public interface
 """
 from __future__ import annotations
 
+import base64
 import csv
+import gzip
+import html as html_lib
+import io
+import json
+import re
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -267,6 +273,22 @@ class AustraliaNINDSSCrawler(BaseCrawler):
 
     def _load_config(self) -> bool:
         """
+        Load Power BI auth/config using progressively more tolerant strategies:
+          1) intercept live browser traffic via Playwright
+          2) extract embed token/config from dashboard HTML
+        """
+        if self._load_config_via_playwright():
+            return True
+        logger.warning(
+            "[AU-NINDSS] Playwright token capture unavailable or did not observe a query request; "
+            "falling back to HTML embed config extraction"
+        )
+        if self._load_config_via_html():
+            return True
+        return False
+
+    def _load_config_via_playwright(self) -> bool:
+        """
         Launch a headless browser, navigate to the NINDSS dashboard, and
         intercept the Authorization Bearer token from the first Power BI
         query request.  Populates self._config on success.
@@ -294,15 +316,29 @@ class AustraliaNINDSSCrawler(BaseCrawler):
                 page.on("request", on_request)
                 page.goto(self.dashboard_url, timeout=90_000)
 
+                # The portal first loads a Power BI embed iframe, then the iframe
+                # triggers the dedicated QES requests carrying the MWCToken.
+                # Waiting for the iframe plus a longer grace period is noticeably
+                # more reliable than only sleeping after `goto`.
+                try:
+                    page.locator("iframe").first.wait_for(timeout=20_000)
+                except Exception:
+                    logger.debug("[AU-NINDSS] Power BI iframe did not appear before timeout")
+
                 waited = 0
-                while waited < 45 and "token" not in captured:
-                    time.sleep(1)
+                while waited < 60 and "token" not in captured:
+                    page.wait_for_timeout(1_000)
                     waited += 1
+                    if waited == 20 and "token" not in captured:
+                        try:
+                            page.reload(timeout=90_000)
+                        except Exception:
+                            logger.debug("[AU-NINDSS] Page reload during token capture failed")
 
                 browser.close()
 
         except ImportError:
-            logger.error(
+            logger.warning(
                 "[AU-NINDSS] playwright not installed — "
                 "run: pip install playwright && playwright install chromium"
             )
@@ -315,38 +351,182 @@ class AustraliaNINDSSCrawler(BaseCrawler):
             logger.error("[AU-NINDSS] Timed out waiting for token from browser traffic")
             return False
 
-        token = captured["token"]
+        return self._set_runtime_config(
+            token=captured.get("token", ""),
+            api_url=captured.get("url", ""),
+            report_id=captured.get("report_id") or _REPORT_ID,
+            dataset_id=_DATASET_ID,
+            model_id=_MODEL_ID,
+            log_source="playwright",
+        )
+
+    def _load_config_via_html(self) -> bool:
+        if not self._http:
+            self._http = self._make_http_session()
+        try:
+            resp = self._http.get(self.dashboard_url, timeout=30)
+            resp.raise_for_status()
+        except requests.RequestException as exc:
+            logger.error(f"[AU-NINDSS] Failed to fetch dashboard HTML | error={exc}")
+            return False
+
+        extracted = self._extract_config_from_html(resp.text)
+        if not extracted:
+            logger.error("[AU-NINDSS] No Power BI embed config found in dashboard HTML")
+            return False
+
+        return self._set_runtime_config(
+            token=extracted.get("accessToken", ""),
+            api_url=extracted.get("apiUrl", ""),
+            report_id=extracted.get("reportId") or _REPORT_ID,
+            dataset_id=extracted.get("datasetId") or _DATASET_ID,
+            model_id=extracted.get("modelId") or _MODEL_ID,
+            log_source="html",
+        )
+
+    def _extract_config_from_html(self, html_content: str) -> Optional[Dict[str, Any]]:
+        access_token = ""
+        api_url = ""
+        report_id = ""
+        dataset_id = ""
+        model_id: Optional[int] = None
+
+        match = re.search(r"var\s+pbiAppConfig\s*=\s*({.*?});", html_content, re.S)
+        if match:
+            try:
+                app_cfg = json.loads(match.group(1))
+                access_token = _norm_text(app_cfg.get("accessToken"))
+                report_id = _norm_text(app_cfg.get("reportId"))
+                api_url = self._derive_api_url_from_embed_url(_norm_text(app_cfg.get("embedUrl")))
+            except json.JSONDecodeError:
+                logger.debug("[AU-NINDSS] Failed to decode pbiAppConfig JSON from HTML")
+
+        if not access_token:
+            match = re.search(r'embedconfig="([^"]+)"', html_content, re.I)
+            if match:
+                try:
+                    cfg = self._decode_embed_config(match.group(1))
+                    embed_token = cfg.get("EmbedToken", {}) if isinstance(cfg, dict) else {}
+                    access_token = _norm_text(embed_token.get("token"))
+                    report_id = report_id or _norm_text(cfg.get("Id") or cfg.get("id"))
+                    api_url = api_url or self._derive_api_url_from_embed_url(
+                        _norm_text(cfg.get("EmbedUrl"))
+                    )
+                except Exception as exc:
+                    logger.debug(f"[AU-NINDSS] Failed to decode embedconfig | error={exc}")
+
+        if not access_token:
+            match = (
+                re.search(r'"accessToken"\s*:\s*"([^"]+)"', html_content)
+                or re.search(r"'accessToken'\s*:\s*'([^']+)'", html_content)
+            )
+            if match:
+                access_token = _norm_text(match.group(1))
+
+        if not access_token:
+            return None
+
+        # The static portal HTML currently exposes an embed token (often
+        # starting with `H4s...`) that is not accepted by the QES public/query
+        # endpoint. Only accept HTML extraction when it looks like the older
+        # JWT-style access token used by the direct API path.
+        if not access_token.startswith("ey"):
+            logger.warning(
+                f"[AU-NINDSS] Ignoring HTML-extracted token with unsupported format "
+                f"prefix={access_token[:5]!r}"
+            )
+            return None
+
+        return {
+            "accessToken": access_token,
+            "apiUrl": api_url,
+            "reportId": report_id,
+            "datasetId": dataset_id,
+            "modelId": model_id,
+        }
+
+    def _decode_embed_config(self, raw_embed_config: str) -> Dict[str, Any]:
+        encoded = html_lib.unescape(raw_embed_config).strip()
+        padding = (-len(encoded)) % 4
+        if padding:
+            encoded += "=" * padding
+        try:
+            decoded = base64.b64decode(encoded)
+        except Exception:
+            decoded = base64.urlsafe_b64decode(encoded)
+
+        if decoded.startswith(b"\x1f\x8b"):
+            with gzip.GzipFile(fileobj=io.BytesIO(decoded)) as gz:
+                decoded = gz.read()
+
+        return json.loads(decoded.decode("utf-8"))
+
+    def _derive_api_url_from_embed_url(self, embed_url: str) -> str:
+        if not embed_url:
+            return ""
+        try:
+            parsed = urlparse(embed_url)
+            config_param = parse_qs(parsed.query).get("config", [])
+            if not config_param:
+                return ""
+            cfg_raw = unquote(config_param[0])
+            cfg = json.loads(cfg_raw)
+            cluster_url = _norm_text(cfg.get("clusterUrl"))
+            if cluster_url:
+                parsed_cluster = urlparse(cluster_url)
+                if parsed_cluster.scheme and parsed_cluster.netloc:
+                    return (
+                        f"{parsed_cluster.scheme}://{parsed_cluster.netloc}"
+                        f"/webapi/capacities/{self.capacity_id}"
+                        "/workloads/QES/QueryExecutionService/automatic/public/query"
+                    )
+        except Exception as exc:
+            logger.debug(f"[AU-NINDSS] Failed to derive apiUrl from embed URL | error={exc}")
+        return ""
+
+    def _default_api_url(self) -> str:
+        cap_slug = self.capacity_id.replace("-", "").lower()
+        return (
+            f"https://{cap_slug}.pbidedicated.windows.net"
+            f"/webapi/capacities/{self.capacity_id}"
+            "/workloads/QES/QueryExecutionService/automatic/public/query"
+        )
+
+    def _set_runtime_config(
+        self,
+        token: str,
+        api_url: str,
+        report_id: str,
+        dataset_id: Any,
+        model_id: Any,
+        log_source: str,
+    ) -> bool:
+        token = _norm_text(token)
         if token.lower().startswith("bearer "):
             token = token.split(" ", 1)[1]
+        if not token:
+            return False
 
-        # Build API URL from intercepted URL or fall back to capacity slug URL
-        api_url = ""
-        raw_url = captured.get("url", "")
-        if raw_url:
-            parsed = urlparse(raw_url)
-            if parsed.scheme and parsed.netloc:
-                # Use the exact URL that was intercepted (most reliable)
-                api_url = raw_url
-        if not api_url:
-            cap_slug = self.capacity_id.replace("-", "").lower()
-            api_url = (
-                f"https://{cap_slug}.pbidedicated.windows.net"
-                f"/webapi/capacities/{self.capacity_id}"
-                "/workloads/QES/QueryExecutionService/automatic/public/query"
-            )
+        api_url = _norm_text(api_url) or self._default_api_url()
+        if api_url:
+            parsed = urlparse(api_url)
+            if not (parsed.scheme and parsed.netloc):
+                api_url = self._default_api_url()
 
+        parsed_model_id = _parse_int(model_id)
         self._config = {
             "accessToken": token,
             "apiUrl": api_url,
-            "reportId": captured.get("report_id") or _REPORT_ID,
-            "datasetId": _DATASET_ID,
-            "modelId": _MODEL_ID,
+            "reportId": _norm_text(report_id) or _REPORT_ID,
+            "datasetId": _norm_text(dataset_id) or _DATASET_ID,
+            "modelId": parsed_model_id if parsed_model_id is not None else _MODEL_ID,
         }
-        self._http = self._make_http_session()
+        if not self._http:
+            self._http = self._make_http_session()
 
         logger.info(
-            f"[AU-NINDSS] Token captured | token_prefix={token[:15]}... "
-            f"api_url={api_url[:60]}..."
+            f"[AU-NINDSS] Token/config loaded via {log_source} | "
+            f"token_prefix={token[:15]}... api_url={api_url[:60]}..."
         )
         return True
 

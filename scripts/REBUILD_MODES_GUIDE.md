@@ -89,7 +89,7 @@
 ```
 
 **适用场景：**
-- 修改了历史数据源文件 `data/processed/cn/history_merged.csv`
+- 修改了历史数据源文件 `data/history/cn/history_merged.csv`
 - 发现历史数据导入有误需要重新导入
 - 数据质量问题修复后重新导入
 - 历史数据去重或清理后重新导入
@@ -228,7 +228,7 @@
 ### 场景 3：历史数据清理
 问题：发现历史数据有重复，需要清理后重新导入
 ```bash
-# 1. 清理 data/processed/cn/history_merged.csv
+# 1. 清理 data/history/cn/history_merged.csv
 # 2. 重新导入历史数据
 ./venv/bin/python scripts/full_rebuild_database.py --mode history --yes
 ```

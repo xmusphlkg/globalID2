@@ -260,8 +260,8 @@ class AppSettings(BaseSettings):
     
     # 数据目录
     data_dir: Path = Field(default=Path("data"), description="数据根目录")
-    raw_data_dir: Path = Field(default=Path("data/raw"), description="原始数据目录")
-    processed_data_dir: Path = Field(default=Path("data/processed"), description="处理后数据目录")
+    raw_data_dir: Path = Field(default=Path("data/raw"), description="原始抓取/调试缓存目录")
+    processed_data_dir: Path = Field(default=Path("data/processed"), description="处理后数据目录（不含 history/current 约定目录）")
     cache_dir: Path = Field(default=Path("data/cache"), description="缓存目录")
     
     # 子配置

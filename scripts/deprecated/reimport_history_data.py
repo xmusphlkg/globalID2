@@ -2,7 +2,7 @@
 """
 重新导入历史数据到 disease_records 表
 
-该脚本从 data/processed/history_merged.csv 读取历史数据，
+该脚本从 data/history/cn/history_merged.csv 读取历史数据，
 使用 disease_mappings 表进行疾病名称映射，然后导入到 disease_records 表。
 """
 import asyncio
@@ -29,7 +29,7 @@ async def main():
     logger.info("=" * 70)
     
     # 读取历史数据
-    csv_file = ROOT / "data/processed/history_merged.csv"
+    csv_file = ROOT / "data/history/cn/history_merged.csv"
     if not csv_file.exists():
         logger.error(f"历史数据文件不存在: {csv_file}")
         return

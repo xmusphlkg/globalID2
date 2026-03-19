@@ -69,7 +69,7 @@ pnpm-debug.log*
 /logs/*.pid
 /exports/
 /reports/
-/data/raw/
+/data/history/
 /data/processed/
 /data/cache/
 /data/demo_output/

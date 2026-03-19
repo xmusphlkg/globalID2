@@ -25,7 +25,7 @@ from src.data.crawlers import AustraliaNINDSSCrawler
 logger = get_logger(__name__)
 
 ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_OUTPUT_CSV = ROOT / "data/raw/au/australia_national_data.csv"
+DEFAULT_OUTPUT_CSV = ROOT / "data/current/au/australia_national_data.csv"
 DEFAULT_SOURCE_NAME = "Australia NINDSS (location aggregated)"
 
 
