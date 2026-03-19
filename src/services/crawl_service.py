@@ -508,7 +508,7 @@ class CrawlService:
             task.task_uuid,
             entry_type="info",
             title="Phase 1/3: Refreshing JP Source",
-            content="Loading JP crawler output CSV and preparing incremental update rows...",
+            content="Refreshing JP current weekly CSV output and preparing incremental update rows...",
             content_type="text",
         )
         await task_manager.update_task_progress(task.task_uuid, 10)
@@ -527,7 +527,7 @@ class CrawlService:
             content=(
                 f"Source rows prepared (TOTAL): {source_rows}\n"
                 f"Source latest week date: {source_latest}\n"
-                f"Standardized CSV: {fetched.source_csv}\n"
+                f"Current standardized CSV: {fetched.source_csv}\n"
                 f"Duration: {phase1_elapsed:.1f}s"
             ),
             content_type="text",
@@ -741,7 +741,7 @@ class CrawlService:
                 f"Months requested: {months_fetched_count}\n"
                 f"Source rows prepared (national monthly): {source_rows}\n"
                 f"Source latest month date: {source_latest}\n"
-                f"National CSV: {fetched.source_csv}\n"
+                f"Current national CSV: {fetched.source_csv}\n"
                 f"Duration: {phase1_elapsed:.1f}s"
             ),
             content_type="text",

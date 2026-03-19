@@ -2,10 +2,10 @@
 """Normalize US CDC NNDSS weekly data into the project's history_merged.csv format.
 
 This script supports two ingestion paths:
-1. Local historical CSV export, such as data/raw/us/NNDSS_Weekly_Data_20260317.csv
+1. Local historical CSV export, such as data/history/us/NNDSS_Weekly_Data_20260317.csv
 2. API-based refresh for national TOTAL rows using public CDC Socrata endpoints
 
-Output is written to data/processed/us/history_merged.csv so the existing
+Output is written to data/history/us/history_merged.csv so the existing
 full_rebuild_database.py --country us flow can reuse the standard history import.
 
 Notes:
@@ -29,8 +29,8 @@ from urllib import request
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_INPUT_CSV = ROOT / "data/raw/us/NNDSS_Weekly_Data_20260317.csv"
-DEFAULT_OUTPUT_CSV = ROOT / "data/processed/us/history_merged.csv"
+DEFAULT_INPUT_CSV = ROOT / "data/history/us/NNDSS_Weekly_Data_20260317.csv"
+DEFAULT_OUTPUT_CSV = ROOT / "data/history/us/history_merged.csv"
 DEFAULT_REPORTING_AREA = "TOTAL"
 DEFAULT_SOURCE_NAME = "US CDC NNDSS"
 DEFAULT_JSON_API_URL = (

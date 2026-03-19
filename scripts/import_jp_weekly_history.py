@@ -2,7 +2,7 @@
 """Import Japan weekly historical data into disease_records.
 
 Source file example:
-  data/raw/jp/weekly_cases_standardized.csv
+  data/history/jp/weekly_cases_standardized.csv
 
 This importer is designed for the current schema where disease_records primary key is
 (time, disease_id, country_id). To avoid collisions from prefecture-level rows, the
@@ -33,7 +33,7 @@ from src.core.logging import get_logger
 
 logger = get_logger(__name__)
 
-DEFAULT_INPUT = ROOT / "data/raw/jp/weekly_cases_standardized.csv"
+DEFAULT_INPUT = ROOT / "data/history/jp/weekly_cases_standardized.csv"
 DEFAULT_REPORTING_AREAS = ["総数"]
 DEFAULT_SOURCE = "Japan NIID Weekly Sentinel"
 
@@ -56,7 +56,7 @@ def parse_args() -> argparse.Namespace:
         "--input",
         type=Path,
         default=DEFAULT_INPUT,
-        help="Path to JP raw weekly CSV.",
+        help="Path to JP historical weekly CSV.",
     )
     parser.add_argument(
         "--reporting-area",

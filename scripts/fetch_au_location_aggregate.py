@@ -6,7 +6,7 @@ This script:
 1) optionally runs the external collector in ID_AU/ScriptGetData
 2) reads location-level CSV files (state rows)
 3) aggregates monthly totals per disease to national rows
-4) writes data/raw/au/australia_national_data.csv
+4) writes data/current/au/australia_national_data.csv
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_OUTPUT = ROOT / "data/raw/au/australia_national_data.csv"
+DEFAULT_OUTPUT = ROOT / "data/current/au/australia_national_data.csv"
 DEFAULT_AU_SCRIPT_ROOT = Path("/home/likangguo/globalID/ID_AU/ScriptGetData")
 DEFAULT_LOCATION_ROOT = Path("/home/likangguo/globalID/ID_AU/Data/GetData/location")
 

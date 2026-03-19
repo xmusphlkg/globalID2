@@ -1,8 +1,8 @@
 """JP weekly updater.
 
-This updater only handles incremental updates from crawler outputs that already
-exist inside globalID2 (data/raw/jp/weekly_cases_standardized.csv).
-It does not run any external historical pipeline.
+This updater only handles incremental updates from the crawler's current-output
+CSV. Historical backfill files live under ``data/history`` and are imported
+only by the dedicated history scripts.
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ from src.data.crawlers import JapanIDWRCrawler
 logger = get_logger(__name__)
 
 ROOT = Path(__file__).resolve().parents[3]
-DEFAULT_OUTPUT_CSV = ROOT / "data/raw/jp/weekly_cases_standardized.csv"
+DEFAULT_OUTPUT_CSV = ROOT / "data/current/jp/weekly_cases_standardized.csv"
 DEFAULT_REPORTING_AREA = "総数"
 DEFAULT_SOURCE_NAME = "Japan NIID Weekly Sentinel"
 
@@ -68,7 +68,7 @@ def _mmwr_week_end_date(year: int, week: int) -> date:
 
 
 class JPWeeklyUpdater:
-    """Read JP standardized weekly rows from local crawler output and import."""
+    """Read JP current weekly rows from crawler output and import."""
 
     def __init__(
         self,
