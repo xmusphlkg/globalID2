@@ -5,8 +5,25 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
+        sans: [
+          'Inter',
+          'system-ui',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          '"Segoe UI"',
+          '"PingFang SC"',
+          '"Hiragino Sans GB"',
+          '"Microsoft YaHei"',
+          'sans-serif',
+        ],
+        mono: [
+          '"JetBrains Mono"',
+          '"SFMono-Regular"',
+          'Consolas',
+          '"Liberation Mono"',
+          'Menlo',
+          'monospace',
+        ],
       },
       colors: {
         brand: {

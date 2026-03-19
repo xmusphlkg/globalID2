@@ -12,6 +12,8 @@
     "@astrojs/react": "^3.6.0",
     "@astrojs/sitemap": "^3.2.0",
     "@astrojs/tailwind": "^5.1.2",
+    "@fontsource/inter": "^5.2.8",
+    "@fontsource/jetbrains-mono": "^5.2.8",
     "astro": "^4.16.0",
     "echarts": "^6.0.0",
     "echarts-for-react": "^3.0.6",
