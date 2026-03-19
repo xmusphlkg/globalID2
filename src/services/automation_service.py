@@ -14,6 +14,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import select
 
 from src.core import get_config, get_database, get_logger
+from src.core.source_scopes import canonicalize_task_source
 from src.domain import AutomationJob, Country, Task, TaskWorkbook
 from src.services.crawl_task_service import crawl_task_service
 from src.services.graph_email_service import graph_email_service
@@ -54,7 +55,10 @@ class AutomationJobConfig:
             job_id=job_id,
             name=str(payload.get("name") or job_id).strip(),
             country_code=country_code,
-            source=str(payload.get("source") or "all").strip().lower(),
+            source=canonicalize_task_source(
+                str(payload.get("source") or "all").strip().lower(),
+                country_code=country_code,
+            ),
             enabled=bool(payload.get("enabled", True)),
             priority=str(payload.get("priority") or "normal").strip().lower(),
             process=bool(payload.get("process", True)),
@@ -173,14 +177,17 @@ class AutomationService:
         jobs: list[AutomationJobConfig] = []
         for row in rows:
             jobs.append(
-                AutomationJobConfig(
-                    job_id=row.job_id,
-                    name=row.name,
-                    country_code=row.country_code,
-                    source=row.source,
-                    enabled=row.enabled,
-                    priority=row.priority,
-                    process=row.process,
+                    AutomationJobConfig(
+                        job_id=row.job_id,
+                        name=row.name,
+                        country_code=row.country_code,
+                        source=canonicalize_task_source(
+                            row.source,
+                            country_code=row.country_code,
+                        ),
+                        enabled=row.enabled,
+                        priority=row.priority,
+                        process=row.process,
                     save_raw=row.save_raw,
                     fill_missing=row.fill_missing,
                     force=row.force,

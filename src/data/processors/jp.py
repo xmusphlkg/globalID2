@@ -82,9 +82,9 @@ class JPWeeklyUpdater:
         self.reporting_area = reporting_area
         self.source_name = source_name
         self.output_csv = output_csv
-    def refresh_source(self, *, source: str = "jp_idwr", run_external: bool = False, force: bool = False) -> JPUpdateFetchResult:
+    def refresh_source(self, *, source: str = "jp_weekly", run_external: bool = False, force: bool = False) -> JPUpdateFetchResult:
         logs: List[str] = []
-        source_key = (source or "jp_idwr").strip().lower()
+        source_key = (source or "jp_weekly").strip().lower()
         crawler = JapanIDWRCrawler()
 
         if source_key == "local":

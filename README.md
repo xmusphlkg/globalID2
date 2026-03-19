@@ -467,6 +467,7 @@ See `schema.sql` for the generated schema snapshot.
 Key documents in `docs/`:
 
 - `DASHBOARD_GUIDE.md`: active dashboard usage
+- `ADD_NEW_COUNTRY_GUIDE.md`: end-to-end checklist for onboarding a new country
 - `ARCHITECTURE_V2.md`: architecture direction and subsystem overview
 - `DATABASE_QUICKSTART.md`: database initialization details
 - `database_design.md`: schema and storage notes

@@ -11,6 +11,8 @@ export interface TaskItem {
   priority: string;
   progress: number;
   country_id: number | null;
+  country_code: string | null;
+  country_name: string | null;
   report_id: number | null;
   description: string | null;
   last_error: string | null;
@@ -28,6 +30,18 @@ export interface TaskDetail extends TaskItem {
   output_data: Record<string, unknown> | null;
   parent_task_id: number | null;
   workbook_entries: WorkbookEntry[];
+}
+
+export interface WorkerStatus {
+  worker_process_running: boolean;
+  worker_pid: number | null;
+  queued_tasks: number;
+  running_tasks: number;
+  retrying_tasks: number;
+  active_tasks: number;
+  latest_created_at: string | null;
+  latest_started_at: string | null;
+  latest_completed_at: string | null;
 }
 
 export interface WorkbookEntry {
@@ -67,6 +81,16 @@ export function useTasks(
       return apiFetch(`/tasks?${params}`);
     },
     staleTime: 10 * 1000,
+    refetchInterval: 5 * 1000,
+  });
+}
+
+export function useWorkerStatus() {
+  return useQuery<WorkerStatus>({
+    queryKey: ["tasks", "worker-status"],
+    queryFn: () => apiFetch("/tasks/worker-status"),
+    staleTime: 5 * 1000,
+    refetchInterval: 5 * 1000,
   });
 }
 
@@ -76,6 +100,7 @@ export function useTaskDetail(uuid: string | null) {
     queryFn: () => apiFetch(`/tasks/${uuid}`),
     enabled: !!uuid,
     staleTime: 5 * 1000,
+    refetchInterval: uuid ? 5 * 1000 : false,
   });
 }
 
@@ -119,12 +144,16 @@ interface TaskWebSocketOptions {
   pingIntervalMs?: number;
 }
 
+const EMPTY_EXTRA_QUERY_KEYS: ReadonlyArray<readonly unknown[]> = [];
+
 export function useTaskWebSocket(options: TaskWebSocketOptions = {}) {
   const queryClient = useQueryClient();
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimerRef = useRef<number | null>(null);
   const pingTimerRef = useRef<number | null>(null);
-  const { extraQueryKeys = [], pingIntervalMs = 15000 } = options;
+  const extraQueryKeys = options.extraQueryKeys ?? EMPTY_EXTRA_QUERY_KEYS;
+  const pingIntervalMs = options.pingIntervalMs ?? 15000;
+  const extraQueryKeysSignature = JSON.stringify(extraQueryKeys);
 
   useEffect(() => {
     let disposed = false;
@@ -219,5 +248,5 @@ export function useTaskWebSocket(options: TaskWebSocketOptions = {}) {
         );
       }
     };
-  }, [extraQueryKeys, pingIntervalMs, queryClient]);
+  }, [extraQueryKeysSignature, pingIntervalMs, queryClient]);
 }

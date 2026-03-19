@@ -27,7 +27,7 @@ def crawl(
     country: str = typer.Option("CN", help="Country code"),
     source: str = typer.Option(
         "all",
-        help="Data source (CN: cdc_weekly/nhc/pubmed/all; US: all; JP: jp_idwr/local; AU: all/location/external)",
+        help="Data source (CN: cdc_weekly/nhc/pubmed/all; US: nndss_api/all; JP: jp_weekly/local; AU: all)",
     ),
     process: bool = typer.Option(True, help="Process and store data"),
     save_raw: bool = typer.Option(True, help="Save raw pages as plain text"),
@@ -183,7 +183,7 @@ def init_database():
                     timezone="Asia/Shanghai",
                     data_source_url="http://weekly.chinacdc.cn",
                     crawler_config={
-                        "sources": ["cdc_weekly", "nhc", "pubmed_rss"],
+                        "sources": ["cdc_weekly", "nhc", "pubmed"],
                     },
                 )
                 db.add(country)

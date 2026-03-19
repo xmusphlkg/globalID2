@@ -5,6 +5,7 @@ import { Badge, Card, Grid, Text } from "@tremor/react";
 import type { Color } from "@tremor/react";
 import type { TaskDetail } from "@/lib/hooks/useTasks";
 import { useReportRuns } from "@/lib/hooks/useReports";
+import { getSourceDisplayLabel } from "@/lib/source-labels";
 
 interface TaskDetailPanelProps {
   taskDetail?: TaskDetail;
@@ -73,6 +74,15 @@ function extractStructuredRows(value: string | null): Array<{ label: string; val
   return rows.length >= 2 ? rows : [];
 }
 
+function normalizeStructuredRows(rows: Array<{ label: string; value: string }>) {
+  return rows.map((row) => {
+    if (row.label.trim().toLowerCase() === "source") {
+      return { ...row, value: getSourceDisplayLabel(row.value, "en") };
+    }
+    return row;
+  });
+}
+
 function entryKind(title: string): "phase" | "progress" | "result" | "default" {
   if (/^phase\s+\d+\/\d+/i.test(title)) return "phase";
   if (/progress/i.test(title)) return "progress";
@@ -92,6 +102,24 @@ function metadataString(value: unknown): string | null {
     return value ? "yes" : "no";
   }
   return null;
+}
+
+function booleanLabel(value: unknown): string | null {
+  if (typeof value === "boolean") return value ? "yes" : "no";
+  return null;
+}
+
+function deriveRawArchivePath(taskDetail?: TaskDetail): string | null {
+  if (!taskDetail) return null;
+  const input = (taskDetail.input_data as Record<string, unknown> | null) ?? null;
+  if (!input || input.save_raw !== true) return null;
+  const countryCode =
+    asDisplayString(input.country_code) ??
+    asDisplayString(input.country) ??
+    taskDetail.country_code ??
+    null;
+  if (!countryCode) return null;
+  return `data/raw/${countryCode.toLowerCase()}`;
 }
 
 function tokenTotal(tokens: Record<string, unknown> | null | undefined): number {
@@ -144,6 +172,26 @@ export function TaskDetailPanel({
   }, [taskDetail]);
 
   const latestEntry = timelineEntries[timelineEntries.length - 1];
+  const descriptionRows = normalizeStructuredRows(extractStructuredRows(taskDetail?.description ?? null));
+  const crawlInput = (taskDetail?.input_data as Record<string, unknown> | null) ?? null;
+  const crawlConfigRows = useMemo(() => {
+    if (!taskDetail || taskDetail.task_type !== "crawl_data" || !crawlInput) return [];
+    const rows: Array<{ label: string; value: string }> = [];
+    const source = asDisplayString(crawlInput.source);
+    const saveRaw = booleanLabel(crawlInput.save_raw);
+    const fillMissing = booleanLabel(crawlInput.fill_missing);
+    const process = booleanLabel(crawlInput.process);
+    const force = booleanLabel(crawlInput.force);
+    const rawArchivePath = deriveRawArchivePath(taskDetail);
+
+    if (source) rows.push({ label: "Source", value: getSourceDisplayLabel(source, "en", taskDetail.country_code) });
+    if (saveRaw) rows.push({ label: "Save Raw", value: saveRaw });
+    if (rawArchivePath) rows.push({ label: "Raw Archive", value: rawArchivePath });
+    if (fillMissing) rows.push({ label: "Fill Missing", value: fillMissing });
+    if (process) rows.push({ label: "Process", value: process });
+    if (force) rows.push({ label: "Force", value: force });
+    return rows;
+  }, [crawlInput, taskDetail]);
 
   const reportUuid = asDisplayString(outputData?.report_uuid);
   const reportId = asDisplayString(taskDetail?.report_id) ?? asDisplayString(outputData?.report_id);
@@ -232,7 +280,27 @@ export function TaskDetailPanel({
       </Grid>
 
       {taskDetail.description && (
-        <Text className="mb-3 text-xs">{taskDetail.description}</Text>
+        descriptionRows.length > 0 ? (
+          <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-tremor-content">
+            {descriptionRows.map((row) => (
+              <span key={`${row.label}-${row.value}`}>
+                {row.label}: {row.value}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <Text className="mb-3 text-xs">{taskDetail.description}</Text>
+        )
+      )}
+
+      {crawlConfigRows.length > 0 && (
+        <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-tremor-content">
+          {crawlConfigRows.map((row) => (
+            <span key={`${row.label}-${row.value}`}>
+              {row.label}: {row.value}
+            </span>
+          ))}
+        </div>
       )}
 
       {taskDetail.cancel_requested && taskDetail.status === "running" && (

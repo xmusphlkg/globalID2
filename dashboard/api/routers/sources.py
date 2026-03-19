@@ -1,4 +1,4 @@
-"""Sources router – data flow pipeline view per country."""
+"""Sources router – data flow pipeline view per country or across all countries."""
 
 from typing import Dict, List, Optional
 
@@ -17,8 +17,16 @@ from ..schemas.sources import (
     StageInfo,
 )
 from src.domain import AutomationJob
+from src.domain.country import Country
 from src.domain.disease_record import DiseaseRecord
 from src.domain.task import Task, TaskType, TaskWorkbook
+from src.core.source_scopes import (
+    EXPECTED_SCOPES_BY_COUNTRY,
+    canonical_data_source_label,
+    canonicalize_task_source,
+    scope_display_label,
+    scope_from_data_source,
+)
 from src.services.automation_service import automation_service
 
 router = APIRouter()
@@ -39,77 +47,38 @@ def _task_status(task: Optional[Task]) -> Optional[str]:
     return status.value if hasattr(status, "value") else str(status)
 
 
-def _scope_from_data_source(data_source: Optional[str]) -> str:
-    """Map record data_source text to canonical scope key."""
-    text = (data_source or "").strip().lower()
-
-    # Exact known labels from current CN dataset.
-    exact = {
-        "china cdc: notifiable infectious diseases reports": "cdc_weekly",
-        "china cdc weekly: notifiable infectious diseases reports": "cdc_weekly",
-        "us cdc nndss": "nndss_api",
-        "us cdc nndss weekly": "nndss_api",
-        "japan niid weekly sentinel": "jp_weekly",
-        "jp niid weekly sentinel": "jp_weekly",
-        "gov data": "nhc",
-        "pubmed": "pubmed",
-    }
-    if text in exact:
-        return exact[text]
-
-    # Fallback heuristics for historical / future labels.
-    if "pubmed" in text:
-        return "pubmed"
-    if "niid" in text or "japan" in text:
-        return "jp_weekly"
-    if "nndss" in text:
-        return "nndss_api"
-    if "gov" in text or "ndcpa" in text or "卫健" in text or "疾控局" in text:
-        return "nhc"
-    if "cdc" in text or "weekly" in text:
-        return "cdc_weekly"
-    return "all"
+def _should_show_task_only_source(task: Optional[Task]) -> bool:
+    """Only surface task-only rows when the source still needs attention."""
+    status = _task_status(task)
+    return status in {"pending", "queued", "running", "retrying", "failed"}
 
 
-def _canonical_data_source_label(data_source: Optional[str]) -> str:
-    """Normalize display label to avoid duplicate cards caused by casing variants."""
-    text = (data_source or "").strip().lower()
-    if text == "gov data":
-        return "GOV Data"
-    return data_source or "Unknown"
-
-
-def _scope_display_label(scope: str) -> str:
-    if scope == "nndss_api":
-        return "US CDC NNDSS"
-    if scope == "jp_weekly":
-        return "JP NIID Weekly"
-    if scope == "pubmed":
-        return "PubMed"
-    if scope == "nhc":
-        return "GOV Data"
-    if scope == "cdc_weekly":
-        return "China CDC Weekly"
-    return "All Sources"
+def _task_country_code(task: Task) -> str:
+    inp = task.input_data or {}
+    if isinstance(inp, dict):
+        return str(inp.get("country_code") or inp.get("country") or "").strip().upper()
+    return ""
 
 
 def _scope_from_task(task: Task) -> str:
     """Infer task scope from task input_data/task_name."""
     inp = task.input_data or {}
-    source = (inp.get("source") or "").strip().lower() if isinstance(inp, dict) else ""
-    if source == "gov":
-        source = "nhc"
+    country_code = _task_country_code(task)
+    source = canonicalize_task_source(
+        (inp.get("source") or "") if isinstance(inp, dict) else "",
+        country_code=country_code,
+    )
     if source in {"nndss_api", "jp_weekly", "cdc_weekly", "nhc", "pubmed", "all"}:
         return source
 
     # Backward compatibility: old tasks only stored data_source text.
     if isinstance(inp, dict) and inp.get("data_source"):
-        return _scope_from_data_source(str(inp.get("data_source")))
+        return scope_from_data_source(str(inp.get("data_source")))
 
     name = (task.task_name or "").lower()
     if "pubmed" in name:
         return "pubmed"
-    if "niid" in name or "japan" in name:
+    if "idwr" in name or "niid" in name or "japan" in name:
         return "jp_weekly"
     if "nndss" in name:
         return "nndss_api"
@@ -122,11 +91,13 @@ def _scope_from_task(task: Task) -> str:
 
 def _source_from_task(task: Task) -> str:
     inp = task.input_data or {}
-    source = (inp.get("source") or "").strip().lower() if isinstance(inp, dict) else ""
+    country_code = _task_country_code(task)
+    source = canonicalize_task_source(
+        (inp.get("source") or "") if isinstance(inp, dict) else "",
+        country_code=country_code,
+    )
     if not source and isinstance(inp, dict) and inp.get("data_source"):
-        source = _scope_from_data_source(str(inp.get("data_source")))
-    if source == "gov":
-        source = "nhc"
+        source = scope_from_data_source(str(inp.get("data_source")))
     return source or "all"
 
 
@@ -136,6 +107,9 @@ def _pick_latest_crawl_task(
     scope: str,
 ) -> Optional[Task]:
     """Get latest crawl task by exact scope first, then country-wide ('all')."""
+    if ":" in scope:
+        country_key, scope_name = scope.split(":", 1)
+        return latest_by_scope.get(scope) or latest_by_scope.get(f"{country_key}:all")
     return latest_by_scope.get(scope) or latest_by_scope.get("all")
 
 
@@ -254,41 +228,57 @@ def _build_data_stages(task: Optional[Task], workbook_entries: List[TaskWorkbook
 
 @router.get("/sources/flow", response_model=List[DataSourceFlow])
 async def get_sources_flow(
-    country_id: int = Query(..., ge=1, description="Country ID"),
+    country_id: Optional[int] = Query(None, ge=1, description="Country ID"),
     db: AsyncSession = Depends(get_db),
 ):
-    """Return ingestion flow status per data source for the given country."""
+    """Return ingestion flow status per data source for the given country or all countries."""
 
     # 1. Distinct data sources + basic stats from disease_records
     src_q = (
         select(
+            DiseaseRecord.country_id,
+            Country.code.label("country_code"),
+            Country.name_en.label("country_name"),
             DiseaseRecord.data_source,
             func.count().label("record_count"),
             func.max(DiseaseRecord.time).label("latest_date"),
         )
-        .where(DiseaseRecord.country_id == country_id)
-        .group_by(DiseaseRecord.data_source)
-        .order_by(func.count().desc())
+        .outerjoin(Country, Country.id == DiseaseRecord.country_id)
+        .group_by(
+            DiseaseRecord.country_id,
+            Country.code,
+            Country.name_en,
+            DiseaseRecord.data_source,
+        )
+        .order_by(func.count().desc(), Country.name_en.asc(), DiseaseRecord.data_source.asc())
     )
+    if country_id is not None:
+        src_q = src_q.where(DiseaseRecord.country_id == country_id)
     src_rows = (await db.execute(src_q)).all()
-
-    if not src_rows:
-        return []
 
     # Normalize/merge rows by canonical source scope (not raw display text).
     merged_sources: Dict[str, Dict[str, object]] = {}
     for row in src_rows:
-        label = _canonical_data_source_label(row.data_source)
-        scope = _scope_from_data_source(label)
-        display_label = _scope_display_label(scope) if scope != "all" else label
+        scope = scope_from_data_source(row.data_source)
+        display_label = canonical_data_source_label(
+            row.data_source,
+            country_code=row.country_code,
+        )
+        country_key = row.country_id if row.country_id is not None else "none"
+        merged_key = f"{country_key}:{scope}"
 
-        prev = merged_sources.get(scope)
+        prev = merged_sources.get(merged_key)
         if prev is None:
-            merged_sources[scope] = {
+            merged_sources[merged_key] = {
+                "key": merged_key,
+                "country_id": row.country_id,
+                "country_code": row.country_code,
+                "country_name": row.country_name,
                 "scope": scope,
                 "data_source": display_label,
                 "record_count": int(row.record_count or 0),
                 "latest_date": row.latest_date,
+                "expected_source": False,
             }
             continue
 
@@ -298,22 +288,21 @@ async def get_sources_flow(
             prev["latest_date"] = row.latest_date
 
     # 2. Gather most-recent crawl tasks and index them by source scope.
-    task_q = (
-        select(Task)
-        .where(
-            Task.country_id == country_id,
-            Task.task_type == TaskType.CRAWL_DATA,
-        )
-        .order_by(Task.created_at.desc())
-    )
+    task_q = select(Task).where(Task.task_type == TaskType.CRAWL_DATA).order_by(Task.created_at.desc())
+    if country_id is not None:
+        task_q = task_q.where(Task.country_id == country_id)
     tasks = (await db.execute(task_q)).scalars().all()
 
-    # Index: scope -> latest crawl task (query already desc by created_at).
+    if not src_rows and not tasks and country_id is None:
+        return []
+
+    # Index: country_id:scope -> latest crawl task (query already desc by created_at).
     latest_by_scope: Dict[str, Task] = {}
     for t in tasks:
         scope = _scope_from_task(t)
-        if scope not in latest_by_scope:
-            latest_by_scope[scope] = t
+        key = f"{t.country_id if t.country_id is not None else 'none'}:{scope}"
+        if key not in latest_by_scope:
+            latest_by_scope[key] = t
 
     # Preload workbook entries for selected latest tasks.
     selected_task_ids = {task.id for task in latest_by_scope.values()}
@@ -328,30 +317,111 @@ async def get_sources_flow(
             workbook_by_task_id.setdefault(wb.task_id, []).append(wb)
 
     # 2.1 Add virtual source rows for scopes that have tasks but no records yet.
-    represented_scopes = {str(item["scope"]) for item in merged_sources.values()}
-    for scope in latest_by_scope.keys():
-        if scope in {"all"} or scope in represented_scopes:
+    represented_keys = set(merged_sources.keys())
+    country_ids_for_meta = {
+        int(row.country_id)
+        for row in src_rows
+        if row.country_id is not None
+    } | {
+        int(t.country_id)
+        for t in tasks
+        if t.country_id is not None
+    }
+    if country_id is not None:
+        country_ids_for_meta.add(country_id)
+
+    country_meta = {
+        row.id: row
+        for row in (
+            await db.execute(
+                select(Country).where(Country.id.in_(country_ids_for_meta))
+            )
+        ).scalars().all()
+    }
+    for task_key, task in latest_by_scope.items():
+        _, scope = task_key.split(":", 1)
+        if scope in {"all"} or task_key in represented_keys:
             continue
-        label = _scope_display_label(scope)
-        if scope not in merged_sources:
-            merged_sources[scope] = {
+        if task.country_id is None:
+            continue
+        country = country_meta.get(task.country_id) if task.country_id is not None else None
+        label = scope_display_label(scope, country_code=country.code if country else None)
+        is_expected_source = bool(
+            country
+            and scope in EXPECTED_SCOPES_BY_COUNTRY.get((country.code or "").upper(), [])
+        )
+        merged_sources[task_key] = {
+                "key": task_key,
+                "country_id": task.country_id,
+                "country_code": country.code if country else None,
+                "country_name": country.name_en if country else None,
                 "scope": scope,
                 "data_source": label,
                 "record_count": 0,
                 "latest_date": None,
+                "expected_source": is_expected_source,
+        }
+
+    # 2.2 Ensure configured per-country sources appear even before data exists.
+    country_scope_candidates: Dict[int, Country] = {}
+    for src in merged_sources.values():
+        country_id_value = src.get("country_id")
+        if country_id_value is None:
+            continue
+        country_code_value = src.get("country_code")
+        country_name_value = src.get("country_name")
+        if country_id_value not in country_scope_candidates:
+            country_scope_candidates[int(country_id_value)] = Country(
+                id=int(country_id_value),
+                code=str(country_code_value or ""),
+                name_en=str(country_name_value or ""),
+            )
+
+    if country_id is not None and country_id in country_meta:
+        country_scope_candidates[country_id] = country_meta[country_id]
+
+    for task in tasks:
+        if task.country_id is None:
+            continue
+        if task.country_id in country_scope_candidates:
+            continue
+        country = country_meta.get(task.country_id)
+        if country is not None:
+            country_scope_candidates[task.country_id] = country
+
+    for country in country_scope_candidates.values():
+        expected_scopes = EXPECTED_SCOPES_BY_COUNTRY.get((country.code or "").upper(), [])
+        for scope in expected_scopes:
+            merged_key = f"{country.id}:{scope}"
+            if merged_key in merged_sources:
+                continue
+            merged_sources[merged_key] = {
+                "key": merged_key,
+                "country_id": country.id,
+                "country_code": country.code,
+                "country_name": country.name_en,
+                "scope": scope,
+                "data_source": scope_display_label(scope, country_code=country.code),
+                "record_count": 0,
+                "latest_date": None,
+                "expected_source": True,
             }
 
     # 3. Build flow objects
     result: List[DataSourceFlow] = []
     sorted_sources = sorted(
         merged_sources.values(),
-        key=lambda item: (int(item["record_count"]), str(item["data_source"])),
-        reverse=True,
+        key=lambda item: (
+            str(item.get("country_name") or "").lower(),
+            -int(item["record_count"]),
+            str(item["data_source"]).lower(),
+        ),
     )
 
     for src in sorted_sources:
         row_scope = str(src["scope"])
-        task = _pick_latest_crawl_task(latest_by_scope, scope=row_scope)
+        scope_key = f"{src.get('country_id') if src.get('country_id') is not None else 'none'}:{row_scope}"
+        task = _pick_latest_crawl_task(latest_by_scope, scope=scope_key)
         workbook_entries = workbook_by_task_id.get(task.id, []) if task else []
         stages = _build_data_stages(task, workbook_entries)
 
@@ -363,9 +433,20 @@ async def get_sources_flow(
                 else (task.created_at.isoformat() if task.created_at else None)
             )
 
+        has_records = int(src["record_count"]) > 0
+        has_real_country = src.get("country_id") is not None
+        is_expected_source = bool(src.get("expected_source"))
+        if not has_real_country:
+            continue
+        if not has_records and not _should_show_task_only_source(task) and not is_expected_source:
+            continue
+
         result.append(
             DataSourceFlow(
                 data_source=str(src["data_source"]),
+                country_id=src.get("country_id"),
+                country_code=src.get("country_code"),
+                country_name=src.get("country_name"),
                 record_count=int(src["record_count"]),
                 latest_date=(
                     src["latest_date"].strftime("%Y-%m-%d")
@@ -418,7 +499,10 @@ async def create_automation_job(body: AutomationJobCreate, db: AsyncSession = De
         job_id=body.job_id.strip(),
         name=body.name.strip(),
         country_code=body.country_code.strip().upper(),
-        source=(body.source or "all").strip().lower(),
+        source=canonicalize_task_source(
+            body.source,
+            country_code=body.country_code,
+        ),
         enabled=body.enabled,
         priority=(body.priority or "normal").strip().lower(),
         process=body.process,
@@ -453,11 +537,19 @@ async def update_automation_job(job_id: str, body: AutomationJobUpdate, db: Asyn
     next_daily = updates["daily_time"] if "daily_time" in updates else job.daily_time
     _validate_automation_schedule(next_interval, next_daily)
 
+    next_country_code = (
+        str(updates.get("country_code", job.country_code) or "").strip().upper()
+        if ("country_code" in updates or job.country_code)
+        else ""
+    )
+
     for field, value in updates.items():
         if field == "country_code":
             value = value.strip().upper()
         elif field in {"source", "priority"} and isinstance(value, str):
             value = value.strip().lower()
+            if field == "source":
+                value = canonicalize_task_source(value, country_code=next_country_code)
         elif field in {"name", "timezone", "notes"} and isinstance(value, str):
             value = value.strip()
         setattr(job, field, value)
@@ -515,7 +607,7 @@ def _automation_job_out(job: AutomationJob, state: dict | None) -> AutomationJob
         job_id=job.job_id,
         name=job.name,
         country_code=job.country_code,
-        source=job.source,
+        source=canonicalize_task_source(job.source, country_code=job.country_code),
         enabled=job.enabled,
         priority=job.priority,
         process=job.process,

@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..deps import get_db
 from ..schemas.quality import CompletenessItem, DataSourceDist, QualityStats, TimeGap
+from src.core.source_scopes import canonical_data_source_label
 from src.domain.disease import Disease
 from src.domain.disease_record import DiseaseRecord
 from src.domain.standard_disease import StandardDisease
@@ -76,29 +77,33 @@ async def quality_gaps(
 
 @router.get("/quality/sources", response_model=List[DataSourceDist])
 async def quality_sources(
-    country_id: int = Query(..., ge=1),
+    country_id: Optional[int] = Query(None, ge=1),
     db: AsyncSession = Depends(get_db),
 ):
-    total_sub = (
-        select(func.count())
-        .where(DiseaseRecord.country_id == country_id)
-        .correlate(None)
-        .scalar_subquery()
-    )
-    q = (
-        select(
-            DiseaseRecord.data_source,
-            func.count().label("count"),
-            func.round(func.count() * 100.0 / total_sub, 2).label("percentage"),
-        )
-        .where(DiseaseRecord.country_id == country_id)
-        .group_by(DiseaseRecord.data_source)
-        .order_by(func.count().desc())
-    )
+    q = select(
+        DiseaseRecord.data_source,
+        func.count().label("count"),
+    ).group_by(DiseaseRecord.data_source)
+    if country_id is not None:
+        q = q.where(DiseaseRecord.country_id == country_id)
     rows = (await db.execute(q)).all()
+
+    merged: dict[str, int] = {}
+    total = 0
+    for row in rows:
+        label = canonical_data_source_label(row.data_source)
+        count = int(row.count or 0)
+        merged[label] = merged.get(label, 0) + count
+        total += count
+
+    ordered = sorted(merged.items(), key=lambda item: (-item[1], item[0].lower()))
     return [
-        DataSourceDist(data_source=r.data_source, count=r.count, percentage=float(r.percentage or 0))
-        for r in rows
+        DataSourceDist(
+            data_source=label,
+            count=count,
+            percentage=round((count / total) * 100, 2) if total else 0.0,
+        )
+        for label, count in ordered
     ]
 
 
