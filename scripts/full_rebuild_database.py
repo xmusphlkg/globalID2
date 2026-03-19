@@ -69,7 +69,7 @@ class DatabaseRebuilder:
         # Configuration file paths
         self.standard_file = ROOT / "configs/standard_diseases.csv"
         self.mapping_file = resolve_mapping_file(ROOT, self.country_code_lower)
-        self.history_file = ROOT / f"data/processed/{self.country_code_lower}/history_merged.csv"
+        self.history_file = ROOT / f"data/history/{self.country_code_lower}/history_merged.csv"
 
         expected_main_mapping = expected_mapping_file(ROOT, self.country_code_lower)
         if self.mapping_file != expected_main_mapping:

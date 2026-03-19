@@ -299,6 +299,11 @@ npx wrangler pages deploy dist
 
 This is the main setup path when refreshing the disease registry, mappings, and historical records.
 
+Directory convention:
+- `data/history/`: one-time historical backfill inputs and merged history files
+- `data/current/`: crawler outputs used by ongoing incremental JP/AU updates
+- `data/raw/`: raw pages / raw payload caches kept for debugging and traceability
+
 ```bash
 python scripts/full_rebuild_database.py --yes
 ```
@@ -307,7 +312,7 @@ The rebuild script can:
 
 ### Import Japan weekly historical data (TOTAL/総数)
 
-If you have JP historical weekly data at `data/raw/jp/weekly_cases_standardized.csv`,
+If you have JP historical weekly data at `data/history/jp/weekly_cases_standardized.csv`,
 use the dedicated importer. By default it ingests only `Reporting Area=総数` rows to
 avoid prefecture-level primary-key collisions in `disease_records`.
 
@@ -326,17 +331,17 @@ python scripts/import_jp_weekly_history.py --replace-existing
 - import standard diseases from `configs/standard_diseases.csv`
 - import disease mappings from the country mapping configuration
 - sync the `diseases` table
-- import historical data from `data/processed/<country>/history_merged.csv`
+- import historical data from `data/history/<country>/history_merged.csv`
 - verify final counts
 
 For the US NNDSS weekly dataset, prepare the normalized historical file first:
 
 ```bash
-python3 scripts/us_prepare_nndss_history.py --input-csv data/raw/us/NNDSS_Weekly_Data_20260317.csv
+python3 scripts/us_prepare_nndss_history.py --input-csv data/history/us/NNDSS_Weekly_Data_20260317.csv
 python3 scripts/full_rebuild_database.py --country us --yes
 ```
 
-To refresh US national weekly data from the CDC API and merge it into the processed history file:
+To refresh US national weekly data from the CDC API and merge it into the history file under `data/history/us/`:
 
 ```bash
 python3 scripts/us_prepare_nndss_history.py

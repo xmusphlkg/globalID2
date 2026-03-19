@@ -270,6 +270,19 @@ class JapanIDWRCrawler(BaseCrawler):
             full = urljoin(base_url, href)
             if re.search(r"/(provisional|rapid)/(20\d{2})/index\.html", full.lower()):
                 candidates.add(full)
+                continue
+
+            # JIHS year index pages currently expose a simple year menu like:
+            #   <a href="./2026/index.html">IDWR Surveillance Data Table 2026</a>
+            # Resolve those explicitly so we do not depend on one exact path shape.
+            link_text = _norm_text(tag.get_text(" ", strip=True))
+            year_match = re.search(r"\b(20\d{2})\b", href) or re.search(r"\b(20\d{2})\b", link_text)
+            if (
+                year_match
+                and href.lower().endswith("/index.html")
+                and not re.search(r"/\d{1,2}/index\.html$", full.lower())
+            ):
+                candidates.add(full)
 
         if re.search(r"/(provisional|rapid)/(20\d{2})/index\.html", base_url.lower()):
             candidates.add(base_url)

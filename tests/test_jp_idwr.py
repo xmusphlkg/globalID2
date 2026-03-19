@@ -46,6 +46,34 @@ def test_discover_year_pages_from_direct_week_entry(crawler: JapanIDWRCrawler, m
     ]
 
 
+def test_discover_year_pages_from_jihs_rapid_menu(crawler: JapanIDWRCrawler, monkeypatch: pytest.MonkeyPatch) -> None:
+    entry_url = "https://id-info.jihs.go.jp/en/surveillance/idwr/rapid/index.html"
+
+    def fake_get(url: str):
+        return _FakeResponse(
+            text="""
+            <html><body>
+              <ul class="menu menu_list">
+                <li><a class="path" href="./2026/index.html">IDWR Surveillance Data Table 2026</a></li>
+                <li><a class="path" href="./2025/index.html">IDWR Surveillance Data Table 2025</a></li>
+                <li><a class="path" href="./2024/index.html">IDWR Surveillance Data Table 2024</a></li>
+                <li><a class="path" href="./2015/index.html">IDWR Surveillance Data Table 2015</a></li>
+              </ul>
+            </body></html>
+            """,
+            url=entry_url,
+        )
+
+    monkeypatch.setattr(crawler, "get", fake_get)
+
+    assert crawler._discover_year_index_urls() == [
+        "https://id-info.jihs.go.jp/en/surveillance/idwr/rapid/2026/index.html",
+        "https://id-info.jihs.go.jp/en/surveillance/idwr/rapid/2025/index.html",
+        "https://id-info.jihs.go.jp/en/surveillance/idwr/rapid/2024/index.html",
+        "https://id-info.jihs.go.jp/en/surveillance/idwr/rapid/2015/index.html",
+    ]
+
+
 def test_discover_week_pages_from_relative_links(crawler: JapanIDWRCrawler, monkeypatch: pytest.MonkeyPatch) -> None:
     year_url = "https://id-info.jihs.go.jp/surveillance/idwr/provisional/2025/index.html"
 

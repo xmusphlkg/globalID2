@@ -4,8 +4,8 @@
 Usage:
   python scripts/restart_migration.py
 
-By default reads from `data/raw/cn/history` and writes to
-`data/processed/history_merged.csv`.
+By default reads from `data/history/cn` and writes to
+`data/history/cn/history_merged.csv`.
 """
 from pathlib import Path
 import argparse
@@ -24,8 +24,8 @@ def read_csv_flexible(path: Path):
 
 def parse_args():
     p = argparse.ArgumentParser()
-    p.add_argument("--src-dir", default="data/raw/cn/history", help="Source history folder")
-    p.add_argument("--out", default="data/processed/history_merged.csv", help="Output CSV path")
+    p.add_argument("--src-dir", default="data/history/cn", help="Source history folder")
+    p.add_argument("--out", default="data/history/cn/history_merged.csv", help="Output CSV path")
     p.add_argument("--special", nargs="*", default=["2013 01.csv", "2013 02.csv"],
                    help="Files to treat as special (add date from filename)")
     p.add_argument("--columns", help="Comma-separated list of columns to keep (default: columns from main files)")
