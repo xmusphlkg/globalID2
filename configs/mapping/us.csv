@@ -1,6 +1,7 @@
 disease_id,local_name,local_code,category,aliases,data_source,notes
 D001,Plague,Plague,Notifiable,,US CDC,
 D002,Cholera,Cholera,Notifiable,"Cholera (toxigenic Vibrio cholerae O1 or O139)",US CDC,
+D003,SARS,SARS,Notifiable,"Severe acute respiratory syndrome-associated coronavirus disease|Severe Acute Respiratory Syndrome",US CDC,Historical weekly label uses the SARS-associated coronavirus phrasing and should be reviewed separately from COVID-19
 D004,COVID-19,COVID-19,Notifiable,Coronavirus Disease 2019|SARS-CoV-2|2019-nCoV,US CDC,No authoritative national weekly case-total label in current feed
 D005,AIDS,AIDS,Notifiable,HIV|Human Immunodeficiency Virus|Acquired Immunodeficiency Syndrome,US CDC,No direct TOTAL match in current weekly feed
 D006,Hepatitis,Hepatitis,Notifiable,Viral Hepatitis,US CDC,Aggregate fallback only
@@ -32,6 +33,7 @@ D054,Varicella,Varicella,Notifiable,"Chickenpox|Varicella|Varicella-Zoster|Varic
 D059,Yellow fever,Yellow fever,Notifiable,,US CDC,
 D064,Smallpox,Smallpox,Notifiable,,US CDC,
 D065,Monkeypox,Mpox,Notifiable,Mpox|Monkeypox,US CDC,
+D089,Arboviral diseases,Arboviral diseases,Notifiable,"Arboviral diseases - Eastern equine encephalitis virus disease|Arboviral diseases - Western equine encephalitis virus disease|Arboviral diseases - St. Louis encephalitis virus disease|Arboviral diseases - Jamestown Canyon virus disease|Arboviral diseases - La Crosse virus disease|Arboviral diseases - Powassan virus disease",US CDC,Generic arboviral fallback for species without a dedicated standard disease entry
 D090,Babesiosis,Babesiosis,Notifiable,,US CDC,
 D091,Botulism,Botulism,Notifiable,,US CDC,Removed foodborne/infant/other subtype split
 D092,Campylobacteriosis,Campylobacteriosis,Notifiable,,US CDC,
@@ -60,6 +62,8 @@ D114,Salmonellosis,Salmonellosis,Notifiable,"Salmonellosis (excluding S. Typhi i
 D115,Shiga toxin-producing Escherichia coli infection,STEC,Notifiable,"Shiga toxin-producing Escherichia coli (STEC)|STEC",US CDC,
 D116,Melioidosis,Melioidosis,Notifiable,,US CDC,
 D117,Cronobacter invasive infection,Cronobacter invasive infection,Notifiable,"Cronobacter invasive infection, infants, Confirmed|Cronobacter invasive infection, infants, Probable",US CDC,Keep infant invasive infection labels only
+D118,Spotted fever rickettsiosis,Spotted fever rickettsiosis,Notifiable,"Spotted Fever Rickettsiosis (including RMSF)|Spotted Fever Rickettsiosis|Rocky Mountain spotted fever|Spotted Fever Rickettsiosis (including RMSF) - Confirmed|Spotted Fever Rickettsiosis (including RMSF) - Probable|Spotted fever rickettsiosis - Confirmed|Spotted fever rickettsiosis - Probable|Spotted Fever Rickettsiosis - Confirmed|Spotted Fever Rickettsiosis - Probable",US CDC,Canonicalize RMSF-era and probable/confirmed weekly labels to the CDC spotted fever rickettsiosis bucket
+D119,Streptococcal disease,Streptococcal disease,Notifiable,"Streptococcal disease, invasive, group A",US CDC,Generic streptococcal fallback for invasive group A weekly reporting labels
 D120,Tetanus,Tetanus,Notifiable,,US CDC,
 D121,Toxic shock syndrome,Toxic shock syndrome,Notifiable,,US CDC,Removed streptococcal/non-streptococcal subtype split
 D122,Trichinellosis,Trichinellosis,Notifiable,,US CDC,

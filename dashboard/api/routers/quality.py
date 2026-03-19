@@ -1,12 +1,20 @@
 """Data quality router – stats, gaps, source distribution, completeness."""
 
+from collections import defaultdict
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import case, func, select, text
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..deps import get_db
+from ..frequency import (
+    expected_periods,
+    infer_country_frequency_profile,
+    infer_frequency_profile_from_times,
+    period_gap,
+    period_start,
+)
 from ..schemas.quality import CompletenessItem, DataSourceDist, QualityStats, TimeGap
 from src.core.source_scopes import canonical_data_source_label
 from src.domain.disease import Disease
@@ -50,28 +58,28 @@ async def quality_gaps(
     country_id: int = Query(..., ge=1),
     db: AsyncSession = Depends(get_db),
 ):
-    """Find gaps > 1 month in the time-series."""
-    raw = text("""
-        WITH months AS (
-            SELECT DISTINCT date_trunc('month', time) AS month
-            FROM disease_records
-            WHERE country_id = :cid
-            ORDER BY month
-        )
-        SELECT month,
-               LEAD(month) OVER (ORDER BY month) AS next_month,
-               EXTRACT(EPOCH FROM (LEAD(month) OVER (ORDER BY month) - month)) / 2592000 AS gap_months
-        FROM months
-    """)
-    rows = (await db.execute(raw, {"cid": country_id})).all()
+    """Find gaps > 1 detected period in the country time-series."""
+    profile = await infer_country_frequency_profile(country_id, db)
+    q = (
+        select(DiseaseRecord.time)
+        .where(DiseaseRecord.country_id == country_id)
+        .distinct()
+        .order_by(DiseaseRecord.time)
+    )
+    rows = (await db.execute(q)).all()
+    periods = sorted(
+        {period_start(row.time, profile) for row in rows if row.time is not None}
+    )
+
     return [
         TimeGap(
-            month=r.month.strftime("%Y-%m-%d") if r.month else "",
-            next_month=r.next_month.strftime("%Y-%m-%d") if r.next_month else None,
-            gap_months=round(float(r.gap_months or 0), 2),
+            period_start=current.strftime("%Y-%m-%d"),
+            next_period=next_period.strftime("%Y-%m-%d"),
+            gap_periods=float(period_gap(current, next_period, profile)),
+            period_unit=profile.period_unit,
         )
-        for r in rows
-        if r.gap_months and float(r.gap_months) > 1.0
+        for current, next_period in zip(periods, periods[1:])
+        if period_gap(current, next_period, profile) > 1
     ]
 
 
@@ -124,21 +132,14 @@ async def quality_completeness(
 
     q = (
         select(
+            Disease.id.label("disease_id"),
             name_col,
-            func.count(func.distinct(func.date_trunc("month", DiseaseRecord.time))).label("data_months"),
-            (
-                (func.extract("year", func.max(DiseaseRecord.time)) - func.extract("year", func.min(DiseaseRecord.time))) * 12
-                + (func.extract("month", func.max(DiseaseRecord.time)) - func.extract("month", func.min(DiseaseRecord.time)))
-            ).label("total_months_span"),
-            func.min(DiseaseRecord.time).label("earliest_date"),
-            func.max(DiseaseRecord.time).label("latest_date"),
-            func.count().label("total_records"),
+            DiseaseRecord.time.label("record_time"),
         )
         .join(Disease, DiseaseRecord.disease_id == Disease.id)
         .outerjoin(StandardDisease, Disease.name == StandardDisease.disease_id)
         .where(DiseaseRecord.country_id == country_id)
-        .group_by(Disease.id, name_col)
-        .order_by(name_col)
+        .order_by(name_col, DiseaseRecord.time)
     )
 
     if start:
@@ -147,22 +148,31 @@ async def quality_completeness(
         q = q.where(DiseaseRecord.time <= end)
 
     rows = (await db.execute(q)).all()
+    grouped: dict[tuple[int, str], list] = defaultdict(list)
+    for row in rows:
+        grouped[(int(row.disease_id), row.disease_name or "")].append(row.record_time)
 
     result = []
-    for r in rows:
-        span = float(r.total_months_span or 0)
-        expected = max(int(span) + 1, 1)
-        data_m = int(r.data_months or 0)
-        rate = round(data_m / expected * 100, 2) if expected else 0.0
+    for (_, disease_name), times in sorted(grouped.items(), key=lambda item: item[0][1].lower()):
+        profile = infer_frequency_profile_from_times(times)
+        period_starts = sorted({period_start(ts, profile) for ts in times if ts is not None})
+        earliest_date = min(times) if times else None
+        latest_date = max(times) if times else None
+        earliest_period = period_starts[0] if period_starts else None
+        latest_period = period_starts[-1] if period_starts else None
+        data_periods = len(period_starts)
+        expected = max(expected_periods(earliest_period, latest_period, profile), 1)
+        rate = round(data_periods / expected * 100, 2) if expected else 0.0
         result.append(
             CompletenessItem(
-                disease_name=r.disease_name or "",
-                data_months=data_m,
-                expected_months=expected,
+                disease_name=disease_name,
+                data_periods=data_periods,
+                expected_periods=expected,
                 completeness_rate=rate,
-                earliest_date=r.earliest_date.strftime("%Y-%m-%d") if r.earliest_date else None,
-                latest_date=r.latest_date.strftime("%Y-%m-%d") if r.latest_date else None,
-                total_records=r.total_records or 0,
+                earliest_date=earliest_date.strftime("%Y-%m-%d") if earliest_date else None,
+                latest_date=latest_date.strftime("%Y-%m-%d") if latest_date else None,
+                total_records=len(times),
+                period_unit=profile.period_unit,
             )
         )
     return result

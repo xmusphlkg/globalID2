@@ -3,7 +3,6 @@
 All queries use parameterised binds to prevent SQL injection.
 """
 
-from statistics import median
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Query
@@ -11,37 +10,13 @@ from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..deps import get_db
+from ..frequency import infer_country_frequency
 from ..schemas.disease_record import OverviewSummary, TopDiseaseItem, TrendPoint
-from src.domain.country import Country
 from src.domain.disease import Disease
 from src.domain.disease_record import DiseaseRecord
 from src.domain.standard_disease import StandardDisease
 
 router = APIRouter()
-
-
-async def _infer_country_frequency(country_id: int, db: AsyncSession) -> str:
-    times_q = (
-        select(DiseaseRecord.time)
-        .where(DiseaseRecord.country_id == country_id)
-        .distinct()
-        .order_by(DiseaseRecord.time.desc())
-        .limit(16)
-    )
-    times = [row[0] for row in (await db.execute(times_q)).all()]
-    if len(times) < 3:
-        return "month"
-
-    gaps = []
-    for previous, current in zip(times, times[1:]):
-        gap = abs((previous - current).days)
-        if gap > 0:
-            gaps.append(gap)
-
-    if not gaps:
-        return "month"
-
-    return "week" if median(gaps) <= 10 else "month"
 
 
 async def _country_has_total_disease(country_id: int, db: AsyncSession) -> bool:
@@ -136,7 +111,7 @@ async def overview_trend(
 ):
     """Monthly trend data for a given country and (optional) disease."""
 
-    bucket = await _infer_country_frequency(country_id, db)
+    bucket = await infer_country_frequency(country_id, db)
     time_period = func.date_trunc(bucket, DiseaseRecord.time).label("time_period")
 
     q = (

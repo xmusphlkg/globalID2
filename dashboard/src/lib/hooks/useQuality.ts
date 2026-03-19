@@ -13,9 +13,10 @@ export interface QualityStats {
 }
 
 export interface TimeGap {
-  month: string;
-  next_month: string | null;
-  gap_months: number;
+  period_start: string;
+  next_period: string | null;
+  gap_periods: number;
+  period_unit: string;
 }
 
 export interface DataSourceDist {
@@ -26,12 +27,13 @@ export interface DataSourceDist {
 
 export interface CompletenessItem {
   disease_name: string;
-  data_months: number;
-  expected_months: number;
+  data_periods: number;
+  expected_periods: number;
   completeness_rate: number;
   earliest_date: string | null;
   latest_date: string | null;
   total_records: number;
+  period_unit: string;
 }
 
 export function useQualityStats(countryId: number | null) {

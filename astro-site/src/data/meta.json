@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-19T04:30:59.381365+00:00",
+  "generated_at": "2026-03-19T06:06:51.570143+00:00",
   "total_countries": 4,
   "total_diseases": 155,
   "total_reports": 1,
@@ -44,11 +44,11 @@
       "code": "US",
       "name": "United States",
       "language": "en-US",
-      "total_cases": 4261160,
+      "total_cases": 15967387,
       "total_deaths": 0,
-      "disease_count": 60,
+      "disease_count": 64,
       "date_range": {
-        "start": "2022-01-08",
+        "start": "2006-01-07",
         "end": "2026-03-14"
       }
     }
