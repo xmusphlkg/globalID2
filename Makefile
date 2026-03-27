@@ -1,7 +1,11 @@
 # Makefile for GlobalID V2
 
 .PHONY: help install up down restart logs ps test test-health clean format lint check \
-	site-data site-install site-dev site-build site-preview site-publish wpp-import
+	site-data site-data-external site-download-sync site-install site-dev site-build site-preview site-publish wpp-import \
+	autostart-install autostart-uninstall autostart-status
+
+DOWNLOAD_REPO_URL ?= git@github.com:xmusphlkg/globalID2_data_download.git
+DOWNLOAD_RAW_BASE_URL ?= https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main
 
 help:
 	@echo "GlobalID V2 - 开发命令"
@@ -24,11 +28,18 @@ help:
 	@echo "静态站点 (Cloudflare Pages):"
 	@echo "  make site-install  安装 Astro/npm 依赖"
 	@echo "  make site-data     导出数据库数据到 JSON 文件"
+	@echo "  make site-data-external  导出数据并将下载链接指向外部数据仓库"
+	@echo "  make site-download-sync  同步 astro-site/public/downloads 到独立数据仓库"
 	@echo "  make site-dev      启动本地开发预览"
 	@echo "  make site-build    生产构建"
 	@echo "  make site-preview  预览生产构建"
 	@echo "  make site-publish  一键导出数据 + 构建"
 	@echo "  make wpp-import    导入 WPP 人口数据到数据库"
+	@echo ""
+	@echo "开机自启:"
+	@echo "  make autostart-install   安装并启用 systemd 开机自启"
+	@echo "  make autostart-uninstall 卸载 systemd 开机自启"
+	@echo "  make autostart-status    查看自启服务状态"
 	@echo ""
 	@echo "清理:"
 	@echo "  make clean        清理临时文件"
@@ -99,6 +110,16 @@ site-data:
 	venv/bin/python3 scripts/generate_site_data.py
 	@echo "数据导出完成"
 
+site-data-external:
+	@echo "导出站点数据，并将下载链接指向外部数据仓库 ..."
+	venv/bin/python3 scripts/generate_site_data.py --download-url-base "$(DOWNLOAD_RAW_BASE_URL)"
+	@echo "外部下载链接导出完成"
+
+site-download-sync:
+	@echo "同步下载数据到独立数据仓库 ..."
+	venv/bin/python3 scripts/publish_download_repo.py --repo-url "$(DOWNLOAD_REPO_URL)"
+	@echo "下载数据仓库同步完成"
+
 site-install:
 	@echo "安装 Astro 依赖..."
 	cd astro-site && npm install
@@ -130,6 +151,20 @@ wpp-import:
 	@echo "导入 WPP 人口数据..."
 	venv/bin/python3 scripts/import_wpp_population.py
 	@echo "WPP 人口数据导入完成"
+
+autostart-install:
+	@echo "安装并启用 GlobalID 开机自启服务..."
+	sudo ./scripts/install_systemd_services.sh --enable --start
+	@echo "开机自启已安装"
+
+autostart-uninstall:
+	@echo "卸载 GlobalID 开机自启服务..."
+	sudo ./scripts/install_systemd_services.sh --uninstall
+	@echo "开机自启已卸载"
+
+autostart-status:
+	@echo "查看 GlobalID systemd 状态..."
+	systemctl status globalid-stack.target --no-pager || true
 
 clean:
 	@echo "清理临时文件..."

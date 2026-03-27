@@ -1,0 +1,193 @@
+---
+interface SourceSummary {
+  country_code?: string;
+  country_name?: string;
+  scope?: string;
+  label?: string;
+  url?: string;
+  type?: string;
+  cadence?: string;
+  description?: string;
+}
+
+interface SourceInfoGroup {
+  country_code?: string;
+  country_name?: string;
+  sources?: SourceSummary[];
+}
+
+interface DownloadEntry {
+  json_path?: string;
+  csv_path?: string;
+  generated_at?: string;
+  record_count?: number;
+  date_range?: { start?: string; end?: string };
+  source_info?: SourceInfoGroup | SourceInfoGroup[] | { sources?: SourceSummary[] };
+}
+
+interface Props {
+  entry?: DownloadEntry | null;
+  title?: string;
+  descriptionEn?: string;
+  descriptionZh?: string;
+}
+
+const {
+  entry = null,
+  title = 'Download Data',
+  descriptionEn = 'Export the dataset behind this view in JSON or CSV, including source metadata.',
+  descriptionZh = '下载当前视图对应的数据集，支持 JSON 与 CSV，并附带数据源元信息。',
+} = Astro.props;
+
+function formatDate(value?: string | null) {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toISOString().slice(0, 10);
+}
+
+function formatCount(value?: number | null) {
+  if (value == null) return '—';
+  return value.toLocaleString();
+}
+
+const rawSourceInfo = entry?.source_info;
+const sourceGroups = Array.isArray(rawSourceInfo)
+  ? rawSourceInfo
+  : rawSourceInfo
+    ? [rawSourceInfo]
+    : [];
+
+const sourceEntries = sourceGroups.flatMap((group) => {
+  const nested = Array.isArray(group?.sources) ? group.sources : [];
+  if (nested.length > 0) {
+    return nested.map((source) => ({
+      ...source,
+      country_code: source.country_code ?? group.country_code,
+      country_name: source.country_name ?? group.country_name,
+    }));
+  }
+  return [group as SourceSummary];
+});
+---
+
+{entry && (
+  <section class="card p-6 space-y-5">
+    <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      <div class="space-y-2">
+        <h2 class="text-xl font-semibold text-slate-100" data-lang-en={title} data-lang-zh="下载数据">
+          {title}
+        </h2>
+        <p class="text-sm text-slate-500 max-w-2xl" data-lang-en={descriptionEn} data-lang-zh={descriptionZh}>
+          {descriptionEn}
+        </p>
+      </div>
+
+      <div class="flex flex-wrap gap-3">
+        {entry.json_path && (
+          <a
+            href={entry.json_path}
+            download
+            class="site-action-secondary inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-medium transition-all"
+          >
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16V4m0 12-4-4m4 4 4-4M4 20h16" />
+            </svg>
+            <span>JSON</span>
+          </a>
+        )}
+        {entry.csv_path && (
+          <a
+            href={entry.csv_path}
+            download
+            class="site-action-secondary inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-medium transition-all"
+          >
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16V4m0 12-4-4m4 4 4-4M4 20h16" />
+            </svg>
+            <span>CSV</span>
+          </a>
+        )}
+      </div>
+    </div>
+
+    <div class="grid gap-3 md:grid-cols-3">
+      <div class="rounded-xl border border-slate-700/60 bg-slate-800/30 px-4 py-3">
+        <div class="text-xs uppercase tracking-[0.18em] text-slate-600">Rows</div>
+        <div class="mt-2 text-lg font-semibold text-slate-100">{formatCount(entry.record_count)}</div>
+      </div>
+      <div class="rounded-xl border border-slate-700/60 bg-slate-800/30 px-4 py-3">
+        <div class="text-xs uppercase tracking-[0.18em] text-slate-600" data-lang-en="Updated" data-lang-zh="更新时间">
+          Updated
+        </div>
+        <div class="mt-2 text-lg font-semibold text-slate-100">{formatDate(entry.generated_at)}</div>
+      </div>
+      <div class="rounded-xl border border-slate-700/60 bg-slate-800/30 px-4 py-3">
+        <div class="text-xs uppercase tracking-[0.18em] text-slate-600" data-lang-en="Coverage" data-lang-zh="覆盖区间">
+          Coverage
+        </div>
+        <div class="mt-2 text-sm font-medium text-slate-100">
+          {(entry.date_range?.start || entry.date_range?.end)
+            ? `${entry.date_range?.start ?? '—'} → ${entry.date_range?.end ?? '—'}`
+            : '—'}
+        </div>
+      </div>
+    </div>
+
+    {sourceEntries.length > 0 && (
+      <div class="space-y-3 border-t border-slate-800 pt-5">
+        <div class="flex items-center justify-between gap-3">
+          <h3 class="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500" data-lang-en="Source Info" data-lang-zh="数据源信息">
+            Source Info
+          </h3>
+          <span class="text-xs text-slate-600" data-lang-en="Included in JSON and repeated in CSV rows." data-lang-zh="JSON 内含元数据，CSV 每行重复来源字段。">
+            Included in JSON and repeated in CSV rows.
+          </span>
+        </div>
+
+        <div class="grid gap-3">
+          {sourceEntries.map((source) => (
+            <div class="rounded-xl border border-slate-700/60 bg-slate-800/30 px-4 py-3">
+              <div class="flex flex-wrap items-center gap-2">
+                {source.country_code && (
+                  <span class="rounded-full border border-slate-600 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-slate-400">
+                    {source.country_code}
+                  </span>
+                )}
+                <span class="text-sm font-semibold text-slate-100">{source.label ?? source.scope ?? 'Unknown Source'}</span>
+                {source.cadence && (
+                  <span class="rounded-full bg-brand-500/10 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-brand-300">
+                    {source.cadence}
+                  </span>
+                )}
+                {source.type && (
+                  <span class="rounded-full bg-slate-700/70 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-slate-400">
+                    {source.type}
+                  </span>
+                )}
+              </div>
+
+              {source.description && (
+                <p class="mt-2 text-sm leading-relaxed text-slate-500">{source.description}</p>
+              )}
+
+              {source.url && (
+                <a
+                  href={source.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="mt-3 inline-flex items-center gap-1.5 text-sm text-brand-400 transition-colors hover:text-brand-300"
+                >
+                  <span data-lang-en="Official source" data-lang-zh="官方来源">Official source</span>
+                  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5h5m0 0v5m0-5L10 14m-3 5h11a2 2 0 002-2V9m-5 10H6a2 2 0 01-2-2V6a2 2 0 012-2h5" />
+                  </svg>
+                </a>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+  </section>
+)}

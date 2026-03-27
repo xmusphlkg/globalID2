@@ -2,6 +2,7 @@
 // src/pages/countries/[country]/reports/[id]/[disease].astro
 // Individual disease detail page within a report — journal publication style.
 import ReportLayout from '../../../../../layouts/ReportLayout.astro';
+import DownloadPanel from '../../../../../components/DownloadPanel.astro';
 import DiseaseDetailView from '../../../../../components/charts/DiseaseDetailView';
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
@@ -57,11 +58,20 @@ const { country, id, disease } = Astro.params;
 
 const reportPath = resolve(`./src/data/reports/${id}.json`);
 const countryPath = resolve(`./src/data/countries/${country}.json`);
+const downloadsPath = resolve('./src/data/downloads.json');
 
 let report: any = null;
 let diseaseMeta: any = null;
 let sections: any[] = [];
 let fullSeries: any = null;
+let diseaseDownload: any = null;
+
+if (existsSync(downloadsPath)) {
+  const downloads = JSON.parse(readFileSync(downloadsPath, 'utf-8')) as any;
+  diseaseDownload = (downloads.diseases ?? []).find(
+    (entry: any) => entry.slug === disease
+  ) ?? null;
+}
 
 if (existsSync(reportPath) && existsSync(countryPath)) {
   report = JSON.parse(readFileSync(reportPath, 'utf-8'));
@@ -131,19 +141,30 @@ const countryName = report?.country_name ?? country.toUpperCase();
       <a href={`/countries/${country}/reports/${id}/`} class="text-brand-400 hover:underline ml-2">← Back to report</a>
     </div>
   ) : (
-    <DiseaseDetailView
-      client:only="react"
-      diseaseMeta={diseaseMeta}
-      sections={sections}
-      series={fullSeries}
-      reportMeta={{
-        id: Number(id),
-        title: report.title,
-        period_start: report.period_start,
-        period_end: report.period_end,
-        country_name: countryName,
-        country_code: country,
-      }}
-    />
+    <div class="max-w-6xl mx-auto px-4 py-10 space-y-8">
+      {diseaseDownload && (
+        <DownloadPanel
+          entry={diseaseDownload}
+          title="Download Disease Dataset"
+          descriptionEn="Download the full disease dataset referenced by this report section, including source metadata."
+          descriptionZh="下载本报告章节对应的完整疾病数据集，并附带数据源信息。"
+        />
+      )}
+
+      <DiseaseDetailView
+        client:only="react"
+        diseaseMeta={diseaseMeta}
+        sections={sections}
+        series={fullSeries}
+        reportMeta={{
+          id: Number(id),
+          title: report.title,
+          period_start: report.period_start,
+          period_end: report.period_end,
+          country_name: countryName,
+          country_code: country,
+        }}
+      />
+    </div>
   )}
 </ReportLayout>

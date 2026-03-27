@@ -7,50 +7,14 @@
   "icd_11": "1C1Y",
   "description": "Swine streptococcosis",
   "slug": "streptococcus-suis",
-  "country_series": {
-    "CN": {
-      "dates": [
-        "2026-01-01",
-        "2026-02-01"
-      ],
-      "cases": [
-        25,
-        28
-      ],
-      "weekly_equiv_cases": [
-        5.64516129032258,
-        6.32258064516129
-      ],
-      "deaths": [
-        1,
-        0
-      ],
-      "incidence_rates": [
-        0.0017693927892346868,
-        0.001981719923942849
-      ],
-      "incidence_sources": [
-        "wpp_computed",
-        "wpp_computed"
-      ],
-      "total_cases": 53,
-      "total_deaths": 1
-    }
-  },
+  "country_series": {},
   "global_monthly": {
-    "months": [
-      "2026-01",
-      "2026-02"
-    ],
-    "cases": [
-      25,
-      28
-    ],
-    "deaths": [
-      1,
-      0
-    ]
+    "months": [],
+    "cases": [],
+    "deaths": []
   },
-  "total_cases": 53,
-  "total_deaths": 1
+  "total_cases": 0,
+  "total_deaths": 0,
+  "generated_at": "2026-03-27T08:30:10.426573+00:00",
+  "source_info": []
 }

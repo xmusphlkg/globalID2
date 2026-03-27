@@ -1,55 +1,153 @@
 {
-  "generated_at": "2026-03-19T06:06:51.570143+00:00",
+  "generated_at": "2026-03-27T08:30:10.426573+00:00",
   "total_countries": 4,
   "total_diseases": 155,
-  "total_reports": 1,
+  "total_reports": 0,
   "countries": [
     {
       "code": "AU",
       "name": "Australia",
       "language": "en-AU",
-      "total_cases": 20034982,
+      "total_cases": 0,
       "total_deaths": 0,
-      "disease_count": 66,
+      "disease_count": 0,
       "date_range": {
-        "start": "2000-01-01",
-        "end": "2026-03-01"
+        "start": null,
+        "end": null
+      },
+      "source_info": {
+        "country_code": "AU",
+        "primary_scope": "all",
+        "primary_label": "Australia NINDSS",
+        "primary_url": "https://www.health.gov.au/topics/national-notifiable-diseases-surveillance-system-nndss",
+        "primary_type": "microsoft_bi",
+        "parser_primary": "au_nindss_internal_crawler",
+        "notes": "NINDSS Microsoft BI feed aggregated to national via internal globalID2 crawler",
+        "sources": [
+          {
+            "scope": "all",
+            "label": "Australia NINDSS",
+            "url": "https://www.health.gov.au/topics/national-notifiable-diseases-surveillance-system-nndss",
+            "machine_url": "https://nindss.health.gov.au/pbi-dashboard/",
+            "type": "microsoft_bi",
+            "cadence": "monthly",
+            "description": "Australian national notifiable diseases surveillance dashboard."
+          }
+        ]
       }
     },
     {
       "code": "CN",
       "name": "China",
       "language": "zh-CN",
-      "total_cases": 347360707,
-      "total_deaths": 702497,
-      "disease_count": 59,
+      "total_cases": 0,
+      "total_deaths": 0,
+      "disease_count": 0,
       "date_range": {
-        "start": "2010-01-01",
-        "end": "2026-02-01"
+        "start": null,
+        "end": null
+      },
+      "source_info": {
+        "country_code": "CN",
+        "primary_scope": "cdc_weekly",
+        "primary_label": "China CDC Weekly",
+        "primary_url": "https://weekly.chinacdc.cn",
+        "primary_type": "web",
+        "parser_primary": "china_cdc_weekly",
+        "notes": "Auto bootstrapped by country library",
+        "sources": [
+          {
+            "scope": "cdc_weekly",
+            "label": "China CDC Weekly",
+            "url": "https://weekly.chinacdc.cn",
+            "machine_url": null,
+            "type": "web",
+            "cadence": "UNKNOWN",
+            "description": "Monthly notifiable infectious disease reports published by China CDC."
+          },
+          {
+            "scope": "nhc",
+            "label": "National Disease Control and Prevention Administration",
+            "url": "https://www.ndcpa.gov.cn",
+            "machine_url": "https://www.ndcpa.gov.cn/queryList",
+            "type": "web",
+            "cadence": "UNKNOWN",
+            "description": "Official China public health bulletin and query portal."
+          },
+          {
+            "scope": "pubmed",
+            "label": "PubMed",
+            "url": "https://pubmed.ncbi.nlm.nih.gov",
+            "machine_url": "https://pubmed.ncbi.nlm.nih.gov/rss/search/1tQjT4yH2iuqFpDL7Y1nShJmC4kDC5_BJYgw4R1O0BCs-_Nemt/",
+            "type": "web",
+            "cadence": "UNKNOWN",
+            "description": "Biomedical literature discovery feed used as supplementary context."
+          }
+        ]
       }
     },
     {
       "code": "JP",
       "name": "Japan",
       "language": "ja-JP",
-      "total_cases": 79829358,
+      "total_cases": 0,
       "total_deaths": 0,
-      "disease_count": 86,
+      "disease_count": 0,
       "date_range": {
-        "start": "2012-09-14",
-        "end": "2026-03-14"
+        "start": null,
+        "end": null
+      },
+      "source_info": {
+        "country_code": "JP",
+        "primary_scope": "jp_weekly",
+        "primary_label": "JP NIID Weekly",
+        "primary_url": "https://id-info.jihs.go.jp/en/surveillance/idwr/rapid/index.html",
+        "primary_type": "web",
+        "parser_primary": "jp_weekly_internal_crawler",
+        "notes": "NIID weekly data via internal globalID2 crawler (TOTAL-only ingestion)",
+        "sources": [
+          {
+            "scope": "jp_weekly",
+            "label": "JP NIID Weekly",
+            "url": "https://id-info.jihs.go.jp/en/surveillance/idwr/rapid/index.html",
+            "machine_url": null,
+            "type": "web",
+            "cadence": "weekly",
+            "description": "Japan weekly infectious disease surveillance via NIID/JIHS."
+          }
+        ]
       }
     },
     {
       "code": "US",
       "name": "United States",
       "language": "en-US",
-      "total_cases": 15967387,
+      "total_cases": 0,
       "total_deaths": 0,
-      "disease_count": 64,
+      "disease_count": 0,
       "date_range": {
-        "start": "2006-01-07",
-        "end": "2026-03-14"
+        "start": null,
+        "end": null
+      },
+      "source_info": {
+        "country_code": "US",
+        "primary_scope": "nndss_api",
+        "primary_label": "US CDC NNDSS",
+        "primary_url": "https://data.cdc.gov/browse?category=NNDSS",
+        "primary_type": "api",
+        "parser_primary": "us_nndss_weekly",
+        "notes": "CDC NNDSS weekly provisional data, bootstrapped for national TOTAL ingestion",
+        "sources": [
+          {
+            "scope": "nndss_api",
+            "label": "US CDC NNDSS",
+            "url": "https://data.cdc.gov/browse?category=NNDSS",
+            "machine_url": "https://data.cdc.gov/resource/x9gk-5huc.csv",
+            "type": "api",
+            "cadence": "weekly",
+            "description": "CDC National Notifiable Diseases Surveillance System provisional data."
+          }
+        ]
       }
     }
   ]

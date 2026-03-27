@@ -1,6 +1,7 @@
 ---
 // src/pages/diseases/[disease].astro — Individual disease detail page
 import ReportLayout from '../../layouts/ReportLayout.astro';
+import DownloadPanel from '../../components/DownloadPanel.astro';
 import MonthlyBar from '../../components/charts/MonthlyBar';
 import EpidemicCurve from '../../components/charts/EpidemicCurve';
 import { readFileSync, existsSync } from 'fs';
@@ -20,9 +21,20 @@ const { disease } = Astro.params;
 const { diseaseId } = Astro.props as { diseaseId: string };
 
 const dataPath = resolve(`./src/data/diseases/${diseaseId.toLowerCase()}.json`);
+const downloadsPath = resolve('./src/data/downloads.json');
 let diseaseData: any = null;
+let diseaseDownload: any = null;
 if (existsSync(dataPath)) {
   diseaseData = JSON.parse(readFileSync(dataPath, 'utf-8'));
+}
+if (existsSync(downloadsPath)) {
+  const downloads = JSON.parse(readFileSync(downloadsPath, 'utf-8')) as any;
+  diseaseDownload = (downloads.diseases ?? []).find(
+    (entry: any) =>
+      entry.disease_id === diseaseId ||
+      entry.slug === disease ||
+      entry.id === diseaseId.toLowerCase()
+  ) ?? null;
 }
 
 const categoryZh: Record<string, string> = {
@@ -138,6 +150,15 @@ for (const [cc, cs] of Object.entries(diseaseData?.country_series ?? {})) {
         </div>
 
         <!-- Epidemic Curve (per country) -->
+        {diseaseDownload && (
+          <DownloadPanel
+            entry={diseaseDownload}
+            title="Download Disease Dataset"
+            descriptionEn="Download the full multi-country disease dataset behind this page in JSON or CSV, including source metadata."
+            descriptionZh="下载当前疾病页面对应的多国家数据集，支持 JSON 和 CSV，并附带数据源信息。"
+          />
+        )}
+
         {Object.keys(countrySeriesForCurve).length > 0 && (
           <div>
             <h2 class="text-xl font-semibold text-slate-100 mb-4" data-lang-en="Full Historical Trend" data-lang-zh="完整历史趋势">

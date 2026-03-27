@@ -7,50 +7,14 @@
   "icd_11": "1F89.0",
   "description": "Clonorchiasis",
   "slug": "clonorchiasis",
-  "country_series": {
-    "CN": {
-      "dates": [
-        "2026-01-01",
-        "2026-02-01"
-      ],
-      "cases": [
-        9408,
-        6270
-      ],
-      "weekly_equiv_cases": [
-        2124.3870967741937,
-        1415.8064516129032
-      ],
-      "deaths": [
-        0,
-        0
-      ],
-      "incidence_rates": [
-        0.6658578944447973,
-        0.44376371154005945
-      ],
-      "incidence_sources": [
-        "wpp_computed",
-        "wpp_computed"
-      ],
-      "total_cases": 15678,
-      "total_deaths": 0
-    }
-  },
+  "country_series": {},
   "global_monthly": {
-    "months": [
-      "2026-01",
-      "2026-02"
-    ],
-    "cases": [
-      9408,
-      6270
-    ],
-    "deaths": [
-      0,
-      0
-    ]
+    "months": [],
+    "cases": [],
+    "deaths": []
   },
-  "total_cases": 15678,
-  "total_deaths": 0
+  "total_cases": 0,
+  "total_deaths": 0,
+  "generated_at": "2026-03-27T08:30:10.426573+00:00",
+  "source_info": []
 }
