@@ -7,14 +7,92 @@
   "icd_11": "1F89.0",
   "description": "Clonorchiasis",
   "slug": "clonorchiasis",
-  "country_series": {},
-  "global_monthly": {
-    "months": [],
-    "cases": [],
-    "deaths": []
+  "country_series": {
+    "CN": {
+      "dates": [
+        "2026-01-01",
+        "2026-02-01"
+      ],
+      "cases": [
+        9408,
+        6270
+      ],
+      "weekly_equiv_cases": [
+        2124.3870967741937,
+        1415.8064516129032
+      ],
+      "deaths": [
+        0,
+        0
+      ],
+      "incidence_rates": [
+        0.6658578944447973,
+        0.44376371154005945
+      ],
+      "incidence_sources": [
+        "wpp_computed",
+        "wpp_computed"
+      ],
+      "total_cases": 15678,
+      "total_deaths": 0
+    }
   },
-  "total_cases": 0,
+  "global_monthly": {
+    "months": [
+      "2026-01",
+      "2026-02"
+    ],
+    "cases": [
+      9408,
+      6270
+    ],
+    "deaths": [
+      0,
+      0
+    ]
+  },
+  "total_cases": 15678,
   "total_deaths": 0,
-  "generated_at": "2026-03-27T08:30:10.426573+00:00",
-  "source_info": []
+  "generated_at": "2026-03-27T08:53:20.585895+00:00",
+  "source_info": [
+    {
+      "country_code": "CN",
+      "primary_scope": "cdc_weekly",
+      "primary_label": "China CDC Weekly",
+      "primary_url": "https://weekly.chinacdc.cn",
+      "primary_type": "web",
+      "parser_primary": "china_cdc_weekly",
+      "notes": "Auto bootstrapped by country library",
+      "sources": [
+        {
+          "scope": "cdc_weekly",
+          "label": "China CDC Weekly",
+          "url": "https://weekly.chinacdc.cn",
+          "machine_url": null,
+          "type": "web",
+          "cadence": "MONTHLY",
+          "description": "Monthly notifiable infectious disease reports published by China CDC."
+        },
+        {
+          "scope": "nhc",
+          "label": "National Disease Control and Prevention Administration",
+          "url": "https://www.ndcpa.gov.cn",
+          "machine_url": "https://www.ndcpa.gov.cn/queryList",
+          "type": "web",
+          "cadence": "MONTHLY",
+          "description": "Official China public health bulletin and query portal."
+        },
+        {
+          "scope": "pubmed",
+          "label": "PubMed",
+          "url": "https://pubmed.ncbi.nlm.nih.gov",
+          "machine_url": "https://pubmed.ncbi.nlm.nih.gov/rss/search/1tQjT4yH2iuqFpDL7Y1nShJmC4kDC5_BJYgw4R1O0BCs-_Nemt/",
+          "type": "web",
+          "cadence": "MONTHLY",
+          "description": "Biomedical literature discovery feed used as supplementary context."
+        }
+      ],
+      "country_name": "China"
+    }
+  ]
 }

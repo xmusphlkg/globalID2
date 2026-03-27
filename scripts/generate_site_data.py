@@ -382,6 +382,28 @@ def export_contains_download_records(source_dir: Path) -> bool:
     return any(int(entry.get("record_count") or 0) > 0 for entry in entries)
 
 
+def existing_site_export_has_content(output_dir: Path) -> bool:
+    """Return True when the current on-disk site export already contains usable data."""
+    meta_path = output_dir / "meta.json"
+    if not meta_path.exists():
+        return False
+
+    try:
+        meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+
+    if int(meta.get("total_reports") or 0) > 0:
+        return True
+
+    for country in meta.get("countries") or []:
+        if int(country.get("disease_count") or 0) > 0:
+            return True
+        if int(country.get("total_cases") or 0) > 0:
+            return True
+    return False
+
+
 def build_country_source_info(country_code: str, frequency_meta: dict | None = None) -> dict:
     """Build structured source metadata for downloads and UI badges."""
     cfg = get_country_bootstrap_config(country_code)
@@ -1168,30 +1190,20 @@ async def export(
     download_output_dir: Path,
     manifest_output: Path,
     download_url_base: str,
+    allow_empty_export: bool = False,
 ) -> None:
     await ensure_site_export_database_ready()
-    remove_stale_public_downloads(download_output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-    (output_dir / "countries").mkdir(exist_ok=True)
-    (output_dir / "diseases").mkdir(exist_ok=True)
-    (output_dir / "reports").mkdir(exist_ok=True)
-    download_output_dir.mkdir(parents=True, exist_ok=True)
-    (download_output_dir / "countries").mkdir(exist_ok=True)
-    (download_output_dir / "diseases").mkdir(exist_ok=True)
-    clean_generated_dir(download_output_dir / "countries")
-    clean_generated_dir(download_output_dir / "diseases")
     generated_at = datetime.now(timezone.utc).isoformat()
 
     # Load static disease list from CSV (no DB needed)
     csv_path = ROOT / "configs" / "standard_diseases.csv"
     diseases = load_standard_diseases(csv_path)
     diseases_by_id = {d["disease_id"]: d for d in diseases}
-
-    # Write disease index
-    (output_dir / "diseases" / "index.json").write_text(
-        json.dumps(diseases, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
-    print(f"  ✓ diseases/index.json ({len(diseases)} diseases)")
+    countries_simple: list[dict] = []
+    country_exports: list[dict] = []
+    disease_exports: list[dict] = []
+    reports: list[dict] = []
+    report_details: dict[int, dict] = {}
 
     async with get_db() as session:
         population_enabled = await has_population_table(session)
@@ -1242,11 +1254,6 @@ async def export(
                     c["date_range"] = country_data["date_range"]
                     c["source_info"] = country_source_info
 
-            (output_dir / "countries" / f"{code.lower()}.json").write_text(
-                json.dumps(country_data, ensure_ascii=False, indent=2), encoding="utf-8"
-            )
-            print(f"  ✓ countries/{code.lower()}.json ({len(records)} records)")
-
             country_download_rows = build_country_download_rows(
                 country_data, generated_at, country_source_info
             )
@@ -1273,13 +1280,14 @@ async def export(
                 },
                 "records": country_download_rows,
             }
-            country_json_path = download_output_dir / "countries" / f"{code.lower()}.json"
-            country_csv_path = download_output_dir / "countries" / f"{code.lower()}.csv"
-            country_json_path.write_text(
-                json.dumps(country_download_payload, ensure_ascii=False, indent=2),
-                encoding="utf-8",
+            country_exports.append(
+                {
+                    "code": code,
+                    "country_data": country_data,
+                    "download_rows": country_download_rows,
+                    "download_payload": country_download_payload,
+                }
             )
-            write_csv(country_csv_path, country_download_rows)
             country_download_entries.append(
                 {
                     "kind": "country",
@@ -1301,6 +1309,18 @@ async def export(
                 }
             )
 
+        reports = await fetch_reports(session)
+        total_record_count = sum(len(records) for records in all_records_by_country.values())
+        if total_record_count == 0 and not allow_empty_export:
+            message = (
+                "Refusing to overwrite site data with an empty export because no disease "
+                f"records were found in the database across {len(countries)} countries."
+            )
+            if existing_site_export_has_content(output_dir):
+                message += f" Existing files in {output_dir} were left untouched."
+            message += " Import data first, or pass --allow-empty-export if this is intentional."
+            raise RuntimeError(message)
+
         # ── Per-disease files ──
         for disease in diseases:
             did = disease["disease_id"]
@@ -1313,9 +1333,6 @@ async def export(
                 disease_source_info.append(country_source)
             disease_data["generated_at"] = generated_at
             disease_data["source_info"] = disease_source_info
-            (output_dir / "diseases" / f"{did.lower()}.json").write_text(
-                json.dumps(disease_data, ensure_ascii=False, indent=2), encoding="utf-8"
-            )
             disease_download_rows = build_disease_download_rows(
                 disease_data,
                 generated_at,
@@ -1345,13 +1362,14 @@ async def export(
                 },
                 "records": disease_download_rows,
             }
-            disease_json_path = download_output_dir / "diseases" / f"{did.lower()}.json"
-            disease_csv_path = download_output_dir / "diseases" / f"{did.lower()}.csv"
-            disease_json_path.write_text(
-                json.dumps(disease_download_payload, ensure_ascii=False, indent=2),
-                encoding="utf-8",
+            disease_exports.append(
+                {
+                    "disease_id": did,
+                    "disease_data": disease_data,
+                    "download_rows": disease_download_rows,
+                    "download_payload": disease_download_payload,
+                }
             )
-            write_csv(disease_csv_path, disease_download_rows)
             disease_download_entries.append(
                 {
                     "kind": "disease",
@@ -1381,30 +1399,81 @@ async def export(
                     "source_info": disease_source_info,
                 }
             )
-        print(f"  ✓ diseases/{diseases[0]['disease_id'].lower()}.json … ({len(diseases)} files)")
-        print(
-            "  ✓ downloads/countries/*.json,csv "
-            f"({len(country_download_entries)} countries)"
-        )
-        print(
-            "  ✓ downloads/diseases/*.json,csv "
-            f"({len(disease_download_entries)} diseases)"
-        )
-
-        # ── Reports ──
-        reports = await fetch_reports(session)
-        (output_dir / "reports" / "index.json").write_text(
-            json.dumps(reports, ensure_ascii=False, indent=2), encoding="utf-8"
-        )
-        print(f"  ✓ reports/index.json ({len(reports)} reports)")
 
         for rep in reports:
             detail = await fetch_report_detail(session, rep["id"])
             if detail:
-                (output_dir / "reports" / f"{rep['id']}.json").write_text(
-                    json.dumps(detail, ensure_ascii=False, indent=2), encoding="utf-8"
-                )
-        print(f"  ✓ reports/<id>.json ({len(reports)} files)")
+                report_details[rep["id"]] = detail
+
+    remove_stale_public_downloads(download_output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / "countries").mkdir(exist_ok=True)
+    (output_dir / "diseases").mkdir(exist_ok=True)
+    (output_dir / "reports").mkdir(exist_ok=True)
+    download_output_dir.mkdir(parents=True, exist_ok=True)
+    (download_output_dir / "countries").mkdir(exist_ok=True)
+    (download_output_dir / "diseases").mkdir(exist_ok=True)
+    clean_generated_dir(download_output_dir / "countries")
+    clean_generated_dir(download_output_dir / "diseases")
+
+    # Write disease index
+    (output_dir / "diseases" / "index.json").write_text(
+        json.dumps(diseases, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    print(f"  ✓ diseases/index.json ({len(diseases)} diseases)")
+
+    for country_export in country_exports:
+        code = country_export["code"]
+        country_data = country_export["country_data"]
+        country_download_rows = country_export["download_rows"]
+        country_download_payload = country_export["download_payload"]
+        (output_dir / "countries" / f"{code.lower()}.json").write_text(
+            json.dumps(country_data, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        country_json_path = download_output_dir / "countries" / f"{code.lower()}.json"
+        country_csv_path = download_output_dir / "countries" / f"{code.lower()}.csv"
+        country_json_path.write_text(
+            json.dumps(country_download_payload, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        write_csv(country_csv_path, country_download_rows)
+        print(f"  ✓ countries/{code.lower()}.json ({len(all_records_by_country[code])} records)")
+
+    for disease_export in disease_exports:
+        did = disease_export["disease_id"]
+        disease_data = disease_export["disease_data"]
+        disease_download_rows = disease_export["download_rows"]
+        disease_download_payload = disease_export["download_payload"]
+        (output_dir / "diseases" / f"{did.lower()}.json").write_text(
+            json.dumps(disease_data, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        disease_json_path = download_output_dir / "diseases" / f"{did.lower()}.json"
+        disease_csv_path = download_output_dir / "diseases" / f"{did.lower()}.csv"
+        disease_json_path.write_text(
+            json.dumps(disease_download_payload, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        write_csv(disease_csv_path, disease_download_rows)
+    print(f"  ✓ diseases/{diseases[0]['disease_id'].lower()}.json … ({len(diseases)} files)")
+    print(
+        "  ✓ downloads/countries/*.json,csv "
+        f"({len(country_download_entries)} countries)"
+    )
+    print(
+        "  ✓ downloads/diseases/*.json,csv "
+        f"({len(disease_download_entries)} diseases)"
+    )
+
+    (output_dir / "reports" / "index.json").write_text(
+        json.dumps(reports, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    print(f"  ✓ reports/index.json ({len(reports)} reports)")
+
+    for report_id, detail in report_details.items():
+        (output_dir / "reports" / f"{report_id}.json").write_text(
+            json.dumps(detail, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+    print(f"  ✓ reports/<id>.json ({len(report_details)} files)")
 
     # ── Meta ──
     meta = {
@@ -1505,6 +1574,11 @@ def main() -> None:
         action="store_true",
         help="Allow publishing download assets even when the generated export has zero records",
     )
+    parser.add_argument(
+        "--allow-empty-export",
+        action="store_true",
+        help="Allow overwriting site data even when the database currently exports zero disease records",
+    )
     args = parser.parse_args()
     print(f"Exporting site data to {args.output} …")
     print(f"Writing download assets to {args.download_output} …")
@@ -1515,6 +1589,7 @@ def main() -> None:
             args.download_output,
             args.manifest_output,
             args.download_url_base,
+            args.allow_empty_export,
         )
     )
     if args.publish_downloads:

@@ -7,14 +7,92 @@
   "icd_11": "1C1Y",
   "description": "Swine streptococcosis",
   "slug": "streptococcus-suis",
-  "country_series": {},
-  "global_monthly": {
-    "months": [],
-    "cases": [],
-    "deaths": []
+  "country_series": {
+    "CN": {
+      "dates": [
+        "2026-01-01",
+        "2026-02-01"
+      ],
+      "cases": [
+        25,
+        28
+      ],
+      "weekly_equiv_cases": [
+        5.64516129032258,
+        6.32258064516129
+      ],
+      "deaths": [
+        1,
+        0
+      ],
+      "incidence_rates": [
+        0.0017693927892346868,
+        0.001981719923942849
+      ],
+      "incidence_sources": [
+        "wpp_computed",
+        "wpp_computed"
+      ],
+      "total_cases": 53,
+      "total_deaths": 1
+    }
   },
-  "total_cases": 0,
-  "total_deaths": 0,
-  "generated_at": "2026-03-27T08:30:10.426573+00:00",
-  "source_info": []
+  "global_monthly": {
+    "months": [
+      "2026-01",
+      "2026-02"
+    ],
+    "cases": [
+      25,
+      28
+    ],
+    "deaths": [
+      1,
+      0
+    ]
+  },
+  "total_cases": 53,
+  "total_deaths": 1,
+  "generated_at": "2026-03-27T08:53:20.585895+00:00",
+  "source_info": [
+    {
+      "country_code": "CN",
+      "primary_scope": "cdc_weekly",
+      "primary_label": "China CDC Weekly",
+      "primary_url": "https://weekly.chinacdc.cn",
+      "primary_type": "web",
+      "parser_primary": "china_cdc_weekly",
+      "notes": "Auto bootstrapped by country library",
+      "sources": [
+        {
+          "scope": "cdc_weekly",
+          "label": "China CDC Weekly",
+          "url": "https://weekly.chinacdc.cn",
+          "machine_url": null,
+          "type": "web",
+          "cadence": "MONTHLY",
+          "description": "Monthly notifiable infectious disease reports published by China CDC."
+        },
+        {
+          "scope": "nhc",
+          "label": "National Disease Control and Prevention Administration",
+          "url": "https://www.ndcpa.gov.cn",
+          "machine_url": "https://www.ndcpa.gov.cn/queryList",
+          "type": "web",
+          "cadence": "MONTHLY",
+          "description": "Official China public health bulletin and query portal."
+        },
+        {
+          "scope": "pubmed",
+          "label": "PubMed",
+          "url": "https://pubmed.ncbi.nlm.nih.gov",
+          "machine_url": "https://pubmed.ncbi.nlm.nih.gov/rss/search/1tQjT4yH2iuqFpDL7Y1nShJmC4kDC5_BJYgw4R1O0BCs-_Nemt/",
+          "type": "web",
+          "cadence": "MONTHLY",
+          "description": "Biomedical literature discovery feed used as supplementary context."
+        }
+      ],
+      "country_name": "China"
+    }
+  ]
 }
