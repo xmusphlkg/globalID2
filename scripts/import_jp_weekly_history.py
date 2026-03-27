@@ -302,6 +302,46 @@ async def upsert_records(
     return len(payload)
 
 
+async def prune_overlapping_history_rows(
+    db,
+    *,
+    country_id: int,
+    preferred_source_file: str,
+    legacy_source_csv: str,
+) -> int:
+    """
+    Remove legacy JP history rows when the standardized weekly file already
+    provides the same disease one day later.
+
+    The duplicate pattern in JP history is:
+    - legacy history row on Friday
+    - standardized weekly row for the same disease on Saturday
+
+    We keep the standardized weekly row from the current updater because it extends
+    later into 2026 and avoids mixing Friday/Saturday variants on the public site.
+    """
+    result = await db.execute(
+        text(
+            """
+            DELETE FROM disease_records legacy
+            USING disease_records preferred
+            WHERE legacy.country_id = :country_id
+              AND preferred.country_id = legacy.country_id
+              AND preferred.disease_id = legacy.disease_id
+              AND legacy.metadata->>'source_csv' = :legacy_source_csv
+              AND preferred.metadata->>'source_file' = :preferred_source_file
+              AND timezone('UTC', preferred.time)::date = timezone('UTC', legacy.time)::date + 1
+            """
+        ),
+        {
+            "country_id": country_id,
+            "legacy_source_csv": legacy_source_csv,
+            "preferred_source_file": preferred_source_file,
+        },
+    )
+    return result.rowcount or 0
+
+
 async def run_import(args: argparse.Namespace) -> None:
     if not args.input.exists():
         raise FileNotFoundError(f"Input file not found: {args.input}")
@@ -351,9 +391,25 @@ async def run_import(args: argparse.Namespace) -> None:
             source_name=args.source_name,
             input_file=args.input,
         )
+        pruned_merged = await prune_overlapping_history_rows(
+            db,
+            country_id=country_id,
+            preferred_source_file=args.input.name,
+            legacy_source_csv="weekly_cases_total_merged_standardized.csv",
+        )
+        pruned_history = await prune_overlapping_history_rows(
+            db,
+            country_id=country_id,
+            preferred_source_file=args.input.name,
+            legacy_source_csv=args.input.name,
+        )
 
         await db.commit()
         logger.info(f"Imported/updated disease_records rows: {inserted:,}")
+        if pruned_merged:
+            logger.info(f"Pruned overlapping JP merged-history rows: {pruned_merged:,}")
+        if pruned_history:
+            logger.info(f"Pruned overlapping JP history-standard rows: {pruned_history:,}")
 
 
 def main() -> None:
