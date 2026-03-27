@@ -43,6 +43,16 @@ resolve_npm() {
   exit 1
 }
 
+resolve_node() {
+  if have_command node; then
+    command -v node
+    return
+  fi
+
+  echo "node not found. Install Node.js first." >&2
+  exit 1
+}
+
 resolve_docker() {
   if have_command docker; then
     command -v docker
