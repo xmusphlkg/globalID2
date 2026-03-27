@@ -200,6 +200,25 @@ class AutomationSettings(_BaseEnvSettings):
         return [item for item in loaded if isinstance(item, dict)]
 
 
+class DataReleaseSettings(_BaseEnvSettings):
+    """静态站点数据发布与部署配置"""
+
+    enabled: bool = Field(default=True, description="是否启用 data release 调度")
+    timezone: str = Field(default="UTC", description="默认 data release 调度时区")
+    poll_interval_seconds: int = Field(default=30, ge=5, description="data release 轮询间隔秒数")
+    default_github_remote: str = Field(default="origin", description="默认 Git 远端名称")
+    default_github_branch: str = Field(default="", description="默认 Git 分支，为空时读取当前分支")
+    default_cloudflare_project_name: str = Field(
+        default="globalid",
+        validation_alias="CLOUDFLARE_PROJECT_NAME",
+        description="默认 Cloudflare Pages 项目名",
+    )
+    default_commit_message_template: str = Field(
+        default="chore(data-release): publish site data {timestamp}",
+        description="默认发布提交消息模板",
+    )
+
+
 class AppSettingsConfig(BaseSettings):
     """应用基础配置"""
 
@@ -265,6 +284,11 @@ class AppSettings(BaseSettings):
     raw_data_dir: Path = Field(default=Path("data/raw"), description="原始抓取/调试缓存目录")
     processed_data_dir: Path = Field(default=Path("data/processed"), description="处理后数据目录（不含 history/current 约定目录）")
     cache_dir: Path = Field(default=Path("data/cache"), description="缓存目录")
+    github_data_share_repo_url: str = Field(default="", description="下载数据分享 GitHub 仓库 URL")
+    github_data_share_repo_branch: str = Field(default="main", description="下载数据分享 GitHub 分支")
+    github_data_share_raw_base_url: str = Field(default="", description="下载数据分享公开 raw base URL")
+    cloudflare_api_token: str = Field(default="", description="Cloudflare API token")
+    cloudflare_account_id: str = Field(default="", description="Cloudflare account id")
     
     # 子配置
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)
@@ -273,6 +297,7 @@ class AppSettings(BaseSettings):
     ai: AISettings = Field(default_factory=AISettings)
     email: EmailSettings = Field(default_factory=EmailSettings)
     automation: AutomationSettings = Field(default_factory=AutomationSettings)
+    data_release: DataReleaseSettings = Field(default_factory=DataReleaseSettings)
     app: AppSettingsConfig = Field(default_factory=AppSettingsConfig)
     report: ReportSettings = Field(default_factory=ReportSettings)
     crawler: CrawlerSettings = Field(default_factory=CrawlerSettings)

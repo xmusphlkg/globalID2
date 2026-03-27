@@ -2,6 +2,7 @@
 
 import os
 from pathlib import Path
+import subprocess
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
@@ -45,6 +46,37 @@ def _is_pid_running(pid: Optional[int]) -> bool:
         return True
     except OSError:
         return False
+
+
+def _find_worker_pid() -> Optional[int]:
+    """Fallback discovery for worker processes started outside dashboard.sh."""
+    try:
+        result = subprocess.run(
+            ["ps", "-eo", "pid=,args="],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except Exception:
+        return None
+
+    if result.returncode != 0:
+        return None
+
+    for raw_line in result.stdout.splitlines():
+        line = raw_line.strip()
+        if not line or "src.services.task_worker" not in line:
+            continue
+        parts = line.split(None, 1)
+        if not parts:
+            continue
+        try:
+            pid = int(parts[0])
+        except ValueError:
+            continue
+        if _is_pid_running(pid):
+            return pid
+    return None
 
 # ---------- WebSocket hub ----------
 
@@ -158,6 +190,8 @@ async def get_worker_status(db: AsyncSession = Depends(get_db)):
     row = (await db.execute(counts_q)).one()
 
     worker_pid = _read_worker_pid()
+    if not _is_pid_running(worker_pid):
+        worker_pid = _find_worker_pid()
     worker_process_running = _is_pid_running(worker_pid)
     running = int(row.running_tasks or 0)
     retrying = int(row.retrying_tasks or 0)

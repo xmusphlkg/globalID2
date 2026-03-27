@@ -24,7 +24,34 @@ export NEXT_PUBLIC_WS_URL="${NEXT_PUBLIC_WS_URL:-ws://${WS_HOST}:${API_PORT}/api
 
 cd "$DASHBOARD_DIR"
 
-if [[ ! -f ".next/BUILD_ID" ]] || is_truthy "${GLOBALID_DASHBOARD_BUILD_ON_START:-0}"; then
+needs_build=0
+if [[ ! -f ".next/BUILD_ID" ]]; then
+  needs_build=1
+elif is_truthy "${GLOBALID_DASHBOARD_BUILD_ON_START:-0}"; then
+  needs_build=1
+elif find \
+  src \
+  public \
+  -type f \
+  -newer ".next/BUILD_ID" \
+  -print \
+  -quit 2>/dev/null | grep -q .; then
+  needs_build=1
+elif find \
+  package.json \
+  package-lock.json \
+  next.config.ts \
+  postcss.config.mjs \
+  tsconfig.json \
+  -maxdepth 0 \
+  -type f \
+  -newer ".next/BUILD_ID" \
+  -print \
+  -quit 2>/dev/null | grep -q .; then
+  needs_build=1
+fi
+
+if [[ "$needs_build" == "1" ]]; then
   "$NPM_BIN" run build
 fi
 

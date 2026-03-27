@@ -1,6 +1,7 @@
 ---
 // src/pages/about.astro — About page
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { acknowledgementEntries, acknowledgementIntro } from '../data/acknowledgements';
 ---
 
 <BaseLayout
@@ -295,6 +296,55 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       </div>
     </section>
 
+    <!-- Acknowledgements -->
+    <section class="mb-16">
+      <div class="ack-shell">
+        <div class="ack-header">
+          <div class="ack-kicker">
+            <span data-lang-en={acknowledgementIntro.kickerEn} data-lang-zh={acknowledgementIntro.kickerZh}>
+              {acknowledgementIntro.kickerEn}
+            </span>
+          </div>
+          <h2 class="ack-title" data-lang-en={acknowledgementIntro.titleEn} data-lang-zh={acknowledgementIntro.titleZh}>
+            {acknowledgementIntro.titleEn}
+          </h2>
+          <p class="ack-lead" data-lang-en={acknowledgementIntro.leadEn} data-lang-zh={acknowledgementIntro.leadZh}>
+            {acknowledgementIntro.leadEn}
+          </p>
+          <p class="ack-note" data-lang-en={acknowledgementIntro.noteEn} data-lang-zh={acknowledgementIntro.noteZh}>
+            {acknowledgementIntro.noteEn}
+          </p>
+        </div>
+
+        <div class="ack-ledger">
+          {acknowledgementEntries.map(({ name, affiliationEn, affiliationZh, roles, contributionEn, contributionZh }) => (
+            <article class="ack-entry">
+              <div class="ack-entry-head">
+                <div class="ack-entry-identity">
+                  <h3 class="ack-name">{name}</h3>
+                  <p class="ack-affiliation" data-lang-en={affiliationEn} data-lang-zh={affiliationZh}>
+                    {affiliationEn}
+                  </p>
+                </div>
+
+                <div class="ack-role-list">
+                  {roles.map(({ en, zh, tone }) => (
+                    <span class={tone === 'support' ? 'ack-role ack-role-support' : 'ack-role'} data-lang-en={en} data-lang-zh={zh}>
+                      {en}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <p class="ack-desc" data-lang-en={contributionEn} data-lang-zh={contributionZh}>
+                {contributionEn}
+              </p>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+
     <!-- Data sources -->
     <section class="mb-16">
       <h2 class="text-2xl font-bold text-slate-100 mb-6 text-center" data-lang-en="Data Sources" data-lang-zh="数据来源">Data Sources</h2>
@@ -356,3 +406,181 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
   </div>
 </BaseLayout>
+
+<style>
+.ack-shell {
+  border-radius: 1.5rem;
+  border: 1px solid rgba(51, 65, 85, 0.6);
+  background: rgba(15, 23, 42, 0.42);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 20px 48px rgba(2, 6, 23, 0.22);
+}
+
+.ack-kicker {
+  display: inline-flex;
+  align-items: center;
+  color: rgb(94, 234, 212);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.ack-header {
+  padding: 2rem 2rem 1.5rem;
+}
+
+.ack-title {
+  margin-top: 0.9rem;
+  color: rgb(248, 250, 252);
+  font-size: clamp(1.65rem, 3vw, 2.2rem);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+}
+
+.ack-lead {
+  margin-top: 1rem;
+  max-width: 52rem;
+  color: rgba(226, 232, 240, 0.9);
+  font-size: 0.98rem;
+  line-height: 1.85;
+}
+
+.ack-note {
+  margin-top: 0.85rem;
+  color: rgba(148, 163, 184, 0.9);
+  font-size: 0.88rem;
+  line-height: 1.7;
+}
+
+.ack-ledger {
+  border-top: 1px solid rgba(51, 65, 85, 0.8);
+  padding: 0 2rem;
+}
+
+.ack-entry {
+  padding: 1.35rem 0;
+}
+
+.ack-entry + .ack-entry {
+  border-top: 1px solid rgba(51, 65, 85, 0.72);
+}
+
+.ack-entry-head {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.ack-name {
+  color: rgb(248, 250, 252);
+  font-size: 1.02rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.ack-affiliation {
+  margin-top: 0.35rem;
+  color: rgba(148, 163, 184, 0.95);
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.ack-role-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.ack-role {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid rgba(71, 85, 105, 0.9);
+  background: rgba(30, 41, 59, 0.7);
+  color: rgba(226, 232, 240, 0.88);
+  padding: 0.34rem 0.72rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ack-role-support {
+  border-color: rgba(45, 212, 191, 0.28);
+  background: rgba(15, 118, 110, 0.22);
+  color: rgb(153, 246, 228);
+}
+
+.ack-desc {
+  margin-top: 0.8rem;
+  color: rgba(203, 213, 225, 0.9);
+  font-size: 0.93rem;
+  line-height: 1.75;
+}
+
+@media (min-width: 640px) {
+  .ack-shell {
+    border-radius: 1.75rem;
+  }
+
+  .ack-entry-head {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+  }
+}
+
+html[data-theme='light'] .ack-shell {
+  border-color: rgba(203, 213, 225, 0.95);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.06);
+}
+
+html[data-theme='light'] .ack-kicker {
+  color: rgb(15, 118, 110);
+}
+
+html[data-theme='light'] .ack-title {
+  color: rgb(15, 23, 42);
+}
+
+html[data-theme='light'] .ack-lead {
+  color: rgb(51, 65, 85);
+}
+
+html[data-theme='light'] .ack-note {
+  color: rgb(100, 116, 139);
+}
+
+html[data-theme='light'] .ack-ledger {
+  border-color: rgba(203, 213, 225, 0.95);
+}
+
+html[data-theme='light'] .ack-entry + .ack-entry {
+  border-color: rgba(226, 232, 240, 0.95);
+}
+
+html[data-theme='light'] .ack-name {
+  color: rgb(15, 23, 42);
+}
+
+html[data-theme='light'] .ack-affiliation {
+  color: rgb(100, 116, 139);
+}
+
+html[data-theme='light'] .ack-role {
+  border-color: rgba(203, 213, 225, 0.95);
+  background: rgba(241, 245, 249, 0.95);
+  color: rgb(71, 85, 105);
+}
+
+html[data-theme='light'] .ack-role-support {
+  border-color: rgba(45, 212, 191, 0.28);
+  background: rgba(204, 251, 241, 0.95);
+  color: rgb(15, 118, 110);
+}
+
+html[data-theme='light'] .ack-desc {
+  color: rgb(51, 65, 85);
+}
+</style>

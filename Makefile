@@ -4,9 +4,6 @@
 	site-data site-data-external site-download-sync site-install site-dev site-build site-preview site-publish wpp-import \
 	autostart-install autostart-uninstall autostart-status
 
-DOWNLOAD_REPO_URL ?= git@github.com:xmusphlkg/globalID2_data_download.git
-DOWNLOAD_RAW_BASE_URL ?= https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main
-
 help:
 	@echo "GlobalID V2 - 开发命令"
 	@echo ""
@@ -112,12 +109,12 @@ site-data:
 
 site-data-external:
 	@echo "导出站点数据，并将下载链接指向外部数据仓库 ..."
-	venv/bin/python3 scripts/generate_site_data.py --download-url-base "$(DOWNLOAD_RAW_BASE_URL)"
+	venv/bin/python3 scripts/generate_site_data.py
 	@echo "外部下载链接导出完成"
 
 site-download-sync:
 	@echo "同步下载数据到独立数据仓库 ..."
-	venv/bin/python3 scripts/publish_download_repo.py --repo-url "$(DOWNLOAD_REPO_URL)"
+	venv/bin/python3 scripts/publish_download_repo.py
 	@echo "下载数据仓库同步完成"
 
 site-install:

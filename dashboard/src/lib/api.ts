@@ -1,6 +1,9 @@
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "/api/v1").replace(/\/$/, "");
 const WS_BASE = (process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000/api/v1").replace(/\/$/, "");
 const API_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_API_TIMEOUT_MS || 10000);
+type ApiFetchInit = RequestInit & {
+  timeoutMs?: number;
+};
 
 function joinPath(base: string, path: string): string {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
@@ -17,22 +20,24 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+export async function apiFetch<T>(path: string, init?: ApiFetchInit): Promise<T> {
+  const timeoutMs = init?.timeoutMs ?? API_TIMEOUT_MS;
+  const { timeoutMs: _timeoutMs, ...requestInit } = init ?? {};
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-  const mergedSignal = init?.signal ?? controller.signal;
+  const mergedSignal = requestInit.signal ?? controller.signal;
 
   let res: Response;
   try {
     res = await fetch(joinPath(API_BASE, path), {
-      ...init,
+      ...requestInit,
       signal: mergedSignal,
-      headers: { "Content-Type": "application/json", ...init?.headers },
+      headers: { "Content-Type": "application/json", ...requestInit.headers },
     });
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
-      throw new ApiError(408, `Request timeout after ${API_TIMEOUT_MS}ms`);
+      throw new ApiError(408, `Request timeout after ${timeoutMs}ms`);
     }
     throw error;
   } finally {
