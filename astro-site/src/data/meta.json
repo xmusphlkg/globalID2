@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-27T08:53:20.585895+00:00",
+  "generated_at": "2026-03-27T11:57:35.190632+00:00",
   "total_countries": 4,
   "total_diseases": 155,
   "total_reports": 1,
@@ -90,7 +90,7 @@
       "code": "JP",
       "name": "Japan",
       "language": "ja-JP",
-      "total_cases": 79829358,
+      "total_cases": 47757065,
       "total_deaths": 0,
       "disease_count": 86,
       "date_range": {
