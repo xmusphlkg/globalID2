@@ -1,10 +1,11 @@
 "use client";
 
 import { type ReactNode, useEffect, useMemo, useState } from "react";
-import { Badge, Button, Card, Grid, Metric, Text, Title } from "@tremor/react";
+import { Badge, Button, Card, Grid, Metric, ProgressBar, Text, Title } from "@tremor/react";
 import {
   AlertTriangle,
   CheckCircle2,
+  ChevronDown,
   Clock3,
   Cloud,
   GitBranch,
@@ -193,6 +194,118 @@ function rawWorkbookText(entry: WorkbookEntry): string {
   return sections.join("\n\n").trim();
 }
 
+function logPreview(value: string): string {
+  const firstLine = value
+    .split("\n")
+    .map((line) => line.trim())
+    .find(Boolean);
+  if (!firstLine) return "(empty log entry)";
+  if (firstLine.length <= 180) return firstLine;
+  return `${firstLine.slice(0, 177)}...`;
+}
+
+function RawReleaseTaskDetail({
+  taskDetail,
+  detailLoading,
+}: {
+  taskDetail?: {
+    task_uuid: string;
+    status: string;
+    progress: number;
+    created_at: string;
+    completed_at: string | null;
+    workbook_entries: WorkbookEntry[];
+  };
+  detailLoading: boolean;
+}) {
+  const rawEntries = useMemo(() => {
+    if (!taskDetail) return [];
+    return [...taskDetail.workbook_entries].sort(
+      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+    );
+  }, [taskDetail]);
+
+  if (detailLoading && !taskDetail) {
+    return (
+      <div className="space-y-3">
+        <div className="h-6 animate-pulse rounded bg-tremor-background-muted dark:bg-dark-tremor-background-muted" />
+        <div className="h-24 animate-pulse rounded bg-tremor-background-muted dark:bg-dark-tremor-background-muted" />
+        <div className="h-24 animate-pulse rounded bg-tremor-background-muted dark:bg-dark-tremor-background-muted" />
+      </div>
+    );
+  }
+
+  if (!taskDetail) {
+    return (
+      <div className="text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+        Failed to load raw release logs.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {taskDetail.status === "running" && taskDetail.progress >= 88 && taskDetail.progress < 100 ? (
+        <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
+          Cloudflare Pages upload is in progress. `wrangler` can stay at 88% for a while and then jump straight to 100% when deploy finishes.
+        </div>
+      ) : null}
+
+      <div className="grid gap-3 md:grid-cols-3">
+        <AccessDetail label="Status" value={<Badge color={statusColor(taskDetail.status)}>{taskDetail.status}</Badge>} />
+        <AccessDetail label="Progress" value={`${taskDetail.progress}%`} />
+        <AccessDetail label="Workbook Entries" value={String(rawEntries.length)} />
+        <AccessDetail label="Created" value={formatDateTime(taskDetail.created_at)} />
+        <AccessDetail label="Completed" value={formatDateTime(taskDetail.completed_at)} />
+        <AccessDetail label="Task UUID" value={taskDetail.task_uuid} mono />
+      </div>
+
+      <div className="rounded-2xl border border-dashed border-tremor-border bg-tremor-background-muted/60 p-3 text-sm text-tremor-content dark:border-dark-tremor-border dark:bg-dark-tremor-background-muted/30 dark:text-dark-tremor-content">
+        Raw workbook entries only. No structured parsing is applied in this view.
+      </div>
+
+      {!rawEntries.length ? (
+        <div className="rounded-tremor-default border border-dashed border-tremor-border p-6 text-center dark:border-dark-tremor-border">
+          <Text>No workbook entries recorded yet.</Text>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {rawEntries.map((entry) => {
+            const rawText = rawWorkbookText(entry);
+            const preview = logPreview(rawText);
+            return (
+              <details
+                key={entry.id}
+                className="rounded-2xl border border-tremor-border bg-tremor-background p-4 dark:border-dark-tremor-border dark:bg-dark-tremor-background"
+              >
+                <summary className="cursor-pointer list-none">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge color={workbookEntryColor(entry.entry_type)}>{entry.entry_type}</Badge>
+                    <Text className="font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">
+                      {entry.title}
+                    </Text>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+                    <span>{formatDateTime(entry.created_at)}</span>
+                    {entry.content_type ? <span>content_type: {entry.content_type}</span> : null}
+                    {entry.duration ? <span>duration: {entry.duration.toFixed(1)}s</span> : null}
+                  </div>
+                  <p className="mt-2 whitespace-pre-wrap break-words font-mono text-xs text-tremor-content dark:text-dark-tremor-content">
+                    {preview}
+                  </p>
+                </summary>
+                <pre className="mt-3 whitespace-pre-wrap break-words rounded-xl bg-tremor-background-muted/60 p-3 font-mono text-xs text-tremor-content-strong dark:bg-dark-tremor-background-muted/30 dark:text-dark-tremor-content-strong">
+                  {rawText || "(empty log entry)"}
+                </pre>
+              </details>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function DataReleasePage() {
   const { lang } = useAppStore();
   const { data: config } = useDataReleaseConfig();
@@ -201,7 +314,7 @@ export default function DataReleasePage() {
   const { data: releaseTasks } = useTasks(undefined, "export_data", undefined, undefined, 20);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [editingJobId, setEditingJobId] = useState<string | null>(null);
-  const [selectedTaskUuid, setSelectedTaskUuid] = useState<string | null>(null);
+  const [expandedTaskUuid, setExpandedTaskUuid] = useState<string | null>(null);
   const [form, setForm] = useState<DataReleaseJobInput>(defaultForm);
 
   const {
@@ -210,7 +323,7 @@ export default function DataReleasePage() {
     isFetching: checkingAccess,
     isLoading: loadingChecks,
   } = useDataReleaseChecks(selectedJobId);
-  const { data: taskDetail, isLoading: detailLoading } = useTaskDetail(selectedTaskUuid);
+  const { data: taskDetail, isFetching: detailFetching, isLoading: detailLoading } = useTaskDetail(expandedTaskUuid);
 
   const runJob = useRunDataReleaseJob();
   const createJob = useCreateDataReleaseJob();
@@ -228,10 +341,10 @@ export default function DataReleasePage() {
   }, [jobs, selectedJobId]);
 
   useEffect(() => {
-    if (!selectedTaskUuid && releaseTasks?.length) {
-      setSelectedTaskUuid(releaseTasks[0].task_uuid);
+    if (!expandedTaskUuid && releaseTasks?.length) {
+      setExpandedTaskUuid(releaseTasks[0].task_uuid);
     }
-  }, [releaseTasks, selectedTaskUuid]);
+  }, [releaseTasks, expandedTaskUuid]);
 
   const selectedJob = useMemo(
     () => jobs?.find((job) => job.job_id === selectedJobId) ?? null,
@@ -254,12 +367,7 @@ export default function DataReleasePage() {
       ? "Ready to release"
       : "Preflight blocked";
 
-  const rawReleaseEntries = useMemo(() => {
-    if (!taskDetail) return [];
-    return [...taskDetail.workbook_entries].sort(
-      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-    );
-  }, [taskDetail]);
+  const expandedTaskDetail = taskDetail?.task_uuid === expandedTaskUuid ? taskDetail : undefined;
 
   const resetForm = () => {
     setEditingJobId(null);
@@ -314,7 +422,7 @@ export default function DataReleasePage() {
   const runSelectedJob = async (jobId: string) => {
     const result = await runJob.mutateAsync(jobId);
     if (result.task_uuid) {
-      setSelectedTaskUuid(result.task_uuid);
+      setExpandedTaskUuid(result.task_uuid);
     }
   };
 
@@ -692,111 +800,90 @@ export default function DataReleasePage() {
         </Card>
       </div>
 
-      <Grid numItemsLg={2} className="gap-6">
-        <Card>
-          <Title>Recent Release Tasks</Title>
-          <Text className="mt-1">Every release run is tracked as an `EXPORT_DATA` task with detailed workbook logs.</Text>
+      <Card>
+        <Title>Recent Release Tasks</Title>
+        <Text className="mt-1">Every release run is tracked as an `EXPORT_DATA` task. Expand any row to inspect the raw workbook log stream.</Text>
 
-          <div className="mt-4 space-y-3">
-            {!releaseTasks?.length ? (
-              <div className="rounded-tremor-default border border-dashed border-tremor-border p-6 text-center dark:border-dark-tremor-border">
-                <Text>No release tasks yet.</Text>
-              </div>
-            ) : (
-              releaseTasks.map((task) => (
-                <button
-                  key={task.task_uuid}
-                  type="button"
-                  onClick={() => setSelectedTaskUuid(task.task_uuid)}
-                  className={`w-full rounded-tremor-default border p-4 text-left transition ${
-                    selectedTaskUuid === task.task_uuid
-                      ? "border-tremor-brand bg-tremor-brand/5"
-                      : "border-tremor-border bg-tremor-background hover:border-tremor-brand/40 dark:border-dark-tremor-border dark:bg-dark-tremor-background"
-                  }`}
-                >
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Text className="font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">{task.task_name}</Text>
-                    <Badge color={statusColor(task.status)}>{task.status}</Badge>
-                    <Badge color="slate">{task.progress}%</Badge>
-                  </div>
-                  <div className="mt-2 grid gap-1 text-xs text-tremor-content dark:text-dark-tremor-content">
-                    <Text>Created: {formatDateTime(task.created_at)}</Text>
-                    <Text>Completed: {formatDateTime(task.completed_at)}</Text>
-                    <Text className="break-all">UUID: {task.task_uuid}</Text>
-                    {task.last_error ? <Text className="break-words text-rose-700 dark:text-rose-300">{task.last_error}</Text> : null}
-                  </div>
-                </button>
-              ))
-            )}
-          </div>
-        </Card>
-
-        <Card>
-          <Title>Release Logs</Title>
-          <Text className="mt-1">Raw workbook entries only. No structured parsing is applied in this view.</Text>
-
-          {!selectedTaskUuid && !detailLoading ? (
-            <div className="mt-4 text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
-              Select a release task to inspect raw logs.
+        <div className="mt-4 space-y-3">
+          {!releaseTasks?.length ? (
+            <div className="rounded-tremor-default border border-dashed border-tremor-border p-6 text-center dark:border-dark-tremor-border">
+              <Text>No release tasks yet.</Text>
             </div>
-          ) : null}
+          ) : (
+            releaseTasks.map((task) => {
+              const expanded = expandedTaskUuid === task.task_uuid;
+              const matchingDetail = expanded && expandedTaskDetail?.task_uuid === task.task_uuid ? expandedTaskDetail : undefined;
+              const loadingExpandedDetail = expanded && !matchingDetail && (detailLoading || detailFetching);
 
-          {detailLoading && !taskDetail ? (
-            <div className="mt-4 space-y-3">
-              <div className="h-6 animate-pulse rounded bg-tremor-background-muted dark:bg-dark-tremor-background-muted" />
-              <div className="h-28 animate-pulse rounded bg-tremor-background-muted dark:bg-dark-tremor-background-muted" />
-              <div className="h-28 animate-pulse rounded bg-tremor-background-muted dark:bg-dark-tremor-background-muted" />
-            </div>
-          ) : null}
-
-          {taskDetail ? (
-            <div className="mt-4 space-y-4">
-              <div className="rounded-2xl border border-tremor-border bg-tremor-background px-4 py-3 dark:border-dark-tremor-border dark:bg-dark-tremor-background">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge color={statusColor(taskDetail.status)}>{taskDetail.status}</Badge>
-                  <Badge color="slate">{taskDetail.progress}%</Badge>
-                  <Text>Created: {formatDateTime(taskDetail.created_at)}</Text>
-                  <Text>Completed: {formatDateTime(taskDetail.completed_at)}</Text>
-                </div>
-                <Text className="mt-2 break-all font-mono text-xs">{taskDetail.task_uuid}</Text>
-              </div>
-
-              {!rawReleaseEntries.length ? (
-                <div className="rounded-tremor-default border border-dashed border-tremor-border p-6 text-center dark:border-dark-tremor-border">
-                  <Text>No workbook entries recorded yet.</Text>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {rawReleaseEntries.map((entry) => {
-                    const rawText = rawWorkbookText(entry);
-                    return (
-                      <div
-                        key={entry.id}
-                        className="rounded-2xl border border-tremor-border bg-tremor-background p-4 dark:border-dark-tremor-border dark:bg-dark-tremor-background"
-                      >
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Badge color={workbookEntryColor(entry.entry_type)}>{entry.entry_type}</Badge>
+              return (
+                <Card key={task.task_uuid} className="overflow-hidden p-0">
+                  <button
+                    type="button"
+                    className="w-full text-left transition hover:bg-tremor-background-subtle dark:hover:bg-dark-tremor-background-subtle"
+                    onClick={() => setExpandedTaskUuid(expanded ? null : task.task_uuid)}
+                  >
+                    <div className="flex items-center gap-3 px-4 py-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex min-w-0 flex-wrap items-center gap-2">
                           <Text className="font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">
-                            {entry.title}
+                            {task.task_name}
                           </Text>
+                          <Badge color={statusColor(task.status)}>{task.status}</Badge>
                         </div>
-                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
-                          <span>{formatDateTime(entry.created_at)}</span>
-                          {entry.content_type ? <span>content_type: {entry.content_type}</span> : null}
-                          {entry.duration ? <span>duration: {entry.duration.toFixed(1)}s</span> : null}
+                        <div className="mt-2 grid gap-1 text-xs text-tremor-content dark:text-dark-tremor-content md:hidden">
+                          <Text>Created: {formatDateTime(task.created_at)}</Text>
+                          <Text>Completed: {formatDateTime(task.completed_at)}</Text>
                         </div>
-                        <pre className="mt-3 whitespace-pre-wrap break-words rounded-xl bg-tremor-background-muted/60 p-3 font-mono text-xs text-tremor-content-strong dark:bg-dark-tremor-background-muted/30 dark:text-dark-tremor-content-strong">
-                          {rawText || "(empty log entry)"}
-                        </pre>
+                        <Text className="mt-2 break-all font-mono text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle md:hidden">
+                          {task.task_uuid}
+                        </Text>
+                        {task.last_error ? (
+                          <Text className="mt-2 break-words text-xs text-rose-700 dark:text-rose-300 md:hidden">
+                            {task.last_error}
+                          </Text>
+                        ) : null}
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          ) : null}
-        </Card>
-      </Grid>
+
+                      <div className="hidden shrink-0 items-center gap-3 md:flex">
+                        <div className="w-44">
+                          <div className="flex items-center gap-2">
+                            <ProgressBar value={task.progress} color={task.progress === 100 ? "emerald" : "teal"} className="flex-1" />
+                            <Text>{task.progress}%</Text>
+                          </div>
+                        </div>
+                        <div className="w-44 text-right text-xs text-tremor-content dark:text-dark-tremor-content">
+                          <Text>Created: {formatDateTime(task.created_at)}</Text>
+                          <Text>Completed: {formatDateTime(task.completed_at)}</Text>
+                        </div>
+                        <ChevronDown className={`h-4 w-4 shrink-0 text-tremor-content-subtle transition-transform ${expanded ? "rotate-180" : ""}`} />
+                      </div>
+                    </div>
+                  </button>
+
+                  <div className="border-t border-transparent px-4 pb-3 md:hidden">
+                    <div className="flex items-center gap-2">
+                      <ProgressBar value={task.progress} color={task.progress === 100 ? "emerald" : "teal"} className="flex-1" />
+                      <Text>{task.progress}%</Text>
+                      <ChevronDown className={`h-4 w-4 shrink-0 text-tremor-content-subtle transition-transform ${expanded ? "rotate-180" : ""}`} />
+                    </div>
+                  </div>
+
+                  {expanded ? (
+                    <div className="border-t border-tremor-border px-4 pb-4 pt-4 dark:border-dark-tremor-border">
+                      {task.last_error ? (
+                        <div className="mb-4 rounded-2xl border border-rose-300 bg-rose-50 p-4 text-sm text-rose-900 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-200">
+                          {task.last_error}
+                        </div>
+                      ) : null}
+                      <RawReleaseTaskDetail taskDetail={matchingDetail} detailLoading={loadingExpandedDetail} />
+                    </div>
+                  ) : null}
+                </Card>
+              );
+            })
+          )}
+        </div>
+      </Card>
     </div>
   );
 }
