@@ -9,12 +9,18 @@ import json
 import shutil
 import subprocess
 from pathlib import Path
+import sys
 
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from src.core.data_share import get_data_share_repo_branch, get_data_share_repo_url  # noqa: E402
+
 DEFAULT_SOURCE_DIR = ROOT / "astro-site" / "public" / "downloads"
 DEFAULT_WORKDIR = Path("/tmp/globalid2-data-download-publish")
-DEFAULT_REPO_URL = "git@github.com:xmusphlkg/globalID2_data_download.git"
+DEFAULT_REPO_URL = get_data_share_repo_url()
+DEFAULT_REPO_BRANCH = get_data_share_repo_branch()
 MANAGED_PATHS = ("countries", "diseases", "manifest.json")
 
 
@@ -130,7 +136,7 @@ def commit_and_push(workdir: Path, branch: str, commit_message: str) -> bool:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Publish generated download assets to a git repo")
     parser.add_argument("--repo-url", default=DEFAULT_REPO_URL, help="Target git repository URL")
-    parser.add_argument("--branch", default="main", help="Target branch")
+    parser.add_argument("--branch", default=DEFAULT_REPO_BRANCH, help="Target branch")
     parser.add_argument("--workdir", type=Path, default=DEFAULT_WORKDIR, help="Temporary local checkout path")
     parser.add_argument(
         "--source-dir",
@@ -144,6 +150,10 @@ def main() -> None:
         help="Git commit message",
     )
     args = parser.parse_args()
+    if not args.repo_url.strip():
+        raise RuntimeError(
+            "Missing download repo URL. Set GITHUB_DATA_SHARE_REPO_URL or pass --repo-url."
+        )
 
     manifest_path = args.source_dir / "manifest.json"
     if not manifest_path.exists():

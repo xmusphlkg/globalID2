@@ -48,6 +48,7 @@ const navGroups: NavGroup[] = [
     icon: Database,
     items: [
       { href: "/data/dashboard", labelKey: "dashboard", icon: BarChart3 },
+      { href: "/data/release", labelKey: "data_release", icon: Send },
       { href: "/data/diseases", labelKey: "diseases", icon: Activity },
       { href: "/data/explorer", labelKey: "explorer", icon: SearchIcon },
       { href: "/data/quality", labelKey: "quality", icon: ShieldCheck },

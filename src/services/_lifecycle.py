@@ -11,8 +11,9 @@ from typing import Optional
 
 from src.core import get_database, get_logger
 from src.core.task_manager import task_manager
-from src.domain import Task, TaskStatus
+from src.domain import Task, TaskStatus, TaskType
 from src.services.automation_service import automation_service
+from src.services.data_release_service import data_release_service
 from src.services.exceptions import TaskCancelledError
 
 logger = get_logger(__name__)
@@ -57,6 +58,11 @@ async def task_lifecycle(task: Task, *, report_id_ref: Optional[list] = None, ex
         if await task_manager.is_cancel_requested(task.task_uuid):
             raise TaskCancelledError("Cancellation requested by user")
         await task_manager.update_task_status(task.task_uuid, TaskStatus.COMPLETED)
+        if task.task_type == TaskType.CRAWL_DATA:
+            try:
+                await data_release_service.maybe_trigger_after_crawl_completion(task.task_uuid)
+            except Exception as exc:
+                logger.warning(f"Post-crawl data release auto-trigger skipped for {task.task_uuid}: {exc}")
 
     except KeyboardInterrupt:
         await _handle_task_cancelled(task, report_id_ref, "Interrupted by user (Ctrl+C)")
