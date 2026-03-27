@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-03-19T02:55:54.469018+00:00",
+  "fetched_at": "2026-03-27T12:18:46.803834+00:00",
   "disease": "Leprosy",
   "year": 2026,
   "month": 3,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1773888954216)/",
-            "rootActivityId": "055bc5f8-ab22-42ff-858b-6318b4feeada",
+            "timestamp": "/Date(1774613926469)/",
+            "rootActivityId": "046416b1-a1a6-400c-9e4e-ffb5ed660485",
             "descriptor": {
               "Select": [
                 {
@@ -399,15 +399,15 @@
                         },
                         {
                           "C": [
-                            "QLD"
-                          ],
-                          "R": 2
+                            "QLD",
+                            "'<5'"
+                          ]
                         },
                         {
                           "C": [
-                            "SA"
-                          ],
-                          "R": 2
+                            "SA",
+                            "0L"
+                          ]
                         },
                         {
                           "C": [
@@ -447,7 +447,7 @@
     "ACT": 0,
     "NSW": "'<5'",
     "NT": 0,
-    "QLD": 0,
+    "QLD": "'<5'",
     "SA": 0,
     "TAS": 0,
     "VIC": 0,

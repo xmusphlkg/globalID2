@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-03-19T02:55:58.546193+00:00",
+  "fetched_at": "2026-03-27T12:18:41.800917+00:00",
   "disease": "Legionellosis",
   "year": 2026,
   "month": 2,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1773888958238)/",
-            "rootActivityId": "c777fded-f526-4bab-b7a5-7ca3b08ae04b",
+            "timestamp": "/Date(1774613921443)/",
+            "rootActivityId": "b575d45b-dfd9-427c-9b69-a2f89edc0d7d",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'33'"
+                          "A0": "'37'"
                         }
                       ]
                     },
@@ -388,7 +388,7 @@
                         {
                           "C": [
                             "NSW",
-                            "'16'"
+                            "'17'"
                           ]
                         },
                         {
@@ -400,7 +400,7 @@
                         {
                           "C": [
                             "QLD",
-                            "'6'"
+                            "'8'"
                           ]
                         },
                         {
@@ -417,15 +417,15 @@
                         },
                         {
                           "C": [
-                            "VIC"
-                          ],
-                          "R": 2
+                            "VIC",
+                            "'5'"
+                          ]
                         },
                         {
                           "C": [
-                            "WA"
-                          ],
-                          "R": 2
+                            "WA",
+                            "'<5'"
+                          ]
                         }
                       ]
                     }
@@ -445,12 +445,12 @@
   },
   "parsed_counts": {
     "ACT": 0,
-    "NSW": 16,
+    "NSW": 17,
     "NT": 0,
-    "QLD": 6,
+    "QLD": 8,
     "SA": "'<5'",
     "TAS": 0,
-    "VIC": 0,
-    "WA": 0
+    "VIC": 5,
+    "WA": "'<5'"
   }
 }

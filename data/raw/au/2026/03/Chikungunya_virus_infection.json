@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-03-19T02:55:53.150071+00:00",
+  "fetched_at": "2026-03-27T12:18:45.245110+00:00",
   "disease": "Chikungunya virus infection",
   "year": 2026,
   "month": 3,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1773888952904)/",
-            "rootActivityId": "390868f5-7f1e-48ea-ac26-fbc6d81ac8a4",
+            "timestamp": "/Date(1774613924881)/",
+            "rootActivityId": "04daf742-6a5e-4f02-b681-0f71966056a6",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "0L"
+                          "A0": "'<5'"
                         }
                       ]
                     },
@@ -405,15 +405,15 @@
                         },
                         {
                           "C": [
-                            "SA"
-                          ],
-                          "R": 2
+                            "SA",
+                            "'<5'"
+                          ]
                         },
                         {
                           "C": [
-                            "TAS"
-                          ],
-                          "R": 2
+                            "TAS",
+                            "0L"
+                          ]
                         },
                         {
                           "C": [
@@ -423,9 +423,9 @@
                         },
                         {
                           "C": [
-                            "WA"
-                          ],
-                          "R": 2
+                            "WA",
+                            "'<5'"
+                          ]
                         }
                       ]
                     }
@@ -448,9 +448,9 @@
     "NSW": 0,
     "NT": 0,
     "QLD": 0,
-    "SA": 0,
+    "SA": "'<5'",
     "TAS": 0,
     "VIC": 0,
-    "WA": 0
+    "WA": "'<5'"
   }
 }

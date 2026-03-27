@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-03-19T02:55:53.739399+00:00",
+  "fetched_at": "2026-03-27T12:18:45.985104+00:00",
   "disease": "Haemophilus influenzae type b",
   "year": 2026,
   "month": 3,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1773888953488)/",
-            "rootActivityId": "361c1e0c-d2c0-4a48-a3e8-6c75b228cd51",
+            "timestamp": "/Date(1774613925500)/",
+            "rootActivityId": "2b2cb7a1-7522-4d93-b4f7-ec67c21f3e02",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "0L"
+                          "A0": "'<5'"
                         }
                       ]
                     },
@@ -387,27 +387,27 @@
                         },
                         {
                           "C": [
-                            "NSW"
-                          ],
-                          "R": 2
+                            "NSW",
+                            "'<5'"
+                          ]
                         },
                         {
                           "C": [
-                            "NT"
-                          ],
-                          "R": 2
+                            "NT",
+                            "0L"
+                          ]
                         },
                         {
                           "C": [
-                            "QLD"
-                          ],
-                          "R": 2
+                            "QLD",
+                            "'<5'"
+                          ]
                         },
                         {
                           "C": [
-                            "SA"
-                          ],
-                          "R": 2
+                            "SA",
+                            "0L"
+                          ]
                         },
                         {
                           "C": [
@@ -445,9 +445,9 @@
   },
   "parsed_counts": {
     "ACT": 0,
-    "NSW": 0,
+    "NSW": "'<5'",
     "NT": 0,
-    "QLD": 0,
+    "QLD": "'<5'",
     "SA": 0,
     "TAS": 0,
     "VIC": 0,

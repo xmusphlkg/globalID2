@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-03-19T02:55:54.268758+00:00",
+  "fetched_at": "2026-03-27T12:18:47.061183+00:00",
   "disease": "Invasive Group A Streptococcal disease (iGAS)",
   "year": 2026,
   "month": 3,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1773888954022)/",
-            "rootActivityId": "732aebe5-8d5c-4b1e-a367-af28c16b2340",
+            "timestamp": "/Date(1774613926239)/",
+            "rootActivityId": "30e1e351-888b-4eec-80fa-f10c073b089f",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'46'"
+                          "A0": "'82'"
                         }
                       ]
                     },
@@ -388,43 +388,43 @@
                         {
                           "C": [
                             "NSW",
-                            "'<5'"
+                            "'6'"
                           ]
                         },
                         {
                           "C": [
-                            "NT"
-                          ],
-                          "R": 2
+                            "NT",
+                            "'5'"
+                          ]
                         },
                         {
                           "C": [
                             "QLD",
-                            "'16'"
+                            "'34'"
                           ]
                         },
                         {
                           "C": [
                             "SA",
-                            "'<5'"
+                            "'5'"
                           ]
                         },
                         {
                           "C": [
                             "TAS",
-                            "0L"
+                            "'<5'"
                           ]
                         },
                         {
                           "C": [
                             "VIC",
-                            "'9'"
+                            "'15'"
                           ]
                         },
                         {
                           "C": [
                             "WA",
-                            "'10'"
+                            "'16'"
                           ]
                         }
                       ]
@@ -445,12 +445,12 @@
   },
   "parsed_counts": {
     "ACT": 0,
-    "NSW": "'<5'",
-    "NT": 0,
-    "QLD": 16,
-    "SA": "'<5'",
-    "TAS": 0,
-    "VIC": 9,
-    "WA": 10
+    "NSW": 6,
+    "NT": 5,
+    "QLD": 34,
+    "SA": 5,
+    "TAS": "'<5'",
+    "VIC": 15,
+    "WA": 16
   }
 }

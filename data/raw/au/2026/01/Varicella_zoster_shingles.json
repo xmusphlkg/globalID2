@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-03-19T02:56:05.191585+00:00",
+  "fetched_at": "2026-03-27T12:18:29.110844+00:00",
   "disease": "Varicella zoster (shingles)",
   "year": 2026,
   "month": 1,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1773888964882)/",
-            "rootActivityId": "30b2869c-7f67-437b-963a-ddb9d298df2a",
+            "timestamp": "/Date(1774613908777)/",
+            "rootActivityId": "bd257b06-6738-4b5f-b149-ef056389ddb0",
             "descriptor": {
               "Select": [
                 {
