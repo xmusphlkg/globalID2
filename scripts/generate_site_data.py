@@ -31,6 +31,11 @@ ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT))
 
 from src.core.database import get_db, init_database  # noqa: E402
+from src.core.data_share import (  # noqa: E402
+    get_data_share_raw_base_url,
+    get_data_share_repo_branch,
+    get_data_share_repo_url,
+)
 from src.core.country_library import (  # noqa: E402
     get_country_bootstrap_config,
     get_country_profile,
@@ -47,13 +52,14 @@ DEFAULT_OUTPUT = ROOT / "astro-site" / "src" / "data"
 DEFAULT_DOWNLOAD_OUTPUT = ROOT / "exports" / "site-downloads"
 DEFAULT_PUBLIC_DOWNLOAD_OUTPUT = ROOT / "astro-site" / "public" / "downloads"
 DEFAULT_DOWNLOAD_MANIFEST = ROOT / "astro-site" / "src" / "data" / "downloads.json"
-DEFAULT_DOWNLOAD_REPO_URL = "git@github.com:xmusphlkg/globalID2_data_download.git"
-DEFAULT_DOWNLOAD_REPO_BRANCH = "main"
+DEFAULT_DOWNLOAD_REPO_URL = get_data_share_repo_url()
+DEFAULT_DOWNLOAD_REPO_BRANCH = get_data_share_repo_branch()
 DEFAULT_DOWNLOAD_REPO_WORKDIR = Path("/tmp/globalid2-data-download-publish")
 DEFAULT_DOWNLOAD_COMMIT_MESSAGE = "chore: update generated data downloads"
 DOWNLOAD_REPO_MANAGED_PATHS = ("countries", "diseases", "manifest.json")
-DEFAULT_DOWNLOAD_URL_BASE = (
-    "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main"
+DEFAULT_DOWNLOAD_URL_BASE = get_data_share_raw_base_url(
+    DEFAULT_DOWNLOAD_REPO_URL,
+    DEFAULT_DOWNLOAD_REPO_BRANCH,
 )
 
 SOURCE_DETAILS_BY_SCOPE: dict[tuple[str, str], dict[str, str]] = {
@@ -348,6 +354,10 @@ def publish_download_assets(
     commit_message: str,
 ) -> bool:
     """Publish generated downloads to a dedicated git repository."""
+    if not repo_url.strip():
+        raise RuntimeError(
+            "Missing download repo URL. Set GITHUB_DATA_SHARE_REPO_URL or pass --download-repo-url."
+        )
     manifest_path = source_dir / "manifest.json"
     if not manifest_path.exists():
         raise FileNotFoundError(

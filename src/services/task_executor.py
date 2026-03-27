@@ -184,6 +184,8 @@ async def _dispatch(task: Task) -> Dict[str, Any]:
         return await _run_crawl(task)
     elif task_type == TaskType.GENERATE_REPORT:
         return await _run_report(task)
+    elif task_type == TaskType.EXPORT_DATA:
+        return await _run_export(task)
     else:
         raise ValueError(f"Unsupported task type for execution: {task_type}")
 
@@ -287,3 +289,11 @@ async def _run_report(task: Task) -> Dict[str, Any]:
                 await db.commit()
 
         return output
+
+
+async def _run_export(task: Task) -> Dict[str, Any]:
+    """Execute an EXPORT_DATA task using the site release workflow."""
+    from src.services.data_release_service import data_release_service
+
+    async with task_lifecycle(task, exit_on_cancel=False):
+        return await data_release_service.execute_release_task(task)

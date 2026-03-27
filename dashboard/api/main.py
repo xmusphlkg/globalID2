@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.core.database import get_engine
 from src.core.logging import get_logger
 
-from .routers import ai, countries, crawl, diseases, explorer, overview, quality, reports, sources, tasks
+from .routers import ai, countries, crawl, diseases, explorer, overview, quality, release, reports, sources, tasks
 
 logger = get_logger(__name__)
 
@@ -24,6 +24,7 @@ async def lifespan(app: FastAPI):
     from src.core.task_manager import task_manager
     from .routers.tasks import task_hub
     from src.services.automation_service import automation_service
+    from src.services.data_release_service import data_release_service
     from src.services.task_executor import recover_interrupted_tasks_on_startup
     task_manager.set_broadcast_hook(task_hub.broadcast)
     logger.info("Task broadcast hook registered")
@@ -33,8 +34,10 @@ async def lifespan(app: FastAPI):
         logger.warning(f"Recovered {recovered_count} interrupted task(s) during API startup")
 
     await automation_service.start()
+    await data_release_service.start()
 
     yield
+    await data_release_service.stop()
     await automation_service.stop()
     logger.info("API shutting down")
 
@@ -71,6 +74,7 @@ def create_app() -> FastAPI:
     app.include_router(ai.router, prefix=prefix, tags=["AI"])
     app.include_router(quality.router, prefix=prefix, tags=["Quality"])
     app.include_router(sources.router, prefix=prefix, tags=["Sources"])
+    app.include_router(release.router, prefix=prefix, tags=["Data Release"])
     app.include_router(explorer.router, prefix=prefix, tags=["Explorer"])
 
     @app.get("/api/v1/health", tags=["Health"])
