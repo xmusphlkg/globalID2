@@ -29,6 +29,15 @@ if [[ ! -f ".next/BUILD_ID" ]] || is_truthy "${GLOBALID_DASHBOARD_BUILD_ON_START
 fi
 
 if [[ -f ".next/standalone/server.js" ]]; then
+  mkdir -p ".next/standalone/.next"
+  rm -rf ".next/standalone/.next/static"
+  cp -a ".next/static" ".next/standalone/.next/static"
+
+  if [[ -d "public" ]]; then
+    rm -rf ".next/standalone/public"
+    cp -a "public" ".next/standalone/public"
+  fi
+
   export HOSTNAME="$DASHBOARD_HOST"
   export PORT="$DASHBOARD_PORT"
   exec "$NODE_BIN" ".next/standalone/server.js"
