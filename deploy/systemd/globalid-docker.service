@@ -1,0 +1,13 @@
+[Unit]
+Description=GlobalID infrastructure containers
+After=docker.service network-online.target
+Wants=docker.service network-online.target
+PartOf=globalid-stack.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=__PROJECT_DIR__
+ExecStart=__PROJECT_DIR__/scripts/run_infra_service.sh start
+ExecStop=__PROJECT_DIR__/scripts/run_infra_service.sh stop
+RemainAfterExit=yes
+TimeoutStartSec=0

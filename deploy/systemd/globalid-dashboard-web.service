@@ -1,0 +1,16 @@
+[Unit]
+Description=GlobalID dashboard web
+After=globalid-dashboard-api.service
+Wants=globalid-dashboard-api.service
+PartOf=globalid-stack.target
+
+[Service]
+Type=simple
+User=__RUN_AS_USER__
+Group=__RUN_AS_GROUP__
+WorkingDirectory=__PROJECT_DIR__/dashboard
+EnvironmentFile=-__PROJECT_DIR__/.env
+ExecStart=__PROJECT_DIR__/scripts/run_dashboard_web_service.sh
+Restart=always
+RestartSec=5
+
