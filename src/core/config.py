@@ -28,10 +28,12 @@ class DatabaseSettings(_BaseEnvSettings):
 
     url: str = Field(
         default="postgresql+asyncpg://globalid:globalid_dev_password@localhost:5432/globalid",
+        validation_alias="DATABASE_URL",
         description="异步数据库连接URL",
     )
     url_sync: str = Field(
         default="postgresql://globalid:globalid_dev_password@localhost:5432/globalid",
+        validation_alias="DATABASE_URL_SYNC",
         description="同步数据库连接URL（用于Alembic）",
     )
     echo: bool = Field(default=False, description="是否打印SQL语句")
