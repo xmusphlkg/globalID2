@@ -67,6 +67,57 @@ npm run dev
 
 访问：http://localhost:3000
 
+### 5. 设置开机自动启动（数据库 + dashboard + 站点）
+
+仓库现在内置了一套 `systemd` 模板，会在开机后自动拉起：
+
+- Docker 基础设施（PostgreSQL / Redis / Qdrant）
+- dashboard API
+- dashboard worker
+- dashboard Web
+- Astro 站点
+
+先确保依赖已经安装过一次：
+
+```bash
+docker compose up -d
+cd dashboard && npm install
+cd ../astro-site && npm install
+cd ..
+```
+
+然后执行：
+
+```bash
+sudo ./scripts/install_systemd_services.sh --enable --start
+```
+
+查看状态：
+
+```bash
+systemctl status globalid-stack.target
+journalctl -u globalid-dashboard-api.service -f
+journalctl -u globalid-dashboard-web.service -f
+journalctl -u globalid-site.service -f
+```
+
+如需卸载：
+
+```bash
+sudo ./scripts/install_systemd_services.sh --uninstall
+```
+
+可选开关写在根目录 `.env`：
+
+```env
+GLOBALID_API_PORT=8000
+GLOBALID_DASHBOARD_PORT=3000
+GLOBALID_SITE_PORT=4321
+GLOBALID_DASHBOARD_BUILD_ON_START=0
+GLOBALID_SITE_BUILD_ON_START=0
+GLOBALID_SITE_REGENERATE_ON_START=0
+```
+
 ## 常用操作
 
 ### 数据管理

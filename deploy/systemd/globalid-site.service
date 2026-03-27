@@ -1,0 +1,16 @@
+[Unit]
+Description=GlobalID public site
+After=network-online.target globalid-docker.service
+Wants=network-online.target globalid-docker.service
+PartOf=globalid-stack.target
+
+[Service]
+Type=simple
+User=__RUN_AS_USER__
+Group=__RUN_AS_GROUP__
+WorkingDirectory=__PROJECT_DIR__
+EnvironmentFile=-__PROJECT_DIR__/.env
+ExecStart=__PROJECT_DIR__/scripts/run_site_service.sh
+Restart=always
+RestartSec=5
+

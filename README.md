@@ -293,6 +293,55 @@ npm run build
 npx wrangler pages deploy dist
 ```
 
+## Boot Autostart
+
+If you want the database containers, dashboard API, dashboard worker, dashboard web, and Astro site to come back automatically after the machine boots, this repository now includes systemd templates and an installer script.
+
+1. Make sure dependencies are already installed once on this machine:
+
+```bash
+docker compose up -d
+cd dashboard && npm install
+cd ../astro-site && npm install
+cd ..
+```
+
+2. Install and enable the services:
+
+```bash
+sudo ./scripts/install_systemd_services.sh --enable --start
+```
+
+This installs:
+
+- `globalid-docker.service`
+- `globalid-dashboard-api.service`
+- `globalid-dashboard-worker.service`
+- `globalid-dashboard-web.service`
+- `globalid-site.service`
+- `globalid-stack.target`
+
+Useful commands:
+
+```bash
+systemctl status globalid-stack.target
+journalctl -u globalid-dashboard-api.service -f
+journalctl -u globalid-dashboard-web.service -f
+journalctl -u globalid-site.service -f
+sudo ./scripts/install_systemd_services.sh --uninstall
+```
+
+Optional `.env` knobs for autostart behavior:
+
+- `GLOBALID_API_PORT=8000`
+- `GLOBALID_DASHBOARD_PORT=3000`
+- `GLOBALID_SITE_PORT=4321`
+- `GLOBALID_DASHBOARD_BUILD_ON_START=1` to rebuild the dashboard before starting it
+- `GLOBALID_SITE_BUILD_ON_START=1` to rebuild the Astro site before serving it
+- `GLOBALID_SITE_REGENERATE_ON_START=1` to rerun `scripts/generate_site_data.py` from the database on boot before rebuilding the site
+
+The site service serves the generated `astro-site/dist/` directory over Python's built-in static HTTP server. If you change site data but do not set `GLOBALID_SITE_REGENERATE_ON_START=1`, the service will continue serving the last built output.
+
 ## Common Workflows
 
 ### Rebuild the database from curated files

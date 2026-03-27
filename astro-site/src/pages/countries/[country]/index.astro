@@ -4,6 +4,7 @@ import ReportLayout from '../../../layouts/ReportLayout.astro';
 import StatBar from '../../../components/StatBar.astro';
 import ReportCard from '../../../components/ReportCard.astro';
 import CountryFlag from '../../../components/CountryFlag.astro';
+import DownloadPanel from '../../../components/DownloadPanel.astro';
 import EpidemicCurve from '../../../components/charts/EpidemicCurve';
 import DiseaseHeatmap from '../../../components/charts/DiseaseHeatmap';
 import ComparisonTable from '../../../components/charts/ComparisonTable';
@@ -21,9 +22,11 @@ export async function getStaticPaths() {
 const { country } = Astro.params;
 const dataPath = resolve(`./src/data/countries/${country}.json`);
 const reportsIndexPath = resolve('./src/data/reports/index.json');
+const downloadsPath = resolve('./src/data/downloads.json');
 
 let countryData: any = null;
 let reports: any[] = [];
+let countryDownload: any = null;
 
 if (existsSync(dataPath)) {
   countryData = JSON.parse(readFileSync(dataPath, 'utf-8'));
@@ -33,6 +36,12 @@ if (existsSync(reportsIndexPath)) {
   reports = allReports
     .filter(r => r.country_code?.toLowerCase() === country)
     .slice(0, 6);
+}
+if (existsSync(downloadsPath)) {
+  const downloads = JSON.parse(readFileSync(downloadsPath, 'utf-8')) as any;
+  countryDownload = (downloads.countries ?? []).find(
+    (entry: any) => entry.code?.toLowerCase() === country
+  ) ?? null;
 }
 
 function fmtNum(n: number | null | undefined) {
@@ -100,6 +109,15 @@ const diseaseRows = countryData
 
     <!-- Stats -->
     {stats.length > 0 && <StatBar stats={stats} />}
+
+    {countryDownload && (
+      <DownloadPanel
+        entry={countryDownload}
+        title="Download Country Dataset"
+        descriptionEn="Download the full country dataset backing this page in JSON or CSV, with source metadata included."
+        descriptionZh="下载当前国家页面对应的完整数据集，支持 JSON 和 CSV，并附带数据源信息。"
+      />
+    )}
 
     <!-- Epidemic Curve -->
     <div>
