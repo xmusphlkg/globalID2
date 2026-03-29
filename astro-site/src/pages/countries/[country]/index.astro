@@ -64,7 +64,19 @@ const stats = countryData
   : [];
 
 const diseaseRows = countryData
-  ? Object.values(countryData.disease_series as Record<string, any>)
+  ? Object.values(countryData.disease_series as Record<string, any>).map((entry: any) => ({
+      disease_id: entry.disease_id,
+      name_en: entry.name_en,
+      name_zh: entry.name_zh,
+      category: entry.category,
+      slug: entry.slug,
+      total_cases: entry.total_cases,
+      total_deaths: entry.total_deaths,
+      latest_cases: entry.latest_cases,
+      latest_deaths: entry.latest_deaths,
+      incidence_rate: entry.incidence_rate,
+      mortality_rate: entry.mortality_rate,
+    }))
   : [];
 
 const coverageLabel = countryData?.date_range
@@ -75,6 +87,7 @@ const chartSourceMeta = buildChartSourceMeta(
   countryDownload,
   `${countryData?.country_name ?? country.toUpperCase()} surveillance dataset`
 );
+const countryDataUrl = countryDownload?.site_json_path ?? `/site-data/countries/${country}.json`;
 ---
 
 <ReportLayout
@@ -151,7 +164,7 @@ const chartSourceMeta = buildChartSourceMeta(
         {countryData?.disease_series ? (
           <EpidemicCurve
             client:only="react"
-            series={countryData.disease_series}
+            dataUrl={countryDataUrl}
             topN={10}
             height={420}
             sourceMeta={chartSourceMeta}
@@ -184,8 +197,7 @@ const chartSourceMeta = buildChartSourceMeta(
         {(countryData?.disease_series || countryData?.heatmap?.z?.length) ? (
           <DiseaseHeatmap
             client:only="react"
-            data={countryData.heatmap}
-            series={countryData.disease_series}
+            dataUrl={countryDataUrl}
             height={600}
             sourceMeta={chartSourceMeta}
           >
@@ -219,7 +231,7 @@ const chartSourceMeta = buildChartSourceMeta(
             client:only="react"
             rows={diseaseRows}
             countryCode={country}
-            series={countryData.disease_series}
+            dataUrl={countryDataUrl}
           >
             <div slot="fallback" class="chart-loading-shell" aria-hidden="true">
               <div class="chart-loading-toolbar">

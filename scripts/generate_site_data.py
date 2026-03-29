@@ -49,6 +49,7 @@ from src.core.source_scopes import scope_display_label  # noqa: E402
 # Config defaults
 # ─────────────────────────────────────────────────────────────
 DEFAULT_OUTPUT = ROOT / "astro-site" / "src" / "data"
+DEFAULT_PUBLIC_SITE_DATA_OUTPUT = ROOT / "astro-site" / "public" / "site-data"
 DEFAULT_DOWNLOAD_OUTPUT = ROOT / "exports" / "site-downloads"
 DEFAULT_PUBLIC_DOWNLOAD_OUTPUT = ROOT / "astro-site" / "public" / "downloads"
 DEFAULT_DOWNLOAD_MANIFEST = ROOT / "astro-site" / "src" / "data" / "downloads.json"
@@ -265,6 +266,13 @@ def clean_generated_dir(dir_path: Path) -> None:
         for file_path in dir_path.glob(pattern):
             if file_path.is_file():
                 file_path.unlink()
+
+
+def reset_public_data_dir(dir_path: Path) -> None:
+    """Replace generated public data files while preserving other public assets."""
+    if dir_path.exists():
+        shutil.rmtree(dir_path)
+    dir_path.mkdir(parents=True, exist_ok=True)
 
 
 def build_download_url(base_url: str, relative_path: str) -> str:
@@ -1519,6 +1527,100 @@ def build_country_data(
     }
 
 
+def build_country_site_data(country_data: dict) -> dict:
+    """Build a compact country payload used only by the site charts."""
+    disease_series = country_data.get("disease_series") or {}
+    shared_dates = sorted(
+        {
+            date
+            for series in disease_series.values()
+            for date in (series.get("dates") or [])
+            if date
+        }
+    )
+    date_index = {date: index for index, date in enumerate(shared_dates)}
+    source_labels: list[str] = []
+    source_codes: dict[str, int] = {}
+
+    def register_source(label: str | None) -> int | None:
+        if not label:
+            return None
+        existing = source_codes.get(label)
+        if existing is not None:
+            return existing
+        code = len(source_labels)
+        source_codes[label] = code
+        source_labels.append(label)
+        return code
+
+    compact_series = []
+    for entry in disease_series.values():
+        dates = entry.get("dates") or []
+        incidence_rates = entry.get("incidence_rates") or []
+        incidence_sources = entry.get("incidence_sources") or []
+
+        ri: list[int] = []
+        rv: list[float] = []
+        rs: list[int | None] = []
+        for point_index, value in enumerate(incidence_rates):
+            if value is None:
+                continue
+            ri.append(point_index)
+            rv.append(round(float(value), 4))
+            source_label = (
+                incidence_sources[point_index]
+                if point_index < len(incidence_sources)
+                else None
+            )
+            rs.append(register_source(source_label))
+
+        compact_entry = {
+            "id": entry.get("disease_id"),
+            "en": entry.get("name_en"),
+            "zh": entry.get("name_zh"),
+            "cat": entry.get("category"),
+            "slug": entry.get("slug"),
+            "tc": entry.get("total_cases", 0),
+            "td": entry.get("total_deaths", 0),
+            "lc": entry.get("latest_cases", 0),
+            "ld": entry.get("latest_deaths", 0),
+            "x": [date_index[date] for date in dates if date in date_index],
+            "c": entry.get("cases") or [],
+            "w": [round(float(value), 2) for value in (entry.get("weekly_equiv_cases") or [])],
+            "d": entry.get("deaths") or [],
+        }
+        if ri:
+            compact_entry["ri"] = ri
+            compact_entry["rv"] = rv
+            if any(code is not None for code in rs):
+                compact_entry["rs"] = rs
+        compact_series.append(compact_entry)
+
+    heatmap = country_data.get("heatmap") or {}
+    return {
+        "v": 1,
+        "meta": {
+            "cc": country_data.get("country_code"),
+            "cn": country_data.get("country_name"),
+            "tc": country_data.get("total_cases"),
+            "td": country_data.get("total_deaths"),
+            "dc": country_data.get("disease_count"),
+            "dr": country_data.get("date_range"),
+        },
+        "dates": shared_dates,
+        "sources": source_labels,
+        "series": compact_series,
+        "heatmap": {
+            "months": heatmap.get("months") or [],
+            "disease_ids": heatmap.get("diseases") or [],
+            "z": [
+                [round(float(value), 4) for value in row]
+                for row in (heatmap.get("z") or [])
+            ],
+        },
+    }
+
+
 def build_disease_data(
     disease_id: str,
     disease_info: dict,
@@ -1583,6 +1685,99 @@ def build_disease_data(
         },
         "total_cases": sum(cs["total_cases"] for cs in country_series.values()),
         "total_deaths": sum(cs["total_deaths"] for cs in country_series.values()),
+    }
+
+
+def build_disease_site_data(
+    disease_data: dict,
+    country_name_by_code: dict[str, str] | None = None,
+) -> dict:
+    """Build a compact disease payload used only by the site charts."""
+    country_series = disease_data.get("country_series") or {}
+    shared_dates = sorted(
+        {
+            date
+            for series in country_series.values()
+            for date in (series.get("dates") or [])
+            if date
+        }
+    )
+    date_index = {date: index for index, date in enumerate(shared_dates)}
+    source_labels: list[str] = []
+    source_codes: dict[str, int] = {}
+
+    def register_source(label: str | None) -> int | None:
+        if not label:
+            return None
+        existing = source_codes.get(label)
+        if existing is not None:
+            return existing
+        code = len(source_labels)
+        source_codes[label] = code
+        source_labels.append(label)
+        return code
+
+    compact_series = []
+    for country_code, entry in country_series.items():
+        dates = entry.get("dates") or []
+        incidence_rates = entry.get("incidence_rates") or []
+        incidence_sources = entry.get("incidence_sources") or []
+
+        ri: list[int] = []
+        rv: list[float] = []
+        rs: list[int | None] = []
+        for point_index, value in enumerate(incidence_rates):
+            if value is None:
+                continue
+            ri.append(point_index)
+            rv.append(round(float(value), 4))
+            source_label = (
+                incidence_sources[point_index]
+                if point_index < len(incidence_sources)
+                else None
+            )
+            rs.append(register_source(source_label))
+
+        compact_entry = {
+            "cc": country_code,
+            "n": (country_name_by_code or {}).get(country_code) or country_code,
+            "tc": entry.get("total_cases", 0),
+            "td": entry.get("total_deaths", 0),
+            "x": [date_index[date] for date in dates if date in date_index],
+            "c": entry.get("cases") or [],
+            "w": [
+                round(float(value), 2)
+                for value in (entry.get("weekly_equiv_cases") or [])
+            ],
+            "d": entry.get("deaths") or [],
+        }
+        if ri:
+            compact_entry["ri"] = ri
+            compact_entry["rv"] = rv
+            if any(code is not None for code in rs):
+                compact_entry["rs"] = rs
+        compact_series.append(compact_entry)
+
+    global_monthly = disease_data.get("global_monthly") or {}
+    return {
+        "v": 1,
+        "meta": {
+            "id": disease_data.get("disease_id"),
+            "en": disease_data.get("name_en"),
+            "zh": disease_data.get("name_zh"),
+            "cat": disease_data.get("category"),
+            "tc": disease_data.get("total_cases"),
+            "td": disease_data.get("total_deaths"),
+            "cc": len(country_series),
+        },
+        "dates": shared_dates,
+        "sources": source_labels,
+        "series": compact_series,
+        "monthly": {
+            "months": global_monthly.get("months") or [],
+            "cases": global_monthly.get("cases") or [],
+            "deaths": global_monthly.get("deaths") or [],
+        },
     }
 
 
@@ -1686,6 +1881,7 @@ async def export(
             country_data = country_export["country_data"]
             country_source_info = country_export["source_info"]
             country_data["generated_at"] = generated_at
+            country_site_data = build_country_site_data(country_data)
             country_download_rows = build_country_download_rows(
                 country_data, generated_at, country_source_info
             )
@@ -1712,6 +1908,7 @@ async def export(
                 },
                 "records": country_download_rows,
             }
+            country_export["site_data"] = country_site_data
             country_export["download_rows"] = country_download_rows
             country_export["download_payload"] = country_download_payload
             country_download_entries.append(
@@ -1731,6 +1928,7 @@ async def export(
                     ),
                     "relative_json_path": f"countries/{code.lower()}.json",
                     "relative_csv_path": f"countries/{code.lower()}.csv",
+                    "site_json_path": f"/site-data/countries/{code.lower()}.json",
                     "source_info": country_source_info,
                 }
             )
@@ -1739,6 +1937,10 @@ async def export(
         for disease in diseases:
             did = disease["disease_id"]
             disease_data = build_disease_data(did, disease, all_records_by_country)
+            disease_site_data = build_disease_site_data(
+                disease_data,
+                country_name_by_code,
+            )
             disease_countries = sorted((disease_data.get("country_series") or {}).keys())
             disease_source_info = []
             for country_code in disease_countries:
@@ -1780,6 +1982,7 @@ async def export(
                 {
                     "disease_id": did,
                     "disease_data": disease_data,
+                    "site_data": disease_site_data,
                     "download_rows": disease_download_rows,
                     "download_payload": disease_download_payload,
                 }
@@ -1810,6 +2013,7 @@ async def export(
                     ),
                     "relative_json_path": f"diseases/{did.lower()}.json",
                     "relative_csv_path": f"diseases/{did.lower()}.csv",
+                    "site_json_path": f"/site-data/diseases/{did.lower()}.json",
                     "source_info": disease_source_info,
                 }
             )
@@ -1820,10 +2024,13 @@ async def export(
                 report_details[rep["id"]] = detail
 
     remove_stale_public_downloads(download_output_dir)
+    public_site_data_dir = DEFAULT_PUBLIC_SITE_DATA_OUTPUT
     output_dir.mkdir(parents=True, exist_ok=True)
     (output_dir / "countries").mkdir(exist_ok=True)
     (output_dir / "diseases").mkdir(exist_ok=True)
     (output_dir / "reports").mkdir(exist_ok=True)
+    reset_public_data_dir(public_site_data_dir / "countries")
+    reset_public_data_dir(public_site_data_dir / "diseases")
     download_output_dir.mkdir(parents=True, exist_ok=True)
     (download_output_dir / "countries").mkdir(exist_ok=True)
     (download_output_dir / "diseases").mkdir(exist_ok=True)
@@ -1839,10 +2046,16 @@ async def export(
     for country_export in country_exports:
         code = country_export["code"]
         country_data = country_export["country_data"]
+        site_data = country_export["site_data"]
         country_download_rows = country_export["download_rows"]
         country_download_payload = country_export["download_payload"]
+        country_json = json.dumps(country_data, ensure_ascii=False, indent=2)
         (output_dir / "countries" / f"{code.lower()}.json").write_text(
-            json.dumps(country_data, ensure_ascii=False, indent=2), encoding="utf-8"
+            country_json, encoding="utf-8"
+        )
+        (public_site_data_dir / "countries" / f"{code.lower()}.json").write_text(
+            json.dumps(site_data, ensure_ascii=False, separators=(",", ":")),
+            encoding="utf-8",
         )
         country_json_path = download_output_dir / "countries" / f"{code.lower()}.json"
         country_csv_path = download_output_dir / "countries" / f"{code.lower()}.csv"
@@ -1856,10 +2069,15 @@ async def export(
     for disease_export in disease_exports:
         did = disease_export["disease_id"]
         disease_data = disease_export["disease_data"]
+        disease_site_data = disease_export["site_data"]
         disease_download_rows = disease_export["download_rows"]
         disease_download_payload = disease_export["download_payload"]
         (output_dir / "diseases" / f"{did.lower()}.json").write_text(
             json.dumps(disease_data, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        (public_site_data_dir / "diseases" / f"{did.lower()}.json").write_text(
+            json.dumps(disease_site_data, ensure_ascii=False, separators=(",", ":")),
+            encoding="utf-8",
         )
         disease_json_path = download_output_dir / "diseases" / f"{did.lower()}.json"
         disease_csv_path = download_output_dir / "diseases" / f"{did.lower()}.csv"

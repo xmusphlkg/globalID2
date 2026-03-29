@@ -2,8 +2,8 @@
 // src/pages/diseases/[disease].astro — Individual disease detail page
 import ReportLayout from '../../layouts/ReportLayout.astro';
 import DownloadPanel from '../../components/DownloadPanel.astro';
-import MonthlyBar from '../../components/charts/MonthlyBar';
-import EpidemicCurve from '../../components/charts/EpidemicCurve';
+import DiseaseMonthlyBar from '../../components/charts/DiseaseMonthlyBar';
+import DiseaseCountryCurve from '../../components/charts/DiseaseCountryCurve';
 import { buildChartSourceMeta } from '../../utils/chartMeta';
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
@@ -67,22 +67,6 @@ if (diseaseData?.global_monthly?.cases?.length > 0) {
   peakMonth = diseaseData.global_monthly.months[maxIdx] ?? '—';
 }
 
-const countrySeriesForCurve: Record<string, any> = {};
-for (const [cc, cs] of Object.entries(diseaseData?.country_series ?? {})) {
-  const s = cs as any;
-  countrySeriesForCurve[cc] = {
-    disease_id: diseaseId,
-    name_en: cc.toUpperCase(),
-    name_zh: cc.toUpperCase(),
-    dates: s.dates,
-    cases: s.cases,
-    weekly_equiv_cases: s.weekly_equiv_cases ?? s.cases,
-    deaths: s.deaths,
-    incidence_rates: s.incidence_rates ?? s.dates.map(() => null),
-    total_cases: s.total_cases,
-  };
-}
-
 const coverageDates = Object.values(diseaseData?.country_series ?? {})
   .flatMap((series: any) => Array.isArray(series?.dates) ? series.dates : []);
 const coverageStart = coverageDates[0] ?? null;
@@ -97,6 +81,7 @@ const chartSourceMeta = buildChartSourceMeta(
   diseaseDownload,
   `${diseaseData?.name_en ?? disease} surveillance dataset`
 );
+const diseaseDataUrl = diseaseDownload?.site_json_path ?? `/site-data/diseases/${diseaseId.toLowerCase()}.json`;
 ---
 
 <ReportLayout
@@ -177,7 +162,7 @@ const chartSourceMeta = buildChartSourceMeta(
           </div>
         </section>
 
-        {Object.keys(countrySeriesForCurve).length > 0 && (
+        {countryCount > 0 && (
           <section class="figure-panel">
             <p class="figure-kicker" data-lang-en="Figure 1" data-lang-zh="图 1">Figure 1</p>
             <h2 class="figure-title" data-lang-en="Full Historical Trend" data-lang-zh="完整历史趋势">
@@ -187,10 +172,10 @@ const chartSourceMeta = buildChartSourceMeta(
               Country-level historical trajectories for this disease across all available reporting jurisdictions.
             </p>
             <div class="mt-6">
-              <EpidemicCurve
+              <DiseaseCountryCurve
                 client:only="react"
-                series={countrySeriesForCurve}
-                topN={Object.keys(countrySeriesForCurve).length}
+                dataUrl={diseaseDataUrl}
+                topN={countryCount}
                 height={380}
                 sourceMeta={chartSourceMeta}
               />
@@ -208,9 +193,9 @@ const chartSourceMeta = buildChartSourceMeta(
               Calendar-month totals compared year over year to highlight seasonality and structural shifts in reporting intensity.
             </p>
             <div class="mt-6">
-              <MonthlyBar
+              <DiseaseMonthlyBar
                 client:only="react"
-                data={diseaseData.global_monthly}
+                dataUrl={diseaseDataUrl}
                 height={360}
                 sourceMeta={chartSourceMeta}
               />

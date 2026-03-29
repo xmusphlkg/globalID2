@@ -6,27 +6,19 @@ import EChartsReact from 'echarts-for-react/lib/core';
 import echarts from '../../lib/echarts';
 import ChartFrame from './ChartFrame';
 import type { ChartSourceMeta } from '../../utils/chartMeta';
+import {
+  loadCountryDataset,
+  type CountryDatasetHeatmap,
+  type CountryDatasetSeriesEntry,
+} from './countryDataset';
 
-interface HeatmapData {
-  diseases: string[];
-  disease_labels: string[];
-  months: string[];
-  z: number[][];
-}
-
-interface DiseaseSeriesEntry {
-  disease_id: string;
-  name_en: string;
-  name_zh: string;
-  category?: string;
-  dates: string[];
-  cases: number[];
-  total_cases: number;
-}
+type HeatmapData = CountryDatasetHeatmap;
+type DiseaseSeriesEntry = CountryDatasetSeriesEntry;
 
 interface Props {
   data?: HeatmapData | null;
   series?: Record<string, DiseaseSeriesEntry>;
+  dataUrl?: string;
   height?: number;
   sourceMeta?: ChartSourceMeta | null;
 }
@@ -51,7 +43,10 @@ function isSummaryRow(diseaseId?: string, label?: string) {
   return normalizedId === 'd999' || normalizedLabel === 'total' || normalizedLabel === 'summary' || normalizedLabel === '合计';
 }
 
-export default function DiseaseHeatmap({ data = null, series, height = 600, sourceMeta = null }: Props) {
+export default function DiseaseHeatmap({ data = null, series: initialSeries, dataUrl, height = 600, sourceMeta = null }: Props) {
+  const [loadedData, setLoadedData] = useState<HeatmapData | null>(data);
+  const [series, setSeries] = useState<Record<string, DiseaseSeriesEntry> | undefined>(initialSeries);
+  const [loadError, setLoadError] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     if (typeof document === 'undefined') return 'light';
     return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
@@ -70,6 +65,33 @@ export default function DiseaseHeatmap({ data = null, series, height = 600, sour
     observer.observe(root, { attributes: true, attributeFilter: ['data-theme'] });
     return () => observer.disconnect();
   }, []);
+
+  useEffect(() => {
+    if (data && ((data.z?.length ?? 0) > 0 || initialSeries)) {
+      setLoadedData(data);
+      setSeries(initialSeries);
+      setLoadError(false);
+      return;
+    }
+    if (!dataUrl) return;
+
+    let cancelled = false;
+    loadCountryDataset(dataUrl)
+      .then((dataset) => {
+        if (cancelled) return;
+        setLoadedData(dataset.heatmap ?? null);
+        setSeries(dataset.disease_series);
+        setLoadError(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setLoadError(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [data, dataUrl, initialSeries]);
 
   const chartColors = useMemo(() => (
     theme === 'light'
@@ -129,21 +151,21 @@ export default function DiseaseHeatmap({ data = null, series, height = 600, sour
       };
     }
 
-    if (!data || !data.z || data.z.length === 0) {
+    if (!loadedData || !loadedData.z || loadedData.z.length === 0) {
       return { diseases: [], disease_labels: [], months: [], z: [] };
     }
 
-    const rowIndexes = data.disease_labels
+    const rowIndexes = loadedData.disease_labels
       .map((_, index) => index)
-      .filter((index) => !isSummaryRow(data.diseases?.[index], data.disease_labels[index]));
+      .filter((index) => !isSummaryRow(loadedData.diseases?.[index], loadedData.disease_labels[index]));
 
     return {
-      diseases: rowIndexes.map((index) => data.diseases[index]),
-      disease_labels: rowIndexes.map((index) => data.disease_labels[index]),
-      months: data.months,
-      z: rowIndexes.map((index) => data.z[index]),
+      diseases: rowIndexes.map((index) => loadedData.diseases[index]),
+      disease_labels: rowIndexes.map((index) => loadedData.disease_labels[index]),
+      months: loadedData.months,
+      z: rowIndexes.map((index) => loadedData.z[index]),
     };
-  }, [data, lang, series]);
+  }, [loadedData, lang, series]);
 
   const hasData = activeData.z.length > 0 && activeData.months.length > 0;
 
@@ -368,10 +390,18 @@ export default function DiseaseHeatmap({ data = null, series, height = 600, sour
     </>
   );
 
+  if (loadError) {
+    return (
+      <div className="chart-shell flex items-center justify-center text-slate-500 text-sm min-h-[160px]">
+        {lang === 'zh' ? '热图数据加载失败' : 'Failed to load heatmap data'}
+      </div>
+    );
+  }
+
   if (!hasData) {
     return (
       <div className="chart-shell flex items-center justify-center text-slate-500 text-sm min-h-[160px]">
-        {lang === 'zh' ? '暂无数据' : 'No data available'}
+        {dataUrl ? (lang === 'zh' ? '热图数据加载中' : 'Loading heatmap data') : (lang === 'zh' ? '暂无数据' : 'No data available')}
       </div>
     );
   }

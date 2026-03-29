@@ -2,6 +2,7 @@
 // Sortable, filterable disease comparison table with optional deaths/CFR columns.
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { loadCountryDataset, type CountryDatasetSeriesEntry } from './countryDataset';
 
 interface DiseaseRow {
   disease_id: string;
@@ -20,12 +21,8 @@ interface DiseaseRow {
 interface Props {
   rows: DiseaseRow[];
   countryCode?: string;
-  series?: Record<string, {
-    disease_id: string;
-    dates: string[];
-    cases: number[];
-    weekly_equiv_cases: number[];
-  }>;
+  series?: Record<string, CountryDatasetSeriesEntry>;
+  dataUrl?: string;
 }
 
 type SortKey = 'name_en' | 'total_cases' | 'total_deaths' | 'latest_cases' | 'category';
@@ -112,7 +109,9 @@ function Sparkline({
   );
 }
 
-export default function ComparisonTable({ rows, countryCode, series }: Props) {
+export default function ComparisonTable({ rows, countryCode, series: initialSeries, dataUrl }: Props) {
+  const [series, setSeries] = useState<Record<string, CountryDatasetSeriesEntry> | undefined>(initialSeries);
+  const [loadError, setLoadError] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>('total_cases');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [catFilter, setCatFilter] = useState<string>('All');
@@ -154,6 +153,31 @@ export default function ComparisonTable({ rows, countryCode, series }: Props) {
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
+  useEffect(() => {
+    if (initialSeries && Object.keys(initialSeries).length > 0) {
+      setSeries(initialSeries);
+      setLoadError(false);
+      return;
+    }
+    if (!dataUrl) return;
+
+    let cancelled = false;
+    loadCountryDataset(dataUrl)
+      .then((dataset) => {
+        if (cancelled) return;
+        setSeries(dataset.disease_series);
+        setLoadError(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setLoadError(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [dataUrl, initialSeries]);
+
   function handleSort(key: SortKey) {
     if (sortKey === key) {
       setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -187,6 +211,14 @@ export default function ComparisonTable({ rows, countryCode, series }: Props) {
 
   const categories = ['All', ...CATEGORY_ORDER];
   const columnCount = 5 + (showDeaths ? 1 : 0) + (showCfr ? 1 : 0);
+
+  if (loadError) {
+    return (
+      <div className="chart-shell flex items-center justify-center text-slate-500 text-sm min-h-[160px]">
+        {lang === 'zh' ? '表格趋势数据加载失败' : 'Failed to load table trend data'}
+      </div>
+    );
+  }
 
   const SortIcon = ({ col }: { col: SortKey }) =>
     sortKey === col ? (

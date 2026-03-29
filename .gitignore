@@ -91,3 +91,4 @@ tests/fixtures/ai_test_data/
 # System files
 .DS_Store
 Thumbs.db
+astro-site/public/site-data/

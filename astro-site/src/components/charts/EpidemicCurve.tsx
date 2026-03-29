@@ -7,23 +7,13 @@ import EChartsReact from 'echarts-for-react/lib/core';
 import echarts from '../../lib/echarts';
 import ChartFrame from './ChartFrame';
 import type { ChartSourceMeta } from '../../utils/chartMeta';
+import { loadCountryDataset, type CountryDatasetSeriesEntry } from './countryDataset';
 
-interface DiseaseSeries {
-  disease_id: string;
-  name_en: string;
-  name_zh: string;
-  category?: string;
-  dates: string[];
-  cases: number[];
-  weekly_equiv_cases: number[];
-  deaths: number[];
-  incidence_rates: (number | null)[];
-  incidence_sources?: (string | null)[];
-  total_cases: number;
-}
+type DiseaseSeries = CountryDatasetSeriesEntry;
 
 interface Props {
-  series: Record<string, DiseaseSeries>;
+  series?: Record<string, DiseaseSeries>;
+  dataUrl?: string;
   title?: string;
   topN?: number;
   diseasIds?: string[];
@@ -47,7 +37,9 @@ function formatCellValue(value: number | null | undefined, digits = 0) {
   return digits > 0 ? value.toFixed(digits) : value.toLocaleString();
 }
 
-export default function EpidemicCurve({ series, title, topN = 10, diseasIds, height = 420, sourceMeta = null }: Props) {
+export default function EpidemicCurve({ series: initialSeries, dataUrl, title, topN = 10, diseasIds, height = 420, sourceMeta = null }: Props) {
+  const [series, setSeries] = useState<Record<string, DiseaseSeries>>(initialSeries ?? {});
+  const [loadError, setLoadError] = useState(false);
   const [metric, setMetric] = useState<Metric>('weekly_equiv_cases');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [sidebarQuery, setSidebarQuery] = useState('');
@@ -69,6 +61,31 @@ export default function EpidemicCurve({ series, title, topN = 10, diseasIds, hei
     observer.observe(root, { attributes: true, attributeFilter: ['data-theme'] });
     return () => observer.disconnect();
   }, []);
+
+  useEffect(() => {
+    if (initialSeries && Object.keys(initialSeries).length > 0) {
+      setSeries(initialSeries);
+      setLoadError(false);
+      return;
+    }
+    if (!dataUrl) return;
+
+    let cancelled = false;
+    loadCountryDataset(dataUrl)
+      .then((dataset) => {
+        if (cancelled) return;
+        setSeries(dataset.disease_series ?? {});
+        setLoadError(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setLoadError(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [dataUrl, initialSeries]);
 
   const chartColors = useMemo(() => (
     theme === 'light'
@@ -312,6 +329,22 @@ export default function EpidemicCurve({ series, title, topN = 10, diseasIds, hei
       };
     }),
   }), [chartColors, lang, metric, series, seriesMeta, theme, title]);
+
+  if (loadError) {
+    return (
+      <div className="chart-shell flex items-center justify-center text-slate-500 text-sm min-h-[160px]">
+        {lang === 'zh' ? '图表数据加载失败' : 'Failed to load chart data'}
+      </div>
+    );
+  }
+
+  if (Object.keys(series).length === 0) {
+    return (
+      <div className="chart-shell flex items-center justify-center text-slate-500 text-sm min-h-[160px]">
+        {lang === 'zh' ? '图表数据加载中' : 'Loading chart data'}
+      </div>
+    );
+  }
 
   const toolbar = (
     <>

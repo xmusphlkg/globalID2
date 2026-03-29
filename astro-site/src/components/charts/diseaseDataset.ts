@@ -1,0 +1,123 @@
+export interface DiseaseDatasetSeriesEntry {
+  disease_id: string;
+  name_en: string;
+  name_zh: string;
+  dates: string[];
+  cases: number[];
+  weekly_equiv_cases: number[];
+  deaths: number[];
+  incidence_rates: (number | null)[];
+  incidence_sources?: (string | null)[];
+  total_cases: number;
+  total_deaths?: number;
+}
+
+export interface DiseaseDatasetMonthlyData {
+  months: string[];
+  cases: number[];
+  deaths: number[];
+}
+
+export interface DiseaseDataset {
+  country_series?: Record<string, DiseaseDatasetSeriesEntry>;
+  global_monthly?: DiseaseDatasetMonthlyData | null;
+}
+
+interface CompactDiseaseDatasetSeriesEntry {
+  cc: string;
+  n?: string;
+  tc?: number;
+  td?: number;
+  x: number[];
+  c: number[];
+  w: number[];
+  d: number[];
+  ri?: number[];
+  rv?: number[];
+  rs?: Array<number | null>;
+}
+
+interface CompactDiseaseDataset {
+  v: number;
+  dates: string[];
+  sources?: string[];
+  series: CompactDiseaseDatasetSeriesEntry[];
+  monthly?: DiseaseDatasetMonthlyData | null;
+}
+
+const cache = new Map<string, Promise<DiseaseDataset>>();
+
+function isCompactDiseaseDataset(value: unknown): value is CompactDiseaseDataset {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as Partial<CompactDiseaseDataset>;
+  return candidate.v === 1 && Array.isArray(candidate.dates) && Array.isArray(candidate.series);
+}
+
+function normalizeDiseaseDataset(raw: DiseaseDataset | CompactDiseaseDataset): DiseaseDataset {
+  if (!isCompactDiseaseDataset(raw)) {
+    return raw;
+  }
+
+  const sourceLabels = raw.sources ?? [];
+  const countrySeries = Object.fromEntries(
+    raw.series.map((entry) => {
+      const dates = entry.x.map((index) => raw.dates[index] ?? '');
+      const incidenceRates = new Array<number | null>(dates.length).fill(null);
+      const incidenceSources = new Array<string | null>(dates.length).fill(null);
+
+      (entry.ri ?? []).forEach((pointIndex, sparseIndex) => {
+        if (pointIndex < 0 || pointIndex >= dates.length) return;
+        incidenceRates[pointIndex] = entry.rv?.[sparseIndex] ?? null;
+        const sourceCode = entry.rs?.[sparseIndex];
+        incidenceSources[pointIndex] = sourceCode == null ? null : (sourceLabels[sourceCode] ?? null);
+      });
+
+      return [
+        entry.cc,
+        {
+          disease_id: entry.cc,
+          name_en: entry.n ?? entry.cc,
+          name_zh: entry.cc,
+          dates,
+          cases: entry.c ?? [],
+          weekly_equiv_cases: entry.w ?? [],
+          deaths: entry.d ?? [],
+          incidence_rates: incidenceRates,
+          incidence_sources: incidenceSources,
+          total_cases: entry.tc ?? 0,
+          total_deaths: entry.td ?? 0,
+        } satisfies DiseaseDatasetSeriesEntry,
+      ];
+    })
+  );
+
+  return {
+    country_series: countrySeries,
+    global_monthly: raw.monthly ?? null,
+  };
+}
+
+export function loadDiseaseDataset(dataUrl?: string | null): Promise<DiseaseDataset> {
+  if (!dataUrl) {
+    return Promise.resolve({});
+  }
+
+  const cached = cache.get(dataUrl);
+  if (cached) return cached;
+
+  const request = fetch(dataUrl)
+    .then(async (response) => {
+      if (!response.ok) {
+        throw new Error(`Failed to load disease dataset: ${response.status}`);
+      }
+      const raw = await response.json();
+      return normalizeDiseaseDataset(raw as DiseaseDataset | CompactDiseaseDataset);
+    })
+    .catch((error) => {
+      cache.delete(dataUrl);
+      throw error;
+    });
+
+  cache.set(dataUrl, request);
+  return request;
+}
