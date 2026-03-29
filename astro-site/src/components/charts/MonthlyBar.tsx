@@ -243,7 +243,7 @@ export default function MonthlyBar({ data, title, height = 380, sourceMeta = nul
           notMerge
           style={{
             width: '100%',
-            height: isFullscreen ? 'clamp(500px, calc(100vh - 250px), 820px)' : height,
+            height: isFullscreen ? '100%' : height,
           }}
         />
       )}

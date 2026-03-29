@@ -2,6 +2,7 @@
 // OWID-style time-series chart with table preview and external legend.
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import type { CSSProperties } from 'react';
 import EChartsReact from 'echarts-for-react/lib/core';
 import echarts from '../../lib/echarts';
 import ChartFrame from './ChartFrame';
@@ -142,6 +143,21 @@ export default function EpidemicCurve({ series, title, topN = 10, diseasIds, hei
     });
   }, [eligibleIds, series, sidebarQuery]);
 
+  const totalCasesRange = useMemo(() => {
+    if (eligibleIds.length === 0) return { min: 0, max: 0 };
+
+    return eligibleIds.reduce(
+      (acc, id) => {
+        const total = series[id]?.total_cases ?? 0;
+        return {
+          min: Math.min(acc.min, total),
+          max: Math.max(acc.max, total),
+        };
+      },
+      { min: Number.POSITIVE_INFINITY, max: Number.NEGATIVE_INFINITY }
+    );
+  }, [eligibleIds, series]);
+
   const selectVisibleDiseases = useCallback(() => {
     if (sidebarDiseaseIds.length === 0) return;
     setSelectedIds(sidebarDiseaseIds);
@@ -181,6 +197,10 @@ export default function EpidemicCurve({ series, title, topN = 10, diseasIds, hei
       totalCases: item.total_cases,
     };
   }), [activeIds, series, metric, lang]);
+  const seriesColorMap = useMemo(
+    () => new Map(seriesMeta.map((item) => [item.id, item.color])),
+    [seriesMeta]
+  );
 
   const dateRange = useMemo(() => {
     const dates = activeIds.flatMap(id => series[id]?.dates ?? []);
@@ -307,9 +327,6 @@ export default function EpidemicCurve({ series, title, topN = 10, diseasIds, hei
           </button>
         ))}
       </div>
-      <span className="chart-chip">
-        {lang === 'zh' ? `${seriesMeta.length} 条序列` : `${seriesMeta.length} series`}
-      </span>
       {dateRange && <span className="chart-chip">{dateRange.start} → {dateRange.end}</span>}
     </>
   );
@@ -426,15 +443,33 @@ export default function EpidemicCurve({ series, title, topN = 10, diseasIds, hei
                 : item[metric];
             const latestValue = [...values].reverse().find((value) => value != null) ?? null;
             const isActive = activeIds.includes(id);
+            const seriesColor = isActive ? seriesColorMap.get(id) : undefined;
+            const totalCases = item.total_cases ?? 0;
+            const volumePercent = totalCasesRange.max <= totalCasesRange.min
+              ? (totalCasesRange.max === 0 ? 0 : 100)
+              : ((totalCases - totalCasesRange.min) / (totalCasesRange.max - totalCasesRange.min)) * 100;
+            const itemStyle = {
+              ['--chart-sidebar-volume' as string]: `${Math.max(0, Math.min(100, volumePercent))}%`,
+            } as CSSProperties;
 
             return (
-              <label key={id} className={`chart-sidebar-item ${isActive ? 'chart-sidebar-item-active' : ''}`}>
-                <div className="flex items-start gap-3">
+              <label
+                key={id}
+                className={`chart-sidebar-item ${isActive ? 'chart-sidebar-item-active' : ''}`}
+                style={itemStyle}
+              >
+                <div className="chart-sidebar-item-inner flex items-start gap-3">
                   <input
                     type="checkbox"
                     checked={isActive}
                     onChange={() => toggleDiseaseSelection(id)}
                     className="chart-sidebar-checkbox mt-1"
+                    style={seriesColor ? { accentColor: seriesColor } : undefined}
+                  />
+                  <span
+                    aria-hidden="true"
+                    className={`chart-sidebar-swatch ${seriesColor ? 'chart-sidebar-swatch-active' : ''}`}
+                    style={seriesColor ? { backgroundColor: seriesColor, borderColor: seriesColor } : undefined}
                   />
                   <div className="min-w-0 flex-1">
                     <div className="chart-sidebar-name">
@@ -443,7 +478,7 @@ export default function EpidemicCurve({ series, title, topN = 10, diseasIds, hei
                     <div className="chart-sidebar-meta">
                       {lang === 'zh' ? '最新值' : 'Latest'} {formatCellValue(latestValue, metric === 'incidence_rates' ? 2 : 0)}
                       {' · '}
-                      {lang === 'zh' ? '累计' : 'Total'} {item.total_cases.toLocaleString()}
+                      {lang === 'zh' ? '累计' : 'Total'} {totalCases.toLocaleString()}
                     </div>
                   </div>
                 </div>
@@ -497,7 +532,7 @@ export default function EpidemicCurve({ series, title, topN = 10, diseasIds, hei
           notMerge
           style={{
             width: '100%',
-            height: isFullscreen ? 'clamp(520px, calc(100vh - 250px), 860px)' : height,
+            height: isFullscreen ? '100%' : height,
           }}
         />
       )}

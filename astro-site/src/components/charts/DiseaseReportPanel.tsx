@@ -404,7 +404,7 @@ function TrendChart({
           notMerge
           style={{
             width: '100%',
-            height: isFullscreen ? 'clamp(520px, calc(100vh - 250px), 860px)' : height,
+            height: isFullscreen ? '100%' : height,
           }}
         />
       )}
@@ -609,7 +609,7 @@ function MonthlyBarChart({
           notMerge
           style={{
             width: '100%',
-            height: isFullscreen ? 'clamp(500px, calc(100vh - 250px), 820px)' : height,
+            height: isFullscreen ? '100%' : height,
           }}
         />
       )}
