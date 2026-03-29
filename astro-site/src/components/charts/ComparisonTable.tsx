@@ -272,7 +272,7 @@ export default function ComparisonTable({ rows, countryCode, series }: Props) {
           <thead>
             <tr className="site-table-head border-b border-slate-700/60 text-left">
               <th
-                className="site-table-head-cell px-4 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer hover:text-slate-300"
+                className="site-table-head-cell comparison-head-sticky px-4 py-3 text-xs font-semibold uppercase tracking-wider cursor-pointer hover:text-slate-300"
                 onClick={() => handleSort('name_en')}
               >
                 {lang === 'zh' ? '疾病' : 'Disease'} <SortIcon col="name_en" />
@@ -319,7 +319,7 @@ export default function ComparisonTable({ rows, countryCode, series }: Props) {
               const diseasePath = `/diseases/${row.slug}/`;
               return (
                 <tr key={row.disease_id} className="site-table-row-hover transition-colors group">
-                  <td className="px-4 py-3">
+                  <td className="comparison-cell-sticky px-4 py-3">
                     <a href={diseasePath} className="block">
                       <span className="comparison-cell-primary font-medium group-hover:text-brand-400 transition-colors">
                         {lang === 'zh' ? row.name_zh : row.name_en}
