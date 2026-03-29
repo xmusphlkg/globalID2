@@ -22,6 +22,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/countries/au.csv",
       "relative_json_path": "countries/au.json",
       "relative_csv_path": "countries/au.csv",
+      "site_json_path": "/site-data/countries/au.json",
       "source_info": {
         "country_code": "AU",
         "primary_scope": "all",
@@ -58,6 +59,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/countries/cn.csv",
       "relative_json_path": "countries/cn.json",
       "relative_csv_path": "countries/cn.csv",
+      "site_json_path": "/site-data/countries/cn.json",
       "source_info": {
         "country_code": "CN",
         "primary_scope": "cdc_weekly",
@@ -112,6 +114,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/countries/jp.csv",
       "relative_json_path": "countries/jp.json",
       "relative_csv_path": "countries/jp.csv",
+      "site_json_path": "/site-data/countries/jp.json",
       "source_info": {
         "country_code": "JP",
         "primary_scope": "jp_weekly",
@@ -148,6 +151,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/countries/us.csv",
       "relative_json_path": "countries/us.json",
       "relative_csv_path": "countries/us.csv",
+      "site_json_path": "/site-data/countries/us.json",
       "source_info": {
         "country_code": "US",
         "primary_scope": "nndss_api",
@@ -199,6 +203,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d001.csv",
       "relative_json_path": "diseases/d001.json",
       "relative_csv_path": "diseases/d001.csv",
+      "site_json_path": "/site-data/diseases/d001.json",
       "source_info": [
         {
           "country_code": "CN",
@@ -315,6 +320,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d002.csv",
       "relative_json_path": "diseases/d002.json",
       "relative_csv_path": "diseases/d002.csv",
+      "site_json_path": "/site-data/diseases/d002.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -444,6 +450,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d003.csv",
       "relative_json_path": "diseases/d003.json",
       "relative_csv_path": "diseases/d003.csv",
+      "site_json_path": "/site-data/diseases/d003.json",
       "source_info": [
         {
           "country_code": "CN",
@@ -535,6 +542,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d004.csv",
       "relative_json_path": "diseases/d004.json",
       "relative_csv_path": "diseases/d004.csv",
+      "site_json_path": "/site-data/diseases/d004.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -643,6 +651,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d005.csv",
       "relative_json_path": "diseases/d005.json",
       "relative_csv_path": "diseases/d005.csv",
+      "site_json_path": "/site-data/diseases/d005.json",
       "source_info": [
         {
           "country_code": "CN",
@@ -734,6 +743,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d006.csv",
       "relative_json_path": "diseases/d006.json",
       "relative_csv_path": "diseases/d006.csv",
+      "site_json_path": "/site-data/diseases/d006.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -850,6 +860,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d007.csv",
       "relative_json_path": "diseases/d007.json",
       "relative_csv_path": "diseases/d007.csv",
+      "site_json_path": "/site-data/diseases/d007.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -983,6 +994,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d008.csv",
       "relative_json_path": "diseases/d008.json",
       "relative_csv_path": "diseases/d008.csv",
+      "site_json_path": "/site-data/diseases/d008.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -1095,6 +1107,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d009.csv",
       "relative_json_path": "diseases/d009.json",
       "relative_csv_path": "diseases/d009.csv",
+      "site_json_path": "/site-data/diseases/d009.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -1203,6 +1216,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d010.csv",
       "relative_json_path": "diseases/d010.json",
       "relative_csv_path": "diseases/d010.csv",
+      "site_json_path": "/site-data/diseases/d010.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -1294,6 +1308,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d011.csv",
       "relative_json_path": "diseases/d011.json",
       "relative_csv_path": "diseases/d011.csv",
+      "site_json_path": "/site-data/diseases/d011.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -1398,6 +1413,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d012.csv",
       "relative_json_path": "diseases/d012.json",
       "relative_csv_path": "diseases/d012.csv",
+      "site_json_path": "/site-data/diseases/d012.json",
       "source_info": [
         {
           "country_code": "CN",
@@ -1468,6 +1484,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d013.csv",
       "relative_json_path": "diseases/d013.json",
       "relative_csv_path": "diseases/d013.csv",
+      "site_json_path": "/site-data/diseases/d013.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -1576,6 +1593,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d014.csv",
       "relative_json_path": "diseases/d014.json",
       "relative_csv_path": "diseases/d014.csv",
+      "site_json_path": "/site-data/diseases/d014.json",
       "source_info": [
         {
           "country_code": "CN",
@@ -1663,6 +1681,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d015.csv",
       "relative_json_path": "diseases/d015.json",
       "relative_csv_path": "diseases/d015.csv",
+      "site_json_path": "/site-data/diseases/d015.json",
       "source_info": [
         {
           "country_code": "CN",
@@ -1758,6 +1777,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d016.csv",
       "relative_json_path": "diseases/d016.json",
       "relative_csv_path": "diseases/d016.csv",
+      "site_json_path": "/site-data/diseases/d016.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -1895,6 +1915,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d017.csv",
       "relative_json_path": "diseases/d017.json",
       "relative_csv_path": "diseases/d017.csv",
+      "site_json_path": "/site-data/diseases/d017.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -2024,6 +2045,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d018.csv",
       "relative_json_path": "diseases/d018.json",
       "relative_csv_path": "diseases/d018.csv",
+      "site_json_path": "/site-data/diseases/d018.json",
       "source_info": [
         {
           "country_code": "CN",
@@ -2119,6 +2141,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d019.csv",
       "relative_json_path": "diseases/d019.json",
       "relative_csv_path": "diseases/d019.csv",
+      "site_json_path": "/site-data/diseases/d019.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -2252,6 +2275,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d020.csv",
       "relative_json_path": "diseases/d020.json",
       "relative_csv_path": "diseases/d020.csv",
+      "site_json_path": "/site-data/diseases/d020.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -2368,6 +2392,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d021.csv",
       "relative_json_path": "diseases/d021.json",
       "relative_csv_path": "diseases/d021.csv",
+      "site_json_path": "/site-data/diseases/d021.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -2488,6 +2513,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d022.csv",
       "relative_json_path": "diseases/d022.json",
       "relative_csv_path": "diseases/d022.csv",
+      "site_json_path": "/site-data/diseases/d022.json",
       "source_info": []
     },
     {
@@ -2522,6 +2548,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d023.csv",
       "relative_json_path": "diseases/d023.json",
       "relative_csv_path": "diseases/d023.csv",
+      "site_json_path": "/site-data/diseases/d023.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -2651,6 +2678,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d024.csv",
       "relative_json_path": "diseases/d024.json",
       "relative_csv_path": "diseases/d024.csv",
+      "site_json_path": "/site-data/diseases/d024.json",
       "source_info": [
         {
           "country_code": "CN",
@@ -2746,6 +2774,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d025.csv",
       "relative_json_path": "diseases/d025.json",
       "relative_csv_path": "diseases/d025.csv",
+      "site_json_path": "/site-data/diseases/d025.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -2883,6 +2912,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d026.csv",
       "relative_json_path": "diseases/d026.json",
       "relative_csv_path": "diseases/d026.csv",
+      "site_json_path": "/site-data/diseases/d026.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -3003,6 +3033,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d027.csv",
       "relative_json_path": "diseases/d027.json",
       "relative_csv_path": "diseases/d027.csv",
+      "site_json_path": "/site-data/diseases/d027.json",
       "source_info": []
     },
     {
@@ -3037,6 +3068,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d028.csv",
       "relative_json_path": "diseases/d028.json",
       "relative_csv_path": "diseases/d028.csv",
+      "site_json_path": "/site-data/diseases/d028.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -3170,6 +3202,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d029.csv",
       "relative_json_path": "diseases/d029.json",
       "relative_csv_path": "diseases/d029.csv",
+      "site_json_path": "/site-data/diseases/d029.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -3274,6 +3307,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d030.csv",
       "relative_json_path": "diseases/d030.json",
       "relative_csv_path": "diseases/d030.csv",
+      "site_json_path": "/site-data/diseases/d030.json",
       "source_info": [
         {
           "country_code": "CN",
@@ -3336,6 +3370,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d031.csv",
       "relative_json_path": "diseases/d031.json",
       "relative_csv_path": "diseases/d031.csv",
+      "site_json_path": "/site-data/diseases/d031.json",
       "source_info": [
         {
           "country_code": "CN",
@@ -3410,6 +3445,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d032.csv",
       "relative_json_path": "diseases/d032.json",
       "relative_csv_path": "diseases/d032.csv",
+      "site_json_path": "/site-data/diseases/d032.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -3539,6 +3575,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d033.csv",
       "relative_json_path": "diseases/d033.json",
       "relative_csv_path": "diseases/d033.csv",
+      "site_json_path": "/site-data/diseases/d033.json",
       "source_info": [
         {
           "country_code": "CN",
@@ -3630,6 +3667,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d034.csv",
       "relative_json_path": "diseases/d034.json",
       "relative_csv_path": "diseases/d034.csv",
+      "site_json_path": "/site-data/diseases/d034.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -3746,6 +3784,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d035.csv",
       "relative_json_path": "diseases/d035.json",
       "relative_csv_path": "diseases/d035.csv",
+      "site_json_path": "/site-data/diseases/d035.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -3871,6 +3910,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d036.csv",
       "relative_json_path": "diseases/d036.json",
       "relative_csv_path": "diseases/d036.csv",
+      "site_json_path": "/site-data/diseases/d036.json",
       "source_info": [
         {
           "country_code": "CN",
@@ -3945,6 +3985,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d037.csv",
       "relative_json_path": "diseases/d037.json",
       "relative_csv_path": "diseases/d037.csv",
+      "site_json_path": "/site-data/diseases/d037.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -4078,6 +4119,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d038.csv",
       "relative_json_path": "diseases/d038.json",
       "relative_csv_path": "diseases/d038.csv",
+      "site_json_path": "/site-data/diseases/d038.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -4194,6 +4236,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d039.csv",
       "relative_json_path": "diseases/d039.json",
       "relative_csv_path": "diseases/d039.csv",
+      "site_json_path": "/site-data/diseases/d039.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -4331,6 +4374,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d040.csv",
       "relative_json_path": "diseases/d040.json",
       "relative_csv_path": "diseases/d040.csv",
+      "site_json_path": "/site-data/diseases/d040.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -4460,6 +4504,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d041.csv",
       "relative_json_path": "diseases/d041.json",
       "relative_csv_path": "diseases/d041.csv",
+      "site_json_path": "/site-data/diseases/d041.json",
       "source_info": [
         {
           "country_code": "CN",
@@ -4551,6 +4596,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d042.csv",
       "relative_json_path": "diseases/d042.json",
       "relative_csv_path": "diseases/d042.csv",
+      "site_json_path": "/site-data/diseases/d042.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -4659,6 +4705,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d043.csv",
       "relative_json_path": "diseases/d043.json",
       "relative_csv_path": "diseases/d043.csv",
+      "site_json_path": "/site-data/diseases/d043.json",
       "source_info": [
         {
           "country_code": "CN",
@@ -4742,6 +4789,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d044.csv",
       "relative_json_path": "diseases/d044.json",
       "relative_csv_path": "diseases/d044.csv",
+      "site_json_path": "/site-data/diseases/d044.json",
       "source_info": [
         {
           "country_code": "CN",
@@ -4812,6 +4860,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d045.csv",
       "relative_json_path": "diseases/d045.json",
       "relative_csv_path": "diseases/d045.csv",
+      "site_json_path": "/site-data/diseases/d045.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -4916,6 +4965,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d046.csv",
       "relative_json_path": "diseases/d046.json",
       "relative_csv_path": "diseases/d046.csv",
+      "site_json_path": "/site-data/diseases/d046.json",
       "source_info": [
         {
           "country_code": "CN",
@@ -4986,6 +5036,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d047.csv",
       "relative_json_path": "diseases/d047.json",
       "relative_csv_path": "diseases/d047.csv",
+      "site_json_path": "/site-data/diseases/d047.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -5094,6 +5145,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d048.csv",
       "relative_json_path": "diseases/d048.json",
       "relative_csv_path": "diseases/d048.csv",
+      "site_json_path": "/site-data/diseases/d048.json",
       "source_info": [
         {
           "country_code": "CN",
@@ -5181,6 +5233,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d049.csv",
       "relative_json_path": "diseases/d049.json",
       "relative_csv_path": "diseases/d049.csv",
+      "site_json_path": "/site-data/diseases/d049.json",
       "source_info": [
         {
           "country_code": "CN",
@@ -5272,6 +5325,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d050.csv",
       "relative_json_path": "diseases/d050.json",
       "relative_csv_path": "diseases/d050.csv",
+      "site_json_path": "/site-data/diseases/d050.json",
       "source_info": [
         {
           "country_code": "CN",
@@ -5384,6 +5438,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d051.csv",
       "relative_json_path": "diseases/d051.json",
       "relative_csv_path": "diseases/d051.csv",
+      "site_json_path": "/site-data/diseases/d051.json",
       "source_info": [
         {
           "country_code": "CN",
@@ -5500,6 +5555,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d052.csv",
       "relative_json_path": "diseases/d052.json",
       "relative_csv_path": "diseases/d052.csv",
+      "site_json_path": "/site-data/diseases/d052.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -5633,6 +5689,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d053.csv",
       "relative_json_path": "diseases/d053.json",
       "relative_csv_path": "diseases/d053.csv",
+      "site_json_path": "/site-data/diseases/d053.json",
       "source_info": [
         {
           "country_code": "CN",
@@ -5749,6 +5806,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d054.csv",
       "relative_json_path": "diseases/d054.json",
       "relative_csv_path": "diseases/d054.csv",
+      "site_json_path": "/site-data/diseases/d054.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -5874,6 +5932,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d055.csv",
       "relative_json_path": "diseases/d055.json",
       "relative_csv_path": "diseases/d055.csv",
+      "site_json_path": "/site-data/diseases/d055.json",
       "source_info": [
         {
           "country_code": "CN",
@@ -5936,6 +5995,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d056.csv",
       "relative_json_path": "diseases/d056.json",
       "relative_csv_path": "diseases/d056.csv",
+      "site_json_path": "/site-data/diseases/d056.json",
       "source_info": [
         {
           "country_code": "CN",
@@ -6002,6 +6062,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d057.csv",
       "relative_json_path": "diseases/d057.json",
       "relative_csv_path": "diseases/d057.csv",
+      "site_json_path": "/site-data/diseases/d057.json",
       "source_info": [
         {
           "country_code": "CN",
@@ -6089,6 +6150,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d058.csv",
       "relative_json_path": "diseases/d058.json",
       "relative_csv_path": "diseases/d058.csv",
+      "site_json_path": "/site-data/diseases/d058.json",
       "source_info": [
         {
           "country_code": "CN",
@@ -6176,6 +6238,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d059.csv",
       "relative_json_path": "diseases/d059.json",
       "relative_csv_path": "diseases/d059.csv",
+      "site_json_path": "/site-data/diseases/d059.json",
       "source_info": [
         {
           "country_code": "JP",
@@ -6236,6 +6299,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d060.csv",
       "relative_json_path": "diseases/d060.json",
       "relative_csv_path": "diseases/d060.csv",
+      "site_json_path": "/site-data/diseases/d060.json",
       "source_info": []
     },
     {
@@ -6253,6 +6317,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d061.csv",
       "relative_json_path": "diseases/d061.json",
       "relative_csv_path": "diseases/d061.csv",
+      "site_json_path": "/site-data/diseases/d061.json",
       "source_info": []
     },
     {
@@ -6275,6 +6340,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d062.csv",
       "relative_json_path": "diseases/d062.json",
       "relative_csv_path": "diseases/d062.csv",
+      "site_json_path": "/site-data/diseases/d062.json",
       "source_info": [
         {
           "country_code": "JP",
@@ -6319,6 +6385,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d063.csv",
       "relative_json_path": "diseases/d063.json",
       "relative_csv_path": "diseases/d063.csv",
+      "site_json_path": "/site-data/diseases/d063.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -6367,6 +6434,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d064.csv",
       "relative_json_path": "diseases/d064.json",
       "relative_csv_path": "diseases/d064.csv",
+      "site_json_path": "/site-data/diseases/d064.json",
       "source_info": [
         {
           "country_code": "JP",
@@ -6444,6 +6512,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d065.csv",
       "relative_json_path": "diseases/d065.json",
       "relative_csv_path": "diseases/d065.csv",
+      "site_json_path": "/site-data/diseases/d065.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -6564,6 +6633,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d066.csv",
       "relative_json_path": "diseases/d066.json",
       "relative_csv_path": "diseases/d066.csv",
+      "site_json_path": "/site-data/diseases/d066.json",
       "source_info": []
     },
     {
@@ -6581,6 +6651,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d067.csv",
       "relative_json_path": "diseases/d067.json",
       "relative_csv_path": "diseases/d067.csv",
+      "site_json_path": "/site-data/diseases/d067.json",
       "source_info": []
     },
     {
@@ -6603,6 +6674,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d068.csv",
       "relative_json_path": "diseases/d068.json",
       "relative_csv_path": "diseases/d068.csv",
+      "site_json_path": "/site-data/diseases/d068.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -6642,6 +6714,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d069.csv",
       "relative_json_path": "diseases/d069.json",
       "relative_csv_path": "diseases/d069.csv",
+      "site_json_path": "/site-data/diseases/d069.json",
       "source_info": []
     },
     {
@@ -6659,6 +6732,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d070.csv",
       "relative_json_path": "diseases/d070.json",
       "relative_csv_path": "diseases/d070.csv",
+      "site_json_path": "/site-data/diseases/d070.json",
       "source_info": []
     },
     {
@@ -6676,6 +6750,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d071.csv",
       "relative_json_path": "diseases/d071.json",
       "relative_csv_path": "diseases/d071.csv",
+      "site_json_path": "/site-data/diseases/d071.json",
       "source_info": []
     },
     {
@@ -6693,6 +6768,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d073.csv",
       "relative_json_path": "diseases/d073.json",
       "relative_csv_path": "diseases/d073.csv",
+      "site_json_path": "/site-data/diseases/d073.json",
       "source_info": []
     },
     {
@@ -6710,6 +6786,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d074.csv",
       "relative_json_path": "diseases/d074.json",
       "relative_csv_path": "diseases/d074.csv",
+      "site_json_path": "/site-data/diseases/d074.json",
       "source_info": []
     },
     {
@@ -6732,6 +6809,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d075.csv",
       "relative_json_path": "diseases/d075.json",
       "relative_csv_path": "diseases/d075.csv",
+      "site_json_path": "/site-data/diseases/d075.json",
       "source_info": [
         {
           "country_code": "JP",
@@ -6771,6 +6849,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d076.csv",
       "relative_json_path": "diseases/d076.json",
       "relative_csv_path": "diseases/d076.csv",
+      "site_json_path": "/site-data/diseases/d076.json",
       "source_info": []
     },
     {
@@ -6788,6 +6867,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d077.csv",
       "relative_json_path": "diseases/d077.json",
       "relative_csv_path": "diseases/d077.csv",
+      "site_json_path": "/site-data/diseases/d077.json",
       "source_info": []
     },
     {
@@ -6805,6 +6885,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d078.csv",
       "relative_json_path": "diseases/d078.json",
       "relative_csv_path": "diseases/d078.csv",
+      "site_json_path": "/site-data/diseases/d078.json",
       "source_info": []
     },
     {
@@ -6822,6 +6903,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d079.csv",
       "relative_json_path": "diseases/d079.json",
       "relative_csv_path": "diseases/d079.csv",
+      "site_json_path": "/site-data/diseases/d079.json",
       "source_info": []
     },
     {
@@ -6839,6 +6921,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d080.csv",
       "relative_json_path": "diseases/d080.json",
       "relative_csv_path": "diseases/d080.csv",
+      "site_json_path": "/site-data/diseases/d080.json",
       "source_info": []
     },
     {
@@ -6856,6 +6939,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d081.csv",
       "relative_json_path": "diseases/d081.json",
       "relative_csv_path": "diseases/d081.csv",
+      "site_json_path": "/site-data/diseases/d081.json",
       "source_info": []
     },
     {
@@ -6873,6 +6957,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d082.csv",
       "relative_json_path": "diseases/d082.json",
       "relative_csv_path": "diseases/d082.csv",
+      "site_json_path": "/site-data/diseases/d082.json",
       "source_info": []
     },
     {
@@ -6890,6 +6975,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d083.csv",
       "relative_json_path": "diseases/d083.json",
       "relative_csv_path": "diseases/d083.csv",
+      "site_json_path": "/site-data/diseases/d083.json",
       "source_info": []
     },
     {
@@ -6907,6 +6993,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d084.csv",
       "relative_json_path": "diseases/d084.json",
       "relative_csv_path": "diseases/d084.csv",
+      "site_json_path": "/site-data/diseases/d084.json",
       "source_info": []
     },
     {
@@ -6924,6 +7011,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d085.csv",
       "relative_json_path": "diseases/d085.json",
       "relative_csv_path": "diseases/d085.csv",
+      "site_json_path": "/site-data/diseases/d085.json",
       "source_info": []
     },
     {
@@ -6941,6 +7029,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d086.csv",
       "relative_json_path": "diseases/d086.json",
       "relative_csv_path": "diseases/d086.csv",
+      "site_json_path": "/site-data/diseases/d086.json",
       "source_info": []
     },
     {
@@ -6958,6 +7047,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d087.csv",
       "relative_json_path": "diseases/d087.json",
       "relative_csv_path": "diseases/d087.csv",
+      "site_json_path": "/site-data/diseases/d087.json",
       "source_info": []
     },
     {
@@ -6975,6 +7065,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d088.csv",
       "relative_json_path": "diseases/d088.json",
       "relative_csv_path": "diseases/d088.csv",
+      "site_json_path": "/site-data/diseases/d088.json",
       "source_info": []
     },
     {
@@ -6997,6 +7088,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d089.csv",
       "relative_json_path": "diseases/d089.json",
       "relative_csv_path": "diseases/d089.csv",
+      "site_json_path": "/site-data/diseases/d089.json",
       "source_info": [
         {
           "country_code": "JP",
@@ -7041,6 +7133,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d090.csv",
       "relative_json_path": "diseases/d090.json",
       "relative_csv_path": "diseases/d090.csv",
+      "site_json_path": "/site-data/diseases/d090.json",
       "source_info": [
         {
           "country_code": "US",
@@ -7089,6 +7182,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d091.csv",
       "relative_json_path": "diseases/d091.json",
       "relative_csv_path": "diseases/d091.csv",
+      "site_json_path": "/site-data/diseases/d091.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -7158,6 +7252,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d092.csv",
       "relative_json_path": "diseases/d092.json",
       "relative_csv_path": "diseases/d092.csv",
+      "site_json_path": "/site-data/diseases/d092.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -7227,6 +7322,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d093.csv",
       "relative_json_path": "diseases/d093.json",
       "relative_csv_path": "diseases/d093.csv",
+      "site_json_path": "/site-data/diseases/d093.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -7296,6 +7392,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d094.csv",
       "relative_json_path": "diseases/d094.json",
       "relative_csv_path": "diseases/d094.csv",
+      "site_json_path": "/site-data/diseases/d094.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -7365,6 +7462,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d095.csv",
       "relative_json_path": "diseases/d095.json",
       "relative_csv_path": "diseases/d095.csv",
+      "site_json_path": "/site-data/diseases/d095.json",
       "source_info": [
         {
           "country_code": "JP",
@@ -7438,6 +7536,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d096.csv",
       "relative_json_path": "diseases/d096.json",
       "relative_csv_path": "diseases/d096.csv",
+      "site_json_path": "/site-data/diseases/d096.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -7524,6 +7623,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d097.csv",
       "relative_json_path": "diseases/d097.json",
       "relative_csv_path": "diseases/d097.csv",
+      "site_json_path": "/site-data/diseases/d097.json",
       "source_info": [
         {
           "country_code": "US",
@@ -7563,6 +7663,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d098.csv",
       "relative_json_path": "diseases/d098.json",
       "relative_csv_path": "diseases/d098.csv",
+      "site_json_path": "/site-data/diseases/d098.json",
       "source_info": []
     },
     {
@@ -7589,6 +7690,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d099.csv",
       "relative_json_path": "diseases/d099.json",
       "relative_csv_path": "diseases/d099.csv",
+      "site_json_path": "/site-data/diseases/d099.json",
       "source_info": [
         {
           "country_code": "JP",
@@ -7662,6 +7764,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d100.csv",
       "relative_json_path": "diseases/d100.json",
       "relative_csv_path": "diseases/d100.csv",
+      "site_json_path": "/site-data/diseases/d100.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -7748,6 +7851,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d101.csv",
       "relative_json_path": "diseases/d101.json",
       "relative_csv_path": "diseases/d101.csv",
+      "site_json_path": "/site-data/diseases/d101.json",
       "source_info": [
         {
           "country_code": "US",
@@ -7796,6 +7900,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d102.csv",
       "relative_json_path": "diseases/d102.json",
       "relative_csv_path": "diseases/d102.csv",
+      "site_json_path": "/site-data/diseases/d102.json",
       "source_info": [
         {
           "country_code": "JP",
@@ -7861,6 +7966,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d103.csv",
       "relative_json_path": "diseases/d103.json",
       "relative_csv_path": "diseases/d103.csv",
+      "site_json_path": "/site-data/diseases/d103.json",
       "source_info": [
         {
           "country_code": "US",
@@ -7905,6 +8011,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d104.csv",
       "relative_json_path": "diseases/d104.json",
       "relative_csv_path": "diseases/d104.csv",
+      "site_json_path": "/site-data/diseases/d104.json",
       "source_info": [
         {
           "country_code": "US",
@@ -7953,6 +8060,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d105.csv",
       "relative_json_path": "diseases/d105.json",
       "relative_csv_path": "diseases/d105.csv",
+      "site_json_path": "/site-data/diseases/d105.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -8026,6 +8134,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d106.csv",
       "relative_json_path": "diseases/d106.json",
       "relative_csv_path": "diseases/d106.csv",
+      "site_json_path": "/site-data/diseases/d106.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -8120,6 +8229,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d107.csv",
       "relative_json_path": "diseases/d107.json",
       "relative_csv_path": "diseases/d107.csv",
+      "site_json_path": "/site-data/diseases/d107.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -8210,6 +8320,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d108.csv",
       "relative_json_path": "diseases/d108.json",
       "relative_csv_path": "diseases/d108.csv",
+      "site_json_path": "/site-data/diseases/d108.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -8279,6 +8390,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d109.csv",
       "relative_json_path": "diseases/d109.json",
       "relative_csv_path": "diseases/d109.csv",
+      "site_json_path": "/site-data/diseases/d109.json",
       "source_info": [
         {
           "country_code": "JP",
@@ -8356,6 +8468,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d110.csv",
       "relative_json_path": "diseases/d110.json",
       "relative_csv_path": "diseases/d110.csv",
+      "site_json_path": "/site-data/diseases/d110.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -8476,6 +8589,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d111.csv",
       "relative_json_path": "diseases/d111.json",
       "relative_csv_path": "diseases/d111.csv",
+      "site_json_path": "/site-data/diseases/d111.json",
       "source_info": []
     },
     {
@@ -8506,6 +8620,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d112.csv",
       "relative_json_path": "diseases/d112.json",
       "relative_csv_path": "diseases/d112.csv",
+      "site_json_path": "/site-data/diseases/d112.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -8600,6 +8715,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d113.csv",
       "relative_json_path": "diseases/d113.json",
       "relative_csv_path": "diseases/d113.csv",
+      "site_json_path": "/site-data/diseases/d113.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -8690,6 +8806,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d114.csv",
       "relative_json_path": "diseases/d114.json",
       "relative_csv_path": "diseases/d114.csv",
+      "site_json_path": "/site-data/diseases/d114.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -8763,6 +8880,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d115.csv",
       "relative_json_path": "diseases/d115.json",
       "relative_csv_path": "diseases/d115.csv",
+      "site_json_path": "/site-data/diseases/d115.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -8853,6 +8971,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d116.csv",
       "relative_json_path": "diseases/d116.json",
       "relative_csv_path": "diseases/d116.csv",
+      "site_json_path": "/site-data/diseases/d116.json",
       "source_info": [
         {
           "country_code": "JP",
@@ -8918,6 +9037,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d117.csv",
       "relative_json_path": "diseases/d117.json",
       "relative_csv_path": "diseases/d117.csv",
+      "site_json_path": "/site-data/diseases/d117.json",
       "source_info": [
         {
           "country_code": "US",
@@ -8966,6 +9086,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d118.csv",
       "relative_json_path": "diseases/d118.json",
       "relative_csv_path": "diseases/d118.csv",
+      "site_json_path": "/site-data/diseases/d118.json",
       "source_info": [
         {
           "country_code": "JP",
@@ -9035,6 +9156,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d119.csv",
       "relative_json_path": "diseases/d119.json",
       "relative_csv_path": "diseases/d119.csv",
+      "site_json_path": "/site-data/diseases/d119.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -9108,6 +9230,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d120.csv",
       "relative_json_path": "diseases/d120.json",
       "relative_csv_path": "diseases/d120.csv",
+      "site_json_path": "/site-data/diseases/d120.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -9189,6 +9312,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d121.csv",
       "relative_json_path": "diseases/d121.json",
       "relative_csv_path": "diseases/d121.csv",
+      "site_json_path": "/site-data/diseases/d121.json",
       "source_info": []
     },
     {
@@ -9211,6 +9335,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d122.csv",
       "relative_json_path": "diseases/d122.json",
       "relative_csv_path": "diseases/d122.csv",
+      "site_json_path": "/site-data/diseases/d122.json",
       "source_info": [
         {
           "country_code": "US",
@@ -9263,6 +9388,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d123.csv",
       "relative_json_path": "diseases/d123.json",
       "relative_csv_path": "diseases/d123.csv",
+      "site_json_path": "/site-data/diseases/d123.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -9357,6 +9483,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d124.csv",
       "relative_json_path": "diseases/d124.json",
       "relative_csv_path": "diseases/d124.csv",
+      "site_json_path": "/site-data/diseases/d124.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -9443,6 +9570,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d125.csv",
       "relative_json_path": "diseases/d125.json",
       "relative_csv_path": "diseases/d125.csv",
+      "site_json_path": "/site-data/diseases/d125.json",
       "source_info": [
         {
           "country_code": "JP",
@@ -9491,6 +9619,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d126.csv",
       "relative_json_path": "diseases/d126.json",
       "relative_csv_path": "diseases/d126.csv",
+      "site_json_path": "/site-data/diseases/d126.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -9556,6 +9685,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d127.csv",
       "relative_json_path": "diseases/d127.json",
       "relative_csv_path": "diseases/d127.csv",
+      "site_json_path": "/site-data/diseases/d127.json",
       "source_info": [
         {
           "country_code": "JP",
@@ -9608,6 +9738,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d128.csv",
       "relative_json_path": "diseases/d128.json",
       "relative_csv_path": "diseases/d128.csv",
+      "site_json_path": "/site-data/diseases/d128.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -9694,6 +9825,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d129.csv",
       "relative_json_path": "diseases/d129.json",
       "relative_csv_path": "diseases/d129.csv",
+      "site_json_path": "/site-data/diseases/d129.json",
       "source_info": [
         {
           "country_code": "US",
@@ -9733,6 +9865,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d130.csv",
       "relative_json_path": "diseases/d130.json",
       "relative_csv_path": "diseases/d130.csv",
+      "site_json_path": "/site-data/diseases/d130.json",
       "source_info": []
     },
     {
@@ -9755,6 +9888,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d131.csv",
       "relative_json_path": "diseases/d131.json",
       "relative_csv_path": "diseases/d131.csv",
+      "site_json_path": "/site-data/diseases/d131.json",
       "source_info": [
         {
           "country_code": "US",
@@ -9803,6 +9937,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d132.csv",
       "relative_json_path": "diseases/d132.json",
       "relative_csv_path": "diseases/d132.csv",
+      "site_json_path": "/site-data/diseases/d132.json",
       "source_info": [
         {
           "country_code": "JP",
@@ -9872,6 +10007,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d133.csv",
       "relative_json_path": "diseases/d133.json",
       "relative_csv_path": "diseases/d133.csv",
+      "site_json_path": "/site-data/diseases/d133.json",
       "source_info": [
         {
           "country_code": "JP",
@@ -9937,6 +10073,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d134.csv",
       "relative_json_path": "diseases/d134.json",
       "relative_csv_path": "diseases/d134.csv",
+      "site_json_path": "/site-data/diseases/d134.json",
       "source_info": [
         {
           "country_code": "JP",
@@ -9981,6 +10118,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d135.csv",
       "relative_json_path": "diseases/d135.json",
       "relative_csv_path": "diseases/d135.csv",
+      "site_json_path": "/site-data/diseases/d135.json",
       "source_info": [
         {
           "country_code": "JP",
@@ -10025,6 +10163,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d136.csv",
       "relative_json_path": "diseases/d136.json",
       "relative_csv_path": "diseases/d136.csv",
+      "site_json_path": "/site-data/diseases/d136.json",
       "source_info": [
         {
           "country_code": "JP",
@@ -10069,6 +10208,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d137.csv",
       "relative_json_path": "diseases/d137.json",
       "relative_csv_path": "diseases/d137.csv",
+      "site_json_path": "/site-data/diseases/d137.json",
       "source_info": [
         {
           "country_code": "JP",
@@ -10113,6 +10253,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d138.csv",
       "relative_json_path": "diseases/d138.json",
       "relative_csv_path": "diseases/d138.csv",
+      "site_json_path": "/site-data/diseases/d138.json",
       "source_info": [
         {
           "country_code": "JP",
@@ -10157,6 +10298,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d139.csv",
       "relative_json_path": "diseases/d139.json",
       "relative_csv_path": "diseases/d139.csv",
+      "site_json_path": "/site-data/diseases/d139.json",
       "source_info": [
         {
           "country_code": "JP",
@@ -10201,6 +10343,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d140.csv",
       "relative_json_path": "diseases/d140.json",
       "relative_csv_path": "diseases/d140.csv",
+      "site_json_path": "/site-data/diseases/d140.json",
       "source_info": [
         {
           "country_code": "JP",
@@ -10245,6 +10388,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d141.csv",
       "relative_json_path": "diseases/d141.json",
       "relative_csv_path": "diseases/d141.csv",
+      "site_json_path": "/site-data/diseases/d141.json",
       "source_info": [
         {
           "country_code": "JP",
@@ -10293,6 +10437,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d142.csv",
       "relative_json_path": "diseases/d142.json",
       "relative_csv_path": "diseases/d142.csv",
+      "site_json_path": "/site-data/diseases/d142.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -10358,6 +10503,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d143.csv",
       "relative_json_path": "diseases/d143.json",
       "relative_csv_path": "diseases/d143.csv",
+      "site_json_path": "/site-data/diseases/d143.json",
       "source_info": [
         {
           "country_code": "JP",
@@ -10406,6 +10552,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d144.csv",
       "relative_json_path": "diseases/d144.json",
       "relative_csv_path": "diseases/d144.csv",
+      "site_json_path": "/site-data/diseases/d144.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -10471,6 +10618,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d145.csv",
       "relative_json_path": "diseases/d145.json",
       "relative_csv_path": "diseases/d145.csv",
+      "site_json_path": "/site-data/diseases/d145.json",
       "source_info": [
         {
           "country_code": "JP",
@@ -10515,6 +10663,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d146.csv",
       "relative_json_path": "diseases/d146.json",
       "relative_csv_path": "diseases/d146.csv",
+      "site_json_path": "/site-data/diseases/d146.json",
       "source_info": [
         {
           "country_code": "JP",
@@ -10559,6 +10708,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d147.csv",
       "relative_json_path": "diseases/d147.json",
       "relative_csv_path": "diseases/d147.csv",
+      "site_json_path": "/site-data/diseases/d147.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -10603,6 +10753,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d148.csv",
       "relative_json_path": "diseases/d148.json",
       "relative_csv_path": "diseases/d148.csv",
+      "site_json_path": "/site-data/diseases/d148.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -10647,6 +10798,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d149.csv",
       "relative_json_path": "diseases/d149.json",
       "relative_csv_path": "diseases/d149.csv",
+      "site_json_path": "/site-data/diseases/d149.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -10691,6 +10843,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d150.csv",
       "relative_json_path": "diseases/d150.json",
       "relative_csv_path": "diseases/d150.csv",
+      "site_json_path": "/site-data/diseases/d150.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -10735,6 +10888,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d151.csv",
       "relative_json_path": "diseases/d151.json",
       "relative_csv_path": "diseases/d151.csv",
+      "site_json_path": "/site-data/diseases/d151.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -10779,6 +10933,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d152.csv",
       "relative_json_path": "diseases/d152.json",
       "relative_csv_path": "diseases/d152.csv",
+      "site_json_path": "/site-data/diseases/d152.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -10823,6 +10978,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d153.csv",
       "relative_json_path": "diseases/d153.json",
       "relative_csv_path": "diseases/d153.csv",
+      "site_json_path": "/site-data/diseases/d153.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -10867,6 +11023,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d154.csv",
       "relative_json_path": "diseases/d154.json",
       "relative_csv_path": "diseases/d154.csv",
+      "site_json_path": "/site-data/diseases/d154.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -10911,6 +11068,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d155.csv",
       "relative_json_path": "diseases/d155.json",
       "relative_csv_path": "diseases/d155.csv",
+      "site_json_path": "/site-data/diseases/d155.json",
       "source_info": [
         {
           "country_code": "AU",
@@ -10955,6 +11113,7 @@
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d999.csv",
       "relative_json_path": "diseases/d999.json",
       "relative_csv_path": "diseases/d999.csv",
+      "site_json_path": "/site-data/diseases/d999.json",
       "source_info": [
         {
           "country_code": "CN",
