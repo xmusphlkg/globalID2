@@ -128,5 +128,5 @@ export function categoryBadgeClass(cat: string): string {
     Parasitic: 'badge-parasitic',
     Fungal: 'badge-fungal',
   };
-  return `inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${map[cat] ?? 'badge-other'}`;
+  return `inline-flex items-center rounded-none px-2 py-0.5 text-xs font-medium ${map[cat] ?? 'badge-other'}`;
 }

@@ -33,6 +33,11 @@ logger = get_logger(__name__)
 ROOT_DIR = Path(__file__).resolve().parents[2]
 ASTRO_DIR = ROOT_DIR / "astro-site"
 RELEASE_PATHS = ("astro-site/src/data", "astro-site/dist")
+AUTO_RELEASE_TASK_TYPES = (
+    TaskType.CRAWL_DATA,
+    TaskType.PROCESS_DATA,
+    TaskType.GENERATE_REPORT,
+)
 
 
 def _iso(value: Optional[datetime]) -> Optional[str]:
@@ -171,6 +176,34 @@ class DataReleaseService:
             )
         return jobs
 
+    def _sync_state_schedule(
+        self,
+        job: DataReleaseJobConfig,
+        state: DataReleaseJobState,
+        *,
+        reset: bool,
+    ) -> None:
+        if not job.enabled:
+            state.next_run_at = None
+            return
+        if reset or state.next_run_at is None:
+            tz_name = job.timezone or self._config().timezone
+            now = datetime.now(ZoneInfo(tz_name))
+            state.next_run_at = self._compute_next_run(job, now=now)
+
+    async def reschedule_job(self, job_id: str) -> None:
+        async with self._lock:
+            job = next((item for item in await self.load_jobs() if item.job_id == job_id), None)
+            if job is None:
+                self._states.pop(job_id, None)
+                return
+            state = self._states.setdefault(job.job_id, DataReleaseJobState())
+            self._sync_state_schedule(job, state, reset=True)
+
+    async def remove_job_state(self, job_id: str) -> None:
+        async with self._lock:
+            self._states.pop(job_id, None)
+
     async def start(self) -> None:
         cfg = self._config()
         if not cfg.enabled:
@@ -182,8 +215,7 @@ class DataReleaseService:
         self._stop_event = asyncio.Event()
         for job in await self.load_jobs():
             state = self._states.setdefault(job.job_id, DataReleaseJobState())
-            if state.next_run_at is None and job.enabled:
-                state.next_run_at = self._compute_next_run(job)
+            self._sync_state_schedule(job, state, reset=state.next_run_at is None)
         self._task = asyncio.create_task(self._run_loop(), name="globalid-data-release-scheduler")
         logger.info("Data release scheduler started with %s configured job(s)", len(await self.load_jobs()))
 
@@ -209,8 +241,7 @@ class DataReleaseService:
                         continue
                     state = self._states.setdefault(job.job_id, DataReleaseJobState())
                     now = datetime.now(ZoneInfo(job.timezone or cfg.timezone))
-                    if state.next_run_at is None:
-                        state.next_run_at = self._compute_next_run(job, now=now)
+                    self._sync_state_schedule(job, state, reset=state.next_run_at is None)
                     if state.next_run_at and now >= state.next_run_at:
                         await self.trigger_job(job.job_id, manual=False, trigger="scheduled")
             except Exception as exc:
@@ -263,31 +294,41 @@ class DataReleaseService:
                 logger.error("Data release job %s failed to queue: %s", job.job_id, exc)
                 raise
 
-    async def maybe_trigger_after_crawl_completion(self, crawl_task_uuid: str) -> None:
+    async def maybe_trigger_after_task_completion(
+        self,
+        trigger_task_uuid: str,
+        trigger_task_type: str | TaskType,
+    ) -> None:
         await self.ensure_storage()
         if not self._config().enabled:
+            return
+        try:
+            normalized_task_type = TaskType(trigger_task_type)
+        except ValueError:
+            return
+        if normalized_task_type not in AUTO_RELEASE_TASK_TYPES:
             return
         enabled_jobs = [job for job in await self.load_jobs() if job.enabled and job.auto_after_crawls]
         if not enabled_jobs:
             return
 
         async with get_database() as db:
-            active_crawls = (
+            active_updates = (
                 await db.execute(
                     select(Task.id).where(
-                        Task.task_type == TaskType.CRAWL_DATA,
+                        Task.task_type.in_(AUTO_RELEASE_TASK_TYPES),
                         Task.status.in_([TaskStatus.PENDING, TaskStatus.QUEUED, TaskStatus.RUNNING, TaskStatus.RETRYING]),
                     )
                 )
             ).scalars().first()
-            if active_crawls is not None:
+            if active_updates is not None:
                 return
 
-            latest_crawl_completion = (
+            latest_data_completion = (
                 await db.execute(
                     select(Task.completed_at)
                     .where(
-                        Task.task_type == TaskType.CRAWL_DATA,
+                        Task.task_type.in_(AUTO_RELEASE_TASK_TYPES),
                         Task.status == TaskStatus.COMPLETED,
                         Task.completed_at.is_not(None),
                     )
@@ -296,21 +337,24 @@ class DataReleaseService:
                 )
             ).scalar_one_or_none()
 
-        if latest_crawl_completion is None:
+        if latest_data_completion is None:
             return
 
         for job in enabled_jobs:
-            if await self._release_up_to_date(job.job_id, latest_crawl_completion):
+            if await self._release_up_to_date(job.job_id, latest_data_completion):
                 continue
             try:
                 await self.trigger_job(
                     job.job_id,
                     manual=False,
-                    trigger="crawl_completion",
-                    trigger_task_uuid=crawl_task_uuid,
+                    trigger="upstream_completion",
+                    trigger_task_uuid=trigger_task_uuid,
                 )
             except Exception as exc:
                 logger.warning("Auto-triggered data release %s was skipped: %s", job.job_id, exc)
+
+    async def maybe_trigger_after_crawl_completion(self, crawl_task_uuid: str) -> None:
+        await self.maybe_trigger_after_task_completion(crawl_task_uuid, TaskType.CRAWL_DATA)
 
     async def _release_up_to_date(self, job_id: str, crawl_completed_at: datetime) -> bool:
         async with get_database() as db:
@@ -325,7 +369,7 @@ class DataReleaseService:
             metadata = dict(task.metadata_ or {})
             if metadata.get("release_job_id") != job_id:
                 continue
-            task_time = task.created_at or task.completed_at
+            task_time = task.completed_at or task.created_at
             return bool(task_time and task_time >= crawl_completed_at)
         return False
 
@@ -426,6 +470,7 @@ class DataReleaseService:
         jobs_payload: list[dict[str, Any]] = []
         for job in jobs:
             state = self._states.setdefault(job.job_id, DataReleaseJobState())
+            self._sync_state_schedule(job, state, reset=False)
             task_status = None
             task_completed_at = None
             if state.last_task_uuid:
@@ -575,6 +620,9 @@ class DataReleaseService:
             title="Build Astro Site",
             cmd=["npm", "run", "build"],
             cwd=ASTRO_DIR,
+            env={
+                "GLOBALID_SKIP_SITE_DATA_GENERATION": "1",
+            },
             metadata={"event": "astro_build", "release_job_id": job.job_id},
         )
         await task_manager.update_task_progress(task.task_uuid, 60)

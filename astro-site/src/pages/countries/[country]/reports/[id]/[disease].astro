@@ -142,15 +142,6 @@ const countryName = report?.country_name ?? country.toUpperCase();
     </div>
   ) : (
     <div class="max-w-6xl mx-auto px-4 py-10 space-y-8">
-      {diseaseDownload && (
-        <DownloadPanel
-          entry={diseaseDownload}
-          title="Download Disease Dataset"
-          descriptionEn="Download the full disease dataset referenced by this report section, including source metadata."
-          descriptionZh="下载本报告章节对应的完整疾病数据集，并附带数据源信息。"
-        />
-      )}
-
       <DiseaseDetailView
         client:only="react"
         diseaseMeta={diseaseMeta}
@@ -165,6 +156,15 @@ const countryName = report?.country_name ?? country.toUpperCase();
           country_code: country,
         }}
       />
+
+      {diseaseDownload && (
+        <DownloadPanel
+          entry={diseaseDownload}
+          title="Download Disease Dataset"
+          descriptionEn="Download the full disease dataset referenced by this report section, including source metadata."
+          descriptionZh="下载本报告章节对应的完整疾病数据集，并附带数据源信息。"
+        />
+      )}
     </div>
   )}
 </ReportLayout>

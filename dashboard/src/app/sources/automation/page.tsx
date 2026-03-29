@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { Badge, Button, Card, Grid, Metric, Text, Title } from "@tremor/react";
 import { useAppStore } from "@/stores/app-store";
@@ -14,10 +15,13 @@ import {
   useRunAutomationJob,
   useUpdateAutomationJob,
 } from "@/lib/hooks/useSources";
-import { useTaskWebSocket } from "@/lib/hooks/useTasks";
+import { useTaskWebSocket, useWorkerStatus } from "@/lib/hooks/useTasks";
 import { getCountryDisplayName, type Country, useCountries } from "@/lib/hooks/useCountries";
 import { getSourceDisplayLabel, getSourceOptionsForCountry } from "@/lib/source-labels";
-import { AlertTriangle, Bot, Clock3, Mail, Pencil, Play, Plus, Sparkles, Trash2 } from "lucide-react";
+import { AlertTriangle, ArrowRight, Bot, Clock3, Cpu, Mail, Pencil, Play, Plus, Sparkles, Trash2 } from "lucide-react";
+
+type ScheduleMode = "daily" | "interval";
+type IntervalUnit = "minutes" | "hours";
 
 const defaultForm: AutomationJobInput = {
   job_id: "",
@@ -51,6 +55,10 @@ const crawlOptionLabels: Record<string, { en: string; zh: string }> = {
   force: { en: "Force re-fetch", zh: "强制重新抓取" },
 };
 
+const DEFAULT_INTERVAL_MINUTES = 60;
+const intervalPresetMinutes = [15, 30, 60, 180, 360, 720] as const;
+const dailyPresetTimes = ["00:00", "08:00", "12:00", "18:00"] as const;
+
 function formatDateTime(value?: string | null): string {
   if (!value) return "-";
   const date = new Date(value);
@@ -58,10 +66,43 @@ function formatDateTime(value?: string | null): string {
   return date.toLocaleString();
 }
 
-function scheduleLabel(job: { interval_minutes?: number | null; daily_time?: string | null; timezone?: string | null }): string {
-  if (job.interval_minutes) return `Every ${job.interval_minutes} minute(s)`;
-  if (job.daily_time) return `Daily at ${job.daily_time} (${job.timezone || "UTC"})`;
-  return "No schedule";
+function intervalMinutesToFields(minutes?: number | null): { value: string; unit: IntervalUnit } {
+  const safeMinutes = minutes && minutes > 0 ? minutes : DEFAULT_INTERVAL_MINUTES;
+  if (safeMinutes % 60 === 0) {
+    return { value: String(safeMinutes / 60), unit: "hours" };
+  }
+  return { value: String(safeMinutes), unit: "minutes" };
+}
+
+function intervalFieldsToMinutes(value: string, unit: IntervalUnit): number | null {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return null;
+  }
+  return unit === "hours" ? parsed * 60 : parsed;
+}
+
+function describeIntervalMinutes(minutes: number, lang: "en" | "zh"): string {
+  if (minutes % 60 === 0) {
+    const hours = minutes / 60;
+    return lang === "zh" ? `每 ${hours} 小时运行一次` : `Every ${hours} hour(s)`;
+  }
+  return lang === "zh" ? `每 ${minutes} 分钟运行一次` : `Every ${minutes} minute(s)`;
+}
+
+function scheduleLabel(
+  job: { interval_minutes?: number | null; daily_time?: string | null; timezone?: string | null },
+  lang: "en" | "zh",
+): string {
+  if (job.interval_minutes) {
+    return describeIntervalMinutes(job.interval_minutes, lang);
+  }
+  if (job.daily_time) {
+    return lang === "zh"
+      ? `每天 ${job.daily_time} (${job.timezone || "UTC"})`
+      : `Daily at ${job.daily_time} (${job.timezone || "UTC"})`;
+  }
+  return lang === "zh" ? "未设置计划" : "No schedule";
 }
 
 function toForm(job: AutomationJob): AutomationJobInput {
@@ -93,12 +134,16 @@ export default function SourcesAutomationPage() {
   const { data: config, isLoading } = useAutomationConfig();
   const { data: jobs } = useAutomationJobs();
   const { data: countries } = useCountries();
+  const { data: workerStatus } = useWorkerStatus();
   const runJob = useRunAutomationJob();
   const createJob = useCreateAutomationJob();
   const updateJob = useUpdateAutomationJob();
   const deleteJob = useDeleteAutomationJob();
   const [editingJobId, setEditingJobId] = useState<string | null>(null);
   const [form, setForm] = useState<AutomationJobInput>(defaultForm);
+  const [scheduleMode, setScheduleMode] = useState<ScheduleMode>("daily");
+  const [intervalValue, setIntervalValue] = useState("1");
+  const [intervalUnit, setIntervalUnit] = useState<IntervalUnit>("hours");
 
   useTaskWebSocket({ extraQueryKeys: [["sources-automation"], ["sources-automation-jobs"], ["sources-flow"]] });
 
@@ -118,12 +163,47 @@ export default function SourcesAutomationPage() {
     return { color: "emerald" as const, label: "Failure alerts ready" };
   }, [config]);
 
+  const schedulePreview = useMemo(() => {
+    if (scheduleMode === "interval") {
+      const minutes = intervalFieldsToMinutes(intervalValue, intervalUnit);
+      if (!minutes) {
+        return lang === "zh" ? "请设置有效的间隔时间" : "Set a valid interval";
+      }
+      return lang === "zh"
+        ? `${describeIntervalMinutes(minutes, lang)}，时区 ${form.timezone || config?.timezone || "UTC"}`
+        : `${describeIntervalMinutes(minutes, lang)} in ${form.timezone || config?.timezone || "UTC"}`;
+    }
+    const timeText = (form.daily_time || "").trim();
+    if (!timeText) {
+      return lang === "zh" ? "请设置每日执行时间" : "Set a daily run time";
+    }
+    return lang === "zh"
+      ? `每天 ${timeText} 运行，时区 ${form.timezone || config?.timezone || "UTC"}`
+      : `Runs daily at ${timeText} in ${form.timezone || config?.timezone || "UTC"}`;
+  }, [config?.timezone, form.daily_time, form.timezone, intervalUnit, intervalValue, lang, scheduleMode]);
+
+  const syncScheduleControls = (payload: { interval_minutes?: number | null; daily_time?: string | null }) => {
+    if (payload.interval_minutes) {
+      const derived = intervalMinutesToFields(payload.interval_minutes);
+      setScheduleMode("interval");
+      setIntervalValue(derived.value);
+      setIntervalUnit(derived.unit);
+      return;
+    }
+    const derived = intervalMinutesToFields(DEFAULT_INTERVAL_MINUTES);
+    setScheduleMode("daily");
+    setIntervalValue(derived.value);
+    setIntervalUnit(derived.unit);
+  };
+
   const resetForm = () => {
     setEditingJobId(null);
-    setForm({
+    const nextForm = {
       ...defaultForm,
       timezone: config?.timezone || defaultForm.timezone,
-    });
+    };
+    setForm(nextForm);
+    syncScheduleControls(nextForm);
   };
 
   const applyPreset = (presetId: (typeof presetTemplates)[number]["id"]) => {
@@ -131,15 +211,33 @@ export default function SourcesAutomationPage() {
     if (!preset) return;
     const timezone = findCountryTimezone(countries, preset.country_code) || config?.timezone || defaultForm.timezone;
     setEditingJobId(null);
-    setForm({
+    const nextForm = {
       ...defaultForm,
       ...preset,
       timezone,
       notes: `${preset.name} preset`,
-    });
+    };
+    setForm(nextForm);
+    syncScheduleControls(nextForm);
   };
 
   const submitForm = async () => {
+    const nextIntervalMinutes = scheduleMode === "interval"
+      ? intervalFieldsToMinutes(intervalValue, intervalUnit)
+      : null;
+    const nextDailyTime = scheduleMode === "daily"
+      ? form.daily_time?.trim() || null
+      : null;
+
+    if (scheduleMode === "interval" && !nextIntervalMinutes) {
+      window.alert(lang === "zh" ? "请填写有效的执行间隔" : "Please enter a valid interval");
+      return;
+    }
+    if (scheduleMode === "daily" && !nextDailyTime) {
+      window.alert(lang === "zh" ? "请填写每日执行时间" : "Please enter a daily run time");
+      return;
+    }
+
     const payload: AutomationJobInput = {
       ...form,
       job_id: form.job_id.trim(),
@@ -147,10 +245,10 @@ export default function SourcesAutomationPage() {
       country_code: form.country_code.trim().toUpperCase(),
       source: form.source.trim().toLowerCase(),
       priority: form.priority.trim().toLowerCase(),
-      daily_time: form.daily_time?.trim() || null,
+      daily_time: nextDailyTime,
       timezone: form.timezone?.trim() || config?.timezone || "UTC",
       notes: form.notes?.trim() || null,
-      interval_minutes: form.interval_minutes ? Number(form.interval_minutes) : null,
+      interval_minutes: nextIntervalMinutes,
     };
 
     if (editingJobId) {
@@ -163,7 +261,9 @@ export default function SourcesAutomationPage() {
 
   const startEdit = (job: AutomationJob) => {
     setEditingJobId(job.job_id);
-    setForm(toForm(job));
+    const nextForm = toForm(job);
+    setForm(nextForm);
+    syncScheduleControls(nextForm);
   };
 
   const removeJob = async (job: AutomationJob) => {
@@ -195,6 +295,22 @@ export default function SourcesAutomationPage() {
             ? "这里可以新增、修改、删除自动化抓取任务；邮件收件人与 Microsoft Graph 凭证仍通过 env 管理。"
             : "Create, edit, and delete automation jobs here; email recipients and Microsoft Graph credentials remain env-managed."}
         </Text>
+        <div className="flex flex-wrap gap-3 pt-2">
+          <Link
+            href="/sources/tasks?scope=all"
+            className="inline-flex items-center gap-2 rounded-xl border border-tremor-border bg-tremor-background px-4 py-2 text-sm font-medium text-tremor-content-strong shadow-sm transition hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background"
+          >
+            {lang === "zh" ? "查看采集任务" : "Open Crawl Tasks"}
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+          <Link
+            href="/sources/flow"
+            className="inline-flex items-center gap-2 rounded-xl border border-tremor-border bg-tremor-background px-4 py-2 text-sm font-medium text-tremor-content-strong shadow-sm transition hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background"
+          >
+            {lang === "zh" ? "查看数据流程" : "Open Data Flow"}
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
       </div>
 
       <Grid numItemsSm={2} numItemsLg={4} className="gap-4">
@@ -232,7 +348,25 @@ export default function SourcesAutomationPage() {
               <Mail className="h-4 w-4 text-tremor-content-subtle" />
               <Text>Email delivery: {config?.email_enabled ? "configured" : "disabled"}</Text>
             </div>
+            <div className="flex items-center gap-2">
+              <Cpu className="h-4 w-4 text-tremor-content-subtle" />
+              <Text>
+                Worker: {workerStatus
+                  ? (workerStatus.worker_process_running ? "running" : "stopped")
+                  : "checking"}
+              </Text>
+            </div>
           </div>
+
+          {!workerStatus?.worker_process_running ? (
+            <div className="mt-4 rounded-tremor-default border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
+              <Text>
+                {lang === "zh"
+                  ? "自动化只会先创建 queued 任务；如果 worker 没启动，任务不会继续执行。"
+                  : "Automation only creates queued tasks first; without a worker process those tasks will not continue running."}
+              </Text>
+            </div>
+          ) : null}
 
           <div className="mt-6">
             <Title>Notification Status</Title>
@@ -327,36 +461,117 @@ export default function SourcesAutomationPage() {
                   <option key={source.value} value={source.value}>{source.label}</option>
                 ))}
               </select>
-              <div className="grid grid-cols-2 gap-3">
-                <input
-                  className="w-full rounded-tremor-default border border-tremor-border px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background"
-                  placeholder="daily_time HH:MM"
-                  value={form.daily_time ?? ""}
-                  onChange={(e) => setForm((prev) => ({ ...prev, daily_time: e.target.value }))}
-                />
-                <input
-                  type="number"
-                  className="w-full rounded-tremor-default border border-tremor-border px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background"
-                  placeholder="interval minutes"
-                  value={form.interval_minutes ?? ""}
-                  onChange={(e) => setForm((prev) => ({ ...prev, interval_minutes: e.target.value ? Number(e.target.value) : null }))}
-                />
+              <div className="rounded-tremor-default border border-dashed border-tremor-border p-4 dark:border-dark-tremor-border">
+                <div className="flex items-center justify-between gap-3">
+                  <Text>{lang === "zh" ? "调度方式" : "Schedule"}</Text>
+                  <Badge color={scheduleMode === "interval" ? "teal" : "blue"}>
+                    {scheduleMode === "interval"
+                      ? (lang === "zh" ? "按间隔执行" : "Interval")
+                      : (lang === "zh" ? "按天执行" : "Daily")}
+                  </Badge>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button
+                    size="xs"
+                    variant={scheduleMode === "daily" ? "primary" : "secondary"}
+                    onClick={() => setScheduleMode("daily")}
+                  >
+                    {lang === "zh" ? "每天固定时间" : "Daily time"}
+                  </Button>
+                  <Button
+                    size="xs"
+                    variant={scheduleMode === "interval" ? "primary" : "secondary"}
+                    onClick={() => setScheduleMode("interval")}
+                  >
+                    {lang === "zh" ? "每隔一段时间" : "Every N"}
+                  </Button>
+                </div>
+
+                {scheduleMode === "daily" ? (
+                  <>
+                    <div className="mt-3 grid grid-cols-2 gap-3">
+                      <input
+                        className="w-full rounded-tremor-default border border-tremor-border px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background"
+                        placeholder="daily_time HH:MM"
+                        value={form.daily_time ?? ""}
+                        onChange={(e) => setForm((prev) => ({ ...prev, daily_time: e.target.value }))}
+                      />
+                      <input
+                        className="w-full rounded-tremor-default border border-tremor-border px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background"
+                        placeholder="timezone"
+                        value={form.timezone ?? ""}
+                        onChange={(e) => setForm((prev) => ({ ...prev, timezone: e.target.value }))}
+                      />
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {dailyPresetTimes.map((timeText) => (
+                        <Button
+                          key={timeText}
+                          size="xs"
+                          variant="secondary"
+                          onClick={() => setForm((prev) => ({ ...prev, daily_time: timeText }))}
+                        >
+                          {timeText}
+                        </Button>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="mt-3 grid grid-cols-3 gap-3">
+                      <input
+                        type="number"
+                        min="1"
+                        className="w-full rounded-tremor-default border border-tremor-border px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background"
+                        placeholder={lang === "zh" ? "间隔值" : "Interval"}
+                        value={intervalValue}
+                        onChange={(e) => setIntervalValue(e.target.value)}
+                      />
+                      <select
+                        className="w-full rounded-tremor-default border border-tremor-border px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background"
+                        value={intervalUnit}
+                        onChange={(e) => setIntervalUnit(e.target.value as IntervalUnit)}
+                      >
+                        <option value="minutes">{lang === "zh" ? "分钟" : "Minutes"}</option>
+                        <option value="hours">{lang === "zh" ? "小时" : "Hours"}</option>
+                      </select>
+                      <input
+                        className="w-full rounded-tremor-default border border-tremor-border px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background"
+                        placeholder="timezone"
+                        value={form.timezone ?? ""}
+                        onChange={(e) => setForm((prev) => ({ ...prev, timezone: e.target.value }))}
+                      />
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {intervalPresetMinutes.map((minutes) => (
+                        <Button
+                          key={minutes}
+                          size="xs"
+                          variant="secondary"
+                          onClick={() => {
+                            const derived = intervalMinutesToFields(minutes);
+                            setIntervalValue(derived.value);
+                            setIntervalUnit(derived.unit);
+                          }}
+                        >
+                          {lang === "zh"
+                            ? (minutes % 60 === 0 ? `${minutes / 60} 小时` : `${minutes} 分钟`)
+                            : (minutes % 60 === 0 ? `${minutes / 60}h` : `${minutes}m`)}
+                        </Button>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                <Text className="mt-3 text-xs">{schedulePreview}</Text>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <input
-                  className="w-full rounded-tremor-default border border-tremor-border px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background"
-                  placeholder="timezone"
-                  value={form.timezone ?? ""}
-                  onChange={(e) => setForm((prev) => ({ ...prev, timezone: e.target.value }))}
-                />
-                <input
-                  type="number"
-                  className="w-full rounded-tremor-default border border-tremor-border px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background"
-                  placeholder="retry threshold"
-                  value={form.retry_threshold}
-                  onChange={(e) => setForm((prev) => ({ ...prev, retry_threshold: Number(e.target.value || 0) }))}
-                />
-              </div>
+              <input
+                type="number"
+                className="w-full rounded-tremor-default border border-tremor-border px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background"
+                placeholder="retry threshold"
+                value={form.retry_threshold}
+                onChange={(e) => setForm((prev) => ({ ...prev, retry_threshold: Number(e.target.value || 0) }))}
+              />
               <div className="grid grid-cols-2 gap-3">
                 <select
                   className="w-full rounded-tremor-default border border-tremor-border px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background"
@@ -434,9 +649,16 @@ export default function SourcesAutomationPage() {
                         <Badge color="slate">{job.country_code}</Badge>
                         <Badge color="blue">{getSourceDisplayLabel(job.source, lang, job.country_code)}</Badge>
                       </div>
-                      <Text>{scheduleLabel(job)}</Text>
+                      <Text>{scheduleLabel(job, lang)}</Text>
                     </div>
                     <div className="flex flex-wrap gap-2">
+                      <Link
+                        href={`/sources/tasks?scope=all${job.last_task_uuid ? `&search=${encodeURIComponent(job.last_task_uuid)}` : ""}`}
+                        className="inline-flex items-center gap-1 rounded-tremor-default border border-tremor-border px-3 py-1.5 text-xs font-medium text-tremor-content-strong transition hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:hover:bg-dark-tremor-background-subtle"
+                      >
+                        {lang === "zh" ? "查看任务" : "View tasks"}
+                        <ArrowRight className="h-3.5 w-3.5" />
+                      </Link>
                       <Button size="xs" icon={Play} loading={runJob.isPending} onClick={() => runJob.mutate(job.job_id)}>
                         Run now
                       </Button>
@@ -464,7 +686,16 @@ export default function SourcesAutomationPage() {
                     </Card>
                     <Card className="p-3">
                       <Text>Last task</Text>
-                      <Text className="mt-1 break-all font-mono text-xs font-medium">{job.last_task_uuid || "-"}</Text>
+                      {job.last_task_uuid ? (
+                        <Link
+                          href={`/sources/tasks?scope=all&search=${encodeURIComponent(job.last_task_uuid)}`}
+                          className="mt-1 block break-all font-mono text-xs font-medium text-tremor-brand hover:underline"
+                        >
+                          {job.last_task_uuid}
+                        </Link>
+                      ) : (
+                        <Text className="mt-1 break-all font-mono text-xs font-medium">-</Text>
+                      )}
                     </Card>
                   </Grid>
 

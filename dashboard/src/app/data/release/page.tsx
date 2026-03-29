@@ -31,12 +31,13 @@ import {
   useUpdateDataReleaseJob,
 } from "@/lib/hooks/useDataRelease";
 import {
-  type WorkbookEntry,
+  useCancelTask,
   useTaskDetail,
   useTasks,
   useTaskWebSocket,
   useWorkerStatus,
 } from "@/lib/hooks/useTasks";
+import { TaskDetailPanel } from "@/components/tasks/TaskDetailPanel";
 import { useAppStore } from "@/stores/app-store";
 
 const defaultForm: DataReleaseJobInput = {
@@ -74,7 +75,7 @@ function formatDateTime(value?: string | null): string {
 function scheduleLabel(job: { interval_minutes?: number | null; daily_time?: string | null; timezone?: string | null }): string {
   if (job.interval_minutes) return `Every ${job.interval_minutes} minute(s)`;
   if (job.daily_time) return `Daily at ${job.daily_time} (${job.timezone || "UTC"})`;
-  return "Manual or crawl-completion trigger";
+  return "Manual or data-task completion trigger";
 }
 
 function toForm(job: DataReleaseJob): DataReleaseJobInput {
@@ -112,21 +113,6 @@ function statusColor(status: string) {
       return "slate" as const;
     default:
       return "blue" as const;
-  }
-}
-
-function workbookEntryColor(entryType: string) {
-  switch (entryType) {
-    case "success":
-      return "emerald" as const;
-    case "warning":
-      return "amber" as const;
-    case "error":
-      return "rose" as const;
-    case "info":
-      return "blue" as const;
-    default:
-      return "slate" as const;
   }
 }
 
@@ -181,128 +167,51 @@ function CheckOutput({ label, value }: { label: string; value?: string | null })
   );
 }
 
-function stripAnsiCodes(value: string): string {
-  return value.replace(/\u001b\[[0-9;]*m/g, "");
-}
-
-function rawWorkbookText(entry: WorkbookEntry): string {
-  const sections: string[] = [];
-  if (entry.content) sections.push(stripAnsiCodes(entry.content));
-  if (entry.prompt) sections.push(`[prompt]\n${entry.prompt}`);
-  if (entry.response) sections.push(`[response]\n${entry.response}`);
-  if (entry.error_message) sections.push(`[error]\n${entry.error_message}`);
-  return sections.join("\n\n").trim();
-}
-
-function logPreview(value: string): string {
-  const firstLine = value
-    .split("\n")
-    .map((line) => line.trim())
-    .find(Boolean);
-  if (!firstLine) return "(empty log entry)";
-  if (firstLine.length <= 180) return firstLine;
-  return `${firstLine.slice(0, 177)}...`;
-}
-
-function RawReleaseTaskDetail({
-  taskDetail,
-  detailLoading,
+function CollapsibleStatusSection({
+  title,
+  subtitle,
+  icon,
+  badges,
+  open,
+  onToggle,
+  children,
 }: {
-  taskDetail?: {
-    task_uuid: string;
-    status: string;
-    progress: number;
-    created_at: string;
-    completed_at: string | null;
-    workbook_entries: WorkbookEntry[];
-  };
-  detailLoading: boolean;
+  title: string;
+  subtitle: string;
+  icon: ReactNode;
+  badges?: ReactNode;
+  open: boolean;
+  onToggle: () => void;
+  children: ReactNode;
 }) {
-  const rawEntries = useMemo(() => {
-    if (!taskDetail) return [];
-    return [...taskDetail.workbook_entries].sort(
-      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-    );
-  }, [taskDetail]);
-
-  if (detailLoading && !taskDetail) {
-    return (
-      <div className="space-y-3">
-        <div className="h-6 animate-pulse rounded bg-tremor-background-muted dark:bg-dark-tremor-background-muted" />
-        <div className="h-24 animate-pulse rounded bg-tremor-background-muted dark:bg-dark-tremor-background-muted" />
-        <div className="h-24 animate-pulse rounded bg-tremor-background-muted dark:bg-dark-tremor-background-muted" />
-      </div>
-    );
-  }
-
-  if (!taskDetail) {
-    return (
-      <div className="text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
-        Failed to load raw release logs.
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-4">
-      {taskDetail.status === "running" && taskDetail.progress >= 88 && taskDetail.progress < 100 ? (
-        <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
-          Cloudflare Pages upload is in progress. `wrangler` can stay at 88% for a while and then jump straight to 100% when deploy finishes.
+    <Card className="overflow-hidden border border-tremor-border dark:border-dark-tremor-border">
+      <button
+        type="button"
+        className="flex w-full flex-col gap-4 text-left lg:flex-row lg:items-start lg:justify-between"
+        onClick={onToggle}
+      >
+        <div className="flex items-start gap-3">
+          <div className="rounded-2xl bg-tremor-background-muted p-3 text-tremor-content-strong dark:bg-dark-tremor-background-muted dark:text-dark-tremor-content-strong">
+            {icon}
+          </div>
+          <div>
+            <Title>{title}</Title>
+            <Text className="mt-1">{subtitle}</Text>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 self-start">
+          {badges}
+          <ChevronDown className={`h-4 w-4 text-tremor-content-subtle transition-transform ${open ? "rotate-180" : ""}`} />
+        </div>
+      </button>
+
+      {open ? (
+        <div className="mt-5 border-t border-tremor-border pt-5 dark:border-dark-tremor-border">
+          {children}
         </div>
       ) : null}
-
-      <div className="grid gap-3 md:grid-cols-3">
-        <AccessDetail label="Status" value={<Badge color={statusColor(taskDetail.status)}>{taskDetail.status}</Badge>} />
-        <AccessDetail label="Progress" value={`${taskDetail.progress}%`} />
-        <AccessDetail label="Workbook Entries" value={String(rawEntries.length)} />
-        <AccessDetail label="Created" value={formatDateTime(taskDetail.created_at)} />
-        <AccessDetail label="Completed" value={formatDateTime(taskDetail.completed_at)} />
-        <AccessDetail label="Task UUID" value={taskDetail.task_uuid} mono />
-      </div>
-
-      <div className="rounded-2xl border border-dashed border-tremor-border bg-tremor-background-muted/60 p-3 text-sm text-tremor-content dark:border-dark-tremor-border dark:bg-dark-tremor-background-muted/30 dark:text-dark-tremor-content">
-        Raw workbook entries only. No structured parsing is applied in this view.
-      </div>
-
-      {!rawEntries.length ? (
-        <div className="rounded-tremor-default border border-dashed border-tremor-border p-6 text-center dark:border-dark-tremor-border">
-          <Text>No workbook entries recorded yet.</Text>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {rawEntries.map((entry) => {
-            const rawText = rawWorkbookText(entry);
-            const preview = logPreview(rawText);
-            return (
-              <details
-                key={entry.id}
-                className="rounded-2xl border border-tremor-border bg-tremor-background p-4 dark:border-dark-tremor-border dark:bg-dark-tremor-background"
-              >
-                <summary className="cursor-pointer list-none">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge color={workbookEntryColor(entry.entry_type)}>{entry.entry_type}</Badge>
-                    <Text className="font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">
-                      {entry.title}
-                    </Text>
-                  </div>
-                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
-                    <span>{formatDateTime(entry.created_at)}</span>
-                    {entry.content_type ? <span>content_type: {entry.content_type}</span> : null}
-                    {entry.duration ? <span>duration: {entry.duration.toFixed(1)}s</span> : null}
-                  </div>
-                  <p className="mt-2 whitespace-pre-wrap break-words font-mono text-xs text-tremor-content dark:text-dark-tremor-content">
-                    {preview}
-                  </p>
-                </summary>
-                <pre className="mt-3 whitespace-pre-wrap break-words rounded-xl bg-tremor-background-muted/60 p-3 font-mono text-xs text-tremor-content-strong dark:bg-dark-tremor-background-muted/30 dark:text-dark-tremor-content-strong">
-                  {rawText || "(empty log entry)"}
-                </pre>
-              </details>
-            );
-          })}
-        </div>
-      )}
-    </div>
+    </Card>
   );
 }
 
@@ -312,9 +221,12 @@ export default function DataReleasePage() {
   const { data: jobs, isLoading } = useDataReleaseJobs();
   const { data: workerStatus } = useWorkerStatus();
   const { data: releaseTasks } = useTasks(undefined, "export_data", undefined, undefined, 20);
+  const cancelTask = useCancelTask();
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const [editingJobId, setEditingJobId] = useState<string | null>(null);
   const [expandedTaskUuid, setExpandedTaskUuid] = useState<string | null>(null);
+  const [showGitChecks, setShowGitChecks] = useState(false);
+  const [showCloudflareChecks, setShowCloudflareChecks] = useState(false);
   const [form, setForm] = useState<DataReleaseJobInput>(defaultForm);
 
   const {
@@ -345,6 +257,23 @@ export default function DataReleasePage() {
       setExpandedTaskUuid(releaseTasks[0].task_uuid);
     }
   }, [releaseTasks, expandedTaskUuid]);
+
+  useEffect(() => {
+    if (!checks) return;
+    if (!checks.git.read_access_ok || !checks.git.write_access_ok || checks.git.dirty_blocking_paths.length > 0) {
+      setShowGitChecks(true);
+    }
+    if (!checks.cloudflare.project_access_ok || !!checks.cloudflare.error) {
+      setShowCloudflareChecks(true);
+    }
+  }, [
+    checks?.checked_at,
+    checks?.cloudflare.error,
+    checks?.cloudflare.project_access_ok,
+    checks?.git.dirty_blocking_paths.length,
+    checks?.git.read_access_ok,
+    checks?.git.write_access_ok,
+  ]);
 
   const selectedJob = useMemo(
     () => jobs?.find((job) => job.job_id === selectedJobId) ?? null,
@@ -426,6 +355,14 @@ export default function DataReleasePage() {
     }
   };
 
+  const handleCancelTask = async (taskUuid: string) => {
+    const ok = window.confirm(
+      lang === "zh" ? "确认取消这个发布任务吗？" : "Cancel this release task?",
+    );
+    if (!ok) return;
+    await cancelTask.mutateAsync(taskUuid);
+  };
+
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 md:px-6">
       <div className="space-y-2">
@@ -435,8 +372,8 @@ export default function DataReleasePage() {
         </h1>
         <Text>
           {lang === "zh"
-            ? "把站点数据导出、下载数据仓库发布、Cloudflare Pages 部署整合成一条统一工作流，支持手动运行、定时调度和 crawl 完成后的自动发布。"
-            : "Unify site-data generation, download-repo publishing, and Cloudflare Pages deployment into one workflow with manual runs, scheduling, and automatic post-crawl release."}
+            ? "把站点数据导出、下载数据仓库发布、Cloudflare Pages 部署整合成一条统一工作流，支持手动运行、定时调度，以及相关数据任务完成后的自动发布。"
+            : "Unify site-data generation, download-repo publishing, and Cloudflare Pages deployment into one workflow with manual runs, scheduling, and automatic release after relevant data-update tasks finish."}
         </Text>
       </div>
 
@@ -450,7 +387,7 @@ export default function DataReleasePage() {
           <Metric>{summary.enabled}/{summary.total}</Metric>
         </Card>
         <Card decoration="top" decorationColor="amber">
-          <Text>Auto after crawl</Text>
+          <Text>Auto after data tasks</Text>
           <Metric>{summary.auto}</Metric>
         </Card>
         <Card decoration="top" decorationColor={checks?.overall_ready ? "emerald" : "rose"}>
@@ -510,31 +447,27 @@ export default function DataReleasePage() {
         ) : null}
       </Card>
 
-      <Grid numItemsLg={2} className="gap-6">
-        <Card className="overflow-hidden border border-tremor-border dark:border-dark-tremor-border">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="flex items-start gap-3">
-              <div className="rounded-2xl bg-sky-50 p-3 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300">
-                <GitBranch className="h-5 w-5" />
-              </div>
-              <div>
-                <Title>GitHub Data Share</Title>
-                <Text className="mt-1">Validate the dedicated download-data repository before publishing release artifacts.</Text>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2">
+      <div className="grid gap-6 lg:grid-cols-2">
+        <CollapsibleStatusSection
+          title="GitHub Data Share"
+          subtitle="Validate the dedicated download-data repository before publishing release artifacts."
+          icon={<GitBranch className="h-5 w-5" />}
+          open={showGitChecks}
+          onToggle={() => setShowGitChecks((prev) => !prev)}
+          badges={
+            <>
               <Badge color={!checks ? "slate" : checks.git.read_access_ok ? "emerald" : "rose"}>
-                {!checks ? "Read check pending" : checks.git.read_access_ok ? "Read access ok" : "Read access failed"}
+                {!checks ? "Read pending" : checks.git.read_access_ok ? "Read ok" : "Read failed"}
               </Badge>
               <Badge color={!checks ? "slate" : checks.git.write_access_ok ? "emerald" : "rose"}>
-                {!checks ? "Write check pending" : checks.git.write_access_ok ? "Write access ok" : "Write access failed"}
+                {!checks ? "Write pending" : checks.git.write_access_ok ? "Write ok" : "Write failed"}
               </Badge>
-            </div>
-          </div>
-
+            </>
+          }
+        >
           {checks ? (
             <>
-              <div className="mt-5 grid gap-3 md:grid-cols-2">
+              <div className="grid gap-3 md:grid-cols-2">
                 <AccessDetail label="Config Env" value={checks.git.env_var || "-"} />
                 <AccessDetail label="Branch" value={checks.git.branch || "-"} />
                 <AccessDetail label="Repo URL" value={checks.git.repo_url || "-"} mono />
@@ -554,28 +487,28 @@ export default function DataReleasePage() {
                 <CheckOutput label="Write Check Output" value={checks.git.write_check_output} />
               </div>
             </>
-          ) : null}
-        </Card>
+          ) : (
+            <Text className="text-sm text-tremor-content dark:text-dark-tremor-content">
+              Run a preflight check to load the latest GitHub access snapshot.
+            </Text>
+          )}
+        </CollapsibleStatusSection>
 
-        <Card className="overflow-hidden border border-tremor-border dark:border-dark-tremor-border">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="flex items-start gap-3">
-              <div className="rounded-2xl bg-emerald-50 p-3 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-                <Cloud className="h-5 w-5" />
-              </div>
-              <div>
-                <Title>Cloudflare Pages</Title>
-                <Text className="mt-1">Check deployment credentials, target project, and Wrangler availability for the Pages release step.</Text>
-              </div>
-            </div>
+        <CollapsibleStatusSection
+          title="Cloudflare Pages"
+          subtitle="Check deployment credentials, target project, and Wrangler availability for the Pages release step."
+          icon={<Cloud className="h-5 w-5" />}
+          open={showCloudflareChecks}
+          onToggle={() => setShowCloudflareChecks((prev) => !prev)}
+          badges={
             <Badge color={!checks ? "slate" : checks.cloudflare.project_access_ok ? "emerald" : "rose"}>
-              {!checks ? "Project check pending" : checks.cloudflare.project_access_ok ? "Project reachable" : "Project check failed"}
+              {!checks ? "Project pending" : checks.cloudflare.project_access_ok ? "Project reachable" : "Project failed"}
             </Badge>
-          </div>
-
+          }
+        >
           {checks ? (
             <>
-              <div className="mt-5 grid gap-3 md:grid-cols-2">
+              <div className="grid gap-3 md:grid-cols-2">
                 <AccessDetail label="Project" value={checks.cloudflare.project_name || "-"} />
                 <AccessDetail label="Wrangler" value={checks.commands.wrangler_version || "-"} mono />
                 <AccessDetail label="Token Present" value={checks.cloudflare.token_present ? "yes" : "no"} />
@@ -592,9 +525,13 @@ export default function DataReleasePage() {
                 </div>
               ) : null}
             </>
-          ) : null}
-        </Card>
-      </Grid>
+          ) : (
+            <Text className="text-sm text-tremor-content dark:text-dark-tremor-content">
+              Run a preflight check to load the latest Cloudflare status snapshot.
+            </Text>
+          )}
+        </CollapsibleStatusSection>
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-1">
@@ -694,7 +631,7 @@ export default function DataReleasePage() {
               />
               <div className="grid grid-cols-2 gap-2 text-sm">
                 {([
-                  ["auto_after_crawls", form.auto_after_crawls, "Auto-trigger after all crawl tasks finish"],
+                  ["auto_after_crawls", form.auto_after_crawls, "Auto-trigger after relevant data-update tasks finish"],
                   ["include_git_push", form.include_git_push, "Publish generated downloads to the GitHub data-share repo"],
                   ["include_cloudflare_deploy", form.include_cloudflare_deploy, "Deploy Astro dist to Cloudflare Pages"],
                   ["require_clean_worktree", form.require_clean_worktree, "Block release if repo has unrelated dirty files"],
@@ -722,7 +659,7 @@ export default function DataReleasePage() {
 
         <Card className="lg:col-span-2">
           <Title>Release Jobs</Title>
-          <Text className="mt-1">Each job can be scheduled, triggered manually, or auto-fired after crawl completion.</Text>
+          <Text className="mt-1">Each job can be scheduled, triggered manually, or auto-fired after relevant data-update tasks complete.</Text>
 
           <div className="mt-4 space-y-4">
             {isLoading ? (
@@ -742,7 +679,7 @@ export default function DataReleasePage() {
                         <Title>{job.name}</Title>
                         <Badge color={job.enabled ? "emerald" : "slate"}>{job.enabled ? "enabled" : "disabled"}</Badge>
                         <Badge color={statusColor(job.last_status)}>{job.last_status}</Badge>
-                        {job.auto_after_crawls ? <Badge color="blue">auto after crawl</Badge> : null}
+                        {job.auto_after_crawls ? <Badge color="blue">auto after data tasks</Badge> : null}
                       </div>
                       <Text>{scheduleLabel(job)}</Text>
                     </div>
@@ -802,7 +739,7 @@ export default function DataReleasePage() {
 
       <Card>
         <Title>Recent Release Tasks</Title>
-        <Text className="mt-1">Every release run is tracked as an `EXPORT_DATA` task. Expand any row to inspect the raw workbook log stream.</Text>
+        <Text className="mt-1">Every release run is tracked as an `EXPORT_DATA` task. Expand any row to inspect the same workflow detail panel used across the task views.</Text>
 
         <div className="mt-4 space-y-3">
           {!releaseTasks?.length ? (
@@ -814,51 +751,66 @@ export default function DataReleasePage() {
               const expanded = expandedTaskUuid === task.task_uuid;
               const matchingDetail = expanded && expandedTaskDetail?.task_uuid === task.task_uuid ? expandedTaskDetail : undefined;
               const loadingExpandedDetail = expanded && !matchingDetail && (detailLoading || detailFetching);
+              const canCancel = ["pending", "queued", "running", "retrying"].includes(task.status) && !task.cancel_requested;
 
               return (
                 <Card key={task.task_uuid} className="overflow-hidden p-0">
-                  <button
-                    type="button"
-                    className="w-full text-left transition hover:bg-tremor-background-subtle dark:hover:bg-dark-tremor-background-subtle"
-                    onClick={() => setExpandedTaskUuid(expanded ? null : task.task_uuid)}
-                  >
-                    <div className="flex items-center gap-3 px-4 py-3">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex min-w-0 flex-wrap items-center gap-2">
-                          <Text className="font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">
-                            {task.task_name}
-                          </Text>
-                          <Badge color={statusColor(task.status)}>{task.status}</Badge>
-                        </div>
-                        <div className="mt-2 grid gap-1 text-xs text-tremor-content dark:text-dark-tremor-content md:hidden">
-                          <Text>Created: {formatDateTime(task.created_at)}</Text>
-                          <Text>Completed: {formatDateTime(task.completed_at)}</Text>
-                        </div>
-                        <Text className="mt-2 break-all font-mono text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle md:hidden">
-                          {task.task_uuid}
-                        </Text>
-                        {task.last_error ? (
-                          <Text className="mt-2 break-words text-xs text-rose-700 dark:text-rose-300 md:hidden">
-                            {task.last_error}
-                          </Text>
-                        ) : null}
-                      </div>
-
-                      <div className="hidden shrink-0 items-center gap-3 md:flex">
-                        <div className="w-44">
-                          <div className="flex items-center gap-2">
-                            <ProgressBar value={task.progress} color={task.progress === 100 ? "emerald" : "teal"} className="flex-1" />
-                            <Text>{task.progress}%</Text>
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <button
+                      type="button"
+                      className="min-w-0 flex-1 rounded-tremor-default text-left transition hover:bg-tremor-background-subtle dark:hover:bg-dark-tremor-background-subtle"
+                      onClick={() => setExpandedTaskUuid(expanded ? null : task.task_uuid)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex min-w-0 flex-wrap items-center gap-2">
+                            <Text className="font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">
+                              {task.task_name}
+                            </Text>
+                            <Badge color={statusColor(task.status)}>{task.status}</Badge>
                           </div>
+                          <div className="mt-2 grid gap-1 text-xs text-tremor-content dark:text-dark-tremor-content md:hidden">
+                            <Text>Created: {formatDateTime(task.created_at)}</Text>
+                            <Text>Completed: {formatDateTime(task.completed_at)}</Text>
+                          </div>
+                          <Text className="mt-2 break-all font-mono text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle md:hidden">
+                            {task.task_uuid}
+                          </Text>
+                          {task.last_error ? (
+                            <Text className="mt-2 break-words text-xs text-rose-700 dark:text-rose-300 md:hidden">
+                              {task.last_error}
+                            </Text>
+                          ) : null}
                         </div>
-                        <div className="w-44 text-right text-xs text-tremor-content dark:text-dark-tremor-content">
-                          <Text>Created: {formatDateTime(task.created_at)}</Text>
-                          <Text>Completed: {formatDateTime(task.completed_at)}</Text>
+
+                        <div className="hidden shrink-0 items-center gap-3 md:flex">
+                          <div className="w-44">
+                            <div className="flex items-center gap-2">
+                              <ProgressBar value={task.progress} color={task.progress === 100 ? "emerald" : "teal"} className="flex-1" />
+                              <Text>{task.progress}%</Text>
+                            </div>
+                          </div>
+                          <div className="w-44 text-right text-xs text-tremor-content dark:text-dark-tremor-content">
+                            <Text>Created: {formatDateTime(task.created_at)}</Text>
+                            <Text>Completed: {formatDateTime(task.completed_at)}</Text>
+                          </div>
+                          <ChevronDown className={`h-4 w-4 shrink-0 text-tremor-content-subtle transition-transform ${expanded ? "rotate-180" : ""}`} />
                         </div>
-                        <ChevronDown className={`h-4 w-4 shrink-0 text-tremor-content-subtle transition-transform ${expanded ? "rotate-180" : ""}`} />
                       </div>
+                    </button>
+
+                    <div className="flex shrink-0 items-center">
+                      <Button
+                        size="xs"
+                        color={canCancel ? "rose" : "slate"}
+                        variant={canCancel ? "secondary" : "light"}
+                        disabled={!canCancel || cancelTask.isPending}
+                        onClick={() => handleCancelTask(task.task_uuid)}
+                      >
+                        {canCancel ? (task.cancel_requested ? "Cancelling" : "Cancel") : ""}
+                      </Button>
                     </div>
-                  </button>
+                  </div>
 
                   <div className="border-t border-transparent px-4 pb-3 md:hidden">
                     <div className="flex items-center gap-2">
@@ -875,7 +827,16 @@ export default function DataReleasePage() {
                           {task.last_error}
                         </div>
                       ) : null}
-                      <RawReleaseTaskDetail taskDetail={matchingDetail} detailLoading={loadingExpandedDetail} />
+                      {task.status === "running" && task.progress >= 88 && task.progress < 100 ? (
+                        <div className="mb-4 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
+                          Cloudflare Pages upload is in progress. `wrangler` can stay at 88% for a while and then jump straight to 100% when deploy finishes.
+                        </div>
+                      ) : null}
+                      <TaskDetailPanel
+                        taskDetail={matchingDetail}
+                        detailLoading={loadingExpandedDetail}
+                        emptyMessage="Failed to load release task details"
+                      />
                     </div>
                   ) : null}
                 </Card>

@@ -3,6 +3,7 @@
 import ReportLayout from '../../layouts/ReportLayout.astro';
 import CountryCard from '../../components/CountryCard.astro';
 import CountryFlag from '../../components/CountryFlag.astro';
+import BrandLogo from '../../components/BrandLogo.astro';
 import CountriesMapView from '../../components/charts/CountriesMapView';
 import metaRaw from '../../data/meta.json';
 
@@ -38,10 +39,8 @@ const ORDERED_COUNTRIES = [...ALL_COUNTRIES].sort((a, b) => {
   return aSupported ? -1 : 1;
 });
 
-const FLAGS: Record<string, string> = {
-  CN: '🇨🇳', TH: '🇹🇭', AU: '🇦🇺', US: '🇺🇸', GB: '🇬🇧',
-  KR: '🇰🇷', NZ: '🇳🇿', SE: '🇸🇪', JP: '🇯🇵', SG: '🇸🇬',
-};
+const liveCountryCount = ORDERED_COUNTRIES.filter((entry) => entry.status === 'Supported' || Boolean(metaByCode[entry.code])).length;
+const scheduledCountryCount = ORDERED_COUNTRIES.length - liveCountryCount;
 ---
 
 <ReportLayout
@@ -49,107 +48,319 @@ const FLAGS: Record<string, string> = {
   description="Global disease surveillance coverage by country."
   breadcrumbs={[{ label: 'Countries' }]}
 >
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-
-    <!-- Page header ──────────────────────────────────────────────────────── -->
-    <div class="mb-8 flex items-center gap-4">
-      <img src="/logo.png" alt="GlobalID logo" class="h-12 w-auto flex-shrink-0" />
-      <div>
-        <h1 class="text-3xl font-bold text-slate-100 mb-1"
-            data-lang-en="Disease Surveillance Coverage"
-            data-lang-zh="疾病监测覆盖范围">
-          Disease Surveillance Coverage
-        </h1>
-        <p class="text-slate-500 text-sm"
-           data-lang-en="Global infectious disease surveillance data organized by country."
-           data-lang-zh="全球传染病监测数据（按国家组织）。">
-          Global infectious disease surveillance data organized by country.
-        </p>
-      </div>
-    </div>
-
-    <!-- Coverage map ─────────────────────────────────────────────────────── -->
-    <div class="card p-4 mb-10 relative">
-      <!-- Legend -->
-      <div class="absolute top-4 right-5 flex gap-5 text-xs text-slate-400 z-20 pointer-events-none">
-        <span class="flex items-center gap-1.5">
-          <span class="inline-block w-2.5 h-2.5 rounded-full bg-teal-500"></span>
-          <span data-lang-en="Supported" data-lang-zh="已支持">Supported</span>
-        </span>
-        <span class="flex items-center gap-1.5">
-          <span class="inline-block w-2.5 h-2.5 rounded-full bg-slate-500"></span>
-          <span data-lang-en="Scheduled" data-lang-zh="规划中">Scheduled</span>
-        </span>
-      </div>
-
-      <CountriesMapView
-        client:only="react"
-        metaCountries={supportedCountries}
-        height={480}
-      />
-    </div>
-
-    <!-- Country cards ────────────────────────────────────────────────────── -->
-    <h2 class="text-lg font-semibold text-slate-300 mb-5"
-        data-lang-en="Coverage Countries" data-lang-zh="覆盖国家">
-      Coverage Countries
-    </h2>
-
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-      {ORDERED_COUNTRIES.map((c) => {
-        const m = metaByCode[c.code];
-        if (m) {
-          return (
-            <CountryCard
-              code={m.code}
-              name={m.name}
-              totalCases={m.total_cases}
-              totalDeaths={m.total_deaths}
-              diseaseCount={m.disease_count}
-              dateRange={m.date_range}
+  <div class="coverage-page max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+    <section class="coverage-surface coverage-intro p-6 sm:p-8">
+      <div class="grid gap-8 xl:grid-cols-[minmax(0,1.2fr)_minmax(280px,0.8fr)] xl:items-end">
+        <div class="space-y-4">
+          <p class="coverage-kicker" data-lang-en="Global Coverage Index" data-lang-zh="全球覆盖索引">
+            Global Coverage Index
+          </p>
+          <div class="flex items-center gap-4">
+            <BrandLogo
+              variant="wordmark"
+              alt="GIDS logo"
+              class="min-w-0"
+              wordmarkClass="h-16 w-auto flex-shrink-0 max-w-full"
             />
-          );
-        }
-
-        if (c.status === 'Supported') {
-          return (
-            <CountryCard
-              code={c.code}
-              name={c.name}
-              totalCases={0}
-              totalDeaths={0}
-              diseaseCount={0}
-            />
-          );
-        }
-
-        // Scheduled country card
-        return (
-          <div class="card p-5 opacity-60 border-slate-700/40 select-none transition-all">
-            <div class="flex items-start justify-between mb-3">
-              <div class="flex items-center gap-3">
-                <CountryFlag code={c.code} name={c.name} sizeClass="w-9 h-7" />
-                <div>
-                  <h3 class="text-slate-300 font-semibold text-base">{c.name}</h3>
-                  <span class="text-slate-600 text-xs font-mono">{c.code}</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="mt-1">
-              <span class="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded
-                           border border-slate-700 text-slate-500">
-                <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span data-lang-en="Scheduled" data-lang-zh="规划中">Scheduled</span>
-              </span>
+            <div>
+              <h1 class="coverage-title"
+                  data-lang-en="Disease Surveillance Coverage"
+                  data-lang-zh="疾病监测覆盖范围">
+                Disease Surveillance Coverage
+              </h1>
+              <p class="coverage-lead mt-3"
+                 data-lang-en="A research-style index of countries currently monitored by GIDS, with live coverage status and upcoming expansions shown together on the same map."
+                 data-lang-zh="以研究门户的方式展示 GIDS 当前已覆盖国家与计划扩展国家，并在同一张地图中呈现实时状态。">
+                A research-style index of countries currently monitored by GIDS, with live coverage status and upcoming expansions shown together on the same map.
+              </p>
             </div>
           </div>
-        );
-      })}
-    </div>
+        </div>
 
+        <div class="coverage-meta-grid">
+          <article class="coverage-meta-card">
+            <div class="coverage-meta-label" data-lang-en="Live countries" data-lang-zh="已上线国家">Live countries</div>
+            <div class="coverage-meta-value">{liveCountryCount}</div>
+          </article>
+          <article class="coverage-meta-card">
+            <div class="coverage-meta-label" data-lang-en="Scheduled" data-lang-zh="计划扩展">Scheduled</div>
+            <div class="coverage-meta-value">{scheduledCountryCount}</div>
+          </article>
+          <article class="coverage-meta-card">
+            <div class="coverage-meta-label" data-lang-en="Diseases tracked" data-lang-zh="追踪疾病">Diseases tracked</div>
+            <div class="coverage-meta-value">{meta.total_diseases ?? '—'}</div>
+          </article>
+          <article class="coverage-meta-card">
+            <div class="coverage-meta-label" data-lang-en="Reports generated" data-lang-zh="已生成报告">Reports generated</div>
+            <div class="coverage-meta-value">{meta.total_reports ?? '—'}</div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="coverage-surface p-5 sm:p-6">
+      <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p class="coverage-kicker" data-lang-en="Coverage map" data-lang-zh="覆盖地图">Coverage map</p>
+          <h2 class="coverage-section-title"
+              data-lang-en="Current and scheduled country monitoring"
+              data-lang-zh="当前与计划中的国家监测布局">
+            Current and scheduled country monitoring
+          </h2>
+          <p class="coverage-section-lead"
+             data-lang-en="Supported countries can be opened directly into their surveillance briefs. Scheduled countries remain visible to show where the network is expanding next."
+             data-lang-zh="已支持国家可直接进入监测概览页；计划中的国家仍保留在地图上，用于展示网络的下一步扩展方向。">
+            Supported countries can be opened directly into their surveillance briefs. Scheduled countries remain visible to show where the network is expanding next.
+          </p>
+        </div>
+
+        <div class="coverage-legend">
+          <span class="coverage-legend-item">
+            <span class="inline-block h-2.5 w-2.5 rounded-full bg-teal-500"></span>
+            <span data-lang-en="Supported" data-lang-zh="已支持">Supported</span>
+          </span>
+          <span class="coverage-legend-item">
+            <span class="inline-block h-2.5 w-2.5 rounded-full bg-slate-500"></span>
+            <span data-lang-en="Scheduled" data-lang-zh="规划中">Scheduled</span>
+          </span>
+        </div>
+      </div>
+
+      <div class="coverage-map-frame mt-6">
+        <CountriesMapView
+          client:only="react"
+          metaCountries={supportedCountries}
+          height={520}
+        />
+      </div>
+    </section>
+
+    <section class="coverage-surface p-5 sm:p-6">
+      <div class="flex flex-col gap-4 border-b border-[rgb(var(--border))/0.68] pb-5 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p class="coverage-kicker" data-lang-en="Country library" data-lang-zh="国家库">Country library</p>
+          <h2 class="coverage-section-title"
+              data-lang-en="Coverage countries"
+              data-lang-zh="覆盖国家">
+            Coverage countries
+          </h2>
+          <p class="coverage-section-lead"
+             data-lang-en="Browse all active country datasets together with the next wave of planned coverage."
+             data-lang-zh="浏览所有已上线国家数据集，以及下一批计划接入的国家。">
+            Browse all active country datasets together with the next wave of planned coverage.
+          </p>
+        </div>
+        <span class="coverage-summary-pill">
+          <span data-lang-en={`${supportedCountries.length} live datasets`} data-lang-zh={`${supportedCountries.length} 个在线数据集`}>
+            {supportedCountries.length} live datasets
+          </span>
+        </span>
+      </div>
+
+      <div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {ORDERED_COUNTRIES.map((c) => {
+          const m = metaByCode[c.code];
+          if (m) {
+            return (
+              <CountryCard
+                code={m.code}
+                name={m.name}
+                totalCases={m.total_cases}
+                totalDeaths={m.total_deaths}
+                diseaseCount={m.disease_count}
+                dateRange={m.date_range}
+              />
+            );
+          }
+
+          if (c.status === 'Supported') {
+            return (
+              <CountryCard
+                code={c.code}
+                name={c.name}
+                totalCases={0}
+                totalDeaths={0}
+                diseaseCount={0}
+              />
+            );
+          }
+
+          return (
+            <div class="coverage-scheduled-card rounded-none border p-5 select-none transition-all">
+              <div class="flex items-start justify-between mb-4">
+                <div class="flex items-center gap-3">
+                  <CountryFlag code={c.code} name={c.name} sizeClass="w-9 h-7" />
+                  <div>
+                    <h3 class="text-[rgb(var(--text-strong))] font-semibold text-base">{c.name}</h3>
+                    <span class="text-[rgb(var(--text-faint))] text-xs font-mono tracking-[0.12em] uppercase">{c.code}</span>
+                  </div>
+                </div>
+                <span class="coverage-scheduled-pill" data-lang-en="Planned" data-lang-zh="规划中">Planned</span>
+              </div>
+
+              <p class="text-sm leading-6 text-[rgb(var(--text-muted))]"
+                 data-lang-en="Coverage is planned and will appear here once data ingestion and report generation are live."
+                 data-lang-zh="该国家已纳入规划，待数据接入与报告生成上线后会在此处开放。">
+                Coverage is planned and will appear here once data ingestion and report generation are live.
+              </p>
+            </div>
+          );
+        })}
+      </div>
+    </section>
   </div>
 </ReportLayout>
+
+<style>
+.coverage-surface {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgb(var(--border) / 0.78);
+  background: linear-gradient(180deg, rgb(var(--surface) / 0.99), rgb(var(--surface-raised) / 0.72));
+  box-shadow: var(--paper-shadow);
+}
+
+.coverage-surface::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: linear-gradient(90deg, rgb(var(--color-accent)), rgb(var(--color-brand) / 0.64), transparent 82%);
+}
+
+.coverage-kicker {
+  color: rgb(var(--text-faint));
+  letter-spacing: 0.18em;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.coverage-title {
+  color: rgb(var(--text-strong));
+  font-family: 'Source Serif 4', serif;
+  font-size: clamp(2rem, 2.8vw, 3rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.08;
+}
+
+.coverage-lead {
+  max-width: 48rem;
+  color: rgb(var(--text));
+  font-size: 1rem;
+  line-height: 1.85;
+}
+
+.coverage-meta-grid {
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.coverage-meta-card {
+  border: 1px solid rgb(var(--border) / 0.72);
+  background: rgb(var(--surface) / 0.84);
+  padding: 1rem 1rem 1.1rem;
+}
+
+.coverage-meta-label {
+  color: rgb(var(--text-faint));
+  letter-spacing: 0.14em;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.coverage-meta-value {
+  margin-top: 0.55rem;
+  color: rgb(var(--text-strong));
+  font-family: 'Source Serif 4', serif;
+  font-size: 1.9rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.coverage-section-title {
+  color: rgb(var(--text-strong));
+  font-family: 'Source Serif 4', serif;
+  font-size: clamp(1.55rem, 2vw, 2.15rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.coverage-section-lead {
+  margin-top: 0.7rem;
+  max-width: 48rem;
+  color: rgb(var(--text-muted));
+  font-size: 0.96rem;
+  line-height: 1.75;
+}
+
+.coverage-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.coverage-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  border: 1px solid rgb(var(--border) / 0.72);
+  background: rgb(var(--surface) / 0.88);
+  padding: 0.55rem 0.85rem;
+  color: rgb(var(--text));
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.coverage-map-frame {
+  border: 1px solid rgb(var(--border) / 0.78);
+  background: linear-gradient(180deg, rgb(var(--bg-soft) / 0.72), rgb(var(--surface) / 0.86));
+  padding: 1rem;
+}
+
+.coverage-summary-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(var(--border) / 0.78);
+  background: rgb(var(--surface) / 0.86);
+  padding: 0.7rem 0.95rem;
+  color: rgb(var(--text));
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.coverage-scheduled-card {
+  border-style: dashed;
+  border-color: rgb(var(--border-soft));
+  background: linear-gradient(180deg, rgb(var(--bg-soft) / 0.56), rgb(var(--surface) / 0.76));
+}
+
+.coverage-scheduled-pill {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgb(var(--border-soft) / 0.78);
+  background: rgb(var(--surface) / 0.82);
+  padding: 0.28rem 0.55rem;
+  color: rgb(var(--text-faint));
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 640px) {
+  .coverage-meta-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .coverage-map-frame {
+    padding: 0.7rem;
+  }
+}
+</style>

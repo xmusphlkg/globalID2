@@ -6,7 +6,9 @@ export default {
     extend: {
       fontFamily: {
         sans: [
+          '"Source Sans 3"',
           'Inter',
+          '"Noto Sans SC"',
           'system-ui',
           '-apple-system',
           'BlinkMacSystemFont',
@@ -15,6 +17,13 @@ export default {
           '"Hiragino Sans GB"',
           '"Microsoft YaHei"',
           'sans-serif',
+        ],
+        serif: [
+          '"Source Serif 4"',
+          '"Noto Serif SC"',
+          'Georgia',
+          '"Times New Roman"',
+          'serif',
         ],
         mono: [
           '"JetBrains Mono"',

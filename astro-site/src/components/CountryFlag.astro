@@ -25,7 +25,7 @@ function toFlagEmoji(countryCode: string) {
 const fallbackEmoji = toFlagEmoji(iso2);
 ---
 
-<span class={`inline-flex items-center justify-center overflow-hidden rounded-md ring-1 ring-slate-700/60 bg-slate-800/30 ${sizeClass}`}>
+<span class={`inline-flex items-center justify-center overflow-hidden rounded-none ring-1 ring-slate-700/60 bg-slate-800/30 ${sizeClass}`}>
   <img
     src={`https://flagcdn.com/w80/${cdnCode}.png`}
     alt={name}

@@ -14,7 +14,18 @@ export default defineConfig({
   },
   vite: {
     optimizeDeps: {
-      include: ['echarts', 'echarts-for-react', 'tslib'],
+      force: true,
+      include: [
+        '@astrojs/react/client.js',
+        'react',
+        'react-dom',
+        'react/jsx-runtime',
+        'react/jsx-dev-runtime',
+        'echarts',
+        'echarts-for-react',
+        'echarts-for-react/lib/core',
+        'tslib',
+      ],
     },
     build: {
       rollupOptions: {

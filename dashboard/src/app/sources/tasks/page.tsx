@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAppStore } from "@/stores/app-store";
 import { t } from "@/lib/i18n";
 import { useCancelTask, useTaskDetail, useTasks, useTaskWebSocket, useWorkerStatus } from "@/lib/hooks/useTasks";
-import { useQualitySources } from "@/lib/hooks/useQuality";
 import { formatDate } from "@/lib/utils";
 import { TaskDetailPanel } from "@/components/tasks/TaskDetailPanel";
 import { Activity, Ban, ChevronDown, Cpu, Download, Search } from "lucide-react";
@@ -13,12 +13,10 @@ import {
   Button,
   Card,
   Color,
-  DonutChart,
   Grid,
   Metric,
   ProgressBar,
   Text,
-  Title,
 } from "@tremor/react";
 
 const statusBadge: Record<string, Color> = {
@@ -46,12 +44,16 @@ function taskTypeLabel(taskType: string, lang: "en" | "zh"): string | null {
   return taskType;
 }
 
-export default function CrawlTasksPage() {
+function CrawlTasksPageContent() {
   const { lang, countryId } = useAppStore();
-  const [scopeMode, setScopeMode] = useState<"selected" | "all">("selected");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [taskTypeFilter, setTaskTypeFilter] = useState("crawl_data");
-  const [search, setSearch] = useState("");
+  const searchParams = useSearchParams();
+  const searchParamsString = searchParams.toString();
+  const [scopeMode, setScopeMode] = useState<"selected" | "all">(
+    searchParams.get("scope") === "all" ? "all" : "selected",
+  );
+  const [statusFilter, setStatusFilter] = useState(searchParams.get("status") ?? "");
+  const [taskTypeFilter, setTaskTypeFilter] = useState(searchParams.get("task_type") ?? "crawl_data");
+  const [search, setSearch] = useState(searchParams.get("search") ?? searchParams.get("task") ?? "");
   const [expandedUuid, setExpandedUuid] = useState<string | null>(null);
   const effectiveCountryId = scopeMode === "all" ? null : countryId;
 
@@ -65,9 +67,15 @@ export default function CrawlTasksPage() {
     200,
   );
   const { data: taskDetail, isFetching: detailLoading } = useTaskDetail(expandedUuid);
-  const { data: sources } = useQualitySources(effectiveCountryId);
   const { data: workerStatus } = useWorkerStatus();
   const cancelTask = useCancelTask();
+
+  useEffect(() => {
+    setScopeMode(searchParams.get("scope") === "all" ? "all" : "selected");
+    setStatusFilter(searchParams.get("status") ?? "");
+    setTaskTypeFilter(searchParams.get("task_type") ?? "crawl_data");
+    setSearch(searchParams.get("search") ?? searchParams.get("task") ?? "");
+  }, [searchParamsString]);
 
   const summary = useMemo(() => {
     const total = tasks?.length ?? 0;
@@ -165,140 +173,127 @@ export default function CrawlTasksPage() {
         </Card>
       </Grid>
 
-      <Grid numItemsLg={3} className="gap-6">
-        {sources && sources.length > 0 && (
-          <Card className="lg:col-span-1">
-            <Title>{t(lang, "data_sources")}</Title>
-            <Text>Distribution by source</Text>
-            <DonutChart
-              className="mt-6 h-64"
-              data={sources.map((s) => ({
-                name: s.data_source ?? "Unknown",
-                value: s.count,
-              }))}
-              category="value"
-              index="name"
-              colors={["slate", "blue", "cyan", "teal", "violet", "amber", "rose"]}
-              showAnimation={true}
-              showTooltip={true}
+      <Card>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative min-w-[220px] flex-1">
+            <Search
+              className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-tremor-content-subtle dark:text-dark-tremor-content-subtle"
+              aria-hidden="true"
             />
-          </Card>
-        )}
+            <input
+              type="text"
+              placeholder={lang === "zh" ? "搜索采集任务..." : "Search source tasks..."}
+              className="w-full rounded-tremor-default border border-tremor-border bg-tremor-background py-2 pl-9 pr-3 text-sm text-tremor-content-emphasis shadow-tremor-input outline-none transition focus:border-tremor-brand-subtle focus:ring-2 focus:ring-tremor-brand-muted dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-emphasis dark:focus:border-dark-tremor-brand-subtle dark:focus:ring-dark-tremor-brand-muted"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <select
+            className="min-w-[170px] rounded-tremor-default border border-tremor-border bg-tremor-background px-3 py-2 text-sm text-tremor-content-emphasis shadow-tremor-input outline-none transition focus:border-tremor-brand-subtle focus:ring-2 focus:ring-tremor-brand-muted dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-emphasis dark:focus:border-dark-tremor-brand-subtle dark:focus:ring-dark-tremor-brand-muted"
+            value={taskTypeFilter}
+            onChange={(e) => setTaskTypeFilter(e.target.value)}
+          >
+            {taskTypeOptions.map((option) => (
+              <option key={option.value || "all"} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+          <select
+            className="min-w-[170px] rounded-tremor-default border border-tremor-border bg-tremor-background px-3 py-2 text-sm text-tremor-content-emphasis shadow-tremor-input outline-none transition focus:border-tremor-brand-subtle focus:ring-2 focus:ring-tremor-brand-muted dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-emphasis dark:focus:border-dark-tremor-brand-subtle dark:focus:ring-dark-tremor-brand-muted"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="">All statuses</option>
+            {["pending", "queued", "running", "completed", "failed", "cancelled", "retrying"].map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        </div>
 
-        <Card className={sources && sources.length > 0 ? "lg:col-span-2" : "lg:col-span-3"}>
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative min-w-[220px] flex-1">
-              <Search
-                className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-tremor-content-subtle dark:text-dark-tremor-content-subtle"
-                aria-hidden="true"
-              />
-              <input
-                type="text"
-                placeholder={lang === "zh" ? "搜索采集任务..." : "Search source tasks..."}
-                className="w-full rounded-tremor-default border border-tremor-border bg-tremor-background py-2 pl-9 pr-3 text-sm text-tremor-content-emphasis shadow-tremor-input outline-none transition focus:border-tremor-brand-subtle focus:ring-2 focus:ring-tremor-brand-muted dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-emphasis dark:focus:border-dark-tremor-brand-subtle dark:focus:ring-dark-tremor-brand-muted"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
+        <div className="mt-4 space-y-3">
+          {isLoading ? (
+            [1, 2, 3].map((i) => (
+              <div key={i} className="h-16 w-full animate-pulse rounded-tremor-default bg-tremor-background-muted dark:bg-dark-tremor-background-muted" />
+            ))
+          ) : !tasks || tasks.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-tremor-default border border-dashed border-tremor-border p-10 text-center dark:border-dark-tremor-border">
+              <Download className="mb-3 h-10 w-10 text-tremor-content-subtle dark:text-dark-tremor-content-subtle" />
+              <Text>{t(lang, "no_data")}</Text>
             </div>
-            <select
-              className="min-w-[170px] rounded-tremor-default border border-tremor-border bg-tremor-background px-3 py-2 text-sm text-tremor-content-emphasis shadow-tremor-input outline-none transition focus:border-tremor-brand-subtle focus:ring-2 focus:ring-tremor-brand-muted dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-emphasis dark:focus:border-dark-tremor-brand-subtle dark:focus:ring-dark-tremor-brand-muted"
-              value={taskTypeFilter}
-              onChange={(e) => setTaskTypeFilter(e.target.value)}
-            >
-              {taskTypeOptions.map((option) => (
-                <option key={option.value || "all"} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-            <select
-              className="min-w-[170px] rounded-tremor-default border border-tremor-border bg-tremor-background px-3 py-2 text-sm text-tremor-content-emphasis shadow-tremor-input outline-none transition focus:border-tremor-brand-subtle focus:ring-2 focus:ring-tremor-brand-muted dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-emphasis dark:focus:border-dark-tremor-brand-subtle dark:focus:ring-dark-tremor-brand-muted"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="">All statuses</option>
-              {["pending", "queued", "running", "completed", "failed", "cancelled", "retrying"].map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="mt-4 space-y-3">
-            {isLoading ? (
-              [1, 2, 3].map((i) => (
-                <div key={i} className="h-16 w-full animate-pulse rounded-tremor-default bg-tremor-background-muted dark:bg-dark-tremor-background-muted" />
-              ))
-            ) : !tasks || tasks.length === 0 ? (
-              <div className="flex flex-col items-center justify-center rounded-tremor-default border border-dashed border-tremor-border p-10 text-center dark:border-dark-tremor-border">
-                <Download className="mb-3 h-10 w-10 text-tremor-content-subtle dark:text-dark-tremor-content-subtle" />
-                <Text>{t(lang, "no_data")}</Text>
-              </div>
-            ) : (
-              tasks.map((task) => {
-                const expanded = expandedUuid === task.task_uuid;
-                const canCancel = cancellableStatuses.has(task.status) && !task.cancel_requested;
-                const typeLabel = taskTypeLabel(task.task_type, lang);
-                return (
-                  <Card key={task.task_uuid} className="p-0">
-                    <div className="flex items-center gap-3 px-4 py-3">
-                      <button
-                        className="min-w-0 flex-1 rounded-tremor-default text-left transition hover:bg-tremor-background-subtle dark:hover:bg-dark-tremor-background-subtle"
-                        onClick={() => setExpandedUuid(expanded ? null : task.task_uuid)}
+          ) : (
+            tasks.map((task) => {
+              const expanded = expandedUuid === task.task_uuid;
+              const canCancel = cancellableStatuses.has(task.status) && !task.cancel_requested;
+              const typeLabel = taskTypeLabel(task.task_type, lang);
+              return (
+                <Card key={task.task_uuid} className="p-0">
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <button
+                      className="min-w-0 flex-1 rounded-tremor-default text-left transition hover:bg-tremor-background-subtle dark:hover:bg-dark-tremor-background-subtle"
+                      onClick={() => setExpandedUuid(expanded ? null : task.task_uuid)}
+                    >
+                      <div className="flex min-w-0 items-center gap-3 rounded-tremor-default px-2 py-1.5">
+                        <div className="flex shrink-0 flex-wrap items-center gap-2">
+                          <Badge color={statusBadge[task.status] ?? "slate"}>{task.status}</Badge>
+                          {typeLabel ? <Badge color="slate">{typeLabel}</Badge> : null}
+                          {scopeMode === "all" ? (
+                            <Badge color="teal">{task.country_code || task.country_name || "-"}</Badge>
+                          ) : null}
+                        </div>
+                        <span className="min-w-0 flex-1 truncate text-sm font-medium leading-6 text-tremor-content-strong dark:text-dark-tremor-content-strong">
+                          {task.task_name}
+                        </span>
+                        <div className="hidden shrink-0 items-center gap-2 md:flex md:w-40">
+                          <ProgressBar value={task.progress} color={task.progress === 100 ? "emerald" : "teal"} className="flex-1" />
+                          <Text>{task.progress}%</Text>
+                        </div>
+                        <Text className="hidden shrink-0 md:block">{formatDate(task.created_at)}</Text>
+                        <ChevronDown className={`h-4 w-4 shrink-0 text-tremor-content-subtle transition-transform ${expanded ? "rotate-180" : ""}`} />
+                      </div>
+                    </button>
+                    <div className="flex shrink-0 items-center">
+                      <Button
+                        size="xs"
+                        color={canCancel ? "rose" : "slate"}
+                        variant={canCancel ? "secondary" : "light"}
+                        disabled={!canCancel || cancelTask.isPending}
+                        icon={Ban}
+                        className={canCancel ? "" : "opacity-55"}
+                        onClick={() => handleCancel(task.task_uuid)}
                       >
-                        <div className="flex min-w-0 items-center gap-3 rounded-tremor-default px-2 py-1.5">
-                          <div className="flex shrink-0 flex-wrap items-center gap-2">
-                            <Badge color={statusBadge[task.status] ?? "slate"}>{task.status}</Badge>
-                            {typeLabel ? <Badge color="slate">{typeLabel}</Badge> : null}
-                            {scopeMode === "all" ? (
-                              <Badge color="teal">{task.country_code || task.country_name || "-"}</Badge>
-                            ) : null}
-                          </div>
-                          <span className="min-w-0 flex-1 truncate text-sm font-medium leading-6 text-tremor-content-strong dark:text-dark-tremor-content-strong">
-                            {task.task_name}
-                          </span>
-                          <div className="hidden shrink-0 items-center gap-2 md:flex md:w-40">
-                            <ProgressBar value={task.progress} color={task.progress === 100 ? "emerald" : "teal"} className="flex-1" />
-                            <Text>{task.progress}%</Text>
-                          </div>
-                          <Text className="hidden shrink-0 md:block">{formatDate(task.created_at)}</Text>
-                          <ChevronDown className={`h-4 w-4 shrink-0 text-tremor-content-subtle transition-transform ${expanded ? "rotate-180" : ""}`} />
-                        </div>
-                      </button>
-                      <div className="flex shrink-0 items-center">
-                        <Button
-                          size="xs"
-                          color={canCancel ? "rose" : "slate"}
-                          variant={canCancel ? "secondary" : "light"}
-                          disabled={!canCancel || cancelTask.isPending}
-                          icon={Ban}
-                          className={canCancel ? "" : "opacity-55"}
-                          onClick={() => handleCancel(task.task_uuid)}
-                        >
-                          {canCancel ? (task.cancel_requested ? "Cancelling" : "Cancel") : ""}
-                        </Button>
-                      </div>
+                        {canCancel ? (task.cancel_requested ? "Cancelling" : "Cancel") : ""}
+                      </Button>
                     </div>
+                  </div>
 
-                    {expanded && (
-                      <div className="border-t border-tremor-border px-4 pb-4 pt-3 dark:border-dark-tremor-border">
-                        <div className="mb-3 flex flex-wrap items-center gap-3 text-xs text-tremor-content md:hidden">
-                          <span>{task.progress}%</span>
-                          <span>{formatDate(task.created_at)}</span>
-                        </div>
-                        {scopeMode === "all" ? (
-                          <div className="mb-3 flex items-center gap-2 text-xs text-tremor-content">
-                            <Activity className="h-4 w-4" />
-                            <span>{lang === "zh" ? "国家" : "Country"}: {task.country_name || task.country_code || "-"}</span>
-                          </div>
-                        ) : null}
-                        <TaskDetailPanel taskDetail={taskDetail} detailLoading={detailLoading} emptyMessage="Failed to load task details" />
+                  {expanded && (
+                    <div className="border-t border-tremor-border px-4 pb-4 pt-3 dark:border-dark-tremor-border">
+                      <div className="mb-3 flex flex-wrap items-center gap-3 text-xs text-tremor-content md:hidden">
+                        <span>{task.progress}%</span>
+                        <span>{formatDate(task.created_at)}</span>
                       </div>
-                    )}
-                  </Card>
-                );
-              })
-            )}
-          </div>
-        </Card>
-      </Grid>
+                      {scopeMode === "all" ? (
+                        <div className="mb-3 flex items-center gap-2 text-xs text-tremor-content">
+                          <Activity className="h-4 w-4" />
+                          <span>{lang === "zh" ? "国家" : "Country"}: {task.country_name || task.country_code || "-"}</span>
+                        </div>
+                      ) : null}
+                      <TaskDetailPanel taskDetail={taskDetail} detailLoading={detailLoading} emptyMessage="Failed to load task details" />
+                    </div>
+                  )}
+                </Card>
+              );
+            })
+          )}
+        </div>
+      </Card>
     </div>
+  );
+}
+
+export default function CrawlTasksPage() {
+  return (
+    <Suspense fallback={<div className="min-h-[40vh]" />}>
+      <CrawlTasksPageContent />
+    </Suspense>
   );
 }

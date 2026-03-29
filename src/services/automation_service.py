@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from datetime import datetime, time, timedelta
 import html
 import json
@@ -177,17 +177,17 @@ class AutomationService:
         jobs: list[AutomationJobConfig] = []
         for row in rows:
             jobs.append(
-                    AutomationJobConfig(
-                        job_id=row.job_id,
-                        name=row.name,
+                AutomationJobConfig(
+                    job_id=row.job_id,
+                    name=row.name,
+                    country_code=row.country_code,
+                    source=canonicalize_task_source(
+                        row.source,
                         country_code=row.country_code,
-                        source=canonicalize_task_source(
-                            row.source,
-                            country_code=row.country_code,
-                        ),
-                        enabled=row.enabled,
-                        priority=row.priority,
-                        process=row.process,
+                    ),
+                    enabled=row.enabled,
+                    priority=row.priority,
+                    process=row.process,
                     save_raw=row.save_raw,
                     fill_missing=row.fill_missing,
                     force=row.force,
@@ -198,6 +198,34 @@ class AutomationService:
                 )
             )
         return jobs
+
+    def _sync_state_schedule(
+        self,
+        job: AutomationJobConfig,
+        state: AutomationJobState,
+        *,
+        reset: bool,
+    ) -> None:
+        if not job.enabled:
+            state.next_run_at = None
+            return
+        if reset or state.next_run_at is None:
+            tz_name = job.timezone or self._config().timezone
+            now = datetime.now(ZoneInfo(tz_name))
+            state.next_run_at = self._compute_next_run(job, now=now)
+
+    async def reschedule_job(self, job_id: str) -> None:
+        async with self._lock:
+            job = next((item for item in await self.load_jobs() if item.job_id == job_id), None)
+            if job is None:
+                self._states.pop(job_id, None)
+                return
+            state = self._states.setdefault(job.job_id, AutomationJobState())
+            self._sync_state_schedule(job, state, reset=True)
+
+    async def remove_job_state(self, job_id: str) -> None:
+        async with self._lock:
+            self._states.pop(job_id, None)
 
     async def start(self) -> None:
         cfg = self._config()
@@ -210,8 +238,7 @@ class AutomationService:
         self._stop_event = asyncio.Event()
         for job in await self.load_jobs():
             state = self._states.setdefault(job.job_id, AutomationJobState())
-            if state.next_run_at is None and job.enabled:
-                state.next_run_at = self._compute_next_run(job)
+            self._sync_state_schedule(job, state, reset=state.next_run_at is None)
         loaded_jobs = await self.load_jobs()
         self._task = asyncio.create_task(self._run_loop(), name="globalid-automation-scheduler")
         logger.info("Automation scheduler started with %s configured job(s)", len(loaded_jobs))
@@ -238,8 +265,7 @@ class AutomationService:
                         continue
                     state = self._states.setdefault(job.job_id, AutomationJobState())
                     now = datetime.now(ZoneInfo(job.timezone or cfg.timezone))
-                    if state.next_run_at is None:
-                        state.next_run_at = self._compute_next_run(job, now=now)
+                    self._sync_state_schedule(job, state, reset=state.next_run_at is None)
                     if state.next_run_at and now >= state.next_run_at:
                         await self.trigger_job(job.job_id, manual=False)
             except Exception as exc:
@@ -316,6 +342,7 @@ class AutomationService:
         jobs_payload: list[dict[str, Any]] = []
         for job in jobs:
             state = self._states.setdefault(job.job_id, AutomationJobState())
+            self._sync_state_schedule(job, state, reset=False)
             jobs_payload.append(
                 {
                     **asdict(job),

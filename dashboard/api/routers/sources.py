@@ -518,6 +518,7 @@ async def create_automation_job(body: AutomationJobCreate, db: AsyncSession = De
     db.add(job)
     await db.commit()
     await db.refresh(job)
+    await automation_service.reschedule_job(job.job_id)
     snapshot = await automation_service.snapshot_async()
     state_by_job = {item["job_id"]: item for item in snapshot["jobs"]}
     return _automation_job_out(job, state_by_job.get(job.job_id))
@@ -556,6 +557,7 @@ async def update_automation_job(job_id: str, body: AutomationJobUpdate, db: Asyn
 
     await db.commit()
     await db.refresh(job)
+    await automation_service.reschedule_job(job.job_id)
     snapshot = await automation_service.snapshot_async()
     state_by_job = {item["job_id"]: item for item in snapshot["jobs"]}
     return _automation_job_out(job, state_by_job.get(job.job_id))
@@ -571,6 +573,7 @@ async def delete_automation_job(job_id: str, db: AsyncSession = Depends(get_db))
         raise HTTPException(404, f"Automation job not found: {job_id}")
     await db.delete(job)
     await db.commit()
+    await automation_service.remove_job_state(job_id)
     return {"ok": True, "job_id": job_id}
 
 

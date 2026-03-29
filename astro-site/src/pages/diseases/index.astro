@@ -24,7 +24,7 @@ const catCounts = Object.fromEntries(
 
 <ReportLayout
   title="Disease Directory"
-  description={`Browse ${diseases.length} infectious diseases tracked by GlobalID`}
+  description={`Browse ${diseases.length} infectious diseases tracked by GIDS`}
   breadcrumbs={[{ label: 'Diseases' }]}
 >
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -47,15 +47,15 @@ const catCounts = Object.fromEntries(
         id="disease-search"
         type="search"
         placeholder="Search diseases…"
-        class="site-control-input w-full sm:w-72 px-3 py-2 text-sm rounded-lg border focus:outline-none focus:ring-2 focus:ring-brand-500"
+        class="site-control-input w-full sm:w-72 px-3 py-2 text-sm rounded-none border focus:outline-none focus:ring-2 focus:ring-brand-500"
       />
       <div class="flex items-center gap-2 flex-wrap" id="cat-filters">
-        <button class="cat-filter-btn active px-3 py-1.5 text-xs rounded-full border border-brand-500 bg-brand-600 text-white font-medium" data-cat="All">
+        <button class="cat-filter-btn active px-3 py-1.5 text-xs rounded-none border border-brand-500 bg-brand-600 text-white font-medium" data-cat="All">
           All ({diseases.length})
         </button>
         {categories.map(cat => (
           <button
-            class="cat-filter-btn site-control-pill px-3 py-1.5 text-xs rounded-full border font-medium transition-all"
+            class="cat-filter-btn site-control-pill px-3 py-1.5 text-xs rounded-none border font-medium transition-all"
             data-cat={cat}
           >
             <span data-lang-en={cat} data-lang-zh={catZh[cat] ?? cat}>{cat}</span>

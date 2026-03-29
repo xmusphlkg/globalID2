@@ -1,239 +1,318 @@
 ---
-// src/pages/about.astro — About page
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { acknowledgementEntries, acknowledgementIntro } from '../data/acknowledgements';
+import aboutRaw from '../data/about.json';
+
+const about = aboutRaw as any;
+const aboutMetrics = about.metrics ?? [];
+const aboutPipeline = about.pipeline_steps ?? [];
+const aboutFeatures = about.features ?? [];
+const aboutSources = about.data_sources ?? [];
+const summary = about.summary ?? {};
+const architecture = about.architecture ?? {};
+
+const toneStyles = {
+  amber: {
+    icon: 'bg-amber-600/20 border-amber-500/30 text-amber-400',
+    pill: 'bg-amber-600/15 border-amber-500/25 text-amber-300',
+  },
+  brand: {
+    icon: 'bg-brand-600/20 border-brand-500/30 text-brand-400',
+    pill: 'bg-brand-600/15 border-brand-500/25 text-brand-300',
+  },
+  green: {
+    icon: 'bg-green-600/20 border-green-500/30 text-green-400',
+    pill: 'bg-green-600/15 border-green-500/25 text-green-300',
+  },
+  purple: {
+    icon: 'bg-purple-600/20 border-purple-500/30 text-purple-400',
+    pill: 'bg-purple-600/15 border-purple-500/25 text-purple-300',
+  },
+  teal: {
+    icon: 'bg-teal-600/20 border-teal-500/30 text-teal-400',
+    pill: 'bg-teal-600/15 border-teal-500/25 text-teal-300',
+  },
+} as const;
+
+type ToneKey = keyof typeof toneStyles;
+
+function getTone(accent: string | undefined) {
+  return toneStyles[(accent as ToneKey) ?? 'brand'] ?? toneStyles.brand;
+}
+
+function formatMetricValue(value: unknown, valueType?: string) {
+  if (valueType === 'number') {
+    const num = Number(value ?? 0);
+    return Number.isFinite(num) ? num.toLocaleString() : '0';
+  }
+  return String(value ?? '—');
+}
+
+const generatedAtEn = about.generated_at
+  ? new Date(about.generated_at).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    })
+  : 'Unknown';
+
+const generatedAtZh = about.generated_at
+  ? new Date(about.generated_at).toLocaleDateString('zh-CN', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    })
+  : '未知';
+
+const coverageStart = summary.coverage_start ?? 'N/A';
+const coverageEnd = summary.coverage_end ?? 'N/A';
 ---
 
 <BaseLayout
   title="About"
-  description="Learn how GlobalID monitors infectious diseases worldwide using automated data collection and AI-powered analysis."
+  description="Learn how GIDS monitors infectious diseases worldwide using automated data collection and AI-powered analysis."
 >
-  <!-- Hero -->
-  <section class="relative overflow-hidden py-16 sm:py-24">
-    <div class="absolute inset-0 -z-10">
-      <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-brand-600/10 rounded-full blur-3xl" />
-    </div>
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-      <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-400 text-xs font-medium mb-6">
-        <span data-lang-en="How it works" data-lang-zh="项目介绍">How it works</span>
+  <div class="about-page">
+    <section class="relative overflow-hidden py-16 sm:py-24">
+      <div class="absolute inset-0 -z-10">
+        <div class="absolute top-0 left-1/2 h-[400px] w-[700px] -translate-x-1/2 rounded-full bg-brand-600/10 blur-3xl" />
       </div>
-      <h1 class="text-4xl sm:text-5xl font-bold text-slate-100 tracking-tight mb-6">
-        <span data-lang-en="About GlobalID" data-lang-zh="关于 GlobalID">About GlobalID</span>
-      </h1>
-      <p class="text-lg text-slate-400 leading-relaxed max-w-2xl mx-auto">
-        <span data-lang-en="GlobalID is an automated infectious disease surveillance system that collects, processes, and visualises data from official public health authorities around the world." data-lang-zh="GlobalID 是一套自动化传染病监测系统，负责从全球各官方公共卫生机构收集、处理和可视化数据。">
-          GlobalID is an automated infectious disease surveillance system that collects, processes, and visualises data from official public health authorities around the world.
-        </span>
-      </p>
-    </div>
-  </section>
-
-  <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
-
-    <!-- Pipeline overview -->
-    <section class="mb-16">
-      <h2 class="text-2xl font-bold text-slate-100 mb-8 text-center" data-lang-en="How the Pipeline Works" data-lang-zh="数据处理流程">
-        How the Pipeline Works
-      </h2>
-
-      <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        <!-- Step 1 -->
-        <div class="relative rounded-2xl border border-slate-700/50 bg-slate-800/40 p-6 flex flex-col gap-3">
-          <div class="w-10 h-10 rounded-xl bg-brand-600/20 border border-brand-500/30 flex items-center justify-center text-brand-400 font-bold text-lg">1</div>
-          <h3 class="text-slate-200 font-semibold" data-lang-en="Data Collection" data-lang-zh="数据采集">Data Collection</h3>
-          <p class="text-slate-500 text-sm leading-relaxed" data-lang-en="Automated scrapers fetch monthly disease reports and bulletins from official national health authorities such as the China CDC, WHO, and ECDC." data-lang-zh="自动爬虫从中国疾控中心、世卫组织、欧洲疾控中心等官方机构获取每月疾病报告与公报。">
-            Automated scrapers fetch monthly disease reports and bulletins from official national health authorities such as the China CDC, WHO, and ECDC.
-          </p>
+      <div class="mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
+        <div class="mb-6 inline-flex items-center gap-2 rounded-none border border-teal-500/20 bg-teal-500/10 px-3 py-1.5 text-xs font-medium text-teal-400">
+          <span data-lang-en="How it works" data-lang-zh="项目介绍">How it works</span>
         </div>
-
-        <!-- Step 2 -->
-        <div class="relative rounded-2xl border border-slate-700/50 bg-slate-800/40 p-6 flex flex-col gap-3">
-          <div class="w-10 h-10 rounded-xl bg-teal-600/20 border border-teal-500/30 flex items-center justify-center text-teal-400 font-bold text-lg">2</div>
-          <h3 class="text-slate-200 font-semibold" data-lang-en="Parsing & Normalisation" data-lang-zh="解析与标准化">Parsing & Normalisation</h3>
-          <p class="text-slate-500 text-sm leading-relaxed" data-lang-en="Raw HTML, PDF, and API responses are parsed, cleaned, and normalised into a unified schema covering disease name, case counts, deaths, and time period." data-lang-zh="原始 HTML、PDF 和 API 响应经过解析、清洗，统一归入涵盖病名、病例数、死亡数和时间段的标准数据模型。">
-            Raw HTML, PDF, and API responses are parsed, cleaned, and normalised into a unified schema covering disease name, case counts, deaths, and time period.
-          </p>
-        </div>
-
-        <!-- Step 3 -->
-        <div class="relative rounded-2xl border border-slate-700/50 bg-slate-800/40 p-6 flex flex-col gap-3">
-          <div class="w-10 h-10 rounded-xl bg-amber-600/20 border border-amber-500/30 flex items-center justify-center text-amber-400 font-bold text-lg">3</div>
-          <h3 class="text-slate-200 font-semibold" data-lang-en="AI Analysis" data-lang-zh="AI 分析">AI Analysis</h3>
-          <p class="text-slate-500 text-sm leading-relaxed" data-lang-en="A large language model analyses trends, compares data against historical baselines, and generates structured epidemiological reports in both English and Chinese." data-lang-zh="大型语言模型分析疾病趋势，与历史基线对比，并生成中英双语的结构化流行病学报告。">
-            A large language model analyses trends, compares data against historical baselines, and generates structured epidemiological reports in both English and Chinese.
-          </p>
-        </div>
-
-        <!-- Step 4 -->
-        <div class="relative rounded-2xl border border-slate-700/50 bg-slate-800/40 p-6 flex flex-col gap-3">
-          <div class="w-10 h-10 rounded-xl bg-purple-600/20 border border-purple-500/30 flex items-center justify-center text-purple-400 font-bold text-lg">4</div>
-          <h3 class="text-slate-200 font-semibold" data-lang-en="Visualisation & Publishing" data-lang-zh="可视化与发布">Visualisation & Publishing</h3>
-          <p class="text-slate-500 text-sm leading-relaxed" data-lang-en="Reports, charts, and statistics are published to this website automatically via a static-site build process, ensuring data is always up to date." data-lang-zh="报告、图表和统计数据通过静态网站构建流程自动发布到本网站，确保数据始终保持最新。">
-            Reports, charts, and statistics are published to this website automatically via a static-site build process, ensuring data is always up to date.
-          </p>
-        </div>
+        <h1 class="mb-6 text-4xl font-bold tracking-tight text-slate-100 sm:text-5xl">
+          <span data-lang-en="About GIDS" data-lang-zh="关于 GIDS">About GIDS</span>
+        </h1>
+        <p class="mx-auto max-w-2xl text-lg leading-relaxed text-slate-400">
+          <span data-lang-en="GIDS (Global Infectious Disease Surveillance) is an automated infectious disease surveillance platform that collects, processes, and visualises data from official public health authorities around the world." data-lang-zh="GIDS（Global Infectious Disease Surveillance）是一套自动化传染病监测平台，负责从全球各官方公共卫生机构收集、处理和可视化数据。">
+            GIDS (Global Infectious Disease Surveillance) is an automated infectious disease surveillance platform that collects, processes, and visualises data from official public health authorities around the world.
+          </span>
+        </p>
+        <p
+          class="mx-auto mt-4 max-w-3xl text-sm leading-relaxed text-slate-500"
+          data-lang-en={`This page is rebuilt from the latest PostgreSQL snapshot. The current data version is ${generatedAtEn}, covering ${coverageStart} to ${coverageEnd}.`}
+          data-lang-zh={`本页会在构建前从最新 PostgreSQL 快照重建，当前数据版本日期为 ${generatedAtZh}，覆盖范围为 ${coverageStart} 至 ${coverageEnd}。`}
+        >
+          This page is rebuilt from the latest PostgreSQL snapshot. The current data version is {generatedAtEn}, covering {coverageStart} to {coverageEnd}.
+        </p>
       </div>
     </section>
 
-    <!-- Architecture diagram (flow) -->
-    <section class="mb-16">
-      <div class="rounded-2xl border border-slate-700/50 bg-slate-800/30 p-8">
-        <h2 class="text-xl font-bold text-slate-100 mb-8 text-center" data-lang-en="System Architecture" data-lang-zh="系统架构">System Architecture</h2>
+    <div class="mx-auto max-w-5xl px-4 pb-20 sm:px-6 lg:px-8">
+      <section class="about-section">
+        <div class="about-section-header">
+          <h2 class="about-section-title" data-lang-en="Live Database Snapshot" data-lang-zh="数据库实时快照">
+            Live Database Snapshot
+          </h2>
+        </div>
+        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {aboutMetrics.map((metric: any) => {
+            const tone = getTone(metric.accent);
+            return (
+              <article class="about-surface-card rounded-none p-5">
+                <div class={`inline-flex h-11 w-11 items-center justify-center rounded-none border text-sm font-bold ${tone.icon}`}>
+                  {metric.value_type === 'date' ? 'DB' : '#'}
+                </div>
+                <p class="mt-4 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500" data-lang-en={metric.label_en} data-lang-zh={metric.label_zh}>
+                  {metric.label_en}
+                </p>
+                <p class="mt-2 text-2xl font-bold text-slate-100">
+                  {formatMetricValue(metric.value, metric.value_type)}
+                </p>
+                <p class="mt-2 text-xs leading-relaxed text-slate-500" data-lang-en={metric.note_en} data-lang-zh={metric.note_zh}>
+                  {metric.note_en}
+                </p>
+              </article>
+            );
+          })}
+        </div>
+      </section>
 
-        <div class="flex flex-col sm:flex-row items-center justify-center gap-3 text-sm flex-wrap">
-          <!-- Source -->
-          <div class="flex flex-col items-center gap-2 text-center">
-            <div class="w-16 h-16 rounded-2xl bg-brand-600/20 border border-brand-500/30 flex items-center justify-center">
-              <svg class="w-7 h-7 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418" />
-              </svg>
+      <section class="about-section">
+        <div class="about-section-header">
+          <h2 class="about-section-title" data-lang-en="How the Pipeline Works" data-lang-zh="数据处理流程">
+            How the Pipeline Works
+          </h2>
+        </div>
+
+        <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {aboutPipeline.map((step: any) => {
+            const tone = getTone(step.accent);
+            return (
+              <div class="about-surface-panel relative flex flex-col gap-3 rounded-none p-6">
+                <div class={`flex h-10 w-10 items-center justify-center rounded-none border text-lg font-bold ${tone.icon}`}>
+                  {step.step}
+                </div>
+                <h3 class="font-semibold text-slate-200" data-lang-en={step.title_en} data-lang-zh={step.title_zh}>
+                  {step.title_en}
+                </h3>
+                <p class="text-sm leading-relaxed text-slate-500" data-lang-en={step.description_en} data-lang-zh={step.description_zh}>
+                  {step.description_en}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      <section class="about-section">
+        <div class="about-section-header">
+          <h2 class="about-section-title" data-lang-en="System Architecture" data-lang-zh="系统架构">
+            System Architecture
+          </h2>
+        </div>
+        <div class="about-surface-panel rounded-none p-8">
+          <div class="flex flex-col flex-wrap items-center justify-center gap-3 text-sm sm:flex-row">
+            <div class="flex flex-col items-center gap-2 text-center">
+              <div class="flex h-16 w-16 items-center justify-center rounded-none border border-brand-500/30 bg-brand-600/20">
+                <svg class="h-7 w-7 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418" />
+                </svg>
+              </div>
+              <span class="font-medium text-slate-400" data-lang-en={architecture.source_label_en} data-lang-zh={architecture.source_label_zh}>
+                {architecture.source_label_en}
+              </span>
+              <span class="text-xs text-slate-600" data-lang-en={architecture.source_detail_en} data-lang-zh={architecture.source_detail_zh}>
+                {architecture.source_detail_en}
+              </span>
             </div>
-            <span class="text-slate-400 font-medium" data-lang-en="Health Authorities" data-lang-zh="卫生机构">Health Authorities</span>
-            <span class="text-slate-600 text-xs" data-lang-en="CDC / WHO / ECDC" data-lang-zh="疾控中心 / 世卫 / 欧洲疾控">CDC / WHO / ECDC</span>
-          </div>
 
-          <svg class="w-6 h-6 text-slate-600 shrink-0 rotate-90 sm:rotate-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          <svg class="h-6 w-6 shrink-0 rotate-90 text-slate-600 sm:rotate-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
 
-          <!-- Scraper -->
           <div class="flex flex-col items-center gap-2 text-center">
-            <div class="w-16 h-16 rounded-2xl bg-teal-600/20 border border-teal-500/30 flex items-center justify-center">
-              <svg class="w-7 h-7 text-teal-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div class="flex h-16 w-16 items-center justify-center rounded-none border border-teal-500/30 bg-teal-600/20">
+              <svg class="h-7 w-7 text-teal-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
               </svg>
             </div>
-            <span class="text-slate-400 font-medium" data-lang-en="Scrapers" data-lang-zh="爬虫">Scrapers</span>
-            <span class="text-slate-600 text-xs" data-lang-en="Python / Playwright" data-lang-zh="Python / Playwright">Python / Playwright</span>
+            <span class="font-medium text-slate-400" data-lang-en={architecture.scraper_label_en} data-lang-zh={architecture.scraper_label_zh}>
+              {architecture.scraper_label_en}
+            </span>
+            <span class="text-xs text-slate-600" data-lang-en={architecture.scraper_detail_en} data-lang-zh={architecture.scraper_detail_zh}>
+              {architecture.scraper_detail_en}
+            </span>
           </div>
 
-          <svg class="w-6 h-6 text-slate-600 shrink-0 rotate-90 sm:rotate-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          <svg class="h-6 w-6 shrink-0 rotate-90 text-slate-600 sm:rotate-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
 
-          <!-- Parser / DB -->
           <div class="flex flex-col items-center gap-2 text-center">
-            <div class="w-16 h-16 rounded-2xl bg-amber-600/20 border border-amber-500/30 flex items-center justify-center">
-              <svg class="w-7 h-7 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div class="flex h-16 w-16 items-center justify-center rounded-none border border-amber-500/30 bg-amber-600/20">
+              <svg class="h-7 w-7 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
               </svg>
             </div>
-            <span class="text-slate-400 font-medium" data-lang-en="Parser + DB" data-lang-zh="解析器 + 数据库">Parser + DB</span>
-            <span class="text-slate-600 text-xs">PostgreSQL</span>
+            <span class="font-medium text-slate-400" data-lang-en={architecture.database_label_en} data-lang-zh={architecture.database_label_zh}>
+              {architecture.database_label_en}
+            </span>
+            <span class="text-xs text-slate-600" data-lang-en={architecture.database_detail_en} data-lang-zh={architecture.database_detail_zh}>
+              {architecture.database_detail_en}
+            </span>
           </div>
 
-          <svg class="w-6 h-6 text-slate-600 shrink-0 rotate-90 sm:rotate-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          <svg class="h-6 w-6 shrink-0 rotate-90 text-slate-600 sm:rotate-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
 
-          <!-- LLM -->
           <div class="flex flex-col items-center gap-2 text-center">
-            <div class="w-16 h-16 rounded-2xl bg-purple-600/20 border border-purple-500/30 flex items-center justify-center">
-              <svg class="w-7 h-7 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div class="flex h-16 w-16 items-center justify-center rounded-none border border-purple-500/30 bg-purple-600/20">
+              <svg class="h-7 w-7 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
             </div>
-            <span class="text-slate-400 font-medium" data-lang-en="AI Report Engine" data-lang-zh="AI 报告引擎">AI Report Engine</span>
-            <span class="text-slate-600 text-xs">LLM Analysis</span>
+            <span class="font-medium text-slate-400" data-lang-en={architecture.llm_label_en} data-lang-zh={architecture.llm_label_zh}>
+              {architecture.llm_label_en}
+            </span>
+            <span class="text-xs text-slate-600" data-lang-en={architecture.llm_detail_en} data-lang-zh={architecture.llm_detail_zh}>
+              {architecture.llm_detail_en}
+            </span>
           </div>
 
-          <svg class="w-6 h-6 text-slate-600 shrink-0 rotate-90 sm:rotate-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+          <svg class="h-6 w-6 shrink-0 rotate-90 text-slate-600 sm:rotate-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
 
-          <!-- Website -->
           <div class="flex flex-col items-center gap-2 text-center">
-            <div class="w-16 h-16 rounded-2xl bg-green-600/20 border border-green-500/30 flex items-center justify-center">
-              <svg class="w-7 h-7 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div class="flex h-16 w-16 items-center justify-center rounded-none border border-green-500/30 bg-green-600/20">
+              <svg class="h-7 w-7 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.75 3H5.25A2.25 2.25 0 003 5.25v13.5A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V9.75m-11.25 0V3m0 6.75h6m-6 3.375h6m-6 3.375h3.75M14.25 3l6 6h-6V3z" />
               </svg>
             </div>
-            <span class="text-slate-400 font-medium" data-lang-en="This Website" data-lang-zh="本网站">This Website</span>
-            <span class="text-slate-600 text-xs">Astro SSG</span>
+            <span class="font-medium text-slate-400" data-lang-en={architecture.website_label_en} data-lang-zh={architecture.website_label_zh}>
+              {architecture.website_label_en}
+            </span>
+            <span class="text-xs text-slate-600" data-lang-en={architecture.website_detail_en} data-lang-zh={architecture.website_detail_zh}>
+              {architecture.website_detail_en}
+            </span>
+          </div>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <!-- Key features -->
-    <section class="mb-16">
-      <h2 class="text-2xl font-bold text-slate-100 mb-8 text-center" data-lang-en="Key Features" data-lang-zh="主要功能">Key Features</h2>
+    <section class="about-section">
+      <div class="about-section-header">
+        <h2 class="about-section-title" data-lang-en="Key Features" data-lang-zh="主要功能">
+          Key Features
+        </h2>
+      </div>
       <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {[
-          {
-            icon: 'M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z',
-            title: 'Real-time Updates', titleZh: '实时更新',
-            desc: 'Data is refreshed monthly as new bulletins are published by health authorities.', descZh: '每月随卫生机构发布新公报时同步刷新数据。',
-            color: 'brand',
-          },
-          {
-            icon: 'M10.5 6a7.5 7.5 0 107.5 7.5h-7.5V6z M13.5 10.5H21A7.5 7.5 0 0013.5 3v7.5z',
-            title: 'Multi-country Coverage', titleZh: '多国覆盖',
-            desc: 'Track disease trends across multiple countries with standardised comparison metrics.', descZh: '通过标准化对比指标，追踪多国疾病趋势。',
-            color: 'teal',
-          },
-          {
-            icon: 'M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z',
-            title: 'Trend Analysis', titleZh: '趋势分析',
-            desc: 'Interactive charts reveal seasonal patterns and outbreak signals against historical baselines.', descZh: '交互式图表揭示季节性规律，并与历史基线对比发现疫情信号。',
-            color: 'amber',
-          },
-          {
-            icon: 'M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z',
-            title: 'AI-generated Reports', titleZh: 'AI 生成报告',
-            desc: 'Detailed epidemiological summaries are written by a large language model, available in English and Chinese.', descZh: '由大型语言模型撰写详细流行病学摘要，提供中英双语版本。',
-            color: 'purple',
-          },
-          {
-            icon: 'M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 2.625c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125m16.5 5.625c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125',
-            title: 'Open Data', titleZh: '开放数据',
-            desc: 'All underlying data is sourced from official public health authorities and is freely accessible.', descZh: '所有基础数据来源于官方公共卫生机构，可免费获取。',
-            color: 'teal',
-          },
-          {
-            icon: 'M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 8.25h3m-3 3.75h3m-3 3.75h3',
-            title: 'Bilingual Interface', titleZh: '双语界面',
-            desc: 'The entire site supports both English and Chinese, with a single click to switch language.', descZh: '整站支持中英双语，一键切换语言。',
-            color: 'brand',
-          },
-        ].map(({ icon, title, titleZh, desc, descZh, color }) => (
-          <div class="rounded-xl border border-slate-700/50 bg-slate-800/30 p-5 flex gap-4">
-            <div class={`mt-0.5 w-9 h-9 shrink-0 rounded-lg bg-${color}-600/15 border border-${color}-500/25 flex items-center justify-center`}>
-              <svg class={`w-5 h-5 text-${color}-400`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d={icon} />
-              </svg>
+        {aboutFeatures.map((feature: any) => {
+          const tone = getTone(feature.accent);
+          return (
+            <div class="about-surface-card flex gap-4 rounded-none p-5">
+              <div class={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-none border ${tone.icon}`}>
+                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d={feature.icon} />
+                </svg>
+              </div>
+              <div>
+                <h3 class="mb-1 text-sm font-medium text-slate-200" data-lang-en={feature.title_en} data-lang-zh={feature.title_zh}>
+                  {feature.title_en}
+                </h3>
+                <p class="text-xs leading-relaxed text-slate-500" data-lang-en={feature.description_en} data-lang-zh={feature.description_zh}>
+                  {feature.description_en}
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 class="text-slate-200 font-medium text-sm mb-1" data-lang-en={title} data-lang-zh={titleZh}>{title}</h3>
-              <p class="text-slate-500 text-xs leading-relaxed" data-lang-en={desc} data-lang-zh={descZh}>{desc}</p>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </section>
 
-    <!-- Open Source -->
-    <section class="mb-16">
-      <div class="rounded-2xl border border-slate-700/50 bg-slate-800/30 overflow-hidden">
+    <section class="about-section">
+      <div class="about-section-header">
+        <h2 class="about-section-title" data-lang-en="Free & Open Source" data-lang-zh="免费 & 开源">
+          Free & Open Source
+        </h2>
+      </div>
+      <div class="about-surface-panel overflow-hidden rounded-none">
         <div class="p-8 sm:p-10">
-          <div class="flex flex-col sm:flex-row sm:items-center gap-6">
-            <!-- GitHub icon -->
-            <div class="w-16 h-16 rounded-2xl bg-slate-700/50 border border-slate-600/50 flex items-center justify-center flex-shrink-0">
-              <svg class="w-8 h-8 text-slate-200" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844a9.59 9.59 0 012.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+          <div class="flex flex-col gap-6 sm:flex-row sm:items-center">
+            <div class="about-icon-shell flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-none">
+              <svg class="h-8 w-8 text-slate-200" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844a9.59 9.59 0 012.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0022 12.017C22 6.484 17.522 2 12 2z" />
               </svg>
             </div>
             <div class="flex-1">
-              <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-400 text-xs font-semibold mb-3">
+              <div class="mb-3 inline-flex items-center gap-2 rounded-none border border-teal-500/20 bg-teal-500/10 px-3 py-1 text-xs font-semibold text-teal-400">
                 <span data-lang-en="Open Source Project" data-lang-zh="开源项目">Open Source Project</span>
               </div>
-              <h2 class="text-2xl font-bold text-slate-100 mb-2" data-lang-en="Free & Open Source" data-lang-zh="免费 &amp; 开源">
-                Free &amp; Open Source
-              </h2>
-              <p class="text-slate-400 text-sm leading-relaxed mb-5" data-lang-en="GlobalID is fully open source under the MIT licence. The entire pipeline — from data collection and AI analysis to frontend visualisation — is available for inspection, reuse, and contribution." data-lang-zh="GlobalID 采用 MIT 协议完全开源。从数据采集、AI 分析到前端可视化的完整流水线均可查看、复用和贡献。">
-                GlobalID is fully open source under the MIT licence. The entire pipeline — from data collection and AI analysis to frontend visualisation — is available for inspection, reuse, and contribution.
+              <p class="mb-5 text-sm leading-relaxed text-slate-400" data-lang-en="GIDS is fully open source under the MIT licence. The entire pipeline, from data collection and AI analysis to frontend visualisation, is available for inspection, reuse, and contribution." data-lang-zh="GIDS 采用 MIT 协议完全开源。从数据采集、AI 分析到前端可视化的完整流水线均可查看、复用和贡献。">
+                GIDS is fully open source under the MIT licence. The entire pipeline, from data collection and AI analysis to frontend visualisation, is available for inspection, reuse, and contribution.
               </p>
               <div class="flex flex-wrap gap-3">
                 <a
                   href="https://github.com/xmusphlkg/globalID2"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-200 hover:bg-white text-slate-900 font-semibold text-sm transition-all shadow-lg shadow-slate-900/20"
+                  class="inline-flex items-center gap-2 rounded-none bg-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-900 shadow-lg shadow-slate-900/20 transition-all hover:bg-white"
                 >
-                  <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844a9.59 9.59 0 012.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+                  <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844a9.59 9.59 0 012.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0022 12.017C22 6.484 17.522 2 12 2z" />
                   </svg>
                   <span data-lang-en="xmusphlkg/globalID2" data-lang-zh="xmusphlkg/globalID2">xmusphlkg/globalID2</span>
                 </a>
@@ -241,10 +320,10 @@ import { acknowledgementEntries, acknowledgementIntro } from '../data/acknowledg
                   href="https://github.com/xmusphlkg/globalID2/issues"
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-700 hover:border-slate-500 text-slate-300 hover:text-slate-100 font-semibold text-sm transition-all"
+                  class="about-outline-button inline-flex items-center gap-2 rounded-none px-5 py-2.5 text-sm font-semibold transition-all"
                 >
-                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+                  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
                   </svg>
                   <span data-lang-en="Report an Issue" data-lang-zh="提交问题">Report an Issue</span>
                 </a>
@@ -255,27 +334,27 @@ import { acknowledgementEntries, acknowledgementIntro } from '../data/acknowledg
       </div>
     </section>
 
-    <!-- Author -->
-    <section class="mb-16">
-      <h2 class="text-2xl font-bold text-slate-100 mb-6 text-center" data-lang-en="Author" data-lang-zh="作者">Author</h2>
-      <div class="max-w-lg mx-auto rounded-2xl border border-slate-700/50 bg-slate-800/30 p-8 flex flex-col sm:flex-row items-center gap-6 text-center sm:text-left">
-        <!-- Avatar placeholder -->
-        <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-teal-500/30 to-brand-500/30 border border-teal-500/20 flex items-center justify-center flex-shrink-0 text-3xl">
+    <section class="about-section">
+      <div class="about-section-header">
+        <h2 class="about-section-title" data-lang-en="Author" data-lang-zh="作者">Author</h2>
+      </div>
+      <div class="about-surface-panel mx-auto flex max-w-lg flex-col items-center gap-6 rounded-none p-8 text-center sm:flex-row sm:text-left">
+        <div class="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-none border border-teal-500/20 bg-gradient-to-br from-teal-500/30 to-brand-500/30 text-3xl">
           👨‍🔬
         </div>
         <div>
-          <h3 class="text-xl font-bold text-slate-100 mb-1">Kangguo Li</h3>
-          <p class="text-slate-400 text-sm mb-4" data-lang-en="Epidemiologist &amp; developer. Building tools that make infectious disease data more accessible and actionable." data-lang-zh="流行病学研究者 &amp; 开发者。致力于构建让传染病数据更易访问、更有价值的工具。">
-            Epidemiologist &amp; developer. Building tools that make infectious disease data more accessible and actionable.
+          <h3 class="mb-1 text-xl font-bold text-slate-100">Kangguo Li</h3>
+          <p class="mb-4 text-sm text-slate-400" data-lang-en="Epidemiologist & developer. Building tools that make infectious disease data more accessible and actionable." data-lang-zh="流行病学研究者与开发者，致力于构建让传染病数据更易访问、更有价值的工具。">
+            Epidemiologist & developer. Building tools that make infectious disease data more accessible and actionable.
           </p>
-          <div class="flex flex-wrap gap-3 justify-center sm:justify-start">
+          <div class="flex flex-wrap justify-center gap-3 sm:justify-start">
             <a
               href="https://kangguo.online/"
               target="_blank"
               rel="noopener noreferrer"
-              class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-600/20 border border-brand-500/30 text-brand-400 hover:text-brand-300 hover:border-brand-400/50 font-medium text-sm transition-all"
+              class="inline-flex items-center gap-2 rounded-none border border-brand-500/30 bg-brand-600/20 px-4 py-2 text-sm font-medium text-brand-400 transition-all hover:border-brand-400/50 hover:text-brand-300"
             >
-              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
               </svg>
               <span>kangguo.online</span>
@@ -284,10 +363,10 @@ import { acknowledgementEntries, acknowledgementIntro } from '../data/acknowledg
               href="https://github.com/xmusphlkg"
               target="_blank"
               rel="noopener noreferrer"
-              class="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-700 hover:border-slate-500 text-slate-400 hover:text-slate-200 font-medium text-sm transition-all"
+              class="about-outline-button inline-flex items-center gap-2 rounded-none px-4 py-2 text-sm font-medium transition-all"
             >
-              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844a9.59 9.59 0 012.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844a9.59 9.59 0 012.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0022 12.017C22 6.484 17.522 2 12 2z" />
               </svg>
               <span>@xmusphlkg</span>
             </a>
@@ -296,18 +375,19 @@ import { acknowledgementEntries, acknowledgementIntro } from '../data/acknowledg
       </div>
     </section>
 
-    <!-- Acknowledgements -->
-    <section class="mb-16">
+    <section class="about-section">
+      <div class="about-section-header">
+        <div class="about-section-kicker">
+          <span data-lang-en={acknowledgementIntro.kickerEn} data-lang-zh={acknowledgementIntro.kickerZh}>
+            {acknowledgementIntro.kickerEn}
+          </span>
+        </div>
+        <h2 class="about-section-title" data-lang-en={acknowledgementIntro.titleEn} data-lang-zh={acknowledgementIntro.titleZh}>
+          {acknowledgementIntro.titleEn}
+        </h2>
+      </div>
       <div class="ack-shell">
         <div class="ack-header">
-          <div class="ack-kicker">
-            <span data-lang-en={acknowledgementIntro.kickerEn} data-lang-zh={acknowledgementIntro.kickerZh}>
-              {acknowledgementIntro.kickerEn}
-            </span>
-          </div>
-          <h2 class="ack-title" data-lang-en={acknowledgementIntro.titleEn} data-lang-zh={acknowledgementIntro.titleZh}>
-            {acknowledgementIntro.titleEn}
-          </h2>
           <p class="ack-lead" data-lang-en={acknowledgementIntro.leadEn} data-lang-zh={acknowledgementIntro.leadZh}>
             {acknowledgementIntro.leadEn}
           </p>
@@ -345,47 +425,64 @@ import { acknowledgementEntries, acknowledgementIntro } from '../data/acknowledg
       </div>
     </section>
 
-    <!-- Data sources -->
-    <section class="mb-16">
-      <h2 class="text-2xl font-bold text-slate-100 mb-6 text-center" data-lang-en="Data Sources" data-lang-zh="数据来源">Data Sources</h2>
-      <div class="rounded-xl border border-slate-700/50 bg-slate-800/30 divide-y divide-slate-700/50">
-        {[
-          { name: 'China CDC', nameZh: '中国疾病预防控制中心', desc: 'Monthly notifiable infectious disease reports for China.', descZh: '中国传染病月度法定报告数据。', url: 'https://www.chinacdc.cn' },
-          { name: 'World Health Organization (WHO)', nameZh: '世界卫生组织', desc: 'Disease outbreak news and global surveillance reports.', descZh: '疾病暴发新闻及全球监测报告。', url: 'https://www.who.int' },
-          { name: 'ECDC', nameZh: '欧洲疾病预防控制中心', desc: 'European communicable disease surveillance data.', descZh: '欧洲传染病监测数据。', url: 'https://www.ecdc.europa.eu' },
-        ].map(({ name, nameZh, desc, descZh, url }) => (
-          <div class="px-6 py-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6">
+    <section class="about-section">
+      <div class="about-section-header">
+        <h2 class="about-section-title" data-lang-en="Data Sources" data-lang-zh="数据来源">
+          Data Sources
+        </h2>
+      </div>
+      <div class="about-divider-list rounded-none">
+        {aboutSources.map((source: any) => (
+          <div class="flex flex-col gap-4 px-6 py-4 lg:flex-row lg:items-center lg:gap-6">
             <div class="flex-1">
-              <p class="text-slate-200 font-medium text-sm" data-lang-en={name} data-lang-zh={nameZh}>{name}</p>
-              <p class="text-slate-500 text-xs mt-0.5" data-lang-en={desc} data-lang-zh={descZh}>{desc}</p>
+              <div class="mb-1.5 flex flex-wrap items-center gap-2">
+                <p class="text-sm font-medium text-slate-200" data-lang-en={`${source.country_name_en} · ${source.label_en}`} data-lang-zh={`${source.country_name_zh} · ${source.label_zh}`}>
+                  {source.country_name_en} · {source.label_en}
+                </p>
+                <span class="about-muted-badge rounded-none px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide">
+                  {source.country_code}
+                </span>
+                <span class={`rounded-none border px-2 py-0.5 text-[11px] font-semibold ${getTone('teal').pill}`} data-lang-en={source.cadence_en} data-lang-zh={source.cadence_zh}>
+                  {source.cadence_en}
+                </span>
+                <span class={`rounded-none border px-2 py-0.5 text-[11px] font-semibold ${getTone('brand').pill}`}>
+                  {String(source.type || '').toUpperCase()}
+                </span>
+              </div>
+              <p class="text-xs text-slate-500" data-lang-en={source.description_en} data-lang-zh={source.description_zh}>
+                {source.description_en}
+              </p>
             </div>
-            <a
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-              class="text-brand-400 hover:text-brand-300 text-xs font-medium transition-colors shrink-0"
-            >
-              {url.replace('https://', '')} →
-            </a>
+            {source.url ? (
+              <a
+                href={source.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="shrink-0 text-xs font-medium text-brand-400 transition-colors hover:text-brand-300"
+              >
+                {String(source.url).replace(/^https?:\/\//, '')} →
+              </a>
+            ) : null}
           </div>
         ))}
       </div>
     </section>
 
-    <!-- CTA -->
     <section class="text-center">
-      <div class="rounded-2xl border border-slate-700/50 bg-gradient-to-br from-brand-600/10 to-teal-600/10 p-10">
-        <h2 class="text-2xl font-bold text-slate-100 mb-3" data-lang-en="Start Exploring" data-lang-zh="开始探索">Start Exploring</h2>
-        <p class="text-slate-400 mb-6 max-w-lg mx-auto text-sm leading-relaxed" data-lang-en="Dive into disease surveillance reports, interactive charts, and AI-powered trend analysis." data-lang-zh="深入浏览疾病监测报告、交互图表和 AI 趋势分析。">
+      <div class="about-callout rounded-none p-10">
+        <h2 class="mb-3 text-2xl font-bold text-slate-100" data-lang-en="Start Exploring" data-lang-zh="开始探索">
+          Start Exploring
+        </h2>
+        <p class="mx-auto mb-6 max-w-lg text-sm leading-relaxed text-slate-400" data-lang-en="Dive into disease surveillance reports, interactive charts, and AI-powered trend analysis." data-lang-zh="深入浏览疾病监测报告、交互图表和 AI 趋势分析。">
           Dive into disease surveillance reports, interactive charts, and AI-powered trend analysis.
         </p>
-        <div class="flex flex-wrap gap-3 justify-center">
+        <div class="flex flex-wrap justify-center gap-3">
           <a
             href="/countries/"
-            class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-medium text-sm transition-colors shadow-lg shadow-brand-600/25"
+            class="inline-flex items-center gap-2 rounded-none bg-brand-600 px-6 py-3 text-sm font-medium text-white shadow-lg shadow-brand-600/25 transition-colors hover:bg-brand-500"
           >
             <span data-lang-en="Browse Countries" data-lang-zh="浏览国家">Browse Countries</span>
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
             </svg>
           </a>
@@ -393,33 +490,161 @@ import { acknowledgementEntries, acknowledgementIntro } from '../data/acknowledg
             href="https://github.com/xmusphlkg/globalID2"
             target="_blank"
             rel="noopener noreferrer"
-            class="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-slate-700 hover:border-slate-500 text-slate-300 hover:text-slate-100 font-medium text-sm transition-all"
+            class="about-outline-button inline-flex items-center gap-2 rounded-none px-6 py-3 text-sm font-medium transition-all"
           >
-            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844a9.59 9.59 0 012.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844a9.59 9.59 0 012.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0022 12.017C22 6.484 17.522 2 12 2z" />
             </svg>
             <span data-lang-en="View Source" data-lang-zh="查看源码">View Source</span>
           </a>
         </div>
       </div>
     </section>
-
+    </div>
   </div>
 </BaseLayout>
 
 <style>
+.about-page {
+  --about-surface: rgb(var(--surface) / 0.95);
+  --about-surface-strong: rgb(var(--surface-raised) / 0.97);
+  --about-surface-inset: rgb(var(--bg-soft) / 0.88);
+  --about-border: rgb(var(--border) / 0.8);
+  --about-border-strong: rgb(var(--border-soft) / 0.9);
+  --about-shadow: var(--paper-shadow);
+  --about-icon-shell-bg: rgb(var(--surface-raised) / 0.95);
+  --about-callout-border: rgb(var(--color-brand) / 0.18);
+  --about-callout-bg: linear-gradient(180deg, rgb(var(--surface-raised) / 0.98), rgb(var(--bg-soft) / 0.9));
+  --ack-shell-border: rgb(var(--border) / 0.82);
+  --ack-shell-bg: rgb(var(--surface) / 0.98);
+  --ack-shell-shadow: var(--paper-shadow);
+  --ack-kicker-color: rgb(var(--text-faint));
+  --ack-title-color: rgb(var(--text-strong));
+  --ack-lead-color: rgb(var(--text));
+  --ack-note-color: rgb(var(--text-muted));
+  --ack-ledger-border: rgb(var(--border) / 0.82);
+  --ack-entry-divider: rgb(var(--border) / 0.62);
+  --ack-name-color: rgb(var(--text-strong));
+  --ack-affiliation-color: rgb(var(--text-muted));
+  --ack-role-border: rgb(var(--border) / 0.88);
+  --ack-role-bg: rgb(var(--surface-raised) / 0.9);
+  --ack-role-color: rgb(var(--text));
+  --ack-role-support-border: rgb(13 148 136 / 0.24);
+  --ack-role-support-bg: rgb(13 148 136 / 0.08);
+  --ack-role-support-color: rgb(15 118 110);
+  --ack-desc-color: rgb(var(--text));
+}
+
+.about-surface-card,
+.about-surface-panel,
+.about-inset-card,
+.about-divider-list,
+.about-icon-shell,
+.about-callout {
+  box-shadow: var(--about-shadow);
+  border-radius: 0;
+}
+
+.about-section {
+  margin-bottom: 4rem;
+}
+
+.about-section-header {
+  margin: 0 auto 2rem;
+  max-width: 40rem;
+  text-align: center;
+}
+
+.about-section-kicker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.85rem;
+  border: 1px solid var(--about-border);
+  border-radius: 0;
+  background: var(--about-surface-strong);
+  color: rgb(var(--text-muted));
+  padding: 0.4rem 0.9rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.about-section-title {
+  color: rgb(var(--text-strong));
+  font-size: clamp(1.6rem, 2.8vw, 2.05rem);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+}
+
+.about-surface-card {
+  border: 1px solid var(--about-border);
+  background: var(--about-surface);
+}
+
+.about-surface-panel {
+  border: 1px solid var(--about-border);
+  background: var(--about-surface-strong);
+}
+
+.about-inset-card {
+  border: 1px solid var(--about-border);
+  background: var(--about-surface-inset);
+}
+
+.about-divider-list {
+  border: 1px solid var(--about-border);
+  background: var(--about-surface-strong);
+}
+
+.about-divider-list > * + * {
+  border-top: 1px solid var(--about-border);
+}
+
+.about-icon-shell {
+  border: 1px solid var(--about-border-strong);
+  background: var(--about-icon-shell-bg);
+}
+
+.about-muted-badge {
+  border: 1px solid var(--about-border);
+  background: var(--about-surface-inset);
+  color: rgb(var(--text-muted));
+  border-radius: 0;
+}
+
+.about-outline-button {
+  border: 1px solid var(--about-border);
+  background: rgb(var(--surface-raised) / 0.48);
+  color: rgb(var(--text));
+  border-radius: 0;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.14);
+}
+
+.about-outline-button:hover {
+  border-color: var(--about-border-strong);
+  background: rgb(var(--bg-soft) / 0.58);
+  color: rgb(var(--text-strong));
+}
+
+.about-callout {
+  border: 1px solid var(--about-callout-border);
+  background: var(--about-callout-bg);
+}
+
 .ack-shell {
-  border-radius: 1.5rem;
-  border: 1px solid rgba(51, 65, 85, 0.6);
-  background: rgba(15, 23, 42, 0.42);
-  backdrop-filter: blur(14px);
-  box-shadow: 0 20px 48px rgba(2, 6, 23, 0.22);
+  border-radius: 0;
+  border: 1px solid var(--ack-shell-border);
+  background: var(--ack-shell-bg);
+  box-shadow: var(--ack-shell-shadow);
 }
 
 .ack-kicker {
   display: inline-flex;
   align-items: center;
-  color: rgb(94, 234, 212);
+  color: var(--ack-kicker-color);
   font-size: 0.74rem;
   font-weight: 700;
   letter-spacing: 0.14em;
@@ -432,7 +657,7 @@ import { acknowledgementEntries, acknowledgementIntro } from '../data/acknowledg
 
 .ack-title {
   margin-top: 0.9rem;
-  color: rgb(248, 250, 252);
+  color: var(--ack-title-color);
   font-size: clamp(1.65rem, 3vw, 2.2rem);
   font-weight: 700;
   line-height: 1.15;
@@ -442,20 +667,20 @@ import { acknowledgementEntries, acknowledgementIntro } from '../data/acknowledg
 .ack-lead {
   margin-top: 1rem;
   max-width: 52rem;
-  color: rgba(226, 232, 240, 0.9);
+  color: var(--ack-lead-color);
   font-size: 0.98rem;
   line-height: 1.85;
 }
 
 .ack-note {
   margin-top: 0.85rem;
-  color: rgba(148, 163, 184, 0.9);
+  color: var(--ack-note-color);
   font-size: 0.88rem;
   line-height: 1.7;
 }
 
 .ack-ledger {
-  border-top: 1px solid rgba(51, 65, 85, 0.8);
+  border-top: 1px solid var(--ack-ledger-border);
   padding: 0 2rem;
 }
 
@@ -464,7 +689,7 @@ import { acknowledgementEntries, acknowledgementIntro } from '../data/acknowledg
 }
 
 .ack-entry + .ack-entry {
-  border-top: 1px solid rgba(51, 65, 85, 0.72);
+  border-top: 1px solid var(--ack-entry-divider);
 }
 
 .ack-entry-head {
@@ -473,7 +698,7 @@ import { acknowledgementEntries, acknowledgementIntro } from '../data/acknowledg
 }
 
 .ack-name {
-  color: rgb(248, 250, 252);
+  color: var(--ack-name-color);
   font-size: 1.02rem;
   font-weight: 700;
   line-height: 1.3;
@@ -481,7 +706,7 @@ import { acknowledgementEntries, acknowledgementIntro } from '../data/acknowledg
 
 .ack-affiliation {
   margin-top: 0.35rem;
-  color: rgba(148, 163, 184, 0.95);
+  color: var(--ack-affiliation-color);
   font-size: 0.88rem;
   line-height: 1.6;
 }
@@ -495,10 +720,10 @@ import { acknowledgementEntries, acknowledgementIntro } from '../data/acknowledg
 .ack-role {
   display: inline-flex;
   align-items: center;
-  border-radius: 999px;
-  border: 1px solid rgba(71, 85, 105, 0.9);
-  background: rgba(30, 41, 59, 0.7);
-  color: rgba(226, 232, 240, 0.88);
+  border-radius: 0;
+  border: 1px solid var(--ack-role-border);
+  background: var(--ack-role-bg);
+  color: var(--ack-role-color);
   padding: 0.34rem 0.72rem;
   font-size: 0.7rem;
   font-weight: 700;
@@ -507,80 +732,22 @@ import { acknowledgementEntries, acknowledgementIntro } from '../data/acknowledg
 }
 
 .ack-role-support {
-  border-color: rgba(45, 212, 191, 0.28);
-  background: rgba(15, 118, 110, 0.22);
-  color: rgb(153, 246, 228);
+  border-color: var(--ack-role-support-border);
+  background: var(--ack-role-support-bg);
+  color: var(--ack-role-support-color);
 }
 
 .ack-desc {
   margin-top: 0.8rem;
-  color: rgba(203, 213, 225, 0.9);
+  color: var(--ack-desc-color);
   font-size: 0.93rem;
   line-height: 1.75;
 }
 
 @media (min-width: 640px) {
-  .ack-shell {
-    border-radius: 1.75rem;
-  }
-
   .ack-entry-head {
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: start;
   }
-}
-
-html[data-theme='light'] .ack-shell {
-  border-color: rgba(203, 213, 225, 0.95);
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.06);
-}
-
-html[data-theme='light'] .ack-kicker {
-  color: rgb(15, 118, 110);
-}
-
-html[data-theme='light'] .ack-title {
-  color: rgb(15, 23, 42);
-}
-
-html[data-theme='light'] .ack-lead {
-  color: rgb(51, 65, 85);
-}
-
-html[data-theme='light'] .ack-note {
-  color: rgb(100, 116, 139);
-}
-
-html[data-theme='light'] .ack-ledger {
-  border-color: rgba(203, 213, 225, 0.95);
-}
-
-html[data-theme='light'] .ack-entry + .ack-entry {
-  border-color: rgba(226, 232, 240, 0.95);
-}
-
-html[data-theme='light'] .ack-name {
-  color: rgb(15, 23, 42);
-}
-
-html[data-theme='light'] .ack-affiliation {
-  color: rgb(100, 116, 139);
-}
-
-html[data-theme='light'] .ack-role {
-  border-color: rgba(203, 213, 225, 0.95);
-  background: rgba(241, 245, 249, 0.95);
-  color: rgb(71, 85, 105);
-}
-
-html[data-theme='light'] .ack-role-support {
-  border-color: rgba(45, 212, 191, 0.28);
-  background: rgba(204, 251, 241, 0.95);
-  color: rgb(15, 118, 110);
-}
-
-html[data-theme='light'] .ack-desc {
-  color: rgb(51, 65, 85);
 }
 </style>

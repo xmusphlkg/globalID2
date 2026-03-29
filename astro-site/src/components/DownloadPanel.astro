@@ -69,16 +69,23 @@ const sourceEntries = sourceGroups.flatMap((group) => {
   }
   return [group as SourceSummary];
 });
+
+const coverageLabel = (entry?.date_range?.start || entry?.date_range?.end)
+  ? `${entry?.date_range?.start ?? '—'} → ${entry?.date_range?.end ?? '—'}`
+  : '—';
 ---
 
 {entry && (
-  <section class="card p-6 space-y-5">
-    <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-      <div class="space-y-2">
-        <h2 class="text-xl font-semibold text-slate-100" data-lang-en={title} data-lang-zh="下载数据">
+  <section class="figure-panel space-y-6">
+    <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+      <div class="space-y-3">
+        <p class="figure-kicker" data-lang-en="Dataset Archive" data-lang-zh="数据归档">
+          Dataset Archive
+        </p>
+        <h2 class="figure-title" data-lang-en={title} data-lang-zh="下载数据">
           {title}
         </h2>
-        <p class="text-sm text-slate-500 max-w-2xl" data-lang-en={descriptionEn} data-lang-zh={descriptionZh}>
+        <p class="figure-caption" data-lang-en={descriptionEn} data-lang-zh={descriptionZh}>
           {descriptionEn}
         </p>
       </div>
@@ -88,106 +95,125 @@ const sourceEntries = sourceGroups.flatMap((group) => {
           <a
             href={entry.json_path}
             download
-            class="site-action-secondary inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-medium transition-all"
+            class="site-action-secondary inline-flex items-center gap-2 rounded-none border px-4 py-2 text-sm font-semibold transition-all"
           >
             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16V4m0 12-4-4m4 4 4-4M4 20h16" />
             </svg>
-            <span>JSON</span>
+            <span data-lang-en="JSON export" data-lang-zh="JSON 导出">JSON export</span>
           </a>
         )}
         {entry.csv_path && (
           <a
             href={entry.csv_path}
             download
-            class="site-action-secondary inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-medium transition-all"
+            class="site-action-secondary inline-flex items-center gap-2 rounded-none border px-4 py-2 text-sm font-semibold transition-all"
           >
             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16V4m0 12-4-4m4 4 4-4M4 20h16" />
             </svg>
-            <span>CSV</span>
+            <span data-lang-en="CSV export" data-lang-zh="CSV 导出">CSV export</span>
           </a>
         )}
       </div>
     </div>
 
-    <div class="grid gap-3 md:grid-cols-3">
-      <div class="rounded-xl border border-slate-700/60 bg-slate-800/30 px-4 py-3">
-        <div class="text-xs uppercase tracking-[0.18em] text-slate-600">Rows</div>
-        <div class="mt-2 text-lg font-semibold text-slate-100">{formatCount(entry.record_count)}</div>
+    <div class="academic-meta-grid">
+      <div class="academic-meta-item">
+        <div class="academic-meta-label">Rows</div>
+        <div class="academic-meta-value font-serif">{formatCount(entry.record_count)}</div>
       </div>
-      <div class="rounded-xl border border-slate-700/60 bg-slate-800/30 px-4 py-3">
-        <div class="text-xs uppercase tracking-[0.18em] text-slate-600" data-lang-en="Updated" data-lang-zh="更新时间">
-          Updated
+      <div class="academic-meta-item">
+        <div class="academic-meta-label" data-lang-en="Data Version" data-lang-zh="数据版本">
+          Data Version
         </div>
-        <div class="mt-2 text-lg font-semibold text-slate-100">{formatDate(entry.generated_at)}</div>
+        <div class="academic-meta-value font-serif">{formatDate(entry.generated_at)}</div>
       </div>
-      <div class="rounded-xl border border-slate-700/60 bg-slate-800/30 px-4 py-3">
-        <div class="text-xs uppercase tracking-[0.18em] text-slate-600" data-lang-en="Coverage" data-lang-zh="覆盖区间">
+      <div class="academic-meta-item">
+        <div class="academic-meta-label" data-lang-en="Coverage" data-lang-zh="覆盖区间">
           Coverage
         </div>
-        <div class="mt-2 text-sm font-medium text-slate-100">
-          {(entry.date_range?.start || entry.date_range?.end)
-            ? `${entry.date_range?.start ?? '—'} → ${entry.date_range?.end ?? '—'}`
-            : '—'}
+        <div class="academic-meta-value text-sm font-medium">
+          {coverageLabel}
+        </div>
+      </div>
+      <div class="academic-meta-item">
+        <div class="academic-meta-label" data-lang-en="Included metadata" data-lang-zh="附带元数据">
+          Included metadata
+        </div>
+        <div class="academic-meta-value text-sm font-medium" data-lang-en="Source links, scope, cadence" data-lang-zh="来源链接、范围、频率">
+          Source links, scope, cadence
         </div>
       </div>
     </div>
 
     {sourceEntries.length > 0 && (
-      <div class="space-y-3 border-t border-slate-800 pt-5">
-        <div class="flex items-center justify-between gap-3">
-          <h3 class="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500" data-lang-en="Source Info" data-lang-zh="数据源信息">
-            Source Info
+      <div class="space-y-4 border-t border-slate-800 pt-5">
+        <div>
+          <h3 class="academic-kicker" data-lang-en="Source Register" data-lang-zh="数据源信息">
+            Source Register
           </h3>
-          <span class="text-xs text-slate-600" data-lang-en="Included in JSON and repeated in CSV rows." data-lang-zh="JSON 内含元数据，CSV 每行重复来源字段。">
-            Included in JSON and repeated in CSV rows.
-          </span>
+          <p class="source-register-intro mt-2 text-sm leading-6" data-lang-en="Official sources and update cadences used to construct the downloadable dataset." data-lang-zh="构建当前可下载数据集所使用的官方来源及更新频率。">
+            Official sources and update cadences used to construct the downloadable dataset.
+          </p>
         </div>
 
         <div class="grid gap-3">
           {sourceEntries.map((source) => (
-            <div class="rounded-xl border border-slate-700/60 bg-slate-800/30 px-4 py-3">
-              <div class="flex flex-wrap items-center gap-2">
+            <article class="source-register-card">
+              <div class="flex flex-wrap items-start gap-2">
                 {source.country_code && (
-                  <span class="rounded-full border border-slate-600 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-slate-400">
+                  <span class="source-register-code">
                     {source.country_code}
                   </span>
                 )}
-                <span class="text-sm font-semibold text-slate-100">{source.label ?? source.scope ?? 'Unknown Source'}</span>
-                {source.cadence && (
-                  <span class="rounded-full bg-brand-500/10 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-brand-300">
-                    {source.cadence}
-                  </span>
-                )}
-                {source.type && (
-                  <span class="rounded-full bg-slate-700/70 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-slate-400">
-                    {source.type}
-                  </span>
-                )}
+                <div class="min-w-0 flex-1">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span class="source-register-title">{source.label ?? source.scope ?? 'Unknown Source'}</span>
+                    {source.cadence && (
+                      <span class="source-register-cadence">
+                        {source.cadence}
+                      </span>
+                    )}
+                    {source.type && (
+                      <span class="source-register-type">
+                        {source.type}
+                      </span>
+                    )}
+                  </div>
+
+                  {source.country_name && (
+                    <p class="source-register-country mt-1 text-xs uppercase tracking-[0.14em]">{source.country_name}</p>
+                  )}
+
+                  {source.description && (
+                    <p class="source-register-description mt-3 text-sm leading-relaxed">{source.description}</p>
+                  )}
+
+                  {source.url && (
+                    <a
+                      href={source.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="source-register-link mt-4 inline-flex items-center gap-1.5 text-sm transition-colors"
+                    >
+                      <span data-lang-en="Official source" data-lang-zh="官方来源">Official source</span>
+                      <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5h5m0 0v5m0-5L10 14m-3 5h11a2 2 0 002-2V9m-5 10H6a2 2 0 01-2-2V6a2 2 0 012-2h5" />
+                      </svg>
+                    </a>
+                  )}
+                </div>
               </div>
-
-              {source.description && (
-                <p class="mt-2 text-sm leading-relaxed text-slate-500">{source.description}</p>
-              )}
-
-              {source.url && (
-                <a
-                  href={source.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="mt-3 inline-flex items-center gap-1.5 text-sm text-brand-400 transition-colors hover:text-brand-300"
-                >
-                  <span data-lang-en="Official source" data-lang-zh="官方来源">Official source</span>
-                  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5h5m0 0v5m0-5L10 14m-3 5h11a2 2 0 002-2V9m-5 10H6a2 2 0 01-2-2V6a2 2 0 012-2h5" />
-                  </svg>
-                </a>
-              )}
-            </div>
+            </article>
           ))}
         </div>
       </div>
     )}
+
+    <div class="academic-note">
+      <span data-lang-en="Suggested presentation pattern:" data-lang-zh="建议呈现方式：">Suggested presentation pattern:</span>
+      <span data-lang-en=" cite the data version and coverage window when exporting charts or tables for publication." data-lang-zh=" 在导出图表或表格用于发布时，建议同时标注数据版本和覆盖区间。"> cite the data version and coverage window when exporting charts or tables for publication.</span>
+    </div>
   </section>
 )}

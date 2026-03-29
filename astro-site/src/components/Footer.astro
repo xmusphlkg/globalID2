@@ -1,9 +1,12 @@
 ---
 // src/components/Footer.astro
+import BrandLogo from './BrandLogo.astro';
 import metaData from '../data/meta.json';
+import sitePackage from '../../package.json';
 
 const year = new Date().getFullYear();
-const updatedAt = metaData?.generated_at
+const siteVersion = sitePackage?.version ? `v${sitePackage.version}` : 'Unknown';
+const dataVersion = metaData?.generated_at
   ? new Date(metaData.generated_at).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
@@ -16,22 +19,22 @@ const updatedAt = metaData?.generated_at
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
     <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
       <!-- Brand -->
-      <div>
-        <div class="flex items-center gap-2 mb-4">
-          <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-brand-500 to-teal-500 flex items-center justify-center text-white font-bold text-xs">
-            G
-          </div>
-          <span class="text-slate-200 font-semibold">GlobalID</span>
-        </div>
-        <p class="text-slate-500 text-sm leading-relaxed">
-          Automated infectious disease surveillance and reporting system.
+      <div class="space-y-4">
+        <BrandLogo
+          variant="wordmark"
+          theme="dark"
+          alt="GIDS"
+          wordmarkClass="h-11 w-auto max-w-[280px]"
+        />
+        <p class="site-footer-copy text-sm leading-relaxed">
+          Global Infectious Disease Surveillance.
           Data sourced from official public health authorities.
         </p>
       </div>
 
       <!-- Quick links -->
       <div>
-        <h3 class="text-slate-300 font-semibold text-sm mb-3">Navigate</h3>
+        <h3 class="site-footer-section-title font-semibold text-sm mb-3">Navigate</h3>
         <ul class="space-y-2">
           {[
             { href: '/', label: 'Home' },
@@ -41,7 +44,7 @@ const updatedAt = metaData?.generated_at
             { href: '/subscribe/', label: 'Subscribe' },
           ].map(({ href, label }) => (
             <li>
-              <a href={href} class="text-slate-500 hover:text-slate-300 text-sm transition-colors">
+              <a href={href} class="site-footer-link text-sm transition-colors">
                 {label}
               </a>
             </li>
@@ -51,21 +54,22 @@ const updatedAt = metaData?.generated_at
 
       <!-- Data info -->
       <div>
-        <h3 class="text-slate-300 font-semibold text-sm mb-3">Data</h3>
-        <ul class="space-y-1.5 text-sm text-slate-500">
-          <li>Countries: <span class="text-slate-400">{metaData?.total_countries ?? '—'}</span></li>
-          <li>Diseases tracked: <span class="text-slate-400">{metaData?.total_diseases ?? '—'}</span></li>
-          <li>Reports generated: <span class="text-slate-400">{metaData?.total_reports ?? '—'}</span></li>
-          <li>Last updated: <span class="text-slate-400">{updatedAt}</span></li>
+        <h3 class="site-footer-section-title font-semibold text-sm mb-3">Data</h3>
+        <ul class="site-footer-meta space-y-1.5 text-sm">
+          <li>Site version: <span class="site-footer-meta-value">{siteVersion}</span></li>
+          <li>Countries: <span class="site-footer-meta-value">{metaData?.total_countries ?? '—'}</span></li>
+          <li>Diseases tracked: <span class="site-footer-meta-value">{metaData?.total_diseases ?? '—'}</span></li>
+          <li>Reports generated: <span class="site-footer-meta-value">{metaData?.total_reports ?? '—'}</span></li>
+          <li>Data version: <span class="site-footer-meta-value">{dataVersion}</span></li>
         </ul>
       </div>
     </div>
 
-    <div class="border-t border-slate-800 mt-10 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-      <p class="text-slate-600 text-xs">
-        © {year} GlobalID. Generated automatically by the GlobalID V2 Pipeline.
+    <div class="site-footer-divider border-t mt-10 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <p class="site-footer-legal text-xs">
+        © {year} GIDS. Site {siteVersion}. Generated automatically by the GIDS pipeline.
       </p>
-      <p class="text-slate-700 text-xs">
+      <p class="site-footer-legal-note text-xs">
         Data provided for informational purposes only. Always refer to official health authorities.
       </p>
     </div>

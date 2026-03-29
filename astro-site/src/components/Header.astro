@@ -1,5 +1,7 @@
 ---
 // src/components/Header.astro
+import BrandLogo from './BrandLogo.astro';
+
 const navLinks = [
   { href: '/', label: 'Home', labelZh: '首页' },
   { href: '/countries/', label: 'Countries', labelZh: '国家' },
@@ -15,17 +17,20 @@ const currentPath = Astro.url.pathname;
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <div class="flex items-center justify-between h-16">
       <!-- Logo -->
-      <a href="/" class="flex items-center gap-3 group">
-        <img
-          src="/logo.png"
-          alt="GlobalID"
-          class="w-8 h-8 rounded-lg object-contain shadow-lg group-hover:opacity-90 transition-opacity"
+      <div class="min-w-0">
+        <BrandLogo
+          href="/"
+          variant="lockup"
+          theme="dark"
+          alt="GIDS"
+          class="site-header-brand-block group min-w-0"
+          wordmarkClass="site-header-wordmark h-11 w-auto max-w-[min(34vw,300px)] group-hover:opacity-90 transition-opacity"
+          textClass="site-header-brand-copy"
+          titleClass="site-header-brandtitle"
+          subtitleClass="site-header-brandline"
+          imgClass="site-header-mark h-10 w-10 rounded-none ring-1 ring-white/10"
         />
-        <div class="flex flex-col leading-tight">
-          <span class="text-slate-100 font-semibold text-sm tracking-wide">GlobalID</span>
-          <span class="text-slate-500 text-xs" data-lang-en="Disease Surveillance" data-lang-zh="疾病监测">Disease Surveillance</span>
-        </div>
-      </a>
+      </div>
 
       <!-- Desktop nav -->
       <nav class="hidden md:flex items-center gap-1">
@@ -50,7 +55,7 @@ const currentPath = Astro.url.pathname;
       <div class="flex items-center gap-3">
         <button
           id="theme-toggle"
-          class="site-toggle-btn text-xs font-medium px-3 py-1.5 rounded-lg border transition-all focus-ring"
+          class="site-toggle-btn text-xs font-medium px-3 py-1.5 rounded-none border transition-all focus-ring"
           aria-label="Toggle color theme"
           title="切换主题 / Toggle Theme"
         >
@@ -59,7 +64,7 @@ const currentPath = Astro.url.pathname;
 
         <button
           id="lang-toggle"
-          class="site-toggle-btn text-xs font-medium px-3 py-1.5 rounded-lg border transition-all focus-ring"
+          class="site-toggle-btn text-xs font-medium px-3 py-1.5 rounded-none border transition-all focus-ring"
           aria-label="Toggle language"
           title="切换语言 / Switch Language"
         >
@@ -69,7 +74,7 @@ const currentPath = Astro.url.pathname;
         <!-- Mobile menu toggle -->
         <button
           id="mobile-menu-toggle"
-          class="site-toggle-btn md:hidden p-2 rounded-lg border transition-colors focus-ring"
+          class="site-toggle-btn md:hidden p-2 rounded-none border transition-colors focus-ring"
           aria-label="Toggle navigation menu"
         >
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -80,7 +85,7 @@ const currentPath = Astro.url.pathname;
     </div>
 
     <!-- Mobile nav -->
-    <div id="mobile-menu" class="hidden md:hidden border-t border-slate-800 py-3 pb-4 space-y-1">
+    <div id="mobile-menu" class="site-header-mobile-menu hidden md:hidden border-t py-3 pb-4 space-y-1">
       {
         navLinks.map(({ href, label, labelZh }) => (
           <a
@@ -112,7 +117,7 @@ const currentPath = Astro.url.pathname;
   function getPreferredTheme(): 'light' | 'dark' {
     const storedTheme = localStorage.getItem('theme');
     if (storedTheme === 'light' || storedTheme === 'dark') return storedTheme;
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    return 'light';
   }
 
   function applyTheme(theme: 'light' | 'dark') {

@@ -34,7 +34,7 @@ const MAP_NAME = 'world';
 
 export default function WorldMap({ activeCodes, height = 440 }: WorldMapProps) {
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    if (typeof document === 'undefined') return 'dark';
+    if (typeof document === 'undefined') return 'light';
     return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
   });
   const [mapReady, setMapReady] = useState(false);
@@ -170,7 +170,7 @@ export default function WorldMap({ activeCodes, height = 440 }: WorldMapProps) {
 
   if (!mapReady) {
     return (
-      <div style={{ height }} className="flex items-center justify-center text-slate-500 text-sm rounded-2xl">
+      <div style={{ height }} className="flex items-center justify-center text-slate-500 text-sm rounded-none">
         <span className="inline-flex items-center gap-2">
           <svg className="animate-spin w-4 h-4 text-teal-500" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -185,7 +185,7 @@ export default function WorldMap({ activeCodes, height = 440 }: WorldMapProps) {
   const isLight = theme === 'light';
 
   return (
-    <div className="relative rounded-2xl overflow-hidden"
+    <div className="relative rounded-none overflow-hidden"
       style={{
         background: isLight
           ? 'linear-gradient(135deg, #f0f9ff 0%, #dbeafe 100%)'
@@ -203,12 +203,12 @@ export default function WorldMap({ activeCodes, height = 440 }: WorldMapProps) {
       />
       {/* Legend */}
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-5 text-xs flex-wrap justify-center">
-        <span className="flex items-center gap-2 px-3 py-1.5 rounded-full backdrop-blur-sm"
+        <span className="flex items-center gap-2 px-3 py-1.5 rounded-none backdrop-blur-sm"
           style={{ background: isLight ? 'rgba(255,255,255,0.8)' : 'rgba(15,23,42,0.75)', border: `1px solid ${isLight ? '#e2e8f0' : '#334155'}` }}>
           <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: '#0d9488', boxShadow: '0 0 6px rgba(13,148,136,0.7)' }} />
           <span style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} data-lang-en="Active Coverage" data-lang-zh="已覆盖">Active Coverage</span>
         </span>
-        <span className="flex items-center gap-2 px-3 py-1.5 rounded-full backdrop-blur-sm"
+        <span className="flex items-center gap-2 px-3 py-1.5 rounded-none backdrop-blur-sm"
           style={{ background: isLight ? 'rgba(255,255,255,0.8)' : 'rgba(15,23,42,0.75)', border: `1px solid ${isLight ? '#e2e8f0' : '#334155'}` }}>
           <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: isLight ? '#bfdbfe' : '#1e3a5f', border: `1px solid ${isLight ? '#3b82f6' : '#1d4ed8'}` }} />
           <span style={{ color: isLight ? '#0f172a' : '#e2e8f0' }} data-lang-en="Planned" data-lang-zh="计划中">Planned</span>
