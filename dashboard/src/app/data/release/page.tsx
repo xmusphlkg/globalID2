@@ -836,6 +836,8 @@ export default function DataReleasePage() {
                         taskDetail={matchingDetail}
                         detailLoading={loadingExpandedDetail}
                         emptyMessage="Failed to load release task details"
+                        logDisplayMode="raw-collapsed"
+                        rawLogLabel={lang === "zh" ? "查看原始日志" : "View raw log"}
                       />
                     </div>
                   ) : null}

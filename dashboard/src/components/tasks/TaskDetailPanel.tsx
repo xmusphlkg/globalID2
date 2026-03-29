@@ -11,6 +11,8 @@ interface TaskDetailPanelProps {
   taskDetail?: TaskDetail;
   detailLoading: boolean;
   emptyMessage?: string;
+  logDisplayMode?: "default" | "raw-collapsed";
+  rawLogLabel?: string;
 }
 
 const entryBadge: Record<string, Color> = {
@@ -152,6 +154,8 @@ export function TaskDetailPanel({
   taskDetail,
   detailLoading,
   emptyMessage = "Task detail unavailable.",
+  logDisplayMode = "default",
+  rawLogLabel = "View raw log",
 }: TaskDetailPanelProps) {
   const outputData = (taskDetail?.output_data as Record<string, unknown> | null) ?? null;
   const timelineEntries = useMemo(() => {
@@ -408,10 +412,14 @@ export function TaskDetailPanel({
       {timelineEntries.length > 0 ? (
         <div className="max-h-[34rem] overflow-y-auto rounded-lg border border-tremor-border bg-tremor-background-subtle px-3 py-3 dark:border-dark-tremor-border dark:bg-dark-tremor-background-subtle">
           {timelineEntries.map((entry, index) => {
-            const preview = summarizeContent(entry.content);
-            const structuredRows = extractStructuredRows(entry.content);
+            const content = entry.content?.trim() ? entry.content : null;
+            const preview = logDisplayMode === "default" ? summarizeContent(content) : null;
+            const structuredRows = logDisplayMode === "default" ? extractStructuredRows(content) : [];
             const kind = entryKind(entry.title);
-            const rawDetail = entry.content && (!preview || entry.content.trim() !== preview || structuredRows.length === 0);
+            const rawDetail =
+              logDisplayMode === "raw-collapsed"
+                ? Boolean(content)
+                : content !== null && (!preview || content.trim() !== preview || structuredRows.length === 0);
             const metadata = entry.metadata || {};
             const metadataDisease = metadataString(metadata.disease_name);
             const metadataSection = metadataString(metadata.section_type);
@@ -460,11 +468,11 @@ export function TaskDetailPanel({
                     {rawDetail && (
                       <details className="rounded-md border border-tremor-border px-2 py-1 dark:border-dark-tremor-border">
                         <summary className="cursor-pointer text-[11px] font-medium text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
-                          View raw log
+                          {rawLogLabel}
                         </summary>
-                        <p className="mt-2 whitespace-pre-wrap break-words text-xs text-tremor-content-strong dark:text-dark-tremor-content-strong">
-                          {entry.content}
-                        </p>
+                        <pre className="mt-2 whitespace-pre-wrap break-words font-mono text-xs text-tremor-content-strong dark:text-dark-tremor-content-strong">
+                          {content}
+                        </pre>
                       </details>
                     )}
 
