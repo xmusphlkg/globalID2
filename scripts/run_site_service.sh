@@ -30,7 +30,11 @@ if [[ "$SITE_BUILD_REQUIRED" == "1" ]]; then
   require_dir "$SITE_DIR/node_modules" "astro-site/node_modules not found. Run 'cd astro-site && npm install' first."
   NPM_BIN="$(resolve_npm)"
   cd "$SITE_DIR"
-  "$NPM_BIN" run build
+  if is_truthy "${GLOBALID_SITE_REGENERATE_ON_START:-0}"; then
+    GLOBALID_SKIP_SITE_DATA_GENERATION=1 "$NPM_BIN" run build
+  else
+    "$NPM_BIN" run build
+  fi
 fi
 
 cd "$ROOT_DIR"

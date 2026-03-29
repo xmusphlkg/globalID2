@@ -4,6 +4,7 @@ import ReportLayout from '../../../../layouts/ReportLayout.astro';
 import DownloadPanel from '../../../../components/DownloadPanel.astro';
 import DiseaseReportPanel from '../../../../components/charts/DiseaseReportPanel';
 import type { DiseaseReportData } from '../../../../components/charts/DiseaseReportPanel';
+import { buildChartSourceMeta } from '../../../../utils/chartMeta';
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
 
@@ -35,7 +36,6 @@ if (existsSync(downloadsPath)) {
   ) ?? null;
 }
 
-// Get neighboring reports for prev/next nav
 const reportsIndexPath = resolve('./src/data/reports/index.json');
 let prevReport: any = null;
 let nextReport: any = null;
@@ -48,12 +48,10 @@ if (existsSync(reportsIndexPath)) {
   if (idx < allReports.length - 1) nextReport = allReports[idx + 1];
 }
 
-// Country time-series for chart context (load only if we also have disease_series)
 const countryPath = resolve(`./src/data/countries/${country}.json`);
 let countrySeries: any = null;
 if (existsSync(countryPath) && report?.period_start && report?.period_end) {
   const cData = JSON.parse(readFileSync(countryPath, 'utf-8'));
-  // Filter series to just the report window
   const startMs = new Date(report.period_start).getTime();
   const endMs = new Date(report.period_end).getTime();
   const filteredSeries: Record<string, any> = {};
@@ -78,7 +76,6 @@ if (existsSync(countryPath) && report?.period_start && report?.period_end) {
   if (Object.keys(filteredSeries).length > 0) countrySeries = filteredSeries;
 }
 
-// Build per-disease panel data (comparison stats + sections + series)
 let diseasePanelData: DiseaseReportData[] = [];
 
 if (existsSync(countryPath)) {
@@ -97,7 +94,6 @@ if (existsSync(countryPath)) {
     const compPrevYM = `${pd.getFullYear()}-${String(pd.getMonth() + 1).padStart(2, '0')}`;
     const compPrevYearYM = `${+ly - 1}-${lm}`;
 
-    // Build a map: disease name (en) → report sections
     const sectionsByDiseaseName: Record<string, any[]> = {};
     for (const sec of (report?.sections ?? [])) {
       const name = sec.title?.split(' - ').slice(0, -1).join(' - ') ?? '';
@@ -111,7 +107,6 @@ if (existsSync(countryPath)) {
         const idx = (s.dates as string[]).findIndex((d: string) => d.startsWith(ym));
         return idx >= 0 ? (arr[idx] ?? 0) : 0;
       }
-      // Report-period series (already computed above in countrySeries)
       const reportSeries = countrySeries?.[s.disease_id] ?? null;
       diseasePanelData.push({
         disease_id: s.disease_id,
@@ -147,6 +142,10 @@ const scoreColor = !report?.quality_score ? 'text-slate-500'
   : 'text-red-400';
 
 const countryName = report?.country_name ?? country.toUpperCase();
+const chartSourceMeta = buildChartSourceMeta(
+  countryDownload,
+  `${countryName} surveillance dataset`
+);
 ---
 
 <ReportLayout
@@ -160,19 +159,20 @@ const countryName = report?.country_name ?? country.toUpperCase();
   ]}
 >
   <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
-
     {!report ? (
       <div class="text-center py-24 text-slate-500">
         Report #{id} not found. <a href={`/countries/${country}/reports/`} class="text-brand-400 hover:underline">← Back to reports</a>
       </div>
     ) : (
       <>
-        <!-- Report header card -->
-        <div class="card p-8">
+        <section class="academic-hero">
           <div class="flex items-start justify-between flex-wrap gap-4 mb-6">
             <div>
+              <p class="academic-kicker mb-3" data-lang-en="Analytical report" data-lang-zh="分析报告">
+                Analytical report
+              </p>
               <div class="flex items-center gap-3 mb-3 flex-wrap">
-                <span class="text-xs font-medium px-2.5 py-1 rounded-full bg-brand-500/15 text-brand-300 ring-1 ring-brand-500/30">
+                <span class="text-xs font-semibold px-2.5 py-1 rounded-none bg-brand-500/15 text-brand-300 ring-1 ring-brand-500/30">
                   {report.report_type}
                 </span>
                 <span class="text-sm text-slate-500">{countryName}</span>
@@ -180,11 +180,11 @@ const countryName = report?.country_name ?? country.toUpperCase();
                   <span class="text-xs text-slate-600 font-mono">{report.ai_model_used}</span>
                 )}
               </div>
-              <h1 class="text-3xl font-bold text-slate-100 leading-tight">{report.title}</h1>
+              <h1 class="academic-title text-3xl sm:text-4xl leading-tight">{report.title}</h1>
             </div>
             {report.quality_score != null && (
               <div class="text-center">
-                <div class={`text-3xl font-bold ${scoreColor}`}>
+                <div class={`font-serif text-3xl font-semibold ${scoreColor}`}>
                   {(report.quality_score * 100).toFixed(0)}%
                 </div>
                 <div class="text-xs text-slate-600 mt-1" data-lang-en="Quality Score" data-lang-zh="质量评分">Quality Score</div>
@@ -192,37 +192,35 @@ const countryName = report?.country_name ?? country.toUpperCase();
             )}
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+          <div class="academic-meta-grid text-sm">
             {report.period_start && (
-              <div class="flex items-center gap-2 text-slate-500">
-                <svg class="w-4 h-4 text-slate-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                <span>
-                  <span data-lang-en="Period" data-lang-zh="报告周期">Period</span>:&nbsp;
-                  <span class="text-slate-300">{fmtDate(report.period_start)} → {fmtDate(report.period_end)}</span>
-                </span>
+              <div class="academic-meta-item">
+                <div class="academic-meta-label" data-lang-en="Reporting window" data-lang-zh="报告周期">Reporting window</div>
+                <div class="academic-meta-value text-sm font-medium">{fmtDate(report.period_start)} → {fmtDate(report.period_end)}</div>
               </div>
             )}
             {report.created_at && (
-              <div class="flex items-center gap-2 text-slate-500">
-                <svg class="w-4 h-4 text-slate-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>
-                  <span data-lang-en="Generated" data-lang-zh="生成时间">Generated</span>:&nbsp;
-                  <span class="text-slate-300">{fmtDate(report.created_at)}</span>
-                </span>
+              <div class="academic-meta-item">
+                <div class="academic-meta-label" data-lang-en="Generated" data-lang-zh="生成时间">Generated</div>
+                <div class="academic-meta-value text-sm font-medium">{fmtDate(report.created_at)}</div>
               </div>
             )}
+            <div class="academic-meta-item">
+              <div class="academic-meta-label" data-lang-en="Country" data-lang-zh="国家">Country</div>
+              <div class="academic-meta-value text-sm font-medium">{countryName}</div>
+            </div>
+            <div class="academic-meta-item">
+              <div class="academic-meta-label" data-lang-en="Disease sections" data-lang-zh="疾病章节">Disease sections</div>
+              <div class="academic-meta-value font-serif">{diseasePanelData.length}</div>
+            </div>
           </div>
-        </div>
+        </section>
 
-        <!-- Key Findings -->
         {report.key_findings && Object.keys(report.key_findings).length > 0 && (
-          <div>
-            <h2 class="text-xl font-semibold text-slate-100 mb-4" data-lang-en="Key Findings" data-lang-zh="关键发现">Key Findings</h2>
-            <div class="card p-6">
+          <section class="figure-panel">
+            <p class="figure-kicker" data-lang-en="Executive summary" data-lang-zh="执行摘要">Executive summary</p>
+            <h2 class="figure-title" data-lang-en="Key Findings" data-lang-zh="关键发现">Key Findings</h2>
+            <div class="mt-5">
               <ul class="space-y-2">
                 {(Array.isArray(report.key_findings) ? report.key_findings : Object.values(report.key_findings)).map((finding: any) => (
                   <li class="flex gap-3 text-slate-400 text-sm">
@@ -232,39 +230,32 @@ const countryName = report?.country_name ?? country.toUpperCase();
                 ))}
               </ul>
             </div>
-          </div>
+          </section>
         )}
 
-        {countryDownload && (
-          <DownloadPanel
-            entry={countryDownload}
-            title="Download Underlying Dataset"
-            descriptionEn="Download the country dataset used to generate this report, including source metadata."
-            descriptionZh="下载生成本报告所依据的国家数据集，并附带数据源信息。"
-          />
-        )}
-
-        <!-- Per-disease analysis panel (replaces separate Epidemic Curve + Comparison Table + Report Sections) -->
         {diseasePanelData.length > 0 && (
-          <div>
-            <h2 class="text-xl font-semibold text-slate-100 mb-2" data-lang-en="Disease Analysis" data-lang-zh="疾病分析">
+          <section class="figure-panel">
+            <p class="figure-kicker" data-lang-en="Interactive appendix" data-lang-zh="交互附录">Interactive appendix</p>
+            <h2 class="figure-title" data-lang-en="Disease Analysis" data-lang-zh="疾病分析">
               Disease Analysis
             </h2>
-            <p class="text-sm text-slate-500 mb-5">
-              <span data-lang-en="Click any disease to expand its trend charts and AI analysis." data-lang-zh="点击疾病名称可展开趋势图表和 AI 分析。">
-                Click any disease to expand its trend charts and AI analysis.
+            <p class="figure-caption">
+              <span data-lang-en="Expand any disease to inspect trend charts, raw data tables, source metadata, and narrative analysis." data-lang-zh="展开任一疾病可查看趋势图、原始数据表、来源信息和文字分析。">
+                Expand any disease to inspect trend charts, raw data tables, source metadata, and narrative analysis.
               </span>
             </p>
-            <DiseaseReportPanel
-              client:only="react"
-              diseases={diseasePanelData}
-              countryCode={country}
-              reportId={id}
-            />
-          </div>
+            <div class="mt-6">
+              <DiseaseReportPanel
+                client:only="react"
+                diseases={diseasePanelData}
+                countryCode={country}
+                reportId={id}
+                sourceMeta={chartSourceMeta}
+              />
+            </div>
+          </section>
         )}
 
-        <!-- Prev / Next navigation -->
         <div class="flex items-center justify-between pt-6 border-t border-slate-800">
           {prevReport ? (
             <a
@@ -290,6 +281,15 @@ const countryName = report?.country_name ?? country.toUpperCase();
             </a>
           ) : <span />}
         </div>
+
+        {countryDownload && (
+          <DownloadPanel
+            entry={countryDownload}
+            title="Download Underlying Dataset"
+            descriptionEn="Download the country dataset used to generate this report, including source metadata."
+            descriptionZh="下载生成本报告所依据的国家数据集，并附带数据源信息。"
+          />
+        )}
       </>
     )}
   </div>

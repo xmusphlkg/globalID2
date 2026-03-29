@@ -13,8 +13,8 @@ interface Props {
 
 const {
   title,
-  description = 'GlobalID — Global Infectious Disease Surveillance & Reporting System',
-  image = '/og-default.png',
+  description = 'GIDS — Global Infectious Disease Surveillance',
+  image = '/logo-2.png',
   noindex = false,
 } = Astro.props;
 
@@ -29,33 +29,33 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
     <meta name="generator" content={Astro.generator} />
 
     <!-- SEO -->
-    <title>{title} | GlobalID</title>
+    <title>{title} | GIDS</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonicalURL} />
     {noindex && <meta name="robots" content="noindex,nofollow" />}
 
     <!-- Open Graph -->
     <meta property="og:type" content="website" />
-    <meta property="og:title" content={`${title} | GlobalID`} />
+    <meta property="og:title" content={`${title} | GIDS`} />
     <meta property="og:description" content={description} />
     <meta property="og:image" content={new URL(image, Astro.site)} />
     <meta property="og:url" content={canonicalURL} />
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content={`${title} | GlobalID`} />
+    <meta name="twitter:title" content={`${title} | GIDS`} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={new URL(image, Astro.site)} />
 
     <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" href="/logo.png" />
+    <link rel="apple-touch-icon" href="/logo.png" />
 
     <!-- Apply theme before first paint to avoid flashing -->
     <script is:inline>
       (() => {
         const storedTheme = localStorage.getItem('theme');
-        const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-        const theme = storedTheme === 'light' || storedTheme === 'dark' ? storedTheme : systemTheme;
+        const theme = storedTheme === 'light' || storedTheme === 'dark' ? storedTheme : 'light';
         document.documentElement.setAttribute('data-theme', theme);
         document.documentElement.classList.toggle('dark', theme === 'dark');
       })();
@@ -73,7 +73,7 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
         </span>
       </div>
     </div>
-    <main class="flex-1">
+    <main class="flex-1 academic-shell">
       <slot />
     </main>
     <Footer />

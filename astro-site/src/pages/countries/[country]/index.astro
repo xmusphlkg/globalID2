@@ -8,6 +8,7 @@ import DownloadPanel from '../../../components/DownloadPanel.astro';
 import EpidemicCurve from '../../../components/charts/EpidemicCurve';
 import DiseaseHeatmap from '../../../components/charts/DiseaseHeatmap';
 import ComparisonTable from '../../../components/charts/ComparisonTable';
+import { buildChartSourceMeta } from '../../../utils/chartMeta';
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
 
@@ -54,16 +55,26 @@ function fmtNum(n: number | null | undefined) {
 const stats = countryData
   ? [
       { label: 'Total Cases', labelZh: '累计病例', value: fmtNum(countryData.total_cases), accent: 'amber' as const },
-      { label: 'Total Deaths', labelZh: '累计死亡', value: fmtNum(countryData.total_deaths), accent: 'red' as const },
+      ...(countryData.total_deaths > 0
+        ? [{ label: 'Total Deaths', labelZh: '累计死亡', value: fmtNum(countryData.total_deaths), accent: 'red' as const }]
+        : []),
       { label: 'Diseases Tracked', labelZh: '追踪疾病数', value: countryData.disease_count ?? 0, accent: 'teal' as const },
-      { label: 'Reports', labelZh: '已生成报告', value: reports.length > 0 ? '—' : '0', accent: 'blue' as const },
+      { label: 'Reports', labelZh: '已生成报告', value: reports.length, accent: 'blue' as const },
     ]
   : [];
 
-// Prepare disease rows for comparison table
 const diseaseRows = countryData
   ? Object.values(countryData.disease_series as Record<string, any>)
   : [];
+
+const coverageLabel = countryData?.date_range
+  ? `${countryData.date_range.start} → ${countryData.date_range.end ?? 'present'}`
+  : '—';
+
+const chartSourceMeta = buildChartSourceMeta(
+  countryDownload,
+  `${countryData?.country_name ?? country.toUpperCase()} surveillance dataset`
+);
 ---
 
 <ReportLayout
@@ -74,118 +85,173 @@ const diseaseRows = countryData
     { label: countryData?.country_name ?? country.toUpperCase() },
   ]}
 >
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-14">
-
-    <!-- Header -->
-    <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
-      <div>
-        <div class="flex items-center gap-3 mb-2">
-          <CountryFlag
-            code={countryData?.country_code ?? country.toUpperCase()}
-            name={countryData?.country_name ?? country.toUpperCase()}
-            sizeClass="w-10 h-8"
-          />
-          <h1 class="text-4xl font-bold text-slate-100">
-            {countryData?.country_name ?? country.toUpperCase()}
-          </h1>
-        </div>
-        {countryData?.date_range && (
-          <p class="text-slate-500 text-sm">
-            <span data-lang-en="Coverage" data-lang-zh="数据区间">Coverage</span>:&nbsp;
-            {countryData.date_range.start} → {countryData.date_range.end ?? 'present'}
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
+    <section class="academic-hero">
+      <div class="flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
+        <div class="space-y-4">
+          <p class="academic-kicker" data-lang-en="Country Surveillance Brief" data-lang-zh="国家监测简报">
+            Country Surveillance Brief
           </p>
-        )}
-      </div>
-      <a
-        href={`/countries/${country}/reports/`}
-        class="site-action-secondary inline-flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-medium transition-all"
-      >
-        <span data-lang-en="View All Reports" data-lang-zh="查看所有报告">View All Reports</span>
-        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-        </svg>
-      </a>
-    </div>
+          <div class="flex items-center gap-3">
+            <CountryFlag
+              code={countryData?.country_code ?? country.toUpperCase()}
+              name={countryData?.country_name ?? country.toUpperCase()}
+              sizeClass="w-10 h-8"
+            />
+            <span class="text-sm uppercase tracking-[0.18em] text-slate-500">{countryData?.country_code ?? country.toUpperCase()}</span>
+          </div>
+          <div>
+            <h1 class="academic-title">
+              {countryData?.country_name ?? country.toUpperCase()}
+            </h1>
+            <p class="academic-subtitle mt-2" data-lang-en="National infectious disease surveillance overview" data-lang-zh="国家传染病监测概览">
+              National infectious disease surveillance overview
+            </p>
+          </div>
+          <p class="academic-lead" data-lang-en="This page consolidates time-series surveillance records, comparative tables, and machine-readable downloads for formal reporting and exploratory review." data-lang-zh="本页整合了时间序列监测记录、疾病对比表和机器可读下载文件，适用于正式汇报与探索性分析。">
+            This page consolidates time-series surveillance records, comparative tables, and machine-readable downloads for formal reporting and exploratory review.
+          </p>
+        </div>
 
-    <!-- Stats -->
+        <div class="space-y-4 xl:max-w-sm">
+          <div class="academic-meta-grid xl:grid-cols-2">
+            <div class="academic-meta-item">
+              <div class="academic-meta-label" data-lang-en="Coverage window" data-lang-zh="覆盖区间">Coverage window</div>
+              <div class="academic-meta-value text-sm font-medium">{coverageLabel}</div>
+            </div>
+            <div class="academic-meta-item">
+              <div class="academic-meta-label" data-lang-en="Tracked diseases" data-lang-zh="追踪疾病数">Tracked diseases</div>
+              <div class="academic-meta-value font-serif">{countryData?.disease_count ?? 0}</div>
+            </div>
+          </div>
+          <a
+            href={`/countries/${country}/reports/`}
+            class="site-action-secondary inline-flex items-center gap-2 px-4 py-2 rounded-none border text-sm font-semibold transition-all"
+          >
+            <span data-lang-en="Open report archive" data-lang-zh="查看报告归档">Open report archive</span>
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </a>
+        </div>
+      </div>
+    </section>
+
     {stats.length > 0 && <StatBar stats={stats} />}
 
-    {countryDownload && (
-      <DownloadPanel
-        entry={countryDownload}
-        title="Download Country Dataset"
-        descriptionEn="Download the full country dataset backing this page in JSON or CSV, with source metadata included."
-        descriptionZh="下载当前国家页面对应的完整数据集，支持 JSON 和 CSV，并附带数据源信息。"
-      />
-    )}
-
-    <!-- Epidemic Curve -->
-    <div>
-      <h2 class="text-xl font-semibold text-slate-100 mb-1" data-lang-en="Epidemic Curve — Top 10 Diseases" data-lang-zh="流行曲线 — 前 10 种疾病">
+    <section class="figure-panel">
+      <p class="figure-kicker" data-lang-en="Figure 1" data-lang-zh="图 1">Figure 1</p>
+      <h2 class="figure-title" data-lang-en="Epidemic Curve — Top 10 Diseases" data-lang-zh="流行曲线 — 前 10 种疾病">
         Epidemic Curve — Top 10 Diseases
       </h2>
-      <p class="text-slate-500 text-sm mb-4" data-lang-en="Default metric uses weekly-equivalent case normalization for fairer cross-country comparison." data-lang-zh="默认指标采用周等价病例折算，以提升跨国比较公平性。">
-        Default metric uses weekly-equivalent case normalization for fairer cross-country comparison.
+      <p class="figure-caption" data-lang-en="Default metric uses weekly-equivalent case normalization to support fairer cross-country comparison while preserving the original reporting rhythm." data-lang-zh="默认指标采用周等价病例折算，在保留原始报告节奏的同时提高跨国比较的可比性。">
+        Default metric uses weekly-equivalent case normalization to support fairer cross-country comparison while preserving the original reporting rhythm.
       </p>
-      {countryData?.disease_series ? (
-        <EpidemicCurve
-          client:only="react"
-          series={countryData.disease_series}
-          topN={10}
-          height={420}
-        />
-      ) : (
-        <div class="card p-8 text-center text-slate-500">No time-series data available</div>
-      )}
-    </div>
+      <div class="mt-6">
+        {countryData?.disease_series ? (
+          <EpidemicCurve
+            client:only="react"
+            series={countryData.disease_series}
+            topN={10}
+            height={420}
+            sourceMeta={chartSourceMeta}
+          >
+            <div slot="fallback" class="chart-loading-shell" aria-hidden="true">
+              <div class="chart-loading-toolbar">
+                <span class="chart-loading-pill w-24"></span>
+                <span class="chart-loading-pill w-32"></span>
+                <span class="chart-loading-pill w-28"></span>
+              </div>
+              <div class="chart-loading-line w-4/5"></div>
+              <div class="chart-loading-panel" style="height: 420px;"></div>
+            </div>
+          </EpidemicCurve>
+        ) : (
+          <div class="card p-8 text-center text-slate-500">No time-series data available</div>
+        )}
+      </div>
+    </section>
 
-    <!-- Heatmap -->
-    <div>
-      <h2 class="text-xl font-semibold text-slate-100 mb-1" data-lang-en="Disease × Month Heatmap" data-lang-zh="疾病 × 月份热图">
+    <section class="figure-panel">
+      <p class="figure-kicker" data-lang-en="Figure 2" data-lang-zh="图 2">Figure 2</p>
+      <h2 class="figure-title" data-lang-en="Disease × Month Heatmap" data-lang-zh="疾病 × 月份热图">
         Disease × Month Heatmap
       </h2>
-      <p class="text-slate-500 text-sm mb-4" data-lang-en="All diseases across the full surveillance period using calendar-month aggregation (log scale)." data-lang-zh="整个监测周期内所有疾病，按自然月聚合（对数刻度）。">
-        All diseases across the full surveillance period using calendar-month aggregation (log scale).
+      <p class="figure-caption" data-lang-en="All diseases across the full surveillance period using calendar-month aggregation. The heatmap uses a logarithmic scale to preserve visibility for both low-incidence and high-incidence diseases." data-lang-zh="展示整个监测周期内所有疾病的自然月聚合结果。热图采用对数刻度，以兼顾低发病和高发病疾病的可读性。">
+        All diseases across the full surveillance period using calendar-month aggregation. The heatmap uses a logarithmic scale to preserve visibility for both low-incidence and high-incidence diseases.
       </p>
-      {countryData?.heatmap?.z?.length ? (
-        <DiseaseHeatmap
-          client:only="react"
-          data={countryData.heatmap}
-          height={600}
-        />
-      ) : (
-        <div class="card p-8 text-center text-slate-500">No heatmap data available</div>
-      )}
-    </div>
+      <div class="mt-6">
+        {(countryData?.disease_series || countryData?.heatmap?.z?.length) ? (
+          <DiseaseHeatmap
+            client:only="react"
+            data={countryData.heatmap}
+            series={countryData.disease_series}
+            height={600}
+            sourceMeta={chartSourceMeta}
+          >
+            <div slot="fallback" class="chart-loading-shell" aria-hidden="true">
+              <div class="chart-loading-toolbar">
+                <span class="chart-loading-pill w-28"></span>
+                <span class="chart-loading-pill w-36"></span>
+                <span class="chart-loading-pill w-24"></span>
+              </div>
+              <div class="chart-loading-line w-3/4"></div>
+              <div class="chart-loading-panel" style="height: 600px;"></div>
+            </div>
+          </DiseaseHeatmap>
+        ) : (
+          <div class="card p-8 text-center text-slate-500">No heatmap data available</div>
+        )}
+      </div>
+    </section>
 
-    <!-- Comparison Table -->
-    <div>
-      <h2 class="text-xl font-semibold text-slate-100 mb-1" data-lang-en="Disease Comparison Table" data-lang-zh="疾病对比表格">
+    <section class="figure-panel">
+      <p class="figure-kicker" data-lang-en="Table 1" data-lang-zh="表 1">Table 1</p>
+      <h2 class="figure-title" data-lang-en="Disease Comparison Table" data-lang-zh="疾病对比表格">
         Disease Comparison Table
       </h2>
-      <p class="text-slate-500 text-sm mb-4" data-lang-en="Totals and latest values come from reported series; compare with weekly-equivalent trend in the curve above." data-lang-zh="总量与最新值来自报告序列；可结合上方周等价趋势进行对比。">
-        Totals and latest values come from reported series; compare with weekly-equivalent trend in the curve above.
+      <p class="figure-caption" data-lang-en="Totals and latest values come from the reported series and are intended to be read alongside the normalized trend view above." data-lang-zh="表中总量与最新值来自原始报告序列，建议与上方的标准化趋势图结合阅读。">
+        Totals and latest values come from the reported series and are intended to be read alongside the normalized trend view above.
       </p>
-      {diseaseRows.length > 0 ? (
-        <ComparisonTable
-          client:only="react"
-          rows={diseaseRows}
-          countryCode={country}
-        />
-      ) : (
-        <div class="card p-8 text-center text-slate-500">No disease data available</div>
-      )}
-    </div>
+      <div class="mt-6">
+        {diseaseRows.length > 0 ? (
+          <ComparisonTable
+            client:only="react"
+            rows={diseaseRows}
+            countryCode={country}
+            series={countryData.disease_series}
+          >
+            <div slot="fallback" class="chart-loading-shell" aria-hidden="true">
+              <div class="chart-loading-toolbar">
+                <span class="chart-loading-pill w-48"></span>
+                <span class="chart-loading-pill w-24"></span>
+                <span class="chart-loading-pill w-24"></span>
+              </div>
+              <div class="chart-loading-line w-full"></div>
+              <div class="chart-loading-line w-5/6"></div>
+              <div class="chart-loading-panel" style="height: 420px;"></div>
+            </div>
+          </ComparisonTable>
+        ) : (
+          <div class="card p-8 text-center text-slate-500">No disease data available</div>
+        )}
+      </div>
+    </section>
 
-    <!-- Recent Reports -->
     {reports.length > 0 && (
-      <div>
-        <div class="flex items-center justify-between mb-6">
-          <h2 class="text-xl font-semibold text-slate-100" data-lang-en="Recent Reports" data-lang-zh="近期报告">
-            Recent Reports
-          </h2>
+      <section>
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between mb-6">
+          <div>
+            <p class="academic-kicker" data-lang-en="Recent documents" data-lang-zh="近期文档">Recent documents</p>
+            <h2 class="academic-section-title" data-lang-en="Recent Reports" data-lang-zh="近期报告">
+              Recent Reports
+            </h2>
+            <p class="academic-section-intro" data-lang-en="Most recent machine-generated analyses for this country, ordered by report publication time." data-lang-zh="按发布时间排序展示该国家最近生成的分析报告。">
+              Most recent machine-generated analyses for this country, ordered by report publication time.
+            </p>
+          </div>
           <a href={`/countries/${country}/reports/`} class="text-sm text-brand-400 hover:text-brand-300 transition-colors">
-            <span data-lang-en="View all →" data-lang-zh="查看全部 →">View all →</span>
+            <span data-lang-en="View all reports →" data-lang-zh="查看全部报告 →">View all reports →</span>
           </a>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -203,7 +269,16 @@ const diseaseRows = countryData
             />
           ))}
         </div>
-      </div>
+      </section>
+    )}
+
+    {countryDownload && (
+      <DownloadPanel
+        entry={countryDownload}
+        title="Download Country Dataset"
+        descriptionEn="Download the full country dataset backing this page in JSON or CSV, with source metadata included."
+        descriptionZh="下载当前国家页面对应的完整数据集，支持 JSON 和 CSV，并附带数据源信息。"
+      />
     )}
   </div>
 </ReportLayout>

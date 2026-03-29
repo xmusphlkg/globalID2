@@ -65,6 +65,7 @@ async def create_data_release_job(body: DataReleaseJobCreate, db: AsyncSession =
     db.add(job)
     await db.commit()
     await db.refresh(job)
+    await data_release_service.reschedule_job(job.job_id)
     snapshot = await data_release_service.snapshot_async()
     state_by_job = {item["job_id"]: item for item in snapshot["jobs"]}
     return DataReleaseJobOut(**state_by_job[job.job_id])
@@ -97,6 +98,7 @@ async def update_data_release_job(job_id: str, body: DataReleaseJobUpdate, db: A
 
     await db.commit()
     await db.refresh(job)
+    await data_release_service.reschedule_job(job.job_id)
     snapshot = await data_release_service.snapshot_async()
     state_by_job = {item["job_id"]: item for item in snapshot["jobs"]}
     return DataReleaseJobOut(**state_by_job[job.job_id])
@@ -112,6 +114,7 @@ async def delete_data_release_job(job_id: str, db: AsyncSession = Depends(get_db
         raise HTTPException(404, f"Data release job not found: {job_id}")
     await db.delete(job)
     await db.commit()
+    await data_release_service.remove_job_state(job_id)
     return {"ok": True, "job_id": job_id}
 
 

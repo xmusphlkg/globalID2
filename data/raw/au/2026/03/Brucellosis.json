@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-03-27T12:18:44.908918+00:00",
+  "fetched_at": "2026-03-29T04:01:55.900658+00:00",
   "disease": "Brucellosis",
   "year": 2026,
   "month": 3,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1774613924569)/",
-            "rootActivityId": "2d637351-3784-4eb4-b874-23e27d0caec9",
+            "timestamp": "/Date(1774756915643)/",
+            "rootActivityId": "a3166b03-f3f5-4083-887f-dd26f6245a5f",
             "descriptor": {
               "Select": [
                 {
@@ -417,15 +417,15 @@
                         },
                         {
                           "C": [
-                            "VIC",
-                            "'<5'"
-                          ]
+                            "VIC"
+                          ],
+                          "R": 2
                         },
                         {
                           "C": [
-                            "WA",
-                            "0L"
-                          ]
+                            "WA"
+                          ],
+                          "R": 2
                         }
                       ]
                     }
@@ -450,7 +450,7 @@
     "QLD": 0,
     "SA": 0,
     "TAS": 0,
-    "VIC": "'<5'",
+    "VIC": 0,
     "WA": 0
   }
 }

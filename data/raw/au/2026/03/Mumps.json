@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-03-27T12:18:47.292950+00:00",
+  "fetched_at": "2026-03-29T04:01:59.001367+00:00",
   "disease": "Mumps",
   "year": 2026,
   "month": 3,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1774613926959)/",
-            "rootActivityId": "0eb8f1c1-b132-4a12-ad4a-27627018b319",
+            "timestamp": "/Date(1774756918479)/",
+            "rootActivityId": "2f9decf2-604e-4353-b4cf-f052d378006b",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'10'"
+                          "A0": "'11'"
                         }
                       ]
                     },
@@ -388,7 +388,7 @@
                         {
                           "C": [
                             "NSW",
-                            "'5'"
+                            "'6'"
                           ]
                         },
                         {
@@ -445,7 +445,7 @@
   },
   "parsed_counts": {
     "ACT": 0,
-    "NSW": 5,
+    "NSW": 6,
     "NT": 0,
     "QLD": "'<5'",
     "SA": 0,

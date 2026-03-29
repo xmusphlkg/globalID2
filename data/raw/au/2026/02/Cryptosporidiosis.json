@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-03-27T12:18:40.670940+00:00",
+  "fetched_at": "2026-03-29T04:01:51.497578+00:00",
   "disease": "Cryptosporidiosis",
   "year": 2026,
   "month": 2,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1774613918380)/",
-            "rootActivityId": "6a64bf29-a80a-4f25-83a0-cc30300d945b",
+            "timestamp": "/Date(1774756910510)/",
+            "rootActivityId": "2ead52a7-f88c-4a02-8d74-3ffeb77d843d",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'260'"
+                          "A0": "'261'"
                         }
                       ]
                     },
@@ -388,7 +388,7 @@
                         {
                           "C": [
                             "NSW",
-                            "'88'"
+                            "'89'"
                           ]
                         },
                         {
@@ -445,7 +445,7 @@
   },
   "parsed_counts": {
     "ACT": "'<5'",
-    "NSW": 88,
+    "NSW": 89,
     "NT": 0,
     "QLD": 61,
     "SA": 24,

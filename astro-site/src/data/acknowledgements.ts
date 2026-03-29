@@ -19,9 +19,9 @@ export const acknowledgementIntro = {
   titleEn: 'Acknowledgements and Support',
   titleZh: '致谢与支持',
   leadEn:
-    'GlobalID has benefited from the intellectual guidance, collegial feedback, and practical support of colleagues and mentors. The author gratefully acknowledges the following individuals for their contributions to the development of this project.',
+    'GIDS has benefited from the intellectual guidance, collegial feedback, and practical support of colleagues and mentors. The author gratefully acknowledges the following individuals for their contributions to the development of this project.',
   leadZh:
-    'GlobalID 的建设与完善，得益于多位同行与师长在学术思考、内容反馈和实际支持方面的帮助。作者谨向以下人员在本项目发展过程中所作出的贡献致以诚挚谢意。',
+    'GIDS 的建设与完善，得益于多位同行与师长在学术思考、内容反馈和实际支持方面的帮助。作者谨向以下人员在本项目发展过程中所作出的贡献致以诚挚谢意。',
   noteEn:
     'This acknowledgement record will be maintained and expanded as the project continues to develop.',
   noteZh: '本致谢名单将随项目推进持续补充与更新。',

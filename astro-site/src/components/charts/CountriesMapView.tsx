@@ -193,6 +193,43 @@ export default function CountriesMapView({ metaCountries = [], height = 450 }: P
 
   // ECharts option ───────────────────────────────────────────────────────────
   const isLight = theme === 'light';
+  const palette = isLight
+    ? {
+        mapBg: 'linear-gradient(180deg, #eef4fa 0%, #dde8f2 100%)',
+        areaColor: '#fbfdff',
+        areaBorder: '#b6c8d8',
+        areaHover: '#e4edf5',
+        tooltipBg: '#ffffff',
+        tooltipBorder: '#c7d7e6',
+        tooltipText: '#17304d',
+        supported: '#0d6d8c',
+        supportedBorder: '#1c86aa',
+        scheduled: '#7d8d9f',
+        scheduledBorder: '#9aacbd',
+        boxBg: '#ffffff',
+        boxText: '#17304d',
+        boxTextMuted: '#657b92',
+        boxSupportedBorder: '#a7c2d5',
+        boxScheduledBorder: '#c8d6e2',
+      }
+    : {
+        mapBg: 'linear-gradient(180deg, #152233 0%, #111b28 100%)',
+        areaColor: '#1b2a3c',
+        areaBorder: '#102033',
+        areaHover: '#25374d',
+        tooltipBg: '#162334',
+        tooltipBorder: '#304156',
+        tooltipText: '#e2e8f0',
+        supported: '#0d9488',
+        supportedBorder: '#14b8a6',
+        scheduled: '#475569',
+        scheduledBorder: '#64748b',
+        boxBg: '#1e293b',
+        boxText: '#f1f5f9',
+        boxTextMuted: '#94a3b8',
+        boxSupportedBorder: '#0d9488',
+        boxScheduledBorder: '#334155',
+      };
 
   const option = useMemo(() => {
     if (!mapReady) return {};
@@ -204,12 +241,12 @@ export default function CountriesMapView({ metaCountries = [], height = 450 }: P
         scaleLimit: { min: 0.6, max: 8 },
         silent: false,
         itemStyle: {
-          areaColor: isLight ? '#e8eef5' : '#1e293b',
-          borderColor: isLight ? '#d1dce8' : '#0f172a',
+          areaColor: palette.areaColor,
+          borderColor: palette.areaBorder,
           borderWidth: 0.5,
         },
         emphasis: {
-          itemStyle: { areaColor: isLight ? '#dbeafe' : '#273549' },
+          itemStyle: { areaColor: palette.areaHover },
           label: { show: false },
         },
         select: { disabled: true },
@@ -226,15 +263,15 @@ export default function CountriesMapView({ metaCountries = [], height = 450 }: P
           })),
           symbolSize: (_v: any, p: any) => p.data?.status === 'Supported' ? 13 : 9,
           itemStyle: {
-            color: (p: any) => p.data?.status === 'Supported' ? '#0d9488' : '#475569',
-            borderColor: (p: any) => p.data?.status === 'Supported' ? '#14b8a6' : '#64748b',
+            color: (p: any) => p.data?.status === 'Supported' ? palette.supported : palette.scheduled,
+            borderColor: (p: any) => p.data?.status === 'Supported' ? palette.supportedBorder : palette.scheduledBorder,
             borderWidth: 2,
-            shadowBlur: (p: any) => p.data?.status === 'Supported' ? 8 : 0,
-            shadowColor: '#0d9488',
+            shadowBlur: (p: any) => p.data?.status === 'Supported' ? 10 : 0,
+            shadowColor: palette.supported,
           },
           emphasis: {
             itemStyle: {
-              color: (p: any) => p.data?.status === 'Supported' ? '#14b8a6' : '#64748b',
+              color: (p: any) => p.data?.status === 'Supported' ? palette.supportedBorder : palette.scheduledBorder,
             },
           },
           label: { show: false },
@@ -243,13 +280,13 @@ export default function CountriesMapView({ metaCountries = [], height = 450 }: P
       ],
       tooltip: {
         trigger: 'item',
-        backgroundColor: isLight ? '#fff' : '#1e293b',
-        borderColor: isLight ? '#cbd5e1' : '#334155',
-        textStyle: { color: isLight ? '#0f172a' : '#e2e8f0', fontSize: 12 },
+        backgroundColor: palette.tooltipBg,
+        borderColor: palette.tooltipBorder,
+        textStyle: { color: palette.tooltipText, fontSize: 12 },
         formatter: (p: any) => `<b>${p.data.name}</b><br/>${p.data.status}`,
       },
     };
-  }, [theme, mapReady, isLight, countriesWithStatus]);
+  }, [mapReady, countriesWithStatus, palette]);
 
   const handleEvents = useMemo(() => ({
     finished: () => setTimeout(computePositions, 600),
@@ -262,9 +299,15 @@ export default function CountriesMapView({ metaCountries = [], height = 450 }: P
     return (
       <div
         style={{ height }}
-        className="flex items-center justify-center text-slate-500 text-sm"
+        className="flex items-center justify-center text-sm text-[rgb(var(--text-muted))]"
       >
-        Loading map…
+        <span className="inline-flex items-center gap-2">
+          <svg className="h-4 w-4 animate-spin text-teal-500" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+          </svg>
+          Loading map…
+        </span>
       </div>
     );
   }
@@ -273,7 +316,15 @@ export default function CountriesMapView({ metaCountries = [], height = 450 }: P
   const scaledBoxH = BOX_H;
 
   return (
-    <div ref={containerRef} style={{ position: 'relative', height, overflow: 'hidden' }}>
+    <div
+      ref={containerRef}
+      style={{
+        position: 'relative',
+        height,
+        overflow: 'hidden',
+        background: palette.mapBg,
+      }}
+    >
       {/* ECharts world map */}
       <ReactEChartsCore
         ref={chartRef}
@@ -302,7 +353,7 @@ export default function CountriesMapView({ metaCountries = [], height = 450 }: P
             const edgeY = d.by;          // box vertical centre
 
             // L-shape: dot → horizontal run → vertical drop to box centre
-            const color = d.status === 'Supported' ? '#0d9488' : '#475569';
+            const color = d.status === 'Supported' ? palette.supported : palette.scheduled;
             const dash = d.status === 'Scheduled' ? '5 3' : undefined;
 
             return (
@@ -335,8 +386,8 @@ export default function CountriesMapView({ metaCountries = [], height = 450 }: P
       {/* ── Country info boxes ── */}
       {dotPositions.map(d => {
         const isSupported = d.status === 'Supported';
-        const accentColor = isSupported ? '#0d9488' : '#475569';
-        const borderColor = isSupported ? '#0d9488' : '#334155';
+        const accentColor = isSupported ? palette.supported : palette.scheduled;
+        const borderColor = isSupported ? palette.boxSupportedBorder : palette.boxScheduledBorder;
         const href = isSupported ? `/countries/${d.iso2.toLowerCase()}/` : undefined;
 
         const boxStyles: React.CSSProperties = {
@@ -345,18 +396,20 @@ export default function CountriesMapView({ metaCountries = [], height = 450 }: P
           top:  d.by - scaledBoxH / 2,
           width: scaledBoxW,
           minHeight: scaledBoxH,
-          background: isLight ? '#fff' : '#1e293b',
+          background: palette.boxBg,
           border: `1px solid ${borderColor}`,
-          borderRadius: 7,
+          borderRadius: 0,
           padding: '6px 10px',
           zIndex: 10,
           lineHeight: 1.4,
           textDecoration: 'none',
-          color: isLight ? '#0f172a' : '#e2e8f0',
+          color: palette.boxText,
           cursor: isSupported ? 'pointer' : 'default',
           boxShadow: isSupported
-            ? `0 2px 12px ${accentColor}44`
-            : `0 1px 4px rgba(0,0,0,0.25)`,
+            ? `0 12px 22px ${accentColor}28`
+            : isLight
+              ? '0 8px 18px rgba(42, 74, 103, 0.1)'
+              : '0 1px 4px rgba(0,0,0,0.25)',
           transition: 'box-shadow 0.15s ease',
           display: 'block',
           userSelect: 'none',
@@ -367,12 +420,12 @@ export default function CountriesMapView({ metaCountries = [], height = 450 }: P
             <div style={{
               fontWeight: 600, fontSize: 12,
               display: 'flex', alignItems: 'center', gap: 5, marginBottom: 3,
-              color: isLight ? '#0f172a' : '#f1f5f9',
+              color: palette.boxText,
             }}>
               <img
                 src={`https://flagcdn.com/w40/${d.iso2.toLowerCase()}.png`}
                 alt={d.name}
-                style={{ width: 20, height: 14, objectFit: 'cover', borderRadius: 2, flexShrink: 0 }}
+                style={{ width: 20, height: 14, objectFit: 'cover', borderRadius: 0, flexShrink: 0 }}
               />
               <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {d.name}
@@ -384,10 +437,10 @@ export default function CountriesMapView({ metaCountries = [], height = 450 }: P
                 display: 'inline-block',
                 background: isSupported ? accentColor : 'transparent',
                 border: `1px solid ${borderColor}`,
-                borderRadius: 4,
+                borderRadius: 0,
                 padding: '1px 6px',
                 fontSize: 10,
-                color: isSupported ? '#fff' : '#64748b',
+                color: isSupported ? '#fff' : palette.boxTextMuted,
                 fontWeight: 500,
               }}>
                 {d.status}

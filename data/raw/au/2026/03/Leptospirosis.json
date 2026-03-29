@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-03-27T12:18:46.884592+00:00",
+  "fetched_at": "2026-03-29T04:01:58.298791+00:00",
   "disease": "Leptospirosis",
   "year": 2026,
   "month": 3,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1774613926530)/",
-            "rootActivityId": "044c3870-80f0-41d0-b1eb-d109de4b79f8",
+            "timestamp": "/Date(1774756918015)/",
+            "rootActivityId": "ca3cd9a6-aef3-4df7-96b3-34937a7c63ff",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'13'"
+                          "A0": "'17'"
                         }
                       ]
                     },
@@ -400,7 +400,7 @@
                         {
                           "C": [
                             "QLD",
-                            "'11'"
+                            "'14'"
                           ]
                         },
                         {
@@ -447,7 +447,7 @@
     "ACT": 0,
     "NSW": "'<5'",
     "NT": 0,
-    "QLD": 11,
+    "QLD": 14,
     "SA": 0,
     "TAS": 0,
     "VIC": 0,
