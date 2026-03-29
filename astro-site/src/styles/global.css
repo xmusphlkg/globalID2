@@ -788,7 +788,12 @@
   }
 
   .chart-stage {
-    @apply grid gap-4 xl:grid-cols-[minmax(0,1fr)_220px];
+    min-height: 0;
+    @apply grid items-stretch gap-4;
+  }
+
+  .chart-stage-with-aside {
+    @apply xl:grid-cols-[minmax(0,1fr)_220px];
   }
 
   .chart-stage-with-wide-aside {
@@ -797,6 +802,7 @@
 
   .chart-canvas {
     min-width: 0;
+    min-height: 0;
   }
 
   .chart-scroll-x {
@@ -804,6 +810,7 @@
     overflow-x: auto;
     overflow-y: hidden;
     padding-bottom: 0.35rem;
+    min-height: 0;
   }
 
   .chart-aside {
@@ -811,6 +818,7 @@
     padding-left: 1rem;
     max-height: min(54vh, 420px);
     overflow: auto;
+    min-height: 0;
   }
 
   .chart-aside-wide {
@@ -849,6 +857,7 @@
   }
 
   .chart-sidebar {
+    min-height: 0;
     @apply flex flex-col gap-3;
   }
 
@@ -868,17 +877,30 @@
 
   .chart-sidebar-list {
     border: 1px solid rgb(var(--border) / 0.74);
-    background:
-      linear-gradient(180deg, rgb(var(--surface) / 0.96), rgb(var(--surface-raised) / 0.48));
+    background-color: rgb(var(--surface) / 0.96);
     max-height: min(58vh, 660px);
+    min-height: 0;
     @apply overflow-auto rounded-none;
   }
 
   .chart-sidebar-item {
+    position: relative;
+    overflow: hidden;
     border-bottom: 1px solid rgb(var(--border) / 0.42);
     color: rgb(var(--text));
     background-color: transparent;
     @apply block cursor-pointer px-3 py-3 transition-colors;
+  }
+
+  .chart-sidebar-item::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: var(--chart-sidebar-volume, 0%);
+    background-color: rgb(var(--color-brand) / 0.1);
+    pointer-events: none;
+    opacity: 0.72;
+    transition: width 220ms ease, opacity 180ms ease, background-color 180ms ease;
   }
 
   .chart-sidebar-item:last-child {
@@ -889,13 +911,41 @@
     background-color: rgb(var(--bg-soft) / 0.42);
   }
 
+  .chart-sidebar-item:hover::before {
+    opacity: 0.94;
+    background-color: rgb(var(--color-brand) / 0.14);
+  }
+
   .chart-sidebar-item-active {
-    background:
-      linear-gradient(90deg, rgb(var(--color-brand) / 0.12), transparent 72%);
+    background-color: rgb(var(--color-brand) / 0.08);
+  }
+
+  .chart-sidebar-item-active::before {
+    background-color: rgb(var(--color-brand) / 0.18);
+  }
+
+  .chart-sidebar-item-inner {
+    position: relative;
+    z-index: 1;
+    min-width: 0;
   }
 
   .chart-sidebar-checkbox {
     accent-color: rgb(var(--color-brand));
+  }
+
+  .chart-sidebar-swatch {
+    width: 10px;
+    height: 10px;
+    min-width: 10px;
+    margin-top: 0.35rem;
+    border: 1px solid rgb(var(--border-soft));
+    background-color: transparent;
+    box-shadow: inset 0 0 0 1px rgb(var(--surface) / 0.82);
+  }
+
+  .chart-sidebar-swatch-active {
+    box-shadow: none;
   }
 
   .chart-sidebar-name {
@@ -958,31 +1008,6 @@
     background-color: rgb(var(--surface) / 0.98);
   }
 
-  .chart-source-block {
-    border-top: 1px solid rgb(var(--border) / 0.7);
-    @apply mt-4 pt-4 text-sm;
-  }
-
-  .chart-source-row {
-    color: rgb(var(--text-muted));
-    @apply mb-1.5 leading-6;
-  }
-
-  .chart-source-label {
-    color: rgb(var(--text-strong));
-    @apply mr-2 font-semibold;
-  }
-
-  .chart-source-link {
-    color: rgb(var(--color-brand));
-    text-decoration: underline;
-    text-underline-offset: 2px;
-  }
-
-  .chart-source-actions {
-    @apply mt-3;
-  }
-
   .chart-link-btn {
     border: 1px solid rgb(var(--border) / 0.82);
     background-color: rgb(var(--surface-raised) / 0.76);
@@ -1008,28 +1033,67 @@
   }
 
   .chart-shell-fullscreen {
-    min-height: calc(100vh - 2rem);
+    height: calc(100vh - 2rem);
+    display: flex;
+    flex-direction: column;
   }
 
   .chart-shell-fullscreen .chart-stage {
-    min-height: min(70vh, 760px);
+    flex: 1 1 auto;
+    min-height: 0;
   }
 
   .chart-shell-fullscreen .chart-stage-with-wide-aside {
-    min-height: min(76vh, 820px);
-    grid-template-columns: minmax(0, 1fr) 320px;
+    grid-template-columns: minmax(0, 1fr) clamp(300px, 24vw, 380px);
+  }
+
+  .chart-shell-fullscreen .chart-canvas {
+    min-height: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
   }
 
   .chart-shell-fullscreen .chart-aside {
     max-height: none;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
   }
 
   .chart-shell-fullscreen .chart-aside-wide {
-    max-height: calc(100vh - 220px);
+    max-height: none;
   }
 
   .chart-shell-fullscreen .data-preview-wrap {
     max-height: calc(100vh - 210px);
+  }
+
+  .chart-shell-fullscreen .chart-canvas > * {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .chart-shell-fullscreen .chart-scroll-x {
+    height: 100%;
+    display: flex;
+    align-items: stretch;
+  }
+
+  .chart-shell-fullscreen .chart-scroll-x > * {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .chart-shell-fullscreen .chart-aside-wide .chart-sidebar {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .chart-shell-fullscreen .chart-aside-wide .chart-sidebar-list {
+    flex: 1 1 auto;
+    max-height: none;
   }
 
   .comparison-shell {
@@ -1062,10 +1126,37 @@
     position: sticky;
     top: 0;
     z-index: 2;
+    background:
+      linear-gradient(180deg, rgb(var(--surface) / 0.98), rgb(var(--surface-raised) / 0.94));
+    box-shadow: inset 0 -1px 0 rgb(var(--border) / 0.74);
+  }
+
+  .comparison-head-sticky {
+    left: 0;
+    z-index: 4 !important;
+    box-shadow:
+      inset -1px 0 0 rgb(var(--border) / 0.58),
+      inset 0 -1px 0 rgb(var(--border) / 0.74);
+  }
+
+  .comparison-cell-sticky {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background-color: rgb(var(--surface) / 0.98);
+    box-shadow: inset -1px 0 0 rgb(var(--border) / 0.44);
   }
 
   .comparison-table tbody tr:nth-child(2n) {
     background-color: rgb(var(--surface-raised) / 0.14);
+  }
+
+  .comparison-table tbody tr:nth-child(2n) .comparison-cell-sticky {
+    background-color: rgb(var(--surface-raised) / 0.46);
+  }
+
+  .comparison-table tbody tr:hover .comparison-cell-sticky {
+    background-color: rgb(var(--bg-soft) / 0.54);
   }
 
   .comparison-cell-primary {

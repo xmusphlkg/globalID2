@@ -1,7 +1,7 @@
 {
   "name": "globalid-report-site",
   "type": "module",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "scripts": {
     "dev": "astro dev",
     "site:data": "sh -c 'PYTHON_BIN=../venv/bin/python3; if [ ! -x \"$PYTHON_BIN\" ]; then PYTHON_BIN=python3; fi; \"$PYTHON_BIN\" ../scripts/generate_site_data.py'",

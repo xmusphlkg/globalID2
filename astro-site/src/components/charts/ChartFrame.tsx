@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { ChartSourceMeta } from '../../utils/chartMeta';
 
@@ -53,14 +53,16 @@ export default function ChartFrame({
   }
 
   const activeAside = isFullscreen && fullscreenSidebar ? fullscreenSidebar : legend;
-  const stageClassName = `chart-stage ${isFullscreen && fullscreenSidebar ? 'chart-stage-with-wide-aside' : ''}`;
+  const hasAside = Boolean(activeAside);
+  const stageClassName = [
+    'chart-stage',
+    hasAside ? 'chart-stage-with-aside' : '',
+    isFullscreen && fullscreenSidebar ? 'chart-stage-with-wide-aside' : '',
+  ].filter(Boolean).join(' ');
   const asideClassName = `chart-aside ${isFullscreen && fullscreenSidebar ? 'chart-aside-wide' : ''}`;
-  const renderedChart = typeof chart === 'function' ? chart({ isFullscreen }) : chart;
-  const renderedSources = sourceMeta?.sources?.length
-    ? sourceMeta.sources
-    : sourceMeta?.label
-      ? [{ label: sourceMeta.label, href: sourceMeta.href }]
-      : [];
+  const renderedChart = typeof chart === 'function'
+    ? chart({ isFullscreen })
+    : chart;
 
   return (
     <div ref={shellRef} className={`chart-shell panel-fullscreen ${isFullscreen ? 'chart-shell-fullscreen' : ''}`}>
@@ -89,6 +91,11 @@ export default function ChartFrame({
           {toolbar && <div className="chart-frame-toolbar-main">{toolbar}</div>}
         </div>
         <div className="chart-frame-actions">
+          {sourceMeta?.downloadHref && (
+            <a href={sourceMeta.downloadHref} target="_blank" rel="noreferrer" className="chart-link-btn">
+              {lang === 'zh' ? '下载数据' : 'Download data'}
+            </a>
+          )}
           <button type="button" onClick={toggleFullscreen} className="chart-link-btn">
             {isFullscreen
               ? (lang === 'zh' ? '退出全屏' : 'Exit full-screen')
@@ -108,58 +115,6 @@ export default function ChartFrame({
         <div className="data-preview-wrap">{table}</div>
       )}
 
-      {sourceMeta && (
-        <div className="chart-source-block">
-          <div className="chart-source-row">
-            <span className="chart-source-label">{lang === 'zh' ? '数据来源' : 'Data source'}</span>
-            <span>
-              {renderedSources.map((source, index) => (
-                <React.Fragment key={`${source.label}-${source.href ?? index}`}>
-                  {index > 0 && '; '}
-                  {source.href ? (
-                    <a href={source.href} target="_blank" rel="noreferrer" className="chart-source-link">
-                      {source.label}
-                    </a>
-                  ) : (
-                    <span>{source.label}</span>
-                  )}
-                </React.Fragment>
-              ))}
-            </span>
-          </div>
-          {sourceMeta.coverage && (
-            <div className="chart-source-row">
-              <span className="chart-source-label">{lang === 'zh' ? '时间范围' : 'Coverage'}</span>
-              <span>{sourceMeta.coverage}</span>
-            </div>
-          )}
-          {sourceMeta.updatedAt && (
-            <div className="chart-source-row">
-              <span className="chart-source-label">{lang === 'zh' ? '更新时间' : 'Updated'}</span>
-              <span>{sourceMeta.updatedAt}</span>
-            </div>
-          )}
-          {sourceMeta.rowCount != null && (
-            <div className="chart-source-row">
-              <span className="chart-source-label">{lang === 'zh' ? '记录数' : 'Rows'}</span>
-              <span>{sourceMeta.rowCount.toLocaleString()}</span>
-            </div>
-          )}
-          {sourceMeta.note && (
-            <div className="chart-source-row">
-              <span className="chart-source-label">{lang === 'zh' ? '说明' : 'Note'}</span>
-              <span>{sourceMeta.note}</span>
-            </div>
-          )}
-          {sourceMeta.downloadHref && (
-            <div className="chart-source-actions">
-              <a href={sourceMeta.downloadHref} target="_blank" rel="noreferrer" className="chart-link-btn">
-                {lang === 'zh' ? '下载底层数据' : 'Download data'}
-              </a>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }

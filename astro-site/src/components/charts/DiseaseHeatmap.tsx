@@ -1,5 +1,5 @@
 // src/components/charts/DiseaseHeatmap.tsx
-// OWID-style heatmap with data preview table and source footer.
+// OWID-style heatmap with ECharts rendering, adaptive width, and scrollable disease axis.
 
 import React, { useEffect, useMemo, useState } from 'react';
 import EChartsReact from 'echarts-for-react/lib/core';
@@ -79,7 +79,9 @@ export default function DiseaseHeatmap({ data = null, series, height = 600, sour
           hoverBg: '#fffdfa',
           hoverBorder: '#c9c2b8',
           hoverFont: '#162232',
-          palette: ['#fff7eb', '#f2e5b7', '#c7dff0', '#56b4e9', '#d55e00'],
+          sliderBg: '#f7f3ec',
+          fillerColor: 'rgba(33,95,124,0.16)',
+          palette: ['#fbf5e8', '#eed795', '#dce7ee', '#6db5e6', '#0d5a86'],
         }
       : {
           font: '#a4b1c1',
@@ -87,7 +89,9 @@ export default function DiseaseHeatmap({ data = null, series, height = 600, sour
           hoverBg: '#17283a',
           hoverBorder: '#51667f',
           hoverFont: '#f3f6fb',
-          palette: ['#112132', '#29465d', '#2f6f91', '#56b4e9', '#f0b35f'],
+          sliderBg: '#122132',
+          fillerColor: 'rgba(118,183,178,0.16)',
+          palette: ['#132130', '#344c5f', '#4c7d99', '#7cc3ee', '#f0c16a'],
         }
   ), [theme]);
 
@@ -140,7 +144,8 @@ export default function DiseaseHeatmap({ data = null, series, height = 600, sour
       z: rowIndexes.map((index) => data.z[index]),
     };
   }, [data, lang, series]);
-  const hasData = activeData.z.length > 0;
+
+  const hasData = activeData.z.length > 0 && activeData.months.length > 0;
 
   const heatmapData = useMemo(() => {
     const result: [number, number, number][] = [];
@@ -162,92 +167,158 @@ export default function DiseaseHeatmap({ data = null, series, height = 600, sour
     return best;
   }, [activeData.z]);
 
-  const previewRowCount = activeData.disease_labels.length;
   const previewRows = useMemo(() => (
     activeData.disease_labels.map((label, rowIdx) => ({
       label,
       values: activeData.z[rowIdx].map(fromLogValue),
     }))
-  ), [activeData.disease_labels, activeData.z, previewRowCount]);
+  ), [activeData.disease_labels, activeData.z]);
 
   const longestLabelLength = useMemo(
     () => activeData.disease_labels.reduce((max, label) => Math.max(max, label.length), 0),
     [activeData.disease_labels]
   );
-  const dynamicHeight = Math.max(height, Math.min(activeData.disease_labels.length * 18 + 220, 920));
-  const leftLabelSpace = Math.min(340, Math.max(190, longestLabelLength * 7 + 44));
-  const chartWidth = Math.max(960, activeData.months.length * 22 + leftLabelSpace + 160);
-  const monthLabelInterval = Math.max(0, Math.ceil(activeData.months.length / 18) - 1);
-  const maxLogValue = Math.max(0, ...activeData.z.flat().filter((value) => Number.isFinite(value)));
+  const maxLogValue = useMemo(
+    () => Math.max(0, ...activeData.z.flat().filter((value) => Number.isFinite(value))),
+    [activeData.z]
+  );
 
-  const option = useMemo(() => ({
-    animationDuration: 240,
-    backgroundColor: 'transparent',
-    tooltip: {
-      trigger: 'item',
-      backgroundColor: chartColors.hoverBg,
-      borderColor: chartColors.hoverBorder,
-      textStyle: { color: chartColors.hoverFont, fontSize: 12 },
-      formatter: (param: any) => {
-        const row = param.value[1];
-        const col = param.value[0];
-        return `<b>${activeData.disease_labels[row]}</b><br/>${activeData.months[col]}<br/>${lang === 'zh' ? '病例数' : 'Cases'}: <b>${fromLogValue(param.value[2]).toLocaleString()}</b>`;
-      },
-    },
-    grid: { left: leftLabelSpace, right: 96, top: 16, bottom: 82 },
-    xAxis: {
-      type: 'category' as const,
-      data: activeData.months,
-      axisLabel: {
-        color: chartColors.font,
-        fontSize: 10,
-        rotate: -40,
-        interval: monthLabelInterval,
-      },
-      axisLine: { lineStyle: { color: chartColors.line } },
-      axisTick: { lineStyle: { color: chartColors.line } },
-    },
-    yAxis: {
-      type: 'category' as const,
-      data: activeData.disease_labels,
-      axisLabel: {
-        color: chartColors.font,
-        fontSize: 11,
-        formatter: (value: string) => value.length > 40 ? `${value.slice(0, 40)}...` : value,
-      },
-      axisLine: { lineStyle: { color: chartColors.line } },
-      axisTick: { lineStyle: { color: chartColors.line } },
-    },
-    visualMap: {
-      min: 0,
-      max: maxLogValue,
-      orient: 'vertical' as const,
-      calculable: false,
-      right: 8,
-      top: 20,
-      bottom: 86,
-      text: [lang === 'zh' ? '高' : 'High', lang === 'zh' ? '低' : 'Low'],
-      textStyle: { color: chartColors.font, fontSize: 10 },
-      inRange: { color: chartColors.palette },
-    },
-    dataZoom: activeData.disease_labels.length > 20
-      ? [{
+  const chartHeight = Math.max(460, height);
+  const leftLabelSpace = Math.min(280, Math.max(180, longestLabelLength * 6.6 + 28));
+  const monthCellWidth = activeData.months.length > 180 ? 10 : activeData.months.length > 120 ? 12 : activeData.months.length > 72 ? 14 : 18;
+  const minChartWidth = Math.max(960, leftLabelSpace + activeData.months.length * monthCellWidth + 40);
+  const monthLabelInterval = Math.max(0, Math.ceil(activeData.months.length / 18) - 1);
+  const visibleDiseaseCount = Math.min(
+    activeData.disease_labels.length,
+    activeData.disease_labels.length > 48 ? 18 : activeData.disease_labels.length > 28 ? 16 : 14
+  );
+
+  const option = useMemo(() => {
+    const zoomControls: Array<Record<string, unknown>> = [];
+
+    if (activeData.disease_labels.length > visibleDiseaseCount) {
+      zoomControls.push(
+        {
+          type: 'inside' as const,
+          yAxisIndex: 0,
+          filterMode: 'weakFilter' as const,
+          zoomOnMouseWheel: false,
+          moveOnMouseWheel: true,
+          moveOnMouseMove: true,
+        },
+        {
           type: 'slider' as const,
           yAxisIndex: 0,
-          right: 72,
-          width: 14,
-          filterMode: 'empty' as const,
-          start: 0,
-          end: Math.max(8, Math.min(100, (20 / activeData.disease_labels.length) * 100)),
-        }]
-      : [],
-    series: [{
-      type: 'heatmap' as const,
-      data: heatmapData,
-      itemStyle: { borderColor: 'rgba(255,255,255,0.06)', borderWidth: 0.5 },
-      emphasis: { itemStyle: { shadowBlur: 8, shadowColor: 'rgba(0,0,0,0.25)' } },
-    }],
-  }), [activeData.disease_labels, activeData.months, activeData.z, chartColors, heatmapData, lang, leftLabelSpace, maxLogValue, monthLabelInterval]);
+          right: 6,
+          top: 16,
+          bottom: 58,
+          width: 10,
+          filterMode: 'weakFilter' as const,
+          startValue: 0,
+          endValue: Math.max(0, visibleDiseaseCount - 1),
+          borderColor: chartColors.line,
+          backgroundColor: chartColors.sliderBg,
+          fillerColor: chartColors.fillerColor,
+          showDetail: false,
+          showDataShadow: false,
+          brushSelect: false,
+        },
+      );
+    }
+
+    return {
+      animationDuration: 240,
+      backgroundColor: 'transparent',
+      tooltip: {
+        trigger: 'item',
+        backgroundColor: chartColors.hoverBg,
+        borderColor: chartColors.hoverBorder,
+        borderWidth: 1,
+        textStyle: { color: chartColors.hoverFont, fontSize: 12 },
+        formatter: (param: any) => {
+          const row = param.value[1];
+          const col = param.value[0];
+          return `<b>${activeData.disease_labels[row]}</b><br/>${activeData.months[col]}<br/>${lang === 'zh' ? '病例数' : 'Cases'}: <b>${fromLogValue(param.value[2]).toLocaleString()}</b>`;
+        },
+      },
+      grid: {
+        left: leftLabelSpace,
+        right: activeData.disease_labels.length > visibleDiseaseCount ? 26 : 14,
+        top: 16,
+        bottom: 58,
+      },
+      xAxis: {
+        type: 'category' as const,
+        data: activeData.months,
+        axisLabel: {
+          color: chartColors.font,
+          fontSize: 10,
+          rotate: -42,
+          interval: monthLabelInterval,
+        },
+        axisLine: { lineStyle: { color: chartColors.line } },
+        axisTick: { lineStyle: { color: chartColors.line } },
+        splitLine: { show: false },
+      },
+      yAxis: {
+        type: 'category' as const,
+        inverse: true,
+        data: activeData.disease_labels,
+        axisLabel: {
+          color: chartColors.font,
+          fontSize: 11,
+          margin: 10,
+          formatter: (value: string) => value.length > 34 ? `${value.slice(0, 34)}...` : value,
+        },
+        axisLine: { lineStyle: { color: chartColors.line } },
+        axisTick: { show: false },
+        splitLine: { show: false },
+      },
+      dataZoom: zoomControls,
+      series: [{
+        type: 'heatmap' as const,
+        data: heatmapData,
+        progressive: 0,
+        itemStyle: {
+          borderColor: theme === 'light' ? 'rgba(255,255,255,0.28)' : 'rgba(255,255,255,0.05)',
+          borderWidth: 0.4,
+        },
+        emphasis: {
+          itemStyle: {
+            borderColor: theme === 'light' ? '#0d5a86' : '#f0c16a',
+            borderWidth: 1,
+            shadowBlur: 6,
+            shadowColor: theme === 'light' ? 'rgba(13,90,134,0.18)' : 'rgba(240,193,106,0.22)',
+          },
+        },
+      }],
+      visualMap: {
+        show: false,
+        min: 0,
+        max: maxLogValue,
+        calculable: false,
+        inRange: { color: chartColors.palette },
+      },
+    };
+  }, [
+    activeData.disease_labels,
+    activeData.months,
+    chartColors.fillerColor,
+    chartColors.font,
+    chartColors.hoverBg,
+    chartColors.hoverBorder,
+    chartColors.hoverFont,
+    chartColors.line,
+    chartColors.palette,
+    chartColors.sliderBg,
+    heatmapData,
+    lang,
+    leftLabelSpace,
+    maxLogValue,
+    monthLabelInterval,
+    theme,
+    visibleDiseaseCount,
+  ]);
 
   const toolbar = (
     <>
@@ -264,15 +335,15 @@ export default function DiseaseHeatmap({ data = null, series, height = 600, sour
   );
 
   const note = lang === 'zh'
-    ? '热图现已覆盖全部非汇总疾病。颜色使用色盲友好的蓝橙双色渐变，强度仍按对数刻度计算；月份较多时支持横向滚动查看。'
-    : 'The heatmap now includes every non-summary disease. Colors use a colorblind-friendly blue-orange ramp while intensity remains logarithmic; long timelines can be explored with horizontal scrolling.';
+    ? '热图已切回 ECharts：横向默认铺满容器，月份过长时才出现横向滚动；颜色图例隐藏，疾病列表通过右侧纵向滚动条浏览。'
+    : 'The heatmap is back on ECharts: it fills the available width first and only adds horizontal scrolling for long timelines. The color legend is hidden, and diseases are browsed through the vertical range control on the right.';
 
   const table = (
     <>
       <div className="data-preview-meta">
         {lang === 'zh'
-          ? `原始数据预览，当前表格已包含全部 ${previewRowCount} 种疾病的月度病例数。`
-          : `Raw data preview covering all ${previewRowCount} diseases with monthly case totals.`}
+          ? `原始数据预览，当前表格已包含全部 ${previewRows.length} 种疾病的月度病例数。`
+          : `Raw data preview covering all ${previewRows.length} diseases with monthly case totals.`}
       </div>
       <table className="data-preview-table">
         <thead>
@@ -317,9 +388,9 @@ export default function DiseaseHeatmap({ data = null, series, height = 600, sour
             option={option}
             notMerge
             style={{
-              width: chartWidth,
-              minWidth: '100%',
-              height: isFullscreen ? 'clamp(560px, calc(100vh - 250px), 960px)' : dynamicHeight,
+              width: '100%',
+              minWidth: `${minChartWidth}px`,
+              height: isFullscreen ? '100%' : chartHeight,
             }}
           />
         </div>
