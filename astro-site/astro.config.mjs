@@ -2,8 +2,10 @@ import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
 import tailwind from '@astrojs/tailwind';
 
+const siteUrl = process.env.GLOBALID_SITE_URL || process.env.SITE_URL || 'https://globalinfectiousdisease.com';
+
 export default defineConfig({
-  site: 'https://globalid.pages.dev', // Update with your actual Cloudflare Pages URL
+  site: siteUrl,
   output: 'static',
   integrations: [
     react(),

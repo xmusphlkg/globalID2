@@ -19,6 +19,44 @@ const {
 } = Astro.props;
 
 const canonicalURL = new URL(Astro.url.pathname, Astro.site);
+const siteOrigin = Astro.site ? new URL(Astro.site).origin : canonicalURL.origin;
+const pageTitle = title === 'GIDS' ? title : `${title} | GIDS`;
+const robotsContent = noindex
+  ? 'noindex,nofollow'
+  : 'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1';
+const structuredData = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'WebSite',
+      '@id': `${siteOrigin}#website`,
+      url: siteOrigin,
+      name: 'GIDS',
+      description,
+      inLanguage: ['en', 'zh'],
+      publisher: {
+        '@id': `${siteOrigin}#organization`,
+      },
+    },
+    {
+      '@type': 'Organization',
+      '@id': `${siteOrigin}#organization`,
+      name: 'GIDS',
+      url: siteOrigin,
+      logo: new URL('/logo.png', siteOrigin).toString(),
+    },
+    {
+      '@type': 'WebPage',
+      '@id': `${canonicalURL}#webpage`,
+      url: canonicalURL.toString(),
+      name: pageTitle,
+      description,
+      isPartOf: {
+        '@id': `${siteOrigin}#website`,
+      },
+    },
+  ],
+};
 ---
 
 <!doctype html>
@@ -29,23 +67,27 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site);
     <meta name="generator" content={Astro.generator} />
 
     <!-- SEO -->
-    <title>{title} | GIDS</title>
+    <title>{pageTitle}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonicalURL} />
-    {noindex && <meta name="robots" content="noindex,nofollow" />}
+    <meta name="robots" content={robotsContent} />
+    <meta name="theme-color" content="#f4f7fb" />
 
     <!-- Open Graph -->
     <meta property="og:type" content="website" />
-    <meta property="og:title" content={`${title} | GIDS`} />
+    <meta property="og:site_name" content="GIDS" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:title" content={pageTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:image" content={new URL(image, Astro.site)} />
     <meta property="og:url" content={canonicalURL} />
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content={`${title} | GIDS`} />
+    <meta name="twitter:title" content={pageTitle} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={new URL(image, Astro.site)} />
+    <script type="application/ld+json" set:html={JSON.stringify(structuredData)} />
 
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="/logo.png" />
