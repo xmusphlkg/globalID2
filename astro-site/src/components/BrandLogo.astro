@@ -1,0 +1,150 @@
+---
+interface Props {
+  variant?: 'mark' | 'wordmark' | 'lockup';
+  theme?: 'auto' | 'light' | 'dark';
+  alt?: string;
+  titleText?: string;
+  href?: string;
+  class?: string;
+  imgClass?: string;
+  wordmarkClass?: string;
+  textClass?: string;
+  titleClass?: string;
+  subtitleClass?: string;
+}
+
+const {
+  variant = 'lockup',
+  theme = 'auto',
+  alt = 'GIDS',
+  titleText = 'Global Infectious Disease',
+  href,
+  class: className = '',
+  imgClass = '',
+  wordmarkClass = '',
+  textClass = '',
+  titleClass = '',
+  subtitleClass = '',
+} = Astro.props;
+
+const Wrapper = href ? 'a' : 'div';
+---
+
+<Wrapper href={href} class:list={['brand-logo', `brand-logo-theme-${theme}`, className]}>
+  {(variant === 'mark' || variant === 'lockup') && (
+    <img
+      src="/logo.png"
+      alt={alt}
+      class:list={['brand-logo-mark object-contain', imgClass]}
+      loading="eager"
+      decoding="async"
+    />
+  )}
+
+  {(variant === 'wordmark' || variant === 'lockup') && (
+    <div class:list={['brand-logo-wordmark-wrap', variant === 'wordmark' ? 'w-full' : 'min-w-0']}>
+      <img
+        src="/logo-1.png"
+        alt={alt}
+        class:list={['brand-logo-wordmark brand-logo-wordmark-light object-contain', wordmarkClass]}
+        loading="eager"
+        decoding="async"
+      />
+      <img
+        src="/logo-2.png"
+        alt={alt}
+        class:list={['brand-logo-wordmark brand-logo-wordmark-dark object-contain', wordmarkClass]}
+        loading="eager"
+        decoding="async"
+      />
+    </div>
+  )}
+
+  {variant === 'mark' && (
+    <span class="sr-only">{alt}</span>
+  )}
+
+  {variant === 'lockup' && (
+    <div class:list={['brand-logo-text min-w-0', textClass]}>
+      <span class="sr-only">{alt}</span>
+      <span
+        class:list={['brand-logo-title', titleClass]}
+        data-lang-en={titleText}
+        data-lang-zh="全球传染病"
+      >
+        {titleText}
+      </span>
+      <span
+        class:list={['brand-logo-subtitle text-[11px] tracking-[0.08em]', subtitleClass]}
+        data-lang-en="Surveillance"
+        data-lang-zh="监测"
+      >
+        Surveillance
+      </span>
+    </div>
+  )}
+</Wrapper>
+
+<style>
+  .brand-logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.875rem;
+  }
+
+  .brand-logo-mark {
+    flex-shrink: 0;
+  }
+
+  .brand-logo-wordmark-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+  }
+
+  .brand-logo-wordmark {
+    max-width: 100%;
+  }
+
+  .brand-logo-wordmark-dark {
+    display: none;
+  }
+
+  .brand-logo-theme-dark .brand-logo-wordmark-light {
+    display: none;
+  }
+
+  .brand-logo-theme-dark .brand-logo-wordmark-dark {
+    display: block;
+  }
+
+  .brand-logo-theme-light .brand-logo-wordmark-dark {
+    display: none;
+  }
+
+  .brand-logo-theme-light .brand-logo-wordmark-light {
+    display: block;
+  }
+
+  :global(html.dark) .brand-logo-theme-auto .brand-logo-wordmark-light,
+  :global(html[data-theme='dark']) .brand-logo-theme-auto .brand-logo-wordmark-light {
+    display: none;
+  }
+
+  :global(html.dark) .brand-logo-theme-auto .brand-logo-wordmark-dark,
+  :global(html[data-theme='dark']) .brand-logo-theme-auto .brand-logo-wordmark-dark {
+    display: block;
+  }
+
+  .brand-logo-text {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    line-height: 1.1;
+  }
+
+  .brand-logo-title {
+    display: block;
+  }
+</style>

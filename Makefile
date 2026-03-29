@@ -127,7 +127,7 @@ site-dev:
 	cd astro-site && npm run dev
 
 site-build:
-	@echo "构建静态站点..."
+	@echo "构建静态站点（自动刷新数据库快照）..."
 	cd astro-site && npm run build
 	@echo "构建完成，输出目录: astro-site/dist/"
 
@@ -135,8 +135,8 @@ site-preview:
 	@echo "预览生产构建..."
 	cd astro-site && npm run preview
 
-# 完整的端到端发布流程: 导出数据 → 构建 → 提示推送
-site-publish: site-data site-build
+# 完整的端到端发布流程: 构建时自动导出数据 → 构建 → 提示推送
+site-publish: site-build
 	@echo ""
 	@echo "✓ 站点已构建完毕"
 	@echo "请执行以下命令推送到 Cloudflare Pages:"

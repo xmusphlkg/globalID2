@@ -4,7 +4,9 @@
   "version": "0.1.0",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "site:data": "sh -c 'PYTHON_BIN=../venv/bin/python3; if [ ! -x \"$PYTHON_BIN\" ]; then PYTHON_BIN=python3; fi; \"$PYTHON_BIN\" ../scripts/generate_site_data.py'",
+    "build:astro": "astro build",
+    "build": "sh -c 'PYTHON_BIN=../venv/bin/python3; if [ ! -x \"$PYTHON_BIN\" ]; then PYTHON_BIN=python3; fi; if [ \"${GLOBALID_SKIP_SITE_DATA_GENERATION:-0}\" != \"1\" ]; then \"$PYTHON_BIN\" ../scripts/generate_site_data.py; else echo \"Skipping site data generation; using existing snapshot\"; fi && astro build'",
     "preview": "astro preview",
     "astro": "astro"
   },
@@ -14,6 +16,8 @@
     "@astrojs/tailwind": "^5.1.2",
     "@fontsource/inter": "^5.2.8",
     "@fontsource/jetbrains-mono": "^5.2.8",
+    "@fontsource/source-sans-3": "^5.2.9",
+    "@fontsource/source-serif-4": "^5.2.9",
     "astro": "^4.16.0",
     "echarts": "^6.0.0",
     "echarts-for-react": "^3.0.6",

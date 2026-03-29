@@ -69,11 +69,12 @@ const features = [
 
 <BaseLayout
   title="Home"
-  description="GlobalID — AI-powered global infectious disease surveillance and reporting."
+  description="GIDS — AI-powered global infectious disease surveillance platform."
 >
+<div class="home-page">
 
 <!-- ═══════════════════════════ HERO ═══════════════════════════ -->
-<section class="relative overflow-hidden min-h-[92vh] flex items-center">
+<section class="home-hero relative overflow-hidden min-h-[88vh] flex items-center">
 
   <!-- Animated background layers: Global Radar Surveillance -->
   <div class="absolute inset-0 -z-10 pointer-events-none overflow-hidden">
@@ -81,7 +82,7 @@ const features = [
     <div class="absolute inset-0 hero-bg" />
 
     <!-- Abstract Global Radar Element -->
-    <div class="absolute right-[-20%] top-1/2 -translate-y-1/2 w-[600px] h-[600px] md:w-[800px] md:h-[800px] lg:right-0 opacity-80 dark:opacity-40">
+    <div class="home-hero-visual hidden md:block absolute right-[-30%] top-[54%] -translate-y-1/2 w-[580px] h-[580px] md:w-[720px] md:h-[720px] lg:right-[-6%] lg:w-[780px] lg:h-[780px]">
       <!-- Glow behind the radar -->
       <div class="absolute inset-0 rounded-full bg-brand-500/10 blur-[100px]" />
       
@@ -182,44 +183,43 @@ const features = [
     </div>
     
     <!-- Subtle grid & noise -->
-    <div class="absolute inset-0 hero-grid opacity-[0.04]" />
-    <div class="absolute inset-0 opacity-[0.02] hero-noise" />
+    <div class="home-hero-grid-layer absolute inset-0 hero-grid" />
+    <div class="home-hero-noise-layer absolute inset-0 hero-noise" />
   </div>
 
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32 w-full relative z-10">
     <div class="grid lg:grid-cols-2 gap-16 items-center">
 
       <!-- Left: copy -->
-      <div class="animate-fade-up">
+      <div class="home-hero-copy-block animate-fade-up">
         <!-- Badge -->
-        <div class="inline-flex items-center gap-2.5 px-4 py-2 rounded-full hero-badge mb-8 border border-brand-500/20 bg-brand-500/10 shadow-[0_0_15px_rgba(20,184,166,0.1)] transition-all hover:bg-brand-500/20">
+        <div class="inline-flex items-center gap-2.5 px-4 py-2 rounded-none hero-badge mb-8 border border-brand-500/20 bg-brand-500/10 transition-all hover:bg-brand-500/20">
           <span class="relative flex h-2.5 w-2.5 items-center justify-center">
             <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75" />
             <span class="relative inline-flex h-2 w-2 rounded-full bg-teal-500" />
           </span>
-          <span class="text-xs font-semibold tracking-wide text-teal-300 flex items-center gap-1.5" data-lang-en="System Active: Continuously Monitoring" data-lang-zh="系统运行中：持续监测">
-            System Active: Continuously Monitoring 
-            <span class="animate-pulse w-1.5 h-3 bg-teal-400/80 inline-block align-middle rounded-sm"></span>
+          <span class="home-hero-badge-label text-xs font-semibold tracking-wide flex items-center gap-1.5" data-lang-en="Official-source surveillance data" data-lang-zh="官方来源监测数据">
+            Official-source surveillance data
           </span>
         </div>
 
         <!-- Heading -->
-        <h1 class="text-5xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight leading-[1.08] mb-6">
-          <span class="text-slate-100 block" data-lang-en="Global" data-lang-zh="全球传染病">Global</span>
-          <span class="hero-gradient-text block" data-lang-en="Infectious Disease" data-lang-zh="智能监测">Infectious Disease</span>
-          <span class="text-slate-300 text-4xl sm:text-5xl lg:text-5xl font-semibold block mt-1" data-lang-en="Surveillance" data-lang-zh="报告平台">Surveillance</span>
+        <h1 class="font-serif text-5xl sm:text-6xl lg:text-7xl font-semibold tracking-tight leading-[1.08] mb-6">
+          <span class="home-hero-line block" data-lang-en="Global" data-lang-zh="全球">Global</span>
+          <span class="hero-gradient-text block" data-lang-en="Infectious Disease" data-lang-zh="传染病">Infectious Disease</span>
+          <span class="home-hero-line-muted text-4xl sm:text-5xl lg:text-5xl font-medium block mt-1" data-lang-en="Surveillance" data-lang-zh="监测">Surveillance</span>
         </h1>
 
         <!-- Subtext -->
-        <p class="text-lg text-slate-400 leading-relaxed max-w-lg mb-10" data-lang-en="Monitor 150+ infectious diseases across countries with AI-generated reports, interactive charts, and real-time trend detection — all open source." data-lang-zh="跨国监测 150+ 种传染病，配备 AI 生成报告、交互图表和实时趋势检测 — 全部开源。">
-          Monitor 150+ infectious diseases across countries with AI-generated reports,
-          interactive charts, and real-time trend detection — all open source.
+        <p class="home-hero-copy text-lg leading-relaxed max-w-xl mb-10" data-lang-en="Track 150+ infectious diseases across countries with structured archives, bilingual reports, and publication-ready charts." data-lang-zh="追踪全球多国 150+ 种传染病，提供结构化归档、双语报告与可直接发表的图表。">
+          Track 150+ infectious diseases across countries with structured archives,
+          bilingual reports, and publication-ready charts.
         </p>
 
         <!-- CTAs -->
         <div class="flex flex-wrap gap-3 relative z-20">
           <a href="/countries/"
-            class="hero-cta-primary group inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition-all relative z-20 pointer-events-auto">
+            class="hero-cta-primary group inline-flex items-center gap-2 px-6 py-3 rounded-none font-semibold text-sm transition-all relative z-20 pointer-events-auto">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
@@ -229,14 +229,14 @@ const features = [
             </svg>
           </a>
           <a href="/diseases/"
-            class="hero-cta-secondary inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition-all relative z-20 pointer-events-auto">
+            class="hero-cta-secondary inline-flex items-center gap-2 px-6 py-3 rounded-none font-semibold text-sm transition-all relative z-20 pointer-events-auto">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             <span data-lang-en="Disease Directory" data-lang-zh="疾病目录">Disease Directory</span>
           </a>
           <a href="https://github.com/xmusphlkg/globalID2" target="_blank" rel="noopener noreferrer"
-            class="hero-cta-ghost inline-flex items-center gap-2 px-5 py-3 rounded-xl font-semibold text-sm transition-all relative z-20 pointer-events-auto">
+            class="hero-cta-ghost inline-flex items-center gap-2 px-5 py-3 rounded-none font-semibold text-sm transition-all relative z-20 pointer-events-auto">
             <!-- GitHub icon -->
             <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844a9.59 9.59 0 012.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
@@ -245,55 +245,41 @@ const features = [
           </a>
         </div>
 
-        <!-- Trust badges -->
-        <div class="flex flex-wrap items-center gap-5 mt-10 pt-8 border-t border-slate-800/60">
-          {[
-            { icon: '🔬', en: 'Official health data', zh: '官方卫生数据' },
-            { icon: '🤖', en: 'AI-powered reports',   zh: 'AI 生成报告' },
-            { icon: '🌏', en: 'Bilingual EN / ZH',    zh: '中英双语' },
-            { icon: '📖', en: 'Open source',          zh: '开源项目' },
-          ].map(b => (
-            <span class="flex items-center gap-1.5 text-xs text-slate-500">
-              <span>{b.icon}</span>
-              <span data-lang-en={b.en} data-lang-zh={b.zh}>{b.en}</span>
-            </span>
-          ))}
-        </div>
       </div>
 
       <!-- Right: animated feature cards -->
-      <div class="hidden lg:block animate-fade-up-delay">
+      <div class="home-hero-aside hidden lg:block animate-fade-up-delay">
         <div class="grid grid-cols-2 gap-4">
           {features.map((f, i) => (
-            <div class={`feature-card feature-card-${f.color} p-5 rounded-2xl`}
+            <div class={`feature-card feature-card-${f.color} p-5 rounded-none`}
               style={`animation-delay: ${i * 120}ms`}>
-              <div class={`w-10 h-10 rounded-xl feature-icon-${f.color} flex items-center justify-center mb-4`}>
+              <div class={`w-10 h-10 rounded-none feature-icon-${f.color} flex items-center justify-center mb-4`}>
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                   <path stroke-linecap="round" stroke-linejoin="round" d={f.icon} />
                 </svg>
               </div>
-              <h3 class="text-slate-200 font-semibold text-sm mb-1.5"
+              <h3 class="home-feature-title font-semibold text-sm mb-1.5"
                 data-lang-en={f.titleEn} data-lang-zh={f.titleZh}>{f.titleEn}</h3>
-              <p class="text-slate-500 text-xs leading-relaxed"
+              <p class="home-feature-copy text-xs leading-relaxed"
                 data-lang-en={f.descEn} data-lang-zh={f.descZh}>{f.descEn}</p>
             </div>
           ))}
         </div>
 
         <!-- Floating data card -->
-        <div class="mt-4 floating-stat-card rounded-2xl p-4 flex items-center gap-4">
-          <div class="w-10 h-10 rounded-xl bg-teal-500/15 border border-teal-500/25 flex items-center justify-center flex-shrink-0">
+        <div class="home-floating-stat mt-4 floating-stat-card rounded-none p-4 flex items-center gap-4">
+          <div class="w-10 h-10 rounded-none bg-teal-500/15 border border-teal-500/25 flex items-center justify-center flex-shrink-0">
             <svg class="w-5 h-5 text-teal-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
             </svg>
           </div>
           <div>
-            <div class="text-xs text-slate-500 mb-0.5" data-lang-en="Tracking this month" data-lang-zh="本月追踪">Tracking this month</div>
-            <div class="font-bold text-slate-100">
+            <div class="home-floating-label text-xs mb-0.5" data-lang-en="Tracking this month" data-lang-zh="本月追踪">Tracking this month</div>
+            <div class="home-floating-text font-bold">
               <span class="text-teal-400">{meta.total_diseases ?? 124}</span>
-              <span class="text-slate-400 text-sm font-normal ml-1.5" data-lang-en="diseases across" data-lang-zh="种疾病覆盖">diseases across</span>
+              <span class="home-floating-copy text-sm font-normal ml-1.5" data-lang-en="diseases across" data-lang-zh="种疾病覆盖">diseases across</span>
               <span class="text-blue-400 ml-1.5">{meta.total_countries ?? 1}</span>
-              <span class="text-slate-400 text-sm font-normal ml-1.5" data-lang-en="countries" data-lang-zh="个国家">countries</span>
+              <span class="home-floating-copy text-sm font-normal ml-1.5" data-lang-en="countries" data-lang-zh="个国家">countries</span>
             </div>
           </div>
         </div>
@@ -303,25 +289,28 @@ const features = [
 
   <!-- Scroll indicator -->
   <div class="absolute bottom-8 left-1/2 -translate-x-1/2 scroll-indicator">
-    <svg class="w-6 h-6 text-slate-600 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg class="home-scroll-icon w-6 h-6 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
     </svg>
   </div>
 </section>
 
 <!-- ═══════════════════════ STATS ════════════════════════ -->
-<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-  <StatBar stats={stats} />
+<section class="home-band home-band-stat">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+    <StatBar stats={stats} />
+  </div>
 </section>
 
 <!-- ══════════════════════ COUNTRIES ═════════════════════ -->
-<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
-  <div class="flex items-center justify-between mb-8">
+<section class="home-band">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+  <div class="home-section-header flex items-center justify-between mb-8">
     <div>
       <h2 class="section-heading" data-lang-en="Countries" data-lang-zh="国家">Countries</h2>
-      <p class="text-sm text-slate-500 mt-1" data-lang-en="Surveillance coverage by country" data-lang-zh="各国监测覆盖情况">Surveillance coverage by country</p>
+      <p class="home-section-copy text-sm mt-1" data-lang-en="Surveillance coverage by country" data-lang-zh="各国监测覆盖情况">Surveillance coverage by country</p>
     </div>
-    <a href="/countries/" class="text-sm text-brand-400 hover:text-brand-300 transition-colors inline-flex items-center gap-1">
+    <a href="/countries/" class="home-section-link inline-flex items-center gap-1 text-sm transition-colors">
       <span data-lang-en="View all" data-lang-zh="查看全部">View all</span>
       <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
     </a>
@@ -338,16 +327,18 @@ const features = [
       />
     ))}
   </div>
+  </div>
 </section>
 
 <!-- ══════════════════════ DISEASES ══════════════════════ -->
-<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
-  <div class="flex items-center justify-between mb-8">
+<section class="home-band">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+  <div class="home-section-header flex items-center justify-between mb-8">
     <div>
       <h2 class="section-heading" data-lang-en="Disease Directory" data-lang-zh="疾病目录">Disease Directory</h2>
-      <p class="text-sm text-slate-500 mt-1" data-lang-en="Categorised by pathogen type" data-lang-zh="按病原体类型分类">Categorised by pathogen type</p>
+      <p class="home-section-copy text-sm mt-1" data-lang-en="Categorised by pathogen type" data-lang-zh="按病原体类型分类">Categorised by pathogen type</p>
     </div>
-    <a href="/diseases/" class="text-sm text-brand-400 hover:text-brand-300 transition-colors inline-flex items-center gap-1">
+    <a href="/diseases/" class="home-section-link inline-flex items-center gap-1 text-sm transition-colors">
       <span data-lang-en="Browse all 150+ →" data-lang-zh="浏览全部 150+ →">Browse all 150+ →</span>
     </a>
   </div>
@@ -356,14 +347,14 @@ const features = [
     const catDiseases = diseases.filter(d => d.category === cat).slice(0, 4);
     if (!catDiseases.length) return null;
     const catColors = {
-      Viral: 'text-blue-400',
-      Bacterial: 'text-amber-400',
-      Parasitic: 'text-green-400',
-      Fungal: 'text-purple-400',
+      Viral: 'home-category-chip home-category-chip-viral',
+      Bacterial: 'home-category-chip home-category-chip-bacterial',
+      Parasitic: 'home-category-chip home-category-chip-parasitic',
+      Fungal: 'home-category-chip home-category-chip-fungal',
     } as { [k: string]: string };
     return (
       <div class="mb-10">
-        <h3 class={`text-sm font-bold uppercase tracking-widest mb-4 flex items-center gap-2 ${catColors[cat] ?? 'text-slate-400'}`}>
+        <h3 class={`text-sm font-bold uppercase tracking-widest mb-4 inline-flex items-center gap-2 ${catColors[cat] ?? 'home-category-chip home-category-chip-neutral'}`}>
           <span data-lang-en={cat} data-lang-zh={catZh[cat] ?? cat}>{cat}</span>
         </h3>
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -382,17 +373,19 @@ const features = [
       </div>
     );
   })}
+  </div>
 </section>
 
 <!-- ═══════════════════ LATEST REPORTS ══════════════════ -->
 {reports.length > 0 && (
-  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-28">
-    <div class="flex items-center justify-between mb-8">
+  <section class="home-band">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+    <div class="home-section-header flex items-center justify-between mb-8">
       <div>
         <h2 class="section-heading" data-lang-en="Latest Reports" data-lang-zh="最新报告">Latest Reports</h2>
-        <p class="text-sm text-slate-500 mt-1" data-lang-en="AI-generated epidemiological analyses" data-lang-zh="AI 生成的流行病学分析">AI-generated epidemiological analyses</p>
+        <p class="home-section-copy text-sm mt-1" data-lang-en="AI-generated epidemiological analyses" data-lang-zh="AI 生成的流行病学分析">AI-generated epidemiological analyses</p>
       </div>
-      <a href={`/countries/${(reports[0]?.country_code ?? 'cn').toLowerCase()}/reports/`} class="text-sm text-brand-400 hover:text-brand-300 transition-colors inline-flex items-center gap-1">
+      <a href={`/countries/${(reports[0]?.country_code ?? 'cn').toLowerCase()}/reports/`} class="home-section-link inline-flex items-center gap-1 text-sm transition-colors">
         <span data-lang-en="View all" data-lang-zh="查看全部">View all</span>
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
       </a>
@@ -412,60 +405,320 @@ const features = [
         />
       ))}
     </div>
+    </div>
   </section>
 )}
 
 <!-- ══════════════════════ OPEN SOURCE CTA ══════════════════ -->
-<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-28">
-  <div class="relative overflow-hidden rounded-3xl oss-cta p-10 sm:p-14 text-center">
+<section class="home-band home-band-cta">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+  <div class="relative overflow-hidden rounded-none oss-cta p-8 sm:p-10 lg:p-12">
     <!-- Background decoration -->
     <div class="absolute inset-0 -z-10 pointer-events-none">
       <div class="absolute top-0 left-1/3 w-64 h-64 bg-teal-600/10 rounded-full blur-3xl" />
       <div class="absolute bottom-0 right-1/3 w-48 h-48 bg-brand-600/10 rounded-full blur-3xl" />
     </div>
-    <!-- GitHub mark -->
-    <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-slate-800/80 border border-slate-700/50 mb-6 mx-auto">
-      <svg class="w-8 h-8 text-slate-200" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844a9.59 9.59 0 012.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
-      </svg>
-    </div>
-    <h2 class="text-3xl sm:text-4xl font-bold text-slate-100 mb-4" data-lang-en="Open Source &amp; Free" data-lang-zh="开源 · 免费">
-      Open Source &amp; Free
-    </h2>
-    <p class="text-slate-400 max-w-xl mx-auto mb-8 leading-relaxed" data-lang-en="GlobalID is fully open source. You can explore the code, contribute improvements, or deploy your own instance." data-lang-zh="GlobalID 完全开源。您可以浏览代码、贡献改进，或部署自己的实例。">
-      GlobalID is fully open source. You can explore the code, contribute improvements, or deploy your own instance.
-    </p>
-    <div class="flex flex-wrap gap-3 justify-center">
-      <a href="https://github.com/xmusphlkg/globalID2" target="_blank" rel="noopener noreferrer"
-        class="inline-flex items-center gap-2.5 px-6 py-3 rounded-xl bg-slate-200 hover:bg-white text-slate-900 font-semibold text-sm transition-all shadow-lg shadow-slate-900/30">
-        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+    <div class="grid gap-8 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:items-center">
+      <div class="home-oss-symbol inline-flex items-center justify-center w-16 h-16 rounded-none">
+        <svg class="w-8 h-8" viewBox="0 0 24 24" fill="currentColor">
           <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844a9.59 9.59 0 012.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
         </svg>
-        <span data-lang-en="View on GitHub" data-lang-zh="查看 GitHub">View on GitHub</span>
-      </a>
-      <a href="/about/"
-        class="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-slate-700 hover:border-slate-500 text-slate-300 hover:text-slate-100 font-semibold text-sm transition-all">
-        <span data-lang-en="Learn more" data-lang-zh="了解更多">Learn more</span>
-        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
-      </a>
+      </div>
+      <div class="lg:max-w-2xl">
+        <div class="home-oss-kicker mb-3" data-lang-en="Open Infrastructure" data-lang-zh="开放基础设施">Open Infrastructure</div>
+        <h2 class="home-oss-title text-3xl sm:text-4xl mb-4" data-lang-en="Open source, deployable, and built for public-health workflows" data-lang-zh="开源、可部署，并面向公共卫生工作流构建">
+          Open source, deployable, and built for public-health workflows
+        </h2>
+        <p class="home-oss-copy max-w-2xl leading-relaxed" data-lang-en="GIDS keeps the research-facing experience polished while staying transparent under the hood. Review the code, contribute improvements, or run a tailored instance for your own monitoring pipeline." data-lang-zh="GIDS 在保持研究发布体验完整的同时，也坚持底层透明。您可以查看代码、参与改进，或为自己的监测流程部署定制实例。">
+          GIDS keeps the research-facing experience polished while staying transparent under the hood.
+          Review the code, contribute improvements, or run a tailored instance for your own monitoring pipeline.
+        </p>
+      </div>
+      <div class="flex flex-wrap gap-3 lg:justify-end">
+        <a href="https://github.com/xmusphlkg/globalID2" target="_blank" rel="noopener noreferrer"
+          class="home-oss-primary inline-flex items-center gap-2.5 px-6 py-3 rounded-none font-semibold text-sm transition-all">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844a9.59 9.59 0 012.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+          </svg>
+          <span data-lang-en="View on GitHub" data-lang-zh="查看 GitHub">View on GitHub</span>
+        </a>
+        <a href="/about/"
+          class="home-oss-secondary inline-flex items-center gap-2 px-6 py-3 rounded-none font-semibold text-sm transition-all">
+          <span data-lang-en="Learn more" data-lang-zh="了解更多">Learn more</span>
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
+        </a>
+      </div>
     </div>
+  </div>
   </div>
 </section>
 
+</div>
 </BaseLayout>
 
 <style>
-/* ─── Hero background ─── */
-.hero-bg {
-  background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(59,130,246,0.12) 0%, transparent 70%),
-              radial-gradient(ellipse 60% 50% at 80% 50%, rgba(20,184,166,0.07) 0%, transparent 60%),
-              rgb(var(--bg));
+.home-page {
+  --home-oss-bg: linear-gradient(180deg, rgb(var(--surface) / 0.99), rgb(var(--surface-raised) / 0.82));
+  --home-oss-border: rgb(var(--border) / 0.82);
 }
 
-html[data-theme='light'] .hero-bg {
-  background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(59,130,246,0.08) 0%, transparent 70%),
-              radial-gradient(ellipse 60% 50% at 80% 50%, rgba(20,184,166,0.05) 0%, transparent 60%),
-              rgb(var(--bg));
+html[data-theme='light'] .home-page {
+  --home-hero-bg:
+    radial-gradient(circle at 16% 22%, rgba(44, 143, 135, 0.1), transparent 24%),
+    radial-gradient(circle at 80% 16%, rgba(223, 124, 94, 0.08), transparent 18%),
+    radial-gradient(circle at 64% 70%, rgba(92, 140, 182, 0.06), transparent 28%),
+    linear-gradient(180deg, #f7fbfd 0%, #eff5f8 52%, #eef3f6 100%);
+  --home-hero-panel: linear-gradient(180deg, rgb(255 255 255 / 0.92), rgb(250 252 253 / 0.98));
+  --home-hero-panel-border: rgb(198 215 228 / 0.82);
+  --home-hero-panel-shadow: 0 28px 54px rgba(42, 74, 103, 0.1);
+  --home-hero-heading: rgb(var(--text-strong));
+  --home-hero-subheading: rgb(61 83 105);
+  --home-hero-copy: rgb(var(--text));
+  --home-hero-badge-bg: rgb(255 255 255 / 0.88);
+  --home-hero-badge-border: rgb(var(--border) / 0.72);
+  --home-hero-badge-text: rgb(34 140 132);
+  --home-hero-visual-opacity: 0.34;
+  --home-hero-grid-opacity: 0.015;
+  --home-hero-noise-opacity: 0.006;
+  --home-cta-secondary-bg: rgb(255 255 255 / 0.82);
+  --home-cta-secondary-border: rgb(var(--border) / 0.82);
+  --home-cta-secondary-text: rgb(var(--text-strong));
+  --home-cta-secondary-hover-bg: rgb(var(--surface-raised) / 0.92);
+  --home-cta-secondary-hover-border: rgb(var(--border-soft));
+  --home-cta-secondary-hover-text: rgb(var(--text-strong));
+  --home-cta-ghost-text: rgb(var(--text));
+  --home-cta-ghost-border: rgb(var(--border) / 0.82);
+  --home-cta-ghost-hover-text: rgb(var(--text-strong));
+  --home-cta-ghost-hover-border: rgb(var(--border-soft));
+  --home-feature-bg: linear-gradient(180deg, rgb(255 255 255 / 0.92), rgb(242 248 252 / 0.98));
+  --home-feature-border: rgb(var(--border) / 0.78);
+  --home-feature-shadow-hover: 0 18px 36px rgba(64, 90, 114, 0.08);
+  --home-feature-title: rgb(var(--text-strong));
+  --home-feature-copy: rgb(var(--text-muted));
+  --home-floating-bg: linear-gradient(180deg, rgb(255 255 255 / 0.96), rgb(241 247 251 / 0.98));
+  --home-floating-border: rgb(var(--border) / 0.78);
+  --home-floating-shadow: 0 20px 40px rgba(64, 90, 114, 0.08);
+  --home-floating-label: rgb(var(--text-muted));
+  --home-floating-text: rgb(var(--text-strong));
+  --home-floating-copy: rgb(var(--text-muted));
+  --home-band-shell-bg: linear-gradient(180deg, rgb(255 255 255 / 0.86), rgb(244 249 252 / 0.96));
+  --home-band-shell-border: rgb(var(--border) / 0.56);
+  --home-band-shell-shadow: 0 16px 34px rgba(64, 90, 114, 0.06);
+  --home-link-color: rgb(31 95 123);
+  --home-link-hover: rgb(var(--color-accent));
+  --home-section-copy: rgb(var(--text-muted));
+  --home-section-accent: linear-gradient(180deg, rgb(var(--color-brand) / 0.76), rgb(var(--color-accent) / 0.48));
+  --home-scroll-color: rgb(var(--text-faint));
+  --home-category-neutral-bg: rgb(var(--surface-raised) / 0.92);
+  --home-category-neutral-border: rgb(var(--border) / 0.76);
+  --home-category-neutral-text: rgb(var(--text-muted));
+  --home-oss-symbol-bg: rgb(255 255 255 / 0.84);
+  --home-oss-symbol-border: rgb(var(--border) / 0.76);
+  --home-oss-symbol-text: rgb(36 83 115);
+  --home-oss-kicker: rgb(32 124 122);
+  --home-oss-title: rgb(var(--text-strong));
+  --home-oss-copy: rgb(var(--text));
+  --home-oss-primary-bg: rgb(var(--text-strong));
+  --home-oss-primary-border: rgb(var(--text-strong));
+  --home-oss-primary-text: rgb(255 255 255);
+  --home-oss-primary-shadow: 0 16px 30px rgba(33, 47, 61, 0.14);
+  --home-oss-primary-hover-bg: rgb(21 32 43);
+  --home-oss-primary-hover-border: rgb(21 32 43);
+  --home-oss-secondary-bg: rgb(255 255 255 / 0.72);
+  --home-oss-secondary-border: rgb(var(--border) / 0.78);
+  --home-oss-secondary-text: rgb(var(--text-strong));
+  --home-oss-secondary-hover-bg: rgb(var(--surface));
+  --home-oss-secondary-hover-border: rgb(var(--border-soft));
+  --home-oss-secondary-hover-text: rgb(var(--text-strong));
+}
+
+html[data-theme='dark'] .home-page {
+  --home-hero-bg:
+    radial-gradient(circle at 16% 18%, rgba(36, 146, 138, 0.16), transparent 26%),
+    radial-gradient(circle at 84% 18%, rgba(224, 110, 78, 0.12), transparent 16%),
+    linear-gradient(180deg, #0b1e31 0%, #081627 48%, #07111d 100%);
+  --home-hero-panel: linear-gradient(180deg, rgb(9 22 36 / 0.74), rgb(10 26 42 / 0.86));
+  --home-hero-panel-border: rgb(111 140 166 / 0.22);
+  --home-hero-panel-shadow: 0 22px 46px rgba(2, 12, 24, 0.3);
+  --home-hero-heading: rgb(245 248 252);
+  --home-hero-subheading: rgb(192 207 221);
+  --home-hero-copy: rgb(171 186 201);
+  --home-hero-badge-bg: rgb(255 255 255 / 0.08);
+  --home-hero-badge-border: rgb(255 255 255 / 0.16);
+  --home-hero-badge-text: rgb(156 232 214);
+  --home-hero-visual-opacity: 0.3;
+  --home-hero-grid-opacity: 0.024;
+  --home-hero-noise-opacity: 0.012;
+  --home-cta-secondary-bg: rgb(255 255 255 / 0.08);
+  --home-cta-secondary-border: rgb(255 255 255 / 0.16);
+  --home-cta-secondary-text: rgb(241 245 249);
+  --home-cta-secondary-hover-bg: rgb(255 255 255 / 0.12);
+  --home-cta-secondary-hover-border: rgb(255 255 255 / 0.24);
+  --home-cta-secondary-hover-text: rgb(255 255 255);
+  --home-cta-ghost-text: rgb(214 224 235);
+  --home-cta-ghost-border: rgb(255 255 255 / 0.14);
+  --home-cta-ghost-hover-text: rgb(255 255 255);
+  --home-cta-ghost-hover-border: rgb(255 255 255 / 0.24);
+  --home-feature-bg: linear-gradient(180deg, rgb(11 34 59 / 0.92), rgb(9 27 48 / 0.96));
+  --home-feature-border: rgb(122 150 176 / 0.22);
+  --home-feature-shadow-hover: 0 18px 36px rgba(3, 15, 30, 0.28);
+  --home-feature-title: rgb(232 238 245);
+  --home-feature-copy: rgb(149 165 182);
+  --home-floating-bg: rgb(7 25 45 / 0.92);
+  --home-floating-border: rgb(122 150 176 / 0.24);
+  --home-floating-shadow: 0 18px 38px rgba(3, 15, 30, 0.26);
+  --home-floating-label: rgb(149 165 182);
+  --home-floating-text: rgb(241 245 249);
+  --home-floating-copy: rgb(168 183 199);
+  --home-band-shell-bg: linear-gradient(180deg, rgb(12 25 40 / 0.74), rgb(15 29 44 / 0.84));
+  --home-band-shell-border: rgb(84 108 133 / 0.34);
+  --home-band-shell-shadow: 0 16px 34px rgba(2, 12, 24, 0.2);
+  --home-link-color: rgb(149 210 216);
+  --home-link-hover: rgb(255 188 168);
+  --home-section-copy: rgb(148 164 181);
+  --home-section-accent: linear-gradient(180deg, rgb(108 200 188 / 0.9), rgb(236 144 121 / 0.7));
+  --home-scroll-color: rgb(104 124 145);
+  --home-category-neutral-bg: rgb(255 255 255 / 0.06);
+  --home-category-neutral-border: rgb(255 255 255 / 0.12);
+  --home-category-neutral-text: rgb(182 197 213);
+  --home-oss-symbol-bg: rgb(255 255 255 / 0.08);
+  --home-oss-symbol-border: rgb(255 255 255 / 0.16);
+  --home-oss-symbol-text: rgb(235 241 247);
+  --home-oss-kicker: rgb(156 232 214);
+  --home-oss-title: rgb(245 248 252);
+  --home-oss-copy: rgb(171 186 201);
+  --home-oss-primary-bg: rgb(239 245 251);
+  --home-oss-primary-border: rgb(239 245 251);
+  --home-oss-primary-text: rgb(9 24 40);
+  --home-oss-primary-shadow: 0 16px 30px rgba(2, 12, 24, 0.24);
+  --home-oss-primary-hover-bg: rgb(255 255 255);
+  --home-oss-primary-hover-border: rgb(255 255 255);
+  --home-oss-secondary-bg: rgb(255 255 255 / 0.06);
+  --home-oss-secondary-border: rgb(255 255 255 / 0.16);
+  --home-oss-secondary-text: rgb(220 229 238);
+  --home-oss-secondary-hover-bg: rgb(255 255 255 / 0.1);
+  --home-oss-secondary-hover-border: rgb(255 255 255 / 0.24);
+  --home-oss-secondary-hover-text: rgb(255 255 255);
+}
+
+.home-band {
+  position: relative;
+  background: transparent;
+}
+
+.home-band::before {
+  content: '';
+  position: absolute;
+  inset: 0 1rem auto 1rem;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgb(var(--color-brand) / 0.28), rgb(var(--color-accent) / 0.18), transparent);
+}
+
+.home-band + .home-band {
+  margin-top: 1rem;
+}
+
+.home-band > div {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--home-band-shell-border);
+  background: var(--home-band-shell-bg);
+  box-shadow: var(--home-band-shell-shadow);
+}
+
+.home-band > div::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(90deg, rgb(var(--color-brand) / 0.54), rgb(var(--color-accent) / 0.2), transparent 82%);
+  pointer-events: none;
+}
+
+.home-band-stat > div,
+.home-band-cta > div {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.home-band-stat > div::before,
+.home-band-cta > div::before {
+  display: none;
+}
+
+.home-section-header {
+  position: relative;
+  border-bottom: 1px solid rgb(var(--border) / 0.34);
+  padding-left: 1rem;
+  padding-bottom: 1rem;
+}
+
+.home-section-header::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--home-section-accent);
+}
+
+.home-section-copy {
+  color: var(--home-section-copy);
+}
+
+.home-section-link {
+  color: var(--home-link-color);
+  font-weight: 600;
+}
+
+.home-section-link:hover {
+  color: var(--home-link-hover);
+}
+
+/* ─── Hero background ─── */
+.hero-bg {
+  background: var(--home-hero-bg);
+}
+
+.home-hero-copy-block {
+  position: relative;
+  padding: clamp(1.5rem, 2.2vw, 2.25rem);
+  border: 1px solid var(--home-hero-panel-border);
+  background: var(--home-hero-panel);
+  box-shadow: var(--home-hero-panel-shadow);
+  backdrop-filter: blur(12px);
+  max-width: 31rem;
+}
+
+.home-hero-visual {
+  opacity: var(--home-hero-visual-opacity);
+  filter: saturate(0.82);
+  -webkit-mask-image: radial-gradient(circle at center, rgb(0 0 0 / 1) 0%, rgb(0 0 0 / 1) 58%, transparent 100%);
+  mask-image: radial-gradient(circle at center, rgb(0 0 0 / 1) 0%, rgb(0 0 0 / 1) 58%, transparent 100%);
+}
+
+.home-hero-grid-layer {
+  opacity: var(--home-hero-grid-opacity);
+}
+
+.home-hero-noise-layer {
+  opacity: var(--home-hero-noise-opacity);
+}
+
+.home-hero-line {
+  color: var(--home-hero-heading);
+}
+
+.home-hero-line-muted {
+  color: var(--home-hero-subheading);
+}
+
+.home-hero-copy {
+  color: var(--home-hero-copy);
+}
+
+.home-hero-badge-label {
+  color: var(--home-hero-badge-text);
 }
 
 /* Animated orbs */
@@ -504,7 +757,7 @@ html[data-theme='light'] .hero-bg {
   background-image:
     linear-gradient(rgba(148,163,184,1) 1px, transparent 1px),
     linear-gradient(to right, rgba(148,163,184,1) 1px, transparent 1px);
-  background-size: 50px 50px;
+  background-size: 72px 72px;
 }
 
 .hero-noise {
@@ -513,81 +766,71 @@ html[data-theme='light'] .hero-bg {
 
 /* Hero badge */
 .hero-badge {
-  background: rgba(20,184,166,0.08);
-  border: 1px solid rgba(20,184,166,0.2);
-  backdrop-filter: blur(8px);
+  background: var(--home-hero-badge-bg);
+  border: 1px solid var(--home-hero-badge-border);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.16);
 }
 
 /* Gradient heading */
 .hero-gradient-text {
-  background: linear-gradient(135deg, #60a5fa 0%, #34d399 50%, #a78bfa 100%);
+  background: linear-gradient(135deg, rgb(229 107 79) 0%, rgb(57 150 143) 52%, rgb(88 144 196) 100%);
   -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
   background-clip: text;
+  color: transparent;
 }
 
 /* CTA buttons */
 .hero-cta-primary {
-  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  background: rgb(var(--color-accent));
+  border: 1px solid rgb(225 112 97 / 0.72);
   color: white;
-  box-shadow: 0 4px 24px rgba(59,130,246,0.3), 0 1px 0 rgba(255,255,255,0.1) inset;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12);
 }
 .hero-cta-primary:hover {
-  background: linear-gradient(135deg, #60a5fa, #3b82f6);
-  box-shadow: 0 6px 28px rgba(59,130,246,0.4), 0 1px 0 rgba(255,255,255,0.1) inset;
-  transform: translateY(-1px);
+  background: rgb(186 54 40);
+  border-color: rgb(var(--color-accent));
 }
 .hero-cta-secondary {
-  background: rgba(30,41,59,0.6);
-  border: 1px solid rgba(51,65,85,0.8);
-  color: rgb(203,213,225);
-  backdrop-filter: blur(8px);
+  background: var(--home-cta-secondary-bg);
+  border: 1px solid var(--home-cta-secondary-border);
+  color: var(--home-cta-secondary-text);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.14);
 }
 .hero-cta-secondary:hover {
-  background: rgba(51,65,85,0.7);
-  border-color: rgba(71,85,105,1);
-  color: white;
-  transform: translateY(-1px);
+  background: var(--home-cta-secondary-hover-bg);
+  border-color: var(--home-cta-secondary-hover-border);
+  color: var(--home-cta-secondary-hover-text);
 }
 .hero-cta-ghost {
-  color: rgb(100,116,139);
-  border: 1px solid rgba(51,65,85,0.5);
+  background: rgb(255 255 255 / 0.02);
+  color: var(--home-cta-ghost-text);
+  border: 1px solid var(--home-cta-ghost-border);
 }
 .hero-cta-ghost:hover {
-  color: rgb(148,163,184);
-  border-color: rgba(71,85,105,0.8);
-}
-
-html[data-theme='light'] .hero-cta-secondary {
-  background: rgba(255,255,255,0.8);
-  border-color: #e2e8f0;
-  color: #334155;
-}
-html[data-theme='light'] .hero-cta-secondary:hover {
-  background: white;
-  border-color: #cbd5e1;
-  color: #0f172a;
-}
-html[data-theme='light'] .hero-cta-ghost {
-  color: #94a3b8;
-  border-color: #e2e8f0;
+  background: rgb(255 255 255 / 0.08);
+  color: var(--home-cta-ghost-hover-text);
+  border-color: var(--home-cta-ghost-hover-border);
 }
 
 /* Feature cards */
 .feature-card {
-  border: 1px solid rgba(51,65,85,0.6);
-  background: rgba(15,23,42,0.7);
-  backdrop-filter: blur(12px);
+  border: 1px solid var(--home-feature-border);
+  background: var(--home-feature-bg);
+  box-shadow: 0 1px 0 rgb(var(--border) / 0.2);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   animation: fade-up 0.5s ease both;
 }
 .feature-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 16px 40px rgba(0,0,0,0.3);
+  border-color: rgb(var(--border-soft));
+  box-shadow: var(--home-feature-shadow-hover);
 }
-html[data-theme='light'] .feature-card {
-  background: rgba(255,255,255,0.85);
-  border-color: rgba(226,232,240,0.8);
+
+.home-feature-title {
+  color: var(--home-feature-title);
+}
+
+.home-feature-copy {
+  color: var(--home-feature-copy);
 }
 
 .feature-icon-teal   { background: rgba(20,184,166,0.12);  border: 1px solid rgba(20,184,166,0.25);   color: rgb(52,211,153); }
@@ -597,30 +840,127 @@ html[data-theme='light'] .feature-card {
 
 /* Floating stat card */
 .floating-stat-card {
-  background: rgba(15,23,42,0.85);
-  border: 1px solid rgba(51,65,85,0.6);
-  backdrop-filter: blur(16px);
-  animation: float 6s ease-in-out infinite;
+  background: var(--home-floating-bg);
+  border: 1px solid var(--home-floating-border);
+  box-shadow: var(--home-floating-shadow);
 }
-html[data-theme='light'] .floating-stat-card {
-  background: rgba(255,255,255,0.9);
-  border-color: rgba(226,232,240,0.8);
-  box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+
+.home-floating-label {
+  color: var(--home-floating-label);
 }
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50%       { transform: translateY(-6px); }
+
+.home-floating-text {
+  color: var(--home-floating-text);
+}
+
+.home-floating-copy {
+  color: var(--home-floating-copy);
+}
+
+.home-category-chip {
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--home-category-neutral-border);
+  background: var(--home-category-neutral-bg);
+  color: var(--home-category-neutral-text);
+  letter-spacing: 0.14em;
+}
+
+.home-category-chip-viral {
+  border-color: rgb(71 133 217 / 0.32);
+  background: rgb(59 130 246 / 0.1);
+  color: rgb(76 123 193);
+}
+
+.home-category-chip-bacterial {
+  border-color: rgb(217 147 44 / 0.34);
+  background: rgb(245 158 11 / 0.1);
+  color: rgb(176 113 24);
+}
+
+.home-category-chip-parasitic {
+  border-color: rgb(46 160 103 / 0.34);
+  background: rgb(34 197 94 / 0.08);
+  color: rgb(29 130 79);
+}
+
+.home-category-chip-fungal {
+  border-color: rgb(144 96 213 / 0.32);
+  background: rgb(168 85 247 / 0.08);
+  color: rgb(116 71 179);
+}
+
+html[data-theme='dark'] .home-category-chip-viral {
+  color: rgb(151 197 255);
+}
+
+html[data-theme='dark'] .home-category-chip-bacterial {
+  color: rgb(255 210 124);
+}
+
+html[data-theme='dark'] .home-category-chip-parasitic {
+  color: rgb(146 233 181);
+}
+
+html[data-theme='dark'] .home-category-chip-fungal {
+  color: rgb(214 184 255);
 }
 
 /* OSS CTA */
 .oss-cta {
-  background: rgba(15,23,42,0.7);
-  border: 1px solid rgba(51,65,85,0.6);
-  backdrop-filter: blur(16px);
+  background: var(--home-oss-bg);
+  border: 1px solid var(--home-oss-border);
+  box-shadow: var(--paper-shadow);
 }
-html[data-theme='light'] .oss-cta {
-  background: rgba(255,255,255,0.85);
-  border-color: rgba(226,232,240,0.8);
+
+.home-oss-symbol {
+  background: var(--home-oss-symbol-bg);
+  border: 1px solid var(--home-oss-symbol-border);
+  color: var(--home-oss-symbol-text);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.14);
+}
+
+.home-oss-kicker {
+  color: var(--home-oss-kicker);
+  letter-spacing: 0.16em;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.home-oss-title {
+  color: var(--home-oss-title);
+  font-family: var(--font-serif, inherit);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+
+.home-oss-copy {
+  color: var(--home-oss-copy);
+}
+
+.home-oss-primary {
+  background: var(--home-oss-primary-bg);
+  border: 1px solid var(--home-oss-primary-border);
+  color: var(--home-oss-primary-text);
+  box-shadow: var(--home-oss-primary-shadow);
+}
+
+.home-oss-primary:hover {
+  background: var(--home-oss-primary-hover-bg);
+  border-color: var(--home-oss-primary-hover-border);
+}
+
+.home-oss-secondary {
+  background: var(--home-oss-secondary-bg);
+  border: 1px solid var(--home-oss-secondary-border);
+  color: var(--home-oss-secondary-text);
+}
+
+.home-oss-secondary:hover {
+  background: var(--home-oss-secondary-hover-bg);
+  border-color: var(--home-oss-secondary-hover-border);
+  color: var(--home-oss-secondary-hover-text);
 }
 
 /* Entrance animations */
@@ -634,4 +974,5 @@ html[data-theme='light'] .oss-cta {
 /* Scroll indicator */
 .scroll-indicator { opacity: 0.4; }
 .scroll-indicator:hover { opacity: 0.7; }
+.home-scroll-icon { color: var(--home-scroll-color); }
 </style>

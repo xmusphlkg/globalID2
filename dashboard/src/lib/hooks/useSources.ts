@@ -100,7 +100,8 @@ export function useAutomationConfig() {
   return useQuery<AutomationConfig>({
     queryKey: ["sources-automation"],
     queryFn: () => apiFetch("/sources/automation"),
-    staleTime: 15 * 1000,
+    staleTime: 5 * 1000,
+    refetchInterval: 5 * 1000,
   });
 }
 
@@ -108,7 +109,8 @@ export function useAutomationJobs() {
   return useQuery<AutomationJob[]>({
     queryKey: ["sources-automation-jobs"],
     queryFn: () => apiFetch("/sources/automation/jobs"),
-    staleTime: 10 * 1000,
+    staleTime: 5 * 1000,
+    refetchInterval: 5 * 1000,
   });
 }
 

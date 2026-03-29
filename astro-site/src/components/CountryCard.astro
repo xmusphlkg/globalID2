@@ -25,41 +25,41 @@ const deathsDisplay = totalDeaths > 0 ? fmtNum(totalDeaths) : '-';
 
 <a
   href={href}
-  class="card p-6 hover:border-slate-600 hover:shadow-xl hover:shadow-brand-500/5 transition-all duration-200 block group"
+  class="card site-card-link p-6 block group"
 >
   <div class="flex items-start justify-between mb-4">
     <div class="flex items-center gap-3">
       <CountryFlag code={code} name={name} />
       <div>
-        <h3 class="text-slate-100 font-semibold text-lg group-hover:text-brand-400 transition-colors">
+        <h3 class="text-[rgb(var(--text-strong))] font-semibold text-lg group-hover:text-brand-700 dark:group-hover:text-brand-400 transition-colors">
           {name}
         </h3>
-        <span class="text-slate-600 text-xs font-mono">{code}</span>
+        <span class="text-[rgb(var(--text-faint))] text-xs font-mono tracking-[0.12em] uppercase">{code}</span>
       </div>
     </div>
-    <svg class="w-4 h-4 text-slate-700 group-hover:text-brand-400 transition-colors mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg class="mt-1 h-4 w-4 text-[rgb(var(--text-faint))] group-hover:text-brand-700 dark:group-hover:text-brand-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
     </svg>
   </div>
 
-  <div class="grid grid-cols-3 gap-3">
+  <div class="grid grid-cols-3 gap-3 border-t border-[rgb(var(--border))/0.72] pt-4">
     <div class="text-center">
-      <div class="text-xl font-bold tabular-nums text-slate-200">{fmtNum(totalCases)}</div>
-      <div class="text-xs text-slate-600 mt-0.5" data-lang-en="Total Cases" data-lang-zh="累计病例">Total Cases</div>
+      <div class="font-serif text-2xl font-semibold tabular-nums text-[rgb(var(--text-strong))]">{fmtNum(totalCases)}</div>
+      <div class="mt-1 text-[11px] uppercase tracking-[0.14em] text-[rgb(var(--text-faint))]" data-lang-en="Total Cases" data-lang-zh="累计病例">Total Cases</div>
     </div>
     <div class="text-center">
-      <div class="text-xl font-bold tabular-nums text-red-400">{deathsDisplay}</div>
-      <div class="text-xs text-slate-600 mt-0.5" data-lang-en="Deaths" data-lang-zh="死亡">Deaths</div>
+      <div class="font-serif text-2xl font-semibold tabular-nums text-red-500 dark:text-red-400">{deathsDisplay}</div>
+      <div class="mt-1 text-[11px] uppercase tracking-[0.14em] text-[rgb(var(--text-faint))]" data-lang-en="Deaths" data-lang-zh="死亡">Deaths</div>
     </div>
     <div class="text-center">
-      <div class="text-xl font-bold tabular-nums text-teal-400">{diseaseCount}</div>
-      <div class="text-xs text-slate-600 mt-0.5" data-lang-en="Diseases" data-lang-zh="疾病数">Diseases</div>
+      <div class="font-serif text-2xl font-semibold tabular-nums text-teal-600 dark:text-teal-400">{diseaseCount}</div>
+      <div class="mt-1 text-[11px] uppercase tracking-[0.14em] text-[rgb(var(--text-faint))]" data-lang-en="Diseases" data-lang-zh="疾病数">Diseases</div>
     </div>
   </div>
 
   {dateRange?.start && (
-    <div class="mt-4 pt-3 border-t border-slate-700/50">
-      <span class="text-xs text-slate-600">
+    <div class="mt-4 pt-3 border-t border-[rgb(var(--border))/0.68]">
+      <span class="text-xs text-[rgb(var(--text-faint))]">
         <span data-lang-en="Data range" data-lang-zh="数据区间">Data range</span>:&nbsp;
         {dateRange.start} → {dateRange.end ?? 'present'}
       </span>

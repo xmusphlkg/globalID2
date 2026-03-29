@@ -3,7 +3,7 @@
 // Sections: Summary → Highlights → Key Findings → Trend Analysis
 // Charts: Epidemic Curve (cases+deaths dual axis) + Monthly Distribution (cases & deaths)
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import EChartsReact from 'echarts-for-react/lib/core';
 import echarts from '../../lib/echarts';
 
@@ -53,7 +53,7 @@ interface Props {
 
 function useTheme() {
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    if (typeof document === 'undefined') return 'dark';
+    if (typeof document === 'undefined') return 'light';
     return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
   });
   useEffect(() => {
@@ -150,10 +150,11 @@ const YEAR_PALETTE_LIGHT = [
 
 // ─── Epidemic Curve (dual-axis: cases bars + deaths line) ────────────────────
 
-function EpidemicCurveChart({ series, theme, lang }: {
+function EpidemicCurveChart({ series, theme, lang, showDeaths }: {
   series: DiseaseSeries;
   theme: 'light' | 'dark';
   lang: 'en' | 'zh';
+  showDeaths: boolean;
 }) {
   const t = chartTokens(theme);
 
@@ -186,6 +187,7 @@ function EpidemicCurveChart({ series, theme, lang }: {
         },
       },
       legend: {
+        show: showDeaths,
         top: 4, right: 8,
         textStyle: { color: t.font, fontSize: 11 },
         itemWidth: 14, itemHeight: 8,
@@ -193,9 +195,9 @@ function EpidemicCurveChart({ series, theme, lang }: {
         borderColor: t.legendBorder,
         borderWidth: 1,
         padding: [4, 8],
-        borderRadius: 4,
+        borderRadius: 0,
       },
-      grid: { left: 60, right: 60, top: 44, bottom: 60 },
+      grid: { left: 60, right: showDeaths ? 60 : 16, top: showDeaths ? 44 : 20, bottom: 60 },
       xAxis: {
         type: 'time' as const,
         axisLabel: {
@@ -210,7 +212,7 @@ function EpidemicCurveChart({ series, theme, lang }: {
         axisTick: { lineStyle: { color: t.tick } },
         splitLine: { show: false },
       },
-      yAxis: [
+      yAxis: showDeaths ? [
         {
           type: 'value' as const,
           name: casesLabel,
@@ -229,7 +231,15 @@ function EpidemicCurveChart({ series, theme, lang }: {
           splitLine: { show: false },
           min: 0,
         },
-      ],
+      ] : {
+        type: 'value' as const,
+        name: casesLabel,
+        nameTextStyle: { color: t.casesColor, fontSize: 11, fontWeight: 600, padding: [0, 0, 0, 50] },
+        axisLabel: { color: t.font, fontSize: 10, formatter: fmtNum },
+        axisLine: { lineStyle: { color: t.casesColor, width: 2 } },
+        splitLine: { lineStyle: { color: t.grid } },
+        min: 0,
+      },
       dataZoom: [{
         type: 'slider' as const, bottom: 4, height: 18,
         backgroundColor: t.sliderBg, borderColor: t.line,
@@ -248,7 +258,7 @@ function EpidemicCurveChart({ series, theme, lang }: {
           emphasis: { itemStyle: { opacity: 1 } },
           data: series.dates.map((d, i) => [d, series.cases[i] ?? 0]),
         },
-        {
+        ...(showDeaths ? [{
           name: deathsLabel,
           type: 'line' as const,
           yAxisIndex: 1,
@@ -258,10 +268,10 @@ function EpidemicCurveChart({ series, theme, lang }: {
           lineStyle: { color: t.deathsColor, width: 2 },
           itemStyle: { color: t.deathsColor },
           data: series.dates.map((d, i) => [d, series.deaths[i] ?? 0]),
-        },
+        }] : []),
       ],
     };
-  }, [series, theme, lang, t]);
+  }, [series, theme, lang, t, showDeaths]);
 
   return (
     <EChartsReact
@@ -314,7 +324,7 @@ function MonthlyDistributionChart({ series, metric, theme, lang }: {
       textStyle: { color: t.font, fontSize: 10 },
       itemWidth: 12, itemHeight: 8,
       backgroundColor: t.legendBg, borderColor: t.legendBorder, borderWidth: 1,
-      padding: [3, 6], borderRadius: 4,
+      padding: [3, 6], borderRadius: 0,
     },
     grid: { left: 50, right: 12, top: 12, bottom: 68 },
     xAxis: {
@@ -384,7 +394,7 @@ function SectionBlock({ section, theme }: {
       style={{
         borderLeft: `3px solid ${accentColor}`,
         background: isLight ? '#fafbfd' : 'rgba(15,23,42,0.6)',
-        borderRadius: '0 12px 12px 0',
+        borderRadius: 0,
         borderStyle: 'solid',
         borderWidth: '1px',
         borderColor,
@@ -422,22 +432,56 @@ function SectionBlock({ section, theme }: {
 
 // ─── Figure wrapper ───────────────────────────────────────────────────────────
 
-function Figure({ number, caption, children, theme }: {
+function Figure({ number, caption, children, theme, lang }: {
   number: number;
   caption: string;
   children: React.ReactNode;
   theme: 'light' | 'dark';
+  lang: 'en' | 'zh';
 }) {
   const isLight = theme === 'light';
+  const figureRef = useRef<HTMLElement>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(document.fullscreenElement === figureRef.current);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  async function toggleFullscreen() {
+    const figure = figureRef.current;
+    if (!figure) return;
+
+    if (document.fullscreenElement === figure) {
+      await document.exitFullscreen();
+      return;
+    }
+
+    if (!document.fullscreenElement) {
+      await figure.requestFullscreen();
+    }
+  }
+
   return (
     <figure
+      ref={figureRef}
       style={{
         background: isLight ? '#ffffff' : 'rgba(15,23,42,0.5)',
         border: `1px solid ${isLight ? '#e2e8f0' : '#1e293b'}`,
-        borderRadius: '12px',
       }}
-      className="p-4 md:p-6"
+      className={`panel-fullscreen p-4 md:p-6 ${isFullscreen ? 'comparison-shell-fullscreen' : ''}`}
     >
+      <div className="mb-3 flex justify-end">
+        <button type="button" onClick={toggleFullscreen} className="chart-link-btn">
+          {isFullscreen
+            ? (lang === 'zh' ? '退出全屏' : 'Exit full-screen')
+            : (lang === 'zh' ? '进入全屏' : 'Enter full-screen')}
+        </button>
+      </div>
       <div className="mb-3">
         {children}
       </div>
@@ -491,6 +535,12 @@ export default function DiseaseDetailView({ diseaseMeta, sections, series, repor
   const totalCases  = series?.total_cases ?? 0;
   const totalDeaths = series?.total_deaths ?? 0;
   const cfr = totalCases > 0 ? ((totalDeaths / totalCases) * 100) : 0;
+  const hasDeathsData = (series?.deaths ?? []).some((value) => (value ?? 0) > 0) || totalDeaths > 0;
+  const [showDeathMetrics, setShowDeathMetrics] = useState(hasDeathsData);
+
+  useEffect(() => {
+    setShowDeathMetrics(hasDeathsData);
+  }, [hasDeathsData]);
 
   const hasSeries = !!series && series.dates.length > 0;
 
@@ -513,7 +563,7 @@ export default function DiseaseDetailView({ diseaseMeta, sections, series, repor
 
         {/* ── HEADER ── */}
         <header
-          style={{ background: bgCard, border: `1px solid ${border}`, borderRadius: '16px' }}
+          style={{ background: bgCard, border: `1px solid ${border}`, borderRadius: 0 }}
           className="p-7 md:p-10"
         >
           {/* Top row: category + back link */}
@@ -521,7 +571,7 @@ export default function DiseaseDetailView({ diseaseMeta, sections, series, repor
             <div className="flex items-center gap-3">
               <span
                 style={{ background: catStyle.bg, color: catStyle.text, border: `1px solid ${catStyle.border}` }}
-                className="text-xs font-bold uppercase tracking-[0.12em] px-3 py-1 rounded-full"
+                className="text-xs font-bold uppercase tracking-[0.12em] px-3 py-1 rounded-none"
               >
                 {diseaseMeta.category}
               </span>
@@ -542,6 +592,20 @@ export default function DiseaseDetailView({ diseaseMeta, sections, series, repor
             </a>
           </div>
 
+          {hasDeathsData && (
+            <div className="mb-5 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowDeathMetrics((current) => !current)}
+                className={`chart-toggle ${showDeathMetrics ? 'chart-toggle-active' : ''}`}
+              >
+                {showDeathMetrics
+                  ? (lang === 'zh' ? '隐藏 deaths / CFR' : 'Hide deaths / CFR')
+                  : (lang === 'zh' ? '显示 deaths / CFR' : 'Show deaths / CFR')}
+              </button>
+            </div>
+          )}
+
           {/* Disease title */}
           <div className="mb-6">
             <h1 style={{ color: textHead }} className="text-3xl md:text-4xl font-bold tracking-tight leading-tight mb-1">
@@ -557,13 +621,15 @@ export default function DiseaseDetailView({ diseaseMeta, sections, series, repor
           {/* Stats row */}
           {series && (
             <div
-              style={{ background: isLight ? '#f8fafc' : 'rgba(255,255,255,0.03)', borderRadius: '10px', border: `1px solid ${border}` }}
+              style={{ background: isLight ? '#f8fafc' : 'rgba(255,255,255,0.03)', borderRadius: 0, border: `1px solid ${border}` }}
               className="grid grid-cols-2 sm:grid-cols-4 gap-0"
             >
               {[
                 { label: lang === 'zh' ? '累计病例' : 'Total Cases',  value: fmtNum(totalCases),  color: isLight ? '#2563eb' : '#60a5fa' },
-                { label: lang === 'zh' ? '累计死亡' : 'Total Deaths', value: fmtNum(totalDeaths), color: isLight ? '#dc2626' : '#f87171' },
-                { label: lang === 'zh' ? '病死率'   : 'Case Fatality', value: cfr.toFixed(3) + '%', color: isLight ? '#d97706' : '#fbbf24' },
+                ...(showDeathMetrics ? [
+                  { label: lang === 'zh' ? '累计死亡' : 'Total Deaths', value: fmtNum(totalDeaths), color: isLight ? '#dc2626' : '#f87171' },
+                  { label: lang === 'zh' ? '病死率'   : 'Case Fatality', value: cfr.toFixed(3) + '%', color: isLight ? '#d97706' : '#fbbf24' },
+                ] : []),
                 {
                   label: lang === 'zh' ? '数据跨度' : 'Data Span',
                   value: series.dates[0]
@@ -641,7 +707,7 @@ export default function DiseaseDetailView({ diseaseMeta, sections, series, repor
           <section>
             {/* Section heading */}
             <div className="flex items-center gap-3 mb-5">
-              <div style={{ width: '3px', height: '20px', background: isLight ? '#0891b2' : '#38bdf8', borderRadius: '2px' }} />
+              <div style={{ width: '3px', height: '20px', background: isLight ? '#0891b2' : '#38bdf8', borderRadius: 0 }} />
               <h2 style={{ color: textHead }} className="text-sm font-bold uppercase tracking-[0.15em]">
                 {lang === 'zh' ? '图表分析' : 'Figures'}
               </h2>
@@ -651,13 +717,18 @@ export default function DiseaseDetailView({ diseaseMeta, sections, series, repor
             <Figure
               number={1}
               caption={
-                lang === 'zh'
-                  ? `${diseaseMeta.name_zh || diseaseMeta.name_en} 流行曲线——月度病例数（柱）与死亡数（线），双纵轴`
-                  : `Epidemic curve for ${diseaseMeta.name_en}. Monthly reported cases (bars, left axis) and deaths (line, right axis) over the full surveillance period.`
+                showDeathMetrics
+                  ? (lang === 'zh'
+                    ? `${diseaseMeta.name_zh || diseaseMeta.name_en} 流行曲线——月度病例数（柱）与死亡数（线），双纵轴`
+                    : `Epidemic curve for ${diseaseMeta.name_en}. Monthly reported cases (bars, left axis) and deaths (line, right axis) over the full surveillance period.`)
+                  : (lang === 'zh'
+                    ? `${diseaseMeta.name_zh || diseaseMeta.name_en} 流行曲线——完整监测期的月度病例数`
+                    : `Epidemic curve for ${diseaseMeta.name_en}. Monthly reported cases over the full surveillance period.`)
               }
               theme={theme}
+              lang={lang}
             >
-              <EpidemicCurveChart series={series!} theme={theme} lang={lang} />
+              <EpidemicCurveChart series={series!} theme={theme} lang={lang} showDeaths={showDeathMetrics && hasDeathsData} />
             </Figure>
 
             {/* Figures 2 & 3: Monthly Distribution side by side */}
@@ -666,16 +737,20 @@ export default function DiseaseDetailView({ diseaseMeta, sections, series, repor
                 number={2}
                 caption={lang === 'zh' ? '月度病例分布（按年分组）' : 'Monthly distribution of cases by year.'}
                 theme={theme}
+                lang={lang}
               >
                 <MonthlyDistributionChart series={series!} metric="cases" theme={theme} lang={lang} />
               </Figure>
-              <Figure
-                number={3}
-                caption={lang === 'zh' ? '月度死亡分布（按年分组）' : 'Monthly distribution of deaths by year.'}
-                theme={theme}
-              >
-                <MonthlyDistributionChart series={series!} metric="deaths" theme={theme} lang={lang} />
-              </Figure>
+              {showDeathMetrics && hasDeathsData && (
+                <Figure
+                  number={3}
+                  caption={lang === 'zh' ? '月度死亡分布（按年分组）' : 'Monthly distribution of deaths by year.'}
+                  theme={theme}
+                  lang={lang}
+                >
+                  <MonthlyDistributionChart series={series!} metric="deaths" theme={theme} lang={lang} />
+                </Figure>
+              )}
             </div>
           </section>
         )}

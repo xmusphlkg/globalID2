@@ -1,13 +1,14 @@
 // src/components/charts/MonthlyBar.tsx
-// ECharts bar chart showing monthly case/death counts for a single disease,
-// with year-over-year grouped bars for comparison.
+// OWID-style grouped monthly bar chart with raw data preview.
 
 import React, { useState, useMemo, useEffect } from 'react';
 import EChartsReact from 'echarts-for-react/lib/core';
 import echarts from '../../lib/echarts';
+import ChartFrame from './ChartFrame';
+import type { ChartSourceMeta } from '../../utils/chartMeta';
 
 interface MonthlyData {
-  months: string[];   // "YYYY-MM" strings
+  months: string[];
   cases: number[];
   deaths: number[];
 }
@@ -16,25 +17,21 @@ interface Props {
   data: MonthlyData;
   title?: string;
   height?: number;
+  sourceMeta?: ChartSourceMeta | null;
 }
 
-const YEAR_COLORS = [
-  '#60a5fa', '#34d399', '#f472b6', '#fb923c',
-  '#a78bfa', '#38bdf8', '#4ade80', '#fbbf24',
-];
+const YEAR_COLORS = ['#0072b2', '#d55e00', '#009e73', '#cc79a7', '#e69f00', '#56b4e9', '#7f3c8d', '#666666', '#bc5090', '#2f4b7c'];
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-const YEAR_COLORS_LIGHT = [
-  '#2563eb', '#0d9488', '#db2777', '#ea580c',
-  '#7c3aed', '#0284c7', '#16a34a', '#ca8a04',
-];
+function formatCellValue(value: number | null | undefined) {
+  if (value == null || Number.isNaN(value)) return '—';
+  return value.toLocaleString();
+}
 
-const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-export default function MonthlyBar({ data, title, height = 380 }: Props) {
+export default function MonthlyBar({ data, title, height = 380, sourceMeta = null }: Props) {
   const [metric, setMetric] = useState<'cases' | 'deaths'>('cases');
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    if (typeof document === 'undefined') return 'dark';
+    if (typeof document === 'undefined') return 'light';
     return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
   });
   const [lang] = useState<'en' | 'zh'>(() => {
@@ -52,138 +49,207 @@ export default function MonthlyBar({ data, title, height = 380 }: Props) {
     return () => observer.disconnect();
   }, []);
 
-  const chartColors = useMemo(() => {
-    if (theme === 'light') {
-      return {
-        title: '#0f172a',
-        font: '#475569',
-        grid: '#e2e8f0',
-        line: '#cbd5e1',
-        tick: '#94a3b8',
-        legendBg: 'rgba(255,255,255,0.92)',
-        legendBorder: '#cbd5e1',
-        hoverBg: '#ffffff',
-        hoverBorder: '#cbd5e1',
-        hoverFont: '#0f172a',
-        palette: YEAR_COLORS_LIGHT,
-      };
-    }
-    return {
-      title: '#e2e8f0',
-      font: '#94a3b8',
-      grid: '#1e293b',
-      line: '#334155',
-      tick: '#475569',
-      legendBg: 'rgba(15,23,42,0.8)',
-      legendBorder: '#334155',
-      hoverBg: '#1e293b',
-      hoverBorder: '#475569',
-      hoverFont: '#e2e8f0',
-      palette: YEAR_COLORS,
-    };
-  }, [theme]);
+  const chartColors = useMemo(() => (
+    theme === 'light'
+      ? {
+          font: '#556070',
+          line: '#c9c2b8',
+          grid: '#d9d2c7',
+          hoverBg: '#fffdfa',
+          hoverBorder: '#c9c2b8',
+          hoverFont: '#162232',
+        }
+      : {
+          font: '#a4b1c1',
+          line: '#51667f',
+          grid: '#344a64',
+          hoverBg: '#17283a',
+          hoverBorder: '#51667f',
+          hoverFont: '#f3f6fb',
+        }
+  ), [theme]);
 
-  // Group by year → each year is one bar group
   const grouped = useMemo(() => {
     const byYear: Record<string, { months: string[]; values: number[] }> = {};
-    data.months.forEach((ym, i) => {
+    data.months.forEach((ym, index) => {
       const [year, monthIdx] = ym.split('-');
       const monthName = MONTH_NAMES[parseInt(monthIdx, 10) - 1];
       if (!byYear[year]) byYear[year] = { months: [], values: [] };
       byYear[year].months.push(monthName);
-      byYear[year].values.push(metric === 'cases' ? data.cases[i] : data.deaths[i]);
+      byYear[year].values.push(metric === 'cases' ? data.cases[index] : data.deaths[index]);
     });
     return byYear;
   }, [data, metric]);
 
+  const hasDeathsMetric = useMemo(
+    () => data.deaths.some((value) => (value ?? 0) > 0),
+    [data.deaths]
+  );
+
+  useEffect(() => {
+    if (!hasDeathsMetric && metric === 'deaths') {
+      setMetric('cases');
+    }
+  }, [hasDeathsMetric, metric]);
+
+  const years = Object.keys(grouped);
   const metricLabel = lang === 'zh' ? (metric === 'cases' ? '病例数' : '死亡数') : (metric === 'cases' ? 'Cases' : 'Deaths');
+  const peakValue = Math.max(0, ...Object.values(grouped).flatMap(({ values }) => values));
 
   const option = useMemo(() => ({
+    animationDuration: 240,
     backgroundColor: 'transparent',
-    title: title ? { text: title, textStyle: { color: chartColors.title, fontSize: 14 }, left: 0, top: 0 } : undefined,
+    title: title
+      ? { text: title, textStyle: { color: theme === 'light' ? '#162232' : '#f3f6fb', fontSize: 15, fontWeight: 600 }, left: 0, top: 0 }
+      : undefined,
     tooltip: {
       trigger: 'axis',
-      axisPointer: { type: 'shadow' },
+      axisPointer: { type: 'shadow' as const },
       backgroundColor: chartColors.hoverBg,
       borderColor: chartColors.hoverBorder,
+      borderWidth: 1,
       textStyle: { color: chartColors.hoverFont, fontSize: 12 },
       formatter: (params: any[]) =>
-        params.map(p => `<b>${p.seriesName}</b> - ${p.name}<br/>${metricLabel}: <b>${p.value?.toLocaleString() ?? 0}</b>`).join('<br/>'),
+        params
+          .map((param) => `<b>${param.seriesName}</b> · ${param.name}<br/>${metricLabel}: <b>${formatCellValue(param.value)}</b>`)
+          .join('<br/>'),
     },
-    legend: {
-      bottom: 0,
-      left: 0,
-      orient: 'horizontal' as const,
-      textStyle: { color: chartColors.font, fontSize: 11 },
-      backgroundColor: chartColors.legendBg,
-      borderColor: chartColors.legendBorder,
-      borderWidth: 1,
-    },
-    grid: { left: 55, right: 20, top: title ? 45 : 15, bottom: 60 },
+    grid: { left: 60, right: 18, top: title ? 38 : 16, bottom: 48 },
     xAxis: {
       type: 'category' as const,
       data: MONTH_NAMES,
       axisLabel: { color: chartColors.font, fontSize: 11 },
       axisLine: { lineStyle: { color: chartColors.line } },
-      axisTick: { lineStyle: { color: chartColors.tick } },
-      splitLine: { lineStyle: { color: chartColors.grid } },
+      axisTick: { lineStyle: { color: chartColors.line } },
     },
     yAxis: {
       type: 'value' as const,
       name: metricLabel,
-      nameTextStyle: { color: chartColors.font, fontSize: 11 },
+      nameTextStyle: { color: chartColors.font, fontSize: 11, padding: [0, 0, 8, 0] },
       axisLabel: { color: chartColors.font, fontSize: 11 },
       axisLine: { lineStyle: { color: chartColors.line } },
-      axisTick: { lineStyle: { color: chartColors.tick } },
-      splitLine: { lineStyle: { color: chartColors.grid } },
+      axisTick: { lineStyle: { color: chartColors.line } },
+      splitLine: { lineStyle: { color: chartColors.grid, type: 'dashed' as const } },
       min: 0,
     },
-    series: Object.entries(grouped).map(([year, { months, values }], idx) => ({
+    series: years.map((year, index) => ({
       name: year,
       type: 'bar' as const,
-      data: MONTH_NAMES.map(mon => {
-        const i = months.indexOf(mon);
-        return i >= 0 ? values[i] : 0;
+      barMaxWidth: 20,
+      itemStyle: { color: YEAR_COLORS[index % YEAR_COLORS.length], borderRadius: [0, 0, 0, 0] },
+      data: MONTH_NAMES.map((monthName) => {
+        const monthIndex = grouped[year].months.indexOf(monthName);
+        return monthIndex >= 0 ? grouped[year].values[monthIndex] : 0;
       }),
-      itemStyle: { color: chartColors.palette[idx % chartColors.palette.length], opacity: 0.85 },
     })),
-  }), [grouped, chartColors, title, metricLabel]);
+  }), [chartColors, grouped, lang, metricLabel, theme, title, years]);
 
-  const hasData = Object.keys(grouped).length > 0;
-
-  return (
-    <div className="card p-4">
-      {/* Metric switcher */}
-      <div className="flex items-center gap-2 mb-4">
-        {(['cases', 'deaths'] as const).map((m) => (
+  const toolbar = (
+    <>
+      <div className="chart-toolbar">
+        {(['cases', 'deaths'] as const).filter((candidate) => candidate !== 'deaths' || hasDeathsMetric).map((candidate) => (
           <button
-            key={m}
-            onClick={() => setMetric(m)}
-            className={`px-3 py-1 text-xs font-medium rounded-full border transition-all ${
-              metric === m
-                ? 'bg-brand-600 border-brand-500 text-white'
-                : 'border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-300'
-            }`}
+            key={candidate}
+            type="button"
+            onClick={() => setMetric(candidate)}
+            className={`chart-toggle ${metric === candidate ? 'chart-toggle-active' : ''}`}
           >
-            {m === 'cases'
+            {candidate === 'cases'
               ? (lang === 'zh' ? '病例数' : 'Cases')
               : (lang === 'zh' ? '死亡数' : 'Deaths')}
           </button>
         ))}
       </div>
+      <span className="chart-chip">{lang === 'zh' ? `${years.length} 个年份` : `${years.length} years`}</span>
+      <span className="chart-chip">{lang === 'zh' ? `峰值 ${peakValue.toLocaleString()}` : `Peak ${peakValue.toLocaleString()}`}</span>
+    </>
+  );
 
-      {!hasData ? (
-        <div className="flex items-center justify-center h-40 text-slate-500 text-sm">
-          {lang === 'zh' ? '暂无数据' : 'No data available'}
-        </div>
-      ) : (
+  const note = lang === 'zh'
+    ? '按自然月比较不同年份的总量，适合观察季节性和异常月份。图例已从绘图区移出，避免遮挡柱体。'
+    : 'Compare calendar-month totals across years to reveal seasonality and unusual peaks. The legend is kept outside the plotting area.';
+
+  const legend = (
+    <div className="chart-legend">
+      {years.map((year, index) => {
+        const values = MONTH_NAMES.map((monthName) => {
+          const monthIndex = grouped[year].months.indexOf(monthName);
+          return monthIndex >= 0 ? grouped[year].values[monthIndex] : 0;
+        });
+        const yearlyTotal = values.reduce((sum, value) => sum + value, 0);
+        return (
+          <div className="chart-legend-item" key={year}>
+            <div className="chart-legend-row">
+              <span
+                className="chart-legend-swatch"
+                style={{ backgroundColor: YEAR_COLORS[index % YEAR_COLORS.length] }}
+              />
+              <div>
+                <div className="chart-legend-name">{year}</div>
+                <div className="chart-legend-meta">
+                  {lang === 'zh' ? '年度合计' : 'Year total'} {yearlyTotal.toLocaleString()}
+                  {' · '}
+                  {lang === 'zh' ? '峰值月' : 'Peak month'} {MONTH_NAMES[values.indexOf(Math.max(...values))]}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  const table = (
+    <>
+      <div className="data-preview-meta">
+        {lang === 'zh'
+          ? `原始月度数据预览。行表示月份，列表示年份，单元格显示 ${metricLabel}。`
+          : `Raw monthly data preview. Rows show calendar months, columns show years, and each cell reports ${metricLabel}.`}
+      </div>
+      <table className="data-preview-table">
+        <thead>
+          <tr>
+            <th className="is-sticky">{lang === 'zh' ? '月份' : 'Month'}</th>
+            {years.map((year) => (
+              <th key={year}>{year}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {MONTH_NAMES.map((monthName) => (
+            <tr key={monthName}>
+              <td className="is-sticky">{monthName}</td>
+              {years.map((year) => {
+                const monthIndex = grouped[year].months.indexOf(monthName);
+                const value = monthIndex >= 0 ? grouped[year].values[monthIndex] : null;
+                return <td key={`${year}-${monthName}`}>{formatCellValue(value)}</td>;
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </>
+  );
+
+  return (
+    <ChartFrame
+      lang={lang}
+      toolbar={toolbar}
+      note={note}
+      chart={({ isFullscreen }) => (
         <EChartsReact
           echarts={echarts}
           option={option}
           notMerge
-          style={{ width: '100%', height }}
+          style={{
+            width: '100%',
+            height: isFullscreen ? 'clamp(500px, calc(100vh - 250px), 820px)' : height,
+          }}
         />
       )}
-    </div>
+      table={table}
+      legend={legend}
+      sourceMeta={sourceMeta}
+    />
   );
 }

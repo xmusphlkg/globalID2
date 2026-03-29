@@ -22,14 +22,17 @@ const accentColor: Record<string, string> = {
 };
 ---
 
-<div class="site-stat-grid grid grid-cols-2 sm:grid-cols-4 gap-px rounded-xl overflow-hidden border">
+<div class="site-stat-grid grid grid-cols-2 sm:grid-cols-4 gap-px rounded-none overflow-hidden border">
   {stats.map(({ label, labelZh, value, accent = 'blue' }) => (
-    <div class="site-stat-item px-6 py-5 text-center">
-      <div class={`text-3xl font-bold tabular-nums ${accentColor[accent] ?? 'text-brand-400'}`}>
+    <div class="site-stat-item px-6 py-6 text-center">
+      <div class="academic-kicker mb-2">
+        <span data-lang-en={label} data-lang-zh={labelZh}>{label}</span>
+      </div>
+      <div class={`font-serif text-3xl font-semibold tabular-nums ${accentColor[accent] ?? 'text-brand-400'}`}>
         {value}
       </div>
-      <div class="text-sm text-slate-500 mt-1">
-        <span data-lang-en={label} data-lang-zh={labelZh}>{label}</span>
+      <div class="site-count-muted text-sm mt-2">
+        <span data-lang-en="Current snapshot" data-lang-zh="当前快照">Current snapshot</span>
       </div>
     </div>
   ))}
