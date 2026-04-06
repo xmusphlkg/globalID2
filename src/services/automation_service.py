@@ -17,7 +17,7 @@ from src.core import get_config, get_database, get_logger
 from src.core.source_scopes import canonicalize_task_source
 from src.domain import AutomationJob, Country, Task, TaskWorkbook
 from src.services.crawl_task_service import crawl_task_service
-from src.services.graph_email_service import graph_email_service
+from src.services.smtp_email_service import smtp_email_service
 
 logger = get_logger(__name__)
 
@@ -362,14 +362,14 @@ class AutomationService:
             "poll_interval_seconds": cfg.poll_interval_seconds,
             "default_retry_threshold": cfg.default_retry_threshold,
             "admin_emails": cfg.admin_emails,
-            "email_enabled": graph_email_service.is_configured(),
+            "email_enabled": smtp_email_service.is_configured(),
             "last_tick_at": _iso(self._last_tick_at),
             "jobs": jobs_payload,
         }
 
     async def notify_task_failure_if_needed(self, task_uuid: str) -> None:
         cfg = self._config()
-        if not cfg.admin_emails or not graph_email_service.is_configured():
+        if not cfg.admin_emails or not smtp_email_service.is_configured():
             return
 
         async with get_database() as db:
@@ -403,7 +403,7 @@ class AutomationService:
                 workbook_entries=workbook_entries,
                 retry_threshold=retry_threshold,
             )
-            sent = graph_email_service.send_email(
+            sent = smtp_email_service.send_email(
                 recipients=cfg.admin_emails,
                 subject=f"[GlobalID] Task failed after retries: {task.task_name}",
                 body_html=body,

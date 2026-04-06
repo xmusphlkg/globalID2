@@ -1,7 +1,7 @@
 """
 GlobalID V2 Email Service
 
-邮件服务：统一通过 Microsoft Graph 发送邮件
+邮件服务：统一通过 SMTP 发送邮件
 """
 
 from __future__ import annotations
@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Optional
 
 from src.core import get_logger
-from src.services.graph_email_service import graph_email_service
+from src.services.smtp_email_service import smtp_email_service
 
 logger = get_logger(__name__)
 
@@ -19,12 +19,12 @@ class EmailService:
     """
     统一邮件服务门面。
 
-    兼容原有调用方式，但底层全部走 Microsoft Graph。
+    兼容原有调用方式，但底层全部走 SMTP。
     """
 
     def __init__(self) -> None:
-        self._service = graph_email_service
-        logger.info("EmailService initialized (provider: Microsoft Graph)")
+        self._service = smtp_email_service
+        logger.info("EmailService initialized (provider: SMTP)")
 
     def is_configured(self) -> bool:
         return self._service.is_configured()

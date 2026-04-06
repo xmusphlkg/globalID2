@@ -147,6 +147,8 @@ export default function SourcesAutomationPage() {
 
   useTaskWebSocket({ extraQueryKeys: [["sources-automation"], ["sources-automation-jobs"], ["sources-flow"]] });
 
+  const schedulerEnabled = Boolean(config?.enabled);
+
   const summary = useMemo(() => {
     const list = jobs ?? [];
     return {
@@ -292,9 +294,24 @@ export default function SourcesAutomationPage() {
         </h1>
         <Text>
           {lang === "zh"
-            ? "这里可以新增、修改、删除自动化抓取任务；邮件收件人与 Microsoft Graph 凭证仍通过 env 管理。"
-            : "Create, edit, and delete automation jobs here; email recipients and Microsoft Graph credentials remain env-managed."}
+            ? "这里可以新增、修改、删除自动化抓取任务；邮件收件人与 SMTP 凭证仍通过 env 管理。"
+            : "Create, edit, and delete automation jobs here; email recipients and SMTP credentials remain env-managed."}
         </Text>
+        {!isLoading && !schedulerEnabled ? (
+          <div className="rounded-tremor-default border border-rose-300 bg-rose-50 p-4 text-sm text-rose-900 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-200">
+            <div className="flex items-center gap-2 font-medium">
+              <AlertTriangle className="h-4 w-4" />
+              {lang === "zh"
+                ? "自动化总开关当前是关闭状态，已保存的 job 不会自动创建爬取任务。"
+                : "The scheduler is currently disabled, so saved jobs will not create crawl tasks automatically."}
+            </div>
+            <Text className="mt-2">
+              {lang === "zh"
+                ? "请在 `.env` 中将 `AUTOMATION__ENABLED` 设为 `true`，然后重启 API 服务。"
+                : "Set `AUTOMATION__ENABLED=true` in `.env`, then restart the API service."}
+            </Text>
+          </div>
+        ) : null}
         <div className="flex flex-wrap gap-3 pt-2">
           <Link
             href="/sources/tasks?scope=all"
@@ -376,10 +393,10 @@ export default function SourcesAutomationPage() {
                 <div className="rounded-tremor-default border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
                   <div className="flex items-center gap-2 font-medium">
                     <AlertTriangle className="h-4 w-4" />
-                    Microsoft Graph mail is not fully configured.
+                    SMTP mail is not fully configured.
                   </div>
                   <Text className="mt-2">
-                    Set `AUTOMATION__GRAPH_ENABLED=true` and provide tenant, client, secret, and sender user id in `.env`.
+                    Set `AUTOMATION__SMTP_HOST`, `SMTP_USERNAME`, `SMTP_PASSWORD`, and `SMTP_FROM_EMAIL` in `.env`.
                   </Text>
                 </div>
               ) : null}
@@ -627,7 +644,13 @@ export default function SourcesAutomationPage() {
 
         <Card className="lg:col-span-2">
           <Title>Automation Jobs</Title>
-          <Text className="mt-1">Jobs here are stored in the database and used directly by the scheduler.</Text>
+          <Text className="mt-1">
+            {schedulerEnabled
+              ? "Jobs here are stored in the database and used directly by the scheduler."
+              : (lang === "zh"
+                ? "这些 job 已经保存在数据库里，但当前调度器总开关关闭，所以它们不会自动运行。"
+                : "These jobs are stored in the database, but the scheduler is disabled, so they will not run automatically.")}
+          </Text>
 
           <div className="mt-4 space-y-4">
             {isLoading ? (
@@ -674,7 +697,11 @@ export default function SourcesAutomationPage() {
                   <Grid numItemsSm={2} numItemsLg={4} className="mt-4 gap-3">
                     <Card className="p-3">
                       <Text>Next run</Text>
-                      <Text className="mt-1 font-medium">{formatDateTime(job.next_run_at)}</Text>
+                      <Text className="mt-1 font-medium">
+                        {schedulerEnabled
+                          ? formatDateTime(job.next_run_at)
+                          : (lang === "zh" ? "调度器已关闭" : "Scheduler off")}
+                      </Text>
                     </Card>
                     <Card className="p-3">
                       <Text>Last status</Text>

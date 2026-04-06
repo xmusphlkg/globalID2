@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-03-29T04:01:57.421673+00:00",
+  "fetched_at": "2026-04-05T22:46:02.243876+00:00",
   "disease": "Hepatitis A",
   "year": 2026,
   "month": 3,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1774756917157)/",
-            "rootActivityId": "2e44095e-d7b4-4f56-b4e6-acb872996e70",
+            "timestamp": "/Date(1775429161890)/",
+            "rootActivityId": "d4524ab8-919b-4bc6-84bc-90ec3ccefcb0",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'11'"
+                          "A0": "'15'"
                         }
                       ]
                     },
@@ -388,7 +388,7 @@
                         {
                           "C": [
                             "NSW",
-                            "'6'"
+                            "'7'"
                           ]
                         },
                         {
@@ -445,7 +445,7 @@
   },
   "parsed_counts": {
     "ACT": 0,
-    "NSW": 6,
+    "NSW": 7,
     "NT": 0,
     "QLD": 0,
     "SA": "'<5'",

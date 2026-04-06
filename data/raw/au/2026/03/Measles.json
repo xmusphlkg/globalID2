@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-03-29T04:01:58.733926+00:00",
+  "fetched_at": "2026-04-05T22:46:04.353827+00:00",
   "disease": "Measles",
   "year": 2026,
   "month": 3,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1774756918257)/",
-            "rootActivityId": "748a983a-32db-46d3-a1ab-571f87ba9ba9",
+            "timestamp": "/Date(1775429163992)/",
+            "rootActivityId": "4c310bfa-3109-4b72-ac3c-4194020a2422",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'25'"
+                          "A0": "'28'"
                         }
                       ]
                     },
@@ -388,7 +388,7 @@
                         {
                           "C": [
                             "NSW",
-                            "'15'"
+                            "'18'"
                           ]
                         },
                         {
@@ -445,7 +445,7 @@
   },
   "parsed_counts": {
     "ACT": 0,
-    "NSW": 15,
+    "NSW": 18,
     "NT": 0,
     "QLD": "'<5'",
     "SA": 0,

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-21T00:00:00+00:00",
+  "generated_at": "2026-04-01T00:00:00+00:00",
   "total_countries": 4,
   "total_diseases": 155,
   "total_reports": 1,
@@ -8,12 +8,12 @@
       "code": "AU",
       "name": "Australia",
       "language": "en-AU",
-      "total_cases": 20051291,
+      "total_cases": 20061490,
       "total_deaths": 0,
       "disease_count": 66,
       "date_range": {
         "start": "2000-01-01",
-        "end": "2026-03-01"
+        "end": "2026-04-01"
       },
       "source_info": {
         "country_code": "AU",
@@ -90,12 +90,12 @@
       "code": "JP",
       "name": "Japan",
       "language": "ja-JP",
-      "total_cases": 47831948,
+      "total_cases": 47896223,
       "total_deaths": 0,
       "disease_count": 86,
       "date_range": {
         "start": "2012-09-14",
-        "end": "2026-03-21"
+        "end": "2026-03-28"
       },
       "source_info": {
         "country_code": "JP",
@@ -122,12 +122,12 @@
       "code": "US",
       "name": "United States",
       "language": "en-US",
-      "total_cases": 15986562,
+      "total_cases": 16004480,
       "total_deaths": 0,
       "disease_count": 64,
       "date_range": {
         "start": "2006-01-07",
-        "end": "2026-03-21"
+        "end": "2026-03-28"
       },
       "source_info": {
         "country_code": "US",

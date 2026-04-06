@@ -176,11 +176,12 @@ class AutomationSettings(_BaseEnvSettings):
     default_retry_threshold: int = Field(default=3, ge=1, le=20, description="失败告警触发阈值")
     jobs_json: str = Field(default="[]", description="自动化任务 JSON 列表")
     admin_emails_raw: str = Field(default="", description="管理员邮箱，逗号分隔")
-    graph_enabled: bool = Field(default=False, description="是否启用 Microsoft Graph 邮件通知")
-    graph_tenant_id: str = Field(default="", description="Azure tenant id")
-    graph_client_id: str = Field(default="", description="Azure client id")
-    graph_client_secret: str = Field(default="", description="Azure client secret")
-    graph_sender_user_id: str = Field(default="", description="Microsoft Graph 发件人 user id")
+    smtp_host: str = Field(default="", description="SMTP 服务器地址 (如 email-smtp.us-east-1.amazonaws.com)")
+    smtp_port: int = Field(default=587, description="SMTP 端口 (587=STARTTLS, 465=SSL)")
+    smtp_username: str = Field(default="", description="SMTP 用户名 (AWS SES SMTP_USER_NAME)")
+    smtp_password: str = Field(default="", description="SMTP 密码 (AWS SES SMTP_USER_PASSWORD)")
+    smtp_from_email: str = Field(default="", description="发件人邮箱地址")
+    smtp_use_tls: bool = Field(default=True, description="是否使用 STARTTLS (否则使用 SMTP_SSL)")
 
     @property
     def admin_emails(self) -> list[str]:
