@@ -88,6 +88,10 @@ async def task_lifecycle(task: Task, *, report_id_ref: Optional[list] = None, ex
             error_message=str(exc),
         )
         try:
+            await automation_service.notify_task_retry_if_needed(task.task_uuid)
+        except Exception as notify_exc:
+            logger.warning(f"Retry warning skipped for {task.task_uuid}: {notify_exc}")
+        try:
             await automation_service.notify_task_failure_if_needed(task.task_uuid)
         except Exception as notify_exc:
             logger.warning(f"Failure notification skipped for {task.task_uuid}: {notify_exc}")
