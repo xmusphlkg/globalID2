@@ -187,7 +187,7 @@ const features = [
     <div class="home-hero-noise-layer absolute inset-0 hero-noise" />
   </div>
 
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32 w-full relative z-10">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-0 py-24 sm:py-32 w-full relative z-10">
     <div class="grid lg:grid-cols-2 gap-16 items-center">
 
       <!-- Left: copy -->
@@ -297,14 +297,14 @@ const features = [
 
 <!-- ═══════════════════════ STATS ════════════════════════ -->
 <section class="home-band home-band-stat">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-0 py-16">
     <StatBar stats={stats} />
   </div>
 </section>
 
 <!-- ══════════════════════ COUNTRIES ═════════════════════ -->
 <section class="home-band">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-16 card">
   <div class="home-section-header flex items-center justify-between mb-8">
     <div>
       <h2 class="section-heading" data-lang-en="Countries" data-lang-zh="国家">Countries</h2>
@@ -332,7 +332,7 @@ const features = [
 
 <!-- ══════════════════════ DISEASES ══════════════════════ -->
 <section class="home-band">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-16 card">
   <div class="home-section-header flex items-center justify-between mb-8">
     <div>
       <h2 class="section-heading" data-lang-en="Disease Directory" data-lang-zh="疾病目录">Disease Directory</h2>
@@ -379,7 +379,7 @@ const features = [
 <!-- ═══════════════════ LATEST REPORTS ══════════════════ -->
 {reports.length > 0 && (
   <section class="home-band">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-16 card">
     <div class="home-section-header flex items-center justify-between mb-8">
       <div>
         <h2 class="section-heading" data-lang-en="Latest Reports" data-lang-zh="最新报告">Latest Reports</h2>
@@ -411,7 +411,7 @@ const features = [
 
 <!-- ══════════════════════ OPEN SOURCE CTA ══════════════════ -->
 <section class="home-band home-band-cta">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-0 py-24">
   <div class="relative overflow-hidden rounded-none oss-cta p-8 sm:p-10 lg:p-12">
     <!-- Background decoration -->
     <div class="absolute inset-0 -z-10 pointer-events-none">
@@ -621,31 +621,9 @@ html[data-theme='dark'] .home-page {
 .home-band > div {
   position: relative;
   overflow: hidden;
-  border: 1px solid var(--home-band-shell-border);
-  background: var(--home-band-shell-bg);
-  box-shadow: var(--home-band-shell-shadow);
 }
 
-.home-band > div::before {
-  content: '';
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 1px;
-  background: linear-gradient(90deg, rgb(var(--color-brand) / 0.54), rgb(var(--color-accent) / 0.2), transparent 82%);
-  pointer-events: none;
-}
 
-.home-band-stat > div,
-.home-band-cta > div {
-  border: none;
-  background: transparent;
-  box-shadow: none;
-}
-
-.home-band-stat > div::before,
-.home-band-cta > div::before {
-  display: none;
-}
 
 .home-section-header {
   position: relative;

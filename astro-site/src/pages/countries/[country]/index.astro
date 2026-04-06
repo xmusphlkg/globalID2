@@ -98,12 +98,12 @@ const countryDataUrl = countryDownload?.site_json_path ?? `/site-data/countries/
     { label: countryData?.country_name ?? country.toUpperCase() },
   ]}
 >
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
     <section class="academic-hero">
       <div class="flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
         <div class="space-y-4">
-          <p class="academic-kicker" data-lang-en="Country Surveillance Brief" data-lang-zh="国家监测简报">
-            Country Surveillance Brief
+          <p class="academic-kicker" data-lang-en="Country Surveillance Brief | National infectious disease profile" data-lang-zh="国家监测简报 | 国家传染病监测概览">
+            Country Surveillance Brief | National infectious disease profile
           </p>
           <div class="flex items-center gap-3">
             <CountryFlag
@@ -111,15 +111,12 @@ const countryDataUrl = countryDownload?.site_json_path ?? `/site-data/countries/
               name={countryData?.country_name ?? country.toUpperCase()}
               sizeClass="w-10 h-8"
             />
-            <span class="text-sm uppercase tracking-[0.18em] text-slate-500">{countryData?.country_code ?? country.toUpperCase()}</span>
+            <span class="text-sm uppercase tracking-[0.18em] text-[rgb(var(--text-muted))]">{countryData?.country_code ?? country.toUpperCase()}</span>
           </div>
           <div>
             <h1 class="academic-title">
               {countryData?.country_name ?? country.toUpperCase()}
             </h1>
-            <p class="academic-subtitle mt-2" data-lang-en="National infectious disease surveillance overview" data-lang-zh="国家传染病监测概览">
-              National infectious disease surveillance overview
-            </p>
           </div>
           <p class="academic-lead" data-lang-en="This page consolidates time-series surveillance records, comparative tables, and machine-readable downloads for formal reporting and exploratory review." data-lang-zh="本页整合了时间序列监测记录、疾病对比表和机器可读下载文件，适用于正式汇报与探索性分析。">
             This page consolidates time-series surveillance records, comparative tables, and machine-readable downloads for formal reporting and exploratory review.
@@ -150,17 +147,22 @@ const countryDataUrl = countryDownload?.site_json_path ?? `/site-data/countries/
       </div>
     </section>
 
-    {stats.length > 0 && <StatBar stats={stats} />}
+    {stats.length > 0 && (
+        <section class="figure-panel">
+            <h2 class="figure-title" data-lang-en="Snapshot | Core surveillance indicators for this country." data-lang-zh="概览 | 该国家核心监测指标。">
+              Snapshot | Core surveillance indicators for this country.
+            </h2>
+          <div class="mt-5">
+            <StatBar stats={stats} />
+          </div>
+        </section>
+      )}
 
     <section class="figure-panel">
-      <p class="figure-kicker" data-lang-en="Figure 1" data-lang-zh="图 1">Figure 1</p>
-      <h2 class="figure-title" data-lang-en="Epidemic Curve — Top 10 Diseases" data-lang-zh="流行曲线 — 前 10 种疾病">
-        Epidemic Curve — Top 10 Diseases
-      </h2>
-      <p class="figure-caption" data-lang-en="Default metric uses weekly-equivalent case normalization to support fairer cross-country comparison while preserving the original reporting rhythm." data-lang-zh="默认指标采用周等价病例折算，在保留原始报告节奏的同时提高跨国比较的可比性。">
-        Default metric uses weekly-equivalent case normalization to support fairer cross-country comparison while preserving the original reporting rhythm.
-      </p>
-      <div class="mt-6">
+        <h2 class="figure-title" data-lang-en="Figure 1 | Epidemic curve for the top 10 diseases (weekly-equivalent normalized cases)." data-lang-zh="图 1 | 前 10 种疾病流行曲线（周等价标准化病例）。">
+          Figure 1 | Epidemic curve for the top 10 diseases (weekly-equivalent normalized cases).
+        </h2>
+      <div class="mt-5">
         {countryData?.disease_series ? (
           <EpidemicCurve
             client:only="react"
@@ -180,20 +182,16 @@ const countryDataUrl = countryDownload?.site_json_path ?? `/site-data/countries/
             </div>
           </EpidemicCurve>
         ) : (
-          <div class="card p-8 text-center text-slate-500">No time-series data available</div>
+          <div class="card p-8 text-center text-[rgb(var(--text-muted))]">No time-series data available</div>
         )}
       </div>
     </section>
 
     <section class="figure-panel">
-      <p class="figure-kicker" data-lang-en="Figure 2" data-lang-zh="图 2">Figure 2</p>
-      <h2 class="figure-title" data-lang-en="Disease × Month Heatmap" data-lang-zh="疾病 × 月份热图">
-        Disease × Month Heatmap
-      </h2>
-      <p class="figure-caption" data-lang-en="All diseases across the full surveillance period using calendar-month aggregation. The heatmap uses a logarithmic scale to preserve visibility for both low-incidence and high-incidence diseases." data-lang-zh="展示整个监测周期内所有疾病的自然月聚合结果。热图采用对数刻度，以兼顾低发病和高发病疾病的可读性。">
-        All diseases across the full surveillance period using calendar-month aggregation. The heatmap uses a logarithmic scale to preserve visibility for both low-incidence and high-incidence diseases.
-      </p>
-      <div class="mt-6">
+        <h2 class="figure-title" data-lang-en="Figure 2 | Disease-month heatmap across the full coverage period (log-scaled case intensity)." data-lang-zh="图 2 | 全覆盖期疾病-月份热图（对数病例强度）。">
+          Figure 2 | Disease-month heatmap across the full coverage period (log-scaled case intensity).
+        </h2>
+      <div class="mt-5">
         {(countryData?.disease_series || countryData?.heatmap?.z?.length) ? (
           <DiseaseHeatmap
             client:only="react"
@@ -212,20 +210,16 @@ const countryDataUrl = countryDownload?.site_json_path ?? `/site-data/countries/
             </div>
           </DiseaseHeatmap>
         ) : (
-          <div class="card p-8 text-center text-slate-500">No heatmap data available</div>
+          <div class="card p-8 text-center text-[rgb(var(--text-muted))]">No heatmap data available</div>
         )}
       </div>
     </section>
 
     <section class="figure-panel">
-      <p class="figure-kicker" data-lang-en="Table 1" data-lang-zh="表 1">Table 1</p>
-      <h2 class="figure-title" data-lang-en="Disease Comparison Table" data-lang-zh="疾病对比表格">
-        Disease Comparison Table
-      </h2>
-      <p class="figure-caption" data-lang-en="Totals and latest values come from the reported series and are intended to be read alongside the normalized trend view above." data-lang-zh="表中总量与最新值来自原始报告序列，建议与上方的标准化趋势图结合阅读。">
-        Totals and latest values come from the reported series and are intended to be read alongside the normalized trend view above.
-      </p>
-      <div class="mt-6">
+        <h2 class="figure-title" data-lang-en="Table 1 | Disease burden comparison with reported totals and latest observations." data-lang-zh="表 1 | 疾病负担对比（含报告总量与最新观测值）。">
+          Table 1 | Disease burden comparison with reported totals and latest observations.
+        </h2>
+      <div class="mt-5">
         {diseaseRows.length > 0 ? (
           <ComparisonTable
             client:only="react"
@@ -245,24 +239,20 @@ const countryDataUrl = countryDownload?.site_json_path ?? `/site-data/countries/
             </div>
           </ComparisonTable>
         ) : (
-          <div class="card p-8 text-center text-slate-500">No disease data available</div>
+          <div class="card p-8 text-center text-[rgb(var(--text-muted))]">No disease data available</div>
         )}
       </div>
     </section>
 
     {reports.length > 0 && (
-      <section>
+      <section class="figure-panel">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between mb-6">
           <div>
-            <p class="academic-kicker" data-lang-en="Recent documents" data-lang-zh="近期文档">Recent documents</p>
-            <h2 class="academic-section-title" data-lang-en="Recent Reports" data-lang-zh="近期报告">
-              Recent Reports
+            <h2 class="figure-title" data-lang-en="Recent Reports | Latest machine-generated analyses for this country." data-lang-zh="近期报告 | 该国家最新自动化生成分析。">
+              Recent Reports | Latest machine-generated analyses for this country.
             </h2>
-            <p class="academic-section-intro" data-lang-en="Most recent machine-generated analyses for this country, ordered by report publication time." data-lang-zh="按发布时间排序展示该国家最近生成的分析报告。">
-              Most recent machine-generated analyses for this country, ordered by report publication time.
-            </p>
           </div>
-          <a href={`/countries/${country}/reports/`} class="text-sm text-brand-400 hover:text-brand-300 transition-colors">
+          <a href={`/countries/${country}/reports/`} class="text-sm font-semibold text-brand-500 hover:text-brand-400 transition-colors">
             <span data-lang-en="View all reports →" data-lang-zh="查看全部报告 →">View all reports →</span>
           </a>
         </div>
@@ -287,9 +277,9 @@ const countryDataUrl = countryDownload?.site_json_path ?? `/site-data/countries/
     {countryDownload && (
       <DownloadPanel
         entry={countryDownload}
-        title="Download Country Dataset"
-        descriptionEn="Download the full country dataset backing this page in JSON or CSV, with source metadata included."
-        descriptionZh="下载当前国家页面对应的完整数据集，支持 JSON 和 CSV，并附带数据源信息。"
+        title="Supplementary Data | Country surveillance dataset"
+        descriptionEn="Machine-readable country surveillance dataset (JSON/CSV) with source metadata."
+        descriptionZh="可下载机器可读国家监测数据集（JSON/CSV），含数据源元信息。"
       />
     )}
   </div>

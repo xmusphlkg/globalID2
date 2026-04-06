@@ -43,13 +43,15 @@ const categoryZh: Record<string, string> = {
 };
 
 const categoryStyles: Record<string, string> = {
-  Viral: 'bg-blue-500/15 text-blue-300 ring-1 ring-blue-500/30',
-  Bacterial: 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/30',
-  Parasitic: 'bg-green-500/15 text-green-300 ring-1 ring-green-500/30',
-  Fungal: 'bg-purple-500/15 text-purple-300 ring-1 ring-purple-500/30',
+  Viral: 'badge-viral',
+  Bacterial: 'badge-bacterial',
+  Parasitic: 'badge-parasitic',
+  Fungal: 'badge-fungal',
 };
 
-const badgeClass = categoryStyles[diseaseData?.category] ?? 'bg-slate-500/15 text-slate-300 ring-1 ring-slate-500/30';
+const badgeClass = categoryStyles[diseaseData?.category] ?? 'badge-other';
+const officialIntroEn = diseaseData?.official_intro_en ?? diseaseData?.official_summary_en ?? null;
+const officialIntroZh = diseaseData?.official_intro_zh ?? diseaseData?.official_summary_zh ?? null;
 
 function fmtNum(n: number | null | undefined) {
   if (!n) return '0';
@@ -92,86 +94,119 @@ const diseaseDataUrl = diseaseDownload?.site_json_path ?? `/site-data/diseases/$
     { label: diseaseData?.name_en ?? disease },
   ]}
 >
-  <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
     {!diseaseData ? (
-      <div class="text-center py-24 text-slate-500">
+      <div class="card p-10 sm:p-12 text-center text-[rgb(var(--text-muted))]">
         Disease data not found. <a href="/diseases/" class="text-brand-400 hover:underline">← Back to directory</a>
       </div>
     ) : (
       <>
         <section class="academic-hero">
-          <div class="flex items-start justify-between flex-wrap gap-4 mb-6">
-            <div class="space-y-4">
-              <p class="academic-kicker" data-lang-en="Disease Monograph" data-lang-zh="疾病专题档案">
-                Disease Monograph
-              </p>
-              <span class={`inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ${badgeClass}`}>
-                <span data-lang-en={diseaseData.category} data-lang-zh={categoryZh[diseaseData.category] ?? diseaseData.category}>
-                  {diseaseData.category}
-                </span>
-              </span>
-            </div>
-            <div class="flex items-center gap-3 text-xs text-slate-600 font-mono">
-              {diseaseData.icd_10 && <span>ICD-10: {diseaseData.icd_10}</span>}
-              {diseaseData.icd_11 && <span>ICD-11: {diseaseData.icd_11}</span>}
-            </div>
-          </div>
-
-          <h1 class="academic-title mb-2">
-            <span data-lang-en={diseaseData.name_en} data-lang-zh={diseaseData.name_zh}>
-              {diseaseData.name_en}
-            </span>
-          </h1>
-          <p class="academic-subtitle mb-5">
-            <span data-lang-en={diseaseData.name_zh} data-lang-zh={diseaseData.name_en}>
-              {diseaseData.name_zh}
-            </span>
-          </p>
-
-          {diseaseData.description && (
-            <p class="academic-lead border-t border-slate-700/50 pt-5">
-              {diseaseData.description}
+          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[rgb(var(--border))/0.68] pb-3">
+            <p class="academic-kicker" data-lang-en="Disease Profile" data-lang-zh="疾病画像">
+              Disease Profile
             </p>
-          )}
-
-          <div class="academic-meta-grid mt-6 pt-6 border-t border-slate-700/50">
-            <div class="academic-meta-item">
-              <div class="academic-meta-label" data-lang-en="Total cases" data-lang-zh="累计病例">Total cases</div>
-              <div class="academic-meta-value font-serif">{fmtNum(diseaseData.total_cases)}</div>
-            </div>
-            {hasDeathsData && (
-              <div class="academic-meta-item">
-                <div class="academic-meta-label" data-lang-en="Total deaths" data-lang-zh="累计死亡">Total deaths</div>
-                <div class="academic-meta-value font-serif text-red-400">{fmtNum(diseaseData.total_deaths)}</div>
-              </div>
-            )}
-            <div class="academic-meta-item">
-              <div class="academic-meta-label" data-lang-en="Peak month" data-lang-zh="峰值月份">Peak month</div>
-              <div class="academic-meta-value font-serif text-amber-400">{peakMonth}</div>
-            </div>
-            <div class="academic-meta-item">
-              <div class="academic-meta-label" data-lang-en="Coverage" data-lang-zh="覆盖区间">Coverage</div>
-              <div class="academic-meta-value text-sm font-medium">{coverageLabel}</div>
-            </div>
+            <span class={`inline-flex items-center rounded-none px-2.5 py-0.5 text-xs font-semibold ${badgeClass}`}>
+              <span data-lang-en={diseaseData.category} data-lang-zh={categoryZh[diseaseData.category] ?? diseaseData.category}>
+                {diseaseData.category}
+              </span>
+            </span>
           </div>
 
-          <div class="academic-note mt-6">
-            <span data-lang-en="Coverage spans " data-lang-zh="当前条目覆盖 ">Coverage spans </span>
-            <span class="font-semibold text-slate-200">{countryCount}</span>
-            <span data-lang-en=" reporting countries in the harmonised site dataset." data-lang-zh=" 个国家的标准化站点数据。"> reporting countries in the harmonised site dataset.</span>
+          <div class="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(260px,320px)] 2xl:grid-cols-[minmax(0,1.12fr)_minmax(280px,340px)] xl:items-start">
+            <div class="space-y-4">
+              <div>
+                <h1 class="academic-title leading-tight">
+                  <span data-lang-en={diseaseData.name_en} data-lang-zh={diseaseData.name_zh}>
+                    {diseaseData.name_en}
+                  </span>
+                </h1>
+                <p class="academic-subtitle mt-2">
+                  <span data-lang-en={diseaseData.name_zh} data-lang-zh={diseaseData.name_en}>
+                    {diseaseData.name_zh}
+                  </span>
+                </p>
+              </div>
+
+              <div class="border border-[rgb(var(--border))/0.7] bg-[rgb(var(--surface))/0.72] px-4 py-3">
+                <p class="academic-kicker" data-lang-en="Official Brief (Reserved)" data-lang-zh="官方简介（预留）">
+                  Official Brief (Reserved)
+                </p>
+                {officialIntroEn ? (
+                  <p class="mt-2 text-sm leading-6 text-[rgb(var(--text))]" data-lang-en={officialIntroEn} data-lang-zh={officialIntroZh ?? officialIntroEn}>
+                    {officialIntroEn}
+                  </p>
+                ) : (
+                  <p class="mt-2 text-sm leading-6 text-[rgb(var(--text-muted))]" data-lang-en="Reserved for an official disease introduction from source agencies." data-lang-zh="此处预留给后续从官方机构抓取的疾病基础介绍。">
+                    Reserved for an official disease introduction from source agencies.
+                  </p>
+                )}
+              </div>
+
+              <p class="text-sm leading-6 text-[rgb(var(--text-muted))]">
+                <span data-lang-en="Coverage spans " data-lang-zh="当前条目覆盖 ">Coverage spans </span>
+                <span class="font-semibold text-[rgb(var(--text-strong))]">{countryCount}</span>
+                <span data-lang-en=" reporting countries in the harmonised site dataset." data-lang-zh=" 个国家的标准化站点数据。"> reporting countries in the harmonised site dataset.</span>
+              </p>
+            </div>
+
+            <aside class="space-y-4 border border-[rgb(var(--border))/0.72] bg-[rgb(var(--bg-soft))/0.38] px-4 py-4">
+              <div>
+                <p class="academic-kicker" data-lang-en="Coding Register" data-lang-zh="编码登记">Coding Register</p>
+                <div class="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+                  {diseaseData.icd_10 && (
+                    <div class="border border-[rgb(var(--border))/0.68] bg-[rgb(var(--surface))/0.72] px-3 py-2">
+                      <div class="academic-meta-label">ICD-10</div>
+                      <div class="mt-1 font-mono text-sm text-[rgb(var(--text-strong))]">{diseaseData.icd_10}</div>
+                    </div>
+                  )}
+                  {diseaseData.icd_11 && (
+                    <div class="border border-[rgb(var(--border))/0.68] bg-[rgb(var(--surface))/0.72] px-3 py-2">
+                      <div class="academic-meta-label">ICD-11</div>
+                      <div class="mt-1 font-mono text-sm text-[rgb(var(--text-strong))]">{diseaseData.icd_11}</div>
+                    </div>
+                  )}
+                  {!diseaseData.icd_10 && !diseaseData.icd_11 && (
+                    <div class="border border-[rgb(var(--border))/0.68] bg-[rgb(var(--surface))/0.72] px-3 py-2 text-sm text-[rgb(var(--text-muted))]" data-lang-en="No ICD coding available" data-lang-zh="暂无 ICD 编码">
+                      No ICD coding available
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <p class="academic-kicker" data-lang-en="Key Statistics" data-lang-zh="核心统计">Key Statistics</p>
+                <div class="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+                  <div class="academic-meta-item">
+                    <div class="academic-meta-label" data-lang-en="Total cases" data-lang-zh="累计病例">Total cases</div>
+                    <div class="academic-meta-value font-serif">{fmtNum(diseaseData.total_cases)}</div>
+                  </div>
+                  {hasDeathsData && (
+                    <div class="academic-meta-item">
+                      <div class="academic-meta-label" data-lang-en="Total deaths" data-lang-zh="累计死亡">Total deaths</div>
+                      <div class="academic-meta-value font-serif text-red-400">{fmtNum(diseaseData.total_deaths)}</div>
+                    </div>
+                  )}
+                  <div class="academic-meta-item">
+                    <div class="academic-meta-label" data-lang-en="Peak month" data-lang-zh="峰值月份">Peak month</div>
+                    <div class="academic-meta-value font-serif text-amber-400">{peakMonth}</div>
+                  </div>
+                  <div class="academic-meta-item">
+                    <div class="academic-meta-label" data-lang-en="Coverage" data-lang-zh="覆盖区间">Coverage</div>
+                    <div class="academic-meta-value text-sm font-medium">{coverageLabel}</div>
+                  </div>
+                </div>
+              </div>
+            </aside>
           </div>
         </section>
 
         {countryCount > 0 && (
           <section class="figure-panel">
-            <p class="figure-kicker" data-lang-en="Figure 1" data-lang-zh="图 1">Figure 1</p>
-            <h2 class="figure-title" data-lang-en="Full Historical Trend" data-lang-zh="完整历史趋势">
-              Full Historical Trend
-            </h2>
-            <p class="figure-caption" data-lang-en="Country-level historical trajectories for this disease across all available reporting jurisdictions." data-lang-zh="展示该疾病在所有可用报告国家中的历史变化轨迹。">
-              Country-level historical trajectories for this disease across all available reporting jurisdictions.
-            </p>
-            <div class="mt-6">
+              <h2 class="figure-title" data-lang-en="Figure 1 | Full historical trajectories across all reporting countries." data-lang-zh="图 1 | 全部报告国家的完整历史轨迹。">
+                Figure 1 | Full historical trajectories across all reporting countries.
+              </h2>
+              <div class="mt-5">
               <DiseaseCountryCurve
                 client:only="react"
                 dataUrl={diseaseDataUrl}
@@ -185,14 +220,10 @@ const diseaseDataUrl = diseaseDownload?.site_json_path ?? `/site-data/diseases/$
 
         {diseaseData.global_monthly?.months?.length > 0 && (
           <section class="figure-panel">
-            <p class="figure-kicker" data-lang-en="Figure 2" data-lang-zh="图 2">Figure 2</p>
-            <h2 class="figure-title" data-lang-en="Year-over-Year Monthly Comparison" data-lang-zh="逐年月度对比">
-              Year-over-Year Monthly Comparison
-            </h2>
-            <p class="figure-caption" data-lang-en="Calendar-month totals compared year over year to highlight seasonality and structural shifts in reporting intensity." data-lang-zh="按自然月进行逐年对比，用于观察季节性及报告强度的结构性变化。">
-              Calendar-month totals compared year over year to highlight seasonality and structural shifts in reporting intensity.
-            </p>
-            <div class="mt-6">
+              <h2 class="figure-title" data-lang-en="Figure 2 | Year-over-year monthly comparison for seasonality and structural shifts." data-lang-zh="图 2 | 逐年月度对比，用于识别季节性与结构性变化。">
+                Figure 2 | Year-over-year monthly comparison for seasonality and structural shifts.
+              </h2>
+              <div class="mt-5">
               <DiseaseMonthlyBar
                 client:only="react"
                 dataUrl={diseaseDataUrl}
@@ -206,14 +237,14 @@ const diseaseDataUrl = diseaseDownload?.site_json_path ?? `/site-data/diseases/$
         {diseaseDownload && (
           <DownloadPanel
             entry={diseaseDownload}
-            title="Download Disease Dataset"
-            descriptionEn="Download the full multi-country disease dataset behind this page in JSON or CSV, including source metadata."
-            descriptionZh="下载当前疾病页面对应的多国家数据集，支持 JSON 和 CSV，并附带数据源信息。"
+            title="Supplementary Data | Multi-country disease dataset"
+            descriptionEn="Machine-readable multi-country disease dataset (JSON/CSV) with source metadata."
+            descriptionZh="可下载机器可读多国家疾病数据集（JSON/CSV），含数据源元信息。"
           />
         )}
 
-        <div class="border-t border-slate-800 pt-4">
-          <a href="/diseases/" class="flex items-center gap-2 text-sm text-slate-500 transition-colors hover:text-brand-400">
+        <div class="border-t border-[rgb(var(--border))/0.72] pt-4">
+          <a href="/diseases/" class="flex items-center gap-2 text-sm text-[rgb(var(--text-muted))] transition-colors hover:text-brand-500">
             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
             </svg>
