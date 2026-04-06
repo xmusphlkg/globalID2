@@ -25,44 +25,37 @@ const deathsDisplay = totalDeaths > 0 ? fmtNum(totalDeaths) : '-';
 
 <a
   href={href}
-  class="card site-card-link p-6 block group"
+  class="card site-card-link p-4 pt-3 block group relative overflow-hidden"
 >
-  <div class="flex items-start justify-between mb-4">
-    <div class="flex items-center gap-3">
-      <CountryFlag code={code} name={name} />
-      <div>
-        <h3 class="text-[rgb(var(--text-strong))] font-semibold text-lg group-hover:text-brand-700 dark:group-hover:text-brand-400 transition-colors">
-          {name}
-        </h3>
-        <span class="text-[rgb(var(--text-faint))] text-xs font-mono tracking-[0.12em] uppercase">{code}</span>
-      </div>
+  <div class="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-brand-500 via-brand-400 to-transparent opacity-80"></div>
+  <div class="flex items-center gap-3 mb-3">
+    <CountryFlag code={code} name={name} sizeClass="w-8 h-6" />
+    <div class="flex-1 min-w-0">
+      <h3 class="text-[rgb(var(--text-strong))] font-semibold text-base truncate group-hover:text-brand-700 dark:group-hover:text-brand-400 transition-colors">
+        {name}
+      </h3>
+      <span class="text-[rgb(var(--text-faint))] text-[10px] font-mono tracking-[0.12em] uppercase">{code}</span>
     </div>
-    <svg class="mt-1 h-4 w-4 text-[rgb(var(--text-faint))] group-hover:text-brand-700 dark:group-hover:text-brand-400 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-    </svg>
   </div>
 
-  <div class="grid grid-cols-3 gap-3 border-t border-[rgb(var(--border))/0.72] pt-4">
+  <div class="grid grid-cols-3 gap-3 border-t border-[rgb(var(--border))/0.68] pt-3">
     <div class="text-center">
-      <div class="font-serif text-2xl font-semibold tabular-nums text-[rgb(var(--text-strong))]">{fmtNum(totalCases)}</div>
-      <div class="mt-1 text-[11px] uppercase tracking-[0.14em] text-[rgb(var(--text-faint))]" data-lang-en="Total Cases" data-lang-zh="累计病例">Total Cases</div>
+      <div class="font-serif text-lg font-semibold tabular-nums text-[rgb(var(--text-strong))]">{fmtNum(totalCases)}</div>
+      <div class="mt-0.5 text-[10px] uppercase tracking-wider text-[rgb(var(--text-faint))]" data-lang-en="Cases" data-lang-zh="病例">Cases</div>
     </div>
     <div class="text-center">
-      <div class="font-serif text-2xl font-semibold tabular-nums text-red-500 dark:text-red-400">{deathsDisplay}</div>
-      <div class="mt-1 text-[11px] uppercase tracking-[0.14em] text-[rgb(var(--text-faint))]" data-lang-en="Deaths" data-lang-zh="死亡">Deaths</div>
+      <div class="font-serif text-lg font-semibold tabular-nums text-red-500 dark:text-red-400">{deathsDisplay}</div>
+      <div class="mt-0.5 text-[10px] uppercase tracking-wider text-[rgb(var(--text-faint))]" data-lang-en="Deaths" data-lang-zh="死亡">Deaths</div>
     </div>
     <div class="text-center">
-      <div class="font-serif text-2xl font-semibold tabular-nums text-teal-600 dark:text-teal-400">{diseaseCount}</div>
-      <div class="mt-1 text-[11px] uppercase tracking-[0.14em] text-[rgb(var(--text-faint))]" data-lang-en="Diseases" data-lang-zh="疾病数">Diseases</div>
+      <div class="font-serif text-lg font-semibold tabular-nums text-teal-600 dark:text-teal-400">{diseaseCount}</div>
+      <div class="mt-0.5 text-[10px] uppercase tracking-wider text-[rgb(var(--text-faint))]" data-lang-en="Diseases" data-lang-zh="疾病">Diseases</div>
     </div>
   </div>
 
   {dateRange?.start && (
-    <div class="mt-4 pt-3 border-t border-[rgb(var(--border))/0.68]">
-      <span class="text-xs text-[rgb(var(--text-faint))]">
-        <span data-lang-en="Data range" data-lang-zh="数据区间">Data range</span>:&nbsp;
-        {dateRange.start} → {dateRange.end ?? 'present'}
-      </span>
+    <div class="mt-2 pt-2 border-t border-[rgb(var(--border))/0.68] text-xs text-[rgb(var(--text-faint))] tabular-nums">
+      {dateRange.start} – {dateRange.end ?? 'Present'}
     </div>
   )}
 </a>

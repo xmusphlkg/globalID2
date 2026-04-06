@@ -5,20 +5,43 @@ import DiseaseCard from '../../components/DiseaseCard.astro';
 import diseasesRaw from '../../data/diseases/index.json';
 
 const diseases = diseasesRaw as any[];
-const categories = ['Viral', 'Bacterial', 'Parasitic', 'Fungal'];
+
+const normalizeCategory = (value: unknown) => {
+  const text = typeof value === 'string' ? value.trim() : '';
+  return text.length ? text : 'Other';
+};
+
+const normalizedDiseases = diseases.map((d) => ({
+  ...d,
+  normalized_category: normalizeCategory(d.category),
+}));
+
+const preferredCategories = ['Viral', 'Bacterial', 'Parasitic', 'Fungal'];
+const discoveredCategories = [
+  ...new Set(normalizedDiseases.map((d) => d.normalized_category)),
+] as string[];
+const categories = [
+  ...preferredCategories.filter((cat) => discoveredCategories.includes(cat)),
+  ...discoveredCategories.filter((cat) => !preferredCategories.includes(cat)),
+];
 
 const byCategory: Record<string, any[]> = {};
-for (const d of diseases) {
-  const cat = d.category ?? 'Other';
+for (const d of normalizedDiseases) {
+  const cat = d.normalized_category;
   if (!byCategory[cat]) byCategory[cat] = [];
   byCategory[cat].push(d);
 }
 
 const catZh: Record<string, string> = {
-  Viral: '病毒性', Bacterial: '细菌性', Parasitic: '寄生虫', Fungal: '真菌性',
+  Viral: '病毒性',
+  Bacterial: '细菌性',
+  Parasitic: '寄生虫',
+  Fungal: '真菌性',
+  Other: '其他',
 };
+
 const catCounts = Object.fromEntries(
-  categories.map(c => [c, (byCategory[c] ?? []).length])
+  categories.map((c) => [c, (byCategory[c] ?? []).length]),
 );
 ---
 
@@ -27,61 +50,96 @@ const catCounts = Object.fromEntries(
   description={`Browse ${diseases.length} infectious diseases tracked by GIDS`}
   breadcrumbs={[{ label: 'Diseases' }]}
 >
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+  <div class="diseases-page max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+    <section class="card diseases-intro p-6 sm:p-8">
+      <div class="diseases-intro-grid">
+        <div>
+          <h1 class="section-heading" data-lang-en="Disease Directory" data-lang-zh="疾病目录">
+            Disease Directory
+          </h1>
+          <p class="diseases-intro-copy mt-3" data-lang-en={`${diseases.length} infectious diseases tracked across categories`} data-lang-zh={`追踪 ${diseases.length} 种传染病，按分类组织`}>
+            {diseases.length} infectious diseases tracked across categories
+          </p>
+        </div>
 
-    <!-- Header + category tabs (client-side filtering) -->
-    <div class="mb-10">
-      <h1 class="text-3xl font-bold text-slate-100 mb-3" data-lang-en="Disease Directory" data-lang-zh="疾病目录">
-        Disease Directory
-      </h1>
-      <p class="text-slate-500">
-        <span data-lang-en={`${diseases.length} infectious diseases tracked across categories`} data-lang-zh={`追踪 ${diseases.length} 种传染病，按分类组织`}>
-          {diseases.length} infectious diseases tracked across categories
-        </span>
-      </p>
-    </div>
-
-    <!-- Search + filter toolbar (progressive enhancement via <details>) -->
-    <div class="mb-8 flex flex-wrap items-center gap-3">
-      <input
-        id="disease-search"
-        type="search"
-        placeholder="Search diseases…"
-        class="site-control-input w-full sm:w-72 px-3 py-2 text-sm rounded-none border focus:outline-none focus:ring-2 focus:ring-brand-500"
-      />
-      <div class="flex items-center gap-2 flex-wrap" id="cat-filters">
-        <button class="cat-filter-btn active px-3 py-1.5 text-xs rounded-none border border-brand-500 bg-brand-600 text-white font-medium" data-cat="All">
-          All ({diseases.length})
-        </button>
-        {categories.map(cat => (
-          <button
-            class="cat-filter-btn site-control-pill px-3 py-1.5 text-xs rounded-none border font-medium transition-all"
-            data-cat={cat}
-          >
-            <span data-lang-en={cat} data-lang-zh={catZh[cat] ?? cat}>{cat}</span>
-            &nbsp;({catCounts[cat] ?? 0})
-          </button>
-        ))}
+        <div class="diseases-meta-grid">
+          <article class="diseases-meta-card">
+            <div class="diseases-meta-label" data-lang-en="Diseases" data-lang-zh="疾病总数">Diseases</div>
+            <div class="diseases-meta-value">{diseases.length}</div>
+          </article>
+          <article class="diseases-meta-card">
+            <div class="diseases-meta-label" data-lang-en="Categories" data-lang-zh="分类数量">Categories</div>
+            <div class="diseases-meta-value">{categories.length}</div>
+          </article>
+        </div>
       </div>
-    </div>
 
-    <!-- Disease grid (each section has data-cat for client hiding) -->
-    {categories.map(cat => {
+      <div class="diseases-toolbar mt-6">
+        <div class="diseases-search-row">
+          <input
+            id="disease-search"
+            type="search"
+            placeholder="Search diseases or ICD code..."
+            class="site-control-input diseases-search w-full px-3 py-2 text-sm rounded-none border focus:outline-none focus:ring-2 focus:ring-brand-500"
+          />
+          <button
+            id="clear-disease-search"
+            type="button"
+            class="site-action-secondary px-3 py-2 text-xs rounded-none border font-semibold transition-colors"
+            data-lang-en="Clear"
+            data-lang-zh="清除"
+            aria-label="Clear search"
+            disabled
+          >
+            Clear
+          </button>
+        </div>
+
+        <div class="diseases-filter-row" id="cat-filters">
+          <button
+            class="cat-filter-btn site-control-pill is-active px-3 py-1.5 text-xs rounded-none border transition-colors"
+            data-cat="All"
+          >
+            <span data-lang-en={`All (${diseases.length})`} data-lang-zh={`全部（${diseases.length}）`}>
+              All ({diseases.length})
+            </span>
+          </button>
+          {categories.map((cat) => (
+            <button
+              class="cat-filter-btn site-control-pill px-3 py-1.5 text-xs rounded-none border transition-colors"
+              data-cat={cat}
+            >
+              <span data-lang-en={`${cat} (${catCounts[cat] ?? 0})`} data-lang-zh={`${catZh[cat] ?? cat}（${catCounts[cat] ?? 0}）`}>
+                {cat} ({catCounts[cat] ?? 0})
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    {categories.map((cat) => {
       const catDiseases = byCategory[cat] ?? [];
       return (
-        <div class="cat-section mb-12" data-cat={cat}>
-          <h2 class="text-slate-400 text-xs font-semibold uppercase tracking-widest mb-5 flex items-center gap-2">
-            <span data-lang-en={cat} data-lang-zh={catZh[cat] ?? cat}>{cat}</span>
-            <span class="site-count-muted">({catDiseases.length})</span>
-          </h2>
-          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4" id={`grid-${cat.toLowerCase()}`}>
-            {catDiseases.map(d => (
-              <div class="disease-card-wrap" data-name-en={d.name_en.toLowerCase()} data-name-zh={d.name_zh}>
+        <section class="cat-section card diseases-category p-5 sm:p-6" data-cat={cat}>
+          <div class="diseases-category-header">
+            <h2 class="diseases-category-title" data-lang-en={cat} data-lang-zh={catZh[cat] ?? cat}>{cat}</h2>
+            <span class="diseases-category-count">{catDiseases.length}</span>
+          </div>
+
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4" id={`grid-${cat.toLowerCase().replace(/\s+/g, '-')}`}>
+            {catDiseases.map((d) => (
+              <div
+                class="disease-card-wrap"
+                data-name-en={(d.name_en ?? '').toLowerCase()}
+                data-name-zh={(d.name_zh ?? '').toLowerCase()}
+                data-icd={(d.icd_10 ?? '').toLowerCase()}
+              >
                 <DiseaseCard
                   diseaseId={d.disease_id}
                   nameEn={d.name_en}
                   nameZh={d.name_zh}
-                  category={d.category}
+                  category={d.normalized_category}
                   icd10={d.icd_10}
                   description={d.description}
                   slug={d.slug}
@@ -89,56 +147,59 @@ const catCounts = Object.fromEntries(
               </div>
             ))}
           </div>
-        </div>
+        </section>
       );
     })}
 
-    <div id="no-results" class="hidden text-center py-16 text-slate-500">
-      No diseases found matching your search.
+    <div id="no-results" class="card diseases-empty hidden p-10 sm:p-12 text-center">
+      <p class="diseases-empty-title" data-lang-en="No diseases found" data-lang-zh="未找到匹配疾病">
+        No diseases found
+      </p>
+      <p class="diseases-empty-copy mt-2" data-lang-en="Try a different keyword, category, or ICD code." data-lang-zh="请尝试其他关键词、分类或 ICD 编码。">
+        Try a different keyword, category, or ICD code.
+      </p>
     </div>
   </div>
 </ReportLayout>
 
 <script>
-  const searchInput = document.getElementById('disease-search') as HTMLInputElement;
-  const filterBtns = document.querySelectorAll<HTMLButtonElement>('.cat-filter-btn');
-  const sections = document.querySelectorAll<HTMLElement>('.cat-section');
-  const noResults = document.getElementById('no-results')!;
+  const searchInput = document.getElementById('disease-search') as HTMLInputElement | null;
+  const clearBtn = document.getElementById('clear-disease-search') as HTMLButtonElement | null;
+  const filterBtns = Array.from(document.querySelectorAll<HTMLButtonElement>('.cat-filter-btn'));
+  const sections = Array.from(document.querySelectorAll<HTMLElement>('.cat-section'));
+  const noResults = document.getElementById('no-results') as HTMLElement | null;
 
   let activeCat = 'All';
 
-  filterBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      activeCat = btn.dataset.cat ?? 'All';
-      filterBtns.forEach(b => {
-        const isActive = b.dataset.cat === activeCat;
-        b.classList.toggle('active', isActive);
-        b.classList.toggle('border-brand-500', isActive);
-        b.classList.toggle('bg-brand-600', isActive);
-        b.classList.toggle('text-white', isActive);
-        b.classList.toggle('site-control-pill', !isActive);
-      });
-      applyFilters();
+  function updateFilterButtonState() {
+    filterBtns.forEach((btn) => {
+      const isActive = btn.dataset.cat === activeCat;
+      btn.classList.toggle('is-active', isActive);
     });
-  });
-
-  searchInput?.addEventListener('input', applyFilters);
+  }
 
   function applyFilters() {
-    const q = searchInput?.value.toLowerCase() ?? '';
+    const q = (searchInput?.value ?? '').trim().toLowerCase();
     let anyVisible = false;
 
-    sections.forEach(section => {
+    sections.forEach((section) => {
       const cat = section.dataset.cat ?? '';
       const showSection = activeCat === 'All' || activeCat === cat;
-      if (!showSection) { section.classList.add('hidden'); return; }
+
+      if (!showSection) {
+        section.classList.add('hidden');
+        return;
+      }
 
       let sectionHasVisible = false;
-      section.querySelectorAll<HTMLElement>('.disease-card-wrap').forEach(card => {
-        const nameEn = card.dataset.nameEn ?? '';
-        const nameZh = card.dataset.nameZh ?? '';
-        const matches = !q || nameEn.includes(q) || nameZh.includes(q);
+      section.querySelectorAll<HTMLElement>('.disease-card-wrap').forEach((card) => {
+        const nameEn = (card.dataset.nameEn ?? '').toLowerCase();
+        const nameZh = (card.dataset.nameZh ?? '').toLowerCase();
+        const icd = (card.dataset.icd ?? '').toLowerCase();
+
+        const matches = !q || nameEn.includes(q) || nameZh.includes(q) || icd.includes(q);
         card.classList.toggle('hidden', !matches);
+
         if (matches) sectionHasVisible = true;
       });
 
@@ -146,6 +207,181 @@ const catCounts = Object.fromEntries(
       if (sectionHasVisible) anyVisible = true;
     });
 
-    noResults.classList.toggle('hidden', anyVisible);
+    if (noResults) noResults.classList.toggle('hidden', anyVisible);
+    if (clearBtn) clearBtn.disabled = q.length === 0;
   }
+
+  filterBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      activeCat = btn.dataset.cat ?? 'All';
+      updateFilterButtonState();
+      applyFilters();
+    });
+  });
+
+  searchInput?.addEventListener('input', applyFilters);
+  searchInput?.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      searchInput.value = '';
+      applyFilters();
+    }
+  });
+
+  clearBtn?.addEventListener('click', () => {
+    if (!searchInput) return;
+    searchInput.value = '';
+    searchInput.focus();
+    applyFilters();
+  });
+
+  updateFilterButtonState();
+  applyFilters();
 </script>
+
+<style>
+.diseases-intro-grid {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.diseases-intro-copy {
+  max-width: 48rem;
+  color: rgb(var(--text-muted));
+  line-height: 1.75;
+}
+
+.diseases-meta-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.diseases-meta-card {
+  border: 1px solid rgb(var(--border) / 0.72);
+  background: rgb(var(--surface) / 0.84);
+  padding: 0.9rem 1rem;
+}
+
+.diseases-meta-label {
+  color: rgb(var(--text-faint));
+  letter-spacing: 0.14em;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.diseases-meta-value {
+  margin-top: 0.55rem;
+  color: rgb(var(--text-strong));
+  font-family: 'Source Serif 4', serif;
+  font-size: 1.85rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.diseases-toolbar {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.diseases-search-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.diseases-search {
+  flex: 1 1 18rem;
+}
+
+.diseases-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.cat-filter-btn.is-active {
+  border-color: rgb(var(--color-brand) / 0.92);
+  background: rgb(var(--color-brand));
+  color: rgb(255 255 255);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12);
+}
+
+.cat-filter-btn:disabled {
+  opacity: 0.62;
+  cursor: not-allowed;
+}
+
+.diseases-category-header {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1.1rem;
+  padding-left: 0.9rem;
+}
+
+.diseases-category-header::before {
+  content: '';
+  position: absolute;
+  inset: 0.18rem auto 0.18rem 0;
+  width: 3px;
+  background: linear-gradient(180deg, rgb(var(--color-brand) / 0.82), rgb(var(--color-accent) / 0.56));
+}
+
+.diseases-category-title {
+  color: rgb(var(--text-strong));
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.diseases-category-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.2rem;
+  border: 1px solid rgb(var(--border) / 0.74);
+  background: rgb(var(--surface) / 0.88);
+  padding: 0.18rem 0.5rem;
+  color: rgb(var(--text-faint));
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.diseases-empty-title {
+  color: rgb(var(--text-strong));
+  font-family: 'Source Serif 4', serif;
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+.diseases-empty-copy {
+  color: rgb(var(--text-muted));
+}
+
+@media (min-width: 1024px) {
+  .diseases-intro-grid {
+    grid-template-columns: minmax(0, 1.3fr) minmax(240px, 0.7fr);
+    align-items: end;
+  }
+
+  .diseases-toolbar {
+    gap: 0.9rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .diseases-meta-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .diseases-category-header {
+    align-items: center;
+  }
+}
+</style>

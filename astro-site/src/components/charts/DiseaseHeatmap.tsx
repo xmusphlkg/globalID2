@@ -1,7 +1,7 @@
 // src/components/charts/DiseaseHeatmap.tsx
 // OWID-style heatmap with ECharts rendering, adaptive width, and scrollable disease axis.
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import EChartsReact from 'echarts-for-react/lib/core';
 import echarts from '../../lib/echarts';
 import ChartFrame from './ChartFrame';
@@ -14,6 +14,11 @@ import {
 
 type HeatmapData = CountryDatasetHeatmap;
 type DiseaseSeriesEntry = CountryDatasetSeriesEntry;
+
+type ZoomWindow = {
+  startValue: number;
+  endValue: number;
+};
 
 interface Props {
   data?: HeatmapData | null;
@@ -55,6 +60,7 @@ export default function DiseaseHeatmap({ data = null, series: initialSeries, dat
     if (typeof window !== 'undefined') return (localStorage.getItem('lang') as 'en' | 'zh') || 'en';
     return 'en';
   });
+  const [zoomWindow, setZoomWindow] = useState<ZoomWindow>({ startValue: 0, endValue: 13 });
 
   useEffect(() => {
     if (typeof document === 'undefined') return;
@@ -206,50 +212,141 @@ export default function DiseaseHeatmap({ data = null, series: initialSeries, dat
   );
 
   const chartHeight = Math.max(460, height);
-  const leftLabelSpace = Math.min(280, Math.max(180, longestLabelLength * 6.6 + 28));
   const monthCellWidth = activeData.months.length > 180 ? 10 : activeData.months.length > 120 ? 12 : activeData.months.length > 72 ? 14 : 18;
-  const minChartWidth = Math.max(960, leftLabelSpace + activeData.months.length * monthCellWidth + 40);
   const monthLabelInterval = Math.max(0, Math.ceil(activeData.months.length / 18) - 1);
   const visibleDiseaseCount = Math.min(
     activeData.disease_labels.length,
     activeData.disease_labels.length > 48 ? 18 : activeData.disease_labels.length > 28 ? 16 : 14
   );
+  const needsVerticalZoom = activeData.disease_labels.length > visibleDiseaseCount;
+  const verticalZoomEnd = Math.max(0, visibleDiseaseCount - 1);
+  const maxDiseaseIndex = Math.max(0, activeData.disease_labels.length - 1);
+  const fixedAxisWidth = Math.min(232, Math.max(124, longestLabelLength * 5.4 + (needsVerticalZoom ? 18 : 6)));
+  const labelMaxChars = Math.max(16, Math.min(30, Math.floor((fixedAxisWidth - (needsVerticalZoom ? 38 : 14)) / 5.2)));
+  const labelPixelWidth = Math.max(92, fixedAxisWidth - (needsVerticalZoom ? 34 : 12));
+  const minHeatmapWidth = Math.max(720, activeData.months.length * monthCellWidth + 24);
 
-  const option = useMemo(() => {
-    const zoomControls: Array<Record<string, unknown>> = [];
+  useEffect(() => {
+    const initialEnd = needsVerticalZoom ? Math.min(verticalZoomEnd, maxDiseaseIndex) : maxDiseaseIndex;
+    setZoomWindow({ startValue: 0, endValue: initialEnd });
+  }, [maxDiseaseIndex, needsVerticalZoom, verticalZoomEnd]);
 
-    if (activeData.disease_labels.length > visibleDiseaseCount) {
-      zoomControls.push(
-        {
-          type: 'inside' as const,
-          yAxisIndex: 0,
-          filterMode: 'weakFilter' as const,
-          zoomOnMouseWheel: false,
-          moveOnMouseWheel: true,
-          moveOnMouseMove: true,
-        },
-        {
-          type: 'slider' as const,
-          yAxisIndex: 0,
-          right: 6,
-          top: 16,
-          bottom: 58,
-          width: 10,
-          filterMode: 'weakFilter' as const,
-          startValue: 0,
-          endValue: Math.max(0, visibleDiseaseCount - 1),
-          borderColor: chartColors.line,
-          backgroundColor: chartColors.sliderBg,
-          fillerColor: chartColors.fillerColor,
-          showDetail: false,
-          showDataShadow: false,
-          brushSelect: false,
-        },
-      );
-    }
+  const handleYAxisZoom = useCallback((_params: unknown, chart: any) => {
+    if (!needsVerticalZoom) return;
+    const option = chart?.getOption?.();
+    const zooms = Array.isArray(option?.dataZoom) ? option.dataZoom : [];
+    if (!zooms.length) return;
 
+    const source = zooms.find((item: any) => item.type === 'slider') ?? zooms[0];
+    const rawStart = Number.isFinite(source?.startValue) ? Number(source.startValue) : 0;
+    const rawEnd = Number.isFinite(source?.endValue) ? Number(source.endValue) : verticalZoomEnd;
+    const nextStart = Math.max(0, Math.min(rawStart, maxDiseaseIndex));
+    const nextEnd = Math.max(nextStart, Math.min(rawEnd, maxDiseaseIndex));
+
+    setZoomWindow((prev) => {
+      if (prev.startValue === nextStart && prev.endValue === nextEnd) return prev;
+      return { startValue: nextStart, endValue: nextEnd };
+    });
+  }, [maxDiseaseIndex, needsVerticalZoom, verticalZoomEnd]);
+
+  const yAxisZoomControls = useMemo(() => {
+    if (!needsVerticalZoom) return [];
+    return [
+      {
+        type: 'inside' as const,
+        yAxisIndex: 0,
+        filterMode: 'weakFilter' as const,
+        zoomOnMouseWheel: false,
+        moveOnMouseWheel: true,
+        moveOnMouseMove: true,
+        startValue: zoomWindow.startValue,
+        endValue: zoomWindow.endValue,
+      },
+      {
+        type: 'slider' as const,
+        yAxisIndex: 0,
+        right: 2,
+        top: 10,
+        bottom: 52,
+        width: 8,
+        filterMode: 'weakFilter' as const,
+        startValue: zoomWindow.startValue,
+        endValue: zoomWindow.endValue,
+        borderColor: chartColors.line,
+        backgroundColor: chartColors.sliderBg,
+        fillerColor: chartColors.fillerColor,
+        showDetail: false,
+        showDataShadow: false,
+        brushSelect: false,
+      },
+    ];
+  }, [
+    chartColors.fillerColor,
+    chartColors.line,
+    chartColors.sliderBg,
+    needsVerticalZoom,
+    zoomWindow.endValue,
+    zoomWindow.startValue,
+  ]);
+
+  const yAxisOption = useMemo(() => {
     return {
-      animationDuration: 240,
+      animationDuration: 160,
+      backgroundColor: 'transparent',
+      grid: {
+        left: 0,
+        right: needsVerticalZoom ? 20 : 4,
+        top: 10,
+        bottom: 52,
+        containLabel: true,
+      },
+      xAxis: {
+        type: 'value' as const,
+        min: 0,
+        max: 1,
+        show: false,
+      },
+      yAxis: {
+        type: 'category' as const,
+        inverse: true,
+        data: activeData.disease_labels,
+        axisLabel: {
+          color: chartColors.font,
+          fontSize: 10,
+          margin: 3,
+          width: labelPixelWidth,
+          overflow: 'truncate' as const,
+          formatter: (value: string) => value.length > labelMaxChars ? `${value.slice(0, labelMaxChars)}...` : value,
+        },
+        axisLine: { lineStyle: { color: chartColors.line } },
+        axisTick: { show: false },
+        splitLine: { show: false },
+      },
+      dataZoom: yAxisZoomControls,
+      series: [
+        {
+          type: 'bar' as const,
+          data: activeData.disease_labels.map(() => 1),
+          silent: true,
+          animation: false,
+          barWidth: '70%',
+          itemStyle: { color: 'transparent' },
+        },
+      ],
+    };
+  }, [
+    activeData.disease_labels,
+    chartColors.font,
+    chartColors.line,
+    labelMaxChars,
+    labelPixelWidth,
+    needsVerticalZoom,
+    yAxisZoomControls,
+  ]);
+
+  const heatmapOption = useMemo(() => {
+    return {
+      animationDuration: 160,
       backgroundColor: 'transparent',
       tooltip: {
         trigger: 'item',
@@ -264,10 +361,10 @@ export default function DiseaseHeatmap({ data = null, series: initialSeries, dat
         },
       },
       grid: {
-        left: leftLabelSpace,
-        right: activeData.disease_labels.length > visibleDiseaseCount ? 26 : 14,
-        top: 16,
-        bottom: 58,
+        left: 6,
+        right: 8,
+        top: 10,
+        bottom: 52,
       },
       xAxis: {
         type: 'category' as const,
@@ -286,17 +383,23 @@ export default function DiseaseHeatmap({ data = null, series: initialSeries, dat
         type: 'category' as const,
         inverse: true,
         data: activeData.disease_labels,
-        axisLabel: {
-          color: chartColors.font,
-          fontSize: 11,
-          margin: 10,
-          formatter: (value: string) => value.length > 34 ? `${value.slice(0, 34)}...` : value,
-        },
-        axisLine: { lineStyle: { color: chartColors.line } },
+        axisLabel: { show: false },
+        axisLine: { show: false },
         axisTick: { show: false },
         splitLine: { show: false },
       },
-      dataZoom: zoomControls,
+      dataZoom: needsVerticalZoom
+        ? [{
+            type: 'inside' as const,
+            yAxisIndex: 0,
+            filterMode: 'weakFilter' as const,
+            zoomOnMouseWheel: false,
+            moveOnMouseWheel: true,
+            moveOnMouseMove: true,
+            startValue: zoomWindow.startValue,
+            endValue: zoomWindow.endValue,
+          }]
+        : [],
       series: [{
         type: 'heatmap' as const,
         data: heatmapData,
@@ -325,22 +428,39 @@ export default function DiseaseHeatmap({ data = null, series: initialSeries, dat
   }, [
     activeData.disease_labels,
     activeData.months,
-    chartColors.fillerColor,
     chartColors.font,
     chartColors.hoverBg,
     chartColors.hoverBorder,
     chartColors.hoverFont,
     chartColors.line,
     chartColors.palette,
-    chartColors.sliderBg,
     heatmapData,
     lang,
-    leftLabelSpace,
     maxLogValue,
     monthLabelInterval,
+    needsVerticalZoom,
     theme,
-    visibleDiseaseCount,
+    zoomWindow.endValue,
+    zoomWindow.startValue,
   ]);
+
+  const yAxisEvents = useMemo(() => ({ datazoom: handleYAxisZoom }), [handleYAxisZoom]);
+
+  const legendGradient = useMemo(
+    () => `linear-gradient(90deg, ${chartColors.palette.join(', ')})`,
+    [chartColors.palette]
+  );
+
+  const legendBreaks = useMemo(() => {
+    const ratios = [0, 0.2, 0.4, 0.6, 0.8, 1];
+    return ratios.map((ratio) => {
+      const raw = fromLogValue(maxLogValue * ratio);
+      const label = raw >= 10000
+        ? `${Math.round(raw / 1000)}k`
+        : raw.toLocaleString();
+      return { ratio, label };
+    });
+  }, [maxLogValue]);
 
   const toolbar = (
     <>
@@ -357,8 +477,47 @@ export default function DiseaseHeatmap({ data = null, series: initialSeries, dat
   );
 
   const note = lang === 'zh'
-    ? '热图已切回 ECharts：横向默认铺满容器，月份过长时才出现横向滚动；颜色图例隐藏，疾病列表通过右侧纵向滚动条浏览。'
-    : 'The heatmap is back on ECharts: it fills the available width first and only adds horizontal scrolling for long timelines. The color legend is hidden, and diseases are browsed through the vertical range control on the right.';
+    ? '图例改为左下角横向分段（breaks）样式；y 轴标签区域已压缩并贴左，横向滚动仍只作用于热图主体与 x 轴。'
+    : 'Legend now uses a compact horizontal segmented (breaks) style at the lower-left; the y-axis label area is tightened and left-aligned, while horizontal scrolling still affects only the heatmap body and x-axis.';
+
+  const legend = (
+    <div className="pointer-events-none absolute bottom-1 left-1 z-[2]">
+      <div className="rounded-none border border-[rgb(var(--border)/0.7)] bg-[rgb(var(--surface)/0.94)] px-2 py-1.5">
+        <div className="relative w-[170px]">
+          <div
+            className="h-2 w-full rounded-none border"
+            style={{
+              background: legendGradient,
+              borderColor: chartColors.line,
+            }}
+          />
+          <div className="relative mt-1 h-4 w-full">
+            {legendBreaks.map((item, index) => (
+              <React.Fragment key={item.ratio}>
+                <span
+                  className="absolute top-0 h-2 w-px -translate-x-1/2 bg-[rgb(var(--text-faint))]"
+                  style={{ left: `${item.ratio * 100}%` }}
+                />
+                <span
+                  className="absolute top-2.5 whitespace-nowrap text-[9px] leading-none text-[rgb(var(--text-faint))]"
+                  style={{
+                    left: `${item.ratio * 100}%`,
+                    transform: index === 0
+                      ? 'translateX(0)'
+                      : index === legendBreaks.length - 1
+                        ? 'translateX(-100%)'
+                        : 'translateX(-50%)',
+                  }}
+                >
+                  {item.label}
+                </span>
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   const table = (
     <>
@@ -412,17 +571,37 @@ export default function DiseaseHeatmap({ data = null, series: initialSeries, dat
       toolbar={toolbar}
       note={note}
       chart={({ isFullscreen }) => (
-        <div className="chart-scroll-x">
-          <EChartsReact
-            echarts={echarts}
-            option={option}
-            notMerge
-            style={{
-              width: '100%',
-              minWidth: `${minChartWidth}px`,
-              height: isFullscreen ? '100%' : chartHeight,
-            }}
-          />
+        <div
+          className="grid min-h-0 w-full items-stretch gap-2"
+          style={{
+            gridTemplateColumns: `${fixedAxisWidth}px minmax(0, 1fr)`,
+          }}
+        >
+          <div className="relative min-h-0" style={{ borderRight: '1px solid rgb(var(--border) / 0.65)', paddingRight: '0.28rem' }}>
+            <EChartsReact
+              echarts={echarts}
+              option={yAxisOption}
+              onEvents={yAxisEvents}
+              notMerge
+              style={{
+                width: '100%',
+                height: isFullscreen ? '100%' : chartHeight,
+              }}
+            />
+            {legend}
+          </div>
+          <div className="chart-scroll-x">
+            <EChartsReact
+              echarts={echarts}
+              option={heatmapOption}
+              notMerge
+              style={{
+                width: '100%',
+                minWidth: `${minHeatmapWidth}px`,
+                height: isFullscreen ? '100%' : chartHeight,
+              }}
+            />
+          </div>
         </div>
       )}
       table={table}
