@@ -185,3 +185,36 @@ def _job_out(job: DataReleaseJob, state: dict | None) -> DataReleaseJobOut:
         run_count=state.get("run_count", 0),
         skipped_count=state.get("skipped_count", 0),
     )
+
+
+# --- SMTP test endpoint ---
+
+from fastapi import BackgroundTasks
+
+from src.generation.email_service import EmailService
+
+
+@router.post("/release/smtp-test")
+async def test_smtp_connection(background_tasks: BackgroundTasks):
+    """Test SMTP email configuration and optionally send a test email."""
+    service = EmailService()
+
+    if not service.is_configured():
+        raise HTTPException(
+            400,
+            "SMTP is not configured. Please set AUTOMATION__SMTP_HOST, "
+            "AUTOMATION__SMTP_USERNAME, AUTOMATION__SMTP_PASSWORD, and "
+            "AUTOMATION__SMTP_FROM_EMAIL in your .env file.",
+        )
+
+    ok = service.test_connection()
+    if not ok:
+        raise HTTPException(
+            500,
+            "SMTP connection test failed. Check your host, port, username, and password.",
+        )
+
+    return {
+        "ok": True,
+        "message": "SMTP connection successful",
+    }

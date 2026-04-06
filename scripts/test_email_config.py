@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
-"""Validate Microsoft Graph email configuration and send a test email."""
+"""Validate SMTP email configuration and send a test email."""
 
 from __future__ import annotations
 
 import argparse
-import base64
-import json
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -29,36 +27,27 @@ def _mask_secret(value: str) -> str:
     return f"{value[:2]}{'*' * (len(value) - 4)}{value[-2:]}"
 
 
-def _decode_token_claims(token: str) -> dict:
-    try:
-        payload = token.split(".")[1]
-        padding = "=" * (-len(payload) % 4)
-        return json.loads(base64.urlsafe_b64decode(payload + padding))
-    except Exception:
-        return {}
-
-
 def _validate_email_config() -> list[str]:
     automation = get_config().automation
     missing: list[str] = []
 
-    if not automation.graph_enabled:
-        missing.append("AUTOMATION__GRAPH_ENABLED=true")
-    if not automation.graph_tenant_id:
-        missing.append("AUTOMATION__GRAPH_TENANT_ID")
-    if not automation.graph_client_id:
-        missing.append("AUTOMATION__GRAPH_CLIENT_ID")
-    if not automation.graph_client_secret:
-        missing.append("AUTOMATION__GRAPH_CLIENT_SECRET")
-    if not automation.graph_sender_user_id:
-        missing.append("AUTOMATION__GRAPH_SENDER_USER_ID")
+    if not automation.smtp_host:
+        missing.append("AUTOMATION__SMTP_HOST")
+    if not automation.smtp_port:
+        missing.append("AUTOMATION__SMTP_PORT")
+    if not automation.smtp_username:
+        missing.append("AUTOMATION__SMTP_USERNAME")
+    if not automation.smtp_password:
+        missing.append("AUTOMATION__SMTP_PASSWORD")
+    if not automation.smtp_from_email:
+        missing.append("AUTOMATION__SMTP_FROM_EMAIL")
 
     return missing
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Validate Microsoft Graph email configuration and send a test email.",
+        description="Validate SMTP email configuration and send a test email.",
     )
     parser.add_argument(
         "--to",
@@ -74,12 +63,12 @@ def main() -> int:
 
     print("Email configuration check")
     print("========================")
-    print(f"Provider: Microsoft Graph")
-    print(f"Graph enabled: {automation.graph_enabled}")
-    print(f"Tenant ID: {automation.graph_tenant_id or '(empty)'}")
-    print(f"Client ID: {automation.graph_client_id or '(empty)'}")
-    print(f"Client secret: {_mask_secret(automation.graph_client_secret)}")
-    print(f"Sender user ID: {automation.graph_sender_user_id or '(empty)'}")
+    print(f"Provider: SMTP")
+    print(f"SMTP host: {automation.smtp_host or '(empty)'}")
+    print(f"SMTP port: {automation.smtp_port or '(empty)'}")
+    print(f"SMTP username: {automation.smtp_username or '(empty)'}")
+    print(f"SMTP password: {_mask_secret(automation.smtp_password)}")
+    print(f"From email: {automation.smtp_from_email or '(empty)'}")
     print(f"Target recipient: {args.to}")
     print(f"App environment: {config.app_env}")
     print()
@@ -91,44 +80,31 @@ def main() -> int:
             print(f"- {item}")
         return 1
 
-    print("Step 0/2: inspecting access token...")
-    try:
-        token = service._service.acquire_token()
-        claims = _decode_token_claims(token)
-        roles = claims.get("roles") or []
-        print(f"Token audience: {claims.get('aud', '(unknown)')}")
-        print(f"Token app id: {claims.get('appid', '(unknown)')}")
-        print(f"Token roles: {roles if roles else '(none)'}")
-        if "Mail.Send" not in roles:
-            print("Diagnostic: application permission 'Mail.Send' is missing or admin consent has not been granted.")
-    except Exception as exc:
-        print(f"Failed to inspect token: {exc}")
-        return 2
-    print()
-
-    print("Step 1/2: testing Microsoft Graph connection...")
+    print("Step 1/2: testing SMTP connection...")
     if not service.test_connection():
-        print("Microsoft Graph connection failed.")
+        print("SMTP connection failed.")
         return 3
 
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    subject = "[GlobalID] Graph test email"
+    subject = "[GlobalID] SMTP test email"
     body_text = (
-        "This is a GlobalID Microsoft Graph test email.\n\n"
+        "This is a GlobalID SMTP test email.\n\n"
         f"Sent at: {timestamp}\n"
-        f"Provider: Microsoft Graph\n"
-        f"Sender user ID: {automation.graph_sender_user_id}\n"
+        f"Provider: SMTP\n"
+        f"SMTP host: {automation.smtp_host}\n"
+        f"From: {automation.smtp_from_email}\n"
         f"To: {args.to}\n"
     )
     body_html = f"""
 <html>
   <body>
-    <h2>GlobalID Microsoft Graph Test</h2>
-    <p>This is a GlobalID Microsoft Graph test email.</p>
+    <h2>GlobalID SMTP Test</h2>
+    <p>This is a GlobalID SMTP test email.</p>
     <ul>
       <li>Sent at: {timestamp}</li>
-      <li>Provider: Microsoft Graph</li>
-      <li>Sender user ID: {automation.graph_sender_user_id}</li>
+      <li>Provider: SMTP</li>
+      <li>SMTP host: {automation.smtp_host}</li>
+      <li>From: {automation.smtp_from_email}</li>
       <li>To: {args.to}</li>
     </ul>
   </body>

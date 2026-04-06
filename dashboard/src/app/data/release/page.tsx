@@ -1,14 +1,18 @@
 "use client";
 
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Badge, Button, Card, Grid, Metric, ProgressBar, Text, Title } from "@tremor/react";
 import {
   AlertTriangle,
+  Ban,
   CheckCircle2,
+  Mail,
   ChevronDown,
   Clock3,
   Cloud,
+  ExternalLink,
   GitBranch,
+  Loader2,
   Pencil,
   Play,
   Plus,
@@ -16,6 +20,7 @@ import {
   ShieldCheck,
   Trash2,
   Wrench,
+  X,
 } from "lucide-react";
 
 import { t } from "@/lib/i18n";
@@ -28,6 +33,7 @@ import {
   useDataReleaseJobs,
   useDeleteDataReleaseJob,
   useRunDataReleaseJob,
+  useTestSmtpConnection,
   useUpdateDataReleaseJob,
 } from "@/lib/hooks/useDataRelease";
 import {
@@ -72,10 +78,26 @@ function formatDateTime(value?: string | null): string {
   return date.toLocaleString();
 }
 
+function relativeTime(value?: string | null): string {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffSec = Math.round(diffMs / 1000);
+  const diffMin = Math.round(diffSec / 60);
+  const diffHr = Math.round(diffMin / 60);
+  const diffDay = Math.round(diffHr / 24);
+  if (diffSec < 60) return `${diffSec}s ago`;
+  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffHr < 24) return `${diffHr}h ago`;
+  return `${diffDay}d ago`;
+}
+
 function scheduleLabel(job: { interval_minutes?: number | null; daily_time?: string | null; timezone?: string | null }): string {
-  if (job.interval_minutes) return `Every ${job.interval_minutes} minute(s)`;
-  if (job.daily_time) return `Daily at ${job.daily_time} (${job.timezone || "UTC"})`;
-  return "Manual or data-task completion trigger";
+  if (job.interval_minutes) return `Every ${job.interval_minutes} min`;
+  if (job.daily_time) return `Daily ${job.daily_time} (${job.timezone || "UTC"})`;
+  return "Manual / auto after data task";
 }
 
 function toForm(job: DataReleaseJob): DataReleaseJobInput {
@@ -101,54 +123,31 @@ function toForm(job: DataReleaseJob): DataReleaseJobInput {
 
 function statusColor(status: string) {
   switch (status) {
-    case "completed":
-      return "emerald" as const;
-    case "running":
-    case "queued":
-      return "amber" as const;
-    case "failed":
-      return "rose" as const;
-    case "skipped":
-    case "cancelled":
-      return "slate" as const;
-    default:
-      return "blue" as const;
+    case "completed": return "emerald" as const;
+    case "running": case "queued": return "amber" as const;
+    case "failed": return "rose" as const;
+    case "skipped": case "cancelled": return "slate" as const;
+    default: return "blue" as const;
   }
 }
 
 function RuntimeTile({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-tremor-border bg-tremor-background px-4 py-3 shadow-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background">
-      <div className="flex items-center gap-2 text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+    <div className="rounded-2xl border border-tremor-border bg-tremor-background px-3 py-2 shadow-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background">
+      <div className="flex items-center gap-1.5 text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
         {icon}
-        <span className="text-xs font-semibold uppercase tracking-[0.18em]">{label}</span>
+        <span className="text-[10px] font-semibold uppercase tracking-[0.15em]">{label}</span>
       </div>
-      <p className="mt-3 text-sm font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">{value}</p>
+      <p className="mt-1.5 text-xs font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong truncate">{value}</p>
     </div>
   );
 }
 
-function AccessDetail({
-  label,
-  value,
-  mono = false,
-}: {
-  label: string;
-  value: ReactNode;
-  mono?: boolean;
-}) {
+function AccessDetail({ label, value, mono = false }: { label: string; value: ReactNode; mono?: boolean }) {
   return (
-    <div className="rounded-2xl border border-tremor-border bg-tremor-background px-4 py-3 dark:border-dark-tremor-border dark:bg-dark-tremor-background">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
-        {label}
-      </p>
-      <div
-        className={`mt-2 text-sm text-tremor-content-strong dark:text-dark-tremor-content-strong ${
-          mono ? "break-all font-mono text-xs" : "break-words"
-        }`}
-      >
-        {value}
-      </div>
+    <div className="rounded-xl border border-tremor-border bg-tremor-background px-3 py-2 dark:border-dark-tremor-border dark:bg-dark-tremor-background">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{label}</p>
+      <div className={`mt-1 text-xs text-tremor-content-strong dark:text-dark-tremor-content-strong ${mono ? "break-all font-mono" : "break-words"}`}>{value}</div>
     </div>
   );
 }
@@ -156,655 +155,450 @@ function AccessDetail({
 function CheckOutput({ label, value }: { label: string; value?: string | null }) {
   if (!value) return null;
   return (
-    <div className="rounded-2xl border border-dashed border-tremor-border bg-tremor-background-muted/60 p-3 dark:border-dark-tremor-border dark:bg-dark-tremor-background-muted/30">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
-        {label}
-      </p>
-      <pre className="mt-2 whitespace-pre-wrap break-words font-mono text-xs text-tremor-content dark:text-dark-tremor-content">
-        {value}
-      </pre>
+    <div className="rounded-xl border border-dashed border-tremor-border bg-tremor-background-muted/60 p-2 dark:border-dark-tremor-border dark:bg-dark-tremor-background-muted/30">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{label}</p>
+      <pre className="mt-1 whitespace-pre-wrap break-words font-mono text-[11px] text-tremor-content dark:text-dark-tremor-content">{value}</pre>
     </div>
   );
 }
 
-function CollapsibleStatusSection({
-  title,
-  subtitle,
-  icon,
-  badges,
-  open,
-  onToggle,
-  children,
+// --- Modal for job create/edit ---
+function JobModal({
+  open, onClose, form, onChange, onSubmit, isSubmitting, isNew, selectedJob,
 }: {
-  title: string;
-  subtitle: string;
-  icon: ReactNode;
-  badges?: ReactNode;
   open: boolean;
-  onToggle: () => void;
-  children: ReactNode;
+  onClose: () => void;
+  form: DataReleaseJobInput;
+  onChange: (patch: Partial<DataReleaseJobInput>) => void;
+  onSubmit: () => Promise<void>;
+  isSubmitting: boolean;
+  isNew: boolean;
+  selectedJob: DataReleaseJob | null;
 }) {
-  return (
-    <Card className="overflow-hidden border border-tremor-border dark:border-dark-tremor-border">
-      <button
-        type="button"
-        className="flex w-full flex-col gap-4 text-left lg:flex-row lg:items-start lg:justify-between"
-        onClick={onToggle}
-      >
-        <div className="flex items-start gap-3">
-          <div className="rounded-2xl bg-tremor-background-muted p-3 text-tremor-content-strong dark:bg-dark-tremor-background-muted dark:text-dark-tremor-content-strong">
-            {icon}
-          </div>
-          <div>
-            <Title>{title}</Title>
-            <Text className="mt-1">{subtitle}</Text>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 self-start">
-          {badges}
-          <ChevronDown className={`h-4 w-4 text-tremor-content-subtle transition-transform ${open ? "rotate-180" : ""}`} />
-        </div>
-      </button>
+  const overlayRef = useRef<HTMLDivElement>(null);
 
-      {open ? (
-        <div className="mt-5 border-t border-tremor-border pt-5 dark:border-dark-tremor-border">
-          {children}
+  const handleOverlayClick = useCallback((e: React.MouseEvent) => {
+    if (e.target === overlayRef.current) onClose();
+  }, [onClose]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    if (open) { document.addEventListener("keydown", handler); document.body.style.overflow = "hidden"; }
+    return () => { document.removeEventListener("keydown", handler); document.body.style.overflow = ""; };
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  const ToggleField = ({ field, label }: { field: BooleanReleaseField; label: string }) => (
+    <label className="flex cursor-pointer items-center gap-2">
+      <input type="checkbox" checked={form[field] as boolean} onChange={(e) => onChange({ [field]: e.target.checked })} className="h-4 w-4 rounded border-tremor-border text-teal-600 focus:ring-teal-500" />
+      <span className="text-sm text-tremor-content dark:text-dark-tremor-content">{label}</span>
+    </label>
+  );
+
+  return (
+    <div ref={overlayRef} className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 pt-12 backdrop-blur-sm" onClick={handleOverlayClick}>
+      <div className="w-full max-w-3xl max-h-[80vh] overflow-y-auto rounded-2xl bg-white shadow-xl dark:bg-gray-900">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-tremor-border bg-white px-6 py-4 dark:border-dark-tremor-border dark:bg-gray-900">
+          <Title className="!text-lg">{isNew ? "New Release Job" : "Edit Release Job"}</Title>
+          <Button size="xs" variant="light" icon={X} onClick={onClose} />
         </div>
-      ) : null}
-    </Card>
+
+        <div className="space-y-6 p-6">
+          {/* Basic info */}
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-tremor-content-subtle dark:text-dark-tremor-content-subtle">Job ID *</label>
+              <input value={form.job_id} onChange={(e) => onChange({ job_id: e.target.value })} disabled={!isNew} placeholder="e.g. prod-main" className="w-full rounded-lg border border-tremor-border bg-tremor-background px-3 py-2 text-sm text-tremor-content-strong dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong disabled:opacity-50" />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-tremor-content-subtle dark:text-dark-tremor-content-subtle">Name *</label>
+              <input value={form.name} onChange={(e) => onChange({ name: e.target.value })} placeholder="Display name" className="w-full rounded-lg border border-tremor-border bg-tremor-background px-3 py-2 text-sm text-tremor-content-strong dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong" />
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-tremor-content-subtle dark:text-dark-tremor-content-subtle">Priority</label>
+              <select value={form.priority} onChange={(e) => onChange({ priority: e.target.value })} className="w-full rounded-lg border border-tremor-border bg-tremor-background px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background">
+                <option value="critical">Critical</option><option value="high">High</option><option value="normal">Normal</option><option value="low">Low</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-tremor-content-subtle dark:text-dark-tremor-content-subtle">Interval (min)</label>
+              <input type="number" value={form.interval_minutes ?? ""} onChange={(e) => onChange({ interval_minutes: e.target.value ? Number(e.target.value) : null })} placeholder="Leave empty for manual/auto" className="w-full rounded-lg border border-tremor-border bg-tremor-background px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background" />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-tremor-content-subtle dark:text-dark-tremor-content-subtle">Daily Time</label>
+              <input value={form.daily_time ?? ""} onChange={(e) => onChange({ daily_time: e.target.value || null })} placeholder="e.g. 02:00" className="w-full rounded-lg border border-tremor-border bg-tremor-background px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background" />
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-tremor-content-subtle dark:text-dark-tremor-content-subtle">Timezone</label>
+              <input value={form.timezone ?? ""} onChange={(e) => onChange({ timezone: e.target.value })} placeholder="UTC" className="w-full rounded-lg border border-tremor-border bg-tremor-background px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background" />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-tremor-content-subtle dark:text-dark-tremor-content-subtle">Schedule</label>
+              <p className="text-xs text-tremor-content dark:text-dark-tremor-content py-2">{scheduleLabel(form)}</p>
+            </div>
+          </div>
+
+          {/* GitHub */}
+          <div className="space-y-3 rounded-xl border border-tremor-border p-4 dark:border-dark-tremor-border">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-tremor-content-subtle dark:text-dark-tremor-content-subtle">GitHub</p>
+            <div className="grid gap-3 md:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-tremor-content-subtle dark:text-dark-tremor-content-subtle">Remote</label>
+                <input value={form.github_remote} onChange={(e) => onChange({ github_remote: e.target.value })} className="w-full rounded-lg border border-tremor-border bg-tremor-background px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-tremor-content-subtle dark:text-dark-tremor-content-subtle">Branch</label>
+                <input value={form.github_branch ?? ""} onChange={(e) => onChange({ github_branch: e.target.value })} className="w-full rounded-lg border border-tremor-border bg-tremor-background px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background" />
+              </div>
+            </div>
+          </div>
+
+          {/* Cloudflare */}
+          <div className="space-y-3 rounded-xl border border-tremor-border p-4 dark:border-dark-tremor-border">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-tremor-content-subtle dark:text-dark-tremor-content-subtle">Cloudflare</p>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-tremor-content-subtle dark:text-dark-tremor-content-subtle">Project</label>
+              <input value={form.cloudflare_project_name ?? ""} onChange={(e) => onChange({ cloudflare_project_name: e.target.value })} className="w-full rounded-lg border border-tremor-border bg-tremor-background px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background" />
+            </div>
+          </div>
+
+          {/* Commit message */}
+          <div>
+            <label className="mb-1 block text-xs font-medium text-tremor-content-subtle dark:text-dark-tremor-content-subtle">Commit Message Template</label>
+            <input value={form.commit_message_template} onChange={(e) => onChange({ commit_message_template: e.target.value })} className="w-full rounded-lg border border-tremor-border bg-tremor-background px-3 py-2 text-sm font-mono dark:border-dark-tremor-border dark:bg-dark-tremor-background" />
+          </div>
+
+          {/* Toggles */}
+          <div className="grid gap-3 md:grid-cols-2">
+            <label className="flex cursor-pointer items-center gap-2"><input type="checkbox" checked={form.enabled} onChange={(e) => onChange({ enabled: e.target.checked })} className="h-4 w-4 rounded border-tremor-border text-teal-600 focus:ring-teal-500" /><span className="text-sm text-tremor-content dark:text-dark-tremor-content">Enabled</span></label>
+            <ToggleField field="auto_after_crawls" label="Auto after data tasks" />
+            <ToggleField field="include_git_push" label="Include Git push" />
+            <ToggleField field="include_cloudflare_deploy" label="Include Cloudflare deploy" />
+            <ToggleField field="require_clean_worktree" label="Require clean worktree" />
+          </div>
+
+          {/* Notes */}
+          <div>
+            <label className="mb-1 block text-xs font-medium text-tremor-content-subtle dark:text-dark-tremor-content-subtle">Notes</label>
+            <textarea value={form.notes ?? ""} onChange={(e) => onChange({ notes: e.target.value })} rows={2} className="w-full rounded-lg border border-tremor-border bg-tremor-background px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background resize-none" />
+          </div>
+        </div>
+
+        <div className="sticky bottom-0 flex items-center justify-end gap-2 border-t border-tremor-border bg-white px-6 py-4 dark:border-dark-tremor-border dark:bg-gray-900">
+          <Button size="sm" variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button size="sm" variant="primary" onClick={onSubmit} disabled={isSubmitting || !form.job_id.trim() || !form.name.trim()} loading={isSubmitting}>
+            {isNew ? "Create" : "Save"}
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }
+
+// ======================== MAIN PAGE ========================
 
 export default function DataReleasePage() {
   const { lang } = useAppStore();
   const { data: config } = useDataReleaseConfig();
   const { data: jobs, isLoading } = useDataReleaseJobs();
   const { data: workerStatus } = useWorkerStatus();
-  const { data: releaseTasks } = useTasks(undefined, "export_data", undefined, undefined, 20);
+  const { data: releaseTasks, refetch: releaseTasksRefetch } = useTasks(undefined, "export_data", undefined, undefined, 20);
   const cancelTask = useCancelTask();
+
+  // Selection state
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
-  const [editingJobId, setEditingJobId] = useState<string | null>(null);
   const [expandedTaskUuid, setExpandedTaskUuid] = useState<string | null>(null);
-  const [showGitChecks, setShowGitChecks] = useState(false);
-  const [showCloudflareChecks, setShowCloudflareChecks] = useState(false);
+
+  // Job modal state
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingJobId, setEditingJobId] = useState<string | null>(null);
   const [form, setForm] = useState<DataReleaseJobInput>(defaultForm);
 
-  const {
-    data: checks,
-    refetch: refetchChecks,
-    isFetching: checkingAccess,
-    isLoading: loadingChecks,
-  } = useDataReleaseChecks(selectedJobId);
-  const { data: taskDetail, isFetching: detailFetching, isLoading: detailLoading } = useTaskDetail(expandedTaskUuid);
+  // SMTP test state
+  const smtpTest = useTestSmtpConnection();
+  const [smtpTestResult, setSmtpTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
+  const handleSmtpTest = async () => {
+    setSmtpTestResult(null);
+    try {
+      const result = await smtpTest.mutateAsync();
+      setSmtpTestResult({ success: true, message: result.message || "SMTP connection successful" });
+    } catch (err: unknown) {
+      const msg = err && typeof err === "object" && "response" in err && err.response && typeof err.response === "object" && "data" in err.response && err.response.data && typeof err.response.data === "object" && "detail" in err.response.data ? String(err.response.data.detail) : err && typeof err === "object" && "message" in err ? String(err.message) : String(err);
+      setSmtpTestResult({ success: false, message: msg });
+    }
+  };
+
+  // Checks
+  const { data: checks, refetch: refetchChecks, isFetching: checkingAccess, isLoading: loadingChecks } = useDataReleaseChecks(selectedJobId);
+  const { data: taskDetail } = useTaskDetail(expandedTaskUuid);
+
+  // Mutations
   const runJob = useRunDataReleaseJob();
   const createJob = useCreateDataReleaseJob();
   const updateJob = useUpdateDataReleaseJob();
   const deleteJob = useDeleteDataReleaseJob();
 
-  useTaskWebSocket({
-    extraQueryKeys: [["data-release"], ["data-release-jobs"], ["data-release-checks"], ["tasks"], ["task"]],
-  });
+  useTaskWebSocket({ extraQueryKeys: [["data-release"], ["data-release-jobs"], ["data-release-checks"], ["tasks"], ["task"]] });
 
-  useEffect(() => {
-    if (!selectedJobId && jobs?.length) {
-      setSelectedJobId(jobs[0].job_id);
-    }
-  }, [jobs, selectedJobId]);
+  useEffect(() => { if (!selectedJobId && jobs?.length) setSelectedJobId(jobs[0].job_id); }, [jobs, selectedJobId]);
 
-  useEffect(() => {
-    if (!expandedTaskUuid && releaseTasks?.length) {
-      setExpandedTaskUuid(releaseTasks[0].task_uuid);
-    }
-  }, [releaseTasks, expandedTaskUuid]);
-
-  useEffect(() => {
-    if (!checks) return;
-    if (!checks.git.read_access_ok || !checks.git.write_access_ok || checks.git.dirty_blocking_paths.length > 0) {
-      setShowGitChecks(true);
-    }
-    if (!checks.cloudflare.project_access_ok || !!checks.cloudflare.error) {
-      setShowCloudflareChecks(true);
-    }
-  }, [
-    checks?.checked_at,
-    checks?.cloudflare.error,
-    checks?.cloudflare.project_access_ok,
-    checks?.git.dirty_blocking_paths.length,
-    checks?.git.read_access_ok,
-    checks?.git.write_access_ok,
-  ]);
-
-  const selectedJob = useMemo(
-    () => jobs?.find((job) => job.job_id === selectedJobId) ?? null,
-    [jobs, selectedJobId],
-  );
+  const selectedJob = useMemo(() => jobs?.find((j) => j.job_id === selectedJobId) ?? null, [jobs, selectedJobId]);
 
   const summary = useMemo(() => {
     const rows = jobs ?? [];
-    return {
-      total: rows.length,
-      enabled: rows.filter((job) => job.enabled).length,
-      auto: rows.filter((job) => job.auto_after_crawls).length,
-      healthy: checks?.overall_ready ? 1 : 0,
-    };
-  }, [checks?.overall_ready, jobs]);
+    return { total: rows.length, enabled: rows.filter((j) => j.enabled).length, auto: rows.filter((j) => j.auto_after_crawls).length };
+  }, [jobs]);
 
-  const accessStatusLabel = !checks
-    ? (loadingChecks || checkingAccess ? "Checking access" : "Awaiting snapshot")
-    : checks.overall_ready
-      ? "Ready to release"
-      : "Preflight blocked";
-
-  const expandedTaskDetail = taskDetail?.task_uuid === expandedTaskUuid ? taskDetail : undefined;
+  const accessStatus = !checks ? (loadingChecks || checkingAccess ? "Checking…" : "Pending") : checks.overall_ready ? "Ready" : "Blocked";
+  const accessColor = !checks ? "slate" : checks.overall_ready ? "emerald" : "rose";
 
   const resetForm = () => {
     setEditingJobId(null);
-    setForm({
-      ...defaultForm,
-      timezone: config?.timezone || defaultForm.timezone,
-      github_branch: selectedJob?.github_branch || defaultForm.github_branch,
-      cloudflare_project_name: selectedJob?.cloudflare_project_name || defaultForm.cloudflare_project_name,
-    });
+    setForm({ ...defaultForm, timezone: config?.timezone || defaultForm.timezone, github_branch: selectedJob?.github_branch || defaultForm.github_branch, cloudflare_project_name: selectedJob?.cloudflare_project_name || defaultForm.cloudflare_project_name });
   };
 
-  const startEdit = (job: DataReleaseJob) => {
-    setSelectedJobId(job.job_id);
-    setEditingJobId(job.job_id);
-    setForm(toForm(job));
-  };
+  const openCreateModal = () => { setEditingJobId(null); setForm({ ...defaultForm, timezone: config?.timezone || "UTC" }); setModalOpen(true); };
+  const openEditModal = (job: DataReleaseJob) => { setEditingJobId(job.job_id); setForm(toForm(job)); setModalOpen(true); };
+  const closeModal = () => { setModalOpen(false); resetForm(); };
 
   const submitForm = async () => {
-    const payload: DataReleaseJobInput = {
-      ...form,
-      job_id: form.job_id.trim(),
-      name: form.name.trim(),
-      priority: form.priority.trim().toLowerCase(),
-      github_remote: form.github_remote.trim() || "origin",
-      github_branch: form.github_branch?.trim() || null,
-      cloudflare_project_name: form.cloudflare_project_name?.trim() || null,
-      commit_message_template: form.commit_message_template.trim() || defaultForm.commit_message_template,
-      daily_time: form.daily_time?.trim() || null,
-      timezone: form.timezone?.trim() || config?.timezone || "UTC",
-      notes: form.notes?.trim() || null,
-      interval_minutes: form.interval_minutes ? Number(form.interval_minutes) : null,
-    };
-    if (editingJobId) {
-      await updateJob.mutateAsync({ jobId: editingJobId, payload });
-    } else {
-      await createJob.mutateAsync(payload);
-      setSelectedJobId(payload.job_id);
-    }
-    resetForm();
+    const payload: DataReleaseJobInput = { ...form, job_id: form.job_id.trim(), name: form.name.trim(), priority: form.priority.trim().toLowerCase(), github_remote: form.github_remote.trim() || "origin", github_branch: form.github_branch?.trim() || null, cloudflare_project_name: form.cloudflare_project_name?.trim() || null, commit_message_template: form.commit_message_template.trim() || defaultForm.commit_message_template, daily_time: form.daily_time?.trim() || null, timezone: form.timezone?.trim() || config?.timezone || "UTC", notes: form.notes?.trim() || null, interval_minutes: form.interval_minutes ? Number(form.interval_minutes) : null };
+    if (editingJobId) await updateJob.mutateAsync({ jobId: editingJobId, payload });
+    else { await createJob.mutateAsync(payload); setSelectedJobId(payload.job_id); }
+    closeModal();
   };
 
   const removeJob = async (job: DataReleaseJob) => {
-    const ok = window.confirm(
-      lang === "zh" ? `确认删除发布任务 ${job.name} 吗？` : `Delete data release job ${job.name}?`,
-    );
-    if (!ok) return;
+    if (!window.confirm(`Delete release job "${job.name}"?`)) return;
     await deleteJob.mutateAsync(job.job_id);
     if (selectedJobId === job.job_id) setSelectedJobId(null);
-    if (editingJobId === job.job_id) resetForm();
+    if (editingJobId === job.job_id) closeModal();
   };
 
   const runSelectedJob = async (jobId: string) => {
     const result = await runJob.mutateAsync(jobId);
-    if (result.task_uuid) {
-      setExpandedTaskUuid(result.task_uuid);
-    }
+    if (result.task_uuid) setExpandedTaskUuid(result.task_uuid);
   };
 
   const handleCancelTask = async (taskUuid: string) => {
-    const ok = window.confirm(
-      lang === "zh" ? "确认取消这个发布任务吗？" : "Cancel this release task?",
-    );
-    if (!ok) return;
+    if (!window.confirm("Cancel this release task?")) return;
     await cancelTask.mutateAsync(taskUuid);
   };
 
+  const updateFormField = (patch: Partial<DataReleaseJobInput>) => setForm((prev) => ({ ...prev, ...patch }));
+
+  // Which tasks to show as collapsed
+
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 md:px-6">
-      <div className="space-y-2">
-        <Badge color="teal" className="w-fit">{t(lang, "mod_database")}</Badge>
-        <h1 className="text-3xl font-semibold tracking-tight text-tremor-content-strong dark:text-dark-tremor-content-strong">
-          {t(lang, "data_release")}
-        </h1>
-        <Text>
-          {lang === "zh"
-            ? "把站点数据导出、下载数据仓库发布、Cloudflare Pages 部署整合成一条统一工作流，支持手动运行、定时调度，以及相关数据任务完成后的自动发布。"
-            : "Unify site-data generation, download-repo publishing, and Cloudflare Pages deployment into one workflow with manual runs, scheduling, and automatic release after relevant data-update tasks finish."}
-        </Text>
+    <div className="mx-auto w-full max-w-7xl space-y-5 px-4 py-6 md:px-6">
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <Badge color="teal">{t(lang, "mod_database")}</Badge>
+            <h1 className="text-2xl font-semibold tracking-tight text-tremor-content-strong dark:text-dark-tremor-content-strong">{t(lang, "data_release")}</h1>
+          </div>
+          <Text className="text-sm">{lang === "zh" ? "统一管理站点数据导出、Git 发布和 Cloudflare 部署的工作流。" : "Unified workflow for site data export, Git publishing, and Cloudflare deployment."}</Text>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button size="xs" variant="secondary" icon={Plus} onClick={openCreateModal}>New Job</Button>
+          <Button size="xs" variant="primary" icon={Play} disabled={!selectedJob} onClick={() => selectedJob && runSelectedJob(selectedJob.job_id)}>Run Selected</Button>
+        </div>
       </div>
 
-      <Grid numItemsSm={2} numItemsLg={4} className="gap-4">
-        <Card decoration="top" decorationColor="blue">
-          <Text>Scheduler</Text>
-          <Metric>{config?.enabled ? "On" : "Off"}</Metric>
-        </Card>
-        <Card decoration="top" decorationColor="teal">
-          <Text>Jobs</Text>
-          <Metric>{summary.enabled}/{summary.total}</Metric>
-        </Card>
-        <Card decoration="top" decorationColor="amber">
-          <Text>Auto after data tasks</Text>
-          <Metric>{summary.auto}</Metric>
-        </Card>
-        <Card decoration="top" decorationColor={checks?.overall_ready ? "emerald" : "rose"}>
-          <Text>Access checks</Text>
-          <Metric>{checks?.overall_ready ? "Ready" : "Needs attention"}</Metric>
-        </Card>
+      {/* Summary cards */}
+      <Grid numItemsSm={2} numItemsLg={4} className="gap-3">
+        <Card decoration="top" decorationColor="blue"><Text>Scheduler</Text><Metric>{config?.enabled ? "On" : "Off"}</Metric></Card>
+        <Card decoration="top" decorationColor="teal"><Text>Jobs</Text><Metric>{summary.enabled}/{summary.total}</Metric></Card>
+        <Card decoration="top" decorationColor="amber"><Text>Auto Trigger</Text><Metric>{summary.auto}</Metric></Card>
+        <Card decoration="top" decorationColor={accessColor}><Text>Access</Text><Metric>{accessStatus}</Metric></Card>
       </Grid>
 
-      <Card className="overflow-hidden border border-tremor-border dark:border-dark-tremor-border">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <Title>Runtime & Access</Title>
-              <Badge color={!checks ? "slate" : checks.overall_ready ? "emerald" : "rose"}>{accessStatusLabel}</Badge>
-              {selectedJob ? <Badge color="slate">{selectedJob.name}</Badge> : null}
-            </div>
-            <Text>
-              Keep the release pipeline healthy, then review GitHub and Cloudflare readiness in the status cards below.
-            </Text>
+      {/* Runtime & Access + Checks */}
+      <Card>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="rounded-lg bg-tremor-background-muted p-1.5 text-tremor-content-strong dark:bg-dark-tremor-background-muted dark:text-dark-tremor-content-strong"><RefreshCw className="h-4 w-4" /></div>
+            <Title className="!text-sm font-medium">Runtime & Access</Title>
+            <Badge color={accessColor} size="xs">{accessStatus}</Badge>
+            {selectedJob && <Badge color="slate" size="xs">{selectedJob.name}</Badge>}
           </div>
-          <Button size="xs" variant="secondary" icon={RefreshCw} loading={checkingAccess} onClick={() => refetchChecks()}>
-            Refresh
-          </Button>
+          <Button size="xs" variant="light" icon={RefreshCw} loading={checkingAccess} onClick={() => refetchChecks()} />
         </div>
-
-        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <RuntimeTile icon={<Clock3 className="h-4 w-4" />} label="Last Tick" value={formatDateTime(config?.last_tick_at)} />
-          <RuntimeTile icon={<Wrench className="h-4 w-4" />} label="Poll Interval" value={`${config?.poll_interval_seconds ?? "-"}s`} />
-          <RuntimeTile
-            icon={<ShieldCheck className="h-4 w-4" />}
-            label="Worker"
-            value={workerStatus?.worker_process_running ? "running" : "stopped"}
-          />
-          <RuntimeTile icon={<CheckCircle2 className="h-4 w-4" />} label="Selected Job" value={selectedJob?.name || "No job selected"} />
+        <div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+          <RuntimeTile icon={<Clock3 className="h-3.5 w-3.5" />} label="Last Tick" value={formatDateTime(config?.last_tick_at)} />
+          <RuntimeTile icon={<Wrench className="h-3.5 w-3.5" />} label="Poll Interval" value={`${config?.poll_interval_seconds ?? "-"}s`} />
+          <RuntimeTile icon={<ShieldCheck className="h-3.5 w-3.5" />} label="Worker" value={workerStatus?.worker_process_running ? "Running" : "Stopped"} />
+          <RuntimeTile icon={<CheckCircle2 className="h-3.5 w-3.5" />} label="Job" value={selectedJob?.name || "None"} />
         </div>
 
         {checks?.blockers?.length ? (
-          <div className="mt-5 rounded-2xl border border-rose-300 bg-rose-50 p-4 text-sm text-rose-900 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-200">
-            <div className="flex items-center gap-2 font-medium">
-              <AlertTriangle className="h-4 w-4" />
-              Blockers
-            </div>
-            <div className="mt-2 space-y-1">
-              {checks.blockers.map((blocker) => (
-                <Text key={blocker}>{blocker}</Text>
-              ))}
-            </div>
-          </div>
-        ) : null}
-
-        {!checks ? (
-          <div className="mt-5 rounded-2xl border border-dashed border-tremor-border bg-tremor-background-muted/60 p-4 text-sm text-tremor-content dark:border-dark-tremor-border dark:bg-dark-tremor-background-muted/30 dark:text-dark-tremor-content">
-            {loadingChecks || checkingAccess
-              ? "Checking the latest release prerequisites. GitHub and Cloudflare details will appear here in a moment."
-              : "No preflight snapshot yet. Click Refresh or run a check from a release job to load the latest access status."}
+          <div className="mx-4 mb-3 rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-xs text-rose-900 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-200">
+            <div className="flex items-center gap-1.5 font-medium"><AlertTriangle className="h-3.5 w-3.5" />Blockers</div>
+            <div className="mt-1 space-y-0.5">{checks.blockers.map((b) => <Text key={b} className="!text-xs">{b}</Text>)}</div>
           </div>
         ) : null}
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <CollapsibleStatusSection
-          title="GitHub Data Share"
-          subtitle="Validate the dedicated download-data repository before publishing release artifacts."
-          icon={<GitBranch className="h-5 w-5" />}
-          open={showGitChecks}
-          onToggle={() => setShowGitChecks((prev) => !prev)}
-          badges={
-            <>
-              <Badge color={!checks ? "slate" : checks.git.read_access_ok ? "emerald" : "rose"}>
-                {!checks ? "Read pending" : checks.git.read_access_ok ? "Read ok" : "Read failed"}
-              </Badge>
-              <Badge color={!checks ? "slate" : checks.git.write_access_ok ? "emerald" : "rose"}>
-                {!checks ? "Write pending" : checks.git.write_access_ok ? "Write ok" : "Write failed"}
-              </Badge>
-            </>
-          }
-        >
-          {checks ? (
-            <>
-              <div className="grid gap-3 md:grid-cols-2">
-                <AccessDetail label="Config Env" value={checks.git.env_var || "-"} />
-                <AccessDetail label="Branch" value={checks.git.branch || "-"} />
-                <AccessDetail label="Repo URL" value={checks.git.repo_url || "-"} mono />
-                <AccessDetail label="Raw Base" value={checks.git.raw_base_url || "-"} mono />
-                <AccessDetail label="Release-path Changes" value={String(checks.git.dirty_release_paths.length ?? 0)} />
-                <AccessDetail label="Other Local Changes" value={String(checks.git.dirty_blocking_paths.length ?? 0)} />
-              </div>
-
-              {!selectedJob?.include_git_push ? (
-                <div className="mt-4 rounded-2xl border border-dashed border-tremor-border bg-tremor-background-muted/60 p-3 text-sm text-tremor-content dark:border-dark-tremor-border dark:bg-dark-tremor-background-muted/30 dark:text-dark-tremor-content">
-                  Download-repo publishing is disabled for this release job, so the GitHub status is informational only.
-                </div>
-              ) : null}
-
-              <div className="mt-4 grid gap-3">
-                <CheckOutput label="Read Check Output" value={checks.git.read_check_output} />
-                <CheckOutput label="Write Check Output" value={checks.git.write_check_output} />
-              </div>
-            </>
-          ) : (
-            <Text className="text-sm text-tremor-content dark:text-dark-tremor-content">
-              Run a preflight check to load the latest GitHub access snapshot.
-            </Text>
-          )}
-        </CollapsibleStatusSection>
-
-        <CollapsibleStatusSection
-          title="Cloudflare Pages"
-          subtitle="Check deployment credentials, target project, and Wrangler availability for the Pages release step."
-          icon={<Cloud className="h-5 w-5" />}
-          open={showCloudflareChecks}
-          onToggle={() => setShowCloudflareChecks((prev) => !prev)}
-          badges={
-            <Badge color={!checks ? "slate" : checks.cloudflare.project_access_ok ? "emerald" : "rose"}>
-              {!checks ? "Project pending" : checks.cloudflare.project_access_ok ? "Project reachable" : "Project failed"}
-            </Badge>
-          }
-        >
-          {checks ? (
-            <>
-              <div className="grid gap-3 md:grid-cols-2">
-                <AccessDetail label="Project" value={checks.cloudflare.project_name || "-"} />
-                <AccessDetail label="Wrangler" value={checks.commands.wrangler_version || "-"} mono />
-                <AccessDetail label="Token Present" value={checks.cloudflare.token_present ? "yes" : "no"} />
-                <AccessDetail label="Account ID Present" value={checks.cloudflare.account_id_present ? "yes" : "no"} />
-              </div>
-
-              {checks.cloudflare.error ? (
-                <div className="mt-4 rounded-2xl border border-rose-300 bg-rose-50 p-4 text-sm text-rose-900 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-200">
-                  <div className="flex items-center gap-2 font-medium">
-                    <AlertTriangle className="h-4 w-4" />
-                    Cloudflare Error
-                  </div>
-                  <Text className="mt-2 break-words text-rose-700 dark:text-rose-300">{checks.cloudflare.error}</Text>
-                </div>
-              ) : null}
-            </>
-          ) : (
-            <Text className="text-sm text-tremor-content dark:text-dark-tremor-content">
-              Run a preflight check to load the latest Cloudflare status snapshot.
-            </Text>
-          )}
-        </CollapsibleStatusSection>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-1">
-          <div className="rounded-tremor-default border border-dashed border-tremor-border p-4 dark:border-dark-tremor-border">
-            <div className="flex items-center justify-between gap-2">
-              <Title>{editingJobId ? "Edit release job" : "New release job"}</Title>
-              <Button size="xs" variant="light" onClick={resetForm}>Reset</Button>
+      {/* Three-column: GitHub / Cloudflare / SMTP */}
+      <div className="grid gap-3 lg:grid-cols-3">
+        {/* GitHub */}
+        <Card className="border-0 shadow-none">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="rounded-lg bg-tremor-background-muted p-1.5 text-tremor-content-strong dark:bg-dark-tremor-background-muted dark:text-dark-tremor-content-strong"><GitBranch className="h-4 w-4" /></div>
+              <Title className="!text-sm font-medium">GitHub</Title>
+              <Badge color={!checks ? "slate" : checks.git.read_access_ok && checks.git.write_access_ok ? "emerald" : "rose"} size="xs">{!checks ? "Pending" : checks.git.read_access_ok && checks.git.write_access_ok ? "OK" : "Failed"}</Badge>
             </div>
-
-            <div className="mt-4 space-y-3">
-              <input
-                className="w-full rounded-tremor-default border border-tremor-border px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background"
-                placeholder="job_id"
-                value={form.job_id}
-                disabled={!!editingJobId}
-                onChange={(e) => setForm((prev) => ({ ...prev, job_id: e.target.value }))}
-              />
-              <input
-                className="w-full rounded-tremor-default border border-tremor-border px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background"
-                placeholder="name"
-                value={form.name}
-                onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-              />
-              <div className="grid grid-cols-2 gap-3">
-                <select
-                  className="w-full rounded-tremor-default border border-tremor-border px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background"
-                  value={form.priority}
-                  onChange={(e) => setForm((prev) => ({ ...prev, priority: e.target.value }))}
-                >
-                  {["low", "normal", "high", "urgent"].map((priority) => (
-                    <option key={priority} value={priority}>{priority}</option>
-                  ))}
-                </select>
-                <select
-                  className="w-full rounded-tremor-default border border-tremor-border px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background"
-                  value={form.enabled ? "yes" : "no"}
-                  onChange={(e) => setForm((prev) => ({ ...prev, enabled: e.target.value === "yes" }))}
-                >
-                  <option value="yes">enabled</option>
-                  <option value="no">disabled</option>
-                </select>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <input
-                  className="w-full rounded-tremor-default border border-tremor-border px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background"
-                  placeholder="daily_time HH:MM"
-                  value={form.daily_time ?? ""}
-                  onChange={(e) => setForm((prev) => ({ ...prev, daily_time: e.target.value }))}
-                />
-                <input
-                  type="number"
-                  className="w-full rounded-tremor-default border border-tremor-border px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background"
-                  placeholder="interval minutes"
-                  value={form.interval_minutes ?? ""}
-                  onChange={(e) => setForm((prev) => ({ ...prev, interval_minutes: e.target.value ? Number(e.target.value) : null }))}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <input
-                  className="w-full rounded-tremor-default border border-tremor-border px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background"
-                  placeholder="timezone"
-                  value={form.timezone ?? ""}
-                  onChange={(e) => setForm((prev) => ({ ...prev, timezone: e.target.value }))}
-                />
-                <input
-                  className="w-full rounded-tremor-default border border-tremor-border px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background"
-                  value="GITHUB_DATA_SHARE_REPO_URL"
-                  disabled
-                  readOnly
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <input
-                  className="w-full rounded-tremor-default border border-tremor-border px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background"
-                  placeholder="download repo branch"
-                  value={form.github_branch ?? ""}
-                  onChange={(e) => setForm((prev) => ({ ...prev, github_branch: e.target.value }))}
-                />
-                <input
-                  className="w-full rounded-tremor-default border border-tremor-border px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background"
-                  placeholder="cloudflare project"
-                  value={form.cloudflare_project_name ?? ""}
-                  onChange={(e) => setForm((prev) => ({ ...prev, cloudflare_project_name: e.target.value }))}
-                />
-              </div>
-              <textarea
-                className="min-h-20 w-full rounded-tremor-default border border-tremor-border px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background"
-                placeholder="commit message template"
-                value={form.commit_message_template}
-                onChange={(e) => setForm((prev) => ({ ...prev, commit_message_template: e.target.value }))}
-              />
-              <textarea
-                className="min-h-20 w-full rounded-tremor-default border border-tremor-border px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background"
-                placeholder="notes"
-                value={form.notes ?? ""}
-                onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
-              />
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                {([
-                  ["auto_after_crawls", form.auto_after_crawls, "Auto-trigger after relevant data-update tasks finish"],
-                  ["include_git_push", form.include_git_push, "Publish generated downloads to the GitHub data-share repo"],
-                  ["include_cloudflare_deploy", form.include_cloudflare_deploy, "Deploy Astro dist to Cloudflare Pages"],
-                  ["require_clean_worktree", form.require_clean_worktree, "Block release if repo has unrelated dirty files"],
-                ] as Array<[BooleanReleaseField, boolean, string]>).map(([key, value, label]) => (
-                  <label key={String(key)} className="flex items-center gap-2 rounded-tremor-default border border-tremor-border px-3 py-2 dark:border-dark-tremor-border">
-                    <input
-                      type="checkbox"
-                      checked={Boolean(value)}
-                      onChange={(e) => setForm((prev) => ({ ...prev, [key]: e.target.checked }))}
-                    />
-                    <span>{label}</span>
-                  </label>
-                ))}
-              </div>
-              <Button
-                icon={editingJobId ? Pencil : Plus}
-                loading={createJob.isPending || updateJob.isPending}
-                onClick={submitForm}
-              >
-                {editingJobId ? "Save changes" : "Create release job"}
-              </Button>
-            </div>
+            <Button size="xs" variant="light" icon={RefreshCw} loading={checkingAccess} onClick={() => refetchChecks()} />
+          </div>
+          <div className="mt-4 space-y-2">
+            {checks ? (
+              <>
+                <div className="grid gap-2 md:grid-cols-2">
+                  <AccessDetail label="Branch" value={checks.git.branch || "-"} />
+                  <AccessDetail label="Repo" value={checks.git.repo_url || "-"} mono />
+                  <AccessDetail label="Release Changes" value={String(checks.git.dirty_release_paths.length)} />
+                  <AccessDetail label="Blocking Changes" value={String(checks.git.dirty_blocking_paths.length)} />
+                </div>
+                <CheckOutput label="Read Check" value={checks.git.read_check_output} />
+                <CheckOutput label="Write Check" value={checks.git.write_check_output} />
+              </>
+            ) : <Text className="!text-xs">Run a preflight check to load status.</Text>}
           </div>
         </Card>
 
-        <Card className="lg:col-span-2">
-          <Title>Release Jobs</Title>
-          <Text className="mt-1">Each job can be scheduled, triggered manually, or auto-fired after relevant data-update tasks complete.</Text>
-
-          <div className="mt-4 space-y-4">
-            {isLoading ? (
-              [1, 2].map((idx) => (
-                <div key={idx} className="h-28 animate-pulse rounded-tremor-default bg-tremor-background-muted dark:bg-dark-tremor-background-muted" />
-              ))
-            ) : !(jobs?.length) ? (
-              <div className="rounded-tremor-default border border-dashed border-tremor-border p-8 text-center dark:border-dark-tremor-border">
-                <Text>No data release jobs configured.</Text>
-              </div>
-            ) : (
-              jobs.map((job) => (
-                <Card key={job.job_id} className="border border-tremor-border dark:border-dark-tremor-border">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="space-y-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Title>{job.name}</Title>
-                        <Badge color={job.enabled ? "emerald" : "slate"}>{job.enabled ? "enabled" : "disabled"}</Badge>
-                        <Badge color={statusColor(job.last_status)}>{job.last_status}</Badge>
-                        {job.auto_after_crawls ? <Badge color="blue">auto after data tasks</Badge> : null}
-                      </div>
-                      <Text>{scheduleLabel(job)}</Text>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Button size="xs" icon={Play} loading={runJob.isPending} onClick={() => runSelectedJob(job.job_id)}>
-                        Run now
-                      </Button>
-                      <Button size="xs" variant="secondary" icon={CheckCircle2} onClick={() => { setSelectedJobId(job.job_id); refetchChecks(); }}>
-                        Check access
-                      </Button>
-                      <Button size="xs" variant="secondary" icon={Pencil} onClick={() => startEdit(job)}>
-                        Edit
-                      </Button>
-                      <Button size="xs" color="rose" variant="secondary" icon={Trash2} loading={deleteJob.isPending} onClick={() => removeJob(job)}>
-                        Delete
-                      </Button>
-                    </div>
-                  </div>
-
-                  <Grid numItemsSm={2} numItemsLg={4} className="mt-4 gap-3">
-                    <Card className="p-3">
-                      <Text>Next run</Text>
-                      <Text className="mt-1 font-medium">{formatDateTime(job.next_run_at)}</Text>
-                    </Card>
-                    <Card className="p-3">
-                      <Text>Last task</Text>
-                      <Text className="mt-1 break-all font-mono text-xs font-medium">{job.last_task_uuid || "-"}</Text>
-                    </Card>
-                    <Card className="p-3">
-                      <Text>Download branch</Text>
-                      <Text className="mt-1 font-medium">{job.github_branch || "-"}</Text>
-                    </Card>
-                    <Card className="p-3">
-                      <Text>Pages project</Text>
-                      <Text className="mt-1 font-medium">{job.cloudflare_project_name || "-"}</Text>
-                    </Card>
-                  </Grid>
-
-                  <div className="mt-4 grid gap-2 text-sm text-tremor-content dark:text-dark-tremor-content md:grid-cols-2">
-                    <Text>Priority: {job.priority}</Text>
-                    <Text>Last started: {formatDateTime(job.last_started_at)}</Text>
-                    <Text>Download repo publish: {job.include_git_push ? "yes" : "no"}</Text>
-                    <Text>Last finished: {formatDateTime(job.last_finished_at)}</Text>
-                    <Text>Pages deploy: {job.include_cloudflare_deploy ? "yes" : "no"}</Text>
-                    <Text>Run count: {job.run_count}</Text>
-                    <Text>Require clean worktree: {job.require_clean_worktree ? "yes" : "no"}</Text>
-                    <Text>Skipped count: {job.skipped_count}</Text>
-                    <Text className="break-words">Last error: {job.last_error || "-"}</Text>
-                    {job.notes ? <Text className="break-words md:col-span-2">Notes: {job.notes}</Text> : null}
-                  </div>
-                </Card>
-              ))
-            )}
+        {/* Cloudflare */}
+        <Card className="border-0 shadow-none">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="rounded-lg bg-tremor-background-muted p-1.5 text-tremor-content-strong dark:bg-dark-tremor-background-muted dark:text-dark-tremor-content-strong"><Cloud className="h-4 w-4" /></div>
+              <Title className="!text-sm font-medium">Cloudflare</Title>
+              <Badge color={!checks ? "slate" : checks.cloudflare.project_access_ok ? "emerald" : "rose"} size="xs">{!checks ? "Pending" : checks.cloudflare.project_access_ok ? "OK" : "Failed"}</Badge>
+            </div>
+            <Button size="xs" variant="light" icon={RefreshCw} loading={checkingAccess} onClick={() => refetchChecks()} />
           </div>
+          <div className="mt-4 space-y-2">
+            {checks ? (
+              <>
+                <div className="grid gap-2 md:grid-cols-2">
+                  <AccessDetail label="Project" value={checks.cloudflare.project_name || "-"} />
+                  <AccessDetail label="Wrangler" value={checks.commands.wrangler_version || "-"} mono />
+                  <AccessDetail label="Token" value={checks.cloudflare.token_present ? "Yes" : "No"} />
+                  <AccessDetail label="Account ID" value={checks.cloudflare.account_id_present ? "Yes" : "No"} />
+                </div>
+                {checks.cloudflare.error && (
+                  <div className="rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-xs text-rose-900 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-200">
+                    <div className="flex items-center gap-1.5 font-medium"><AlertTriangle className="h-3.5 w-3.5" />Error</div>
+                    <Text className="mt-1 !text-xs break-words text-rose-700 dark:text-rose-300">{checks.cloudflare.error}</Text>
+                  </div>
+                )}
+              </>
+            ) : <Text className="!text-xs">Run a preflight check to load status.</Text>}
+          </div>
+        </Card>
+
+        {/* SMTP */}
+        <Card className="border-0 shadow-none">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="rounded-lg bg-tremor-background-muted p-1.5 text-tremor-content-strong dark:bg-dark-tremor-background-muted dark:text-dark-tremor-content-strong"><Mail className="h-4 w-4" /></div>
+              <Title className="!text-sm font-medium">SMTP</Title>
+              <Badge color={smtpTestResult?.success ? "emerald" : smtpTestResult ? "rose" : "slate"} size="xs">{smtpTestResult?.success ? "OK" : smtpTestResult ? "Failed" : "Untested"}</Badge>
+            </div>
+            <Button size="xs" variant="light" icon={smtpTest.isPending ? Loader2 : Mail} loading={smtpTest.isPending} onClick={handleSmtpTest} />
+          </div>
+          {smtpTestResult && (
+            <div className={`mt-4 rounded-xl border px-3 py-2 text-xs ${smtpTestResult.success ? "border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-200" : "border-rose-300 bg-rose-50 text-rose-900 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-200"}`}>
+              <div className="flex items-center gap-1.5 font-medium">
+                {smtpTestResult.success ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertTriangle className="h-3.5 w-3.5" />}
+                {smtpTestResult.success ? "Connection OK" : "Connection Failed"}
+              </div>
+              <Text className="mt-1 !text-xs">{smtpTestResult.message}</Text>
+            </div>
+          )}
         </Card>
       </div>
 
+      {/* Release Jobs */}
       <Card>
-        <Title>Recent Release Tasks</Title>
-        <Text className="mt-1">Every release run is tracked as an `EXPORT_DATA` task. Expand any row to inspect the same workflow detail panel used across the task views.</Text>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="rounded-lg bg-tremor-background-muted p-1.5 text-tremor-content-strong dark:bg-dark-tremor-background-muted dark:text-dark-tremor-content-strong"><Wrench className="h-4 w-4" /></div>
+            <Title className="!text-sm font-medium">Release Jobs</Title>
+          </div>
+          <Button size="xs" variant="light" icon={Plus} onClick={openCreateModal} />
+        </div>
+        <div className="mt-4 space-y-2">
+        {!jobs?.length ? (
+          <Text className="!text-xs">No release jobs configured. Click "New Job" to create one.</Text>
+        ) : (
+          jobs.map((job) => (
+            <JobRow key={job.job_id} job={job} isSelected={job.job_id === selectedJobId} onSelect={() => setSelectedJobId(job.job_id)} onRun={() => runSelectedJob(job.job_id)} onEdit={() => openEditModal(job)} onDelete={() => removeJob(job)} />
+          ))
+        )}
+        </div>
+      </Card>
+
+      {/* Recent Release Tasks */}
+      <Card>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="rounded-lg bg-tremor-background-muted p-1.5 text-tremor-content-strong dark:bg-dark-tremor-background-muted dark:text-dark-tremor-content-strong"><Clock3 className="h-4 w-4" /></div>
+            <Title className="!text-sm font-medium">Recent Release Tasks</Title>
+          </div>
+          <Button size="xs" variant="light" icon={RefreshCw} onClick={() => releaseTasksRefetch()} />
+        </div>
 
         <div className="mt-4 space-y-3">
           {!releaseTasks?.length ? (
-            <div className="rounded-tremor-default border border-dashed border-tremor-border p-6 text-center dark:border-dark-tremor-border">
+            <div className="flex flex-col items-center justify-center rounded-tremor-default border border-dashed border-tremor-border p-10 text-center dark:border-dark-tremor-border">
+              <Clock3 className="mb-3 h-10 w-10 text-tremor-content-subtle dark:text-dark-tremor-content-subtle" />
               <Text>No release tasks yet.</Text>
             </div>
           ) : (
             releaseTasks.map((task) => {
               const expanded = expandedTaskUuid === task.task_uuid;
-              const matchingDetail = expanded && expandedTaskDetail?.task_uuid === task.task_uuid ? expandedTaskDetail : undefined;
-              const loadingExpandedDetail = expanded && !matchingDetail && (detailLoading || detailFetching);
               const canCancel = ["pending", "queued", "running", "retrying"].includes(task.status) && !task.cancel_requested;
-
               return (
-                <Card key={task.task_uuid} className="overflow-hidden p-0">
+                <Card key={task.task_uuid} className="p-0">
                   <div className="flex items-center gap-3 px-4 py-3">
                     <button
-                      type="button"
                       className="min-w-0 flex-1 rounded-tremor-default text-left transition hover:bg-tremor-background-subtle dark:hover:bg-dark-tremor-background-subtle"
                       onClick={() => setExpandedTaskUuid(expanded ? null : task.task_uuid)}
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex min-w-0 flex-wrap items-center gap-2">
-                            <Text className="font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">
-                              {task.task_name}
-                            </Text>
-                            <Badge color={statusColor(task.status)}>{task.status}</Badge>
-                          </div>
-                          <div className="mt-2 grid gap-1 text-xs text-tremor-content dark:text-dark-tremor-content md:hidden">
-                            <Text>Created: {formatDateTime(task.created_at)}</Text>
-                            <Text>Completed: {formatDateTime(task.completed_at)}</Text>
-                          </div>
-                          <Text className="mt-2 break-all font-mono text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle md:hidden">
-                            {task.task_uuid}
-                          </Text>
-                          {task.last_error ? (
-                            <Text className="mt-2 break-words text-xs text-rose-700 dark:text-rose-300 md:hidden">
-                              {task.last_error}
-                            </Text>
-                          ) : null}
+                      <div className="flex min-w-0 items-center gap-3 rounded-tremor-default px-2 py-1.5">
+                        <div className="flex shrink-0 flex-wrap items-center gap-2">
+                          <Badge color={statusColor(task.status)}>{task.status}</Badge>
+                          <Badge color="slate">Release</Badge>
                         </div>
-
-                        <div className="hidden shrink-0 items-center gap-3 md:flex">
-                          <div className="w-44">
-                            <div className="flex items-center gap-2">
-                              <ProgressBar value={task.progress} color={task.progress === 100 ? "emerald" : "teal"} className="flex-1" />
-                              <Text>{task.progress}%</Text>
-                            </div>
-                          </div>
-                          <div className="w-44 text-right text-xs text-tremor-content dark:text-dark-tremor-content">
-                            <Text>Created: {formatDateTime(task.created_at)}</Text>
-                            <Text>Completed: {formatDateTime(task.completed_at)}</Text>
-                          </div>
-                          <ChevronDown className={`h-4 w-4 shrink-0 text-tremor-content-subtle transition-transform ${expanded ? "rotate-180" : ""}`} />
+                        <span className="min-w-0 flex-1 truncate text-sm font-medium leading-6 text-tremor-content-strong dark:text-dark-tremor-content-strong">
+                          {task.task_name || task.task_type}
+                        </span>
+                        <div className="hidden shrink-0 items-center gap-2 md:flex md:w-40">
+                          <ProgressBar value={task.progress} color={task.progress === 100 ? "emerald" : "teal"} className="flex-1" />
+                          <Text>{task.progress}%</Text>
                         </div>
+                        <Text className="hidden shrink-0 md:block" title={formatDateTime(task.created_at)}>{relativeTime(task.created_at)}</Text>
+                        <ChevronDown className={`h-4 w-4 shrink-0 text-tremor-content-subtle transition-transform ${expanded ? "rotate-180" : ""}`} />
                       </div>
                     </button>
-
                     <div className="flex shrink-0 items-center">
                       <Button
                         size="xs"
                         color={canCancel ? "rose" : "slate"}
                         variant={canCancel ? "secondary" : "light"}
                         disabled={!canCancel || cancelTask.isPending}
+                        icon={Ban}
+                        className={canCancel ? "" : "opacity-55"}
                         onClick={() => handleCancelTask(task.task_uuid)}
                       >
                         {canCancel ? (task.cancel_requested ? "Cancelling" : "Cancel") : ""}
@@ -812,41 +606,71 @@ export default function DataReleasePage() {
                     </div>
                   </div>
 
-                  <div className="border-t border-transparent px-4 pb-3 md:hidden">
-                    <div className="flex items-center gap-2">
-                      <ProgressBar value={task.progress} color={task.progress === 100 ? "emerald" : "teal"} className="flex-1" />
-                      <Text>{task.progress}%</Text>
-                      <ChevronDown className={`h-4 w-4 shrink-0 text-tremor-content-subtle transition-transform ${expanded ? "rotate-180" : ""}`} />
+                  {expanded && (
+                    <div className="border-t border-tremor-border px-4 pb-4 pt-3 dark:border-dark-tremor-border">
+                      <div className="mb-3 flex flex-wrap items-center gap-3 text-xs text-tremor-content md:hidden">
+                        <span>{task.progress}%</span>
+                        <span>{formatDateTime(task.created_at)}</span>
+                      </div>
+                      <TaskDetailPanel taskDetail={taskDetail ?? undefined} detailLoading={false} emptyMessage="Failed to load task detail" logDisplayMode="minimal" />
                     </div>
-                  </div>
-
-                  {expanded ? (
-                    <div className="border-t border-tremor-border px-4 pb-4 pt-4 dark:border-dark-tremor-border">
-                      {task.last_error ? (
-                        <div className="mb-4 rounded-2xl border border-rose-300 bg-rose-50 p-4 text-sm text-rose-900 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-200">
-                          {task.last_error}
-                        </div>
-                      ) : null}
-                      {task.status === "running" && task.progress >= 88 && task.progress < 100 ? (
-                        <div className="mb-4 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
-                          Cloudflare Pages upload is in progress. `wrangler` can stay at 88% for a while and then jump straight to 100% when deploy finishes.
-                        </div>
-                      ) : null}
-                      <TaskDetailPanel
-                        taskDetail={matchingDetail}
-                        detailLoading={loadingExpandedDetail}
-                        emptyMessage="Failed to load release task details"
-                        logDisplayMode="raw-collapsed"
-                        rawLogLabel={lang === "zh" ? "查看原始日志" : "View raw log"}
-                      />
-                    </div>
-                  ) : null}
+                  )}
                 </Card>
               );
             })
           )}
         </div>
       </Card>
+
+
+      {/* Job Modal */}
+      <JobModal open={modalOpen} onClose={closeModal} form={form} onChange={updateFormField} onSubmit={submitForm} isSubmitting={createJob.isPending || updateJob.isPending} isNew={!editingJobId} selectedJob={selectedJob} />
+    </div>
+  );
+}
+
+// --- Compact job row ---
+function JobRow({ job, isSelected, onSelect, onRun, onEdit, onDelete }: {
+  job: DataReleaseJob; isSelected: boolean; onSelect: () => void; onRun: () => void; onEdit: () => void; onDelete: () => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <div className={`${isSelected ? "bg-teal-50/50 dark:bg-teal-950/20" : ""}`}>
+      <div className="flex items-center justify-between px-4 py-2.5">
+        <div className="flex items-center gap-3">
+          <button type="button" className={`h-3 w-3 rounded-full border-2 transition-colors ${isSelected ? "border-teal-500 bg-teal-500" : "border-tremor-border dark:border-dark-tremor-border"}`} onClick={onSelect} />
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">{job.name}</span>
+              <Badge color={job.enabled ? "emerald" : "slate"} size="xs">{job.enabled ? "On" : "Off"}</Badge>
+              <Badge color={statusColor(job.priority)} size="xs">{job.priority}</Badge>
+            </div>
+            <Text className="!text-xs mt-0.5">{scheduleLabel(job)}</Text>
+          </div>
+        </div>
+        <div className="flex items-center gap-1">
+          <Button size="xs" variant="light" icon={Play} onClick={onRun} title="Run now" />
+          <Button size="xs" variant="light" icon={Pencil} onClick={onEdit} title="Edit" />
+          <Button size="xs" variant="light" icon={Trash2} onClick={onDelete} title="Delete" />
+          <button type="button" onClick={() => setExpanded(!expanded)} className="ml-1 p-1 text-tremor-content-subtle hover:text-tremor-content dark:text-dark-tremor-content-subtle dark:hover:text-dark-tremor-content">
+            <ChevronDown className={`h-4 w-4 transition-transform ${expanded ? "rotate-180" : ""}`} />
+          </button>
+        </div>
+      </div>
+      {expanded && (
+        <div className="border-t border-tremor-border bg-tremor-background-muted/40 px-4 py-3 text-xs text-tremor-content dark:border-dark-tremor-border dark:bg-dark-tremor-background-muted/30 dark:text-dark-tremor-content space-y-2">
+          <div className="grid gap-x-4 gap-y-1 md:grid-cols-3">
+            <span><span className="font-medium">Git:</span> {job.github_remote}/{job.github_branch || "-"}</span>
+            <span><span className="font-medium">CF Project:</span> {job.cloudflare_project_name || "-"}</span>
+            <span><span className="font-medium">Auto after tasks:</span> {job.auto_after_crawls ? "Yes" : "No"}</span>
+            <span><span className="font-medium">Git push:</span> {job.include_git_push ? "Yes" : "No"}</span>
+            <span><span className="font-medium">CF deploy:</span> {job.include_cloudflare_deploy ? "Yes" : "No"}</span>
+            <span><span className="font-medium">Clean worktree:</span> {job.require_clean_worktree ? "Yes" : "No"}</span>
+          </div>
+          {job.notes && <p className="mt-1 text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{job.notes}</p>}
+          <p className="font-mono text-[11px] text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{job.commit_message_template}</p>
+        </div>
+      )}
     </div>
   );
 }

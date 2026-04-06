@@ -11,7 +11,7 @@ interface TaskDetailPanelProps {
   taskDetail?: TaskDetail;
   detailLoading: boolean;
   emptyMessage?: string;
-  logDisplayMode?: "default" | "raw-collapsed";
+  logDisplayMode?: "default" | "raw-collapsed" | "minimal";
   rawLogLabel?: string;
 }
 
@@ -417,7 +417,7 @@ export function TaskDetailPanel({
             const structuredRows = logDisplayMode === "default" ? extractStructuredRows(content) : [];
             const kind = entryKind(entry.title);
             const rawDetail =
-              logDisplayMode === "raw-collapsed"
+              logDisplayMode === "minimal" || logDisplayMode === "raw-collapsed"
                 ? Boolean(content)
                 : content !== null && (!preview || content.trim() !== preview || structuredRows.length === 0);
             const metadata = entry.metadata || {};
@@ -450,11 +450,11 @@ export function TaskDetailPanel({
                       {entry.duration != null && <Badge color="slate">{entry.duration.toFixed(1)}s</Badge>}
                     </div>
 
-                    {preview && structuredRows.length === 0 && (
+                    {preview && structuredRows.length === 0 && logDisplayMode !== "minimal" && (
                       <Text className="text-sm text-tremor-content dark:text-dark-tremor-content">{preview}</Text>
                     )}
 
-                    {structuredRows.length > 0 && (
+                    {structuredRows.length > 0 && logDisplayMode !== "minimal" && (
                       <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                         {structuredRows.map((row) => (
                           <div key={`${entry.id}-${row.label}`} className="rounded-md border border-tremor-border bg-tremor-background px-2 py-1.5 dark:border-dark-tremor-border dark:bg-dark-tremor-background">
