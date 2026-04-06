@@ -185,3 +185,22 @@ export function useDeleteDataReleaseJob() {
     },
   });
 }
+
+export interface SmtpTestResult {
+  ok: boolean;
+  message: string;
+}
+
+export function useTestSmtpConnection() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      apiFetch<SmtpTestResult>("/release/smtp-test", {
+        method: "POST",
+        timeoutMs: 30_000,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["data-release"] });
+    },
+  });
+}
