@@ -367,6 +367,75 @@ class AutomationService:
             "jobs": jobs_payload,
         }
 
+    async def notify_task_retry_if_needed(self, task_uuid: str) -> None:
+        """Send a warning email when a task is being retried.
+        
+        This is called when a task fails but hasn't reached the retry threshold yet.
+        It warns administrators that the task is experiencing issues but the system
+        is handling it automatically.
+        """
+        cfg = self._config()
+        if not cfg.admin_emails or not smtp_email_service.is_configured():
+            return
+
+        async with get_database() as db:
+            task = (await db.execute(select(Task).where(Task.task_uuid == task_uuid))).scalar_one_or_none()
+            if task is None:
+                return
+
+            metadata = dict(task.metadata_ or {})
+            retry_count = int(task.retry_count or 0)
+            
+            # Only send warning if retry_count > 0
+            if retry_count <= 0:
+                return
+
+            retry_threshold = int(
+                (task.input_data or {}).get("retry_threshold")
+                or cfg.default_retry_threshold
+            )
+            
+            # Don't send if we've already reached the threshold
+            if retry_count >= retry_threshold:
+                return
+
+            # Debounce: don't send more than one warning per minute
+            last_retry_warning = metadata.get("last_retry_warning_at")
+            if last_retry_warning:
+                from datetime import datetime as dt
+                try:
+                    last_warning_time = dt.fromisoformat(last_retry_warning)
+                    if (dt.utcnow() - last_warning_time).total_seconds() < 60:
+                        return
+                except (ValueError, TypeError):
+                    pass
+
+            country = await db.get(Country, task.country_id) if task.country_id else None
+            
+            from src.generation.email_service import EmailService
+            body = EmailService.build_task_retry_warning_html(
+                task_name=task.task_name,
+                task_uuid=task.task_uuid,
+                task_type=str(task.task_type.value if hasattr(task.task_type, 'value') else task.task_type),
+                country=country.code if country else "-",
+                retry_count=retry_count,
+                retry_threshold=retry_threshold,
+                last_error=task.last_error or "Unknown error",
+            )
+            
+            sent = smtp_email_service.send_email(
+                recipients=cfg.admin_emails,
+                subject=f"[GlobalID] Task retry warning ({retry_count}/{retry_threshold}): {task.task_name}",
+                body_html=body,
+            )
+            
+            if sent:
+                from datetime import datetime as dt
+                metadata["last_retry_warning_at"] = dt.utcnow().isoformat()
+                task.metadata_ = metadata
+                await db.commit()
+                logger.info(f"Retry warning sent for task {task_uuid} (attempt {retry_count}/{retry_threshold})")
+
     async def notify_task_failure_if_needed(self, task_uuid: str) -> None:
         cfg = self._config()
         if not cfg.admin_emails or not smtp_email_service.is_configured():
@@ -402,11 +471,14 @@ class AutomationService:
                 country=country.code if country else None,
                 workbook_entries=workbook_entries,
                 retry_threshold=retry_threshold,
+                task_uuid=task_uuid,
             )
+            attachments = self._collect_task_log_attachments(task_uuid)
             sent = smtp_email_service.send_email(
                 recipients=cfg.admin_emails,
                 subject=f"[GlobalID] Task failed after retries: {task.task_name}",
                 body_html=body,
+                attachments=attachments,
             )
             if not sent:
                 return
@@ -422,6 +494,7 @@ class AutomationService:
         country: Optional[str],
         workbook_entries: list[TaskWorkbook],
         retry_threshold: int,
+        task_uuid: Optional[str] = None,
     ) -> str:
         latest_entries = workbook_entries[-12:]
         entry_blocks = []
@@ -431,7 +504,7 @@ class AutomationService:
             entry_blocks.append(
                 f"<li><strong>{title}</strong><br/><pre style='white-space:pre-wrap'>{content}</pre></li>"
             )
-        log_tail = html.escape(self._read_recent_error_log())
+        log_tail = html.escape(self._read_recent_error_log(task_uuid or task.task_uuid))
         input_data = html.escape(json.dumps(task.input_data or {}, ensure_ascii=False, indent=2))
         last_error = html.escape(task.last_error or "Unknown error")
         country_text = html.escape(country or "-")
@@ -485,11 +558,34 @@ class AutomationService:
             return scheduled
         return current + timedelta(days=1)
 
-    def _read_recent_error_log(self) -> str:
+    def _read_recent_error_log(self, task_uuid: Optional[str] = None) -> str:
+        """Read recent error log lines, optionally filtered by task_uuid.
+        
+        When task_uuid is provided, searches all error log files for lines
+        containing that UUID to provide task-specific context.
+        Falls back to reading the latest error log file if no matches found.
+        """
         log_dir = Path(get_config().log_dir)
         candidates = sorted(log_dir.glob("error_*.log"))
         if not candidates:
             return "No error log file found."
+        
+        if task_uuid:
+            # Search across all error logs for task-specific entries
+            task_lines = []
+            for log_file in candidates:
+                try:
+                    with log_file.open("r", encoding="utf-8", errors="ignore") as handle:
+                        for line in handle:
+                            if task_uuid in line:
+                                task_lines.append(line.rstrip())
+                except Exception:
+                    continue
+            
+            if task_lines:
+                return "\n".join(task_lines[-120:]).strip()
+        
+        # Fallback: read last 120 lines of the latest error log
         latest = candidates[-1]
         try:
             with latest.open("r", encoding="utf-8", errors="ignore") as handle:
@@ -497,6 +593,28 @@ class AutomationService:
             return "".join(lines[-120:]).strip() or f"{latest.name} is empty."
         except Exception as exc:
             return f"Failed to read error log {latest.name}: {exc}"
+
+    def _collect_task_log_attachments(self, task_uuid: str) -> list[str]:
+        """Collect log files as attachments for failure notification emails.
+        
+        Returns list of file paths to attach:
+        - Latest error log file
+        - Task-specific log if available
+        """
+        attachments = []
+        log_dir = Path(get_config().log_dir)
+        
+        # Attach latest error log
+        error_logs = sorted(log_dir.glob("error_*.log"))
+        if error_logs:
+            attachments.append(str(error_logs[-1]))
+        
+        # Attach main log from today
+        main_logs = sorted(log_dir.glob("globalid_*.log"))
+        if main_logs:
+            attachments.append(str(main_logs[-1]))
+        
+        return attachments
 
 
 automation_service = AutomationService()

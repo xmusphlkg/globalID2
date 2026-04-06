@@ -204,3 +204,14 @@ export function useTestSmtpConnection() {
     },
   });
 }
+
+export function useSendTestEmail() {
+  return useMutation({
+    mutationFn: (recipient: string) =>
+      apiFetch<{ ok: boolean; message: string }>("/release/send-test-email", {
+        method: "POST",
+        body: JSON.stringify({ recipient }),
+        timeoutMs: 30_000,
+      }),
+  });
+}

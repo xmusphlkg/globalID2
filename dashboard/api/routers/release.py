@@ -218,3 +218,45 @@ async def test_smtp_connection(background_tasks: BackgroundTasks):
         "ok": True,
         "message": "SMTP connection successful",
     }
+
+
+@router.post("/release/send-test-email")
+async def send_test_email(body: dict):
+    """Send a test email to a specific recipient address."""
+    from src.core.config import get_config
+
+    recipient = body.get("recipient", "").strip()
+    if not recipient:
+        raise HTTPException(400, "Recipient email is required.")
+
+    service = EmailService()
+    if not service.is_configured():
+        raise HTTPException(
+            400,
+            "SMTP is not configured. Please set AUTOMATION__SMTP_HOST, "
+            "AUTOMATION__SMTP_USERNAME, AUTOMATION__SMTP_PASSWORD, and "
+            "AUTOMATION__SMTP_FROM_EMAIL in your .env file.",
+        )
+
+    config = get_config()
+    cfg = config.automation
+
+    try:
+        sent = service.send(
+            to_addrs=[recipient],
+            subject="[GlobalID] Test Email",
+            body_html=(
+                f"<html><body>"
+                f"<h2>GlobalID Test Email</h2>"
+                f"<p>This is a test email sent from the GlobalID dashboard.</p>"
+                f"<p><strong>Recipient:</strong> {recipient}</p>"
+                f"<p><strong>Time:</strong> {__import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>"
+                f"</body></html>"
+            ),
+        )
+        if sent:
+            return {"ok": True, "message": f"Test email sent successfully to {recipient}"}
+        else:
+            raise HTTPException(500, f"Failed to send test email to {recipient}")
+    except Exception as e:
+        raise HTTPException(500, f"Error sending test email: {str(e)}")
