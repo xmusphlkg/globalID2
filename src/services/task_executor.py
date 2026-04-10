@@ -25,9 +25,9 @@ _running: set[str] = set()
 
 
 async def recover_interrupted_tasks_on_startup() -> int:
-    """Mark orphaned RUNNING tasks as cancelled after an API/server restart."""
+    """Mark orphaned RUNNING tasks as cancelled after a task worker restart."""
     message = (
-        "API server restarted while this task was running. "
+        "Task worker restarted while this task was running. "
         "Resume the task to continue from the last checkpoint."
     )
     now = datetime.now(timezone.utc)

@@ -3,6 +3,12 @@ Description=GlobalID dashboard API
 After=network-online.target globalid-docker.service
 Wants=network-online.target globalid-docker.service
 PartOf=globalid-stack.target
+# Stop trying to restart if it crashes more than 5 times in 5 minutes —
+# prevents a crash-loop from hammering the system endlessly.
+StartLimitIntervalSec=300
+StartLimitBurst=5
+# Alert admin when the service gives up and stops retrying.
+OnFailure=globalid-notify-failure@%n.service
 
 [Service]
 Type=simple
@@ -11,6 +17,8 @@ Group=__RUN_AS_GROUP__
 WorkingDirectory=__PROJECT_DIR__
 EnvironmentFile=-__PROJECT_DIR__/.env
 ExecStart=__PROJECT_DIR__/scripts/run_dashboard_api_service.sh
-Restart=always
-RestartSec=5
+Restart=on-failure
+RestartSec=10
+# Give the process up to 30 s to finish in-flight requests before hard-kill.
+TimeoutStopSec=30
 

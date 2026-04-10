@@ -15,6 +15,7 @@ from src.domain import Task, TaskStatus, TaskType
 from src.services.automation_service import automation_service
 from src.services.data_release_service import data_release_service
 from src.services.exceptions import TaskCancelledError
+from src.services.task_alert_service import task_alert_service
 
 logger = get_logger(__name__)
 
@@ -88,13 +89,9 @@ async def task_lifecycle(task: Task, *, report_id_ref: Optional[list] = None, ex
             error_message=str(exc),
         )
         try:
-            await automation_service.notify_task_retry_if_needed(task.task_uuid)
+            await task_alert_service.send_task_alert(task.task_uuid, TaskStatus.FAILED)
         except Exception as notify_exc:
-            logger.warning(f"Retry warning skipped for {task.task_uuid}: {notify_exc}")
-        try:
-            await automation_service.notify_task_failure_if_needed(task.task_uuid)
-        except Exception as notify_exc:
-            logger.warning(f"Failure notification skipped for {task.task_uuid}: {notify_exc}")
+            logger.warning(f"Failure alert skipped for {task.task_uuid}: {notify_exc}")
         await _mark_report(report_id_ref, "failed", str(exc))
         raise
 
@@ -117,6 +114,10 @@ async def _handle_task_cancelled(task: Task, report_id_ref: Optional[list], mess
         TaskStatus.CANCELLED,
         error_message=message,
     )
+    try:
+        await task_alert_service.send_task_alert(task.task_uuid, TaskStatus.CANCELLED)
+    except Exception as notify_exc:
+        logger.warning(f"Cancellation alert skipped for {task.task_uuid}: {notify_exc}")
     await _mark_report(report_id_ref, "cancelled", message)
 
 
