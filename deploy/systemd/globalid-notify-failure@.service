@@ -1,0 +1,23 @@
+# Template unit — sends an email when a service exceeds its start-limit.
+# Referenced via OnFailure= in globalid-dashboard-api/worker services.
+# Requires: GLOBALID_ADMIN_EMAIL env var set in /etc/environment or .env.
+#
+# Usage: OnFailure=globalid-notify-failure@%n.service
+[Unit]
+Description=Notify admin on start-limit failure for %i
+
+[Service]
+Type=oneshot
+User=__RUN_AS_USER__
+WorkingDirectory=__PROJECT_DIR__
+EnvironmentFile=-__PROJECT_DIR__/.env
+# Simple mail via sendmail/mailx if available; falls back to logger
+ExecStart=/bin/bash -c '\
+  SUBJECT="[GlobalID CRITICAL] Service %i has stopped after repeated failures"; \
+  BODY="The systemd service %i on $(hostname) has exceeded its start limit and is no longer running. Manual intervention required."; \
+  EMAILS="${AUTOMATION__ADMIN_EMAILS_RAW:-}"; \
+  if [ -n "$EMAILS" ] && command -v mail >/dev/null 2>&1; then \
+    echo "$BODY" | mail -s "$SUBJECT" "$EMAILS"; \
+  else \
+    logger -t globalid-notify "[CRITICAL] %i has stopped: $BODY"; \
+  fi'

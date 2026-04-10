@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-04-05T22:46:09.787310+00:00",
+  "fetched_at": "2026-04-09T22:46:12.913926+00:00",
   "disease": "Hepatitis C (newly acquired)",
   "year": 2026,
   "month": 4,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1775429169467)/",
-            "rootActivityId": "65ade6ff-f149-407f-b583-59828f83280e",
+            "timestamp": "/Date(1775774772572)/",
+            "rootActivityId": "017c6570-37fb-4a60-bd97-19e0c772cac5",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "0L"
+                          "A0": "'<5'"
                         }
                       ]
                     },
@@ -382,7 +382,7 @@
                           ],
                           "C": [
                             "ACT",
-                            "0L"
+                            "'<5'"
                           ]
                         },
                         {
@@ -393,21 +393,21 @@
                         },
                         {
                           "C": [
-                            "NT"
-                          ],
-                          "R": 2
+                            "NT",
+                            "0L"
+                          ]
                         },
                         {
                           "C": [
-                            "QLD"
-                          ],
-                          "R": 2
+                            "QLD",
+                            "'<5'"
+                          ]
                         },
                         {
                           "C": [
-                            "SA"
-                          ],
-                          "R": 2
+                            "SA",
+                            "0L"
+                          ]
                         },
                         {
                           "C": [
@@ -444,10 +444,10 @@
     ]
   },
   "parsed_counts": {
-    "ACT": 0,
+    "ACT": "'<5'",
     "NSW": 0,
     "NT": 0,
-    "QLD": 0,
+    "QLD": "'<5'",
     "SA": 0,
     "TAS": 0,
     "VIC": 0,

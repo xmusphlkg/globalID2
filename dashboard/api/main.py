@@ -25,13 +25,8 @@ async def lifespan(app: FastAPI):
     from .routers.tasks import task_hub
     from src.services.automation_service import automation_service
     from src.services.data_release_service import data_release_service
-    from src.services.task_executor import recover_interrupted_tasks_on_startup
     task_manager.set_broadcast_hook(task_hub.broadcast)
     logger.info("Task broadcast hook registered")
-
-    recovered_count = await recover_interrupted_tasks_on_startup()
-    if recovered_count:
-        logger.warning(f"Recovered {recovered_count} interrupted task(s) during API startup")
 
     await automation_service.start()
     await data_release_service.start()
@@ -80,7 +75,17 @@ def create_app() -> FastAPI:
     @app.get("/api/v1/health", tags=["Health"])
     @app.get("/health", tags=["Health"])
     async def health():
-        return {"status": "ok"}
+        from sqlalchemy import text
+        from src.core import get_database
+        db_ok = False
+        try:
+            async with get_database() as db:
+                await db.execute(text("SELECT 1"))
+            db_ok = True
+        except Exception:
+            pass
+        status = "ok" if db_ok else "degraded"
+        return {"status": status, "db": "ok" if db_ok else "error"}
 
     return app
 

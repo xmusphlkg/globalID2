@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-04-05T22:45:50.288705+00:00",
+  "fetched_at": "2026-04-09T22:45:49.660921+00:00",
   "disease": "Anthrax",
   "year": 2026,
   "month": 2,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1775429149994)/",
-            "rootActivityId": "a38f6a08-e1fc-4f64-a27a-0e3226363d4e",
+            "timestamp": "/Date(1775774749391)/",
+            "rootActivityId": "7966b295-bd1f-443d-94e5-42f11318793c",
             "descriptor": {
               "Select": [
                 {

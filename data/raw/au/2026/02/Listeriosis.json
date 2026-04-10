@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-04-05T22:45:55.623819+00:00",
+  "fetched_at": "2026-04-09T22:45:54.772884+00:00",
   "disease": "Listeriosis",
   "year": 2026,
   "month": 2,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1775429155295)/",
-            "rootActivityId": "2be1c323-9a44-46a1-bc01-0020bbe00122",
+            "timestamp": "/Date(1775774754439)/",
+            "rootActivityId": "b05b2649-c639-447f-9f2c-ccd752da37a8",
             "descriptor": {
               "Select": [
                 {

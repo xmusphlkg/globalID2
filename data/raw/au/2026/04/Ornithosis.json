@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-04-05T22:46:11.721241+00:00",
+  "fetched_at": "2026-04-09T22:46:14.457924+00:00",
   "disease": "Ornithosis",
   "year": 2026,
   "month": 4,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1775429171442)/",
-            "rootActivityId": "e6ddfdce-0fba-4792-935f-58873b64fc7b",
+            "timestamp": "/Date(1775774774121)/",
+            "rootActivityId": "79b81ffa-11bc-4e7c-b0c2-ba4af686fbe4",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "0L"
+                          "A0": "'<5'"
                         }
                       ]
                     },
@@ -387,15 +387,15 @@
                         },
                         {
                           "C": [
-                            "NSW"
-                          ],
-                          "R": 2
+                            "NSW",
+                            "'<5'"
+                          ]
                         },
                         {
                           "C": [
-                            "NT"
-                          ],
-                          "R": 2
+                            "NT",
+                            "0L"
+                          ]
                         },
                         {
                           "C": [
@@ -445,7 +445,7 @@
   },
   "parsed_counts": {
     "ACT": 0,
-    "NSW": 0,
+    "NSW": "'<5'",
     "NT": 0,
     "QLD": 0,
     "SA": 0,

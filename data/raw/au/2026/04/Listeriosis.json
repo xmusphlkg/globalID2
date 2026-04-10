@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-04-05T22:46:10.962217+00:00",
+  "fetched_at": "2026-04-09T22:46:13.499460+00:00",
   "disease": "Listeriosis",
   "year": 2026,
   "month": 4,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1775429170615)/",
-            "rootActivityId": "9c992cf8-4df0-41ab-b042-a45d27c16140",
+            "timestamp": "/Date(1775774773217)/",
+            "rootActivityId": "4bcc182a-e7f7-4eed-8e7b-1721c38b1572",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'<5'"
+                          "A0": "0L"
                         }
                       ]
                     },
@@ -387,15 +387,15 @@
                         },
                         {
                           "C": [
-                            "NSW",
-                            "'<5'"
-                          ]
+                            "NSW"
+                          ],
+                          "R": 2
                         },
                         {
                           "C": [
-                            "NT",
-                            "0L"
-                          ]
+                            "NT"
+                          ],
+                          "R": 2
                         },
                         {
                           "C": [
@@ -445,7 +445,7 @@
   },
   "parsed_counts": {
     "ACT": 0,
-    "NSW": "'<5'",
+    "NSW": 0,
     "NT": 0,
     "QLD": 0,
     "SA": 0,

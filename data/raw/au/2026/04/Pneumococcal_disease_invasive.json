@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-04-05T22:46:12.034522+00:00",
+  "fetched_at": "2026-04-09T22:46:14.670013+00:00",
   "disease": "Pneumococcal disease (invasive)",
   "year": 2026,
   "month": 4,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1775429171704)/",
-            "rootActivityId": "8dcf89f4-3e90-4456-8613-c6f0fee4cc6e",
+            "timestamp": "/Date(1775774774357)/",
+            "rootActivityId": "442a9c39-1904-4cdb-bd48-2ae80831b7a4",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'6'"
+                          "A0": "'27'"
                         }
                       ]
                     },
@@ -388,7 +388,7 @@
                         {
                           "C": [
                             "NSW",
-                            "'5'"
+                            "'13'"
                           ]
                         },
                         {
@@ -400,32 +400,32 @@
                         {
                           "C": [
                             "QLD",
-                            "'<5'"
+                            "'5'"
                           ]
                         },
                         {
                           "C": [
                             "SA",
+                            "'<5'"
+                          ]
+                        },
+                        {
+                          "C": [
+                            "TAS",
                             "0L"
                           ]
                         },
                         {
                           "C": [
-                            "TAS"
-                          ],
-                          "R": 2
+                            "VIC",
+                            "'7'"
+                          ]
                         },
                         {
                           "C": [
-                            "VIC"
-                          ],
-                          "R": 2
-                        },
-                        {
-                          "C": [
-                            "WA"
-                          ],
-                          "R": 2
+                            "WA",
+                            "0L"
+                          ]
                         }
                       ]
                     }
@@ -445,12 +445,12 @@
   },
   "parsed_counts": {
     "ACT": 0,
-    "NSW": 5,
+    "NSW": 13,
     "NT": 0,
-    "QLD": "'<5'",
-    "SA": 0,
+    "QLD": 5,
+    "SA": "'<5'",
     "TAS": 0,
-    "VIC": 0,
+    "VIC": 7,
     "WA": 0
   }
 }
