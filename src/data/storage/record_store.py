@@ -237,7 +237,7 @@ class RecordStore:
                 "incidence_rate": stmt.excluded.incidence_rate,
                 "mortality_rate": stmt.excluded.mortality_rate,
                 "data_source": stmt.excluded.data_source,
-                "metadata_": stmt.excluded.metadata_,
+                DiseaseRecord.metadata_: stmt.excluded["metadata"],
             },
         )
         result = await db.execute(stmt)
