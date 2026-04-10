@@ -28,7 +28,7 @@ def setup_logging() -> None:
     )
 
     logger.add(
-        config.log_dir / "globalid_{time:YYYY-MM-DD}.log",
+        config.log_dir / "globalid.log",
         format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}",
         level=config.log_level,
         rotation="00:00",
@@ -38,7 +38,7 @@ def setup_logging() -> None:
     )
 
     logger.add(
-        config.log_dir / "error_{time:YYYY-MM-DD}.log",
+        config.log_dir / "error.log",
         format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}\n{exception}",
         level="ERROR",
         rotation="00:00",
