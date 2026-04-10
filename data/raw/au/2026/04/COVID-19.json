@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-04-09T22:46:10.627864+00:00",
+  "fetched_at": "2026-04-10T03:15:57.463949+00:00",
   "disease": "COVID-19",
   "year": 2026,
   "month": 4,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1775774770307)/",
-            "rootActivityId": "d25a0954-243c-499b-9561-031a9e8e927b",
+            "timestamp": "/Date(1775790957135)/",
+            "rootActivityId": "59806398-f241-4f76-9cba-6dc5cdaeb61e",
             "descriptor": {
               "Select": [
                 {

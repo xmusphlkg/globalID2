@@ -138,10 +138,8 @@ class DataProcessor:
                 else:
                     logger.debug(f"[DataProcessor][{self.country_code}] [{index}/{total}] Parse OK | period={result.year_month!r}")
                 
-                # Parse HTML table
-                parse_result = self.parser.parse(
-                    result.url or result.content,
-                    url=result.url,
+                # Parse HTML table: use pre-fetched content if available, otherwise fetch from URL
+                _parse_kwargs = dict(
                     title=result.title,
                     date=result.date,
                     year_month=result.year_month,
@@ -149,6 +147,13 @@ class DataProcessor:
                     language=result.metadata.get("language", "en"),
                     doi=result.metadata.get("doi"),
                 )
+                if result.content:
+                    parse_result = self.parser.parse(result.content, url=result.url, **_parse_kwargs)
+                elif result.url:
+                    parse_result = self.parser.fetch_and_parse(result.url, **_parse_kwargs)
+                else:
+                    logger.warning(f"[DataProcessor][{self.country_code}] [{index}/{total}] No content or URL | title={result.title!r}")
+                    return None
                 
                 if not parse_result.success or not parse_result.has_data:
                     logger.debug(f"[DataProcessor][{self.country_code}] Parse failed | [{index}/{total}] error={parse_result.error_message!r}")
@@ -212,9 +217,7 @@ class DataProcessor:
         saved = 0
         for i, result in enumerate(results, 1):
             try:
-                parse_result = self.parser.parse(
-                    result.url or result.content,
-                    url=result.url,
+                _raw_kwargs = dict(
                     title=result.title,
                     date=result.date,
                     year_month=result.year_month,
@@ -222,6 +225,12 @@ class DataProcessor:
                     language=result.metadata.get("language", "en"),
                     doi=result.metadata.get("doi"),
                 )
+                if result.content:
+                    parse_result = self.parser.parse(result.content, url=result.url, **_raw_kwargs)
+                elif result.url:
+                    parse_result = self.parser.fetch_and_parse(result.url, **_raw_kwargs)
+                else:
+                    continue
 
                 if parse_result.raw_content:
                     await self._save_raw_content(

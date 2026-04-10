@@ -40,12 +40,12 @@
       "code": "CN",
       "name": "China",
       "language": "zh-CN",
-      "total_cases": 347360707,
-      "total_deaths": 702497,
+      "total_cases": 349675940,
+      "total_deaths": 706636,
       "disease_count": 59,
       "date_range": {
         "start": "2010-01-01",
-        "end": "2026-02-01"
+        "end": "2026-03-01"
       },
       "source_info": {
         "country_code": "CN",

@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-04-09T22:46:03.564318+00:00",
+  "fetched_at": "2026-04-10T03:15:54.119272+00:00",
   "disease": "Pneumococcal disease (invasive)",
   "year": 2026,
   "month": 3,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1775774763255)/",
-            "rootActivityId": "8f0eefb0-6c66-491c-938c-b18742234a38",
+            "timestamp": "/Date(1775790953791)/",
+            "rootActivityId": "8707af7b-3103-477e-8832-34c82470fcb3",
             "descriptor": {
               "Select": [
                 {

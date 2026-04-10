@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-04-09T22:45:57.801749+00:00",
+  "fetched_at": "2026-04-10T03:15:47.300798+00:00",
   "disease": "Tularaemia",
   "year": 2026,
   "month": 2,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1775774757487)/",
-            "rootActivityId": "616b0667-8a2b-4204-98a6-f083278d72b2",
+            "timestamp": "/Date(1775790946989)/",
+            "rootActivityId": "bb03baa0-b714-4a75-ad18-0b8ada28b9c7",
             "descriptor": {
               "Select": [
                 {

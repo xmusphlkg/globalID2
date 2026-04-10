@@ -11,47 +11,56 @@
     "CN": {
       "dates": [
         "2026-01-01",
-        "2026-02-01"
+        "2026-02-01",
+        "2026-03-01"
       ],
       "cases": [
         25,
-        28
+        28,
+        17
       ],
       "weekly_equiv_cases": [
         5.64516129032258,
-        6.32258064516129
+        6.32258064516129,
+        4.25
       ],
       "deaths": [
         1,
+        0,
         0
       ],
       "incidence_rates": [
         0.0017693927892346868,
-        0.001981719923942849
+        0.001981719923942849,
+        0.001203187096679587
       ],
       "incidence_sources": [
         "wpp_computed",
+        "wpp_computed",
         "wpp_computed"
       ],
-      "total_cases": 53,
+      "total_cases": 70,
       "total_deaths": 1
     }
   },
   "global_monthly": {
     "months": [
       "2026-01",
-      "2026-02"
+      "2026-02",
+      "2026-03"
     ],
     "cases": [
       25,
-      28
+      28,
+      17
     ],
     "deaths": [
       1,
+      0,
       0
     ]
   },
-  "total_cases": 53,
+  "total_cases": 70,
   "total_deaths": 1,
   "generated_at": "2026-04-04T00:00:00+00:00",
   "source_info": [

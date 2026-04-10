@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-04-09T22:46:01.751580+00:00",
+  "fetched_at": "2026-04-10T03:15:52.112356+00:00",
   "disease": "Hydatid infection",
   "year": 2026,
   "month": 3,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1775774761467)/",
-            "rootActivityId": "33c496f0-1cf4-4d37-8e71-281f0ac896b0",
+            "timestamp": "/Date(1775790951797)/",
+            "rootActivityId": "26917224-e771-451e-805d-84e9b7143a35",
             "descriptor": {
               "Select": [
                 {
