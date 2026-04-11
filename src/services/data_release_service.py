@@ -38,6 +38,7 @@ AUTO_RELEASE_TASK_TYPES = (
     TaskType.PROCESS_DATA,
     TaskType.GENERATE_REPORT,
 )
+GITHUB_SSH_PREFIXES = ("git@github.com:", "ssh://git@github.com/")
 
 
 def _iso(value: Optional[datetime]) -> Optional[str]:
@@ -541,6 +542,7 @@ class DataReleaseService:
                 "write_access_ok": download_repo["payload"]["write_access_ok"],
                 "read_check_output": download_repo["payload"]["read_check_output"],
                 "write_check_output": download_repo["payload"]["write_check_output"],
+                "ssh_transport": download_repo["payload"].get("ssh_transport"),
                 "require_clean_worktree": job.require_clean_worktree,
                 "dirty_release_paths": release_dirty,
                 "dirty_blocking_paths": blocking_dirty,
@@ -579,6 +581,11 @@ class DataReleaseService:
         branch = self._download_repo_branch(job)
         project_name = self._cloudflare_project_name(job.cloudflare_project_name)
         download_repo_url = self._download_repo_url()
+        git_transport = str((checks.get("git") or {}).get("ssh_transport") or "default")
+        git_env = self._build_git_env(
+            download_repo_url,
+            use_github_ssh_over_443=(git_transport == "github-ssh-over-443"),
+        )
         download_url_base = self._download_repo_raw_base(job)
         publish_commit_message = self._render_commit_message(job, branch=branch, tz=tz)
         python_path = self._python_executable()
@@ -607,10 +614,7 @@ class DataReleaseService:
             title="Generate Site Data",
             cmd=generate_cmd,
             cwd=ROOT_DIR,
-            env={
-                "GIT_TERMINAL_PROMPT": "0",
-                "GIT_SSH_COMMAND": "ssh -o BatchMode=yes",
-            },
+            env=git_env,
             metadata={"event": "generate_site_data", "release_job_id": job.job_id},
         )
         await task_manager.update_task_progress(task.task_uuid, 35)
@@ -820,6 +824,31 @@ class DataReleaseService:
     def _cloudflare_account_id(self) -> str:
         return get_config().cloudflare_account_id.strip()
 
+    def _is_github_ssh_repo_url(self, repo_url: str) -> bool:
+        normalized = (repo_url or "").strip().lower()
+        return any(normalized.startswith(prefix) for prefix in GITHUB_SSH_PREFIXES)
+
+    def _build_git_env(
+        self,
+        repo_url: str,
+        *,
+        use_github_ssh_over_443: bool = False,
+    ) -> dict[str, str]:
+        ssh_parts = [
+            "ssh",
+            "-o",
+            "BatchMode=yes",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+        ]
+        if use_github_ssh_over_443 and self._is_github_ssh_repo_url(repo_url):
+            # GitHub supports SSH over 443 via ssh.github.com, which helps in restricted networks.
+            ssh_parts.extend(["-o", "Hostname=ssh.github.com", "-p", "443"])
+        return {
+            "GIT_TERMINAL_PROMPT": "0",
+            "GIT_SSH_COMMAND": " ".join(ssh_parts),
+        }
+
     async def _git_status_paths(self) -> list[str]:
         result = await self._run_capture(
             ["git", "status", "--porcelain=v1", "-uall"],
@@ -854,10 +883,8 @@ class DataReleaseService:
         repo_url = self._download_repo_url()
         branch = self._download_repo_branch(job)
         raw_base_url = self._download_repo_raw_base(job)
-        git_env = {
-            "GIT_TERMINAL_PROMPT": "0",
-            "GIT_SSH_COMMAND": "ssh -o BatchMode=yes",
-        }
+        git_env = self._build_git_env(repo_url)
+        ssh_transport = "default"
         payload = {
             "repo_url": repo_url or None,
             "branch": branch,
@@ -866,6 +893,7 @@ class DataReleaseService:
             "write_access_ok": False,
             "read_check_output": None,
             "write_check_output": None,
+            "ssh_transport": ssh_transport,
         }
         blockers: list[str] = []
 
@@ -879,8 +907,30 @@ class DataReleaseService:
             env=git_env,
             timeout=40,
         )
+
+        if read_check["returncode"] != 0 and self._is_github_ssh_repo_url(repo_url):
+            fallback_env = self._build_git_env(repo_url, use_github_ssh_over_443=True)
+            fallback_read = await self._run_capture(
+                ["git", "ls-remote", repo_url, "HEAD"],
+                cwd=ROOT_DIR,
+                env=fallback_env,
+                timeout=40,
+            )
+            if fallback_read["returncode"] == 0:
+                read_check = fallback_read
+                git_env = fallback_env
+                ssh_transport = "github-ssh-over-443"
+            else:
+                read_check["stdout"] = (
+                    "Primary SSH (port 22) failed:\n"
+                    + (read_check.get("stdout") or "")
+                    + "\n\nSSH-over-443 fallback failed:\n"
+                    + (fallback_read.get("stdout") or "")
+                ).strip()
+
         payload["read_check_output"] = read_check["stdout"]
         payload["read_access_ok"] = read_check["returncode"] == 0
+        payload["ssh_transport"] = ssh_transport
         if read_check["returncode"] != 0:
             blockers.append("Download-data repo read check failed.")
             return {"payload": payload, "blockers": blockers}
@@ -934,6 +984,7 @@ class DataReleaseService:
             )
             payload["write_check_output"] = write_check["stdout"]
             payload["write_access_ok"] = write_check["returncode"] == 0
+            payload["ssh_transport"] = ssh_transport
             if write_check["returncode"] != 0:
                 blockers.append("Download-data repo write check failed.")
 
