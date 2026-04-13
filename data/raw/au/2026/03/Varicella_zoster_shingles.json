@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-04-10T22:45:53.909149+00:00",
+  "fetched_at": "2026-04-12T22:45:58.760223+00:00",
   "disease": "Varicella zoster (shingles)",
   "year": 2026,
   "month": 3,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1775861153602)/",
-            "rootActivityId": "cd33e833-bcd4-4b65-879c-28dd653fd5bb",
+            "timestamp": "/Date(1776033958441)/",
+            "rootActivityId": "fe4e7ff4-8a9c-4d68-af4c-94b14e47fdef",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'867'"
+                          "A0": "'868'"
                         }
                       ]
                     },
@@ -394,7 +394,7 @@
                         {
                           "C": [
                             "NT",
-                            "'26'"
+                            "'27'"
                           ]
                         },
                         {
@@ -446,7 +446,7 @@
   "parsed_counts": {
     "ACT": 40,
     "NSW": 0,
-    "NT": 26,
+    "NT": 27,
     "QLD": 272,
     "SA": 128,
     "TAS": 42,

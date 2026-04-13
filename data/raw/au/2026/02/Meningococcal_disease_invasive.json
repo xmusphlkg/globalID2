@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-04-10T22:45:43.874980+00:00",
+  "fetched_at": "2026-04-12T22:45:49.009081+00:00",
   "disease": "Meningococcal disease (invasive)",
   "year": 2026,
   "month": 2,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1775861143568)/",
-            "rootActivityId": "c5778405-35e0-42f0-82cc-43fd1e3cf48a",
+            "timestamp": "/Date(1776033948696)/",
+            "rootActivityId": "10f97b9f-406e-42b5-8b08-3370f4b3aadf",
             "descriptor": {
               "Select": [
                 {

@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-04-10T22:45:42.377532+00:00",
+  "fetched_at": "2026-04-12T22:45:47.535450+00:00",
   "disease": "Hepatitis C (unspecified)",
   "year": 2026,
   "month": 2,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1775861142086)/",
-            "rootActivityId": "9c06e493-41c6-4c02-bf75-dc17109bae34",
+            "timestamp": "/Date(1776033947202)/",
+            "rootActivityId": "1c1b470a-b18c-404a-a3b4-e9d83ab9b1f3",
             "descriptor": {
               "Select": [
                 {
