@@ -516,7 +516,11 @@ class DataReleaseService:
         release_dirty = [path for path in worktree if self._is_release_path(path)]
 
         python_path = self._python_executable()
-        wrangler_check = await self._run_capture(["npx", "wrangler", "--version"], cwd=ROOT_DIR, timeout=20)
+        wrangler_check = await self._run_capture(
+            ["npm", "exec", "--", "wrangler", "--version"],
+            cwd=ASTRO_DIR,
+            timeout=60,
+        )
         cloudflare = await self._cloudflare_check(job.cloudflare_project_name)
 
         blockers: list[str] = []
@@ -671,7 +675,9 @@ class DataReleaseService:
                 task.task_uuid,
                 title="Deploy Cloudflare Pages",
                 cmd=[
-                    "npx",
+                    "npm",
+                    "exec",
+                    "--",
                     "wrangler",
                     "pages",
                     "deploy",
