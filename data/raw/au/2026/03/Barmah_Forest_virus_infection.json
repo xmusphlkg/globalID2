@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-04-12T22:45:52.619114+00:00",
+  "fetched_at": "2026-04-16T22:45:43.725608+00:00",
   "disease": "Barmah Forest virus infection",
   "year": 2026,
   "month": 3,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1776033952297)/",
-            "rootActivityId": "fd7a2c5f-a10d-4c43-8df9-77e583628229",
+            "timestamp": "/Date(1776379543454)/",
+            "rootActivityId": "d474a787-d70f-4670-ad88-17affd415a3c",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'25'"
+                          "A0": "'26'"
                         }
                       ]
                     },
@@ -388,7 +388,7 @@
                         {
                           "C": [
                             "NSW",
-                            "'5'"
+                            "'6'"
                           ]
                         },
                         {
@@ -445,7 +445,7 @@
   },
   "parsed_counts": {
     "ACT": 0,
-    "NSW": 5,
+    "NSW": 6,
     "NT": 0,
     "QLD": 16,
     "SA": "'<5'",

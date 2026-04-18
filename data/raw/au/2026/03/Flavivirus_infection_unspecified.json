@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-04-12T22:45:54.057015+00:00",
+  "fetched_at": "2026-04-16T22:45:44.901747+00:00",
   "disease": "Flavivirus infection (unspecified)",
   "year": 2026,
   "month": 3,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1776033953728)/",
-            "rootActivityId": "1866b14f-279c-48a3-84dc-ecfe54d58af0",
+            "timestamp": "/Date(1776379544536)/",
+            "rootActivityId": "e6430d38-faf1-4b07-9b07-b1f33b2164bb",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'<5'"
+                          "A0": "0L"
                         }
                       ]
                     },
@@ -399,15 +399,15 @@
                         },
                         {
                           "C": [
-                            "QLD",
-                            "'<5'"
-                          ]
+                            "QLD"
+                          ],
+                          "R": 2
                         },
                         {
                           "C": [
-                            "SA",
-                            "0L"
-                          ]
+                            "SA"
+                          ],
+                          "R": 2
                         },
                         {
                           "C": [
@@ -447,7 +447,7 @@
     "ACT": 0,
     "NSW": 0,
     "NT": 0,
-    "QLD": "'<5'",
+    "QLD": 0,
     "SA": 0,
     "TAS": 0,
     "VIC": 0,

@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-04-12T22:45:47.204579+00:00",
+  "fetched_at": "2026-04-16T22:45:39.213534+00:00",
   "disease": "Hepatitis B (unspecified)",
   "year": 2026,
   "month": 2,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1776033946892)/",
-            "rootActivityId": "a289b83a-91b0-45f6-9350-bda363a5add8",
+            "timestamp": "/Date(1776379538904)/",
+            "rootActivityId": "6b593aa5-233a-468a-ba33-9dd4edad037a",
             "descriptor": {
               "Select": [
                 {
@@ -400,7 +400,7 @@
                         {
                           "C": [
                             "QLD",
-                            "'81'"
+                            "'83'"
                           ]
                         },
                         {
@@ -418,7 +418,7 @@
                         {
                           "C": [
                             "VIC",
-                            "'147'"
+                            "'145'"
                           ]
                         },
                         {
@@ -447,10 +447,10 @@
     "ACT": 8,
     "NSW": 142,
     "NT": 9,
-    "QLD": 81,
+    "QLD": 83,
     "SA": 19,
     "TAS": "'<5'",
-    "VIC": 147,
+    "VIC": 145,
     "WA": 55
   }
 }

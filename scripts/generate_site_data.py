@@ -16,10 +16,12 @@ import asyncio
 import csv
 import json
 import math
+import os
 import shutil
 import statistics
 import subprocess
 import sys
+import time
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -62,6 +64,7 @@ DEFAULT_DOWNLOAD_URL_BASE = get_data_share_raw_base_url(
     DEFAULT_DOWNLOAD_REPO_URL,
     DEFAULT_DOWNLOAD_REPO_BRANCH,
 )
+GITHUB_SSH_PREFIXES = ("git@github.com:", "ssh://git@github.com/")
 
 SOURCE_DETAILS_BY_SCOPE: dict[tuple[str, str], dict[str, str]] = {
     ("CN", "cdc_weekly"): {
@@ -292,27 +295,81 @@ def remove_stale_public_downloads(active_download_output: Path) -> None:
     print(f"  ✓ removed stale public downloads: {public_dir}")
 
 
-def run_git(args: list[str], cwd: Path) -> str:
-    """Run a git command and return stdout."""
-    completed = subprocess.run(
-        ["git", *args],
-        cwd=cwd,
-        check=True,
-        text=True,
-        capture_output=True,
-    )
-    return completed.stdout.strip()
+def _is_github_ssh_repo_url(repo_url: str) -> bool:
+    normalized = (repo_url or "").strip().lower()
+    return any(normalized.startswith(prefix) for prefix in GITHUB_SSH_PREFIXES)
+
+
+def _build_git_env(repo_url: str, *, use_github_ssh_over_443: bool = False) -> dict[str, str]:
+    env = os.environ.copy()
+    env["GIT_TERMINAL_PROMPT"] = "0"
+
+    if _is_github_ssh_repo_url(repo_url):
+        ssh_parts = [
+            "ssh",
+            "-o",
+            "BatchMode=yes",
+            "-o",
+            "StrictHostKeyChecking=accept-new",
+        ]
+        if use_github_ssh_over_443:
+            ssh_parts.extend(["-o", "Hostname=ssh.github.com", "-p", "443"])
+        env["GIT_SSH_COMMAND"] = " ".join(ssh_parts)
+
+    return env
+
+
+def run_git(args: list[str], cwd: Path, *, repo_url: str, retries: int = 3) -> str:
+    """Run a git command with retries and GitHub SSH-over-443 fallback."""
+    env_default = _build_git_env(repo_url)
+    env_fallback = _build_git_env(repo_url, use_github_ssh_over_443=True) if _is_github_ssh_repo_url(repo_url) else None
+    last_error = ""
+
+    for attempt in range(1, retries + 1):
+        completed = subprocess.run(
+            ["git", *args],
+            cwd=cwd,
+            check=False,
+            text=True,
+            capture_output=True,
+            env=env_default,
+        )
+        if completed.returncode == 0:
+            return completed.stdout.strip()
+
+        stderr_primary = (completed.stderr or completed.stdout or "").strip()
+        last_error = stderr_primary
+
+        if env_fallback is not None:
+            fallback = subprocess.run(
+                ["git", *args],
+                cwd=cwd,
+                check=False,
+                text=True,
+                capture_output=True,
+                env=env_fallback,
+            )
+            if fallback.returncode == 0:
+                return fallback.stdout.strip()
+
+            stderr_fallback = (fallback.stderr or fallback.stdout or "").strip()
+            last_error = (
+                "Primary SSH (port 22) failed:\n"
+                + stderr_primary
+                + "\n\nSSH-over-443 fallback failed:\n"
+                + stderr_fallback
+            ).strip()
+
+        if attempt < retries:
+            time.sleep(min(5, attempt * 2))
+
+    raise RuntimeError(f"git {' '.join(args)} failed after {retries} attempts.\n{last_error}")
 
 
 def remote_branch_exists(repo_url: str, branch: str) -> bool:
     """Return True when the remote branch already exists."""
-    completed = subprocess.run(
-        ["git", "ls-remote", "--heads", repo_url, branch],
-        check=True,
-        text=True,
-        capture_output=True,
-    )
-    return bool(completed.stdout.strip())
+    output = run_git(["ls-remote", "--heads", repo_url, branch], ROOT, repo_url=repo_url)
+    return bool(output)
 
 
 def ensure_download_repo(repo_url: str, branch: str, workdir: Path) -> None:
@@ -321,18 +378,18 @@ def ensure_download_repo(repo_url: str, branch: str, workdir: Path) -> None:
         if workdir.exists():
             shutil.rmtree(workdir)
         workdir.parent.mkdir(parents=True, exist_ok=True)
-        clone_cmd = ["git", "clone"]
+        clone_cmd = ["clone"]
         if remote_branch_exists(repo_url, branch):
             clone_cmd.extend(["--branch", branch])
         clone_cmd.extend([repo_url, str(workdir)])
-        subprocess.run(clone_cmd, check=True, text=True)
-        run_git(["checkout", "-B", branch], workdir)
+        run_git(clone_cmd, workdir.parent, repo_url=repo_url)
+        run_git(["checkout", "-B", branch], workdir, repo_url=repo_url)
         return
 
-    run_git(["fetch", "origin"], workdir)
-    run_git(["checkout", "-B", branch], workdir)
+    run_git(["fetch", "origin"], workdir, repo_url=repo_url)
+    run_git(["checkout", "-B", branch], workdir, repo_url=repo_url)
     if remote_branch_exists(repo_url, branch):
-        run_git(["pull", "--ff-only", "origin", branch], workdir)
+        run_git(["pull", "--ff-only", "origin", branch], workdir, repo_url=repo_url)
 
 
 def clean_download_repo_paths(workdir: Path) -> None:
@@ -412,14 +469,14 @@ def publish_download_assets(
     copy_download_repo_assets(source_dir, workdir)
     write_download_repo_readme(workdir, manifest)
 
-    status = run_git(["status", "--short"], workdir)
+    status = run_git(["status", "--short"], workdir, repo_url=repo_url)
     if not status:
         print("  No download repo changes to publish.")
         return False
 
-    run_git(["add", "countries", "diseases", "manifest.json", "README.md"], workdir)
-    run_git(["commit", "-m", commit_message], workdir)
-    run_git(["push", "origin", branch], workdir)
+    run_git(["add", "countries", "diseases", "manifest.json", "README.md"], workdir, repo_url=repo_url)
+    run_git(["commit", "-m", commit_message], workdir, repo_url=repo_url)
+    run_git(["push", "origin", branch], workdir, repo_url=repo_url)
     print(f"  ✓ published download assets to {repo_url} ({branch})")
     return True
 

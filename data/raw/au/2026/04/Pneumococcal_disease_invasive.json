@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-04-12T22:46:03.557254+00:00",
+  "fetched_at": "2026-04-16T22:45:53.835210+00:00",
   "disease": "Pneumococcal disease (invasive)",
   "year": 2026,
   "month": 4,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1776033963245)/",
-            "rootActivityId": "63af74a4-bf0b-4c6d-ae42-e8e3ad5a1017",
+            "timestamp": "/Date(1776379553545)/",
+            "rootActivityId": "bfc4cdbd-9d07-4b38-96ac-5e0200271d1f",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'36'"
+                          "A0": "'53'"
                         }
                       ]
                     },
@@ -388,7 +388,7 @@
                         {
                           "C": [
                             "NSW",
-                            "'18'"
+                            "'24'"
                           ]
                         },
                         {
@@ -400,7 +400,7 @@
                         {
                           "C": [
                             "QLD",
-                            "'8'"
+                            "'10'"
                           ]
                         },
                         {
@@ -418,13 +418,13 @@
                         {
                           "C": [
                             "VIC",
-                            "'8'"
+                            "'15'"
                           ]
                         },
                         {
                           "C": [
                             "WA",
-                            "0L"
+                            "'<5'"
                           ]
                         }
                       ]
@@ -445,12 +445,12 @@
   },
   "parsed_counts": {
     "ACT": 0,
-    "NSW": 18,
+    "NSW": 24,
     "NT": 0,
-    "QLD": 8,
+    "QLD": 10,
     "SA": "'<5'",
     "TAS": 0,
-    "VIC": 8,
-    "WA": 0
+    "VIC": 15,
+    "WA": "'<5'"
   }
 }
