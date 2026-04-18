@@ -26,9 +26,8 @@ IDLE_LOG_EVERY = int(os.getenv("TASK_WORKER_IDLE_LOG_EVERY", "30"))
 async def _claim_next_task_uuid() -> Optional[str]:
     """Pick one runnable task and return its UUID.
 
-    Status transition here is intentionally lightweight:
-    - pending -> queued
-    - queued  -> queued
+    Claim must be atomic across worker processes. We lock one candidate row,
+    mark it RUNNING in the same transaction, and then return the UUID.
     """
     async with get_database() as db:
         priority_rank = case(
@@ -41,15 +40,16 @@ async def _claim_next_task_uuid() -> Optional[str]:
             select(Task)
             .where(Task.status.in_([TaskStatus.PENDING, TaskStatus.QUEUED]))
             .order_by(priority_rank.asc(), Task.created_at.asc())
+            .with_for_update(skip_locked=True)
             .limit(1)
         )
         task = result.scalar_one_or_none()
         if task is None:
             return None
 
-        if task.status == TaskStatus.PENDING:
-            task.status = TaskStatus.QUEUED
-
+        task.status = TaskStatus.RUNNING
+        task.last_error = None
+        await db.commit()
         return task.task_uuid
 
 
@@ -90,10 +90,10 @@ async def run_worker() -> None:
 
         idle_ticks = 0
         try:
-            logger.info("Executing queued task %s", task_uuid)
+            logger.info("Executing claimed task {}", task_uuid)
             await execute_task(task_uuid)
         except Exception as exc:
-            logger.exception("Worker failed executing task %s: %s", task_uuid, exc)
+            logger.exception("Worker failed executing task {}: {}", task_uuid, exc)
 
     logger.info("Task worker stopped")
 
