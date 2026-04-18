@@ -120,10 +120,18 @@ async def execute_task(task_uuid: str) -> Dict[str, Any]:
     if task is None:
         raise ValueError(f"Task not found: {task_uuid}")
 
-    if task.status not in (TaskStatus.PENDING, TaskStatus.QUEUED, TaskStatus.FAILED, TaskStatus.CANCELLED):
+    # RUNNING is accepted here because worker claim is now atomic and marks
+    # the row as RUNNING before dispatch, preventing multi-worker double picks.
+    if task.status not in (
+        TaskStatus.PENDING,
+        TaskStatus.QUEUED,
+        TaskStatus.FAILED,
+        TaskStatus.CANCELLED,
+        TaskStatus.RUNNING,
+    ):
         raise ValueError(
             f"Task {task_uuid} has status '{task.status}' — "
-            "only pending/queued/failed/cancelled tasks can be executed"
+            "only pending/queued/failed/cancelled/running(claimed) tasks can be executed"
         )
 
     # Resume semantics: re-executing a failed/cancelled report task should always

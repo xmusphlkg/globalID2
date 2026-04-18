@@ -907,32 +907,45 @@ class DataReleaseService:
             blockers.append("Missing GITHUB_DATA_SHARE_REPO_URL.")
             return {"payload": payload, "blockers": blockers}
 
-        read_check = await self._run_capture(
-            ["git", "ls-remote", repo_url, "HEAD"],
-            cwd=ROOT_DIR,
-            env=git_env,
-            timeout=40,
-        )
-
-        if read_check["returncode"] != 0 and self._is_github_ssh_repo_url(repo_url):
-            fallback_env = self._build_git_env(repo_url, use_github_ssh_over_443=True)
-            fallback_read = await self._run_capture(
+        read_check: dict[str, Any] = {"returncode": 127, "stdout": "read check did not run"}
+        fallback_read_output: Optional[str] = None
+        for attempt in range(1, 4):
+            read_check = await self._run_capture(
                 ["git", "ls-remote", repo_url, "HEAD"],
                 cwd=ROOT_DIR,
-                env=fallback_env,
+                env=git_env,
                 timeout=40,
             )
-            if fallback_read["returncode"] == 0:
-                read_check = fallback_read
-                git_env = fallback_env
-                ssh_transport = "github-ssh-over-443"
-            else:
-                read_check["stdout"] = (
-                    "Primary SSH (port 22) failed:\n"
-                    + (read_check.get("stdout") or "")
-                    + "\n\nSSH-over-443 fallback failed:\n"
-                    + (fallback_read.get("stdout") or "")
-                ).strip()
+
+            if read_check["returncode"] != 0 and self._is_github_ssh_repo_url(repo_url):
+                fallback_env = self._build_git_env(repo_url, use_github_ssh_over_443=True)
+                fallback_read = await self._run_capture(
+                    ["git", "ls-remote", repo_url, "HEAD"],
+                    cwd=ROOT_DIR,
+                    env=fallback_env,
+                    timeout=40,
+                )
+                if fallback_read["returncode"] == 0:
+                    read_check = fallback_read
+                    git_env = fallback_env
+                    ssh_transport = "github-ssh-over-443"
+                    fallback_read_output = None
+                else:
+                    fallback_read_output = fallback_read.get("stdout") or ""
+
+            if read_check["returncode"] == 0:
+                break
+
+            if attempt < 3:
+                await asyncio.sleep(min(5, attempt * 2))
+
+        if read_check["returncode"] != 0 and self._is_github_ssh_repo_url(repo_url) and fallback_read_output is not None:
+            read_check["stdout"] = (
+                "Primary SSH (port 22) failed:\n"
+                + (read_check.get("stdout") or "")
+                + "\n\nSSH-over-443 fallback failed:\n"
+                + fallback_read_output
+            ).strip()
 
         payload["read_check_output"] = read_check["stdout"]
         payload["read_access_ok"] = read_check["returncode"] == 0
@@ -982,12 +995,40 @@ class DataReleaseService:
                 return {"payload": payload, "blockers": blockers}
 
             probe_branch = f"__globalid_write_probe__/{branch or 'main'}"
-            write_check = await self._run_capture(
-                ["git", "push", "--dry-run", "origin", f"HEAD:refs/heads/{probe_branch}"],
-                cwd=temp_path,
-                env=git_env,
-                timeout=40,
-            )
+            write_check: dict[str, Any] = {"returncode": 127, "stdout": "write check did not run"}
+            for attempt in range(1, 3):
+                write_check = await self._run_capture(
+                    ["git", "push", "--dry-run", "origin", f"HEAD:refs/heads/{probe_branch}"],
+                    cwd=temp_path,
+                    env=git_env,
+                    timeout=40,
+                )
+                if write_check["returncode"] == 0:
+                    break
+
+                if self._is_github_ssh_repo_url(repo_url) and ssh_transport == "default":
+                    fallback_env = self._build_git_env(repo_url, use_github_ssh_over_443=True)
+                    fallback_write = await self._run_capture(
+                        ["git", "push", "--dry-run", "origin", f"HEAD:refs/heads/{probe_branch}"],
+                        cwd=temp_path,
+                        env=fallback_env,
+                        timeout=40,
+                    )
+                    if fallback_write["returncode"] == 0:
+                        write_check = fallback_write
+                        git_env = fallback_env
+                        ssh_transport = "github-ssh-over-443"
+                        break
+                    write_check["stdout"] = (
+                        "Primary SSH (port 22) failed:\n"
+                        + (write_check.get("stdout") or "")
+                        + "\n\nSSH-over-443 fallback failed:\n"
+                        + (fallback_write.get("stdout") or "")
+                    ).strip()
+
+                if attempt < 2:
+                    await asyncio.sleep(min(5, attempt * 2))
+
             payload["write_check_output"] = write_check["stdout"]
             payload["write_access_ok"] = write_check["returncode"] == 0
             payload["ssh_transport"] = ssh_transport
@@ -1027,17 +1068,32 @@ class DataReleaseService:
             },
             method="GET",
         )
-        try:
-            with urlrequest.urlopen(req, timeout=15) as response:
-                body = json.loads(response.read().decode("utf-8", errors="replace"))
-            payload["project_access_ok"] = bool(body.get("success"))
-            if not payload["project_access_ok"]:
-                messages = body.get("errors") or body.get("messages") or []
-                payload["error"] = json.dumps(messages, ensure_ascii=False)
-                blockers.append("Cloudflare Pages project check failed.")
-        except (urlerror.HTTPError, urlerror.URLError, TimeoutError, json.JSONDecodeError) as exc:
-            payload["error"] = str(exc)
-            blockers.append("Cloudflare Pages project is not reachable with current credentials.")
+        last_exc: Optional[Exception] = None
+        for attempt in range(1, 4):
+            try:
+                with urlrequest.urlopen(req, timeout=20) as response:
+                    body = json.loads(response.read().decode("utf-8", errors="replace"))
+                payload["project_access_ok"] = bool(body.get("success"))
+                if not payload["project_access_ok"]:
+                    messages = body.get("errors") or body.get("messages") or []
+                    payload["error"] = json.dumps(messages, ensure_ascii=False)
+                    blockers.append("Cloudflare Pages project check failed.")
+                return {"payload": payload, "blockers": blockers}
+            except urlerror.HTTPError as exc:
+                last_exc = exc
+                # 4xx (except 429) is usually credential/scope/config mismatch.
+                if 400 <= exc.code < 500 and exc.code != 429:
+                    payload["error"] = str(exc)
+                    blockers.append("Cloudflare Pages project check failed.")
+                    return {"payload": payload, "blockers": blockers}
+            except (urlerror.URLError, TimeoutError, json.JSONDecodeError) as exc:
+                last_exc = exc
+
+            if attempt < 3:
+                await asyncio.sleep(min(5, attempt * 2))
+
+        payload["error"] = str(last_exc) if last_exc else "Cloudflare check failed without exception details"
+        blockers.append("Cloudflare Pages project is not reachable with current credentials.")
         return {"payload": payload, "blockers": blockers}
 
     async def _run_capture(
