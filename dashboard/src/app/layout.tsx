@@ -4,8 +4,11 @@ import { Providers } from "@/components/Providers";
 import { TremorAppShell } from "@/components/layout/TremorAppShell";
 
 export const metadata: Metadata = {
-  title: "GlobalID Dashboard",
-  description: "Disease surveillance dashboard",
+  title: {
+    default: "GIDS Dashboard",
+    template: "%s | GIDS Dashboard",
+  },
+  description: "GIDS disease surveillance dashboard",
 };
 
 export const viewport: Viewport = {

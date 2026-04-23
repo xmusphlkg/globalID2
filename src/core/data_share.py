@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-from .config import get_config
+from src.services.settings_service import system_settings_service
 
 DEFAULT_DATA_SHARE_BRANCH = "main"
 DEFAULT_LOCAL_DOWNLOAD_BASE_URL = "/downloads"
@@ -18,16 +18,15 @@ _GITHUB_REPO_PATTERNS = (
 
 def get_data_share_repo_url() -> str:
     """Return the configured download-data repository URL."""
-    cfg = get_config()
-    return cfg.github_data_share_repo_url.strip()
+    return system_settings_service.github_runtime()["github_data_share_repo_url"]
 
 
 def get_data_share_repo_branch(branch_override: str | None = None) -> str:
     """Return the configured target branch for the download-data repo."""
     if branch_override and branch_override.strip():
         return branch_override.strip()
-    cfg = get_config()
-    return cfg.github_data_share_repo_branch.strip() or DEFAULT_DATA_SHARE_BRANCH
+    branch = system_settings_service.github_runtime()["github_data_share_repo_branch"]
+    return branch.strip() or DEFAULT_DATA_SHARE_BRANCH
 
 
 def derive_github_raw_base_url(repo_url: str, branch: str) -> str:
@@ -48,8 +47,7 @@ def get_data_share_raw_base_url(
     branch: str | None = None,
 ) -> str:
     """Return the configured or derived raw base URL for download artifacts."""
-    cfg = get_config()
-    configured = cfg.github_data_share_raw_base_url.strip()
+    configured = system_settings_service.github_runtime()["github_data_share_raw_base_url"].strip()
     if configured:
         return configured.rstrip("/")
     target_repo = (repo_url or get_data_share_repo_url()).strip()

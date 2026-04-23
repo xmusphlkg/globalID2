@@ -27,6 +27,7 @@ from src.core.data_share import (
 from src.core.task_manager import task_manager
 from src.domain import DataReleaseJob, Task, TaskPriority, TaskStatus, TaskType
 from src.services.exceptions import TaskCancelledError
+from src.services.settings_service import system_settings_service
 
 logger = get_logger(__name__)
 
@@ -114,6 +115,8 @@ class DataReleaseService:
 
     async def _seed_default_job_if_needed(self) -> None:
         cfg = self._config()
+        github_settings = system_settings_service.github_runtime()
+        cloudflare_settings = system_settings_service.cloudflare_runtime()
         async with get_database() as db:
             existing = (
                 await db.execute(select(DataReleaseJob.id).limit(1))
@@ -134,9 +137,9 @@ class DataReleaseService:
                     daily_time=None,
                     interval_minutes=None,
                     timezone=cfg.timezone,
-                    github_remote=cfg.default_github_remote,
+                    github_remote=github_settings["default_github_remote"] or "origin",
                     github_branch=get_data_share_repo_branch(),
-                    cloudflare_project_name=cfg.default_cloudflare_project_name,
+                    cloudflare_project_name=cloudflare_settings["default_cloudflare_project_name"] or "globalid",
                     commit_message_template=cfg.default_commit_message_template,
                     notes="Default release pipeline for generated site data and Cloudflare Pages deploy.",
                 )
@@ -146,6 +149,8 @@ class DataReleaseService:
     async def load_jobs(self) -> list[DataReleaseJobConfig]:
         await self.ensure_storage()
         cfg = self._config()
+        github_settings = system_settings_service.github_runtime()
+        cloudflare_settings = system_settings_service.cloudflare_runtime()
         async with get_database() as db:
             rows = (
                 await db.execute(select(DataReleaseJob).order_by(DataReleaseJob.job_id.asc()))
@@ -168,9 +173,9 @@ class DataReleaseService:
                     interval_minutes=row.interval_minutes,
                     daily_time=row.daily_time,
                     timezone=row.timezone or cfg.timezone,
-                    github_remote=row.github_remote or cfg.default_github_remote,
+                    github_remote=row.github_remote or github_settings["default_github_remote"] or "origin",
                     github_branch=resolved_branch,
-                    cloudflare_project_name=resolved_project_name,
+                    cloudflare_project_name=resolved_project_name or cloudflare_settings["default_cloudflare_project_name"] or "globalid",
                     commit_message_template=row.commit_message_template or cfg.default_commit_message_template,
                     notes=row.notes,
                 )
@@ -798,7 +803,7 @@ class DataReleaseService:
     def _normalize_download_repo_branch(self, branch: Optional[str]) -> str:
         default_branch = get_data_share_repo_branch()
         candidate = (branch or "").strip()
-        legacy_branch = self._config().default_github_branch.strip() or self._current_git_branch_fallback()
+        legacy_branch = system_settings_service.github_runtime()["default_github_branch"].strip() or self._current_git_branch_fallback()
         if not candidate:
             return default_branch
         if candidate == legacy_branch and default_branch != legacy_branch:
@@ -815,7 +820,7 @@ class DataReleaseService:
         return self._normalize_cloudflare_project_name(project_name)
 
     def _normalize_cloudflare_project_name(self, project_name: Optional[str]) -> str:
-        default_project_name = self._config().default_cloudflare_project_name.strip() or "globalid"
+        default_project_name = system_settings_service.cloudflare_runtime()["default_cloudflare_project_name"].strip() or "globalid"
         candidate = (project_name or "").strip()
         legacy_default_project_name = "globalid"
         if not candidate:
@@ -825,10 +830,10 @@ class DataReleaseService:
         return candidate
 
     def _cloudflare_api_token(self) -> str:
-        return get_config().cloudflare_api_token.strip()
+        return system_settings_service.cloudflare_runtime()["cloudflare_api_token"].strip()
 
     def _cloudflare_account_id(self) -> str:
-        return get_config().cloudflare_account_id.strip()
+        return system_settings_service.cloudflare_runtime()["cloudflare_account_id"].strip()
 
     def _is_github_ssh_repo_url(self, repo_url: str) -> bool:
         normalized = (repo_url or "").strip().lower()

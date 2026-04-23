@@ -155,6 +155,11 @@ function CrawlTasksPageContent() {
           <Text className="mt-2 text-xs">
             {workerStatus?.worker_pid ? `PID ${workerStatus.worker_pid}` : (lang === "zh" ? "未检测到 worker pid" : "No worker pid detected")}
           </Text>
+          <Text className="mt-1 text-xs">
+            {lang === "zh"
+              ? `并发度 ${workerStatus?.worker_concurrency ?? 1}`
+              : `Concurrency ${workerStatus?.worker_concurrency ?? 1}`}
+          </Text>
         </Card>
         <Card className="border border-tremor-border">
           <Text>{lang === "zh" ? "等待队列" : "Queued backlog"}</Text>

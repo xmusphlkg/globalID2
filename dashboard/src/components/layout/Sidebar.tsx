@@ -15,6 +15,7 @@ import {
   Send,
   Search as SearchIcon,
   GitBranch,
+  BookOpen,
   X,
   ChevronRight,
 } from "lucide-react";
@@ -50,6 +51,7 @@ const navGroups: NavGroup[] = [
       { href: "/data/dashboard", labelKey: "dashboard", icon: BarChart3 },
       { href: "/data/release", labelKey: "data_release", icon: Send },
       { href: "/data/diseases", labelKey: "diseases", icon: Activity },
+      { href: "/data/knowledge", labelKey: "knowledge_base", icon: BookOpen },
       { href: "/data/explorer", labelKey: "explorer", icon: SearchIcon },
       { href: "/data/quality", labelKey: "quality", icon: ShieldCheck },
     ],
@@ -70,6 +72,14 @@ const navGroups: NavGroup[] = [
     icon: Send,
     items: [
       { href: "/reports", labelKey: "reports", icon: FileText },
+    ],
+  },
+  {
+    step: 5,
+    titleKey: "mod_settings",
+    icon: Settings2,
+    items: [
+      { href: "/setting", labelKey: "settings", icon: Settings2 },
     ],
   },
 ];
@@ -107,7 +117,7 @@ export function Sidebar({
     <div className={`flex grow flex-col gap-y-4 overflow-y-auto border-r border-tremor-border bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(243,247,245,0.95))] pb-6 ${collapsed ? "px-2.5" : "px-6"}`}>
       <div className={`flex shrink-0 flex-col gap-3 pt-6 ${collapsed ? "items-center" : ""}`}>
         <div>
-          <span className={`font-bold tracking-tight text-tremor-brand ${collapsed ? "text-base" : "text-xl"}`}>GlobalID</span>
+          <span className={`font-bold tracking-tight text-tremor-brand ${collapsed ? "text-base" : "text-xl"}`}>{t(lang, "brand_name")}</span>
           {!collapsed ? <p className="mt-1 text-sm text-tremor-content">{t(lang, "workspace_subtitle")}</p> : null}
         </div>
         {!collapsed ? (

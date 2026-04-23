@@ -149,18 +149,26 @@ function stripMarkdown(raw: string) {
 
 function sectionLabel(sectionType: string, lang: 'en' | 'zh') {
   const labels: Record<string, { en: string; zh: string }> = {
+    executive_summary: { en: 'Executive summary', zh: '执行摘要' },
+    disease_card: { en: 'Disease card', zh: '疾病卡片' },
     summary: { en: 'Summary', zh: '摘要' },
     key_findings: { en: 'Key findings', zh: '关键发现' },
     trend_analysis: { en: 'Trend analysis', zh: '趋势分析' },
     highlights: { en: 'Highlights', zh: '要点' },
+    data_quality_notes: { en: 'Data quality', zh: '数据质量' },
+    methodology: { en: 'Methodology', zh: '方法说明' },
   };
   return labels[sectionType]?.[lang] ?? sectionType.replaceAll('_', ' ');
 }
 
 function sectionOrder(sectionType: string) {
-  const order = ['summary', 'key_findings', 'trend_analysis', 'highlights'];
+  const order = ['disease_card', 'summary', 'key_findings', 'trend_analysis', 'highlights'];
   const index = order.indexOf(sectionType);
   return index === -1 ? order.length : index;
+}
+
+function hasStructuredCard(disease: DiseaseReportData) {
+  return disease.sections.some((section) => section.section_type === 'disease_card');
 }
 
 function Delta({ current, prev }: { current: number; prev: number }) {
@@ -174,10 +182,11 @@ function Delta({ current, prev }: { current: number; prev: number }) {
 }
 
 function AnalysisSummary({ sections, lang }: { sections: DiseaseSection[]; lang: 'en' | 'zh' }) {
-  const orderedSections = useMemo(
-    () => [...sections].sort((a, b) => sectionOrder(a.section_type) - sectionOrder(b.section_type)).slice(0, 3),
-    [sections]
-  );
+  const orderedSections = useMemo(() => {
+    const sorted = [...sections].sort((a, b) => sectionOrder(a.section_type) - sectionOrder(b.section_type));
+    const diseaseCards = sorted.filter((section) => section.section_type === 'disease_card');
+    return diseaseCards.length > 0 ? diseaseCards.slice(0, 1) : sorted.slice(0, 3);
+  }, [sections]);
 
   if (orderedSections.length === 0) return null;
 
@@ -186,13 +195,14 @@ function AnalysisSummary({ sections, lang }: { sections: DiseaseSection[]; lang:
       <h4 className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
         {lang === 'zh' ? '文本摘要' : 'Narrative summary'}
       </h4>
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className={`grid gap-4 ${orderedSections.some((section) => section.section_type === 'disease_card') ? 'lg:grid-cols-1' : 'lg:grid-cols-3'}`}>
         {orderedSections.map((section) => {
+          const isDiseaseCard = section.section_type === 'disease_card';
           const paragraphs = stripMarkdown(section.content)
             .split(/\n{2,}/)
             .map((paragraph) => paragraph.trim())
             .filter(Boolean)
-            .slice(0, 2);
+            .slice(0, isDiseaseCard ? 10 : 2);
 
           return (
             <article key={`${section.section_type}-${section.title}`} className="border border-slate-700/60 bg-slate-800/10 p-4">
@@ -201,7 +211,7 @@ function AnalysisSummary({ sections, lang }: { sections: DiseaseSection[]; lang:
               </div>
               <div className="space-y-3">
                 {paragraphs.length > 0 ? paragraphs.map((paragraph, index) => (
-                  <p key={index} className="text-sm leading-6 text-slate-400">
+                  <p key={index} className={`text-sm leading-6 ${isDiseaseCard && index === 0 ? 'font-semibold text-slate-200' : 'text-slate-400'}`}>
                     {paragraph}
                   </p>
                 )) : (
@@ -766,6 +776,7 @@ export default function DiseaseReportPanel({ diseases, countryCode, reportId, so
   const theme = useTheme();
   const lang = useLang();
   const [search, setSearch] = useState('');
+  const [viewMode, setViewMode] = useState<'priority' | 'all'>('priority');
   const [openId, setOpenId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -790,8 +801,12 @@ export default function DiseaseReportPanel({ diseases, countryCode, reportId, so
     );
   }, [diseases, search]);
 
-  const withCases = filtered.filter((disease) => disease.cases > 0);
-  const zeroCases = filtered.filter((disease) => disease.cases === 0);
+  const priorityDiseases = filtered.filter(hasStructuredCard);
+  const visibleDiseases = !search.trim() && viewMode === 'priority' && priorityDiseases.length > 0
+    ? priorityDiseases
+    : filtered;
+  const withCases = visibleDiseases.filter((disease) => disease.cases > 0);
+  const zeroCases = visibleDiseases.filter((disease) => disease.cases === 0);
 
   return (
     <div className="space-y-4">
@@ -808,20 +823,39 @@ export default function DiseaseReportPanel({ diseases, countryCode, reportId, so
             onChange={(event) => setSearch(event.target.value)}
           />
         </div>
+        <div className="chart-toolbar">
+          <button
+            type="button"
+            onClick={() => setViewMode('priority')}
+            className={`chart-toggle ${viewMode === 'priority' ? 'chart-toggle-active' : ''}`}
+          >
+            {lang === 'zh' ? '重点疾病' : 'Priority'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('all')}
+            className={`chart-toggle ${viewMode === 'all' ? 'chart-toggle-active' : ''}`}
+          >
+            {lang === 'zh' ? '完整列表' : 'All'}
+          </button>
+        </div>
         <span className="chart-chip">
           {withCases.length} {lang === 'zh' ? '个有病例的疾病' : 'diseases with cases'}
         </span>
         <span className="chart-chip">
-          {lang === 'zh' ? '每项均含图表与原始表格' : 'Each item includes chart and raw table views'}
+          {priorityDiseases.length} {lang === 'zh' ? '张结构化疾病卡片' : 'structured disease cards'}
         </span>
       </div>
 
       <div className="space-y-2">
-        {withCases.map((disease) => (
+        {withCases.map((disease, index) => (
           <DiseaseCard
             key={disease.disease_id}
             disease={disease}
-            defaultOpen={openId === disease.disease_id}
+            defaultOpen={
+              openId === disease.disease_id
+              || (!openId && !search.trim() && viewMode === 'priority' && index === 0)
+            }
             theme={theme}
             lang={lang}
             countryCode={countryCode}

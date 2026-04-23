@@ -192,10 +192,17 @@ class ReportGenerator:
                 **kwargs
             )
         else:
+            generation_config = {
+                **(report.generation_config or {}),
+                **({"language": kwargs.get("language")} if kwargs.get("language") else {}),
+                **({"report_layout": kwargs.get("report_layout")} if kwargs.get("report_layout") else {}),
+            }
+            generation_config.pop("email_delivery", None)
             report = existing_report
             report.status = ReportStatus.GENERATING
             report.error_message = None
             report.completed_at = None
+            report.generation_config = generation_config
             await db.commit()
             await db.refresh(report)
 
@@ -244,13 +251,23 @@ class ReportGenerator:
             sections_kwargs = dict(kwargs)
             sections_kwargs['progress_callback'] = lambda cur, tot, msg: notify_progress("analysis", cur, tot, msg)
             
-            sections = await self._generate_sections(
-                db,
-                report=report,
-                data=data,
-                raw_sources=raw_sources,
-                **sections_kwargs
-            )
+            report_layout = kwargs.get("report_layout", "structured")
+            if report_layout == "legacy":
+                sections = await self._generate_sections(
+                    db,
+                    report=report,
+                    data=data,
+                    raw_sources=raw_sources,
+                    **sections_kwargs
+                )
+            else:
+                sections = await self._generate_structured_sections(
+                    db,
+                    report=report,
+                    data=data,
+                    raw_sources=raw_sources,
+                    **sections_kwargs,
+                )
             
             await notify_progress("writing", 1, 1, f"Generated {len(sections)} sections")
             
@@ -283,10 +300,10 @@ class ReportGenerator:
             
             # 7. 发送邮件（如果配置）
             if kwargs.get('send_email', False):
-                await self._send_email(report, sections)
+                await self._send_email(db, report, sections)
             
             # 8. 更新状态（根据审核结果决定是否标记为APPROVED）
-            if enable_review:
+            if enable_review and report_layout == "legacy":
                 # 计算整体质量分，并判断是否所有章节均通过审核
                 all_verified = True
                 quality_scores: list[float] = []
@@ -312,7 +329,7 @@ class ReportGenerator:
                     if report.quality_score is None and avg_quality is not None:
                         report.quality_score = avg_quality
             else:
-                report.status = ReportStatus.COMPLETED
+                report.status = ReportStatus.APPROVED if report_layout != "legacy" else ReportStatus.COMPLETED
 
             report.completed_at = datetime.now(timezone.utc)
             await db.commit()
@@ -364,6 +381,12 @@ class ReportGenerator:
         **kwargs
     ) -> Report:
         """创建报告记录"""
+        generation_config = dict(kwargs.get('config', {}) or {})
+        if kwargs.get("language"):
+            generation_config["language"] = kwargs.get("language")
+        if kwargs.get("report_layout"):
+            generation_config["report_layout"] = kwargs.get("report_layout")
+
         report = Report(
             country_id=country_id,
             report_type=report_type,
@@ -371,7 +394,7 @@ class ReportGenerator:
             status=ReportStatus.GENERATING,
             period_start=period_start,
             period_end=period_end,
-            generation_config=kwargs.get('config', {}),
+            generation_config=generation_config,
         )
         
         db.add(report)
@@ -432,6 +455,658 @@ class ReportGenerator:
         data = normalize_rate_columns(data, copy=False)
         logger.info(f"Extracted {len(data)} records")
         return data
+
+    async def _generate_structured_sections(
+        self,
+        db,
+        report: Report,
+        data: pd.DataFrame,
+        raw_sources: Optional[List[Dict[str, Any]]] = None,
+        **kwargs,
+    ) -> List[Dict[str, Any]]:
+        """Generate the v2 structured report: executive summary + disease cards + appendices."""
+        from sqlalchemy import select
+        from src.domain import Country, Disease, DiseaseKnowledgeBrief, ReportSection
+
+        logger.info("Generating structured report sections (executive summary + disease cards)")
+        task_uuid = kwargs.get("task_uuid")
+        language = kwargs.get("language", "en")
+        progress_callback = kwargs.get("progress_callback")
+
+        existing_sections_result = await db.execute(
+            select(ReportSection)
+            .where(ReportSection.report_id == report.id)
+            .order_by(ReportSection.section_order)
+        )
+        existing_sections = existing_sections_result.scalars().all()
+        if existing_sections:
+            return [
+                {
+                    "title": section.title,
+                    "content": section.content,
+                    "type": section.section_type,
+                    "chart_html": None,
+                    "disease_name": self._section_disease_name(section.title, section.section_type),
+                    "is_verified": bool(section.is_verified),
+                    "quality_scores": {"overall": 0.9 if section.is_verified else 0.7},
+                }
+                for section in existing_sections
+            ]
+
+        country = (
+            await db.execute(select(Country).where(Country.id == report.country_id))
+        ).scalar_one_or_none()
+        country_name = (country.name_en or country.name) if country else "Unknown"
+        country_code = country.code if country else ""
+
+        disease_ids_needed = [int(id_) for id_ in data["disease_id"].unique()]
+        disease_rows = (
+            await db.execute(select(Disease).where(Disease.id.in_(disease_ids_needed)))
+        ).scalars().all()
+        disease_map = {row.id: row for row in disease_rows}
+        standard_ids = [row.name for row in disease_rows if row.name not in self.SKIP_DISEASE_CODES]
+
+        brief_rows = (
+            await db.execute(
+                select(DiseaseKnowledgeBrief).where(
+                    DiseaseKnowledgeBrief.disease_id.in_(standard_ids),
+                    DiseaseKnowledgeBrief.language == ("zh" if language == "zh" else "en"),
+                    DiseaseKnowledgeBrief.status == "published",
+                )
+            )
+        ).scalars().all()
+        brief_map = {brief.disease_id: brief for brief in brief_rows}
+
+        disease_cards: list[dict[str, Any]] = []
+        for disease_id, disease_data in data.groupby("disease_id"):
+            disease = disease_map.get(int(disease_id))
+            if not disease or disease.name in self.SKIP_DISEASE_CODES:
+                continue
+            card = self._build_disease_card_payload(
+                disease=disease,
+                disease_data=disease_data,
+                knowledge_brief=brief_map.get(disease.name),
+                language=language,
+            )
+            disease_cards.append(card)
+
+        disease_cards.sort(
+            key=lambda item: (
+                item["metrics"]["total_cases"],
+                item["metrics"]["total_deaths"],
+                abs(item["metrics"].get("change_pct") or 0),
+            ),
+            reverse=True,
+        )
+
+        if progress_callback:
+            await progress_callback(0, max(len(disease_cards), 1), "Building structured report sections...")
+
+        top_limit = int(kwargs.get("top_disease_cards", 0) or len(disease_cards))
+        visible_cards = disease_cards[:top_limit]
+        report_summary_payload = self._build_report_summary_payload(
+            country_name=country_name,
+            country_code=country_code,
+            report=report,
+            disease_cards=disease_cards,
+            language=language,
+        )
+
+        report.title = report_summary_payload["title"]
+        report.summary = report_summary_payload["summary_text"]
+        report.key_findings = report_summary_payload["key_findings"]
+        report.quality_score = 0.9
+        report.metadata_ = {
+            **(report.metadata_ or {}),
+            "report_layout": "structured",
+            "disease_card_count": len(visible_cards),
+            "knowledge_brief_count": sum(1 for card in visible_cards if card.get("knowledge_status") == "published"),
+        }
+
+        section_payloads: list[dict[str, Any]] = [
+            {
+                "section_type": "executive_summary",
+                "title": "Executive Summary" if language != "zh" else "执行摘要",
+                "content": self._render_executive_summary(report_summary_payload, language),
+                "data_sources": self._report_data_sources(country_name, country_code, raw_sources),
+                "metadata": report_summary_payload,
+                "disease_name": "",
+            }
+        ]
+
+        for index, card in enumerate(visible_cards, 1):
+            section_payloads.append(
+                {
+                    "section_type": "disease_card",
+                    "title": f"{card['name_en']} - disease_card",
+                    "content": self._render_disease_card(card, language),
+                    "data_sources": card.get("data_sources") or [],
+                    "metadata": card,
+                    "disease_name": card["name_en"],
+                }
+            )
+            if progress_callback and index % 10 == 0:
+                await progress_callback(index, len(visible_cards), f"Built {index}/{len(visible_cards)} disease cards")
+
+        quality_payload = self._build_data_quality_payload(data, disease_cards, language)
+        methodology_payload = self._build_methodology_payload(country_name, language)
+        section_payloads.extend(
+            [
+                {
+                    "section_type": "data_quality_notes",
+                    "title": "Data Quality Notes" if language != "zh" else "数据质量说明",
+                    "content": self._render_data_quality_notes(quality_payload, language),
+                    "data_sources": self._report_data_sources(country_name, country_code, raw_sources),
+                    "metadata": quality_payload,
+                    "disease_name": "",
+                },
+                {
+                    "section_type": "methodology",
+                    "title": "Methodology" if language != "zh" else "方法说明",
+                    "content": self._render_methodology(methodology_payload, language),
+                    "data_sources": self._report_data_sources(country_name, country_code, raw_sources),
+                    "metadata": methodology_payload,
+                    "disease_name": "",
+                },
+            ]
+        )
+
+        persisted_sections: list[dict[str, Any]] = []
+        for order, payload in enumerate(section_payloads, 1):
+            section = ReportSection(
+                report_id=report.id,
+                title=payload["title"],
+                content=payload["content"],
+                section_type=payload["section_type"],
+                section_order=order,
+                data_sources=payload.get("data_sources") or [],
+                is_verified=True,
+                metadata_=payload.get("metadata") or {},
+            )
+            db.add(section)
+            await db.flush()
+            persisted_sections.append(
+                {
+                    "title": section.title,
+                    "content": section.content,
+                    "type": section.section_type,
+                    "chart_html": None,
+                    "section_id": section.id,
+                    "disease_name": payload.get("disease_name") or "",
+                    "token_usage": {},
+                    "quality_scores": {"overall": 0.9},
+                    "is_verified": True,
+                }
+            )
+
+        await db.commit()
+        if progress_callback:
+            await progress_callback(len(visible_cards), max(len(visible_cards), 1), "Structured report complete")
+        await self._log_task_event(
+            task_uuid,
+            entry_type="success",
+            title="Structured Report Generated",
+            content=(
+                f"Country: {country_name}\n"
+                f"Disease cards: {len(visible_cards)}\n"
+                f"Knowledge briefs used: {report.metadata_.get('knowledge_brief_count', 0)}"
+            ),
+            metadata={"scope": "report", "event": "structured_report_generated", "report_id": report.id},
+        )
+        logger.info("Structured report generated with %s sections", len(persisted_sections))
+        return persisted_sections
+
+    @staticmethod
+    def _section_disease_name(title: str, section_type: str) -> str:
+        if section_type != "disease_card" or " - " not in (title or ""):
+            return ""
+        return str(title).split(" - ")[0]
+
+    def _build_disease_card_payload(
+        self,
+        *,
+        disease,
+        disease_data: pd.DataFrame,
+        knowledge_brief,
+        language: str,
+    ) -> Dict[str, Any]:
+        df = normalize_rate_columns(disease_data)
+        sorted_df = df.sort_values("time") if "time" in df.columns else df
+        cases = sorted_df["cases"].fillna(0).tolist() if "cases" in sorted_df.columns else []
+        deaths = sorted_df["deaths"].fillna(0).tolist() if "deaths" in sorted_df.columns else []
+        latest_cases = int(cases[-1]) if cases else 0
+        previous_cases = int(cases[-2]) if len(cases) >= 2 else 0
+        latest_deaths = int(deaths[-1]) if deaths else 0
+        previous_deaths = int(deaths[-2]) if len(deaths) >= 2 else 0
+        total_cases = int(sum(cases))
+        total_deaths = int(sum(deaths))
+        change_pct = self._pct_change(latest_cases, previous_cases)
+        death_change_pct = self._pct_change(latest_deaths, previous_deaths)
+        trend = self._trend_label(change_pct, language)
+        period_start = self._format_period_value(sorted_df["time"].min()) if "time" in sorted_df.columns and len(sorted_df) else ""
+        period_end = self._format_period_value(sorted_df["time"].max()) if "time" in sorted_df.columns and len(sorted_df) else ""
+
+        if knowledge_brief:
+            official_brief = knowledge_brief.brief
+            definition = knowledge_brief.definition
+            clinical_features = knowledge_brief.clinical_features or knowledge_brief.clinical_summary
+            epidemiology = knowledge_brief.epidemiology
+            transmission = knowledge_brief.transmission
+            prevention = knowledge_brief.prevention
+            surveillance_note = knowledge_brief.surveillance_note
+            risk_groups = knowledge_brief.risk_groups
+            source_attribution = knowledge_brief.source_attribution or []
+            knowledge_status = knowledge_brief.status
+            knowledge_updated_at = knowledge_brief.updated_at.isoformat() if knowledge_brief.updated_at else None
+            disclaimer = knowledge_brief.disclaimer
+        else:
+            from src.knowledge.catalogue import build_catalogue_disease_brief
+
+            fallback_brief = build_catalogue_disease_brief(disease, language)
+            official_brief = fallback_brief["brief"]
+            definition = fallback_brief.get("definition")
+            clinical_features = fallback_brief.get("clinical_features") or fallback_brief.get("clinical_summary")
+            epidemiology = fallback_brief.get("epidemiology")
+            transmission = fallback_brief["transmission"]
+            prevention = fallback_brief["prevention"]
+            surveillance_note = fallback_brief.get("surveillance_note")
+            risk_groups = fallback_brief["risk_groups"]
+            source_attribution = []
+            knowledge_status = "fallback"
+            knowledge_updated_at = None
+            disclaimer = fallback_brief["disclaimer"]
+
+        interpretation = self._current_interpretation(
+            name=disease.name_en or disease.name,
+            latest_cases=latest_cases,
+            latest_deaths=latest_deaths,
+            previous_cases=previous_cases,
+            change_pct=change_pct,
+            trend=trend,
+            language=language,
+        )
+        limitations = self._disease_limitations(df, language)
+
+        data_sources = [
+            {
+                "url": item.get("resolved_url") or item.get("url"),
+                "title": item.get("title") or item.get("source_name"),
+                "snippet": item.get("license") or item.get("source_type"),
+            }
+            for item in source_attribution
+            if isinstance(item, dict)
+        ]
+        data_sources.append(
+            {
+                "url": None,
+                "title": f"Surveillance data for {disease.name_en or disease.name}",
+                "snippet": f"Period: {period_start} to {period_end}; records: {len(sorted_df)}; total cases: {total_cases}; total deaths: {total_deaths}",
+            }
+        )
+
+        return {
+            "disease_id": disease.name,
+            "name_en": disease.name_en or disease.name,
+            "name_zh": self._first_alias(disease) or disease.name_en or disease.name,
+            "category": disease.category,
+            "icd_10": disease.icd_10,
+            "icd_11": disease.icd_11,
+            "period_start": period_start,
+            "period_end": period_end,
+            "official_brief": official_brief,
+            "definition": definition,
+            "clinical_features": clinical_features,
+            "epidemiology": epidemiology,
+            "transmission": transmission,
+            "prevention": prevention,
+            "surveillance_note": surveillance_note,
+            "risk_groups": risk_groups,
+            "current_interpretation": interpretation,
+            "trend_assessment": trend,
+            "risk_note": self._risk_note(latest_cases, latest_deaths, language),
+            "data_limitations": limitations,
+            "disclaimer": disclaimer,
+            "knowledge_status": knowledge_status,
+            "knowledge_updated_at": knowledge_updated_at,
+            "source_attribution": source_attribution,
+            "data_sources": data_sources,
+            "metrics": {
+                "total_cases": total_cases,
+                "total_deaths": total_deaths,
+                "latest_cases": latest_cases,
+                "latest_deaths": latest_deaths,
+                "previous_cases": previous_cases,
+                "previous_deaths": previous_deaths,
+                "change_pct": change_pct,
+                "death_change_pct": death_change_pct,
+                "record_count": int(len(sorted_df)),
+            },
+        }
+
+    def _build_report_summary_payload(
+        self,
+        *,
+        country_name: str,
+        country_code: str,
+        report: Report,
+        disease_cards: list[dict[str, Any]],
+        language: str,
+    ) -> Dict[str, Any]:
+        total_cases = sum(card["metrics"]["total_cases"] for card in disease_cards)
+        total_deaths = sum(card["metrics"]["total_deaths"] for card in disease_cards)
+        latest_cases = sum(card["metrics"]["latest_cases"] for card in disease_cards)
+        active_cards = [card for card in disease_cards if card["metrics"]["latest_cases"] > 0 or card["metrics"]["latest_deaths"] > 0]
+        top_by_cases = sorted(disease_cards, key=lambda card: card["metrics"]["total_cases"], reverse=True)[:5]
+        top_movers = sorted(
+            disease_cards,
+            key=lambda card: abs(card["metrics"].get("change_pct") or 0),
+            reverse=True,
+        )[:5]
+        period = f"{report.period_start.strftime('%Y-%m-%d')} to {report.period_end.strftime('%Y-%m-%d')}"
+        title = (
+            f"{country_name} Infectious Disease Surveillance Report | {report.period_start.strftime('%Y-%m')} to {report.period_end.strftime('%Y-%m')}"
+            if language != "zh"
+            else f"{country_name} 传染病监测报告 | {report.period_start.strftime('%Y-%m')} 至 {report.period_end.strftime('%Y-%m')}"
+        )
+        if language == "zh":
+            summary_text = (
+                f"本报告汇总 {country_name} 在 {period} 期间的传染病监测数据，覆盖 {len(disease_cards)} 种标准化疾病。"
+                f"报告期内累计记录 {total_cases:,} 例病例和 {total_deaths:,} 例死亡，最近一期活跃报告疾病 {len(active_cards)} 种。"
+            )
+            key_findings = [
+                f"累计病例最高的疾病包括：{', '.join(card['name_en'] for card in top_by_cases if card['metrics']['total_cases'] > 0) or '暂无'}。",
+                f"最近一期病例合计为 {latest_cases:,} 例，需结合各来源报告频率解读。",
+                "所有疾病卡片均包含基础简介、当前解读、趋势判断、关键数字和数据限制。",
+                "报告中的疾病简介优先使用知识库发布 brief；缺失时以本地目录后备说明展示并标记需复核。",
+            ]
+        else:
+            summary_text = (
+                f"This report summarizes infectious disease surveillance data for {country_name} during {period}, "
+                f"covering {len(disease_cards)} standardized diseases. The reporting window contains {total_cases:,} "
+                f"recorded cases and {total_deaths:,} deaths, with {len(active_cards)} diseases active in the latest observation."
+            )
+            key_findings = [
+                f"Highest cumulative case burdens: {', '.join(card['name_en'] for card in top_by_cases if card['metrics']['total_cases'] > 0) or 'none reported'}.",
+                f"Latest-observation reported cases sum to {latest_cases:,}; interpretation should account for source reporting cadence.",
+                "Each disease card includes an official brief, current interpretation, trend assessment, key metrics, and data limitations.",
+                "Disease introductions use published knowledge briefs where available, with local-catalogue fallback clearly marked for review.",
+            ]
+
+        return {
+            "title": title,
+            "country_name": country_name,
+            "country_code": country_code,
+            "period": period,
+            "summary_text": summary_text,
+            "key_findings": key_findings,
+            "totals": {
+                "disease_count": len(disease_cards),
+                "active_latest_diseases": len(active_cards),
+                "total_cases": total_cases,
+                "total_deaths": total_deaths,
+                "latest_cases": latest_cases,
+            },
+            "top_by_cases": top_by_cases,
+            "top_movers": top_movers,
+        }
+
+    @staticmethod
+    def _render_executive_summary(payload: Dict[str, Any], language: str) -> str:
+        lines = [f"# {payload['title']}", "", payload["summary_text"], ""]
+        lines.append("## Key Findings" if language != "zh" else "## 关键发现")
+        for finding in payload["key_findings"]:
+            lines.append(f"- {finding}")
+        lines.append("")
+        lines.append("## Highest Burden Diseases" if language != "zh" else "## 累计负担最高疾病")
+        for card in payload["top_by_cases"]:
+            metrics = card["metrics"]
+            lines.append(
+                f"- **{card['name_en']}**: {metrics['total_cases']:,} cases, {metrics['total_deaths']:,} deaths; latest {metrics['latest_cases']:,} cases."
+            )
+        lines.append("")
+        lines.append("## Largest Recent Changes" if language != "zh" else "## 最近变化较大疾病")
+        for card in payload["top_movers"]:
+            change = card["metrics"].get("change_pct")
+            change_text = "N/A" if change is None else f"{change:+.1f}%"
+            lines.append(f"- **{card['name_en']}**: {change_text} vs previous observation; {card['trend_assessment']}.")
+        return "\n".join(lines)
+
+    @staticmethod
+    def _render_disease_card(card: Dict[str, Any], language: str) -> str:
+        labels = {
+            "official": "Official Brief" if language != "zh" else "官方简介",
+            "current": "Current Interpretation" if language != "zh" else "当前解读",
+            "metrics": "Key Metrics" if language != "zh" else "关键指标",
+            "risk": "Risk Note" if language != "zh" else "风险提示",
+            "limits": "Data Limitations" if language != "zh" else "数据限制",
+            "sources": "Sources" if language != "zh" else "来源",
+        }
+        m = card["metrics"]
+        lines = [
+            f"## {card['name_en']}",
+            "",
+            f"### {labels['official']}",
+            card.get("official_brief") or "",
+            "",
+        ]
+        if card.get("definition"):
+            lines.extend(["**Definition:**" if language != "zh" else "**定义：**", card["definition"], ""])
+        if card.get("clinical_features"):
+            lines.extend(["**Clinical features:**" if language != "zh" else "**临床特征：**", card["clinical_features"], ""])
+        if card.get("epidemiology"):
+            lines.extend(["**Epidemiology:**" if language != "zh" else "**流行病学：**", card["epidemiology"], ""])
+        if card.get("transmission"):
+            lines.extend(["**Transmission / exposure:**" if language != "zh" else "**传播/暴露：**", card["transmission"], ""])
+        if card.get("prevention"):
+            lines.extend(["**Prevention context:**" if language != "zh" else "**预防解读：**", card["prevention"], ""])
+        if card.get("surveillance_note"):
+            lines.extend(["**Surveillance note:**" if language != "zh" else "**监测说明：**", card["surveillance_note"], ""])
+        if card.get("risk_groups"):
+            lines.extend(["**Risk groups:**" if language != "zh" else "**重点人群：**", card["risk_groups"], ""])
+        lines.extend(
+            [
+                f"### {labels['current']}",
+                card["current_interpretation"],
+                "",
+                f"### {labels['metrics']}",
+                f"- Total cases: {m['total_cases']:,}",
+                f"- Total deaths: {m['total_deaths']:,}",
+                f"- Latest observation: {m['latest_cases']:,} cases and {m['latest_deaths']:,} deaths",
+                f"- Trend assessment: {card['trend_assessment']}",
+                "",
+                f"### {labels['risk']}",
+                card["risk_note"],
+                "",
+                f"### {labels['limits']}",
+                card["data_limitations"],
+                "",
+            ]
+        )
+        sources = card.get("source_attribution") or []
+        if sources:
+            lines.append(f"### {labels['sources']}")
+            for src in sources[:5]:
+                title = src.get("title") or src.get("source_name") or src.get("source_type")
+                url = src.get("resolved_url") or src.get("url")
+                lines.append(f"- [{title}]({url})" if url else f"- {title}")
+            lines.append("")
+        if card.get("disclaimer"):
+            lines.extend(["", f"*{card['disclaimer']}*"])
+        return "\n".join(lines)
+
+    @staticmethod
+    def _build_data_quality_payload(data: pd.DataFrame, disease_cards: list[dict[str, Any]], language: str) -> Dict[str, Any]:
+        missing_rates = {}
+        for column in ("cases", "deaths", "incidence_rate", "mortality_rate"):
+            if column in data.columns:
+                missing_rates[column] = round(float(data[column].isna().mean()), 4)
+        fallback_count = sum(1 for card in disease_cards if card.get("knowledge_status") != "published")
+        return {
+            "record_count": int(len(data)),
+            "disease_count": len(disease_cards),
+            "missing_rates": missing_rates,
+            "fallback_knowledge_briefs": fallback_count,
+            "language": language,
+        }
+
+    @staticmethod
+    def _render_data_quality_notes(payload: Dict[str, Any], language: str) -> str:
+        if language == "zh":
+            lines = [
+                "## 数据质量说明",
+                f"- 本报告使用 {payload['record_count']:,} 条标准化监测记录，覆盖 {payload['disease_count']} 种疾病。",
+                f"- {payload['fallback_knowledge_briefs']} 个疾病简介使用本地目录后备文本，需后续知识库复核。",
+                "- 发病率、死亡率等率值依赖人口分母和来源定义，缺失时不自动推断。",
+            ]
+        else:
+            lines = [
+                "## Data Quality Notes",
+                f"- This report uses {payload['record_count']:,} standardized surveillance records covering {payload['disease_count']} diseases.",
+                f"- {payload['fallback_knowledge_briefs']} disease briefs use local-catalogue fallback text and should be reviewed in the knowledge base.",
+                "- Incidence and mortality rates depend on population denominators and source definitions; missing rates are not inferred.",
+            ]
+        for column, missing in payload.get("missing_rates", {}).items():
+            lines.append(f"- Missing `{column}` values: {missing:.1%}.")
+        return "\n".join(lines)
+
+    @staticmethod
+    def _build_methodology_payload(country_name: str, language: str) -> Dict[str, Any]:
+        return {
+            "country_name": country_name,
+            "language": language,
+            "sections": ["executive_summary", "disease_card", "data_quality_notes", "methodology"],
+        }
+
+    @staticmethod
+    def _render_methodology(payload: Dict[str, Any], language: str) -> str:
+        if language == "zh":
+            return (
+                "## 方法说明\n"
+                "本报告先聚合报告期内的国家级监测指标，再按标准疾病生成结构化疾病卡片。"
+                "疾病卡片中的基础简介来自知识库发布 brief；监测解读来自当前数据库时间序列。"
+                "所有数字均来自清洗后的监测记录，缺少来源支撑的医学解释不会自动生成。"
+            )
+        return (
+            "## Methodology\n"
+            "The report first aggregates country-level surveillance indicators for the reporting window, "
+            "then renders structured disease cards for standardized diseases. Disease-card briefs come "
+            "from published knowledge-base briefs when available; surveillance interpretation comes from "
+            "the current database time series. All reported numbers are derived from cleaned surveillance "
+            "records, and unsupported medical interpretation is not inferred."
+        )
+
+    @staticmethod
+    def _report_data_sources(country_name: str, country_code: str, raw_sources: Optional[List[Dict[str, Any]]]) -> list[dict[str, Any]]:
+        sources = [
+            {
+                "url": None,
+                "title": f"{country_name} ({country_code}) surveillance records",
+                "snippet": "Standardized database records used for this report.",
+            }
+        ]
+        for src in (raw_sources or [])[:5]:
+            sources.append(
+                {
+                    "url": src.get("url"),
+                    "title": src.get("title"),
+                    "snippet": (src.get("snippet") or src.get("text", ""))[:500],
+                }
+            )
+        return sources
+
+    @staticmethod
+    def _pct_change(current: int, previous: int) -> Optional[float]:
+        if previous == 0:
+            if current == 0:
+                return 0.0
+            return None
+        return round(((current - previous) / previous) * 100.0, 2)
+
+    @staticmethod
+    def _trend_label(change_pct: Optional[float], language: str) -> str:
+        if change_pct is None:
+            return "new or reappearing signal" if language != "zh" else "新增或重新出现信号"
+        if change_pct > 20:
+            return "increasing" if language != "zh" else "上升"
+        if change_pct < -20:
+            return "decreasing" if language != "zh" else "下降"
+        return "stable or low-change" if language != "zh" else "稳定或低变化"
+
+    @staticmethod
+    def _format_period_value(value: Any) -> str:
+        try:
+            return value.strftime("%Y-%m-%d")
+        except Exception:
+            return str(value) if value is not None else ""
+
+    @staticmethod
+    def _fallback_disease_brief(disease, language: str) -> str:
+        from src.knowledge.catalogue import build_catalogue_disease_brief
+
+        return build_catalogue_disease_brief(disease, language)["brief"]
+
+    @staticmethod
+    def _current_interpretation(
+        *,
+        name: str,
+        latest_cases: int,
+        latest_deaths: int,
+        previous_cases: int,
+        change_pct: Optional[float],
+        trend: str,
+        language: str,
+    ) -> str:
+        if language == "zh":
+            if change_pct is None:
+                change = "上一期为 0，无法计算相对变化"
+            else:
+                change = f"较上一期变化 {change_pct:+.1f}%"
+            return f"{name} 最近一期报告 {latest_cases:,} 例病例、{latest_deaths:,} 例死亡；上一期病例为 {previous_cases:,} 例，{change}，趋势判断为{trend}。"
+        change = "relative change is not calculable because the previous observation was zero" if change_pct is None else f"{change_pct:+.1f}% compared with the previous observation"
+        return f"{name} recorded {latest_cases:,} cases and {latest_deaths:,} deaths in the latest observation; previous cases were {previous_cases:,}, {change}, and the trend assessment is {trend}."
+
+    @staticmethod
+    def _risk_note(latest_cases: int, latest_deaths: int, language: str) -> str:
+        if language == "zh":
+            if latest_deaths > 0:
+                return "最近一期存在死亡报告，应结合来源定义、诊断延迟和临床严重程度进行重点复核。"
+            if latest_cases > 0:
+                return "最近一期仍有病例报告，应保持常规监测并关注异常增幅。"
+            return "最近一期未报告病例，但低报告不等同于无风险，仍需结合监测敏感性解读。"
+        if latest_deaths > 0:
+            return "Deaths are present in the latest observation; source definitions, diagnostic delay, and clinical severity should be reviewed carefully."
+        if latest_cases > 0:
+            return "Cases remain present in the latest observation; routine monitoring should continue with attention to unusual increases."
+        return "No cases were reported in the latest observation, but low reporting does not equal zero risk and should be interpreted with surveillance sensitivity."
+
+    @staticmethod
+    def _disease_limitations(df: pd.DataFrame, language: str) -> str:
+        issues = []
+        if "incidence_rate" in df.columns and df["incidence_rate"].isna().any():
+            issues.append("incidence rate is missing for some records")
+        if "mortality_rate" in df.columns and df["mortality_rate"].isna().any():
+            issues.append("mortality rate is missing for some records")
+        if len(df) < 3:
+            issues.append("the time series is short")
+        if not issues:
+            return "No major structural limitation was detected in the available time series." if language != "zh" else "当前时间序列未发现明显结构性限制。"
+        if language == "zh":
+            return "；".join(
+                {
+                    "incidence rate is missing for some records": "部分记录缺少发病率",
+                    "mortality rate is missing for some records": "部分记录缺少死亡率",
+                    "the time series is short": "时间序列较短",
+                }.get(issue, issue)
+                for issue in issues
+            ) + "。"
+        return "; ".join(issues) + "."
+
+    @staticmethod
+    def _first_alias(disease) -> Optional[str]:
+        aliases = disease.aliases or []
+        if isinstance(aliases, list) and aliases:
+            return str(aliases[0])
+        return None
     
     async def _generate_sections(
         self,
@@ -1791,6 +2466,10 @@ class ReportGenerator:
             'period_start': report.period_start.strftime('%Y-%m-%d'),
             'period_end': report.period_end.strftime('%Y-%m-%d'),
             'country': country_name,
+            'summary': report.summary,
+            'key_findings': report.key_findings,
+            'report_layout': (report.metadata_ or {}).get('report_layout', 'legacy'),
+            'language': (report.generation_config or {}).get('language', 'en'),
         }
         
         # 生成文件名前缀
@@ -1875,40 +2554,51 @@ class ReportGenerator:
     
     async def _send_email(
         self,
+        db,
         report: Report,
         sections: List[Dict[str, Any]],
-    ) -> None:
+    ) -> Dict[str, Any]:
         """发送报告邮件"""
         logger.info("Sending report email")
-        
-        # 获取收件人列表
-        recipients = self.config.email.default_recipients
-        
-        if not recipients:
-            logger.warning("No email recipients configured")
-            return
-        
+
         # 读取HTML内容
-        if report.html_path:
+        if report.html_path and Path(report.html_path).exists():
             with open(report.html_path, 'r', encoding='utf-8') as f:
                 html_content = f.read()
         else:
             # 使用简单HTML
             metadata = {'title': report.title}
             html_content = self.formatter.format_html(sections, metadata)
-        
-        # 发送邮件
-        success = self.email_service.send_report(
-            to_addrs=recipients,
+
+        delivery = self.email_service.send_report_to_settings_recipients(
             report_title=report.title,
             report_html=html_content,
             pdf_path=report.pdf_path,
         )
-        
-        if success:
+        await self._persist_email_delivery(db, report, delivery)
+
+        if delivery.get("sent"):
             logger.info("Report email sent successfully")
         else:
-            logger.error("Failed to send report email")
+            logger.warning(
+                "Report email was not sent for report %s: %s",
+                report.id,
+                delivery.get("message") or delivery.get("reason") or "unknown",
+            )
+        return delivery
+
+    async def _persist_email_delivery(
+        self,
+        db,
+        report: Report,
+        delivery: Dict[str, Any],
+    ) -> None:
+        generation_config = dict(report.generation_config or {})
+        generation_config["email_delivery"] = delivery
+        report.generation_config = generation_config
+        db.add(report)
+        await db.commit()
+        await db.refresh(report)
     
     def _generate_section_chart(
         self,

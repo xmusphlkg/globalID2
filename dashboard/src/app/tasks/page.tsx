@@ -198,6 +198,7 @@ export default function TasksPage() {
               "review_section",
               "export_data",
               "send_email",
+              "update_disease_knowledge",
             ].map((t) => (
               <option key={t} value={t}>{t}</option>
             ))}

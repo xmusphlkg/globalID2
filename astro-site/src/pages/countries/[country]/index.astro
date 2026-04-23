@@ -82,20 +82,46 @@ const diseaseRows = countryData
 const coverageLabel = countryData?.date_range
   ? `${countryData.date_range.start} → ${countryData.date_range.end ?? 'present'}`
   : '—';
+const countryName = countryData?.country_name ?? country.toUpperCase();
+const countryBriefEn = countryData?.brief_en
+  ?? `${countryName} surveillance page consolidates infectious disease records, charts, and source metadata for exploratory review.`;
+const countryBriefZh = countryData?.brief_zh
+  ?? `${countryName} 监测页面整合传染病记录、图表和来源信息，供探索性分析使用。`;
+const surveillanceSystemEn = countryData?.surveillance_system_en
+  ?? `Current records are built from configured public surveillance sources for ${countryName}.`;
+const surveillanceSystemZh = countryData?.surveillance_system_zh
+  ?? `当前记录来自 ${countryName} 已配置的公开监测来源。`;
+const interpretationEn = countryData?.interpretation_en
+  ?? `Coverage spans ${coverageLabel} across ${countryData?.disease_count ?? 0} tracked diseases.`;
+const interpretationZh = countryData?.interpretation_zh
+  ?? `当前覆盖 ${coverageLabel}，纳入 ${countryData?.disease_count ?? 0} 种追踪疾病。`;
+const reportingCadenceEn = countryData?.reporting_cadence_en
+  ?? 'Reporting cadence can differ by source; charts use weekly-equivalent normalization where applicable.';
+const reportingCadenceZh = countryData?.reporting_cadence_zh
+  ?? '不同来源的报告频率可能不同；相关图表在适用时使用周等价归一化。';
+const limitationsEn = countryData?.limitations_en
+  ?? 'Counts reflect reported surveillance records and can be affected by source cadence, case definitions, reporting lag, and missing denominators.';
+const limitationsZh = countryData?.limitations_zh
+  ?? '病例数反映已报告监测记录，可能受来源频率、病例定义、报告延迟和分母缺失影响。';
+const sourceSummaryEn = countryData?.source_summary_en ?? 'Configured public surveillance sources';
+const sourceSummaryZh = countryData?.source_summary_zh ?? sourceSummaryEn;
+const countryBriefUpdated = countryData?.country_brief_updated_at
+  ? new Date(countryData.country_brief_updated_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+  : null;
 
 const chartSourceMeta = buildChartSourceMeta(
   countryDownload,
-  `${countryData?.country_name ?? country.toUpperCase()} surveillance dataset`
+  `${countryName} surveillance dataset`
 );
 const countryDataUrl = countryDownload?.site_json_path ?? `/site-data/countries/${country}.json`;
 ---
 
 <ReportLayout
-  title={countryData?.country_name ?? country.toUpperCase()}
-  description={`Disease surveillance data for ${countryData?.country_name ?? country.toUpperCase()}`}
+  title={countryName}
+  description={`Disease surveillance data for ${countryName}`}
   breadcrumbs={[
     { label: 'Countries', href: '/countries/' },
-    { label: countryData?.country_name ?? country.toUpperCase() },
+    { label: countryName },
   ]}
 >
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
@@ -108,18 +134,18 @@ const countryDataUrl = countryDownload?.site_json_path ?? `/site-data/countries/
           <div class="flex items-center gap-3">
             <CountryFlag
               code={countryData?.country_code ?? country.toUpperCase()}
-              name={countryData?.country_name ?? country.toUpperCase()}
+              name={countryName}
               sizeClass="w-10 h-8"
             />
             <span class="text-sm uppercase tracking-[0.18em] text-[rgb(var(--text-muted))]">{countryData?.country_code ?? country.toUpperCase()}</span>
           </div>
           <div>
             <h1 class="academic-title">
-              {countryData?.country_name ?? country.toUpperCase()}
+              {countryName}
             </h1>
           </div>
-          <p class="academic-lead" data-lang-en="This page consolidates time-series surveillance records, comparative tables, and machine-readable downloads for formal reporting and exploratory review." data-lang-zh="本页整合了时间序列监测记录、疾病对比表和机器可读下载文件，适用于正式汇报与探索性分析。">
-            This page consolidates time-series surveillance records, comparative tables, and machine-readable downloads for formal reporting and exploratory review.
+          <p class="academic-lead" data-lang-en={countryBriefEn} data-lang-zh={countryBriefZh}>
+            {countryBriefEn}
           </p>
         </div>
 
@@ -143,6 +169,53 @@ const countryDataUrl = countryDownload?.site_json_path ?? `/site-data/countries/
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
             </svg>
           </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="figure-panel">
+      <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p class="figure-kicker" data-lang-en="Country Brief" data-lang-zh="国家简介">Country Brief</p>
+          <h2 class="figure-title" data-lang-en="How to interpret this surveillance profile." data-lang-zh="如何解读本国家监测画像。">
+            How to interpret this surveillance profile.
+          </h2>
+        </div>
+        <div class="text-xs leading-5 text-[rgb(var(--text-muted))] sm:text-right">
+          <div data-lang-en={`Sources: ${sourceSummaryEn}`} data-lang-zh={`来源：${sourceSummaryZh}`}>
+            Sources: {sourceSummaryEn}
+          </div>
+          {countryBriefUpdated && (
+            <div data-lang-en={`Updated ${countryBriefUpdated}`} data-lang-zh={`更新于 ${countryBriefUpdated}`}>
+              Updated {countryBriefUpdated}
+            </div>
+          )}
+        </div>
+      </div>
+      <div class="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div class="border border-[rgb(var(--border))/0.68] bg-[rgb(var(--surface))/0.6] px-4 py-3">
+          <div class="academic-meta-label" data-lang-en="Surveillance system" data-lang-zh="监测系统">Surveillance system</div>
+          <p class="mt-2 text-sm leading-6 text-[rgb(var(--text-muted))]" data-lang-en={surveillanceSystemEn} data-lang-zh={surveillanceSystemZh}>
+            {surveillanceSystemEn}
+          </p>
+        </div>
+        <div class="border border-[rgb(var(--border))/0.68] bg-[rgb(var(--surface))/0.6] px-4 py-3">
+          <div class="academic-meta-label" data-lang-en="Current interpretation" data-lang-zh="当前解读">Current interpretation</div>
+          <p class="mt-2 text-sm leading-6 text-[rgb(var(--text-muted))]" data-lang-en={interpretationEn} data-lang-zh={interpretationZh}>
+            {interpretationEn}
+          </p>
+        </div>
+        <div class="border border-[rgb(var(--border))/0.68] bg-[rgb(var(--surface))/0.6] px-4 py-3">
+          <div class="academic-meta-label" data-lang-en="Reporting cadence" data-lang-zh="报告频率">Reporting cadence</div>
+          <p class="mt-2 text-sm leading-6 text-[rgb(var(--text-muted))]" data-lang-en={reportingCadenceEn} data-lang-zh={reportingCadenceZh}>
+            {reportingCadenceEn}
+          </p>
+        </div>
+        <div class="border border-[rgb(var(--border))/0.68] bg-[rgb(var(--surface))/0.6] px-4 py-3">
+          <div class="academic-meta-label" data-lang-en="Data limitations" data-lang-zh="数据限制">Data limitations</div>
+          <p class="mt-2 text-sm leading-6 text-[rgb(var(--text-muted))]" data-lang-en={limitationsEn} data-lang-zh={limitationsZh}>
+            {limitationsEn}
+          </p>
         </div>
       </div>
     </section>
@@ -268,6 +341,7 @@ const countryDataUrl = countryDownload?.site_json_path ?? `/site-data/countries/
               countryCode={r.country_code}
               countryName={r.country_name}
               qualityScore={r.quality_score}
+              summary={r.summary}
             />
           ))}
         </div>

@@ -289,6 +289,16 @@ start_web() {
   )
   sleep 2
 
+  local listener_pid
+  for _ in {1..10}; do
+    listener_pid="$(find_port_pid 3000)"
+    if [[ -n "$listener_pid" ]] && pid_is_running "$listener_pid"; then
+      echo "$listener_pid" > "$WEB_PID_FILE"
+      break
+    fi
+    sleep 0.5
+  done
+
   pid="$(read_pid "$WEB_PID_FILE")"
   if [[ -n "$pid" ]] && pid_is_running "$pid"; then
     echo "Dashboard web started (PID $pid)"

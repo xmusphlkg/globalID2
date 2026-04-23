@@ -1,1 +1,1 @@
-"""GlobalID V2 API Routers Package"""
+"""GIDS V2 API Routers Package"""

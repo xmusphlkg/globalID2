@@ -83,7 +83,7 @@ export function TopNavbar({
               {sidebarCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
             </button>
             <div className="lg:hidden">
-              <span className="text-lg tracking-tight">GlobalID</span>
+              <span className="text-lg tracking-tight">{t(lang, "brand_name")}</span>
             </div>
             <div className={`hidden rounded-full border px-3 py-1 text-xs font-medium lg:flex lg:items-center lg:gap-2 ${countryHealthTone}`}>
               {error ? <AlertTriangle className="h-3.5 w-3.5" /> : <ShieldCheck className="h-3.5 w-3.5" />}

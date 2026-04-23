@@ -19,9 +19,10 @@ from typing import Optional
 
 from sqlalchemy import select
 
-from src.core import get_config, get_database, get_logger
+from src.core import get_database, get_logger
 from src.domain import Country, Task, TaskStatus, TaskWorkbook
 from src.services.smtp_email_service import smtp_email_service
+from src.services.settings_service import system_settings_service
 
 logger = get_logger(__name__)
 
@@ -49,8 +50,9 @@ class TaskAlertService:
         if final_status not in (TaskStatus.FAILED, TaskStatus.CANCELLED):
             return
 
-        config = get_config().automation
-        if not config.admin_emails or not smtp_email_service.is_configured():
+        smtp_state = system_settings_service.build_smtp_status()
+        admin_emails = smtp_state["admin_emails"]
+        if not admin_emails or not smtp_state["alerting_ready"]:
             return
 
         async with get_database() as db:
@@ -91,7 +93,7 @@ class TaskAlertService:
             body = _build_alert_html(task, country, workbook_entries, final_status)
 
             sent = smtp_email_service.send_email(
-                recipients=config.admin_emails,
+                recipients=admin_emails,
                 subject=subject,
                 body_html=body,
             )
@@ -106,7 +108,7 @@ class TaskAlertService:
             "Task alert (%s) sent for %s to %d recipient(s)",
             status_label,
             task_uuid,
-            len(config.admin_emails),
+            len(admin_emails),
         )
 
 

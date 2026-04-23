@@ -294,8 +294,8 @@ export default function SourcesAutomationPage() {
         </h1>
         <Text>
           {lang === "zh"
-            ? "这里可以新增、修改、删除自动化抓取任务；邮件收件人与 SMTP 凭证仍通过 env 管理。"
-            : "Create, edit, and delete automation jobs here; email recipients and SMTP credentials remain env-managed."}
+            ? "这里可以新增、修改、删除自动化抓取任务；邮件收件人与 SMTP 凭证已统一收口到设置中心。"
+            : "Create, edit, and delete automation jobs here; email recipients and SMTP credentials are centralized in Settings."}
         </Text>
         {!isLoading && !schedulerEnabled ? (
           <div className="rounded-tremor-default border border-rose-300 bg-rose-50 p-4 text-sm text-rose-900 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-200">
@@ -325,6 +325,13 @@ export default function SourcesAutomationPage() {
             className="inline-flex items-center gap-2 rounded-xl border border-tremor-border bg-tremor-background px-4 py-2 text-sm font-medium text-tremor-content-strong shadow-sm transition hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background"
           >
             {lang === "zh" ? "查看数据流程" : "Open Data Flow"}
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+          <Link
+            href="/setting"
+            className="inline-flex items-center gap-2 rounded-xl border border-teal-200 bg-teal-50 px-4 py-2 text-sm font-medium text-teal-700 shadow-sm transition hover:bg-teal-100 dark:border-teal-900/50 dark:bg-teal-950/25 dark:text-teal-300"
+          >
+            {lang === "zh" ? "打开设置中心" : "Open Settings"}
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
@@ -393,16 +400,22 @@ export default function SourcesAutomationPage() {
                 <div className="rounded-tremor-default border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
                   <div className="flex items-center gap-2 font-medium">
                     <AlertTriangle className="h-4 w-4" />
-                    SMTP mail is not fully configured.
+                    {lang === "zh" ? "设置中心中的 SMTP 还未准备完成。" : "SMTP is not ready in the Settings Center."}
                   </div>
                   <Text className="mt-2">
-                    Set `AUTOMATION__SMTP_HOST`, `SMTP_USERNAME`, `SMTP_PASSWORD`, and `SMTP_FROM_EMAIL` in `.env`.
+                    {lang === "zh"
+                      ? "请到设置中心补齐 SMTP 主机、账号、密码和发件邮箱。"
+                      : "Open Settings to finish the SMTP host, username, password, and from-email setup."}
                   </Text>
                 </div>
               ) : null}
               {!config?.admin_emails.length ? (
                 <div className="rounded-tremor-default border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
-                  <Text>Add `AUTOMATION__ADMIN_EMAILS_RAW` in `.env` to receive failure alerts.</Text>
+                  <Text>
+                    {lang === "zh"
+                      ? "请在设置中心补充管理员邮箱，自动化失败提醒才会送达。"
+                      : "Add admin email recipients in Settings so automation failure alerts have somewhere to go."}
+                  </Text>
                 </div>
               ) : null}
             </div>
@@ -416,7 +429,7 @@ export default function SourcesAutomationPage() {
                   <Badge key={email} color="slate">{email}</Badge>
                 ))
               ) : (
-                <Text>No admin emails configured</Text>
+                <Text>{lang === "zh" ? "尚未配置管理员邮箱" : "No admin emails configured"}</Text>
               )}
             </div>
           </div>

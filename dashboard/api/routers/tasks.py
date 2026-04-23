@@ -5,17 +5,25 @@ from pathlib import Path
 import subprocess
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
-from sqlalchemy import func, select
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, WebSocket, WebSocketDisconnect
+from sqlalchemy import Text, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..deps import get_db
 from ..schemas.task import TaskCreateRequest, TaskDetailOut, TaskOut, WorkbookEntryOut, WorkerStatusOut
+from src.core.config import get_config
 from src.core.task_manager import task_manager
 from src.domain.country import Country
 from src.domain.task import Task, TaskStatus, TaskType, TaskWorkbook
 
 router = APIRouter()
+
+
+def _worker_concurrency() -> int:
+    try:
+        return max(1, int(get_config().task_worker.concurrency))
+    except Exception:
+        return 1
 
 
 def _cancel_meta(task: Task) -> tuple[bool, Optional[str]]:
@@ -111,13 +119,40 @@ task_hub = _ConnectionHub()
 
 @router.get("/tasks", response_model=List[TaskOut])
 async def list_tasks(
+    response: Response,
     status: Optional[str] = Query(None, description="Comma-separated statuses"),
     task_type: Optional[str] = Query(None, description="Comma-separated types"),
     country_id: Optional[int] = Query(None, ge=1, description="Filter by country id"),
     search: Optional[str] = Query(None),
     limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
 ):
+    filters = []
+    if status:
+        vals = [s.strip() for s in status.split(",") if s.strip()]
+        filters.append(Task.status.in_(vals))
+    if task_type:
+        vals = [t.strip() for t in task_type.split(",") if t.strip()]
+        filters.append(Task.task_type.in_(vals))
+    if country_id is not None:
+        filters.append(Task.country_id == country_id)
+    if search:
+        like = f"%{search}%"
+        filters.append(
+            Task.task_name.ilike(like)
+            | Task.task_uuid.ilike(like)
+            | Task.description.ilike(like)
+            | cast(Task.input_data, Text).ilike(like)
+            | cast(Task.output_data, Text).ilike(like)
+            | cast(Task.metadata_, Text).ilike(like)
+        )
+
+    count_q = select(func.count()).select_from(Task)
+    if filters:
+        count_q = count_q.where(*filters)
+    total_count = int((await db.execute(count_q)).scalar_one() or 0)
+
     q = (
         select(
             Task,
@@ -129,26 +164,19 @@ async def list_tasks(
         .outerjoin(TaskWorkbook, TaskWorkbook.task_id == Task.id)
         .group_by(Task.id, Country.code, Country.name_en)
         .order_by(Task.created_at.desc())
+        .offset(offset)
         .limit(limit)
     )
 
-    if status:
-        vals = [s.strip() for s in status.split(",") if s.strip()]
-        q = q.where(Task.status.in_(vals))
-    if task_type:
-        vals = [t.strip() for t in task_type.split(",") if t.strip()]
-        q = q.where(Task.task_type.in_(vals))
-    if country_id is not None:
-        q = q.where(Task.country_id == country_id)
-    if search:
-        like = f"%{search}%"
-        q = q.where(
-            Task.task_name.ilike(like)
-            | Task.task_uuid.ilike(like)
-            | Task.description.ilike(like)
-        )
+    if filters:
+        q = q.where(*filters)
 
     rows = (await db.execute(q)).all()
+
+    response.headers["X-Total-Count"] = str(total_count)
+    response.headers["X-Limit"] = str(limit)
+    response.headers["X-Offset"] = str(offset)
+    response.headers["Access-Control-Expose-Headers"] = "X-Total-Count, X-Limit, X-Offset"
 
     return [
         TaskOut(
@@ -199,6 +227,7 @@ async def get_worker_status(db: AsyncSession = Depends(get_db)):
     return WorkerStatusOut(
         worker_process_running=worker_process_running,
         worker_pid=worker_pid if worker_process_running else None,
+        worker_concurrency=_worker_concurrency(),
         queued_tasks=int(row.queued_tasks or 0),
         running_tasks=running,
         retrying_tasks=retrying,
