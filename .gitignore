@@ -76,7 +76,9 @@ pnpm-debug.log*
 /data/test_output/
 /data/recovered/
 /data/backups/
+/data/system-settings.json
 !/data/.gitkeep
+astro-site/src/data/disease-knowledge/
 
 # Documentation build artifacts / large fixtures
 site/

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiFetch, wsUrl } from "@/lib/api";
+import { apiFetch, apiFetchWithHeaders, wsUrl } from "@/lib/api";
 
 export interface TaskItem {
   id: number;
@@ -35,6 +35,7 @@ export interface TaskDetail extends TaskItem {
 export interface WorkerStatus {
   worker_process_running: boolean;
   worker_pid: number | null;
+  worker_concurrency: number;
   queued_tasks: number;
   running_tasks: number;
   retrying_tasks: number;
@@ -63,6 +64,13 @@ export interface WorkbookEntry {
   created_at: string;
 }
 
+export interface TaskPage {
+  items: TaskItem[];
+  totalCount: number;
+  limit: number;
+  offset: number;
+}
+
 export function useTasks(
   status?: string,
   taskType?: string,
@@ -79,6 +87,43 @@ export function useTasks(
       if (countryId) params.set("country_id", String(countryId));
       if (search) params.set("search", search);
       return apiFetch(`/tasks?${params}`);
+    },
+    staleTime: 10 * 1000,
+    refetchInterval: 5 * 1000,
+  });
+}
+
+export function usePaginatedTasks(
+  status?: string,
+  taskType?: string,
+  countryId?: number | null,
+  search?: string,
+  limit = 50,
+  offset = 0,
+) {
+  return useQuery<TaskPage>({
+    queryKey: ["tasks", "paged", status, taskType, countryId, search, limit, offset],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        limit: String(limit),
+        offset: String(offset),
+      });
+      if (status) params.set("status", status);
+      if (taskType) params.set("task_type", taskType);
+      if (countryId) params.set("country_id", String(countryId));
+      if (search) params.set("search", search);
+
+      const { data, headers } = await apiFetchWithHeaders<TaskItem[]>(`/tasks?${params}`);
+      const totalCount = Number(headers.get("x-total-count") ?? data.length);
+      const parsedLimit = Number(headers.get("x-limit") ?? limit);
+      const parsedOffset = Number(headers.get("x-offset") ?? offset);
+
+      return {
+        items: data,
+        totalCount: Number.isFinite(totalCount) ? totalCount : data.length,
+        limit: Number.isFinite(parsedLimit) ? parsedLimit : limit,
+        offset: Number.isFinite(parsedOffset) ? parsedOffset : offset,
+      };
     },
     staleTime: 10 * 1000,
     refetchInterval: 5 * 1000,

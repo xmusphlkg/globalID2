@@ -22,11 +22,13 @@ from src.ai.model_center import (
     get_runtime_routes,
     mask_api_key,
 )
+from src.core.db_schema import ensure_task_type_enum_schema
 from src.core.task_manager import task_manager
 from src.domain.ai_model_center import AIModelConfig, AIProviderConfig
 from src.domain.country import Country
 from src.domain.report import ReportType
 from src.domain.task import Task, TaskPriority, TaskStatus, TaskType
+from src.services.disease_knowledge_service import DiseaseKnowledgeUpdateService, expand_sources
 
 router = APIRouter()
 
@@ -41,7 +43,10 @@ class AIStartRequest(BaseModel):
     language: str = Field("en", description="Report language: zh or en")
     days: int = Field(365, ge=1, le=3650, description="Fallback period in days")
     enable_review: bool = Field(True, description="Enable reviewer agent")
-    send_email: bool = Field(False, description="Send email after generation")
+    send_email: bool = Field(
+        False,
+        description="Send the completed report email to the centralized Settings recipients after generation",
+    )
     reuse_from_failed: bool = Field(True, description="Reuse partial output from failed/generating tasks in same scope")
     reuse_strategy: str = Field(
         "auto",
@@ -55,6 +60,233 @@ class AIStartRequest(BaseModel):
     priority: str = Field("normal", description="Task priority")
     task_name: Optional[str] = Field(None, description="Optional custom task name")
     description: Optional[str] = Field(None, description="Optional task description")
+
+
+class DiseaseKnowledgeCatalogueItem(BaseModel):
+    disease_id: str
+    name_en: Optional[str] = None
+    name_zh: Optional[str] = None
+    category: Optional[str] = None
+    icd_10: Optional[str] = None
+    icd_11: Optional[str] = None
+    description: Optional[str] = None
+    slug: Optional[str] = None
+    knowledge_status: str = "fallback"
+    knowledge_updated_at: Optional[str] = None
+    published_languages: List[str] = Field(default_factory=list)
+    source_count: int = 0
+    brief_statuses: Dict[str, str] = Field(default_factory=dict)
+
+
+class DiseaseKnowledgeTaskSkipped(BaseModel):
+    disease_id: str
+    reason: str
+    existing_task_uuid: Optional[str] = None
+    existing_status: Optional[str] = None
+
+
+class DiseaseKnowledgeStartRequest(BaseModel):
+    disease_ids: List[str] = Field(..., min_length=1)
+    source: List[str] = Field(default_factory=list, description="Source groups: who / wikidata / wikipedia / msd")
+    force: bool = False
+    generator: str = Field("ai", description="ai / auto / template")
+    priority: str = Field("normal")
+    task_name: Optional[str] = Field(None, description="Optional batch task name prefix")
+    description: Optional[str] = Field(None, description="Optional task description")
+
+
+class DiseaseKnowledgeStartResponse(BaseModel):
+    requested_disease_ids: List[str]
+    created_tasks: List[TaskOut]
+    skipped: List[DiseaseKnowledgeTaskSkipped] = Field(default_factory=list)
+
+
+class DiseaseKnowledgeSourceDetail(BaseModel):
+    id: int
+    disease_id: str
+    source_type: str
+    source_name: str
+    url: str
+    resolved_url: Optional[str] = None
+    title: Optional[str] = None
+    license: Optional[str] = None
+    status: str
+    language: str
+    raw_excerpt: Optional[str] = None
+    content_text: Optional[str] = None
+    content_sections: List[Dict[str, Any]] = Field(default_factory=list)
+    raw_excerpt_hash: Optional[str] = None
+    fetched_at: Optional[str] = None
+    review_status: str
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class DiseaseKnowledgeBriefDetail(BaseModel):
+    language: str
+    status: str
+    source_confidence: str
+    updated_at: Optional[str] = None
+    brief: str
+    definition: Optional[str] = None
+    clinical_features: Optional[str] = None
+    clinical_summary: Optional[str] = None
+    epidemiology: Optional[str] = None
+    transmission: Optional[str] = None
+    prevention: Optional[str] = None
+    surveillance_note: Optional[str] = None
+    risk_groups: Optional[str] = None
+    disclaimer: Optional[str] = None
+    model: Optional[str] = None
+    quality_score: Optional[float] = None
+    review_notes: Optional[str] = None
+    source_ids: List[int] = Field(default_factory=list)
+    source_attribution: List[Dict[str, Any]] = Field(default_factory=list)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class DiseaseKnowledgeDetail(BaseModel):
+    disease_id: str
+    name_en: Optional[str] = None
+    name_zh: Optional[str] = None
+    category: Optional[str] = None
+    icd_10: Optional[str] = None
+    icd_11: Optional[str] = None
+    description: Optional[str] = None
+    slug: Optional[str] = None
+    knowledge_status: str = "fallback"
+    knowledge_updated_at: Optional[str] = None
+    published_languages: List[str] = Field(default_factory=list)
+    source_count: int = 0
+    brief_statuses: Dict[str, str] = Field(default_factory=dict)
+    summary: Dict[str, Any] = Field(default_factory=dict)
+    briefs: List[DiseaseKnowledgeBriefDetail] = Field(default_factory=list)
+    sources: List[DiseaseKnowledgeSourceDetail] = Field(default_factory=list)
+
+
+@router.get("/ai/disease-knowledge/catalogue", response_model=List[DiseaseKnowledgeCatalogueItem])
+async def list_disease_knowledge_catalogue(
+    search: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+):
+    service = DiseaseKnowledgeUpdateService()
+    return await service.list_catalogue(db, search=search)
+
+
+@router.post("/ai/disease-knowledge/start", response_model=DiseaseKnowledgeStartResponse, status_code=201)
+async def start_disease_knowledge_tasks(
+    body: DiseaseKnowledgeStartRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    service = DiseaseKnowledgeUpdateService()
+    await ensure_task_type_enum_schema(db)
+    requested_ids = _dedupe_disease_ids(body.disease_ids)
+    if not requested_ids:
+        raise HTTPException(422, "At least one disease id is required")
+
+    priority = _normalize_priority(body.priority)
+    source_groups = _normalize_source_groups(body.source)
+    active_tasks = await _load_active_knowledge_tasks(db)
+    active_by_disease = _active_knowledge_tasks_by_disease(active_tasks)
+
+    created_tasks: list[TaskOut] = []
+    skipped: list[DiseaseKnowledgeTaskSkipped] = []
+
+    for disease_id in requested_ids:
+        disease = _find_disease_in_catalogue(service, disease_id)
+        if disease is None:
+            skipped.append(
+                DiseaseKnowledgeTaskSkipped(
+                    disease_id=disease_id,
+                    reason="not_found",
+                    existing_task_uuid=None,
+                    existing_status=None,
+                )
+            )
+            continue
+
+        existing = active_by_disease.get(disease_id.upper())
+        if existing is not None:
+            skipped.append(
+                DiseaseKnowledgeTaskSkipped(
+                    disease_id=disease_id,
+                    reason="already_running",
+                    existing_task_uuid=existing.task_uuid,
+                    existing_status=str(existing.status),
+                )
+            )
+            continue
+
+        task_name = body.task_name or f"Update {disease['name_en']} knowledge"
+        if body.task_name and len(requested_ids) > 1:
+            task_name = f"{body.task_name} · {disease['name_en']}"
+
+        description = body.description or (
+            f"Disease: {disease_id}, "
+            f"Sources: {', '.join(source_groups) or 'default'}, "
+            f"Force: {'Yes' if body.force else 'No'}, "
+            f"Generator: {body.generator}"
+        )
+
+        task = await task_manager.create_task(
+            task_type=TaskType.UPDATE_DISEASE_KNOWLEDGE,
+            task_name=task_name,
+            priority=priority,
+            description=description,
+            input_data={
+                "disease_id": disease_id,
+                "disease_ids": [disease_id],
+                "source_groups": source_groups,
+                "source": source_groups,
+                "force": body.force,
+                "generator": body.generator,
+                "initiated_via": "dashboard",
+                "requested_by": "ai-control-panel",
+            },
+        )
+        await task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="info",
+            title="Task Queued",
+            content=(
+                f"Queued from AI control panel for disease {disease_id} "
+                f"with sources {', '.join(source_groups) or 'default'}."
+            ),
+            content_type="text",
+            metadata={
+                "disease_id": disease_id,
+                "source_groups": source_groups,
+                "generator": body.generator,
+                "force": body.force,
+            },
+        )
+        task = await task_manager.update_task_status(task.task_uuid, TaskStatus.QUEUED) or task
+        created_tasks.append(_task_to_out(task))
+
+    if not created_tasks and skipped:
+        return DiseaseKnowledgeStartResponse(
+            requested_disease_ids=requested_ids,
+            created_tasks=[],
+            skipped=skipped,
+        )
+
+    return DiseaseKnowledgeStartResponse(
+        requested_disease_ids=requested_ids,
+        created_tasks=created_tasks,
+        skipped=skipped,
+    )
+
+
+@router.get("/ai/disease-knowledge/diseases/{disease_id}", response_model=DiseaseKnowledgeDetail)
+async def get_disease_knowledge_detail(
+    disease_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    service = DiseaseKnowledgeUpdateService()
+    try:
+        payload = await service.get_detail(db, disease_id)
+    except ValueError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    return DiseaseKnowledgeDetail(**payload)
 
 
 class ProviderCreateRequest(BaseModel):
@@ -538,6 +770,74 @@ def _normalize_reuse_strategy(value: str) -> str:
         joined = ", ".join(sorted(allowed))
         raise HTTPException(422, f"Invalid reuse_strategy '{value}'. Allowed values: {joined}")
     return normalized
+
+
+def _normalize_source_groups(values: list[str] | None) -> list[str]:
+    cleaned = [str(value).strip().lower() for value in (values or []) if str(value).strip()]
+    if not cleaned:
+        cleaned = ["who", "wikidata", "wikipedia", "msd"]
+    allowed = {"who", "wikidata", "wikipedia", "msd"}
+    invalid = sorted({value for value in cleaned if value not in allowed})
+    if invalid:
+        joined = ", ".join(invalid)
+        raise HTTPException(422, f"Invalid source groups: {joined}")
+    return expand_sources(cleaned)
+
+
+def _dedupe_disease_ids(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    result: list[str] = []
+    for value in values:
+        disease_id = str(value or "").strip().upper()
+        if not disease_id or disease_id in seen:
+            continue
+        seen.add(disease_id)
+        result.append(disease_id)
+    return result
+
+
+async def _load_active_knowledge_tasks(db: AsyncSession) -> list[Task]:
+    result = await db.execute(
+        select(Task)
+        .where(
+            Task.task_type == TaskType.UPDATE_DISEASE_KNOWLEDGE,
+            Task.status.in_(
+                [
+                    TaskStatus.PENDING,
+                    TaskStatus.QUEUED,
+                    TaskStatus.RUNNING,
+                    TaskStatus.RETRYING,
+                ]
+            ),
+        )
+        .order_by(Task.created_at.asc())
+    )
+    return list(result.scalars().all())
+
+
+def _active_knowledge_tasks_by_disease(tasks: list[Task]) -> dict[str, Task]:
+    result: dict[str, Task] = {}
+    for task in tasks:
+        input_data = dict(task.input_data or {})
+        disease_ids = input_data.get("disease_ids")
+        disease_id = input_data.get("disease_id")
+        candidates: list[str] = []
+        if isinstance(disease_ids, list):
+            candidates.extend(str(value).strip().upper() for value in disease_ids if str(value).strip())
+        if disease_id:
+            candidates.append(str(disease_id).strip().upper())
+        for candidate in candidates:
+            if candidate and candidate not in result:
+                result[candidate] = task
+    return result
+
+
+def _find_disease_in_catalogue(service: DiseaseKnowledgeUpdateService, disease_id: str) -> dict[str, Any] | None:
+    wanted = str(disease_id or "").strip().upper()
+    for disease in service.load_standard_diseases():
+        if str(disease.get("disease_id") or "").upper() == wanted:
+            return disease
+    return None
 
 
 def _task_to_out(task: Task) -> TaskOut:

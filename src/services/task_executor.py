@@ -192,6 +192,8 @@ async def _dispatch(task: Task) -> Dict[str, Any]:
         return await _run_crawl(task)
     elif task_type == TaskType.GENERATE_REPORT:
         return await _run_report(task)
+    elif task_type == TaskType.UPDATE_DISEASE_KNOWLEDGE:
+        return await _run_disease_knowledge(task)
     elif task_type == TaskType.EXPORT_DATA:
         return await _run_export(task)
     else:
@@ -288,6 +290,8 @@ async def _run_report(task: Task) -> Dict[str, Any]:
             "sections_count": result.sections_count,
             "reused": result.reused,
         }
+        if result.email_delivery is not None:
+            output["email_delivery"] = result.email_delivery
 
         async with get_database() as db:
             task_obj = await db.get(Task, task.id)
@@ -305,3 +309,22 @@ async def _run_export(task: Task) -> Dict[str, Any]:
 
     async with task_lifecycle(task, exit_on_cancel=False):
         return await data_release_service.execute_release_task(task)
+
+
+# ── Disease knowledge handler ────────────────────────────────────────────────
+
+async def _run_disease_knowledge(task: Task) -> Dict[str, Any]:
+    """Execute an UPDATE_DISEASE_KNOWLEDGE task using the knowledge service."""
+    from src.services.disease_knowledge_service import DiseaseKnowledgeUpdateService
+
+    async with task_lifecycle(task, exit_on_cancel=False):
+        service = DiseaseKnowledgeUpdateService()
+        result = await service.execute_task(task)
+
+        async with get_database() as db:
+            task_obj = await db.get(Task, task.id)
+            if task_obj:
+                task_obj.output_data = result
+                await db.commit()
+
+        return result

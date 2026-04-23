@@ -32,6 +32,7 @@ class TaskType(str, PyEnum):
     GENERATE_REPORT = "generate_report"  # Report generation task
     GENERATE_SECTION = "generate_section"  # Section generation task
     REVIEW_SECTION = "review_section"  # Section review task
+    UPDATE_DISEASE_KNOWLEDGE = "update_disease_knowledge"  # Disease knowledge refresh task
     EXPORT_DATA = "export_data"  # Data export task
     SEND_EMAIL = "send_email"  # Email sending task
 

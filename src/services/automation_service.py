@@ -18,6 +18,7 @@ from src.core.source_scopes import canonicalize_task_source
 from src.domain import AutomationJob, Country, Task, TaskWorkbook
 from src.services.crawl_task_service import crawl_task_service
 from src.services.smtp_email_service import smtp_email_service
+from src.services.settings_service import system_settings_service
 
 logger = get_logger(__name__)
 
@@ -337,6 +338,7 @@ class AutomationService:
 
     async def snapshot_async(self) -> dict[str, Any]:
         cfg = self._config()
+        smtp_state = system_settings_service.build_smtp_status()
         await self.ensure_storage()
         jobs = await self.load_jobs()
         jobs_payload: list[dict[str, Any]] = []
@@ -361,8 +363,8 @@ class AutomationService:
             "timezone": cfg.timezone,
             "poll_interval_seconds": cfg.poll_interval_seconds,
             "default_retry_threshold": cfg.default_retry_threshold,
-            "admin_emails": cfg.admin_emails,
-            "email_enabled": smtp_email_service.is_configured(),
+            "admin_emails": smtp_state["admin_emails"],
+            "email_enabled": smtp_state["alerting_ready"],
             "last_tick_at": _iso(self._last_tick_at),
             "jobs": jobs_payload,
         }
@@ -375,7 +377,8 @@ class AutomationService:
         is handling it automatically.
         """
         cfg = self._config()
-        if not cfg.admin_emails or not smtp_email_service.is_configured():
+        smtp_state = system_settings_service.build_smtp_status()
+        if not smtp_state["admin_emails"] or not smtp_state["alerting_ready"]:
             return
 
         async with get_database() as db:
@@ -424,7 +427,7 @@ class AutomationService:
             )
             
             sent = smtp_email_service.send_email(
-                recipients=cfg.admin_emails,
+                recipients=smtp_state["admin_emails"],
                 subject=f"[GlobalID] Task retry warning ({retry_count}/{retry_threshold}): {task.task_name}",
                 body_html=body,
             )
@@ -438,7 +441,8 @@ class AutomationService:
 
     async def notify_task_failure_if_needed(self, task_uuid: str) -> None:
         cfg = self._config()
-        if not cfg.admin_emails or not smtp_email_service.is_configured():
+        smtp_state = system_settings_service.build_smtp_status()
+        if not smtp_state["admin_emails"] or not smtp_state["alerting_ready"]:
             return
 
         async with get_database() as db:
@@ -475,7 +479,7 @@ class AutomationService:
             )
             attachments = self._collect_task_log_attachments(task_uuid)
             sent = smtp_email_service.send_email(
-                recipients=cfg.admin_emails,
+                recipients=smtp_state["admin_emails"],
                 subject=f"[GlobalID] Task failed after retries: {task.task_name}",
                 body_html=body,
                 attachments=attachments,

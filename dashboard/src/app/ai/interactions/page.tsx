@@ -5,12 +5,14 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAppStore } from "@/stores/app-store";
 import { Badge, Card, Grid, Metric, Text, Title } from "@tremor/react";
-import { MessageSquare, Search, ChevronDown, ListTodo, Settings2 } from "lucide-react";
+import { MessageSquare, MessageSquareText, Search, ChevronDown, ListTodo, Settings2 } from "lucide-react";
 import { Chart } from "@/components/charts/Chart";
+import { TaskDetailPanel } from "@/components/tasks/TaskDetailPanel";
+import { TaskWorkflowTopology } from "@/components/tasks/TaskWorkflowTopology";
 import { CHART_TOKENS } from "@/lib/chart-theme";
 import { ApiError } from "@/lib/api";
 import { t } from "@/lib/i18n";
-import { useTaskWebSocket } from "@/lib/hooks/useTasks";
+import { usePaginatedTasks, useTaskDetail, useTaskWebSocket } from "@/lib/hooks/useTasks";
 import {
   useAIInteractions,
   useAIInteractionSummary,
@@ -74,7 +76,15 @@ function uiText(lang: "en" | "zh") {
       diseaseSuffix: "疾病",
       loading: "加载交互数据中...",
       subtitle: "优先按任务实时查看提示词、回复、Token 消耗、耗时和质量评分，兼容 ?task=... 或 ?uuid=...&disease=... 直达。",
-      waitingForTaskBinding: "任务已创建，但暂时还没有可展示的 AI 交互；如果报告上下文刚生成，页面会自动刷新。",
+      waitingForTaskBinding: "任务已创建，但暂时还没有可展示的 AI 交互；上方的流程日志会先展示任务生成过程，报告上下文就绪后页面会自动刷新。",
+      workflowTopologyTitle: "任务流程拓扑",
+      workflowTopologySubtitle: "把工作簿阶段日志转成流程图，展示知识库搭建每一步和对应模型。",
+      workflowTopologyEmpty: "当前任务还没有足够的阶段数据来绘制流程拓扑。",
+      workflowModels: "流程模型",
+      workflowOnlyMode: "该知识库任务主要以工作流日志记录过程，可能不会生成传统对话消息；请以上方流程拓扑和阶段日志为准。",
+      recentKnowledgeTasks: "最近知识库任务",
+      recentKnowledgeTasksSubtitle: "这里会列出最近的知识库建设任务，点开即可查看流程拓扑和每一步使用的模型。",
+      openWorkflow: "打开流程",
     } as const;
   }
 
@@ -119,7 +129,15 @@ function uiText(lang: "en" | "zh") {
     diseaseSuffix: "Disease",
     loading: "Loading interactions...",
     subtitle: "Inspect prompts, responses, token usage, durations and quality scoring in task-centric real time. Supports ?task=... and keeps ?uuid=...&disease=... for report mode.",
-    waitingForTaskBinding: "The task exists, but there are no AI interactions to show yet. If the report context was just created, this page will refresh automatically.",
+    waitingForTaskBinding: "The task exists, but there are no AI interactions to show yet. The workflow log above still shows the generation process, and the page will refresh once the report context is ready.",
+    workflowTopologyTitle: "Workflow Topology",
+    workflowTopologySubtitle: "Render workbook-stage logs as a topology so you can inspect each knowledge-build step and the model used.",
+    workflowTopologyEmpty: "This task does not have enough stage data yet to render a workflow topology.",
+    workflowModels: "Workflow Models",
+    workflowOnlyMode: "This knowledge task is primarily recorded as workflow logs, so it may not emit traditional chat messages. Use the topology and staged log above as the source of truth.",
+    recentKnowledgeTasks: "Recent Knowledge Tasks",
+    recentKnowledgeTasksSubtitle: "Open a recent knowledge-building task to inspect its topology and the model used for each step.",
+    openWorkflow: "Open Workflow",
   } as const;
 }
 
@@ -147,6 +165,17 @@ function shortUuid(value: string | null): string {
   if (!value) return "-";
   if (value.length <= 12) return value;
   return `${value.slice(0, 8)}...${value.slice(-4)}`;
+}
+
+function metadataString(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed || null;
+}
+
+function stageLabel(value: string | null): string | null {
+  if (!value) return null;
+  return value.replace(/_/g, " ");
 }
 
 function rowStatusColor(status: string | null): string {
@@ -426,6 +455,9 @@ function AIInteractionsPageContent() {
   const [reportUuidFilter, setReportUuidFilter] = useState(initialUuid);
   const [diseaseFilter, setDiseaseFilter] = useState(initialDisease);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const activeTaskUuid = taskUuidFilter.trim();
+  const activeReportUuid = reportUuidFilter.trim();
+  const hasTaskScope = Boolean(activeTaskUuid || activeReportUuid);
 
   useEffect(() => {
     const params = new URLSearchParams(searchParamsString);
@@ -441,7 +473,7 @@ function AIInteractionsPageContent() {
     if (nextDisease !== diseaseFilter) {
       setDiseaseFilter(nextDisease);
     }
-  }, [searchParamsString]);
+  }, [diseaseFilter, reportUuidFilter, searchParamsString, taskUuidFilter]);
 
   useEffect(() => {
     const params = new URLSearchParams(searchParamsString);
@@ -478,32 +510,43 @@ function AIInteractionsPageContent() {
     router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
   }, [diseaseFilter, pathname, reportUuidFilter, router, searchParamsString, taskUuidFilter]);
 
+  const interactionLimit = hasTaskScope ? 1000 : 200;
   const filters = {
     countryId,
-    taskUuid: taskUuidFilter.trim() || undefined,
+    taskUuid: activeTaskUuid || undefined,
     agent: agentFilter || undefined,
     model: modelFilter || undefined,
     disease: diseaseFilter.trim() || undefined,
-    reportUuid: reportUuidFilter.trim() || undefined,
-    limit: 200,
+    reportUuid: activeReportUuid || undefined,
+    limit: interactionLimit,
   };
 
   useTaskWebSocket({
-    extraQueryKeys: [["ai-interactions"], ["ai-interactions-summary"], ["reports"]],
+    extraQueryKeys: [["ai-interactions"], ["ai-interactions-summary"], ["reports"], ["report-runs"]],
   });
 
-  const liveRefreshMs = taskUuidFilter.trim() || reportUuidFilter.trim() ? 3000 : 5000;
+  const liveRefreshMs = hasTaskScope ? 3000 : 5000;
+
+  const { data: taskDetail, isFetching: taskDetailLoading } = useTaskDetail(activeTaskUuid || null);
+  const { data: recentKnowledgeTaskPage } = usePaginatedTasks(
+    undefined,
+    "update_disease_knowledge",
+    countryId,
+    diseaseFilter.trim() || undefined,
+    8,
+    0,
+  );
 
   const { data: interactions, isLoading, isError, error } = useAIInteractions(filters, {
     refetchIntervalMs: liveRefreshMs,
   });
   const { data: summary } = useAIInteractionSummary({
     countryId,
-    taskUuid: taskUuidFilter.trim() || undefined,
+    taskUuid: activeTaskUuid || undefined,
     agent: agentFilter || undefined,
     model: modelFilter || undefined,
     disease: diseaseFilter.trim() || undefined,
-    reportUuid: reportUuidFilter.trim() || undefined,
+    reportUuid: activeReportUuid || undefined,
   }, {
     refetchIntervalMs: liveRefreshMs,
   });
@@ -590,6 +633,24 @@ function AIInteractionsPageContent() {
   }, [interactions]);
 
   const interactionItems = interactions ?? [];
+  const recentKnowledgeTasks = recentKnowledgeTaskPage?.items ?? [];
+  const isKnowledgeTask = taskDetail?.task_type === "update_disease_knowledge";
+  const workflowModels = useMemo(() => {
+    if (!taskDetail) return [];
+    const seen = new Set<string>();
+    return taskDetail.workbook_entries
+      .map((entry) => {
+        const provider = metadataString(entry.metadata?.provider);
+        const stage = stageLabel(metadataString(entry.metadata?.workflow_stage));
+        const model = entry.model_used;
+        if (!model && !provider) return null;
+        const label = [stage, model ? `${provider ? `${provider}/` : ""}${model}` : provider].filter(Boolean).join(": ");
+        if (!label || seen.has(label)) return null;
+        seen.add(label);
+        return label;
+      })
+      .filter((item): item is string => !!item);
+  }, [taskDetail]);
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 md:px-6">
@@ -637,6 +698,52 @@ function AIInteractionsPageContent() {
           <Metric>{summary?.avg_quality != null ? summary.avg_quality.toFixed(2) : "-"}</Metric>
         </Card>
       </Grid>
+
+      {!activeTaskUuid && recentKnowledgeTasks.length > 0 && (
+        <Card className="border-emerald-200/70 bg-emerald-50/40 dark:border-emerald-900/60 dark:bg-emerald-950/10">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <Title className="text-base">{labels.recentKnowledgeTasks}</Title>
+              <Text className="mt-1 text-sm text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+                {labels.recentKnowledgeTasksSubtitle}
+              </Text>
+            </div>
+            <Link
+              href="/ai/tasks?task_type=update_disease_knowledge"
+              className="inline-flex items-center gap-1 rounded-lg border border-emerald-300/70 bg-white px-3 py-1.5 text-xs font-medium text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-300"
+            >
+              <ListTodo className="h-3.5 w-3.5" />
+              Open AI Tasks
+            </Link>
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {recentKnowledgeTasks.map((task) => (
+              <Link
+                key={task.task_uuid}
+                href={`/ai/interactions?task=${encodeURIComponent(task.task_uuid)}`}
+                className="rounded-xl border border-tremor-border/80 bg-white/90 p-3 transition hover:border-emerald-300 hover:shadow-sm dark:border-dark-tremor-border/80 dark:bg-white/5"
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge color="emerald">{task.status}</Badge>
+                  <Badge color="slate">{task.progress}%</Badge>
+                </div>
+                <Text className="mt-2 line-clamp-2 text-sm font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">
+                  {task.task_name}
+                </Text>
+                <Text className="mt-1 text-[11px] text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+                  {shortUuid(task.task_uuid)}
+                </Text>
+                <Text className="mt-1 text-[11px] text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+                  {formatDateTime(task.created_at)}
+                </Text>
+                <Text className="mt-3 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+                  {labels.openWorkflow}
+                </Text>
+              </Link>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {(byAgentData.length > 0 || byModelData.length > 0) && (
         <Grid numItems={1} numItemsLg={2} className="gap-4">
@@ -711,7 +818,7 @@ function AIInteractionsPageContent() {
             />
           </div>
 
-          {!taskUuidFilter.trim() && (
+          {!activeTaskUuid && (
             <div className="relative flex-1 min-w-[220px] max-w-md">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-tremor-content-subtle dark:text-dark-tremor-content-subtle" />
               <input
@@ -775,16 +882,52 @@ function AIInteractionsPageContent() {
             </Text>
           </div>
         </Card>
-      ) : taskUuidFilter.trim() ? (
+      ) : activeTaskUuid ? (
         <div className="space-y-4">
+          <div className="rounded-2xl border border-violet-200/60 bg-violet-50/35 p-4 dark:border-violet-900/50 dark:bg-violet-950/10">
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <MessageSquareText className="h-4 w-4 text-violet-500" />
+              <Title className="text-lg">{lang === "zh" ? "任务生成过程" : "Task generation process"}</Title>
+              <Badge color="violet">{shortUuid(activeTaskUuid)}</Badge>
+            </div>
+            <Text className="mb-4 text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+              {lang === "zh"
+                ? "这里先展示任务级工作流、阶段进度和 AI payload。即使 chat 记录还没写入，也能先查看生成过程。"
+                : "This section shows task-level workflow, stage progress, and AI payloads. Even before chat records are written, you can inspect the generation process here."}
+            </Text>
+            {workflowModels.length > 0 && (
+              <div className="mb-4 flex flex-wrap items-center gap-2">
+                <Text className="text-xs font-medium text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+                  {labels.workflowModels}
+                </Text>
+                {workflowModels.map((item) => (
+                  <Badge key={item} color="indigo">{item}</Badge>
+                ))}
+              </div>
+            )}
+            <TaskWorkflowTopology
+              taskDetail={taskDetail}
+              labels={{
+                title: labels.workflowTopologyTitle,
+                subtitle: labels.workflowTopologySubtitle,
+                empty: labels.workflowTopologyEmpty,
+              }}
+            />
+            <TaskDetailPanel
+              taskDetail={taskDetail}
+              detailLoading={taskDetailLoading}
+              emptyMessage={labels.waitingForTaskBinding}
+            />
+          </div>
+
           <Text className="text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
-            {labels.chatModePrefix}: {taskUuidFilter.trim()} {diseaseFilter.trim() ? `| ${labels.diseaseSuffix}: ${diseaseFilter.trim()}` : ""}
+            {labels.chatModePrefix}: {activeTaskUuid} {diseaseFilter.trim() ? `| ${labels.diseaseSuffix}: ${diseaseFilter.trim()}` : ""}
           </Text>
           {interactionItems.length === 0 ? (
             <Card>
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <MessageSquare className="h-12 w-12 text-tremor-content-subtle dark:text-dark-tremor-content-subtle" />
-                <Text className="mt-3">{labels.waitingForTaskBinding}</Text>
+                <Text className="mt-3">{isKnowledgeTask ? labels.workflowOnlyMode : labels.waitingForTaskBinding}</Text>
                 <Text className="mt-2 text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
                   {labels.currentCountry}: {countryName || "All"}
                 </Text>
@@ -796,10 +939,10 @@ function AIInteractionsPageContent() {
             ))
           )}
         </div>
-      ) : reportUuidFilter.trim() ? (
+      ) : activeReportUuid ? (
         <div className="space-y-4">
           <Text className="text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
-            {labels.reportModePrefix}: {reportUuidFilter.trim()} {diseaseFilter.trim() ? `| ${labels.diseaseSuffix}: ${diseaseFilter.trim()}` : ""}
+            {labels.reportModePrefix}: {activeReportUuid} {diseaseFilter.trim() ? `| ${labels.diseaseSuffix}: ${diseaseFilter.trim()}` : ""}
           </Text>
           {interactionItems.length === 0 ? (
             <Card>

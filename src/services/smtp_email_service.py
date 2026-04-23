@@ -11,7 +11,8 @@ from email import encoders
 from pathlib import Path
 from typing import Iterable, Optional
 
-from src.core import get_config, get_logger
+from src.core import get_logger
+from src.services.settings_service import system_settings_service
 
 logger = get_logger(__name__)
 
@@ -20,29 +21,29 @@ class SMTPEmailService:
     """Send email via SMTP (AWS SES, SendGrid, etc.)."""
 
     def __init__(self) -> None:
-        self._config = get_config
+        self._settings = system_settings_service
 
     def is_configured(self) -> bool:
-        config = self._config().automation
+        config = self._settings.smtp_runtime()
         return bool(
-            config.smtp_host
-            and config.smtp_port
-            and config.smtp_username
-            and config.smtp_password
-            and config.smtp_from_email
+            config["smtp_host"]
+            and config["smtp_port"]
+            and config["smtp_username"]
+            and config["smtp_password"]
+            and config["smtp_from_email"]
         )
 
     def _create_connection(self) -> smtplib.SMTP:
-        config = self._config().automation
+        config = self._settings.smtp_runtime()
         context = ssl.create_default_context()
 
-        if config.smtp_use_tls:
-            server = smtplib.SMTP(config.smtp_host, config.smtp_port)
+        if config["smtp_use_tls"]:
+            server = smtplib.SMTP(config["smtp_host"], config["smtp_port"])
             server.starttls(context=context)
         else:
-            server = smtplib.SMTP_SSL(config.smtp_host, config.smtp_port, context=context)
+            server = smtplib.SMTP_SSL(config["smtp_host"], config["smtp_port"], context=context)
 
-        server.login(config.smtp_username, config.smtp_password)
+        server.login(config["smtp_username"], config["smtp_password"])
         return server
 
     def send_email(
@@ -56,13 +57,13 @@ class SMTPEmailService:
         cc_recipients: Optional[Iterable[str]] = None,
         bcc_recipients: Optional[Iterable[str]] = None,
     ) -> bool:
-        config = self._config().automation
+        config = self._settings.smtp_runtime()
         recipient_list = [addr.strip() for addr in recipients if addr and addr.strip()]
         if not recipient_list:
             logger.warning("SMTP email skipped: no recipients configured")
             return False
 
-        from_email = config.smtp_from_email
+        from_email = config["smtp_from_email"]
 
         try:
             msg = MIMEMultipart("mixed")

@@ -20,7 +20,7 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiFetch<T>(path: string, init?: ApiFetchInit): Promise<T> {
+async function performApiFetch(path: string, init?: ApiFetchInit): Promise<Response> {
   const timeoutMs = init?.timeoutMs ?? API_TIMEOUT_MS;
   const { timeoutMs: _timeoutMs, ...requestInit } = init ?? {};
   const controller = new AbortController();
@@ -48,7 +48,21 @@ export async function apiFetch<T>(path: string, init?: ApiFetchInit): Promise<T>
     const text = await res.text().catch(() => "Unknown error");
     throw new ApiError(res.status, text);
   }
+  return res;
+}
+
+export async function apiFetch<T>(path: string, init?: ApiFetchInit): Promise<T> {
+  const res = await performApiFetch(path, init);
   return res.json();
+}
+
+export async function apiFetchWithHeaders<T>(
+  path: string,
+  init?: ApiFetchInit,
+): Promise<{ data: T; headers: Headers }> {
+  const res = await performApiFetch(path, init);
+  const data = await res.json() as T;
+  return { data, headers: res.headers };
 }
 
 export function wsUrl(path: string): string {

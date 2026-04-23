@@ -106,9 +106,21 @@ function metadataString(value: unknown): string | null {
   return null;
 }
 
+function workflowStageLabel(value: string | null): string | null {
+  if (!value) return null;
+  return value.replace(/_/g, " ");
+}
+
 function booleanLabel(value: unknown): string | null {
   if (typeof value === "boolean") return value ? "yes" : "no";
   return null;
+}
+
+function asStringList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => asDisplayString(item))
+    .filter((item): item is string => !!item);
 }
 
 function deriveRawArchivePath(taskDetail?: TaskDetail): string | null {
@@ -194,6 +206,25 @@ export function TaskDetailPanel({
     if (fillMissing) rows.push({ label: "Fill Missing", value: fillMissing });
     if (process) rows.push({ label: "Process", value: process });
     if (force) rows.push({ label: "Force", value: force });
+    return rows;
+  }, [crawlInput, taskDetail]);
+
+  const diseaseKnowledgeRows = useMemo(() => {
+    if (!taskDetail || taskDetail.task_type !== "update_disease_knowledge" || !crawlInput) return [];
+    const rows: Array<{ label: string; value: string }> = [];
+    const diseaseId = asDisplayString(crawlInput.disease_id);
+    const diseaseIds = asStringList(crawlInput.disease_ids);
+    const sourceGroups = asStringList(crawlInput.source_groups ?? crawlInput.source);
+    const generator = asDisplayString(crawlInput.generator);
+    const force = booleanLabel(crawlInput.force);
+    const dryRun = booleanLabel(crawlInput.dry_run);
+
+    if (diseaseId) rows.push({ label: "Disease", value: diseaseId });
+    if (diseaseIds.length > 0) rows.push({ label: "Disease IDs", value: diseaseIds.join(", ") });
+    if (sourceGroups.length > 0) rows.push({ label: "Source Groups", value: sourceGroups.join(", ") });
+    if (generator) rows.push({ label: "Generator", value: generator });
+    if (force) rows.push({ label: "Force", value: force });
+    if (dryRun) rows.push({ label: "Dry Run", value: dryRun });
     return rows;
   }, [crawlInput, taskDetail]);
 
@@ -300,6 +331,16 @@ export function TaskDetailPanel({
       {crawlConfigRows.length > 0 && (
         <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-tremor-content">
           {crawlConfigRows.map((row) => (
+            <span key={`${row.label}-${row.value}`}>
+              {row.label}: {row.value}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {diseaseKnowledgeRows.length > 0 && (
+        <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-tremor-content">
+          {diseaseKnowledgeRows.map((row) => (
             <span key={`${row.label}-${row.value}`}>
               {row.label}: {row.value}
             </span>
@@ -424,6 +465,8 @@ export function TaskDetailPanel({
             const metadataDisease = metadataString(metadata.disease_name);
             const metadataSection = metadataString(metadata.section_type);
             const metadataEvent = metadataString(metadata.event);
+            const metadataProvider = metadataString(metadata.provider);
+            const metadataWorkflowStage = workflowStageLabel(metadataString(metadata.workflow_stage));
 
             return (
               <Card
@@ -441,10 +484,12 @@ export function TaskDetailPanel({
                       {metadataDisease && <Badge color="violet">{metadataDisease}</Badge>}
                       {metadataSection && <Badge color="blue">{metadataSection}</Badge>}
                       {metadataEvent && <Badge color="slate">{metadataEvent}</Badge>}
+                      {metadataWorkflowStage && <Badge color="indigo">{metadataWorkflowStage}</Badge>}
                       {kind === "phase" && <Badge color="violet">phase</Badge>}
                       {kind === "progress" && <Badge color="amber">progress</Badge>}
                       {kind === "result" && <Badge color="emerald">result</Badge>}
                       <Text className="text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{formatDateTime(entry.created_at)}</Text>
+                      {metadataProvider && <Badge color="cyan">{metadataProvider}</Badge>}
                       {entry.model_used && <Badge color="blue">{entry.model_used}</Badge>}
                       {entry.tokens_used != null && <Badge color="slate">{entry.tokens_used} tokens</Badge>}
                       {entry.duration != null && <Badge color="slate">{entry.duration.toFixed(1)}s</Badge>}

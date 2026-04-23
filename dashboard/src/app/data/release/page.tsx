@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Badge, Button, Card, Grid, Metric, ProgressBar, Text, Title, TextInput } from "@tremor/react";
+import { Badge, Button, Card, Grid, Metric, ProgressBar, Text, Title } from "@tremor/react";
 import {
   AlertTriangle,
   Ban,
@@ -12,12 +13,10 @@ import {
   Cloud,
   ExternalLink,
   GitBranch,
-  Loader2,
   Pencil,
   Play,
   Plus,
   RefreshCw,
-  Send,
   ShieldCheck,
   Trash2,
   Wrench,
@@ -34,10 +33,9 @@ import {
   useDataReleaseJobs,
   useDeleteDataReleaseJob,
   useRunDataReleaseJob,
-  useSendTestEmail,
-  useTestSmtpConnection,
   useUpdateDataReleaseJob,
 } from "@/lib/hooks/useDataRelease";
+import { useSettings } from "@/lib/hooks/useSettings";
 import {
   useCancelTask,
   useTaskDetail,
@@ -45,7 +43,6 @@ import {
   useTaskWebSocket,
   useWorkerStatus,
 } from "@/lib/hooks/useTasks";
-import { useAutomationConfig } from "@/lib/hooks/useSources";
 import { TaskDetailPanel } from "@/components/tasks/TaskDetailPanel";
 import { useAppStore } from "@/stores/app-store";
 
@@ -312,6 +309,7 @@ export default function DataReleasePage() {
   const { data: config } = useDataReleaseConfig();
   const { data: jobs, isLoading } = useDataReleaseJobs();
   const { data: workerStatus } = useWorkerStatus();
+  const { data: settings } = useSettings();
   const { data: releaseTasks, refetch: releaseTasksRefetch } = useTasks(undefined, "export_data", undefined, undefined, 20);
   const cancelTask = useCancelTask();
 
@@ -324,49 +322,7 @@ export default function DataReleasePage() {
   const [editingJobId, setEditingJobId] = useState<string | null>(null);
   const [form, setForm] = useState<DataReleaseJobInput>(defaultForm);
 
-  // SMTP test state
-  const smtpTest = useTestSmtpConnection();
-  const [smtpTestResult, setSmtpTestResult] = useState<{ success: boolean; message: string } | null>(null);
-
-  const handleSmtpTest = async () => {
-    setSmtpTestResult(null);
-    try {
-      const result = await smtpTest.mutateAsync();
-      setSmtpTestResult({ success: true, message: result.message || "SMTP connection successful" });
-    } catch (err: unknown) {
-      const msg = err && typeof err === "object" && "response" in err && err.response && typeof err.response === "object" && "data" in err.response && err.response.data && typeof err.response.data === "object" && "detail" in err.response.data ? String(err.response.data.detail) : err && typeof err === "object" && "message" in err ? String(err.message) : String(err);
-      setSmtpTestResult({ success: false, message: msg });
-    }
-  };
-
-  // Test email dialog
-  const [testEmailDialogOpen, setTestEmailDialogOpen] = useState(false);
-  const [testEmailRecipient, setTestEmailRecipient] = useState("");
-  const [testEmailResult, setTestEmailResult] = useState<{ success: boolean; message: string } | null>(null);
-  const sendTestEmail = useSendTestEmail();
-
-  const handleOpenTestEmailDialog = () => {
-    const adminEmails = automationConfig?.admin_emails ?? [];
-    setTestEmailRecipient(adminEmails.join(", ") || "");
-    setTestEmailResult(null);
-    setTestEmailDialogOpen(true);
-  };
-
-  const handleSendTestEmail = async () => {
-    const recipient = testEmailRecipient.trim();
-    if (!recipient) return;
-    setTestEmailResult(null);
-    try {
-      const result = await sendTestEmail.mutateAsync(recipient);
-      setTestEmailResult({ success: true, message: result.message });
-    } catch (err: unknown) {
-      const msg = err && typeof err === "object" && "response" in err && err.response && typeof err.response === "object" && "data" in err.response && err.response.data && typeof err.response.data === "object" && "detail" in err.response.data ? String(err.response.data.detail) : err && typeof err === "object" && "message" in err ? String(err.message) : String(err);
-      setTestEmailResult({ success: false, message: msg });
-    }
-  };
-
   // Checks
-  const { data: automationConfig } = useAutomationConfig();
   const { data: checks, refetch: refetchChecks, isFetching: checkingAccess, isLoading: loadingChecks } = useDataReleaseChecks(selectedJobId);
   const { data: taskDetail } = useTaskDetail(expandedTaskUuid);
 
@@ -389,6 +345,9 @@ export default function DataReleasePage() {
 
   const accessStatus = !checks ? (loadingChecks || checkingAccess ? "Checking…" : "Pending") : checks.overall_ready ? "Ready" : "Blocked";
   const accessColor = !checks ? "slate" : checks.overall_ready ? "emerald" : "rose";
+  const smtpReady = Boolean(settings?.smtp.alerting_ready);
+  const smtpConfigured = Boolean(settings?.smtp.smtp_configured);
+  const smtpBadgeColor = smtpReady ? "emerald" : smtpConfigured ? "amber" : "slate";
 
   const resetForm = () => {
     setEditingJobId(null);
@@ -437,8 +396,20 @@ export default function DataReleasePage() {
             <h1 className="text-2xl font-semibold tracking-tight text-tremor-content-strong dark:text-dark-tremor-content-strong">{t(lang, "data_release")}</h1>
           </div>
           <Text className="text-sm">{lang === "zh" ? "统一管理站点数据导出、Git 发布和 Cloudflare 部署的工作流。" : "Unified workflow for site data export, Git publishing, and Cloudflare deployment."}</Text>
+          <Text className="text-xs text-tremor-content-subtle">
+            {lang === "zh"
+              ? "SMTP、GitHub 和 Cloudflare 的默认配置已统一迁移到设置中心。"
+              : "SMTP, GitHub, and Cloudflare defaults now live in the Settings Center."}
+          </Text>
         </div>
         <div className="flex items-center gap-2">
+          <Link
+            href="/setting"
+            className="inline-flex items-center gap-1 rounded-lg border border-tremor-border bg-tremor-background px-3 py-1.5 text-xs font-medium text-tremor-content-strong transition hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong dark:hover:bg-dark-tremor-background-subtle"
+          >
+            {lang === "zh" ? "打开设置中心" : "Open Settings"}
+            <ExternalLink className="h-3.5 w-3.5" />
+          </Link>
           <Button size="xs" variant="secondary" icon={Plus} onClick={openCreateModal}>New Job</Button>
           <Button size="xs" variant="primary" icon={Play} disabled={!selectedJob} onClick={() => selectedJob && runSelectedJob(selectedJob.job_id)}>Run Selected</Button>
         </div>
@@ -542,20 +513,37 @@ export default function DataReleasePage() {
             <div className="flex items-center gap-2">
               <div className="rounded-lg bg-tremor-background-muted p-1.5 text-tremor-content-strong dark:bg-dark-tremor-background-muted dark:text-dark-tremor-content-strong"><Mail className="h-4 w-4" /></div>
               <Title className="!text-sm font-medium">SMTP</Title>
-              <Badge color={smtpTestResult?.success ? "emerald" : smtpTestResult ? "rose" : "slate"} size="xs">{smtpTestResult?.success ? "OK" : smtpTestResult ? "Failed" : "Untested"}</Badge>
+              <Badge color={smtpBadgeColor} size="xs">
+                {smtpReady ? "Ready" : smtpConfigured ? "Needs Recipients" : "Managed in Settings"}
+              </Badge>
             </div>
-            <Button size="xs" variant="light" icon={Send} onClick={handleOpenTestEmailDialog} title="Send test email" />
-            <Button size="xs" variant="light" icon={smtpTest.isPending ? Loader2 : Mail} loading={smtpTest.isPending} onClick={handleSmtpTest} />
+            <Link
+              href="/setting"
+              className="inline-flex items-center gap-1 rounded-full border border-tremor-border px-3 py-1.5 text-xs font-medium text-tremor-content-strong transition hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:text-dark-tremor-content-strong dark:hover:bg-dark-tremor-background-subtle"
+            >
+              {lang === "zh" ? "去设置" : "Open Settings"}
+              <ExternalLink className="h-3.5 w-3.5" />
+            </Link>
           </div>
-          {smtpTestResult && (
-            <div className={`mt-4 rounded-xl border px-3 py-2 text-xs ${smtpTestResult.success ? "border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-200" : "border-rose-300 bg-rose-50 text-rose-900 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-200"}`}>
-              <div className="flex items-center gap-1.5 font-medium">
-                {smtpTestResult.success ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertTriangle className="h-3.5 w-3.5" />}
-                {smtpTestResult.success ? "Connection OK" : "Connection Failed"}
-              </div>
-              <Text className="mt-1 !text-xs">{smtpTestResult.message}</Text>
+          <div className="mt-4 space-y-3">
+            <Text className="!text-xs text-tremor-content-subtle">
+              {lang === "zh"
+                ? "数据发布只读取统一设置，不再在这里单独维护 SMTP。测试连接、发测试邮件和收件人管理都在设置中心完成。"
+                : "Data release only reads the shared SMTP settings now. Connection tests, test emails, and recipient management all happen in the Settings Center."}
+            </Text>
+            <div className="grid gap-2 md:grid-cols-2">
+              <AccessDetail label="Source" value={settings?.smtp.source || "env"} />
+              <AccessDetail label="From" value={settings?.smtp.smtp_from_email || "-"} />
+              <AccessDetail
+                label="Recipients"
+                value={settings?.smtp.admin_emails?.length ? settings.smtp.admin_emails.join(", ") : "-"}
+              />
+              <AccessDetail
+                label="Password"
+                value={settings?.smtp.smtp_password_present ? "Saved" : "Missing"}
+              />
             </div>
-          )}
+          </div>
         </Card>
       </div>
 
@@ -652,52 +640,6 @@ export default function DataReleasePage() {
           )}
         </div>
       </Card>
-
-
-      {/* Test Email Dialog */}
-      {testEmailDialogOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setTestEmailDialogOpen(false)}>
-          <Card className="w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <div className="rounded-lg bg-tremor-background-muted p-1.5 text-tremor-content-strong"><Send className="h-4 w-4" /></div>
-                <Title className="!text-base">Send Test Email</Title>
-              </div>
-              <Button size="xs" variant="light" icon={X} onClick={() => setTestEmailDialogOpen(false)} />
-            </div>
-            <div className="space-y-4">
-              <div>
-                <Text className="mb-1.5">Recipient Email</Text>
-                <TextInput
-                  placeholder="Enter email address"
-                  value={testEmailRecipient}
-                  onChange={(e) => setTestEmailRecipient(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter" && testEmailRecipient.trim()) handleSendTestEmail(); }}
-                />
-                <Text className="mt-1 !text-xs text-tremor-content-subtle">Default: AUTOMATION__ADMIN_EMAILS_RAW value</Text>
-              </div>
-              <Button
-                className="w-full"
-                icon={sendTestEmail.isPending ? Loader2 : Send}
-                loading={sendTestEmail.isPending}
-                disabled={!testEmailRecipient.trim()}
-                onClick={handleSendTestEmail}
-              >
-                {sendTestEmail.isPending ? "Sending..." : "Send Test Email"}
-              </Button>
-              {testEmailResult && (
-                <div className={`rounded-xl border px-3 py-2 text-xs ${testEmailResult.success ? "border-emerald-300 bg-emerald-50 text-emerald-900" : "border-rose-300 bg-rose-50 text-rose-900"}`}>
-                  <div className="flex items-center gap-1.5 font-medium">
-                    {testEmailResult.success ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertTriangle className="h-3.5 w-3.5" />}
-                    {testEmailResult.success ? "Delivered" : "Failed"}
-                  </div>
-                  <Text className="mt-1 !text-xs">{testEmailResult.message}</Text>
-                </div>
-              )}
-            </div>
-          </Card>
-        </div>
-      )}
 
       <JobModal open={modalOpen} onClose={closeModal} form={form} onChange={updateFormField} onSubmit={submitForm} isSubmitting={createJob.isPending || updateJob.isPending} isNew={!editingJobId} selectedJob={selectedJob} />
     </div>

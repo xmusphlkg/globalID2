@@ -12,6 +12,7 @@ interface Props {
   countryCode?: string;
   countryName?: string;
   qualityScore?: number | null;
+  summary?: string | null;
 }
 
 const {
@@ -24,6 +25,7 @@ const {
   countryCode,
   countryName,
   qualityScore,
+  summary,
 } = Astro.props;
 
 const href = `/countries/${(countryCode ?? 'cn').toLowerCase()}/reports/${id}/`;
@@ -59,6 +61,12 @@ const typeLabels: Record<string, string> = {
   <h3 class="text-[rgb(var(--text-strong))] font-semibold text-base mb-2 group-hover:text-brand-700 dark:group-hover:text-brand-400 transition-colors line-clamp-2">
     {title}
   </h3>
+
+  {summary && (
+    <p class="text-sm leading-6 text-[rgb(var(--text-muted))] line-clamp-3">
+      {summary}
+    </p>
+  )}
 
   <div class="mt-3 flex items-center justify-between border-t border-[rgb(var(--border))/0.68] pt-3 text-xs text-[rgb(var(--text-faint))]">
     {periodStart && periodEnd && (

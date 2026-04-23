@@ -9,7 +9,8 @@ from __future__ import annotations
 import hashlib
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
-from typing import List, Optional, Tuple
+from pathlib import Path
+from typing import Any, List, Optional, Tuple
 
 from sqlalchemy import func, select
 
@@ -37,6 +38,7 @@ class ReportResult:
     output_files: List[str] = field(default_factory=list)
     sections_count: int = 0
     reused: bool = False
+    email_delivery: Optional[dict[str, Any]] = None
 
 
 DataSignature = Tuple[int, int, Optional[datetime], Optional[datetime], str]
@@ -206,6 +208,10 @@ class ReportService:
                         ),
                         content_type="text",
                     )
+                    email_delivery = None
+                    if send_email:
+                        email_delivery = await self._send_reused_report_email(db, selected)
+                        await self._log_report_email_delivery(task.task_uuid, email_delivery)
                     await task_manager.update_task_progress(task.task_uuid, 100)
                     return ReportResult(
                         report_id=selected.id,
@@ -214,6 +220,7 @@ class ReportService:
                         output_files=output_files,
                         sections_count=selected_candidate.section_count,
                         reused=True,
+                        email_delivery=email_delivery,
                     )
 
                 resumable_report = selected
@@ -303,6 +310,7 @@ class ReportService:
                 content_type="text",
             )
             output_files = self._collect_output_files(report)
+            email_delivery = self._email_delivery_from_report(report) if send_email else None
             await task_manager.add_workbook_entry(
                 task.task_uuid,
                 entry_type="success",
@@ -314,13 +322,7 @@ class ReportService:
 
             # ── Phase 4: Email (90 → 95 %) ────────────────────────────────────
             if send_email:
-                await task_manager.add_workbook_entry(
-                    task.task_uuid,
-                    entry_type="success",
-                    title="Email Sent",
-                    content="Report successfully delivered",
-                    content_type="text",
-                )
+                await self._log_report_email_delivery(task.task_uuid, email_delivery)
             await task_manager.update_task_progress(task.task_uuid, 95)
 
             # ── Phase 5: Finalise ─────────────────────────────────────────────
@@ -340,6 +342,7 @@ class ReportService:
                 status=str(report.status),
                 output_files=output_files,
                 sections_count=sections_count,
+                email_delivery=email_delivery,
             )
 
     # ── Helpers ───────────────────────────────────────────────────────────────
@@ -350,6 +353,121 @@ class ReportService:
         if not country:
             raise ValueError(f"Country not found: {country_code}")
         return country
+
+    @staticmethod
+    def _email_delivery_from_report(report: Report) -> Optional[dict[str, Any]]:
+        generation_config = report.generation_config if isinstance(report.generation_config, dict) else {}
+        delivery = generation_config.get("email_delivery") if isinstance(generation_config, dict) else None
+        return dict(delivery) if isinstance(delivery, dict) else None
+
+    async def _log_report_email_delivery(
+        self,
+        task_uuid: str,
+        email_delivery: Optional[dict[str, Any]],
+    ) -> None:
+        if not email_delivery:
+            await task_manager.add_workbook_entry(
+                task_uuid,
+                entry_type="warning",
+                title="Email Skipped",
+                content="Email was requested, but no delivery result was recorded.",
+                content_type="text",
+            )
+            return
+
+        recipients = ", ".join(email_delivery.get("recipients") or []) or "-"
+        subject = str(email_delivery.get("subject") or "-")
+        detail = str(email_delivery.get("message") or email_delivery.get("reason") or "No detail")
+        checked_at = str(email_delivery.get("checked_at") or "-")
+
+        if email_delivery.get("sent"):
+            await task_manager.add_workbook_entry(
+                task_uuid,
+                entry_type="success",
+                title="Email Sent",
+                content=(
+                    f"Recipients: {recipients}\n"
+                    f"Subject: {subject}\n"
+                    f"Checked At: {checked_at}\n"
+                    f"Result: {detail}"
+                ),
+                content_type="text",
+            )
+            return
+
+        reason = str(email_delivery.get("reason") or "send_failed")
+        entry_type = "warning" if reason in {"smtp_not_configured", "missing_recipients"} else "error"
+        title = "Email Skipped" if entry_type == "warning" else "Email Failed"
+        await task_manager.add_workbook_entry(
+            task_uuid,
+            entry_type=entry_type,
+            title=title,
+            content=(
+                f"Recipients: {recipients}\n"
+                f"Subject: {subject}\n"
+                f"Checked At: {checked_at}\n"
+                f"Reason: {detail}"
+            ),
+            content_type="text",
+        )
+
+    async def _send_reused_report_email(self, db, report: Report) -> dict[str, Any]:
+        from src.generation.email_service import EmailService
+        from src.generation.formatter import ReportFormatter
+
+        try:
+            if report.html_path and Path(report.html_path).exists():
+                html_content = Path(report.html_path).read_text(encoding="utf-8")
+            else:
+                sections = (
+                    await db.execute(
+                        select(ReportSection)
+                        .where(ReportSection.report_id == report.id)
+                        .order_by(ReportSection.section_order.asc())
+                    )
+                ).scalars().all()
+                country = await db.get(Country, report.country_id)
+                formatter = ReportFormatter()
+                html_content = formatter.format_html(
+                    [
+                        {
+                            "title": section.title,
+                            "content": section.content,
+                            "content_html": section.content_html,
+                        }
+                        for section in sections
+                    ],
+                    {
+                        "title": report.title,
+                        "generated_at": (report.updated_at or report.created_at).strftime("%Y-%m-%d %H:%M:%S"),
+                        "period_start": report.period_start.date().isoformat(),
+                        "period_end": report.period_end.date().isoformat(),
+                        "country": country.name_en if country else "-",
+                    },
+                )
+            delivery = EmailService().send_report_to_settings_recipients(
+                report_title=report.title,
+                report_html=html_content,
+                pdf_path=report.pdf_path,
+            )
+        except Exception as exc:
+            delivery = {
+                "requested": True,
+                "sent": False,
+                "recipients": [],
+                "subject": f"[GlobalID] {report.title}",
+                "checked_at": datetime.now(timezone.utc).isoformat(),
+                "reason": "render_failed",
+                "message": f"Failed to prepare reused report email: {exc}",
+            }
+
+        generation_config = dict(report.generation_config or {})
+        generation_config["email_delivery"] = delivery
+        report.generation_config = generation_config
+        db.add(report)
+        await db.commit()
+        await db.refresh(report)
+        return delivery
 
     @staticmethod
     def _normalize_reuse_strategy(value: str) -> str:

@@ -2,7 +2,12 @@
 
 import ReactEChartsCore from "echarts-for-react/lib/core";
 import * as echarts from "echarts/core";
-import { BarChart as EBarChart, LineChart as ELineChart, PieChart as EPieChart } from "echarts/charts";
+import {
+  BarChart as EBarChart,
+  GraphChart as EGraphChart,
+  LineChart as ELineChart,
+  PieChart as EPieChart,
+} from "echarts/charts";
 import {
   GridComponent,
   TooltipComponent,
@@ -14,6 +19,7 @@ import { withTheme } from "@/lib/chart-theme";
 
 echarts.use([
   EBarChart,
+  EGraphChart,
   ELineChart,
   EPieChart,
   GridComponent,
