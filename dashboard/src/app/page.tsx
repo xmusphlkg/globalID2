@@ -101,7 +101,7 @@ export default function HomePage() {
         <div className="grid gap-6 lg:grid-cols-[1.5fr_0.9fr]">
           <div className="space-y-4">
             <Badge color="teal" className="w-fit">
-              GlobalID
+              {t(lang, "brand_name")}
             </Badge>
             <div className="space-y-2">
               <Title className="text-3xl md:text-4xl">{t(lang, "workspace_title")}</Title>

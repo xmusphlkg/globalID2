@@ -5,6 +5,8 @@ import json
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.domain.task import Task, TaskType
+
 
 async def _ensure_country_row(db: AsyncSession, country_code: str) -> None:
     """Create a minimal country row when scope migration finds missing parent country."""
@@ -385,3 +387,164 @@ async def ensure_disease_learning_suggestions_schema(db: AsyncSession) -> None:
         "CREATE INDEX IF NOT EXISTS idx_learning_confidence "
         "ON disease_learning_suggestions (ai_confidence DESC)"
     ))
+
+
+async def ensure_disease_knowledge_source_schema(db: AsyncSession) -> None:
+    """Ensure the disease knowledge source table can store resolved URLs and parsed page text."""
+    await db.execute(text("""
+        CREATE TABLE IF NOT EXISTS disease_knowledge_sources (
+            id SERIAL PRIMARY KEY,
+            disease_id VARCHAR(100) NOT NULL,
+            source_type VARCHAR(40) NOT NULL,
+            source_name VARCHAR(120) NOT NULL,
+            url VARCHAR(1000) NOT NULL,
+            resolved_url VARCHAR(1000),
+            title VARCHAR(500),
+            license VARCHAR(200),
+            status VARCHAR(30) NOT NULL DEFAULT 'active',
+            language VARCHAR(20) NOT NULL DEFAULT 'en',
+            raw_excerpt TEXT,
+            content_text TEXT,
+            content_sections JSON NOT NULL DEFAULT '[]'::json,
+            raw_excerpt_hash VARCHAR(64),
+            fetched_at TIMESTAMP WITH TIME ZONE,
+            review_status VARCHAR(30) NOT NULL DEFAULT 'pending',
+            metadata JSON NOT NULL DEFAULT '{}'::json,
+            created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            CONSTRAINT uq_disease_knowledge_source UNIQUE (disease_id, source_type, url)
+        )
+    """))
+
+    alter_statements = [
+        "ALTER TABLE disease_knowledge_sources ADD COLUMN IF NOT EXISTS resolved_url VARCHAR(1000)",
+        "ALTER TABLE disease_knowledge_sources ADD COLUMN IF NOT EXISTS content_text TEXT",
+        "ALTER TABLE disease_knowledge_sources ADD COLUMN IF NOT EXISTS content_sections JSON DEFAULT '[]'::json",
+        "ALTER TABLE disease_knowledge_sources ADD COLUMN IF NOT EXISTS status VARCHAR(30) DEFAULT 'active'",
+        "ALTER TABLE disease_knowledge_sources ADD COLUMN IF NOT EXISTS language VARCHAR(20) DEFAULT 'en'",
+        "ALTER TABLE disease_knowledge_sources ADD COLUMN IF NOT EXISTS raw_excerpt_hash VARCHAR(64)",
+        "ALTER TABLE disease_knowledge_sources ADD COLUMN IF NOT EXISTS fetched_at TIMESTAMP WITH TIME ZONE",
+        "ALTER TABLE disease_knowledge_sources ADD COLUMN IF NOT EXISTS review_status VARCHAR(30) DEFAULT 'pending'",
+        "ALTER TABLE disease_knowledge_sources ADD COLUMN IF NOT EXISTS metadata JSON DEFAULT '{}'::json",
+        "ALTER TABLE disease_knowledge_sources ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP",
+        "ALTER TABLE disease_knowledge_sources ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP",
+    ]
+
+    for statement in alter_statements:
+        await db.execute(text(statement))
+
+    await db.execute(text(
+        "CREATE INDEX IF NOT EXISTS idx_knowledge_source_disease ON disease_knowledge_sources (disease_id)"
+    ))
+    await db.execute(text(
+        "CREATE INDEX IF NOT EXISTS idx_knowledge_source_type ON disease_knowledge_sources (source_type)"
+    ))
+    await db.execute(text(
+        "CREATE INDEX IF NOT EXISTS idx_knowledge_source_review ON disease_knowledge_sources (review_status)"
+    ))
+
+
+async def ensure_disease_knowledge_schema(db: AsyncSession) -> None:
+    """Ensure the disease knowledge brief schema supports structured academic fields."""
+    await db.execute(text("""
+        CREATE TABLE IF NOT EXISTS disease_knowledge_briefs (
+            id SERIAL PRIMARY KEY,
+            disease_id VARCHAR(100) NOT NULL,
+            language VARCHAR(20) NOT NULL,
+            brief TEXT NOT NULL,
+            definition TEXT,
+            clinical_features TEXT,
+            epidemiology TEXT,
+            transmission TEXT,
+            prevention TEXT,
+            surveillance_note TEXT,
+            clinical_summary TEXT,
+            risk_groups TEXT,
+            source_ids JSON NOT NULL DEFAULT '[]'::json,
+            source_attribution JSON NOT NULL DEFAULT '[]'::json,
+            disclaimer TEXT,
+            model VARCHAR(120),
+            status VARCHAR(30) NOT NULL DEFAULT 'draft',
+            source_confidence VARCHAR(30) NOT NULL DEFAULT 'medium',
+            quality_score FLOAT,
+            review_notes TEXT,
+            metadata JSON NOT NULL DEFAULT '{}'::json,
+            created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            CONSTRAINT uq_disease_knowledge_brief UNIQUE (disease_id, language)
+        )
+    """))
+
+    alter_statements = [
+        "ALTER TABLE disease_knowledge_briefs ADD COLUMN IF NOT EXISTS definition TEXT",
+        "ALTER TABLE disease_knowledge_briefs ADD COLUMN IF NOT EXISTS clinical_features TEXT",
+        "ALTER TABLE disease_knowledge_briefs ADD COLUMN IF NOT EXISTS epidemiology TEXT",
+        "ALTER TABLE disease_knowledge_briefs ADD COLUMN IF NOT EXISTS surveillance_note TEXT",
+        "ALTER TABLE disease_knowledge_briefs ADD COLUMN IF NOT EXISTS clinical_summary TEXT",
+        "ALTER TABLE disease_knowledge_briefs ADD COLUMN IF NOT EXISTS risk_groups TEXT",
+        "ALTER TABLE disease_knowledge_briefs ADD COLUMN IF NOT EXISTS source_ids JSON NOT NULL DEFAULT '[]'::json",
+        "ALTER TABLE disease_knowledge_briefs ADD COLUMN IF NOT EXISTS source_attribution JSON NOT NULL DEFAULT '[]'::json",
+        "ALTER TABLE disease_knowledge_briefs ADD COLUMN IF NOT EXISTS disclaimer TEXT",
+        "ALTER TABLE disease_knowledge_briefs ADD COLUMN IF NOT EXISTS model VARCHAR(120)",
+        "ALTER TABLE disease_knowledge_briefs ADD COLUMN IF NOT EXISTS status VARCHAR(30) DEFAULT 'draft'",
+        "ALTER TABLE disease_knowledge_briefs ADD COLUMN IF NOT EXISTS source_confidence VARCHAR(30) DEFAULT 'medium'",
+        "ALTER TABLE disease_knowledge_briefs ADD COLUMN IF NOT EXISTS quality_score FLOAT",
+        "ALTER TABLE disease_knowledge_briefs ADD COLUMN IF NOT EXISTS review_notes TEXT",
+        "ALTER TABLE disease_knowledge_briefs ADD COLUMN IF NOT EXISTS metadata JSON DEFAULT '{}'::json",
+        "ALTER TABLE disease_knowledge_briefs ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP",
+        "ALTER TABLE disease_knowledge_briefs ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP",
+    ]
+
+    for statement in alter_statements:
+        await db.execute(text(statement))
+
+    await db.execute(text(
+        "CREATE INDEX IF NOT EXISTS idx_knowledge_brief_disease ON disease_knowledge_briefs (disease_id)"
+    ))
+    await db.execute(text(
+        "CREATE INDEX IF NOT EXISTS idx_knowledge_brief_language ON disease_knowledge_briefs (language)"
+    ))
+    await db.execute(text(
+        "CREATE INDEX IF NOT EXISTS idx_knowledge_brief_status ON disease_knowledge_briefs (status)"
+    ))
+
+
+async def ensure_task_type_enum_schema(db: AsyncSession) -> None:
+    """Ensure the task_type enum knows about newly added task kinds."""
+    enum_type = getattr(getattr(Task.__table__.c.task_type, "type", None), "name", None) or "tasktype"
+    bind = getattr(db, "bind", None)
+    dialect_name = getattr(getattr(bind, "dialect", None), "name", None)
+    if dialect_name and dialect_name != "postgresql":
+        return
+
+    changed = False
+    seen_labels: set[str] = set()
+    labels: list[str] = []
+    for value in TaskType:
+        # SQLAlchemy's default Enum(TaskType) stores enum member names, but this
+        # repository has historically mixed name-based and value-based labels in
+        # Postgres. Keep both forms in sync so either representation can be
+        # written safely during migrations and runtime task creation.
+        for label in (value.name, value.value):
+            if label and label not in seen_labels:
+                seen_labels.add(label)
+                labels.append(label)
+
+    for label in labels:
+        try:
+            escaped_value = label.replace("'", "''")
+            await db.execute(
+                text(
+                    f"ALTER TYPE {enum_type} ADD VALUE IF NOT EXISTS '{escaped_value}'"
+                )
+            )
+            changed = True
+        except Exception:
+            # Ignore enum maintenance failures on non-PostgreSQL databases or
+            # when the type has not been created yet.
+            return
+
+    if changed:
+        # PostgreSQL requires new enum values to be committed before they can
+        # be referenced in later statements within the same session.
+        await db.commit()

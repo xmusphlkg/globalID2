@@ -109,9 +109,18 @@ The shipped example includes these categories:
 
 - application settings: `APP_ENV`, `APP_NAME`, `DEBUG`, `LOG_LEVEL`
 - database: `DATABASE_URL`, `DATABASE_URL_SYNC`
-- performance: `MAX_PARALLEL_TASKS`, `MAX_CRAWLER_CONCURRENT`
-- AI defaults: `DEFAULT_AI_PROVIDER`, `DEFAULT_MODEL`
+- performance: `MAX_PARALLEL_TASKS`, `MAX_CRAWLER_CONCURRENT`, `TASK_WORKER_CONCURRENCY`
+- AI defaults: `DEFAULT_AI_PROVIDER`, `DEFAULT_MODEL`, `AI__MODEL_CHAIN_RAW`, `AI__KNOWLEDGE_MODEL_SHARDS_RAW`
 - paths: `DATA_DIR`, `LOG_DIR`, `CONFIG_DIR`
+
+For dashboard background tasks, `TASK_WORKER_CONCURRENCY` controls how many queued jobs
+the standalone worker consumes in parallel. Increase it carefully because higher values
+also increase model/API pressure and email/report throughput.
+
+For disease knowledge building, `AI__KNOWLEDGE_MODEL_SHARDS_RAW` lets us distribute
+tasks across multiple preferred models. The worker deterministically rotates the preferred
+model order per disease/language and still falls back to the rest of `AI__MODEL_CHAIN_RAW`
+if the first choice is rate-limited or unavailable.
 
 The Python configuration layer also supports provider-specific credentials such as:
 

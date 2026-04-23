@@ -6,10 +6,12 @@ GlobalID V2 Email Service
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from src.core import get_logger
+from src.services.settings_service import system_settings_service
 from src.services.smtp_email_service import smtp_email_service
 
 logger = get_logger(__name__)
@@ -122,6 +124,52 @@ class EmailService:
 
     def test_connection(self) -> bool:
         return self._service.test_connection()
+
+    def send_report_to_settings_recipients(
+        self,
+        *,
+        report_title: str,
+        report_html: str,
+        pdf_path: Optional[str] = None,
+        requested: bool = True,
+    ) -> dict[str, Any]:
+        """Send a report email to the centralized Settings recipient list."""
+        smtp_state = system_settings_service.build_smtp_status()
+        recipients = list(smtp_state["admin_emails"])
+        subject = f"[GlobalID] {report_title}"
+        delivery: dict[str, Any] = {
+            "requested": requested,
+            "sent": False,
+            "recipients": recipients,
+            "subject": subject,
+            "checked_at": datetime.now(timezone.utc).isoformat(),
+            "reason": None,
+            "message": None,
+        }
+
+        if not smtp_state["smtp_configured"]:
+            delivery["reason"] = "smtp_not_configured"
+            delivery["message"] = "SMTP is not fully configured in Settings."
+            return delivery
+
+        if not recipients:
+            delivery["reason"] = "missing_recipients"
+            delivery["message"] = "No admin email recipients are configured in Settings."
+            return delivery
+
+        sent = self.send_report(
+            to_addrs=recipients,
+            report_title=report_title,
+            report_html=report_html,
+            pdf_path=pdf_path,
+        )
+        if sent:
+            delivery["sent"] = True
+            delivery["message"] = f"Delivered to {len(recipients)} recipient(s)."
+        else:
+            delivery["reason"] = "send_failed"
+            delivery["message"] = "SMTP delivery failed."
+        return delivery
 
     @staticmethod
     def build_task_failure_html(

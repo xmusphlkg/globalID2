@@ -1,1 +1,1 @@
-"""GlobalID V2 API Package"""
+"""GIDS V2 API Package"""

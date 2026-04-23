@@ -79,6 +79,7 @@ class TaskStatusUpdate(BaseModel):
 class WorkerStatusOut(BaseModel):
     worker_process_running: bool
     worker_pid: Optional[int] = None
+    worker_concurrency: int = 1
     queued_tasks: int = 0
     running_tasks: int = 0
     retrying_tasks: int = 0

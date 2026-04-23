@@ -1,1 +1,1 @@
-"""Pydantic response/request schemas for the GlobalID API."""
+"""Pydantic response/request schemas for the GIDS API."""

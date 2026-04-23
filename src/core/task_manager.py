@@ -10,6 +10,7 @@ from sqlalchemy import select, and_
 from sqlalchemy.orm import selectinload
 
 from src.core.database import get_db
+from src.core.db_schema import ensure_task_type_enum_schema
 from src.core.logging import get_logger
 from src.domain import Country, Task, TaskWorkbook, TaskStatus, TaskType, TaskPriority
 
@@ -63,6 +64,7 @@ class TaskManager:
             创建的任务对象
         """
         async with get_db() as db:
+            await ensure_task_type_enum_schema(db)
             if country_id is None:
                 country_id = await self._infer_country_id(db, input_data)
 
@@ -185,6 +187,7 @@ class TaskManager:
         reason: str = "Cancelled by user",
     ) -> Optional[Task]:
         """Request cancellation for a task. Running tasks stop cooperatively at safe checkpoints."""
+        immediate_cancelled = False
         async with get_db() as db:
             query = select(Task).where(Task.task_uuid == task_uuid)
             result = await db.execute(query)
@@ -225,6 +228,7 @@ class TaskManager:
                 "progress": task.progress or 0,
                 "cancel_requested": True,
             })
+            immediate_cancelled = task.status == TaskStatus.CANCELLED
 
         await self.add_workbook_entry(
             task_uuid,
@@ -233,6 +237,13 @@ class TaskManager:
             content=entry_content,
             content_type="text",
         )
+        if immediate_cancelled:
+            try:
+                from src.services.task_alert_service import task_alert_service
+
+                await task_alert_service.send_task_alert(task_uuid, TaskStatus.CANCELLED)
+            except Exception as exc:
+                logger.warning(f"Cancellation alert skipped for {task_uuid}: {exc}")
         return await self.get_task_by_uuid(task_uuid)
 
     async def is_cancel_requested(self, task_uuid: str) -> bool:

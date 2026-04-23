@@ -95,6 +95,10 @@ class AISettings(_BaseEnvSettings):
         default="",
         description="模型优先级列表，逗号分隔（高→低），为空则使用 default_model + fallback_model",
     )
+    knowledge_model_shards_raw: str = Field(
+        default="",
+        description="知识库任务的模型分流列表，逗号分隔；为空时回退到 model_chain",
+    )
     
     # 模型配置
     temperature: float = Field(default=0.7, ge=0.0, le=2.0, description="生成温度")
@@ -156,15 +160,24 @@ class AISettings(_BaseEnvSettings):
                 ordered.append(m)
         return ordered
 
-
-class EmailSettings(BaseSettings):
-    """邮件配置"""
-
-    default_recipients_raw: str = Field(default="", description="默认收件人，逗号分隔")
-
     @property
-    def default_recipients(self) -> list[str]:
-        return [item.strip() for item in self.default_recipients_raw.split(",") if item.strip()]
+    def knowledge_model_shards(self) -> list[str]:
+        """
+        返回知识库生成的候选分流模型列表。
+
+        若未显式配置 knowledge_model_shards_raw，则回退到通用 model_chain。
+        """
+        raw = self.knowledge_model_shards_raw.strip()
+        if not raw:
+            return list(self.model_chain)
+
+        seen: set[str] = set()
+        ordered: list[str] = []
+        for item in [m.strip() for m in raw.split(",") if m.strip()]:
+            if item not in seen:
+                seen.add(item)
+                ordered.append(item)
+        return ordered
 
 
 class AutomationSettings(_BaseEnvSettings):
@@ -235,7 +248,6 @@ class ReportSettings(BaseSettings):
     output_dir: str = Field(default="reports", description="报告输出目录")
     template_dir: str = Field(default="templates", description="模板目录")
     max_retries: int = Field(default=3, description="最大重试次数")
-    enable_email: bool = Field(default=False, description="是否启用邮件发送")
     max_parallel_tasks: int = Field(
         default=20,
         alias="MAX_PARALLEL_TASKS",
@@ -256,6 +268,30 @@ class CrawlerSettings(BaseSettings):
     timeout: int = Field(default=30, description="请求超时时间（秒）")
     max_retries: int = Field(default=3, description="最大重试次数")
     delay: float = Field(default=1.0, description="请求延迟（秒）")
+
+
+class TaskWorkerSettings(_BaseEnvSettings):
+    """后台任务 worker 配置"""
+
+    concurrency: int = Field(
+        default=2,
+        validation_alias="TASK_WORKER_CONCURRENCY",
+        ge=1,
+        le=64,
+        description="任务 worker 最大并发数",
+    )
+    poll_interval_seconds: float = Field(
+        default=2.0,
+        validation_alias="TASK_WORKER_POLL_INTERVAL",
+        gt=0,
+        description="任务 worker 拉取队列轮询间隔（秒）",
+    )
+    idle_log_every: int = Field(
+        default=30,
+        validation_alias="TASK_WORKER_IDLE_LOG_EVERY",
+        ge=1,
+        description="worker 空闲日志输出周期（轮）",
+    )
 
 
 class AppSettings(BaseSettings):
@@ -296,12 +332,12 @@ class AppSettings(BaseSettings):
     redis: RedisSettings = Field(default_factory=RedisSettings)
     qdrant: QdrantSettings = Field(default_factory=QdrantSettings)
     ai: AISettings = Field(default_factory=AISettings)
-    email: EmailSettings = Field(default_factory=EmailSettings)
     automation: AutomationSettings = Field(default_factory=AutomationSettings)
     data_release: DataReleaseSettings = Field(default_factory=DataReleaseSettings)
     app: AppSettingsConfig = Field(default_factory=AppSettingsConfig)
     report: ReportSettings = Field(default_factory=ReportSettings)
     crawler: CrawlerSettings = Field(default_factory=CrawlerSettings)
+    task_worker: TaskWorkerSettings = Field(default_factory=TaskWorkerSettings)
     
     @field_validator("log_dir", "data_dir", "raw_data_dir", "processed_data_dir", "cache_dir")
     @classmethod

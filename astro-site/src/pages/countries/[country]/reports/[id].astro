@@ -142,6 +142,9 @@ const scoreColor = !report?.quality_score ? 'text-slate-500'
   : 'text-red-400';
 
 const countryName = report?.country_name ?? country.toUpperCase();
+const keyFindings = report?.key_findings
+  ? (Array.isArray(report.key_findings) ? report.key_findings : Object.values(report.key_findings))
+  : [];
 const chartSourceMeta = buildChartSourceMeta(
   countryDownload,
   `${countryName} surveillance dataset`
@@ -216,19 +219,26 @@ const chartSourceMeta = buildChartSourceMeta(
           </div>
         </section>
 
-        {report.key_findings && Object.keys(report.key_findings).length > 0 && (
+        {(report.summary || keyFindings.length > 0) && (
           <section class="figure-panel">
             <p class="figure-kicker" data-lang-en="Executive summary" data-lang-zh="执行摘要">Executive summary</p>
             <h2 class="figure-title" data-lang-en="Key Findings" data-lang-zh="关键发现">Key Findings</h2>
             <div class="mt-5">
-              <ul class="space-y-2">
-                {(Array.isArray(report.key_findings) ? report.key_findings : Object.values(report.key_findings)).map((finding: any) => (
-                  <li class="flex gap-3 text-slate-400 text-sm">
-                    <span class="text-teal-400 flex-shrink-0 mt-0.5">→</span>
-                    <span>{typeof finding === 'string' ? finding : JSON.stringify(finding)}</span>
-                  </li>
-                ))}
-              </ul>
+              {report.summary && (
+                <p class="mb-4 text-sm leading-7 text-slate-400">
+                  {report.summary}
+                </p>
+              )}
+              {keyFindings.length > 0 && (
+                <ul class="space-y-2">
+                  {keyFindings.map((finding: any) => (
+                    <li class="flex gap-3 text-slate-400 text-sm">
+                      <span class="text-teal-400 flex-shrink-0 mt-0.5">→</span>
+                      <span>{typeof finding === 'string' ? finding : JSON.stringify(finding)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </section>
         )}

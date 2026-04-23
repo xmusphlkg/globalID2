@@ -45,6 +45,7 @@ from src.core.country_library import (  # noqa: E402
 )
 from src.core.db_schema import ensure_country_scope, ensure_country_scope_schema  # noqa: E402
 from src.core.source_scopes import scope_display_label  # noqa: E402
+from src.knowledge.catalogue import build_catalogue_disease_brief  # noqa: E402
 
 
 # ─────────────────────────────────────────────────────────────
@@ -1167,6 +1168,10 @@ async def fetch_countries(session) -> list[dict]:
 
 
 async def has_population_table(session) -> bool:
+    return await has_table(session, "population_records")
+
+
+async def has_table(session, table_name: str) -> bool:
     row = await session.execute(
         text(
             """
@@ -1174,10 +1179,11 @@ async def has_population_table(session) -> bool:
                 SELECT 1
                 FROM information_schema.tables
                 WHERE table_schema = 'public'
-                  AND table_name = 'population_records'
+                  AND table_name = :table_name
             ) AS has_table
             """
-        )
+        ),
+        {"table_name": table_name},
     )
     result = row.fetchone()
     return bool(result[0]) if result else False
@@ -1383,12 +1389,13 @@ async def fetch_reports(session) -> list[dict]:
                 r.period_start::date  AS period_start,
                 r.period_end::date    AS period_end,
                 r.created_at,
+                r.summary,
                 r.quality_score,
                 c.code                AS country_code,
                 c.name                AS country_name
             FROM reports r
             JOIN countries c ON c.id = r.country_id
-            WHERE r.status = 'COMPLETED'
+            WHERE r.status IN ('COMPLETED', 'APPROVED', 'PUBLISHED')
             ORDER BY r.created_at DESC
             """
         )
@@ -1413,7 +1420,7 @@ async def fetch_report_detail(session, report_id: int) -> dict | None:
                 r.period_start::date AS period_start,
                 r.period_end::date   AS period_end,
                 r.created_at, r.ai_model_used, r.quality_score,
-                r.key_findings,
+                r.summary, r.key_findings,
                 c.code               AS country_code,
                 c.name               AS country_name
             FROM reports r
@@ -1448,6 +1455,160 @@ async def fetch_report_detail(session, report_id: int) -> dict | None:
     )
     report["sections"] = [dict(s._mapping) for s in srows]
     return report
+
+
+async def fetch_disease_knowledge_briefs(session) -> dict[str, dict[str, dict]]:
+    """Load published knowledge briefs keyed by disease_id and language."""
+    if not await has_table(session, "disease_knowledge_briefs"):
+        return {}
+    rows = await session.execute(
+        text(
+            """
+            SELECT disease_id, language, brief, definition, clinical_features, epidemiology,
+                   clinical_summary, transmission, prevention, surveillance_note, risk_groups,
+                   source_attribution, disclaimer, status, source_confidence, updated_at
+            FROM disease_knowledge_briefs
+            WHERE status = 'published'
+            """
+        )
+    )
+    result: dict[str, dict[str, dict]] = defaultdict(dict)
+    for row in rows:
+        item = dict(row._mapping)
+        if item.get("updated_at"):
+            item["updated_at"] = item["updated_at"].isoformat()
+        result[item["disease_id"]][item["language"]] = item
+    return result
+
+
+async def fetch_country_briefs(session) -> dict[str, dict[str, dict]]:
+    """Load published country briefs keyed by country code and language."""
+    if not await has_table(session, "country_briefs"):
+        return {}
+    rows = await session.execute(
+        text(
+            """
+            SELECT country_code, language, brief, surveillance_system,
+                   coverage_interpretation, reporting_cadence, data_limitations,
+                   source_summary, status, updated_at
+            FROM country_briefs
+            WHERE status = 'published'
+            """
+        )
+    )
+    result: dict[str, dict[str, dict]] = defaultdict(dict)
+    for row in rows:
+        item = dict(row._mapping)
+        if item.get("updated_at"):
+            item["updated_at"] = item["updated_at"].isoformat()
+        result[(item["country_code"] or "").upper()][item["language"]] = item
+    return result
+
+
+def build_disease_knowledge_fields(disease: dict, brief_by_language: dict[str, dict] | None) -> dict:
+    """Build the site-facing knowledge payload for one disease."""
+    brief_by_language = brief_by_language or {}
+    en = brief_by_language.get("en") or {}
+    zh = brief_by_language.get("zh") or {}
+
+    if not en:
+        en = build_catalogue_disease_brief(disease, "en")
+    if not zh:
+        zh = build_catalogue_disease_brief(disease, "zh")
+
+    knowledge_sources = en.get("source_attribution") or zh.get("source_attribution") or []
+    knowledge_status = "published" if brief_by_language else "fallback"
+    knowledge_updated_at = en.get("updated_at") or zh.get("updated_at")
+
+    payload = {
+        "disease_id": disease["disease_id"],
+        "name_en": disease.get("name_en"),
+        "name_zh": disease.get("name_zh"),
+        "category": disease.get("category"),
+        "description": disease.get("description"),
+        "official_intro_en": en.get("brief") or en.get("definition"),
+        "official_intro_zh": zh.get("brief") or zh.get("definition"),
+        "official_summary_en": en.get("brief") or en.get("definition"),
+        "official_summary_zh": zh.get("brief") or zh.get("definition"),
+        "official_definition_en": en.get("definition"),
+        "official_definition_zh": zh.get("definition"),
+        "clinical_features_en": en.get("clinical_features") or en.get("clinical_summary"),
+        "clinical_features_zh": zh.get("clinical_features") or zh.get("clinical_summary"),
+        "epidemiology_en": en.get("epidemiology"),
+        "epidemiology_zh": zh.get("epidemiology"),
+        "clinical_summary_en": en.get("clinical_features") or en.get("clinical_summary"),
+        "clinical_summary_zh": zh.get("clinical_features") or zh.get("clinical_summary"),
+        "transmission_en": en.get("transmission"),
+        "transmission_zh": zh.get("transmission"),
+        "prevention_en": en.get("prevention"),
+        "prevention_zh": zh.get("prevention"),
+        "surveillance_note_en": en.get("surveillance_note"),
+        "surveillance_note_zh": zh.get("surveillance_note"),
+        "risk_groups_en": en.get("risk_groups"),
+        "risk_groups_zh": zh.get("risk_groups"),
+        "knowledge_sources": knowledge_sources,
+        "knowledge_source_count": len(knowledge_sources),
+        "knowledge_updated_at": knowledge_updated_at,
+        "knowledge_status": knowledge_status,
+    }
+    return payload
+
+
+def apply_disease_knowledge_fields(disease: dict, brief_by_language: dict[str, dict] | None) -> dict:
+    """Backward-compatible alias for the knowledge payload builder."""
+    return build_disease_knowledge_fields(disease, brief_by_language)
+
+
+def apply_country_brief_fields(country_data: dict, brief_by_language: dict[str, dict] | None) -> dict:
+    """Attach country page interpretive text, falling back to generated source context."""
+    brief_by_language = brief_by_language or {}
+    en = brief_by_language.get("en") or {}
+    zh = brief_by_language.get("zh") or {}
+    source_info = country_data.get("source_info") or {}
+    source_labels = [src.get("label") for src in source_info.get("sources") or [] if src.get("label")]
+    source_label_en = ", ".join(source_labels) or source_info.get("primary_label") or "official surveillance sources"
+    country_name = country_data.get("country_name") or country_data.get("country_code")
+    date_range = country_data.get("date_range") or {}
+    frequency = (country_data.get("frequency_meta") or {}).get("source_frequency") or "UNKNOWN"
+
+    country_data["brief_en"] = en.get("brief") or (
+        f"{country_name} page consolidates infectious disease surveillance records from {source_label_en}. "
+        "It combines source metadata, time-series charts, and downloadable machine-readable datasets."
+    )
+    country_data["brief_zh"] = zh.get("brief") or (
+        f"{country_name} 页面整合来自 {source_label_en} 的传染病监测记录，包含来源信息、时间序列图表和可下载数据。"
+    )
+    country_data["surveillance_system_en"] = en.get("surveillance_system") or (
+        f"The dataset is built from configured official feeds for {country_name}; current primary sources include {source_label_en}."
+    )
+    country_data["surveillance_system_zh"] = zh.get("surveillance_system") or (
+        f"该数据集来自 {country_name} 已配置的官方数据源；当前主要来源包括 {source_label_en}。"
+    )
+    country_data["interpretation_en"] = en.get("coverage_interpretation") or (
+        f"Coverage currently spans {date_range.get('start') or 'N/A'} to {date_range.get('end') or 'N/A'} "
+        f"across {country_data.get('disease_count') or 0} tracked diseases."
+    )
+    country_data["interpretation_zh"] = zh.get("coverage_interpretation") or (
+        f"当前覆盖区间为 {date_range.get('start') or 'N/A'} 至 {date_range.get('end') or 'N/A'}，"
+        f"覆盖 {country_data.get('disease_count') or 0} 种追踪疾病。"
+    )
+    country_data["reporting_cadence_en"] = en.get("reporting_cadence") or (
+        f"Source reporting frequency is inferred as {frequency}; charts use weekly-equivalent normalization where applicable."
+    )
+    country_data["reporting_cadence_zh"] = zh.get("reporting_cadence") or (
+        f"来源报告频率推断为 {frequency}；相关图表在适用时使用周等价归一化。"
+    )
+    country_data["limitations_en"] = en.get("data_limitations") or (
+        "Counts reflect reported surveillance records and may be affected by case definitions, reporting lag, source cadence, and missing population denominators."
+    )
+    country_data["limitations_zh"] = zh.get("data_limitations") or (
+        "病例数反映已报告的监测记录，可能受病例定义、报告延迟、来源频率和人口分母缺失影响。"
+    )
+    country_data["source_summary_en"] = en.get("source_summary") or source_label_en
+    country_data["source_summary_zh"] = zh.get("source_summary") or source_label_en
+    country_data["country_brief_status"] = "published" if en or zh else "fallback"
+    country_data["country_brief_updated_at"] = en.get("updated_at") or zh.get("updated_at")
+    return country_data
 
 
 # ─────────────────────────────────────────────────────────────
@@ -1855,6 +2016,8 @@ async def export(
     csv_path = ROOT / "configs" / "standard_diseases.csv"
     diseases = load_standard_diseases(csv_path)
     diseases_by_id = {d["disease_id"]: d for d in diseases}
+    disease_knowledge_briefs: dict[str, dict[str, dict]] = {}
+    country_briefs: dict[str, dict[str, dict]] = {}
     countries_simple: list[dict] = []
     country_exports: list[dict] = []
     disease_exports: list[dict] = []
@@ -1867,6 +2030,17 @@ async def export(
             print("  Population table detected: incidence will use WPP-based computation")
         else:
             print("  Population table not found: incidence falls back to database values")
+
+        disease_knowledge_briefs = await fetch_disease_knowledge_briefs(session)
+        country_briefs = await fetch_country_briefs(session)
+        if disease_knowledge_briefs:
+            print(f"  Knowledge briefs detected: {len(disease_knowledge_briefs)} diseases")
+        else:
+            print("  Knowledge briefs not found: using local catalogue fallback")
+        if country_briefs:
+            print(f"  Country briefs detected: {len(country_briefs)} countries")
+        else:
+            print("  Country briefs not found: using generated country context fallback")
 
         # ── Countries ──
         countries = await fetch_countries(session)
@@ -1900,6 +2074,7 @@ async def export(
                 code, country["name"], records, diseases_by_id, frequency_meta
             )
             country_data["source_info"] = country_source_info
+            country_data = apply_country_brief_fields(country_data, country_briefs.get(code.upper()))
             # Augment countries_simple with stats
             for c in countries_simple:
                 if c["code"] == code:
@@ -2085,6 +2260,7 @@ async def export(
     output_dir.mkdir(parents=True, exist_ok=True)
     (output_dir / "countries").mkdir(exist_ok=True)
     (output_dir / "diseases").mkdir(exist_ok=True)
+    (output_dir / "disease-knowledge").mkdir(exist_ok=True)
     (output_dir / "reports").mkdir(exist_ok=True)
     reset_public_data_dir(public_site_data_dir / "countries")
     reset_public_data_dir(public_site_data_dir / "diseases")
@@ -2093,6 +2269,7 @@ async def export(
     (download_output_dir / "diseases").mkdir(exist_ok=True)
     clean_generated_dir(download_output_dir / "countries")
     clean_generated_dir(download_output_dir / "diseases")
+    clean_generated_dir(output_dir / "disease-knowledge")
 
     # Write disease index
     (output_dir / "diseases" / "index.json").write_text(
@@ -2129,8 +2306,16 @@ async def export(
         disease_site_data = disease_export["site_data"]
         disease_download_rows = disease_export["download_rows"]
         disease_download_payload = disease_export["download_payload"]
+        disease_knowledge_payload = build_disease_knowledge_fields(
+            diseases_by_id[did],
+            disease_knowledge_briefs.get(did),
+        )
         (output_dir / "diseases" / f"{did.lower()}.json").write_text(
             json.dumps(disease_data, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        (output_dir / "disease-knowledge" / f"{did.lower()}.json").write_text(
+            json.dumps(disease_knowledge_payload, ensure_ascii=False, indent=2),
+            encoding="utf-8",
         )
         (public_site_data_dir / "diseases" / f"{did.lower()}.json").write_text(
             json.dumps(disease_site_data, ensure_ascii=False, separators=(",", ":")),
@@ -2144,6 +2329,7 @@ async def export(
         )
         write_csv(disease_csv_path, disease_download_rows)
     print(f"  ✓ diseases/{diseases[0]['disease_id'].lower()}.json … ({len(diseases)} files)")
+    print(f"  ✓ disease-knowledge/{diseases[0]['disease_id'].lower()}.json … ({len(diseases)} files)")
     print(
         "  ✓ downloads/countries/*.json,csv "
         f"({len(country_download_entries)} countries)"

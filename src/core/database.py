@@ -4,6 +4,11 @@ from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from src.domain import Base
+from src.core.db_schema import (
+    ensure_disease_knowledge_schema,
+    ensure_disease_knowledge_source_schema,
+    ensure_task_type_enum_schema,
+)
 
 from .config import get_config
 from .logging import get_logger
@@ -64,4 +69,8 @@ async def init_database():
     engine = get_engine()
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    async with get_db() as db:
+        await ensure_disease_knowledge_source_schema(db)
+        await ensure_disease_knowledge_schema(db)
+        await ensure_task_type_enum_schema(db)
     logger.info("Database tables created")

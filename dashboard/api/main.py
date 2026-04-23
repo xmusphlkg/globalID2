@@ -1,4 +1,4 @@
-"""FastAPI application factory for GlobalID V2 API."""
+"""FastAPI application factory for GIDS V2 API."""
 
 from contextlib import asynccontextmanager
 
@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.core.database import get_engine
 from src.core.logging import get_logger
 
-from .routers import ai, countries, crawl, diseases, explorer, overview, quality, release, reports, sources, tasks
+from .routers import ai, countries, crawl, diseases, explorer, overview, quality, release, reports, settings, sources, tasks
 
 logger = get_logger(__name__)
 
@@ -39,9 +39,9 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     app = FastAPI(
-        title="GlobalID V2 API",
+        title="GIDS V2 API",
         version="0.1.0",
-        description="REST API for the GlobalID disease surveillance dashboard",
+        description="REST API for the GIDS disease surveillance dashboard",
         lifespan=lifespan,
     )
 
@@ -70,6 +70,7 @@ def create_app() -> FastAPI:
     app.include_router(quality.router, prefix=prefix, tags=["Quality"])
     app.include_router(sources.router, prefix=prefix, tags=["Sources"])
     app.include_router(release.router, prefix=prefix, tags=["Data Release"])
+    app.include_router(settings.router, prefix=prefix, tags=["Settings"])
     app.include_router(explorer.router, prefix=prefix, tags=["Explorer"])
 
     @app.get("/api/v1/health", tags=["Health"])

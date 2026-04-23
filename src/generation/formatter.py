@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional
 
 import markdown
 from jinja2 import Environment, FileSystemLoader, select_autoescape
+from markupsafe import Markup
 
 from src.core import get_config, get_logger
 
@@ -47,6 +48,7 @@ class ReportFormatter:
             loader=FileSystemLoader(str(self.template_dir)),
             autoescape=select_autoescape(['html', 'xml']),
         )
+        self.jinja_env.filters["markdown"] = self._markdown_to_html
         
         # Markdown扩展
         self.md_extensions = [
@@ -57,6 +59,11 @@ class ReportFormatter:
         ]
         
         logger.info(f"ReportFormatter initialized with template dir: {template_dir}")
+
+    def _markdown_to_html(self, value: Any) -> str:
+        """Render Markdown for Jinja templates."""
+        safe_value = value if isinstance(value, str) else ("" if value is None else str(value))
+        return Markup(markdown.markdown(safe_value, extensions=self.md_extensions))
     
     def format_markdown(
         self,

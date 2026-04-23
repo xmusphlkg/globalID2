@@ -254,6 +254,34 @@ class BaseAgent(ABC):
             )
 
         return candidates, chain_used
+
+    @staticmethod
+    def _prioritize_candidates(
+        candidates: List[Dict[str, Any]],
+        preferred_models: Optional[List[str]],
+    ) -> List[Dict[str, Any]]:
+        if not candidates or not preferred_models:
+            return candidates
+
+        preferred_order = {
+            model_name.strip(): index
+            for index, model_name in enumerate(preferred_models)
+            if isinstance(model_name, str) and model_name.strip()
+        }
+        if not preferred_order:
+            return candidates
+
+        prioritized: list[Dict[str, Any]] = []
+        deferred: list[Dict[str, Any]] = []
+        for candidate in candidates:
+            model_name = str(candidate.get("model_name") or "").strip()
+            if model_name in preferred_order:
+                prioritized.append(candidate)
+            else:
+                deferred.append(candidate)
+
+        prioritized.sort(key=lambda candidate: preferred_order.get(str(candidate.get("model_name") or "").strip(), 10**6))
+        return prioritized + deferred
     
     def _init_clients(self):
         """Initialize clients for supported AI providers."""
@@ -444,6 +472,12 @@ class BaseAgent(ABC):
         # Internal retry guard for a one-shot quota recovery pass.
         quota_recovery_attempted = bool(kwargs.pop("_quota_recovery_attempted", False))
         quota_recovery_round = int(kwargs.pop("_quota_recovery_round", 0) or 0)
+        preferred_models_raw = kwargs.pop("preferred_models", None)
+        preferred_models = (
+            [item for item in preferred_models_raw if isinstance(item, str)]
+            if isinstance(preferred_models_raw, list)
+            else None
+        )
 
         # 检查缓存
         if use_cache and self.config.ai.enable_cache:
@@ -501,6 +535,7 @@ class BaseAgent(ABC):
                 BaseAgent.AVAILABLE_MODEL_ROUTES_LOADED_AT = None
 
         candidates, chain_used = self._build_candidates(runtime_routes, ignore_local_cooldowns=False)
+        candidates = self._prioritize_candidates(candidates, preferred_models)
 
         if not candidates:
             wait_cap_seconds = max(
@@ -540,10 +575,12 @@ class BaseAgent(ABC):
                 runtime_routes = []
 
             candidates, chain_used = self._build_candidates(runtime_routes, ignore_local_cooldowns=False)
+            candidates = self._prioritize_candidates(candidates, preferred_models)
 
             # 最后做一次安全探测：忽略本地进程冷却，尝试首个候选，避免直接抛出空链路错误。
             if not candidates:
                 probe_candidates, _ = self._build_candidates(runtime_routes, ignore_local_cooldowns=True)
+                probe_candidates = self._prioritize_candidates(probe_candidates, preferred_models)
                 if probe_candidates:
                     candidates = probe_candidates
                     logger.warning(
@@ -727,6 +764,7 @@ class BaseAgent(ABC):
                 prompt=prompt,
                 system=system,
                 use_cache=use_cache,
+                preferred_models=preferred_models,
                 _quota_recovery_attempted=True,
                 _quota_recovery_round=quota_recovery_round + 1,
                 **kwargs,

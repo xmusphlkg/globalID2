@@ -1,6 +1,6 @@
 # Dashboard Development Guide
 
-This directory contains the GlobalID dashboard subsystem, which has two parts:
+This directory contains the GIDS dashboard subsystem, which has two parts:
 
 - Next.js frontend, listening on `http://localhost:3000` by default
 - FastAPI backend, listening on `http://localhost:8000` by default
