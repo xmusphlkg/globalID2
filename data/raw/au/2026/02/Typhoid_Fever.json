@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-04-16T22:45:42.820286+00:00",
+  "fetched_at": "2026-04-22T22:45:31.095431+00:00",
   "disease": "Typhoid Fever",
   "year": 2026,
   "month": 2,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1776379542554)/",
-            "rootActivityId": "6f78565d-3081-4b68-9eb9-0b0335a4e2ba",
+            "timestamp": "/Date(1776897930747)/",
+            "rootActivityId": "d91f9467-1824-4dbb-947b-3509be0de82e",
             "descriptor": {
               "Select": [
                 {

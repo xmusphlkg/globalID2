@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-04-16T22:45:52.734530+00:00",
+  "fetched_at": "2026-04-22T22:45:42.115384+00:00",
   "disease": "Meningococcal disease (invasive)",
   "year": 2026,
   "month": 4,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1776379552457)/",
-            "rootActivityId": "d0bdb9ea-6662-4bca-9b01-ba1d9b87d23f",
+            "timestamp": "/Date(1776897941761)/",
+            "rootActivityId": "99eeee13-339d-4637-8c27-c1b1f6b831d7",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'<5'"
+                          "A0": "'5'"
                         }
                       ]
                     },
@@ -387,21 +387,21 @@
                         },
                         {
                           "C": [
-                            "NSW"
-                          ],
-                          "R": 2
+                            "NSW",
+                            "'<5'"
+                          ]
                         },
                         {
                           "C": [
-                            "NT"
-                          ],
-                          "R": 2
+                            "NT",
+                            "0L"
+                          ]
                         },
                         {
                           "C": [
-                            "QLD"
-                          ],
-                          "R": 2
+                            "QLD",
+                            "'<5'"
+                          ]
                         },
                         {
                           "C": [
@@ -411,9 +411,9 @@
                         },
                         {
                           "C": [
-                            "TAS"
-                          ],
-                          "R": 2
+                            "TAS",
+                            "0L"
+                          ]
                         },
                         {
                           "C": [
@@ -445,9 +445,9 @@
   },
   "parsed_counts": {
     "ACT": 0,
-    "NSW": 0,
+    "NSW": "'<5'",
     "NT": 0,
-    "QLD": 0,
+    "QLD": "'<5'",
     "SA": 0,
     "TAS": 0,
     "VIC": "'<5'",

@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-04-16T22:45:52.717752+00:00",
+  "fetched_at": "2026-04-22T22:45:42.119708+00:00",
   "disease": "Measles",
   "year": 2026,
   "month": 4,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1776379552310)/",
-            "rootActivityId": "938ecc50-efb0-482b-b3b0-dfd85e73af29",
+            "timestamp": "/Date(1776897941764)/",
+            "rootActivityId": "78513007-3be2-4048-9349-a16cd9a0c2cb",
             "descriptor": {
               "Select": [
                 {

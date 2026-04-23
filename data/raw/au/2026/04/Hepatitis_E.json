@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-04-16T22:45:51.790165+00:00",
+  "fetched_at": "2026-04-22T22:45:41.055334+00:00",
   "disease": "Hepatitis E",
   "year": 2026,
   "month": 4,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1776379551513)/",
-            "rootActivityId": "8676e739-ee4d-44a9-9903-5db754706a4f",
+            "timestamp": "/Date(1776897940717)/",
+            "rootActivityId": "6432598a-d716-4198-8754-f1818db194ab",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "0L"
+                          "A0": "'<5'"
                         }
                       ]
                     },
@@ -399,15 +399,15 @@
                         },
                         {
                           "C": [
-                            "QLD"
-                          ],
-                          "R": 2
+                            "QLD",
+                            "'<5'"
+                          ]
                         },
                         {
                           "C": [
-                            "SA"
-                          ],
-                          "R": 2
+                            "SA",
+                            "0L"
+                          ]
                         },
                         {
                           "C": [
@@ -447,7 +447,7 @@
     "ACT": 0,
     "NSW": 0,
     "NT": 0,
-    "QLD": 0,
+    "QLD": "'<5'",
     "SA": 0,
     "TAS": 0,
     "VIC": 0,

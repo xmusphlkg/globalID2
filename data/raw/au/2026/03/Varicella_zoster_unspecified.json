@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-04-16T22:45:49.039919+00:00",
+  "fetched_at": "2026-04-22T22:45:38.224281+00:00",
   "disease": "Varicella zoster (unspecified)",
   "year": 2026,
   "month": 3,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1776379548781)/",
-            "rootActivityId": "705181e4-7707-418a-8b50-388832ffeee8",
+            "timestamp": "/Date(1776897937884)/",
+            "rootActivityId": "bdb79561-f653-4de4-9ce0-085d7dd1317b",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'2,097'"
+                          "A0": "'2,096'"
                         }
                       ]
                     },
@@ -394,7 +394,7 @@
                         {
                           "C": [
                             "NT",
-                            "'15'"
+                            "'18'"
                           ]
                         },
                         {
@@ -412,13 +412,13 @@
                         {
                           "C": [
                             "TAS",
-                            "'32'"
+                            "'29'"
                           ]
                         },
                         {
                           "C": [
                             "VIC",
-                            "'929'"
+                            "'928'"
                           ]
                         },
                         {
@@ -446,11 +446,11 @@
   "parsed_counts": {
     "ACT": 37,
     "NSW": 0,
-    "NT": 15,
+    "NT": 18,
     "QLD": 689,
     "SA": 142,
-    "TAS": 32,
-    "VIC": 929,
+    "TAS": 29,
+    "VIC": 928,
     "WA": 253
   }
 }

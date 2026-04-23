@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-04-16T22:45:51.025254+00:00",
+  "fetched_at": "2026-04-22T22:45:40.454068+00:00",
   "disease": "Haemophilus influenzae type b",
   "year": 2026,
   "month": 4,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1776379550760)/",
-            "rootActivityId": "b744ce83-1663-4f8b-93ef-eaae9a9a5f53",
+            "timestamp": "/Date(1776897940113)/",
+            "rootActivityId": "325e3962-ba42-49cb-ba11-a0c229b7177f",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "0L"
+                          "A0": "'<5'"
                         }
                       ]
                     },
@@ -399,15 +399,15 @@
                         },
                         {
                           "C": [
-                            "QLD"
-                          ],
-                          "R": 2
+                            "QLD",
+                            "'<5'"
+                          ]
                         },
                         {
                           "C": [
-                            "SA"
-                          ],
-                          "R": 2
+                            "SA",
+                            "0L"
+                          ]
                         },
                         {
                           "C": [
@@ -423,9 +423,9 @@
                         },
                         {
                           "C": [
-                            "WA"
-                          ],
-                          "R": 2
+                            "WA",
+                            "'<5'"
+                          ]
                         }
                       ]
                     }
@@ -447,10 +447,10 @@
     "ACT": 0,
     "NSW": 0,
     "NT": 0,
-    "QLD": 0,
+    "QLD": "'<5'",
     "SA": 0,
     "TAS": 0,
     "VIC": 0,
-    "WA": 0
+    "WA": "'<5'"
   }
 }

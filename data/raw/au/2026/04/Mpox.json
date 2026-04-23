@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-04-16T22:45:53.489288+00:00",
+  "fetched_at": "2026-04-22T22:45:42.252301+00:00",
   "disease": "Mpox",
   "year": 2026,
   "month": 4,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1776379552555)/",
-            "rootActivityId": "bcbdf9ee-189f-4eda-975a-5724a5d14df5",
+            "timestamp": "/Date(1776897941898)/",
+            "rootActivityId": "91323c75-213a-47fe-a2df-73f48cb15920",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'15'"
+                          "A0": "'28'"
                         }
                       ]
                     },
@@ -388,7 +388,7 @@
                         {
                           "C": [
                             "NSW",
-                            "'<5'"
+                            "'7'"
                           ]
                         },
                         {
@@ -418,7 +418,7 @@
                         {
                           "C": [
                             "VIC",
-                            "'11'"
+                            "'18'"
                           ]
                         },
                         {
@@ -445,12 +445,12 @@
   },
   "parsed_counts": {
     "ACT": 0,
-    "NSW": "'<5'",
+    "NSW": 7,
     "NT": 0,
     "QLD": 0,
     "SA": 0,
     "TAS": 0,
-    "VIC": 11,
+    "VIC": 18,
     "WA": "'<5'"
   }
 }

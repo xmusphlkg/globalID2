@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-04-16T22:45:48.963055+00:00",
+  "fetched_at": "2026-04-22T22:45:37.970668+00:00",
   "disease": "Varicella zoster (chickenpox)",
   "year": 2026,
   "month": 3,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1776379548705)/",
-            "rootActivityId": "7277a841-a458-4558-b885-68af075f1cf9",
+            "timestamp": "/Date(1776897937616)/",
+            "rootActivityId": "f7197022-07c9-40f4-b09d-47aaae9f3b66",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'202'"
+                          "A0": "'204'"
                         }
                       ]
                     },
@@ -418,13 +418,13 @@
                         {
                           "C": [
                             "VIC",
-                            "'75'"
+                            "'76'"
                           ]
                         },
                         {
                           "C": [
                             "WA",
-                            "'41'"
+                            "'42'"
                           ]
                         }
                       ]
@@ -450,7 +450,7 @@
     "QLD": 46,
     "SA": 15,
     "TAS": 5,
-    "VIC": 75,
-    "WA": 41
+    "VIC": 76,
+    "WA": 42
   }
 }

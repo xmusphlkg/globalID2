@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-04-16T22:45:39.784685+00:00",
+  "fetched_at": "2026-04-22T22:45:27.561761+00:00",
   "disease": "Invasive Group A Streptococcal disease (iGAS)",
   "year": 2026,
   "month": 2,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1776379539527)/",
-            "rootActivityId": "f90b7551-7efa-4c5b-abbd-847da4697254",
+            "timestamp": "/Date(1776897927199)/",
+            "rootActivityId": "9ec215fc-88e0-49c6-a8ec-88f78c92cd6d",
             "descriptor": {
               "Select": [
                 {

@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-04-16T22:45:55.389260+00:00",
+  "fetched_at": "2026-04-22T22:45:44.486937+00:00",
   "disease": "Typhoid Fever",
   "year": 2026,
   "month": 4,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1776379555112)/",
-            "rootActivityId": "ae26caf6-bdf8-4271-8e41-4feb9c1f7a9d",
+            "timestamp": "/Date(1776897944143)/",
+            "rootActivityId": "272ce452-0002-42f8-b44b-d65bd80f60cb",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'<5'"
+                          "A0": "'5'"
                         }
                       ]
                     },
@@ -399,9 +399,9 @@
                         },
                         {
                           "C": [
-                            "QLD"
-                          ],
-                          "R": 2
+                            "QLD",
+                            "'<5'"
+                          ]
                         },
                         {
                           "C": [
@@ -411,9 +411,9 @@
                         },
                         {
                           "C": [
-                            "TAS"
-                          ],
-                          "R": 2
+                            "TAS",
+                            "0L"
+                          ]
                         },
                         {
                           "C": [
@@ -447,7 +447,7 @@
     "ACT": 0,
     "NSW": 0,
     "NT": 0,
-    "QLD": 0,
+    "QLD": "'<5'",
     "SA": 0,
     "TAS": 0,
     "VIC": "'<5'",
