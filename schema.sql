@@ -10,7 +10,7 @@
 -- == Metadata-based DDL (deterministic) ==
 CREATE TYPE reporttype AS ENUM ('DAILY', 'WEEKLY', 'MONTHLY', 'SPECIAL');
 CREATE TYPE reportstatus AS ENUM ('PENDING', 'GENERATING', 'COMPLETED', 'FAILED', 'REVIEWING', 'APPROVED', 'PUBLISHED');
-CREATE TYPE tasktype AS ENUM ('CRAWL_DATA', 'PROCESS_DATA', 'GENERATE_REPORT', 'GENERATE_SECTION', 'REVIEW_SECTION', 'EXPORT_DATA', 'SEND_EMAIL');
+CREATE TYPE tasktype AS ENUM ('CRAWL_DATA', 'PROCESS_DATA', 'GENERATE_REPORT', 'GENERATE_SECTION', 'REVIEW_SECTION', 'EXPORT_DATA', 'SEND_EMAIL', 'AGENT_WORKFLOW');
 CREATE TYPE taskstatus AS ENUM ('PENDING', 'QUEUED', 'RUNNING', 'COMPLETED', 'FAILED', 'CANCELLED', 'RETRYING');
 CREATE TYPE taskpriority AS ENUM ('LOW', 'NORMAL', 'HIGH', 'URGENT');
 CREATE TYPE reportsectionrunstatus AS ENUM ('QUEUED', 'RUNNING', 'COMPLETED', 'FAILED', 'CANCELLED');
@@ -652,3 +652,178 @@ CREATE TABLE ai_conversations (
 ;
 CREATE INDEX idx_ai_conv_run ON ai_conversations (run_id);
 CREATE INDEX idx_ai_conv_section ON ai_conversations (section_id);
+
+CREATE TABLE agent_runs (
+	task_id INTEGER NOT NULL,
+	mode VARCHAR(40) NOT NULL,
+	output_format VARCHAR(40) NOT NULL,
+	prompt TEXT NOT NULL,
+	status VARCHAR(30) NOT NULL,
+	risk_level VARCHAR(20) NOT NULL,
+	country_id INTEGER,
+	search_scope VARCHAR(80) NOT NULL,
+	memory_scope VARCHAR(40) NOT NULL,
+	allowed_actions JSON NOT NULL,
+	plan_json JSON NOT NULL,
+	summary TEXT,
+	findings JSON NOT NULL,
+	citations JSON NOT NULL,
+	artifacts JSON NOT NULL,
+	open_questions JSON NOT NULL,
+	actions_taken JSON NOT NULL,
+	result_json JSON NOT NULL,
+	budget_tokens_total INTEGER,
+	budget_tokens_used INTEGER NOT NULL,
+	replan_count INTEGER NOT NULL,
+	search_round_count INTEGER NOT NULL,
+	review_round_count INTEGER NOT NULL,
+	step_count INTEGER NOT NULL,
+	error_message TEXT,
+	metadata JSON NOT NULL,
+	started_at TIMESTAMP WITH TIME ZONE,
+	ended_at TIMESTAMP WITH TIME ZONE,
+	id SERIAL NOT NULL,
+	created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+	updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+	PRIMARY KEY (id),
+	UNIQUE (task_id),
+	FOREIGN KEY(task_id) REFERENCES tasks (id) ON DELETE CASCADE,
+	FOREIGN KEY(country_id) REFERENCES countries (id) ON DELETE SET NULL
+)
+
+;
+CREATE INDEX idx_agent_runs_task ON agent_runs (task_id);
+CREATE INDEX idx_agent_runs_status ON agent_runs (status);
+CREATE INDEX idx_agent_runs_country ON agent_runs (country_id);
+CREATE INDEX idx_agent_runs_created ON agent_runs (created_at);
+
+CREATE TABLE agent_steps (
+	run_id INTEGER NOT NULL,
+	step_uuid VARCHAR(36) NOT NULL,
+	step_key VARCHAR(120) NOT NULL,
+	step_order INTEGER NOT NULL,
+	step_type VARCHAR(40) NOT NULL,
+	step_name VARCHAR(200) NOT NULL,
+	status VARCHAR(30) NOT NULL,
+	attempt INTEGER NOT NULL,
+	input_summary TEXT,
+	output_summary TEXT,
+	input_payload JSON NOT NULL,
+	output_payload JSON NOT NULL,
+	prompt TEXT,
+	system_prompt TEXT,
+	response TEXT,
+	model VARCHAR(120),
+	provider VARCHAR(120),
+	tokens JSON NOT NULL,
+	duration FLOAT,
+	error_message TEXT,
+	metadata JSON NOT NULL,
+	started_at TIMESTAMP WITH TIME ZONE,
+	ended_at TIMESTAMP WITH TIME ZONE,
+	id SERIAL NOT NULL,
+	created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+	updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+	PRIMARY KEY (id),
+	UNIQUE (step_uuid),
+	FOREIGN KEY(run_id) REFERENCES agent_runs (id) ON DELETE CASCADE
+)
+
+;
+CREATE INDEX idx_agent_steps_run ON agent_steps (run_id);
+CREATE UNIQUE INDEX idx_agent_steps_step_key ON agent_steps (run_id, step_key);
+CREATE INDEX idx_agent_steps_status ON agent_steps (status);
+CREATE INDEX idx_agent_steps_created ON agent_steps (created_at);
+
+CREATE TABLE agent_evidence (
+	run_id INTEGER NOT NULL,
+	step_id INTEGER,
+	evidence_uuid VARCHAR(36) NOT NULL,
+	evidence_type VARCHAR(30) NOT NULL,
+	source_type VARCHAR(50) NOT NULL,
+	source_name VARCHAR(200),
+	title TEXT,
+	url TEXT,
+	resolved_url TEXT,
+	content_snippet TEXT,
+	content_hash VARCHAR(128) NOT NULL,
+	confidence FLOAT NOT NULL,
+	weight FLOAT NOT NULL,
+	metadata JSON NOT NULL,
+	id SERIAL NOT NULL,
+	created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+	updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+	PRIMARY KEY (id),
+	UNIQUE (evidence_uuid),
+	FOREIGN KEY(run_id) REFERENCES agent_runs (id) ON DELETE CASCADE,
+	FOREIGN KEY(step_id) REFERENCES agent_steps (id) ON DELETE SET NULL
+)
+
+;
+CREATE INDEX idx_agent_evidence_run ON agent_evidence (run_id);
+CREATE INDEX idx_agent_evidence_step ON agent_evidence (step_id);
+CREATE UNIQUE INDEX idx_agent_evidence_hash ON agent_evidence (run_id, content_hash);
+CREATE INDEX idx_agent_evidence_created ON agent_evidence (created_at);
+
+CREATE TABLE agent_conversations (
+	run_id INTEGER NOT NULL,
+	step_id INTEGER,
+	conversation_uuid VARCHAR(36) NOT NULL,
+	agent_role VARCHAR(50) NOT NULL,
+	phase VARCHAR(50) NOT NULL,
+	timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
+	prompt TEXT,
+	system_prompt TEXT,
+	response TEXT,
+	model VARCHAR(120),
+	provider VARCHAR(120),
+	tokens JSON NOT NULL,
+	duration FLOAT,
+	temperature FLOAT,
+	metadata JSON NOT NULL,
+	id SERIAL NOT NULL,
+	created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+	updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+	PRIMARY KEY (id),
+	UNIQUE (conversation_uuid),
+	FOREIGN KEY(run_id) REFERENCES agent_runs (id) ON DELETE CASCADE,
+	FOREIGN KEY(step_id) REFERENCES agent_steps (id) ON DELETE SET NULL
+)
+
+;
+CREATE INDEX idx_agent_conversations_run ON agent_conversations (run_id);
+CREATE INDEX idx_agent_conversations_step ON agent_conversations (step_id);
+CREATE INDEX idx_agent_conversations_timestamp ON agent_conversations (timestamp);
+CREATE INDEX idx_agent_conversations_created ON agent_conversations (created_at);
+
+CREATE TABLE agent_memories (
+	run_id INTEGER,
+	task_id INTEGER,
+	memory_uuid VARCHAR(36) NOT NULL,
+	scope VARCHAR(50) NOT NULL,
+	memory_type VARCHAR(50) NOT NULL,
+	content TEXT,
+	summary TEXT,
+	source_type VARCHAR(50),
+	source_ref VARCHAR(500),
+	content_hash VARCHAR(128) NOT NULL,
+	embedding JSON NOT NULL,
+	collection_name VARCHAR(100),
+	qdrant_point_id VARCHAR(120),
+	status VARCHAR(30) NOT NULL,
+	metadata JSON NOT NULL,
+	id SERIAL NOT NULL,
+	created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+	updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+	PRIMARY KEY (id),
+	UNIQUE (memory_uuid),
+	FOREIGN KEY(run_id) REFERENCES agent_runs (id) ON DELETE CASCADE,
+	FOREIGN KEY(task_id) REFERENCES tasks (id) ON DELETE SET NULL
+)
+
+;
+CREATE INDEX idx_agent_memories_run ON agent_memories (run_id);
+CREATE INDEX idx_agent_memories_task ON agent_memories (task_id);
+CREATE INDEX idx_agent_memories_scope ON agent_memories (scope);
+CREATE INDEX idx_agent_memories_hash ON agent_memories (content_hash);
+CREATE INDEX idx_agent_memories_created ON agent_memories (created_at);

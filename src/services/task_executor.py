@@ -15,7 +15,17 @@ from sqlalchemy import select
 
 from src.core import get_database, get_logger, init_app
 from src.core.task_manager import task_manager
-from src.domain import Report, ReportSectionRun, ReportSectionRunStatus, ReportStatus, Task, TaskStatus, TaskType
+from src.domain import (
+    AgentWorkflowRun,
+    AgentWorkflowStep,
+    Report,
+    ReportSectionRun,
+    ReportSectionRunStatus,
+    ReportStatus,
+    Task,
+    TaskStatus,
+    TaskType,
+)
 from src.services._lifecycle import task_lifecycle
 
 logger = get_logger(__name__)
@@ -76,6 +86,30 @@ async def recover_interrupted_tasks_on_startup() -> int:
                     run.status = ReportSectionRunStatus.CANCELLED
                     run.error_message = message
                     run.ended_at = now
+
+            if task.task_type == TaskType.AGENT_WORKFLOW:
+                agent_run = (
+                    await db.execute(
+                        select(AgentWorkflowRun).where(AgentWorkflowRun.task_id == task.id)
+                    )
+                ).scalar_one_or_none()
+                if agent_run is not None and agent_run.status not in {"completed", "failed", "cancelled"}:
+                    agent_run.status = "cancelled"
+                    agent_run.error_message = message
+                    agent_run.ended_at = now
+                    agent_run.metadata_ = {**(agent_run.metadata_ or {}), "recovered_after_restart": True}
+                    pending_steps = (
+                        await db.execute(
+                            select(AgentWorkflowStep).where(
+                                AgentWorkflowStep.run_id == agent_run.id,
+                                AgentWorkflowStep.status.in_(["running", "pending"]),
+                            )
+                        )
+                    ).scalars().all()
+                    for step in pending_steps:
+                        step.status = "cancelled"
+                        step.error_message = message
+                        step.ended_at = now
 
             recovered.append((task.task_uuid, task.progress or 0))
 
@@ -196,6 +230,8 @@ async def _dispatch(task: Task) -> Dict[str, Any]:
         return await _run_disease_knowledge(task)
     elif task_type == TaskType.EXPORT_DATA:
         return await _run_export(task)
+    elif task_type == TaskType.AGENT_WORKFLOW:
+        return await _run_agent_workflow(task)
     else:
         raise ValueError(f"Unsupported task type for execution: {task_type}")
 
@@ -309,6 +345,24 @@ async def _run_export(task: Task) -> Dict[str, Any]:
 
     async with task_lifecycle(task, exit_on_cancel=False):
         return await data_release_service.execute_release_task(task)
+
+
+# ── Agent workflow handler ───────────────────────────────────────────────────
+
+async def _run_agent_workflow(task: Task) -> Dict[str, Any]:
+    """Execute an AGENT_WORKFLOW task using the generic workflow service."""
+    from src.services.agent_workflow_service import agent_workflow_service
+
+    async with task_lifecycle(task, exit_on_cancel=False):
+        result = await agent_workflow_service.execute(task)
+
+        async with get_database() as db:
+            task_obj = await db.get(Task, task.id)
+            if task_obj:
+                task_obj.output_data = result
+                await db.commit()
+
+        return result
 
 
 # ── Disease knowledge handler ────────────────────────────────────────────────

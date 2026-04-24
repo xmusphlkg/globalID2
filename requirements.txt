@@ -50,6 +50,7 @@ python-dotenv
 pyyaml
 python-dateutil
 pycountry
+qdrant-client
 
 # Testing
 pytest

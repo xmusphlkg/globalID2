@@ -35,6 +35,7 @@ class TaskType(str, PyEnum):
     UPDATE_DISEASE_KNOWLEDGE = "update_disease_knowledge"  # Disease knowledge refresh task
     EXPORT_DATA = "export_data"  # Data export task
     SEND_EMAIL = "send_email"  # Email sending task
+    AGENT_WORKFLOW = "agent_workflow"  # General multi-expert agent workflow task
 
 
 class TaskPriority(str, PyEnum):
