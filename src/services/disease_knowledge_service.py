@@ -12,8 +12,15 @@ from sqlalchemy import func, select
 from src.core import get_database, get_logger
 from src.core.task_manager import task_manager
 from src.domain import DiseaseKnowledgeBrief, DiseaseKnowledgeSource, Task, TaskStatus
-from src.knowledge import AIDiseaseBriefGenerator, DiseaseKnowledgeFetcher, SourceGroundedBriefGenerator
-from src.knowledge.catalogue import build_catalogue_disease_brief
+from src.knowledge import (
+    AIDiseaseBriefGenerator,
+    DiseaseKnowledgeFetcher,
+    SourceGroundedBriefGenerator,
+    build_catalogue_disease_brief_payload,
+    knowledge_brief_fallback_reason,
+    knowledge_brief_publication_tier,
+    resolve_disease_knowledge_status,
+)
 from src.services.exceptions import TaskCancelledError
 
 logger = get_logger(__name__)
@@ -182,6 +189,22 @@ def source_to_dict(row: DiseaseKnowledgeSource) -> dict[str, Any]:
         "metadata": metadata,
         "fetched_at": row.fetched_at.isoformat() if row.fetched_at else None,
     }
+
+
+def _has_approved_public_sources(sources: list[dict[str, Any]]) -> bool:
+    return any(
+        str(src.get("source_type") or "") in SourceGroundedBriefGenerator.PUBLIC_SOURCE_TYPES
+        and str(src.get("review_status") or "pending") != "rejected"
+        for src in sources
+    )
+
+
+def _catalogue_fallback_reason(sources: list[dict[str, Any]]) -> str:
+    if not sources:
+        return "no_sources_fetched"
+    if all(str(src.get("source_type") or "") == "msd" for src in sources):
+        return "metadata_only_sources"
+    return "no_public_sources"
 
 
 async def _generate_brief(
@@ -365,14 +388,20 @@ class DiseaseKnowledgeUpdateService:
             disease_id = str(disease.get("disease_id") or "")
             language_briefs = briefs_by_disease.get(disease_id, {})
             published_languages = sorted(
-                [lang for lang, brief in language_briefs.items() if brief.status == "published"]
+                [
+                    lang
+                    for lang, brief in language_briefs.items()
+                    if knowledge_brief_publication_tier(brief) == "published"
+                ]
             )
-            if published_languages:
-                knowledge_status = "published"
-            elif language_briefs:
-                knowledge_status = "requires_review"
-            else:
-                knowledge_status = "fallback"
+            fallback_languages = sorted(
+                [
+                    lang
+                    for lang, brief in language_briefs.items()
+                    if knowledge_brief_publication_tier(brief) == "fallback"
+                ]
+            )
+            knowledge_status = resolve_disease_knowledge_status(language_briefs.values())
 
             latest_updated_at = None
             for brief in language_briefs.values():
@@ -392,9 +421,14 @@ class DiseaseKnowledgeUpdateService:
                     "knowledge_status": knowledge_status,
                     "knowledge_updated_at": latest_updated_at.isoformat() if latest_updated_at else None,
                     "published_languages": published_languages,
+                    "fallback_languages": fallback_languages,
                     "source_count": source_counts.get(disease_id, 0),
                     "brief_statuses": {
                         lang: brief.status for lang, brief in sorted(language_briefs.items())
+                    },
+                    "brief_tiers": {
+                        lang: knowledge_brief_publication_tier(brief)
+                        for lang, brief in sorted(language_briefs.items())
                     },
                 }
             )
@@ -420,13 +454,13 @@ class DiseaseKnowledgeUpdateService:
             )
         ).scalars().all()
 
-        published_languages = sorted([brief.language for brief in brief_rows if brief.status == "published"])
-        if published_languages:
-            knowledge_status = "published"
-        elif brief_rows:
-            knowledge_status = "requires_review"
-        else:
-            knowledge_status = "fallback"
+        published_languages = sorted(
+            [brief.language for brief in brief_rows if knowledge_brief_publication_tier(brief) == "published"]
+        )
+        fallback_languages = sorted(
+            [brief.language for brief in brief_rows if knowledge_brief_publication_tier(brief) == "fallback"]
+        )
+        knowledge_status = resolve_disease_knowledge_status(brief_rows)
 
         latest_updated_at = None
         for brief in brief_rows:
@@ -434,6 +468,7 @@ class DiseaseKnowledgeUpdateService:
                 latest_updated_at = brief.updated_at
 
         brief_statuses = {brief.language: brief.status for brief in brief_rows}
+        brief_tiers = {brief.language: knowledge_brief_publication_tier(brief) for brief in brief_rows}
         review_status_counts: dict[str, int] = {}
         source_type_counts: dict[str, int] = {}
         for source in source_rows:
@@ -452,12 +487,15 @@ class DiseaseKnowledgeUpdateService:
             "knowledge_status": knowledge_status,
             "knowledge_updated_at": latest_updated_at.isoformat() if latest_updated_at else None,
             "published_languages": published_languages,
+            "fallback_languages": fallback_languages,
             "source_count": len(source_rows),
             "brief_statuses": brief_statuses,
+            "brief_tiers": brief_tiers,
             "summary": {
                 "brief_count": len(brief_rows),
                 "source_count": len(source_rows),
-                "published_briefs": sum(1 for brief in brief_rows if brief.status == "published"),
+                "published_briefs": sum(1 for brief in brief_rows if knowledge_brief_publication_tier(brief) == "published"),
+                "fallback_briefs": sum(1 for brief in brief_rows if knowledge_brief_publication_tier(brief) == "fallback"),
                 "draft_briefs": sum(1 for brief in brief_rows if brief.status == "draft"),
                 "review_briefs": sum(1 for brief in brief_rows if brief.status == "requires_review"),
                 "source_review_counts": review_status_counts,
@@ -467,6 +505,8 @@ class DiseaseKnowledgeUpdateService:
                 {
                     "language": brief.language,
                     "status": brief.status,
+                    "brief_tier": knowledge_brief_publication_tier(brief),
+                    "fallback_reason": knowledge_brief_fallback_reason(brief),
                     "source_confidence": brief.source_confidence,
                     "updated_at": brief.updated_at.isoformat() if brief.updated_at else None,
                     "brief": brief.brief,
@@ -550,10 +590,17 @@ class DiseaseKnowledgeUpdateService:
                 }
                 for idx, c in enumerate(candidates)
             ]
-            briefs = await asyncio.gather(
-                _generate_brief(generator, disease=disease, sources=source_dicts, language="en"),
-                _generate_brief(generator, disease=disease, sources=source_dicts, language="zh"),
-            )
+            if _has_approved_public_sources(source_dicts):
+                briefs = await asyncio.gather(
+                    _generate_brief(generator, disease=disease, sources=source_dicts, language="en"),
+                    _generate_brief(generator, disease=disease, sources=source_dicts, language="zh"),
+                )
+            else:
+                fallback_reason = _catalogue_fallback_reason(source_dicts)
+                briefs = [
+                    build_catalogue_disease_brief_payload(disease, "en", fallback_reason=fallback_reason),
+                    build_catalogue_disease_brief_payload(disease, "zh", fallback_reason=fallback_reason),
+                ]
             return {
                 "disease_id": disease["disease_id"],
                 "fetched_sources": len(candidates),
@@ -623,6 +670,8 @@ class DiseaseKnowledgeUpdateService:
             source_rows = await _existing_sources(db, disease["disease_id"])
             source_dicts = [source_to_dict(row) for row in source_rows]
             brief_rows = []
+            fallback_reason = _catalogue_fallback_reason(source_dicts)
+            has_public_sources = _has_approved_public_sources(source_dicts)
 
             if task_uuid:
                 await task_manager.update_task_progress(task_uuid, 55)
@@ -645,12 +694,40 @@ class DiseaseKnowledgeUpdateService:
                     },
                 )
 
-            generated_results = await asyncio.gather(
-                *[
-                    _generate_brief_result(generator, disease=disease, sources=source_dicts, language=language)
+            if has_public_sources:
+                generated_results = await asyncio.gather(
+                    *[
+                        _generate_brief_result(generator, disease=disease, sources=source_dicts, language=language)
+                        for language in brief_languages
+                    ]
+                )
+            else:
+                generated_results = [
+                    {
+                        "payload": build_catalogue_disease_brief_payload(
+                            disease,
+                            language,
+                            fallback_reason=fallback_reason,
+                        ),
+                        "trace": {
+                            "generator": "catalogue_fallback",
+                            "language": language,
+                            "preferred_models": [],
+                            "shard_index": 0,
+                            "shard_key": f"{str(disease.get('disease_id') or '').strip().upper()}:{language}",
+                            "model": None,
+                            "provider": None,
+                            "token_usage": {},
+                            "duration": 0.0,
+                            "prompt": None,
+                            "system_prompt": None,
+                            "response": None,
+                            "error": None,
+                            "cache_hit": False,
+                        },
+                    }
                     for language in brief_languages
                 ]
-            )
 
             if task_uuid:
                 await task_manager.update_task_progress(task_uuid, 80)
@@ -720,6 +797,12 @@ class DiseaseKnowledgeUpdateService:
             await db.commit()
 
         brief_statuses = {brief.language: brief.status for brief in brief_rows}
+        published_languages = [
+            brief.language for brief in brief_rows if knowledge_brief_publication_tier(brief) == "published"
+        ]
+        fallback_languages = [
+            brief.language for brief in brief_rows if knowledge_brief_publication_tier(brief) == "fallback"
+        ]
         await _log_task(
             task_uuid,
             entry_type="success",
@@ -743,7 +826,8 @@ class DiseaseKnowledgeUpdateService:
             "fetched_sources": len(candidates),
             "total_sources": len(source_dicts),
             "brief_statuses": brief_statuses,
-            "published_languages": [brief.language for brief in brief_rows if brief.status == "published"],
+            "published_languages": published_languages,
+            "fallback_languages": fallback_languages,
         }
 
     async def execute_task(self, task: Task) -> dict[str, Any]:

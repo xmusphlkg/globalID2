@@ -687,6 +687,8 @@ class ReportGenerator:
         period_end = self._format_period_value(sorted_df["time"].max()) if "time" in sorted_df.columns and len(sorted_df) else ""
 
         if knowledge_brief:
+            from src.knowledge.catalogue import knowledge_brief_publication_tier
+
             official_brief = knowledge_brief.brief
             definition = knowledge_brief.definition
             clinical_features = knowledge_brief.clinical_features or knowledge_brief.clinical_summary
@@ -696,7 +698,7 @@ class ReportGenerator:
             surveillance_note = knowledge_brief.surveillance_note
             risk_groups = knowledge_brief.risk_groups
             source_attribution = knowledge_brief.source_attribution or []
-            knowledge_status = knowledge_brief.status
+            knowledge_status = knowledge_brief_publication_tier(knowledge_brief)
             knowledge_updated_at = knowledge_brief.updated_at.isoformat() if knowledge_brief.updated_at else None
             disclaimer = knowledge_brief.disclaimer
         else:
