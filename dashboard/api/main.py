@@ -8,7 +8,21 @@ from fastapi.middleware.cors import CORSMiddleware
 from src.core.database import get_engine
 from src.core.logging import get_logger
 
-from .routers import ai, countries, crawl, diseases, explorer, overview, quality, release, reports, settings, sources, tasks
+from .routers import (
+    ai,
+    agent_runs,
+    countries,
+    crawl,
+    diseases,
+    explorer,
+    overview,
+    quality,
+    release,
+    reports,
+    settings,
+    sources,
+    tasks,
+)
 
 logger = get_logger(__name__)
 
@@ -67,6 +81,7 @@ def create_app() -> FastAPI:
     app.include_router(tasks.router, prefix=prefix, tags=["Tasks"])
     app.include_router(crawl.router, prefix=prefix, tags=["Crawl"])
     app.include_router(ai.router, prefix=prefix, tags=["AI"])
+    app.include_router(agent_runs.router, prefix=prefix, tags=["Agent Workflow"])
     app.include_router(quality.router, prefix=prefix, tags=["Quality"])
     app.include_router(sources.router, prefix=prefix, tags=["Sources"])
     app.include_router(release.router, prefix=prefix, tags=["Data Release"])

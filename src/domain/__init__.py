@@ -17,6 +17,13 @@ from .report import (
     ReportStatus,
     ReportType,
 )
+from .agent_workflow import (
+    AgentWorkflowRun,
+    AgentWorkflowStep,
+    AgentWorkflowEvidence,
+    AgentWorkflowConversation,
+    AgentWorkflowMemory,
+)
 from .task import Task, TaskWorkbook, TaskDependency, TaskStatus, TaskType, TaskPriority
 from .standard_disease import StandardDisease
 from .disease_mapping import DiseaseMapping
@@ -44,6 +51,11 @@ __all__ = [
     "ReportSection",
     "ReportSectionRun",
     "AIConversation",
+    "AgentWorkflowRun",
+    "AgentWorkflowStep",
+    "AgentWorkflowEvidence",
+    "AgentWorkflowConversation",
+    "AgentWorkflowMemory",
     "Task",
     "TaskWorkbook",
     "TaskDependency",
