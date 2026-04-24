@@ -210,16 +210,6 @@
     "slug": "dengue"
   },
   {
-    "disease_id": "D022",
-    "name_en": "Meningococcal infection",
-    "name_zh": "脑膜炎球菌感染",
-    "category": "Bacterial",
-    "icd_10": "A39",
-    "icd_11": "1C20.1",
-    "description": "Deprecated duplicate for cross-country surveillance; use D110 as the canonical meningococcal ID",
-    "slug": "meningococcal-infection"
-  },
-  {
     "disease_id": "D023",
     "name_en": "Anthrax",
     "name_zh": "炭疽",
@@ -258,16 +248,6 @@
     "icd_11": "1B13",
     "description": "Enteric fever",
     "slug": "typhoid-and-paratyphoid-fever"
-  },
-  {
-    "disease_id": "D027",
-    "name_en": "Meningococcal Meningitis",
-    "name_zh": "流行性脑脊髓膜炎",
-    "category": "Bacterial",
-    "icd_10": "A39",
-    "icd_11": "1C20.1",
-    "description": "Deprecated duplicate for cross-country surveillance; use D110 as the canonical meningococcal ID",
-    "slug": "meningococcal-meningitis"
   },
   {
     "disease_id": "D028",
@@ -1090,16 +1070,6 @@
     "slug": "meningococcal-disease"
   },
   {
-    "disease_id": "D111",
-    "name_en": "Novel influenza A (deprecated duplicate)",
-    "name_zh": "新型甲型流感（废弃重复ID）",
-    "category": "Viral",
-    "icd_10": "",
-    "icd_11": "",
-    "description": "Deprecated duplicate of D016; do not use for new mappings",
-    "slug": "novel-influenza-a-(deprecated-duplicate)"
-  },
-  {
     "disease_id": "D112",
     "name_en": "Psittacosis",
     "name_zh": "鹦鹉热",
@@ -1278,16 +1248,6 @@
     "icd_11": "",
     "description": "Oropouche virus disease used in CDC arboviral surveillance",
     "slug": "oropouche-virus-disease"
-  },
-  {
-    "disease_id": "D130",
-    "name_en": "Zika virus",
-    "name_zh": "寨卡病毒",
-    "category": "Viral",
-    "icd_10": "",
-    "icd_11": "",
-    "description": "Deprecated duplicate of D051; do not use for new mappings",
-    "slug": "zika-virus"
   },
   {
     "disease_id": "D131",
@@ -1538,15 +1498,5 @@
     "icd_11": "",
     "description": "AU NINDSS surveillance concept",
     "slug": "yersiniosis"
-  },
-  {
-    "disease_id": "D999",
-    "name_en": "Total",
-    "name_zh": "甲乙丙类传染病总计",
-    "category": "Summary",
-    "icd_10": "",
-    "icd_11": "",
-    "description": "Aggregate total for reporting",
-    "slug": "total"
   }
 ]

@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-04-22T22:45:38.310328+00:00",
+  "fetched_at": "2026-04-23T22:45:59.631006+00:00",
   "disease": "Vibrio parahaemolyticus infection",
   "year": 2026,
   "month": 3,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1776897937955)/",
-            "rootActivityId": "14cdf0b7-c032-4cf1-8bdc-45b51b203f36",
+            "timestamp": "/Date(1776984359285)/",
+            "rootActivityId": "49ccf097-8151-4d22-b028-d26f16918031",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'25'"
+                          "A0": "'26'"
                         }
                       ]
                     },

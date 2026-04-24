@@ -629,7 +629,7 @@
         0,
         0,
         0,
-        1093,
+        0,
         0,
         0,
         0,
@@ -1192,7 +1192,7 @@
         "wpp_computed"
       ],
       "total_cases": 0,
-      "total_deaths": 1093
+      "total_deaths": 0
     },
     "JP": {
       "dates": [
@@ -5885,7 +5885,7 @@
       0,
       0,
       0,
-      1093,
+      0,
       0,
       0,
       0,
@@ -6056,7 +6056,7 @@
     ]
   },
   "total_cases": 0,
-  "total_deaths": 1093,
+  "total_deaths": 0,
   "generated_at": "2026-04-18T00:00:00+00:00",
   "source_info": [
     {
