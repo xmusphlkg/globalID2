@@ -6,8 +6,11 @@ and workbook error logging — eliminating boilerplate from every CLI command.
 """
 import signal
 import sys
+from datetime import datetime, timezone
 from contextlib import asynccontextmanager
 from typing import Optional
+
+from sqlalchemy import select
 
 from src.core import get_database, get_logger
 from src.core.task_manager import task_manager
@@ -76,13 +79,16 @@ async def task_lifecycle(task: Task, *, report_id_ref: Optional[list] = None, ex
 
     except Exception as exc:
         logger.error(f"Task {task.task_uuid} failed: {exc}")
-        await task_manager.add_workbook_entry(
-            task.task_uuid,
-            entry_type="error",
-            title="Task Failed",
-            content=f"Error: {exc}",
-            content_type="text",
-        )
+        try:
+            await task_manager.add_workbook_entry(
+                task.task_uuid,
+                entry_type="error",
+                title="Task Failed",
+                content=f"Error: {exc}",
+                content_type="text",
+            )
+        except Exception as log_exc:
+            logger.warning(f"Failed to write failure workbook entry for {task.task_uuid}: {log_exc}")
         await task_manager.update_task_status(
             task.task_uuid,
             TaskStatus.FAILED,
@@ -93,6 +99,7 @@ async def task_lifecycle(task: Task, *, report_id_ref: Optional[list] = None, ex
         except Exception as notify_exc:
             logger.warning(f"Failure alert skipped for {task.task_uuid}: {notify_exc}")
         await _mark_report(report_id_ref, "failed", str(exc))
+        await _mark_agent_workflow(task, "failed", str(exc))
         raise
 
     finally:
@@ -102,13 +109,16 @@ async def task_lifecycle(task: Task, *, report_id_ref: Optional[list] = None, ex
 
 async def _handle_task_cancelled(task: Task, report_id_ref: Optional[list], message: str) -> None:
     logger.warning(f"Task {task.task_uuid} cancelled: {message}")
-    await task_manager.add_workbook_entry(
-        task.task_uuid,
-        entry_type="warning",
-        title="Task Cancelled",
-        content=message,
-        content_type="text",
-    )
+    try:
+        await task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="warning",
+            title="Task Cancelled",
+            content=message,
+            content_type="text",
+        )
+    except Exception as log_exc:
+        logger.warning(f"Failed to write cancellation workbook entry for {task.task_uuid}: {log_exc}")
     await task_manager.update_task_status(
         task.task_uuid,
         TaskStatus.CANCELLED,
@@ -119,6 +129,7 @@ async def _handle_task_cancelled(task: Task, report_id_ref: Optional[list], mess
     except Exception as notify_exc:
         logger.warning(f"Cancellation alert skipped for {task.task_uuid}: {notify_exc}")
     await _mark_report(report_id_ref, "cancelled", message)
+    await _mark_agent_workflow(task, "cancelled", message)
 
 
 async def _mark_report(
@@ -140,3 +151,23 @@ async def _mark_report(
                 await db.commit()
     except Exception as e:
         logger.warning(f"Failed to mark report {report_id} as {new_status}: {e}")
+
+
+async def _mark_agent_workflow(task: Task, new_status: str, error_message: str) -> None:
+    """Update the generic agent workflow run that belongs to this task, if any."""
+    if task.task_type != TaskType.AGENT_WORKFLOW:
+        return
+    try:
+        from src.domain import AgentWorkflowRun
+
+        async with get_database() as db:
+            run = (await db.execute(select(AgentWorkflowRun).where(AgentWorkflowRun.task_id == task.id))).scalar_one_or_none()
+            if run is None:
+                return
+            run.status = new_status
+            run.error_message = error_message
+            run.ended_at = datetime.now(timezone.utc)
+            run.metadata_ = {**(run.metadata_ or {}), "task_lifecycle_status": new_status}
+            await db.commit()
+    except Exception as e:
+        logger.warning(f"Failed to mark agent run for task {task.task_uuid} as {new_status}: {e}")

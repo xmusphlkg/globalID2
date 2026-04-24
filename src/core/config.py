@@ -54,7 +54,7 @@ class QdrantSettings(_BaseEnvSettings):
 
     url: str = Field(default="http://localhost:6333", description="Qdrant连接URL")
     api_key: str | None = Field(default=None, description="API密钥")
-    collection_name: str = Field(default="diseases", description="集合名称")
+    collection_name: str = Field(default="agent_memory_v1", description="集合名称")
     vector_size: int = Field(default=1536, description="向量维度")
 
 
@@ -99,6 +99,14 @@ class AISettings(_BaseEnvSettings):
         default="",
         description="知识库任务的模型分流列表，逗号分隔；为空时回退到 model_chain",
     )
+    agent_role_models_raw: str = Field(
+        default="",
+        description="多专家角色模型偏好，格式 role=model1|model2,role2=model3；为空时回退到 model_chain",
+    )
+    agent_max_replan_rounds: int = Field(default=1, ge=0, le=10, description="Agent workflow 最大重规划次数")
+    agent_max_search_rounds: int = Field(default=2, ge=1, le=10, description="Agent workflow 最大搜索轮次")
+    agent_step_token_budget: int = Field(default=2500, gt=0, description="单步 token 预算")
+    agent_total_token_budget: int = Field(default=12000, gt=0, description="单次 workflow 总 token 预算")
     
     # 模型配置
     temperature: float = Field(default=0.7, ge=0.0, le=2.0, description="生成温度")
@@ -178,6 +186,50 @@ class AISettings(_BaseEnvSettings):
                 seen.add(item)
                 ordered.append(item)
         return ordered
+
+    @property
+    def agent_role_models(self) -> dict[str, list[str]]:
+        """Parse role-specific model preferences.
+
+        Supported formats:
+        - JSON object: {"planner": ["gpt-4o-mini", "gpt-4o"], "reviewer": ["gpt-4o-mini"]}
+        - Compact string: planner=gpt-4o-mini|gpt-4o,reviewer=gpt-4o-mini
+        """
+        raw = self.agent_role_models_raw.strip()
+        if not raw:
+            return {}
+
+        parsed: dict[str, list[str]] = {}
+        if raw.startswith("{"):
+            try:
+                payload = json.loads(raw)
+            except json.JSONDecodeError:
+                payload = None
+            if isinstance(payload, dict):
+                for key, value in payload.items():
+                    role = str(key).strip().lower()
+                    if not role:
+                        continue
+                    if isinstance(value, str):
+                        models = [item.strip() for item in value.split("|") if item.strip()]
+                    elif isinstance(value, list):
+                        models = [str(item).strip() for item in value if str(item).strip()]
+                    else:
+                        models = []
+                    if models:
+                        parsed[role] = models
+                return parsed
+
+        for chunk in [item.strip() for item in raw.replace(";", ",").split(",") if item.strip()]:
+            separator = "=" if "=" in chunk else (":" if ":" in chunk else None)
+            if not separator:
+                continue
+            role, model_blob = chunk.split(separator, 1)
+            role = role.strip().lower()
+            models = [item.strip() for item in model_blob.split("|") if item.strip()]
+            if role and models:
+                parsed[role] = models
+        return parsed
 
 
 class AutomationSettings(_BaseEnvSettings):
