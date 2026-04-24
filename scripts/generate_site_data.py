@@ -45,7 +45,12 @@ from src.core.country_library import (  # noqa: E402
 )
 from src.core.db_schema import ensure_country_scope, ensure_country_scope_schema  # noqa: E402
 from src.core.source_scopes import scope_display_label  # noqa: E402
-from src.knowledge.catalogue import build_catalogue_disease_brief  # noqa: E402
+from src.knowledge.catalogue import (  # noqa: E402
+    knowledge_brief_fallback_reason,
+    knowledge_brief_publication_tier,
+    resolve_disease_knowledge_status,
+    should_generate_public_disease_page,
+)
 
 
 # ─────────────────────────────────────────────────────────────
@@ -66,6 +71,8 @@ DEFAULT_DOWNLOAD_URL_BASE = get_data_share_raw_base_url(
     DEFAULT_DOWNLOAD_REPO_BRANCH,
 )
 GITHUB_SSH_PREFIXES = ("git@github.com:", "ssh://git@github.com/")
+AUTHORITATIVE_KNOWLEDGE_SOURCE_TYPES = frozenset({"who", "who_don"})
+AUTHORITATIVE_KNOWLEDGE_URL_MARKERS = ("who.int",)
 
 SOURCE_DETAILS_BY_SCOPE: dict[tuple[str, str], dict[str, str]] = {
     ("CN", "cdc_weekly"): {
@@ -1458,7 +1465,7 @@ async def fetch_report_detail(session, report_id: int) -> dict | None:
 
 
 async def fetch_disease_knowledge_briefs(session) -> dict[str, dict[str, dict]]:
-    """Load published knowledge briefs keyed by disease_id and language."""
+    """Load reviewed or published knowledge briefs keyed by disease_id and language."""
     if not await has_table(session, "disease_knowledge_briefs"):
         return {}
     rows = await session.execute(
@@ -1466,9 +1473,9 @@ async def fetch_disease_knowledge_briefs(session) -> dict[str, dict[str, dict]]:
             """
             SELECT disease_id, language, brief, definition, clinical_features, epidemiology,
                    clinical_summary, transmission, prevention, surveillance_note, risk_groups,
-                   source_attribution, disclaimer, status, source_confidence, updated_at
+                   source_attribution, disclaimer, status, source_confidence, updated_at, metadata
             FROM disease_knowledge_briefs
-            WHERE status = 'published'
+            WHERE status IN ('published', 'requires_review')
             """
         )
     )
@@ -1511,14 +1518,31 @@ def build_disease_knowledge_fields(disease: dict, brief_by_language: dict[str, d
     en = brief_by_language.get("en") or {}
     zh = brief_by_language.get("zh") or {}
 
-    if not en:
-        en = build_catalogue_disease_brief(disease, "en")
-    if not zh:
-        zh = build_catalogue_disease_brief(disease, "zh")
-
     knowledge_sources = en.get("source_attribution") or zh.get("source_attribution") or []
-    knowledge_status = "published" if brief_by_language else "fallback"
+    knowledge_status = resolve_disease_knowledge_status((brief_by_language or {}).values())
+    primary_brief = brief_by_language.get("en") or brief_by_language.get("zh") or {}
+    knowledge_tier = knowledge_brief_publication_tier(primary_brief) if primary_brief else "fallback"
+    fallback_reason = knowledge_brief_fallback_reason(primary_brief) if primary_brief else None
     knowledge_updated_at = en.get("updated_at") or zh.get("updated_at")
+    has_authoritative_sources = any(
+        _is_authoritative_knowledge_source(source) for source in knowledge_sources
+    ) or any(
+        str(brief.get("source_confidence") or "") == "high"
+        for brief in brief_by_language.values()
+        if isinstance(brief, dict)
+    )
+    knowledge_profile_available = knowledge_status == "published" and knowledge_tier == "published"
+    if knowledge_profile_available:
+        profile_reason = None
+    elif not brief_by_language:
+        profile_reason = "no_published_brief"
+    elif knowledge_tier != "published":
+        profile_reason = fallback_reason or "fallback_only"
+    else:
+        profile_reason = "profile_unavailable"
+
+    def keep_profile_text(value: str | None) -> str | None:
+        return value if knowledge_profile_available else None
 
     payload = {
         "disease_id": disease["disease_id"],
@@ -1526,32 +1550,63 @@ def build_disease_knowledge_fields(disease: dict, brief_by_language: dict[str, d
         "name_zh": disease.get("name_zh"),
         "category": disease.get("category"),
         "description": disease.get("description"),
-        "official_intro_en": en.get("brief") or en.get("definition"),
-        "official_intro_zh": zh.get("brief") or zh.get("definition"),
-        "official_summary_en": en.get("brief") or en.get("definition"),
-        "official_summary_zh": zh.get("brief") or zh.get("definition"),
-        "official_definition_en": en.get("definition"),
-        "official_definition_zh": zh.get("definition"),
-        "clinical_features_en": en.get("clinical_features") or en.get("clinical_summary"),
-        "clinical_features_zh": zh.get("clinical_features") or zh.get("clinical_summary"),
-        "epidemiology_en": en.get("epidemiology"),
-        "epidemiology_zh": zh.get("epidemiology"),
-        "clinical_summary_en": en.get("clinical_features") or en.get("clinical_summary"),
-        "clinical_summary_zh": zh.get("clinical_features") or zh.get("clinical_summary"),
-        "transmission_en": en.get("transmission"),
-        "transmission_zh": zh.get("transmission"),
-        "prevention_en": en.get("prevention"),
-        "prevention_zh": zh.get("prevention"),
-        "surveillance_note_en": en.get("surveillance_note"),
-        "surveillance_note_zh": zh.get("surveillance_note"),
-        "risk_groups_en": en.get("risk_groups"),
-        "risk_groups_zh": zh.get("risk_groups"),
+        "official_intro_en": keep_profile_text(en.get("brief") or en.get("definition")),
+        "official_intro_zh": keep_profile_text(zh.get("brief") or zh.get("definition")),
+        "official_summary_en": keep_profile_text(en.get("brief") or en.get("definition")),
+        "official_summary_zh": keep_profile_text(zh.get("brief") or zh.get("definition")),
+        "official_definition_en": keep_profile_text(en.get("definition")),
+        "official_definition_zh": keep_profile_text(zh.get("definition")),
+        "clinical_features_en": keep_profile_text(en.get("clinical_features") or en.get("clinical_summary")),
+        "clinical_features_zh": keep_profile_text(zh.get("clinical_features") or zh.get("clinical_summary")),
+        "epidemiology_en": keep_profile_text(en.get("epidemiology")),
+        "epidemiology_zh": keep_profile_text(zh.get("epidemiology")),
+        "clinical_summary_en": keep_profile_text(en.get("clinical_features") or en.get("clinical_summary")),
+        "clinical_summary_zh": keep_profile_text(zh.get("clinical_features") or zh.get("clinical_summary")),
+        "transmission_en": keep_profile_text(en.get("transmission")),
+        "transmission_zh": keep_profile_text(zh.get("transmission")),
+        "prevention_en": keep_profile_text(en.get("prevention")),
+        "prevention_zh": keep_profile_text(zh.get("prevention")),
+        "surveillance_note_en": keep_profile_text(en.get("surveillance_note")),
+        "surveillance_note_zh": keep_profile_text(zh.get("surveillance_note")),
+        "risk_groups_en": keep_profile_text(en.get("risk_groups")),
+        "risk_groups_zh": keep_profile_text(zh.get("risk_groups")),
         "knowledge_sources": knowledge_sources,
         "knowledge_source_count": len(knowledge_sources),
         "knowledge_updated_at": knowledge_updated_at,
         "knowledge_status": knowledge_status,
+        "knowledge_tier": knowledge_tier,
+        "knowledge_fallback_reason": fallback_reason,
+        "knowledge_profile_available": knowledge_profile_available,
+        "knowledge_profile_reason": profile_reason,
+        "knowledge_has_authoritative_sources": has_authoritative_sources,
     }
     return payload
+
+
+def _is_authoritative_knowledge_source(source: object) -> bool:
+    """Infer whether a source should unlock the public disease profile."""
+    if not isinstance(source, dict):
+        return False
+
+    source_type = str(source.get("source_type") or "").strip().lower()
+    if source_type in AUTHORITATIVE_KNOWLEDGE_SOURCE_TYPES:
+        return True
+
+    source_names = {
+        str(source.get(field) or "").strip().lower()
+        for field in ("source_name", "title", "label")
+        if str(source.get(field) or "").strip()
+    }
+    if any(
+        name == "who"
+        or name.startswith("who ")
+        or "world health organization" in name
+        for name in source_names
+    ):
+        return True
+
+    source_url = str(source.get("url") or source.get("source_url") or "").strip().lower()
+    return any(marker in source_url for marker in AUTHORITATIVE_KNOWLEDGE_URL_MARKERS)
 
 
 def apply_disease_knowledge_fields(disease: dict, brief_by_language: dict[str, dict] | None) -> dict:
@@ -1622,6 +1677,7 @@ def build_country_data(
     frequency_meta: dict | None = None,
 ) -> dict:
     """Build the full country JSON blob with time-series per disease."""
+    records = [rec for rec in records if rec.get("disease_id") in diseases_by_id]
     # Group records by disease_id
     by_disease: dict[str, list] = defaultdict(list)
     for rec in records:
@@ -2014,7 +2070,11 @@ async def export(
 
     # Load static disease list from CSV (no DB needed)
     csv_path = ROOT / "configs" / "standard_diseases.csv"
-    diseases = load_standard_diseases(csv_path)
+    diseases = [
+        disease
+        for disease in load_standard_diseases(csv_path)
+        if should_generate_public_disease_page(disease)
+    ]
     diseases_by_id = {d["disease_id"]: d for d in diseases}
     disease_knowledge_briefs: dict[str, dict[str, dict]] = {}
     country_briefs: dict[str, dict[str, dict]] = {}
@@ -2267,9 +2327,12 @@ async def export(
     download_output_dir.mkdir(parents=True, exist_ok=True)
     (download_output_dir / "countries").mkdir(exist_ok=True)
     (download_output_dir / "diseases").mkdir(exist_ok=True)
+    clean_generated_dir(output_dir / "countries")
+    clean_generated_dir(output_dir / "diseases")
     clean_generated_dir(download_output_dir / "countries")
     clean_generated_dir(download_output_dir / "diseases")
     clean_generated_dir(output_dir / "disease-knowledge")
+    clean_generated_dir(output_dir / "reports")
 
     # Write disease index
     (output_dir / "diseases" / "index.json").write_text(

@@ -6,7 +6,15 @@ guidance, and avoids pretending to be an official source.
 """
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Iterable
+
+
+NON_PUBLIC_DISEASE_IDS = frozenset({"D999"})
+CATALOGUE_FALLBACK_BRIEF_TIER = "catalogue_fallback"
+NON_PUBLIC_DESCRIPTION_PHRASES = (
+    "aggregate total",
+    "deprecated duplicate",
+)
 
 
 def build_catalogue_disease_brief(disease: Any, language: str = "en") -> dict[str, str]:
@@ -98,6 +106,110 @@ def build_catalogue_disease_brief(disease: Any, language: str = "en") -> dict[st
     }
 
 
+def build_catalogue_disease_brief_payload(
+    disease: Any,
+    language: str = "en",
+    *,
+    fallback_reason: str = "no_public_sources",
+) -> dict[str, Any]:
+    """Build a persistable low-confidence fallback brief payload."""
+    normalized_language = _normalize_language(language)
+    fallback = build_catalogue_disease_brief(disease, normalized_language)
+    reason = (fallback_reason or "no_public_sources").strip() or "no_public_sources"
+
+    return {
+        "disease_id": _value(disease, "disease_id"),
+        "language": normalized_language,
+        "brief": fallback.get("brief"),
+        "definition": fallback.get("definition"),
+        "clinical_features": fallback.get("clinical_features"),
+        "epidemiology": fallback.get("epidemiology"),
+        "clinical_summary": fallback.get("clinical_summary") or fallback.get("clinical_features"),
+        "transmission": fallback.get("transmission"),
+        "prevention": fallback.get("prevention"),
+        "surveillance_note": fallback.get("surveillance_note"),
+        "risk_groups": fallback.get("risk_groups"),
+        "source_ids": [],
+        "source_attribution": [],
+        "disclaimer": fallback.get("disclaimer"),
+        "model": "catalogue-surveillance-fallback-v1",
+        "status": "requires_review",
+        "source_confidence": "low",
+        "quality_score": 0.45,
+        "review_notes": f"Requires review because catalogue fallback was used for {reason.replace('_', ' ')}.",
+        "metadata": {
+            "generator": "CatalogueDiseaseBrief",
+            "brief_tier": CATALOGUE_FALLBACK_BRIEF_TIER,
+            "fallback_reason": reason,
+            "version": 1,
+        },
+    }
+
+
+def public_disease_page_exclusion_reason(disease: Any) -> str | None:
+    """Explain why a disease should not receive a public-facing disease page."""
+    disease_id = _value(disease, "disease_id").upper()
+    category = _value(disease, "category").lower()
+    name_en = _value(disease, "name_en").lower() or _value(disease, "standard_name_en").lower()
+    description = _value(disease, "description").lower()
+
+    if disease_id in NON_PUBLIC_DISEASE_IDS:
+        return "non_public_disease_id"
+    if category == "summary":
+        return "summary_category"
+    if name_en in {"total", "summary"}:
+        return "summary_name"
+    if any(phrase in description for phrase in NON_PUBLIC_DESCRIPTION_PHRASES):
+        return "deprecated_or_aggregate_description"
+    return None
+
+
+def should_generate_public_disease_page(disease: Any) -> bool:
+    """Return True when a disease should appear in public site/page exports."""
+    return public_disease_page_exclusion_reason(disease) is None
+
+
+def knowledge_brief_publication_tier(brief: Any) -> str:
+    """Classify a stored/generated brief as published, fallback, or non-published."""
+    status = _value(brief, "status").lower()
+    if status != "published":
+        return status or "fallback"
+    metadata = _brief_metadata(brief)
+    if metadata.get("brief_tier") == CATALOGUE_FALLBACK_BRIEF_TIER:
+        return "fallback"
+    return "published"
+
+
+def knowledge_brief_fallback_reason(brief: Any) -> str | None:
+    metadata = _brief_metadata(brief)
+    value = metadata.get("fallback_reason")
+    if value in (None, ""):
+        return None
+    return str(value)
+
+
+def resolve_disease_knowledge_status(briefs: Iterable[Any]) -> str:
+    """Resolve disease-level status from a set of brief rows/payloads."""
+    has_review = False
+    has_fallback = False
+
+    for brief in briefs:
+        tier = knowledge_brief_publication_tier(brief)
+        if tier == "published":
+            return "published"
+        if tier == "fallback":
+            has_fallback = True
+            continue
+        if tier:
+            has_review = True
+
+    if has_fallback:
+        return "fallback"
+    if has_review:
+        return "requires_review"
+    return "fallback"
+
+
 def _value(obj: Any, key: str) -> str:
     if isinstance(obj, dict):
         value = obj.get(key)
@@ -107,11 +219,28 @@ def _value(obj: Any, key: str) -> str:
 
 
 def _metadata_value(obj: Any, key: str) -> str:
-    metadata = obj.get("metadata") if isinstance(obj, dict) else getattr(obj, "metadata_", None)
+    metadata = _brief_metadata(obj)
     if not isinstance(metadata, dict):
         return ""
     value = metadata.get(key)
     return str(value).strip() if value not in (None, "") else ""
+
+
+def _brief_metadata(obj: Any) -> dict[str, Any]:
+    if isinstance(obj, dict):
+        metadata = obj.get("metadata")
+        if isinstance(metadata, dict):
+            return metadata
+        metadata = obj.get("metadata_")
+        if isinstance(metadata, dict):
+            return metadata
+        return {}
+    metadata = getattr(obj, "metadata_", None)
+    return metadata if isinstance(metadata, dict) else {}
+
+
+def _normalize_language(language: str) -> str:
+    return "zh" if language == "zh" else "en"
 
 
 def _category_zh(category: str) -> str:

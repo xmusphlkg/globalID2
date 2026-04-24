@@ -146,6 +146,11 @@ drop_all_objects() {
     cat > /tmp/drop_all.sql << 'EOF'
 -- Drop all tables (order matters due to foreign keys)
 DROP TABLE IF EXISTS ai_conversations CASCADE;
+DROP TABLE IF EXISTS agent_conversations CASCADE;
+DROP TABLE IF EXISTS agent_evidence CASCADE;
+DROP TABLE IF EXISTS agent_steps CASCADE;
+DROP TABLE IF EXISTS agent_memories CASCADE;
+DROP TABLE IF EXISTS agent_runs CASCADE;
 DROP TABLE IF EXISTS task_workbook CASCADE;
 DROP TABLE IF EXISTS task_dependencies CASCADE;
 DROP TABLE IF EXISTS report_section_runs CASCADE;

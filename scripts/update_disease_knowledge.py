@@ -25,6 +25,7 @@ from src.services.disease_knowledge_service import (  # noqa: E402
     expand_sources,
     load_standard_diseases,
 )
+from src.knowledge.catalogue import should_generate_public_disease_page  # noqa: E402
 
 
 async def async_main(args: argparse.Namespace) -> None:
@@ -33,6 +34,8 @@ async def async_main(args: argparse.Namespace) -> None:
     if args.disease_id:
         wanted = {item.upper() for item in args.disease_id}
         diseases = [d for d in diseases if d["disease_id"].upper() in wanted]
+    else:
+        diseases = [d for d in diseases if should_generate_public_disease_page(d)]
     if args.limit:
         diseases = diseases[: args.limit]
 
