@@ -63,30 +63,44 @@ type BriefSection = {
 };
 
 const badgeClass = categoryStyles[diseaseData?.category] ?? 'badge-other';
-const officialIntroEn = knowledgeData?.official_intro_en ?? diseaseData?.official_intro_en ?? diseaseData?.official_summary_en ?? null;
-const officialIntroZh = knowledgeData?.official_intro_zh ?? diseaseData?.official_intro_zh ?? diseaseData?.official_summary_zh ?? null;
-const officialSummaryEn = knowledgeData?.official_summary_en ?? diseaseData?.official_summary_en ?? officialIntroEn ?? diseaseData?.description ?? diseaseData?.name_en ?? null;
-const officialSummaryZh = knowledgeData?.official_summary_zh ?? diseaseData?.official_summary_zh ?? officialIntroZh ?? officialSummaryEn;
-const officialDefinitionEn = knowledgeData?.official_definition_en ?? diseaseData?.official_definition_en ?? null;
-const officialDefinitionZh = knowledgeData?.official_definition_zh ?? diseaseData?.official_definition_zh ?? null;
-const clinicalFeaturesEn = knowledgeData?.clinical_features_en ?? diseaseData?.clinical_features_en ?? diseaseData?.clinical_summary_en ?? null;
-const clinicalFeaturesZh = knowledgeData?.clinical_features_zh ?? diseaseData?.clinical_features_zh ?? diseaseData?.clinical_summary_zh ?? null;
-const epidemiologyEn = knowledgeData?.epidemiology_en ?? diseaseData?.epidemiology_en ?? null;
-const epidemiologyZh = knowledgeData?.epidemiology_zh ?? diseaseData?.epidemiology_zh ?? null;
-const transmissionEn = knowledgeData?.transmission_en ?? diseaseData?.transmission_en ?? null;
-const transmissionZh = knowledgeData?.transmission_zh ?? diseaseData?.transmission_zh ?? null;
-const riskGroupsEn = knowledgeData?.risk_groups_en ?? diseaseData?.risk_groups_en ?? null;
-const riskGroupsZh = knowledgeData?.risk_groups_zh ?? diseaseData?.risk_groups_zh ?? null;
-const preventionEn = knowledgeData?.prevention_en ?? diseaseData?.prevention_en ?? null;
-const preventionZh = knowledgeData?.prevention_zh ?? diseaseData?.prevention_zh ?? null;
-const surveillanceNoteEn = knowledgeData?.surveillance_note_en ?? diseaseData?.surveillance_note_en ?? null;
-const surveillanceNoteZh = knowledgeData?.surveillance_note_zh ?? diseaseData?.surveillance_note_zh ?? null;
+const knowledgeStatus = knowledgeData?.knowledge_status ?? diseaseData?.knowledge_status ?? null;
+const knowledgeProfileAvailable = Boolean(
+  knowledgeData?.knowledge_profile_available ?? diseaseData?.knowledge_profile_available ?? false
+);
+const officialIntroEn = knowledgeProfileAvailable
+  ? (knowledgeData?.official_intro_en ?? diseaseData?.official_intro_en ?? diseaseData?.official_summary_en ?? null)
+  : null;
+const officialIntroZh = knowledgeProfileAvailable
+  ? (knowledgeData?.official_intro_zh ?? diseaseData?.official_intro_zh ?? diseaseData?.official_summary_zh ?? null)
+  : null;
+const officialSummaryEn = knowledgeProfileAvailable
+  ? (knowledgeData?.official_summary_en ?? diseaseData?.official_summary_en ?? officialIntroEn ?? null)
+  : null;
+const officialSummaryZh = knowledgeProfileAvailable
+  ? (knowledgeData?.official_summary_zh ?? diseaseData?.official_summary_zh ?? officialIntroZh ?? officialSummaryEn)
+  : null;
+const officialDefinitionEn = knowledgeProfileAvailable ? (knowledgeData?.official_definition_en ?? diseaseData?.official_definition_en ?? null) : null;
+const officialDefinitionZh = knowledgeProfileAvailable ? (knowledgeData?.official_definition_zh ?? diseaseData?.official_definition_zh ?? null) : null;
+const clinicalFeaturesEn = knowledgeProfileAvailable ? (knowledgeData?.clinical_features_en ?? diseaseData?.clinical_features_en ?? diseaseData?.clinical_summary_en ?? null) : null;
+const clinicalFeaturesZh = knowledgeProfileAvailable ? (knowledgeData?.clinical_features_zh ?? diseaseData?.clinical_features_zh ?? diseaseData?.clinical_summary_zh ?? null) : null;
+const epidemiologyEn = knowledgeProfileAvailable ? (knowledgeData?.epidemiology_en ?? diseaseData?.epidemiology_en ?? null) : null;
+const epidemiologyZh = knowledgeProfileAvailable ? (knowledgeData?.epidemiology_zh ?? diseaseData?.epidemiology_zh ?? null) : null;
+const transmissionEn = knowledgeProfileAvailable ? (knowledgeData?.transmission_en ?? diseaseData?.transmission_en ?? null) : null;
+const transmissionZh = knowledgeProfileAvailable ? (knowledgeData?.transmission_zh ?? diseaseData?.transmission_zh ?? null) : null;
+const riskGroupsEn = knowledgeProfileAvailable ? (knowledgeData?.risk_groups_en ?? diseaseData?.risk_groups_en ?? null) : null;
+const riskGroupsZh = knowledgeProfileAvailable ? (knowledgeData?.risk_groups_zh ?? diseaseData?.risk_groups_zh ?? null) : null;
+const preventionEn = knowledgeProfileAvailable ? (knowledgeData?.prevention_en ?? diseaseData?.prevention_en ?? null) : null;
+const preventionZh = knowledgeProfileAvailable ? (knowledgeData?.prevention_zh ?? diseaseData?.prevention_zh ?? null) : null;
+const surveillanceNoteEn = knowledgeProfileAvailable ? (knowledgeData?.surveillance_note_en ?? diseaseData?.surveillance_note_en ?? null) : null;
+const surveillanceNoteZh = knowledgeProfileAvailable ? (knowledgeData?.surveillance_note_zh ?? diseaseData?.surveillance_note_zh ?? null) : null;
 const knowledgeSources = Array.isArray(knowledgeData?.knowledge_sources)
   ? knowledgeData.knowledge_sources
   : Array.isArray(diseaseData?.knowledge_sources)
     ? diseaseData.knowledge_sources
     : [];
-const knowledgeSourceEntries = knowledgeSources.filter((source: any) => source?.url);
+const knowledgeSourceEntries = knowledgeProfileAvailable
+  ? knowledgeSources.filter((source: any) => source?.url)
+  : [];
 const briefSections = [
   officialDefinitionEn && {
     key: 'definition',
@@ -145,6 +159,12 @@ const knowledgeUpdatedEn = knowledgeUpdatedAt
 const knowledgeUpdatedZh = knowledgeUpdatedAt
   ? new Date(knowledgeUpdatedAt).toLocaleDateString('zh-CN', { year: 'numeric', month: 'short', day: 'numeric' })
   : null;
+const profileUnavailableMessageEn = knowledgeStatus === 'requires_review'
+  ? 'This disease profile is still under review and will be generated by the multi-expert pipeline when ready. Surveillance charts and downloadable datasets remain available below.'
+  : 'A public disease profile is not shown for this disease at the moment. Surveillance charts and downloadable datasets remain available below.';
+const profileUnavailableMessageZh = knowledgeStatus === 'requires_review'
+  ? '该疾病的 Disease Profile 目前仍在复核中，后续会由多专家流程生成。下方仍保留监测图表与可下载数据。'
+  : '该疾病当前暂不展示公开 Disease Profile。下方仍保留监测图表与可下载数据。';
 
 function formatReferenceCitation(source: any) {
   const name = source?.source_name ?? source?.source_type ?? 'Unknown source';
@@ -202,8 +222,8 @@ const diseaseDataUrl = diseaseDownload?.site_json_path ?? `/site-data/diseases/$
       <>
         <section class="academic-hero">
           <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[rgb(var(--border))/0.68] pb-3">
-            <p class="academic-kicker" data-lang-en="Disease Profile" data-lang-zh="疾病画像">
-              Disease Profile
+            <p class="academic-kicker" data-lang-en={knowledgeProfileAvailable ? 'Disease Profile' : 'Disease Data Overview'} data-lang-zh={knowledgeProfileAvailable ? '疾病画像' : '疾病数据概览'}>
+              {knowledgeProfileAvailable ? 'Disease Profile' : 'Disease Data Overview'}
             </p>
             <span class={`inline-flex items-center rounded-none px-2.5 py-0.5 text-xs font-semibold ${badgeClass}`}>
               <span data-lang-en={diseaseData.category} data-lang-zh={categoryZh[diseaseData.category] ?? diseaseData.category}>
@@ -212,7 +232,7 @@ const diseaseDataUrl = diseaseDownload?.site_json_path ?? `/site-data/diseases/$
             </span>
           </div>
 
-          <div class="mt-5 space-y-5">
+          <div class="mt-5 space-y-4">
             <div class="space-y-4">
               <div>
                 <h1 class="academic-title leading-tight">
@@ -227,190 +247,117 @@ const diseaseDataUrl = diseaseDownload?.site_json_path ?? `/site-data/diseases/$
                 </p>
               </div>
 
-              <div class="border border-[rgb(var(--border))/0.7] bg-[rgb(var(--surface))/0.72] px-4 py-4 sm:px-5 sm:py-5">
-                <div class="flex flex-col gap-4 border-b border-[rgb(var(--border))/0.58] pb-4 xl:flex-row xl:items-start xl:justify-between">
-                  <div class="space-y-2">
-                    <p class="academic-kicker" data-lang-en="Official Brief" data-lang-zh="官方简介">
-                      Official Brief
-                    </p>
-                  </div>
-                  {knowledgeUpdatedEn && (
-                    <p
-                      class="text-[11px] font-semibold uppercase tracking-[0.14em] text-[rgb(var(--text-faint))]"
-                      data-lang-en={`Last revised ${knowledgeUpdatedEn}`}
-                      data-lang-zh={`最近修订 ${knowledgeUpdatedZh ?? knowledgeUpdatedEn}`}
-                    >
-                      Last revised {knowledgeUpdatedEn}
-                    </p>
-                  )}
-                </div>
-
-                <div class="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(240px,280px)]">
-                  <div class="space-y-4">
+              {knowledgeProfileAvailable ? (
+                <div class="space-y-5">
+                  {officialSummaryEn && (
                     <p class="max-w-4xl text-sm leading-6 text-[rgb(var(--text))]" data-lang-en={officialSummaryEn} data-lang-zh={officialSummaryZh ?? officialSummaryEn}>
                       {officialSummaryEn}
                     </p>
+                  )}
 
-                    <div class="grid gap-3 md:grid-cols-2">
-                      {briefSections.map((section) => (
-                        <article class="border-l-2 border-[rgb(var(--border))/0.56] pl-4">
-                          <div class="academic-meta-label" data-lang-en={section.labelEn} data-lang-zh={section.labelZh}>
-                            {section.labelEn}
-                          </div>
-                          <p class="mt-1 text-sm leading-6 text-[rgb(var(--text-muted))]" data-lang-en={section.en} data-lang-zh={section.zh}>
-                            {section.en}
-                          </p>
-                        </article>
-                      ))}
-                    </div>
-                  </div>
+                  <div class="profile-flow">
+                    {briefSections.map((section) => (
+                      <article class="profile-flow-item">
+                        <div class="academic-meta-label" data-lang-en={section.labelEn} data-lang-zh={section.labelZh}>
+                          {section.labelEn}
+                        </div>
+                        <p class="mt-1 text-sm leading-6 text-[rgb(var(--text-muted))]" data-lang-en={section.en} data-lang-zh={section.zh}>
+                          {section.en}
+                        </p>
+                      </article>
+                    ))}
 
-                  <aside class="border-t border-[rgb(var(--border))/0.58] pt-4 xl:border-l xl:border-t-0 xl:pl-5 xl:pt-0">
-                    <div class="flex flex-wrap items-center justify-between gap-2">
-                      <p class="academic-meta-label" data-lang-en="References" data-lang-zh="参考文献">References</p>
-                    </div>
-
-                    <ol class="mt-3 space-y-2">
-                      {knowledgeSourceEntries.length > 0 ? knowledgeSourceEntries.map((source: any, index: number) => (
-                        <li>
-                          <a
-                            href={source.resolved_url ?? source.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            class="group flex items-start gap-3 text-sm leading-6 text-[rgb(var(--text-muted))] transition-colors hover:text-[rgb(var(--text-strong))]"
-                          >
-                            <span class="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center border border-[rgb(var(--border))/0.72] bg-[rgb(var(--surface-raised))/0.34] font-mono text-[10px] font-semibold text-[rgb(var(--text-faint))]">
-                              {index + 1}
-                            </span>
-                            <span class="min-w-0">
-                              <span class="font-semibold text-[rgb(var(--text-strong))]">
-                                {formatReferenceCitation(source)}
+                    <article class="profile-flow-item">
+                      <div class="academic-meta-label" data-lang-en="References" data-lang-zh="参考文献">References</div>
+                      <ol class="mt-3 space-y-2">
+                        {knowledgeSourceEntries.length > 0 ? knowledgeSourceEntries.map((source: any, index: number) => (
+                          <li>
+                            <a
+                              href={source.resolved_url ?? source.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              class="group flex items-start gap-3 text-sm leading-6 text-[rgb(var(--text-muted))] transition-colors hover:text-[rgb(var(--text-strong))]"
+                            >
+                              <span class="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center border border-[rgb(var(--border))/0.72] bg-[rgb(var(--surface-raised))/0.34] font-mono text-[10px] font-semibold text-[rgb(var(--text-faint))]">
+                                {index + 1}
                               </span>
-                              <svg class="ml-1 inline-block h-3.5 w-3.5 align-[-0.1em] text-[rgb(var(--text-faint))] transition-colors group-hover:text-[rgb(var(--text-strong))]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5h5m0 0v5m0-5L10 14m-3 5h11a2 2 0 002-2V9m-5 10H6a2 2 0 01-2-2V6a2 2 0 012-2h5" />
-                              </svg>
-                            </span>
-                          </a>
-                        </li>
-                      )) : (
-                        <li class="academic-note" data-lang-en="No references recorded yet." data-lang-zh="尚未记录参考文献。">
-                          No references recorded yet.
-                        </li>
-                      )}
-                    </ol>
-                  </aside>
-                </div>
-              </div>
-            </div>
+                              <span class="min-w-0">
+                                <span class="font-semibold text-[rgb(var(--text-strong))]">
+                                  {formatReferenceCitation(source)}
+                                </span>
+                                <svg class="ml-1 inline-block h-3.5 w-3.5 align-[-0.1em] text-[rgb(var(--text-faint))] transition-colors group-hover:text-[rgb(var(--text-strong))]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5h5m0 0v5m0-5L10 14m-3 5h11a2 2 0 002-2V9m-5 10H6a2 2 0 01-2-2V6a2 2 0 012-2h5" />
+                                </svg>
+                              </span>
+                            </a>
+                          </li>
+                        )) : (
+                          <li class="academic-note border-0 bg-transparent px-0" data-lang-en="No references recorded yet." data-lang-zh="尚未记录参考文献。">
+                            No references recorded yet.
+                          </li>
+                        )}
+                      </ol>
+                    </article>
 
-            <aside class="xl:hidden space-y-5 border border-[rgb(var(--border))/0.72] bg-[rgb(var(--bg-soft))/0.38] px-4 py-4">
-              <div>
-                <p class="academic-kicker" data-lang-en="Coding Register" data-lang-zh="编码登记">Coding Register</p>
-                <div class="mt-2 grid gap-2 sm:grid-cols-2">
-                  {diseaseData.icd_10 && (
-                    <div class="border border-[rgb(var(--border))/0.52] bg-[rgb(var(--surface))/0.5] px-3 py-2">
-                      <div class="academic-meta-label">ICD-10</div>
-                      <div class="mt-1 font-mono text-sm text-[rgb(var(--text-strong))]">{diseaseData.icd_10}</div>
-                    </div>
-                  )}
-                  {diseaseData.icd_11 && (
-                    <div class="border border-[rgb(var(--border))/0.52] bg-[rgb(var(--surface))/0.5] px-3 py-2">
-                      <div class="academic-meta-label">ICD-11</div>
-                      <div class="mt-1 font-mono text-sm text-[rgb(var(--text-strong))]">{diseaseData.icd_11}</div>
-                    </div>
-                  )}
-                  {!diseaseData.icd_10 && !diseaseData.icd_11 && (
-                    <div class="border border-[rgb(var(--border))/0.52] bg-[rgb(var(--surface))/0.5] px-3 py-2 text-sm text-[rgb(var(--text-muted))]" data-lang-en="No ICD coding available" data-lang-zh="暂无 ICD 编码">
-                      No ICD coding available
-                    </div>
-                  )}
-                </div>
-              </div>
+                    <article class="profile-flow-item">
+                      <div class="academic-meta-label" data-lang-en="Coding Register" data-lang-zh="编码登记">Coding Register</div>
+                      <dl class="mt-3 grid gap-4 sm:grid-cols-2">
+                        <div>
+                          <dt class="academic-meta-label">ICD-10</dt>
+                          <dd class="mt-1 font-mono text-sm text-[rgb(var(--text-strong))]">
+                            {diseaseData.icd_10 ?? '—'}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt class="academic-meta-label">ICD-11</dt>
+                          <dd class="mt-1 font-mono text-sm text-[rgb(var(--text-strong))]">
+                            {diseaseData.icd_11 ?? '—'}
+                          </dd>
+                        </div>
+                      </dl>
+                    </article>
 
-              <div>
-                <p class="academic-kicker" data-lang-en="Key Statistics" data-lang-zh="核心统计">Key Statistics</p>
-                <div class="mt-2 grid gap-2 sm:grid-cols-2">
-                  <div class="academic-meta-item border-[rgb(var(--border))/0.56] bg-[rgb(var(--surface))/0.5]">
-                    <div class="academic-meta-label" data-lang-en="Total cases" data-lang-zh="累计病例">Total cases</div>
-                    <div class="academic-meta-value font-serif">{fmtNum(diseaseData.total_cases)}</div>
-                  </div>
-                  {hasDeathsData && (
-                    <div class="academic-meta-item border-[rgb(var(--border))/0.56] bg-[rgb(var(--surface))/0.5]">
-                      <div class="academic-meta-label" data-lang-en="Total deaths" data-lang-zh="累计死亡">Total deaths</div>
-                      <div class="academic-meta-value font-serif text-red-400">{fmtNum(diseaseData.total_deaths)}</div>
-                    </div>
-                  )}
-                  <div class="academic-meta-item border-[rgb(var(--border))/0.56] bg-[rgb(var(--surface))/0.5]">
-                    <div class="academic-meta-label" data-lang-en="Peak month" data-lang-zh="峰值月份">Peak month</div>
-                    <div class="academic-meta-value font-serif text-amber-400">{peakMonth}</div>
-                  </div>
-                  <div class="academic-meta-item border-[rgb(var(--border))/0.56] bg-[rgb(var(--surface))/0.5]">
-                    <div class="academic-meta-label" data-lang-en="Coverage" data-lang-zh="覆盖区间">Coverage</div>
-                    <div
-                      class="academic-meta-value text-sm font-medium"
-                      data-lang-en={`${countryCount} reporting countries · ${coverageLabel}`}
-                      data-lang-zh={`${countryCount} 个报告国家 · ${coverageLabel}`}
-                    >
-                      {countryCount} reporting countries · {coverageLabel}
-                    </div>
+                    <article class="profile-flow-item">
+                      <div class="academic-meta-label" data-lang-en="Key Statistics" data-lang-zh="核心统计">Key Statistics</div>
+                      <dl class="mt-3 grid gap-4 sm:grid-cols-2">
+                        <div>
+                          <dt class="academic-meta-label" data-lang-en="Total cases" data-lang-zh="累计病例">Total cases</dt>
+                          <dd class="academic-meta-value font-serif">{fmtNum(diseaseData.total_cases)}</dd>
+                        </div>
+                        {hasDeathsData && (
+                          <div>
+                            <dt class="academic-meta-label" data-lang-en="Total deaths" data-lang-zh="累计死亡">Total deaths</dt>
+                            <dd class="academic-meta-value font-serif text-red-400">{fmtNum(diseaseData.total_deaths)}</dd>
+                          </div>
+                        )}
+                        <div>
+                          <dt class="academic-meta-label" data-lang-en="Peak month" data-lang-zh="峰值月份">Peak month</dt>
+                          <dd class="academic-meta-value font-serif text-amber-400">{peakMonth}</dd>
+                        </div>
+                        <div>
+                          <dt class="academic-meta-label" data-lang-en="Coverage" data-lang-zh="覆盖区间">Coverage</dt>
+                          <dd
+                            class="academic-meta-value text-sm font-medium"
+                            data-lang-en={`${countryCount} reporting countries · ${coverageLabel}`}
+                            data-lang-zh={`${countryCount} 个报告国家 · ${coverageLabel}`}
+                          >
+                            {countryCount} reporting countries · {coverageLabel}
+                          </dd>
+                        </div>
+                      </dl>
+                    </article>
                   </div>
                 </div>
-              </div>
-            </aside>
-
-            <div class="hidden xl:block border-t border-[rgb(var(--border))/0.5] pt-4">
-              <div class="flex flex-nowrap items-stretch gap-2">
-                <div class="flex-[1.45] min-w-[220px] border border-[rgb(var(--border))/0.52] bg-[rgb(var(--surface))/0.46] px-3 py-2">
-                  <div class="academic-meta-label" data-lang-en="Coding Register" data-lang-zh="编码登记">Coding Register</div>
-                  <div class="mt-2 flex flex-wrap gap-2">
-                    {diseaseData.icd_10 && (
-                      <span class="inline-flex items-center gap-2 border border-[rgb(var(--border))/0.56] bg-[rgb(var(--surface-raised))/0.38] px-2.5 py-1 font-mono text-sm text-[rgb(var(--text-strong))]">
-                        <span class="text-[10px] font-semibold uppercase tracking-[0.14em] text-[rgb(var(--text-faint))]">ICD-10</span>
-                        {diseaseData.icd_10}
-                      </span>
-                    )}
-                    {diseaseData.icd_11 && (
-                      <span class="inline-flex items-center gap-2 border border-[rgb(var(--border))/0.56] bg-[rgb(var(--surface-raised))/0.38] px-2.5 py-1 font-mono text-sm text-[rgb(var(--text-strong))]">
-                        <span class="text-[10px] font-semibold uppercase tracking-[0.14em] text-[rgb(var(--text-faint))]">ICD-11</span>
-                        {diseaseData.icd_11}
-                      </span>
-                    )}
-                    {!diseaseData.icd_10 && !diseaseData.icd_11 && (
-                      <span class="text-sm text-[rgb(var(--text-muted))]" data-lang-en="No ICD coding available" data-lang-zh="暂无 ICD 编码">
-                        No ICD coding available
-                      </span>
-                    )}
-                  </div>
+              ) : (
+                <div class="space-y-3">
+                  <p class="academic-kicker" data-lang-en="Profile Availability" data-lang-zh="画像可用性">
+                    Profile Availability
+                  </p>
+                  <p class="max-w-none text-sm leading-6 text-[rgb(var(--text-muted))]" data-lang-en={profileUnavailableMessageEn} data-lang-zh={profileUnavailableMessageZh}>
+                    {profileUnavailableMessageEn}
+                  </p>
                 </div>
-
-                <div class="flex-[0.9] min-w-[140px] border border-[rgb(var(--border))/0.52] bg-[rgb(var(--surface))/0.46] px-3 py-2">
-                  <div class="academic-meta-label" data-lang-en="Total cases" data-lang-zh="累计病例">Total cases</div>
-                  <div class="mt-1 font-serif text-lg font-semibold text-[rgb(var(--text-strong))]">{fmtNum(diseaseData.total_cases)}</div>
-                </div>
-
-                {hasDeathsData && (
-                  <div class="flex-[0.9] min-w-[140px] border border-[rgb(var(--border))/0.52] bg-[rgb(var(--surface))/0.46] px-3 py-2">
-                    <div class="academic-meta-label" data-lang-en="Total deaths" data-lang-zh="累计死亡">Total deaths</div>
-                    <div class="mt-1 font-serif text-lg font-semibold text-red-400">{fmtNum(diseaseData.total_deaths)}</div>
-                  </div>
-                )}
-
-                <div class="flex-[0.9] min-w-[140px] border border-[rgb(var(--border))/0.52] bg-[rgb(var(--surface))/0.46] px-3 py-2">
-                  <div class="academic-meta-label" data-lang-en="Peak month" data-lang-zh="峰值月份">Peak month</div>
-                  <div class="mt-1 font-serif text-lg font-semibold text-amber-400">{peakMonth}</div>
-                </div>
-
-                <div class="flex-[1.35] min-w-[220px] border border-[rgb(var(--border))/0.52] bg-[rgb(var(--surface))/0.46] px-3 py-2">
-                  <div class="academic-meta-label" data-lang-en="Coverage" data-lang-zh="覆盖区间">Coverage</div>
-                  <div
-                    class="mt-1 text-sm font-medium leading-5 text-[rgb(var(--text-strong))]"
-                    data-lang-en={`${countryCount} reporting countries · ${coverageLabel}`}
-                    data-lang-zh={`${countryCount} 个报告国家 · ${coverageLabel}`}
-                  >
-                    {countryCount} reporting countries · {coverageLabel}
-                  </div>
-                </div>
-              </div>
+              )}
             </div>
           </div>
         </section>

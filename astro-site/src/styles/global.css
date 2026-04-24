@@ -699,6 +699,28 @@
     @apply rounded-none px-4 py-3 text-sm leading-6;
   }
 
+  .profile-flow {
+    column-count: 1;
+    column-gap: 2rem;
+  }
+
+  .profile-flow-item {
+    display: inline-block;
+    width: 100%;
+    margin: 0 0 1.25rem;
+    padding-left: 1rem;
+    border-left: 2px solid rgb(var(--border) / 0.56);
+    break-inside: avoid;
+  }
+
+  @media (min-width: 1024px) {
+    .profile-flow {
+      column-count: 2;
+      column-gap: 2.5rem;
+      column-rule: 1px solid rgb(var(--border) / 0.5);
+    }
+  }
+
   .chart-shell {
     border: 1px solid rgb(var(--border) / 0.7);
     background: linear-gradient(180deg, rgb(var(--surface) / 0.98), rgb(var(--bg-soft) / 0.34));
