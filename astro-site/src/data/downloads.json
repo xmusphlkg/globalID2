@@ -138,6 +138,43 @@
     },
     {
       "kind": "country",
+      "id": "nz",
+      "code": "NZ",
+      "name": "New Zealand",
+      "generated_at": "2026-05-09T00:00:00+00:00",
+      "record_count": 2091,
+      "date_range": {
+        "start": "2018-05-01",
+        "end": "2026-03-01"
+      },
+      "json_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/countries/nz.json",
+      "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/countries/nz.csv",
+      "relative_json_path": "countries/nz.json",
+      "relative_csv_path": "countries/nz.csv",
+      "site_json_path": "/site-data/countries/nz.json",
+      "source_info": {
+        "country_code": "NZ",
+        "primary_scope": "phf_monthly",
+        "primary_label": "All Sources",
+        "primary_url": "https://www.phfscience.nz/digital-library/",
+        "primary_type": "web",
+        "parser_primary": "nz_phf_internal_crawler",
+        "notes": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler",
+        "sources": [
+          {
+            "scope": "phf_monthly",
+            "label": "All Sources",
+            "url": "https://www.phfscience.nz/digital-library/",
+            "machine_url": null,
+            "type": "web",
+            "cadence": "monthly",
+            "description": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler"
+          }
+        ]
+      }
+    },
+    {
+      "kind": "country",
       "id": "us",
       "code": "US",
       "name": "United States",
@@ -522,8 +559,8 @@
       "name_en": "COVID-19",
       "name_zh": "新型冠状病毒感染",
       "generated_at": "2026-05-09T00:00:00+00:00",
-      "record_count": 524,
-      "country_count": 3,
+      "record_count": 595,
+      "country_count": 4,
       "countries": [
         {
           "code": "AU",
@@ -536,6 +573,10 @@
         {
           "code": "JP",
           "name": "Japan"
+        },
+        {
+          "code": "NZ",
+          "name": "New Zealand"
         }
       ],
       "json_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d004.json",
@@ -624,6 +665,27 @@
             }
           ],
           "country_name": "Japan"
+        },
+        {
+          "country_code": "NZ",
+          "primary_scope": "phf_monthly",
+          "primary_label": "All Sources",
+          "primary_url": "https://www.phfscience.nz/digital-library/",
+          "primary_type": "web",
+          "parser_primary": "nz_phf_internal_crawler",
+          "notes": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler",
+          "sources": [
+            {
+              "scope": "phf_monthly",
+              "label": "All Sources",
+              "url": "https://www.phfscience.nz/digital-library/",
+              "machine_url": null,
+              "type": "web",
+              "cadence": "monthly",
+              "description": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler"
+            }
+          ],
+          "country_name": "New Zealand"
         }
       ]
     },
@@ -836,8 +898,8 @@
       "name_en": "Hepatitis A",
       "name_zh": "甲型肝炎",
       "generated_at": "2026-05-09T00:00:00+00:00",
-      "record_count": 1433,
-      "country_count": 4,
+      "record_count": 1505,
+      "country_count": 5,
       "countries": [
         {
           "code": "AU",
@@ -850,6 +912,10 @@
         {
           "code": "JP",
           "name": "Japan"
+        },
+        {
+          "code": "NZ",
+          "name": "New Zealand"
         },
         {
           "code": "US",
@@ -944,6 +1010,27 @@
           "country_name": "Japan"
         },
         {
+          "country_code": "NZ",
+          "primary_scope": "phf_monthly",
+          "primary_label": "All Sources",
+          "primary_url": "https://www.phfscience.nz/digital-library/",
+          "primary_type": "web",
+          "parser_primary": "nz_phf_internal_crawler",
+          "notes": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler",
+          "sources": [
+            {
+              "scope": "phf_monthly",
+              "label": "All Sources",
+              "url": "https://www.phfscience.nz/digital-library/",
+              "machine_url": null,
+              "type": "web",
+              "cadence": "monthly",
+              "description": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler"
+            }
+          ],
+          "country_name": "New Zealand"
+        },
+        {
           "country_code": "US",
           "primary_scope": "nndss_api",
           "primary_label": "US CDC NNDSS",
@@ -974,8 +1061,8 @@
       "name_en": "Hepatitis B",
       "name_zh": "乙型肝炎",
       "generated_at": "2026-05-09T00:00:00+00:00",
-      "record_count": 674,
-      "country_count": 3,
+      "record_count": 746,
+      "country_count": 4,
       "countries": [
         {
           "code": "AU",
@@ -984,6 +1071,10 @@
         {
           "code": "CN",
           "name": "China"
+        },
+        {
+          "code": "NZ",
+          "name": "New Zealand"
         },
         {
           "code": "US",
@@ -1057,6 +1148,27 @@
           "country_name": "China"
         },
         {
+          "country_code": "NZ",
+          "primary_scope": "phf_monthly",
+          "primary_label": "All Sources",
+          "primary_url": "https://www.phfscience.nz/digital-library/",
+          "primary_type": "web",
+          "parser_primary": "nz_phf_internal_crawler",
+          "notes": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler",
+          "sources": [
+            {
+              "scope": "phf_monthly",
+              "label": "All Sources",
+              "url": "https://www.phfscience.nz/digital-library/",
+              "machine_url": null,
+              "type": "web",
+              "cadence": "monthly",
+              "description": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler"
+            }
+          ],
+          "country_name": "New Zealand"
+        },
+        {
           "country_code": "US",
           "primary_scope": "nndss_api",
           "primary_label": "US CDC NNDSS",
@@ -1087,8 +1199,8 @@
       "name_en": "Hepatitis C",
       "name_zh": "丙型肝炎",
       "generated_at": "2026-05-09T00:00:00+00:00",
-      "record_count": 740,
-      "country_count": 3,
+      "record_count": 812,
+      "country_count": 4,
       "countries": [
         {
           "code": "AU",
@@ -1097,6 +1209,10 @@
         {
           "code": "CN",
           "name": "China"
+        },
+        {
+          "code": "NZ",
+          "name": "New Zealand"
         },
         {
           "code": "US",
@@ -1168,6 +1284,27 @@
             }
           ],
           "country_name": "China"
+        },
+        {
+          "country_code": "NZ",
+          "primary_scope": "phf_monthly",
+          "primary_label": "All Sources",
+          "primary_url": "https://www.phfscience.nz/digital-library/",
+          "primary_type": "web",
+          "parser_primary": "nz_phf_internal_crawler",
+          "notes": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler",
+          "sources": [
+            {
+              "scope": "phf_monthly",
+              "label": "All Sources",
+              "url": "https://www.phfscience.nz/digital-library/",
+              "machine_url": null,
+              "type": "web",
+              "cadence": "monthly",
+              "description": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler"
+            }
+          ],
+          "country_name": "New Zealand"
         },
         {
           "country_code": "US",
@@ -1891,8 +2028,8 @@
       "name_en": "Measles",
       "name_zh": "麻疹",
       "generated_at": "2026-05-09T00:00:00+00:00",
-      "record_count": 1264,
-      "country_count": 4,
+      "record_count": 1336,
+      "country_count": 5,
       "countries": [
         {
           "code": "AU",
@@ -1905,6 +2042,10 @@
         {
           "code": "JP",
           "name": "Japan"
+        },
+        {
+          "code": "NZ",
+          "name": "New Zealand"
         },
         {
           "code": "US",
@@ -1997,6 +2138,27 @@
             }
           ],
           "country_name": "Japan"
+        },
+        {
+          "country_code": "NZ",
+          "primary_scope": "phf_monthly",
+          "primary_label": "All Sources",
+          "primary_url": "https://www.phfscience.nz/digital-library/",
+          "primary_type": "web",
+          "parser_primary": "nz_phf_internal_crawler",
+          "notes": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler",
+          "sources": [
+            {
+              "scope": "phf_monthly",
+              "label": "All Sources",
+              "url": "https://www.phfscience.nz/digital-library/",
+              "machine_url": null,
+              "type": "web",
+              "cadence": "monthly",
+              "description": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler"
+            }
+          ],
+          "country_name": "New Zealand"
         },
         {
           "country_code": "US",
@@ -2368,8 +2530,8 @@
       "name_en": "Dengue",
       "name_zh": "登革热",
       "generated_at": "2026-05-09T00:00:00+00:00",
-      "record_count": 1344,
-      "country_count": 4,
+      "record_count": 1416,
+      "country_count": 5,
       "countries": [
         {
           "code": "AU",
@@ -2382,6 +2544,10 @@
         {
           "code": "JP",
           "name": "Japan"
+        },
+        {
+          "code": "NZ",
+          "name": "New Zealand"
         },
         {
           "code": "US",
@@ -2474,6 +2640,27 @@
             }
           ],
           "country_name": "Japan"
+        },
+        {
+          "country_code": "NZ",
+          "primary_scope": "phf_monthly",
+          "primary_label": "All Sources",
+          "primary_url": "https://www.phfscience.nz/digital-library/",
+          "primary_type": "web",
+          "parser_primary": "nz_phf_internal_crawler",
+          "notes": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler",
+          "sources": [
+            {
+              "scope": "phf_monthly",
+              "label": "All Sources",
+              "url": "https://www.phfscience.nz/digital-library/",
+              "machine_url": null,
+              "type": "web",
+              "cadence": "monthly",
+              "description": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler"
+            }
+          ],
+          "country_name": "New Zealand"
         },
         {
           "country_code": "US",
@@ -2732,8 +2919,8 @@
       "name_en": "Tuberculosis",
       "name_zh": "肺结核",
       "generated_at": "2026-05-09T00:00:00+00:00",
-      "record_count": 1553,
-      "country_count": 4,
+      "record_count": 1625,
+      "country_count": 5,
       "countries": [
         {
           "code": "AU",
@@ -2746,6 +2933,10 @@
         {
           "code": "JP",
           "name": "Japan"
+        },
+        {
+          "code": "NZ",
+          "name": "New Zealand"
         },
         {
           "code": "US",
@@ -2840,6 +3031,27 @@
           "country_name": "Japan"
         },
         {
+          "country_code": "NZ",
+          "primary_scope": "phf_monthly",
+          "primary_label": "All Sources",
+          "primary_url": "https://www.phfscience.nz/digital-library/",
+          "primary_type": "web",
+          "parser_primary": "nz_phf_internal_crawler",
+          "notes": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler",
+          "sources": [
+            {
+              "scope": "phf_monthly",
+              "label": "All Sources",
+              "url": "https://www.phfscience.nz/digital-library/",
+              "machine_url": null,
+              "type": "web",
+              "cadence": "monthly",
+              "description": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler"
+            }
+          ],
+          "country_name": "New Zealand"
+        },
+        {
           "country_code": "US",
           "primary_scope": "nndss_api",
           "primary_label": "US CDC NNDSS",
@@ -2870,8 +3082,8 @@
       "name_en": "Typhoid and Paratyphoid fever",
       "name_zh": "伤寒和副伤寒",
       "generated_at": "2026-05-09T00:00:00+00:00",
-      "record_count": 1430,
-      "country_count": 4,
+      "record_count": 1502,
+      "country_count": 5,
       "countries": [
         {
           "code": "AU",
@@ -2884,6 +3096,10 @@
         {
           "code": "JP",
           "name": "Japan"
+        },
+        {
+          "code": "NZ",
+          "name": "New Zealand"
         },
         {
           "code": "US",
@@ -2978,6 +3194,27 @@
           "country_name": "Japan"
         },
         {
+          "country_code": "NZ",
+          "primary_scope": "phf_monthly",
+          "primary_label": "All Sources",
+          "primary_url": "https://www.phfscience.nz/digital-library/",
+          "primary_type": "web",
+          "parser_primary": "nz_phf_internal_crawler",
+          "notes": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler",
+          "sources": [
+            {
+              "scope": "phf_monthly",
+              "label": "All Sources",
+              "url": "https://www.phfscience.nz/digital-library/",
+              "machine_url": null,
+              "type": "web",
+              "cadence": "monthly",
+              "description": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler"
+            }
+          ],
+          "country_name": "New Zealand"
+        },
+        {
           "country_code": "US",
           "primary_scope": "nndss_api",
           "primary_label": "US CDC NNDSS",
@@ -3008,8 +3245,8 @@
       "name_en": "Pertussis",
       "name_zh": "百日咳",
       "generated_at": "2026-05-09T00:00:00+00:00",
-      "record_count": 2284,
-      "country_count": 4,
+      "record_count": 2356,
+      "country_count": 5,
       "countries": [
         {
           "code": "AU",
@@ -3022,6 +3259,10 @@
         {
           "code": "JP",
           "name": "Japan"
+        },
+        {
+          "code": "NZ",
+          "name": "New Zealand"
         },
         {
           "code": "US",
@@ -3114,6 +3355,27 @@
             }
           ],
           "country_name": "Japan"
+        },
+        {
+          "country_code": "NZ",
+          "primary_scope": "phf_monthly",
+          "primary_label": "All Sources",
+          "primary_url": "https://www.phfscience.nz/digital-library/",
+          "primary_type": "web",
+          "parser_primary": "nz_phf_internal_crawler",
+          "notes": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler",
+          "sources": [
+            {
+              "scope": "phf_monthly",
+              "label": "All Sources",
+              "url": "https://www.phfscience.nz/digital-library/",
+              "machine_url": null,
+              "type": "web",
+              "cadence": "monthly",
+              "description": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler"
+            }
+          ],
+          "country_name": "New Zealand"
         },
         {
           "country_code": "US",
@@ -3724,8 +3986,8 @@
       "name_en": "Leptospirosis",
       "name_zh": "钩端螺旋体病",
       "generated_at": "2026-05-09T00:00:00+00:00",
-      "record_count": 1465,
-      "country_count": 4,
+      "record_count": 1537,
+      "country_count": 5,
       "countries": [
         {
           "code": "AU",
@@ -3738,6 +4000,10 @@
         {
           "code": "JP",
           "name": "Japan"
+        },
+        {
+          "code": "NZ",
+          "name": "New Zealand"
         },
         {
           "code": "US",
@@ -3830,6 +4096,27 @@
             }
           ],
           "country_name": "Japan"
+        },
+        {
+          "country_code": "NZ",
+          "primary_scope": "phf_monthly",
+          "primary_label": "All Sources",
+          "primary_url": "https://www.phfscience.nz/digital-library/",
+          "primary_type": "web",
+          "parser_primary": "nz_phf_internal_crawler",
+          "notes": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler",
+          "sources": [
+            {
+              "scope": "phf_monthly",
+              "label": "All Sources",
+              "url": "https://www.phfscience.nz/digital-library/",
+              "machine_url": null,
+              "type": "web",
+              "cadence": "monthly",
+              "description": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler"
+            }
+          ],
+          "country_name": "New Zealand"
         },
         {
           "country_code": "US",
@@ -3925,8 +4212,8 @@
       "name_en": "Malaria",
       "name_zh": "疟疾",
       "generated_at": "2026-05-09T00:00:00+00:00",
-      "record_count": 2267,
-      "country_count": 4,
+      "record_count": 2339,
+      "country_count": 5,
       "countries": [
         {
           "code": "AU",
@@ -3939,6 +4226,10 @@
         {
           "code": "JP",
           "name": "Japan"
+        },
+        {
+          "code": "NZ",
+          "name": "New Zealand"
         },
         {
           "code": "US",
@@ -4031,6 +4322,27 @@
             }
           ],
           "country_name": "Japan"
+        },
+        {
+          "country_code": "NZ",
+          "primary_scope": "phf_monthly",
+          "primary_label": "All Sources",
+          "primary_url": "https://www.phfscience.nz/digital-library/",
+          "primary_type": "web",
+          "parser_primary": "nz_phf_internal_crawler",
+          "notes": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler",
+          "sources": [
+            {
+              "scope": "phf_monthly",
+              "label": "All Sources",
+              "url": "https://www.phfscience.nz/digital-library/",
+              "machine_url": null,
+              "type": "web",
+              "cadence": "monthly",
+              "description": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler"
+            }
+          ],
+          "country_name": "New Zealand"
         },
         {
           "country_code": "US",
@@ -4176,8 +4488,8 @@
       "name_en": "Mumps",
       "name_zh": "流行性腮腺炎",
       "generated_at": "2026-05-09T00:00:00+00:00",
-      "record_count": 1926,
-      "country_count": 4,
+      "record_count": 1998,
+      "country_count": 5,
       "countries": [
         {
           "code": "AU",
@@ -4190,6 +4502,10 @@
         {
           "code": "JP",
           "name": "Japan"
+        },
+        {
+          "code": "NZ",
+          "name": "New Zealand"
         },
         {
           "code": "US",
@@ -4282,6 +4598,27 @@
             }
           ],
           "country_name": "Japan"
+        },
+        {
+          "country_code": "NZ",
+          "primary_scope": "phf_monthly",
+          "primary_label": "All Sources",
+          "primary_url": "https://www.phfscience.nz/digital-library/",
+          "primary_type": "web",
+          "parser_primary": "nz_phf_internal_crawler",
+          "notes": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler",
+          "sources": [
+            {
+              "scope": "phf_monthly",
+              "label": "All Sources",
+              "url": "https://www.phfscience.nz/digital-library/",
+              "machine_url": null,
+              "type": "web",
+              "cadence": "monthly",
+              "description": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler"
+            }
+          ],
+          "country_name": "New Zealand"
         },
         {
           "country_code": "US",
@@ -6452,8 +6789,8 @@
       "name_en": "Monkeypox",
       "name_zh": "猴痘",
       "generated_at": "2026-05-09T00:00:00+00:00",
-      "record_count": 626,
-      "country_count": 4,
+      "record_count": 677,
+      "country_count": 5,
       "countries": [
         {
           "code": "AU",
@@ -6466,6 +6803,10 @@
         {
           "code": "JP",
           "name": "Japan"
+        },
+        {
+          "code": "NZ",
+          "name": "New Zealand"
         },
         {
           "code": "US",
@@ -6558,6 +6899,27 @@
             }
           ],
           "country_name": "Japan"
+        },
+        {
+          "country_code": "NZ",
+          "primary_scope": "phf_monthly",
+          "primary_label": "All Sources",
+          "primary_url": "https://www.phfscience.nz/digital-library/",
+          "primary_type": "web",
+          "parser_primary": "nz_phf_internal_crawler",
+          "notes": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler",
+          "sources": [
+            {
+              "scope": "phf_monthly",
+              "label": "All Sources",
+              "url": "https://www.phfscience.nz/digital-library/",
+              "machine_url": null,
+              "type": "web",
+              "cadence": "monthly",
+              "description": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler"
+            }
+          ],
+          "country_name": "New Zealand"
         },
         {
           "country_code": "US",
@@ -7200,12 +7562,16 @@
       "name_en": "Campylobacteriosis",
       "name_zh": "弯曲杆菌病",
       "generated_at": "2026-05-09T00:00:00+00:00",
-      "record_count": 908,
-      "country_count": 2,
+      "record_count": 980,
+      "country_count": 3,
       "countries": [
         {
           "code": "AU",
           "name": "Australia"
+        },
+        {
+          "code": "NZ",
+          "name": "New Zealand"
         },
         {
           "code": "US",
@@ -7238,6 +7604,27 @@
             }
           ],
           "country_name": "Australia"
+        },
+        {
+          "country_code": "NZ",
+          "primary_scope": "phf_monthly",
+          "primary_label": "All Sources",
+          "primary_url": "https://www.phfscience.nz/digital-library/",
+          "primary_type": "web",
+          "parser_primary": "nz_phf_internal_crawler",
+          "notes": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler",
+          "sources": [
+            {
+              "scope": "phf_monthly",
+              "label": "All Sources",
+              "url": "https://www.phfscience.nz/digital-library/",
+              "machine_url": null,
+              "type": "web",
+              "cadence": "monthly",
+              "description": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler"
+            }
+          ],
+          "country_name": "New Zealand"
         },
         {
           "country_code": "US",
@@ -7480,8 +7867,8 @@
       "name_en": "Cryptosporidiosis",
       "name_zh": "隐孢子虫病",
       "generated_at": "2026-05-09T00:00:00+00:00",
-      "record_count": 2090,
-      "country_count": 3,
+      "record_count": 2162,
+      "country_count": 4,
       "countries": [
         {
           "code": "AU",
@@ -7490,6 +7877,10 @@
         {
           "code": "JP",
           "name": "Japan"
+        },
+        {
+          "code": "NZ",
+          "name": "New Zealand"
         },
         {
           "code": "US",
@@ -7543,6 +7934,27 @@
             }
           ],
           "country_name": "Japan"
+        },
+        {
+          "country_code": "NZ",
+          "primary_scope": "phf_monthly",
+          "primary_label": "All Sources",
+          "primary_url": "https://www.phfscience.nz/digital-library/",
+          "primary_type": "web",
+          "parser_primary": "nz_phf_internal_crawler",
+          "notes": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler",
+          "sources": [
+            {
+              "scope": "phf_monthly",
+              "label": "All Sources",
+              "url": "https://www.phfscience.nz/digital-library/",
+              "machine_url": null,
+              "type": "web",
+              "cadence": "monthly",
+              "description": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler"
+            }
+          ],
+          "country_name": "New Zealand"
         },
         {
           "country_code": "US",
@@ -7638,12 +8050,16 @@
       "name_en": "Giardiasis",
       "name_zh": "贾第虫病",
       "generated_at": "2026-05-09T00:00:00+00:00",
-      "record_count": 1773,
-      "country_count": 2,
+      "record_count": 1845,
+      "country_count": 3,
       "countries": [
         {
           "code": "JP",
           "name": "Japan"
+        },
+        {
+          "code": "NZ",
+          "name": "New Zealand"
         },
         {
           "code": "US",
@@ -7678,6 +8094,27 @@
           "country_name": "Japan"
         },
         {
+          "country_code": "NZ",
+          "primary_scope": "phf_monthly",
+          "primary_label": "All Sources",
+          "primary_url": "https://www.phfscience.nz/digital-library/",
+          "primary_type": "web",
+          "parser_primary": "nz_phf_internal_crawler",
+          "notes": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler",
+          "sources": [
+            {
+              "scope": "phf_monthly",
+              "label": "All Sources",
+              "url": "https://www.phfscience.nz/digital-library/",
+              "machine_url": null,
+              "type": "web",
+              "cadence": "monthly",
+              "description": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler"
+            }
+          ],
+          "country_name": "New Zealand"
+        },
+        {
           "country_code": "US",
           "primary_scope": "nndss_api",
           "primary_label": "US CDC NNDSS",
@@ -7708,8 +8145,8 @@
       "name_en": "Haemophilus influenzae",
       "name_zh": "流感嗜血杆菌",
       "generated_at": "2026-05-09T00:00:00+00:00",
-      "record_count": 2058,
-      "country_count": 3,
+      "record_count": 2129,
+      "country_count": 4,
       "countries": [
         {
           "code": "AU",
@@ -7718,6 +8155,10 @@
         {
           "code": "JP",
           "name": "Japan"
+        },
+        {
+          "code": "NZ",
+          "name": "New Zealand"
         },
         {
           "code": "US",
@@ -7771,6 +8212,27 @@
             }
           ],
           "country_name": "Japan"
+        },
+        {
+          "country_code": "NZ",
+          "primary_scope": "phf_monthly",
+          "primary_label": "All Sources",
+          "primary_url": "https://www.phfscience.nz/digital-library/",
+          "primary_type": "web",
+          "parser_primary": "nz_phf_internal_crawler",
+          "notes": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler",
+          "sources": [
+            {
+              "scope": "phf_monthly",
+              "label": "All Sources",
+              "url": "https://www.phfscience.nz/digital-library/",
+              "machine_url": null,
+              "type": "web",
+              "cadence": "monthly",
+              "description": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler"
+            }
+          ],
+          "country_name": "New Zealand"
         },
         {
           "country_code": "US",
@@ -8008,12 +8470,16 @@
       "name_en": "Shigellosis",
       "name_zh": "志贺菌病",
       "generated_at": "2026-05-09T00:00:00+00:00",
-      "record_count": 1379,
-      "country_count": 2,
+      "record_count": 1451,
+      "country_count": 3,
       "countries": [
         {
           "code": "AU",
           "name": "Australia"
+        },
+        {
+          "code": "NZ",
+          "name": "New Zealand"
         },
         {
           "code": "US",
@@ -8048,6 +8514,27 @@
           "country_name": "Australia"
         },
         {
+          "country_code": "NZ",
+          "primary_scope": "phf_monthly",
+          "primary_label": "All Sources",
+          "primary_url": "https://www.phfscience.nz/digital-library/",
+          "primary_type": "web",
+          "parser_primary": "nz_phf_internal_crawler",
+          "notes": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler",
+          "sources": [
+            {
+              "scope": "phf_monthly",
+              "label": "All Sources",
+              "url": "https://www.phfscience.nz/digital-library/",
+              "machine_url": null,
+              "type": "web",
+              "cadence": "monthly",
+              "description": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler"
+            }
+          ],
+          "country_name": "New Zealand"
+        },
+        {
           "country_code": "US",
           "primary_scope": "nndss_api",
           "primary_label": "US CDC NNDSS",
@@ -8078,8 +8565,8 @@
       "name_en": "Invasive pneumococcal disease",
       "name_zh": "侵袭性肺炎球菌病",
       "generated_at": "2026-05-09T00:00:00+00:00",
-      "record_count": 1642,
-      "country_count": 3,
+      "record_count": 1714,
+      "country_count": 4,
       "countries": [
         {
           "code": "AU",
@@ -8088,6 +8575,10 @@
         {
           "code": "JP",
           "name": "Japan"
+        },
+        {
+          "code": "NZ",
+          "name": "New Zealand"
         },
         {
           "code": "US",
@@ -8143,6 +8634,27 @@
           "country_name": "Japan"
         },
         {
+          "country_code": "NZ",
+          "primary_scope": "phf_monthly",
+          "primary_label": "All Sources",
+          "primary_url": "https://www.phfscience.nz/digital-library/",
+          "primary_type": "web",
+          "parser_primary": "nz_phf_internal_crawler",
+          "notes": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler",
+          "sources": [
+            {
+              "scope": "phf_monthly",
+              "label": "All Sources",
+              "url": "https://www.phfscience.nz/digital-library/",
+              "machine_url": null,
+              "type": "web",
+              "cadence": "monthly",
+              "description": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler"
+            }
+          ],
+          "country_name": "New Zealand"
+        },
+        {
           "country_code": "US",
           "primary_scope": "nndss_api",
           "primary_label": "US CDC NNDSS",
@@ -8173,8 +8685,8 @@
       "name_en": "Legionellosis",
       "name_zh": "军团菌病",
       "generated_at": "2026-05-09T00:00:00+00:00",
-      "record_count": 2090,
-      "country_count": 3,
+      "record_count": 2162,
+      "country_count": 4,
       "countries": [
         {
           "code": "AU",
@@ -8183,6 +8695,10 @@
         {
           "code": "JP",
           "name": "Japan"
+        },
+        {
+          "code": "NZ",
+          "name": "New Zealand"
         },
         {
           "code": "US",
@@ -8238,6 +8754,27 @@
           "country_name": "Japan"
         },
         {
+          "country_code": "NZ",
+          "primary_scope": "phf_monthly",
+          "primary_label": "All Sources",
+          "primary_url": "https://www.phfscience.nz/digital-library/",
+          "primary_type": "web",
+          "parser_primary": "nz_phf_internal_crawler",
+          "notes": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler",
+          "sources": [
+            {
+              "scope": "phf_monthly",
+              "label": "All Sources",
+              "url": "https://www.phfscience.nz/digital-library/",
+              "machine_url": null,
+              "type": "web",
+              "cadence": "monthly",
+              "description": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler"
+            }
+          ],
+          "country_name": "New Zealand"
+        },
+        {
           "country_code": "US",
           "primary_scope": "nndss_api",
           "primary_label": "US CDC NNDSS",
@@ -8268,12 +8805,16 @@
       "name_en": "Listeriosis",
       "name_zh": "李斯特菌病",
       "generated_at": "2026-05-09T00:00:00+00:00",
-      "record_count": 596,
-      "country_count": 2,
+      "record_count": 668,
+      "country_count": 3,
       "countries": [
         {
           "code": "AU",
           "name": "Australia"
+        },
+        {
+          "code": "NZ",
+          "name": "New Zealand"
         },
         {
           "code": "US",
@@ -8306,6 +8847,27 @@
             }
           ],
           "country_name": "Australia"
+        },
+        {
+          "country_code": "NZ",
+          "primary_scope": "phf_monthly",
+          "primary_label": "All Sources",
+          "primary_url": "https://www.phfscience.nz/digital-library/",
+          "primary_type": "web",
+          "parser_primary": "nz_phf_internal_crawler",
+          "notes": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler",
+          "sources": [
+            {
+              "scope": "phf_monthly",
+              "label": "All Sources",
+              "url": "https://www.phfscience.nz/digital-library/",
+              "machine_url": null,
+              "type": "web",
+              "cadence": "monthly",
+              "description": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler"
+            }
+          ],
+          "country_name": "New Zealand"
         },
         {
           "country_code": "US",
@@ -8408,8 +8970,8 @@
       "name_en": "Meningococcal disease",
       "name_zh": "脑膜炎球菌病",
       "generated_at": "2026-05-09T00:00:00+00:00",
-      "record_count": 2130,
-      "country_count": 4,
+      "record_count": 2202,
+      "country_count": 5,
       "countries": [
         {
           "code": "AU",
@@ -8422,6 +8984,10 @@
         {
           "code": "JP",
           "name": "Japan"
+        },
+        {
+          "code": "NZ",
+          "name": "New Zealand"
         },
         {
           "code": "US",
@@ -8514,6 +9080,27 @@
             }
           ],
           "country_name": "Japan"
+        },
+        {
+          "country_code": "NZ",
+          "primary_scope": "phf_monthly",
+          "primary_label": "All Sources",
+          "primary_url": "https://www.phfscience.nz/digital-library/",
+          "primary_type": "web",
+          "parser_primary": "nz_phf_internal_crawler",
+          "notes": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler",
+          "sources": [
+            {
+              "scope": "phf_monthly",
+              "label": "All Sources",
+              "url": "https://www.phfscience.nz/digital-library/",
+              "machine_url": null,
+              "type": "web",
+              "cadence": "monthly",
+              "description": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler"
+            }
+          ],
+          "country_name": "New Zealand"
         },
         {
           "country_code": "US",
@@ -8736,12 +9323,16 @@
       "name_en": "Salmonellosis",
       "name_zh": "沙门氏菌病",
       "generated_at": "2026-05-09T00:00:00+00:00",
-      "record_count": 1326,
-      "country_count": 2,
+      "record_count": 1398,
+      "country_count": 3,
       "countries": [
         {
           "code": "AU",
           "name": "Australia"
+        },
+        {
+          "code": "NZ",
+          "name": "New Zealand"
         },
         {
           "code": "US",
@@ -8774,6 +9365,27 @@
             }
           ],
           "country_name": "Australia"
+        },
+        {
+          "country_code": "NZ",
+          "primary_scope": "phf_monthly",
+          "primary_label": "All Sources",
+          "primary_url": "https://www.phfscience.nz/digital-library/",
+          "primary_type": "web",
+          "parser_primary": "nz_phf_internal_crawler",
+          "notes": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler",
+          "sources": [
+            {
+              "scope": "phf_monthly",
+              "label": "All Sources",
+              "url": "https://www.phfscience.nz/digital-library/",
+              "machine_url": null,
+              "type": "web",
+              "cadence": "monthly",
+              "description": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler"
+            }
+          ],
+          "country_name": "New Zealand"
         },
         {
           "country_code": "US",
@@ -9409,8 +10021,8 @@
       "name_en": "Typhoid fever",
       "name_zh": "伤寒",
       "generated_at": "2026-05-09T00:00:00+00:00",
-      "record_count": 1337,
-      "country_count": 3,
+      "record_count": 1409,
+      "country_count": 4,
       "countries": [
         {
           "code": "AU",
@@ -9419,6 +10031,10 @@
         {
           "code": "JP",
           "name": "Japan"
+        },
+        {
+          "code": "NZ",
+          "name": "New Zealand"
         },
         {
           "code": "US",
@@ -9472,6 +10088,27 @@
             }
           ],
           "country_name": "Japan"
+        },
+        {
+          "country_code": "NZ",
+          "primary_scope": "phf_monthly",
+          "primary_label": "All Sources",
+          "primary_url": "https://www.phfscience.nz/digital-library/",
+          "primary_type": "web",
+          "parser_primary": "nz_phf_internal_crawler",
+          "notes": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler",
+          "sources": [
+            {
+              "scope": "phf_monthly",
+              "label": "All Sources",
+              "url": "https://www.phfscience.nz/digital-library/",
+              "machine_url": null,
+              "type": "web",
+              "cadence": "monthly",
+              "description": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler"
+            }
+          ],
+          "country_name": "New Zealand"
         },
         {
           "country_code": "US",
@@ -10984,12 +11621,16 @@
       "name_en": "Yersiniosis",
       "name_zh": "耶尔森菌病",
       "generated_at": "2026-05-09T00:00:00+00:00",
-      "record_count": 317,
-      "country_count": 1,
+      "record_count": 389,
+      "country_count": 2,
       "countries": [
         {
           "code": "AU",
           "name": "Australia"
+        },
+        {
+          "code": "NZ",
+          "name": "New Zealand"
         }
       ],
       "json_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d155.json",
@@ -11018,8 +11659,272 @@
             }
           ],
           "country_name": "Australia"
+        },
+        {
+          "country_code": "NZ",
+          "primary_scope": "phf_monthly",
+          "primary_label": "All Sources",
+          "primary_url": "https://www.phfscience.nz/digital-library/",
+          "primary_type": "web",
+          "parser_primary": "nz_phf_internal_crawler",
+          "notes": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler",
+          "sources": [
+            {
+              "scope": "phf_monthly",
+              "label": "All Sources",
+              "url": "https://www.phfscience.nz/digital-library/",
+              "machine_url": null,
+              "type": "web",
+              "cadence": "monthly",
+              "description": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler"
+            }
+          ],
+          "country_name": "New Zealand"
         }
       ]
+    },
+    {
+      "kind": "disease",
+      "id": "d156",
+      "disease_id": "D156",
+      "slug": "gastroenteritis",
+      "name_en": "Gastroenteritis",
+      "name_zh": "胃肠炎",
+      "generated_at": "2026-05-09T00:00:00+00:00",
+      "record_count": 72,
+      "country_count": 1,
+      "countries": [
+        {
+          "code": "NZ",
+          "name": "New Zealand"
+        }
+      ],
+      "json_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d156.json",
+      "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d156.csv",
+      "relative_json_path": "diseases/d156.json",
+      "relative_csv_path": "diseases/d156.csv",
+      "site_json_path": "/site-data/diseases/d156.json",
+      "source_info": [
+        {
+          "country_code": "NZ",
+          "primary_scope": "phf_monthly",
+          "primary_label": "All Sources",
+          "primary_url": "https://www.phfscience.nz/digital-library/",
+          "primary_type": "web",
+          "parser_primary": "nz_phf_internal_crawler",
+          "notes": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler",
+          "sources": [
+            {
+              "scope": "phf_monthly",
+              "label": "All Sources",
+              "url": "https://www.phfscience.nz/digital-library/",
+              "machine_url": null,
+              "type": "web",
+              "cadence": "monthly",
+              "description": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler"
+            }
+          ],
+          "country_name": "New Zealand"
+        }
+      ]
+    },
+    {
+      "kind": "disease",
+      "id": "d157",
+      "disease_id": "D157",
+      "slug": "invasive-group-a-streptococcal-infection",
+      "name_en": "Invasive group A streptococcal infection",
+      "name_zh": "侵袭性A族链球菌感染",
+      "generated_at": "2026-05-09T00:00:00+00:00",
+      "record_count": 27,
+      "country_count": 1,
+      "countries": [
+        {
+          "code": "NZ",
+          "name": "New Zealand"
+        }
+      ],
+      "json_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d157.json",
+      "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d157.csv",
+      "relative_json_path": "diseases/d157.json",
+      "relative_csv_path": "diseases/d157.csv",
+      "site_json_path": "/site-data/diseases/d157.json",
+      "source_info": [
+        {
+          "country_code": "NZ",
+          "primary_scope": "phf_monthly",
+          "primary_label": "All Sources",
+          "primary_url": "https://www.phfscience.nz/digital-library/",
+          "primary_type": "web",
+          "parser_primary": "nz_phf_internal_crawler",
+          "notes": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler",
+          "sources": [
+            {
+              "scope": "phf_monthly",
+              "label": "All Sources",
+              "url": "https://www.phfscience.nz/digital-library/",
+              "machine_url": null,
+              "type": "web",
+              "cadence": "monthly",
+              "description": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler"
+            }
+          ],
+          "country_name": "New Zealand"
+        }
+      ]
+    },
+    {
+      "kind": "disease",
+      "id": "d158",
+      "disease_id": "D158",
+      "slug": "rheumatic-fever",
+      "name_en": "Rheumatic fever",
+      "name_zh": "风湿热",
+      "generated_at": "2026-05-09T00:00:00+00:00",
+      "record_count": 72,
+      "country_count": 1,
+      "countries": [
+        {
+          "code": "NZ",
+          "name": "New Zealand"
+        }
+      ],
+      "json_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d158.json",
+      "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d158.csv",
+      "relative_json_path": "diseases/d158.json",
+      "relative_csv_path": "diseases/d158.csv",
+      "site_json_path": "/site-data/diseases/d158.json",
+      "source_info": [
+        {
+          "country_code": "NZ",
+          "primary_scope": "phf_monthly",
+          "primary_label": "All Sources",
+          "primary_url": "https://www.phfscience.nz/digital-library/",
+          "primary_type": "web",
+          "parser_primary": "nz_phf_internal_crawler",
+          "notes": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler",
+          "sources": [
+            {
+              "scope": "phf_monthly",
+              "label": "All Sources",
+              "url": "https://www.phfscience.nz/digital-library/",
+              "machine_url": null,
+              "type": "web",
+              "cadence": "monthly",
+              "description": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler"
+            }
+          ],
+          "country_name": "New Zealand"
+        }
+      ]
+    },
+    {
+      "kind": "disease",
+      "id": "d159",
+      "disease_id": "D159",
+      "slug": "rickettsial-disease",
+      "name_en": "Rickettsial disease",
+      "name_zh": "立克次体病",
+      "generated_at": "2026-05-09T00:00:00+00:00",
+      "record_count": 71,
+      "country_count": 1,
+      "countries": [
+        {
+          "code": "NZ",
+          "name": "New Zealand"
+        }
+      ],
+      "json_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d159.json",
+      "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d159.csv",
+      "relative_json_path": "diseases/d159.json",
+      "relative_csv_path": "diseases/d159.csv",
+      "site_json_path": "/site-data/diseases/d159.json",
+      "source_info": [
+        {
+          "country_code": "NZ",
+          "primary_scope": "phf_monthly",
+          "primary_label": "All Sources",
+          "primary_url": "https://www.phfscience.nz/digital-library/",
+          "primary_type": "web",
+          "parser_primary": "nz_phf_internal_crawler",
+          "notes": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler",
+          "sources": [
+            {
+              "scope": "phf_monthly",
+              "label": "All Sources",
+              "url": "https://www.phfscience.nz/digital-library/",
+              "machine_url": null,
+              "type": "web",
+              "cadence": "monthly",
+              "description": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler"
+            }
+          ],
+          "country_name": "New Zealand"
+        }
+      ]
+    },
+    {
+      "kind": "disease",
+      "id": "d160",
+      "disease_id": "D160",
+      "slug": "vtec-stec-infection",
+      "name_en": "VTEC/STEC infection",
+      "name_zh": "产志贺毒素大肠杆菌感染",
+      "generated_at": "2026-05-09T00:00:00+00:00",
+      "record_count": 72,
+      "country_count": 1,
+      "countries": [
+        {
+          "code": "NZ",
+          "name": "New Zealand"
+        }
+      ],
+      "json_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d160.json",
+      "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d160.csv",
+      "relative_json_path": "diseases/d160.json",
+      "relative_csv_path": "diseases/d160.csv",
+      "site_json_path": "/site-data/diseases/d160.json",
+      "source_info": [
+        {
+          "country_code": "NZ",
+          "primary_scope": "phf_monthly",
+          "primary_label": "All Sources",
+          "primary_url": "https://www.phfscience.nz/digital-library/",
+          "primary_type": "web",
+          "parser_primary": "nz_phf_internal_crawler",
+          "notes": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler",
+          "sources": [
+            {
+              "scope": "phf_monthly",
+              "label": "All Sources",
+              "url": "https://www.phfscience.nz/digital-library/",
+              "machine_url": null,
+              "type": "web",
+              "cadence": "monthly",
+              "description": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler"
+            }
+          ],
+          "country_name": "New Zealand"
+        }
+      ]
+    },
+    {
+      "kind": "disease",
+      "id": "d161",
+      "disease_id": "D161",
+      "slug": "decompression-sickness",
+      "name_en": "Decompression sickness",
+      "name_zh": "减压病",
+      "generated_at": "2026-05-09T00:00:00+00:00",
+      "record_count": 0,
+      "country_count": 0,
+      "countries": [],
+      "json_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d161.json",
+      "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d161.csv",
+      "relative_json_path": "diseases/d161.json",
+      "relative_csv_path": "diseases/d161.csv",
+      "site_json_path": "/site-data/diseases/d161.json",
+      "source_info": []
     }
   ]
 }

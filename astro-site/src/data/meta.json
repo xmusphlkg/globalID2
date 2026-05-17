@@ -1,7 +1,7 @@
 {
   "generated_at": "2026-05-09T00:00:00+00:00",
-  "total_countries": 4,
-  "total_diseases": 150,
+  "total_countries": 5,
+  "total_diseases": 156,
   "total_reports": 1,
   "countries": [
     {
@@ -114,6 +114,38 @@
             "type": "web",
             "cadence": "weekly",
             "description": "Japan weekly infectious disease surveillance via NIID/JIHS."
+          }
+        ]
+      }
+    },
+    {
+      "code": "NZ",
+      "name": "New Zealand",
+      "language": "en",
+      "total_cases": 2777430,
+      "total_deaths": 0,
+      "disease_count": 30,
+      "date_range": {
+        "start": "2018-05-01",
+        "end": "2026-03-01"
+      },
+      "source_info": {
+        "country_code": "NZ",
+        "primary_scope": "phf_monthly",
+        "primary_label": "All Sources",
+        "primary_url": "https://www.phfscience.nz/digital-library/",
+        "primary_type": "web",
+        "parser_primary": "nz_phf_internal_crawler",
+        "notes": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler",
+        "sources": [
+          {
+            "scope": "phf_monthly",
+            "label": "All Sources",
+            "url": "https://www.phfscience.nz/digital-library/",
+            "machine_url": null,
+            "type": "web",
+            "cadence": "monthly",
+            "description": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler"
           }
         ]
       }
