@@ -33,7 +33,7 @@ import { Badge, Card, Color, Grid, Select, SelectItem, Text, TextInput, Title } 
 type KnowledgeStatusFilter = "all" | "published" | "requires_review" | "fallback";
 type RefreshPriority = "low" | "normal" | "high" | "urgent";
 type RefreshGenerator = "ai" | "auto" | "template";
-type SourceGroup = "who" | "wikidata" | "wikipedia" | "msd";
+type SourceGroup = "who" | "wikidata" | "wikipedia" | "pubmed" | "msd";
 
 const SOURCE_GROUPS: Array<{
   value: SourceGroup;
@@ -41,31 +41,37 @@ const SOURCE_GROUPS: Array<{
   note: string;
   color: Color;
 }> = [
-  {
-    value: "who",
-    label: "WHO",
-    note: "health topics, fact sheets, and outbreak news",
-    color: "teal",
-  },
-  {
-    value: "wikidata",
-    label: "Wikidata",
-    note: "structured identifiers and aliases",
-    color: "violet",
-  },
-  {
-    value: "wikipedia",
-    label: "Wikipedia",
-    note: "article text and section structure",
-    color: "sky",
-  },
-  {
-    value: "msd",
-    label: "MSD metadata",
-    note: "links and metadata only, not public text",
-    color: "amber",
-  },
-];
+    {
+      value: "who",
+      label: "WHO",
+      note: "health topics, fact sheets, and outbreak news",
+      color: "teal",
+    },
+    {
+      value: "wikidata",
+      label: "Wikidata",
+      note: "structured identifiers and aliases",
+      color: "violet",
+    },
+    {
+      value: "wikipedia",
+      label: "Wikipedia",
+      note: "article text and section structure",
+      color: "sky",
+    },
+    {
+      value: "pubmed",
+      label: "PubMed",
+      note: "review article abstracts for supplementary knowledge",
+      color: "rose",
+    },
+    {
+      value: "msd",
+      label: "MSD metadata",
+      note: "links and metadata only, not public text",
+      color: "amber",
+    },
+  ];
 
 function formatDateTime(value?: string | null): string {
   if (!value) return "-";
@@ -145,6 +151,8 @@ function sourceTypeColor(sourceType: string): Color {
       return "violet";
     case "wikipedia":
       return "sky";
+    case "pubmed":
+      return "rose";
     case "msd":
       return "amber";
     default:
@@ -432,7 +440,7 @@ export default function KnowledgePage() {
   const [statusFilter, setStatusFilter] = useState<KnowledgeStatusFilter>("all");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [selectedDiseaseId, setSelectedDiseaseId] = useState<string | null>(null);
-  const [refreshSources, setRefreshSources] = useState<SourceGroup[]>(["who", "wikidata", "wikipedia"]);
+  const [refreshSources, setRefreshSources] = useState<SourceGroup[]>(["who", "wikidata", "wikipedia", "pubmed"]);
   const [forceRefresh, setForceRefresh] = useState(true);
   const [generator, setGenerator] = useState<RefreshGenerator>("ai");
   const [priority, setPriority] = useState<RefreshPriority>("normal");

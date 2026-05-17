@@ -87,7 +87,7 @@ class DiseaseKnowledgeTaskSkipped(BaseModel):
 
 class DiseaseKnowledgeStartRequest(BaseModel):
     disease_ids: List[str] = Field(..., min_length=1)
-    source: List[str] = Field(default_factory=list, description="Source groups: who / wikidata / wikipedia / msd")
+    source: List[str] = Field(default_factory=list, description="Source groups: who / wikidata / wikipedia / pubmed / msd")
     force: bool = False
     generator: str = Field("ai", description="ai / auto / template")
     priority: str = Field("normal")
@@ -775,8 +775,8 @@ def _normalize_reuse_strategy(value: str) -> str:
 def _normalize_source_groups(values: list[str] | None) -> list[str]:
     cleaned = [str(value).strip().lower() for value in (values or []) if str(value).strip()]
     if not cleaned:
-        cleaned = ["who", "wikidata", "wikipedia", "msd"]
-    allowed = {"who", "wikidata", "wikipedia", "msd"}
+        cleaned = ["who", "wikidata", "wikipedia", "pubmed", "msd"]
+    allowed = {"who", "wikidata", "wikipedia", "pubmed", "msd"}
     invalid = sorted({value for value in cleaned if value not in allowed})
     if invalid:
         joined = ", ".join(invalid)
