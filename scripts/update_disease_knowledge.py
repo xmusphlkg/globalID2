@@ -92,7 +92,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Update source-grounded disease knowledge briefs")
     parser.add_argument("--disease-csv", type=Path, default=ROOT / "configs" / "standard_diseases.csv")
     parser.add_argument("--disease-id", action="append", help="Standard disease ID to update, e.g. D001")
-    parser.add_argument("--source", action="append", choices=sorted(["who", "wikidata", "wikipedia", "msd"]), help="Source group to fetch")
+    parser.add_argument("--source", action="append", choices=sorted(["who", "wikidata", "wikipedia", "pubmed", "msd"]), help="Source group to fetch")
     parser.add_argument("--force", action="store_true", help="Fetch sources even when existing rows are present")
     parser.add_argument(
         "--generator",

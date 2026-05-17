@@ -28,7 +28,7 @@ class BriefValidationResult:
 class SourceGroundedBriefGenerator:
     """Generate bilingual disease briefs from short source records."""
 
-    PUBLIC_SOURCE_TYPES = {"who", "who_don", "wikidata", "wikipedia"}
+    PUBLIC_SOURCE_TYPES = {"who", "who_don", "wikidata", "wikipedia", "pubmed"}
     AUTHORITATIVE_SOURCE_TYPES = {"who", "who_don"}
 
     def generate(
@@ -185,7 +185,7 @@ class SourceGroundedBriefGenerator:
     def _source_confidence(self, source_types: set[str]) -> str:
         if source_types & self.AUTHORITATIVE_SOURCE_TYPES:
             return "high"
-        if source_types & {"wikidata", "wikipedia"}:
+        if source_types & {"wikidata", "wikipedia", "pubmed"}:
             return "medium"
         return "low"
 

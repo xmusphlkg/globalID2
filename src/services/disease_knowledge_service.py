@@ -32,6 +32,7 @@ SOURCE_GROUPS = {
     "who": ["who", "who_don"],
     "wikidata": ["wikidata"],
     "wikipedia": ["wikipedia"],
+    "pubmed": ["pubmed"],
     "msd": ["msd"],
 }
 
@@ -61,7 +62,7 @@ def load_standard_diseases(path: Path = DEFAULT_DISEASE_CSV) -> list[dict[str, A
 def expand_sources(values: list[str] | None) -> list[str]:
     """Expand source groups into concrete adapters."""
     if not values:
-        values = ["who", "wikidata", "wikipedia", "msd"]
+        values = ["who", "wikidata", "wikipedia", "pubmed", "msd"]
     expanded: list[str] = []
     for value in values:
         for adapter in SOURCE_GROUPS.get(value, []):
