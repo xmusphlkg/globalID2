@@ -154,3 +154,10 @@ D153,Non-tuberculous mycobacterial infection,非结核分枝杆菌感染,Bacteri
 D154,Ross River virus infection,罗斯河病毒感染,Viral,,,"AU NINDSS surveillance concept",AU NINDSS
 D155,Yersiniosis,耶尔森菌病,Bacterial,,,"AU NINDSS surveillance concept",AU NINDSS
 D999,Total,甲乙丙类传染病总计,Summary,,,Aggregate total for reporting,China CDC
+
+D156,Gastroenteritis,胃肠炎,Bacterial,A09,1A40,Gastroenteritis from common source or foodborne intoxication,NZ PHF Science
+D157,Invasive group A streptococcal infection,侵袭性A族链球菌感染,Bacterial,A49.1,1B50,Invasive infection caused by Group A Streptococcus,NZ PHF Science
+D158,Rheumatic fever,风湿热,Bacterial,I00,BA40,Inflammatory disease following Group A Streptococcal infection,NZ PHF Science
+D159,Rickettsial disease,立克次体病,Bacterial,A79,1C30,Infection caused by Rickettsia species,NZ PHF Science
+D160,VTEC/STEC infection,产志贺毒素大肠杆菌感染,Bacterial,A04.3,1A03,Verotoxin/Shiga toxin-producing E. coli infection,NZ PHF Science
+D161,Decompression sickness,减压病,Other,T70.3,NF04,Condition caused by dissolved gases in body during decompression,NZ PHF Science
