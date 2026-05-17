@@ -39,11 +39,12 @@ import {
   CheckSquare2,
   RefreshCcw,
   Mail,
+  GitBranch,
 } from "lucide-react";
 import { Badge, Card, Grid, Text, Title, Color } from "@tremor/react";
 import { useSettings } from "@/lib/hooks/useSettings";
 
-const AI_TYPES = "process_data,generate_report,generate_section,review_section,update_disease_knowledge";
+const AI_TYPES = "process_data,generate_report,generate_section,review_section,update_disease_knowledge,agent_workflow";
 const TASK_PAGE_SIZE = 100;
 
 const statusBadge: Record<string, Color> = {
@@ -895,6 +896,13 @@ function AIPageContent() {
             Open AI Interactions
           </Link>
           <Link
+            href="/ai/agent-runs"
+            className="inline-flex items-center gap-1 rounded-lg border border-cyan-300/70 bg-cyan-50 px-3 py-1.5 text-xs font-medium text-cyan-700 transition hover:bg-cyan-100 dark:border-cyan-900 dark:bg-cyan-950/25 dark:text-cyan-300"
+          >
+            <GitBranch className="h-3.5 w-3.5" />
+            {t(lang, "agent_runs")}
+          </Link>
+          <Link
             href="/ai/models"
             className="inline-flex items-center gap-1 rounded-lg border border-sky-300/70 bg-sky-50 px-3 py-1.5 text-xs font-medium text-sky-700 transition hover:bg-sky-100 dark:border-sky-900 dark:bg-sky-950/25 dark:text-sky-300"
           >
@@ -1034,7 +1042,7 @@ function AIPageContent() {
             onChange={(e) => setTypeFilter(e.target.value)}
           >
             <option value="">All AI types</option>
-            {["process_data", "generate_report", "generate_section", "review_section", "update_disease_knowledge"].map(
+            {["process_data", "generate_report", "generate_section", "review_section", "update_disease_knowledge", "agent_workflow"].map(
               (tp) => (<option key={tp} value={tp}>{tp}</option>),
             )}
           </select>
@@ -1128,6 +1136,15 @@ function AIPageContent() {
                     </div>
                   )}
                   <div className="mb-3 flex flex-wrap gap-2">
+                    {expandedUuid === task.task_uuid && task.task_type === "agent_workflow" && (
+                      <Link
+                        href={`/ai/agent-runs?task_uuid=${encodeURIComponent(task.task_uuid)}`}
+                        className="inline-flex items-center gap-1 rounded-lg border border-cyan-300/70 bg-cyan-50 px-3 py-1.5 text-xs font-medium text-cyan-700 transition hover:bg-cyan-100 dark:border-cyan-900 dark:bg-cyan-950/25 dark:text-cyan-300"
+                      >
+                        <GitBranch className="h-3.5 w-3.5" />
+                        {lang === "zh" ? "查看 Agent Run" : "View Agent Run"}
+                      </Link>
+                    )}
                     {expandedUuid === task.task_uuid && ["pending", "queued", "failed", "cancelled"].includes(task.status) && (
                       <button
                         onClick={() => executeTask(task.task_uuid)}
