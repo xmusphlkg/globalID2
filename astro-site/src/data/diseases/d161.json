@@ -1,0 +1,20 @@
+{
+  "disease_id": "D161",
+  "name_en": "Decompression sickness",
+  "name_zh": "减压病",
+  "category": "Other",
+  "icd_10": "T70.3",
+  "icd_11": "NF04",
+  "description": "Condition caused by dissolved gases in body during decompression",
+  "slug": "decompression-sickness",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0,
+  "generated_at": "2026-05-09T00:00:00+00:00",
+  "source_info": []
+}

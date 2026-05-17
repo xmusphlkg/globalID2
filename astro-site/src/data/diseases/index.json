@@ -1498,5 +1498,65 @@
     "icd_11": "",
     "description": "AU NINDSS surveillance concept",
     "slug": "yersiniosis"
+  },
+  {
+    "disease_id": "D156",
+    "name_en": "Gastroenteritis",
+    "name_zh": "胃肠炎",
+    "category": "Bacterial",
+    "icd_10": "A09",
+    "icd_11": "1A40",
+    "description": "Gastroenteritis from common source or foodborne intoxication",
+    "slug": "gastroenteritis"
+  },
+  {
+    "disease_id": "D157",
+    "name_en": "Invasive group A streptococcal infection",
+    "name_zh": "侵袭性A族链球菌感染",
+    "category": "Bacterial",
+    "icd_10": "A49.1",
+    "icd_11": "1B50",
+    "description": "Invasive infection caused by Group A Streptococcus",
+    "slug": "invasive-group-a-streptococcal-infection"
+  },
+  {
+    "disease_id": "D158",
+    "name_en": "Rheumatic fever",
+    "name_zh": "风湿热",
+    "category": "Bacterial",
+    "icd_10": "I00",
+    "icd_11": "BA40",
+    "description": "Inflammatory disease following Group A Streptococcal infection",
+    "slug": "rheumatic-fever"
+  },
+  {
+    "disease_id": "D159",
+    "name_en": "Rickettsial disease",
+    "name_zh": "立克次体病",
+    "category": "Bacterial",
+    "icd_10": "A79",
+    "icd_11": "1C30",
+    "description": "Infection caused by Rickettsia species",
+    "slug": "rickettsial-disease"
+  },
+  {
+    "disease_id": "D160",
+    "name_en": "VTEC/STEC infection",
+    "name_zh": "产志贺毒素大肠杆菌感染",
+    "category": "Bacterial",
+    "icd_10": "A04.3",
+    "icd_11": "1A03",
+    "description": "Verotoxin/Shiga toxin-producing E. coli infection",
+    "slug": "vtec-stec-infection"
+  },
+  {
+    "disease_id": "D161",
+    "name_en": "Decompression sickness",
+    "name_zh": "减压病",
+    "category": "Other",
+    "icd_10": "T70.3",
+    "icd_11": "NF04",
+    "description": "Condition caused by dissolved gases in body during decompression",
+    "slug": "decompression-sickness"
   }
 ]
