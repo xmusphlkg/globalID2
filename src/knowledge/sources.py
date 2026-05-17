@@ -35,6 +35,7 @@ SOURCE_LICENSES = {
     "who_don": "WHO Disease Outbreak News API; cite WHO URL; non-commercial/permission rules may apply",
     "wikidata": "Wikidata structured data; CC0 unless source-specific references apply",
     "wikipedia": "Wikipedia summary; CC BY-SA; attribution required",
+    "pubmed": "PubMed/PMC open-access abstracts; NLM terms; cite PMID/DOI",
     "msd": "MSD Manual metadata only; public reuse requires permission/review",
 }
 
@@ -66,6 +67,13 @@ TRUSTED_SOURCE_REGISTRY = (
         "trust_level": "medium",
         "republish_policy": "short attribution-required summary",
         "notes": "Use disease pages only, not disambiguation pages.",
+    },
+    {
+        "source_type": "pubmed",
+        "label": "PubMed/PMC review articles",
+        "trust_level": "medium",
+        "republish_policy": "abstract summary only",
+        "notes": "Use recent review articles for supplementary clinical and epidemiological context when WHO sources are unavailable.",
     },
     {
         "source_type": "msd",
@@ -145,6 +153,7 @@ class DiseaseKnowledgeFetcher:
             "who_don": self._fetch_who_don,
             "wikidata": self._fetch_wikidata,
             "wikipedia": self._fetch_wikipedia,
+            "pubmed": self._fetch_pubmed,
             "msd": self._build_msd_metadata,
         }
         for key in enabled:
@@ -505,6 +514,153 @@ class DiseaseKnowledgeFetcher:
         if "refers to:" in extract and len(extract) < 250:
             return True
         return False
+
+    def _fetch_pubmed(self, disease: dict[str, Any]) -> list[SourceCandidate]:
+        """Fetch recent review articles from PubMed E-utilities for supplementary knowledge."""
+        disease_id = str(disease["disease_id"])
+        name = str(disease.get("name_en") or disease.get("standard_name_en") or disease_id)
+
+        # Search for recent review articles about this disease
+        search_term = f'"{name}"[Title] AND (review[pt] OR systematic review[pt]) AND ("last 10 years"[PDat])'
+        search_response = self._get(
+            "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
+            params={
+                "db": "pubmed",
+                "term": search_term,
+                "retmax": "5",
+                "sort": "relevance",
+                "retmode": "json",
+            },
+        )
+        if search_response is None or search_response.status_code != 200:
+            # Fallback: broader search without title restriction
+            search_term = f'"{name}" AND (review[pt]) AND ("last 5 years"[PDat])'
+            search_response = self._get(
+                "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
+                params={
+                    "db": "pubmed",
+                    "term": search_term,
+                    "retmax": "3",
+                    "sort": "relevance",
+                    "retmode": "json",
+                },
+            )
+            if search_response is None or search_response.status_code != 200:
+                return []
+
+        try:
+            search_data = search_response.json()
+            id_list = search_data.get("esearchresult", {}).get("idlist", [])
+        except (ValueError, KeyError):
+            return []
+
+        if not id_list:
+            return []
+
+        # Fetch article summaries
+        summary_response = self._get(
+            "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi",
+            params={
+                "db": "pubmed",
+                "id": ",".join(id_list[:3]),
+                "retmode": "json",
+            },
+        )
+        if summary_response is None or summary_response.status_code != 200:
+            return []
+
+        try:
+            summary_data = summary_response.json()
+            results = summary_data.get("result", {})
+        except (ValueError, KeyError):
+            return []
+
+        # Fetch abstracts via efetch
+        abstract_response = self._get(
+            "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi",
+            params={
+                "db": "pubmed",
+                "id": ",".join(id_list[:3]),
+                "rettype": "abstract",
+                "retmode": "xml",
+            },
+        )
+        abstracts_by_pmid: dict[str, str] = {}
+        if abstract_response is not None and abstract_response.status_code == 200:
+            try:
+                abstract_soup = BeautifulSoup(abstract_response.content, "xml")
+                for article in abstract_soup.find_all("PubmedArticle"):
+                    pmid_tag = article.find("PMID")
+                    abstract_tag = article.find("Abstract")
+                    if pmid_tag and abstract_tag:
+                        pmid = pmid_tag.get_text(strip=True)
+                        abstract_text = " ".join(
+                            t.get_text(" ", strip=True)
+                            for t in abstract_tag.find_all("AbstractText")
+                        )
+                        abstracts_by_pmid[pmid] = abstract_text
+            except Exception as exc:
+                logger.debug("PubMed abstract XML parse failed: %s", exc)
+
+        candidates: list[SourceCandidate] = []
+        uid_list = results.get("uids", id_list[:3])
+        for pmid in uid_list:
+            article = results.get(str(pmid))
+            if not isinstance(article, dict):
+                continue
+
+            title = article.get("title") or ""
+            authors = article.get("authors") or []
+            first_author = authors[0].get("name", "") if authors else ""
+            pub_date = article.get("pubdate") or article.get("epubdate") or ""
+            source_journal = article.get("source") or ""
+            doi = ""
+            article_ids = article.get("articleids") or []
+            for aid in article_ids:
+                if isinstance(aid, dict) and aid.get("idtype") == "doi":
+                    doi = aid.get("value", "")
+                    break
+
+            pubmed_url = f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/"
+            abstract = abstracts_by_pmid.get(str(pmid), "")
+
+            # Build content text from abstract
+            content_text = abstract if abstract else f"Review article: {title}"
+            if len(content_text) > 2000:
+                content_text = content_text[:2000].rstrip() + "..."
+
+            # Build citation-style excerpt
+            citation = f"{first_author} et al. {title} {source_journal}. {pub_date}."
+            excerpt = f"{citation} {abstract[:400]}..." if abstract and len(abstract) > 400 else f"{citation} {abstract}"
+
+            candidates.append(
+                SourceCandidate(
+                    disease_id=disease_id,
+                    source_type="pubmed",
+                    source_name="PubMed",
+                    url=pubmed_url,
+                    resolved_url=pubmed_url,
+                    title=title.rstrip("."),
+                    license=SOURCE_LICENSES["pubmed"],
+                    raw_excerpt=self._clip(excerpt),
+                    content_text=content_text,
+                    content_sections=[
+                        {"heading": "Abstract", "text": self._clip(abstract) or ""}
+                    ] if abstract else [],
+                    review_status="approved",
+                    metadata={
+                        "pmid": str(pmid),
+                        "doi": doi,
+                        "first_author": first_author,
+                        "journal": source_journal,
+                        "pub_date": pub_date,
+                        "matched_name": name,
+                        "content_kind": "abstract",
+                    },
+                )
+            )
+
+        return candidates
 
     def _build_msd_metadata(self, disease: dict[str, Any]) -> list[SourceCandidate]:
         disease_id = str(disease["disease_id"])
