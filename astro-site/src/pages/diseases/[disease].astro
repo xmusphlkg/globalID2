@@ -5,6 +5,7 @@ import DownloadPanel from '../../components/DownloadPanel.astro';
 import DiseaseMonthlyBar from '../../components/charts/DiseaseMonthlyBar';
 import DiseaseCountryCurve from '../../components/charts/DiseaseCountryCurve';
 import { buildChartSourceMeta } from '../../utils/chartMeta';
+import { renderCitations, hasCitations } from '../../utils/citations';
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
 
@@ -250,9 +251,17 @@ const diseaseDataUrl = diseaseDownload?.site_json_path ?? `/site-data/diseases/$
               {knowledgeProfileAvailable ? (
                 <div class="space-y-5">
                   {officialSummaryEn && (
-                    <p class="max-w-4xl text-sm leading-6 text-[rgb(var(--text))]" data-lang-en={officialSummaryEn} data-lang-zh={officialSummaryZh ?? officialSummaryEn}>
-                      {officialSummaryEn}
-                    </p>
+                    hasCitations(officialSummaryEn) ? (
+                      <p class="max-w-4xl text-sm leading-6 text-[rgb(var(--text))] citation-text"
+                        data-lang-en-html={renderCitations(officialSummaryEn, knowledgeSourceEntries)}
+                        data-lang-zh-html={renderCitations(officialSummaryZh ?? officialSummaryEn, knowledgeSourceEntries)}
+                        set:html={renderCitations(officialSummaryEn, knowledgeSourceEntries)}
+                      />
+                    ) : (
+                      <p class="max-w-4xl text-sm leading-6 text-[rgb(var(--text))]" data-lang-en={officialSummaryEn} data-lang-zh={officialSummaryZh ?? officialSummaryEn}>
+                        {officialSummaryEn}
+                      </p>
+                    )
                   )}
 
                   <div class="profile-flow">
@@ -261,9 +270,17 @@ const diseaseDataUrl = diseaseDownload?.site_json_path ?? `/site-data/diseases/$
                         <div class="academic-meta-label" data-lang-en={section.labelEn} data-lang-zh={section.labelZh}>
                           {section.labelEn}
                         </div>
-                        <p class="mt-1 text-sm leading-6 text-[rgb(var(--text-muted))]" data-lang-en={section.en} data-lang-zh={section.zh}>
-                          {section.en}
-                        </p>
+                        {hasCitations(section.en) ? (
+                          <p class="mt-1 text-sm leading-6 text-[rgb(var(--text-muted))] citation-text"
+                            data-lang-en-html={renderCitations(section.en, knowledgeSourceEntries)}
+                            data-lang-zh-html={renderCitations(section.zh, knowledgeSourceEntries)}
+                            set:html={renderCitations(section.en, knowledgeSourceEntries)}
+                          />
+                        ) : (
+                          <p class="mt-1 text-sm leading-6 text-[rgb(var(--text-muted))]" data-lang-en={section.en} data-lang-zh={section.zh}>
+                            {section.en}
+                          </p>
+                        )}
                       </article>
                     ))}
 
@@ -271,7 +288,7 @@ const diseaseDataUrl = diseaseDownload?.site_json_path ?? `/site-data/diseases/$
                       <div class="academic-meta-label" data-lang-en="References" data-lang-zh="参考文献">References</div>
                       <ol class="mt-3 space-y-2">
                         {knowledgeSourceEntries.length > 0 ? knowledgeSourceEntries.map((source: any, index: number) => (
-                          <li>
+                          <li id={`ref-${index + 1}`}>
                             <a
                               href={source.resolved_url ?? source.url}
                               target="_blank"
