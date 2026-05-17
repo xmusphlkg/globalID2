@@ -63,6 +63,7 @@ const navGroups: NavGroup[] = [
     items: [
       { href: "/ai/models", labelKey: "ai_models", icon: Settings2 },
       { href: "/ai/tasks", labelKey: "ai_tasks", icon: Cpu },
+      { href: "/ai/agent-runs", labelKey: "agent_runs", icon: GitBranch },
       { href: "/ai/interactions", labelKey: "ai_interactions", icon: SearchIcon },
     ],
   },
