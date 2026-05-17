@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-04-23T22:46:04.188365+00:00",
+  "fetched_at": "2026-05-16T22:45:56.765430+00:00",
   "disease": "Listeriosis",
   "year": 2026,
   "month": 4,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1776984363867)/",
-            "rootActivityId": "24aaa82d-387c-4e94-8e70-b6afbff1eb6e",
+            "timestamp": "/Date(1778971556383)/",
+            "rootActivityId": "b698935e-6843-4e24-8c50-2d6329970351",
             "descriptor": {
               "Select": [
                 {
@@ -387,15 +387,15 @@
                         },
                         {
                           "C": [
-                            "NSW"
-                          ],
-                          "R": 2
+                            "NSW",
+                            "'<5'"
+                          ]
                         },
                         {
                           "C": [
-                            "NT"
-                          ],
-                          "R": 2
+                            "NT",
+                            "0L"
+                          ]
                         },
                         {
                           "C": [
@@ -405,15 +405,15 @@
                         },
                         {
                           "C": [
-                            "SA"
-                          ],
-                          "R": 2
+                            "SA",
+                            "'<5'"
+                          ]
                         },
                         {
                           "C": [
-                            "TAS"
-                          ],
-                          "R": 2
+                            "TAS",
+                            "0L"
+                          ]
                         },
                         {
                           "C": [
@@ -445,10 +445,10 @@
   },
   "parsed_counts": {
     "ACT": 0,
-    "NSW": 0,
+    "NSW": "'<5'",
     "NT": 0,
     "QLD": 0,
-    "SA": 0,
+    "SA": "'<5'",
     "TAS": 0,
     "VIC": "'<5'",
     "WA": 0

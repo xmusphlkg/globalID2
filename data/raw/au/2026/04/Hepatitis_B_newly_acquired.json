@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-04-23T22:46:02.837782+00:00",
+  "fetched_at": "2026-05-16T22:45:55.495599+00:00",
   "disease": "Hepatitis B (newly acquired)",
   "year": 2026,
   "month": 4,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1776984362509)/",
-            "rootActivityId": "c6a6529e-41ea-4e88-ab2b-4664c2a1032a",
+            "timestamp": "/Date(1778971555125)/",
+            "rootActivityId": "6105c610-5710-45c2-9e10-4156bdc3fcff",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'<5'"
+                          "A0": "'5'"
                         }
                       ]
                     },
@@ -382,14 +382,14 @@
                           ],
                           "C": [
                             "ACT",
-                            "0L"
+                            "'<5'"
                           ]
                         },
                         {
                           "C": [
-                            "NSW"
-                          ],
-                          "R": 2
+                            "NSW",
+                            "0L"
+                          ]
                         },
                         {
                           "C": [
@@ -423,9 +423,9 @@
                         },
                         {
                           "C": [
-                            "WA"
-                          ],
-                          "R": 2
+                            "WA",
+                            "'<5'"
+                          ]
                         }
                       ]
                     }
@@ -444,13 +444,13 @@
     ]
   },
   "parsed_counts": {
-    "ACT": 0,
+    "ACT": "'<5'",
     "NSW": 0,
     "NT": 0,
     "QLD": 0,
     "SA": "'<5'",
     "TAS": 0,
     "VIC": 0,
-    "WA": 0
+    "WA": "'<5'"
   }
 }

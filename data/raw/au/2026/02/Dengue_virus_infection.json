@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-04-23T22:45:44.217481+00:00",
+  "fetched_at": "2026-04-29T22:45:35.509340+00:00",
   "disease": "Dengue virus infection",
   "year": 2026,
   "month": 2,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1776984343893)/",
-            "rootActivityId": "74e0b0f4-8927-4d3c-be20-f99725c09938",
+            "timestamp": "/Date(1777502735175)/",
+            "rootActivityId": "d555d56b-82d0-4bd1-8e62-d772518d0cb0",
             "descriptor": {
               "Select": [
                 {

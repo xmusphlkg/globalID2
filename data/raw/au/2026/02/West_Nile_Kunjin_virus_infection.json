@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-04-23T22:45:51.587923+00:00",
+  "fetched_at": "2026-04-29T22:45:41.278897+00:00",
   "disease": "West Nile/Kunjin virus infection",
   "year": 2026,
   "month": 2,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1776984351300)/",
-            "rootActivityId": "8787e102-d32c-411e-b91d-18ddba6f8a76",
+            "timestamp": "/Date(1777502740987)/",
+            "rootActivityId": "5e654a15-c32a-438b-a88a-43f2545907cc",
             "descriptor": {
               "Select": [
                 {
