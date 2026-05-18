@@ -857,7 +857,7 @@
   }
 
   .chart-stage-with-aside {
-    @apply xl:grid-cols-[minmax(0, 1fr)_220px];
+    @apply xl:grid-cols-[minmax(0,1fr)_220px];
   }
 
   .chart-stage-with-wide-aside {
