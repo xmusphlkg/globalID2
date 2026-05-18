@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-05-16T22:46:04.112375+00:00",
+  "fetched_at": "2026-05-17T22:46:03.853107+00:00",
   "disease": "NON TB MYCO",
   "year": 2026,
   "month": 5,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1778971563785)/",
-            "rootActivityId": "5bd6e21f-a64e-44cd-b0fb-fca975d34562",
+            "timestamp": "/Date(1779057963516)/",
+            "rootActivityId": "e38d1c23-182a-4821-aecc-cb8cf77e7e60",
             "descriptor": {
               "Select": [
                 {
