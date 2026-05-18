@@ -154,10 +154,31 @@ D153,Non-tuberculous mycobacterial infection,非结核分枝杆菌感染,Bacteri
 D154,Ross River virus infection,罗斯河病毒感染,Viral,,,"AU NINDSS surveillance concept",AU NINDSS
 D155,Yersiniosis,耶尔森菌病,Bacterial,,,"AU NINDSS surveillance concept",AU NINDSS
 D999,Total,甲乙丙类传染病总计,Summary,,,Aggregate total for reporting,China CDC
-
 D156,Gastroenteritis,胃肠炎,Bacterial,A09,1A40,Gastroenteritis from common source or foodborne intoxication,NZ PHF Science
 D157,Invasive group A streptococcal infection,侵袭性A族链球菌感染,Bacterial,A49.1,1B50,Invasive infection caused by Group A Streptococcus,NZ PHF Science
 D158,Rheumatic fever,风湿热,Bacterial,I00,BA40,Inflammatory disease following Group A Streptococcal infection,NZ PHF Science
 D159,Rickettsial disease,立克次体病,Bacterial,A79,1C30,Infection caused by Rickettsia species,NZ PHF Science
 D160,VTEC/STEC infection,产志贺毒素大肠杆菌感染,Bacterial,A04.3,1A03,Verotoxin/Shiga toxin-producing E. coli infection,NZ PHF Science
 D161,Decompression sickness,减压病,Other,T70.3,NF04,Condition caused by dissolved gases in body during decompression,NZ PHF Science
+D162,HIV infection,人类免疫缺乏病毒感染,Viral,B20-B24,1C62,Human immunodeficiency virus infection surveillance concept,Taiwan, China CDC NIDSS
+D163,Hantavirus hemorrhagic fever,汉他病毒出血热,Viral,A98.5,1D67,Hantavirus hemorrhagic fever surveillance concept,Taiwan, China CDC NIDSS
+D164,Hantavirus pulmonary syndrome,汉他病毒肺症候群,Viral,B33.4,1D64,Hantavirus pulmonary syndrome surveillance concept,Taiwan, China CDC NIDSS
+D165,Amebiasis,阿米巴病,Parasitic,A06,1A36,Entamoeba histolytica infection surveillance concept,Taiwan, China CDC NIDSS
+D166,Multidrug-resistant tuberculosis,多重耐药结核病,Bacterial,A15-A19,1B10,Multidrug-resistant tuberculosis surveillance concept,Taiwan, China CDC NIDSS
+D167,Congenital syphilis,先天性梅毒,Bacterial,A50,1A70.1,Congenital syphilis surveillance concept,Taiwan, China CDC NIDSS
+D168,Congenital rubella syndrome,先天性风疹综合征,Viral,P35.0,KA63.0,Congenital rubella syndrome surveillance concept,Taiwan, China CDC NIDSS
+D169,Endemic typhus fever,地方性斑疹伤寒,Bacterial,A75.2,1C30,Endemic typhus fever surveillance concept,Taiwan, China CDC NIDSS
+D170,Complicated varicella,水痘并发症,Viral,B01,KA62.0,Complicated varicella surveillance concept,Taiwan, China CDC NIDSS
+D171,Herpes B virus infection,疱疹B病毒感染,Viral,B00,1E90,Macacine herpesvirus 1 infection surveillance concept,Taiwan, China CDC NIDSS
+D172,Severe complicated influenza,流感并发重症,Viral,J09-J11,1E30,Severe complicated influenza surveillance concept,Taiwan, China CDC NIDSS
+D173,Rift Valley fever,裂谷热,Viral,A92.4,1D47,Rift Valley fever surveillance concept,Taiwan, China CDC NIDSS
+D174,Marburg virus disease,马堡病毒病,Viral,A98.3,1D60.1,Marburg virus disease surveillance concept,Taiwan, China CDC NIDSS
+D175,Nipah virus infection,立百病毒感染,Viral,B33.8,1D64,Nipah virus infection surveillance concept,Taiwan, China CDC NIDSS
+D176,Relapsing fever,回归热,Bacterial,A68,1C21,Relapsing fever surveillance concept,Taiwan, China CDC NIDSS
+D177,Cat-scratch disease,猫抓病,Bacterial,A28.1,1B9Y,Cat-scratch disease surveillance concept,Taiwan, China CDC NIDSS
+D178,Acute flaccid paralysis,急性无力肢体麻痹,Other,,,Acute flaccid paralysis surveillance concept,Taiwan, China CDC NIDSS
+D179,Toxoplasmosis,弓形虫感染,Parasitic,B58,1F57,Toxoplasma gondii infection surveillance concept,Taiwan, China CDC NIDSS
+D180,Enterovirus infection with severe complications,肠病毒感染并发重症,Viral,B34.1,1F01,Severe enterovirus infection surveillance concept,Taiwan, China CDC NIDSS
+D181,Severe complicated COVID-19,新冠并发重症,Viral,U07.1,RA01,Severe complicated COVID-19 surveillance concept,Taiwan, China CDC NIDSS
+D182,Hantavirus syndrome,汉他病毒症候群,Viral,,,Aggregate hantavirus syndrome surveillance concept,Taiwan, China CDC NIDSS
+D183,Epidemic typhus fever,流行性斑疹伤寒,Bacterial,A75.0,1C30,Epidemic typhus fever surveillance concept,Taiwan, China CDC NIDSS

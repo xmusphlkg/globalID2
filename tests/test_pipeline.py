@@ -1,11 +1,11 @@
 """
 Pipeline smoke tests — validate the task → CrawlService → crawler/processor chain
-for all supported countries (CN, JP, AU, US).
+for supported countries.
 
 What is tested
 --------------
 1. DB connection reachable.
-2. All four country crawlers can be instantiated without errors.
+2. Country crawlers can be instantiated without errors.
 3. A CRAWL_DATA task can be created via task_manager for each country.
 4. CrawlService.execute() resolves the correct handler for each country
    (dry-run: fetch_list only, no full HTML download, no DB writes).
@@ -201,17 +201,21 @@ async def test_task_manager_create_and_retrieve(app_ready):
 # ══════════════════════════════════════════════════════════════════════════════
 
 def test_crawlers_importable():
-    """All four country crawlers can be imported and instantiated."""
+    """Country crawlers can be imported and instantiated."""
     from src.data.crawlers.cn import ChinaCDCCrawler
     from src.data.crawlers.jp import JapanIDWRCrawler
     from src.data.crawlers.au import AustraliaNINDSSCrawler
     from src.data.crawlers.us import USNNDSSCrawler
+    from src.data.crawlers.nz import NewZealandPHFCrawler
+    from src.data.crawlers.tw import TaiwanNIDSSCrawler
 
     crawlers = {
         "CN": ChinaCDCCrawler(),
         "JP": JapanIDWRCrawler(),
         "AU": AustraliaNINDSSCrawler(),
         "US": USNNDSSCrawler(),
+        "NZ": NewZealandPHFCrawler(),
+        "TW": TaiwanNIDSSCrawler(),
     }
     for code, crawler in crawlers.items():
         assert crawler is not None
@@ -219,13 +223,22 @@ def test_crawlers_importable():
 
 
 def test_processors_importable():
-    """All four country processors can be imported."""
+    """Country processors can be imported."""
     from src.data.processors.cn import DataProcessor
     from src.data.processors.jp import JPWeeklyUpdater
     from src.data.processors.au import AUMonthlyUpdater
     from src.data.processors.us import USWeeklyUpdater
+    from src.data.processors.nz import NZMonthlyUpdater
+    from src.data.processors.tw import TWMonthlyUpdater
 
-    for cls in (DataProcessor, JPWeeklyUpdater, AUMonthlyUpdater, USWeeklyUpdater):
+    for cls in (
+        DataProcessor,
+        JPWeeklyUpdater,
+        AUMonthlyUpdater,
+        USWeeklyUpdater,
+        NZMonthlyUpdater,
+        TWMonthlyUpdater,
+    ):
         assert cls is not None
         print(f"\n  ✅ {cls.__name__} importable")
 
@@ -239,6 +252,7 @@ COUNTRY_SOURCES = {
     "JP": "jp_weekly",
     "AU": "all",
     "US": "nndss_api",
+    "TW": "nidss_open_data",
 }
 
 # Skip network tests if explicitly disabled (e.g. CI without external access)
@@ -382,6 +396,8 @@ def test_source_scope_aliases_cover_cn_jp_au_legacy_values():
     assert canonicalize_task_source("au_nindss", country_code="AU") == "all"
     assert canonicalize_task_source("location", country_code="AU") == "all"
     assert canonicalize_task_source("external", country_code="AU") == "all"
+    assert canonicalize_task_source("nidss", country_code="TW") == "nidss_open_data"
+    assert canonicalize_task_source("taiwan_cdc", country_code="TW") == "nidss_open_data"
 
 
 def test_au_runtime_hints_can_be_extracted_from_live_query_shape():

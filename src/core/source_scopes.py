@@ -9,6 +9,7 @@ EXPECTED_SCOPES_BY_COUNTRY = {
     "US": ["nndss_api"],
     "JP": ["jp_weekly"],
     "AU": ["all"],
+    "TW": ["nidss_open_data"],
 }
 
 _EXACT_SCOPE_BY_DATA_SOURCE = {
@@ -18,6 +19,10 @@ _EXACT_SCOPE_BY_DATA_SOURCE = {
     "us cdc nndss weekly": "nndss_api",
     "japan niid weekly sentinel": "jp_weekly",
     "jp niid weekly sentinel": "jp_weekly",
+    "taiwan, china cdc nidss open data": "nidss_open_data",
+    "taiwan, china cdc nidss": "nidss_open_data",
+    "taiwan cdc nidss open data": "nidss_open_data",
+    "taiwan cdc nidss": "nidss_open_data",
     "nhc": "nhc",
     "gov data": "nhc",
     "pubmed": "pubmed",
@@ -32,6 +37,11 @@ _TASK_SOURCE_ALIASES = {
     "au_nindss": "all",
     "location": "all",
     "external": "all",
+    "nidss": "nidss_open_data",
+    "nidss_open_data": "nidss_open_data",
+    "tw": "nidss_open_data",
+    "taiwan": "nidss_open_data",
+    "taiwan_cdc": "nidss_open_data",
 }
 
 
@@ -64,6 +74,8 @@ def scope_from_data_source(data_source: Optional[str]) -> str:
         return "jp_weekly"
     if "nndss" in text:
         return "nndss_api"
+    if "nidss" in text or "taiwan cdc" in text or "taiwan, china cdc" in text:
+        return "nidss_open_data"
     if "nhc" in text or "gov" in text or "ndcpa" in text or "卫健" in text or "疾控局" in text:
         return "nhc"
     if "cdc" in text or "weekly" in text:
@@ -88,6 +100,8 @@ def scope_display_label(scope: str, *, country_code: Optional[str] = None) -> st
         return "NHC"
     if normalized_scope == "cdc_weekly":
         return "China CDC Weekly"
+    if normalized_scope == "nidss_open_data":
+        return "Taiwan, China CDC NIDSS"
     if normalized_scope == "all" and upper_country == "AU":
         return "Australia NINDSS"
     return "All Sources"
@@ -106,6 +120,13 @@ def canonical_data_source_label(
         return "NHC"
     if text == "australia nindss (location aggregated)":
         return "Australia NINDSS"
+    if text in {
+        "taiwan, china cdc nidss open data",
+        "taiwan, china cdc nidss",
+        "taiwan cdc nidss open data",
+        "taiwan cdc nidss",
+    }:
+        return "Taiwan, China CDC NIDSS"
 
     scope = scope_from_data_source(data_source)
     if scope != "all":

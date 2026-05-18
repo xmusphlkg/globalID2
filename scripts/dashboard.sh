@@ -58,7 +58,17 @@ port_has_listener() {
 find_port_pid() {
   local port="$1"
   if have_command lsof; then
-    lsof -ti tcp:"$port" -sTCP:LISTEN 2>/dev/null | head -n 1 || true
+    local lsof_pid
+    lsof_pid="$(lsof -ti tcp:"$port" -sTCP:LISTEN 2>/dev/null | head -n 1 || true)"
+    if [[ -n "$lsof_pid" ]]; then
+      echo "$lsof_pid"
+      return
+    fi
+  fi
+  if have_command ss; then
+    ss -ltnpH "( sport = :$port )" 2>/dev/null \
+      | sed -n 's/.*pid=\([0-9][0-9]*\).*/\1/p' \
+      | head -n 1
   fi
 }
 
@@ -84,8 +94,11 @@ is_managed_worker_pid() {
 is_managed_web_pid() {
   local pid="$1"
   local cmd
+  local cwd
   cmd="$(pid_cmdline "$pid")"
-  [[ "$cmd" == *"dashboard/node_modules/.bin/next"* && "$cmd" == *"dev"* && "$cmd" == *"--port 3000"* ]]
+  cwd="$(readlink "/proc/$pid/cwd" 2>/dev/null || true)"
+  [[ "$cmd" == *"dashboard/node_modules/.bin/next"* && "$cmd" == *"dev"* && "$cmd" == *"--port 3000"* ]] ||
+    [[ "$cmd" == *"next-server"* && "$cwd" == "$DASHBOARD_DIR"* ]]
 }
 
 find_worker_pid() {
