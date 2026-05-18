@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-05-16T22:45:54.365755+00:00",
+  "fetched_at": "2026-05-17T22:45:52.394124+00:00",
   "disease": "Chlamydial infection",
   "year": 2026,
   "month": 4,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1778971554004)/",
-            "rootActivityId": "2a71150e-d983-424d-a3d1-73b3e4219b24",
+            "timestamp": "/Date(1779057952040)/",
+            "rootActivityId": "b03077a9-0262-4499-aec8-263c3e545b25",
             "descriptor": {
               "Select": [
                 {

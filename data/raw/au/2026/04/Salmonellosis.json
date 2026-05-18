@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-05-16T22:45:58.711628+00:00",
+  "fetched_at": "2026-05-17T22:45:57.751263+00:00",
   "disease": "Salmonellosis",
   "year": 2026,
   "month": 4,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1778971558355)/",
-            "rootActivityId": "992836e8-731c-4434-a0dd-881a252d4d29",
+            "timestamp": "/Date(1779057957385)/",
+            "rootActivityId": "358e7a8a-845f-4d10-ab4b-a4afc1da3f91",
             "descriptor": {
               "Select": [
                 {
