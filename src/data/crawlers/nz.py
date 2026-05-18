@@ -223,9 +223,9 @@ class NewZealandPHFCrawler(BaseCrawler):
     def resolve_yearly_archive(self, report: Dict[str, Any]) -> List[Dict[str, Any]]:
         """
         For a yearly archive page, download the master ZIP and return info
-        about each monthly sub-ZIP inside.
+        about each monthly sub-ZIP or PDF inside.
 
-        Returns list of dicts with: year, month, zip_bytes
+        Returns list of dicts with: year, month, zip_bytes/pdf_bytes, type
         """
         download_url = self.resolve_download_url(report)
         if not download_url:
@@ -238,29 +238,39 @@ class NewZealandPHFCrawler(BaseCrawler):
             logger.error(f"[NZ] Failed to download yearly archive: {e}")
             return []
 
-        monthly_zips: List[Dict[str, Any]] = []
+        monthly_items: List[Dict[str, Any]] = []
         try:
             with zipfile.ZipFile(io.BytesIO(response.content)) as outer_zip:
                 for name in outer_zip.namelist():
-                    if not name.endswith(".zip"):
-                        continue
-                    # Extract month from filename like "2021-01Monthlyreport.zip"
                     match = re.search(r"(\d{4})-?(\d{2})", name)
-                    if match:
-                        year = int(match.group(1))
-                        month = int(match.group(2))
+                    if not match:
+                        continue
+                    year = int(match.group(1))
+                    month = int(match.group(2))
+
+                    if name.endswith(".zip"):
                         with outer_zip.open(name) as f:
-                            monthly_zips.append({
+                            monthly_items.append({
                                 "year": year,
                                 "month": month,
                                 "zip_bytes": io.BytesIO(f.read()),
                                 "filename": name,
+                                "type": "zip",
+                            })
+                    elif name.endswith(".pdf"):
+                        with outer_zip.open(name) as f:
+                            monthly_items.append({
+                                "year": year,
+                                "month": month,
+                                "pdf_bytes": f.read(),
+                                "filename": name,
+                                "type": "pdf",
                             })
         except Exception as e:
             logger.error(f"[NZ] Failed to parse yearly archive ZIP: {e}")
 
-        logger.info(f"[NZ] Yearly archive {report['year']}: found {len(monthly_zips)} monthly ZIPs")
-        return monthly_zips
+        logger.info(f"[NZ] Yearly archive {report['year']}: found {len(monthly_items)} monthly items")
+        return monthly_items
 
     # ── Phase 3: Download and parse Excel data ───────────────────────────────
 
@@ -298,37 +308,53 @@ class NewZealandPHFCrawler(BaseCrawler):
         year: int,
         month: int,
     ) -> List[Dict[str, str]]:
-        """Parse the National Excel file from a ZIP archive (handles nested ZIPs)."""
+        """Parse the National Excel/XLS/PDF file from a ZIP archive (handles nested ZIPs)."""
         import openpyxl
 
         try:
             with zipfile.ZipFile(zip_bytes) as zf:
-                # Find the National file (may be in a subdirectory)
-                national_file = None
+                # Categorize files
+                xlsx_national = None
+                xls_national = None
+                pdf_file = None
                 nested_zip = None
 
                 for name in zf.namelist():
                     name_lower = name.lower()
                     if name_lower.endswith(".xlsx") and ("national" in name_lower or "nat" in name_lower):
-                        national_file = name
-                        break
-                    # Check for nested ZIP (yearly archives contain ZIPs)
-                    if name_lower.endswith(".zip"):
+                        xlsx_national = name
+                    elif name_lower.endswith(".xls") and ("national" in name_lower or "nat" in name_lower):
+                        xls_national = name
+                    elif name_lower.endswith(".pdf"):
+                        pdf_file = name
+                    elif name_lower.endswith(".zip"):
                         nested_zip = name
 
-                if national_file:
-                    with zf.open(national_file) as f:
+                # Priority: xlsx > xls > pdf > nested zip
+                if xlsx_national:
+                    with zf.open(xlsx_national) as f:
                         wb = openpyxl.load_workbook(io.BytesIO(f.read()), data_only=True)
                         ws = wb.active
                         return self._parse_national_sheet(ws, year, month)
 
-                # If no direct xlsx found, try nested ZIP
+                if xls_national:
+                    from src.data.parsers.nz_pdf_parser import parse_nz_xls
+                    with zf.open(xls_national) as f:
+                        return parse_nz_xls(f.read(), year, month)
+
+                if pdf_file:
+                    from src.data.parsers.nz_pdf_parser import parse_nz_pdf
+                    with zf.open(pdf_file) as f:
+                        result = parse_nz_pdf(f.read(), year, month)
+                        return result.rows
+
+                # Try nested ZIP
                 if nested_zip:
                     with zf.open(nested_zip) as f:
                         inner_bytes = io.BytesIO(f.read())
                         return self._parse_zip_content(inner_bytes, year, month)
 
-                logger.warning(f"[NZ] No National xlsx found in ZIP for {year}-{month:02d}")
+                logger.warning(f"[NZ] No parseable file found in ZIP for {year}-{month:02d}")
                 return []
         except Exception as e:
             logger.error(f"[NZ] Failed to parse ZIP for {year}-{month:02d}: {e}")
@@ -674,7 +700,13 @@ class NewZealandPHFCrawler(BaseCrawler):
                     if mz_ym not in remaining:
                         continue
 
-                    rows = self._parse_zip_content(mz["zip_bytes"], mz["year"], mz["month"])
+                    if mz.get("type") == "pdf":
+                        from src.data.parsers.nz_pdf_parser import parse_nz_pdf
+                        result = parse_nz_pdf(mz["pdf_bytes"], mz["year"], mz["month"])
+                        rows = result.rows
+                    else:
+                        rows = self._parse_zip_content(mz["zip_bytes"], mz["year"], mz["month"])
+
                     if rows:
                         all_rows.extend(rows)
                         fetched_months.add(mz_ym)
