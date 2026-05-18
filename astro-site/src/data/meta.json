@@ -1,14 +1,14 @@
 {
   "generated_at": "2026-05-09T00:00:00+00:00",
-  "total_countries": 5,
-  "total_diseases": 156,
+  "total_countries": 6,
+  "total_diseases": 178,
   "total_reports": 1,
   "countries": [
     {
       "code": "AU",
       "name": "Australia",
       "language": "en-AU",
-      "total_cases": 20123501,
+      "total_cases": 20125323,
       "total_deaths": 0,
       "disease_count": 66,
       "date_range": {
@@ -146,6 +146,38 @@
             "type": "web",
             "cadence": "monthly",
             "description": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler"
+          }
+        ]
+      }
+    },
+    {
+      "code": "TW",
+      "name": "Taiwan, China",
+      "language": "zh-TW",
+      "total_cases": 11163910,
+      "total_deaths": 0,
+      "disease_count": 49,
+      "date_range": {
+        "start": "2003-01-01",
+        "end": "2026-05-01"
+      },
+      "source_info": {
+        "country_code": "TW",
+        "primary_scope": "nidss_open_data",
+        "primary_label": "Taiwan, China CDC NIDSS",
+        "primary_url": "https://nidss.cdc.gov.tw/Home/Index",
+        "primary_type": "open_data_csv",
+        "parser_primary": "tw_nidss_open_data_monthly",
+        "notes": "Taiwan, China CDC NIDSS open data CSV aggregated to national monthly totals",
+        "sources": [
+          {
+            "scope": "nidss_open_data",
+            "label": "Taiwan, China CDC NIDSS",
+            "url": "https://nidss.cdc.gov.tw/Home/Index",
+            "machine_url": "https://od.cdc.gov.tw/eic/Age_County_Gender_{disease_code}.csv",
+            "type": "open_data_csv",
+            "cadence": "monthly",
+            "description": "Taiwan, China monthly notifiable infectious disease open-data CSV feed."
           }
         ]
       }

@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-05-17T22:46:06.122333+00:00",
+  "fetched_at": "2026-05-18T22:45:55.012157+00:00",
   "disease": "Typhoid Fever",
   "year": 2026,
   "month": 5,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1779057965717)/",
-            "rootActivityId": "8c24d470-6831-49d3-bb18-1b0d345f58ff",
+            "timestamp": "/Date(1779144354527)/",
+            "rootActivityId": "06af0369-ed53-4b1c-85e6-ccedc7ede94a",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'<5'"
+                          "A0": "'5'"
                         }
                       ]
                     },

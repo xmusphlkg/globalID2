@@ -1,0 +1,20 @@
+{
+  "disease_id": "D162",
+  "name_en": "HIV infection",
+  "name_zh": "人类免疫缺乏病毒感染",
+  "category": "Viral",
+  "icd_10": "B20-B24",
+  "icd_11": "1C62",
+  "description": "Human immunodeficiency virus infection surveillance concept",
+  "slug": "hiv-infection",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0,
+  "generated_at": "2026-05-09T00:00:00+00:00",
+  "source_info": []
+}

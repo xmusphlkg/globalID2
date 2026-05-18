@@ -1,0 +1,20 @@
+{
+  "disease_id": "D177",
+  "name_en": "Cat-scratch disease",
+  "name_zh": "猫抓病",
+  "category": "Bacterial",
+  "icd_10": "A28.1",
+  "icd_11": "1B9Y",
+  "description": "Cat-scratch disease surveillance concept",
+  "slug": "cat-scratch-disease",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0,
+  "generated_at": "2026-05-09T00:00:00+00:00",
+  "source_info": []
+}

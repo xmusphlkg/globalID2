@@ -1,23 +1,23 @@
 {
   "generated_at": "2026-05-09T00:00:00+00:00",
   "summary": {
-    "total_countries": 5,
-    "total_diseases": 156,
+    "total_countries": 6,
+    "total_diseases": 178,
     "total_reports": 1,
-    "total_cases": 276019632,
+    "total_cases": 287185364,
     "total_deaths": 363160,
     "coverage_start": "2000-01-01",
     "coverage_end": "2026-05-09",
-    "source_count": 7,
+    "source_count": 8,
     "cadence_en": "Monthly / Weekly",
     "cadence_zh": "每月 / 每周",
-    "source_type_summary": "MICROSOFT_BI / WEB / API"
+    "source_type_summary": "MICROSOFT_BI / WEB / OPEN_DATA_CSV / API"
   },
   "metrics": [
     {
       "label_en": "Countries in database",
       "label_zh": "数据库国家数",
-      "value": 5,
+      "value": 6,
       "value_type": "number",
       "note_en": "Official surveillance feeds currently exported to the public site.",
       "note_zh": "当前已导出到公开站点的官方监测国家。",
@@ -26,7 +26,7 @@
     {
       "label_en": "Diseases tracked",
       "label_zh": "追踪疾病数",
-      "value": 156,
+      "value": 178,
       "value_type": "number",
       "note_en": "Standard diseases normalised into the build-time snapshot.",
       "note_zh": "已标准化进入构建快照的疾病目录。",
@@ -35,7 +35,7 @@
     {
       "label_en": "Cumulative cases",
       "label_zh": "累计病例",
-      "value": 276019632,
+      "value": 287185364,
       "value_type": "number",
       "note_en": "Summed from the latest PostgreSQL-backed export.",
       "note_zh": "来自最新 PostgreSQL 导出快照的累计病例。",
@@ -88,16 +88,16 @@
   "architecture": {
     "source_label_en": "Official Health Sources",
     "source_label_zh": "官方卫生数据源",
-    "source_detail_en": "7 configured feeds across 5 countries",
-    "source_detail_zh": "5 个国家，共 7 个已配置来源",
+    "source_detail_en": "8 configured feeds across 6 countries",
+    "source_detail_zh": "6 个国家，共 8 个已配置来源",
     "scraper_label_en": "Collectors",
     "scraper_label_zh": "采集器",
-    "scraper_detail_en": "Python ingestion for MICROSOFT_BI / WEB / API source types",
-    "scraper_detail_zh": "面向 MICROSOFT_BI / WEB / API 类型来源的 Python 采集链路",
+    "scraper_detail_en": "Python ingestion for MICROSOFT_BI / WEB / OPEN_DATA_CSV / API source types",
+    "scraper_detail_zh": "面向 MICROSOFT_BI / WEB / OPEN_DATA_CSV / API 类型来源的 Python 采集链路",
     "database_label_en": "Parser + PostgreSQL",
     "database_label_zh": "解析器 + PostgreSQL",
-    "database_detail_en": "156 diseases normalised in the database",
-    "database_detail_zh": "156 种疾病数据已标准化入库",
+    "database_detail_en": "178 diseases normalised in the database",
+    "database_detail_zh": "178 种疾病数据已标准化入库",
     "llm_label_en": "AI Report Engine",
     "llm_label_zh": "AI 报告引擎",
     "llm_detail_en": "1 report entry in the current public release",
@@ -120,8 +120,8 @@
       "icon": "M10.5 6a7.5 7.5 0 107.5 7.5h-7.5V6z M13.5 10.5H21A7.5 7.5 0 0013.5 3v7.5z",
       "title_en": "Multi-country coverage",
       "title_zh": "多国覆盖",
-      "description_en": "The current export covers 5 countries and 156 standardised diseases from the database.",
-      "description_zh": "当前导出覆盖 5 个国家、156 种已标准化疾病数据。",
+      "description_en": "The current export covers 6 countries and 178 standardised diseases from the database.",
+      "description_zh": "当前导出覆盖 6 个国家、178 种已标准化疾病数据。",
       "accent": "teal"
     },
     {
@@ -243,6 +243,20 @@
       "cadence_zh": "每月"
     },
     {
+      "country_code": "TW",
+      "country_name_en": "Taiwan, China",
+      "country_name_zh": "中国台湾",
+      "label_en": "Taiwan, China CDC NIDSS",
+      "label_zh": "中国台湾 CDC NIDSS",
+      "description_en": "Taiwan, China monthly notifiable infectious disease open-data CSV feed.",
+      "description_zh": "中国台湾月度法定传染病开放数据 CSV。",
+      "url": "https://nidss.cdc.gov.tw/Home/Index",
+      "machine_url": "https://od.cdc.gov.tw/eic/Age_County_Gender_{disease_code}.csv",
+      "type": "open_data_csv",
+      "cadence_en": "Monthly",
+      "cadence_zh": "每月"
+    },
+    {
       "country_code": "US",
       "country_name_en": "United States",
       "country_name_zh": "美国",
@@ -263,7 +277,7 @@
       "name_en": "Australia",
       "name_zh": "澳大利亚",
       "disease_count": 66,
-      "total_cases": 20123501,
+      "total_cases": 20125323,
       "total_deaths": 0,
       "coverage_start": "2000-01-01",
       "coverage_end": "2026-05-01",
@@ -311,6 +325,20 @@
       "coverage_end": "2026-03-01",
       "primary_source_label_en": "All Sources",
       "primary_source_label_zh": "All Sources",
+      "cadence_en": "Monthly",
+      "cadence_zh": "每月"
+    },
+    {
+      "code": "TW",
+      "name_en": "Taiwan, China",
+      "name_zh": "中国台湾",
+      "disease_count": 49,
+      "total_cases": 11163910,
+      "total_deaths": 0,
+      "coverage_start": "2003-01-01",
+      "coverage_end": "2026-05-01",
+      "primary_source_label_en": "Taiwan, China CDC NIDSS",
+      "primary_source_label_zh": "中国台湾 CDC NIDSS",
       "cadence_en": "Monthly",
       "cadence_zh": "每月"
     },

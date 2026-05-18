@@ -1,0 +1,20 @@
+{
+  "disease_id": "D183",
+  "name_en": "Epidemic typhus fever",
+  "name_zh": "流行性斑疹伤寒",
+  "category": "Bacterial",
+  "icd_10": "A75.0",
+  "icd_11": "1C30",
+  "description": "Epidemic typhus fever surveillance concept",
+  "slug": "epidemic-typhus-fever",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0,
+  "generated_at": "2026-05-09T00:00:00+00:00",
+  "source_info": []
+}

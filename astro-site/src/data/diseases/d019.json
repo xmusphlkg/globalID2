@@ -7400,6 +7400,34 @@
       "total_cases": 1,
       "total_deaths": 0
     },
+    "TW": {
+      "dates": [
+        "2012-07-01",
+        "2013-05-01"
+      ],
+      "cases": [
+        1,
+        1
+      ],
+      "weekly_equiv_cases": [
+        0.023026315789473683,
+        0.023026315789473683
+      ],
+      "deaths": [
+        0,
+        0
+      ],
+      "incidence_rates": [
+        null,
+        null
+      ],
+      "incidence_sources": [
+        "missing_population",
+        "missing_population"
+      ],
+      "total_cases": 2,
+      "total_deaths": 0
+    },
     "US": {
       "dates": [
         "2022-01-08",
@@ -9250,7 +9278,7 @@
       97,
       117,
       104,
-      145,
+      146,
       146,
       154,
       136,
@@ -9260,7 +9288,7 @@
       64,
       90,
       77,
-      97,
+      98,
       98,
       106,
       108,
@@ -9738,7 +9766,7 @@
       0
     ]
   },
-  "total_cases": 11648,
+  "total_cases": 11650,
   "total_deaths": 10778,
   "generated_at": "2026-05-09T00:00:00+00:00",
   "source_info": [
@@ -9822,6 +9850,27 @@
         }
       ],
       "country_name": "Japan"
+    },
+    {
+      "country_code": "TW",
+      "primary_scope": "nidss_open_data",
+      "primary_label": "Taiwan, China CDC NIDSS",
+      "primary_url": "https://nidss.cdc.gov.tw/Home/Index",
+      "primary_type": "open_data_csv",
+      "parser_primary": "tw_nidss_open_data_monthly",
+      "notes": "Taiwan, China CDC NIDSS open data CSV aggregated to national monthly totals",
+      "sources": [
+        {
+          "scope": "nidss_open_data",
+          "label": "Taiwan, China CDC NIDSS",
+          "url": "https://nidss.cdc.gov.tw/Home/Index",
+          "machine_url": "https://od.cdc.gov.tw/eic/Age_County_Gender_{disease_code}.csv",
+          "type": "open_data_csv",
+          "cadence": "monthly",
+          "description": "Taiwan, China monthly notifiable infectious disease open-data CSV feed."
+        }
+      ],
+      "country_name": "Taiwan, China"
     },
     {
       "country_code": "US",

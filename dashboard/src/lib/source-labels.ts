@@ -9,6 +9,9 @@ export function getSourceDisplayLabel(
   const cc = (countryCode || "").trim().toUpperCase();
   if (s === "nndss_api" || (s === "all" && cc === "US")) return "US CDC NNDSS";
   if (s === "jp_idwr" || s === "jp_weekly" || (s === "all" && cc === "JP")) return "JP NIID Weekly";
+  if (s === "nidss_open_data" || s === "nidss" || ((s === "all" || s === "tw") && cc === "TW")) {
+    return lang === "zh" ? "中国台湾 CDC NIDSS" : "Taiwan, China CDC NIDSS";
+  }
   if (s === "pubmed" || s === "pubmed_rss") return "PubMed";
   if (s === "cdc_weekly") return "China CDC Weekly";
   if (s === "nhc") return lang === "zh" ? "国家卫健委" : "NHC";
@@ -43,6 +46,9 @@ export function getSourceOptionsForCountry(
   }
   if (code === "AU") {
     return [{ value: "all", label: "Australia NINDSS" }];
+  }
+  if (code === "TW") {
+    return [{ value: "nidss_open_data", label: lang === "zh" ? "中国台湾 CDC NIDSS" : "Taiwan, China CDC NIDSS" }];
   }
   return [{ value: "all", label: lang === "zh" ? "全部来源" : "All Sources" }];
 }

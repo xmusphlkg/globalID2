@@ -1,0 +1,89 @@
+{
+  "disease_id": "D168",
+  "name_en": "Congenital rubella syndrome",
+  "name_zh": "先天性风疹综合征",
+  "category": "Viral",
+  "icd_10": "P35.0",
+  "icd_11": "KA63.0",
+  "description": "Congenital rubella syndrome surveillance concept",
+  "slug": "congenital-rubella-syndrome",
+  "country_series": {
+    "TW": {
+      "dates": [
+        "2007-01-01",
+        "2008-01-01",
+        "2017-08-01"
+      ],
+      "cases": [
+        1,
+        1,
+        1
+      ],
+      "weekly_equiv_cases": [
+        0.019178082191780823,
+        0.019178082191780823,
+        0.002
+      ],
+      "deaths": [
+        0,
+        0,
+        0
+      ],
+      "incidence_rates": [
+        null,
+        null,
+        null
+      ],
+      "incidence_sources": [
+        "missing_population",
+        "missing_population",
+        "missing_population"
+      ],
+      "total_cases": 3,
+      "total_deaths": 0
+    }
+  },
+  "global_monthly": {
+    "months": [
+      "2007-01",
+      "2008-01",
+      "2017-08"
+    ],
+    "cases": [
+      1,
+      1,
+      1
+    ],
+    "deaths": [
+      0,
+      0,
+      0
+    ]
+  },
+  "total_cases": 3,
+  "total_deaths": 0,
+  "generated_at": "2026-05-09T00:00:00+00:00",
+  "source_info": [
+    {
+      "country_code": "TW",
+      "primary_scope": "nidss_open_data",
+      "primary_label": "Taiwan, China CDC NIDSS",
+      "primary_url": "https://nidss.cdc.gov.tw/Home/Index",
+      "primary_type": "open_data_csv",
+      "parser_primary": "tw_nidss_open_data_monthly",
+      "notes": "Taiwan, China CDC NIDSS open data CSV aggregated to national monthly totals",
+      "sources": [
+        {
+          "scope": "nidss_open_data",
+          "label": "Taiwan, China CDC NIDSS",
+          "url": "https://nidss.cdc.gov.tw/Home/Index",
+          "machine_url": "https://od.cdc.gov.tw/eic/Age_County_Gender_{disease_code}.csv",
+          "type": "open_data_csv",
+          "cadence": "monthly",
+          "description": "Taiwan, China monthly notifiable infectious disease open-data CSV feed."
+        }
+      ],
+      "country_name": "Taiwan, China"
+    }
+  ]
+}

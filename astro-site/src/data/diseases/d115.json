@@ -642,8 +642,8 @@
         103,
         82,
         89,
-        73,
-        10
+        78,
+        12
       ],
       "weekly_equiv_cases": [
         1.5806451612903225,
@@ -960,8 +960,8 @@
         23.258064516129032,
         18.516129032258064,
         22.25,
-        16.483870967741936,
-        2.333333333333333
+        17.612903225806452,
+        2.8000000000000003
       ],
       "deaths": [
         0,
@@ -1596,8 +1596,8 @@
         0.3782996174105384,
         0.3011705692006228,
         0.3268802519372613,
-        0.2681152628249447,
-        0.0367281181951979
+        0.2864793219225436,
+        0.044073741834237484
       ],
       "incidence_sources": [
         "wpp_computed",
@@ -1917,7 +1917,7 @@
         "wpp_computed",
         "wpp_computed"
       ],
-      "total_cases": 8601,
+      "total_cases": 8608,
       "total_deaths": 0
     },
     "JP": {
@@ -6200,6 +6200,40 @@
         "wpp_computed"
       ],
       "total_cases": 43492,
+      "total_deaths": 0
+    },
+    "TW": {
+      "dates": [
+        "2019-04-01",
+        "2022-08-01",
+        "2025-03-01"
+      ],
+      "cases": [
+        1,
+        2,
+        1
+      ],
+      "weekly_equiv_cases": [
+        0.005747126436781609,
+        0.011494252873563218,
+        0.007423117709437965
+      ],
+      "deaths": [
+        0,
+        0,
+        0
+      ],
+      "incidence_rates": [
+        null,
+        null,
+        null
+      ],
+      "incidence_sources": [
+        "missing_population",
+        "missing_population",
+        "missing_population"
+      ],
+      "total_cases": 4,
       "total_deaths": 0
     },
     "US": {
@@ -13141,7 +13175,7 @@
       230,
       268,
       406,
-      414,
+      415,
       501,
       895,
       1093,
@@ -13181,7 +13215,7 @@
       657,
       713,
       1015,
-      1031,
+      1033,
       977,
       765,
       489,
@@ -13212,7 +13246,7 @@
       697,
       527,
       518,
-      675,
+      676,
       634,
       971,
       1047,
@@ -13225,8 +13259,8 @@
       707,
       599,
       680,
-      833,
-      372
+      838,
+      374
     ],
     "deaths": [
       0,
@@ -13547,7 +13581,7 @@
       0
     ]
   },
-  "total_cases": 115462,
+  "total_cases": 115473,
   "total_deaths": 0,
   "generated_at": "2026-05-09T00:00:00+00:00",
   "source_info": [
@@ -13592,6 +13626,27 @@
         }
       ],
       "country_name": "Japan"
+    },
+    {
+      "country_code": "TW",
+      "primary_scope": "nidss_open_data",
+      "primary_label": "Taiwan, China CDC NIDSS",
+      "primary_url": "https://nidss.cdc.gov.tw/Home/Index",
+      "primary_type": "open_data_csv",
+      "parser_primary": "tw_nidss_open_data_monthly",
+      "notes": "Taiwan, China CDC NIDSS open data CSV aggregated to national monthly totals",
+      "sources": [
+        {
+          "scope": "nidss_open_data",
+          "label": "Taiwan, China CDC NIDSS",
+          "url": "https://nidss.cdc.gov.tw/Home/Index",
+          "machine_url": "https://od.cdc.gov.tw/eic/Age_County_Gender_{disease_code}.csv",
+          "type": "open_data_csv",
+          "cadence": "monthly",
+          "description": "Taiwan, China monthly notifiable infectious disease open-data CSV feed."
+        }
+      ],
+      "country_name": "Taiwan, China"
     },
     {
       "country_code": "US",

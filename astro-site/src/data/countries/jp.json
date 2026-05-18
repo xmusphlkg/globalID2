@@ -425197,9 +425197,9 @@
     ]
   },
   "brief_en": "Japan page consolidates infectious disease surveillance records from JP NIID Weekly. It combines source metadata, time-series charts, and downloadable machine-readable datasets.",
-  "brief_zh": "Japan 页面整合来自 JP NIID Weekly 的传染病监测记录，包含来源信息、时间序列图表和可下载数据。",
+  "brief_zh": "日本页面整合来自日本 NIID/JIHS 周报 的传染病监测记录，包含来源信息、时间序列图表和可下载数据。",
   "surveillance_system_en": "The dataset is built from configured official feeds for Japan; current primary sources include JP NIID Weekly.",
-  "surveillance_system_zh": "该数据集来自 Japan 已配置的官方数据源；当前主要来源包括 JP NIID Weekly。",
+  "surveillance_system_zh": "该数据集来自日本已配置的官方数据源；当前主要来源包括日本 NIID/JIHS 周报。",
   "interpretation_en": "Coverage currently spans 2012-09-14 to 2026-05-09 across 86 tracked diseases.",
   "interpretation_zh": "当前覆盖区间为 2012-09-14 至 2026-05-09，覆盖 86 种追踪疾病。",
   "reporting_cadence_en": "Source reporting frequency is inferred as WEEKLY; charts use weekly-equivalent normalization where applicable.",
@@ -425207,7 +425207,7 @@
   "limitations_en": "Counts reflect reported surveillance records and may be affected by case definitions, reporting lag, source cadence, and missing population denominators.",
   "limitations_zh": "病例数反映已报告的监测记录，可能受病例定义、报告延迟、来源频率和人口分母缺失影响。",
   "source_summary_en": "JP NIID Weekly",
-  "source_summary_zh": "JP NIID Weekly",
+  "source_summary_zh": "日本 NIID/JIHS 周报",
   "country_brief_status": "fallback",
   "country_brief_updated_at": null,
   "generated_at": "2026-05-09T00:00:00+00:00"

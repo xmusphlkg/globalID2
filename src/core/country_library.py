@@ -50,6 +50,13 @@ COUNTRY_OVERRIDES: dict[str, dict[str, str]] = {
         "language": "ja-JP",
         "timezone": "Asia/Tokyo",
     },
+    "TW": {
+        "name": "Taiwan, China",
+        "name_en": "Taiwan, China",
+        "name_local": "中国台湾",
+        "language": "zh-TW",
+        "timezone": "Asia/Taipei",
+    },
 }
 
 
@@ -152,6 +159,31 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
             "lang": "en-AU",
         },
         "notes": "NINDSS Microsoft BI feed aggregated to national via internal globalID2 crawler",
+    },
+    "TW": {
+        "data_source_url": "https://nidss.cdc.gov.tw/Home/Index",
+        "data_source_type": "open_data_csv",
+        "crawler_config": {
+            "sources": ["nidss_open_data"],
+            "cadence": "monthly",
+            "index_url": "https://nidss.cdc.gov.tw/Home/Index",
+            "monthly_csv_url_template": "https://od.cdc.gov.tw/eic/Age_County_Gender_{disease_code}.csv",
+            "weekly_csv_url_template": "https://od.cdc.gov.tw/eic/Weekly_Age_County_Gender_{disease_code}.csv",
+            "refresh_recent_months": 3,
+            "reporting_area": "national",
+        },
+        "parser_config": {
+            "primary": "tw_nidss_open_data_monthly",
+        },
+        "disease_mapping_rules": {
+            "strategy": "db_first",
+            "fallback": "learning_suggestions",
+        },
+        "report_config": {
+            "default_type": "MONTHLY",
+            "lang": "zh-TW",
+        },
+        "notes": "Taiwan, China CDC NIDSS open data CSV aggregated to national monthly totals",
     },
 }
 

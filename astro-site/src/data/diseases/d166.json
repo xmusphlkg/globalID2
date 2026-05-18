@@ -1,0 +1,20 @@
+{
+  "disease_id": "D166",
+  "name_en": "Multidrug-resistant tuberculosis",
+  "name_zh": "多重耐药结核病",
+  "category": "Bacterial",
+  "icd_10": "A15-A19",
+  "icd_11": "1B10",
+  "description": "Multidrug-resistant tuberculosis surveillance concept",
+  "slug": "multidrug-resistant-tuberculosis",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0,
+  "generated_at": "2026-05-09T00:00:00+00:00",
+  "source_info": []
+}

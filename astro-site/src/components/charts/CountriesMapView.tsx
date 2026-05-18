@@ -9,7 +9,7 @@ import ReactEChartsCore from 'echarts-for-react/lib/core';
 import echarts from '../../lib/echarts';
 
 const MAP_NAME = 'world';
-const BOX_W = 126;
+const BOX_W = 146;
 const BOX_H = 46;
 
 interface CountryDef {
@@ -26,6 +26,7 @@ const ALL_COUNTRIES: CountryDef[] = [
   { iso2: 'US', name: 'United States',  lat: 39,    lng: -98 },
   { iso2: 'GB', name: 'United Kingdom', lat: 54,    lng: -3 },
   { iso2: 'KR', name: 'South Korea',    lat: 36.5,  lng: 127.5 },
+  { iso2: 'TW', name: 'Taiwan, China',   lat: 23.7,  lng: 121.0 },
   { iso2: 'NZ', name: 'New Zealand',    lat: -41,   lng: 171 },
   { iso2: 'SE', name: 'Sweden',         lat: 62,    lng: 18 },
   { iso2: 'JP', name: 'Japan',          lat: 36,    lng: 138 },
@@ -40,6 +41,7 @@ const BASE_OFFSETS: Record<string, [number, number]> = {
   CN: [  -60,  0],   // Top-Right / Top
   TH: [ -60,   0],   // Left, slightly down
   KR: [  -60,  -95],   // Right, very far up
+  TW: [ 100,  70],   // Right, below the East-Asia cluster
   JP: [ 95, 0],   // Right, max up
   SG: [-60,   60],   // Left, far down
   // Oceania
@@ -389,6 +391,7 @@ export default function CountriesMapView({ metaCountries = [], height = 450 }: P
         const accentColor = isSupported ? palette.supported : palette.scheduled;
         const borderColor = isSupported ? palette.boxSupportedBorder : palette.boxScheduledBorder;
         const href = isSupported ? `/countries/${d.iso2.toLowerCase()}/` : undefined;
+        const flagCode = d.iso2 === 'TW' ? 'cn' : d.iso2.toLowerCase();
 
         const boxStyles: React.CSSProperties = {
           position: 'absolute',
@@ -423,7 +426,7 @@ export default function CountriesMapView({ metaCountries = [], height = 450 }: P
               color: palette.boxText,
             }}>
               <img
-                src={`https://flagcdn.com/w40/${d.iso2.toLowerCase()}.png`}
+                src={`https://flagcdn.com/w40/${flagCode}.png`}
                 alt={d.name}
                 style={{ width: 20, height: 14, objectFit: 'cover', borderRadius: 0, flexShrink: 0 }}
               />

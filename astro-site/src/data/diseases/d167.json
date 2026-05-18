@@ -1,0 +1,20 @@
+{
+  "disease_id": "D167",
+  "name_en": "Congenital syphilis",
+  "name_zh": "先天性梅毒",
+  "category": "Bacterial",
+  "icd_10": "A50",
+  "icd_11": "1A70.1",
+  "description": "Congenital syphilis surveillance concept",
+  "slug": "congenital-syphilis",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0,
+  "generated_at": "2026-05-09T00:00:00+00:00",
+  "source_info": []
+}

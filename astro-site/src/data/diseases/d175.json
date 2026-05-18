@@ -1,0 +1,20 @@
+{
+  "disease_id": "D175",
+  "name_en": "Nipah virus infection",
+  "name_zh": "立百病毒感染",
+  "category": "Viral",
+  "icd_10": "B33.8",
+  "icd_11": "1D64",
+  "description": "Nipah virus infection surveillance concept",
+  "slug": "nipah-virus-infection",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0,
+  "generated_at": "2026-05-09T00:00:00+00:00",
+  "source_info": []
+}

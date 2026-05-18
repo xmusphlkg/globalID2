@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-05-17T22:46:02.572974+00:00",
+  "fetched_at": "2026-05-18T22:45:51.689550+00:00",
   "disease": "Invasive Group A Streptococcal disease (iGAS)",
   "year": 2026,
   "month": 5,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1779057962211)/",
-            "rootActivityId": "bd5efa36-56a0-47eb-93dc-b76ea4f8d5a5",
+            "timestamp": "/Date(1779144351317)/",
+            "rootActivityId": "f61fd3fb-b481-4407-b935-9a1ef429a932",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'56'"
+                          "A0": "'53'"
                         }
                       ]
                     },
@@ -388,7 +388,7 @@
                         {
                           "C": [
                             "NSW",
-                            "'15'"
+                            "'17'"
                           ]
                         },
                         {
@@ -400,7 +400,7 @@
                         {
                           "C": [
                             "QLD",
-                            "'23'"
+                            "'17'"
                           ]
                         },
                         {
@@ -423,9 +423,9 @@
                         },
                         {
                           "C": [
-                            "WA"
-                          ],
-                          "R": 2
+                            "WA",
+                            "'9'"
+                          ]
                         }
                       ]
                     }
@@ -445,12 +445,12 @@
   },
   "parsed_counts": {
     "ACT": 0,
-    "NSW": 15,
+    "NSW": 17,
     "NT": "'<5'",
-    "QLD": 23,
+    "QLD": 17,
     "SA": "'<5'",
     "TAS": 0,
     "VIC": 8,
-    "WA": 0
+    "WA": 9
   }
 }

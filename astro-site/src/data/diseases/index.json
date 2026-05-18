@@ -1558,5 +1558,225 @@
     "icd_11": "NF04",
     "description": "Condition caused by dissolved gases in body during decompression",
     "slug": "decompression-sickness"
+  },
+  {
+    "disease_id": "D162",
+    "name_en": "HIV infection",
+    "name_zh": "人类免疫缺乏病毒感染",
+    "category": "Viral",
+    "icd_10": "B20-B24",
+    "icd_11": "1C62",
+    "description": "Human immunodeficiency virus infection surveillance concept",
+    "slug": "hiv-infection"
+  },
+  {
+    "disease_id": "D163",
+    "name_en": "Hantavirus hemorrhagic fever",
+    "name_zh": "汉他病毒出血热",
+    "category": "Viral",
+    "icd_10": "A98.5",
+    "icd_11": "1D67",
+    "description": "Hantavirus hemorrhagic fever surveillance concept",
+    "slug": "hantavirus-hemorrhagic-fever"
+  },
+  {
+    "disease_id": "D164",
+    "name_en": "Hantavirus pulmonary syndrome",
+    "name_zh": "汉他病毒肺症候群",
+    "category": "Viral",
+    "icd_10": "B33.4",
+    "icd_11": "1D64",
+    "description": "Hantavirus pulmonary syndrome surveillance concept",
+    "slug": "hantavirus-pulmonary-syndrome"
+  },
+  {
+    "disease_id": "D165",
+    "name_en": "Amebiasis",
+    "name_zh": "阿米巴病",
+    "category": "Parasitic",
+    "icd_10": "A06",
+    "icd_11": "1A36",
+    "description": "Entamoeba histolytica infection surveillance concept",
+    "slug": "amebiasis"
+  },
+  {
+    "disease_id": "D166",
+    "name_en": "Multidrug-resistant tuberculosis",
+    "name_zh": "多重耐药结核病",
+    "category": "Bacterial",
+    "icd_10": "A15-A19",
+    "icd_11": "1B10",
+    "description": "Multidrug-resistant tuberculosis surveillance concept",
+    "slug": "multidrug-resistant-tuberculosis"
+  },
+  {
+    "disease_id": "D167",
+    "name_en": "Congenital syphilis",
+    "name_zh": "先天性梅毒",
+    "category": "Bacterial",
+    "icd_10": "A50",
+    "icd_11": "1A70.1",
+    "description": "Congenital syphilis surveillance concept",
+    "slug": "congenital-syphilis"
+  },
+  {
+    "disease_id": "D168",
+    "name_en": "Congenital rubella syndrome",
+    "name_zh": "先天性风疹综合征",
+    "category": "Viral",
+    "icd_10": "P35.0",
+    "icd_11": "KA63.0",
+    "description": "Congenital rubella syndrome surveillance concept",
+    "slug": "congenital-rubella-syndrome"
+  },
+  {
+    "disease_id": "D169",
+    "name_en": "Endemic typhus fever",
+    "name_zh": "地方性斑疹伤寒",
+    "category": "Bacterial",
+    "icd_10": "A75.2",
+    "icd_11": "1C30",
+    "description": "Endemic typhus fever surveillance concept",
+    "slug": "endemic-typhus-fever"
+  },
+  {
+    "disease_id": "D170",
+    "name_en": "Complicated varicella",
+    "name_zh": "水痘并发症",
+    "category": "Viral",
+    "icd_10": "B01",
+    "icd_11": "KA62.0",
+    "description": "Complicated varicella surveillance concept",
+    "slug": "complicated-varicella"
+  },
+  {
+    "disease_id": "D171",
+    "name_en": "Herpes B virus infection",
+    "name_zh": "疱疹B病毒感染",
+    "category": "Viral",
+    "icd_10": "B00",
+    "icd_11": "1E90",
+    "description": "Macacine herpesvirus 1 infection surveillance concept",
+    "slug": "herpes-b-virus-infection"
+  },
+  {
+    "disease_id": "D172",
+    "name_en": "Severe complicated influenza",
+    "name_zh": "流感并发重症",
+    "category": "Viral",
+    "icd_10": "J09-J11",
+    "icd_11": "1E30",
+    "description": "Severe complicated influenza surveillance concept",
+    "slug": "severe-complicated-influenza"
+  },
+  {
+    "disease_id": "D173",
+    "name_en": "Rift Valley fever",
+    "name_zh": "裂谷热",
+    "category": "Viral",
+    "icd_10": "A92.4",
+    "icd_11": "1D47",
+    "description": "Rift Valley fever surveillance concept",
+    "slug": "rift-valley-fever"
+  },
+  {
+    "disease_id": "D174",
+    "name_en": "Marburg virus disease",
+    "name_zh": "马堡病毒病",
+    "category": "Viral",
+    "icd_10": "A98.3",
+    "icd_11": "1D60.1",
+    "description": "Marburg virus disease surveillance concept",
+    "slug": "marburg-virus-disease"
+  },
+  {
+    "disease_id": "D175",
+    "name_en": "Nipah virus infection",
+    "name_zh": "立百病毒感染",
+    "category": "Viral",
+    "icd_10": "B33.8",
+    "icd_11": "1D64",
+    "description": "Nipah virus infection surveillance concept",
+    "slug": "nipah-virus-infection"
+  },
+  {
+    "disease_id": "D176",
+    "name_en": "Relapsing fever",
+    "name_zh": "回归热",
+    "category": "Bacterial",
+    "icd_10": "A68",
+    "icd_11": "1C21",
+    "description": "Relapsing fever surveillance concept",
+    "slug": "relapsing-fever"
+  },
+  {
+    "disease_id": "D177",
+    "name_en": "Cat-scratch disease",
+    "name_zh": "猫抓病",
+    "category": "Bacterial",
+    "icd_10": "A28.1",
+    "icd_11": "1B9Y",
+    "description": "Cat-scratch disease surveillance concept",
+    "slug": "cat-scratch-disease"
+  },
+  {
+    "disease_id": "D178",
+    "name_en": "Acute flaccid paralysis",
+    "name_zh": "急性无力肢体麻痹",
+    "category": "Other",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "Acute flaccid paralysis surveillance concept",
+    "slug": "acute-flaccid-paralysis"
+  },
+  {
+    "disease_id": "D179",
+    "name_en": "Toxoplasmosis",
+    "name_zh": "弓形虫感染",
+    "category": "Parasitic",
+    "icd_10": "B58",
+    "icd_11": "1F57",
+    "description": "Toxoplasma gondii infection surveillance concept",
+    "slug": "toxoplasmosis"
+  },
+  {
+    "disease_id": "D180",
+    "name_en": "Enterovirus infection with severe complications",
+    "name_zh": "肠病毒感染并发重症",
+    "category": "Viral",
+    "icd_10": "B34.1",
+    "icd_11": "1F01",
+    "description": "Severe enterovirus infection surveillance concept",
+    "slug": "enterovirus-infection-with-severe-complications"
+  },
+  {
+    "disease_id": "D181",
+    "name_en": "Severe complicated COVID-19",
+    "name_zh": "新冠并发重症",
+    "category": "Viral",
+    "icd_10": "U07.1",
+    "icd_11": "RA01",
+    "description": "Severe complicated COVID-19 surveillance concept",
+    "slug": "severe-complicated-covid-19"
+  },
+  {
+    "disease_id": "D182",
+    "name_en": "Hantavirus syndrome",
+    "name_zh": "汉他病毒症候群",
+    "category": "Viral",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "Aggregate hantavirus syndrome surveillance concept",
+    "slug": "hantavirus-syndrome"
+  },
+  {
+    "disease_id": "D183",
+    "name_en": "Epidemic typhus fever",
+    "name_zh": "流行性斑疹伤寒",
+    "category": "Bacterial",
+    "icd_10": "A75.0",
+    "icd_11": "1C30",
+    "description": "Epidemic typhus fever surveillance concept",
+    "slug": "epidemic-typhus-fever"
   }
 ]

@@ -5481,10 +5481,68 @@
       ],
       "total_cases": 0,
       "total_deaths": 0
+    },
+    "TW": {
+      "dates": [
+        "2003-02-01",
+        "2003-03-01",
+        "2003-04-01",
+        "2003-05-01",
+        "2003-06-01",
+        "2003-12-01"
+      ],
+      "cases": [
+        1,
+        14,
+        197,
+        238,
+        14,
+        1
+      ],
+      "weekly_equiv_cases": [
+        0.25,
+        3.5,
+        44.483870967741936,
+        55.53333333333333,
+        3.161290322580645,
+        0.03825136612021858
+      ],
+      "deaths": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "incidence_rates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "incidence_sources": [
+        "missing_population",
+        "missing_population",
+        "missing_population",
+        "missing_population",
+        "missing_population",
+        "missing_population"
+      ],
+      "total_cases": 465,
+      "total_deaths": 0
     }
   },
   "global_monthly": {
     "months": [
+      "2003-02",
+      "2003-03",
+      "2003-04",
+      "2003-05",
+      "2003-06",
+      "2003-12",
       "2010-01",
       "2010-02",
       "2010-03",
@@ -5684,6 +5742,12 @@
       "2026-05"
     ],
     "cases": [
+      1,
+      14,
+      197,
+      238,
+      14,
+      1,
       0,
       0,
       0,
@@ -6079,10 +6143,16 @@
       0,
       0,
       0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
       0
     ]
   },
-  "total_cases": 0,
+  "total_cases": 465,
   "total_deaths": 0,
   "generated_at": "2026-05-09T00:00:00+00:00",
   "source_info": [
@@ -6145,6 +6215,27 @@
         }
       ],
       "country_name": "Japan"
+    },
+    {
+      "country_code": "TW",
+      "primary_scope": "nidss_open_data",
+      "primary_label": "Taiwan, China CDC NIDSS",
+      "primary_url": "https://nidss.cdc.gov.tw/Home/Index",
+      "primary_type": "open_data_csv",
+      "parser_primary": "tw_nidss_open_data_monthly",
+      "notes": "Taiwan, China CDC NIDSS open data CSV aggregated to national monthly totals",
+      "sources": [
+        {
+          "scope": "nidss_open_data",
+          "label": "Taiwan, China CDC NIDSS",
+          "url": "https://nidss.cdc.gov.tw/Home/Index",
+          "machine_url": "https://od.cdc.gov.tw/eic/Age_County_Gender_{disease_code}.csv",
+          "type": "open_data_csv",
+          "cadence": "monthly",
+          "description": "Taiwan, China monthly notifiable infectious disease open-data CSV feed."
+        }
+      ],
+      "country_name": "Taiwan, China"
     }
   ]
 }

@@ -46,6 +46,7 @@ const presetTemplates = [
   { id: "us", job_id: "us-daily", name: "US Daily Crawl", country_code: "US", source: "nndss_api", daily_time: "08:15" },
   { id: "jp", job_id: "jp-daily", name: "JP Daily Crawl", country_code: "JP", source: "jp_weekly", daily_time: "08:30" },
   { id: "au", job_id: "au-daily", name: "AU Daily Crawl", country_code: "AU", source: "all", daily_time: "08:45" },
+  { id: "tw", job_id: "tw-daily", name: "Taiwan, China Daily Crawl", country_code: "TW", source: "nidss_open_data", daily_time: "09:00" },
 ] as const;
 
 const crawlOptionLabels: Record<string, { en: string; zh: string }> = {

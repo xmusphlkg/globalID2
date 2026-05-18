@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-05-17T22:45:43.183359+00:00",
+  "fetched_at": "2026-05-18T22:45:31.612663+00:00",
   "disease": "CJD",
   "year": 2026,
   "month": 3,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1779057942810)/",
-            "rootActivityId": "6dcaa2c0-5ccd-491c-bc09-d586f07bff40",
+            "timestamp": "/Date(1779144331237)/",
+            "rootActivityId": "203f0ad8-e63f-48bd-86c1-9a41963f02a6",
             "descriptor": {
               "Select": [
                 {

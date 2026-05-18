@@ -1,0 +1,20 @@
+{
+  "disease_id": "D174",
+  "name_en": "Marburg virus disease",
+  "name_zh": "马堡病毒病",
+  "category": "Viral",
+  "icd_10": "A98.3",
+  "icd_11": "1D60.1",
+  "description": "Marburg virus disease surveillance concept",
+  "slug": "marburg-virus-disease",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0,
+  "generated_at": "2026-05-09T00:00:00+00:00",
+  "source_info": []
+}

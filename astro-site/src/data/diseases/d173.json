@@ -1,0 +1,20 @@
+{
+  "disease_id": "D173",
+  "name_en": "Rift Valley fever",
+  "name_zh": "裂谷热",
+  "category": "Viral",
+  "icd_10": "A92.4",
+  "icd_11": "1D47",
+  "description": "Rift Valley fever surveillance concept",
+  "slug": "rift-valley-fever",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0,
+  "generated_at": "2026-05-09T00:00:00+00:00",
+  "source_info": []
+}

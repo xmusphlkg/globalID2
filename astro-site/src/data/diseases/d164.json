@@ -1,0 +1,20 @@
+{
+  "disease_id": "D164",
+  "name_en": "Hantavirus pulmonary syndrome",
+  "name_zh": "汉他病毒肺症候群",
+  "category": "Viral",
+  "icd_10": "B33.4",
+  "icd_11": "1D64",
+  "description": "Hantavirus pulmonary syndrome surveillance concept",
+  "slug": "hantavirus-pulmonary-syndrome",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0,
+  "generated_at": "2026-05-09T00:00:00+00:00",
+  "source_info": []
+}

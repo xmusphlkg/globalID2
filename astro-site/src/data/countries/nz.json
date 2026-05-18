@@ -29365,9 +29365,9 @@
     ]
   },
   "brief_en": "New Zealand page consolidates infectious disease surveillance records from All Sources. It combines source metadata, time-series charts, and downloadable machine-readable datasets.",
-  "brief_zh": "New Zealand 页面整合来自 All Sources 的传染病监测记录，包含来源信息、时间序列图表和可下载数据。",
+  "brief_zh": "New Zealand页面整合来自All Sources 的传染病监测记录，包含来源信息、时间序列图表和可下载数据。",
   "surveillance_system_en": "The dataset is built from configured official feeds for New Zealand; current primary sources include All Sources.",
-  "surveillance_system_zh": "该数据集来自 New Zealand 已配置的官方数据源；当前主要来源包括 All Sources。",
+  "surveillance_system_zh": "该数据集来自New Zealand已配置的官方数据源；当前主要来源包括All Sources。",
   "interpretation_en": "Coverage currently spans 2016-01-01 to 2026-03-01 across 32 tracked diseases.",
   "interpretation_zh": "当前覆盖区间为 2016-01-01 至 2026-03-01，覆盖 32 种追踪疾病。",
   "reporting_cadence_en": "Source reporting frequency is inferred as MONTHLY; charts use weekly-equivalent normalization where applicable.",

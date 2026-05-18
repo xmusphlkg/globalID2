@@ -1,0 +1,20 @@
+{
+  "disease_id": "D171",
+  "name_en": "Herpes B virus infection",
+  "name_zh": "疱疹B病毒感染",
+  "category": "Viral",
+  "icd_10": "B00",
+  "icd_11": "1E90",
+  "description": "Macacine herpesvirus 1 infection surveillance concept",
+  "slug": "herpes-b-virus-infection",
+  "country_series": {},
+  "global_monthly": {
+    "months": [],
+    "cases": [],
+    "deaths": []
+  },
+  "total_cases": 0,
+  "total_deaths": 0,
+  "generated_at": "2026-05-09T00:00:00+00:00",
+  "source_info": []
+}
