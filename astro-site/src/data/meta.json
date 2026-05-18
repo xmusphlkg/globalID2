@@ -8,7 +8,7 @@
       "code": "AU",
       "name": "Australia",
       "language": "en-AU",
-      "total_cases": 20122900,
+      "total_cases": 20123501,
       "total_deaths": 0,
       "disease_count": 66,
       "date_range": {
@@ -122,11 +122,11 @@
       "code": "NZ",
       "name": "New Zealand",
       "language": "en",
-      "total_cases": 2777430,
+      "total_cases": 2872288,
       "total_deaths": 0,
-      "disease_count": 30,
+      "disease_count": 32,
       "date_range": {
-        "start": "2018-05-01",
+        "start": "2016-01-01",
         "end": "2026-03-01"
       },
       "source_info": {

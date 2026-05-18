@@ -7400,6 +7400,40 @@
       "total_cases": 16397,
       "total_deaths": 0
     },
+    "NZ": {
+      "dates": [
+        "2018-06-01",
+        "2020-03-01",
+        "2020-04-01"
+      ],
+      "cases": [
+        0,
+        0,
+        0
+      ],
+      "weekly_equiv_cases": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "deaths": [
+        0,
+        0,
+        0
+      ],
+      "incidence_rates": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "incidence_sources": [
+        "wpp_computed",
+        "wpp_computed",
+        "wpp_computed"
+      ],
+      "total_cases": 0,
+      "total_deaths": 0
+    },
     "US": {
       "dates": [
         "2015-01-17",
@@ -9984,6 +10018,27 @@
         }
       ],
       "country_name": "Japan"
+    },
+    {
+      "country_code": "NZ",
+      "primary_scope": "phf_monthly",
+      "primary_label": "All Sources",
+      "primary_url": "https://www.phfscience.nz/digital-library/",
+      "primary_type": "web",
+      "parser_primary": "nz_phf_internal_crawler",
+      "notes": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler",
+      "sources": [
+        {
+          "scope": "phf_monthly",
+          "label": "All Sources",
+          "url": "https://www.phfscience.nz/digital-library/",
+          "machine_url": null,
+          "type": "web",
+          "cadence": "monthly",
+          "description": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler"
+        }
+      ],
+      "country_name": "New Zealand"
     },
     {
       "country_code": "US",
