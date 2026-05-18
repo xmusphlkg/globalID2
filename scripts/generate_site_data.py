@@ -118,6 +118,13 @@ SOURCE_DETAILS_BY_SCOPE: dict[tuple[str, str], dict[str, str]] = {
         "type": "microsoft_bi",
         "description": "Australian national notifiable diseases surveillance dashboard.",
     },
+    ("TW", "nidss_open_data"): {
+        "label": "Taiwan, China CDC NIDSS",
+        "url": "https://nidss.cdc.gov.tw/Home/Index",
+        "machine_url": "https://od.cdc.gov.tw/eic/Age_County_Gender_{disease_code}.csv",
+        "type": "open_data_csv",
+        "description": "Taiwan, China monthly notifiable infectious disease open-data CSV feed.",
+    },
 }
 
 DOWNLOAD_CSV_FIELDS = [
@@ -156,6 +163,7 @@ ABOUT_COUNTRY_NAMES_ZH: dict[str, str] = {
     "AU": "澳大利亚",
     "CN": "中国",
     "JP": "日本",
+    "TW": "中国台湾",
     "US": "美国",
 }
 
@@ -165,6 +173,7 @@ ABOUT_SOURCE_LABELS_ZH: dict[tuple[str, str], str] = {
     ("CN", "nhc"): "国家疾病预防控制局",
     ("CN", "pubmed"): "PubMed 生物医学文献库",
     ("JP", "jp_weekly"): "日本 NIID/JIHS 周报",
+    ("TW", "nidss_open_data"): "中国台湾 CDC NIDSS",
     ("US", "nndss_api"): "美国 CDC NNDSS",
 }
 
@@ -174,6 +183,7 @@ ABOUT_SOURCE_DESCRIPTIONS_ZH: dict[tuple[str, str], str] = {
     ("CN", "nhc"): "中国官方公共卫生公报与查询门户。",
     ("CN", "pubmed"): "作为补充上下文使用的生物医学文献发现源。",
     ("JP", "jp_weekly"): "日本 NIID/JIHS 的周度传染病监测数据。",
+    ("TW", "nidss_open_data"): "中国台湾月度法定传染病开放数据 CSV。",
     ("US", "nndss_api"): "美国 CDC 国家法定传染病监测系统的临时数据。",
 }
 
@@ -1622,6 +1632,14 @@ def apply_country_brief_fields(country_data: dict, brief_by_language: dict[str, 
     source_info = country_data.get("source_info") or {}
     source_labels = [src.get("label") for src in source_info.get("sources") or [] if src.get("label")]
     source_label_en = ", ".join(source_labels) or source_info.get("primary_label") or "official surveillance sources"
+    country_code = str(country_data.get("country_code") or "").upper()
+    country_name_zh = ABOUT_COUNTRY_NAMES_ZH.get(country_code, country_data.get("country_name") or country_code)
+    source_labels_zh = [
+        ABOUT_SOURCE_LABELS_ZH.get((country_code, src.get("scope")), src.get("label"))
+        for src in source_info.get("sources") or []
+        if src.get("label")
+    ]
+    source_label_zh = ", ".join(label for label in source_labels_zh if label) or source_label_en
     country_name = country_data.get("country_name") or country_data.get("country_code")
     date_range = country_data.get("date_range") or {}
     frequency = (country_data.get("frequency_meta") or {}).get("source_frequency") or "UNKNOWN"
@@ -1631,13 +1649,13 @@ def apply_country_brief_fields(country_data: dict, brief_by_language: dict[str, 
         "It combines source metadata, time-series charts, and downloadable machine-readable datasets."
     )
     country_data["brief_zh"] = zh.get("brief") or (
-        f"{country_name} 页面整合来自 {source_label_en} 的传染病监测记录，包含来源信息、时间序列图表和可下载数据。"
+        f"{country_name_zh}页面整合来自{source_label_zh} 的传染病监测记录，包含来源信息、时间序列图表和可下载数据。"
     )
     country_data["surveillance_system_en"] = en.get("surveillance_system") or (
         f"The dataset is built from configured official feeds for {country_name}; current primary sources include {source_label_en}."
     )
     country_data["surveillance_system_zh"] = zh.get("surveillance_system") or (
-        f"该数据集来自 {country_name} 已配置的官方数据源；当前主要来源包括 {source_label_en}。"
+        f"该数据集来自{country_name_zh}已配置的官方数据源；当前主要来源包括{source_label_zh}。"
     )
     country_data["interpretation_en"] = en.get("coverage_interpretation") or (
         f"Coverage currently spans {date_range.get('start') or 'N/A'} to {date_range.get('end') or 'N/A'} "
@@ -1660,7 +1678,7 @@ def apply_country_brief_fields(country_data: dict, brief_by_language: dict[str, 
         "病例数反映已报告的监测记录，可能受病例定义、报告延迟、来源频率和人口分母缺失影响。"
     )
     country_data["source_summary_en"] = en.get("source_summary") or source_label_en
-    country_data["source_summary_zh"] = zh.get("source_summary") or source_label_en
+    country_data["source_summary_zh"] = zh.get("source_summary") or source_label_zh
     country_data["country_brief_status"] = "published" if en or zh else "fallback"
     country_data["country_brief_updated_at"] = en.get("updated_at") or zh.get("updated_at")
     return country_data

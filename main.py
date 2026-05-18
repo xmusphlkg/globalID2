@@ -27,7 +27,7 @@ def crawl(
     country: str = typer.Option("CN", help="Country code"),
     source: str = typer.Option(
         "all",
-        help="Data source (CN: cdc_weekly/nhc/pubmed/all; US: nndss_api/all; JP: jp_weekly/local; AU: all)",
+        help="Data source (CN: cdc_weekly/nhc/pubmed/all; US: nndss_api/all; JP: jp_weekly/local; AU/NZ: all; TW: nidss_open_data)",
     ),
     process: bool = typer.Option(True, help="Process and store data"),
     save_raw: bool = typer.Option(True, help="Save raw pages as plain text"),

@@ -15,7 +15,7 @@ from sqlalchemy import select
 
 from src.core import get_config, get_database, get_logger
 from src.core.source_scopes import canonicalize_task_source
-from src.domain import AutomationJob, Country, Task, TaskWorkbook
+from src.domain import AutomationJob, Country, Task, TaskType, TaskWorkbook
 from src.services.crawl_task_service import crawl_task_service
 from src.services.smtp_email_service import smtp_email_service
 from src.services.settings_service import system_settings_service
@@ -25,6 +25,10 @@ logger = get_logger(__name__)
 
 def _iso(value: Optional[datetime]) -> Optional[str]:
     return value.isoformat() if value else None
+
+
+def _enum_value(value: Any) -> str:
+    return str(value.value if hasattr(value, "value") else value).lower()
 
 
 @dataclass
@@ -341,10 +345,35 @@ class AutomationService:
         smtp_state = system_settings_service.build_smtp_status()
         await self.ensure_storage()
         jobs = await self.load_jobs()
+        job_ids = {job.job_id for job in jobs}
+        latest_task_by_job_id: dict[str, Task] = {}
+        if job_ids:
+            async with get_database() as db:
+                recent_tasks = (
+                    await db.execute(
+                        select(Task)
+                        .where(Task.task_type == TaskType.CRAWL_DATA)
+                        .order_by(Task.created_at.desc())
+                        .limit(max(200, len(job_ids) * 20))
+                    )
+                ).scalars().all()
+            for task in recent_tasks:
+                inp = task.input_data if isinstance(task.input_data, dict) else {}
+                job_id = str(inp.get("automation_job_id") or "").strip()
+                if job_id in job_ids and job_id not in latest_task_by_job_id:
+                    latest_task_by_job_id[job_id] = task
+
         jobs_payload: list[dict[str, Any]] = []
         for job in jobs:
             state = self._states.setdefault(job.job_id, AutomationJobState())
             self._sync_state_schedule(job, state, reset=False)
+            latest_task = latest_task_by_job_id.get(job.job_id)
+            if latest_task is not None:
+                state.last_task_uuid = latest_task.task_uuid
+                state.last_status = _enum_value(latest_task.status)
+                state.last_started_at = latest_task.started_at or state.last_started_at
+                state.last_finished_at = latest_task.completed_at or state.last_finished_at
+                state.last_error = latest_task.last_error
             jobs_payload.append(
                 {
                     **asdict(job),

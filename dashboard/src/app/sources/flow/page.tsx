@@ -83,6 +83,11 @@ function isAUCountry(countryName: string): boolean {
   return name === "au" || name.includes("australia") || name.includes("澳大利亚");
 }
 
+function isTWCountry(countryName: string): boolean {
+  const name = countryName.trim().toLowerCase();
+  return name === "tw" || name.includes("taiwan") || name.includes("台湾") || name.includes("台灣");
+}
+
 function getCrawlSourceOptions(countryName: string, lang: "en" | "zh") {
   if (isUSCountry(countryName)) {
     return getSourceOptionsForCountry("US", lang);
@@ -95,6 +100,9 @@ function getCrawlSourceOptions(countryName: string, lang: "en" | "zh") {
   }
   if (isAUCountry(countryName)) {
     return getSourceOptionsForCountry("AU", lang);
+  }
+  if (isTWCountry(countryName)) {
+    return getSourceOptionsForCountry("TW", lang);
   }
   return [];
 }
@@ -221,7 +229,8 @@ function CreateCrawlModal({
   const cnMode = isCNCountry(countryName);
   const jpMode = isJPCountry(countryName);
   const auMode = isAUCountry(countryName);
-  const supportedMode = usMode || cnMode || jpMode || auMode;
+  const twMode = isTWCountry(countryName);
+  const supportedMode = usMode || cnMode || jpMode || auMode || twMode;
   const [source, setSource] = useState("all");
   const [priority, setPriority] = useState("normal");
   const [force, setForce] = useState(false);
@@ -397,7 +406,8 @@ export default function SourcesFlowPage() {
     isUSCountry(countryName) ||
     isCNCountry(countryName) ||
     isJPCountry(countryName) ||
-    isAUCountry(countryName);
+    isAUCountry(countryName) ||
+    isTWCountry(countryName);
 
   const { data: flows, isLoading, error } = useSourcesFlow(effectiveCountryId);
 

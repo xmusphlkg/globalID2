@@ -68,7 +68,7 @@ def _scope_from_task(task: Task) -> str:
         (inp.get("source") or "") if isinstance(inp, dict) else "",
         country_code=country_code,
     )
-    if source in {"nndss_api", "jp_weekly", "cdc_weekly", "nhc", "pubmed", "all"}:
+    if source in {"nndss_api", "jp_weekly", "cdc_weekly", "nhc", "pubmed", "nidss_open_data", "all"}:
         return source
 
     # Backward compatibility: old tasks only stored data_source text.
