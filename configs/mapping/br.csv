@@ -1,0 +1,59 @@
+disease_id,local_name,local_code,category,aliases,notes,data_source
+D185,Work accident with biological material,ACBI,Other,ACBI|Acidente de trabalho com material biologico,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D186,Serious work accident,ACGR,Other,ACGR|Acidente de trabalho grave,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D005,AIDS in adults,AIDA,Viral,AIDA|Aids adulto|AIDS adulto,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D005,AIDS in children,AIDC,Viral,AIDC|Aids crianca|AIDS crianca,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D184,Accident caused by venomous animals,ANIM,Other,ANIM|Acidente por animais peconhentos,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D187,Rabies post-exposure prophylaxis,ANTR,Other,ANTR|Atendimento antirrabico,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D091,Botulism,BOTU,Bacterial,BOTU|Botulismo,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D188,Work-related cancer,CANC,Other,CANC|Cancer relacionado ao trabalho,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D084,Acute Chagas disease,CHAG,Parasitic,CHAG|Doenca de Chagas aguda,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D052,Chikungunya fever,CHIK,Viral,CHIK|Febre de Chikungunya|Chikungunya,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D002,Cholera,COLE,Bacterial,COLE|Colera,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D028,Pertussis,COQU,Bacterial,COQU|Coqueluche,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D144,Creutzfeldt-Jakob disease,DCRJ,Prion,DCRJ|Doenca de Creutzfeldt-Jakob,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D021,Dengue,DENG,Viral,DENG|Dengue,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D189,Work-related dermatosis,DERM,Other,DERM|Dermatose ocupacional|Dermatoses ocupacionais,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D029,Diphtheria,DIFT,Bacterial,DIFT|Difteria,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D190,Sporotrichosis,ESPO,Fungal,ESPO|Esporotricose,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D036,Schistosomiasis,ESQU,Parasitic,ESQU|Esquistossomose,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D201,Exanthematous diseases,EXAN,Viral,EXAN|Doencas exantematicas,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D118,Spotted fever,FMAC,Bacterial,FMAC|Febre maculosa|Spotted fever rickettsiosis,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D124,Typhoid fever,FTIF,Bacterial,FTIF|Febre tifoide,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D042,Leprosy,HANS,Bacterial,HANS|Hanseniase,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D102,Hantavirus disease,HANT,Viral,HANT|Hantavirose|Hantavirus infection,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D006,Viral hepatitis,HEPA,Viral,HEPA|Hepatites virais|Hepatite,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D162,HIV infection in adults,HIVA,Viral,HIVA|HIV adulto,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D162,HIV infection in children,HIVC,Viral,HIVC|HIV crianca,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D162,HIV infection in pregnant women,HIVE,Viral,HIVE|HIV gestante,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D162,HIV infection,HIVG,Viral,HIVG|HIV,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D191,Exogenous poisoning,IEXO,Other,IEXO|Intoxicacao exogena,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D044,Visceral leishmaniasis,LEIV,Parasitic,LEIV|Leishmaniose visceral|Kala-azar,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D035,Leptospirosis,LEPT,Bacterial,LEPT|Leptospirose,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D192,Work-related repetitive strain injury,LER,Other,LER|LER DORT,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D192,Work-related repetitive strain injury,LERD,Other,LERD|LER DORT,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D082,American tegumentary leishmaniasis,LTAN,Parasitic,LTAN|Leishmaniose tegumentar americana|Tegumentary leishmaniasis,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D037,Malaria,MALA,Parasitic,MALA|Malaria,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D135,Meningitis,MENI,Bacterial,MENI|Meningite,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D193,Work-related mental disorder,MENT,Other,MENT|Transtorno mental relacionado ao trabalho,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D193,Work-related disorder,NTRA,Other,NTRA|Notificacao de transtorno relacionado ao trabalho,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D194,Noise-induced hearing loss,PAIR,Other,PAIR|Perda auditiva induzida por ruido,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D001,Plague,PEST,Bacterial,PEST|Peste,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D178,Acute flaccid paralysis,PFAN,Other,PFAN|Paralisia flacida aguda,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D195,Pneumoconiosis,PNEU,Other,PNEU|Pneumoconiose,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D019,Rabies,RAIV,Viral,RAIV|Raiva,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D199,Rotavirus infection,ROTA,Viral,ROTA|Rotavirus,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D196,Foodborne disease outbreak,SDTA,Bacterial,SDTA|Surto de doencas transmitidas por alimentos|DTA,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D034,Acquired syphilis,SIFA,Bacterial,SIFA|Sifilis adquirida,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D167,Congenital syphilis,SIFC,Bacterial,SIFC|Sifilis congenita,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D197,Syphilis in pregnancy,SIFG,Bacterial,SIFG|Sifilis em gestante,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D168,Congenital rubella syndrome,SRC,Viral,SRC|Sindrome da rubeola congenita,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D120,Tetanus,TETA,Bacterial,TETA|Tetano acidental|Tetano,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D030,Neonatal tetanus,TETN,Bacterial,TETN|Tetano neonatal,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D085,Congenital toxoplasmosis,TOXC,Parasitic,TOXC|Toxoplasmose congenita|Toxoplasmosis|Toxoplasma gondii infection,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D198,Toxoplasmosis in pregnancy,TOXG,Parasitic,TOXG|Toxoplasmose gestacional|Toxoplasmose em gestante,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D200,Trachoma,TRAC,Bacterial,TRAC|Tracoma,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D025,Tuberculosis,TUBE,Bacterial,TUBE|Tuberculose,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D054,Varicella,VARC,Viral,VARC|Varicela|Catapora,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D202,Domestic sexual and other violence,VIOL,Other,VIOL|Violencia domestica sexual e outras violencias,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D051,Zika virus disease,ZIKA,Viral,ZIKA|Zika virus|Zika,Brazil SINAN prefix mapping,Brazil DATASUS SINAN

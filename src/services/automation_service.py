@@ -41,7 +41,7 @@ class AutomationJobConfig:
     priority: str = "normal"
     process: bool = True
     save_raw: bool = True
-    fill_missing: bool = True
+    fill_missing: bool = False
     force: bool = False
     retry_threshold: int = 3
     interval_minutes: Optional[int] = None
@@ -68,7 +68,7 @@ class AutomationJobConfig:
             priority=str(payload.get("priority") or "normal").strip().lower(),
             process=bool(payload.get("process", True)),
             save_raw=bool(payload.get("save_raw", True)),
-            fill_missing=bool(payload.get("fill_missing", True)),
+            fill_missing=bool(payload.get("fill_missing", False)),
             force=bool(payload.get("force", False)),
             retry_threshold=int(payload.get("retry_threshold") or default_retry_threshold),
             interval_minutes=(

@@ -57,6 +57,30 @@ COUNTRY_OVERRIDES: dict[str, dict[str, str]] = {
         "language": "zh-TW",
         "timezone": "Asia/Taipei",
     },
+    "KR": {
+        "name": "South Korea",
+        "name_en": "South Korea",
+        "name_local": "대한민국",
+        "language": "ko-KR",
+        "timezone": "Asia/Seoul",
+    },
+    "BR": {
+        "name": "Brazil",
+        "name_local": "Brasil",
+        "language": "pt-BR",
+        "timezone": "America/Sao_Paulo",
+    },
+}
+
+COUNTRY_NAMES_ZH: dict[str, str] = {
+    "AU": "澳大利亚",
+    "BR": "巴西",
+    "CN": "中国",
+    "JP": "日本",
+    "KR": "韩国",
+    "NZ": "新西兰",
+    "TW": "中国台湾",
+    "US": "美国",
 }
 
 
@@ -185,6 +209,67 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
         },
         "notes": "Taiwan, China CDC NIDSS open data CSV aggregated to national monthly totals",
     },
+    "KR": {
+        "data_source_url": "https://www.data.go.kr/data/15139178/openapi.do",
+        "data_source_type": "open_api_or_portal_download",
+        "crawler_config": {
+            "sources": ["kdca_open_api"],
+            "cadence": "monthly",
+            "base_url": "https://apis.data.go.kr/1790387/EIDAPIService",
+            "portal_url": "https://dportal.kdca.go.kr/pot/is/inftnsds.do",
+            "regional_portal_url": "https://dportal.kdca.go.kr/pot/is/summaryRgin.do",
+            "primary_operation": "PeriodRegion",
+            "service_key_env": "DATA_GO_KR_SERVICE_KEY",
+            "dportal_file_env": "KR_DPORTAL_FILE",
+            "dportal_dir_env": "KR_DPORTAL_DIR",
+            "kosis_file_env": "KR_KOSIS_FILE",
+            "page_size": 1000,
+            "refresh_recent_months": 3,
+            "full_history_start_year": 2001,
+            "reporting_area": "national",
+        },
+        "parser_config": {
+            "primary": "kr_kdca_period_region_monthly",
+        },
+        "disease_mapping_rules": {
+            "strategy": "db_first",
+            "fallback": "learning_suggestions",
+        },
+        "report_config": {
+            "default_type": "MONTHLY",
+            "lang": "ko-KR",
+        },
+        "notes": "Korea KDCA EID data from data.go.kr OpenAPI or KDCA/KOSIS portal downloads aggregated to national monthly totals",
+    },
+    "BR": {
+        "data_source_url": "http://siab.datasus.gov.br/DATASUS/index.php?acao=41&area=0901&item=1",
+        "data_source_type": "ftp_dbc",
+        "crawler_config": {
+            "sources": ["sinan_datasus"],
+            "cadence": "monthly",
+            "final_ftp_url": "ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/FINAIS/",
+            "prelim_ftp_url": "ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/",
+            "full_history_start_year": 2000,
+            "refresh_recent_months": 3,
+            "history_batch_months": 120,
+            "max_workers": 6,
+            "request_delay_seconds": 0.0,
+            "max_retries": 3,
+            "reporting_area": "national",
+        },
+        "parser_config": {
+            "primary": "br_sinan_datasus_dbc_monthly",
+        },
+        "disease_mapping_rules": {
+            "strategy": "db_first",
+            "fallback": "learning_suggestions",
+        },
+        "report_config": {
+            "default_type": "MONTHLY",
+            "lang": "pt-BR",
+        },
+        "notes": "Brazil Ministry of Health DATASUS/SINAN public DBC microdata aggregated to national monthly notification counts.",
+    },
 }
 
 
@@ -258,6 +343,18 @@ def get_country_profile(code: str) -> CountryProfile:
         timezone=timezone,
         source=source,
     )
+
+
+def get_country_display_name(code: str, lang: str = "en") -> str:
+    """Return a stable country display name for dashboard/site languages."""
+    normalized = (code or "").strip().upper()
+    if not normalized:
+        return ""
+
+    profile = get_country_profile(normalized)
+    if (lang or "").lower().startswith("zh"):
+        return COUNTRY_NAMES_ZH.get(normalized) or profile.name_local or profile.name_en or normalized
+    return profile.name_en or profile.name or profile.name_local or normalized
 
 
 def get_country_bootstrap_config(code: str) -> dict:

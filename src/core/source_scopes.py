@@ -10,6 +10,54 @@ EXPECTED_SCOPES_BY_COUNTRY = {
     "JP": ["jp_weekly"],
     "AU": ["all"],
     "TW": ["nidss_open_data"],
+    "BR": ["sinan_datasus"],
+    "KR": ["kdca_open_api"],
+}
+
+SOURCE_SCOPE_LABELS: dict[str, dict[str, str]] = {
+    "all": {
+        "en": "All Sources",
+        "zh": "全部来源",
+    },
+    "cdc_weekly": {
+        "en": "China CDC Weekly",
+        "zh": "中国疾控中心周报",
+    },
+    "nhc": {
+        "en": "NHC",
+        "zh": "国家卫健委",
+    },
+    "pubmed": {
+        "en": "PubMed",
+        "zh": "PubMed 生物医学文献库",
+    },
+    "nndss_api": {
+        "en": "US CDC NNDSS",
+        "zh": "美国 CDC NNDSS",
+    },
+    "jp_weekly": {
+        "en": "JP NIID Weekly",
+        "zh": "日本 NIID/JIHS 周报",
+    },
+    "nidss_open_data": {
+        "en": "Taiwan, China CDC NIDSS",
+        "zh": "中国台湾 CDC NIDSS",
+    },
+    "sinan_datasus": {
+        "en": "Brazil DATASUS SINAN",
+        "zh": "巴西 DATASUS SINAN",
+    },
+    "kdca_open_api": {
+        "en": "Korea KDCA EID",
+        "zh": "韩国 KDCA EID",
+    },
+}
+
+COUNTRY_SOURCE_LABEL_OVERRIDES: dict[tuple[str, str], dict[str, str]] = {
+    ("AU", "all"): {
+        "en": "Australia NINDSS",
+        "zh": "澳大利亚 NINDSS",
+    },
 }
 
 _EXACT_SCOPE_BY_DATA_SOURCE = {
@@ -23,6 +71,13 @@ _EXACT_SCOPE_BY_DATA_SOURCE = {
     "taiwan, china cdc nidss": "nidss_open_data",
     "taiwan cdc nidss open data": "nidss_open_data",
     "taiwan cdc nidss": "nidss_open_data",
+    "brazil datasus sinan open data": "sinan_datasus",
+    "brazil datasus sinan": "sinan_datasus",
+    "korea kdca eid open api": "kdca_open_api",
+    "korea kdca eid portal download": "kdca_open_api",
+    "korea kosis download": "kdca_open_api",
+    "korea kdca eid": "kdca_open_api",
+    "korea kdca": "kdca_open_api",
     "nhc": "nhc",
     "gov data": "nhc",
     "pubmed": "pubmed",
@@ -42,6 +97,19 @@ _TASK_SOURCE_ALIASES = {
     "tw": "nidss_open_data",
     "taiwan": "nidss_open_data",
     "taiwan_cdc": "nidss_open_data",
+    "sinan": "sinan_datasus",
+    "sinan_datasus": "sinan_datasus",
+    "datasus": "sinan_datasus",
+    "br": "sinan_datasus",
+    "kdca": "kdca_open_api",
+    "kdca_open_api": "kdca_open_api",
+    "kr": "kdca_open_api",
+    "korea": "kdca_open_api",
+    "data_go_kr": "kdca_open_api",
+    "kdca_dportal": "kdca_open_api",
+    "kdca_portal": "kdca_open_api",
+    "kosis": "kdca_open_api",
+    "kosis_file": "kdca_open_api",
 }
 
 
@@ -58,8 +126,98 @@ def canonicalize_task_source(
 
     if normalized == "local" and (country_code or "").strip().upper() == "JP":
         return "jp_weekly"
+    if normalized == "all" and (country_code or "").strip().upper() == "KR":
+        return "kdca_open_api"
 
     return normalized
+
+
+def get_expected_scopes_for_country(country_code: Optional[str]) -> list[str]:
+    """Return canonical data-source scopes declared for a country.
+
+    The JSON bootstrap registry is the preferred source. The constant above is
+    kept as a compatibility fallback for older deployments and tests.
+    """
+    code = (country_code or "").strip().upper()
+    if not code:
+        return []
+
+    try:
+        from src.core.country_library import get_country_bootstrap_config
+
+        cfg = get_country_bootstrap_config(code)
+        crawler_cfg = cfg.get("crawler_config", {}) if isinstance(cfg, dict) else {}
+        raw_scopes = crawler_cfg.get("sources") or []
+    except Exception:
+        raw_scopes = []
+
+    scopes = [
+        canonicalize_task_source(str(scope), country_code=code)
+        for scope in raw_scopes
+        if str(scope).strip()
+    ] or EXPECTED_SCOPES_BY_COUNTRY.get(code, [])
+
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for scope in scopes:
+        if scope not in seen:
+            seen.add(scope)
+            ordered.append(scope)
+    return ordered
+
+
+def source_scope_label(
+    scope: str,
+    *,
+    country_code: Optional[str] = None,
+    lang: str = "en",
+) -> str:
+    """Return a localized UI label for a canonical source scope."""
+    normalized_scope = canonicalize_task_source(scope, country_code=country_code)
+    upper_country = (country_code or "").strip().upper()
+    lang_key = "zh" if (lang or "").lower().startswith("zh") else "en"
+
+    country_override = COUNTRY_SOURCE_LABEL_OVERRIDES.get((upper_country, normalized_scope))
+    if country_override:
+        return country_override.get(lang_key) or country_override.get("en") or normalized_scope
+
+    labels = SOURCE_SCOPE_LABELS.get(normalized_scope)
+    if labels:
+        return labels.get(lang_key) or labels.get("en") or normalized_scope
+
+    return normalized_scope or ("未知来源" if lang_key == "zh" else "Unknown Source")
+
+
+def source_options_for_country(country_code: Optional[str]) -> list[dict[str, str]]:
+    """Return source selector options with bilingual labels for a country."""
+    code = (country_code or "").strip().upper()
+    scopes = get_expected_scopes_for_country(code)
+    if not scopes:
+        scopes = ["all"]
+
+    option_scopes = list(scopes)
+    if len(scopes) > 1 and "all" not in option_scopes:
+        option_scopes.insert(0, "all")
+
+    return [
+        {
+            "value": scope,
+            "label_en": source_scope_label(scope, country_code=code, lang="en"),
+            "label_zh": source_scope_label(scope, country_code=code, lang="zh"),
+        }
+        for scope in option_scopes
+    ]
+
+
+def default_source_for_country(country_code: Optional[str]) -> str:
+    """Return the preferred source value for forms and automation presets."""
+    code = (country_code or "").strip().upper()
+    scopes = get_expected_scopes_for_country(code)
+    if len(scopes) > 1:
+        return "all"
+    if scopes:
+        return scopes[0]
+    return "all"
 
 
 def scope_from_data_source(data_source: Optional[str]) -> str:
@@ -76,6 +234,10 @@ def scope_from_data_source(data_source: Optional[str]) -> str:
         return "nndss_api"
     if "nidss" in text or "taiwan cdc" in text or "taiwan, china cdc" in text:
         return "nidss_open_data"
+    if "sinan" in text or "datasus" in text:
+        return "sinan_datasus"
+    if "kdca" in text or "korea" in text or "data.go.kr" in text:
+        return "kdca_open_api"
     if "nhc" in text or "gov" in text or "ndcpa" in text or "卫健" in text or "疾控局" in text:
         return "nhc"
     if "cdc" in text or "weekly" in text:
@@ -87,24 +249,7 @@ def scope_from_data_source(data_source: Optional[str]) -> str:
 
 def scope_display_label(scope: str, *, country_code: Optional[str] = None) -> str:
     """Return a stable UI label for a canonical scope key."""
-    normalized_scope = canonicalize_task_source(scope, country_code=country_code)
-    upper_country = (country_code or "").strip().upper()
-
-    if normalized_scope == "nndss_api":
-        return "US CDC NNDSS"
-    if normalized_scope == "jp_weekly":
-        return "JP NIID Weekly"
-    if normalized_scope == "pubmed":
-        return "PubMed"
-    if normalized_scope == "nhc":
-        return "NHC"
-    if normalized_scope == "cdc_weekly":
-        return "China CDC Weekly"
-    if normalized_scope == "nidss_open_data":
-        return "Taiwan, China CDC NIDSS"
-    if normalized_scope == "all" and upper_country == "AU":
-        return "Australia NINDSS"
-    return "All Sources"
+    return source_scope_label(scope, country_code=country_code, lang="en")
 
 
 def canonical_data_source_label(
@@ -127,6 +272,16 @@ def canonical_data_source_label(
         "taiwan cdc nidss",
     }:
         return "Taiwan, China CDC NIDSS"
+    if text in {"brazil datasus sinan open data", "brazil datasus sinan"}:
+        return "Brazil DATASUS SINAN"
+    if text in {
+        "korea kdca eid open api",
+        "korea kdca eid portal download",
+        "korea kosis download",
+        "korea kdca eid",
+        "korea kdca",
+    }:
+        return "Korea KDCA EID"
 
     scope = scope_from_data_source(data_source)
     if scope != "all":
