@@ -36,6 +36,8 @@ import {
   useCreateAIModel,
   useCreateAIProvider,
   useDeleteAIModel,
+  useDeleteAIProvider,
+  useRebuildAIProviders,
   useTestAIModel,
   useTestAIProvider,
   useUpdateAIModel,
@@ -159,7 +161,9 @@ export default function AIModelsPage() {
 
   const createProvider = useCreateAIProvider();
   const updateProvider = useUpdateAIProvider();
+  const deleteProvider = useDeleteAIProvider();
   const testProvider = useTestAIProvider();
+  const rebuildProviders = useRebuildAIProviders();
 
   const createModel = useCreateAIModel();
   const updateModel = useUpdateAIModel();
@@ -215,6 +219,7 @@ export default function AIModelsPage() {
   const [compactProviders, setCompactProviders] = useState(true);
   const [compactModels, setCompactModels] = useState(true);
   const [deletingModelId, setDeletingModelId] = useState<number | null>(null);
+  const [deletingProviderId, setDeletingProviderId] = useState<number | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
 
   const copy = isZh
@@ -323,8 +328,16 @@ export default function AIModelsPage() {
         deleting: "删除中...",
         deleteModelConfirm: "确认删除模型",
         deleteModelDefaultWarn: "这是默认模型，删除后系统会自动选择下一个模型作为默认。",
+        deleteProvider: "删除提供商",
+        deleteProviderConfirm: "确认删除提供商",
+        providerModelsTitle: "包含模型",
+        deleteProviderDefaultWarn: "该提供商下的模型会一并删除，包含默认模型时会自动切换下一个可用默认模型。",
+        rebuildFromEnv: "重建 env 提供商",
+        rebuildFromEnvConfirm: "该操作会按 .env 配置重新初始化提供商及默认模型。已有自定义记录将被清空。",
         deleteModelSuccess: "模型已删除",
         deleteModelFailed: "删除失败",
+        deleteProviderSuccess: "提供商已删除",
+        deleteProviderFailed: "提供商删除失败",
         cardDensity: "卡片密度",
         compact: "紧凑",
         detailed: "详细",
@@ -434,8 +447,16 @@ export default function AIModelsPage() {
         deleting: "Deleting...",
         deleteModelConfirm: "Delete model",
         deleteModelDefaultWarn: "This is the default model. After deletion, the system will auto-pick another default.",
+        deleteProvider: "Delete Provider",
+        deleteProviderConfirm: "Delete provider",
+        providerModelsTitle: "Models",
+        rebuildFromEnv: "Rebuild From .env",
+        rebuildFromEnvConfirm: "This will rebuild providers/models from .env and clear current custom records.",
+        deleteProviderDefaultWarn: "All models under this provider will be removed; a replacement default model will be selected if needed.",
         deleteModelSuccess: "Model deleted",
         deleteModelFailed: "Delete failed",
+        deleteProviderSuccess: "Provider deleted",
+        deleteProviderFailed: "Delete provider failed",
         cardDensity: "Card Density",
         compact: "Compact",
         detailed: "Detailed",
@@ -543,6 +564,8 @@ export default function AIModelsPage() {
   const operationError =
     createProvider.error ??
     updateProvider.error ??
+    deleteProvider.error ??
+    rebuildProviders.error ??
     testProvider.error ??
     createModel.error ??
     updateModel.error ??
@@ -684,6 +707,61 @@ export default function AIModelsPage() {
     );
   };
 
+  const onDeleteProvider = (provider: AIProviderItem) => {
+    const modelCount = modelCountByProvider.get(provider.id) ?? 0;
+    const relatedModels = (models ?? []).filter((model) => model.provider_id === provider.id);
+    const modelNames = relatedModels.map((model) => model.display_name || model.model_name);
+    const topModelNames = modelNames.slice(0, 4).join("，");
+    const moreCount = Math.max(0, modelNames.length - 4);
+    const confirmText = isZh
+      ? `${copy.deleteProviderConfirm} ${provider.display_name} (${provider.provider_key})？${modelCount > 0 ? `\n\n${copy.providerModelsTitle}: ${topModelNames}${moreCount > 0 ? `，...共 ${modelCount} 个` : ""}\n${copy.deleteProviderDefaultWarn}` : ""}`
+      : `${copy.deleteProviderConfirm} ${provider.display_name} (${provider.provider_key})?${modelCount > 0 ? `\n\n${copy.providerModelsTitle}: ${topModelNames}${moreCount > 0 ? `, +${moreCount} more` : ""}\n${copy.deleteProviderDefaultWarn}` : ""}`;
+    if (!window.confirm(confirmText)) return;
+
+    if (editingProviderId === provider.id) {
+      setEditingProviderId(null);
+    }
+    setDeletingProviderId(provider.id);
+    deleteProvider.mutate(provider.id, {
+      onSuccess: () => {
+        setToast({
+          type: "success",
+          message: `${copy.deleteProviderSuccess}: ${provider.display_name}`,
+        });
+      },
+      onError: (error) => {
+        setToast({
+          type: "error",
+          message: `${copy.deleteProviderFailed}: ${mutationErrorText(error, lang)}`,
+        });
+      },
+      onSettled: () => {
+        setDeletingProviderId(null);
+      },
+    });
+  };
+
+  const onRebuildFromEnv = () => {
+    if (!window.confirm(copy.rebuildFromEnvConfirm)) return;
+    rebuildProviders.mutate(
+      { force: true },
+      {
+        onSuccess: () => {
+          setToast({
+            type: "success",
+            message: isZh ? "已按 env 重建提供商与模型" : "Rebuilt providers/models from env",
+          });
+        },
+        onError: (error) => {
+          setToast({
+            type: "error",
+            message: `${isZh ? "重建失败" : "Rebuild failed"}: ${mutationErrorText(error, lang)}`,
+          });
+        },
+      },
+    );
+  };
+
   const onDeleteModel = (model: AIModelItem) => {
     const confirmText = isZh
       ? `${copy.deleteModelConfirm} ${model.display_name} (${model.model_name})?${model.is_default ? `\n\n${copy.deleteModelDefaultWarn}` : ""}`
@@ -745,6 +823,14 @@ export default function AIModelsPage() {
               >
                 {checkAll.isPending ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <ShieldCheck className="h-3.5 w-3.5" />}
                 {copy.checkAllModels}
+              </button>
+              <button
+                onClick={onRebuildFromEnv}
+                disabled={rebuildProviders.isPending}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300/70 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 transition hover:bg-amber-100 disabled:opacity-60 dark:border-amber-900 dark:bg-amber-950/25 dark:text-amber-300"
+              >
+                {rebuildProviders.isPending ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <ArrowRight className="h-3.5 w-3.5" />}
+                {copy.rebuildFromEnv}
               </button>
             </div>
             {operationError && (
@@ -1120,6 +1206,14 @@ export default function AIModelsPage() {
                     className="rounded-xl border border-amber-300/70 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-300"
                   >
                     {provider.is_active ? copy.disable : copy.enable}
+                  </button>
+                  <button
+                    onClick={() => onDeleteProvider(provider)}
+                    disabled={deleteProvider.isPending && deletingProviderId === provider.id}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-rose-300/70 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 disabled:opacity-60 dark:border-rose-900 dark:bg-rose-950/20 dark:text-rose-300"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    {deleteProvider.isPending && deletingProviderId === provider.id ? copy.deleting : copy.deleteProvider}
                   </button>
                 </div>
 

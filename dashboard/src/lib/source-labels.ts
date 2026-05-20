@@ -1,4 +1,27 @@
+import type { CountrySourceConfig, SourceOption } from "@/lib/hooks/useSources";
+
 export type DashboardLang = "en" | "zh";
+
+export function getSourceOptionLabel(option: SourceOption, lang: DashboardLang = "en"): string {
+  return lang === "zh" ? option.label_zh || option.label : option.label_en || option.label;
+}
+
+export function getConfiguredSourceOptions(
+  config?: CountrySourceConfig | null,
+  lang: DashboardLang = "en",
+  fallbackCountryCode?: string | null,
+): Array<{ value: string; label: string }> {
+  if (!config) {
+    return getSourceOptionsForCountry(fallbackCountryCode || "", lang);
+  }
+  if (!config.source_options.length) {
+    return getSourceOptionsForCountry(config.country_code, lang);
+  }
+  return config.source_options.map((option) => ({
+    value: option.value,
+    label: getSourceOptionLabel(option, lang),
+  }));
+}
 
 export function getSourceDisplayLabel(
   source?: string | null,
@@ -11,6 +34,21 @@ export function getSourceDisplayLabel(
   if (s === "jp_idwr" || s === "jp_weekly" || (s === "all" && cc === "JP")) return "JP NIID Weekly";
   if (s === "nidss_open_data" || s === "nidss" || ((s === "all" || s === "tw") && cc === "TW")) {
     return lang === "zh" ? "中国台湾 CDC NIDSS" : "Taiwan, China CDC NIDSS";
+  }
+  if (s === "sinan_datasus" || s === "sinan" || s === "datasus" || ((s === "all" || s === "br") && cc === "BR")) {
+    return lang === "zh" ? "巴西 DATASUS SINAN" : "Brazil DATASUS SINAN";
+  }
+  if (
+    s === "kdca_open_api" ||
+    s === "kdca" ||
+    s === "kdca_dportal" ||
+    s === "kdca_portal" ||
+    s === "kosis" ||
+    s === "korea kdca eid portal download" ||
+    s === "korea kosis download" ||
+    ((s === "all" || s === "kr" || s === "korea") && cc === "KR")
+  ) {
+    return lang === "zh" ? "韩国 KDCA EID" : "Korea KDCA EID";
   }
   if (s === "pubmed" || s === "pubmed_rss") return "PubMed";
   if (s === "cdc_weekly") return "China CDC Weekly";
@@ -49,6 +87,12 @@ export function getSourceOptionsForCountry(
   }
   if (code === "TW") {
     return [{ value: "nidss_open_data", label: lang === "zh" ? "中国台湾 CDC NIDSS" : "Taiwan, China CDC NIDSS" }];
+  }
+  if (code === "BR") {
+    return [{ value: "sinan_datasus", label: lang === "zh" ? "巴西 DATASUS SINAN" : "Brazil DATASUS SINAN" }];
+  }
+  if (code === "KR") {
+    return [{ value: "kdca_open_api", label: lang === "zh" ? "韩国 KDCA EID" : "Korea KDCA EID" }];
   }
   return [{ value: "all", label: lang === "zh" ? "全部来源" : "All Sources" }];
 }

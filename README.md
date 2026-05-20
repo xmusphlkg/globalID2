@@ -131,6 +131,29 @@ The Python configuration layer also supports provider-specific credentials such 
 - `AZURE_API_KEY`
 - `CUSTOM_API_KEY`
 
+### AI-assisted disease duplicate review
+
+The disease duplicate audit can run fully offline, or ask an OpenAI-compatible
+model to classify review candidates:
+
+```bash
+python3 scripts/audit_disease_duplicates.py --fail-on-high
+python3 scripts/audit_disease_duplicates.py --ai-review --ai-output reports/disease_duplicate_ai_review.json
+```
+
+`--ai-review` uses the same model-center routing used by the management
+dashboard. Configure providers and model routes in `/ai/models`; the audit will
+use the first active, routable model and respect model-center
+cooldown/unavailable state.
+
+The AI layer is advisory only: it recommends `merge`, `keep_separate`, or
+`needs_human_review`, but it does not edit mapping CSVs automatically.
+
+The management dashboard also exposes this workflow at `/ai/disease-audit`.
+That dashboard entry uses the configured AI model center routes rather than
+direct environment variables, and it can review both duplicate disease concepts
+and newly observed unmapped disease terms from current source data.
+
 If you want email delivery for generated reports, configure SMTP values as well.
 
 ## Quick Start
@@ -359,7 +382,7 @@ This is the main setup path when refreshing the disease registry, mappings, and 
 
 Directory convention:
 - `data/history/`: one-time historical backfill inputs and merged history files
-- `data/current/`: crawler outputs used by ongoing incremental JP/AU updates
+- `data/current/`: crawler outputs used by ongoing incremental JP/AU/NZ/TW/BR updates
 - `data/raw/`: raw pages / raw payload caches kept for debugging and traceability
 
 ```bash
@@ -428,6 +451,9 @@ python main.py crawl --country CN --source nhc
 python main.py crawl --country CN --source pubmed
 python main.py crawl --country CN --force
 python main.py crawl --country US --source nndss_api
+python main.py crawl --country BR --source sinan_datasus
+python main.py crawl --country BR --source DENG,CHIK,ZIKA
+python main.py crawl --country BR --fill-missing --start-year 2000 --source sinan_datasus
 ```
 
 Behavior summary:
@@ -442,6 +468,22 @@ US incremental notes:
 - US now follows the same task and crawl workflow as CN (`TaskManager` -> `CrawlService` -> workbook/progress updates)
 - the US update gate compares source latest week date with database latest US date
 - data is imported only when source has a newer week (unless `--force` is used)
+
+BR incremental notes:
+
+- Brazil uses DATASUS/SINAN public annual `.dbc` microdata from final and preliminary FTP folders, aggregated to national monthly notification counts.
+- The default BR crawl refreshes the configured recent-month window (from `country_bootstrap.json`).
+- BR files are now cached by file signature (`filename + status + size + ftp mtime`) under `data/cache/br/sinan_monthly_aggregates`; repeated runs reuse cached monthly buckets without re-decompressing unchanged `.dbc` files.
+- Use `--fill-missing` for one-off historical backfills; `--force` is equivalent to a full range re-fetch from `full_history_start_year`.
+- `--source sinan_datasus` uses all configured SINAN prefixes; a comma-separated prefix list such as `DENG,CHIK,ZIKA` limits the crawl.
+- `--start-year` lets you set the history start year for BR backfills (default: 2000), so you can split by year range for predictable runtime.
+- Use `--save-raw` when you want the original DBC files archived under `data/raw/br/`.
+
+If a one-off scripted backfill is preferred, run:
+
+```bash
+./venv/bin/python scripts/import_br_history.py --start-year 2000 --end-year 2026 --save-raw
+```
 
 ### Generate an AI-assisted report
 

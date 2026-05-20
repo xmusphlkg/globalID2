@@ -16,7 +16,7 @@ export function TopNavbar({
   sidebarCollapsed?: boolean;
   onToggleSidebar?: () => void;
 }) {
-  const { lang, setLang, countryId, countryName, setCountry } = useAppStore();
+  const { lang, setLang, countryId, countryName, countryCode, setCountry } = useAppStore();
   const { data: countries, isLoading, error } = useCountries();
 
   useEffect(() => {
@@ -31,7 +31,7 @@ export function TopNavbar({
       }
 
       const displayName = getCountryDisplayName(selected, lang);
-      if (countryName !== displayName) {
+      if (countryName !== displayName || countryCode !== selected.code) {
         setCountry(selected.id, displayName, selected.code);
       }
       return;
@@ -42,7 +42,7 @@ export function TopNavbar({
     const fallback = countries.find((country) => country.is_active) ?? countries[0];
     const next = preferred ?? fallback;
     setCountry(next.id, getCountryDisplayName(next, lang), next.code);
-  }, [countryId, countryName, countries, lang, setCountry]);
+  }, [countryCode, countryId, countryName, countries, lang, setCountry]);
 
   const selectorValue = countryId ? String(countryId) : "";
   const selectorDisabled = isLoading || !!error || !countries || countries.length === 0;

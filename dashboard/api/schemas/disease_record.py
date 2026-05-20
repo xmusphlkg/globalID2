@@ -38,6 +38,7 @@ class DiseaseRecordOut(BaseModel):
 class OverviewSummary(BaseModel):
     total_diseases: int = 0
     total_records: int = 0
+    earliest_date: Optional[str] = None
     latest_date: Optional[str] = None
     recent_cases_30d: int = 0
     top_diseases: list = []

@@ -198,9 +198,15 @@ export function TaskDetailPanel({
     const fillMissing = booleanLabel(crawlInput.fill_missing);
     const process = booleanLabel(crawlInput.process);
     const force = booleanLabel(crawlInput.force);
+    const startYear = asDisplayString(crawlInput.start_year);
+    const sourceFile = asDisplayString(crawlInput.source_file);
+    const sourceDir = asDisplayString(crawlInput.source_dir);
     const rawArchivePath = deriveRawArchivePath(taskDetail);
 
     if (source) rows.push({ label: "Source", value: getSourceDisplayLabel(source, "en", taskDetail.country_code) });
+    if (startYear) rows.push({ label: "History Start Year", value: startYear });
+    if (sourceFile) rows.push({ label: "Source File", value: sourceFile });
+    if (sourceDir) rows.push({ label: "Source Dir", value: sourceDir });
     if (saveRaw) rows.push({ label: "Save Raw", value: saveRaw });
     if (rawArchivePath) rows.push({ label: "Raw Archive", value: rawArchivePath });
     if (fillMissing) rows.push({ label: "Fill Missing", value: fillMissing });
