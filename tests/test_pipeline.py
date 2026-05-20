@@ -208,6 +208,7 @@ def test_crawlers_importable():
     from src.data.crawlers.us import USNNDSSCrawler
     from src.data.crawlers.nz import NewZealandPHFCrawler
     from src.data.crawlers.tw import TaiwanNIDSSCrawler
+    from src.data.crawlers.kr import KoreaKDCAOpenAPICrawler
 
     crawlers = {
         "CN": ChinaCDCCrawler(),
@@ -216,6 +217,7 @@ def test_crawlers_importable():
         "US": USNNDSSCrawler(),
         "NZ": NewZealandPHFCrawler(),
         "TW": TaiwanNIDSSCrawler(),
+        "KR": KoreaKDCAOpenAPICrawler(),
     }
     for code, crawler in crawlers.items():
         assert crawler is not None
@@ -230,6 +232,7 @@ def test_processors_importable():
     from src.data.processors.us import USWeeklyUpdater
     from src.data.processors.nz import NZMonthlyUpdater
     from src.data.processors.tw import TWMonthlyUpdater
+    from src.data.processors.kr import KRMonthlyUpdater
 
     for cls in (
         DataProcessor,
@@ -238,6 +241,7 @@ def test_processors_importable():
         USWeeklyUpdater,
         NZMonthlyUpdater,
         TWMonthlyUpdater,
+        KRMonthlyUpdater,
     ):
         assert cls is not None
         print(f"\n  ✅ {cls.__name__} importable")
@@ -253,6 +257,7 @@ COUNTRY_SOURCES = {
     "AU": "all",
     "US": "nndss_api",
     "TW": "nidss_open_data",
+    "KR": "kdca_open_api",
 }
 
 # Skip network tests if explicitly disabled (e.g. CI without external access)
@@ -398,6 +403,12 @@ def test_source_scope_aliases_cover_cn_jp_au_legacy_values():
     assert canonicalize_task_source("external", country_code="AU") == "all"
     assert canonicalize_task_source("nidss", country_code="TW") == "nidss_open_data"
     assert canonicalize_task_source("taiwan_cdc", country_code="TW") == "nidss_open_data"
+    assert canonicalize_task_source("sinan", country_code="BR") == "sinan_datasus"
+    assert canonicalize_task_source("datasus", country_code="BR") == "sinan_datasus"
+    assert canonicalize_task_source("kdca", country_code="KR") == "kdca_open_api"
+    assert canonicalize_task_source("kdca_portal", country_code="KR") == "kdca_open_api"
+    assert canonicalize_task_source("kosis", country_code="KR") == "kdca_open_api"
+    assert canonicalize_task_source("all", country_code="KR") == "kdca_open_api"
 
 
 def test_au_runtime_hints_can_be_extracted_from_live_query_shape():

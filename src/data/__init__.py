@@ -15,6 +15,8 @@ from .crawlers.cn import ChinaCDCCrawler
 from .crawlers.jp import JapanIDWRCrawler
 from .crawlers.au import AustraliaNINDSSCrawler
 from .crawlers.us import USNNDSSCrawler
+from .crawlers.br import BrazilSINANCrawler
+from .crawlers.kr import KoreaKDCAOpenAPICrawler
 from .parsers.html_parser import HTMLTableParser
 from .normalizers.disease_mapper import DiseaseMapper
 from .normalizers.disease_mapper_db import DiseaseMapperDB, DiseaseMapperDBSync
@@ -32,6 +34,8 @@ __all__ = [
     "JapanIDWRCrawler",
     "JPIDWRCrawler",
     "AustraliaNINDSSCrawler",
+    "BrazilSINANCrawler",
+    "KoreaKDCAOpenAPICrawler",
     # Parsers
     "HTMLTableParser",
     # Normalizers

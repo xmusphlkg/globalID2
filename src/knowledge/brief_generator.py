@@ -28,7 +28,7 @@ class BriefValidationResult:
 class SourceGroundedBriefGenerator:
     """Generate bilingual disease briefs from short source records."""
 
-    PUBLIC_SOURCE_TYPES = {"who", "who_don", "wikidata", "wikipedia", "pubmed"}
+    PUBLIC_SOURCE_TYPES = {"who", "who_don", "web_search", "wikidata", "wikipedia", "pubmed"}
     AUTHORITATIVE_SOURCE_TYPES = {"who", "who_don"}
 
     def generate(

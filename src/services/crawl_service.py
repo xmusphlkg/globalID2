@@ -47,10 +47,10 @@ class CrawlService:
         Raises on unrecoverable errors (caller handles via task_lifecycle).
         """
         from src.data.crawlers import ChinaCDCCrawler
-        from src.data.processors import AUMonthlyUpdater, DataProcessor, JPWeeklyUpdater, USWeeklyUpdater, NZMonthlyUpdater, TWMonthlyUpdater
+        from src.data.processors import AUMonthlyUpdater, DataProcessor, JPWeeklyUpdater, USWeeklyUpdater, NZMonthlyUpdater, TWMonthlyUpdater, BRMonthlyUpdater, KRMonthlyUpdater
 
-        if country_code not in ("CN", "US", "JP", "AU", "NZ", "TW"):
-            raise ValueError(f"Unsupported country: {country_code}. Available: CN, US, JP, AU, NZ, TW")
+        if country_code not in ("CN", "US", "JP", "AU", "NZ", "TW", "BR", "KR"):
+            raise ValueError(f"Unsupported country: {country_code}. Available: CN, US, JP, AU, NZ, TW, BR, KR")
 
         if country_code == "US":
             return await self._execute_us_weekly(
@@ -105,6 +105,34 @@ class CrawlService:
                 save_raw=save_raw,
                 fill_missing=fill_missing,
                 updater=TWMonthlyUpdater(),
+            )
+
+        if country_code == "BR":
+            start_year = (
+                task.input_data.get("start_year")
+                if isinstance(task.input_data, dict)
+                else None
+            )
+            return await self._execute_br_monthly(
+                task=task,
+                source=source,
+                force=force,
+                process=process,
+                save_raw=save_raw,
+                fill_missing=fill_missing,
+                start_year=start_year,
+                updater=BRMonthlyUpdater(),
+            )
+
+        if country_code == "KR":
+            return await self._execute_kr_monthly(
+                task=task,
+                source=source,
+                force=force,
+                process=process,
+                save_raw=save_raw,
+                fill_missing=fill_missing,
+                updater=KRMonthlyUpdater(),
             )
 
         crawler = ChinaCDCCrawler()
@@ -1307,6 +1335,604 @@ class CrawlService:
         await task_manager.update_task_progress(task.task_uuid, 100)
 
         return CrawlResult(imported, 1 if process else 0, imported, run_id)
+
+    async def _execute_br_monthly(
+        self,
+        *,
+        task: Task,
+        source: str,
+        force: bool,
+        process: bool,
+        save_raw: bool,
+        fill_missing: bool,
+        start_year: Optional[int] = None,
+        updater,
+    ) -> CrawlResult:
+        """Execute the Brazil DATASUS SINAN monthly open-data pipeline."""
+        run_started = perf_counter()
+        raw_dir = Path("data/raw") / "br"
+        run_id: Optional[int] = None
+        history_start_year = self._br_history_start_year(
+            task, updater, default_start_year=start_year
+        )
+
+        await task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="info",
+            title="Crawl Configuration",
+            content=(
+                "Country: BR\n"
+                f"Source: {source}\n"
+                f"Force: {'Yes' if force else 'No'}\n"
+                f"Process: {'Yes' if process else 'No'}\n"
+                f"Save Raw: {'Yes' if save_raw else 'No'}\n"
+                f"Fill Missing: {'Yes' if fill_missing else 'No'}\n"
+                f"History Start Year: {history_start_year}"
+            ),
+            content_type="text",
+        )
+        await self._add_raw_archive_entry(task.task_uuid, save_raw=save_raw, raw_dir=raw_dir)
+
+        try:
+            async with get_database() as db:
+                run = CrawlRun(
+                    country_code="BR",
+                    source=source,
+                    status="running",
+                    started_at=datetime.now(timezone.utc),
+                    raw_dir=str(raw_dir) if save_raw else None,
+                    metadata_={"force": force, "process": process},
+                )
+                db.add(run)
+                await db.flush()
+                run_id = run.id
+        except Exception as e:
+            logger.warning(f"Could not create CrawlRun record: {e}")
+
+        await task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="info",
+            title="Phase 1/3: Fetching BR Source",
+            content=(
+                "Fetching Brazil DATASUS SINAN DBC files and aggregating national monthly rows...\n"
+                + (
+                    f"Mode: {'fill missing months' if fill_missing else 'recent months'} "
+                    f"(refresh window: {updater.refresh_recent_months}, start: {history_start_year})"
+                    if not force
+                    else f"Mode: full history refresh from {history_start_year}"
+                )
+                + (" + force re-fetch" if force else "")
+            ),
+            content_type="text",
+        )
+        await task_manager.update_task_progress(task.task_uuid, 10)
+
+        months_to_fetch = None
+        if fill_missing or force:
+            if force:
+                months_to_fetch = updater.history_months(start_year=history_start_year)
+            else:
+                now_dt = datetime.now()
+                recent: list[tuple[int, int]] = []
+                for delta in range(max(1, updater.refresh_recent_months)):
+                    m = now_dt.month - delta
+                    y = now_dt.year
+                    if m <= 0:
+                        m += 12
+                        y -= 1
+                    recent.append((y, m))
+                months_set = set(recent)
+
+                async with get_database() as db:
+                    existing_months = await updater.get_db_months(db)
+                for fy in range(history_start_year, now_dt.year + 1):
+                    for fm in range(1, 13 if fy < now_dt.year else now_dt.month + 1):
+                        if (fy, fm) not in existing_months:
+                            months_set.add((fy, fm))
+
+                months_to_fetch = sorted(months_set)
+
+        requested_batches: list[Optional[List[tuple[int, int]]]]
+        if months_to_fetch is None:
+            requested_batches = [None]
+        else:
+            month_batch_size = (
+                int(getattr(updater, "history_batch_months", 0) or 0)
+                if fill_missing or force
+                else 0
+            )
+            requested_batches = (
+                self._chunk_months(months_to_fetch, month_batch_size)
+                if month_batch_size > 0
+                else [months_to_fetch]
+            )
+
+        use_batch_csv_write = len(requested_batches) > 1
+        shared_crawler = None
+        if use_batch_csv_write:
+            from src.data.crawlers import BrazilSINANCrawler
+
+            shared_crawler = BrazilSINANCrawler(
+                save_raw=save_raw,
+                raw_dir=raw_dir if save_raw else None,
+            )
+
+        phase1_started = perf_counter()
+        merged_rows: list[dict] = []
+        fetched_batch_messages: list[str] = []
+        failed_batches: list[tuple[int, Exception]] = []
+        source_latest: Optional[date] = None
+        source_csv: Optional[Path] = None
+        source_latest_date: Optional[date] = None
+        for idx, batch_months in enumerate(requested_batches, start=1):
+            batch_start = perf_counter()
+            batch_label_len = (
+                len(batch_months)
+                if batch_months is not None
+                else int(max(1, updater.refresh_recent_months))
+            )
+            try:
+                fetched = updater.refresh_source(
+                    source=source,
+                    run_external=False,
+                    force=force or False,
+                    months=batch_months,
+                    save_raw=save_raw,
+                    raw_dir=raw_dir if save_raw else None,
+                    load_csv_fallback=not use_batch_csv_write,
+                    write_csv=not use_batch_csv_write,
+                    crawler=shared_crawler,
+                )
+            except Exception as exc:
+                failed_batches.append((idx, exc))
+                logger.warning(
+                    f"[BR] refresh batch failed | batch={idx}/{len(requested_batches)} "
+                    f"months={batch_label_len} err={exc}"
+                )
+                fetched_batch_messages.append(
+                    f"[BR] batch {idx}/{len(requested_batches)} failed: "
+                    f"{type(exc).__name__}: {exc}"
+                )
+                continue
+
+            phase_elapsed = perf_counter() - batch_start
+            merged_rows.extend(fetched.rows)
+            fetched_batch_messages.append(
+                f"[BR] batch {idx}/{len(requested_batches)} success: "
+                f"months={batch_label_len} rows={len(fetched.rows)} "
+                f"elapsed={phase_elapsed:.1f}s"
+            )
+            if fetched.source_latest_date is not None and (
+                source_latest is None
+                or fetched.source_latest_date > source_latest
+            ):
+                source_latest = fetched.source_latest_date
+            source_csv = fetched.source_csv
+
+            batch_progress = 10 + int((idx / max(1, len(requested_batches))) * 20)
+            await task_manager.update_task_progress(task.task_uuid, min(30, batch_progress))
+
+            if fetched.script_logs:
+                fetched_batch_messages.extend(fetched.script_logs[-2:])
+
+        phase1_elapsed = perf_counter() - phase1_started
+        source_rows = len(merged_rows)
+        if not merged_rows and failed_batches:
+            raise failed_batches[0][1]
+        if not merged_rows:
+            raise RuntimeError("BR source produced no rows in this run")
+
+        if use_batch_csv_write:
+            updater._write_rows_to_output_csv(merged_rows)
+
+        source_latest_date = source_latest
+        source_latest_text = source_latest_date.isoformat() if source_latest_date else "none"
+        months_fetched_count = len(months_to_fetch) if months_to_fetch is not None else max(
+            1,
+            int(updater.refresh_recent_months),
+        )
+
+        await task_manager.update_task_progress(task.task_uuid, 30)
+        await task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="success",
+            title="Phase 1/3 Complete",
+            content=(
+                f"Months requested: {months_fetched_count}\n"
+                f"Source rows prepared (national monthly): {source_rows}\n"
+                f"Source latest month date: {source_latest_text}\n"
+                f"Current national CSV: {source_csv or 'N/A'}\n"
+                f"Duration: {phase1_elapsed:.1f}s"
+            ),
+            content_type="text",
+        )
+
+        if fetched_batch_messages:
+            await task_manager.add_workbook_entry(
+                task.task_uuid,
+                entry_type="info",
+                title="BR Pipeline Logs",
+                content="\n".join(fetched_batch_messages[-10:]),
+                content_type="text",
+            )
+
+        await task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="info",
+            title="Phase 2/3: Upserting BR Data",
+            content=(
+                "Brazil SINAN data may be revised — upserting all fetched rows "
+                f"({source_rows}) into the database unconditionally..."
+            ),
+            content_type="text",
+        )
+        await task_manager.update_task_progress(task.task_uuid, 50)
+
+        imported = 0
+        skipped_unmapped = 0
+        imported_new_data = False
+        db_latest_text = "none"
+
+        async with get_database() as db:
+            db_latest = await updater.get_db_latest_date(db)
+            db_latest_text = db_latest.isoformat() if db_latest else "none"
+
+            if not process:
+                imported_new_data = False
+                imported = 0
+            else:
+                import_result = await updater.import_rows(
+                    db,
+                    merged_rows,
+                    db_latest_date=db_latest,
+                    source_latest_date=source_latest_date,
+                    force=force,
+                )
+                imported = import_result.inserted_or_updated
+                skipped_unmapped = import_result.skipped_unmapped
+                imported_new_data = import_result.imported_new_data
+                await db.commit()
+
+        await task_manager.update_task_progress(task.task_uuid, 80)
+        await task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="success",
+            title="Phase 2/3 Complete",
+            content=(
+                f"DB latest date: {db_latest_text}\n"
+                f"Source latest date: {source_latest_text}\n"
+                f"Upserted rows: {imported}\n"
+                f"Skipped unmapped rows: {skipped_unmapped}"
+            ),
+            content_type="text",
+        )
+
+        await task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="info",
+            title="Phase 3/3: Finalizing",
+            content="Finalizing Brazil monthly update and crawl run summary...",
+            content_type="text",
+        )
+
+        if not process:
+            summary_message = "Process disabled, refreshed Brazil source only."
+        elif imported_new_data:
+            summary_message = f"Brazil SINAN data upserted: {imported} rows across {months_fetched_count} month(s)."
+        elif force:
+            summary_message = "Force mode completed; no rows were upserted (possibly all skipped due to mapping)."
+        else:
+            summary_message = "Brazil source refreshed; no rows matched disease mapping (check mapping config)."
+
+        await self._finish_crawl_run(
+            run_id,
+            new_reports=imported,
+            processed=1 if process else 0,
+            records=imported,
+        )
+
+        await task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="success",
+            title="Crawl Completed",
+            content=(
+                f"Summary: {summary_message}\n"
+                f"Prepared rows: {source_rows}\n"
+                f"Imported rows: {imported}\n"
+                f"Duration: {perf_counter() - run_started:.1f}s"
+            ),
+            content_type="text",
+        )
+        await task_manager.update_task_progress(task.task_uuid, 100)
+
+        return CrawlResult(imported, 1 if process else 0, imported, run_id)
+
+    @staticmethod
+    def _chunk_months(
+        values: List[Tuple[int, int]],
+        chunk_size: int,
+    ) -> List[List[Tuple[int, int]]]:
+        if chunk_size <= 0:
+            return [values]
+        return [values[i : i + chunk_size] for i in range(0, len(values), chunk_size)]
+
+    @staticmethod
+    def _br_history_start_year(
+        task: Task,
+        updater,
+        default_start_year: Optional[int] = None,
+    ) -> int:
+        raw_value = (
+            task.input_data.get("start_year")
+            if isinstance(task.input_data, dict)
+            else None
+        )
+        current_year = datetime.now().year
+        crawler_default = getattr(updater, "full_history_start_year", None)
+        fallback_start_year = (
+            int(crawler_default)
+            if crawler_default is not None
+            else 2000
+        )
+
+        if default_start_year is not None:
+            try:
+                return max(1900, min(int(default_start_year), current_year))
+            except (TypeError, ValueError):
+                pass
+
+        if raw_value is not None:
+            try:
+                return max(1900, min(int(raw_value), current_year))
+            except (TypeError, ValueError):
+                pass
+
+        return max(1900, min(fallback_start_year, current_year))
+
+    async def _execute_kr_monthly(
+        self,
+        *,
+        task: Task,
+        source: str,
+        force: bool,
+        process: bool,
+        save_raw: bool,
+        fill_missing: bool,
+        updater,
+    ) -> CrawlResult:
+        """Execute the Korea KDCA monthly OpenAPI pipeline."""
+        run_started = perf_counter()
+        raw_dir = Path("data/raw") / "kr"
+        run_id: Optional[int] = None
+        input_data = task.input_data if isinstance(task.input_data, dict) else {}
+        source_file = input_data.get("source_file")
+        source_dir = input_data.get("source_dir")
+        source_file_path = Path(str(source_file)) if source_file else None
+        source_dir_path = Path(str(source_dir)) if source_dir else None
+
+        await task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="info",
+            title="Crawl Configuration",
+            content=(
+                "Country: KR\n"
+                f"Source: {source}\n"
+                f"Force: {'Yes' if force else 'No'}\n"
+                f"Process: {'Yes' if process else 'No'}\n"
+                f"Save Raw: {'Yes' if save_raw else 'No'}\n"
+                f"Fill Missing: {'Yes' if fill_missing else 'No'}\n"
+                f"History Start Year: {self._kr_history_start_year(task, updater)}\n"
+                f"Download Source File: {source_file_path or 'auto'}\n"
+                f"Download Source Dir: {source_dir_path or 'auto'}"
+            ),
+            content_type="text",
+        )
+        await self._add_raw_archive_entry(task.task_uuid, save_raw=save_raw, raw_dir=raw_dir)
+
+        try:
+            async with get_database() as db:
+                run = CrawlRun(
+                    country_code="KR",
+                    source=source,
+                    status="running",
+                    started_at=datetime.now(timezone.utc),
+                    raw_dir=str(raw_dir) if save_raw else None,
+                    metadata_={"force": force, "process": process},
+                )
+                db.add(run)
+                await db.flush()
+                run_id = run.id
+        except Exception as e:
+            logger.warning(f"Could not create CrawlRun record: {e}")
+
+        history_start_year = self._kr_history_start_year(task, updater)
+        if force:
+            mode_text = f"full history refresh from {history_start_year}"
+        elif fill_missing:
+            mode_text = f"fill missing months from {history_start_year}"
+        else:
+            mode_text = f"recent {updater.refresh_recent_months} months"
+
+        await task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="info",
+            title="Phase 1/3: Fetching KR Source",
+            content=(
+                "Preparing Korea KDCA monthly rows from OpenAPI or portal/KOSIS downloads...\n"
+                f"Mode: {mode_text}"
+            ),
+            content_type="text",
+        )
+        await task_manager.update_task_progress(task.task_uuid, 10)
+
+        months_to_fetch = None
+        if force:
+            months_to_fetch = updater.history_months(start_year=history_start_year)
+        elif fill_missing:
+            now_dt = datetime.now()
+            recent: list = []
+            for delta in range(updater.refresh_recent_months):
+                m = now_dt.month - delta
+                y = now_dt.year
+                if m <= 0:
+                    m += 12
+                    y -= 1
+                recent.append((y, m))
+            months_set = set(recent)
+
+            async with get_database() as db:
+                existing_months = await updater.get_db_months(db)
+            for fy in range(history_start_year, now_dt.year + 1):
+                for fm in range(1, 13 if fy < now_dt.year else now_dt.month + 1):
+                    if (fy, fm) not in existing_months:
+                        months_set.add((fy, fm))
+
+            months_to_fetch = sorted(months_set)
+
+        phase1_started = perf_counter()
+        fetched = updater.refresh_source(
+            source=source,
+            run_external=False,
+            force=force,
+            months=months_to_fetch,
+            save_raw=save_raw,
+            raw_dir=raw_dir if save_raw else None,
+            source_file=source_file_path,
+            source_dir=source_dir_path,
+        )
+        phase1_elapsed = perf_counter() - phase1_started
+        source_latest = fetched.source_latest_date.isoformat() if fetched.source_latest_date else "none"
+        source_rows = len(fetched.rows)
+        months_fetched_count = (
+            len(months_to_fetch) if months_to_fetch is not None else updater.refresh_recent_months
+        )
+
+        await task_manager.update_task_progress(task.task_uuid, 30)
+        await task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="success",
+            title="Phase 1/3 Complete",
+            content=(
+                f"Months requested: {months_fetched_count}\n"
+                f"Source rows prepared (national monthly): {source_rows}\n"
+                f"Source latest month date: {source_latest}\n"
+                f"Current national CSV: {fetched.source_csv}\n"
+                f"Duration: {phase1_elapsed:.1f}s"
+            ),
+            content_type="text",
+        )
+
+        if fetched.script_logs:
+            await task_manager.add_workbook_entry(
+                task.task_uuid,
+                entry_type="info",
+                title="KR Pipeline Logs",
+                content="\n".join(fetched.script_logs[-10:]),
+                content_type="text",
+            )
+
+        await task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="info",
+            title="Phase 2/3: Upserting KR Data",
+            content=(
+                "Korea KDCA monthly data may be revised — upserting all fetched rows "
+                f"({source_rows}) into the database unconditionally..."
+            ),
+            content_type="text",
+        )
+        await task_manager.update_task_progress(task.task_uuid, 50)
+
+        imported = 0
+        skipped_unmapped = 0
+        imported_new_data = False
+        db_latest_text = "none"
+
+        async with get_database() as db:
+            db_latest = await updater.get_db_latest_date(db)
+            db_latest_text = db_latest.isoformat() if db_latest else "none"
+
+            if not process:
+                imported_new_data = False
+                imported = 0
+            else:
+                import_result = await updater.import_rows(
+                    db,
+                    fetched.rows,
+                    db_latest_date=db_latest,
+                    source_latest_date=fetched.source_latest_date,
+                    force=force,
+                )
+                imported = import_result.inserted_or_updated
+                skipped_unmapped = import_result.skipped_unmapped
+                imported_new_data = import_result.imported_new_data
+
+            await db.commit()
+
+        await task_manager.update_task_progress(task.task_uuid, 80)
+        await task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="success",
+            title="Phase 2/3 Complete",
+            content=(
+                f"DB latest date: {db_latest_text}\n"
+                f"Source latest date: {source_latest}\n"
+                f"Upserted rows: {imported}\n"
+                f"Skipped unmapped rows: {skipped_unmapped}"
+            ),
+            content_type="text",
+        )
+
+        await task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="info",
+            title="Phase 3/3: Finalizing",
+            content="Finalizing Korea monthly update and crawl run summary...",
+            content_type="text",
+        )
+
+        if not process:
+            summary_message = "Process disabled, refreshed Korea KDCA source only."
+        elif imported_new_data:
+            summary_message = f"Korea KDCA data upserted: {imported} rows across {months_fetched_count} month(s)."
+        elif force:
+            summary_message = "Force mode completed; no rows were upserted (possibly all skipped due to mapping)."
+        else:
+            summary_message = "Korea KDCA source refreshed; no rows matched disease mapping (check mapping config)."
+
+        await self._finish_crawl_run(
+            run_id,
+            new_reports=imported,
+            processed=1 if process else 0,
+            records=imported,
+        )
+
+        await task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="success",
+            title="Crawl Completed",
+            content=(
+                f"Summary: {summary_message}\n"
+                f"Prepared rows: {source_rows}\n"
+                f"Imported rows: {imported}\n"
+                f"Duration: {perf_counter() - run_started:.1f}s"
+            ),
+            content_type="text",
+        )
+        await task_manager.update_task_progress(task.task_uuid, 100)
+
+        return CrawlResult(imported, 1 if process else 0, imported, run_id)
+
+    @staticmethod
+    def _kr_history_start_year(task: Task, updater) -> int:
+        raw_value = (task.input_data or {}).get("start_year") if isinstance(task.input_data, dict) else None
+        try:
+            start_year = int(raw_value) if raw_value is not None else int(updater.full_history_start_year)
+        except (TypeError, ValueError):
+            start_year = int(updater.full_history_start_year)
+
+        current_year = datetime.now().year
+        return max(1900, min(start_year, current_year))
 
     @staticmethod
     def _source_distribution(results) -> Dict[str, int]:

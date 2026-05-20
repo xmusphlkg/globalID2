@@ -20,6 +20,8 @@ pandas
 numpy
 openpyxl  # Excel support
 pyarrow  # Parquet support
+datasus-dbc  # DATASUS DBC decompression
+dbfread  # DBF reader for DATASUS/SINAN files
 
 # Web Scraping
 requests
