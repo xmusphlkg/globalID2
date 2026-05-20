@@ -30,11 +30,32 @@ def _cancel_meta(task: Task) -> tuple[bool, Optional[str]]:
 class CrawlStartRequest(BaseModel):
     """Body for POST /crawl/start."""
     country_id: int = Field(..., ge=1, description="Country DB id")
-    source: str = Field("all", description="Crawl source: nndss_api / cdc_weekly / nhc / pubmed / jp_weekly / all")
+    source: str = Field(
+        "all",
+        description=(
+            "Crawl source: nndss_api / cdc_weekly / nhc / pubmed / "
+            "jp_weekly / nidss_open_data / sinan_datasus / kdca_open_api "
+            "(KR OpenAPI or portal/KOSIS download) / all"
+        ),
+    )
     force: bool = Field(False, description="Ignore DB and re-crawl everything")
     process: bool = Field(True, description="Also run data processing after fetch")
     save_raw: bool = Field(True, description="Archive original fetched payloads / raw source artifacts")
-    fill_missing: bool = Field(True, description="Backfill missing months")
+    fill_missing: bool = Field(False, description="Backfill missing months")
+    start_year: Optional[int] = Field(
+        None,
+        ge=1900,
+        le=2100,
+        description="Optional historical backfill start year for sources that support it",
+    )
+    source_file: Optional[str] = Field(
+        None,
+        description="Optional local KDCA/KOSIS export file path for manual KR imports",
+    )
+    source_dir: Optional[str] = Field(
+        None,
+        description="Optional local directory containing KDCA/KOSIS export files",
+    )
     priority: str = Field("normal", description="Task priority")
 
 
@@ -68,6 +89,12 @@ async def start_crawl(
             save_raw=body.save_raw,
             fill_missing=body.fill_missing,
             priority=body.priority,
+            metadata={
+                **({"start_year": body.start_year} if body.start_year is not None else {}),
+                **({"source_file": body.source_file} if body.source_file else {}),
+                **({"source_dir": body.source_dir} if body.source_dir else {}),
+            }
+            or None,
         )
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc

@@ -128,6 +128,10 @@ export interface ModelUpdatePayload {
   priority?: number;
 }
 
+export interface ProviderBootstrapPayload {
+  force?: boolean;
+}
+
 function invalidateAIModelQueries(queryClient: ReturnType<typeof useQueryClient>) {
   queryClient.invalidateQueries({ queryKey: ["ai-providers"] });
   queryClient.invalidateQueries({ queryKey: ["ai-models"] });
@@ -182,10 +186,30 @@ export function useUpdateAIProvider() {
   });
 }
 
+export function useDeleteAIProvider() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (providerId: number) => apiFetch(`/ai/models/providers/${providerId}`, { method: "DELETE" }),
+    onSuccess: () => invalidateAIModelQueries(queryClient),
+  });
+}
+
 export function useTestAIProvider() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (providerId: number) => apiFetch(`/ai/models/providers/${providerId}/test`, { method: "POST" }),
+    onSuccess: () => invalidateAIModelQueries(queryClient),
+  });
+}
+
+export function useRebuildAIProviders() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: ProviderBootstrapPayload = {}) =>
+      apiFetch("/ai/models/providers/bootstrap", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }),
     onSuccess: () => invalidateAIModelQueries(queryClient),
   });
 }

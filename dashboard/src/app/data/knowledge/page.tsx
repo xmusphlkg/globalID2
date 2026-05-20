@@ -33,7 +33,7 @@ import { Badge, Card, Color, Grid, Select, SelectItem, Text, TextInput, Title } 
 type KnowledgeStatusFilter = "all" | "published" | "requires_review" | "fallback";
 type RefreshPriority = "low" | "normal" | "high" | "urgent";
 type RefreshGenerator = "ai" | "auto" | "template";
-type SourceGroup = "who" | "wikidata" | "wikipedia" | "pubmed" | "msd";
+type SourceGroup = "who" | "search" | "wikidata" | "wikipedia" | "pubmed" | "msd";
 
 const SOURCE_GROUPS: Array<{
   value: SourceGroup;
@@ -46,6 +46,12 @@ const SOURCE_GROUPS: Array<{
       label: "WHO",
       note: "health topics, fact sheets, and outbreak news",
       color: "teal",
+    },
+    {
+      value: "search",
+      label: "Search discovery",
+      note: "trusted web discovery across CDC, NIH, WHO, BMJ, MSD, and Wikipedia",
+      color: "indigo",
     },
     {
       value: "wikidata",
@@ -147,6 +153,8 @@ function sourceTypeColor(sourceType: string): Color {
     case "who":
     case "who_don":
       return "teal";
+    case "web_search":
+      return "indigo";
     case "wikidata":
       return "violet";
     case "wikipedia":
@@ -440,7 +448,7 @@ export default function KnowledgePage() {
   const [statusFilter, setStatusFilter] = useState<KnowledgeStatusFilter>("all");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [selectedDiseaseId, setSelectedDiseaseId] = useState<string | null>(null);
-  const [refreshSources, setRefreshSources] = useState<SourceGroup[]>(["who", "wikidata", "wikipedia", "pubmed"]);
+  const [refreshSources, setRefreshSources] = useState<SourceGroup[]>(["who", "search", "wikidata", "wikipedia", "pubmed"]);
   const [forceRefresh, setForceRefresh] = useState(true);
   const [generator, setGenerator] = useState<RefreshGenerator>("ai");
   const [priority, setPriority] = useState<RefreshPriority>("normal");
@@ -729,8 +737,8 @@ export default function KnowledgePage() {
                 </div>
                 <p className="mt-2 text-xs leading-6 text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
                   {lang === "zh"
-                    ? "WHO 与 WHO DON 作为首选权威来源，Wikidata/Wikipedia 用于结构化补充，MSD 仅保留元数据和链接。"
-                    : "WHO and WHO DON are the primary authoritative sources, Wikidata and Wikipedia provide structured supplements, and MSD is retained as metadata plus links only."}
+                    ? "先用搜索发现层聚合 CDC、NIH、WHO、BMJ、MSD 等可信结果，再由 WHO、Wikidata、Wikipedia、PubMed 和 MSD 适配器补充结构化来源。"
+                    : "The search discovery layer first gathers trusted CDC, NIH, WHO, BMJ, MSD, and Wikipedia results, then WHO, Wikidata, Wikipedia, PubMed, and MSD adapters add structured sources."}
                 </p>
               </div>
 

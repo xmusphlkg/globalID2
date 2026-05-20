@@ -300,16 +300,10 @@ def _env_provider_seed() -> List[Dict[str, Any]]:
 
 
 async def bootstrap_model_center_from_env(force: bool = False) -> None:
-    """Seed provider/model records from .env only when DB has no records (or force=True)."""
+    """Seed provider/model records from .env only when database is empty (or force=True)."""
     await ensure_model_center_tables()
 
     async with get_db() as db:
-        providers_existing = (await db.execute(select(AIProviderConfig.id))).first() is not None
-        models_existing = (await db.execute(select(AIModelConfig.id))).first() is not None
-
-        if (providers_existing or models_existing) and not force:
-            return
-
         if force:
             for model in (await db.execute(select(AIModelConfig))).scalars().all():
                 await db.delete(model)
@@ -317,26 +311,45 @@ async def bootstrap_model_center_from_env(force: bool = False) -> None:
                 await db.delete(provider)
             await db.commit()
 
+        existing_provider_count = len((await db.execute(select(AIProviderConfig.id))).all())
+        if not force and existing_provider_count:
+            logger.info("Model center already initialized; env bootstrap skipped")
+            return
+
         providers = _env_provider_seed()
         if not providers:
             logger.info("No provider credentials in env; skip model-center bootstrap")
             return
 
         provider_by_name: Dict[str, AIProviderConfig] = {}
+        provider_by_key: Dict[str, AIProviderConfig] = {
+            provider.provider_key: provider
+            for provider in (await db.execute(select(AIProviderConfig))).scalars().all()
+        }
         for i, item in enumerate(providers, start=1):
-            provider = AIProviderConfig(
-                provider_key=item["provider_key"],
-                provider_name=item["provider_name"],
-                display_name=item["display_name"],
-                api_style=item.get("api_style", "openai_compatible"),
-                base_url=item.get("base_url"),
-                api_key=item.get("api_key"),
-                priority=i * 10,
-                extra_config=item.get("extra_config", {}),
-                is_active=True,
-                last_check_status="unknown",
-            )
-            db.add(provider)
+            provider = provider_by_key.get(item["provider_key"])
+            if provider is None:
+                provider = AIProviderConfig(
+                    provider_key=item["provider_key"],
+                    provider_name=item["provider_name"],
+                    display_name=item["display_name"],
+                    api_style=item.get("api_style", "openai_compatible"),
+                    base_url=item.get("base_url"),
+                    api_key=item.get("api_key"),
+                    priority=i * 10,
+                    extra_config=item.get("extra_config", {}),
+                    is_active=True,
+                    last_check_status="unknown",
+                )
+                db.add(provider)
+            else:
+                provider.provider_name = provider.provider_name or item["provider_name"]
+                provider.display_name = provider.display_name or item["display_name"]
+                provider.api_style = provider.api_style or item.get("api_style", "openai_compatible")
+                provider.base_url = provider.base_url or item.get("base_url")
+                provider.api_key = provider.api_key or item.get("api_key")
+                provider.extra_config = provider.extra_config or item.get("extra_config", {})
+                provider.is_active = True
             provider_by_name[provider.provider_name] = provider
 
         await db.flush()
@@ -349,17 +362,49 @@ async def bootstrap_model_center_from_env(force: bool = False) -> None:
             await db.commit()
             return
 
-        for idx, model_name in enumerate(chain, start=1):
-            preferred_provider = _infer_provider_from_model(model_name) or ai_cfg.default_provider
+        existing_model_keys = {
+            model.model_key
+            for model in (await db.execute(select(AIModelConfig))).scalars().all()
+        }
+
+        route_specs: List[tuple[str, str]] = []
+        for model_name in chain:
+            route_specs.append((_infer_provider_from_model(model_name) or ai_cfg.default_provider, model_name))
+
+        represented_providers = {provider_name for provider_name, _ in route_specs}
+        default_provider = ai_cfg.default_provider
+        if default_provider in provider_by_name and default_provider not in represented_providers:
+            for fallback_name in (ai_cfg.default_model, ai_cfg.fallback_model):
+                if fallback_name and (default_provider, fallback_name) not in route_specs:
+                    route_specs.append((default_provider, fallback_name))
+
+        provider_default_models: Dict[str, List[str]] = {
+            "glm": [
+                ai_cfg.default_model if _infer_provider_from_model(ai_cfg.default_model) == "glm" else "glm-4-7",
+                ai_cfg.fallback_model if _infer_provider_from_model(ai_cfg.fallback_model) == "glm" else "glm-4-plus",
+            ],
+        }
+        for provider_name, model_names in provider_default_models.items():
+            if provider_name not in provider_by_name or provider_name in represented_providers:
+                continue
+            for model_name in model_names:
+                if model_name and (provider_name, model_name) not in route_specs:
+                    route_specs.append((provider_name, model_name))
+
+        for idx, (preferred_provider, model_name) in enumerate(route_specs, start=1):
             provider = provider_by_name.get(preferred_provider)
             if provider is None and provider_by_name:
                 provider = list(provider_by_name.values())[0]
             if provider is None:
                 continue
 
+            model_key = f"{provider.provider_key}:{model_name}"
+            if model_key in existing_model_keys:
+                continue
+
             model = AIModelConfig(
                 provider_id=provider.id,
-                model_key=f"{provider.provider_key}:{model_name}",
+                model_key=model_key,
                 model_name=model_name,
                 display_name=model_name,
                 api_style=None,

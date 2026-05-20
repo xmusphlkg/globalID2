@@ -67,6 +67,7 @@ export default function DataDashboardPage() {
         <KPICard title={t(lang, "total_diseases")} value={summary?.total_diseases ?? "-"} icon={<Activity className="h-5 w-5" />} accent="primary" />
         <KPICard title={t(lang, "total_records")} value={summary?.total_records ?? "-"} icon={<Database className="h-5 w-5" />} accent="info" />
         <KPICard title={t(lang, "recent_cases")} value={summary?.recent_cases_30d ?? "-"} icon={<TrendingUp className="h-5 w-5" />} accent="warning" />
+        <KPICard title={t(lang, "coverage_start")} value={summary?.earliest_date ? formatDate(summary.earliest_date) : "-"} icon={<CalendarDays className="h-5 w-5" />} accent="primary" />
         <KPICard title={t(lang, "latest_date")} value={summary?.latest_date ? formatDate(summary.latest_date) : "-"} icon={<CalendarDays className="h-5 w-5" />} accent="success" />
       </Grid>
 

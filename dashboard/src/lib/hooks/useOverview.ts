@@ -4,6 +4,7 @@ import { apiFetch } from "@/lib/api";
 export interface OverviewSummary {
   total_diseases: number;
   total_records: number;
+  earliest_date: string | null;
   latest_date: string | null;
   recent_cases_30d: number;
   top_diseases: TopDiseaseItem[];

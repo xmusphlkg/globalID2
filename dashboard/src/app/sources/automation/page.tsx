@@ -8,20 +8,32 @@ import { t } from "@/lib/i18n";
 import {
   type AutomationJob,
   type AutomationJobInput,
+  type CountrySourceConfig,
   useAutomationConfig,
   useAutomationJobs,
   useCreateAutomationJob,
   useDeleteAutomationJob,
   useRunAutomationJob,
+  useSourceConfigs,
   useUpdateAutomationJob,
 } from "@/lib/hooks/useSources";
 import { useTaskWebSocket, useWorkerStatus } from "@/lib/hooks/useTasks";
 import { getCountryDisplayName, type Country, useCountries } from "@/lib/hooks/useCountries";
-import { getSourceDisplayLabel, getSourceOptionsForCountry } from "@/lib/source-labels";
+import { getConfiguredSourceOptions, getSourceDisplayLabel } from "@/lib/source-labels";
 import { AlertTriangle, ArrowRight, Bot, Clock3, Cpu, Mail, Pencil, Play, Plus, Sparkles, Trash2 } from "lucide-react";
 
 type ScheduleMode = "daily" | "interval";
 type IntervalUnit = "minutes" | "hours";
+
+type AutomationPreset = Partial<AutomationJobInput> & {
+  id: string;
+  label: string;
+  job_id: string;
+  name: string;
+  country_code: string;
+  source: string;
+  daily_time: string;
+};
 
 const defaultForm: AutomationJobInput = {
   job_id: "",
@@ -40,14 +52,6 @@ const defaultForm: AutomationJobInput = {
   timezone: "Asia/Shanghai",
   notes: "",
 };
-
-const presetTemplates = [
-  { id: "cn", job_id: "cn-daily", name: "CN Daily Crawl", country_code: "CN", source: "all", daily_time: "08:00" },
-  { id: "us", job_id: "us-daily", name: "US Daily Crawl", country_code: "US", source: "nndss_api", daily_time: "08:15" },
-  { id: "jp", job_id: "jp-daily", name: "JP Daily Crawl", country_code: "JP", source: "jp_weekly", daily_time: "08:30" },
-  { id: "au", job_id: "au-daily", name: "AU Daily Crawl", country_code: "AU", source: "all", daily_time: "08:45" },
-  { id: "tw", job_id: "tw-daily", name: "Taiwan, China Daily Crawl", country_code: "TW", source: "nidss_open_data", daily_time: "09:00" },
-] as const;
 
 const crawlOptionLabels: Record<string, { en: string; zh: string }> = {
   process: { en: "Process data after crawl", zh: "抓取后自动处理数据" },
@@ -130,11 +134,23 @@ function findCountryTimezone(countries: Country[] | undefined, code: string): st
   return countries?.find((country) => country.code === code)?.timezone ?? null;
 }
 
+function defaultFillMissingForCountry(config?: CountrySourceConfig | null): boolean {
+  return config?.default_fill_missing ?? true;
+}
+
+function presetTimeForIndex(index: number): string {
+  const totalMinutes = 8 * 60 + index * 15;
+  const hour = Math.floor(totalMinutes / 60) % 24;
+  const minute = totalMinutes % 60;
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
 export default function SourcesAutomationPage() {
   const { lang } = useAppStore();
   const { data: config, isLoading } = useAutomationConfig();
   const { data: jobs } = useAutomationJobs();
   const { data: countries } = useCountries();
+  const { data: sourceConfigs } = useSourceConfigs(lang);
   const { data: workerStatus } = useWorkerStatus();
   const runJob = useRunAutomationJob();
   const createJob = useCreateAutomationJob();
@@ -149,6 +165,49 @@ export default function SourcesAutomationPage() {
   useTaskWebSocket({ extraQueryKeys: [["sources-automation"], ["sources-automation-jobs"], ["sources-flow"]] });
 
   const schedulerEnabled = Boolean(config?.enabled);
+  const sourceConfigByCountry = useMemo(() => {
+    const map = new Map<string, CountrySourceConfig>();
+    for (const item of sourceConfigs ?? []) {
+      map.set(item.country_code.toUpperCase(), item);
+    }
+    return map;
+  }, [sourceConfigs]);
+  const selectedSourceConfig = sourceConfigByCountry.get(form.country_code.trim().toUpperCase()) ?? null;
+  const selectedSupportsCrawl = Boolean(selectedSourceConfig?.supports_crawl);
+  const automationPresets = useMemo<AutomationPreset[]>(() => {
+    const basePresets = (sourceConfigs ?? [])
+      .filter((item) => item.supports_crawl)
+      .map((item, index) => ({
+        id: item.country_code.toLowerCase(),
+        label: item.country_code,
+        job_id: `${item.country_code.toLowerCase()}-daily`,
+        name: `${item.country_code} Daily Crawl`,
+        country_code: item.country_code,
+        source: item.default_source,
+        daily_time: presetTimeForIndex(index),
+        timezone: item.timezone,
+        fill_missing: item.default_fill_missing,
+      }));
+
+    const historyPresets = (sourceConfigs ?? [])
+      .filter((item) => item.supports_start_year)
+      .map((item) => ({
+        id: `${item.country_code.toLowerCase()}-history`,
+        label: `${item.country_code} hist`,
+        job_id: `${item.country_code.toLowerCase()}-history-backfill`,
+        name: `${item.country_code} Historical Backfill`,
+        country_code: item.country_code,
+        source: item.default_source,
+        daily_time: "02:00",
+        timezone: item.timezone,
+        enabled: false,
+        priority: "high",
+        fill_missing: true,
+        force: true,
+      }));
+
+    return [...basePresets, ...historyPresets];
+  }, [sourceConfigs]);
 
   const summary = useMemo(() => {
     const list = jobs ?? [];
@@ -209,10 +268,15 @@ export default function SourcesAutomationPage() {
     syncScheduleControls(nextForm);
   };
 
-  const applyPreset = (presetId: (typeof presetTemplates)[number]["id"]) => {
-    const preset = presetTemplates.find((item) => item.id === presetId);
+  const applyPreset = (presetId: string) => {
+    const preset = automationPresets.find((item) => item.id === presetId);
     if (!preset) return;
-    const timezone = findCountryTimezone(countries, preset.country_code) || config?.timezone || defaultForm.timezone;
+    const presetConfig = sourceConfigByCountry.get(preset.country_code.toUpperCase());
+    const timezone =
+      findCountryTimezone(countries, preset.country_code) ||
+      presetConfig?.timezone ||
+      config?.timezone ||
+      defaultForm.timezone;
     setEditingJobId(null);
     const nextForm = {
       ...defaultForm,
@@ -225,6 +289,15 @@ export default function SourcesAutomationPage() {
   };
 
   const submitForm = async () => {
+    if (!selectedSupportsCrawl) {
+      window.alert(
+        lang === "zh"
+          ? "当前国家还没有配置自动采集来源，暂时不能创建自动化任务。"
+          : "This country does not have configured crawl sources yet.",
+      );
+      return;
+    }
+
     const nextIntervalMinutes = scheduleMode === "interval"
       ? intervalFieldsToMinutes(intervalValue, intervalUnit)
       : null;
@@ -278,7 +351,10 @@ export default function SourcesAutomationPage() {
     if (editingJobId === job.job_id) resetForm();
   };
 
-  const sources = getSourceOptionsForCountry(form.country_code, lang);
+  const sources = useMemo(
+    () => getConfiguredSourceOptions(selectedSourceConfig, lang, form.country_code),
+    [form.country_code, lang, selectedSourceConfig],
+  );
 
   useEffect(() => {
     if (!sources.some((option) => option.value === form.source) && sources[0]) {
@@ -444,7 +520,7 @@ export default function SourcesAutomationPage() {
             <div className="mt-4">
               <Text>Quick presets</Text>
               <div className="mt-2 flex flex-wrap gap-2">
-                {presetTemplates.map((preset) => (
+                {automationPresets.map((preset) => (
                   <Button
                     key={preset.id}
                     size="xs"
@@ -452,7 +528,7 @@ export default function SourcesAutomationPage() {
                     icon={Sparkles}
                     onClick={() => applyPreset(preset.id)}
                   >
-                    {preset.country_code}
+                    {preset.label}
                   </Button>
                 ))}
               </div>
@@ -475,7 +551,20 @@ export default function SourcesAutomationPage() {
               <select
                 className="w-full rounded-tremor-default border border-tremor-border px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background"
                 value={form.country_code}
-                onChange={(e) => setForm((prev) => ({ ...prev, country_code: e.target.value }))}
+                onChange={(e) => {
+                  const nextCode = e.target.value;
+                  const nextConfig = sourceConfigByCountry.get(nextCode.toUpperCase());
+                  setForm((prev) => ({
+                    ...prev,
+                    country_code: nextCode,
+                    source: nextConfig?.default_source || prev.source,
+                    fill_missing: defaultFillMissingForCountry(nextConfig),
+                    timezone:
+                      findCountryTimezone(countries, nextCode) ||
+                      nextConfig?.timezone ||
+                      prev.timezone,
+                  }));
+                }}
               >
                 {(countries ?? []).map((country) => (
                   <option key={country.code} value={country.code}>
@@ -487,11 +576,19 @@ export default function SourcesAutomationPage() {
                 className="w-full rounded-tremor-default border border-tremor-border px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background"
                 value={form.source}
                 onChange={(e) => setForm((prev) => ({ ...prev, source: e.target.value }))}
+                disabled={!selectedSupportsCrawl}
               >
                 {sources.map((source) => (
                   <option key={source.value} value={source.value}>{source.label}</option>
                 ))}
               </select>
+              {!selectedSupportsCrawl ? (
+                <div className="rounded-tremor-default border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+                  {lang === "zh"
+                    ? "这个国家还没有在后端 registry 中声明可采集来源。"
+                    : "This country has no crawl source declared in the backend registry yet."}
+                </div>
+              ) : null}
               <div className="rounded-tremor-default border border-dashed border-tremor-border p-4 dark:border-dark-tremor-border">
                 <div className="flex items-center justify-between gap-3">
                   <Text>{lang === "zh" ? "调度方式" : "Schedule"}</Text>
@@ -634,7 +731,9 @@ export default function SourcesAutomationPage() {
                   ["save_raw", form.save_raw],
                   ["fill_missing", form.fill_missing],
                   ["force", form.force],
-                ] as Array<[string, boolean]>).map(([key, value]) => (
+                ] as Array<[string, boolean]>)
+                  .filter(([key]) => key !== "fill_missing" || (selectedSourceConfig?.supports_fill_missing ?? true))
+                  .map(([key, value]) => (
                   <label key={key} className="flex items-center gap-2 rounded-tremor-default border border-tremor-border px-3 py-2 dark:border-dark-tremor-border">
                     <input
                       type="checkbox"
@@ -648,6 +747,7 @@ export default function SourcesAutomationPage() {
               <Button
                 icon={editingJobId ? Pencil : Plus}
                 loading={createJob.isPending || updateJob.isPending}
+                disabled={!selectedSupportsCrawl}
                 onClick={submitForm}
               >
                 {editingJobId ? "Save changes" : "Create job"}

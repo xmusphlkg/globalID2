@@ -9,6 +9,7 @@ class CountryOut(BaseModel):
     code: str
     name: str
     name_en: str
+    name_zh: Optional[str] = None
     name_local: Optional[str] = None
     language: str
     timezone: str

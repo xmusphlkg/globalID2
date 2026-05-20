@@ -17,12 +17,40 @@ export interface DataSourceFlow {
   country_code?: string | null;
   country_name?: string | null;
   record_count: number;
+  earliest_date?: string | null;
   latest_date: string | null;
+  history_start_year?: number | null;
+  source_scope?: string | null;
   latest_task_uuid?: string | null;
   latest_task_source?: string | null;
   latest_task_status?: string | null;
   latest_task_time?: string | null;
   stages: StageInfo[];
+}
+
+export interface SourceOption {
+  value: string;
+  label: string;
+  label_en: string;
+  label_zh: string;
+}
+
+export interface CountrySourceConfig {
+  country_code: string;
+  country_name: string;
+  country_name_en: string;
+  country_name_zh: string;
+  language: string;
+  timezone: string;
+  supports_crawl: boolean;
+  supports_fill_missing: boolean;
+  default_fill_missing: boolean;
+  default_source: string;
+  default_start_year?: number | null;
+  supports_start_year: boolean;
+  supports_source_file: boolean;
+  supports_source_dir: boolean;
+  source_options: SourceOption[];
 }
 
 export interface AutomationJob {
@@ -96,6 +124,14 @@ export function useSourcesFlow(countryId: number | null) {
   });
 }
 
+export function useSourceConfigs(lang: "en" | "zh" = "en") {
+  return useQuery<CountrySourceConfig[]>({
+    queryKey: ["sources-config", lang],
+    queryFn: () => apiFetch(`/sources/config?lang=${lang}`),
+    staleTime: 30 * 60 * 1000,
+  });
+}
+
 export function useAutomationConfig() {
   return useQuery<AutomationConfig>({
     queryKey: ["sources-automation"],
@@ -130,6 +166,9 @@ export interface StartCrawlPayload {
   process?: boolean;
   save_raw?: boolean;
   fill_missing?: boolean;
+  start_year?: number | null;
+  source_file?: string | null;
+  source_dir?: string | null;
   priority?: string;
 }
 
