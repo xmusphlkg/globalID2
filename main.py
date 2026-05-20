@@ -27,14 +27,26 @@ def crawl(
     country: str = typer.Option("CN", help="Country code"),
     source: str = typer.Option(
         "all",
-        help="Data source (CN: cdc_weekly/nhc/pubmed/all; US: nndss_api/all; JP: jp_weekly/local; AU/NZ: all; TW: nidss_open_data)",
+        help="Data source (CN: cdc_weekly/nhc/pubmed/all; US: nndss_api/all; JP: jp_weekly/local; AU/NZ: all; TW: nidss_open_data; BR: sinan_datasus or comma-separated SINAN prefixes; KR: kdca_open_api or portal/KOSIS download file)",
     ),
     process: bool = typer.Option(True, help="Process and store data"),
     save_raw: bool = typer.Option(True, help="Save raw pages as plain text"),
     force: bool = typer.Option(False, help="Force crawl all data (ignore database check)"),
     fill_missing: bool = typer.Option(
-        True,
+        False,
         help="Also backfill missing months found in the source list (non-force).",
+    ),
+    start_year: Optional[int] = typer.Option(
+        None,
+        help="Optional historical start year for sources that support it (KR KDCA, BR SINAN).",
+    ),
+    source_file: Optional[str] = typer.Option(
+        None,
+        help="Optional local source export file for KR KDCA/KOSIS imports.",
+    ),
+    source_dir: Optional[str] = typer.Option(
+        None,
+        help="Optional local directory of KR KDCA/KOSIS export files.",
     ),
 ):
     """
@@ -59,6 +71,9 @@ def crawl(
                 "source": source, "force": force,
                 "process": process, "save_raw": save_raw,
                 "fill_missing": fill_missing,
+                **({"start_year": start_year} if start_year is not None else {}),
+                **({"source_file": source_file} if source_file else {}),
+                **({"source_dir": source_dir} if source_dir else {}),
             },
         )
 

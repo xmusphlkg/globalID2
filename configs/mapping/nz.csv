@@ -27,7 +27,7 @@ D114,Salmonellosis,,Bacterial,,NZ PHF Science mapping,NZ Monthly Notifiable
 D105,Shigellosis,,Bacterial,,NZ PHF Science mapping,NZ Monthly Notifiable
 D025,Tuberculosis disease,,Bacterial,Tuberculosis,NZ PHF Science mapping,NZ Monthly Notifiable
 D124,Typhoid fever,,Bacterial,,NZ PHF Science mapping,NZ Monthly Notifiable
-D160,VTEC/STEC infection,,Bacterial,Verotoxin-producing E. coli,NZ PHF Science mapping,NZ Monthly Notifiable
+D115,VTEC/STEC infection,,Bacterial,Verotoxin-producing E. coli|Shiga toxin-producing Escherichia coli infection|Shiga toxin-producing Escherichia coli (STEC)|STEC|VTEC,NZ PHF Science mapping,NZ Monthly Notifiable
 D155,Yersiniosis,,Bacterial,,NZ PHF Science mapping,NZ Monthly Notifiable
 D052,Chikungunya fever,,Viral,Chikungunya,NZ PHF Science mapping,NZ Monthly Notifiable
 D161,Decompression sickness,,Other,,NZ PHF Science mapping,NZ Monthly Notifiable

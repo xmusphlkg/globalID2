@@ -32,7 +32,7 @@ class CrawlTaskService:
         force: bool = False,
         process: bool = True,
         save_raw: bool = True,
-        fill_missing: bool = True,
+        fill_missing: bool = False,
         priority: str = "normal",
         description: Optional[str] = None,
         metadata: Optional[dict[str, Any]] = None,

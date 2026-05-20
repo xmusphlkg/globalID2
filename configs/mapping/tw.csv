@@ -1,79 +1,79 @@
 disease_id,local_name,local_code,category,aliases,notes,data_source
-D064,天花,050,First category,Smallpox|050,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D003,嚴重急性呼吸道症候群,SARS,First category,SARS|Severe Acute Respiratory Syndrome,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D001,鼠疫,020,First category,Plague|020,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D019,狂犬病,071,First category,Rabies|071,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D040,德國麻疹,056,Second category,Rubella|German measles|056,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D002,霍亂,001,Second category,Cholera|001,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D023,炭疽病,022,Second category,Anthrax|022,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D183,流行性斑疹傷寒,080,Second category,Epidemic typhus fever|080,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D029,白喉,032,Second category,Diphtheria|032,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D110,流行性腦脊髓膜炎,0360,Second category,Meningococcal meningitis|Meningococcal disease|0360,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D128,西尼羅熱,0663b,Second category,West Nile fever|West Nile virus|0663b,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D124,傷寒,002,Second category,Typhoid fever|002,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D026,副傷寒,002a,Second category,Paratyphoid fever|002a,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D013,小兒麻痺症,045,Second category,Poliomyelitis|Polio|045,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D178,急性無力肢體麻痺,045a,Second category,Acute flaccid paralysis|045a,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D024,桿菌性痢疾,004,Second category,Bacillary dysentery|Shigellosis|004,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D165,阿米巴性痢疾,006,Second category,Amebiasis|Amoebic dysentery|006,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D021,登革熱,061,Second category,Dengue|Dengue fever|061,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D037,瘧疾,084,Second category,Malaria|084,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D017,麻疹,055,Second category,Measles|055,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D051,茲卡病毒感染症,ZIKAV,Second category,Zika virus infection|Zika virus disease|ZIKAV,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D007,急性病毒性Ａ型肝炎,0701,Second category,Acute Hepatitis A|Hepatitis A|0701,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D115,腸道出血性大腸桿菌感染症,0080,Second category,Enterohaemorrhagic E. coli infection|EHEC|STEC|0080,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D163,漢他病毒出血熱,0786,Second category,Hantavirus hemorrhagic fever|0786,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D164,漢他病毒肺症候群,4808,Second category,Hantavirus pulmonary syndrome|4808,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D182,漢他病毒症候群,HANTA,Second category,Hantavirus syndrome|HANTA,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D065,Ｍ痘,MPXV,Second category,Mpox|Monkeypox|M痘|MPXV,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D166,多重抗藥性結核病,010m,Second category,MDR-TB|Multidrug-resistant tuberculosis|010m,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D052,屈公病,A920,Second category,Chikungunya|Chikungunya fever|A920,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D162,人類免疫缺乏病毒感染(含母子垂直感染及孕產婦疑似個案),044,Third category,HIV infection|Human immunodeficiency virus infection|044,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D005,後天免疫缺乏症候群,042,Third category,AIDS|Acquired immunodeficiency syndrome|042,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D025,結核病,010,Third category,Tuberculosis|TB|010,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D042,漢生病,030,Third category,Hansen's disease|Leprosy|030,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D028,百日咳,033,Third category,Pertussis|Whooping cough|033,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D120,破傷風,037,Third category,Tetanus|037,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D068,急性病毒性Ｂ型肝炎,0703,Third category,Acute Hepatitis B|Hepatitis B|0703,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D009,急性病毒性Ｃ型肝炎,0705,Third category,Acute Hepatitis C|Hepatitis C|0705,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D010,急性病毒性Ｄ型肝炎,070d,Third category,Acute Hepatitis D|Hepatitis D|070d,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D011,急性病毒性Ｅ型肝炎,070e,Third category,Acute Hepatitis E|Hepatitis E|070e,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D039,流行性腮腺炎,072,Third category,Mumps|072,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D034,梅毒,090,Third category,Syphilis|090,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D033,淋病,098,Third category,Gonorrhea|098,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D100,侵襲性ｂ型嗜血桿菌感染症,3200,Third category,Invasive Haemophilus influenzae Type b infection|Hib|3200,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D107,退伍軍人病,4828,Third category,Legionnaires' disease|Legionellosis|4828,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D168,先天性德國麻疹症候群,7710,Third category,Congenital rubella syndrome|7710,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D030,新生兒破傷風,7713,Third category,Neonatal tetanus|7713,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D180,腸病毒感染併發重症,0749,Third category,Enterovirus infection with severe complications|0749,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D020,日本腦炎,0620,Third category,Japanese encephalitis|0620,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D071,急性病毒性肝炎未定型,070x,Third category,Acute viral hepatitis unspecified|Unspecified viral hepatitis|070x,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D167,先天性梅毒,091,Third category,Congenital syphilis|091,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D091,肉毒桿菌中毒,0051,Fourth category,Botulism|0051,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D144,庫賈氏病,0461,Fourth category,Creutzfeldt-Jakob disease|CJD|0461,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D035,鉤端螺旋體病,100,Fourth category,Leptospirosis|100,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D109,萊姆病,1048,Fourth category,Lyme disease|1048,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D116,類鼻疽,025,Fourth category,Melioidosis|025,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D004,嚴重特殊傳染性肺炎(112/3/19以前病例定義版本),19CoV,Fourth category,COVID-19|Coronavirus disease 2019|19CoV,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D169,地方性斑疹傷寒,0820,Fourth category,Endemic typhus fever|0820,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D113,Ｑ熱,0830,Fourth category,Q fever|0830,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D057,發熱伴血小板減少綜合症,SFTS,Fourth category,Severe fever with thrombocytopenia syndrome|SFTS,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D058,恙蟲病,0812,Fourth category,Scrub typhus|0812,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D172,流感併發重症,487a,Fourth category,Severe complicated influenza|487a,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D004,嚴重特殊傳染性肺炎,19CVS,Fourth category,COVID-19|19CVS,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D181,新冠併發重症,19SC,Fourth category,Severe complicated COVID-19|19SC,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D170,水痘併發症,052VC,Fourth category,Complicated varicella|052VC,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D123,兔熱病,021,Fourth category,Tularemia|021,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D106,侵襲性肺炎鏈球菌感染症,0412,Fourth category,Invasive pneumococcal disease|0412,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D171,疱疹B病毒感染症,0543,Fourth category,Herpes B virus infection|0543,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D179,弓形蟲感染症,130,Fourth category,Toxoplasmosis|130,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D032,布氏桿菌病,023,Fourth category,Brucellosis|023,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D108,李斯特菌症,027,Fourth category,Listeriosis|027,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D049,中東呼吸症候群冠狀病毒感染症,NoCoV,Fifth category,MERS|Middle East respiratory syndrome coronavirus infections|NoCoV,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D059,黃熱病,060,Fifth category,Yellow fever|060,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D050,伊波拉病毒感染,0788,Fifth category,Ebola virus disease|0788,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D053,拉薩熱,0788b,Fifth category,Lassa fever|0788b,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D174,馬堡病毒出血熱,0788a,Fifth category,Marburg virus disease|0788a,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D173,裂谷熱,0663a,Fifth category,Rift Valley fever|0663a,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D016,新型A型流感,NFluA,Fifth category,Novel influenza A virus infections|NFluA,TW NIDSS mapping,Taiwan, China CDC NIDSS
-D175,立百病毒感染症,NiV,Fifth category,Nipah virus infection|NiV,TW NIDSS mapping,Taiwan, China CDC NIDSS
+D064,天花,050,First category,Smallpox|050,TW NIDSS mapping,Taiwan
+D003,嚴重急性呼吸道症候群,SARS,First category,SARS|Severe Acute Respiratory Syndrome,TW NIDSS mapping,Taiwan
+D001,鼠疫,020,First category,Plague|020,TW NIDSS mapping,Taiwan
+D019,狂犬病,071,First category,Rabies|071,TW NIDSS mapping,Taiwan
+D040,德國麻疹,056,Second category,Rubella|German measles|056,TW NIDSS mapping,Taiwan
+D002,霍亂,001,Second category,Cholera|001,TW NIDSS mapping,Taiwan
+D023,炭疽病,022,Second category,Anthrax|022,TW NIDSS mapping,Taiwan
+D183,流行性斑疹傷寒,080,Second category,Epidemic typhus fever|080,TW NIDSS mapping,Taiwan
+D029,白喉,032,Second category,Diphtheria|032,TW NIDSS mapping,Taiwan
+D110,流行性腦脊髓膜炎,0360,Second category,Meningococcal meningitis|Meningococcal disease|0360,TW NIDSS mapping,Taiwan
+D128,西尼羅熱,0663b,Second category,West Nile fever|West Nile virus|0663b,TW NIDSS mapping,Taiwan
+D124,傷寒,002,Second category,Typhoid fever|002,TW NIDSS mapping,Taiwan
+D026,副傷寒,002a,Second category,Paratyphoid fever|002a,TW NIDSS mapping,Taiwan
+D013,小兒麻痺症,045,Second category,Poliomyelitis|Polio|045,TW NIDSS mapping,Taiwan
+D178,急性無力肢體麻痺,045a,Second category,Acute flaccid paralysis|045a,TW NIDSS mapping,Taiwan
+D024,桿菌性痢疾,004,Second category,Bacillary dysentery|Shigellosis|004,TW NIDSS mapping,Taiwan
+D165,阿米巴性痢疾,006,Second category,Amebiasis|Amoebic dysentery|006,TW NIDSS mapping,Taiwan
+D021,登革熱,061,Second category,Dengue|Dengue fever|061,TW NIDSS mapping,Taiwan
+D037,瘧疾,084,Second category,Malaria|084,TW NIDSS mapping,Taiwan
+D017,麻疹,055,Second category,Measles|055,TW NIDSS mapping,Taiwan
+D051,茲卡病毒感染症,ZIKAV,Second category,Zika virus infection|Zika virus disease|ZIKAV,TW NIDSS mapping,Taiwan
+D007,急性病毒性Ａ型肝炎,0701,Second category,Acute Hepatitis A|Hepatitis A|0701,TW NIDSS mapping,Taiwan
+D115,腸道出血性大腸桿菌感染症,0080,Second category,Enterohaemorrhagic E. coli infection|EHEC|STEC|0080,TW NIDSS mapping,Taiwan
+D163,漢他病毒出血熱,0786,Second category,Hantavirus hemorrhagic fever|0786,TW NIDSS mapping,Taiwan
+D164,漢他病毒肺症候群,4808,Second category,Hantavirus pulmonary syndrome|4808,TW NIDSS mapping,Taiwan
+D182,漢他病毒症候群,HANTA,Second category,Hantavirus syndrome|HANTA,TW NIDSS mapping,Taiwan
+D065,Ｍ痘,MPXV,Second category,Mpox|Monkeypox|M痘|MPXV,TW NIDSS mapping,Taiwan
+D166,多重抗藥性結核病,010m,Second category,MDR-TB|Multidrug-resistant tuberculosis|010m,TW NIDSS mapping,Taiwan
+D052,屈公病,A920,Second category,Chikungunya|Chikungunya fever|A920,TW NIDSS mapping,Taiwan
+D162,人類免疫缺乏病毒感染(含母子垂直感染及孕產婦疑似個案),044,Third category,HIV infection|Human immunodeficiency virus infection|044,TW NIDSS mapping,Taiwan
+D005,後天免疫缺乏症候群,042,Third category,AIDS|Acquired immunodeficiency syndrome|042,TW NIDSS mapping,Taiwan
+D025,結核病,010,Third category,Tuberculosis|TB|010,TW NIDSS mapping,Taiwan
+D042,漢生病,030,Third category,Hansen's disease|Leprosy|030,TW NIDSS mapping,Taiwan
+D028,百日咳,033,Third category,Pertussis|Whooping cough|033,TW NIDSS mapping,Taiwan
+D120,破傷風,037,Third category,Tetanus|037,TW NIDSS mapping,Taiwan
+D068,急性病毒性Ｂ型肝炎,0703,Third category,Acute Hepatitis B|Hepatitis B|0703,TW NIDSS mapping,Taiwan
+D009,急性病毒性Ｃ型肝炎,0705,Third category,Acute Hepatitis C|Hepatitis C|0705,TW NIDSS mapping,Taiwan
+D010,急性病毒性Ｄ型肝炎,070d,Third category,Acute Hepatitis D|Hepatitis D|070d,TW NIDSS mapping,Taiwan
+D011,急性病毒性Ｅ型肝炎,070e,Third category,Acute Hepatitis E|Hepatitis E|070e,TW NIDSS mapping,Taiwan
+D039,流行性腮腺炎,072,Third category,Mumps|072,TW NIDSS mapping,Taiwan
+D034,梅毒,090,Third category,Syphilis|090,TW NIDSS mapping,Taiwan
+D033,淋病,098,Third category,Gonorrhea|098,TW NIDSS mapping,Taiwan
+D100,侵襲性ｂ型嗜血桿菌感染症,3200,Third category,Invasive Haemophilus influenzae Type b infection|Hib|3200,TW NIDSS mapping,Taiwan
+D107,退伍軍人病,4828,Third category,Legionnaires' disease|Legionellosis|4828,TW NIDSS mapping,Taiwan
+D168,先天性德國麻疹症候群,7710,Third category,Congenital rubella syndrome|7710,TW NIDSS mapping,Taiwan
+D030,新生兒破傷風,7713,Third category,Neonatal tetanus|7713,TW NIDSS mapping,Taiwan
+D180,腸病毒感染併發重症,0749,Third category,Enterovirus infection with severe complications|0749,TW NIDSS mapping,Taiwan
+D020,日本腦炎,0620,Third category,Japanese encephalitis|0620,TW NIDSS mapping,Taiwan
+D071,急性病毒性肝炎未定型,070x,Third category,Acute viral hepatitis unspecified|Unspecified viral hepatitis|070x,TW NIDSS mapping,Taiwan
+D167,先天性梅毒,091,Third category,Congenital syphilis|091,TW NIDSS mapping,Taiwan
+D091,肉毒桿菌中毒,0051,Fourth category,Botulism|0051,TW NIDSS mapping,Taiwan
+D144,庫賈氏病,0461,Fourth category,Creutzfeldt-Jakob disease|CJD|0461,TW NIDSS mapping,Taiwan
+D035,鉤端螺旋體病,100,Fourth category,Leptospirosis|100,TW NIDSS mapping,Taiwan
+D109,萊姆病,1048,Fourth category,Lyme disease|1048,TW NIDSS mapping,Taiwan
+D116,類鼻疽,025,Fourth category,Melioidosis|025,TW NIDSS mapping,Taiwan
+D004,嚴重特殊傳染性肺炎(112/3/19以前病例定義版本),19CoV,Fourth category,COVID-19|Coronavirus disease 2019|19CoV,TW NIDSS mapping,Taiwan
+D169,地方性斑疹傷寒,0820,Fourth category,Endemic typhus fever|0820,TW NIDSS mapping,Taiwan
+D113,Ｑ熱,0830,Fourth category,Q fever|0830,TW NIDSS mapping,Taiwan
+D057,發熱伴血小板減少綜合症,SFTS,Fourth category,Severe fever with thrombocytopenia syndrome|SFTS,TW NIDSS mapping,Taiwan
+D058,恙蟲病,0812,Fourth category,Scrub typhus|0812,TW NIDSS mapping,Taiwan
+D172,流感併發重症,487a,Fourth category,Severe complicated influenza|487a,TW NIDSS mapping,Taiwan
+D004,嚴重特殊傳染性肺炎,19CVS,Fourth category,COVID-19|19CVS,TW NIDSS mapping,Taiwan
+D181,新冠併發重症,19SC,Fourth category,Severe complicated COVID-19|19SC,TW NIDSS mapping,Taiwan
+D170,水痘併發症,052VC,Fourth category,Complicated varicella|052VC,TW NIDSS mapping,Taiwan
+D123,兔熱病,021,Fourth category,Tularemia|021,TW NIDSS mapping,Taiwan
+D106,侵襲性肺炎鏈球菌感染症,0412,Fourth category,Invasive pneumococcal disease|0412,TW NIDSS mapping,Taiwan
+D171,疱疹B病毒感染症,0543,Fourth category,Herpes B virus infection|0543,TW NIDSS mapping,Taiwan
+D085,弓形蟲感染症,130,Fourth category,Toxoplasmosis|130|Toxoplasma gondii infection|弓形体病,TW NIDSS mapping,Taiwan
+D032,布氏桿菌病,023,Fourth category,Brucellosis|023,TW NIDSS mapping,Taiwan
+D108,李斯特菌症,027,Fourth category,Listeriosis|027,TW NIDSS mapping,Taiwan
+D049,中東呼吸症候群冠狀病毒感染症,NoCoV,Fifth category,MERS|Middle East respiratory syndrome coronavirus infections|NoCoV,TW NIDSS mapping,Taiwan
+D059,黃熱病,060,Fifth category,Yellow fever|060,TW NIDSS mapping,Taiwan
+D050,伊波拉病毒感染,0788,Fifth category,Ebola virus disease|0788,TW NIDSS mapping,Taiwan
+D053,拉薩熱,0788b,Fifth category,Lassa fever|0788b,TW NIDSS mapping,Taiwan
+D174,馬堡病毒出血熱,0788a,Fifth category,Marburg virus disease|0788a,TW NIDSS mapping,Taiwan
+D173,裂谷熱,0663a,Fifth category,Rift Valley fever|0663a,TW NIDSS mapping,Taiwan
+D016,新型A型流感,NFluA,Fifth category,Novel influenza A virus infections|NFluA,TW NIDSS mapping,Taiwan
+D175,立百病毒感染症,NiV,Fifth category,Nipah virus infection|NiV,TW NIDSS mapping,Taiwan
