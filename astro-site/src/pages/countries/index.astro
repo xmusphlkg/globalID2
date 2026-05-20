@@ -4,6 +4,7 @@ import ReportLayout from '../../layouts/ReportLayout.astro';
 import CountryCard from '../../components/CountryCard.astro';
 import CountryFlag from '../../components/CountryFlag.astro';
 import CountriesMapView from '../../components/charts/CountriesMapView';
+import { COUNTRY_COVERAGE, resolveCoverageStatus } from '../../lib/country-coverage';
 import metaRaw from '../../data/meta.json';
 
 const meta = metaRaw as any;
@@ -17,23 +18,9 @@ const metaByCode = Object.fromEntries(
   supportedCountries.map(c => [c.code.toUpperCase(), c])
 ) as Record<string, typeof supportedCountries[0]>;
 
-// All 10 countries from support_map.js
-const ALL_COUNTRIES = [
-  { code: 'CN', name: 'China',          status: 'Supported' },
-  { code: 'TH', name: 'Thailand',       status: 'Scheduled' },
-  { code: 'AU', name: 'Australia',      status: 'Supported' },
-  { code: 'US', name: 'United States',  status: 'Supported' },
-  { code: 'GB', name: 'United Kingdom', status: 'Scheduled' },
-  { code: 'KR', name: 'South Korea',    status: 'Scheduled' },
-  { code: 'NZ', name: 'New Zealand',    status: 'Scheduled' },
-  { code: 'SE', name: 'Sweden',         status: 'Scheduled' },
-  { code: 'JP', name: 'Japan',          status: 'Supported' },
-  { code: 'SG', name: 'Singapore',      status: 'Scheduled' },
-];
-
-const ORDERED_COUNTRIES = [...ALL_COUNTRIES].sort((a, b) => {
-  const aSupported = Boolean(metaByCode[a.code]) || a.status === 'Supported';
-  const bSupported = Boolean(metaByCode[b.code]) || b.status === 'Supported';
+const ORDERED_COUNTRIES = [...COUNTRY_COVERAGE].sort((a, b) => {
+  const aSupported = resolveCoverageStatus(a, Boolean(metaByCode[a.code])) === 'Supported';
+  const bSupported = resolveCoverageStatus(b, Boolean(metaByCode[b.code])) === 'Supported';
   if (aSupported === bSupported) return 0;
   return aSupported ? -1 : 1;
 });
@@ -95,11 +82,13 @@ const ORDERED_COUNTRIES = [...ALL_COUNTRIES].sort((a, b) => {
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {ORDERED_COUNTRIES.map((c) => {
           const m = metaByCode[c.code];
+          const status = resolveCoverageStatus(c, Boolean(m));
           if (m) {
             return (
               <CountryCard
                 code={m.code}
                 name={m.name}
+                nameZh={c.name_zh}
                 totalCases={m.total_cases}
                 totalDeaths={m.total_deaths}
                 diseaseCount={m.disease_count}
@@ -108,11 +97,12 @@ const ORDERED_COUNTRIES = [...ALL_COUNTRIES].sort((a, b) => {
             );
           }
 
-          if (c.status === 'Supported') {
+          if (status === 'Supported') {
             return (
               <CountryCard
                 code={c.code}
-                name={c.name}
+                name={c.name_en}
+                nameZh={c.name_zh}
                 totalCases={0}
                 totalDeaths={0}
                 diseaseCount={0}
@@ -124,9 +114,15 @@ const ORDERED_COUNTRIES = [...ALL_COUNTRIES].sort((a, b) => {
             <div class="coverage-scheduled-card rounded-none border p-5 select-none transition-all">
               <div class="flex items-start justify-between mb-4">
                 <div class="flex items-center gap-3">
-                  <CountryFlag code={c.code} name={c.name} sizeClass="w-9 h-7" />
+                  <CountryFlag code={c.code} name={c.name_en} sizeClass="w-9 h-7" />
                   <div>
-                    <h3 class="text-[rgb(var(--text-strong))] font-semibold text-base">{c.name}</h3>
+                    <h3
+                      class="text-[rgb(var(--text-strong))] font-semibold text-base"
+                      data-lang-en={c.name_en}
+                      data-lang-zh={c.name_zh}
+                    >
+                      {c.name_en}
+                    </h3>
                     <span class="text-[rgb(var(--text-faint))] text-xs font-mono tracking-[0.12em] uppercase">{c.code}</span>
                   </div>
                 </div>

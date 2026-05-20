@@ -1,63 +1,77 @@
 // src/components/charts/CountriesMapView.tsx
 // Flat world map with SVG leader lines (折线) connecting each country dot to an info box.
-// Countries + status sourced from support_map.js data.
+// Countries and coverage status come from the shared country coverage registry.
 
 import React, {
   useRef, useState, useEffect, useCallback, useMemo,
 } from 'react';
 import ReactEChartsCore from 'echarts-for-react/lib/core';
 import echarts from '../../lib/echarts';
+import {
+  COUNTRY_COVERAGE,
+  getCoverageDisplayName,
+  getCoverageLabelOffset,
+  resolveCoverageStatus,
+  type CoverageStatus,
+} from '../../lib/country-coverage';
 
-const MAP_NAME = 'world';
-const BOX_W = 146;
-const BOX_H = 46;
+const MAP_NAME = 'world-countries-lnglat';
+const LOCAL_WORLD_MAP_URL = '/data/world.json';
+const WORLD_MAP_FALLBACK_URL = 'https://registry.npmmirror.com/echarts/4.9.0/files/map/json/world.json';
+const BOX_W = 138;
+const BOX_H = 42;
 
-interface CountryDef {
-  iso2: string;
-  name: string;
-  lat: number;
-  lng: number;
+function getGeoJsonBounds(geoJson: any) {
+  const bounds = {
+    minX: Infinity,
+    maxX: -Infinity,
+    minY: Infinity,
+    maxY: -Infinity,
+  };
+
+  const visit = (value: any) => {
+    if (Array.isArray(value) && typeof value[0] === 'number' && typeof value[1] === 'number') {
+      bounds.minX = Math.min(bounds.minX, value[0]);
+      bounds.maxX = Math.max(bounds.maxX, value[0]);
+      bounds.minY = Math.min(bounds.minY, value[1]);
+      bounds.maxY = Math.max(bounds.maxY, value[1]);
+      return;
+    }
+
+    if (Array.isArray(value)) value.forEach(visit);
+  };
+
+  geoJson?.features?.forEach((feature: any) => visit(feature.geometry?.coordinates));
+  return bounds;
 }
 
-const ALL_COUNTRIES: CountryDef[] = [
-  { iso2: 'CN', name: 'China',          lat: 35,    lng: 104 },
-  { iso2: 'TH', name: 'Thailand',       lat: 15.5,  lng: 100.5 },
-  { iso2: 'AU', name: 'Australia',      lat: -25,   lng: 133 },
-  { iso2: 'US', name: 'United States',  lat: 39,    lng: -98 },
-  { iso2: 'GB', name: 'United Kingdom', lat: 54,    lng: -3 },
-  { iso2: 'KR', name: 'South Korea',    lat: 36.5,  lng: 127.5 },
-  { iso2: 'TW', name: 'Taiwan, China',   lat: 23.7,  lng: 121.0 },
-  { iso2: 'NZ', name: 'New Zealand',    lat: -41,   lng: 171 },
-  { iso2: 'SE', name: 'Sweden',         lat: 62,    lng: 18 },
-  { iso2: 'JP', name: 'Japan',          lat: 36,    lng: 138 },
-  { iso2: 'SG', name: 'Singapore',      lat: 1.35,  lng: 103.8 },
-];
+function isLngLatWorldGeoJson(geoJson: any) {
+  const { minX, maxX, minY, maxY } = getGeoJsonBounds(geoJson);
+  return (
+    Number.isFinite(minX)
+    && minX >= -180.5
+    && maxX <= 180.5
+    && minY >= -90.5
+    && maxY <= 90.5
+  );
+}
 
-// Box offset (dx, dy) from dot centre → box centre, tuned for a ~900 px wide chart.
-// Positive dx → box to the right; negative dx → box to the left.
-// Spread out to avoid overlap in the crowded East-Asia cluster, keeping boxes looking neat.
-const BASE_OFFSETS: Record<string, [number, number]> = {
-  // East Asia cluster — spread in all four directions
-  CN: [  -60,  0],   // Top-Right / Top
-  TH: [ -60,   0],   // Left, slightly down
-  KR: [  -60,  -95],   // Right, very far up
-  TW: [ 100,  70],   // Right, below the East-Asia cluster
-  JP: [ 95, 0],   // Right, max up
-  SG: [-60,   60],   // Left, far down
-  // Oceania
-  AU: [  80,  -40],   // Right, down
-  NZ: [ 80,   0],   // Left
-  // Europe
-  GB: [-110,  -40],   // Far left
-  SE: [-110,  -85],   // Far upper-left
-  // Americas
-  US: [-120,  -35],   // Far left
-};
+async function fetchLngLatWorldGeoJson() {
+  let lastError: unknown;
 
-function fmtNum(n: number) {
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
-  if (n >= 1_000)     return (n / 1_000).toFixed(0) + 'K';
-  return n.toLocaleString();
+  for (const url of [LOCAL_WORLD_MAP_URL, WORLD_MAP_FALLBACK_URL]) {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const geoJson = await response.json();
+      if (isLngLatWorldGeoJson(geoJson)) return geoJson;
+      throw new Error(`World map is not lng/lat GeoJSON: ${url}`);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError;
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -72,7 +86,8 @@ interface MetaCountry {
 
 interface DotPos {
   iso2: string;
-  status: 'Supported' | 'Scheduled';
+  status: CoverageStatus;
+  statusLabel: string;
   name: string;
   px: number; py: number;   // dot pixel position (chart-relative)
   bx: number; by: number;   // box centre pixel position
@@ -91,6 +106,7 @@ export default function CountriesMapView({ metaCountries = [], height = 450 }: P
   const containerRef = useRef<HTMLDivElement>(null);
 
   const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+  const [lang, setLang] = useState<'en' | 'zh'>('en');
   const [mapReady, setMapReady] = useState(false);
   const [dotPositions, setDotPositions] = useState<DotPos[]>([]);
 
@@ -101,42 +117,53 @@ export default function CountriesMapView({ metaCountries = [], height = 450 }: P
   );
 
   const countriesWithStatus = useMemo(
-    () => ALL_COUNTRIES.map((c) => {
-      const meta = metaByCode[c.iso2];
+    () => COUNTRY_COVERAGE.map((c) => {
+      const meta = metaByCode[c.code];
+      const status = resolveCoverageStatus(c, Boolean(meta));
       return {
-        ...c,
-        name: meta?.name ?? c.name,
-        status: (meta ? 'Supported' : 'Scheduled') as 'Supported' | 'Scheduled',
+        iso2: c.code,
+        lat: c.lat,
+        lng: c.lng,
+        name: getCoverageDisplayName(c, lang, meta?.name),
+        status,
+        statusLabel: lang === 'zh'
+          ? status === 'Supported' ? '已支持' : '规划中'
+          : status,
       };
     }),
-    [metaByCode],
+    [lang, metaByCode],
   );
 
-  // Theme detection ──────────────────────────────────────────────────────────
+  // Theme/language detection ────────────────────────────────────────────────
   useEffect(() => {
     if (typeof document === 'undefined') return;
     const root = document.documentElement;
-    const update = () =>
+    const update = () => {
       setTheme(root.getAttribute('data-theme') === 'light' ? 'light' : 'dark');
+      setLang(root.getAttribute('data-lang') === 'zh' ? 'zh' : 'en');
+    };
     update();
     const obs = new MutationObserver(update);
-    obs.observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+    obs.observe(root, { attributes: true, attributeFilter: ['data-theme', 'data-lang'] });
     return () => obs.disconnect();
   }, []);
 
   // Load world GeoJSON ───────────────────────────────────────────────────────
   useEffect(() => {
     if (echarts.getMap(MAP_NAME)) { setMapReady(true); return; }
-    // Fetch an unprojected, standard lat/lng world map from a reliable CDN
-    fetch('https://registry.npmmirror.com/echarts/4.9.0/files/map/json/world.json')
-      .then(r => r.json())
-      .then(gj => { echarts.registerMap(MAP_NAME, gj); setMapReady(true); })
-      .catch(() => {
-        // Fallback or use local if CDN fails
-        fetch('/data/world.json')
-          .then(r => r.json())
-          .then(gj => { echarts.registerMap(MAP_NAME, gj); setMapReady(true); });
+
+    let cancelled = false;
+    fetchLngLatWorldGeoJson()
+      .then((gj) => {
+        if (cancelled) return;
+        echarts.registerMap(MAP_NAME, gj);
+        setMapReady(true);
+      })
+      .catch((error) => {
+        console.error('Unable to load lng/lat world map for countries view', error);
       });
+
+    return () => { cancelled = true; };
   }, []);
 
   // Convert geo → pixel and place boxes ─────────────────────────────────────
@@ -147,7 +174,7 @@ export default function CountriesMapView({ metaCountries = [], height = 450 }: P
     const rect = containerRef.current?.getBoundingClientRect();
     const cw = rect?.width ?? 900;
     const ch = rect?.height ?? 450;
-    const scale = Math.max(0.5, cw / 900);
+    const scale = Math.max(0.72, Math.min(1.14, cw / 1100));
 
     const hw = BOX_W / 2; const hh = BOX_H / 2;
     const pos: DotPos[] = [];
@@ -155,7 +182,7 @@ export default function CountriesMapView({ metaCountries = [], height = 450 }: P
     for (const c of countriesWithStatus) {
       const pt = inst.convertToPixel({ geoIndex: 0 }, [c.lng, c.lat]) as [number, number] | null;
       if (!pt) continue;
-      const [bdx, bdy] = BASE_OFFSETS[c.iso2] ?? [80, -30];
+      const [bdx, bdy] = getCoverageLabelOffset(c.iso2);
       // Raw box centre
       let bx = pt[0] + bdx * scale;
       let by = pt[1] + bdy * scale;
@@ -165,7 +192,7 @@ export default function CountriesMapView({ metaCountries = [], height = 450 }: P
       by = Math.max(hh + 4, Math.min(ch - hh - 4, by));
       
       pos.push({
-        iso2: c.iso2, status: c.status, name: c.name,
+        iso2: c.iso2, status: c.status, statusLabel: c.statusLabel, name: c.name,
         px: pt[0], py: pt[1], bx, by,
         meta: metaByCode[c.iso2],
       });
@@ -261,6 +288,7 @@ export default function CountriesMapView({ metaCountries = [], height = 450 }: P
             value: [c.lng, c.lat],
             name: c.name,
             status: c.status,
+            statusLabel: c.statusLabel,
             iso2: c.iso2,
           })),
           symbolSize: (_v: any, p: any) => p.data?.status === 'Supported' ? 13 : 9,
@@ -285,7 +313,7 @@ export default function CountriesMapView({ metaCountries = [], height = 450 }: P
         backgroundColor: palette.tooltipBg,
         borderColor: palette.tooltipBorder,
         textStyle: { color: palette.tooltipText, fontSize: 12 },
-        formatter: (p: any) => `<b>${p.data.name}</b><br/>${p.data.status}`,
+        formatter: (p: any) => `<b>${p.data.name}</b><br/>${p.data.statusLabel ?? p.data.status}`,
       },
     };
   }, [mapReady, countriesWithStatus, palette]);
@@ -347,7 +375,7 @@ export default function CountriesMapView({ metaCountries = [], height = 450 }: P
           }}
         >
           {dotPositions.map(d => {
-            const [bdx] = BASE_OFFSETS[d.iso2] ?? [80, -30];
+            const [bdx] = getCoverageLabelOffset(d.iso2);
             const isRight = bdx > 0;
 
             // Connect to the nearest edge of the box
@@ -402,16 +430,16 @@ export default function CountriesMapView({ metaCountries = [], height = 450 }: P
           background: palette.boxBg,
           border: `1px solid ${borderColor}`,
           borderRadius: 0,
-          padding: '6px 10px',
+          padding: '5px 9px',
           zIndex: 10,
-          lineHeight: 1.4,
+          lineHeight: 1.32,
           textDecoration: 'none',
           color: palette.boxText,
           cursor: isSupported ? 'pointer' : 'default',
           boxShadow: isSupported
-            ? `0 12px 22px ${accentColor}28`
+            ? `0 10px 18px ${accentColor}22`
             : isLight
-              ? '0 8px 18px rgba(42, 74, 103, 0.1)'
+              ? '0 6px 14px rgba(42, 74, 103, 0.08)'
               : '0 1px 4px rgba(0,0,0,0.25)',
           transition: 'box-shadow 0.15s ease',
           display: 'block',
@@ -421,8 +449,8 @@ export default function CountriesMapView({ metaCountries = [], height = 450 }: P
         const inner = (
           <>
             <div style={{
-              fontWeight: 600, fontSize: 12,
-              display: 'flex', alignItems: 'center', gap: 5, marginBottom: 3,
+              fontWeight: 650, fontSize: 11.5,
+              display: 'flex', alignItems: 'center', gap: 5, marginBottom: 4,
               color: palette.boxText,
             }}>
               <img
@@ -441,12 +469,12 @@ export default function CountriesMapView({ metaCountries = [], height = 450 }: P
                 background: isSupported ? accentColor : 'transparent',
                 border: `1px solid ${borderColor}`,
                 borderRadius: 0,
-                padding: '1px 6px',
-                fontSize: 10,
+                padding: '1px 5px',
+                fontSize: 9.5,
                 color: isSupported ? '#fff' : palette.boxTextMuted,
                 fontWeight: 500,
               }}>
-                {d.status}
+                {d.statusLabel}
               </span>
             </div>
           </>

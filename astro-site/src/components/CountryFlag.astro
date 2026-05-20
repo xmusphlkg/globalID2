@@ -13,7 +13,8 @@ const normalized = (code || '')
   .replace('UK', 'GB');
 
 const iso2 = /^[A-Z]{2}$/.test(normalized) ? normalized : 'UN';
-const cdnCode = iso2.toLowerCase();
+const flagIso2 = iso2 === 'TW' ? 'CN' : iso2;
+const cdnCode = flagIso2.toLowerCase();
 
 function toFlagEmoji(countryCode: string) {
   if (!/^[A-Z]{2}$/.test(countryCode)) return '🌐';
@@ -22,7 +23,7 @@ function toFlagEmoji(countryCode: string) {
   );
 }
 
-const fallbackEmoji = toFlagEmoji(iso2);
+const fallbackEmoji = toFlagEmoji(flagIso2);
 ---
 
 <span class={`inline-flex items-center justify-center overflow-hidden rounded-none ring-1 ring-slate-700/60 bg-slate-800/30 ${sizeClass}`}>

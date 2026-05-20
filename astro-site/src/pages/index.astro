@@ -5,6 +5,7 @@ import StatBar from '../components/StatBar.astro';
 import CountryCard from '../components/CountryCard.astro';
 import DiseaseCard from '../components/DiseaseCard.astro';
 import ReportCard from '../components/ReportCard.astro';
+import { getCountryCoverage } from '../lib/country-coverage';
 
 import metaRaw from '../data/meta.json';
 import diseasesRaw from '../data/diseases/index.json';
@@ -320,6 +321,7 @@ const features = [
       <CountryCard
         code={c.code}
         name={c.name}
+        nameZh={getCountryCoverage(c.code)?.name_zh}
         totalCases={c.total_cases}
         totalDeaths={c.total_deaths}
         diseaseCount={c.disease_count}
