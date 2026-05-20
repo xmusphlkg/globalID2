@@ -645,7 +645,7 @@
         258,
         219,
         215,
-        92
+        98
       ],
       "weekly_equiv_cases": [
         0.0,
@@ -964,7 +964,7 @@
         58.25806451612903,
         54.75,
         48.54838709677419,
-        21.46666666666667
+        22.866666666666667
       ],
       "deaths": [
         0,
@@ -1602,7 +1602,7 @@
         0.9475854494361059,
         0.8043457884748341,
         0.7896545411967548,
-        0.3378986873958207
+        0.35993555831293944
       ],
       "incidence_sources": [
         "wpp_computed",
@@ -1923,7 +1923,7 @@
         "wpp_computed",
         "wpp_computed"
       ],
-      "total_cases": 85800,
+      "total_cases": 85806,
       "total_deaths": 0
     },
     "JP": {
@@ -2638,7 +2638,8 @@
         "2026-04-18",
         "2026-04-25",
         "2026-05-02",
-        "2026-05-09"
+        "2026-05-09",
+        "2026-05-16"
       ],
       "cases": [
         0,
@@ -3350,6 +3351,7 @@
         0,
         0,
         1,
+        0,
         0,
         0
       ],
@@ -4064,9 +4066,11 @@
         0.0,
         1.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -5490,9 +5494,11 @@
         0.0,
         0.0008168084075657662,
         0.0,
+        0.0,
         0.0
       ],
       "incidence_sources": [
+        "wpp_computed",
         "wpp_computed",
         "wpp_computed",
         "wpp_computed",
@@ -13988,7 +13994,7 @@
       535,
       463,
       507,
-      240
+      246
     ],
     "deaths": [
       0,
@@ -14310,9 +14316,9 @@
       0
     ]
   },
-  "total_cases": 175986,
+  "total_cases": 175992,
   "total_deaths": 0,
-  "generated_at": "2026-05-09T00:00:00+00:00",
+  "generated_at": "2026-05-16T00:00:00+00:00",
   "source_info": [
     {
       "country_code": "AU",
@@ -14359,7 +14365,7 @@
     {
       "country_code": "NZ",
       "primary_scope": "phf_monthly",
-      "primary_label": "All Sources",
+      "primary_label": "phf_monthly",
       "primary_url": "https://www.phfscience.nz/digital-library/",
       "primary_type": "web",
       "parser_primary": "nz_phf_internal_crawler",
@@ -14367,7 +14373,7 @@
       "sources": [
         {
           "scope": "phf_monthly",
-          "label": "All Sources",
+          "label": "phf_monthly",
           "url": "https://www.phfscience.nz/digital-library/",
           "machine_url": null,
           "type": "web",

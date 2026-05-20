@@ -645,7 +645,7 @@
         7340,
         10221,
         7667,
-        4147
+        4448
       ],
       "weekly_equiv_cases": [
         0.0,
@@ -964,7 +964,7 @@
         1657.4193548387098,
         2555.25,
         1731.258064516129,
-        967.6333333333332
+        1037.8666666666668
       ],
       "deaths": [
         0,
@@ -1602,7 +1602,7 @@
         26.95843875527526,
         37.539809607311774,
         28.15944822025823,
-        15.231150615548568
+        16.336666973224027
       ],
       "incidence_sources": [
         "wpp_computed",
@@ -1923,7 +1923,7 @@
         "wpp_computed",
         "wpp_computed"
       ],
-      "total_cases": 12287929,
+      "total_cases": 12288230,
       "total_deaths": 0
     },
     "CN": {
@@ -2405,7 +2405,8 @@
         "2026-04-18",
         "2026-04-25",
         "2026-05-02",
-        "2026-05-09"
+        "2026-05-09",
+        "2026-05-16"
       ],
       "cases": [
         12922,
@@ -2563,7 +2564,8 @@
         2340,
         2556,
         2528,
-        2170
+        2170,
+        1266
       ],
       "weekly_equiv_cases": [
         12922.0,
@@ -2721,9 +2723,11 @@
         2340.0,
         2556.0,
         2528.0,
-        2170.0
+        2170.0,
+        1266.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -3037,7 +3041,8 @@
         1.9113316737038932,
         2.0877622897380985,
         2.064891654326257,
-        1.772474244417713
+        1.772474244417713,
+        1.0340794439782601
       ],
       "incidence_sources": [
         "wpp_computed",
@@ -3195,9 +3200,10 @@
         "wpp_computed",
         "wpp_computed",
         "wpp_computed",
+        "wpp_computed",
         "wpp_computed"
       ],
-      "total_cases": 3821484,
+      "total_cases": 3822750,
       "total_deaths": 0
     },
     "NZ": {
@@ -4638,7 +4644,7 @@
       62914,
       57399,
       42559,
-      8845
+      10412
     ],
     "deaths": [
       0,
@@ -4960,9 +4966,9 @@
       0
     ]
   },
-  "total_cases": 31720059,
+  "total_cases": 31721626,
   "total_deaths": 4005,
-  "generated_at": "2026-05-09T00:00:00+00:00",
+  "generated_at": "2026-05-16T00:00:00+00:00",
   "source_info": [
     {
       "country_code": "AU",
@@ -5048,7 +5054,7 @@
     {
       "country_code": "NZ",
       "primary_scope": "phf_monthly",
-      "primary_label": "All Sources",
+      "primary_label": "phf_monthly",
       "primary_url": "https://www.phfscience.nz/digital-library/",
       "primary_type": "web",
       "parser_primary": "nz_phf_internal_crawler",
@@ -5056,7 +5062,7 @@
       "sources": [
         {
           "scope": "phf_monthly",
-          "label": "All Sources",
+          "label": "phf_monthly",
           "url": "https://www.phfscience.nz/digital-library/",
           "machine_url": null,
           "type": "web",

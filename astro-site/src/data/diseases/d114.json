@@ -643,9 +643,9 @@
         682,
         1296,
         1249,
-        1455,
-        1360,
-        540
+        1456,
+        1362,
+        573
       ],
       "weekly_equiv_cases": [
         348.64516129032256,
@@ -962,9 +962,9 @@
         159.13333333333333,
         292.64516129032256,
         282.0322580645161,
-        363.75,
-        307.09677419354836,
-        126.0
+        364.0,
+        307.5483870967742,
+        133.70000000000002
       ],
       "deaths": [
         0,
@@ -1600,9 +1600,9 @@
         2.5283582065205987,
         4.759964118097648,
         4.587341962580218,
-        5.343941197401295,
-        4.995024074546914,
-        1.9833183825406866
+        5.347614009220814,
+        5.002369698185954,
+        2.10452117258484
       ],
       "incidence_sources": [
         "wpp_computed",
@@ -1923,7 +1923,7 @@
         "wpp_computed",
         "wpp_computed"
       ],
-      "total_cases": 296634,
+      "total_cases": 296670,
       "total_deaths": 0
     },
     "NZ": {
@@ -9386,9 +9386,9 @@
       2396,
       2706,
       2514,
-      2849,
-      2982,
-      1506
+      2850,
+      2984,
+      1539
     ],
     "deaths": [
       0,
@@ -9710,9 +9710,9 @@
       0
     ]
   },
-  "total_cases": 719253,
+  "total_cases": 719289,
   "total_deaths": 0,
-  "generated_at": "2026-05-09T00:00:00+00:00",
+  "generated_at": "2026-05-16T00:00:00+00:00",
   "source_info": [
     {
       "country_code": "AU",
@@ -9738,7 +9738,7 @@
     {
       "country_code": "NZ",
       "primary_scope": "phf_monthly",
-      "primary_label": "All Sources",
+      "primary_label": "phf_monthly",
       "primary_url": "https://www.phfscience.nz/digital-library/",
       "primary_type": "web",
       "parser_primary": "nz_phf_internal_crawler",
@@ -9746,7 +9746,7 @@
       "sources": [
         {
           "scope": "phf_monthly",
-          "label": "All Sources",
+          "label": "phf_monthly",
           "url": "https://www.phfscience.nz/digital-library/",
           "machine_url": null,
           "type": "web",

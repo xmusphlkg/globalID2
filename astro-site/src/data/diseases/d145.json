@@ -3,9 +3,9 @@
   "name_en": "Relapsing fever",
   "name_zh": "回归热",
   "category": "Bacterial",
-  "icd_10": "",
-  "icd_11": "",
-  "description": "JP weekly surveillance concept",
+  "icd_10": "A68",
+  "icd_11": "1C21",
+  "description": "Relapsing fever surveillance concept used in cross-country surveillance",
   "slug": "relapsing-fever",
   "country_series": {
     "JP": {
@@ -720,7 +720,8 @@
         "2026-04-18",
         "2026-04-25",
         "2026-05-02",
-        "2026-05-09"
+        "2026-05-09",
+        "2026-05-16"
       ],
       "cases": [
         0,
@@ -1386,6 +1387,7 @@
         0,
         0,
         1,
+        0,
         0,
         0,
         0,
@@ -2146,9 +2148,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -3572,9 +3576,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "incidence_sources": [
+        "wpp_computed",
         "wpp_computed",
         "wpp_computed",
         "wpp_computed",
@@ -4796,7 +4802,7 @@
   },
   "total_cases": 85,
   "total_deaths": 0,
-  "generated_at": "2026-05-09T00:00:00+00:00",
+  "generated_at": "2026-05-16T00:00:00+00:00",
   "source_info": [
     {
       "country_code": "JP",

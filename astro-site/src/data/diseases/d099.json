@@ -720,7 +720,8 @@
         "2026-04-18",
         "2026-04-25",
         "2026-05-02",
-        "2026-05-09"
+        "2026-05-09",
+        "2026-05-16"
       ],
       "cases": [
         2,
@@ -1431,6 +1432,7 @@
         0,
         2,
         3,
+        0,
         0,
         0,
         0
@@ -2146,9 +2148,11 @@
         3.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -3572,9 +3576,11 @@
         0.002450425222697299,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "incidence_sources": [
+        "wpp_computed",
         "wpp_computed",
         "wpp_computed",
         "wpp_computed",
@@ -12178,7 +12184,7 @@
   },
   "total_cases": 161475,
   "total_deaths": 0,
-  "generated_at": "2026-05-09T00:00:00+00:00",
+  "generated_at": "2026-05-16T00:00:00+00:00",
   "source_info": [
     {
       "country_code": "JP",
@@ -12204,7 +12210,7 @@
     {
       "country_code": "NZ",
       "primary_scope": "phf_monthly",
-      "primary_label": "All Sources",
+      "primary_label": "phf_monthly",
       "primary_url": "https://www.phfscience.nz/digital-library/",
       "primary_type": "web",
       "parser_primary": "nz_phf_internal_crawler",
@@ -12212,7 +12218,7 @@
       "sources": [
         {
           "scope": "phf_monthly",
-          "label": "All Sources",
+          "label": "phf_monthly",
           "url": "https://www.phfscience.nz/digital-library/",
           "machine_url": null,
           "type": "web",

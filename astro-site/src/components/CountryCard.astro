@@ -5,13 +5,14 @@ import CountryFlag from './CountryFlag.astro';
 interface Props {
   code: string;
   name: string;
+  nameZh?: string;
   totalCases?: number;
   totalDeaths?: number;
   diseaseCount?: number;
   dateRange?: { start: string | null; end: string | null };
 }
 
-const { code, name, totalCases = 0, totalDeaths = 0, diseaseCount = 0, dateRange } = Astro.props;
+const { code, name, nameZh = name, totalCases = 0, totalDeaths = 0, diseaseCount = 0, dateRange } = Astro.props;
 
 function fmtNum(n: number) {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
@@ -31,7 +32,11 @@ const deathsDisplay = totalDeaths > 0 ? fmtNum(totalDeaths) : '-';
   <div class="flex items-center gap-3 mb-3">
     <CountryFlag code={code} name={name} sizeClass="w-8 h-6" />
     <div class="flex-1 min-w-0">
-      <h3 class="text-[rgb(var(--text-strong))] font-semibold text-base truncate group-hover:text-brand-700 dark:group-hover:text-brand-400 transition-colors">
+      <h3
+        class="text-[rgb(var(--text-strong))] font-semibold text-base truncate group-hover:text-brand-700 dark:group-hover:text-brand-400 transition-colors"
+        data-lang-en={name}
+        data-lang-zh={nameZh}
+      >
         {name}
       </h3>
       <span class="text-[rgb(var(--text-faint))] text-[10px] font-mono tracking-[0.12em] uppercase">{code}</span>

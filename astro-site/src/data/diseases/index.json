@@ -815,8 +815,8 @@
     "name_zh": "弓形体病",
     "category": "Parasitic",
     "icd_10": "B58",
-    "icd_11": "1F54",
-    "description": "",
+    "icd_11": "1F57",
+    "description": "Toxoplasma gondii infection surveillance concept used in cross-country surveillance",
     "slug": "toxoplasmosis"
   },
   {
@@ -1104,9 +1104,9 @@
     "name_en": "Shiga toxin-producing Escherichia coli infection",
     "name_zh": "产志贺毒素大肠杆菌感染",
     "category": "Bacterial",
-    "icd_10": "",
-    "icd_11": "",
-    "description": "Shiga toxin-producing Escherichia coli infection used in CDC surveillance",
+    "icd_10": "A04.3",
+    "icd_11": "1A03",
+    "description": "Shiga toxin-producing / verotoxin-producing Escherichia coli infection (STEC/VTEC) used in cross-country surveillance",
     "slug": "shiga-toxin-producing-escherichia-coli-infection"
   },
   {
@@ -1394,9 +1394,9 @@
     "name_en": "Relapsing fever",
     "name_zh": "回归热",
     "category": "Bacterial",
-    "icd_10": "",
-    "icd_11": "",
-    "description": "JP weekly surveillance concept",
+    "icd_10": "A68",
+    "icd_11": "1C21",
+    "description": "Relapsing fever surveillance concept used in cross-country surveillance",
     "slug": "relapsing-fever"
   },
   {
@@ -1538,16 +1538,6 @@
     "icd_11": "1C30",
     "description": "Infection caused by Rickettsia species",
     "slug": "rickettsial-disease"
-  },
-  {
-    "disease_id": "D160",
-    "name_en": "VTEC/STEC infection",
-    "name_zh": "产志贺毒素大肠杆菌感染",
-    "category": "Bacterial",
-    "icd_10": "A04.3",
-    "icd_11": "1A03",
-    "description": "Verotoxin/Shiga toxin-producing E. coli infection",
-    "slug": "vtec-stec-infection"
   },
   {
     "disease_id": "D161",
@@ -1700,16 +1690,6 @@
     "slug": "nipah-virus-infection"
   },
   {
-    "disease_id": "D176",
-    "name_en": "Relapsing fever",
-    "name_zh": "回归热",
-    "category": "Bacterial",
-    "icd_10": "A68",
-    "icd_11": "1C21",
-    "description": "Relapsing fever surveillance concept",
-    "slug": "relapsing-fever"
-  },
-  {
     "disease_id": "D177",
     "name_en": "Cat-scratch disease",
     "name_zh": "猫抓病",
@@ -1728,16 +1708,6 @@
     "icd_11": "",
     "description": "Acute flaccid paralysis surveillance concept",
     "slug": "acute-flaccid-paralysis"
-  },
-  {
-    "disease_id": "D179",
-    "name_en": "Toxoplasmosis",
-    "name_zh": "弓形虫感染",
-    "category": "Parasitic",
-    "icd_10": "B58",
-    "icd_11": "1F57",
-    "description": "Toxoplasma gondii infection surveillance concept",
-    "slug": "toxoplasmosis"
   },
   {
     "disease_id": "D180",
@@ -1778,5 +1748,225 @@
     "icd_11": "1C30",
     "description": "Epidemic typhus fever surveillance concept",
     "slug": "epidemic-typhus-fever"
+  },
+  {
+    "disease_id": "D184",
+    "name_en": "Accident caused by venomous animals",
+    "name_zh": "毒性动物伤害",
+    "category": "Other",
+    "icd_10": "T63",
+    "icd_11": "",
+    "description": "SINAN surveillance concept for injuries caused by venomous animals",
+    "slug": "accident-caused-by-venomous-animals"
+  },
+  {
+    "disease_id": "D185",
+    "name_en": "Work accident with biological material",
+    "name_zh": "生物材料职业暴露事故",
+    "category": "Other",
+    "icd_10": "Z57.8",
+    "icd_11": "",
+    "description": "SINAN occupational exposure concept for work accidents involving biological material",
+    "slug": "work-accident-with-biological-material"
+  },
+  {
+    "disease_id": "D186",
+    "name_en": "Serious work accident",
+    "name_zh": "严重工伤",
+    "category": "Other",
+    "icd_10": "T14",
+    "icd_11": "",
+    "description": "SINAN occupational health concept for serious work accidents",
+    "slug": "serious-work-accident"
+  },
+  {
+    "disease_id": "D187",
+    "name_en": "Rabies post-exposure prophylaxis",
+    "name_zh": "狂犬病暴露后处置",
+    "category": "Other",
+    "icd_10": "Z20.3",
+    "icd_11": "",
+    "description": "SINAN surveillance concept for anti-rabies care after exposure",
+    "slug": "rabies-post-exposure-prophylaxis"
+  },
+  {
+    "disease_id": "D188",
+    "name_en": "Work-related cancer",
+    "name_zh": "职业相关癌症",
+    "category": "Other",
+    "icd_10": "C00-C97",
+    "icd_11": "",
+    "description": "SINAN occupational health concept for work-related cancer",
+    "slug": "work-related-cancer"
+  },
+  {
+    "disease_id": "D189",
+    "name_en": "Work-related dermatosis",
+    "name_zh": "职业性皮肤病",
+    "category": "Other",
+    "icd_10": "L20-L99",
+    "icd_11": "",
+    "description": "SINAN occupational health concept for work-related dermatoses",
+    "slug": "work-related-dermatosis"
+  },
+  {
+    "disease_id": "D190",
+    "name_en": "Sporotrichosis",
+    "name_zh": "孢子丝菌病",
+    "category": "Fungal",
+    "icd_10": "B42",
+    "icd_11": "",
+    "description": "Sporothrix infection surveillance concept",
+    "slug": "sporotrichosis"
+  },
+  {
+    "disease_id": "D191",
+    "name_en": "Exogenous poisoning",
+    "name_zh": "外源性中毒",
+    "category": "Other",
+    "icd_10": "T36-T65",
+    "icd_11": "",
+    "description": "SINAN surveillance concept for exogenous intoxication/poisoning",
+    "slug": "exogenous-poisoning"
+  },
+  {
+    "disease_id": "D192",
+    "name_en": "Work-related repetitive strain injury",
+    "name_zh": "职业相关重复性劳损",
+    "category": "Other",
+    "icd_10": "M70-M79",
+    "icd_11": "",
+    "description": "SINAN occupational health concept for RSI/WMSD",
+    "slug": "work-related-repetitive-strain-injury"
+  },
+  {
+    "disease_id": "D193",
+    "name_en": "Work-related mental disorder",
+    "name_zh": "职业相关精神障碍",
+    "category": "Other",
+    "icd_10": "F00-F99",
+    "icd_11": "",
+    "description": "SINAN occupational health concept for work-related mental disorders",
+    "slug": "work-related-mental-disorder"
+  },
+  {
+    "disease_id": "D194",
+    "name_en": "Noise-induced hearing loss",
+    "name_zh": "噪声性听力损失",
+    "category": "Other",
+    "icd_10": "H83.3",
+    "icd_11": "",
+    "description": "SINAN occupational health concept for noise-induced hearing loss",
+    "slug": "noise-induced-hearing-loss"
+  },
+  {
+    "disease_id": "D195",
+    "name_en": "Pneumoconiosis",
+    "name_zh": "尘肺病",
+    "category": "Other",
+    "icd_10": "J60-J64",
+    "icd_11": "",
+    "description": "SINAN occupational health concept for pneumoconiosis",
+    "slug": "pneumoconiosis"
+  },
+  {
+    "disease_id": "D196",
+    "name_en": "Foodborne disease outbreak",
+    "name_zh": "食源性疾病暴发",
+    "category": "Bacterial",
+    "icd_10": "A05",
+    "icd_11": "",
+    "description": "SINAN surveillance concept for foodborne disease outbreaks",
+    "slug": "foodborne-disease-outbreak"
+  },
+  {
+    "disease_id": "D197",
+    "name_en": "Syphilis in pregnancy",
+    "name_zh": "妊娠期梅毒",
+    "category": "Bacterial",
+    "icd_10": "A50-A53",
+    "icd_11": "",
+    "description": "SINAN surveillance concept for syphilis in pregnancy",
+    "slug": "syphilis-in-pregnancy"
+  },
+  {
+    "disease_id": "D198",
+    "name_en": "Toxoplasmosis in pregnancy",
+    "name_zh": "妊娠期弓形虫病",
+    "category": "Parasitic",
+    "icd_10": "B58",
+    "icd_11": "",
+    "description": "SINAN surveillance concept for toxoplasmosis in pregnancy",
+    "slug": "toxoplasmosis-in-pregnancy"
+  },
+  {
+    "disease_id": "D199",
+    "name_en": "Rotavirus infection",
+    "name_zh": "轮状病毒感染",
+    "category": "Viral",
+    "icd_10": "A08.0",
+    "icd_11": "",
+    "description": "Rotavirus infection surveillance concept",
+    "slug": "rotavirus-infection"
+  },
+  {
+    "disease_id": "D200",
+    "name_en": "Trachoma",
+    "name_zh": "沙眼",
+    "category": "Bacterial",
+    "icd_10": "A71",
+    "icd_11": "",
+    "description": "Chlamydia trachomatis eye infection surveillance concept",
+    "slug": "trachoma"
+  },
+  {
+    "disease_id": "D201",
+    "name_en": "Exanthematous diseases",
+    "name_zh": "出疹性疾病",
+    "category": "Viral",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "Aggregate SINAN exanthematous disease surveillance concept",
+    "slug": "exanthematous-diseases"
+  },
+  {
+    "disease_id": "D202",
+    "name_en": "Domestic sexual and other violence",
+    "name_zh": "家庭/性及其他暴力",
+    "category": "Other",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "SINAN surveillance concept for domestic sexual and other violence",
+    "slug": "domestic-sexual-and-other-violence"
+  },
+  {
+    "disease_id": "D203",
+    "name_en": "Crimean-Congo hemorrhagic fever",
+    "name_zh": "克里米亚-刚果出血热",
+    "category": "Viral",
+    "icd_10": "A98.0",
+    "icd_11": "1D60.0",
+    "description": "Crimean-Congo hemorrhagic fever surveillance concept",
+    "slug": "crimean-congo-hemorrhagic-fever"
+  },
+  {
+    "disease_id": "D204",
+    "name_en": "South American hemorrhagic fever",
+    "name_zh": "南美出血热",
+    "category": "Viral",
+    "icd_10": "A96.0-A96.1",
+    "icd_11": "1D61",
+    "description": "South American arenaviral hemorrhagic fever surveillance concept",
+    "slug": "south-american-hemorrhagic-fever"
+  },
+  {
+    "disease_id": "D205",
+    "name_en": "Tick-borne encephalitis",
+    "name_zh": "蜱传脑炎",
+    "category": "Viral",
+    "icd_10": "A84",
+    "icd_11": "1D49",
+    "description": "Tick-borne encephalitis surveillance concept",
+    "slug": "tick-borne-encephalitis"
   }
 ]

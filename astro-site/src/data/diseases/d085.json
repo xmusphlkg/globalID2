@@ -4,8 +4,8 @@
   "name_zh": "弓形体病",
   "category": "Parasitic",
   "icd_10": "B58",
-  "icd_11": "1F54",
-  "description": "",
+  "icd_11": "1F57",
+  "description": "Toxoplasma gondii infection surveillance concept used in cross-country surveillance",
   "slug": "toxoplasmosis",
   "country_series": {},
   "global_monthly": {
@@ -15,6 +15,6 @@
   },
   "total_cases": 0,
   "total_deaths": 0,
-  "generated_at": "2026-05-09T00:00:00+00:00",
+  "generated_at": "2026-05-16T00:00:00+00:00",
   "source_info": []
 }

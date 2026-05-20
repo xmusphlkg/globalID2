@@ -125,6 +125,26 @@ SOURCE_DETAILS_BY_SCOPE: dict[tuple[str, str], dict[str, str]] = {
         "type": "open_data_csv",
         "description": "Taiwan, China monthly notifiable infectious disease open-data CSV feed.",
     },
+    ("BR", "sinan_datasus"): {
+        "label": "Brazil DATASUS SINAN",
+        "url": "http://siab.datasus.gov.br/DATASUS/index.php?acao=41&area=0901&item=1",
+        "machine_url": "ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/FINAIS/",
+        "type": "ftp_dbc",
+        "description": (
+            "Brazil Ministry of Health DATASUS/SINAN public DBC microdata "
+            "aggregated to national monthly notification counts."
+        ),
+    },
+    ("KR", "kdca_open_api"): {
+        "label": "Korea KDCA EID",
+        "url": "https://www.data.go.kr/data/15139178/openapi.do",
+        "machine_url": "https://apis.data.go.kr/1790387/EIDAPIService/PeriodRegion",
+        "type": "open_api_or_portal_download",
+        "description": (
+            "Korea KDCA notifiable infectious disease OpenAPI or portal/KOSIS downloads "
+            "aggregated to national monthly notification counts."
+        ),
+    },
 }
 
 DOWNLOAD_CSV_FIELDS = [
@@ -161,28 +181,34 @@ DOWNLOAD_CSV_FIELDS = [
 
 ABOUT_COUNTRY_NAMES_ZH: dict[str, str] = {
     "AU": "澳大利亚",
+    "BR": "巴西",
     "CN": "中国",
     "JP": "日本",
+    "KR": "韩国",
     "TW": "中国台湾",
     "US": "美国",
 }
 
 ABOUT_SOURCE_LABELS_ZH: dict[tuple[str, str], str] = {
     ("AU", "all"): "澳大利亚 NINDSS",
+    ("BR", "sinan_datasus"): "巴西 DATASUS SINAN",
     ("CN", "cdc_weekly"): "中国疾控中心周报",
     ("CN", "nhc"): "国家疾病预防控制局",
     ("CN", "pubmed"): "PubMed 生物医学文献库",
     ("JP", "jp_weekly"): "日本 NIID/JIHS 周报",
+    ("KR", "kdca_open_api"): "韩国 KDCA EID",
     ("TW", "nidss_open_data"): "中国台湾 CDC NIDSS",
     ("US", "nndss_api"): "美国 CDC NNDSS",
 }
 
 ABOUT_SOURCE_DESCRIPTIONS_ZH: dict[tuple[str, str], str] = {
     ("AU", "all"): "澳大利亚国家法定传染病监测系统仪表板。",
+    ("BR", "sinan_datasus"): "巴西卫生部 DATASUS/SINAN 的 SUS 开放 DBC 微数据，按通报月份聚合为全国月度病例数。",
     ("CN", "cdc_weekly"): "中国疾控中心发布的月度法定传染病报告。",
     ("CN", "nhc"): "中国官方公共卫生公报与查询门户。",
     ("CN", "pubmed"): "作为补充上下文使用的生物医学文献发现源。",
     ("JP", "jp_weekly"): "日本 NIID/JIHS 的周度传染病监测数据。",
+    ("KR", "kdca_open_api"): "韩国 KDCA 法定传染病 OpenAPI 或门户/KOSIS 导出，按月聚合为全国通报病例数。",
     ("TW", "nidss_open_data"): "中国台湾月度法定传染病开放数据 CSV。",
     ("US", "nndss_api"): "美国 CDC 国家法定传染病监测系统的临时数据。",
 }

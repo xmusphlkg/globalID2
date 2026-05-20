@@ -644,8 +644,8 @@
         3877,
         3205,
         3233,
-        2897,
-        1405
+        2899,
+        1496
       ],
       "weekly_equiv_cases": [
         1145.2903225806454,
@@ -963,8 +963,8 @@
         875.4516129032259,
         723.7096774193549,
         808.25,
-        654.1612903225806,
-        327.83333333333337
+        654.6129032258065,
+        349.06666666666666
       ],
       "deaths": [
         0,
@@ -1601,8 +1601,8 @@
         14.239491424278226,
         11.771361881560928,
         11.874200612507483,
-        10.640135841148831,
-        5.160300606425305
+        10.647481464787871,
+        5.494526482001606
       ],
       "incidence_sources": [
         "wpp_computed",
@@ -1923,7 +1923,7 @@
         "wpp_computed",
         "wpp_computed"
       ],
-      "total_cases": 636588,
+      "total_cases": 636681,
       "total_deaths": 0
     },
     "NZ": {
@@ -6879,8 +6879,8 @@
       7428,
       6176,
       6221,
-      5778,
-      2931
+      5780,
+      3022
     ],
     "deaths": [
       0,
@@ -7202,9 +7202,9 @@
       0
     ]
   },
-  "total_cases": 1030901,
+  "total_cases": 1030994,
   "total_deaths": 0,
-  "generated_at": "2026-05-09T00:00:00+00:00",
+  "generated_at": "2026-05-16T00:00:00+00:00",
   "source_info": [
     {
       "country_code": "AU",
@@ -7230,7 +7230,7 @@
     {
       "country_code": "NZ",
       "primary_scope": "phf_monthly",
-      "primary_label": "All Sources",
+      "primary_label": "phf_monthly",
       "primary_url": "https://www.phfscience.nz/digital-library/",
       "primary_type": "web",
       "parser_primary": "nz_phf_internal_crawler",
@@ -7238,7 +7238,7 @@
       "sources": [
         {
           "scope": "phf_monthly",
-          "label": "All Sources",
+          "label": "phf_monthly",
           "url": "https://www.phfscience.nz/digital-library/",
           "machine_url": null,
           "type": "web",

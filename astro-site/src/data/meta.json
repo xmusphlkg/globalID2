@@ -1,14 +1,14 @@
 {
-  "generated_at": "2026-05-09T00:00:00+00:00",
-  "total_countries": 6,
-  "total_diseases": 178,
+  "generated_at": "2026-05-16T00:00:00+00:00",
+  "total_countries": 8,
+  "total_diseases": 197,
   "total_reports": 1,
   "countries": [
     {
       "code": "AU",
       "name": "Australia",
       "language": "en-AU",
-      "total_cases": 20125323,
+      "total_cases": 20127162,
       "total_deaths": 0,
       "disease_count": 66,
       "date_range": {
@@ -32,6 +32,38 @@
             "type": "microsoft_bi",
             "cadence": "monthly",
             "description": "Australian national notifiable diseases surveillance dashboard."
+          }
+        ]
+      }
+    },
+    {
+      "code": "BR",
+      "name": "Brazil",
+      "language": "pt-BR",
+      "total_cases": 60603848,
+      "total_deaths": 0,
+      "disease_count": 45,
+      "date_range": {
+        "start": "2000-01-01",
+        "end": "2026-05-01"
+      },
+      "source_info": {
+        "country_code": "BR",
+        "primary_scope": "sinan_datasus",
+        "primary_label": "Brazil DATASUS SINAN",
+        "primary_url": "http://siab.datasus.gov.br/DATASUS/index.php?acao=41&area=0901&item=1",
+        "primary_type": "ftp_dbc",
+        "parser_primary": "br_sinan_datasus_dbc_monthly",
+        "notes": "Brazil Ministry of Health DATASUS/SINAN public DBC microdata aggregated to national monthly notification counts.",
+        "sources": [
+          {
+            "scope": "sinan_datasus",
+            "label": "Brazil DATASUS SINAN",
+            "url": "http://siab.datasus.gov.br/DATASUS/index.php?acao=41&area=0901&item=1",
+            "machine_url": "ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/FINAIS/",
+            "type": "ftp_dbc",
+            "cadence": "monthly",
+            "description": "Brazil Ministry of Health DATASUS/SINAN public DBC microdata aggregated to national monthly notification counts."
           }
         ]
       }
@@ -90,12 +122,12 @@
       "code": "JP",
       "name": "Japan",
       "language": "ja-JP",
-      "total_cases": 48097100,
+      "total_cases": 48114166,
       "total_deaths": 0,
       "disease_count": 86,
       "date_range": {
         "start": "2012-09-14",
-        "end": "2026-05-09"
+        "end": "2026-05-16"
       },
       "source_info": {
         "country_code": "JP",
@@ -119,12 +151,44 @@
       }
     },
     {
+      "code": "KR",
+      "name": "South Korea",
+      "language": "ko-KR",
+      "total_cases": 2849954,
+      "total_deaths": 0,
+      "disease_count": 64,
+      "date_range": {
+        "start": "2005-01-01",
+        "end": "2026-05-01"
+      },
+      "source_info": {
+        "country_code": "KR",
+        "primary_scope": "kdca_open_api",
+        "primary_label": "Korea KDCA EID",
+        "primary_url": "https://www.data.go.kr/data/15139178/openapi.do",
+        "primary_type": "open_api_or_portal_download",
+        "parser_primary": "kr_kdca_period_region_monthly",
+        "notes": "Korea KDCA EID data from data.go.kr OpenAPI or KDCA/KOSIS portal downloads aggregated to national monthly totals",
+        "sources": [
+          {
+            "scope": "kdca_open_api",
+            "label": "Korea KDCA EID",
+            "url": "https://www.data.go.kr/data/15139178/openapi.do",
+            "machine_url": "https://apis.data.go.kr/1790387/EIDAPIService/PeriodRegion",
+            "type": "open_api_or_portal_download",
+            "cadence": "monthly",
+            "description": "Korea KDCA notifiable infectious disease OpenAPI or portal/KOSIS downloads aggregated to national monthly notification counts."
+          }
+        ]
+      }
+    },
+    {
       "code": "NZ",
       "name": "New Zealand",
       "language": "en",
-      "total_cases": 2872288,
+      "total_cases": 2862123,
       "total_deaths": 0,
-      "disease_count": 32,
+      "disease_count": 31,
       "date_range": {
         "start": "2016-01-01",
         "end": "2026-03-01"
@@ -132,7 +196,7 @@
       "source_info": {
         "country_code": "NZ",
         "primary_scope": "phf_monthly",
-        "primary_label": "All Sources",
+        "primary_label": "phf_monthly",
         "primary_url": "https://www.phfscience.nz/digital-library/",
         "primary_type": "web",
         "parser_primary": "nz_phf_internal_crawler",
@@ -140,7 +204,7 @@
         "sources": [
           {
             "scope": "phf_monthly",
-            "label": "All Sources",
+            "label": "phf_monthly",
             "url": "https://www.phfscience.nz/digital-library/",
             "machine_url": null,
             "type": "web",
@@ -154,9 +218,9 @@
       "code": "TW",
       "name": "Taiwan, China",
       "language": "zh-TW",
-      "total_cases": 11163910,
+      "total_cases": 11163654,
       "total_deaths": 0,
-      "disease_count": 49,
+      "disease_count": 48,
       "date_range": {
         "start": "2003-01-01",
         "end": "2026-05-01"
