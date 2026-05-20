@@ -3,6 +3,7 @@
 from collections import defaultdict
 from datetime import datetime
 from typing import Any, List, Optional
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
@@ -221,7 +222,7 @@ async def list_reports(
 
 
 @router.get("/reports/{report_uuid}", response_model=ReportDetailOut)
-async def get_report(report_uuid: str, db: AsyncSession = Depends(get_db)):
+async def get_report(report_uuid: UUID, db: AsyncSession = Depends(get_db)):
     q = (
         select(Report, Country.name.label("country_name"))
         .join(Country, Report.country_id == Country.id)
@@ -281,7 +282,7 @@ async def get_report(report_uuid: str, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/reports/{report_uuid}/runs", response_model=List[ReportSectionRunOut])
-async def get_report_runs(report_uuid: str, db: AsyncSession = Depends(get_db)):
+async def get_report_runs(report_uuid: UUID, db: AsyncSession = Depends(get_db)):
     report_q = select(Report.id).where(Report.report_uuid == report_uuid)
     report_id = (await db.execute(report_q)).scalar_one_or_none()
     if report_id is None:

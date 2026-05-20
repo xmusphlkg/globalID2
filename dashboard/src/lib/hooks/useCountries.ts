@@ -6,6 +6,7 @@ export interface Country {
   code: string;
   name: string;
   name_en: string;
+  name_zh?: string | null;
   name_local: string | null;
   language: string;
   timezone: string;
@@ -14,7 +15,13 @@ export interface Country {
 
 export function getCountryDisplayName(country: Country, lang: "en" | "zh") {
   if (lang === "zh") {
-    return country.name_local || country.name || country.name_en || country.code;
+    return (
+      country.name_zh ||
+      country.name_local ||
+      country.name ||
+      country.name_en ||
+      country.code
+    );
   }
 
   return country.name_en || country.name || country.name_local || country.code;

@@ -28,7 +28,8 @@ from src.domain.ai_model_center import AIModelConfig, AIProviderConfig
 from src.domain.country import Country
 from src.domain.report import ReportType
 from src.domain.task import Task, TaskPriority, TaskStatus, TaskType
-from src.services.disease_knowledge_service import DiseaseKnowledgeUpdateService, expand_sources
+from src.services.disease_duplicate_audit_service import DiseaseDuplicateAuditService
+from src.services.disease_knowledge_service import DiseaseKnowledgeUpdateService, SOURCE_GROUPS, expand_sources
 
 router = APIRouter()
 
@@ -87,7 +88,7 @@ class DiseaseKnowledgeTaskSkipped(BaseModel):
 
 class DiseaseKnowledgeStartRequest(BaseModel):
     disease_ids: List[str] = Field(..., min_length=1)
-    source: List[str] = Field(default_factory=list, description="Source groups: who / wikidata / wikipedia / pubmed / msd")
+    source: List[str] = Field(default_factory=list, description="Source groups: who / search / wikidata / wikipedia / pubmed / msd")
     force: bool = False
     generator: str = Field("ai", description="ai / auto / template")
     priority: str = Field("normal")
@@ -99,6 +100,19 @@ class DiseaseKnowledgeStartResponse(BaseModel):
     requested_disease_ids: List[str]
     created_tasks: List[TaskOut]
     skipped: List[DiseaseKnowledgeTaskSkipped] = Field(default_factory=list)
+
+
+class DiseaseDuplicateAuditRequest(BaseModel):
+    include_ai: bool = Field(True, description="Ask the model center to classify findings")
+    include_new_disease_candidates: bool = Field(
+        True,
+        description="Scan current source data for unmapped disease terms that may need new standard diseases",
+    )
+    max_ai_candidates: int = Field(40, ge=1, le=100)
+
+
+class DiseaseDuplicateAuditStatusRequest(BaseModel):
+    include_new_disease_candidates: bool = True
 
 
 class DiseaseKnowledgeSourceDetail(BaseModel):
@@ -161,6 +175,47 @@ class DiseaseKnowledgeDetail(BaseModel):
     summary: Dict[str, Any] = Field(default_factory=dict)
     briefs: List[DiseaseKnowledgeBriefDetail] = Field(default_factory=list)
     sources: List[DiseaseKnowledgeSourceDetail] = Field(default_factory=list)
+
+
+@router.post("/ai/disease-duplicate-audit/run", response_model=Dict[str, Any])
+@router.post("/ai/disease-audit/run", response_model=Dict[str, Any])
+async def run_disease_duplicate_audit(body: DiseaseDuplicateAuditRequest):
+    service = DiseaseDuplicateAuditService()
+    audit = service.run_local_audit(
+        include_new_disease_candidates=body.include_new_disease_candidates,
+    )
+    if body.include_ai:
+        try:
+            audit["ai_review"] = await service.run_ai_review(
+                audit,
+                max_candidates=body.max_ai_candidates,
+            )
+        except Exception as exc:
+            audit["ai_review"] = {
+                "status": "failed",
+                "summary": {
+                    "merge": 0,
+                    "keep_separate": 0,
+                    "add_standard_disease": 0,
+                    "needs_human_review": 0,
+                },
+                "recommendations": [],
+                "warnings": [
+                    str(exc),
+                    "Local audit completed, but AI review failed because no model-center route returned a usable chat completion.",
+                    "Open the AI Models page and test/fix provider base URLs, keys, quota, and enabled model routes.",
+                ],
+            }
+    return audit
+
+
+@router.get("/ai/disease-duplicate-audit/status", response_model=Dict[str, Any])
+@router.get("/ai/disease-audit/status", response_model=Dict[str, Any])
+async def get_disease_duplicate_audit_status(include_new_disease_candidates: bool = True):
+    service = DiseaseDuplicateAuditService()
+    return await service.status(
+        include_new_disease_candidates=include_new_disease_candidates,
+    )
 
 
 @router.get("/ai/disease-knowledge/catalogue", response_model=List[DiseaseKnowledgeCatalogueItem])
@@ -301,6 +356,10 @@ class ProviderCreateRequest(BaseModel):
     extra_config: Dict[str, Any] = Field(default_factory=dict)
     is_active: bool = True
     priority: int = 100
+
+
+class ProviderBootstrapRequest(BaseModel):
+    force: bool = False
 
 
 class ProviderUpdateRequest(BaseModel):
@@ -561,6 +620,66 @@ async def update_provider(provider_id: int, body: ProviderUpdateRequest, db: Asy
     return _provider_to_out(provider)
 
 
+@router.post("/ai/models/providers/bootstrap")
+async def bootstrap_providers(body: ProviderBootstrapRequest):
+    await bootstrap_model_center_from_env(force=body.force)
+    return {"ok": True, "force": body.force}
+
+
+@router.delete("/ai/models/providers/{provider_id}")
+async def delete_provider(provider_id: int, db: AsyncSession = Depends(get_db)):
+    await bootstrap_model_center_from_env(force=False)
+
+    provider = await db.get(AIProviderConfig, provider_id)
+    if provider is None:
+        raise HTTPException(404, "Provider not found")
+
+    models_to_delete = (
+        await db.execute(
+            select(AIModelConfig)
+            .where(AIModelConfig.provider_id == provider_id)
+            .order_by(AIModelConfig.priority.asc(), AIModelConfig.id.asc())
+        )
+    ).scalars().all()
+
+    had_default_model = any(model.is_default for model in models_to_delete)
+
+    await db.delete(provider)
+    await db.flush()
+
+    replacement = None
+    if had_default_model:
+        replacement = (
+            await db.execute(
+                select(AIModelConfig)
+                .where(AIModelConfig.provider_id != provider_id)
+                .where(AIModelConfig.is_enabled.is_(True))
+                .order_by(AIModelConfig.is_enabled.desc(), AIModelConfig.priority.asc(), AIModelConfig.id.asc())
+            )
+        ).scalars().first()
+
+        if replacement is None:
+            replacement = (
+                await db.execute(
+                    select(AIModelConfig)
+                    .where(AIModelConfig.provider_id != provider_id)
+                    .order_by(AIModelConfig.priority.asc(), AIModelConfig.id.asc())
+                )
+            ).scalars().first()
+
+        if replacement is not None:
+            replacement.is_default = True
+
+    await db.commit()
+    return {
+        "ok": True,
+        "provider_key": provider.provider_key,
+        "removed_model_count": len(models_to_delete),
+        "default_promoted_model_id": replacement.id if replacement is not None else None,
+        "default_promoted_model_key": replacement.model_key if replacement is not None else None,
+    }
+
+
 @router.post("/ai/models/providers/{provider_id}/test")
 async def test_provider(provider_id: int):
     await bootstrap_model_center_from_env(force=False)
@@ -775,8 +894,8 @@ def _normalize_reuse_strategy(value: str) -> str:
 def _normalize_source_groups(values: list[str] | None) -> list[str]:
     cleaned = [str(value).strip().lower() for value in (values or []) if str(value).strip()]
     if not cleaned:
-        cleaned = ["who", "wikidata", "wikipedia", "pubmed", "msd"]
-    allowed = {"who", "wikidata", "wikipedia", "pubmed", "msd"}
+        cleaned = ["who", "search", "wikidata", "wikipedia", "pubmed", "msd"]
+    allowed = set(SOURCE_GROUPS)
     invalid = sorted({value for value in cleaned if value not in allowed})
     if invalid:
         joined = ", ".join(invalid)

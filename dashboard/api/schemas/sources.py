@@ -1,7 +1,7 @@
 """Sources / Data Flow schemas."""
 
-from typing import Any, List, Optional
-from pydantic import BaseModel
+from typing import List, Optional
+from pydantic import BaseModel, Field
 
 
 class StageInfo(BaseModel):
@@ -24,12 +24,40 @@ class DataSourceFlow(BaseModel):
     country_code: Optional[str] = None
     country_name: Optional[str] = None
     record_count: int = 0
+    earliest_date: Optional[str] = None
     latest_date: Optional[str] = None
+    history_start_year: Optional[int] = None
+    source_scope: Optional[str] = None
     latest_task_uuid: Optional[str] = None
     latest_task_source: Optional[str] = None
     latest_task_status: Optional[str] = None
     latest_task_time: Optional[str] = None
-    stages: List[StageInfo] = []
+    stages: List[StageInfo] = Field(default_factory=list)
+
+
+class SourceOptionOut(BaseModel):
+    value: str
+    label_en: str
+    label_zh: str
+    label: str
+
+
+class CountrySourceConfigOut(BaseModel):
+    country_code: str
+    country_name: str
+    country_name_en: str
+    country_name_zh: str
+    language: str
+    timezone: str
+    supports_crawl: bool
+    supports_fill_missing: bool
+    default_fill_missing: bool
+    default_source: str
+    default_start_year: Optional[int] = None
+    supports_start_year: bool = False
+    supports_source_file: bool = False
+    supports_source_dir: bool = False
+    source_options: List[SourceOptionOut] = Field(default_factory=list)
 
 
 class AutomationJobOut(BaseModel):
@@ -63,10 +91,10 @@ class AutomationConfigOut(BaseModel):
     timezone: str
     poll_interval_seconds: int
     default_retry_threshold: int
-    admin_emails: List[str] = []
+    admin_emails: List[str] = Field(default_factory=list)
     email_enabled: bool = False
     last_tick_at: Optional[str] = None
-    jobs: List[AutomationJobOut] = []
+    jobs: List[AutomationJobOut] = Field(default_factory=list)
 
 
 class AutomationTriggerResult(BaseModel):
@@ -85,7 +113,7 @@ class AutomationJobCreate(BaseModel):
     priority: str = "normal"
     process: bool = True
     save_raw: bool = True
-    fill_missing: bool = True
+    fill_missing: bool = False
     force: bool = False
     retry_threshold: int = 3
     interval_minutes: Optional[int] = None

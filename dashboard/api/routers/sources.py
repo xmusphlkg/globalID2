@@ -13,7 +13,9 @@ from ..schemas.sources import (
     AutomationJobOut,
     AutomationJobUpdate,
     AutomationTriggerResult,
+    CountrySourceConfigOut,
     DataSourceFlow,
+    SourceOptionOut,
     StageInfo,
 )
 from src.domain import AutomationJob
@@ -21,12 +23,15 @@ from src.domain.country import Country
 from src.domain.disease_record import DiseaseRecord
 from src.domain.task import Task, TaskType, TaskWorkbook
 from src.core.source_scopes import (
-    EXPECTED_SCOPES_BY_COUNTRY,
     canonical_data_source_label,
     canonicalize_task_source,
+    default_source_for_country,
+    get_expected_scopes_for_country,
     scope_display_label,
     scope_from_data_source,
+    source_options_for_country,
 )
+from src.core.country_library import get_country_bootstrap_config, get_country_display_name
 from src.services.automation_service import automation_service
 
 router = APIRouter()
@@ -38,6 +43,70 @@ DATA_PIPELINE_STAGES = [
     "process_store",
     "finalize",
 ]
+
+
+def _history_start_year(country_code: Optional[str]) -> Optional[int]:
+    cfg = get_country_bootstrap_config(country_code or "")
+    crawler_cfg = cfg.get("crawler_config", {}) if isinstance(cfg, dict) else {}
+    raw_value = crawler_cfg.get("full_history_start_year")
+    if raw_value is None:
+        return None
+    try:
+        return int(raw_value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _optional_bool(value, default: bool) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "y", "on"}
+    return bool(value)
+
+
+def _country_source_config(country: Country, *, lang: str = "en") -> CountrySourceConfigOut:
+    code = (country.code or "").strip().upper()
+    cfg = get_country_bootstrap_config(code)
+    crawler_cfg = cfg.get("crawler_config", {}) if isinstance(cfg, dict) else {}
+    options = [
+        SourceOptionOut(
+            value=option["value"],
+            label_en=option["label_en"],
+            label_zh=option["label_zh"],
+            label=option["label_zh"] if (lang or "").lower().startswith("zh") else option["label_en"],
+        )
+        for option in source_options_for_country(code)
+    ]
+    start_year = _history_start_year(code)
+    supports_fill_missing = _optional_bool(
+        crawler_cfg.get("supports_fill_missing"),
+        code not in {"US"},
+    )
+    default_fill_missing = supports_fill_missing and _optional_bool(
+        crawler_cfg.get("default_fill_missing"),
+        code not in {"BR"},
+    )
+
+    return CountrySourceConfigOut(
+        country_code=code,
+        country_name=country.name_en or country.name or code,
+        country_name_en=country.name_en or country.name or code,
+        country_name_zh=get_country_display_name(code, "zh"),
+        language=country.language or cfg.get("report_config", {}).get("lang") or "en",
+        timezone=country.timezone or "UTC",
+        supports_crawl=bool(get_expected_scopes_for_country(code)),
+        supports_fill_missing=supports_fill_missing,
+        default_fill_missing=default_fill_missing,
+        default_source=default_source_for_country(code),
+        default_start_year=start_year,
+        supports_start_year=start_year is not None,
+        supports_source_file=bool(crawler_cfg.get("dportal_file_env") or crawler_cfg.get("kosis_file_env")),
+        supports_source_dir=bool(crawler_cfg.get("dportal_dir_env")),
+        source_options=options,
+    )
 
 
 def _task_status(task: Optional[Task]) -> Optional[str]:
@@ -68,7 +137,17 @@ def _scope_from_task(task: Task) -> str:
         (inp.get("source") or "") if isinstance(inp, dict) else "",
         country_code=country_code,
     )
-    if source in {"nndss_api", "jp_weekly", "cdc_weekly", "nhc", "pubmed", "nidss_open_data", "all"}:
+    if source in {
+        "nndss_api",
+        "jp_weekly",
+        "cdc_weekly",
+        "nhc",
+        "pubmed",
+        "nidss_open_data",
+        "sinan_datasus",
+        "kdca_open_api",
+        "all",
+    }:
         return source
 
     # Backward compatibility: old tasks only stored data_source text.
@@ -82,6 +161,10 @@ def _scope_from_task(task: Task) -> str:
         return "jp_weekly"
     if "nndss" in name:
         return "nndss_api"
+    if "sinan" in name or "datasus" in name or "brazil" in name:
+        return "sinan_datasus"
+    if "kdca" in name or "korea" in name:
+        return "kdca_open_api"
     if "gov" in name or "nhc" in name:
         return "nhc"
     if "cdc" in name or "weekly" in name:
@@ -226,6 +309,25 @@ def _build_data_stages(task: Optional[Task], workbook_entries: List[TaskWorkbook
     return out
 
 
+@router.get("/sources/config", response_model=List[CountrySourceConfigOut])
+async def get_sources_config(
+    lang: str = Query("en", description="Display language: en or zh"),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return per-country source selector and task-option metadata."""
+    rows = (
+        await db.execute(
+            select(Country)
+            .where(
+                Country.is_active.is_(True),
+                Country.code.op("~")(r"^[A-Z]{2}$"),
+            )
+            .order_by(Country.name_en.asc(), Country.name.asc())
+        )
+    ).scalars().all()
+    return [_country_source_config(country, lang=lang) for country in rows]
+
+
 @router.get("/sources/flow", response_model=List[DataSourceFlow])
 async def get_sources_flow(
     country_id: Optional[int] = Query(None, ge=1, description="Country ID"),
@@ -241,6 +343,7 @@ async def get_sources_flow(
             Country.name_en.label("country_name"),
             DiseaseRecord.data_source,
             func.count().label("record_count"),
+            func.min(DiseaseRecord.time).label("earliest_date"),
             func.max(DiseaseRecord.time).label("latest_date"),
         )
         .outerjoin(Country, Country.id == DiseaseRecord.country_id)
@@ -277,12 +380,17 @@ async def get_sources_flow(
                 "scope": scope,
                 "data_source": display_label,
                 "record_count": int(row.record_count or 0),
+                "earliest_date": row.earliest_date,
                 "latest_date": row.latest_date,
+                "history_start_year": _history_start_year(row.country_code),
                 "expected_source": False,
             }
             continue
 
         prev["record_count"] = int(prev["record_count"]) + int(row.record_count or 0)
+        prev_earliest = prev.get("earliest_date")
+        if (prev_earliest is None) or (row.earliest_date and row.earliest_date < prev_earliest):
+            prev["earliest_date"] = row.earliest_date
         prev_latest = prev.get("latest_date")
         if (prev_latest is None) or (row.latest_date and row.latest_date > prev_latest):
             prev["latest_date"] = row.latest_date
@@ -348,7 +456,7 @@ async def get_sources_flow(
         label = scope_display_label(scope, country_code=country.code if country else None)
         is_expected_source = bool(
             country
-            and scope in EXPECTED_SCOPES_BY_COUNTRY.get((country.code or "").upper(), [])
+            and scope in get_expected_scopes_for_country(country.code)
         )
         merged_sources[task_key] = {
                 "key": task_key,
@@ -358,7 +466,9 @@ async def get_sources_flow(
                 "scope": scope,
                 "data_source": label,
                 "record_count": 0,
+                "earliest_date": None,
                 "latest_date": None,
+                "history_start_year": _history_start_year(country.code if country else None),
                 "expected_source": is_expected_source,
         }
 
@@ -390,7 +500,7 @@ async def get_sources_flow(
             country_scope_candidates[task.country_id] = country
 
     for country in country_scope_candidates.values():
-        expected_scopes = EXPECTED_SCOPES_BY_COUNTRY.get((country.code or "").upper(), [])
+        expected_scopes = get_expected_scopes_for_country(country.code)
         for scope in expected_scopes:
             merged_key = f"{country.id}:{scope}"
             if merged_key in merged_sources:
@@ -403,7 +513,9 @@ async def get_sources_flow(
                 "scope": scope,
                 "data_source": scope_display_label(scope, country_code=country.code),
                 "record_count": 0,
+                "earliest_date": None,
                 "latest_date": None,
+                "history_start_year": _history_start_year(country.code),
                 "expected_source": True,
             }
 
@@ -448,11 +560,18 @@ async def get_sources_flow(
                 country_code=src.get("country_code"),
                 country_name=src.get("country_name"),
                 record_count=int(src["record_count"]),
+                earliest_date=(
+                    src["earliest_date"].strftime("%Y-%m-%d")
+                    if src.get("earliest_date")
+                    else None
+                ),
                 latest_date=(
                     src["latest_date"].strftime("%Y-%m-%d")
                     if src.get("latest_date")
                     else None
                 ),
+                history_start_year=src.get("history_start_year"),
+                source_scope=row_scope,
                 latest_task_uuid=task.task_uuid if task else None,
                 latest_task_source=_source_from_task(task) if task else None,
                 latest_task_status=_task_status(task),

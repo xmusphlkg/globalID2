@@ -42,6 +42,7 @@ async def overview_summary(
     kpi_q = select(
         func.count(func.distinct(DiseaseRecord.disease_id)).label("total_diseases"),
         func.count().label("total_records"),
+        func.min(DiseaseRecord.time).label("earliest_date"),
         func.max(DiseaseRecord.time).label("latest_date"),
         func.coalesce(
             func.sum(DiseaseRecord.cases).filter(
@@ -91,11 +92,14 @@ async def overview_summary(
     ]
 
     latest = kpi_row.latest_date
+    earliest = kpi_row.earliest_date
     latest_str = latest.strftime("%Y-%m-%d") if latest else None
+    earliest_str = earliest.strftime("%Y-%m-%d") if earliest else None
 
     return OverviewSummary(
         total_diseases=kpi_row.total_diseases or 0,
         total_records=kpi_row.total_records or 0,
+        earliest_date=earliest_str,
         latest_date=latest_str,
         recent_cases_30d=int(kpi_row.recent_cases_30d or 0),
         top_diseases=top_diseases,

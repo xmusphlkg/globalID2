@@ -3,10 +3,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAppStore } from "@/stores/app-store";
 import { t } from "@/lib/i18n";
-import { useSourcesFlow, useStartCrawl } from "@/lib/hooks/useSources";
+import {
+  type CountrySourceConfig,
+  type DataSourceFlow,
+  type StageInfo,
+  useSourceConfigs,
+  useSourcesFlow,
+  useStartCrawl,
+} from "@/lib/hooks/useSources";
 import { useTaskWebSocket } from "@/lib/hooks/useTasks";
 import { formatDate } from "@/lib/utils";
-import { getSourceDisplayLabel, getSourceOptionsForCountry } from "@/lib/source-labels";
+import { getConfiguredSourceOptions, getSourceDisplayLabel } from "@/lib/source-labels";
 import {
   Badge,
   Card,
@@ -28,7 +35,6 @@ import {
   AlertCircle,
   Loader2,
 } from "lucide-react";
-import type { DataSourceFlow, StageInfo } from "@/lib/hooks/useSources";
 
 // ── Colour mapping ──────────────────────────────────────────────────────────
 const statusBadge: Record<string, Color> = {
@@ -62,50 +68,6 @@ const STAGE_LABEL_KEYS: Record<string, string> = {
   process_store: "flow_stage_process_store",
   finalize: "flow_stage_finalize",
 };
-
-function isUSCountry(countryName: string): boolean {
-  const name = countryName.trim().toLowerCase();
-  return name === "us" || name === "usa" || name.includes("united states") || name.includes("美国");
-}
-
-function isCNCountry(countryName: string): boolean {
-  const name = countryName.trim().toLowerCase();
-  return name === "cn" || name.includes("china") || name.includes("中国");
-}
-
-function isJPCountry(countryName: string): boolean {
-  const name = countryName.trim().toLowerCase();
-  return name === "jp" || name.includes("japan") || name.includes("日本");
-}
-
-function isAUCountry(countryName: string): boolean {
-  const name = countryName.trim().toLowerCase();
-  return name === "au" || name.includes("australia") || name.includes("澳大利亚");
-}
-
-function isTWCountry(countryName: string): boolean {
-  const name = countryName.trim().toLowerCase();
-  return name === "tw" || name.includes("taiwan") || name.includes("台湾") || name.includes("台灣");
-}
-
-function getCrawlSourceOptions(countryName: string, lang: "en" | "zh") {
-  if (isUSCountry(countryName)) {
-    return getSourceOptionsForCountry("US", lang);
-  }
-  if (isCNCountry(countryName)) {
-    return getSourceOptionsForCountry("CN", lang);
-  }
-  if (isJPCountry(countryName)) {
-    return getSourceOptionsForCountry("JP", lang);
-  }
-  if (isAUCountry(countryName)) {
-    return getSourceOptionsForCountry("AU", lang);
-  }
-  if (isTWCountry(countryName)) {
-    return getSourceOptionsForCountry("TW", lang);
-  }
-  return [];
-}
 
 // ── Stage pill ───────────────────────────────────────────────────────────────
 function StagePill({
@@ -163,6 +125,15 @@ function FlowRow({
   flow: DataSourceFlow;
   lang: "en" | "zh";
 }) {
+  const coverageStart = flow.earliest_date ?? (
+    flow.history_start_year ? `${flow.history_start_year}-01-01` : null
+  );
+  const coverageText = coverageStart && flow.latest_date
+    ? `${coverageStart} → ${flow.latest_date}`
+    : coverageStart
+      ? (lang === "zh" ? `配置起始：${coverageStart}` : `Configured from ${coverageStart}`)
+      : null;
+
   return (
     <Card className="p-4 overflow-hidden">
       <div className="flex flex-col md:flex-row md:items-center gap-4">
@@ -182,6 +153,11 @@ function FlowRow({
             {flow.latest_date && (
               <span className="inline-flex items-center gap-1 text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
                 {t(lang, "latest_date")}: {flow.latest_date}
+              </span>
+            )}
+            {coverageText && (
+              <span className="inline-flex items-center gap-1 text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+                {lang === "zh" ? "历史覆盖" : "History"}: {coverageText}
               </span>
             )}
           </div>
@@ -216,31 +192,47 @@ function CreateCrawlModal({
   open,
   countryId,
   countryName,
+  countryCode,
+  sourceConfig,
   lang,
   onClose,
 }: {
   open: boolean;
   countryId: number;
   countryName: string;
+  countryCode?: string | null;
+  sourceConfig?: CountrySourceConfig | null;
   lang: "en" | "zh";
   onClose: () => void;
 }) {
-  const usMode = isUSCountry(countryName);
-  const cnMode = isCNCountry(countryName);
-  const jpMode = isJPCountry(countryName);
-  const auMode = isAUCountry(countryName);
-  const twMode = isTWCountry(countryName);
-  const supportedMode = usMode || cnMode || jpMode || auMode || twMode;
+  const normalizedCountryCode = (countryCode || sourceConfig?.country_code || "").trim().toUpperCase();
+  const sourceOptions = useMemo(
+    () => getConfiguredSourceOptions(sourceConfig, lang, normalizedCountryCode),
+    [lang, normalizedCountryCode, sourceConfig],
+  );
+  const supportedMode = Boolean(sourceConfig?.supports_crawl && sourceOptions.length);
+  const supportsFillMissing = sourceConfig?.supports_fill_missing ?? normalizedCountryCode !== "US";
+  const supportsStartYear = Boolean(sourceConfig?.supports_start_year);
+  const supportsSourceFile = Boolean(sourceConfig?.supports_source_file);
+  const supportsSourceDir = Boolean(sourceConfig?.supports_source_dir);
   const [source, setSource] = useState("all");
   const [priority, setPriority] = useState("normal");
   const [force, setForce] = useState(false);
   const [process, setProcess] = useState(true);
   const [saveRaw, setSaveRaw] = useState(true);
-  const [fillMissing, setFillMissing] = useState(true);
+  const [fillMissing, setFillMissing] = useState(sourceConfig?.default_fill_missing ?? true);
+  const [historyStartYear, setHistoryStartYear] = useState(sourceConfig?.default_start_year ?? 2001);
+  const [sourceFile, setSourceFile] = useState("");
+  const [sourceDir, setSourceDir] = useState("");
   const [error, setError] = useState<string | null>(null);
   const { mutate: startCrawl, isPending, isSuccess } = useStartCrawl();
 
-  const sourceOptions = getCrawlSourceOptions(countryName, lang);
+  useEffect(() => {
+    setFillMissing(sourceConfig?.default_fill_missing ?? true);
+    setHistoryStartYear(sourceConfig?.default_start_year ?? 2001);
+    setSourceFile("");
+    setSourceDir("");
+  }, [open, sourceConfig?.default_fill_missing, sourceConfig?.default_start_year]);
 
   useEffect(() => {
     if (sourceOptions.length > 0) {
@@ -259,6 +251,9 @@ function CreateCrawlModal({
         process,
         save_raw: saveRaw,
         fill_missing: fillMissing,
+        start_year: supportsStartYear ? historyStartYear : undefined,
+        source_file: supportsSourceFile && sourceFile.trim() ? sourceFile.trim() : undefined,
+        source_dir: supportsSourceDir && sourceDir.trim() ? sourceDir.trim() : undefined,
         priority,
       },
       {
@@ -282,7 +277,7 @@ function CreateCrawlModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="relative w-full max-w-md rounded-tremor-default bg-tremor-background p-6 shadow-xl dark:bg-dark-tremor-background">
+      <div className="relative max-h-[90vh] w-full max-w-md overflow-y-auto rounded-tremor-default bg-tremor-background p-6 shadow-xl dark:bg-dark-tremor-background">
         <button
           onClick={onClose}
           className="absolute right-4 top-4 text-tremor-content-subtle hover:text-tremor-content-strong dark:text-dark-tremor-content-subtle dark:hover:text-dark-tremor-content-strong"
@@ -305,8 +300,8 @@ function CreateCrawlModal({
             {!supportedMode && (
               <div className="rounded-tremor-default border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
                 {lang === "zh"
-                  ? "当前国家的自动爬取流程尚未配置，请先完成该国家 crawler 设计后再创建任务。"
-                  : "Automated crawl workflow is not configured for this country yet. Please complete crawler design first."}
+                  ? `${countryName || normalizedCountryCode || "当前国家"} 的自动爬取流程尚未配置。`
+                  : `Automated crawl workflow is not configured for ${countryName || normalizedCountryCode || "this country"} yet.`}
               </div>
             )}
 
@@ -344,12 +339,59 @@ function CreateCrawlModal({
                   className="h-4 w-4 rounded border-tremor-border text-tremor-brand focus:ring-tremor-brand-muted" />
                 {lang === "zh" ? "保存 raw 原始抓取数据（默认）" : "Save raw fetched data (default)"}
               </label>
-              {!usMode && (
+              {supportsFillMissing && (
                 <label className="flex items-center gap-2.5 text-sm text-tremor-content-emphasis dark:text-dark-tremor-content-emphasis cursor-pointer">
                   <input type="checkbox" checked={fillMissing} onChange={(e) => setFillMissing(e.target.checked)}
                     className="h-4 w-4 rounded border-tremor-border text-tremor-brand focus:ring-tremor-brand-muted" />
                   {lang === "zh" ? "回填缺失月份" : "Backfill missing months"}
                 </label>
+              )}
+              {(supportsStartYear || supportsSourceFile || supportsSourceDir) && (
+                <div className="space-y-2.5">
+                  {supportsStartYear && (
+                    <div>
+                      <label className={labelCls}>
+                        {lang === "zh" ? "历史起始年份" : "History Start Year"}
+                      </label>
+                      <input
+                        type="number"
+                        min={sourceConfig?.default_start_year ?? 1900}
+                        max={new Date().getFullYear()}
+                        value={historyStartYear}
+                        onChange={(e) => setHistoryStartYear(Number(e.target.value || sourceConfig?.default_start_year || 2001))}
+                        className={inputCls}
+                      />
+                    </div>
+                  )}
+                  {supportsSourceFile && (
+                    <div>
+                      <label className={labelCls}>
+                        {lang === "zh" ? "来源文件" : "Source File"}
+                      </label>
+                      <input
+                        type="text"
+                        value={sourceFile}
+                        onChange={(e) => setSourceFile(e.target.value)}
+                        placeholder="data/raw/<country>/export.csv"
+                        className={inputCls}
+                      />
+                    </div>
+                  )}
+                  {supportsSourceDir && (
+                    <div>
+                      <label className={labelCls}>
+                        {lang === "zh" ? "来源目录" : "Source Directory"}
+                      </label>
+                      <input
+                        type="text"
+                        value={sourceDir}
+                        onChange={(e) => setSourceDir(e.target.value)}
+                        placeholder="data/raw/<country>/"
+                        className={inputCls}
+                      />
+                    </div>
+                  )}
+                </div>
               )}
               <label className="flex items-center gap-2.5 text-sm text-tremor-content-emphasis dark:text-dark-tremor-content-emphasis cursor-pointer">
                 <input type="checkbox" checked={force} onChange={(e) => setForce(e.target.checked)}
@@ -394,22 +436,25 @@ function CreateCrawlModal({
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function SourcesFlowPage() {
-  const { lang, countryId, countryName } = useAppStore();
+  const { lang, countryId, countryName, countryCode } = useAppStore();
   const [scopeMode, setScopeMode] = useState<"selected" | "all">("selected");
   const effectiveCountryId = scopeMode === "all" ? null : countryId;
   const effectiveCountryName =
     scopeMode === "all"
       ? (lang === "zh" ? "全部国家" : "All countries")
       : countryName;
-  const countrySupported =
-    scopeMode === "all" ||
-    isUSCountry(countryName) ||
-    isCNCountry(countryName) ||
-    isJPCountry(countryName) ||
-    isAUCountry(countryName) ||
-    isTWCountry(countryName);
 
   const { data: flows, isLoading, error } = useSourcesFlow(effectiveCountryId);
+  const { data: sourceConfigs } = useSourceConfigs(lang);
+  const sourceConfigByCountry = useMemo(() => {
+    const map = new Map<string, CountrySourceConfig>();
+    for (const config of sourceConfigs ?? []) {
+      map.set(config.country_code.toUpperCase(), config);
+    }
+    return map;
+  }, [sourceConfigs]);
+  const selectedSourceConfig = sourceConfigByCountry.get((countryCode || "").toUpperCase()) ?? null;
+  const countrySupported = scopeMode === "all" || Boolean(selectedSourceConfig?.supports_crawl);
 
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -617,6 +662,8 @@ export default function SourcesFlowPage() {
           open={true}
           countryId={countryId}
           countryName={countryName}
+          countryCode={countryCode}
+          sourceConfig={selectedSourceConfig}
           lang={lang}
           onClose={closeModal}
         />
