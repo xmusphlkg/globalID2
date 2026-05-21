@@ -4,11 +4,15 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAppStore } from "@/stores/app-store";
-import { Badge, Card, Grid, Metric, Text, Title } from "@tremor/react";
+import { Badge, Card, Grid, Text, Title } from "@tremor/react";
 import { MessageSquare, MessageSquareText, Search, ChevronDown, ListTodo, Settings2 } from "lucide-react";
 import { Chart } from "@/components/charts/Chart";
 import { TaskDetailPanel } from "@/components/tasks/TaskDetailPanel";
 import { TaskWorkflowTopology } from "@/components/tasks/TaskWorkflowTopology";
+import { FilterToolbar } from "@/components/ui/FilterToolbar";
+import { MetricTile } from "@/components/ui/MetricTile";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatusBadge as UiStatusBadge } from "@/components/ui/StatusBadge";
 import { CHART_TOKENS } from "@/lib/chart-theme";
 import { ApiError } from "@/lib/api";
 import { t } from "@/lib/i18n";
@@ -386,7 +390,7 @@ function GroupedRunChat({
           const alignRight = (item.agent ?? "").toLowerCase() === "writer";
           return (
             <div key={item.id} className={`flex ${alignRight ? "justify-end" : "justify-start"}`}>
-              <div className={`w-full max-w-4xl rounded-xl border p-3 ${alignRight ? "border-blue-200 bg-blue-50/70 dark:border-blue-900/70 dark:bg-blue-950/20" : "border-slate-200 bg-slate-50/70 dark:border-slate-800 dark:bg-slate-900/20"}`}>
+              <div className={`w-full max-w-4xl rounded-tremor-default border p-3 ${alignRight ? "border-blue-200 bg-blue-50/70 dark:border-blue-900/70 dark:bg-blue-950/20" : "border-slate-200 bg-slate-50/70 dark:border-slate-800 dark:bg-slate-900/20"}`}>
                 <div className="mb-2 flex flex-wrap items-center gap-2">
                   <Badge color="slate">{item.agent ?? labels.unknown}</Badge>
                   <Badge color="blue">{item.role ?? "-"}</Badge>
@@ -653,51 +657,70 @@ function AIInteractionsPageContent() {
   }, [taskDetail]);
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 md:px-6">
-      <div className="space-y-2">
-        <Badge color="violet" className="w-fit">{t(lang, "mod_ai")}</Badge>
-        <Title className="text-2xl">{t(lang, "ai_interactions")}</Title>
-        <Text>{labels.subtitle}</Text>
-        <div className="flex flex-wrap items-center gap-2 pt-1">
+    <div className="space-y-5">
+      <PageHeader
+        eyebrow={t(lang, "mod_ai")}
+        title={t(lang, "ai_interactions")}
+        description={labels.subtitle}
+        meta={
+          <>
+            <UiStatusBadge tone={activeTaskUuid ? "primary" : "neutral"}>
+              {activeTaskUuid ? `${labels.taskUuid} ${shortUuid(activeTaskUuid)}` : labels.currentCountry}
+            </UiStatusBadge>
+            <UiStatusBadge tone="info">
+              {summary?.total_interactions ?? 0} {labels.interactions}
+            </UiStatusBadge>
+          </>
+        }
+        actions={
+          <>
           <Link
             href="/ai/tasks"
-            className="inline-flex items-center gap-1 rounded-lg border border-violet-300/70 bg-violet-50 px-3 py-1.5 text-xs font-medium text-violet-700 transition hover:bg-violet-100 dark:border-violet-800 dark:bg-violet-950/25 dark:text-violet-300"
+            className="inline-flex h-10 items-center gap-2 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm font-medium text-tremor-content-strong transition hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong dark:hover:bg-dark-tremor-background-subtle"
           >
-            <ListTodo className="h-3.5 w-3.5" />
+            <ListTodo className="h-4 w-4" />
             Open AI Tasks
           </Link>
           <Link
             href="/ai/models"
-            className="inline-flex items-center gap-1 rounded-lg border border-sky-300/70 bg-sky-50 px-3 py-1.5 text-xs font-medium text-sky-700 transition hover:bg-sky-100 dark:border-sky-900 dark:bg-sky-950/25 dark:text-sky-300"
+            className="inline-flex h-10 items-center gap-2 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm font-medium text-tremor-content-strong transition hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong dark:hover:bg-dark-tremor-background-subtle"
           >
-            <Settings2 className="h-3.5 w-3.5" />
+            <Settings2 className="h-4 w-4" />
             Open AI Models
           </Link>
-        </div>
-      </div>
+          </>
+        }
+      />
 
-      <Grid numItems={1} numItemsSm={2} numItemsLg={5} className="gap-4">
-        <Card>
-          <Text>{labels.interactions}</Text>
-          <Metric>{summary?.total_interactions ?? 0}</Metric>
-        </Card>
-        <Card>
-          <Text>{labels.totalTokens}</Text>
-          <Metric>{summary?.total_tokens ?? 0}</Metric>
-        </Card>
-        <Card>
-          <Text>{labels.avgTokens}</Text>
-          <Metric>{Math.round(summary?.avg_tokens ?? 0)}</Metric>
-        </Card>
-        <Card>
-          <Text>{labels.avgDuration}</Text>
-          <Metric>{(summary?.avg_duration ?? 0).toFixed(2)}s</Metric>
-        </Card>
-        <Card>
-          <Text>{labels.avgQuality}</Text>
-          <Metric>{summary?.avg_quality != null ? summary.avg_quality.toFixed(2) : "-"}</Metric>
-        </Card>
-      </Grid>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <MetricTile
+          label={labels.interactions}
+          value={summary?.total_interactions ?? 0}
+          icon={<MessageSquareText className="h-4 w-4" />}
+          tone="primary"
+        />
+        <MetricTile
+          label={labels.totalTokens}
+          value={summary?.total_tokens ?? 0}
+          icon={<MessageSquare className="h-4 w-4" />}
+          tone="info"
+        />
+        <MetricTile
+          label={labels.avgTokens}
+          value={Math.round(summary?.avg_tokens ?? 0)}
+          tone="neutral"
+        />
+        <MetricTile
+          label={labels.avgDuration}
+          value={`${(summary?.avg_duration ?? 0).toFixed(2)}s`}
+          tone="warning"
+        />
+        <MetricTile
+          label={labels.avgQuality}
+          value={summary?.avg_quality != null ? summary.avg_quality.toFixed(2) : "-"}
+          tone="success"
+        />
+      </div>
 
       {!activeTaskUuid && recentKnowledgeTasks.length > 0 && (
         <Card className="border-emerald-200/70 bg-emerald-50/40 dark:border-emerald-900/60 dark:bg-emerald-950/10">
@@ -710,7 +733,7 @@ function AIInteractionsPageContent() {
             </div>
             <Link
               href="/ai/tasks?task_type=update_disease_knowledge"
-              className="inline-flex items-center gap-1 rounded-lg border border-emerald-300/70 bg-white px-3 py-1.5 text-xs font-medium text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-300"
+              className="inline-flex items-center gap-1 rounded-tremor-default border border-emerald-300/70 bg-white px-3 py-1.5 text-xs font-medium text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-300"
             >
               <ListTodo className="h-3.5 w-3.5" />
               Open AI Tasks
@@ -721,7 +744,7 @@ function AIInteractionsPageContent() {
               <Link
                 key={task.task_uuid}
                 href={`/ai/interactions?task=${encodeURIComponent(task.task_uuid)}`}
-                className="rounded-xl border border-tremor-border/80 bg-white/90 p-3 transition hover:border-emerald-300 hover:shadow-sm dark:border-dark-tremor-border/80 dark:bg-white/5"
+                className="rounded-tremor-default border border-tremor-border/80 bg-white/90 p-3 transition hover:border-emerald-300 dark:border-dark-tremor-border/80 dark:bg-white/5"
               >
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge color="emerald">{task.status}</Badge>
@@ -799,8 +822,7 @@ function AIInteractionsPageContent() {
         </Grid>
       )}
 
-      <Card>
-        <div className="flex flex-wrap items-center gap-2.5">
+      <FilterToolbar>
           <div className="relative flex-1 min-w-[220px] max-w-md">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-tremor-content-subtle dark:text-dark-tremor-content-subtle" />
             <input
@@ -863,8 +885,7 @@ function AIInteractionsPageContent() {
               <option key={name} value={name}>{name}</option>
             ))}
           </select>
-        </div>
-      </Card>
+      </FilterToolbar>
 
       {isLoading ? (
         <div className="space-y-4">
@@ -884,7 +905,7 @@ function AIInteractionsPageContent() {
         </Card>
       ) : activeTaskUuid ? (
         <div className="space-y-4">
-          <div className="rounded-2xl border border-violet-200/60 bg-violet-50/35 p-4 dark:border-violet-900/50 dark:bg-violet-950/10">
+          <div className="rounded-tremor-default border border-violet-200/60 bg-violet-50/35 p-4 dark:border-violet-900/50 dark:bg-violet-950/10">
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <MessageSquareText className="h-4 w-4 text-violet-500" />
               <Title className="text-lg">{lang === "zh" ? "任务生成过程" : "Task generation process"}</Title>

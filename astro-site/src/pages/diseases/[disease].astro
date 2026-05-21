@@ -5,7 +5,15 @@ import DownloadPanel from '../../components/DownloadPanel.astro';
 import DiseaseMonthlyBar from '../../components/charts/DiseaseMonthlyBar';
 import DiseaseCountryCurve from '../../components/charts/DiseaseCountryCurve';
 import { buildChartSourceMeta } from '../../utils/chartMeta';
-import { renderCitations, hasCitations } from '../../utils/citations';
+import {
+  formatReferenceCitation,
+  hasCitations,
+  normalizeCitationSources,
+  referenceLinkLabel,
+  referenceTooltip,
+  referenceUrl,
+  renderCitations,
+} from '../../utils/citations';
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
 
@@ -99,7 +107,7 @@ const knowledgeSources = Array.isArray(knowledgeData?.knowledge_sources)
   : Array.isArray(diseaseData?.knowledge_sources)
     ? diseaseData.knowledge_sources
     : [];
-const knowledgeSourceEntries = knowledgeProfileAvailable
+const rawKnowledgeSourceEntries = knowledgeProfileAvailable
   ? knowledgeSources.filter((source: any) => source?.url)
   : [];
 const briefSections = [
@@ -153,6 +161,12 @@ const briefSections = [
     zh: surveillanceNoteZh ?? surveillanceNoteEn,
   },
 ].filter(Boolean) as BriefSection[];
+const citationTextCorpus = [
+  officialSummaryEn,
+  officialSummaryZh,
+  ...briefSections.flatMap((section) => [section.en, section.zh]),
+];
+const knowledgeSourceEntries = normalizeCitationSources(rawKnowledgeSourceEntries, citationTextCorpus);
 const knowledgeUpdatedAt = knowledgeData?.knowledge_updated_at ?? diseaseData?.knowledge_updated_at ?? null;
 const knowledgeUpdatedEn = knowledgeUpdatedAt
   ? new Date(knowledgeUpdatedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
@@ -166,12 +180,6 @@ const profileUnavailableMessageEn = knowledgeStatus === 'requires_review'
 const profileUnavailableMessageZh = knowledgeStatus === 'requires_review'
   ? '该疾病的 Disease Profile 目前仍在复核中，后续会由多专家流程生成。下方仍保留监测图表与可下载数据。'
   : '该疾病当前暂不展示公开 Disease Profile。下方仍保留监测图表与可下载数据。';
-
-function formatReferenceCitation(source: any) {
-  const name = source?.source_name ?? source?.source_type ?? 'Unknown source';
-  const title = source?.title && source.title !== name ? source.title : null;
-  return title ? `${name}. ${title}.` : `${name}.`;
-}
 
 function fmtNum(n: number | null | undefined) {
   if (!n) return '0';
@@ -287,28 +295,40 @@ const diseaseDataUrl = diseaseDownload?.site_json_path ?? `/site-data/diseases/$
                     <article class="profile-flow-item">
                       <div class="academic-meta-label" data-lang-en="References" data-lang-zh="参考文献">References</div>
                       <ol class="mt-3 space-y-2">
-                        {knowledgeSourceEntries.length > 0 ? knowledgeSourceEntries.map((source: any, index: number) => (
-                          <li id={`ref-${index + 1}`}>
-                            <a
-                              href={source.resolved_url ?? source.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              class="group flex items-start gap-3 text-sm leading-6 text-[rgb(var(--text-muted))] transition-colors hover:text-[rgb(var(--text-strong))]"
+                        {knowledgeSourceEntries.length > 0 ? knowledgeSourceEntries.map((source: any, index: number) => {
+                          const citationIndex = Number(source.citation_index ?? index + 1);
+                          const sourceUrl = referenceUrl(source);
+                          return (
+                          <li id={`ref-${citationIndex}`}>
+                            <div
+                              title={referenceTooltip(source, citationIndex)}
+                              class="group flex items-start gap-3 text-sm leading-6 text-[rgb(var(--text-muted))]"
                             >
                               <span class="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center border border-[rgb(var(--border))/0.72] bg-[rgb(var(--surface-raised))/0.34] font-mono text-[10px] font-semibold text-[rgb(var(--text-faint))]">
-                                {index + 1}
+                                {citationIndex}
                               </span>
                               <span class="min-w-0">
                                 <span class="font-semibold text-[rgb(var(--text-strong))]">
                                   {formatReferenceCitation(source)}
                                 </span>
-                                <svg class="ml-1 inline-block h-3.5 w-3.5 align-[-0.1em] text-[rgb(var(--text-faint))] transition-colors group-hover:text-[rgb(var(--text-strong))]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5h5m0 0v5m0-5L10 14m-3 5h11a2 2 0 002-2V9m-5 10H6a2 2 0 01-2-2V6a2 2 0 012-2h5" />
-                                </svg>
+                                {sourceUrl && (
+                                  <span class="mt-1 block break-all text-xs text-[rgb(var(--text-faint))]">
+                                    {referenceLinkLabel(source)}:{' '}
+                                    <a
+                                      href={sourceUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      class="text-[rgb(var(--color-brand))] underline-offset-2 hover:underline"
+                                    >
+                                      {sourceUrl}
+                                    </a>
+                                  </span>
+                                )}
                               </span>
-                            </a>
+                            </div>
                           </li>
-                        )) : (
+                          );
+                        }) : (
                           <li class="academic-note border-0 bg-transparent px-0" data-lang-en="No references recorded yet." data-lang-zh="尚未记录参考文献。">
                             No references recorded yet.
                           </li>

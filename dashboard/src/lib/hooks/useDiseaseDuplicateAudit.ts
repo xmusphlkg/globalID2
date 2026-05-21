@@ -1,5 +1,4 @@
-import { useMutation } from "@tanstack/react-query";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 
 export interface DiseaseAuditFinding {
@@ -33,6 +32,7 @@ export interface DiseaseAuditRecommendation {
 }
 
 export interface DiseaseDuplicateAuditResult {
+  run_id?: string;
   generated_at: string;
   standard_catalogue: string;
   mapping_directory: string;
@@ -56,6 +56,7 @@ export interface DiseaseDuplicateAuditResult {
     };
     recommendations?: DiseaseAuditRecommendation[];
     warnings?: string[];
+    status?: string;
     model_route?: {
       model_id?: number;
       model_key?: string;
@@ -65,6 +66,16 @@ export interface DiseaseDuplicateAuditResult {
     };
     raw_response?: string;
   } | null;
+  logs?: DiseaseAuditLogEntry[];
+}
+
+export interface DiseaseAuditLogEntry {
+  timestamp: string;
+  run_id: string;
+  level: "info" | "warning" | "error" | string;
+  event: string;
+  message: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface DiseaseDuplicateAuditStatus {
@@ -101,6 +112,7 @@ export interface DiseaseDuplicateAuditPayload {
 }
 
 export function useRunDiseaseDuplicateAudit() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: DiseaseDuplicateAuditPayload) =>
       apiFetch<DiseaseDuplicateAuditResult>("/ai/disease-audit/run", {
@@ -108,6 +120,10 @@ export function useRunDiseaseDuplicateAudit() {
         body: JSON.stringify(payload),
         timeoutMs: 180000,
       }),
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["disease-duplicate-audit-logs"] });
+      queryClient.invalidateQueries({ queryKey: ["disease-duplicate-audit-status"] });
+    },
   });
 }
 
@@ -121,5 +137,14 @@ export function useDiseaseDuplicateAuditStatus(includeNewDiseaseCandidates = tru
       }),
     staleTime: 20 * 1000,
     retry: false,
+  });
+}
+
+export function useDiseaseDuplicateAuditLogs(limit = 100) {
+  return useQuery<DiseaseAuditLogEntry[]>({
+    queryKey: ["disease-duplicate-audit-logs", limit],
+    queryFn: () => apiFetch(`/ai/disease-audit/logs?limit=${limit}`),
+    staleTime: 5 * 1000,
+    refetchInterval: 10 * 1000,
   });
 }

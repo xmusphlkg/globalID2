@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
@@ -18,6 +19,11 @@ logger = get_logger(__name__)
 
 _schema_ready = False
 _ROUTING_STATE_KEY = "routing_state"
+_MODEL_TEST_MARKER = "globalid-model-test-ok"
+_MODEL_TEST_PROMPT = (
+    "This is a production model-center health check. "
+    f"Reply with exactly this text and nothing else: {_MODEL_TEST_MARKER}"
+)
 
 
 def _utcnow() -> datetime:
@@ -627,46 +633,180 @@ async def get_active_model_routes() -> List[Dict[str, Any]]:
     return [route for route in routes if route.get("available_for_routing")]
 
 
-async def _test_openai_compatible(route: Dict[str, Any], model_name: str) -> None:
-    client = AsyncOpenAI(
-        api_key=route.get("api_key"),
-        base_url=route.get("base_url") or None,
-        default_headers=(route.get("extra_headers") or None),
-    )
-    await client.chat.completions.create(
-        model=model_name,
-        messages=[{"role": "user", "content": "ping"}],
-        max_tokens=16,
-        temperature=0,
-    )
+def _content_to_text(content: Any) -> str:
+    if content is None:
+        return ""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts: List[str] = []
+        for item in content:
+            if isinstance(item, str):
+                parts.append(item)
+            elif isinstance(item, dict):
+                text = item.get("text") or item.get("content")
+                if isinstance(text, str):
+                    parts.append(text)
+            else:
+                text = getattr(item, "text", None)
+                if isinstance(text, str):
+                    parts.append(text)
+        return "\n".join(parts)
+    return str(content)
 
 
-async def _test_anthropic(route: Dict[str, Any], model_name: str) -> None:
+def _openai_response_text(response: Any) -> str:
+    choices = getattr(response, "choices", None)
+    if choices:
+        first = choices[0]
+        message = getattr(first, "message", None)
+        if message is not None:
+            return _content_to_text(getattr(message, "content", None))
+        text = getattr(first, "text", None)
+        if isinstance(text, str):
+            return text
+
+    if isinstance(response, dict):
+        choices = response.get("choices")
+        if isinstance(choices, list) and choices:
+            first = choices[0]
+            if isinstance(first, dict):
+                message = first.get("message")
+                if isinstance(message, dict):
+                    return _content_to_text(message.get("content"))
+                text = first.get("text")
+                if isinstance(text, str):
+                    return text
+        output_text = response.get("output_text")
+        if isinstance(output_text, str):
+            return output_text
+        return json.dumps(response, ensure_ascii=False)
+
+    output_text = getattr(response, "output_text", None)
+    if isinstance(output_text, str):
+        return output_text
+    return str(response)
+
+
+def _looks_like_html(text: str) -> bool:
+    normalized = text.lstrip().lower()
+    return normalized.startswith("<!doctype html") or normalized.startswith("<html")
+
+
+def _test_max_tokens(route: Dict[str, Any]) -> int:
+    configured = route.get("max_tokens")
+    try:
+        value = int(configured) if configured is not None else 512
+    except (TypeError, ValueError):
+        value = 512
+    return max(64, min(value, 1600))
+
+
+def _response_preview(text: str, limit: int = 180) -> str:
+    compact = re.sub(r"\s+", " ", text).strip()
+    if len(compact) <= limit:
+        return compact
+    return f"{compact[:limit].rstrip()}..."
+
+
+def _validate_test_response(text: str) -> None:
+    value = text.strip()
+    if not value:
+        raise RuntimeError("Chat completion returned an empty assistant response")
+    if _looks_like_html(value):
+        raise RuntimeError(
+            "Chat completion returned an HTML page instead of an assistant response. "
+            "Check the provider base_url; OpenAI-compatible gateways usually require /v1."
+        )
+    if _MODEL_TEST_MARKER not in value.lower():
+        raise RuntimeError(f"Chat completion did not echo the expected test marker. Response preview: {_response_preview(value)}")
+
+
+async def _test_openai_compatible(route: Dict[str, Any], model_name: str) -> Dict[str, Any]:
+    base_url = str(route.get("base_url") or "").rstrip("/")
+    base_urls: List[Optional[str]] = [base_url or None]
+    if base_url and not base_url.endswith("/v1"):
+        base_urls.append(f"{base_url}/v1")
+
+    last_error: Optional[Exception] = None
+    for candidate_base_url in base_urls:
+        try:
+            client = AsyncOpenAI(
+                api_key=route.get("api_key"),
+                base_url=candidate_base_url,
+                default_headers=(route.get("extra_headers") or None),
+            )
+            response = await client.chat.completions.create(
+                model=model_name,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are validating that this chat model can answer normal conversations.",
+                    },
+                    {"role": "user", "content": _MODEL_TEST_PROMPT},
+                ],
+                max_tokens=_test_max_tokens(route),
+                temperature=0,
+            )
+            text = _openai_response_text(response)
+            _validate_test_response(text)
+            return {
+                "base_url": candidate_base_url or "default-openai-base-url",
+                "response_preview": _response_preview(text),
+            }
+        except Exception as exc:
+            last_error = exc
+            if is_rate_limit_error(exc) or getattr(exc, "status_code", None) in {400, 401, 403, 429}:
+                raise
+            continue
+
+    if last_error is not None:
+        raise last_error
+    raise RuntimeError("Chat completion returned no usable response")
+
+
+async def _test_anthropic(route: Dict[str, Any], model_name: str) -> Dict[str, Any]:
     client = AsyncAnthropic(api_key=route.get("api_key"))
-    await client.messages.create(
+    response = await client.messages.create(
         model=model_name,
-        messages=[{"role": "user", "content": "ping"}],
-        max_tokens=16,
+        system="You are validating that this chat model can answer normal conversations.",
+        messages=[{"role": "user", "content": _MODEL_TEST_PROMPT}],
+        max_tokens=_test_max_tokens(route),
         temperature=0,
     )
+    text = "\n".join(
+        str(block.text)
+        for block in response.content
+        if getattr(block, "type", None) == "text" and getattr(block, "text", None)
+    )
+    _validate_test_response(text)
+    return {"response_preview": _response_preview(text)}
 
 
 async def test_route_connection(route: Dict[str, Any]) -> Dict[str, Any]:
-    """Test one model route and return structured status."""
+    """Test one model route with a real chat completion and return structured status."""
     style = str(route.get("api_style") or "openai_compatible").lower()
     model_name = str(route.get("model_name") or "")
 
     try:
+        if not route.get("api_key"):
+            raise RuntimeError("API key is not configured")
+
         if style == "anthropic":
-            await _test_anthropic(route, model_name)
+            details = await _test_anthropic(route, model_name)
         else:
-            await _test_openai_compatible(route, model_name)
+            details = await _test_openai_compatible(route, model_name)
+
+        message = f"Chat completion test successful. Response: {details.get('response_preview') or _MODEL_TEST_MARKER}"
 
         return {
             "success": True,
             "status": "available",
-            "message": "Connection successful",
+            "message": message,
             "model_name": model_name,
+            "test_type": "chat_completion",
+            "test_prompt": _MODEL_TEST_PROMPT,
+            **details,
         }
     except Exception as exc:
         return {
@@ -674,6 +814,8 @@ async def test_route_connection(route: Dict[str, Any]) -> Dict[str, Any]:
             "status": "rate_limited" if is_rate_limit_error(exc) else "unavailable",
             "message": str(exc),
             "model_name": model_name,
+            "test_type": "chat_completion",
+            "test_prompt": _MODEL_TEST_PROMPT,
             "retry_after_seconds": extract_retry_after_seconds(exc),
         }
 
@@ -853,6 +995,7 @@ async def check_model_by_id(model_id: int) -> Dict[str, Any]:
 
         route = {
             "model_id": model.id,
+            "model_key": model.model_key,
             "model_name": model.model_name,
             "provider_id": provider.id,
             "provider_key": provider.provider_key,
@@ -861,6 +1004,10 @@ async def check_model_by_id(model_id: int) -> Dict[str, Any]:
             "base_url": provider.base_url,
             "api_key": provider.api_key,
             "extra_headers": provider.extra_headers or {},
+            "extra_config": provider.extra_config or {},
+            "extra_params": model.extra_params or {},
+            "temperature": model.temperature,
+            "max_tokens": model.max_tokens,
         }
 
     result = await test_route_connection(route)
@@ -896,8 +1043,8 @@ async def check_provider_by_id(provider_id: int) -> Dict[str, Any]:
 
 
 async def check_all_models() -> List[Dict[str, Any]]:
-    """Test all active model routes and persist statuses."""
-    routes = await get_active_model_routes()
+    """Test all enabled runtime routes and persist statuses."""
+    routes = await get_runtime_routes()
     results: List[Dict[str, Any]] = []
     for route in routes:
         result = await test_route_connection(route)

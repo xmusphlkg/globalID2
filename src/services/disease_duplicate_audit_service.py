@@ -5,20 +5,22 @@ from __future__ import annotations
 import csv
 import json
 import re
+import time
 import unicodedata
 from collections import defaultdict
 from datetime import datetime, timezone
 from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 from anthropic import AsyncAnthropic
 from openai import AsyncOpenAI
 
+from src.core.logging import get_logger
 from src.ai.model_center import (
     clear_route_rate_limit,
     extract_retry_after_seconds,
-    get_active_model_routes,
     get_runtime_routes,
     is_model_unavailable_error,
     is_rate_limit_error,
@@ -33,6 +35,8 @@ ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_STANDARD = ROOT / "configs" / "standard_diseases.csv"
 DEFAULT_MAPPING_DIR = ROOT / "configs" / "mapping"
 DEFAULT_CURRENT_DATA_DIR = ROOT / "data" / "current"
+DEFAULT_AUDIT_LOG_PATH = ROOT / "logs" / "disease-audit.jsonl"
+logger = get_logger(__name__)
 
 FOOTNOTE_RE = re.compile(r"[¹²³⁴⁵⁶⁷⁸⁹⁰]+")
 PUNCT_RE = re.compile(r"[^0-9a-zA-Z\u4e00-\u9fff]+")
@@ -167,17 +171,70 @@ class DiseaseDuplicateAuditService:
             "ai_review": None,
         }
 
-    async def run_ai_review(self, audit: dict[str, Any], max_candidates: int = 40) -> dict[str, Any]:
+    async def run_ai_review(
+        self,
+        audit: dict[str, Any],
+        max_candidates: int = 40,
+        run_id: str | None = None,
+        logs: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
+        run_id = run_id or str(uuid4())
         rows = read_csv(self.standard_path)
         payload = self._build_ai_payload(audit, rows, max_candidates=max_candidates)
-        routes = await get_active_model_routes()
+        self._record_event(
+            logs,
+            run_id,
+            "ai_payload_prepared",
+            "Prepared disease audit payload for model review",
+            candidate_count=len(payload.get("candidates") or []),
+            catalogue_row_count=len(payload.get("catalogue_rows") or []),
+            max_candidates=max_candidates,
+        )
+
+        runtime_routes = await get_runtime_routes()
+        routes = [route for route in runtime_routes if route.get("available_for_routing")]
         if not routes:
+            degraded_routes = [
+                route
+                for route in runtime_routes
+                if route.get("has_api_key") and not route.get("rate_limit_active")
+            ]
+            if degraded_routes:
+                self._record_event(
+                    logs,
+                    run_id,
+                    "fallback_to_degraded_routes",
+                    "No healthy model-center routes are available; trying enabled routes with API keys that are not rate-limited.",
+                    level="warning",
+                    route_count=len(degraded_routes),
+                    unavailable_routes=[self._route_log_meta(route) for route in degraded_routes],
+                )
+                routes = degraded_routes
+
+        if not routes:
+            self._record_event(
+                logs,
+                run_id,
+                "no_model_routes",
+                "No model-center routes can be used for disease audit.",
+                level="error",
+                runtime_route_count=len(runtime_routes),
+                routes=[self._route_log_meta(route) for route in runtime_routes],
+            )
             raise RuntimeError("No active model-center routes are available. Configure and enable a model first.")
 
         errors: list[dict[str, Any]] = []
         for route in routes:
+            started = time.perf_counter()
+            self._record_event(
+                logs,
+                run_id,
+                "route_attempt_started",
+                "Trying model route for disease audit AI review.",
+                route=self._route_log_meta(route),
+            )
             try:
-                result = await self._chat_json(route, payload)
+                result = await self._chat_json(route, payload, run_id=run_id, logs=logs)
                 await clear_route_rate_limit(route, "Disease duplicate audit succeeded")
                 result["model_route"] = {
                     "model_id": route.get("model_id"),
@@ -186,16 +243,38 @@ class DiseaseDuplicateAuditService:
                     "provider_key": route.get("provider_key"),
                     "provider_name": route.get("provider_name"),
                 }
+                self._record_event(
+                    logs,
+                    run_id,
+                    "route_attempt_succeeded",
+                    "Disease audit AI review completed with this route.",
+                    duration=round(time.perf_counter() - started, 3),
+                    route=self._route_log_meta(route),
+                    recommendation_count=len(result.get("recommendations") or []),
+                    warning_count=len(result.get("warnings") or []),
+                )
                 return result
             except Exception as exc:
                 message = str(exc)
+                hint = self.workload_failure_hint(exc)
+                self._record_event(
+                    logs,
+                    run_id,
+                    "route_attempt_failed",
+                    "Model route failed during disease audit AI review.",
+                    level="error",
+                    duration=round(time.perf_counter() - started, 3),
+                    route=self._route_log_meta(route),
+                    error=message,
+                    hint=hint,
+                )
                 errors.append(
                     {
                         "model_key": route.get("model_key"),
                         "model_name": route.get("model_name"),
                         "provider_key": route.get("provider_key"),
                         "error": message,
-                        "hint": self.workload_failure_hint(exc),
+                        "hint": hint,
                     }
                 )
                 if is_rate_limit_error(exc):
@@ -217,6 +296,14 @@ class DiseaseDuplicateAuditService:
                     await update_provider_check_result(int(route["provider_id"]), "unavailable", message)
                     continue
 
+        self._record_event(
+            logs,
+            run_id,
+            "ai_review_failed",
+            "All model-center routes failed for disease audit AI review.",
+            level="error",
+            errors=errors,
+        )
         raise RuntimeError(f"All model-center routes failed for duplicate audit: {errors}")
 
     async def status(self, include_new_disease_candidates: bool = True) -> dict[str, Any]:
@@ -509,7 +596,13 @@ class DiseaseDuplicateAuditService:
             "catalogue_rows": _catalogue_rows_for_ids(rows, ids),
         }
 
-    async def _chat_json(self, route: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
+    async def _chat_json(
+        self,
+        route: dict[str, Any],
+        payload: dict[str, Any],
+        run_id: str | None = None,
+        logs: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
         style = str(route.get("api_style") or "openai_compatible").lower()
         system_prompt = (
             "You are a cautious infectious-disease ontology reviewer for a multilingual "
@@ -543,6 +636,8 @@ class DiseaseDuplicateAuditService:
                 user_content=user_content,
                 max_tokens=max_tokens,
                 temperature=temperature,
+                run_id=run_id,
+                logs=logs,
             )
 
         try:
@@ -648,6 +743,8 @@ class DiseaseDuplicateAuditService:
         user_content: str,
         max_tokens: int,
         temperature: float,
+        run_id: str | None = None,
+        logs: list[dict[str, Any]] | None = None,
     ) -> str:
         base_url = str(route.get("base_url") or "").rstrip("/")
         base_urls: list[str | None] = [base_url or None]
@@ -655,33 +752,80 @@ class DiseaseDuplicateAuditService:
             base_urls.append(f"{base_url}/v1")
 
         html_error: RuntimeError | None = None
+        attempt_errors: list[dict[str, Any]] = []
         for candidate_base_url in base_urls:
-            client = AsyncOpenAI(
-                api_key=route.get("api_key"),
-                base_url=candidate_base_url,
-                default_headers=(route.get("extra_headers") or None),
-            )
-            response = await client.chat.completions.create(
-                model=str(route.get("model_name") or ""),
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_content},
-                ],
+            self._record_event(
+                logs,
+                run_id,
+                "openai_base_url_attempt",
+                "Calling OpenAI-compatible chat completion endpoint.",
+                route=self._route_log_meta(route),
+                base_url=self._safe_base_url(candidate_base_url),
                 max_tokens=max_tokens,
                 temperature=temperature,
             )
-            text = self._openai_compatible_response_text(response)
-            if not self._looks_like_html(text):
-                return text
-            html_error = RuntimeError(
-                "Model route returned an HTML page instead of a chat completion. "
-                "Check the provider base_url in the model center; OpenAI-compatible "
-                "gateways usually need an API path such as /v1, not the web console URL."
-            )
+            try:
+                client = AsyncOpenAI(
+                    api_key=route.get("api_key"),
+                    base_url=candidate_base_url,
+                    default_headers=(route.get("extra_headers") or None),
+                )
+                response = await client.chat.completions.create(
+                    model=str(route.get("model_name") or ""),
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_content},
+                    ],
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                )
+                text = self._openai_compatible_response_text(response)
+                if not self._looks_like_html(text):
+                    self._record_event(
+                        logs,
+                        run_id,
+                        "openai_base_url_succeeded",
+                        "OpenAI-compatible route returned usable response text.",
+                        route=self._route_log_meta(route),
+                        base_url=self._safe_base_url(candidate_base_url),
+                        response_chars=len(text),
+                    )
+                    return text
+                html_error = RuntimeError(
+                    "Model route returned an HTML page instead of a chat completion. "
+                    "Check the provider base_url in the model center; OpenAI-compatible "
+                    "gateways usually need an API path such as /v1, not the web console URL."
+                )
+                attempt_errors.append({"base_url": self._safe_base_url(candidate_base_url), "error": str(html_error)})
+                self._record_event(
+                    logs,
+                    run_id,
+                    "openai_base_url_failed",
+                    "OpenAI-compatible route returned HTML instead of response text.",
+                    level="warning",
+                    route=self._route_log_meta(route),
+                    base_url=self._safe_base_url(candidate_base_url),
+                    error=str(html_error),
+                )
+            except Exception as exc:
+                attempt_errors.append({"base_url": self._safe_base_url(candidate_base_url), "error": str(exc)})
+                self._record_event(
+                    logs,
+                    run_id,
+                    "openai_base_url_failed",
+                    "OpenAI-compatible route failed for this base URL.",
+                    level="warning",
+                    route=self._route_log_meta(route),
+                    base_url=self._safe_base_url(candidate_base_url),
+                    error=str(exc),
+                )
+                if self._should_not_try_base_url_fallback(exc):
+                    raise
+                continue
 
         if html_error is not None:
             raise html_error
-        raise RuntimeError("OpenAI-compatible route returned no usable response text")
+        raise RuntimeError(f"OpenAI-compatible route returned no usable response text: {attempt_errors}")
 
     @staticmethod
     def _is_auth_error(error: Exception) -> bool:
@@ -708,8 +852,8 @@ class DiseaseDuplicateAuditService:
         if "bad_response_status_code" not in message and "openai_error" not in message:
             return None
         return (
-            "The model-center ping can pass while this audit fails because ping uses a tiny "
-            "prompt and max_tokens=16, but disease audit sends a larger structured JSON task. "
+            "The model-center chat test can pass while this audit fails because it uses a short "
+            "marker prompt, but disease audit sends a larger structured JSON task. "
             "For OpenAI-compatible gateways such as New API/One API, bad_response_status_code "
             "usually means the upstream model/channel rejected this real workload. Check model "
             "permission, channel quota, context/output token limits, and per-model routing rules."
@@ -724,3 +868,102 @@ class DiseaseDuplicateAuditService:
     def _is_route_configuration_error(error: Exception) -> bool:
         message = str(error).lower()
         return "returned an html page" in message or "web console url" in message
+
+    @staticmethod
+    def _should_not_try_base_url_fallback(error: Exception) -> bool:
+        if is_rate_limit_error(error) or DiseaseDuplicateAuditService._is_auth_error(error):
+            return True
+        status_code = getattr(error, "status_code", None)
+        try:
+            normalized_status = int(status_code) if status_code is not None else None
+        except (TypeError, ValueError):
+            normalized_status = None
+        return normalized_status in {400, 401, 403, 429}
+
+    @staticmethod
+    def _safe_base_url(value: str | None) -> str:
+        return value or "default-openai-base-url"
+
+    @staticmethod
+    def _route_log_meta(route: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "model_id": route.get("model_id"),
+            "model_key": route.get("model_key"),
+            "model_name": route.get("model_name"),
+            "provider_id": route.get("provider_id"),
+            "provider_key": route.get("provider_key"),
+            "provider_name": route.get("provider_name"),
+            "api_style": route.get("api_style"),
+            "base_url": DiseaseDuplicateAuditService._safe_base_url(route.get("base_url")),
+            "available_for_routing": route.get("available_for_routing"),
+            "last_check_status": route.get("last_check_status"),
+            "rate_limit_active": route.get("rate_limit_active"),
+            "rate_limit_scope": route.get("rate_limit_scope"),
+            "rate_limit_remaining_seconds": route.get("rate_limit_remaining_seconds"),
+        }
+
+    @staticmethod
+    def _record_event(
+        logs: list[dict[str, Any]] | None,
+        run_id: str | None,
+        event: str,
+        message: str,
+        level: str = "info",
+        **metadata: Any,
+    ) -> dict[str, Any]:
+        record = {
+            "timestamp": _utcnow(),
+            "run_id": run_id or "unknown",
+            "level": level,
+            "event": event,
+            "message": message,
+            "metadata": metadata,
+        }
+        if logs is not None:
+            logs.append(record)
+        DiseaseDuplicateAuditService._append_audit_log(record)
+        if level == "error":
+            logger.error("Disease audit {event}: {message} | {metadata}", event=event, message=message, metadata=metadata)
+        elif level == "warning":
+            logger.warning("Disease audit {event}: {message} | {metadata}", event=event, message=message, metadata=metadata)
+        else:
+            logger.info("Disease audit {event}: {message} | {metadata}", event=event, message=message, metadata=metadata)
+        return record
+
+    @staticmethod
+    def record_event(
+        logs: list[dict[str, Any]] | None,
+        run_id: str | None,
+        event: str,
+        message: str,
+        level: str = "info",
+        **metadata: Any,
+    ) -> dict[str, Any]:
+        return DiseaseDuplicateAuditService._record_event(logs, run_id, event, message, level=level, **metadata)
+
+    @staticmethod
+    def _append_audit_log(record: dict[str, Any]) -> None:
+        try:
+            DEFAULT_AUDIT_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+            with DEFAULT_AUDIT_LOG_PATH.open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps(record, ensure_ascii=False, default=str) + "\n")
+        except OSError as exc:
+            logger.warning("Failed to write disease audit log: {error}", error=str(exc))
+
+    @staticmethod
+    def read_audit_logs(limit: int = 100) -> list[dict[str, Any]]:
+        if not DEFAULT_AUDIT_LOG_PATH.exists():
+            return []
+        try:
+            lines = DEFAULT_AUDIT_LOG_PATH.read_text(encoding="utf-8").splitlines()
+        except OSError:
+            return []
+        items: list[dict[str, Any]] = []
+        for line in lines[-max(1, limit) :]:
+            try:
+                value = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(value, dict):
+                items.append(value)
+        return items

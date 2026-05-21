@@ -1,26 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useMemo, useState, type ReactNode } from "react";
-import { Badge, Card, Grid, Metric, ProgressBar, Text, Title } from "@tremor/react";
+import { useMemo, useState, type FormEvent, type MouseEvent, type ReactNode } from "react";
 import {
+  AlertTriangle,
   ArrowRight,
   CheckCircle2,
-  CircleSlash,
   Cpu,
-  ChevronDown,
-  ChevronUp,
   GitBranch,
   KeyRound,
   ListTodo,
   MessageSquareText,
+  Pencil,
   Plus,
   RefreshCw,
   Search,
-  Settings2,
   ShieldCheck,
   Trash2,
 } from "lucide-react";
+
 import { ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app-store";
@@ -43,30 +41,21 @@ import {
   useUpdateAIModel,
   useUpdateAIProvider,
 } from "@/lib/hooks/useAIModels";
-
-const inputCls =
-  "w-full rounded-tremor-default border border-tremor-border bg-tremor-background px-2.5 py-1.5 text-sm text-tremor-content-emphasis outline-none focus:ring-2 focus:ring-tremor-brand-muted dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-emphasis";
-
-const pillButtonCls =
-  "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition";
+import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
+import { DetailDrawer } from "@/components/ui/DetailDrawer";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { FilterToolbar } from "@/components/ui/FilterToolbar";
+import { MetricTile } from "@/components/ui/MetricTile";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 
 type HealthFilter = "all" | "healthy" | "attention" | "checking";
+type DrawerMode = "create" | "edit" | null;
 
-type ToastState = {
-  type: "success" | "error";
-  message: string;
-};
+const inputClass =
+  "h-10 w-full rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm text-tremor-content-strong outline-none transition focus:border-tremor-brand-subtle focus:ring-2 focus:ring-tremor-brand-muted disabled:bg-tremor-background-subtle disabled:text-tremor-content-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong";
 
-function statusColor(status: string): "slate" | "emerald" | "rose" | "amber" {
-  const s = (status || "").toLowerCase();
-  if (s === "available") return "emerald";
-  if (s === "rate_limited") return "amber";
-  if (s === "unavailable" || s === "failed") return "rose";
-  if (s === "checking") return "amber";
-  return "slate";
-}
-
-function formatDateTime(value: string | null): string {
+function formatDateTime(value?: string | null): string {
   if (!value) return "-";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
@@ -87,18 +76,16 @@ function formatDuration(seconds: number, lang: "en" | "zh"): string {
   return `${secs}s`;
 }
 
+function queryErrorText(error: unknown, lang: "en" | "zh"): string {
+  const fallback = lang === "zh" ? "接口返回失败，请检查模型中心后端服务。" : "Request failed. Please check the model-center backend service.";
+  if (error instanceof ApiError) return `Request failed (${error.status}). ${error.message || fallback}`;
+  if (error instanceof Error && error.message) return error.message;
+  return fallback;
+}
+
 function mutationErrorText(error: unknown, lang: "en" | "zh"): string {
   if (error instanceof Error && error.message) return error.message;
   return lang === "zh" ? "操作失败，请检查接口返回。" : "Action failed. Please review the API response.";
-}
-
-function queryErrorText(error: unknown, lang: "en" | "zh"): string {
-  const fallback = lang === "zh" ? "接口返回失败，请检查模型中心后端服务。" : "Request failed. Please check the model-center backend service.";
-  if (error instanceof ApiError) {
-    return `Request failed (${error.status}). ${error.message || fallback}`;
-  }
-  if (error instanceof Error && error.message) return error.message;
-  return fallback;
 }
 
 function matchesQuery(fields: Array<string | number | null | undefined>, query: string): boolean {
@@ -111,7 +98,7 @@ function providerMatchesFilter(provider: AIProviderItem, filter: HealthFilter): 
   if (filter === "all") return true;
   if (filter === "healthy") return provider.is_active && provider.has_api_key && status === "available" && !provider.rate_limit_active;
   if (filter === "attention") {
-    return !provider.is_active || !provider.has_api_key || provider.rate_limit_active || status === "unavailable" || status === "failed" || status === "rate_limited";
+    return !provider.is_active || !provider.has_api_key || provider.rate_limit_active || ["unavailable", "failed", "rate_limited"].includes(status);
   }
   return status === "checking";
 }
@@ -121,7 +108,7 @@ function modelMatchesFilter(model: AIModelItem, filter: HealthFilter): boolean {
   if (filter === "all") return true;
   if (filter === "healthy") return model.is_enabled && status === "available" && !model.rate_limit_active;
   if (filter === "attention") {
-    return !model.is_enabled || model.rate_limit_active || status === "unavailable" || status === "failed" || status === "rate_limited";
+    return !model.is_enabled || model.rate_limit_active || ["unavailable", "failed", "rate_limited"].includes(status);
   }
   return status === "checking";
 }
@@ -133,20 +120,94 @@ function routeMatchesFilter(route: AIRuntimeRoute, filter: HealthFilter): boolea
   return (route.last_check_status || "").toLowerCase() === "checking";
 }
 
-function DetailField({ label, value, mono = false }: { label: string; value: ReactNode; mono?: boolean }) {
+function statusTone(status: string): "neutral" | "info" | "success" | "warning" | "danger" | "primary" {
+  const normalized = (status || "").toLowerCase();
+  if (normalized === "available") return "success";
+  if (normalized === "rate_limited" || normalized === "checking") return "warning";
+  if (normalized === "unavailable" || normalized === "failed") return "danger";
+  return "neutral";
+}
+
+function ActionButton({
+  children,
+  icon,
+  tone = "neutral",
+  disabled,
+  onClick,
+  type = "button",
+  className,
+}: {
+  children: ReactNode;
+  icon?: ReactNode;
+  tone?: "neutral" | "primary" | "danger";
+  disabled?: boolean;
+  onClick?: (event: MouseEvent<HTMLButtonElement>) => void;
+  type?: "button" | "submit";
+  className?: string;
+}) {
+  const toneClass =
+    tone === "primary"
+      ? "border-tremor-brand bg-tremor-brand text-tremor-brand-inverted hover:bg-tremor-brand/90"
+      : tone === "danger"
+        ? "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300"
+        : "border-tremor-border bg-tremor-background text-tremor-content-strong hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong dark:hover:bg-dark-tremor-background-subtle";
+
   return (
-    <div className="rounded-2xl border border-tremor-border/70 bg-tremor-background-subtle/70 p-3 dark:border-dark-tremor-border/70 dark:bg-dark-tremor-background-subtle/70">
-      <Text className="text-[11px] uppercase tracking-[0.16em] text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
-        {label}
-      </Text>
-      <div
-        className={cn(
-          "mt-1 text-sm font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong",
-          mono && "break-all font-mono text-xs",
-        )}
+    <button
+      type={type}
+      disabled={disabled}
+      onClick={onClick}
+      className={cn(
+        "inline-flex h-9 items-center justify-center gap-2 rounded-tremor-default border px-3 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-55",
+        toneClass,
+        className,
+      )}
+    >
+      {icon}
+      {children}
+    </button>
+  );
+}
+
+function Field({ label, children, hint }: { label: string; children: ReactNode; hint?: ReactNode }) {
+  return (
+    <label className="block space-y-1.5">
+      <span className="text-xs font-medium text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{label}</span>
+      {children}
+      {hint ? <span className="block text-xs text-tremor-content dark:text-dark-tremor-content">{hint}</span> : null}
+    </label>
+  );
+}
+
+function FormSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="space-y-3 border-b border-tremor-border pb-5 last:border-b-0 last:pb-0 dark:border-dark-tremor-border">
+      <h3 className="text-sm font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">{title}</h3>
+      {children}
+    </section>
+  );
+}
+
+function AlertBox({ tone, children }: { tone: "danger" | "warning"; children: ReactNode }) {
+  const toneClass =
+    tone === "danger"
+      ? "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/25 dark:text-rose-200"
+      : "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/25 dark:text-amber-200";
+  return <div className={cn("rounded-tremor-default border px-4 py-3 text-sm", toneClass)}>{children}</div>;
+}
+
+function LastCheckCell({ checkedAt, message }: { checkedAt?: string | null; message?: string | null }) {
+  return (
+    <div className="min-w-[220px] max-w-[360px]">
+      <p className="whitespace-nowrap text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+        {formatDateTime(checkedAt)}
+      </p>
+      <p
+        className="mt-1 truncate text-sm text-tremor-content-strong dark:text-dark-tremor-content-strong"
+        title={message || undefined}
       >
-        {value}
-      </div>
+        {message || "-"}
+      </p>
     </div>
   );
 }
@@ -171,37 +232,31 @@ export default function AIModelsPage() {
   const deleteModel = useDeleteAIModel();
   const checkAll = useCheckAllAIModels();
 
+  const [providerDrawerMode, setProviderDrawerMode] = useState<DrawerMode>(null);
+  const [modelDrawerMode, setModelDrawerMode] = useState<DrawerMode>(null);
+  const [editingProviderId, setEditingProviderId] = useState<number | null>(null);
+  const [editingModelId, setEditingModelId] = useState<number | null>(null);
+  const [search, setSearch] = useState("");
+  const [healthFilter, setHealthFilter] = useState<HealthFilter>("all");
+  const [deletingProviderId, setDeletingProviderId] = useState<number | null>(null);
+  const [deletingModelId, setDeletingModelId] = useState<number | null>(null);
+
   const [providerForm, setProviderForm] = useState({
     provider_key: "",
     provider_name: "openai",
     display_name: "",
     api_style: "openai_compatible",
     base_url: "",
-    api_key: "",
+    organization: "",
     priority: 100,
+    api_key: "",
+    clear_api_key: false,
+    is_active: true,
   });
 
   const [modelForm, setModelForm] = useState({
     provider_id: 0,
     model_name: "",
-    display_name: "",
-    priority: 100,
-  });
-
-  const [editingProviderId, setEditingProviderId] = useState<number | null>(null);
-  const [providerEditForm, setProviderEditForm] = useState({
-    display_name: "",
-    api_style: "openai_compatible",
-    base_url: "",
-    organization: "",
-    priority: 100,
-    api_key_new: "",
-    clear_api_key: false,
-    is_active: true,
-  });
-
-  const [editingModelId, setEditingModelId] = useState<number | null>(null);
-  const [modelEditForm, setModelEditForm] = useState({
     display_name: "",
     model_type: "chat",
     api_style: "",
@@ -212,278 +267,140 @@ export default function AIModelsPage() {
     is_default: false,
   });
 
-  const [search, setSearch] = useState("");
-  const [healthFilter, setHealthFilter] = useState<HealthFilter>("all");
-  const [showSetup, setShowSetup] = useState(false);
-  const [showRuntime, setShowRuntime] = useState(false);
-  const [compactProviders, setCompactProviders] = useState(true);
-  const [compactModels, setCompactModels] = useState(true);
-  const [deletingModelId, setDeletingModelId] = useState<number | null>(null);
-  const [deletingProviderId, setDeletingProviderId] = useState<number | null>(null);
-  const [toast, setToast] = useState<ToastState | null>(null);
-
   const copy = isZh
     ? {
-        subtitle: "把提供商配置、模型路由和运行时优先级放在同一个工作台里，快速发现凭证缺口、默认模型和可用性问题。",
-        openTasks: "打开 AI 任务",
-        openInteractions: "打开 AI 交互",
-        checkAllModels: "检查全部模型",
-        providersMetric: "提供商",
-        activeProvidersMetric: "活跃提供商",
-        modelsMetric: "启用模型",
-        keysMetric: "已配密钥",
-        routesMetric: "运行路由",
-        defaultsMetric: "默认模型",
-        providerFormTitle: "新增 API 提供商",
-        providerFormDesc: "先录入端点和密钥，再把模型挂到对应提供商下。",
-        modelFormTitle: "新增模型路由",
-        modelFormDesc: "为同一个 provider 添加多个模型，并通过优先级控制选择顺序。",
-        providerFormHint: "建议用稳定的 provider_key 标识环境，例如 openai-prod 或 qwen-cn-primary。",
-        modelFormHint: "优先级数值越小越优先，默认模型建议只保留一个。",
+        subtitle: "统一管理提供商、模型路由、运行时优先级和健康状态。",
+        openTasks: "AI 任务",
+        openInteractions: "AI 交互",
+        checkAllModels: "对话检查全部模型",
+        rebuildFromEnv: "重建 env 提供商",
+        rebuildConfirm: "该操作会按 .env 配置重新初始化提供商及默认模型。已有自定义记录将被清空。",
+        providers: "提供商",
+        activeProviders: "活跃提供商",
+        models: "模型",
+        enabledModels: "启用模型",
+        keys: "已配密钥",
+        routes: "运行路由",
+        defaults: "默认模型",
+        searchPlaceholder: "搜索 provider、model、base url 或 route key",
+        all: "全部",
+        healthy: "健康",
+        attention: "需处理",
+        checking: "检查中",
+        noProviders: "当前筛选下没有提供商。",
+        noModels: "当前筛选下没有模型。",
+        noRoutes: "当前筛选下没有运行时路由。",
+        newProvider: "新建提供商",
+        editProvider: "编辑提供商",
+        newModel: "新建模型",
+        editModel: "编辑模型",
+        save: "保存",
+        create: "创建",
+        reset: "重置",
+        test: "对话测试",
+        edit: "编辑",
+        delete: "删除",
+        enable: "启用",
+        disable: "停用",
+        setDefault: "设为默认",
+        credential: "凭证",
+        noCredential: "未配置",
+        priority: "优先级",
+        lastCheck: "最近检查",
+        lastMessage: "最近消息",
+        cooldown: "冷却",
+        routeCoverage: "可用路由覆盖率",
         providerKey: "Provider Key",
         providerName: "Provider Name",
         displayName: "显示名称",
         apiStyle: "API 风格",
         baseUrl: "Base URL",
         apiKey: "API Key",
-        priority: "优先级",
-        createProvider: "新增提供商",
-        createModel: "新增模型",
+        organization: "组织",
+        clearApiKey: "清空当前 API Key",
+        providerActive: "启用该提供商",
         selectProvider: "选择提供商",
         modelName: "模型名",
-        workspaceFilters: "工作台筛选",
-        workspaceFiltersDesc: "按关键字和健康状态过滤提供商、模型与运行时链路。",
-        searchPlaceholder: "搜索 provider、model、base url 或路由 key",
-        all: "全部",
-        healthy: "健康",
-        attention: "需处理",
-        checking: "检查中",
-        filteredProviders: "筛选后提供商",
-        filteredModels: "筛选后模型",
-        filteredRoutes: "筛选后路由",
-        providersTitle: "API 提供商",
-        providersDesc: "检查连接状态、凭证配置和基础端点。",
-        modelsTitle: "模型路由",
-        modelsDesc: "查看默认模型、启用状态和运行参数。",
-        runtimeTitle: "运行时调配链路",
-        runtimeDesc: "系统会按优先级从上到下尝试匹配可用路由。",
-        active: "活跃",
-        inactive: "停用",
-        enabled: "启用",
-        disabled: "停用",
-        defaultModel: "默认",
-        providerCount: "模型数",
-        credential: "凭证",
-        noCredential: "未配置",
-        lastCheck: "最近检查",
-        lastMessage: "最近消息",
-        organization: "组织",
-        test: "测试",
-        edit: "编辑",
-        disable: "停用",
-        enable: "启用",
-        save: "保存",
-        cancel: "取消",
-        clearApiKey: "清空当前 API Key",
-        providerIsActive: "启用该提供商",
         modelType: "模型类型",
-        modelTypePlaceholder: "模型类型（chat/text）",
-        inheritProvider: "继承 Provider",
         temperature: "温度",
         maxTokens: "最大 Token",
-        modelKey: "模型 Key",
-        routeCoverage: "可用路由覆盖率",
-        routeReady: "密钥就绪",
-        routable: "可路由",
-        preferredRoute: "首选",
-        noProviders: "当前筛选下没有提供商。",
-        noModels: "当前筛选下没有模型。",
-        noRoutes: "当前筛选下没有运行时路由。",
-        loadingProviders: "正在加载提供商...",
-        loadingModels: "正在加载模型...",
-        routeHint: "缺少 API Key 的路由不会真正可用。",
-        loadingRoutes: "正在加载运行时路由...",
-        runtimeErrorTitle: "运行时路由加载失败",
-        setDefault: "设为默认",
         modelEnabled: "启用该模型",
-        setDefaultModel: "设为默认模型",
-        temperaturePlaceholder: "温度（留空使用默认）",
-        maxTokensPlaceholder: "最大 token（留空使用默认）",
-        organizationOptional: "组织（可选）",
-        newApiKey: "新 API Key（留空不改）",
-        lastStatus: "状态",
-        cooldown: "冷却中",
-        cooldownUntil: "冷却到",
-        cooldownRemaining: "剩余冷却",
-        rateLimitCount: "限流次数",
-        lastRateLimit: "最近限流",
-        routeCoolingHint: "命中 rate limit 后，模型中心会把当前路由冷却一段时间，并自动切换到下一个可用模型。",
-        setupPanelTitle: "新增与配置",
-        setupPanelDesc: "默认折叠输入区，减少视觉负担，需要时再展开。",
-        expandSetup: "展开新增区",
-        collapseSetup: "收起新增区",
-        expandRuntime: "展开运行时链路",
-        collapseRuntime: "收起运行时链路",
-        deleteModel: "删除",
-        deleting: "删除中...",
-        deleteModelConfirm: "确认删除模型",
-        deleteModelDefaultWarn: "这是默认模型，删除后系统会自动选择下一个模型作为默认。",
-        deleteProvider: "删除提供商",
-        deleteProviderConfirm: "确认删除提供商",
-        providerModelsTitle: "包含模型",
-        deleteProviderDefaultWarn: "该提供商下的模型会一并删除，包含默认模型时会自动切换下一个可用默认模型。",
-        rebuildFromEnv: "重建 env 提供商",
-        rebuildFromEnvConfirm: "该操作会按 .env 配置重新初始化提供商及默认模型。已有自定义记录将被清空。",
-        deleteModelSuccess: "模型已删除",
-        deleteModelFailed: "删除失败",
-        deleteProviderSuccess: "提供商已删除",
-        deleteProviderFailed: "提供商删除失败",
-        cardDensity: "卡片密度",
-        compact: "紧凑",
-        detailed: "详细",
+        defaultModel: "默认模型",
       }
     : {
-        subtitle: "Manage providers, model routes, and runtime priority in a single workspace so credential gaps, defaults, and health issues are obvious.",
-        openTasks: "Open AI Tasks",
-        openInteractions: "Open AI Interactions",
-        checkAllModels: "Check All Models",
-        providersMetric: "Providers",
-        activeProvidersMetric: "Active Providers",
-        modelsMetric: "Enabled Models",
-        keysMetric: "Configured Keys",
-        routesMetric: "Runtime Routes",
-        defaultsMetric: "Default Models",
-        providerFormTitle: "New API Provider",
-        providerFormDesc: "Register endpoint and credentials first, then attach models to that provider.",
-        modelFormTitle: "New Model Route",
-        modelFormDesc: "Add multiple models to one provider and control selection order with priority.",
-        providerFormHint: "Use a stable provider_key to identify environments, for example openai-prod or qwen-cn-primary.",
-        modelFormHint: "Lower priority values win first. Keep only one default model where possible.",
+        subtitle: "Manage providers, model routes, runtime priority, and health in one workspace.",
+        openTasks: "AI Tasks",
+        openInteractions: "AI Interactions",
+        checkAllModels: "Chat Test All",
+        rebuildFromEnv: "Rebuild From .env",
+        rebuildConfirm: "This will rebuild providers/models from .env and clear current custom records.",
+        providers: "Providers",
+        activeProviders: "Active Providers",
+        models: "Models",
+        enabledModels: "Enabled Models",
+        keys: "Configured Keys",
+        routes: "Runtime Routes",
+        defaults: "Default Models",
+        searchPlaceholder: "Search provider, model, base url, or route key",
+        all: "All",
+        healthy: "Healthy",
+        attention: "Needs Attention",
+        checking: "Checking",
+        noProviders: "No providers match the current filter.",
+        noModels: "No models match the current filter.",
+        noRoutes: "No runtime routes match the current filter.",
+        newProvider: "New Provider",
+        editProvider: "Edit Provider",
+        newModel: "New Model",
+        editModel: "Edit Model",
+        save: "Save",
+        create: "Create",
+        reset: "Reset",
+        test: "Chat Test",
+        edit: "Edit",
+        delete: "Delete",
+        enable: "Enable",
+        disable: "Disable",
+        setDefault: "Set Default",
+        credential: "Credential",
+        noCredential: "Not configured",
+        priority: "Priority",
+        lastCheck: "Last check",
+        lastMessage: "Last message",
+        cooldown: "Cooling",
+        routeCoverage: "Ready route coverage",
         providerKey: "Provider Key",
         providerName: "Provider Name",
         displayName: "Display Name",
         apiStyle: "API Style",
         baseUrl: "Base URL",
         apiKey: "API Key",
-        priority: "Priority",
-        createProvider: "Create Provider",
-        createModel: "Create Model",
+        organization: "Organization",
+        clearApiKey: "Clear current API Key",
+        providerActive: "Provider is active",
         selectProvider: "Select Provider",
         modelName: "Model Name",
-        workspaceFilters: "Workspace Filters",
-        workspaceFiltersDesc: "Filter providers, models, and runtime chains by keyword and health state.",
-        searchPlaceholder: "Search provider, model, base url, or route key",
-        all: "All",
-        healthy: "Healthy",
-        attention: "Needs Attention",
-        checking: "Checking",
-        filteredProviders: "Filtered providers",
-        filteredModels: "Filtered models",
-        filteredRoutes: "Filtered routes",
-        providersTitle: "API Providers",
-        providersDesc: "Inspect connectivity, credentials, and base endpoints.",
-        modelsTitle: "Model Routes",
-        modelsDesc: "Review default routes, enablement state, and runtime parameters.",
-        runtimeTitle: "Runtime Routing Chain",
-        runtimeDesc: "The system tries routes from top to bottom based on priority.",
-        active: "active",
-        inactive: "inactive",
-        enabled: "enabled",
-        disabled: "disabled",
-        defaultModel: "default",
-        providerCount: "Models",
-        credential: "Credential",
-        noCredential: "Not configured",
-        lastCheck: "Last check",
-        lastMessage: "Last message",
-        organization: "Organization",
-        test: "Test",
-        edit: "Edit",
-        disable: "Disable",
-        enable: "Enable",
-        save: "Save",
-        cancel: "Cancel",
-        clearApiKey: "Clear current API Key",
-        providerIsActive: "Provider is active",
         modelType: "Model Type",
-        modelTypePlaceholder: "Model type (chat/text)",
-        inheritProvider: "Inherit Provider",
         temperature: "Temperature",
         maxTokens: "Max Tokens",
-        modelKey: "Model Key",
-        routeCoverage: "Ready route coverage",
-        routeReady: "Key ready",
-        routable: "Routable",
-        preferredRoute: "Preferred",
-        noProviders: "No providers match the current filter.",
-        noModels: "No models match the current filter.",
-        noRoutes: "No runtime routes match the current filter.",
-        loadingProviders: "Loading providers...",
-        loadingModels: "Loading models...",
-        routeHint: "Routes without an API key are visible here but not actually ready to serve traffic.",
-        loadingRoutes: "Loading runtime routes...",
-        runtimeErrorTitle: "Failed to load runtime routes",
-        setDefault: "Set Default",
         modelEnabled: "Model is enabled",
-        setDefaultModel: "Set as default model",
-        temperaturePlaceholder: "Temperature (empty for default)",
-        maxTokensPlaceholder: "Max tokens (empty for default)",
-        organizationOptional: "Organization (optional)",
-        newApiKey: "New API Key (leave blank to keep)",
-        lastStatus: "Status",
-        cooldown: "Cooling",
-        cooldownUntil: "Cooldown Until",
-        cooldownRemaining: "Cooldown Remaining",
-        rateLimitCount: "Rate-limit Count",
-        lastRateLimit: "Last Rate-limit",
-        routeCoolingHint: "When a route hits a rate limit, model center cools it down for a while and automatically moves to the next available model.",
-        setupPanelTitle: "Create and Configure",
-        setupPanelDesc: "Input forms are collapsed by default to reduce visual noise.",
-        expandSetup: "Expand Create Panel",
-        collapseSetup: "Collapse Create Panel",
-        expandRuntime: "Expand Runtime Chain",
-        collapseRuntime: "Collapse Runtime Chain",
-        deleteModel: "Delete",
-        deleting: "Deleting...",
-        deleteModelConfirm: "Delete model",
-        deleteModelDefaultWarn: "This is the default model. After deletion, the system will auto-pick another default.",
-        deleteProvider: "Delete Provider",
-        deleteProviderConfirm: "Delete provider",
-        providerModelsTitle: "Models",
-        rebuildFromEnv: "Rebuild From .env",
-        rebuildFromEnvConfirm: "This will rebuild providers/models from .env and clear current custom records.",
-        deleteProviderDefaultWarn: "All models under this provider will be removed; a replacement default model will be selected if needed.",
-        deleteModelSuccess: "Model deleted",
-        deleteModelFailed: "Delete failed",
-        deleteProviderSuccess: "Provider deleted",
-        deleteProviderFailed: "Delete provider failed",
-        cardDensity: "Card Density",
-        compact: "Compact",
-        detailed: "Detailed",
+        defaultModel: "Default model",
       };
 
-  useEffect(() => {
-    if (!toast) return;
-    const timer = window.setTimeout(() => setToast(null), 2800);
-    return () => window.clearTimeout(timer);
-  }, [toast]);
+  const modelCountByProvider = useMemo(() => {
+    const counter = new Map<number, number>();
+    (models ?? []).forEach((model) => counter.set(model.provider_id, (counter.get(model.provider_id) ?? 0) + 1));
+    return counter;
+  }, [models]);
 
   const providerOptions = useMemo(
     () =>
       (providers ?? [])
         .slice()
         .sort((a, b) => a.priority - b.priority || a.display_name.localeCompare(b.display_name))
-        .map((p) => ({ id: p.id, label: `${p.display_name} (${p.provider_key})` })),
+        .map((provider) => ({ id: provider.id, label: `${provider.display_name} (${provider.provider_key})` })),
     [providers],
   );
-
-  const modelCountByProvider = useMemo(() => {
-    const counter = new Map<number, number>();
-    (models ?? []).forEach((model) => {
-      counter.set(model.provider_id, (counter.get(model.provider_id) ?? 0) + 1);
-    });
-    return counter;
-  }, [models]);
 
   const summary = useMemo(() => {
     const totalProviders = providers?.length ?? 0;
@@ -492,70 +409,42 @@ export default function AIModelsPage() {
     const enabledModels = (models ?? []).filter((model) => model.is_enabled).length;
     const defaultModels = (models ?? []).filter((model) => model.is_default).length;
     const runtimeReady = (runtimeRoutes ?? []).filter((route) => route.available_for_routing).length;
+    const totalRoutes = runtimeRoutes?.length ?? 0;
     return {
       totalProviders,
       activeProviders,
       configuredKeys,
       enabledModels,
       defaultModels,
-      totalRoutes: runtimeRoutes?.length ?? 0,
+      totalRoutes,
       runtimeReady,
-      routeCoverage: runtimeRoutes && runtimeRoutes.length > 0
-        ? Math.round((runtimeReady / runtimeRoutes.length) * 100)
-        : 0,
+      routeCoverage: totalRoutes > 0 ? Math.round((runtimeReady / totalRoutes) * 100) : 0,
     };
   }, [models, providers, runtimeRoutes]);
 
   const searchQuery = search.trim().toLowerCase();
-
   const filteredProviders = useMemo(
     () =>
       (providers ?? [])
-        .filter((provider) =>
-          matchesQuery(
-            [provider.display_name, provider.provider_key, provider.provider_name, provider.base_url, provider.api_style],
-            searchQuery,
-          ),
-        )
+        .filter((provider) => matchesQuery([provider.display_name, provider.provider_key, provider.provider_name, provider.base_url, provider.api_style], searchQuery))
         .filter((provider) => providerMatchesFilter(provider, healthFilter))
-        .sort(
-          (a, b) =>
-            Number(b.is_active) - Number(a.is_active) ||
-            a.priority - b.priority ||
-            a.display_name.localeCompare(b.display_name),
-        ),
+        .sort((a, b) => Number(b.is_active) - Number(a.is_active) || a.priority - b.priority || a.display_name.localeCompare(b.display_name)),
     [healthFilter, providers, searchQuery],
   );
 
   const filteredModels = useMemo(
     () =>
       (models ?? [])
-        .filter((model) =>
-          matchesQuery(
-            [model.display_name, model.model_name, model.model_key, model.provider_key, model.provider_name, model.api_style],
-            searchQuery,
-          ),
-        )
+        .filter((model) => matchesQuery([model.display_name, model.model_name, model.model_key, model.provider_key, model.provider_name, model.api_style], searchQuery))
         .filter((model) => modelMatchesFilter(model, healthFilter))
-        .sort(
-          (a, b) =>
-            Number(b.is_default) - Number(a.is_default) ||
-            Number(b.is_enabled) - Number(a.is_enabled) ||
-            a.priority - b.priority ||
-            a.display_name.localeCompare(b.display_name),
-        ),
+        .sort((a, b) => Number(b.is_default) - Number(a.is_default) || Number(b.is_enabled) - Number(a.is_enabled) || a.priority - b.priority || a.display_name.localeCompare(b.display_name)),
     [healthFilter, models, searchQuery],
   );
 
   const filteredRuntimeRoutes = useMemo(
     () =>
       (runtimeRoutes ?? [])
-        .filter((route) =>
-          matchesQuery(
-            [route.model_name, route.model_key, route.provider_key, route.provider_name, route.api_style, route.base_url],
-            searchQuery,
-          ),
-        )
+        .filter((route) => matchesQuery([route.model_name, route.model_key, route.provider_key, route.provider_name, route.api_style, route.base_url], searchQuery))
         .filter((route) => routeMatchesFilter(route, healthFilter))
         .sort((a, b) => (a.priority ?? Number.MAX_SAFE_INTEGER) - (b.priority ?? Number.MAX_SAFE_INTEGER)),
     [healthFilter, runtimeRoutes, searchQuery],
@@ -572,8 +461,104 @@ export default function AIModelsPage() {
     testModel.error ??
     checkAll.error;
 
-  const onCreateProvider = (e: FormEvent) => {
-    e.preventDefault();
+  const resetProviderForm = () => {
+    setProviderForm({
+      provider_key: "",
+      provider_name: "openai",
+      display_name: "",
+      api_style: "openai_compatible",
+      base_url: "",
+      organization: "",
+      priority: 100,
+      api_key: "",
+      clear_api_key: false,
+      is_active: true,
+    });
+    setEditingProviderId(null);
+  };
+
+  const resetModelForm = () => {
+    setModelForm({
+      provider_id: providerOptions[0]?.id ?? 0,
+      model_name: "",
+      display_name: "",
+      model_type: "chat",
+      api_style: "",
+      temperature: "",
+      max_tokens: "",
+      priority: 100,
+      is_enabled: true,
+      is_default: false,
+    });
+    setEditingModelId(null);
+  };
+
+  const openCreateProvider = () => {
+    resetProviderForm();
+    setProviderDrawerMode("create");
+  };
+
+  const openEditProvider = (provider: AIProviderItem) => {
+    setEditingProviderId(provider.id);
+    setProviderForm({
+      provider_key: provider.provider_key,
+      provider_name: provider.provider_name,
+      display_name: provider.display_name,
+      api_style: provider.api_style || "openai_compatible",
+      base_url: provider.base_url || "",
+      organization: provider.organization || "",
+      priority: provider.priority,
+      api_key: "",
+      clear_api_key: false,
+      is_active: provider.is_active,
+    });
+    setProviderDrawerMode("edit");
+  };
+
+  const openCreateModel = () => {
+    resetModelForm();
+    setModelDrawerMode("create");
+  };
+
+  const openEditModel = (model: AIModelItem) => {
+    setEditingModelId(model.id);
+    setModelForm({
+      provider_id: model.provider_id,
+      model_name: model.model_name,
+      display_name: model.display_name,
+      model_type: model.model_type || "chat",
+      api_style: model.api_style || "",
+      temperature: model.temperature == null ? "" : String(model.temperature),
+      max_tokens: model.max_tokens == null ? "" : String(model.max_tokens),
+      priority: model.priority,
+      is_enabled: model.is_enabled,
+      is_default: model.is_default,
+    });
+    setModelDrawerMode("edit");
+  };
+
+  const submitProvider = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (providerDrawerMode === "edit" && editingProviderId) {
+      updateProvider.mutate(
+        {
+          providerId: editingProviderId,
+          payload: {
+            display_name: providerForm.display_name.trim(),
+            api_style: providerForm.api_style,
+            base_url: providerForm.base_url.trim() || null,
+            organization: providerForm.organization.trim() || null,
+            priority: Number(providerForm.priority) || 100,
+            is_active: providerForm.is_active,
+            clear_api_key: providerForm.clear_api_key,
+            ...(providerForm.api_key.trim() ? { api_key: providerForm.api_key.trim() } : {}),
+          },
+        },
+        { onSuccess: () => setProviderDrawerMode(null) },
+      );
+      return;
+    }
+
     createProvider.mutate(
       {
         provider_key: providerForm.provider_key.trim(),
@@ -582,1062 +567,560 @@ export default function AIModelsPage() {
         api_style: providerForm.api_style,
         base_url: providerForm.base_url.trim() || null,
         api_key: providerForm.api_key.trim() || null,
+        organization: providerForm.organization.trim() || null,
         priority: Number(providerForm.priority) || 100,
+        is_active: providerForm.is_active,
       },
-      {
-        onSuccess: () => {
-          setProviderForm({
-            provider_key: "",
-            provider_name: "openai",
-            display_name: "",
-            api_style: "openai_compatible",
-            base_url: "",
-            api_key: "",
-            priority: 100,
-          });
-        },
-      },
+      { onSuccess: () => setProviderDrawerMode(null) },
     );
   };
 
-  const onCreateModel = (e: FormEvent) => {
-    e.preventDefault();
+  const submitModel = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     if (!modelForm.provider_id) return;
+
+    const payload = {
+      display_name: modelForm.display_name.trim() || modelForm.model_name.trim(),
+      model_type: modelForm.model_type.trim() || "chat",
+      api_style: modelForm.api_style.trim() || null,
+      temperature: modelForm.temperature.trim() === "" ? null : Number(modelForm.temperature),
+      max_tokens: modelForm.max_tokens.trim() === "" ? null : Number(modelForm.max_tokens),
+      priority: Number(modelForm.priority) || 100,
+      is_enabled: modelForm.is_enabled,
+      is_default: modelForm.is_default,
+    };
+
+    if (modelDrawerMode === "edit" && editingModelId) {
+      updateModel.mutate({ modelId: editingModelId, payload }, { onSuccess: () => setModelDrawerMode(null) });
+      return;
+    }
 
     createModel.mutate(
       {
         provider_id: Number(modelForm.provider_id),
         model_name: modelForm.model_name.trim(),
-        display_name: modelForm.display_name.trim() || modelForm.model_name.trim(),
-        priority: Number(modelForm.priority) || 100,
+        ...payload,
       },
-      {
-        onSuccess: () => {
-          setModelForm((old) => ({ ...old, model_name: "", display_name: "", priority: 100 }));
-        },
-      },
-    );
-  };
-
-  const startEditProvider = (providerId: number) => {
-    const target = (providers ?? []).find((p) => p.id === providerId);
-    if (!target) return;
-
-    setEditingProviderId(providerId);
-    setProviderEditForm({
-      display_name: target.display_name,
-      api_style: target.api_style || "openai_compatible",
-      base_url: target.base_url || "",
-      organization: target.organization || "",
-      priority: target.priority,
-      api_key_new: "",
-      clear_api_key: false,
-      is_active: target.is_active,
-    });
-  };
-
-  const saveProviderEdit = (e: FormEvent) => {
-    e.preventDefault();
-    if (!editingProviderId) return;
-
-    updateProvider.mutate(
-      {
-        providerId: editingProviderId,
-        payload: {
-          display_name: providerEditForm.display_name.trim(),
-          api_style: providerEditForm.api_style,
-          base_url: providerEditForm.base_url.trim() || null,
-          organization: providerEditForm.organization.trim() || null,
-          priority: Number(providerEditForm.priority) || 100,
-          is_active: providerEditForm.is_active,
-          clear_api_key: providerEditForm.clear_api_key,
-          ...(providerEditForm.api_key_new.trim()
-            ? { api_key: providerEditForm.api_key_new.trim() }
-            : {}),
-        },
-      },
-      {
-        onSuccess: () => {
-          setEditingProviderId(null);
-        },
-      },
-    );
-  };
-
-  const startEditModel = (modelId: number) => {
-    const target = (models ?? []).find((m) => m.id === modelId);
-    if (!target) return;
-
-    setEditingModelId(modelId);
-    setModelEditForm({
-      display_name: target.display_name,
-      model_type: target.model_type || "chat",
-      api_style: target.api_style || "",
-      temperature: target.temperature == null ? "" : String(target.temperature),
-      max_tokens: target.max_tokens == null ? "" : String(target.max_tokens),
-      priority: target.priority,
-      is_enabled: target.is_enabled,
-      is_default: target.is_default,
-    });
-  };
-
-  const saveModelEdit = (e: FormEvent) => {
-    e.preventDefault();
-    if (!editingModelId) return;
-
-    updateModel.mutate(
-      {
-        modelId: editingModelId,
-        payload: {
-          display_name: modelEditForm.display_name.trim(),
-          model_type: modelEditForm.model_type.trim() || "chat",
-          api_style: modelEditForm.api_style.trim() || null,
-          temperature: modelEditForm.temperature.trim() === "" ? null : Number(modelEditForm.temperature),
-          max_tokens: modelEditForm.max_tokens.trim() === "" ? null : Number(modelEditForm.max_tokens),
-          priority: Number(modelEditForm.priority) || 100,
-          is_enabled: modelEditForm.is_enabled,
-          is_default: modelEditForm.is_default,
-        },
-      },
-      {
-        onSuccess: () => {
-          setEditingModelId(null);
-        },
-      },
+      { onSuccess: () => setModelDrawerMode(null) },
     );
   };
 
   const onDeleteProvider = (provider: AIProviderItem) => {
     const modelCount = modelCountByProvider.get(provider.id) ?? 0;
-    const relatedModels = (models ?? []).filter((model) => model.provider_id === provider.id);
-    const modelNames = relatedModels.map((model) => model.display_name || model.model_name);
-    const topModelNames = modelNames.slice(0, 4).join("，");
-    const moreCount = Math.max(0, modelNames.length - 4);
     const confirmText = isZh
-      ? `${copy.deleteProviderConfirm} ${provider.display_name} (${provider.provider_key})？${modelCount > 0 ? `\n\n${copy.providerModelsTitle}: ${topModelNames}${moreCount > 0 ? `，...共 ${modelCount} 个` : ""}\n${copy.deleteProviderDefaultWarn}` : ""}`
-      : `${copy.deleteProviderConfirm} ${provider.display_name} (${provider.provider_key})?${modelCount > 0 ? `\n\n${copy.providerModelsTitle}: ${topModelNames}${moreCount > 0 ? `, +${moreCount} more` : ""}\n${copy.deleteProviderDefaultWarn}` : ""}`;
+      ? `确认删除提供商 ${provider.display_name}？${modelCount > 0 ? `\n\n该提供商下 ${modelCount} 个模型也会被删除。` : ""}`
+      : `Delete provider ${provider.display_name}?${modelCount > 0 ? `\n\n${modelCount} models under this provider will also be removed.` : ""}`;
     if (!window.confirm(confirmText)) return;
-
-    if (editingProviderId === provider.id) {
-      setEditingProviderId(null);
-    }
     setDeletingProviderId(provider.id);
-    deleteProvider.mutate(provider.id, {
-      onSuccess: () => {
-        setToast({
-          type: "success",
-          message: `${copy.deleteProviderSuccess}: ${provider.display_name}`,
-        });
-      },
-      onError: (error) => {
-        setToast({
-          type: "error",
-          message: `${copy.deleteProviderFailed}: ${mutationErrorText(error, lang)}`,
-        });
-      },
-      onSettled: () => {
-        setDeletingProviderId(null);
-      },
-    });
-  };
-
-  const onRebuildFromEnv = () => {
-    if (!window.confirm(copy.rebuildFromEnvConfirm)) return;
-    rebuildProviders.mutate(
-      { force: true },
-      {
-        onSuccess: () => {
-          setToast({
-            type: "success",
-            message: isZh ? "已按 env 重建提供商与模型" : "Rebuilt providers/models from env",
-          });
-        },
-        onError: (error) => {
-          setToast({
-            type: "error",
-            message: `${isZh ? "重建失败" : "Rebuild failed"}: ${mutationErrorText(error, lang)}`,
-          });
-        },
-      },
-    );
+    deleteProvider.mutate(provider.id, { onSettled: () => setDeletingProviderId(null) });
   };
 
   const onDeleteModel = (model: AIModelItem) => {
     const confirmText = isZh
-      ? `${copy.deleteModelConfirm} ${model.display_name} (${model.model_name})?${model.is_default ? `\n\n${copy.deleteModelDefaultWarn}` : ""}`
-      : `${copy.deleteModelConfirm} ${model.display_name} (${model.model_name})?${model.is_default ? `\n\n${copy.deleteModelDefaultWarn}` : ""}`;
+      ? `确认删除模型 ${model.display_name}？${model.is_default ? "\n\n这是默认模型，删除后系统会自动选择下一个模型作为默认。" : ""}`
+      : `Delete model ${model.display_name}?${model.is_default ? "\n\nThis is the default model. A replacement default will be selected automatically." : ""}`;
     if (!window.confirm(confirmText)) return;
-
-    if (editingModelId === model.id) {
-      setEditingModelId(null);
-    }
     setDeletingModelId(model.id);
-    deleteModel.mutate(model.id, {
-      onSuccess: () => {
-        setToast({
-          type: "success",
-          message: `${copy.deleteModelSuccess}: ${model.display_name}`,
-        });
-      },
-      onError: (error) => {
-        setToast({
-          type: "error",
-          message: `${copy.deleteModelFailed}: ${mutationErrorText(error, lang)}`,
-        });
-      },
-      onSettled: () => {
-        setDeletingModelId(null);
-      },
-    });
+    deleteModel.mutate(model.id, { onSettled: () => setDeletingModelId(null) });
   };
 
+  const onRebuildFromEnv = () => {
+    if (!window.confirm(copy.rebuildConfirm)) return;
+    rebuildProviders.mutate({ force: true });
+  };
+
+  const providerColumns = useMemo<DataTableColumn<AIProviderItem>[]>(
+    () => [
+      {
+        key: "status",
+        header: isZh ? "状态" : "Status",
+        render: (provider) => (
+          <div className="space-y-1">
+            <StatusBadge tone={provider.is_active ? "success" : "neutral"}>{provider.is_active ? "active" : "inactive"}</StatusBadge>
+            <StatusBadge tone={statusTone(provider.last_check_status)}>{provider.last_check_status || "unknown"}</StatusBadge>
+          </div>
+        ),
+      },
+      {
+        key: "provider",
+        header: copy.providers,
+        render: (provider) => (
+          <div className="min-w-[230px] max-w-[380px]">
+            <p className="truncate font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">{provider.display_name}</p>
+            <p className="mt-1 truncate font-mono text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{provider.provider_key}</p>
+          </div>
+        ),
+      },
+      {
+        key: "endpoint",
+        header: "Endpoint",
+        render: (provider) => (
+          <div className="min-w-[220px] max-w-[420px]">
+            <p className="truncate text-sm text-tremor-content-strong dark:text-dark-tremor-content-strong">{provider.api_style}</p>
+            <p className="mt-1 truncate font-mono text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{provider.base_url || "-"}</p>
+          </div>
+        ),
+      },
+      {
+        key: "credential",
+        header: copy.credential,
+        render: (provider) => (
+          <div className="min-w-[150px]">
+            <StatusBadge tone={provider.has_api_key ? "success" : "danger"}>
+              {provider.api_key_hint || copy.noCredential}
+            </StatusBadge>
+            <p className="mt-1 text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+              {modelCountByProvider.get(provider.id) ?? 0} {copy.models}
+            </p>
+          </div>
+        ),
+      },
+      {
+        key: "last-check",
+        header: copy.lastCheck,
+        render: (provider) => (
+          <LastCheckCell checkedAt={provider.last_checked_at} message={provider.last_check_message} />
+        ),
+      },
+      {
+        key: "priority",
+        header: copy.priority,
+        render: (provider) => <span className="text-sm text-tremor-content dark:text-dark-tremor-content">P{provider.priority}</span>,
+      },
+      {
+        key: "actions",
+        header: "",
+        className: "text-right",
+        render: (provider) => (
+          <div className="flex min-w-[310px] justify-end gap-2">
+            <ActionButton disabled={testProvider.isPending} onClick={() => testProvider.mutate(provider.id)}>{copy.test}</ActionButton>
+            <ActionButton onClick={() => openEditProvider(provider)} icon={<Pencil className="h-4 w-4" />}>{copy.edit}</ActionButton>
+            <ActionButton
+              onClick={() => updateProvider.mutate({ providerId: provider.id, payload: { is_active: !provider.is_active } })}
+            >
+              {provider.is_active ? copy.disable : copy.enable}
+            </ActionButton>
+            <ActionButton
+              tone="danger"
+              disabled={deleteProvider.isPending && deletingProviderId === provider.id}
+              onClick={() => onDeleteProvider(provider)}
+              icon={<Trash2 className="h-4 w-4" />}
+            >
+              {copy.delete}
+            </ActionButton>
+          </div>
+        ),
+      },
+    ],
+    [copy, deleteProvider.isPending, deletingProviderId, isZh, modelCountByProvider, testProvider.isPending, updateProvider],
+  );
+
+  const modelColumns = useMemo<DataTableColumn<AIModelItem>[]>(
+    () => [
+      {
+        key: "status",
+        header: isZh ? "状态" : "Status",
+        render: (model) => (
+          <div className="space-y-1">
+            <StatusBadge tone={model.is_enabled ? "success" : "neutral"}>{model.is_enabled ? "enabled" : "disabled"}</StatusBadge>
+            {model.is_default ? <StatusBadge tone="primary">default</StatusBadge> : null}
+            <StatusBadge tone={statusTone(model.last_check_status)}>{model.last_check_status || "unknown"}</StatusBadge>
+          </div>
+        ),
+      },
+      {
+        key: "model",
+        header: copy.models,
+        render: (model) => (
+          <div className="min-w-[240px] max-w-[420px]">
+            <p className="truncate font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">{model.display_name}</p>
+            <p className="mt-1 truncate font-mono text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{model.model_key}</p>
+          </div>
+        ),
+      },
+      {
+        key: "provider",
+        header: copy.providers,
+        render: (model) => (
+          <div className="min-w-[140px]">
+            <p className="truncate text-sm font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">{model.provider_key}</p>
+            <p className="mt-1 truncate text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{model.provider_name}</p>
+          </div>
+        ),
+      },
+      {
+        key: "params",
+        header: isZh ? "参数" : "Params",
+        render: (model) => (
+          <div className="min-w-[140px] text-sm text-tremor-content dark:text-dark-tremor-content">
+            <p>{model.model_type || "chat"}</p>
+            <p className="mt-1 text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+              temp {model.temperature ?? "-"} / max {model.max_tokens ?? "-"}
+            </p>
+          </div>
+        ),
+      },
+      {
+        key: "last-check",
+        header: copy.lastCheck,
+        render: (model) => (
+          <LastCheckCell checkedAt={model.last_checked_at} message={model.last_check_message} />
+        ),
+      },
+      {
+        key: "priority",
+        header: copy.priority,
+        render: (model) => <span className="text-sm text-tremor-content dark:text-dark-tremor-content">P{model.priority}</span>,
+      },
+      {
+        key: "actions",
+        header: "",
+        className: "text-right",
+        render: (model) => (
+          <div className="flex min-w-[360px] justify-end gap-2">
+            <ActionButton disabled={testModel.isPending} onClick={() => testModel.mutate(model.id)}>{copy.test}</ActionButton>
+            <ActionButton onClick={() => openEditModel(model)} icon={<Pencil className="h-4 w-4" />}>{copy.edit}</ActionButton>
+            <ActionButton onClick={() => updateModel.mutate({ modelId: model.id, payload: { is_enabled: !model.is_enabled } })}>
+              {model.is_enabled ? copy.disable : copy.enable}
+            </ActionButton>
+            {!model.is_default ? (
+              <ActionButton onClick={() => updateModel.mutate({ modelId: model.id, payload: { is_default: true } })}>{copy.setDefault}</ActionButton>
+            ) : null}
+            <ActionButton
+              tone="danger"
+              disabled={deleteModel.isPending && deletingModelId === model.id}
+              onClick={() => onDeleteModel(model)}
+              icon={<Trash2 className="h-4 w-4" />}
+            >
+              {copy.delete}
+            </ActionButton>
+          </div>
+        ),
+      },
+    ],
+    [copy, deleteModel.isPending, deletingModelId, isZh, testModel.isPending, updateModel],
+  );
+
+  const routeColumns = useMemo<DataTableColumn<AIRuntimeRoute>[]>(
+    () => [
+      {
+        key: "rank",
+        header: "#",
+        render: (route) => <span className="font-mono text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">P{route.priority ?? "-"}</span>,
+      },
+      {
+        key: "route",
+        header: copy.routes,
+        render: (route) => (
+          <div className="min-w-[250px] max-w-[430px]">
+            <p className="truncate font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">{route.model_name}</p>
+            <p className="mt-1 truncate font-mono text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{route.model_key}</p>
+          </div>
+        ),
+      },
+      {
+        key: "provider",
+        header: copy.providers,
+        render: (route) => <span className="whitespace-nowrap text-sm text-tremor-content dark:text-dark-tremor-content">{route.provider_key}</span>,
+      },
+      {
+        key: "ready",
+        header: "Ready",
+        render: (route) => (
+          <div className="flex flex-wrap gap-1.5">
+            <StatusBadge tone={route.has_api_key ? "success" : "danger"}>{route.has_api_key ? "key ready" : copy.noCredential}</StatusBadge>
+            <StatusBadge tone={route.available_for_routing ? "success" : route.rate_limit_active ? "warning" : "neutral"}>
+              {route.available_for_routing ? "routable" : route.rate_limit_active ? copy.cooldown : "disabled"}
+            </StatusBadge>
+          </div>
+        ),
+      },
+      {
+        key: "cooldown",
+        header: "Cooldown",
+        render: (route) => (
+          <span className="whitespace-nowrap text-sm text-tremor-content dark:text-dark-tremor-content">
+            {route.rate_limit_active ? formatDuration(route.rate_limit_remaining_seconds, lang) : "-"}
+          </span>
+        ),
+      },
+    ],
+    [copy, lang],
+  );
+
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-4 px-4 py-4 md:px-6">
-      <Card className="overflow-hidden border border-violet-200/60 bg-gradient-to-br from-violet-50 via-white to-sky-50 shadow-sm dark:border-violet-900/40 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-3xl space-y-3">
-            <Badge color="violet" className="w-fit">{t(lang, "mod_ai")}</Badge>
-            <div className="space-y-2">
-              <Title className="text-2xl tracking-tight">{t(lang, "ai_models")}</Title>
-              <Text className="max-w-2xl text-sm leading-6">{copy.subtitle}</Text>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 pt-1">
-              <Link
-                href="/ai/tasks"
-                className="inline-flex items-center gap-1.5 rounded-xl border border-violet-300/70 bg-violet-50 px-3 py-1.5 text-xs font-medium text-violet-700 transition hover:bg-violet-100 dark:border-violet-800 dark:bg-violet-950/25 dark:text-violet-300"
-              >
-                <ListTodo className="h-3.5 w-3.5" />
-                {copy.openTasks}
-              </Link>
-              <Link
-                href="/ai/interactions"
-                className="inline-flex items-center gap-1.5 rounded-xl border border-sky-300/70 bg-sky-50 px-3 py-1.5 text-xs font-medium text-sky-700 transition hover:bg-sky-100 dark:border-sky-900 dark:bg-sky-950/25 dark:text-sky-300"
-              >
-                <MessageSquareText className="h-3.5 w-3.5" />
-                {copy.openInteractions}
-              </Link>
-              <button
-                onClick={() => checkAll.mutate()}
-                disabled={checkAll.isPending}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-300/70 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-60 dark:border-emerald-900 dark:bg-emerald-950/25 dark:text-emerald-300"
-              >
-                {checkAll.isPending ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <ShieldCheck className="h-3.5 w-3.5" />}
-                {copy.checkAllModels}
-              </button>
-              <button
-                onClick={onRebuildFromEnv}
-                disabled={rebuildProviders.isPending}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300/70 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 transition hover:bg-amber-100 disabled:opacity-60 dark:border-amber-900 dark:bg-amber-950/25 dark:text-amber-300"
-              >
-                {rebuildProviders.isPending ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <ArrowRight className="h-3.5 w-3.5" />}
-                {copy.rebuildFromEnv}
-              </button>
-            </div>
-            {operationError && (
-              <div className="rounded-2xl border border-rose-200 bg-rose-50/90 px-4 py-3 dark:border-rose-900/60 dark:bg-rose-950/30">
-                <Text className="text-sm text-rose-700 dark:text-rose-300">{mutationErrorText(operationError, lang)}</Text>
-              </div>
-            )}
-          </div>
-
-          <div className="grid flex-1 gap-3 sm:grid-cols-2 xl:max-w-2xl">
-            {[
-              {
-                title: copy.providersMetric,
-                value: summary.totalProviders,
-                detail: `${summary.activeProviders} ${copy.activeProvidersMetric}`,
-                icon: ShieldCheck,
-                tone: "bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300",
-              },
-              {
-                title: copy.modelsMetric,
-                value: summary.enabledModels,
-                detail: `${summary.defaultModels} ${copy.defaultsMetric}`,
-                icon: Cpu,
-                tone: "bg-sky-100 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300",
-              },
-              {
-                title: copy.keysMetric,
-                value: summary.configuredKeys,
-                detail: `${summary.totalProviders} ${copy.providersMetric}`,
-                icon: KeyRound,
-                tone: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300",
-              },
-              {
-                title: copy.routesMetric,
-                value: summary.totalRoutes,
-                detail: `${summary.routeCoverage}% ${copy.routeCoverage}`,
-                icon: GitBranch,
-                tone: "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300",
-              },
-            ].map((item) => {
-              const Icon = item.icon;
-              return (
-                <div
-                  key={item.title}
-                  className="rounded-2xl border border-white/70 bg-white/80 p-3 shadow-sm backdrop-blur dark:border-white/5 dark:bg-white/5"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <Text className="text-[11px] uppercase tracking-[0.18em] text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
-                        {item.title}
-                      </Text>
-                      <Metric className="mt-2">{item.value}</Metric>
-                      <Text className="mt-1 text-xs text-tremor-content dark:text-dark-tremor-content">{item.detail}</Text>
-                    </div>
-                    <div className={cn("rounded-2xl p-2.5", item.tone)}>
-                      <Icon className="h-5 w-5" />
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </Card>
-
-      <Card className="border border-tremor-border/80 shadow-sm dark:border-dark-tremor-border/80">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0">
-            <Title className="text-base">{copy.setupPanelTitle}</Title>
-            <Text className="mt-1 text-sm">{copy.setupPanelDesc}</Text>
-          </div>
-          <button
-            type="button"
-            onClick={() => setShowSetup((old) => !old)}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300/70 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900/30 dark:text-slate-300"
-          >
-            <Settings2 className="h-3.5 w-3.5" />
-            {showSetup ? copy.collapseSetup : copy.expandSetup}
-            {showSetup ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-          </button>
-        </div>
-      </Card>
-
-      {showSetup && (
-        <Grid numItems={1} numItemsLg={2} className="gap-3">
-          <Card className="border border-tremor-border/80 shadow-sm dark:border-dark-tremor-border/80">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <Title className="text-base">{copy.providerFormTitle}</Title>
-              <Text className="mt-1 text-sm">{copy.providerFormDesc}</Text>
-            </div>
-            <div className="rounded-2xl bg-violet-100 p-2.5 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300">
-              <Plus className="h-5 w-5" />
-            </div>
-          </div>
-
-          <form className="mt-4 grid gap-3 md:grid-cols-2" onSubmit={onCreateProvider}>
-            <input
-              className={inputCls}
-              placeholder={`${copy.providerKey} (e.g. openai-prod)`}
-              value={providerForm.provider_key}
-              onChange={(e) => setProviderForm((s) => ({ ...s, provider_key: e.target.value }))}
-              required
-            />
-            <input
-              className={inputCls}
-              placeholder={`${copy.providerName} (openai/qianwen/glm/anthropic/custom)`}
-              value={providerForm.provider_name}
-              onChange={(e) => setProviderForm((s) => ({ ...s, provider_name: e.target.value }))}
-              required
-            />
-            <input
-              className={inputCls}
-              placeholder={copy.displayName}
-              value={providerForm.display_name}
-              onChange={(e) => setProviderForm((s) => ({ ...s, display_name: e.target.value }))}
-            />
-            <select
-              className={inputCls}
-              value={providerForm.api_style}
-              onChange={(e) => setProviderForm((s) => ({ ...s, api_style: e.target.value }))}
+    <div className="space-y-5">
+      <PageHeader
+        eyebrow={t(lang, "mod_ai")}
+        title={t(lang, "ai_models")}
+        description={copy.subtitle}
+        meta={
+          <>
+            <StatusBadge tone={summary.configuredKeys === summary.totalProviders && summary.totalProviders > 0 ? "success" : "warning"}>
+              {summary.configuredKeys}/{summary.totalProviders} keys
+            </StatusBadge>
+            <StatusBadge tone={summary.routeCoverage >= 80 ? "success" : summary.routeCoverage >= 40 ? "warning" : "danger"}>
+              {summary.routeCoverage}% {copy.routeCoverage}
+            </StatusBadge>
+          </>
+        }
+        actions={
+          <>
+            <Link
+              href="/ai/tasks"
+              className="inline-flex h-9 items-center gap-2 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm font-medium text-tremor-content-strong transition hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:hover:bg-dark-tremor-background-subtle"
             >
-              <option value="openai_compatible">openai_compatible</option>
-              <option value="anthropic">anthropic</option>
-            </select>
-            <input
-              className={cn(inputCls, "md:col-span-2")}
-              placeholder={copy.baseUrl}
-              value={providerForm.base_url}
-              onChange={(e) => setProviderForm((s) => ({ ...s, base_url: e.target.value }))}
-            />
-            <input
-              className={cn(inputCls, "md:col-span-2")}
-              type="password"
-              placeholder={copy.apiKey}
-              value={providerForm.api_key}
-              onChange={(e) => setProviderForm((s) => ({ ...s, api_key: e.target.value }))}
-            />
-            <input
-              className={inputCls}
-              type="number"
-              placeholder={copy.priority}
-              value={providerForm.priority}
-              onChange={(e) => setProviderForm((s) => ({ ...s, priority: Number(e.target.value) }))}
-            />
-            <div className="rounded-2xl border border-dashed border-tremor-border p-3 dark:border-dark-tremor-border">
-              <Text className="text-xs leading-6">{copy.providerFormHint}</Text>
-            </div>
-            <div className="md:col-span-2 flex flex-wrap items-center gap-3 pt-1">
-              <button
-                type="submit"
-                disabled={createProvider.isPending}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-violet-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-violet-700 disabled:opacity-60"
-              >
-                <Plus className="h-3.5 w-3.5" />
-                {copy.createProvider}
-              </button>
-            </div>
-          </form>
-          </Card>
-
-          <Card className="border border-tremor-border/80 shadow-sm dark:border-dark-tremor-border/80">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <Title className="text-base">{copy.modelFormTitle}</Title>
-              <Text className="mt-1 text-sm">{copy.modelFormDesc}</Text>
-            </div>
-            <div className="rounded-2xl bg-sky-100 p-2.5 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300">
-              <Cpu className="h-5 w-5" />
-            </div>
-          </div>
-
-          <form className="mt-4 grid gap-3 md:grid-cols-2" onSubmit={onCreateModel}>
-            <select
-              className={cn(inputCls, "md:col-span-2")}
-              value={modelForm.provider_id || ""}
-              onChange={(e) => setModelForm((s) => ({ ...s, provider_id: Number(e.target.value) }))}
-              required
+              <ListTodo className="h-4 w-4" />
+              {copy.openTasks}
+            </Link>
+            <Link
+              href="/ai/interactions"
+              className="inline-flex h-9 items-center gap-2 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm font-medium text-tremor-content-strong transition hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:hover:bg-dark-tremor-background-subtle"
             >
-              <option value="">{copy.selectProvider}</option>
-              {providerOptions.map((p) => (
-                <option key={p.id} value={p.id}>{p.label}</option>
-              ))}
-            </select>
-            <input
-              className={inputCls}
-              placeholder={`${copy.modelName} (e.g. qwen-plus)`}
-              value={modelForm.model_name}
-              onChange={(e) => setModelForm((s) => ({ ...s, model_name: e.target.value }))}
-              required
-            />
-            <input
-              className={inputCls}
-              placeholder={copy.displayName}
-              value={modelForm.display_name}
-              onChange={(e) => setModelForm((s) => ({ ...s, display_name: e.target.value }))}
-            />
-            <input
-              className={inputCls}
-              type="number"
-              placeholder={copy.priority}
-              value={modelForm.priority}
-              onChange={(e) => setModelForm((s) => ({ ...s, priority: Number(e.target.value) }))}
-            />
-            <div className="rounded-2xl border border-dashed border-tremor-border p-3 dark:border-dark-tremor-border">
-              <Text className="text-xs leading-6">{copy.modelFormHint}</Text>
-            </div>
-            <div className="md:col-span-2 flex flex-wrap items-center gap-3 pt-1">
-              <button
-                type="submit"
-                disabled={createModel.isPending}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-sky-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-sky-700 disabled:opacity-60"
-              >
-                <Cpu className="h-3.5 w-3.5" />
-                {copy.createModel}
-              </button>
-            </div>
-          </form>
-          </Card>
-        </Grid>
-      )}
+              <MessageSquareText className="h-4 w-4" />
+              {copy.openInteractions}
+            </Link>
+            <ActionButton disabled={checkAll.isPending} onClick={() => checkAll.mutate()} icon={<ShieldCheck className="h-4 w-4" />}>
+              {copy.checkAllModels}
+            </ActionButton>
+            <ActionButton disabled={rebuildProviders.isPending} onClick={onRebuildFromEnv} icon={<ArrowRight className="h-4 w-4" />}>
+              {copy.rebuildFromEnv}
+            </ActionButton>
+          </>
+        }
+      />
 
-      <Card className="border border-tremor-border/80 shadow-sm dark:border-dark-tremor-border/80">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricTile label={copy.providers} value={summary.totalProviders} icon={<ShieldCheck className="h-4 w-4" />} tone="neutral" hint={`${summary.activeProviders} ${copy.activeProviders}`} />
+        <MetricTile label={copy.enabledModels} value={summary.enabledModels} icon={<Cpu className="h-4 w-4" />} tone="primary" hint={`${summary.defaultModels} ${copy.defaults}`} />
+        <MetricTile label={copy.keys} value={summary.configuredKeys} icon={<KeyRound className="h-4 w-4" />} tone={summary.configuredKeys > 0 ? "success" : "danger"} hint={`${summary.totalProviders} ${copy.providers}`} />
+        <MetricTile label={copy.routes} value={summary.totalRoutes} icon={<GitBranch className="h-4 w-4" />} tone="info" hint={`${summary.runtimeReady} ready`} />
+      </div>
+
+      {operationError ? (
+        <AlertBox tone="danger">
+          <div className="flex gap-2">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>{mutationErrorText(operationError, lang)}</span>
+          </div>
+        </AlertBox>
+      ) : null}
+
+      <FilterToolbar>
+        <div className="relative min-w-[240px] flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-tremor-content-subtle" />
+          <input
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder={copy.searchPlaceholder}
+            className={cn(inputClass, "pl-9")}
+          />
+        </div>
+        <select
+          className="h-10 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm text-tremor-content-strong outline-none transition focus:border-tremor-brand-subtle focus:ring-2 focus:ring-tremor-brand-muted dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong"
+          value={healthFilter}
+          onChange={(event) => setHealthFilter(event.target.value as HealthFilter)}
+          aria-label={isZh ? "健康状态筛选" : "Health filter"}
+        >
+          <option value="all">{copy.all}</option>
+          <option value="healthy">{copy.healthy}</option>
+          <option value="attention">{copy.attention}</option>
+          <option value="checking">{copy.checking}</option>
+        </select>
+        <ActionButton tone="primary" onClick={openCreateProvider} icon={<Plus className="h-4 w-4" />}>{copy.newProvider}</ActionButton>
+        <ActionButton tone="primary" onClick={openCreateModel} icon={<Plus className="h-4 w-4" />}>{copy.newModel}</ActionButton>
+      </FilterToolbar>
+
+      <section className="space-y-3">
+        <div className="flex items-end justify-between gap-3">
           <div>
-            <Title className="text-base">{copy.workspaceFilters}</Title>
-            <Text className="mt-1 text-sm">{copy.workspaceFiltersDesc}</Text>
+            <h2 className="text-sm font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">{copy.providers}</h2>
+            <p className="text-sm text-tremor-content dark:text-dark-tremor-content">Inspect connectivity, credentials, and base endpoints.</p>
           </div>
-          <div className="flex flex-wrap gap-2 text-xs">
-            <Badge color="slate">{copy.filteredProviders}: {filteredProviders.length}</Badge>
-            <Badge color="blue">{copy.filteredModels}: {filteredModels.length}</Badge>
-            <Badge color="emerald">{copy.filteredRoutes}: {filteredRuntimeRoutes.length}</Badge>
-          </div>
+          <StatusBadge tone="neutral">{filteredProviders.length}</StatusBadge>
         </div>
-
-        <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-tremor-content-subtle dark:text-dark-tremor-content-subtle" />
-            <input
-              type="text"
-              placeholder={copy.searchPlaceholder}
-              className="w-full rounded-tremor-default border border-tremor-border bg-tremor-background py-2 pl-9 pr-3 text-sm text-tremor-content-emphasis outline-none transition focus:border-tremor-brand-subtle focus:ring-2 focus:ring-tremor-brand-muted dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-emphasis"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            {[
-              { key: "all", label: copy.all, activeCls: "border-slate-400 bg-slate-100 text-slate-800 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100" },
-              { key: "healthy", label: copy.healthy, activeCls: "border-emerald-400 bg-emerald-50 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950/35 dark:text-emerald-300" },
-              { key: "attention", label: copy.attention, activeCls: "border-rose-400 bg-rose-50 text-rose-700 dark:border-rose-700 dark:bg-rose-950/35 dark:text-rose-300" },
-              { key: "checking", label: copy.checking, activeCls: "border-amber-400 bg-amber-50 text-amber-700 dark:border-amber-700 dark:bg-amber-950/35 dark:text-amber-300" },
-            ].map((option) => (
-              <button
-                key={option.key}
-                type="button"
-                onClick={() => setHealthFilter(option.key as HealthFilter)}
-                className={cn(
-                  pillButtonCls,
-                  healthFilter === option.key
-                    ? option.activeCls
-                    : "border-tremor-border bg-white text-tremor-content hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content dark:hover:bg-dark-tremor-background-subtle",
-                )}
-              >
-                {healthFilter === option.key ? <CheckCircle2 className="h-3.5 w-3.5" /> : <CircleSlash className="h-3.5 w-3.5 opacity-70" />}
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </Card>
-
-      <section className="space-y-4" id="providers">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <Title className="text-base">{copy.providersTitle}</Title>
-            <Text className="mt-1 text-sm">{copy.providersDesc}</Text>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge color="emerald">{summary.activeProviders} {copy.activeProvidersMetric}</Badge>
-            <Badge color="blue">{summary.configuredKeys} {copy.keysMetric}</Badge>
-            <button
-              type="button"
-              onClick={() => setCompactProviders((old) => !old)}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300/70 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900/30 dark:text-slate-300"
-            >
-              {copy.cardDensity}: {compactProviders ? copy.compact : copy.detailed}
-            </button>
-          </div>
-        </div>
-
         {loadingProviders ? (
-          <Card>
-            <Text>{copy.loadingProviders}</Text>
-          </Card>
-        ) : filteredProviders.length === 0 ? (
-          <Card>
-            <Text>{copy.noProviders}</Text>
-          </Card>
+          <SkeletonRows />
         ) : (
-          <div className="grid gap-4 xl:grid-cols-2">
-            {filteredProviders.map((provider) => (
-              <Card key={provider.id} className="border border-tremor-border/80 shadow-sm dark:border-dark-tremor-border/80">
-                <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-                  <div className="space-y-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Title className="text-base">{provider.display_name}</Title>
-                      <Badge color="slate">{provider.provider_key}</Badge>
-                      <Badge color="blue">{provider.provider_name}</Badge>
-                    </div>
-                    <Text>{provider.api_style}</Text>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    <Badge color={provider.is_active ? "emerald" : "rose"}>
-                      {provider.is_active ? copy.active : copy.inactive}
-                    </Badge>
-                    {provider.rate_limit_active && (
-                      <Badge color="amber">{copy.cooldown} {formatDuration(provider.rate_limit_remaining_seconds, lang)}</Badge>
-                    )}
-                    <Badge color={statusColor(provider.last_check_status)}>{provider.last_check_status || "unknown"}</Badge>
-                  </div>
-                </div>
-
-                <div className={cn("mt-3 grid gap-2 sm:grid-cols-2", compactProviders ? "2xl:grid-cols-4" : "2xl:grid-cols-5")}>
-                  <DetailField label={copy.baseUrl} value={provider.base_url || "-"} mono />
-                  <DetailField label={copy.credential} value={provider.api_key_hint || copy.noCredential} mono />
-                  <DetailField label={copy.priority} value={provider.priority} />
-                  <DetailField label={copy.providerCount} value={modelCountByProvider.get(provider.id) ?? 0} />
-                  {!compactProviders && (
-                    <DetailField
-                      label={provider.rate_limit_active ? copy.cooldownUntil : copy.lastCheck}
-                      value={provider.rate_limit_active ? formatDateTime(provider.rate_limit_cooldown_until) : formatDateTime(provider.last_checked_at)}
-                    />
-                  )}
-                </div>
-
-                {!compactProviders && provider.rate_limit_count > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                    <Badge color="amber">{copy.rateLimitCount}: {provider.rate_limit_count}</Badge>
-                    {provider.last_rate_limit_at && <Badge color="slate">{copy.lastRateLimit}: {formatDateTime(provider.last_rate_limit_at)}</Badge>}
-                  </div>
-                )}
-
-                {!compactProviders && provider.last_check_message && (
-                  <div className="mt-4 rounded-2xl border border-tremor-border/80 bg-tremor-background-subtle/70 px-4 py-3 dark:border-dark-tremor-border/80 dark:bg-dark-tremor-background-subtle/70">
-                    <Text className="text-xs font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">{copy.lastMessage}</Text>
-                    <Text className="mt-1 text-sm">{provider.last_check_message}</Text>
-                  </div>
-                )}
-
-                <div className="mt-4 flex flex-wrap items-center gap-2">
-                  <button
-                    onClick={() => testProvider.mutate(provider.id)}
-                    className="rounded-xl border border-blue-300/70 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 dark:border-blue-900 dark:bg-blue-950/20 dark:text-blue-300"
-                  >
-                    {copy.test}
-                  </button>
-                  <button
-                    onClick={() => startEditProvider(provider.id)}
-                    className="rounded-xl border border-slate-300/70 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-900/30 dark:text-slate-300"
-                  >
-                    {copy.edit}
-                  </button>
-                  <button
-                    onClick={() =>
-                      updateProvider.mutate({
-                        providerId: provider.id,
-                        payload: { is_active: !provider.is_active },
-                      })
-                    }
-                    className="rounded-xl border border-amber-300/70 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-300"
-                  >
-                    {provider.is_active ? copy.disable : copy.enable}
-                  </button>
-                  <button
-                    onClick={() => onDeleteProvider(provider)}
-                    disabled={deleteProvider.isPending && deletingProviderId === provider.id}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-rose-300/70 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 disabled:opacity-60 dark:border-rose-900 dark:bg-rose-950/20 dark:text-rose-300"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    {deleteProvider.isPending && deletingProviderId === provider.id ? copy.deleting : copy.deleteProvider}
-                  </button>
-                </div>
-
-                {editingProviderId === provider.id && (
-                  <form onSubmit={saveProviderEdit} className="mt-4 grid gap-3 rounded-2xl border border-slate-200 p-4 dark:border-slate-700/80 md:grid-cols-2">
-                    <input
-                      className={inputCls}
-                      placeholder={copy.displayName}
-                      value={providerEditForm.display_name}
-                      onChange={(e) => setProviderEditForm((s) => ({ ...s, display_name: e.target.value }))}
-                      required
-                    />
-                    <select
-                      className={inputCls}
-                      value={providerEditForm.api_style}
-                      onChange={(e) => setProviderEditForm((s) => ({ ...s, api_style: e.target.value }))}
-                    >
-                      <option value="openai_compatible">openai_compatible</option>
-                      <option value="anthropic">anthropic</option>
-                    </select>
-                    <input
-                      className={cn(inputCls, "md:col-span-2")}
-                      placeholder={copy.baseUrl}
-                      value={providerEditForm.base_url}
-                      onChange={(e) => setProviderEditForm((s) => ({ ...s, base_url: e.target.value }))}
-                    />
-                    <input
-                      className={inputCls}
-                      placeholder={copy.organizationOptional}
-                      value={providerEditForm.organization}
-                      onChange={(e) => setProviderEditForm((s) => ({ ...s, organization: e.target.value }))}
-                    />
-                    <input
-                      className={inputCls}
-                      type="number"
-                      placeholder={copy.priority}
-                      value={providerEditForm.priority}
-                      onChange={(e) => setProviderEditForm((s) => ({ ...s, priority: Number(e.target.value) }))}
-                    />
-                    <input
-                      className={cn(inputCls, "md:col-span-2")}
-                      type="password"
-                      placeholder={copy.newApiKey}
-                      value={providerEditForm.api_key_new}
-                      onChange={(e) => setProviderEditForm((s) => ({ ...s, api_key_new: e.target.value }))}
-                    />
-                    <label className="flex items-center gap-2 text-xs text-tremor-content-emphasis dark:text-dark-tremor-content-emphasis">
-                      <input
-                        type="checkbox"
-                        checked={providerEditForm.clear_api_key}
-                        onChange={(e) => setProviderEditForm((s) => ({ ...s, clear_api_key: e.target.checked }))}
-                      />
-                      {copy.clearApiKey}
-                    </label>
-                    <label className="flex items-center gap-2 text-xs text-tremor-content-emphasis dark:text-dark-tremor-content-emphasis">
-                      <input
-                        type="checkbox"
-                        checked={providerEditForm.is_active}
-                        onChange={(e) => setProviderEditForm((s) => ({ ...s, is_active: e.target.checked }))}
-                      />
-                      {copy.providerIsActive}
-                    </label>
-                    <div className="md:col-span-2 flex items-center gap-2 pt-1">
-                      <button
-                        type="submit"
-                        disabled={updateProvider.isPending}
-                        className="rounded-xl bg-slate-700 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
-                      >
-                        {copy.save}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setEditingProviderId(null)}
-                        className="rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300"
-                      >
-                        {copy.cancel}
-                      </button>
-                    </div>
-                  </form>
-                )}
-              </Card>
-            ))}
-          </div>
+          <DataTable
+            columns={providerColumns}
+            rows={filteredProviders}
+            getRowKey={(provider) => provider.id}
+            emptyState={<EmptyState icon={<ShieldCheck className="h-10 w-10" />} title={copy.noProviders} />}
+          />
         )}
       </section>
 
-      <section className="space-y-4" id="models">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <section className="space-y-3">
+        <div className="flex items-end justify-between gap-3">
           <div>
-            <Title className="text-base">{copy.modelsTitle}</Title>
-            <Text className="mt-1 text-sm">{copy.modelsDesc}</Text>
+            <h2 className="text-sm font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">{copy.models}</h2>
+            <p className="text-sm text-tremor-content dark:text-dark-tremor-content">Review default routes, enablement state, and runtime parameters.</p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge color="emerald">{summary.enabledModels} {copy.modelsMetric}</Badge>
-            <Badge color="blue">{summary.defaultModels} {copy.defaultsMetric}</Badge>
-            <button
-              type="button"
-              onClick={() => setCompactModels((old) => !old)}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300/70 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900/30 dark:text-slate-300"
-            >
-              {copy.cardDensity}: {compactModels ? copy.compact : copy.detailed}
-            </button>
-          </div>
+          <StatusBadge tone="neutral">{filteredModels.length}</StatusBadge>
         </div>
-
         {loadingModels ? (
-          <Card>
-            <Text>{copy.loadingModels}</Text>
-          </Card>
-        ) : filteredModels.length === 0 ? (
-          <Card>
-            <Text>{copy.noModels}</Text>
-          </Card>
+          <SkeletonRows />
         ) : (
-          <div className="grid gap-4 xl:grid-cols-2">
-            {filteredModels.map((model) => (
-              <Card key={model.id} className="border border-tremor-border/80 shadow-sm dark:border-dark-tremor-border/80">
-                <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-                  <div className="space-y-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Title className="text-base">{model.display_name}</Title>
-                      <Badge color="slate">{model.model_name}</Badge>
-                      <Badge color="blue">{model.provider_key}</Badge>
-                    </div>
-                    <Text className="text-sm">{model.provider_name}</Text>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    {model.is_default && <Badge color="emerald">{copy.defaultModel}</Badge>}
-                    <Badge color={model.is_enabled ? "emerald" : "rose"}>
-                      {model.is_enabled ? copy.enabled : copy.disabled}
-                    </Badge>
-                    {model.rate_limit_active && (
-                      <Badge color="amber">{copy.cooldown} {formatDuration(model.rate_limit_remaining_seconds, lang)}</Badge>
-                    )}
-                    <Badge color={statusColor(model.last_check_status)}>{model.last_check_status || "unknown"}</Badge>
-                  </div>
-                </div>
-
-                <div className={cn("mt-3 grid gap-2 sm:grid-cols-2", compactModels ? "2xl:grid-cols-3" : "2xl:grid-cols-6")}>
-                  <DetailField label={copy.modelKey} value={model.model_key} mono />
-                  <DetailField label={copy.modelType} value={model.model_type || "chat"} />
-                  {!compactModels && <DetailField label={copy.apiStyle} value={model.api_style || copy.inheritProvider} />}
-                  {!compactModels && <DetailField label={copy.temperature} value={model.temperature == null ? "-" : model.temperature} />}
-                  {!compactModels && <DetailField label={copy.maxTokens} value={model.max_tokens == null ? "-" : model.max_tokens} />}
-                  <DetailField label={copy.priority} value={model.priority} />
-                </div>
-
-                {!compactModels && model.rate_limit_count > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                    <Badge color="amber">{copy.rateLimitCount}: {model.rate_limit_count}</Badge>
-                    {model.last_rate_limit_at && <Badge color="slate">{copy.lastRateLimit}: {formatDateTime(model.last_rate_limit_at)}</Badge>}
-                    {model.rate_limit_active && <Badge color="amber">{copy.cooldownUntil}: {formatDateTime(model.rate_limit_cooldown_until)}</Badge>}
-                  </div>
-                )}
-
-                {!compactModels && model.last_check_message && (
-                  <div className="mt-4 rounded-2xl border border-tremor-border/80 bg-tremor-background-subtle/70 px-4 py-3 dark:border-dark-tremor-border/80 dark:bg-dark-tremor-background-subtle/70">
-                    <Text className="text-xs font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">{copy.lastMessage}</Text>
-                    <Text className="mt-1 text-sm">{model.last_check_message}</Text>
-                  </div>
-                )}
-
-                <div className="mt-4 flex flex-wrap items-center gap-2">
-                  <button
-                    onClick={() => testModel.mutate(model.id)}
-                    className="rounded-xl border border-blue-300/70 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 dark:border-blue-900 dark:bg-blue-950/20 dark:text-blue-300"
-                  >
-                    {copy.test}
-                  </button>
-                  <button
-                    onClick={() => startEditModel(model.id)}
-                    className="rounded-xl border border-slate-300/70 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-900/30 dark:text-slate-300"
-                  >
-                    {copy.edit}
-                  </button>
-                  <button
-                    onClick={() =>
-                      updateModel.mutate({
-                        modelId: model.id,
-                        payload: { is_enabled: !model.is_enabled },
-                      })
-                    }
-                    className="rounded-xl border border-amber-300/70 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-300"
-                  >
-                    {model.is_enabled ? copy.disable : copy.enable}
-                  </button>
-                  {!model.is_default && (
-                    <button
-                      onClick={() =>
-                        updateModel.mutate({
-                          modelId: model.id,
-                          payload: { is_default: true },
-                        })
-                      }
-                      className="rounded-xl border border-emerald-300/70 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/20 dark:text-emerald-300"
-                    >
-                      {copy.setDefault}
-                    </button>
-                  )}
-                  <button
-                    onClick={() => onDeleteModel(model)}
-                    disabled={deleteModel.isPending && deletingModelId === model.id}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-rose-300/70 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 disabled:opacity-60 dark:border-rose-900 dark:bg-rose-950/20 dark:text-rose-300"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    {deleteModel.isPending && deletingModelId === model.id ? copy.deleting : copy.deleteModel}
-                  </button>
-                </div>
-
-                {editingModelId === model.id && (
-                  <form onSubmit={saveModelEdit} className="mt-4 grid gap-3 rounded-2xl border border-slate-200 p-4 dark:border-slate-700/80 md:grid-cols-2">
-                    <input
-                      className={inputCls}
-                      placeholder={copy.displayName}
-                      value={modelEditForm.display_name}
-                      onChange={(e) => setModelEditForm((s) => ({ ...s, display_name: e.target.value }))}
-                      required
-                    />
-                    <input
-                      className={inputCls}
-                      placeholder={copy.modelTypePlaceholder}
-                      value={modelEditForm.model_type}
-                      onChange={(e) => setModelEditForm((s) => ({ ...s, model_type: e.target.value }))}
-                    />
-                    <input
-                      className={cn(inputCls, "md:col-span-2")}
-                      placeholder={`${copy.apiStyle} (${copy.inheritProvider})`}
-                      value={modelEditForm.api_style}
-                      onChange={(e) => setModelEditForm((s) => ({ ...s, api_style: e.target.value }))}
-                    />
-                    <input
-                      className={inputCls}
-                      type="number"
-                      step="0.01"
-                      placeholder={copy.temperaturePlaceholder}
-                      value={modelEditForm.temperature}
-                      onChange={(e) => setModelEditForm((s) => ({ ...s, temperature: e.target.value }))}
-                    />
-                    <input
-                      className={inputCls}
-                      type="number"
-                      placeholder={copy.maxTokensPlaceholder}
-                      value={modelEditForm.max_tokens}
-                      onChange={(e) => setModelEditForm((s) => ({ ...s, max_tokens: e.target.value }))}
-                    />
-                    <input
-                      className={inputCls}
-                      type="number"
-                      placeholder={copy.priority}
-                      value={modelEditForm.priority}
-                      onChange={(e) => setModelEditForm((s) => ({ ...s, priority: Number(e.target.value) }))}
-                    />
-                    <div className="rounded-2xl border border-dashed border-tremor-border p-3 dark:border-dark-tremor-border md:col-span-1">
-                      <Text className="text-xs leading-6">{copy.modelFormHint}</Text>
-                    </div>
-                    <label className="flex items-center gap-2 text-xs text-tremor-content-emphasis dark:text-dark-tremor-content-emphasis md:col-span-2">
-                      <input
-                        type="checkbox"
-                        checked={modelEditForm.is_enabled}
-                        onChange={(e) => setModelEditForm((s) => ({ ...s, is_enabled: e.target.checked }))}
-                      />
-                      {copy.modelEnabled}
-                    </label>
-                    <label className="flex items-center gap-2 text-xs text-tremor-content-emphasis dark:text-dark-tremor-content-emphasis md:col-span-2">
-                      <input
-                        type="checkbox"
-                        checked={modelEditForm.is_default}
-                        onChange={(e) => setModelEditForm((s) => ({ ...s, is_default: e.target.checked }))}
-                      />
-                      {copy.setDefaultModel}
-                    </label>
-                    <div className="md:col-span-2 flex items-center gap-2 pt-1">
-                      <button
-                        type="submit"
-                        disabled={updateModel.isPending}
-                        className="rounded-xl bg-slate-700 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60"
-                      >
-                        {copy.save}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setEditingModelId(null)}
-                        className="rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 dark:border-slate-700 dark:text-slate-300"
-                      >
-                        {copy.cancel}
-                      </button>
-                    </div>
-                  </form>
-                )}
-              </Card>
-            ))}
-          </div>
+          <DataTable
+            columns={modelColumns}
+            rows={filteredModels}
+            getRowKey={(model) => model.id}
+            emptyState={<EmptyState icon={<Cpu className="h-10 w-10" />} title={copy.noModels} />}
+          />
         )}
       </section>
 
-      <section id="runtime" className="space-y-3">
-        <Card className="border border-tremor-border/80 shadow-sm dark:border-dark-tremor-border/80">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <Title className="text-base">{copy.runtimeTitle}</Title>
-              <Text className="mt-1 text-sm">{copy.runtimeDesc}</Text>
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowRuntime((old) => !old)}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300/70 bg-slate-50 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900/30 dark:text-slate-300"
-            >
-              <GitBranch className="h-3.5 w-3.5" />
-              {showRuntime ? copy.collapseRuntime : copy.expandRuntime}
-              {showRuntime ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-            </button>
+      <section className="space-y-3">
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">{copy.routes}</h2>
+            <p className="text-sm text-tremor-content dark:text-dark-tremor-content">The system tries routes from top to bottom based on priority.</p>
           </div>
-        </Card>
-
-        {showRuntime && (
-          <Card className="border border-tremor-border/80 shadow-sm dark:border-dark-tremor-border/80">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-              <div className="w-full max-w-sm rounded-2xl border border-tremor-border/70 bg-tremor-background-subtle/70 p-4 dark:border-dark-tremor-border/70 dark:bg-dark-tremor-background-subtle/70">
-                <div className="flex items-center justify-between text-xs font-medium text-tremor-content dark:text-dark-tremor-content">
-                  <span>{copy.routeCoverage}</span>
-                  <span>{summary.routeCoverage}%</span>
-                </div>
-                <ProgressBar
-                  value={summary.routeCoverage}
-                  color={summary.routeCoverage >= 100 ? "emerald" : summary.routeCoverage >= 60 ? "amber" : "rose"}
-                  className="mt-3"
-                />
-                <Text className="mt-2 text-xs">
-                  {summary.runtimeReady}/{summary.totalRoutes} {copy.routeReady}
-                </Text>
-              </div>
-            </div>
-
-            <div className="mt-4 space-y-3">
-              {loadingRuntimeRoutes ? (
-                <Text>{copy.loadingRoutes}</Text>
-              ) : runtimeRoutesError ? (
-                <div className="rounded-2xl border border-rose-200 bg-rose-50/90 px-4 py-3 dark:border-rose-900/60 dark:bg-rose-950/30">
-                  <Text className="text-sm font-medium text-rose-700 dark:text-rose-300">{copy.runtimeErrorTitle}</Text>
-                  <Text className="mt-1 text-sm text-rose-700 dark:text-rose-300">{queryErrorText(runtimeRoutesError, lang)}</Text>
-                </div>
-              ) : filteredRuntimeRoutes.length === 0 ? (
-                <Text>{copy.noRoutes}</Text>
-              ) : (
-                filteredRuntimeRoutes.map((route, index) => (
-                  <div
-                    key={route.model_key}
-                    className="rounded-2xl border border-tremor-border/80 bg-white/80 px-4 py-4 shadow-sm dark:border-dark-tremor-border/80 dark:bg-white/5"
-                  >
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                      <div className="flex items-start gap-3">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white dark:bg-slate-100 dark:text-slate-900">
-                          {index + 1}
-                        </div>
-                        <div>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <Title className="text-base">{route.model_name}</Title>
-                            {index === 0 && <Badge color="emerald">{copy.preferredRoute}</Badge>}
-                            <Badge color="blue">{route.provider_key}</Badge>
-                            <Badge color="slate">{route.api_style}</Badge>
-                          </div>
-                          <Text className="mt-1">{route.provider_name}</Text>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge color={route.has_api_key ? "emerald" : "rose"}>
-                          {route.has_api_key ? copy.routeReady : copy.noCredential}
-                        </Badge>
-                        <Badge color={route.available_for_routing ? "emerald" : route.rate_limit_active ? "amber" : "slate"}>
-                          {route.available_for_routing ? copy.routable : route.rate_limit_active ? copy.cooldown : copy.disabled}
-                        </Badge>
-                        {route.rate_limit_active && (
-                          <Badge color="amber">{formatDuration(route.rate_limit_remaining_seconds, lang)}</Badge>
-                        )}
-                        {route.priority != null && <Badge color="amber">P{route.priority}</Badge>}
-                      </div>
-                    </div>
-
-                    <div className="mt-4 grid gap-3 md:grid-cols-4">
-                      <DetailField label={copy.modelKey} value={route.model_key} mono />
-                      <DetailField label={copy.baseUrl} value={route.base_url || "-"} mono />
-                      <DetailField label={copy.credential} value={route.api_key_hint || copy.noCredential} mono />
-                      <DetailField label={copy.lastStatus} value={route.last_check_status || "unknown"} />
-                    </div>
-
-                    {route.rate_limit_count > 0 && (
-                      <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                        <Badge color="amber">{copy.rateLimitCount}: {route.rate_limit_count}</Badge>
-                        {route.last_rate_limit_at && <Badge color="slate">{copy.lastRateLimit}: {formatDateTime(route.last_rate_limit_at)}</Badge>}
-                        {route.rate_limit_active && <Badge color="amber">{copy.cooldownUntil}: {formatDateTime(route.rate_limit_cooldown_until)}</Badge>}
-                      </div>
-                    )}
-
-                    <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-tremor-background-subtle px-3 py-1 text-xs text-tremor-content dark:bg-dark-tremor-background-subtle dark:text-dark-tremor-content">
-                      <GitBranch className="h-3.5 w-3.5" />
-                      {route.rate_limit_active ? copy.routeCoolingHint : copy.routeHint}
-                      <ArrowRight className="h-3.5 w-3.5 opacity-70" />
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </Card>
-        )}
-      </section>
-
-      {toast && (
-        <div className="pointer-events-none fixed bottom-5 right-5 z-50">
-          <div
-            className={cn(
-              "max-w-sm rounded-xl border px-4 py-3 text-sm shadow-lg",
-              toast.type === "success"
-                ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/50 dark:bg-emerald-950/60 dark:text-emerald-200"
-                : "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/60 dark:text-rose-200",
-            )}
-            role="status"
-            aria-live="polite"
-          >
-            {toast.message}
-          </div>
+          <StatusBadge tone={summary.routeCoverage >= 80 ? "success" : summary.routeCoverage >= 40 ? "warning" : "danger"}>
+            {summary.routeCoverage}%
+          </StatusBadge>
         </div>
-      )}
+        {loadingRuntimeRoutes ? (
+          <SkeletonRows />
+        ) : runtimeRoutesError ? (
+          <AlertBox tone="danger">{queryErrorText(runtimeRoutesError, lang)}</AlertBox>
+        ) : (
+          <DataTable
+            columns={routeColumns}
+            rows={filteredRuntimeRoutes}
+            getRowKey={(route) => route.model_key}
+            emptyState={<EmptyState icon={<GitBranch className="h-10 w-10" />} title={copy.noRoutes} />}
+          />
+        )}
+      </section>
+
+      <DetailDrawer
+        open={providerDrawerMode !== null}
+        title={providerDrawerMode === "edit" ? copy.editProvider : copy.newProvider}
+        subtitle={providerDrawerMode === "edit" ? providerForm.provider_key : undefined}
+        onClose={() => setProviderDrawerMode(null)}
+      >
+        <form className="space-y-5" onSubmit={submitProvider}>
+          <FormSection title={copy.providers}>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label={copy.providerKey}>
+                <input className={inputClass} value={providerForm.provider_key} disabled={providerDrawerMode === "edit"} required onChange={(event) => setProviderForm((prev) => ({ ...prev, provider_key: event.target.value }))} />
+              </Field>
+              <Field label={copy.providerName}>
+                <input className={inputClass} value={providerForm.provider_name} disabled={providerDrawerMode === "edit"} required onChange={(event) => setProviderForm((prev) => ({ ...prev, provider_name: event.target.value }))} />
+              </Field>
+              <Field label={copy.displayName}>
+                <input className={inputClass} value={providerForm.display_name} onChange={(event) => setProviderForm((prev) => ({ ...prev, display_name: event.target.value }))} />
+              </Field>
+              <Field label={copy.apiStyle}>
+                <select className={inputClass} value={providerForm.api_style} onChange={(event) => setProviderForm((prev) => ({ ...prev, api_style: event.target.value }))}>
+                  <option value="openai_compatible">openai_compatible</option>
+                  <option value="anthropic">anthropic</option>
+                </select>
+              </Field>
+              <Field label={copy.baseUrl}>
+                <input className={inputClass} value={providerForm.base_url} onChange={(event) => setProviderForm((prev) => ({ ...prev, base_url: event.target.value }))} />
+              </Field>
+              <Field label={copy.organization}>
+                <input className={inputClass} value={providerForm.organization} onChange={(event) => setProviderForm((prev) => ({ ...prev, organization: event.target.value }))} />
+              </Field>
+              <Field label={copy.priority}>
+                <input type="number" className={inputClass} value={providerForm.priority} onChange={(event) => setProviderForm((prev) => ({ ...prev, priority: Number(event.target.value) }))} />
+              </Field>
+              <Field label={copy.apiKey}>
+                <input type="password" className={inputClass} value={providerForm.api_key} onChange={(event) => setProviderForm((prev) => ({ ...prev, api_key: event.target.value }))} />
+              </Field>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <label className="flex min-h-12 cursor-pointer items-center gap-3 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 py-2 text-sm text-tremor-content-strong dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong">
+                <input type="checkbox" checked={providerForm.is_active} onChange={(event) => setProviderForm((prev) => ({ ...prev, is_active: event.target.checked }))} />
+                {copy.providerActive}
+              </label>
+              {providerDrawerMode === "edit" ? (
+                <label className="flex min-h-12 cursor-pointer items-center gap-3 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 py-2 text-sm text-tremor-content-strong dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong">
+                  <input type="checkbox" checked={providerForm.clear_api_key} onChange={(event) => setProviderForm((prev) => ({ ...prev, clear_api_key: event.target.checked }))} />
+                  {copy.clearApiKey}
+                </label>
+              ) : null}
+            </div>
+          </FormSection>
+          <div className="flex justify-end gap-2">
+            <ActionButton onClick={resetProviderForm}>{copy.reset}</ActionButton>
+            <ActionButton type="submit" tone="primary" disabled={createProvider.isPending || updateProvider.isPending}>
+              {providerDrawerMode === "edit" ? copy.save : copy.create}
+            </ActionButton>
+          </div>
+        </form>
+      </DetailDrawer>
+
+      <DetailDrawer
+        open={modelDrawerMode !== null}
+        title={modelDrawerMode === "edit" ? copy.editModel : copy.newModel}
+        subtitle={modelDrawerMode === "edit" ? modelForm.model_name : undefined}
+        onClose={() => setModelDrawerMode(null)}
+      >
+        <form className="space-y-5" onSubmit={submitModel}>
+          <FormSection title={copy.models}>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label={copy.selectProvider}>
+                <select className={inputClass} value={modelForm.provider_id || ""} required disabled={modelDrawerMode === "edit"} onChange={(event) => setModelForm((prev) => ({ ...prev, provider_id: Number(event.target.value) }))}>
+                  <option value="">{copy.selectProvider}</option>
+                  {providerOptions.map((provider) => <option key={provider.id} value={provider.id}>{provider.label}</option>)}
+                </select>
+              </Field>
+              <Field label={copy.modelName}>
+                <input className={inputClass} value={modelForm.model_name} disabled={modelDrawerMode === "edit"} required onChange={(event) => setModelForm((prev) => ({ ...prev, model_name: event.target.value }))} />
+              </Field>
+              <Field label={copy.displayName}>
+                <input className={inputClass} value={modelForm.display_name} onChange={(event) => setModelForm((prev) => ({ ...prev, display_name: event.target.value }))} />
+              </Field>
+              <Field label={copy.modelType}>
+                <input className={inputClass} value={modelForm.model_type} onChange={(event) => setModelForm((prev) => ({ ...prev, model_type: event.target.value }))} />
+              </Field>
+              <Field label={copy.apiStyle}>
+                <input className={inputClass} value={modelForm.api_style} onChange={(event) => setModelForm((prev) => ({ ...prev, api_style: event.target.value }))} />
+              </Field>
+              <Field label={copy.priority}>
+                <input type="number" className={inputClass} value={modelForm.priority} onChange={(event) => setModelForm((prev) => ({ ...prev, priority: Number(event.target.value) }))} />
+              </Field>
+              <Field label={copy.temperature}>
+                <input type="number" step="0.01" className={inputClass} value={modelForm.temperature} onChange={(event) => setModelForm((prev) => ({ ...prev, temperature: event.target.value }))} />
+              </Field>
+              <Field label={copy.maxTokens}>
+                <input type="number" className={inputClass} value={modelForm.max_tokens} onChange={(event) => setModelForm((prev) => ({ ...prev, max_tokens: event.target.value }))} />
+              </Field>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <label className="flex min-h-12 cursor-pointer items-center gap-3 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 py-2 text-sm text-tremor-content-strong dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong">
+                <input type="checkbox" checked={modelForm.is_enabled} onChange={(event) => setModelForm((prev) => ({ ...prev, is_enabled: event.target.checked }))} />
+                {copy.modelEnabled}
+              </label>
+              <label className="flex min-h-12 cursor-pointer items-center gap-3 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 py-2 text-sm text-tremor-content-strong dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong">
+                <input type="checkbox" checked={modelForm.is_default} onChange={(event) => setModelForm((prev) => ({ ...prev, is_default: event.target.checked }))} />
+                {copy.defaultModel}
+              </label>
+            </div>
+          </FormSection>
+          <div className="flex justify-end gap-2">
+            <ActionButton onClick={resetModelForm}>{copy.reset}</ActionButton>
+            <ActionButton type="submit" tone="primary" disabled={createModel.isPending || updateModel.isPending}>
+              {modelDrawerMode === "edit" ? copy.save : copy.create}
+            </ActionButton>
+          </div>
+        </form>
+      </DetailDrawer>
+    </div>
+  );
+}
+
+function SkeletonRows() {
+  return (
+    <div className="space-y-3">
+      {[1, 2, 3].map((item) => (
+        <div key={item} className="h-16 animate-pulse rounded-tremor-default border border-tremor-border bg-tremor-background dark:border-dark-tremor-border dark:bg-dark-tremor-background" />
+      ))}
     </div>
   );
 }

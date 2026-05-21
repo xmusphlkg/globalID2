@@ -11,6 +11,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from src.knowledge.citations import normalize_knowledge_citations
+
 
 DISCLAIMER_EN = (
     "This brief is for surveillance and public information only. "
@@ -144,6 +146,7 @@ class SourceGroundedBriefGenerator:
                 "version": 1,
             },
         }
+        payload = normalize_knowledge_citations(payload, marker_mode="position")
         validation = self.validate(payload)
         if not validation.ok:
             payload["status"] = "requires_review"
@@ -190,18 +193,32 @@ class SourceGroundedBriefGenerator:
         return "low"
 
     @staticmethod
-    def _source_attribution(sources: list[dict[str, Any]]) -> list[dict[str, str | None]]:
+    def _source_attribution(sources: list[dict[str, Any]]) -> list[dict[str, Any]]:
         attribution = []
         for src in sources:
+            metadata = src.get("metadata") if isinstance(src.get("metadata"), dict) else {}
             attribution.append(
                 {
                     "id": src.get("id"),
+                    "source_id": src.get("source_id") or src.get("id"),
                     "source_name": src.get("source_name"),
                     "source_type": src.get("source_type"),
                     "title": src.get("title"),
                     "url": src.get("url"),
                     "resolved_url": src.get("resolved_url") or src.get("url"),
                     "license": src.get("license"),
+                    "fetched_at": src.get("fetched_at"),
+                    "pmid": metadata.get("pmid") or src.get("pmid"),
+                    "doi": metadata.get("doi") or src.get("doi"),
+                    "first_author": metadata.get("first_author") or src.get("first_author"),
+                    "journal": metadata.get("journal") or src.get("journal"),
+                    "pub_date": metadata.get("pub_date") or src.get("pub_date"),
+                    "container_title": metadata.get("container_title") or src.get("container_title"),
+                    "publisher": metadata.get("publisher") or src.get("publisher"),
+                    "year": metadata.get("year") or src.get("year"),
+                    "provider": metadata.get("provider") or src.get("provider"),
+                    "content_kind": metadata.get("content_kind") or src.get("content_kind"),
+                    "metadata": metadata,
                 }
             )
         return attribution

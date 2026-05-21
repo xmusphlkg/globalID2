@@ -4,22 +4,22 @@
 @theme {
   --font-sans: "IBM Plex Sans", sans-serif;
   --color-tremor-brand: #0f766e;
-  --color-tremor-brand-muted: #99f6e4;
-  --color-tremor-brand-subtle: #14b8a6;
+  --color-tremor-brand-muted: #ccfbf1;
+  --color-tremor-brand-subtle: #2dd4bf;
   --color-tremor-brand-inverted: #ffffff;
 
-  --color-tremor-background: #fcfdfc;
-  --color-tremor-background-subtle: #f3f7f5;
-  --color-tremor-background-muted: #e8f0ec;
-  --color-tremor-background-emphasis: #17322e;
+  --color-tremor-background: #ffffff;
+  --color-tremor-background-subtle: #f6f8fa;
+  --color-tremor-background-muted: #eef2f4;
+  --color-tremor-background-emphasis: #172026;
 
-  --color-tremor-border: #d7e3dd;
-  --color-tremor-ring: #9ec9be;
+  --color-tremor-border: #d9e1e5;
+  --color-tremor-ring: #8bc7bd;
 
-  --color-tremor-content: #4f6b64;
-  --color-tremor-content-subtle: #738a84;
-  --color-tremor-content-emphasis: #25423d;
-  --color-tremor-content-strong: #0f2a25;
+  --color-tremor-content: #4b5f68;
+  --color-tremor-content-subtle: #71828a;
+  --color-tremor-content-emphasis: #263942;
+  --color-tremor-content-strong: #17262d;
   --color-tremor-content-inverted: #ffffff;
 
   --color-dark-tremor-brand: #3b82f6;
@@ -65,10 +65,7 @@ body {
   @apply bg-tremor-background-subtle;
   color: var(--color-tremor-content-strong);
   font-family: var(--font-sans);
-  background-image:
-    radial-gradient(circle at top left, rgba(20, 184, 166, 0.08), transparent 24rem),
-    radial-gradient(circle at top right, rgba(13, 148, 136, 0.06), transparent 20rem),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(243, 247, 245, 0.96));
+  background: var(--color-tremor-background-subtle);
 }
 
 a {
@@ -80,22 +77,6 @@ a {
 }
 
 .glass-panel {
-  background: rgba(252, 253, 252, 0.78);
-  backdrop-filter: blur(10px);
-}
-
-.page-intro {
-  position: relative;
-  overflow: hidden;
-}
-
-.page-intro::after {
-  content: "";
-  position: absolute;
-  inset: auto -4rem -4rem auto;
-  width: 12rem;
-  height: 12rem;
-  border-radius: 9999px;
-  background: radial-gradient(circle, rgba(20, 184, 166, 0.16), transparent 70%);
-  pointer-events: none;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(8px);
 }

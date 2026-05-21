@@ -387,7 +387,7 @@ export function TaskDetailPanel({
       {runsByDisease.length > 0 && (
         <Card className="mb-3 border-tremor-border/80 bg-white/80 px-3 py-3 dark:border-dark-tremor-border/80 dark:bg-white/5">
           <div className="flex flex-wrap items-center gap-2">
-            <Text className="text-xs font-medium uppercase tracking-wide text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+            <Text className="text-xs font-medium uppercase text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
               Section Execution
             </Text>
             <Badge color="emerald">completed {runSummary.completed}</Badge>
@@ -396,7 +396,7 @@ export function TaskDetailPanel({
           </div>
           <div className="mt-3 space-y-3">
             {runsByDisease.map((group) => (
-              <div key={group.diseaseName} className="rounded-lg border border-tremor-border bg-tremor-background px-3 py-3 dark:border-dark-tremor-border dark:bg-dark-tremor-background">
+              <div key={group.diseaseName} className="rounded-tremor-default border border-tremor-border bg-tremor-background px-3 py-3 dark:border-dark-tremor-border dark:bg-dark-tremor-background">
                 <div className="flex flex-wrap items-center gap-2">
                   <Text className="font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">{group.diseaseName}</Text>
                   <Badge color="slate">{group.runs.length} runs</Badge>
@@ -412,19 +412,19 @@ export function TaskDetailPanel({
                       </div>
                       <div className="mt-2 grid gap-2 sm:grid-cols-2">
                         <div>
-                          <Text className="text-[10px] uppercase tracking-wide text-tremor-content-subtle dark:text-dark-tremor-content-subtle">Tokens</Text>
+                          <Text className="text-[10px] uppercase text-tremor-content-subtle dark:text-dark-tremor-content-subtle">Tokens</Text>
                           <Text className="text-xs font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">{tokenTotal(run.token_usage)}</Text>
                         </div>
                         <div>
-                          <Text className="text-[10px] uppercase tracking-wide text-tremor-content-subtle dark:text-dark-tremor-content-subtle">Quality</Text>
+                          <Text className="text-[10px] uppercase text-tremor-content-subtle dark:text-dark-tremor-content-subtle">Quality</Text>
                           <Text className="text-xs font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">{qualityOverall(run.quality_scores)}</Text>
                         </div>
                         <div>
-                          <Text className="text-[10px] uppercase tracking-wide text-tremor-content-subtle dark:text-dark-tremor-content-subtle">Revisions</Text>
+                          <Text className="text-[10px] uppercase text-tremor-content-subtle dark:text-dark-tremor-content-subtle">Revisions</Text>
                           <Text className="text-xs font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">{run.revision_count}</Text>
                         </div>
                         <div>
-                          <Text className="text-[10px] uppercase tracking-wide text-tremor-content-subtle dark:text-dark-tremor-content-subtle">Started</Text>
+                          <Text className="text-[10px] uppercase text-tremor-content-subtle dark:text-dark-tremor-content-subtle">Started</Text>
                           <Text className="text-xs font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">{formatDateTime(run.started_at)}</Text>
                         </div>
                       </div>
@@ -443,7 +443,7 @@ export function TaskDetailPanel({
       {latestEntry && (
         <Card className="mb-3 border-tremor-border/80 bg-white/80 px-3 py-3 dark:border-dark-tremor-border/80 dark:bg-white/5">
           <div className="flex flex-wrap items-center gap-2">
-            <Text className="text-xs font-medium uppercase tracking-wide text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+            <Text className="text-xs font-medium uppercase text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
               Latest Update
             </Text>
             <Badge color={entryBadge[latestEntry.entry_type] ?? "slate"}>{latestEntry.entry_type}</Badge>
@@ -457,7 +457,7 @@ export function TaskDetailPanel({
       )}
 
       {timelineEntries.length > 0 ? (
-        <div className="max-h-[34rem] overflow-y-auto rounded-lg border border-tremor-border bg-tremor-background-subtle px-3 py-3 dark:border-dark-tremor-border dark:bg-dark-tremor-background-subtle">
+        <div className="max-h-[34rem] overflow-y-auto rounded-tremor-default border border-tremor-border bg-tremor-background-subtle px-3 py-3 dark:border-dark-tremor-border dark:bg-dark-tremor-background-subtle">
           {timelineEntries.map((entry, index) => {
             const content = entry.content?.trim() ? entry.content : null;
             const preview = logDisplayMode === "default" ? summarizeContent(content) : null;
@@ -509,7 +509,7 @@ export function TaskDetailPanel({
                       <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                         {structuredRows.map((row) => (
                           <div key={`${entry.id}-${row.label}`} className="rounded-md border border-tremor-border bg-tremor-background px-2 py-1.5 dark:border-dark-tremor-border dark:bg-dark-tremor-background">
-                            <Text className="text-[10px] uppercase tracking-wide text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{row.label}</Text>
+                            <Text className="text-[10px] uppercase text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{row.label}</Text>
                             <Text className="mt-1 text-xs font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">{row.value}</Text>
                           </div>
                         ))}
@@ -534,7 +534,7 @@ export function TaskDetailPanel({
                         </summary>
                         {entry.prompt && (
                           <div className="mt-2">
-                            <Text className="text-[10px] uppercase tracking-wide text-tremor-content-subtle dark:text-dark-tremor-content-subtle">Prompt</Text>
+                            <Text className="text-[10px] uppercase text-tremor-content-subtle dark:text-dark-tremor-content-subtle">Prompt</Text>
                             <p className="mt-1 whitespace-pre-wrap break-words text-xs text-tremor-content-strong dark:text-dark-tremor-content-strong">
                               {entry.prompt}
                             </p>
@@ -542,7 +542,7 @@ export function TaskDetailPanel({
                         )}
                         {entry.response && (
                           <div className="mt-2">
-                            <Text className="text-[10px] uppercase tracking-wide text-tremor-content-subtle dark:text-dark-tremor-content-subtle">Response</Text>
+                            <Text className="text-[10px] uppercase text-tremor-content-subtle dark:text-dark-tremor-content-subtle">Response</Text>
                             <p className="mt-1 whitespace-pre-wrap break-words text-xs text-tremor-content-strong dark:text-dark-tremor-content-strong">
                               {entry.response}
                             </p>
@@ -557,7 +557,7 @@ export function TaskDetailPanel({
           })}
         </div>
       ) : (
-        <div className="rounded-lg bg-tremor-background-subtle px-3 py-2 text-xs text-tremor-content-subtle dark:bg-dark-tremor-background-subtle dark:text-dark-tremor-content-subtle">
+        <div className="rounded-tremor-default bg-tremor-background-subtle px-3 py-2 text-xs text-tremor-content-subtle dark:bg-dark-tremor-background-subtle dark:text-dark-tremor-content-subtle">
           No workflow entries recorded yet.
         </div>
       )}

@@ -21,6 +21,7 @@ from src.knowledge import (
     knowledge_brief_publication_tier,
     resolve_disease_knowledge_status,
 )
+from src.knowledge.citations import normalize_knowledge_citations
 from src.services.exceptions import TaskCancelledError
 
 logger = get_logger(__name__)
@@ -138,6 +139,7 @@ async def _mark_stale_sources(db, disease_id: str, candidates: list, enabled_sou
 
 
 async def _upsert_brief(db, payload: dict[str, Any]) -> DiseaseKnowledgeBrief:
+    payload = normalize_knowledge_citations(payload)
     result = await db.execute(
         select(DiseaseKnowledgeBrief).where(
             DiseaseKnowledgeBrief.disease_id == payload["disease_id"],
@@ -186,14 +188,84 @@ def source_to_dict(row: DiseaseKnowledgeSource) -> dict[str, Any]:
         "resolved_url": row.resolved_url or metadata.get("resolved_url") or row.url,
         "title": row.title,
         "license": row.license,
+        "status": row.status,
         "language": row.language,
         "raw_excerpt": row.raw_excerpt,
         "content_text": row.content_text or metadata.get("content_text"),
         "content_sections": row.content_sections or metadata.get("content_sections") or [],
+        "raw_excerpt_hash": row.raw_excerpt_hash,
         "review_status": row.review_status,
         "metadata": metadata,
         "fetched_at": row.fetched_at.isoformat() if row.fetched_at else None,
     }
+
+
+def _safe_int(value: Any) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _metadata_field(source: dict[str, Any], key: str) -> Any:
+    metadata = source.get("metadata")
+    if isinstance(metadata, dict):
+        return metadata.get(key)
+    return None
+
+
+def _enrich_source_attribution(
+    attribution: list[Any],
+    sources_by_id: dict[int, dict[str, Any]],
+) -> list[dict[str, Any]]:
+    enriched: list[dict[str, Any]] = []
+    metadata_keys = (
+        "pmid",
+        "doi",
+        "first_author",
+        "journal",
+        "pub_date",
+        "container_title",
+        "publisher",
+        "year",
+        "provider",
+        "content_kind",
+    )
+    direct_keys = (
+        "source_name",
+        "source_type",
+        "title",
+        "url",
+        "resolved_url",
+        "license",
+        "fetched_at",
+    )
+
+    for item in attribution:
+        if not isinstance(item, dict):
+            continue
+        source_id = _safe_int(item.get("source_id") or item.get("id"))
+        source = sources_by_id.get(source_id) if source_id is not None else None
+        if not source:
+            enriched.append(dict(item))
+            continue
+
+        source_metadata = source.get("metadata") if isinstance(source.get("metadata"), dict) else {}
+        item_metadata = item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
+        merged = {
+            **item,
+            "id": item.get("id") or source.get("id"),
+            "source_id": item.get("source_id") or source.get("id"),
+            "metadata": {**source_metadata, **item_metadata},
+        }
+        for key in direct_keys:
+            if not merged.get(key):
+                merged[key] = source.get(key)
+        for key in metadata_keys:
+            if not merged.get(key):
+                merged[key] = _metadata_field(source, key)
+        enriched.append(merged)
+    return enriched
 
 
 def _has_approved_public_sources(sources: list[dict[str, Any]]) -> bool:
@@ -458,6 +530,12 @@ class DiseaseKnowledgeUpdateService:
                 .order_by(DiseaseKnowledgeSource.review_status.asc(), DiseaseKnowledgeSource.source_type.asc(), DiseaseKnowledgeSource.id.asc())
             )
         ).scalars().all()
+        source_dicts = [source_to_dict(source) for source in source_rows]
+        sources_by_id = {
+            int(source["id"]): source
+            for source in source_dicts
+            if source.get("id") is not None
+        }
 
         published_languages = sorted(
             [brief.language for brief in brief_rows if knowledge_brief_publication_tier(brief) == "published"]
@@ -507,33 +585,38 @@ class DiseaseKnowledgeUpdateService:
                 "source_type_counts": source_type_counts,
             },
             "briefs": [
-                {
-                    "language": brief.language,
-                    "status": brief.status,
-                    "brief_tier": knowledge_brief_publication_tier(brief),
-                    "fallback_reason": knowledge_brief_fallback_reason(brief),
-                    "source_confidence": brief.source_confidence,
-                    "updated_at": brief.updated_at.isoformat() if brief.updated_at else None,
-                    "brief": brief.brief,
-                    "definition": brief.definition,
-                    "clinical_features": brief.clinical_features,
-                    "clinical_summary": brief.clinical_summary,
-                    "epidemiology": brief.epidemiology,
-                    "transmission": brief.transmission,
-                    "prevention": brief.prevention,
-                    "surveillance_note": brief.surveillance_note,
-                    "risk_groups": brief.risk_groups,
-                    "disclaimer": brief.disclaimer,
-                    "model": brief.model,
-                    "quality_score": brief.quality_score,
-                    "review_notes": brief.review_notes,
-                    "source_ids": brief.source_ids or [],
-                    "source_attribution": brief.source_attribution or [],
-                    "metadata": brief.metadata_ or {},
-                }
+                normalize_knowledge_citations(
+                    {
+                        "language": brief.language,
+                        "status": brief.status,
+                        "brief_tier": knowledge_brief_publication_tier(brief),
+                        "fallback_reason": knowledge_brief_fallback_reason(brief),
+                        "source_confidence": brief.source_confidence,
+                        "updated_at": brief.updated_at.isoformat() if brief.updated_at else None,
+                        "brief": brief.brief,
+                        "definition": brief.definition,
+                        "clinical_features": brief.clinical_features,
+                        "clinical_summary": brief.clinical_summary,
+                        "epidemiology": brief.epidemiology,
+                        "transmission": brief.transmission,
+                        "prevention": brief.prevention,
+                        "surveillance_note": brief.surveillance_note,
+                        "risk_groups": brief.risk_groups,
+                        "disclaimer": brief.disclaimer,
+                        "model": brief.model,
+                        "quality_score": brief.quality_score,
+                        "review_notes": brief.review_notes,
+                        "source_ids": brief.source_ids or [],
+                        "source_attribution": _enrich_source_attribution(
+                            brief.source_attribution or [],
+                            sources_by_id,
+                        ),
+                        "metadata": brief.metadata_ or {},
+                    }
+                )
                 for brief in brief_rows
             ],
-            "sources": [source_to_dict(source) for source in source_rows],
+            "sources": source_dicts,
         }
 
     async def update_disease(
