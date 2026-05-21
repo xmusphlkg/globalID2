@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { Badge, Button, Card, Grid, Text, Title } from "@tremor/react";
+import { Badge, Button, Card, Text, Title } from "@tremor/react";
 import {
   Cloud,
   ExternalLink,
@@ -14,6 +14,9 @@ import {
   ShieldCheck,
   WandSparkles,
 } from "lucide-react";
+import { MetricTile } from "@/components/ui/MetricTile";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatusBadge as HeaderBadge } from "@/components/ui/StatusBadge";
 
 import { useAppStore } from "@/stores/app-store";
 import {
@@ -277,83 +280,63 @@ export default function SettingPage() {
     : "Manage the default Pages project and access credentials.";
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 md:px-6">
-      <section className="overflow-hidden rounded-[28px] border border-tremor-border bg-[linear-gradient(135deg,rgba(15,118,110,0.12),rgba(255,255,255,0.94)_45%,rgba(37,99,235,0.10))] p-6 shadow-sm md:p-8">
-        <div className="grid gap-6 lg:grid-cols-[1.4fr_0.9fr]">
-          <div className="space-y-4">
-            <Badge color="teal" className="w-fit">
-              {isZh ? "设置中心" : "Settings Center"}
-            </Badge>
-            <div className="space-y-2">
-              <Title className="text-3xl md:text-4xl">{isZh ? "统一设置管理" : "Unified Settings"}</Title>
-              <Text className="max-w-2xl text-base text-tremor-content">
-                {isZh
-                  ? "把 SMTP、GitHub 和 Cloudflare 的运行时设置收归到一个入口，任务告警、数据发布和外部接入都读取同一份配置。"
-                  : "Keep SMTP, GitHub, and Cloudflare runtime settings in one place so alerts, publishing, and external access share the same configuration."}
-              </Text>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Link href="/ai/tasks" className="inline-flex items-center gap-2 rounded-full bg-tremor-brand px-4 py-2 text-sm font-semibold text-tremor-brand-inverted transition hover:opacity-90">
-                {isZh ? "回到 AI 任务" : "Back to AI Tasks"}
-                <ExternalLink className="h-4 w-4" />
-              </Link>
-              <Link href="/data/release" className="inline-flex items-center gap-2 rounded-full border border-tremor-border bg-tremor-background px-4 py-2 text-sm font-semibold text-tremor-content-strong transition hover:bg-tremor-background-subtle dark:bg-dark-tremor-background dark:hover:bg-dark-tremor-background-subtle">
-                {isZh ? "打开数据发布" : "Open Release"}
-                <ExternalLink className="h-4 w-4" />
-              </Link>
-            </div>
-            {notice && (
-              <div className={`rounded-2xl border px-4 py-3 text-sm ${notice.kind === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-200" : "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-200"}`}>
-                {notice.message}
-              </div>
-            )}
-          </div>
+    <div className="space-y-5">
+      <PageHeader
+        eyebrow={isZh ? "设置中心" : "Settings Center"}
+        title={isZh ? "统一设置管理" : "Unified Settings"}
+        description={
+          isZh
+            ? "把 SMTP、GitHub 和 Cloudflare 的运行时设置收归到一个入口，任务告警、数据发布和外部接入都读取同一份配置。"
+            : "Keep SMTP, GitHub, and Cloudflare runtime settings in one place so alerts, publishing, and external access share the same configuration."
+        }
+        meta={
+          <>
+            <HeaderBadge tone={settings?.smtp.alerting_ready ? "success" : "warning"}>
+              {isZh ? "SMTP 告警" : "SMTP Alerts"}: {settings?.smtp.alerting_ready ? (isZh ? "已就绪" : "Ready") : (isZh ? "未就绪" : "Not ready")}
+            </HeaderBadge>
+            <HeaderBadge>{settings?.smtp.source || "env"}</HeaderBadge>
+            <HeaderBadge>{settings?.github.source || "env"}</HeaderBadge>
+            <HeaderBadge>{settings?.cloudflare.source || "env"}</HeaderBadge>
+          </>
+        }
+        actions={
+          <>
+            <Link href="/ai/tasks" className="inline-flex h-10 items-center gap-2 rounded-tremor-default bg-tremor-brand px-4 text-sm font-semibold text-tremor-brand-inverted transition hover:opacity-90">
+              {isZh ? "回到 AI 任务" : "Back to AI Tasks"}
+              <ExternalLink className="h-4 w-4" />
+            </Link>
+            <Link href="/data/release" className="inline-flex h-10 items-center gap-2 rounded-tremor-default border border-tremor-border bg-tremor-background px-4 text-sm font-semibold text-tremor-content-strong transition hover:bg-tremor-background-subtle dark:bg-dark-tremor-background dark:hover:bg-dark-tremor-background-subtle">
+              {isZh ? "打开数据发布" : "Open Release"}
+              <ExternalLink className="h-4 w-4" />
+            </Link>
+          </>
+        }
+      />
 
-          <Card className="border-none bg-white/80 shadow-sm">
-            <div className="flex items-center gap-2">
-              <WandSparkles className="h-5 w-5 text-tremor-brand" />
-              <Title>{isZh ? "运行状态" : "Runtime Status"}</Title>
-            </div>
-            <div className="mt-5 space-y-3">
-              <div className="rounded-2xl border border-tremor-border bg-tremor-background px-4 py-3">
-                <p className="text-sm font-medium text-tremor-content-strong">{isZh ? "SMTP 告警" : "SMTP Alerts"}</p>
-                <p className="mt-1 text-xs text-tremor-content">{settings?.smtp.alerting_ready ? (isZh ? "已就绪" : "Ready") : (isZh ? "未就绪" : "Not ready")}</p>
-              </div>
-              <div className="rounded-2xl border border-dashed border-tremor-border px-4 py-3">
-                <p className="text-sm font-medium text-tremor-content-strong">{isZh ? "设置文件" : "Settings File"}</p>
-                <p className="mt-1 text-xs text-tremor-content">
-                  {isZh
-                    ? "写入 data/system-settings.json，环境变量仍作为默认值。"
-                    : "Writes to data/system-settings.json; environment variables stay as defaults."}
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <StatusBadge label={settings?.smtp.source || "env"} color={settings?.smtp.source === "local" ? "teal" : "slate"} />
-                <StatusBadge label={settings?.github.source || "env"} color={settings?.github.source === "local" ? "blue" : "slate"} />
-                <StatusBadge label={settings?.cloudflare.source || "env"} color={settings?.cloudflare.source === "local" ? "amber" : "slate"} />
-              </div>
-            </div>
-          </Card>
+      {notice && (
+        <div className={`rounded-tremor-default border px-4 py-3 text-sm ${notice.kind === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-200" : "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-200"}`}>
+          {notice.message}
         </div>
-      </section>
+      )}
 
-      <Grid numItems={1} numItemsSm={3} className="gap-4">
+      <div className="grid gap-3 sm:grid-cols-3">
         {summaryCards.map((card) => (
-          <Card key={card.title} decoration="top" decorationColor={card.color as never}>
-            <Text>{card.title}</Text>
-            <Title className="mt-1 text-2xl">{card.value}</Title>
-            <Text className="mt-2 text-xs text-tremor-content-subtle">
-              {card.desc || "-"}
-            </Text>
-          </Card>
+          <MetricTile
+            key={card.title}
+            label={card.title}
+            value={card.value}
+            hint={card.desc || "-"}
+            icon={<WandSparkles className="h-4 w-4" />}
+            tone={card.color === "rose" ? "danger" : card.color === "amber" ? "warning" : card.color === "emerald" ? "success" : "primary"}
+          />
         ))}
-      </Grid>
+      </div>
 
       <div className="grid gap-4 xl:grid-cols-3">
         <Card className="xl:col-span-1">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <div className="rounded-lg bg-tremor-background-muted p-2 text-tremor-content-strong dark:bg-dark-tremor-background-muted dark:text-dark-tremor-content-strong">
+              <div className="rounded-tremor-default bg-tremor-background-muted p-2 text-tremor-content-strong dark:bg-dark-tremor-background-muted dark:text-dark-tremor-content-strong">
                 <Mail className="h-4 w-4" />
               </div>
               <div>
@@ -420,7 +403,7 @@ export default function SettingPage() {
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <label className="flex cursor-pointer items-center gap-2 rounded-2xl border border-tremor-border px-3 py-2 dark:border-dark-tremor-border">
+              <label className="flex cursor-pointer items-center gap-2 rounded-tremor-default border border-tremor-border px-3 py-2 dark:border-dark-tremor-border">
                 <input
                   type="checkbox"
                   checked={Boolean(smtpForm.smtp_use_tls)}
@@ -431,8 +414,8 @@ export default function SettingPage() {
                   {isZh ? "使用 STARTTLS" : "Use STARTTLS"}
                 </span>
               </label>
-              <div className="rounded-2xl border border-tremor-border px-3 py-2 dark:border-dark-tremor-border">
-                <Text className="text-[11px] uppercase tracking-[0.16em] text-tremor-content-subtle">
+              <div className="rounded-tremor-default border border-tremor-border px-3 py-2 dark:border-dark-tremor-border">
+                <Text className="text-[11px] uppercase text-tremor-content-subtle">
                   {isZh ? "状态" : "Status"}
                 </Text>
                 <div className="mt-2 flex flex-wrap gap-2">
@@ -443,7 +426,7 @@ export default function SettingPage() {
             </div>
 
             {smtpResult && (
-              <div className={`rounded-2xl border px-3 py-2 text-xs ${smtpResult.kind === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-200" : "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-200"}`}>
+              <div className={`rounded-tremor-default border px-3 py-2 text-xs ${smtpResult.kind === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-200" : "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-200"}`}>
                 {smtpResult.message}
               </div>
             )}
@@ -457,7 +440,7 @@ export default function SettingPage() {
               </Button>
             </div>
 
-            <div className="rounded-2xl border border-dashed border-tremor-border p-3 dark:border-dark-tremor-border">
+            <div className="rounded-tremor-default border border-dashed border-tremor-border p-3 dark:border-dark-tremor-border">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <Text className="font-medium text-tremor-content-strong">{isZh ? "发送测试邮件" : "Send Test Email"}</Text>
@@ -474,7 +457,7 @@ export default function SettingPage() {
                 placeholder="ops@example.com"
               />
               {emailResult && (
-                <div className={`mt-3 rounded-xl border px-3 py-2 text-xs ${emailResult.kind === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-200" : "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-200"}`}>
+                <div className={`mt-3 rounded-tremor-default border px-3 py-2 text-xs ${emailResult.kind === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/30 dark:text-emerald-200" : "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-200"}`}>
                   {emailResult.message}
                 </div>
               )}
@@ -485,7 +468,7 @@ export default function SettingPage() {
         <Card className="xl:col-span-1">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <div className="rounded-lg bg-tremor-background-muted p-2 text-tremor-content-strong dark:bg-dark-tremor-background-muted dark:text-dark-tremor-content-strong">
+              <div className="rounded-tremor-default bg-tremor-background-muted p-2 text-tremor-content-strong dark:bg-dark-tremor-background-muted dark:text-dark-tremor-content-strong">
                 <GitBranch className="h-4 w-4" />
               </div>
               <div>
@@ -527,8 +510,8 @@ export default function SettingPage() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-dashed border-tremor-border p-3 dark:border-dark-tremor-border">
-              <Text className="text-[11px] uppercase tracking-[0.16em] text-tremor-content-subtle">{isZh ? "推断值" : "Derived"}</Text>
+            <div className="rounded-tremor-default border border-dashed border-tremor-border p-3 dark:border-dark-tremor-border">
+              <Text className="text-[11px] uppercase text-tremor-content-subtle">{isZh ? "推断值" : "Derived"}</Text>
               <p className="mt-2 break-all text-sm text-tremor-content-strong dark:text-dark-tremor-content-strong">
                 {settings?.github.github_data_share_raw_base_url_effective || "/downloads"}
               </p>
@@ -548,7 +531,7 @@ export default function SettingPage() {
         <Card className="xl:col-span-1">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <div className="rounded-lg bg-tremor-background-muted p-2 text-tremor-content-strong dark:bg-dark-tremor-background-muted dark:text-dark-tremor-content-strong">
+              <div className="rounded-tremor-default bg-tremor-background-muted p-2 text-tremor-content-strong dark:bg-dark-tremor-background-muted dark:text-dark-tremor-content-strong">
                 <Cloud className="h-4 w-4" />
               </div>
               <div>
@@ -598,7 +581,7 @@ export default function SettingPage() {
                 placeholder="globalid"
               />
             </div>
-            <div className="rounded-2xl border border-dashed border-tremor-border p-3 dark:border-dark-tremor-border">
+            <div className="rounded-tremor-default border border-dashed border-tremor-border p-3 dark:border-dark-tremor-border">
               <div className="flex items-center gap-2 text-xs text-tremor-content-subtle">
                 <ShieldCheck className="h-4 w-4" />
                 <span>{isZh ? "项目与凭据会被数据发布流程读取。" : "The release pipeline reads the project and credentials from here."}</span>
@@ -617,7 +600,7 @@ export default function SettingPage() {
         </Card>
       </div>
 
-      <Card className="border-dashed border-tremor-border bg-gradient-to-br from-white to-tremor-background-subtle/50 dark:from-dark-tremor-background dark:to-dark-tremor-background-subtle/50">
+      <Card className="border-dashed border-tremor-border">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <Title className="!text-base">{isZh ? "统一归口说明" : "Unified Routing"}</Title>
@@ -627,7 +610,7 @@ export default function SettingPage() {
                 : "AI completion mail, task alerts, automation warnings, and data release defaults all read from this same settings layer."}
             </Text>
           </div>
-          <Link href="/ai/tasks" className="inline-flex items-center gap-2 rounded-full bg-tremor-brand px-4 py-2 text-sm font-semibold text-tremor-brand-inverted transition hover:opacity-90">
+          <Link href="/ai/tasks" className="inline-flex items-center gap-2 rounded-tremor-default bg-tremor-brand px-4 py-2 text-sm font-semibold text-tremor-brand-inverted transition hover:opacity-90">
             {isZh ? "回到 AI 任务" : "Back to AI Tasks"}
             <ExternalLink className="h-4 w-4" />
           </Link>

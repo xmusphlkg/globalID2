@@ -738,6 +738,7 @@
   }
 
   .citation-link {
+    position: relative;
     color: rgb(var(--color-brand));
     text-decoration: none;
     font-weight: 600;
@@ -748,6 +749,29 @@
   .citation-link:hover {
     color: rgb(var(--color-teal));
     text-decoration: underline;
+  }
+
+  .citation-link:hover::after,
+  .citation-link:focus-visible::after {
+    content: attr(data-citation-tooltip);
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 0.45rem);
+    z-index: 40;
+    width: max-content;
+    max-width: min(28rem, 78vw);
+    transform: translateX(-50%);
+    border: 1px solid rgb(var(--border) / 0.78);
+    background: rgb(var(--surface-raised));
+    color: rgb(var(--text));
+    box-shadow: 0 14px 35px rgb(0 0 0 / 0.22);
+    padding: 0.45rem 0.55rem;
+    font-size: 0.72rem;
+    font-weight: 500;
+    line-height: 1.35;
+    white-space: normal;
+    text-align: left;
+    pointer-events: none;
   }
 
   .citation-text {

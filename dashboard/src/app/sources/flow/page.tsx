@@ -17,12 +17,15 @@ import { getConfiguredSourceOptions, getSourceDisplayLabel } from "@/lib/source-
 import {
   Badge,
   Card,
-  Grid,
   Text,
   Title,
   ProgressBar,
 } from "@tremor/react";
 import type { Color } from "@tremor/react";
+import { FilterToolbar } from "@/components/ui/FilterToolbar";
+import { MetricTile } from "@/components/ui/MetricTile";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 import {
   GitBranch,
   Download,
@@ -493,42 +496,56 @@ export default function SourcesFlowPage() {
   }, [flows]);
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 md:px-6">
-      {/* Header */}
-      <div className="space-y-2">
-        <Badge color="teal" className="w-fit">{t(lang, "mod_sources")}</Badge>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight text-tremor-content-strong dark:text-dark-tremor-content-strong">
-              {t(lang, "flow_title")}
-            </h1>
-            <Text>{t(lang, "flow_subtitle")}</Text>
-          </div>
-          {countryId && countrySupported && (
+    <div className="space-y-5">
+      <PageHeader
+        eyebrow={t(lang, "mod_sources")}
+        title={t(lang, "flow_title")}
+        description={t(lang, "flow_subtitle")}
+        meta={
+          <>
+            <StatusBadge tone={scopeMode === "all" ? "info" : "primary"}>
+              {scopeMode === "all" ? (lang === "zh" ? "全部国家" : "All countries") : effectiveCountryName}
+            </StatusBadge>
+            <StatusBadge tone={failedFlows > 0 ? "danger" : "success"}>
+              {failedFlows > 0
+                ? lang === "zh"
+                  ? `${failedFlows} 个异常流程`
+                  : `${failedFlows} failed flows`
+                : lang === "zh"
+                  ? "无异常流程"
+                  : "No failed flows"}
+            </StatusBadge>
+          </>
+        }
+        actions={
+          countryId && countrySupported ? (
             <button
               onClick={openModal}
-              className="flex items-center gap-2 rounded-tremor-default bg-tremor-brand px-4 py-2 text-sm font-medium text-tremor-brand-inverted shadow-tremor-input transition hover:opacity-90 dark:bg-dark-tremor-brand dark:text-dark-tremor-brand-inverted"
+              className="flex h-10 items-center gap-2 rounded-tremor-default bg-tremor-brand px-4 text-sm font-medium text-tremor-brand-inverted transition hover:opacity-90 dark:bg-dark-tremor-brand dark:text-dark-tremor-brand-inverted"
             >
               <Plus className="h-4 w-4" />
               {t(lang, "flow_new_crawl_task")}
             </button>
-          )}
-        </div>
-        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-tremor-border bg-tremor-background p-1.5 shadow-sm">
+          ) : null
+        }
+      />
+
+      <FilterToolbar>
+        <div className="flex items-center gap-1 rounded-tremor-default border border-tremor-border bg-tremor-background-subtle p-1 dark:border-dark-tremor-border dark:bg-dark-tremor-background-subtle">
           <button
             onClick={() => setScopeMode("selected")}
-            className={`rounded-xl px-4 py-2 text-sm font-medium transition ${scopeMode === "selected" ? "bg-tremor-brand text-tremor-brand-inverted" : "text-tremor-content-strong"}`}
+            className={`h-8 rounded-tremor-default px-3 text-sm font-medium transition ${scopeMode === "selected" ? "bg-tremor-background text-tremor-content-strong dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong" : "text-tremor-content-subtle hover:text-tremor-content-strong dark:text-dark-tremor-content-subtle dark:hover:text-dark-tremor-content-strong"}`}
           >
             {lang === "zh" ? "当前国家" : "Selected country"}
           </button>
           <button
             onClick={() => setScopeMode("all")}
-            className={`rounded-xl px-4 py-2 text-sm font-medium transition ${scopeMode === "all" ? "bg-tremor-brand text-tremor-brand-inverted" : "text-tremor-content-strong"}`}
+            className={`h-8 rounded-tremor-default px-3 text-sm font-medium transition ${scopeMode === "all" ? "bg-tremor-background text-tremor-content-strong dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong" : "text-tremor-content-subtle hover:text-tremor-content-strong dark:text-dark-tremor-content-subtle dark:hover:text-dark-tremor-content-strong"}`}
           >
             {lang === "zh" ? "全部国家" : "All countries"}
           </button>
         </div>
-      </div>
+      </FilterToolbar>
 
       {scopeMode === "selected" && countryId && !countrySupported && (
         <Card>
@@ -540,33 +557,32 @@ export default function SourcesFlowPage() {
         </Card>
       )}
 
-      {/* KPI row */}
-      <Grid numItemsSm={2} numItemsLg={4} className="gap-4">
-        <Card decoration="top" decorationColor="blue">
-          <Text>{t(lang, "flow_kpi_sources")}</Text>
-          <p className="mt-1 text-3xl font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
-            {totalSources}
-          </p>
-        </Card>
-        <Card decoration="top" decorationColor="amber">
-          <Text>{t(lang, "flow_kpi_active")}</Text>
-          <p className="mt-1 text-3xl font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
-            {activeFlows}
-          </p>
-        </Card>
-        <Card decoration="top" decorationColor="emerald">
-          <Text>{t(lang, "flow_kpi_completed")}</Text>
-          <p className="mt-1 text-3xl font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
-            {completedFlows}
-          </p>
-        </Card>
-        <Card decoration="top" decorationColor="rose">
-          <Text>{t(lang, "flow_kpi_failed")}</Text>
-          <p className="mt-1 text-3xl font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
-            {failedFlows}
-          </p>
-        </Card>
-      </Grid>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricTile
+          label={t(lang, "flow_kpi_sources")}
+          value={totalSources}
+          icon={<Download className="h-4 w-4" />}
+          tone="info"
+        />
+        <MetricTile
+          label={t(lang, "flow_kpi_active")}
+          value={activeFlows}
+          icon={<Loader2 className="h-4 w-4" />}
+          tone="warning"
+        />
+        <MetricTile
+          label={t(lang, "flow_kpi_completed")}
+          value={completedFlows}
+          icon={<CheckCircle2 className="h-4 w-4" />}
+          tone="success"
+        />
+        <MetricTile
+          label={t(lang, "flow_kpi_failed")}
+          value={failedFlows}
+          icon={<AlertCircle className="h-4 w-4" />}
+          tone={failedFlows > 0 ? "danger" : "success"}
+        />
+      </div>
 
       {/* Country guard */}
       {scopeMode === "selected" && !countryId ? (

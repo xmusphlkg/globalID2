@@ -688,16 +688,33 @@ class ReportGenerator:
 
         if knowledge_brief:
             from src.knowledge.catalogue import knowledge_brief_publication_tier
+            from src.knowledge.citations import normalize_knowledge_citations
 
-            official_brief = knowledge_brief.brief
-            definition = knowledge_brief.definition
-            clinical_features = knowledge_brief.clinical_features or knowledge_brief.clinical_summary
-            epidemiology = knowledge_brief.epidemiology
-            transmission = knowledge_brief.transmission
-            prevention = knowledge_brief.prevention
-            surveillance_note = knowledge_brief.surveillance_note
-            risk_groups = knowledge_brief.risk_groups
-            source_attribution = knowledge_brief.source_attribution or []
+            normalized_brief = normalize_knowledge_citations(
+                {
+                    "brief": knowledge_brief.brief,
+                    "definition": knowledge_brief.definition,
+                    "clinical_features": knowledge_brief.clinical_features,
+                    "clinical_summary": knowledge_brief.clinical_summary,
+                    "epidemiology": knowledge_brief.epidemiology,
+                    "transmission": knowledge_brief.transmission,
+                    "prevention": knowledge_brief.prevention,
+                    "surveillance_note": knowledge_brief.surveillance_note,
+                    "risk_groups": knowledge_brief.risk_groups,
+                    "source_ids": knowledge_brief.source_ids or [],
+                    "source_attribution": knowledge_brief.source_attribution or [],
+                    "metadata": knowledge_brief.metadata_ or {},
+                }
+            )
+            official_brief = normalized_brief.get("brief")
+            definition = normalized_brief.get("definition")
+            clinical_features = normalized_brief.get("clinical_features") or normalized_brief.get("clinical_summary")
+            epidemiology = normalized_brief.get("epidemiology")
+            transmission = normalized_brief.get("transmission")
+            prevention = normalized_brief.get("prevention")
+            surveillance_note = normalized_brief.get("surveillance_note")
+            risk_groups = normalized_brief.get("risk_groups")
+            source_attribution = normalized_brief.get("source_attribution") or []
             knowledge_status = knowledge_brief_publication_tier(knowledge_brief)
             knowledge_updated_at = knowledge_brief.updated_at.isoformat() if knowledge_brief.updated_at else None
             disclaimer = knowledge_brief.disclaimer

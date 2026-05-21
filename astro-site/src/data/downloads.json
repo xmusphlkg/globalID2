@@ -253,7 +253,7 @@
       "code": "TW",
       "name": "Taiwan, China",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 6285,
+      "record_count": 6286,
       "date_range": {
         "start": "2003-01-01",
         "end": "2026-05-01"
@@ -8800,7 +8800,7 @@
       "name_en": "Monkeypox",
       "name_zh": "猴痘",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 976,
+      "record_count": 977,
       "country_count": 7,
       "countries": [
         {

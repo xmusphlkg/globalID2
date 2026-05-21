@@ -1,10 +1,34 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { Badge, Button, Card, Grid, Metric, Text, Title } from "@tremor/react";
-import { useAppStore } from "@/stores/app-store";
-import { t } from "@/lib/i18n";
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  Bell,
+  Bot,
+  CalendarClock,
+  CheckCircle2,
+  Clock3,
+  Cpu,
+  Mail,
+  Pencil,
+  Play,
+  Plus,
+  RotateCcw,
+  Settings2,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
+
+import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
+import { DetailDrawer } from "@/components/ui/DetailDrawer";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { FilterToolbar } from "@/components/ui/FilterToolbar";
+import { MetricTile } from "@/components/ui/MetricTile";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { getCountryDisplayName, type Country, useCountries } from "@/lib/hooks/useCountries";
 import {
   type AutomationJob,
   type AutomationJobInput,
@@ -18,12 +42,14 @@ import {
   useUpdateAutomationJob,
 } from "@/lib/hooks/useSources";
 import { useTaskWebSocket, useWorkerStatus } from "@/lib/hooks/useTasks";
-import { getCountryDisplayName, type Country, useCountries } from "@/lib/hooks/useCountries";
+import { t } from "@/lib/i18n";
 import { getConfiguredSourceOptions, getSourceDisplayLabel } from "@/lib/source-labels";
-import { AlertTriangle, ArrowRight, Bot, Clock3, Cpu, Mail, Pencil, Play, Plus, Sparkles, Trash2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useAppStore } from "@/stores/app-store";
 
 type ScheduleMode = "daily" | "interval";
 type IntervalUnit = "minutes" | "hours";
+type JobFilter = "all" | "enabled" | "disabled" | "failed";
 
 type AutomationPreset = Partial<AutomationJobInput> & {
   id: string;
@@ -61,8 +87,10 @@ const crawlOptionLabels: Record<string, { en: string; zh: string }> = {
 };
 
 const DEFAULT_INTERVAL_MINUTES = 60;
-const intervalPresetMinutes = [15, 30, 60, 180, 360, 720] as const;
 const dailyPresetTimes = ["00:00", "08:00", "12:00", "18:00"] as const;
+const intervalPresetMinutes = [15, 30, 60, 180, 360, 720] as const;
+const inputClass =
+  "h-10 w-full rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm text-tremor-content-strong outline-none transition focus:border-tremor-brand-subtle focus:ring-2 focus:ring-tremor-brand-muted disabled:bg-tremor-background-subtle disabled:text-tremor-content-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong";
 
 function formatDateTime(value?: string | null): string {
   if (!value) return "-";
@@ -81,9 +109,7 @@ function intervalMinutesToFields(minutes?: number | null): { value: string; unit
 
 function intervalFieldsToMinutes(value: string, unit: IntervalUnit): number | null {
   const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return null;
-  }
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
   return unit === "hours" ? parsed * 60 : parsed;
 }
 
@@ -99,15 +125,13 @@ function scheduleLabel(
   job: { interval_minutes?: number | null; daily_time?: string | null; timezone?: string | null },
   lang: "en" | "zh",
 ): string {
-  if (job.interval_minutes) {
-    return describeIntervalMinutes(job.interval_minutes, lang);
-  }
+  if (job.interval_minutes) return describeIntervalMinutes(job.interval_minutes, lang);
   if (job.daily_time) {
     return lang === "zh"
       ? `每天 ${job.daily_time} (${job.timezone || "UTC"})`
       : `Daily at ${job.daily_time} (${job.timezone || "UTC"})`;
   }
-  return lang === "zh" ? "未设置计划" : "No schedule";
+  return lang === "zh" ? "手动运行" : "Manual";
 }
 
 function toForm(job: AutomationJob): AutomationJobInput {
@@ -145,6 +169,121 @@ function presetTimeForIndex(index: number): string {
   return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
 }
 
+function FormSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="space-y-3 border-b border-tremor-border pb-5 last:border-b-0 last:pb-0 dark:border-dark-tremor-border">
+      <h3 className="text-sm font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
+        {title}
+      </h3>
+      {children}
+    </section>
+  );
+}
+
+function Field({
+  label,
+  children,
+  hint,
+  className,
+}: {
+  label: string;
+  children: ReactNode;
+  hint?: ReactNode;
+  className?: string;
+}) {
+  return (
+    <label className={cn("block space-y-1.5", className)}>
+      <span className="text-xs font-medium text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+        {label}
+      </span>
+      {children}
+      {hint ? <span className="block text-xs text-tremor-content dark:text-dark-tremor-content">{hint}</span> : null}
+    </label>
+  );
+}
+
+function ActionButton({
+  children,
+  icon,
+  tone = "neutral",
+  disabled,
+  onClick,
+  type = "button",
+  className,
+}: {
+  children: ReactNode;
+  icon?: ReactNode;
+  tone?: "neutral" | "primary" | "danger";
+  disabled?: boolean;
+  onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  type?: "button" | "submit";
+  className?: string;
+}) {
+  const toneClass =
+    tone === "primary"
+      ? "border-tremor-brand bg-tremor-brand text-tremor-brand-inverted hover:bg-tremor-brand/90"
+      : tone === "danger"
+        ? "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300"
+        : "border-tremor-border bg-tremor-background text-tremor-content-strong hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong dark:hover:bg-dark-tremor-background-subtle";
+
+  return (
+    <button
+      type={type}
+      disabled={disabled}
+      onClick={onClick}
+      className={cn(
+        "inline-flex h-9 items-center justify-center gap-2 rounded-tremor-default border px-3 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-55",
+        toneClass,
+        className,
+      )}
+    >
+      {icon}
+      {children}
+    </button>
+  );
+}
+
+function InlineStatus({
+  icon,
+  label,
+  value,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: ReactNode;
+}) {
+  return (
+    <div className="flex items-start gap-3 border-b border-tremor-border py-3 last:border-b-0 dark:border-dark-tremor-border">
+      <div className="mt-0.5 text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{icon}</div>
+      <div className="min-w-0">
+        <p className="text-xs font-medium text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{label}</p>
+        <div className="mt-1 text-sm text-tremor-content-strong dark:text-dark-tremor-content-strong">{value}</div>
+      </div>
+    </div>
+  );
+}
+
+function AlertPanel({ tone, children }: { tone: "warning" | "danger" | "info"; children: ReactNode }) {
+  const toneClass =
+    tone === "danger"
+      ? "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900/50 dark:bg-rose-950/25 dark:text-rose-200"
+      : tone === "warning"
+        ? "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/25 dark:text-amber-200"
+        : "border-sky-200 bg-sky-50 text-sky-800 dark:border-sky-900/50 dark:bg-sky-950/25 dark:text-sky-200";
+
+  return (
+    <div className={cn("rounded-tremor-default border px-4 py-3 text-sm", toneClass)}>
+      {children}
+    </div>
+  );
+}
+
+function JobHealthBadge({ job }: { job: AutomationJob }) {
+  if (!job.enabled) return <StatusBadge status="disabled">disabled</StatusBadge>;
+  if (job.last_status === "failed") return <StatusBadge status="failed">failed</StatusBadge>;
+  return <StatusBadge status="enabled">enabled</StatusBadge>;
+}
+
 export default function SourcesAutomationPage() {
   const { lang } = useAppStore();
   const { data: config, isLoading } = useAutomationConfig();
@@ -156,15 +295,21 @@ export default function SourcesAutomationPage() {
   const createJob = useCreateAutomationJob();
   const updateJob = useUpdateAutomationJob();
   const deleteJob = useDeleteAutomationJob();
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingJobId, setEditingJobId] = useState<string | null>(null);
   const [form, setForm] = useState<AutomationJobInput>(defaultForm);
   const [scheduleMode, setScheduleMode] = useState<ScheduleMode>("daily");
   const [intervalValue, setIntervalValue] = useState("1");
   const [intervalUnit, setIntervalUnit] = useState<IntervalUnit>("hours");
+  const [jobSearch, setJobSearch] = useState("");
+  const [jobFilter, setJobFilter] = useState<JobFilter>("all");
 
   useTaskWebSocket({ extraQueryKeys: [["sources-automation"], ["sources-automation-jobs"], ["sources-flow"]] });
 
   const schedulerEnabled = Boolean(config?.enabled);
+  const workerRunning = Boolean(workerStatus?.worker_process_running);
+  const saving = createJob.isPending || updateJob.isPending;
+
   const sourceConfigByCountry = useMemo(() => {
     const map = new Map<string, CountrySourceConfig>();
     for (const item of sourceConfigs ?? []) {
@@ -172,8 +317,15 @@ export default function SourcesAutomationPage() {
     }
     return map;
   }, [sourceConfigs]);
+
   const selectedSourceConfig = sourceConfigByCountry.get(form.country_code.trim().toUpperCase()) ?? null;
   const selectedSupportsCrawl = Boolean(selectedSourceConfig?.supports_crawl);
+
+  const sources = useMemo(
+    () => getConfiguredSourceOptions(selectedSourceConfig, lang, form.country_code),
+    [form.country_code, lang, selectedSourceConfig],
+  );
+
   const automationPresets = useMemo<AutomationPreset[]>(() => {
     const basePresets = (sourceConfigs ?? [])
       .filter((item) => item.supports_crawl)
@@ -214,31 +366,58 @@ export default function SourcesAutomationPage() {
     return {
       total: list.length,
       enabled: list.filter((job) => job.enabled).length,
+      disabled: list.filter((job) => !job.enabled).length,
+      failed: list.filter((job) => job.last_status === "failed").length,
+      runCount: list.reduce((total, job) => total + job.run_count, 0),
       alerting: config?.email_enabled ? config.admin_emails.length : 0,
     };
   }, [config, jobs]);
 
   const deliveryStatus = useMemo(() => {
-    if (!config) return { color: "slate" as const, label: "Loading" };
-    if (!config.admin_emails.length) return { color: "amber" as const, label: "Missing admin emails" };
-    if (!config.email_enabled) return { color: "amber" as const, label: "Email not configured" };
-    return { color: "emerald" as const, label: "Failure alerts ready" };
+    if (!config) return { tone: "neutral" as const, label: "Loading" };
+    if (!config.admin_emails.length) return { tone: "warning" as const, label: "Missing admin emails" };
+    if (!config.email_enabled) return { tone: "warning" as const, label: "Email not configured" };
+    return { tone: "success" as const, label: "Failure alerts ready" };
   }, [config]);
+
+  const filteredJobs = useMemo(() => {
+    const search = jobSearch.trim().toLowerCase();
+    return (jobs ?? []).filter((job) => {
+      const matchesFilter =
+        jobFilter === "all" ||
+        (jobFilter === "enabled" && job.enabled) ||
+        (jobFilter === "disabled" && !job.enabled) ||
+        (jobFilter === "failed" && job.last_status === "failed");
+
+      if (!matchesFilter) return false;
+      if (!search) return true;
+
+      return [
+        job.job_id,
+        job.name,
+        job.country_code,
+        job.source,
+        job.priority,
+        job.last_status,
+        job.last_task_uuid ?? "",
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(search);
+    });
+  }, [jobFilter, jobSearch, jobs]);
 
   const schedulePreview = useMemo(() => {
     if (scheduleMode === "interval") {
       const minutes = intervalFieldsToMinutes(intervalValue, intervalUnit);
-      if (!minutes) {
-        return lang === "zh" ? "请设置有效的间隔时间" : "Set a valid interval";
-      }
+      if (!minutes) return lang === "zh" ? "请设置有效的间隔时间" : "Set a valid interval";
       return lang === "zh"
         ? `${describeIntervalMinutes(minutes, lang)}，时区 ${form.timezone || config?.timezone || "UTC"}`
         : `${describeIntervalMinutes(minutes, lang)} in ${form.timezone || config?.timezone || "UTC"}`;
     }
+
     const timeText = (form.daily_time || "").trim();
-    if (!timeText) {
-      return lang === "zh" ? "请设置每日执行时间" : "Set a daily run time";
-    }
+    if (!timeText) return lang === "zh" ? "请设置每日执行时间" : "Set a daily run time";
     return lang === "zh"
       ? `每天 ${timeText} 运行，时区 ${form.timezone || config?.timezone || "UTC"}`
       : `Runs daily at ${timeText} in ${form.timezone || config?.timezone || "UTC"}`;
@@ -268,6 +447,16 @@ export default function SourcesAutomationPage() {
     syncScheduleControls(nextForm);
   };
 
+  const openNewJob = () => {
+    resetForm();
+    setDrawerOpen(true);
+  };
+
+  const closeDrawer = () => {
+    setDrawerOpen(false);
+    resetForm();
+  };
+
   const applyPreset = (presetId: string) => {
     const preset = automationPresets.find((item) => item.id === presetId);
     if (!preset) return;
@@ -277,18 +466,28 @@ export default function SourcesAutomationPage() {
       presetConfig?.timezone ||
       config?.timezone ||
       defaultForm.timezone;
-    setEditingJobId(null);
     const nextForm = {
       ...defaultForm,
       ...preset,
       timezone,
       notes: `${preset.name} preset`,
     };
+    setEditingJobId(null);
     setForm(nextForm);
     syncScheduleControls(nextForm);
+    setDrawerOpen(true);
   };
 
-  const submitForm = async () => {
+  const startEdit = (job: AutomationJob) => {
+    setEditingJobId(job.job_id);
+    const nextForm = toForm(job);
+    setForm(nextForm);
+    syncScheduleControls(nextForm);
+    setDrawerOpen(true);
+  };
+
+  const submitForm = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     if (!selectedSupportsCrawl) {
       window.alert(
         lang === "zh"
@@ -301,9 +500,7 @@ export default function SourcesAutomationPage() {
     const nextIntervalMinutes = scheduleMode === "interval"
       ? intervalFieldsToMinutes(intervalValue, intervalUnit)
       : null;
-    const nextDailyTime = scheduleMode === "daily"
-      ? form.daily_time?.trim() || null
-      : null;
+    const nextDailyTime = scheduleMode === "daily" ? form.daily_time?.trim() || null : null;
 
     if (scheduleMode === "interval" && !nextIntervalMinutes) {
       window.alert(lang === "zh" ? "请填写有效的执行间隔" : "Please enter a valid interval");
@@ -332,14 +529,9 @@ export default function SourcesAutomationPage() {
     } else {
       await createJob.mutateAsync(payload);
     }
-    resetForm();
-  };
 
-  const startEdit = (job: AutomationJob) => {
-    setEditingJobId(job.job_id);
-    const nextForm = toForm(job);
-    setForm(nextForm);
-    syncScheduleControls(nextForm);
+    setDrawerOpen(false);
+    resetForm();
   };
 
   const removeJob = async (job: AutomationJob) => {
@@ -348,13 +540,11 @@ export default function SourcesAutomationPage() {
     );
     if (!ok) return;
     await deleteJob.mutateAsync(job.job_id);
-    if (editingJobId === job.job_id) resetForm();
+    if (editingJobId === job.job_id) {
+      setDrawerOpen(false);
+      resetForm();
+    }
   };
-
-  const sources = useMemo(
-    () => getConfiguredSourceOptions(selectedSourceConfig, lang, form.country_code),
-    [form.country_code, lang, selectedSourceConfig],
-  );
 
   useEffect(() => {
     if (!sources.some((option) => option.value === form.source) && sources[0]) {
@@ -362,503 +552,644 @@ export default function SourcesAutomationPage() {
     }
   }, [form.source, sources]);
 
-  return (
-    <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 md:px-6">
-      <div className="space-y-2">
-        <Badge color="teal" className="w-fit">{t(lang, "mod_sources")}</Badge>
-        <h1 className="text-3xl font-semibold tracking-tight text-tremor-content-strong dark:text-dark-tremor-content-strong">
-          {t(lang, "automation")}
-        </h1>
-        <Text>
-          {lang === "zh"
-            ? "这里可以新增、修改、删除自动化抓取任务；邮件收件人与 SMTP 凭证已统一收口到设置中心。"
-            : "Create, edit, and delete automation jobs here; email recipients and SMTP credentials are centralized in Settings."}
-        </Text>
-        {!isLoading && !schedulerEnabled ? (
-          <div className="rounded-tremor-default border border-rose-300 bg-rose-50 p-4 text-sm text-rose-900 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-200">
-            <div className="flex items-center gap-2 font-medium">
-              <AlertTriangle className="h-4 w-4" />
-              {lang === "zh"
-                ? "自动化总开关当前是关闭状态，已保存的 job 不会自动创建爬取任务。"
-                : "The scheduler is currently disabled, so saved jobs will not create crawl tasks automatically."}
-            </div>
-            <Text className="mt-2">
-              {lang === "zh"
-                ? "请在 `.env` 中将 `AUTOMATION__ENABLED` 设为 `true`，然后重启 API 服务。"
-                : "Set `AUTOMATION__ENABLED=true` in `.env`, then restart the API service."}
-            </Text>
-          </div>
-        ) : null}
-        <div className="flex flex-wrap gap-3 pt-2">
-          <Link
-            href="/sources/tasks?scope=all"
-            className="inline-flex items-center gap-2 rounded-xl border border-tremor-border bg-tremor-background px-4 py-2 text-sm font-medium text-tremor-content-strong shadow-sm transition hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background"
-          >
-            {lang === "zh" ? "查看采集任务" : "Open Crawl Tasks"}
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-          <Link
-            href="/sources/flow"
-            className="inline-flex items-center gap-2 rounded-xl border border-tremor-border bg-tremor-background px-4 py-2 text-sm font-medium text-tremor-content-strong shadow-sm transition hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background"
-          >
-            {lang === "zh" ? "查看数据流程" : "Open Data Flow"}
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-          <Link
-            href="/setting"
-            className="inline-flex items-center gap-2 rounded-xl border border-teal-200 bg-teal-50 px-4 py-2 text-sm font-medium text-teal-700 shadow-sm transition hover:bg-teal-100 dark:border-teal-900/50 dark:bg-teal-950/25 dark:text-teal-300"
-          >
-            {lang === "zh" ? "打开设置中心" : "Open Settings"}
-            <ArrowRight className="h-4 w-4" />
-          </Link>
+  const columns: DataTableColumn<AutomationJob>[] = [
+    {
+      key: "status",
+      header: lang === "zh" ? "状态" : "Status",
+      render: (job) => <JobHealthBadge job={job} />,
+    },
+    {
+      key: "job",
+      header: lang === "zh" ? "任务" : "Job",
+      render: (job) => (
+        <div className="min-w-[240px] max-w-[420px]">
+          <p className="truncate font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">
+            {job.name}
+          </p>
+          <p className="mt-1 truncate font-mono text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+            {job.job_id}
+          </p>
         </div>
+      ),
+    },
+    {
+      key: "source",
+      header: lang === "zh" ? "国家/来源" : "Country / Source",
+      render: (job) => (
+        <div className="min-w-[150px]">
+          <p className="font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">{job.country_code}</p>
+          <p className="mt-1 truncate text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+            {getSourceDisplayLabel(job.source, lang, job.country_code)}
+          </p>
+        </div>
+      ),
+    },
+    {
+      key: "schedule",
+      header: lang === "zh" ? "计划" : "Schedule",
+      render: (job) => (
+        <div className="min-w-[180px]">
+          <p className="text-sm text-tremor-content-strong dark:text-dark-tremor-content-strong">
+            {scheduleLabel(job, lang)}
+          </p>
+          <p className="mt-1 text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+            {schedulerEnabled ? formatDateTime(job.next_run_at) : (lang === "zh" ? "调度器已关闭" : "Scheduler off")}
+          </p>
+        </div>
+      ),
+    },
+    {
+      key: "last",
+      header: lang === "zh" ? "最近运行" : "Last Run",
+      render: (job) => (
+        <div className="min-w-[130px]">
+          <StatusBadge status={job.last_status}>{job.last_status || "-"}</StatusBadge>
+          <p className="mt-1 text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+            {formatDateTime(job.last_finished_at || job.last_started_at)}
+          </p>
+        </div>
+      ),
+    },
+    {
+      key: "runs",
+      header: lang === "zh" ? "次数" : "Runs",
+      render: (job) => (
+        <div className="whitespace-nowrap text-sm text-tremor-content dark:text-dark-tremor-content">
+          <span className="font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">{job.run_count}</span>
+          <span className="text-tremor-content-subtle dark:text-dark-tremor-content-subtle"> / {job.skipped_count}</span>
+        </div>
+      ),
+    },
+    {
+      key: "actions",
+      header: "",
+      className: "text-right",
+      render: (job) => (
+        <div className="flex min-w-[230px] justify-end gap-2">
+          <ActionButton
+            disabled={runJob.isPending}
+            onClick={(event) => {
+              event.stopPropagation();
+              runJob.mutate(job.job_id);
+            }}
+            icon={<Play className="h-4 w-4" />}
+          >
+            {lang === "zh" ? "运行" : "Run"}
+          </ActionButton>
+          <ActionButton
+            onClick={(event) => {
+              event.stopPropagation();
+              startEdit(job);
+            }}
+            icon={<Pencil className="h-4 w-4" />}
+          >
+            {lang === "zh" ? "编辑" : "Edit"}
+          </ActionButton>
+          <ActionButton
+            tone="danger"
+            disabled={deleteJob.isPending}
+            onClick={(event) => {
+              event.stopPropagation();
+              void removeJob(job);
+            }}
+            icon={<Trash2 className="h-4 w-4" />}
+          >
+            {lang === "zh" ? "删除" : "Delete"}
+          </ActionButton>
+        </div>
+      ),
+    },
+  ];
+
+  return (
+    <div className="space-y-5">
+      <PageHeader
+        eyebrow={t(lang, "mod_sources")}
+        title={t(lang, "automation")}
+        description={
+          lang === "zh"
+            ? "管理自动采集 job、调度状态、失败通知和最近执行结果。"
+            : "Manage automated collection jobs, scheduler state, failure alerts, and recent execution outcomes."
+        }
+        meta={
+          <>
+            <StatusBadge status={schedulerEnabled ? "enabled" : "disabled"}>
+              {schedulerEnabled ? (lang === "zh" ? "调度器开启" : "Scheduler on") : (lang === "zh" ? "调度器关闭" : "Scheduler off")}
+            </StatusBadge>
+            <StatusBadge status={workerRunning ? "enabled" : "stopped"}>
+              {workerRunning ? (lang === "zh" ? "Worker 运行中" : "Worker running") : (lang === "zh" ? "Worker 停止" : "Worker stopped")}
+            </StatusBadge>
+            <StatusBadge tone={deliveryStatus.tone}>{deliveryStatus.label}</StatusBadge>
+          </>
+        }
+        actions={
+          <>
+            <Link
+              href="/sources/tasks?scope=all"
+              className="inline-flex h-9 items-center gap-2 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm font-medium text-tremor-content-strong transition hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:hover:bg-dark-tremor-background-subtle"
+            >
+              {lang === "zh" ? "采集任务" : "Crawl Tasks"}
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+            <Link
+              href="/sources/flow"
+              className="inline-flex h-9 items-center gap-2 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm font-medium text-tremor-content-strong transition hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:hover:bg-dark-tremor-background-subtle"
+            >
+              {lang === "zh" ? "数据流程" : "Data Flow"}
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+            <ActionButton tone="primary" onClick={openNewJob} icon={<Plus className="h-4 w-4" />}>
+              {lang === "zh" ? "新建 job" : "New job"}
+            </ActionButton>
+          </>
+        }
+      />
+
+      {!isLoading && !schedulerEnabled ? (
+        <AlertPanel tone="danger">
+          <div className="flex gap-2">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            <div>
+              <p className="font-medium">
+                {lang === "zh"
+                  ? "自动化总开关当前关闭，已保存的 job 不会自动创建爬取任务。"
+                  : "The scheduler is disabled, so saved jobs will not create crawl tasks automatically."}
+              </p>
+              <p className="mt-1">
+                {lang === "zh"
+                  ? "请在 `.env` 中将 `AUTOMATION__ENABLED` 设为 `true`，然后重启 API 服务。"
+                  : "Set `AUTOMATION__ENABLED=true` in `.env`, then restart the API service."}
+              </p>
+            </div>
+          </div>
+        </AlertPanel>
+      ) : null}
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricTile
+          label={lang === "zh" ? "调度器" : "Scheduler"}
+          value={config?.enabled ? "On" : "Off"}
+          icon={<CalendarClock className="h-4 w-4" />}
+          tone={schedulerEnabled ? "success" : "danger"}
+          hint={lang === "zh" ? `轮询间隔 ${config?.poll_interval_seconds ?? "-"}s` : `Poll interval ${config?.poll_interval_seconds ?? "-"}s`}
+        />
+        <MetricTile
+          label={lang === "zh" ? "启用 job" : "Enabled Jobs"}
+          value={`${summary.enabled}/${summary.total}`}
+          icon={<Bot className="h-4 w-4" />}
+          tone="primary"
+          hint={lang === "zh" ? `${summary.disabled} 个停用` : `${summary.disabled} disabled`}
+        />
+        <MetricTile
+          label={lang === "zh" ? "最近失败" : "Recent Failures"}
+          value={summary.failed}
+          icon={<AlertTriangle className="h-4 w-4" />}
+          tone={summary.failed > 0 ? "danger" : "success"}
+          hint={lang === "zh" ? "按最近状态统计" : "Based on last status"}
+        />
+        <MetricTile
+          label={lang === "zh" ? "提醒收件人" : "Alert Recipients"}
+          value={summary.alerting}
+          icon={<Bell className="h-4 w-4" />}
+          tone={summary.alerting > 0 ? "success" : "warning"}
+          hint={lang === "zh" ? `累计运行 ${summary.runCount} 次` : `${summary.runCount} total runs`}
+        />
       </div>
 
-      <Grid numItemsSm={2} numItemsLg={4} className="gap-4">
-        <Card decoration="top" decorationColor="blue">
-          <Text>Scheduler</Text>
-          <Metric>{config?.enabled ? "On" : "Off"}</Metric>
-        </Card>
-        <Card decoration="top" decorationColor="teal">
-          <Text>Jobs</Text>
-          <Metric>{summary.enabled}/{summary.total}</Metric>
-        </Card>
-        <Card decoration="top" decorationColor="amber">
-          <Text>Timezone</Text>
-          <Metric>{config?.timezone ?? "-"}</Metric>
-        </Card>
-        <Card decoration="top" decorationColor="rose">
-          <Text>Alert Recipients</Text>
-          <Metric>{summary.alerting}</Metric>
-        </Card>
-      </Grid>
+      <div className="grid gap-5 xl:grid-cols-[320px_minmax(0,1fr)]">
+        <aside className="space-y-5">
+          <section className="rounded-tremor-default border border-tremor-border bg-tremor-background px-4 py-3 dark:border-dark-tremor-border dark:bg-dark-tremor-background">
+            <div className="mb-1 flex items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
+                {lang === "zh" ? "运行状态" : "Runtime"}
+              </h2>
+              <Settings2 className="h-4 w-4 text-tremor-content-subtle" />
+            </div>
+            <InlineStatus
+              icon={<Clock3 className="h-4 w-4" />}
+              label={lang === "zh" ? "最近 tick" : "Last tick"}
+              value={formatDateTime(config?.last_tick_at)}
+            />
+            <InlineStatus
+              icon={<Cpu className="h-4 w-4" />}
+              label="Worker"
+              value={workerStatus ? (workerRunning ? "running" : "stopped") : "checking"}
+            />
+            <InlineStatus
+              icon={<Mail className="h-4 w-4" />}
+              label={lang === "zh" ? "邮件发送" : "Email delivery"}
+              value={config?.email_enabled ? "configured" : "disabled"}
+            />
+          </section>
 
-      <Grid numItemsLg={3} className="gap-6">
-        <Card className="lg:col-span-1">
-          <Title>Runtime</Title>
-          <div className="mt-4 space-y-3 text-sm">
-            <div className="flex items-center gap-2">
-              <Clock3 className="h-4 w-4 text-tremor-content-subtle" />
-              <Text>Last tick: {formatDateTime(config?.last_tick_at)}</Text>
-            </div>
-            <div className="flex items-center gap-2">
-              <Bot className="h-4 w-4 text-tremor-content-subtle" />
-              <Text>Poll interval: {config?.poll_interval_seconds ?? "-"}s</Text>
-            </div>
-            <div className="flex items-center gap-2">
-              <Mail className="h-4 w-4 text-tremor-content-subtle" />
-              <Text>Email delivery: {config?.email_enabled ? "configured" : "disabled"}</Text>
-            </div>
-            <div className="flex items-center gap-2">
-              <Cpu className="h-4 w-4 text-tremor-content-subtle" />
-              <Text>
-                Worker: {workerStatus
-                  ? (workerStatus.worker_process_running ? "running" : "stopped")
-                  : "checking"}
-              </Text>
-            </div>
-          </div>
-
-          {!workerStatus?.worker_process_running ? (
-            <div className="mt-4 rounded-tremor-default border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
-              <Text>
-                {lang === "zh"
-                  ? "自动化只会先创建 queued 任务；如果 worker 没启动，任务不会继续执行。"
-                  : "Automation only creates queued tasks first; without a worker process those tasks will not continue running."}
-              </Text>
-            </div>
+          {!workerRunning ? (
+            <AlertPanel tone="warning">
+              {lang === "zh"
+                ? "自动化只会先创建 queued 任务；如果 worker 没启动，任务不会继续执行。"
+                : "Automation can create queued tasks, but they will not continue without a running worker."}
+            </AlertPanel>
           ) : null}
 
-          <div className="mt-6">
-            <Title>Notification Status</Title>
+          <section className="rounded-tremor-default border border-tremor-border bg-tremor-background px-4 py-3 dark:border-dark-tremor-border dark:bg-dark-tremor-background">
+            <h2 className="text-sm font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
+              {lang === "zh" ? "通知" : "Notifications"}
+            </h2>
             <div className="mt-3 space-y-3">
-              <Badge color={deliveryStatus.color}>{deliveryStatus.label}</Badge>
+              <StatusBadge tone={deliveryStatus.tone}>{deliveryStatus.label}</StatusBadge>
               {!config?.email_enabled ? (
-                <div className="rounded-tremor-default border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
-                  <div className="flex items-center gap-2 font-medium">
-                    <AlertTriangle className="h-4 w-4" />
-                    {lang === "zh" ? "设置中心中的 SMTP 还未准备完成。" : "SMTP is not ready in the Settings Center."}
-                  </div>
-                  <Text className="mt-2">
-                    {lang === "zh"
-                      ? "请到设置中心补齐 SMTP 主机、账号、密码和发件邮箱。"
-                      : "Open Settings to finish the SMTP host, username, password, and from-email setup."}
-                  </Text>
-                </div>
+                <AlertPanel tone="warning">
+                  {lang === "zh"
+                    ? "SMTP 尚未准备完成，请到设置中心补齐主机、账号、密码和发件邮箱。"
+                    : "SMTP is not ready. Open Settings to finish the host, username, password, and from-email setup."}
+                </AlertPanel>
               ) : null}
               {!config?.admin_emails.length ? (
-                <div className="rounded-tremor-default border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
-                  <Text>
-                    {lang === "zh"
-                      ? "请在设置中心补充管理员邮箱，自动化失败提醒才会送达。"
-                      : "Add admin email recipients in Settings so automation failure alerts have somewhere to go."}
-                  </Text>
-                </div>
-              ) : null}
-            </div>
-          </div>
-
-          <div className="mt-6">
-            <Title>Admin Emails</Title>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {(config?.admin_emails ?? []).length > 0 ? (
-                config?.admin_emails.map((email) => (
-                  <Badge key={email} color="slate">{email}</Badge>
-                ))
-              ) : (
-                <Text>{lang === "zh" ? "尚未配置管理员邮箱" : "No admin emails configured"}</Text>
-              )}
-            </div>
-          </div>
-
-          <div className="mt-6 rounded-tremor-default border border-dashed border-tremor-border p-4 dark:border-dark-tremor-border">
-            <div className="flex items-center justify-between gap-2">
-              <Title>{editingJobId ? "Edit Job" : "New Job"}</Title>
-              <Button size="xs" variant="light" onClick={resetForm}>Reset</Button>
-            </div>
-
-            <div className="mt-4">
-              <Text>Quick presets</Text>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {automationPresets.map((preset) => (
-                  <Button
-                    key={preset.id}
-                    size="xs"
-                    variant="secondary"
-                    icon={Sparkles}
-                    onClick={() => applyPreset(preset.id)}
-                  >
-                    {preset.label}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            <div className="mt-4 space-y-3">
-              <input
-                className="w-full rounded-tremor-default border border-tremor-border px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background"
-                placeholder="job_id"
-                value={form.job_id}
-                disabled={!!editingJobId}
-                onChange={(e) => setForm((prev) => ({ ...prev, job_id: e.target.value }))}
-              />
-              <input
-                className="w-full rounded-tremor-default border border-tremor-border px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background"
-                placeholder="name"
-                value={form.name}
-                onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-              />
-              <select
-                className="w-full rounded-tremor-default border border-tremor-border px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background"
-                value={form.country_code}
-                onChange={(e) => {
-                  const nextCode = e.target.value;
-                  const nextConfig = sourceConfigByCountry.get(nextCode.toUpperCase());
-                  setForm((prev) => ({
-                    ...prev,
-                    country_code: nextCode,
-                    source: nextConfig?.default_source || prev.source,
-                    fill_missing: defaultFillMissingForCountry(nextConfig),
-                    timezone:
-                      findCountryTimezone(countries, nextCode) ||
-                      nextConfig?.timezone ||
-                      prev.timezone,
-                  }));
-                }}
-              >
-                {(countries ?? []).map((country) => (
-                  <option key={country.code} value={country.code}>
-                    {getCountryDisplayName(country, lang)}
-                  </option>
-                ))}
-              </select>
-              <select
-                className="w-full rounded-tremor-default border border-tremor-border px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background"
-                value={form.source}
-                onChange={(e) => setForm((prev) => ({ ...prev, source: e.target.value }))}
-                disabled={!selectedSupportsCrawl}
-              >
-                {sources.map((source) => (
-                  <option key={source.value} value={source.value}>{source.label}</option>
-                ))}
-              </select>
-              {!selectedSupportsCrawl ? (
-                <div className="rounded-tremor-default border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+                <AlertPanel tone="warning">
                   {lang === "zh"
-                    ? "这个国家还没有在后端 registry 中声明可采集来源。"
-                    : "This country has no crawl source declared in the backend registry yet."}
-                </div>
+                    ? "请在设置中心补充管理员邮箱，自动化失败提醒才会送达。"
+                    : "Add admin email recipients in Settings so automation failure alerts have somewhere to go."}
+                </AlertPanel>
               ) : null}
-              <div className="rounded-tremor-default border border-dashed border-tremor-border p-4 dark:border-dark-tremor-border">
-                <div className="flex items-center justify-between gap-3">
-                  <Text>{lang === "zh" ? "调度方式" : "Schedule"}</Text>
-                  <Badge color={scheduleMode === "interval" ? "teal" : "blue"}>
-                    {scheduleMode === "interval"
-                      ? (lang === "zh" ? "按间隔执行" : "Interval")
-                      : (lang === "zh" ? "按天执行" : "Daily")}
-                  </Badge>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Button
-                    size="xs"
-                    variant={scheduleMode === "daily" ? "primary" : "secondary"}
-                    onClick={() => setScheduleMode("daily")}
-                  >
-                    {lang === "zh" ? "每天固定时间" : "Daily time"}
-                  </Button>
-                  <Button
-                    size="xs"
-                    variant={scheduleMode === "interval" ? "primary" : "secondary"}
-                    onClick={() => setScheduleMode("interval")}
-                  >
-                    {lang === "zh" ? "每隔一段时间" : "Every N"}
-                  </Button>
-                </div>
-
-                {scheduleMode === "daily" ? (
-                  <>
-                    <div className="mt-3 grid grid-cols-2 gap-3">
-                      <input
-                        className="w-full rounded-tremor-default border border-tremor-border px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background"
-                        placeholder="daily_time HH:MM"
-                        value={form.daily_time ?? ""}
-                        onChange={(e) => setForm((prev) => ({ ...prev, daily_time: e.target.value }))}
-                      />
-                      <input
-                        className="w-full rounded-tremor-default border border-tremor-border px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background"
-                        placeholder="timezone"
-                        value={form.timezone ?? ""}
-                        onChange={(e) => setForm((prev) => ({ ...prev, timezone: e.target.value }))}
-                      />
-                    </div>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {dailyPresetTimes.map((timeText) => (
-                        <Button
-                          key={timeText}
-                          size="xs"
-                          variant="secondary"
-                          onClick={() => setForm((prev) => ({ ...prev, daily_time: timeText }))}
-                        >
-                          {timeText}
-                        </Button>
-                      ))}
-                    </div>
-                  </>
+              <div className="flex flex-wrap gap-2">
+                {(config?.admin_emails ?? []).length > 0 ? (
+                  config?.admin_emails.map((email) => (
+                    <StatusBadge key={email} tone="neutral">{email}</StatusBadge>
+                  ))
                 ) : (
-                  <>
-                    <div className="mt-3 grid grid-cols-3 gap-3">
-                      <input
-                        type="number"
-                        min="1"
-                        className="w-full rounded-tremor-default border border-tremor-border px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background"
-                        placeholder={lang === "zh" ? "间隔值" : "Interval"}
-                        value={intervalValue}
-                        onChange={(e) => setIntervalValue(e.target.value)}
-                      />
-                      <select
-                        className="w-full rounded-tremor-default border border-tremor-border px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background"
-                        value={intervalUnit}
-                        onChange={(e) => setIntervalUnit(e.target.value as IntervalUnit)}
-                      >
-                        <option value="minutes">{lang === "zh" ? "分钟" : "Minutes"}</option>
-                        <option value="hours">{lang === "zh" ? "小时" : "Hours"}</option>
-                      </select>
-                      <input
-                        className="w-full rounded-tremor-default border border-tremor-border px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background"
-                        placeholder="timezone"
-                        value={form.timezone ?? ""}
-                        onChange={(e) => setForm((prev) => ({ ...prev, timezone: e.target.value }))}
-                      />
-                    </div>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {intervalPresetMinutes.map((minutes) => (
-                        <Button
-                          key={minutes}
-                          size="xs"
-                          variant="secondary"
-                          onClick={() => {
-                            const derived = intervalMinutesToFields(minutes);
-                            setIntervalValue(derived.value);
-                            setIntervalUnit(derived.unit);
-                          }}
-                        >
-                          {lang === "zh"
-                            ? (minutes % 60 === 0 ? `${minutes / 60} 小时` : `${minutes} 分钟`)
-                            : (minutes % 60 === 0 ? `${minutes / 60}h` : `${minutes}m`)}
-                        </Button>
-                      ))}
-                    </div>
-                  </>
+                  <p className="text-sm text-tremor-content dark:text-dark-tremor-content">
+                    {lang === "zh" ? "尚未配置管理员邮箱" : "No admin emails configured"}
+                  </p>
                 )}
-
-                <Text className="mt-3 text-xs">{schedulePreview}</Text>
               </div>
-              <input
-                type="number"
-                className="w-full rounded-tremor-default border border-tremor-border px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background"
-                placeholder="retry threshold"
-                value={form.retry_threshold}
-                onChange={(e) => setForm((prev) => ({ ...prev, retry_threshold: Number(e.target.value || 0) }))}
-              />
-              <div className="grid grid-cols-2 gap-3">
+              <Link
+                href="/setting"
+                className="inline-flex h-9 items-center gap-2 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm font-medium text-tremor-content-strong transition hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:hover:bg-dark-tremor-background-subtle"
+              >
+                {lang === "zh" ? "打开设置中心" : "Open Settings"}
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+          </section>
+        </aside>
+
+        <section className="space-y-3">
+          <FilterToolbar>
+            <input
+              type="search"
+              value={jobSearch}
+              onChange={(event) => setJobSearch(event.target.value)}
+              placeholder={lang === "zh" ? "搜索 job、国家、来源或最近任务" : "Search jobs, countries, sources, or last task"}
+              className={cn(inputClass, "min-w-[240px] flex-1")}
+            />
+            <select
+              value={jobFilter}
+              onChange={(event) => setJobFilter(event.target.value as JobFilter)}
+              className="h-10 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm text-tremor-content-strong outline-none transition focus:border-tremor-brand-subtle focus:ring-2 focus:ring-tremor-brand-muted dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong"
+              aria-label={lang === "zh" ? "筛选 job" : "Filter jobs"}
+            >
+              <option value="all">{lang === "zh" ? "全部 job" : "All jobs"}</option>
+              <option value="enabled">{lang === "zh" ? "已启用" : "Enabled"}</option>
+              <option value="disabled">{lang === "zh" ? "已停用" : "Disabled"}</option>
+              <option value="failed">{lang === "zh" ? "最近失败" : "Failed last run"}</option>
+            </select>
+            <ActionButton onClick={openNewJob} icon={<Plus className="h-4 w-4" />} tone="primary">
+              {lang === "zh" ? "新建" : "New"}
+            </ActionButton>
+          </FilterToolbar>
+
+          {isLoading ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map((item) => (
+                <div
+                  key={item}
+                  className="h-16 animate-pulse rounded-tremor-default border border-tremor-border bg-tremor-background dark:border-dark-tremor-border dark:bg-dark-tremor-background"
+                />
+              ))}
+            </div>
+          ) : (
+            <DataTable
+              columns={columns}
+              rows={filteredJobs}
+              getRowKey={(job) => job.job_id}
+              selectedRowKey={drawerOpen ? editingJobId : null}
+              onRowClick={startEdit}
+              emptyState={
+                <EmptyState
+                  icon={<Bot className="h-10 w-10" />}
+                  title={lang === "zh" ? "暂无自动化 job" : "No automation jobs"}
+                  description={
+                    jobSearch || jobFilter !== "all"
+                      ? lang === "zh"
+                        ? "当前筛选条件下没有匹配的 job。"
+                        : "No jobs match the current filters."
+                      : lang === "zh"
+                        ? "创建一个 job 后，调度器会按计划生成采集任务。"
+                        : "Create a job to let the scheduler generate crawl tasks on a schedule."
+                  }
+                />
+              }
+            />
+          )}
+        </section>
+      </div>
+
+      <DetailDrawer
+        open={drawerOpen}
+        title={editingJobId ? (lang === "zh" ? "编辑自动化 job" : "Edit Automation Job") : (lang === "zh" ? "新建自动化 job" : "New Automation Job")}
+        subtitle={editingJobId ?? (lang === "zh" ? "配置国家、来源、调度和执行选项" : "Configure country, source, schedule, and execution options")}
+        onClose={closeDrawer}
+      >
+        <form className="space-y-5" onSubmit={submitForm}>
+          <FormSection title={lang === "zh" ? "基础信息" : "Basic Info"}>
+            {!editingJobId ? (
+              <div>
+                <p className="text-xs font-medium text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+                  {lang === "zh" ? "快速预设" : "Quick presets"}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {automationPresets.map((preset) => (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => applyPreset(preset.id)}
+                      className="inline-flex h-8 items-center gap-2 rounded-tremor-default border border-tremor-border bg-tremor-background px-2.5 text-xs font-medium text-tremor-content-strong transition hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:hover:bg-dark-tremor-background-subtle"
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Job ID">
+                <input
+                  className={inputClass}
+                  value={form.job_id}
+                  disabled={Boolean(editingJobId)}
+                  required
+                  onChange={(event) => setForm((prev) => ({ ...prev, job_id: event.target.value }))}
+                />
+              </Field>
+              <Field label={lang === "zh" ? "名称" : "Name"}>
+                <input
+                  className={inputClass}
+                  value={form.name}
+                  required
+                  onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+                />
+              </Field>
+              <Field label={lang === "zh" ? "国家" : "Country"}>
                 <select
-                  className="w-full rounded-tremor-default border border-tremor-border px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background"
-                  value={form.priority}
-                  onChange={(e) => setForm((prev) => ({ ...prev, priority: e.target.value }))}
+                  className={inputClass}
+                  value={form.country_code}
+                  onChange={(event) => {
+                    const nextCode = event.target.value;
+                    const nextConfig = sourceConfigByCountry.get(nextCode.toUpperCase());
+                    setForm((prev) => ({
+                      ...prev,
+                      country_code: nextCode,
+                      source: nextConfig?.default_source || prev.source,
+                      fill_missing: defaultFillMissingForCountry(nextConfig),
+                      timezone: findCountryTimezone(countries, nextCode) || nextConfig?.timezone || prev.timezone,
+                    }));
+                  }}
                 >
-                  {["low", "normal", "high", "urgent"].map((priority) => (
-                    <option key={priority} value={priority}>{priority}</option>
+                  {(countries ?? []).map((country) => (
+                    <option key={country.code} value={country.code}>
+                      {getCountryDisplayName(country, lang)}
+                    </option>
                   ))}
                 </select>
+              </Field>
+              <Field label={lang === "zh" ? "来源" : "Source"}>
                 <select
-                  className="w-full rounded-tremor-default border border-tremor-border px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background"
+                  className={inputClass}
+                  value={form.source}
+                  disabled={!selectedSupportsCrawl}
+                  onChange={(event) => setForm((prev) => ({ ...prev, source: event.target.value }))}
+                >
+                  {sources.map((source) => (
+                    <option key={source.value} value={source.value}>
+                      {source.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+
+            {!selectedSupportsCrawl ? (
+              <AlertPanel tone="warning">
+                {lang === "zh"
+                  ? "这个国家还没有在后端 registry 中声明可采集来源。"
+                  : "This country has no crawl source declared in the backend registry yet."}
+              </AlertPanel>
+            ) : null}
+          </FormSection>
+
+          <FormSection title={lang === "zh" ? "调度" : "Schedule"}>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setScheduleMode("daily")}
+                className={cn(
+                  "h-9 rounded-tremor-default border px-3 text-sm font-medium transition",
+                  scheduleMode === "daily"
+                    ? "border-tremor-brand bg-tremor-brand text-tremor-brand-inverted"
+                    : "border-tremor-border bg-tremor-background text-tremor-content-strong hover:bg-tremor-background-subtle dark:border-dark-tremor-border",
+                )}
+              >
+                {lang === "zh" ? "每天固定时间" : "Daily time"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setScheduleMode("interval")}
+                className={cn(
+                  "h-9 rounded-tremor-default border px-3 text-sm font-medium transition",
+                  scheduleMode === "interval"
+                    ? "border-tremor-brand bg-tremor-brand text-tremor-brand-inverted"
+                    : "border-tremor-border bg-tremor-background text-tremor-content-strong hover:bg-tremor-background-subtle dark:border-dark-tremor-border",
+                )}
+              >
+                {lang === "zh" ? "每隔一段时间" : "Every N"}
+              </button>
+            </div>
+
+            {scheduleMode === "daily" ? (
+              <>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Field label={lang === "zh" ? "每日执行时间" : "Daily time"}>
+                    <input
+                      className={inputClass}
+                      placeholder="HH:MM"
+                      value={form.daily_time ?? ""}
+                      onChange={(event) => setForm((prev) => ({ ...prev, daily_time: event.target.value }))}
+                    />
+                  </Field>
+                  <Field label={lang === "zh" ? "时区" : "Timezone"}>
+                    <input
+                      className={inputClass}
+                      value={form.timezone ?? ""}
+                      onChange={(event) => setForm((prev) => ({ ...prev, timezone: event.target.value }))}
+                    />
+                  </Field>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {dailyPresetTimes.map((timeText) => (
+                    <button
+                      key={timeText}
+                      type="button"
+                      onClick={() => setForm((prev) => ({ ...prev, daily_time: timeText }))}
+                      className="h-8 rounded-tremor-default border border-tremor-border bg-tremor-background px-2.5 text-xs font-medium text-tremor-content-strong transition hover:bg-tremor-background-subtle dark:border-dark-tremor-border"
+                    >
+                      {timeText}
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <Field label={lang === "zh" ? "间隔值" : "Interval"}>
+                    <input
+                      type="number"
+                      min="1"
+                      className={inputClass}
+                      value={intervalValue}
+                      onChange={(event) => setIntervalValue(event.target.value)}
+                    />
+                  </Field>
+                  <Field label={lang === "zh" ? "单位" : "Unit"}>
+                    <select
+                      className={inputClass}
+                      value={intervalUnit}
+                      onChange={(event) => setIntervalUnit(event.target.value as IntervalUnit)}
+                    >
+                      <option value="minutes">{lang === "zh" ? "分钟" : "Minutes"}</option>
+                      <option value="hours">{lang === "zh" ? "小时" : "Hours"}</option>
+                    </select>
+                  </Field>
+                  <Field label={lang === "zh" ? "时区" : "Timezone"}>
+                    <input
+                      className={inputClass}
+                      value={form.timezone ?? ""}
+                      onChange={(event) => setForm((prev) => ({ ...prev, timezone: event.target.value }))}
+                    />
+                  </Field>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {intervalPresetMinutes.map((minutes) => (
+                    <button
+                      key={minutes}
+                      type="button"
+                      onClick={() => {
+                        const derived = intervalMinutesToFields(minutes);
+                        setIntervalValue(derived.value);
+                        setIntervalUnit(derived.unit);
+                      }}
+                      className="h-8 rounded-tremor-default border border-tremor-border bg-tremor-background px-2.5 text-xs font-medium text-tremor-content-strong transition hover:bg-tremor-background-subtle dark:border-dark-tremor-border"
+                    >
+                      {lang === "zh"
+                        ? minutes % 60 === 0 ? `${minutes / 60} 小时` : `${minutes} 分钟`
+                        : minutes % 60 === 0 ? `${minutes / 60}h` : `${minutes}m`}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+
+            <AlertPanel tone="info">{schedulePreview}</AlertPanel>
+          </FormSection>
+
+          <FormSection title={lang === "zh" ? "执行选项" : "Execution"}>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label={lang === "zh" ? "优先级" : "Priority"}>
+                <select
+                  className={inputClass}
+                  value={form.priority}
+                  onChange={(event) => setForm((prev) => ({ ...prev, priority: event.target.value }))}
+                >
+                  {["low", "normal", "high", "urgent"].map((priority) => (
+                    <option key={priority} value={priority}>
+                      {priority}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label={lang === "zh" ? "失败阈值" : "Retry threshold"}>
+                <input
+                  type="number"
+                  min="0"
+                  className={inputClass}
+                  value={form.retry_threshold}
+                  onChange={(event) => setForm((prev) => ({ ...prev, retry_threshold: Number(event.target.value || 0) }))}
+                />
+              </Field>
+              <Field label={lang === "zh" ? "启用状态" : "Enabled"}>
+                <select
+                  className={inputClass}
                   value={form.enabled ? "yes" : "no"}
-                  onChange={(e) => setForm((prev) => ({ ...prev, enabled: e.target.value === "yes" }))}
+                  onChange={(event) => setForm((prev) => ({ ...prev, enabled: event.target.value === "yes" }))}
                 >
                   <option value="yes">enabled</option>
                   <option value="no">disabled</option>
                 </select>
-              </div>
-              <textarea
-                className="min-h-24 w-full rounded-tremor-default border border-tremor-border px-3 py-2 text-sm dark:border-dark-tremor-border dark:bg-dark-tremor-background"
-                placeholder="notes"
-                value={form.notes ?? ""}
-                onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))}
-              />
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                {([
-                  ["process", form.process],
-                  ["save_raw", form.save_raw],
-                  ["fill_missing", form.fill_missing],
-                  ["force", form.force],
-                ] as Array<[string, boolean]>)
-                  .filter(([key]) => key !== "fill_missing" || (selectedSourceConfig?.supports_fill_missing ?? true))
-                  .map(([key, value]) => (
-                  <label key={key} className="flex items-center gap-2 rounded-tremor-default border border-tremor-border px-3 py-2 dark:border-dark-tremor-border">
+              </Field>
+            </div>
+
+            <div className="grid gap-2 sm:grid-cols-2">
+              {([
+                ["process", form.process],
+                ["save_raw", form.save_raw],
+                ["fill_missing", form.fill_missing],
+                ["force", form.force],
+              ] as Array<[keyof Pick<AutomationJobInput, "process" | "save_raw" | "fill_missing" | "force">, boolean]>)
+                .filter(([key]) => key !== "fill_missing" || (selectedSourceConfig?.supports_fill_missing ?? true))
+                .map(([key, value]) => (
+                  <label
+                    key={key}
+                    className="flex min-h-12 cursor-pointer items-center gap-3 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 py-2 text-sm text-tremor-content-strong dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong"
+                  >
                     <input
                       type="checkbox"
                       checked={Boolean(value)}
-                      onChange={(e) => setForm((prev) => ({ ...prev, [key]: e.target.checked }))}
+                      onChange={(event) => setForm((prev) => ({ ...prev, [key]: event.target.checked }))}
+                      className="h-4 w-4 rounded border-tremor-border text-tremor-brand"
                     />
                     <span>{crawlOptionLabels[key]?.[lang] ?? key}</span>
                   </label>
                 ))}
-              </div>
-              <Button
-                icon={editingJobId ? Pencil : Plus}
-                loading={createJob.isPending || updateJob.isPending}
-                disabled={!selectedSupportsCrawl}
-                onClick={submitForm}
-              >
-                {editingJobId ? "Save changes" : "Create job"}
-              </Button>
             </div>
+          </FormSection>
+
+          <FormSection title={lang === "zh" ? "备注" : "Notes"}>
+            <textarea
+              className="min-h-24 w-full rounded-tremor-default border border-tremor-border bg-tremor-background px-3 py-2 text-sm text-tremor-content-strong outline-none transition focus:border-tremor-brand-subtle focus:ring-2 focus:ring-tremor-brand-muted dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong"
+              value={form.notes ?? ""}
+              onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))}
+            />
+          </FormSection>
+
+          <div className="flex flex-wrap justify-end gap-2 pt-2">
+            <ActionButton onClick={resetForm} icon={<RotateCcw className="h-4 w-4" />}>
+              {lang === "zh" ? "重置" : "Reset"}
+            </ActionButton>
+            <ActionButton
+              type="submit"
+              tone="primary"
+              disabled={saving || !selectedSupportsCrawl}
+              icon={editingJobId ? <Pencil className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+            >
+              {saving
+                ? lang === "zh" ? "保存中" : "Saving"
+                : editingJobId
+                  ? lang === "zh" ? "保存修改" : "Save changes"
+                  : lang === "zh" ? "创建 job" : "Create job"}
+            </ActionButton>
           </div>
-        </Card>
-
-        <Card className="lg:col-span-2">
-          <Title>Automation Jobs</Title>
-          <Text className="mt-1">
-            {schedulerEnabled
-              ? "Jobs here are stored in the database and used directly by the scheduler."
-              : (lang === "zh"
-                ? "这些 job 已经保存在数据库里，但当前调度器总开关关闭，所以它们不会自动运行。"
-                : "These jobs are stored in the database, but the scheduler is disabled, so they will not run automatically.")}
-          </Text>
-
-          <div className="mt-4 space-y-4">
-            {isLoading ? (
-              [1, 2, 3].map((idx) => (
-                <div key={idx} className="h-28 animate-pulse rounded-tremor-default bg-tremor-background-muted dark:bg-dark-tremor-background-muted" />
-              ))
-            ) : !(jobs?.length) ? (
-              <div className="rounded-tremor-default border border-dashed border-tremor-border p-8 text-center dark:border-dark-tremor-border">
-                <Text>No automation jobs configured.</Text>
-              </div>
-            ) : (
-              jobs.map((job) => (
-                <Card key={job.job_id} className="border border-tremor-border dark:border-dark-tremor-border">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="space-y-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Title>{job.name}</Title>
-                        <Badge color={job.enabled ? "emerald" : "slate"}>{job.enabled ? "enabled" : "disabled"}</Badge>
-                        <Badge color="slate">{job.country_code}</Badge>
-                        <Badge color="blue">{getSourceDisplayLabel(job.source, lang, job.country_code)}</Badge>
-                      </div>
-                      <Text>{scheduleLabel(job, lang)}</Text>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Link
-                        href={`/sources/tasks?scope=all${job.last_task_uuid ? `&search=${encodeURIComponent(job.last_task_uuid)}` : ""}`}
-                        className="inline-flex items-center gap-1 rounded-tremor-default border border-tremor-border px-3 py-1.5 text-xs font-medium text-tremor-content-strong transition hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:hover:bg-dark-tremor-background-subtle"
-                      >
-                        {lang === "zh" ? "查看任务" : "View tasks"}
-                        <ArrowRight className="h-3.5 w-3.5" />
-                      </Link>
-                      <Button size="xs" icon={Play} loading={runJob.isPending} onClick={() => runJob.mutate(job.job_id)}>
-                        Run now
-                      </Button>
-                      <Button size="xs" variant="secondary" icon={Pencil} onClick={() => startEdit(job)}>
-                        Edit
-                      </Button>
-                      <Button size="xs" color="rose" variant="secondary" icon={Trash2} loading={deleteJob.isPending} onClick={() => removeJob(job)}>
-                        Delete
-                      </Button>
-                    </div>
-                  </div>
-
-                  <Grid numItemsSm={2} numItemsLg={4} className="mt-4 gap-3">
-                    <Card className="p-3">
-                      <Text>Next run</Text>
-                      <Text className="mt-1 font-medium">
-                        {schedulerEnabled
-                          ? formatDateTime(job.next_run_at)
-                          : (lang === "zh" ? "调度器已关闭" : "Scheduler off")}
-                      </Text>
-                    </Card>
-                    <Card className="p-3">
-                      <Text>Last status</Text>
-                      <Text className="mt-1 font-medium">{job.last_status}</Text>
-                    </Card>
-                    <Card className="p-3">
-                      <Text>Retry threshold</Text>
-                      <Text className="mt-1 font-medium">{job.retry_threshold}</Text>
-                    </Card>
-                    <Card className="p-3">
-                      <Text>Last task</Text>
-                      {job.last_task_uuid ? (
-                        <Link
-                          href={`/sources/tasks?scope=all&search=${encodeURIComponent(job.last_task_uuid)}`}
-                          className="mt-1 block break-all font-mono text-xs font-medium text-tremor-brand hover:underline"
-                        >
-                          {job.last_task_uuid}
-                        </Link>
-                      ) : (
-                        <Text className="mt-1 break-all font-mono text-xs font-medium">-</Text>
-                      )}
-                    </Card>
-                  </Grid>
-
-                  <div className="mt-4 grid gap-2 text-sm text-tremor-content dark:text-dark-tremor-content md:grid-cols-2">
-                    <Text>Priority: {job.priority}</Text>
-                    <Text>Last started: {formatDateTime(job.last_started_at)}</Text>
-                    <Text>Process: {job.process ? "yes" : "no"}</Text>
-                    <Text>Last finished: {formatDateTime(job.last_finished_at)}</Text>
-                    <Text>Save raw: {job.save_raw ? "yes" : "no"}</Text>
-                    <Text>Run count: {job.run_count}</Text>
-                    <Text>Fill missing: {job.fill_missing ? "yes" : "no"}</Text>
-                    <Text>Skipped count: {job.skipped_count}</Text>
-                    <Text>Force: {job.force ? "yes" : "no"}</Text>
-                    <Text className="break-words">Last error: {job.last_error || "-"}</Text>
-                    {job.notes ? <Text className="break-words md:col-span-2">Notes: {job.notes}</Text> : null}
-                  </div>
-                </Card>
-              ))
-            )}
-          </div>
-        </Card>
-      </Grid>
+        </form>
+      </DetailDrawer>
     </div>
   );
 }

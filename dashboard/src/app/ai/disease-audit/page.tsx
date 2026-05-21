@@ -2,14 +2,21 @@
 
 import { useMemo, useState } from "react";
 import { AlertTriangle, BrainCircuit, FileSearch, GitMerge, PlusCircle, ShieldCheck } from "lucide-react";
-import { Badge, Button, Card, Text, Title } from "@tremor/react";
-import { useAppStore } from "@/stores/app-store";
+
+import { EmptyState } from "@/components/ui/EmptyState";
+import { FilterToolbar } from "@/components/ui/FilterToolbar";
+import { MetricTile } from "@/components/ui/MetricTile";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 import {
+  type DiseaseAuditLogEntry,
   type DiseaseAuditFinding,
   type DiseaseAuditRecommendation,
+  useDiseaseDuplicateAuditLogs,
   useDiseaseDuplicateAuditStatus,
   useRunDiseaseDuplicateAudit,
 } from "@/lib/hooks/useDiseaseDuplicateAudit";
+import { useAppStore } from "@/stores/app-store";
 
 const copy = {
   en: {
@@ -32,9 +39,10 @@ const copy = {
     noFindings: "No findings in this section.",
     generatedAt: "Generated",
     modelUsed: "Model used",
+    logs: "Audit logs",
+    degradedRouteHint: "No healthy route is available; the run will still try enabled, non-rate-limited routes and record each attempt.",
     loading: "Analyzing...",
     error: "Audit failed",
-    summary: "Summary",
     merge: "Merge",
     keep: "Keep separate",
     add: "Add disease",
@@ -60,9 +68,10 @@ const copy = {
     noFindings: "本区暂无发现。",
     generatedAt: "生成时间",
     modelUsed: "使用模型",
+    logs: "审计日志",
+    degradedRouteHint: "当前没有健康路由；运行时仍会尝试已启用且未限流的路由，并记录每一次尝试。",
     loading: "分析中...",
     error: "审计失败",
-    summary: "汇总",
     merge: "建议合并",
     keep: "建议保留",
     add: "建议新增",
@@ -70,11 +79,11 @@ const copy = {
   },
 };
 
-function decisionColor(decision?: string) {
-  if (decision === "merge") return "emerald";
-  if (decision === "add_standard_disease") return "blue";
-  if (decision === "keep_separate") return "slate";
-  return "amber";
+function decisionTone(decision?: string) {
+  if (decision === "merge") return "success" as const;
+  if (decision === "add_standard_disease") return "info" as const;
+  if (decision === "keep_separate") return "neutral" as const;
+  return "warning" as const;
 }
 
 function decisionLabel(decision: string | undefined, lang: "en" | "zh") {
@@ -84,36 +93,70 @@ function decisionLabel(decision: string | undefined, lang: "en" | "zh") {
   return copy[lang].review;
 }
 
-function FindingList({ title, items }: { title: string; items?: DiseaseAuditFinding[] }) {
+function AlertPanel({ title, message, tone }: { title: string; message: string; tone: "warning" | "danger" }) {
+  const toneClass =
+    tone === "danger"
+      ? "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-200"
+      : "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200";
+
   return (
-    <Card className="space-y-4">
+    <section className={`rounded-tremor-default border p-4 ${toneClass}`}>
+      <div className="flex gap-3">
+        <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
+        <div>
+          <h2 className="text-sm font-semibold">{title}</h2>
+          <p className="mt-1 text-sm">{message}</p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function FindingList({
+  title,
+  items,
+  empty,
+}: {
+  title: string;
+  items?: DiseaseAuditFinding[];
+  empty: string;
+}) {
+  return (
+    <section className="rounded-tremor-default border border-tremor-border bg-tremor-background p-4 dark:border-dark-tremor-border dark:bg-dark-tremor-background">
       <div className="flex items-center justify-between gap-3">
-        <Title className="text-base">{title}</Title>
-        <Badge color={items?.length ? "amber" : "emerald"}>{items?.length ?? 0}</Badge>
+        <h2 className="text-base font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">{title}</h2>
+        <StatusBadge tone={items?.length ? "warning" : "success"}>{items?.length ?? 0}</StatusBadge>
       </div>
       {!items?.length ? (
-        <Text className="text-sm text-tremor-content-subtle">No findings in this section.</Text>
+        <p className="mt-4 text-sm text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{empty}</p>
       ) : (
-        <div className="max-h-[420px] space-y-3 overflow-y-auto pr-1">
+        <div className="mt-4 max-h-[420px] space-y-3 overflow-y-auto pr-1">
           {items.map((item, index) => (
-            <div key={`${item.category}-${index}`} className="rounded-2xl border border-tremor-border bg-tremor-background-subtle/60 p-3">
+            <div
+              key={`${item.category}-${index}`}
+              className="rounded-tremor-default border border-tremor-border bg-tremor-background-subtle/60 p-3 dark:border-dark-tremor-border dark:bg-dark-tremor-background-subtle/50"
+            >
               <div className="flex flex-wrap items-center gap-2">
-                <Badge color="slate">{item.category}</Badge>
+                <StatusBadge>{item.category}</StatusBadge>
                 {item.candidate_ids?.map((id) => (
-                  <Badge key={id} color="blue">{id}</Badge>
+                  <StatusBadge key={id} tone="info">{id}</StatusBadge>
                 ))}
-                {item.country_code ? <Badge color="emerald">{item.country_code}</Badge> : null}
-                {item.row_count ? <Badge color="amber">{item.row_count} rows</Badge> : null}
+                {item.country_code ? <StatusBadge tone="success">{item.country_code}</StatusBadge> : null}
+                {item.row_count ? <StatusBadge tone="warning">{item.row_count} rows</StatusBadge> : null}
               </div>
-              <p className="mt-2 text-sm leading-6 text-tremor-content-strong">{item.finding}</p>
+              <p className="mt-2 text-sm leading-6 text-tremor-content-strong dark:text-dark-tremor-content-strong">
+                {item.finding}
+              </p>
               {item.raw_terms?.length ? (
-                <p className="mt-1 text-xs text-tremor-content-subtle">Examples: {item.raw_terms.slice(0, 4).join(", ")}</p>
+                <p className="mt-1 text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+                  Examples: {item.raw_terms.slice(0, 4).join(", ")}
+                </p>
               ) : null}
             </div>
           ))}
         </div>
       )}
-    </Card>
+    </section>
   );
 }
 
@@ -125,31 +168,104 @@ function RecommendationList({
   lang: "en" | "zh";
 }) {
   if (!items?.length) {
-    return <Text className="text-sm text-tremor-content-subtle">{copy[lang].noFindings}</Text>;
+    return <p className="text-sm text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{copy[lang].noFindings}</p>;
   }
 
   return (
     <div className="space-y-3">
       {items.map((item, index) => (
-        <div key={`${item.decision}-${index}`} className="rounded-2xl border border-tremor-border bg-white/80 p-4 shadow-sm">
+        <div
+          key={`${item.decision}-${index}`}
+          className="rounded-tremor-default border border-tremor-border bg-tremor-background p-4 dark:border-dark-tremor-border dark:bg-dark-tremor-background"
+        >
           <div className="flex flex-wrap items-center gap-2">
-            <Badge color={decisionColor(item.decision)}>{decisionLabel(item.decision, lang)}</Badge>
-            {item.confidence ? <Badge color="slate">{item.confidence}</Badge> : null}
-            {item.canonical_id ? <Badge color="blue">canonical {item.canonical_id}</Badge> : null}
-            {item.merge_ids?.map((id) => <Badge key={id} color="emerald">merge {id}</Badge>)}
+            <StatusBadge tone={decisionTone(item.decision)}>{decisionLabel(item.decision, lang)}</StatusBadge>
+            {item.confidence ? <StatusBadge>{item.confidence}</StatusBadge> : null}
+            {item.canonical_id ? <StatusBadge tone="info">canonical {item.canonical_id}</StatusBadge> : null}
+            {item.merge_ids?.map((id) => <StatusBadge key={id} tone="success">merge {id}</StatusBadge>)}
           </div>
-          <p className="mt-3 text-sm font-medium leading-6 text-tremor-content-strong">{item.finding}</p>
-          {(item.proposed_standard_name_en || item.proposed_standard_name_zh) ? (
-            <p className="mt-2 text-sm text-tremor-content">
+          <p className="mt-3 text-sm font-medium leading-6 text-tremor-content-strong dark:text-dark-tremor-content-strong">
+            {item.finding}
+          </p>
+          {item.proposed_standard_name_en || item.proposed_standard_name_zh ? (
+            <p className="mt-2 text-sm text-tremor-content dark:text-dark-tremor-content">
               Proposed: {item.proposed_standard_name_en || "-"} / {item.proposed_standard_name_zh || "-"}
             </p>
           ) : null}
-          <p className="mt-2 text-sm leading-6 text-tremor-content">
+          <p className="mt-2 text-sm leading-6 text-tremor-content dark:text-dark-tremor-content">
             {lang === "zh" ? item.rationale_zh || item.rationale_en : item.rationale_en || item.rationale_zh}
           </p>
         </div>
       ))}
     </div>
+  );
+}
+
+function logTone(level: string) {
+  if (level === "error") return "danger" as const;
+  if (level === "warning") return "warning" as const;
+  return "neutral" as const;
+}
+
+function formatMetadata(metadata: Record<string, unknown> | undefined): string | null {
+  if (!metadata || Object.keys(metadata).length === 0) return null;
+  return JSON.stringify(metadata, null, 2);
+}
+
+function AuditLogPanel({
+  title,
+  logs,
+}: {
+  title: string;
+  logs: DiseaseAuditLogEntry[];
+}) {
+  if (!logs.length) return null;
+  const visibleLogs = [...logs].reverse().slice(0, 80);
+
+  return (
+    <section className="rounded-tremor-default border border-tremor-border bg-tremor-background p-4 dark:border-dark-tremor-border dark:bg-dark-tremor-background">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-base font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
+          {title}
+        </h2>
+        <StatusBadge>{logs.length}</StatusBadge>
+      </div>
+      <div className="mt-4 max-h-[360px] space-y-2 overflow-y-auto pr-1">
+        {visibleLogs.map((entry, index) => {
+          const metadata = formatMetadata(entry.metadata);
+          return (
+            <div
+              key={`${entry.run_id}-${entry.timestamp}-${entry.event}-${index}`}
+              className="rounded-tremor-default border border-tremor-border bg-tremor-background-subtle px-3 py-3 dark:border-dark-tremor-border dark:bg-dark-tremor-background-subtle"
+            >
+              <div className="flex flex-wrap items-center gap-2">
+                <StatusBadge tone={logTone(entry.level)}>{entry.level}</StatusBadge>
+                <StatusBadge>{entry.event}</StatusBadge>
+                <span className="font-mono text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+                  {new Date(entry.timestamp).toLocaleString()}
+                </span>
+                <span className="font-mono text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+                  {entry.run_id.slice(0, 8)}
+                </span>
+              </div>
+              <p className="mt-2 text-sm text-tremor-content-strong dark:text-dark-tremor-content-strong">
+                {entry.message}
+              </p>
+              {metadata ? (
+                <details className="mt-2">
+                  <summary className="cursor-pointer text-xs font-medium text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+                    metadata
+                  </summary>
+                  <pre className="mt-2 max-h-44 overflow-auto rounded-tremor-default bg-tremor-background px-3 py-2 text-xs text-tremor-content dark:bg-dark-tremor-background dark:text-dark-tremor-content">
+                    {metadata}
+                  </pre>
+                </details>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
@@ -159,6 +275,7 @@ export default function DiseaseAuditPage() {
   const [includeNew, setIncludeNew] = useState(true);
   const [maxCandidates, setMaxCandidates] = useState(40);
   const { data: status, error: statusError } = useDiseaseDuplicateAuditStatus(includeNew);
+  const { data: persistedLogs } = useDiseaseDuplicateAuditLogs(120);
   const runAudit = useRunDiseaseDuplicateAudit();
   const result = runAudit.data;
 
@@ -166,6 +283,7 @@ export default function DiseaseAuditPage() {
     () => (status?.model_center.routes ?? []).filter((route) => route.available_for_routing),
     [status],
   );
+  const auditLogs = result?.logs?.length ? result.logs : persistedLogs ?? [];
 
   const run = (includeAI: boolean) => {
     runAudit.mutate({
@@ -176,157 +294,176 @@ export default function DiseaseAuditPage() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 md:px-6">
-      <div className="overflow-hidden rounded-[2rem] border border-emerald-200 bg-[radial-gradient(circle_at_top_left,rgba(20,184,166,0.24),transparent_34%),linear-gradient(135deg,#f7fee7,#f0fdfa_45%,#ffffff)] p-6 shadow-sm">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-3">
-            <Badge color="emerald" className="w-fit">{ui.eyebrow}</Badge>
-            <div>
-              <Title className="text-3xl tracking-tight text-slate-950">{ui.title}</Title>
-              <Text className="mt-2 max-w-3xl text-base text-slate-700">{ui.subtitle}</Text>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {status ? <Badge color="emerald">Audit API ready</Badge> : null}
-              {activeRoutes.length ? (
-                activeRoutes.slice(0, 4).map((route) => (
-                  <Badge key={route.model_key} color="blue">
-                    {route.provider_key} / {route.model_name}
-                  </Badge>
-                ))
-              ) : (
-                <Badge color="rose">{ui.noRoutes}</Badge>
-              )}
-              {status?.model_center.route_count ? (
-                <Badge color="slate">
-                  {ui.modelRoutes}: {status.model_center.active_route_count}/{status.model_center.route_count}
-                </Badge>
-              ) : null}
-            </div>
-          </div>
-          <div className="flex flex-col gap-3 rounded-3xl border border-white/70 bg-white/75 p-4 shadow-sm backdrop-blur md:min-w-[340px]">
-            <label className="flex items-center gap-3 text-sm font-medium text-slate-800">
-              <input
-                type="checkbox"
-                checked={includeNew}
-                onChange={(event) => setIncludeNew(event.target.checked)}
-                className="h-4 w-4 rounded border-slate-300 text-emerald-600"
-              />
-              {ui.includeNew}
-            </label>
-            <label className="space-y-1 text-sm font-medium text-slate-800">
-              <span>{ui.maxCandidates}</span>
-              <input
-                type="number"
-                min={1}
-                max={100}
-                value={maxCandidates}
-                onChange={(event) => setMaxCandidates(Number(event.target.value) || 40)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-emerald-400"
-              />
-            </label>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <Button variant="secondary" icon={FileSearch} onClick={() => run(false)} disabled={runAudit.isPending}>
-                {ui.runLocal}
-              </Button>
-              <Button icon={BrainCircuit} onClick={() => run(true)} disabled={runAudit.isPending || !activeRoutes.length}>
-                {runAudit.isPending ? ui.loading : ui.runAI}
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div className="space-y-5">
+      <PageHeader
+        eyebrow={ui.eyebrow}
+        title={ui.title}
+        description={ui.subtitle}
+        meta={
+          <>
+            {status ? <StatusBadge tone="success">Audit API ready</StatusBadge> : null}
+            {activeRoutes.length ? (
+              activeRoutes.slice(0, 4).map((route) => (
+                <StatusBadge key={route.model_key} tone="info">
+                  {route.provider_key} / {route.model_name}
+                </StatusBadge>
+              ))
+            ) : (
+              <StatusBadge tone="danger">{ui.noRoutes}</StatusBadge>
+            )}
+            {status?.model_center.route_count ? (
+              <StatusBadge>
+                {ui.modelRoutes}: {status.model_center.active_route_count}/{status.model_center.route_count}
+              </StatusBadge>
+            ) : null}
+          </>
+        }
+      />
+
+      <FilterToolbar>
+        <label className="inline-flex h-10 items-center gap-2 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm font-medium text-tremor-content-strong dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong">
+          <input
+            type="checkbox"
+            checked={includeNew}
+            onChange={(event) => setIncludeNew(event.target.checked)}
+            className="h-4 w-4 rounded border-tremor-border text-tremor-brand"
+          />
+          {ui.includeNew}
+        </label>
+
+        <label className="flex items-center gap-2 text-sm font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">
+          <span>{ui.maxCandidates}</span>
+          <input
+            type="number"
+            min={1}
+            max={100}
+            value={maxCandidates}
+            onChange={(event) => setMaxCandidates(Number(event.target.value) || 40)}
+            className="h-10 w-24 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm outline-none focus:border-tremor-brand-subtle focus:ring-2 focus:ring-tremor-brand-muted dark:border-dark-tremor-border dark:bg-dark-tremor-background"
+          />
+        </label>
+
+        <button
+          type="button"
+          className="inline-flex h-10 items-center gap-2 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm font-medium text-tremor-content-strong transition hover:bg-tremor-background-subtle disabled:opacity-60 dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong dark:hover:bg-dark-tremor-background-subtle"
+          onClick={() => run(false)}
+          disabled={runAudit.isPending}
+        >
+          <FileSearch className="h-4 w-4" />
+          {ui.runLocal}
+        </button>
+        <button
+          type="button"
+          className="inline-flex h-10 items-center gap-2 rounded-tremor-default bg-tremor-brand px-3 text-sm font-medium text-tremor-brand-inverted transition hover:opacity-90 disabled:opacity-60 dark:bg-dark-tremor-brand dark:text-dark-tremor-brand-inverted"
+          onClick={() => run(true)}
+          disabled={runAudit.isPending}
+        >
+          <BrainCircuit className="h-4 w-4" />
+          {runAudit.isPending ? ui.loading : ui.runAI}
+        </button>
+        {!activeRoutes.length && status?.model_center.route_count ? (
+          <span className="text-xs text-amber-700 dark:text-amber-300">
+            {ui.degradedRouteHint}
+          </span>
+        ) : null}
+      </FilterToolbar>
 
       {statusError ? (
-        <Card className="border-amber-200 bg-amber-50">
-          <div className="flex gap-3">
-            <AlertTriangle className="mt-0.5 h-5 w-5 text-amber-600" />
-            <div>
-              <Title className="text-base text-amber-900">{ui.error}</Title>
-              <Text className="mt-1 text-amber-800">
-                {String(statusError.message || statusError).includes("Not Found")
-                  ? ui.routeMissing
-                  : String(statusError.message || statusError)}
-              </Text>
-            </div>
-          </div>
-        </Card>
+        <AlertPanel
+          title={ui.error}
+          tone="warning"
+          message={
+            String(statusError.message || statusError).includes("Not Found")
+              ? ui.routeMissing
+              : String(statusError.message || statusError)
+          }
+        />
       ) : null}
 
       {runAudit.error ? (
-        <Card className="border-rose-200 bg-rose-50">
-          <div className="flex gap-3">
-            <AlertTriangle className="mt-0.5 h-5 w-5 text-rose-600" />
-            <div>
-              <Title className="text-base text-rose-900">{ui.error}</Title>
-              <Text className="mt-1 text-rose-800">
-                {String(runAudit.error.message || runAudit.error).includes("Not Found")
-                  ? ui.routeMissing
-                  : String(runAudit.error.message || runAudit.error)}
-              </Text>
-            </div>
-          </div>
-        </Card>
+        <AlertPanel
+          title={ui.error}
+          tone="danger"
+          message={
+            String(runAudit.error.message || runAudit.error).includes("Not Found")
+              ? ui.routeMissing
+              : String(runAudit.error.message || runAudit.error)
+          }
+        />
       ) : null}
 
+      <AuditLogPanel title={ui.logs} logs={auditLogs} />
+
       {!result ? (
-        <Card>
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <ShieldCheck className="h-12 w-12 text-tremor-content-subtle" />
-            <Title className="mt-3">{ui.noData}</Title>
-          </div>
-        </Card>
+        <EmptyState
+          icon={<ShieldCheck className="h-12 w-12" />}
+          title={ui.noData}
+          className="rounded-tremor-default border border-dashed border-tremor-border bg-tremor-background py-16 dark:border-dark-tremor-border dark:bg-dark-tremor-background"
+        />
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <Card decoration="top" decorationColor="rose">
-              <Text>{ui.highDuplicates}</Text>
-              <p className="mt-2 text-3xl font-semibold">{result.summary.high_confidence_standard_duplicates}</p>
-            </Card>
-            <Card decoration="top" decorationColor="amber">
-              <Text>{ui.mappingCandidates}</Text>
-              <p className="mt-2 text-3xl font-semibold">{result.summary.mapping_term_review_candidates}</p>
-            </Card>
-            <Card decoration="top" decorationColor="blue">
-              <Text>{ui.newCandidates}</Text>
-              <p className="mt-2 text-3xl font-semibold">{result.summary.new_disease_candidates}</p>
-            </Card>
-            <Card decoration="top" decorationColor="slate">
-              <Text>{ui.similarCandidates}</Text>
-              <p className="mt-2 text-3xl font-semibold">{result.summary.similar_name_review_candidates}</p>
-            </Card>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <MetricTile
+              label={ui.highDuplicates}
+              value={result.summary.high_confidence_standard_duplicates}
+              tone="danger"
+              icon={<AlertTriangle className="h-4 w-4" />}
+            />
+            <MetricTile
+              label={ui.mappingCandidates}
+              value={result.summary.mapping_term_review_candidates}
+              tone="warning"
+              icon={<FileSearch className="h-4 w-4" />}
+            />
+            <MetricTile
+              label={ui.newCandidates}
+              value={result.summary.new_disease_candidates}
+              tone="info"
+              icon={<PlusCircle className="h-4 w-4" />}
+            />
+            <MetricTile
+              label={ui.similarCandidates}
+              value={result.summary.similar_name_review_candidates}
+              tone="neutral"
+              icon={<ShieldCheck className="h-4 w-4" />}
+            />
           </div>
 
           {result.ai_review ? (
-            <Card className="space-y-5 border-emerald-200 bg-emerald-50/50">
+            <section className="space-y-5 rounded-tremor-default border border-emerald-200 bg-emerald-50/50 p-4 dark:border-emerald-900/40 dark:bg-emerald-950/20">
               <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                 <div>
                   <div className="flex items-center gap-2">
-                    <BrainCircuit className="h-5 w-5 text-emerald-700" />
-                    <Title className="text-base">{ui.aiReview}</Title>
+                    <BrainCircuit className="h-5 w-5 text-emerald-700 dark:text-emerald-300" />
+                    <h2 className="text-base font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
+                      {ui.aiReview}
+                    </h2>
                   </div>
-                  <Text className="mt-1">
+                  <p className="mt-1 text-sm text-tremor-content dark:text-dark-tremor-content">
                     {ui.modelUsed}: {result.ai_review.model_route?.provider_key || "-"} / {result.ai_review.model_route?.model_name || "-"}
-                  </Text>
+                  </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Badge color="emerald"><GitMerge className="mr-1 h-3 w-3" />{ui.merge}: {result.ai_review.summary?.merge ?? 0}</Badge>
-                  <Badge color="blue"><PlusCircle className="mr-1 h-3 w-3" />{ui.add}: {result.ai_review.summary?.add_standard_disease ?? 0}</Badge>
-                  <Badge color="slate">{ui.keep}: {result.ai_review.summary?.keep_separate ?? 0}</Badge>
-                  <Badge color="amber">{ui.review}: {result.ai_review.summary?.needs_human_review ?? 0}</Badge>
+                  <StatusBadge tone="success"><GitMerge className="mr-1 h-3 w-3" />{ui.merge}: {result.ai_review.summary?.merge ?? 0}</StatusBadge>
+                  <StatusBadge tone="info"><PlusCircle className="mr-1 h-3 w-3" />{ui.add}: {result.ai_review.summary?.add_standard_disease ?? 0}</StatusBadge>
+                  <StatusBadge>{ui.keep}: {result.ai_review.summary?.keep_separate ?? 0}</StatusBadge>
+                  <StatusBadge tone="warning">{ui.review}: {result.ai_review.summary?.needs_human_review ?? 0}</StatusBadge>
                 </div>
               </div>
               <RecommendationList items={result.ai_review.recommendations} lang={lang} />
-            </Card>
+            </section>
           ) : null}
 
-          <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-            <FindingList title={ui.highDuplicates} items={result.high_confidence_standard_duplicates} />
-            <FindingList title={ui.newCandidates} items={result.new_disease_candidates} />
-            <FindingList title={ui.mappingCandidates} items={result.mapping_term_review_candidates} />
-            <FindingList title={ui.similarCandidates} items={result.similar_name_review_candidates} />
+          <div className="grid gap-4 xl:grid-cols-2">
+            <FindingList title={ui.highDuplicates} items={result.high_confidence_standard_duplicates} empty={ui.noFindings} />
+            <FindingList title={ui.newCandidates} items={result.new_disease_candidates} empty={ui.noFindings} />
+            <FindingList title={ui.mappingCandidates} items={result.mapping_term_review_candidates} empty={ui.noFindings} />
+            <FindingList title={ui.similarCandidates} items={result.similar_name_review_candidates} empty={ui.noFindings} />
           </div>
 
-          <Text className="text-xs text-tremor-content-subtle">{ui.generatedAt}: {result.generated_at}</Text>
+          <p className="text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+            {ui.generatedAt}: {result.generated_at}
+          </p>
         </>
       )}
     </div>

@@ -60,8 +60,8 @@ export function TopNavbar({
       : t(lang, "system_status_country_empty");
 
   return (
-    <header className="glass-panel sticky top-0 z-40 border-b border-tremor-border px-4 shadow-sm sm:px-6 lg:px-8">
-      <div className="flex min-h-16 items-center gap-x-4 py-3 sm:gap-x-6">
+    <header className="glass-panel sticky top-0 z-40 border-b border-tremor-border px-4 sm:px-6 lg:px-8">
+      <div className="flex min-h-14 items-center gap-x-4 py-2 sm:gap-x-6">
         <button
           type="button"
           className="-m-2.5 p-2.5 text-tremor-content-subtle hover:text-tremor-content lg:hidden"
@@ -76,16 +76,16 @@ export function TopNavbar({
             <button
               type="button"
               onClick={onToggleSidebar}
-              className="hidden rounded-full border border-tremor-border bg-tremor-background p-2 text-tremor-content-subtle shadow-sm transition hover:text-tremor-content lg:inline-flex"
+              className="hidden rounded-tremor-default border border-tremor-border bg-tremor-background p-2 text-tremor-content-subtle transition hover:bg-tremor-background-subtle hover:text-tremor-content lg:inline-flex"
               aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
               title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
               {sidebarCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
             </button>
             <div className="lg:hidden">
-              <span className="text-lg tracking-tight">{t(lang, "brand_name")}</span>
+              <span className="text-lg">{t(lang, "brand_name")}</span>
             </div>
-            <div className={`hidden rounded-full border px-3 py-1 text-xs font-medium lg:flex lg:items-center lg:gap-2 ${countryHealthTone}`}>
+            <div className={`hidden rounded-tremor-default border px-2.5 py-1 text-xs font-medium lg:flex lg:items-center lg:gap-2 ${countryHealthTone}`}>
               {error ? <AlertTriangle className="h-3.5 w-3.5" /> : <ShieldCheck className="h-3.5 w-3.5" />}
               <span>{countryHealthLabel}</span>
               {errorStatus ? <span className="opacity-75">({errorStatus})</span> : null}
@@ -93,7 +93,7 @@ export function TopNavbar({
           </div>
           <div className="flex items-center gap-3 lg:gap-4">
             <div className="hidden text-right lg:block">
-              <p className="text-xs font-medium uppercase tracking-[0.18em] text-tremor-content-subtle">
+              <p className="text-xs font-medium uppercase text-tremor-content-subtle">
                 {t(lang, "active_country")}
               </p>
               <p className="text-sm font-semibold text-tremor-content-strong">
@@ -101,7 +101,7 @@ export function TopNavbar({
               </p>
             </div>
 
-            <div className="flex items-center gap-2 rounded-full border border-tremor-border bg-tremor-background px-3 py-2 shadow-sm">
+            <div className="flex items-center gap-2 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 py-2">
               <Globe className="h-4 w-4 text-tremor-content-subtle" />
               <select
                 title={t(lang, "select_country")}
@@ -131,7 +131,7 @@ export function TopNavbar({
             <button
               onClick={() => setLang(lang === "en" ? "zh" : "en")}
               aria-label={t(lang, "language_toggle_label")}
-              className="flex items-center gap-2 rounded-full border border-tremor-border bg-tremor-background px-3 py-2 text-sm font-medium text-tremor-content-strong shadow-sm transition hover:border-tremor-ring hover:bg-tremor-background-muted"
+              className="flex items-center gap-2 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 py-2 text-sm font-medium text-tremor-content-strong transition hover:border-tremor-ring hover:bg-tremor-background-muted"
             >
               <Languages className="h-4 w-4" />
               {lang === "en" ? "中文" : "EN"}

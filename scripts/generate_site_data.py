@@ -51,6 +51,7 @@ from src.knowledge.catalogue import (  # noqa: E402
     resolve_disease_knowledge_status,
     should_generate_public_disease_page,
 )
+from src.knowledge.citations import normalize_knowledge_citation_group  # noqa: E402
 
 
 # ─────────────────────────────────────────────────────────────
@@ -232,6 +233,74 @@ def safe_float(v) -> float | None:
         return f if math.isfinite(f) else None
     except (TypeError, ValueError):
         return None
+
+
+def safe_int(v) -> int | None:
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        return None
+
+
+def iso_or_none(value) -> str | None:
+    return value.isoformat() if hasattr(value, "isoformat") else value
+
+
+def source_metadata_field(source: dict, key: str):
+    metadata = source.get("metadata")
+    if isinstance(metadata, dict):
+        return metadata.get(key)
+    return None
+
+
+def enrich_source_attribution(attribution: list, sources_by_id: dict[int, dict]) -> list[dict]:
+    enriched: list[dict] = []
+    metadata_keys = (
+        "pmid",
+        "doi",
+        "first_author",
+        "journal",
+        "pub_date",
+        "container_title",
+        "publisher",
+        "year",
+        "provider",
+        "content_kind",
+    )
+    direct_keys = (
+        "source_name",
+        "source_type",
+        "title",
+        "url",
+        "resolved_url",
+        "license",
+        "fetched_at",
+    )
+
+    for item in attribution or []:
+        if not isinstance(item, dict):
+            continue
+        source_id = safe_int(item.get("source_id") or item.get("id"))
+        source = sources_by_id.get(source_id) if source_id is not None else None
+        if not source:
+            enriched.append(dict(item))
+            continue
+        source_metadata = source.get("metadata") if isinstance(source.get("metadata"), dict) else {}
+        item_metadata = item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
+        merged = {
+            **item,
+            "id": item.get("id") or source.get("id"),
+            "source_id": item.get("source_id") or source.get("id"),
+            "metadata": {**source_metadata, **item_metadata},
+        }
+        for key in direct_keys:
+            if not merged.get(key):
+                merged[key] = source.get(key)
+        for key in metadata_keys:
+            if not merged.get(key):
+                merged[key] = source_metadata_field(source, key)
+        enriched.append(merged)
+    return enriched
 
 
 def avg_or_none(values: list[float | None]) -> float | None:
@@ -1504,6 +1573,29 @@ async def fetch_disease_knowledge_briefs(session) -> dict[str, dict[str, dict]]:
     """Load reviewed or published knowledge briefs keyed by disease_id and language."""
     if not await has_table(session, "disease_knowledge_briefs"):
         return {}
+    sources_by_disease_id: dict[str, dict[int, dict]] = defaultdict(dict)
+    if await has_table(session, "disease_knowledge_sources"):
+        source_rows = await session.execute(
+            text(
+                """
+                SELECT id, disease_id, source_type, source_name, url, resolved_url,
+                       title, license, status, review_status, fetched_at, metadata
+                FROM disease_knowledge_sources
+                """
+            )
+        )
+        for row in source_rows:
+            source = dict(row._mapping)
+            source_id = safe_int(source.get("id"))
+            disease_id = source.get("disease_id")
+            if source_id is None or not disease_id:
+                continue
+            source["fetched_at"] = iso_or_none(source.get("fetched_at"))
+            if not source.get("resolved_url"):
+                metadata = source.get("metadata") if isinstance(source.get("metadata"), dict) else {}
+                source["resolved_url"] = metadata.get("resolved_url") or source.get("url")
+            sources_by_disease_id[str(disease_id)][source_id] = source
+
     rows = await session.execute(
         text(
             """
@@ -1520,6 +1612,10 @@ async def fetch_disease_knowledge_briefs(session) -> dict[str, dict[str, dict]]:
         item = dict(row._mapping)
         if item.get("updated_at"):
             item["updated_at"] = item["updated_at"].isoformat()
+        item["source_attribution"] = enrich_source_attribution(
+            item.get("source_attribution") or [],
+            sources_by_disease_id.get(str(item.get("disease_id")), {}),
+        )
         result[item["disease_id"]][item["language"]] = item
     return result
 
@@ -1551,8 +1647,10 @@ async def fetch_country_briefs(session) -> dict[str, dict[str, dict]]:
 def build_disease_knowledge_fields(disease: dict, brief_by_language: dict[str, dict] | None) -> dict:
     """Build the site-facing knowledge payload for one disease."""
     brief_by_language = brief_by_language or {}
-    en = brief_by_language.get("en") or {}
-    zh = brief_by_language.get("zh") or {}
+    en, zh = normalize_knowledge_citation_group([
+        brief_by_language.get("en") or {},
+        brief_by_language.get("zh") or {},
+    ])
 
     knowledge_sources = en.get("source_attribution") or zh.get("source_attribution") or []
     knowledge_status = resolve_disease_knowledge_status((brief_by_language or {}).values())

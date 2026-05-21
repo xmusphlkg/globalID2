@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
+from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -181,16 +182,46 @@ class DiseaseKnowledgeDetail(BaseModel):
 @router.post("/ai/disease-audit/run", response_model=Dict[str, Any])
 async def run_disease_duplicate_audit(body: DiseaseDuplicateAuditRequest):
     service = DiseaseDuplicateAuditService()
+    run_id = str(uuid4())
+    logs: list[dict[str, Any]] = []
+    service.record_event(
+        logs,
+        run_id,
+        "run_started",
+        "Disease duplicate audit run started.",
+        include_ai=body.include_ai,
+        include_new_disease_candidates=body.include_new_disease_candidates,
+        max_ai_candidates=body.max_ai_candidates,
+    )
     audit = service.run_local_audit(
         include_new_disease_candidates=body.include_new_disease_candidates,
+    )
+    audit["run_id"] = run_id
+    audit["logs"] = logs
+    service.record_event(
+        logs,
+        run_id,
+        "local_audit_completed",
+        "Local disease duplicate audit completed.",
+        summary=audit.get("summary"),
     )
     if body.include_ai:
         try:
             audit["ai_review"] = await service.run_ai_review(
                 audit,
                 max_candidates=body.max_ai_candidates,
+                run_id=run_id,
+                logs=logs,
             )
         except Exception as exc:
+            service.record_event(
+                logs,
+                run_id,
+                "ai_review_exception",
+                "Disease audit AI review failed and local audit result will be returned.",
+                level="error",
+                error=str(exc),
+            )
             audit["ai_review"] = {
                 "status": "failed",
                 "summary": {
@@ -206,6 +237,21 @@ async def run_disease_duplicate_audit(body: DiseaseDuplicateAuditRequest):
                     "Open the AI Models page and test/fix provider base URLs, keys, quota, and enabled model routes.",
                 ],
             }
+    else:
+        service.record_event(
+            logs,
+            run_id,
+            "ai_review_skipped",
+            "Disease audit AI review was skipped by request.",
+        )
+    service.record_event(
+        logs,
+        run_id,
+        "run_completed",
+        "Disease duplicate audit run completed.",
+        ai_status=(audit.get("ai_review") or {}).get("status", "completed") if audit.get("ai_review") else "skipped",
+    )
+    audit["logs"] = logs
     return audit
 
 
@@ -216,6 +262,12 @@ async def get_disease_duplicate_audit_status(include_new_disease_candidates: boo
     return await service.status(
         include_new_disease_candidates=include_new_disease_candidates,
     )
+
+
+@router.get("/ai/disease-duplicate-audit/logs", response_model=List[Dict[str, Any]])
+@router.get("/ai/disease-audit/logs", response_model=List[Dict[str, Any]])
+async def list_disease_duplicate_audit_logs(limit: int = Query(100, ge=1, le=500)):
+    return DiseaseDuplicateAuditService.read_audit_logs(limit=limit)
 
 
 @router.get("/ai/disease-knowledge/catalogue", response_model=List[DiseaseKnowledgeCatalogueItem])
