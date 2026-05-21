@@ -1,13 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useAppStore } from "@/stores/app-store";
-import { t } from "@/lib/i18n";
+import { ChevronLeft, ChevronRight, Database, Eye } from "lucide-react";
+
+import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
+import { DetailDrawer } from "@/components/ui/DetailDrawer";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { FilterToolbar } from "@/components/ui/FilterToolbar";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 import { apiFetch } from "@/lib/api";
-import { formatDate } from "@/lib/utils";
-import { Database, ChevronLeft, ChevronRight } from "lucide-react";
-import { Card, Title, Text, Badge, Flex } from "@tremor/react";
+import { t } from "@/lib/i18n";
+import { useAppStore } from "@/stores/app-store";
 
 interface BrowseResult {
   table: string;
@@ -17,11 +22,17 @@ interface BrowseResult {
   data: Record<string, unknown>[];
 }
 
+interface BrowseRow {
+  id: number;
+  values: Record<string, unknown>;
+}
+
 export default function ExplorerPage() {
   const { lang } = useAppStore();
   const [table, setTable] = useState("diseases");
   const [page, setPage] = useState(0);
   const [hideEmptyColumns, setHideEmptyColumns] = useState(true);
+  const [selectedRow, setSelectedRow] = useState<BrowseRow | null>(null);
   const limit = 100;
 
   const { data: tables } = useQuery<{ tables: string[] }>({
@@ -41,136 +52,193 @@ export default function ExplorerPage() {
 
   useEffect(() => setPage(0), [table]);
   useEffect(() => {
-    // Countries has many optional fields; default to a cleaner view.
     setHideEmptyColumns(table === "countries");
   }, [table]);
+  useEffect(() => {
+    setSelectedRow(null);
+  }, [page, table]);
+
+  const rows = useMemo(
+    () => (result?.data ?? []).map((values, index) => ({ id: page * limit + index + 1, values })),
+    [page, result],
+  );
 
   const rawColumns = result?.data?.[0] ? Object.keys(result.data[0]) : [];
-  const columns = hideEmptyColumns
-    ? rawColumns.filter((col) => hasAnyValue(result?.data ?? [], col))
+  const visibleColumns = hideEmptyColumns
+    ? rawColumns.filter((column) => hasAnyValue(result?.data ?? [], column))
     : rawColumns;
   const totalPages = result ? Math.ceil(result.total / limit) : 0;
 
-  return (
-    <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 md:px-6">
-      <div className="space-y-2">
-        <Badge color="blue" className="w-fit">{t(lang, "mod_database")}</Badge>
-        <Title className="text-2xl">{t(lang, "explorer")}</Title>
-        <Text>Browse raw database tables</Text>
-      </div>
+  const tableColumns = useMemo<DataTableColumn<BrowseRow>[]>(
+    () => [
+      {
+        key: "__row",
+        header: "#",
+        render: (row) => (
+          <span className="font-mono text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+            {row.id}
+          </span>
+        ),
+      },
+      ...visibleColumns.slice(0, 10).map((column) => ({
+        key: column,
+        header: column,
+        render: (row: BrowseRow) => (
+          <span className="block max-w-[260px] truncate text-xs text-tremor-content dark:text-dark-tremor-content">
+            {formatCell(row.values[column])}
+          </span>
+        ),
+      })),
+      {
+        key: "__action",
+        header: "",
+        className: "text-right",
+        render: () => (
+          <span className="inline-flex h-8 items-center gap-2 rounded-tremor-default border border-tremor-border px-2.5 text-xs font-medium text-tremor-content-subtle dark:border-dark-tremor-border dark:text-dark-tremor-content-subtle">
+            <Eye className="h-3.5 w-3.5" />
+            {lang === "zh" ? "查看" : "View"}
+          </span>
+        ),
+      },
+    ],
+    [lang, visibleColumns],
+  );
 
-      <Card>
-        <div className="flex flex-wrap items-center gap-3">
-          <select
-            className="rounded-tremor-default border border-tremor-border bg-tremor-background px-3 py-2 text-sm text-tremor-content-strong shadow-tremor-input outline-none transition focus:border-tremor-brand-subtle focus:ring-2 focus:ring-tremor-brand-muted dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong"
-            value={table}
-            onChange={(e) => setTable(e.target.value)}
-          >
-            {tables?.tables.map((t) => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
-          {result && (
-            <Badge color="slate">
-              {result.total.toLocaleString()} rows
-            </Badge>
-          )}
-          <label className="inline-flex items-center gap-2 text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
-            <input
-              type="checkbox"
-              checked={hideEmptyColumns}
-              onChange={(e) => setHideEmptyColumns(e.target.checked)}
-            />
-            Hide empty columns
-          </label>
-        </div>
-      </Card>
+  return (
+    <div className="space-y-5">
+      <PageHeader
+        eyebrow={t(lang, "mod_database")}
+        title={t(lang, "explorer")}
+        description={lang === "zh" ? "浏览原始数据库表，快速检查字段和值。" : "Browse raw database tables and inspect records quickly."}
+        meta={
+          <>
+            <StatusBadge tone="primary">{table}</StatusBadge>
+            {result ? <StatusBadge>{result.total.toLocaleString()} rows</StatusBadge> : null}
+            <StatusBadge>{visibleColumns.length} columns</StatusBadge>
+          </>
+        }
+      />
+
+      <FilterToolbar>
+        <select
+          className="h-10 min-w-[220px] rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm text-tremor-content-strong outline-none transition focus:border-tremor-brand-subtle focus:ring-2 focus:ring-tremor-brand-muted dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong"
+          value={table}
+          onChange={(event) => setTable(event.target.value)}
+        >
+          {tables?.tables.map((name) => (
+            <option key={name} value={name}>
+              {name}
+            </option>
+          ))}
+        </select>
+
+        <label className="inline-flex h-10 items-center gap-2 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm font-medium text-tremor-content-strong dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong">
+          <input
+            type="checkbox"
+            checked={hideEmptyColumns}
+            onChange={(event) => setHideEmptyColumns(event.target.checked)}
+            className="h-4 w-4 rounded border-tremor-border text-tremor-brand"
+          />
+          {lang === "zh" ? "隐藏空字段" : "Hide empty columns"}
+        </label>
+      </FilterToolbar>
 
       {isLoading ? (
-        <div className="space-y-4">
-          {[1, 2, 3, 4, 5].map((i) => <div key={i} className="h-10 w-full animate-pulse rounded-tremor-default bg-tremor-background-muted dark:bg-dark-tremor-background-muted" />)}
+        <div className="space-y-3">
+          {[1, 2, 3, 4, 5].map((item) => (
+            <div
+              key={item}
+              className="h-12 w-full animate-pulse rounded-tremor-default bg-tremor-background-muted dark:bg-dark-tremor-background-muted"
+            />
+          ))}
         </div>
-      ) : result && result.data.length > 0 ? (
-        <>
-          <Card className="overflow-hidden p-0">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-tremor-border dark:divide-dark-tremor-border">
-                <thead>
-                  <tr className="bg-tremor-background-subtle dark:bg-dark-tremor-background-subtle">
-                    {columns.map((col) => (
-                      <th key={col} className="whitespace-nowrap px-3 py-2.5 text-left text-xs font-semibold text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{col}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-tremor-border dark:divide-dark-tremor-border">
-                  {result.data.map((row, i) => (
-                    <tr key={i} className="hover:bg-tremor-background-subtle/50 dark:hover:bg-dark-tremor-background-subtle/50">
-                      {columns.map((col) => (
-                        <td key={col} className="max-w-xs truncate px-3 py-2 text-xs text-tremor-content dark:text-dark-tremor-content">
-                          {formatCell(row[col])}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
-
-          <Card>
-            <Flex className="flex-wrap gap-3">
-            <button
-              className="inline-flex items-center gap-1 rounded-tremor-default border border-tremor-border px-3 py-1.5 text-sm text-tremor-content transition hover:bg-tremor-background-subtle disabled:cursor-not-allowed disabled:opacity-50 dark:border-dark-tremor-border dark:text-dark-tremor-content dark:hover:bg-dark-tremor-background-subtle"
-              disabled={page === 0}
-              onClick={() => setPage((p) => p - 1)}
-            >
-              <ChevronLeft className="h-3.5 w-3.5" />
-              Prev
-            </button>
-            <Text className="text-xs font-medium">
-              Page {page + 1} of {totalPages || 1}
-            </Text>
-            <button
-              className="inline-flex items-center gap-1 rounded-tremor-default border border-tremor-border px-3 py-1.5 text-sm text-tremor-content transition hover:bg-tremor-background-subtle disabled:cursor-not-allowed disabled:opacity-50 dark:border-dark-tremor-border dark:text-dark-tremor-content dark:hover:bg-dark-tremor-background-subtle"
-              disabled={page + 1 >= totalPages}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              Next
-              <ChevronRight className="h-3.5 w-3.5" />
-            </button>
-            </Flex>
-          </Card>
-        </>
       ) : (
-          <Card>
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <Database className="h-12 w-12 text-tremor-content-subtle dark:text-dark-tremor-content-subtle" />
-            <Text className="mt-3">{t(lang, "no_data")}</Text>
-          </div>
-        </Card>
+        <DataTable
+          columns={tableColumns}
+          rows={rows}
+          getRowKey={(row) => row.id}
+          selectedRowKey={selectedRow?.id}
+          onRowClick={setSelectedRow}
+          emptyState={<EmptyState icon={<Database className="h-10 w-10" />} title={t(lang, "no_data")} />}
+        />
       )}
+
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 py-3 dark:border-dark-tremor-border dark:bg-dark-tremor-background">
+        <button
+          className="inline-flex h-9 items-center gap-1 rounded-tremor-default border border-tremor-border px-3 text-sm text-tremor-content transition hover:bg-tremor-background-subtle disabled:cursor-not-allowed disabled:opacity-50 dark:border-dark-tremor-border dark:text-dark-tremor-content dark:hover:bg-dark-tremor-background-subtle"
+          disabled={page === 0}
+          onClick={() => setPage((currentPage) => currentPage - 1)}
+        >
+          <ChevronLeft className="h-3.5 w-3.5" />
+          Prev
+        </button>
+        <span className="text-xs font-medium text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+          Page {page + 1} of {totalPages || 1}
+        </span>
+        <button
+          className="inline-flex h-9 items-center gap-1 rounded-tremor-default border border-tremor-border px-3 text-sm text-tremor-content transition hover:bg-tremor-background-subtle disabled:cursor-not-allowed disabled:opacity-50 dark:border-dark-tremor-border dark:text-dark-tremor-content dark:hover:bg-dark-tremor-background-subtle"
+          disabled={page + 1 >= totalPages}
+          onClick={() => setPage((currentPage) => currentPage + 1)}
+        >
+          Next
+          <ChevronRight className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      <DetailDrawer
+        open={Boolean(selectedRow)}
+        title={selectedRow ? `${table} #${selectedRow.id}` : table}
+        subtitle={selectedRow ? `${visibleColumns.length} visible columns` : undefined}
+        onClose={() => setSelectedRow(null)}
+      >
+        {selectedRow ? (
+          <div className="divide-y divide-tremor-border overflow-hidden rounded-tremor-default border border-tremor-border dark:divide-dark-tremor-border dark:border-dark-tremor-border">
+            {Object.entries(selectedRow.values).map(([key, value]) => (
+              <div key={key} className="grid gap-2 px-3 py-3 sm:grid-cols-[180px_minmax(0,1fr)]">
+                <div className="font-mono text-xs font-medium text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+                  {key}
+                </div>
+                <pre className="whitespace-pre-wrap break-words text-xs text-tremor-content-strong dark:text-dark-tremor-content-strong">
+                  {formatCellFull(value)}
+                </pre>
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </DetailDrawer>
     </div>
   );
 }
 
-function formatCell(v: unknown): string {
-  if (v === null || v === undefined) return "—";
-  if (typeof v === "object") {
-    const text = JSON.stringify(v);
-    if (text === "{}" || text === "[]") return "—";
+function formatCell(value: unknown): string {
+  if (value === null || value === undefined) return "-";
+  if (typeof value === "object") {
+    const text = JSON.stringify(value);
+    if (text === "{}" || text === "[]") return "-";
     return text.slice(0, 80);
   }
-  if (typeof v === "string" && v.trim() === "") return "—";
-  return String(v);
+  if (typeof value === "string" && value.trim() === "") return "-";
+  return String(value);
 }
 
-function hasAnyValue(rows: Record<string, unknown>[], col: string): boolean {
+function formatCellFull(value: unknown): string {
+  if (value === null || value === undefined) return "-";
+  if (typeof value === "object") {
+    const text = JSON.stringify(value, null, 2);
+    if (text === "{}" || text === "[]") return "-";
+    return text;
+  }
+  if (typeof value === "string" && value.trim() === "") return "-";
+  return String(value);
+}
+
+function hasAnyValue(rows: Record<string, unknown>[], column: string): boolean {
   for (const row of rows) {
-    const v = row[col];
-    if (v === null || v === undefined) continue;
-    if (typeof v === "string" && v.trim() === "") continue;
-    if (typeof v === "object") {
-      const text = JSON.stringify(v);
+    const value = row[column];
+    if (value === null || value === undefined) continue;
+    if (typeof value === "string" && value.trim() === "") continue;
+    if (typeof value === "object") {
+      const text = JSON.stringify(value);
       if (text === "{}" || text === "[]") continue;
       return true;
     }

@@ -24,6 +24,10 @@ import { formatDate } from "@/lib/utils";
 import { CHART_TOKENS } from "@/lib/chart-theme";
 import { Chart } from "@/components/charts/Chart";
 import { TaskDetailPanel } from "@/components/tasks/TaskDetailPanel";
+import { FilterToolbar } from "@/components/ui/FilterToolbar";
+import { MetricTile } from "@/components/ui/MetricTile";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatusBadge as UiStatusBadge } from "@/components/ui/StatusBadge";
 import {
   Cpu,
   ChevronDown,
@@ -644,7 +648,7 @@ function CreateDiseaseKnowledgeTaskModal({
 
                 <div className="space-y-2 rounded-tremor-default border border-tremor-border p-3 dark:border-dark-tremor-border">
                   <div className="flex items-center justify-between gap-2">
-                    <div className="text-xs font-semibold uppercase tracking-[0.12em] text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+                    <div className="text-xs font-semibold uppercase text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
                       {lang === "zh" ? "来源组" : "Source groups"}
                     </div>
                     <Badge color={selectedSources.length > 0 ? "emerald" : "slate"}>
@@ -867,78 +871,110 @@ function AIPageContent() {
   }, [tasks]);
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 md:px-6">
-      <div className="space-y-2">
-        <Badge color="violet" className="w-fit">{t(lang, "mod_ai")}</Badge>
-        <Title className="text-2xl">{t(lang, "ai_tasks")}</Title>
-        <Text>{t(lang, "ai_tasks_subtitle")}</Text>
-        <div className="flex flex-wrap items-center gap-2 pt-1">
+    <div className="space-y-5">
+      <PageHeader
+        eyebrow={t(lang, "mod_ai")}
+        title={t(lang, "ai_tasks")}
+        description={t(lang, "ai_tasks_subtitle")}
+        meta={
+          <>
+            <UiStatusBadge tone={summary.failed > 0 ? "danger" : "success"}>
+              {summary.failed > 0
+                ? lang === "zh"
+                  ? `${summary.failed} 个失败任务`
+                  : `${summary.failed} failed`
+                : lang === "zh"
+                  ? "无失败任务"
+                  : "No failures"}
+            </UiStatusBadge>
+            <UiStatusBadge tone={summary.running > 0 ? "warning" : "neutral"}>
+              {summary.running > 0
+                ? lang === "zh"
+                  ? `${summary.running} 个运行中`
+                  : `${summary.running} running`
+                : lang === "zh"
+                  ? "暂无运行任务"
+                  : "Nothing running"}
+            </UiStatusBadge>
+          </>
+        }
+        actions={
+          <>
           <button
             onClick={() => setCreateModalOpen(true)}
             disabled={!countryId}
-            className="inline-flex items-center gap-1 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+            className="inline-flex h-10 items-center gap-2 rounded-tremor-default bg-tremor-brand px-3 text-sm font-medium text-tremor-brand-inverted transition hover:opacity-90 disabled:cursor-not-allowed disabled:bg-slate-400 dark:bg-dark-tremor-brand dark:text-dark-tremor-brand-inverted"
           >
-            <Plus className="h-3.5 w-3.5" />
+            <Plus className="h-4 w-4" />
             {lang === "zh" ? "新建 AI 任务" : "New AI Task"}
           </button>
           <button
             onClick={() => setKnowledgeModalOpen(true)}
-            className="inline-flex items-center gap-1 rounded-lg border border-emerald-300/70 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-900 dark:bg-emerald-950/25 dark:text-emerald-300"
+            className="inline-flex h-10 items-center gap-2 rounded-tremor-default border border-emerald-300/70 bg-emerald-50 px-3 text-sm font-medium text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-900 dark:bg-emerald-950/25 dark:text-emerald-300"
           >
-            <BookOpen className="h-3.5 w-3.5" />
+            <BookOpen className="h-4 w-4" />
             {lang === "zh" ? "更新疾病知识" : "Update Disease Knowledge"}
           </button>
           <Link
             href="/ai/interactions"
-            className="inline-flex items-center gap-1 rounded-lg border border-violet-300/70 bg-violet-50 px-3 py-1.5 text-xs font-medium text-violet-700 transition hover:bg-violet-100 dark:border-violet-800 dark:bg-violet-950/25 dark:text-violet-300"
+            className="inline-flex h-10 items-center gap-2 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm font-medium text-tremor-content-strong transition hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong dark:hover:bg-dark-tremor-background-subtle"
           >
-            <MessageSquareText className="h-3.5 w-3.5" />
+            <MessageSquareText className="h-4 w-4" />
             Open AI Interactions
           </Link>
           <Link
             href="/ai/agent-runs"
-            className="inline-flex items-center gap-1 rounded-lg border border-cyan-300/70 bg-cyan-50 px-3 py-1.5 text-xs font-medium text-cyan-700 transition hover:bg-cyan-100 dark:border-cyan-900 dark:bg-cyan-950/25 dark:text-cyan-300"
+            className="inline-flex h-10 items-center gap-2 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm font-medium text-tremor-content-strong transition hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong dark:hover:bg-dark-tremor-background-subtle"
           >
-            <GitBranch className="h-3.5 w-3.5" />
+            <GitBranch className="h-4 w-4" />
             {t(lang, "agent_runs")}
           </Link>
           <Link
             href="/ai/models"
-            className="inline-flex items-center gap-1 rounded-lg border border-sky-300/70 bg-sky-50 px-3 py-1.5 text-xs font-medium text-sky-700 transition hover:bg-sky-100 dark:border-sky-900 dark:bg-sky-950/25 dark:text-sky-300"
+            className="inline-flex h-10 items-center gap-2 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm font-medium text-tremor-content-strong transition hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong dark:hover:bg-dark-tremor-background-subtle"
           >
-            <Settings2 className="h-3.5 w-3.5" />
+            <Settings2 className="h-4 w-4" />
             Open AI Models
           </Link>
-        </div>
-      </div>
+          </>
+        }
+      />
 
-      <Grid numItems={1} numItemsSm={2} numItemsLg={4} className="gap-4">
-        <Card>
-          <Text>{t(lang, "total_tasks")}</Text>
-          <Title>{summary.total}</Title>
-        </Card>
-        <Card>
-          <Text>{t(lang, "running_tasks")}</Text>
-          <Title className="text-amber-600 dark:text-amber-500">{summary.running}</Title>
-        </Card>
-        <Card>
-          <Text>{t(lang, "failed_tasks")}</Text>
-          <Title className="text-rose-600 dark:text-rose-500">{summary.failed}</Title>
-        </Card>
-        <Card>
-          <Text>{t(lang, "avg_progress")}</Text>
-          <Title>{summary.avgProgress}%</Title>
-        </Card>
-      </Grid>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricTile
+          label={t(lang, "total_tasks")}
+          value={summary.total}
+          icon={<Cpu className="h-4 w-4" />}
+          tone="neutral"
+        />
+        <MetricTile
+          label={t(lang, "running_tasks")}
+          value={summary.running}
+          icon={<Loader2 className="h-4 w-4" />}
+          tone="warning"
+        />
+        <MetricTile
+          label={t(lang, "failed_tasks")}
+          value={summary.failed}
+          icon={<Ban className="h-4 w-4" />}
+          tone={summary.failed > 0 ? "danger" : "success"}
+        />
+        <MetricTile
+          label={t(lang, "avg_progress")}
+          value={`${summary.avgProgress}%`}
+          icon={<CheckCircle2 className="h-4 w-4" />}
+          tone="primary"
+        />
+      </div>
 
       <Card className={`border ${settings?.smtp.alerting_ready ? "border-emerald-200 dark:border-emerald-900/40" : "border-amber-200 dark:border-amber-900/40"}`}>
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-start gap-3">
-            <div className={`rounded-xl p-2 ${settings?.smtp.alerting_ready ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-300" : "bg-amber-50 text-amber-600 dark:bg-amber-950/30 dark:text-amber-300"}`}>
+            <div className={`rounded-tremor-default p-2 ${settings?.smtp.alerting_ready ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-300" : "bg-amber-50 text-amber-600 dark:bg-amber-950/30 dark:text-amber-300"}`}>
               <Mail className="h-5 w-5" />
             </div>
             <div>
-              <Text className="text-xs font-semibold uppercase tracking-[0.18em] text-tremor-content-subtle">
+              <Text className="text-xs font-semibold uppercase text-tremor-content-subtle">
                 {lang === "zh" ? "SMTP 提醒" : "SMTP Alerts"}
               </Text>
               <Title className="mt-1 text-xl">
@@ -959,7 +995,7 @@ function AIPageContent() {
           </div>
           <Link
             href="/setting"
-            className="inline-flex items-center gap-2 rounded-full bg-tremor-brand px-4 py-2 text-sm font-semibold text-tremor-brand-inverted transition hover:opacity-90"
+            className="inline-flex items-center gap-2 rounded-tremor-default bg-tremor-brand px-4 py-2 text-sm font-semibold text-tremor-brand-inverted transition hover:opacity-90"
           >
             {lang === "zh" ? "打开设置中心" : "Open Settings"}
             <Mail className="h-4 w-4" />
@@ -1013,8 +1049,7 @@ function AIPageContent() {
         </Grid>
       )}
 
-      <Card>
-        <div className="flex flex-wrap items-center gap-2.5">
+      <FilterToolbar>
           <div className="relative flex-1 min-w-[200px] max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4"
               style={{ color: "var(--color-tremor-content-subtle)" }} />
@@ -1046,8 +1081,8 @@ function AIPageContent() {
               (tp) => (<option key={tp} value={tp}>{tp}</option>),
             )}
           </select>
-        </div>
-        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+      </FilterToolbar>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 py-2 text-xs text-tremor-content-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-subtle">
           <span>
             {lang === "zh"
               ? `显示第 ${visibleStart}-${visibleEnd} 条，共 ${totalCount} 条任务`
@@ -1062,11 +1097,10 @@ function AIPageContent() {
             <span>
               {lang === "zh"
                 ? `Worker 并发 ${workerStatus.worker_concurrency}，排队 ${workerStatus.queued_tasks}`
-                : `Worker concurrency ${workerStatus.worker_concurrency}, queued ${workerStatus.queued_tasks}`}
+              : `Worker concurrency ${workerStatus.worker_concurrency}, queued ${workerStatus.queued_tasks}`}
             </span>
           )}
-        </div>
-      </Card>
+      </div>
 
       {isLoading ? (
         <div className="space-y-4">
@@ -1128,7 +1162,7 @@ function AIPageContent() {
                     <div className="mb-3">
                       <Link
                         href={`/ai/interactions?task=${encodeURIComponent(task.task_uuid)}${activeTaskReportUuid ? `&uuid=${encodeURIComponent(activeTaskReportUuid)}` : ""}`}
-                        className="inline-flex items-center gap-1 rounded-lg border border-blue-300/70 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 transition hover:bg-blue-100 dark:border-blue-900 dark:bg-blue-950/25 dark:text-blue-300"
+                        className="inline-flex items-center gap-1 rounded-tremor-default border border-blue-300/70 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 transition hover:bg-blue-100 dark:border-blue-900 dark:bg-blue-950/25 dark:text-blue-300"
                       >
                         <MessageSquareText className="h-3.5 w-3.5" />
                         View this task in chat workflow
@@ -1139,7 +1173,7 @@ function AIPageContent() {
                     {expandedUuid === task.task_uuid && task.task_type === "agent_workflow" && (
                       <Link
                         href={`/ai/agent-runs?task_uuid=${encodeURIComponent(task.task_uuid)}`}
-                        className="inline-flex items-center gap-1 rounded-lg border border-cyan-300/70 bg-cyan-50 px-3 py-1.5 text-xs font-medium text-cyan-700 transition hover:bg-cyan-100 dark:border-cyan-900 dark:bg-cyan-950/25 dark:text-cyan-300"
+                        className="inline-flex items-center gap-1 rounded-tremor-default border border-cyan-300/70 bg-cyan-50 px-3 py-1.5 text-xs font-medium text-cyan-700 transition hover:bg-cyan-100 dark:border-cyan-900 dark:bg-cyan-950/25 dark:text-cyan-300"
                       >
                         <GitBranch className="h-3.5 w-3.5" />
                         {lang === "zh" ? "查看 Agent Run" : "View Agent Run"}
@@ -1149,7 +1183,7 @@ function AIPageContent() {
                       <button
                         onClick={() => executeTask(task.task_uuid)}
                         disabled={executingTask}
-                        className="inline-flex items-center gap-1 rounded-lg border border-amber-300/70 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-amber-900 dark:bg-amber-950/25 dark:text-amber-300"
+                        className="inline-flex items-center gap-1 rounded-tremor-default border border-amber-300/70 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-amber-900 dark:bg-amber-950/25 dark:text-amber-300"
                       >
                         {executingTask ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Cpu className="h-3.5 w-3.5" />}
                         {task.status === "cancelled" ? (lang === "zh" ? "从中断点继续" : "Resume Task") : (lang === "zh" ? "执行任务" : "Execute Task")}
@@ -1159,7 +1193,7 @@ function AIPageContent() {
                       <button
                         onClick={() => cancelTask(task.task_uuid)}
                         disabled={cancellingTask || task.cancel_requested}
-                        className="inline-flex items-center gap-1 rounded-lg border border-rose-300/70 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-900 dark:bg-rose-950/25 dark:text-rose-300"
+                        className="inline-flex items-center gap-1 rounded-tremor-default border border-rose-300/70 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-rose-900 dark:bg-rose-950/25 dark:text-rose-300"
                       >
                         {cancellingTask ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Ban className="h-3.5 w-3.5" />}
                         {task.cancel_requested
@@ -1188,7 +1222,7 @@ function AIPageContent() {
               <button
                 onClick={() => setPage((current) => Math.max(1, current - 1))}
                 disabled={page <= 1}
-                className="rounded-lg border border-tremor-border px-3 py-1.5 text-sm text-tremor-content-strong transition hover:bg-tremor-background-subtle disabled:cursor-not-allowed disabled:opacity-50 dark:border-dark-tremor-border dark:text-dark-tremor-content-strong dark:hover:bg-dark-tremor-background-subtle"
+                className="rounded-tremor-default border border-tremor-border px-3 py-1.5 text-sm text-tremor-content-strong transition hover:bg-tremor-background-subtle disabled:cursor-not-allowed disabled:opacity-50 dark:border-dark-tremor-border dark:text-dark-tremor-content-strong dark:hover:bg-dark-tremor-background-subtle"
               >
                 {lang === "zh" ? "上一页" : "Previous"}
               </button>
@@ -1198,7 +1232,7 @@ function AIPageContent() {
               <button
                 onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
                 disabled={page >= totalPages}
-                className="rounded-lg border border-tremor-border px-3 py-1.5 text-sm text-tremor-content-strong transition hover:bg-tremor-background-subtle disabled:cursor-not-allowed disabled:opacity-50 dark:border-dark-tremor-border dark:text-dark-tremor-content-strong dark:hover:bg-dark-tremor-background-subtle"
+                className="rounded-tremor-default border border-tremor-border px-3 py-1.5 text-sm text-tremor-content-strong transition hover:bg-tremor-background-subtle disabled:cursor-not-allowed disabled:opacity-50 dark:border-dark-tremor-border dark:text-dark-tremor-content-strong dark:hover:bg-dark-tremor-background-subtle"
               >
                 {lang === "zh" ? "下一页" : "Next"}
               </button>

@@ -10,6 +10,7 @@ from typing import Any
 from src.ai.agents.base import BaseAgent
 from src.core import get_config, get_logger
 from src.knowledge.brief_generator import DISCLAIMER_EN, DISCLAIMER_ZH, SourceGroundedBriefGenerator
+from src.knowledge.citations import normalize_knowledge_citations
 
 logger = get_logger(__name__)
 
@@ -166,6 +167,7 @@ class AIDiseaseBriefGenerator:
                 "version": 1,
             },
         }
+        merged = normalize_knowledge_citations(merged, marker_mode="position")
         validation = self.template_generator.validate(merged)
         if not validation.ok:
             merged["status"] = "requires_review"
@@ -235,10 +237,11 @@ class AIDiseaseBriefGenerator:
             "Do not provide diagnosis, treatment, dosing, or personal medical advice. "
             "Summarize in your own words and avoid copying long source passages. "
             "\n\n"
-            "INLINE CITATIONS: You MUST insert inline citation markers in the format [n] (where n is the source id number from the sources array) "
-            "immediately after each factual claim or data point that comes from a specific source. "
+            "INLINE CITATIONS: You MUST insert inline citation markers in the format [n], where n is the sequential citation_ref shown in the sources array. "
+            "Do not use the database source_id/id as a citation number. "
+            "Only use citation_ref values that are present in the provided sources array, normally [1], [2], [3], etc. "
+            "Insert the marker immediately after each factual claim or data point that comes from a specific source. "
             "Place the citation marker at the end of the sentence or clause containing the claim, before the period. "
-            "Use the 'id' field from each source object as the citation number. "
             "Multiple citations for the same claim should be written as [n1][n2]. "
             "Every substantive paragraph should have at least one citation. "
             "Example: 'The disease has a case-fatality rate of 30-60% [2]. It is transmitted primarily through respiratory droplets [1][3].' "
@@ -255,12 +258,13 @@ class AIDiseaseBriefGenerator:
     @staticmethod
     def _user_prompt(*, disease: dict[str, Any], sources: list[dict[str, Any]], language: str) -> str:
         source_payload = []
-        for src in sources[:8]:
+        for index, src in enumerate(sources[:8], start=1):
             content_text = src.get("content_text") or src.get("raw_excerpt") or src.get("snippet") or src.get("description") or ""
             sections = src.get("content_sections") or []
             source_payload.append(
                 {
-                    "id": src.get("id"),
+                    "citation_ref": index,
+                    "source_id": src.get("id"),
                     "source_type": src.get("source_type"),
                     "source_name": src.get("source_name"),
                     "title": src.get("title"),

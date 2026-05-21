@@ -1,19 +1,23 @@
 "use client";
 
-import { useAppStore } from "@/stores/app-store";
-import { t } from "@/lib/i18n";
+import { CalendarDays, Clock, Database, ShieldCheck } from "lucide-react";
+
+import { Chart } from "@/components/charts/Chart";
+import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { MetricTile } from "@/components/ui/MetricTile";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { CHART_TOKENS } from "@/lib/chart-theme";
 import {
-  useQualityStats,
+  useQualityCompleteness,
   useQualityGaps,
   useQualitySources,
-  useQualityCompleteness,
+  useQualityStats,
 } from "@/lib/hooks/useQuality";
-import { CHART_TOKENS } from "@/lib/chart-theme";
-import { KPICard } from "@/components/KPICard";
-import { Chart } from "@/components/charts/Chart";
+import { t } from "@/lib/i18n";
 import { formatNumber } from "@/lib/utils";
-import { ShieldCheck, Database, CalendarDays, Clock } from "lucide-react";
-import { Badge, Card, ProgressBar, Text, Title } from "@tremor/react";
+import { useAppStore } from "@/stores/app-store";
 
 function cadenceLabel(unit: string, mode: "noun" | "plural" | "adjective" = "noun") {
   if (unit === "week") {
@@ -31,18 +35,30 @@ function cadenceLabel(unit: string, mode: "noun" | "plural" | "adjective" = "nou
   return "Month";
 }
 
+function ProgressLine({ value }: { value: number }) {
+  const tone = value >= 90 ? "bg-emerald-500" : value >= 60 ? "bg-amber-500" : "bg-rose-500";
+
+  return (
+    <div className="flex min-w-[130px] items-center gap-3">
+      <div className="h-2 flex-1 overflow-hidden rounded-tremor-full bg-tremor-background-muted dark:bg-dark-tremor-background-muted">
+        <div className={`h-full rounded-tremor-full ${tone}`} style={{ width: `${Math.min(100, Math.max(0, value))}%` }} />
+      </div>
+      <span className="w-12 text-right text-xs font-medium text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+        {value.toFixed(1)}%
+      </span>
+    </div>
+  );
+}
+
+type CompletenessRow = NonNullable<ReturnType<typeof useQualityCompleteness>["data"]>[number];
+
 export default function QualityPage() {
   const { lang, countryId } = useAppStore();
 
   const { data: stats } = useQualityStats(countryId);
   const { data: gaps } = useQualityGaps(countryId);
   const { data: sources } = useQualitySources(countryId);
-  const { data: completeness } = useQualityCompleteness(
-    countryId,
-    undefined,
-    undefined,
-    lang,
-  );
+  const { data: completeness } = useQualityCompleteness(countryId, undefined, undefined, lang);
   const gapUnit = gaps?.[0]?.period_unit ?? "month";
   const completenessUnits = Array.from(new Set((completeness ?? []).map((item) => item.period_unit)));
   const mixedCadence = completenessUnits.length > 1;
@@ -52,89 +68,147 @@ export default function QualityPage() {
 
   if (!countryId) {
     return (
-      <Card>
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <ShieldCheck className="h-12 w-12 text-tremor-content-subtle dark:text-dark-tremor-content-subtle" />
-          <Title className="mt-3">{t(lang, "no_data")}</Title>
-          <Text>Select a country to view data quality metrics.</Text>
-        </div>
-      </Card>
+      <EmptyState
+        icon={<ShieldCheck className="h-12 w-12" />}
+        title={t(lang, "no_data")}
+        description={lang === "zh" ? "请选择国家后查看数据质量指标。" : "Select a country to view data quality metrics."}
+        className="min-h-[55vh]"
+      />
     );
   }
 
-  return (
-    <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 md:px-6">
-      <div className="space-y-2">
-        <Badge color="blue" className="w-fit">{t(lang, "mod_database")}</Badge>
-        <Title className="text-2xl">{t(lang, "quality")}</Title>
-        <Text>Data quality metrics and completeness analysis ({cadenceSummary} periods)</Text>
-      </div>
+  const columns: DataTableColumn<CompletenessRow>[] = [
+    {
+      key: "disease",
+      header: "Disease",
+      render: (row) => (
+        <span className="font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">
+          {row.disease_name}
+        </span>
+      ),
+    },
+    {
+      key: "cadence",
+      header: "Cadence",
+      render: (row) => <StatusBadge>{cadenceLabel(row.period_unit, "adjective")}</StatusBadge>,
+    },
+    {
+      key: "periods",
+      header: "Periods",
+      render: (row) => (
+        <span className="whitespace-nowrap text-sm text-tremor-content dark:text-dark-tremor-content">
+          {row.data_periods} / {row.expected_periods}
+        </span>
+      ),
+    },
+    {
+      key: "rate",
+      header: "Rate",
+      render: (row) => <ProgressLine value={row.completeness_rate} />,
+    },
+    {
+      key: "records",
+      header: "Records",
+      render: (row) => (
+        <span className="whitespace-nowrap text-sm text-tremor-content dark:text-dark-tremor-content">
+          {formatNumber(row.total_records)}
+        </span>
+      ),
+    },
+    {
+      key: "range",
+      header: "Range",
+      render: (row) => (
+        <span className="whitespace-nowrap text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+          {row.earliest_date ?? "-"} - {row.latest_date ?? "-"}
+        </span>
+      ),
+    },
+  ];
 
-      {stats && (
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4 stagger">
-          <KPICard
-            title={t(lang, "total_records")}
+  return (
+    <div className="space-y-5">
+      <PageHeader
+        eyebrow={t(lang, "mod_database")}
+        title={t(lang, "quality")}
+        description={
+          lang === "zh"
+            ? `数据完整性、时间缺口和来源结构分析（${cadenceSummary} 周期）。`
+            : `Data quality, temporal gaps, and source coverage analysis (${cadenceSummary} periods).`
+        }
+        meta={
+          <>
+            <StatusBadge tone="primary">{cadenceSummary}</StatusBadge>
+            <StatusBadge>{completeness?.length ?? 0} diseases</StatusBadge>
+          </>
+        }
+      />
+
+      {stats ? (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <MetricTile
+            label={t(lang, "total_records")}
             value={stats.total_records}
-            icon={<Database className="h-5 w-5" />}
-            accent="primary"
+            icon={<Database className="h-4 w-4" />}
+            tone="primary"
           />
-          <KPICard
-            title={t(lang, "total_diseases")}
+          <MetricTile
+            label={t(lang, "total_diseases")}
             value={stats.unique_diseases}
-            icon={<ShieldCheck className="h-5 w-5" />}
-            accent="info"
+            icon={<ShieldCheck className="h-4 w-4" />}
+            tone="info"
           />
-          <KPICard
-            title="Earliest"
-            value={stats.earliest_date ?? "—"}
-            icon={<CalendarDays className="h-5 w-5" />}
-            accent="success"
+          <MetricTile
+            label="Earliest"
+            value={stats.earliest_date ?? "-"}
+            icon={<CalendarDays className="h-4 w-4" />}
+            tone="success"
           />
-          <KPICard
-            title="Latest"
-            value={stats.latest_date ?? "—"}
-            icon={<Clock className="h-5 w-5" />}
-            accent="warning"
+          <MetricTile
+            label="Latest"
+            value={stats.latest_date ?? "-"}
+            icon={<Clock className="h-4 w-4" />}
+            tone="warning"
           />
         </div>
-      )}
+      ) : null}
 
-      {stats && (
-        <section>
-          <Title className="mb-4">{t(lang, "zero_values")}</Title>
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-            <Card>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Text className="font-semibold">Zero Cases</Text>
-                  <Badge color="amber">{stats.zero_cases_pct}%</Badge>
-                </div>
-                <ProgressBar value={stats.zero_cases_pct} color="amber" />
-                <Text className="text-xs">
-                  {formatNumber(stats.zero_cases_count)} records with zero cases
-                </Text>
-              </div>
-            </Card>
-            <Card>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Text className="font-semibold">Zero Deaths</Text>
-                  <Badge color="amber">{stats.zero_deaths_pct}%</Badge>
-                </div>
-                <ProgressBar value={stats.zero_deaths_pct} color="amber" />
-                <Text className="text-xs">
-                  {formatNumber(stats.zero_deaths_count)} records with zero deaths
-                </Text>
-              </div>
-            </Card>
+      {stats ? (
+        <section className="grid gap-4 lg:grid-cols-2">
+          <div className="rounded-tremor-default border border-tremor-border bg-tremor-background p-4 dark:border-dark-tremor-border dark:bg-dark-tremor-background">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h2 className="text-base font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
+                Zero Cases
+              </h2>
+              <StatusBadge tone="warning">{stats.zero_cases_pct}%</StatusBadge>
+            </div>
+            <ProgressLine value={stats.zero_cases_pct} />
+            <p className="mt-3 text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+              {formatNumber(stats.zero_cases_count)} records with zero cases
+            </p>
+          </div>
+
+          <div className="rounded-tremor-default border border-tremor-border bg-tremor-background p-4 dark:border-dark-tremor-border dark:bg-dark-tremor-background">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h2 className="text-base font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
+                Zero Deaths
+              </h2>
+              <StatusBadge tone="warning">{stats.zero_deaths_pct}%</StatusBadge>
+            </div>
+            <ProgressLine value={stats.zero_deaths_pct} />
+            <p className="mt-3 text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+              {formatNumber(stats.zero_deaths_count)} records with zero deaths
+            </p>
           </div>
         </section>
-      )}
+      ) : null}
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        {gaps && gaps.length > 0 && (
-          <Card>
-            <Title className="mb-3">{t(lang, "time_gaps")}</Title>
+      <div className="grid gap-4 lg:grid-cols-2">
+        {gaps && gaps.length > 0 ? (
+          <section className="rounded-tremor-default border border-tremor-border bg-tremor-background p-4 dark:border-dark-tremor-border dark:bg-dark-tremor-background">
+            <h2 className="mb-3 text-base font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
+              {t(lang, "time_gaps")}
+            </h2>
             <Chart
               height={280}
               option={{
@@ -149,19 +223,21 @@ export default function QualityPage() {
                 series: [
                   {
                     type: "bar",
-                    data: gaps.map((g) => [g.period_start, g.gap_periods]),
+                    data: gaps.map((gap) => [gap.period_start, gap.gap_periods]),
                     barMaxWidth: 24,
                     itemStyle: { borderRadius: [4, 4, 0, 0] },
                   },
                 ],
               }}
             />
-          </Card>
-        )}
+          </section>
+        ) : null}
 
-        {sources && sources.length > 0 && (
-          <Card>
-            <Title className="mb-3">{t(lang, "data_sources")}</Title>
+        {sources && sources.length > 0 ? (
+          <section className="rounded-tremor-default border border-tremor-border bg-tremor-background p-4 dark:border-dark-tremor-border dark:bg-dark-tremor-background">
+            <h2 className="mb-3 text-base font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
+              {t(lang, "data_sources")}
+            </h2>
             <Chart
               height={280}
               option={{
@@ -171,69 +247,35 @@ export default function QualityPage() {
                     type: "pie",
                     radius: ["45%", "72%"],
                     center: ["50%", "50%"],
-                    data: sources.map((s) => ({
-                      name: s.data_source ?? "Unknown",
-                      value: s.count,
+                    data: sources.map((source) => ({
+                      name: source.data_source ?? "Unknown",
+                      value: source.count,
                     })),
                     label: { show: true, formatter: "{b}\n{d}%", fontSize: 11 },
-                    emphasis: {
-                      itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: "rgba(0,0,0,0.15)" },
-                    },
                   },
                 ],
               }}
             />
-          </Card>
-        )}
+          </section>
+        ) : null}
       </div>
 
-      {completeness && completeness.length > 0 && (
+      {completeness && completeness.length > 0 ? (
         <section>
-          <Title className="mb-4">{t(lang, "completeness")}</Title>
-          <Card className="overflow-hidden p-0">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-tremor-border dark:divide-dark-tremor-border">
-                <thead className="bg-tremor-background-subtle dark:bg-dark-tremor-background-subtle">
-                  <tr>
-                    <th className="px-3 py-2.5 text-left text-xs font-semibold text-tremor-content-subtle dark:text-dark-tremor-content-subtle">Disease</th>
-                    <th className="px-3 py-2.5 text-left text-xs font-semibold text-tremor-content-subtle dark:text-dark-tremor-content-subtle">Cadence</th>
-                    <th className="px-3 py-2.5 text-right text-xs font-semibold text-tremor-content-subtle dark:text-dark-tremor-content-subtle">Data Periods</th>
-                    <th className="px-3 py-2.5 text-right text-xs font-semibold text-tremor-content-subtle dark:text-dark-tremor-content-subtle">Expected Periods</th>
-                    <th className="px-3 py-2.5 text-right text-xs font-semibold text-tremor-content-subtle dark:text-dark-tremor-content-subtle">Rate</th>
-                    <th className="px-3 py-2.5 text-right text-xs font-semibold text-tremor-content-subtle dark:text-dark-tremor-content-subtle">Records</th>
-                    <th className="px-3 py-2.5 text-left text-xs font-semibold text-tremor-content-subtle dark:text-dark-tremor-content-subtle">Earliest</th>
-                    <th className="px-3 py-2.5 text-left text-xs font-semibold text-tremor-content-subtle dark:text-dark-tremor-content-subtle">Latest</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-tremor-border dark:divide-dark-tremor-border">
-                  {completeness.map((c, i) => (
-                    <tr key={i} className="hover:bg-tremor-background-subtle/50 dark:hover:bg-dark-tremor-background-subtle/50">
-                      <td className="px-3 py-2 text-sm font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">{c.disease_name}</td>
-                      <td className="px-3 py-2 text-sm text-tremor-content dark:text-dark-tremor-content">{cadenceLabel(c.period_unit, "adjective")}</td>
-                      <td className="px-3 py-2 text-right text-sm text-tremor-content dark:text-dark-tremor-content">{c.data_periods}</td>
-                      <td className="px-3 py-2 text-right text-sm text-tremor-content dark:text-dark-tremor-content">{c.expected_periods}</td>
-                      <td className="px-3 py-2 text-right">
-                        <Badge color={
-                          c.completeness_rate >= 90
-                            ? "emerald"
-                            : c.completeness_rate >= 60
-                              ? "amber"
-                              : "rose"
-                        }>
-                          {c.completeness_rate.toFixed(1)}%
-                        </Badge>
-                      </td>
-                      <td className="px-3 py-2 text-right text-sm text-tremor-content dark:text-dark-tremor-content">{formatNumber(c.total_records)}</td>
-                      <td className="px-3 py-2 text-sm text-tremor-content dark:text-dark-tremor-content">{c.earliest_date ?? "—"}</td>
-                      <td className="px-3 py-2 text-sm text-tremor-content dark:text-dark-tremor-content">{c.latest_date ?? "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </Card>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h2 className="text-base font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
+              {t(lang, "completeness")}
+            </h2>
+            <StatusBadge>{completeness.length}</StatusBadge>
+          </div>
+          <DataTable
+            columns={columns}
+            rows={completeness}
+            getRowKey={(row) => row.disease_name}
+            emptyState={<EmptyState title={t(lang, "no_data")} />}
+          />
         </section>
-      )}
+      ) : null}
     </div>
   );
 }

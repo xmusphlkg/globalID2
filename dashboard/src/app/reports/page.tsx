@@ -1,23 +1,20 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useAppStore } from "@/stores/app-store";
-import { t } from "@/lib/i18n";
-import { useReports, useReportDetail } from "@/lib/hooks/useReports";
-import { formatDate } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
-import { ChevronDown, FileText, Gauge, Layers3, Send } from "lucide-react";
-import { Badge, Card, Col, Color, Flex, Grid, ProgressBar, Text, Title } from "@tremor/react";
+import { ChevronDown, FileText, Gauge, Layers3, Search, Send, TimerReset } from "lucide-react";
 
-const statusBadge: Record<string, Color> = {
-  pending: "slate",
-  generating: "amber",
-  completed: "emerald",
-  failed: "rose",
-  reviewing: "blue",
-  approved: "emerald",
-  published: "teal",
-};
+import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
+import { DetailDrawer } from "@/components/ui/DetailDrawer";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { FilterToolbar } from "@/components/ui/FilterToolbar";
+import { MetricTile } from "@/components/ui/MetricTile";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+import { type ReportDetail, type ReportListItem, useReportDetail, useReports } from "@/lib/hooks/useReports";
+import { t } from "@/lib/i18n";
+import { formatDate } from "@/lib/utils";
+import { useAppStore } from "@/stores/app-store";
 
 const statusLabelKey = {
   pending: "report_status_pending",
@@ -53,10 +50,7 @@ function percent(score: number | null | undefined) {
   return `${Math.round(score * 100)}%`;
 }
 
-function extractSectionDisease(
-  sectionTitle: string | null | undefined,
-  fallback: string,
-) {
+function extractSectionDisease(sectionTitle: string | null | undefined, fallback: string) {
   const title = (sectionTitle || "").trim();
   if (!title) return fallback;
 
@@ -72,68 +66,54 @@ function extractSectionDisease(
   return fallback;
 }
 
-export default function ReportsPage() {
-  const { lang, countryId } = useAppStore();
-  const [selectedUuid, setSelectedUuid] = useState<string | null>(null);
-  const [flowFilter, setFlowFilter] = useState<FlowGroupId | "all">("all");
+function QualityCell({ score }: { score: number | null | undefined }) {
+  if (score == null) {
+    return <span className="text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">--</span>;
+  }
 
-  const { data: reports, isLoading } = useReports(countryId);
-  const { data: detail } = useReportDetail(selectedUuid);
-  const list = reports ?? [];
+  const value = Math.round(score * 100);
+  const tone = value >= 80 ? "bg-emerald-500" : value >= 50 ? "bg-amber-500" : "bg-rose-500";
 
-  useEffect(() => {
-    if (list.length === 0) {
-      if (selectedUuid !== null) setSelectedUuid(null);
-      return;
-    }
-
-    if (!selectedUuid || !list.some((item) => item.report_uuid === selectedUuid)) {
-      setSelectedUuid(list[0].report_uuid);
-    }
-  }, [list, selectedUuid]);
-
-  const groupedReports = useMemo(() => {
-    const activeGroups =
-      flowFilter === "all" ? FLOW_GROUPS : FLOW_GROUPS.filter((g) => g.id === flowFilter);
-
-    return activeGroups.map((group) => ({
-      ...group,
-      items: list.filter((item) => group.statuses.includes(item.status)),
-    }));
-  }, [list, flowFilter]);
-
-  const flowCounts = useMemo(() => {
-    return {
-      all: list.length,
-      queue: list.filter((item) => FLOW_GROUPS[0].statuses.includes(item.status)).length,
-      review: list.filter((item) => FLOW_GROUPS[1].statuses.includes(item.status)).length,
-      published: list.filter((item) => FLOW_GROUPS[2].statuses.includes(item.status)).length,
-    };
-  }, [list]);
-
-  const filteredCount = useMemo(
-    () => groupedReports.reduce((total, group) => total + group.items.length, 0),
-    [groupedReports],
+  return (
+    <div className="flex min-w-[132px] items-center gap-3">
+      <div className="h-2 flex-1 overflow-hidden rounded-tremor-full bg-tremor-background-muted dark:bg-dark-tremor-background-muted">
+        <div className={`h-full rounded-tremor-full ${tone}`} style={{ width: `${value}%` }} />
+      </div>
+      <span className="w-10 text-right text-xs font-medium text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+        {value}%
+      </span>
+    </div>
   );
+}
 
-  const avgQuality = useMemo(() => {
-    const scores = list
-      .map((item) => item.quality_score)
-      .filter((score): score is number => score != null);
+function ReportTitleCell({ report }: { report: ReportListItem }) {
+  return (
+    <div className="min-w-[260px] max-w-[520px]">
+      <p className="line-clamp-2 font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">
+        {report.title}
+      </p>
+      <p className="mt-1 truncate text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+        {report.primary_disease || report.disease_names?.join(", ") || report.country_name || "-"}
+      </p>
+    </div>
+  );
+}
 
-    if (scores.length === 0) return null;
-    return scores.reduce((sum, score) => sum + score, 0) / scores.length;
-  }, [list]);
-
+function ReportDetailPanel({
+  detail,
+  lang,
+  loading,
+}: {
+  detail?: ReportDetail;
+  lang: "en" | "zh";
+  loading: boolean;
+}) {
   const sectionsByDisease = useMemo(() => {
     if (!detail) return [];
 
-    const grouped = new Map<string, typeof detail.sections>();
+    const grouped = new Map<string, ReportDetail["sections"]>();
     detail.sections.forEach((section) => {
-      const diseaseName = extractSectionDisease(
-        section.title,
-        t(lang, "report_disease_unknown"),
-      );
+      const diseaseName = extractSectionDisease(section.title, t(lang, "report_disease_unknown"));
       const current = grouped.get(diseaseName) ?? [];
       current.push(section);
       grouped.set(diseaseName, current);
@@ -152,318 +132,451 @@ export default function ReportsPage() {
       });
   }, [detail, lang]);
 
-  const metrics = [
-    {
-      key: "total",
-      title: t(lang, "report_overview_total"),
-      value: String(flowCounts.all),
-      icon: Layers3,
-      panelClass:
-        "border-sky-100 bg-sky-50/70 dark:border-sky-900/40 dark:bg-sky-950/20",
-      iconClass: "text-sky-600 dark:text-sky-300",
-    },
-    {
-      key: "filtered",
-      title: t(lang, "report_overview_filtered"),
-      value: String(filteredCount),
-      icon: Send,
-      panelClass:
-        "border-amber-100 bg-amber-50/70 dark:border-amber-900/40 dark:bg-amber-950/20",
-      iconClass: "text-amber-600 dark:text-amber-300",
-    },
-    {
-      key: "published",
-      title: t(lang, "report_overview_published"),
-      value: String(flowCounts.published),
-      icon: FileText,
-      panelClass:
-        "border-emerald-100 bg-emerald-50/70 dark:border-emerald-900/40 dark:bg-emerald-950/20",
-      iconClass: "text-emerald-600 dark:text-emerald-300",
-    },
-    {
-      key: "quality",
-      title: t(lang, "report_overview_quality"),
-      value: percent(avgQuality),
-      icon: Gauge,
-      panelClass:
-        "border-indigo-100 bg-indigo-50/70 dark:border-indigo-900/40 dark:bg-indigo-950/20",
-      iconClass: "text-indigo-600 dark:text-indigo-300",
-    },
-  ];
+  if (loading && !detail) {
+    return (
+      <div className="space-y-3">
+        {[1, 2, 3].map((item) => (
+          <div
+            key={item}
+            className="h-24 animate-pulse rounded-tremor-default bg-tremor-background-muted dark:bg-dark-tremor-background-muted"
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (!detail) {
+    return (
+      <EmptyState
+        icon={<FileText className="h-10 w-10" />}
+        title={t(lang, "report_select_hint")}
+        className="py-12"
+      />
+    );
+  }
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 md:px-6">
-      <Card className="overflow-hidden p-0">
-        <div className="border-b border-tremor-border bg-gradient-to-br from-sky-50 via-white to-emerald-50 px-4 py-5 sm:px-6 dark:border-dark-tremor-border dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
-          <Badge color="teal" className="w-fit">{t(lang, "mod_results")}</Badge>
-          <Title className="mt-2 text-2xl">{t(lang, "reports")}</Title>
-          <Text className="mt-1">{t(lang, "publication_flow")}</Text>
-
-          <Grid numItems={2} numItemsLg={4} className="mt-5 gap-3">
-            {metrics.map((metric) => {
-              const Icon = metric.icon;
-              return (
-                <div
-                  key={metric.key}
-                  className={`rounded-xl border px-3 py-3 ${metric.panelClass}`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <Text className="text-xs font-medium uppercase tracking-wide">{metric.title}</Text>
-                    <Icon className={`h-4 w-4 ${metric.iconClass}`} />
-                  </div>
-                  <div className="mt-2 text-xl font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
-                    {metric.value}
-                  </div>
-                </div>
-              );
-            })}
-          </Grid>
+    <div className="space-y-5">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="rounded-tremor-default border border-tremor-border bg-tremor-background-subtle px-3 py-3 dark:border-dark-tremor-border dark:bg-dark-tremor-background-subtle">
+          <p className="text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+            {t(lang, "report_meta_quality")}
+          </p>
+          <p className="mt-1 text-base font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
+            {percent(detail.quality_score)}
+          </p>
         </div>
+        <div className="rounded-tremor-default border border-tremor-border bg-tremor-background-subtle px-3 py-3 dark:border-dark-tremor-border dark:bg-dark-tremor-background-subtle">
+          <p className="text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+            {t(lang, "report_meta_generation_time")}
+          </p>
+          <p className="mt-1 text-base font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
+            {detail.generation_time != null ? `${detail.generation_time.toFixed(1)}s` : "--"}
+          </p>
+        </div>
+        <div className="rounded-tremor-default border border-tremor-border bg-tremor-background-subtle px-3 py-3 dark:border-dark-tremor-border dark:bg-dark-tremor-background-subtle">
+          <p className="text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+            {t(lang, "sections")}
+          </p>
+          <p className="mt-1 text-base font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
+            {detail.sections.length}
+          </p>
+        </div>
+      </div>
 
-        <div className="px-4 py-4 sm:px-6">
-          <div className="flex flex-wrap gap-2">
-            <button
-              className={`inline-flex items-center gap-2 rounded-tremor-full border px-3 py-1.5 text-sm font-medium transition ${flowFilter === "all" ? "border-tremor-brand bg-tremor-brand text-tremor-brand-inverted dark:border-dark-tremor-brand dark:bg-dark-tremor-brand dark:text-dark-tremor-brand-inverted" : "border-tremor-border bg-tremor-background text-tremor-content-strong hover:border-tremor-brand-muted hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong dark:hover:border-dark-tremor-brand-muted dark:hover:bg-dark-tremor-background-subtle"}`}
-              onClick={() => setFlowFilter("all")}
-            >
-              {t(lang, "flow_all")}
-              <span className="rounded-full bg-black/10 px-2 py-0.5 text-xs dark:bg-white/10">{flowCounts.all}</span>
-            </button>
-            {FLOW_GROUPS.map((group) => (
-              <button
-                key={group.id}
-                className={`inline-flex items-center gap-2 rounded-tremor-full border px-3 py-1.5 text-sm font-medium transition ${flowFilter === group.id ? "border-tremor-brand bg-tremor-brand text-tremor-brand-inverted dark:border-dark-tremor-brand dark:bg-dark-tremor-brand dark:text-dark-tremor-brand-inverted" : "border-tremor-border bg-tremor-background text-tremor-content-strong hover:border-tremor-brand-muted hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong dark:hover:border-dark-tremor-brand-muted dark:hover:bg-dark-tremor-background-subtle"}`}
-                onClick={() => setFlowFilter(group.id)}
-              >
-                {t(lang, group.titleKey)}
-                <span className="rounded-full bg-black/10 px-2 py-0.5 text-xs dark:bg-white/10">
-                  {flowCounts[group.id]}
-                </span>
-              </button>
+      <div className="rounded-tremor-default border border-tremor-border bg-tremor-background-subtle px-4 py-3 dark:border-dark-tremor-border dark:bg-dark-tremor-background-subtle">
+        <div className="flex flex-wrap gap-2">
+          <StatusBadge status={detail.status}>{statusLabel(lang, detail.status)}</StatusBadge>
+          <StatusBadge>{detail.report_type}</StatusBadge>
+          {detail.ai_model_used ? <StatusBadge tone="info">{detail.ai_model_used}</StatusBadge> : null}
+        </div>
+        <p className="mt-3 text-sm text-tremor-content dark:text-dark-tremor-content">
+          {formatDate(detail.period_start)} - {formatDate(detail.period_end)}
+        </p>
+      </div>
+
+      {detail.summary ? (
+        <section className="rounded-tremor-default border border-tremor-border bg-tremor-background px-4 py-3 text-sm leading-6 text-tremor-content-strong dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong">
+          {detail.summary}
+        </section>
+      ) : null}
+
+      {(detail.key_findings?.length ?? 0) > 0 ? (
+        <section className="rounded-tremor-default border border-emerald-200 bg-emerald-50/70 p-4 dark:border-emerald-900/30 dark:bg-emerald-950/20">
+          <h3 className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">
+            {t(lang, "report_key_findings")}
+          </h3>
+          <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-emerald-900 dark:text-emerald-100">
+            {detail.key_findings.map((finding, index) => (
+              <li key={`${finding}-${index}`}>{finding}</li>
             ))}
-          </div>
+          </ul>
+        </section>
+      ) : null}
+
+      {(detail.recommendations?.length ?? 0) > 0 ? (
+        <section className="rounded-tremor-default border border-sky-200 bg-sky-50/70 p-4 dark:border-sky-900/30 dark:bg-sky-950/20">
+          <h3 className="text-sm font-semibold text-sky-800 dark:text-sky-200">
+            {t(lang, "report_recommendations")}
+          </h3>
+          <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-sky-900 dark:text-sky-100">
+            {detail.recommendations.map((item, index) => (
+              <li key={`${item}-${index}`}>{item}</li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {detail.error_message ? (
+        <section className="rounded-tremor-default border border-rose-200 bg-rose-50 p-4 text-sm font-medium text-rose-700 dark:border-rose-900/30 dark:bg-rose-950/30 dark:text-rose-300">
+          {detail.error_message}
+        </section>
+      ) : null}
+
+      <section className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-sm font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
+            {t(lang, "report_disease_summary")}
+          </h3>
+          <StatusBadge>{detail.sections.length}</StatusBadge>
         </div>
-      </Card>
+
+        {detail.sections.length > 0 ? (
+          sectionsByDisease.map((group) => (
+            <div
+              key={group.disease}
+              className="rounded-tremor-default border border-tremor-border bg-tremor-background-subtle/60 p-3 dark:border-dark-tremor-border dark:bg-dark-tremor-background-subtle/50"
+            >
+              <div className="mb-3 flex items-center justify-between gap-2 px-1">
+                <p className="text-sm font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
+                  {group.disease}
+                </p>
+                <StatusBadge>{group.sections.length}</StatusBadge>
+              </div>
+
+              <div className="space-y-3">
+                {group.sections.map((section) => (
+                  <details
+                    key={section.id}
+                    className="group overflow-hidden rounded-tremor-default border border-tremor-border bg-tremor-background dark:border-dark-tremor-border dark:bg-dark-tremor-background"
+                  >
+                    <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-semibold text-tremor-content-strong transition-colors hover:bg-tremor-background-subtle dark:text-dark-tremor-content-strong dark:hover:bg-dark-tremor-background-subtle [&::-webkit-details-marker]:hidden">
+                      <ChevronDown className="h-4 w-4 shrink-0 text-tremor-content-subtle transition-transform group-open:rotate-180 dark:text-dark-tremor-content-subtle" />
+                      <span className="truncate">
+                        {section.section_order}. {section.title || section.section_type || "Section"}
+                      </span>
+                    </summary>
+
+                    <div className="prose max-w-none border-t border-tremor-border px-4 py-4 dark:border-dark-tremor-border dark:prose-invert">
+                      <ReactMarkdown>{section.content ?? ""}</ReactMarkdown>
+                    </div>
+
+                    {section.ai_model || section.generation_time != null ? (
+                      <div className="border-t border-tremor-border bg-tremor-background-subtle px-4 py-2 text-xs text-tremor-content-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background-subtle dark:text-dark-tremor-content-subtle">
+                        {section.ai_model ? `Model: ${section.ai_model}` : "Model: --"}
+                        {section.generation_time != null ? ` · ${section.generation_time.toFixed(1)}s` : ""}
+                      </div>
+                    ) : null}
+                  </details>
+                ))}
+              </div>
+            </div>
+          ))
+        ) : (
+          <EmptyState title={t(lang, "report_no_sections")} className="rounded-tremor-default border border-dashed border-tremor-border py-10 dark:border-dark-tremor-border" />
+        )}
+      </section>
+    </div>
+  );
+}
+
+export default function ReportsPage() {
+  const { lang, countryId } = useAppStore();
+  const [selectedUuid, setSelectedUuid] = useState<string | null>(null);
+  const [flowFilter, setFlowFilter] = useState<FlowGroupId | "all">("all");
+  const [search, setSearch] = useState("");
+
+  const { data: reports, isLoading } = useReports(countryId);
+  const { data: detail, isFetching: detailLoading } = useReportDetail(selectedUuid);
+  const list = reports ?? [];
+
+  useEffect(() => {
+    if (selectedUuid && !list.some((item) => item.report_uuid === selectedUuid)) {
+      setSelectedUuid(null);
+    }
+  }, [list, selectedUuid]);
+
+  const flowCounts = useMemo(() => {
+    return {
+      all: list.length,
+      queue: list.filter((item) => FLOW_GROUPS[0].statuses.includes(item.status)).length,
+      review: list.filter((item) => FLOW_GROUPS[1].statuses.includes(item.status)).length,
+      published: list.filter((item) => FLOW_GROUPS[2].statuses.includes(item.status)).length,
+    };
+  }, [list]);
+
+  const filteredReports = useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase();
+    const activeStatuses =
+      flowFilter === "all"
+        ? null
+        : FLOW_GROUPS.find((group) => group.id === flowFilter)?.statuses ?? [];
+
+    return list.filter((report) => {
+      if (activeStatuses && !activeStatuses.includes(report.status)) return false;
+      if (!normalizedSearch) return true;
+
+      const haystack = [
+        report.title,
+        report.report_type,
+        report.status,
+        report.country_name,
+        report.primary_disease,
+        ...(report.disease_names ?? []),
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      return haystack.includes(normalizedSearch);
+    });
+  }, [flowFilter, list, search]);
+
+  const selectedReport = useMemo(
+    () => list.find((item) => item.report_uuid === selectedUuid) ?? null,
+    [list, selectedUuid],
+  );
+
+  const avgQuality = useMemo(() => {
+    const scores = list
+      .map((item) => item.quality_score)
+      .filter((score): score is number => score != null);
+
+    if (scores.length === 0) return null;
+    return scores.reduce((sum, score) => sum + score, 0) / scores.length;
+  }, [list]);
+
+  const hasFilters = Boolean(search || flowFilter !== "all");
+
+  const columns = useMemo<DataTableColumn<ReportListItem>[]>(
+    () => [
+      {
+        key: "status",
+        header: lang === "zh" ? "状态" : "Status",
+        render: (report) => <StatusBadge status={report.status}>{statusLabel(lang, report.status)}</StatusBadge>,
+      },
+      {
+        key: "report",
+        header: t(lang, "report_title"),
+        render: (report) => <ReportTitleCell report={report} />,
+      },
+      {
+        key: "type",
+        header: t(lang, "report_type"),
+        render: (report) => (
+          <span className="whitespace-nowrap font-mono text-xs text-tremor-content dark:text-dark-tremor-content">
+            {report.report_type}
+          </span>
+        ),
+      },
+      {
+        key: "quality",
+        header: t(lang, "quality_score"),
+        render: (report) => <QualityCell score={report.quality_score} />,
+      },
+      {
+        key: "sections",
+        header: t(lang, "sections"),
+        render: (report) => (
+          <span className="whitespace-nowrap text-sm font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">
+            {report.section_count}
+          </span>
+        ),
+      },
+      {
+        key: "period",
+        header: lang === "zh" ? "周期" : "Period",
+        render: (report) => (
+          <span className="whitespace-nowrap text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+            {formatDate(report.period_start)} - {formatDate(report.period_end)}
+          </span>
+        ),
+      },
+      {
+        key: "created",
+        header: lang === "zh" ? "创建时间" : "Created",
+        render: (report) => (
+          <span className="whitespace-nowrap text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+            {formatDate(report.created_at)}
+          </span>
+        ),
+      },
+    ],
+    [lang],
+  );
+
+  return (
+    <div className="space-y-5">
+      <PageHeader
+        eyebrow={t(lang, "mod_results")}
+        title={t(lang, "reports")}
+        description={t(lang, "publication_flow")}
+        meta={
+          <>
+            <StatusBadge tone={flowCounts.queue > 0 ? "warning" : "neutral"}>
+              {t(lang, "flow_queue")} {flowCounts.queue}
+            </StatusBadge>
+            <StatusBadge tone="info">
+              {t(lang, "flow_review")} {flowCounts.review}
+            </StatusBadge>
+            <StatusBadge tone="success">
+              {t(lang, "flow_published")} {flowCounts.published}
+            </StatusBadge>
+          </>
+        }
+      />
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricTile
+          label={t(lang, "report_overview_total")}
+          value={isLoading ? "-" : flowCounts.all}
+          icon={<Layers3 className="h-4 w-4" />}
+          tone="neutral"
+          hint={lang === "zh" ? "当前国家报告" : "Reports for current country"}
+        />
+        <MetricTile
+          label={t(lang, "report_overview_filtered")}
+          value={isLoading ? "-" : filteredReports.length}
+          icon={<Send className="h-4 w-4" />}
+          tone="primary"
+          hint={flowFilter === "all" ? t(lang, "flow_all") : t(lang, FLOW_GROUPS.find((group) => group.id === flowFilter)?.titleKey ?? "flow_all")}
+        />
+        <MetricTile
+          label={t(lang, "report_overview_published")}
+          value={isLoading ? "-" : flowCounts.published}
+          icon={<FileText className="h-4 w-4" />}
+          tone="success"
+          hint={lang === "zh" ? "可用于对外发布" : "Ready for downstream use"}
+        />
+        <MetricTile
+          label={t(lang, "report_overview_quality")}
+          value={isLoading ? "-" : percent(avgQuality)}
+          icon={<Gauge className="h-4 w-4" />}
+          tone="info"
+          hint={lang === "zh" ? "按已有质量分计算" : "Based on scored reports"}
+        />
+      </div>
+
+      <FilterToolbar>
+        <div className="relative min-w-[220px] flex-1 sm:max-w-sm">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-tremor-content-subtle" />
+          <input
+            type="search"
+            placeholder={lang === "zh" ? "搜索标题、疾病、类型" : "Search title, disease, or type"}
+            className="h-10 w-full rounded-tremor-default border border-tremor-border bg-tremor-background py-2 pl-9 pr-3 text-sm text-tremor-content-strong outline-none transition focus:border-tremor-brand-subtle focus:ring-2 focus:ring-tremor-brand-muted dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            className={`inline-flex h-10 items-center gap-2 rounded-tremor-default border px-3 text-sm font-medium transition ${
+              flowFilter === "all"
+                ? "border-tremor-brand bg-tremor-brand text-tremor-brand-inverted dark:border-dark-tremor-brand dark:bg-dark-tremor-brand dark:text-dark-tremor-brand-inverted"
+                : "border-tremor-border bg-tremor-background text-tremor-content-strong hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong dark:hover:bg-dark-tremor-background-subtle"
+            }`}
+            onClick={() => setFlowFilter("all")}
+          >
+            {t(lang, "flow_all")}
+            <span className="rounded-tremor-default bg-black/10 px-2 py-0.5 text-xs dark:bg-white/10">{flowCounts.all}</span>
+          </button>
+          {FLOW_GROUPS.map((group) => (
+            <button
+              key={group.id}
+              type="button"
+              className={`inline-flex h-10 items-center gap-2 rounded-tremor-default border px-3 text-sm font-medium transition ${
+                flowFilter === group.id
+                  ? "border-tremor-brand bg-tremor-brand text-tremor-brand-inverted dark:border-dark-tremor-brand dark:bg-dark-tremor-brand dark:text-dark-tremor-brand-inverted"
+                  : "border-tremor-border bg-tremor-background text-tremor-content-strong hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong dark:hover:bg-dark-tremor-background-subtle"
+              }`}
+              onClick={() => setFlowFilter(group.id)}
+            >
+              {t(lang, group.titleKey)}
+              <span className="rounded-tremor-default bg-black/10 px-2 py-0.5 text-xs dark:bg-white/10">
+                {flowCounts[group.id]}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {hasFilters ? (
+          <button
+            type="button"
+            className="inline-flex h-10 items-center gap-2 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm font-medium text-tremor-content-strong transition hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:hover:bg-dark-tremor-background-subtle"
+            onClick={() => {
+              setSearch("");
+              setFlowFilter("all");
+            }}
+          >
+            <TimerReset className="h-4 w-4" />
+            {lang === "zh" ? "重置" : "Reset"}
+          </button>
+        ) : null}
+      </FilterToolbar>
 
       {isLoading ? (
-        <Grid numItems={1} numItemsLg={12} className="gap-6">
-          <Col numColSpan={1} numColSpanLg={4} className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="h-28 w-full animate-pulse rounded-xl bg-tremor-background-muted dark:bg-dark-tremor-background-muted"
-              />
-            ))}
-          </Col>
-          <Col numColSpan={1} numColSpanLg={8}>
-            <div className="h-[34rem] w-full animate-pulse rounded-xl bg-tremor-background-muted dark:bg-dark-tremor-background-muted" />
-          </Col>
-        </Grid>
+        <div className="space-y-3">
+          {[1, 2, 3].map((item) => (
+            <div
+              key={item}
+              className="h-16 animate-pulse rounded-tremor-default border border-tremor-border bg-tremor-background dark:border-dark-tremor-border dark:bg-dark-tremor-background"
+            />
+          ))}
+        </div>
       ) : (
-        <Grid numItems={1} numItemsLg={12} className="gap-6">
-          <Col numColSpan={1} numColSpanLg={4} className="space-y-4">
-            {groupedReports.map((group) => (
-              <Card key={group.id} className="p-3">
-                <Flex className="mb-2" justifyContent="between" alignItems="center">
-                  <Title className="text-base">{t(lang, group.titleKey)}</Title>
-                  <Badge color="slate">{group.items.length}</Badge>
-                </Flex>
-
-                {group.items.length > 0 ? (
-                  <div className="max-h-[28rem] space-y-2.5 overflow-y-auto pr-1">
-                    {group.items.map((r) => (
-                      <button
-                        key={r.report_uuid}
-                        className={`w-full rounded-xl border px-3 py-3 text-left transition-all ${selectedUuid === r.report_uuid ? "border-tremor-brand bg-sky-50/80 shadow-sm dark:border-dark-tremor-brand dark:bg-sky-950/20" : "border-tremor-border bg-tremor-background hover:border-tremor-brand-muted hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:hover:border-dark-tremor-brand-muted dark:hover:bg-dark-tremor-background-subtle"}`}
-                        onClick={() => setSelectedUuid(r.report_uuid)}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <span className="line-clamp-2 text-sm font-semibold leading-5 text-tremor-content-strong dark:text-dark-tremor-content-strong">
-                            {r.title}
-                          </span>
-                          <Badge color={statusBadge[r.status] ?? "slate"}>{statusLabel(lang, r.status)}</Badge>
-                        </div>
-
-                        <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
-                          <span>{formatDate(r.created_at)}</span>
-                          <span>{r.section_count} {t(lang, "sections")}</span>
-                        </div>
-
-                        {r.quality_score != null && (
-                          <div className="mt-2 space-y-1">
-                            <div className="flex items-center justify-between text-[11px] text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
-                              <span>{t(lang, "quality_score")}</span>
-                              <span className="font-medium">{percent(r.quality_score)}</span>
-                            </div>
-                            <ProgressBar
-                              value={Math.round(r.quality_score * 100)}
-                              color={r.quality_score >= 0.8 ? "emerald" : r.quality_score >= 0.5 ? "amber" : "rose"}
-                            />
-                          </div>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="rounded-xl bg-tremor-background-subtle px-3 py-4 text-center text-xs text-tremor-content-subtle dark:bg-dark-tremor-background-subtle dark:text-dark-tremor-content-subtle">
-                    {t(lang, "flow_empty")}
-                  </div>
-                )}
-              </Card>
-            ))}
-          </Col>
-
-          <Col numColSpan={1} numColSpanLg={8}>
-            {detail ? (
-              <Card className="overflow-hidden p-0 lg:h-[calc(100vh-9rem)]">
-                <div className="flex h-full flex-col">
-                <div className="border-b border-tremor-border bg-tremor-background-subtle p-6 dark:border-dark-tremor-border dark:bg-dark-tremor-background-subtle">
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div>
-                      <Title className="text-xl leading-7">{detail.title}</Title>
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        <Badge color={statusBadge[detail.status] ?? "slate"}>{statusLabel(lang, detail.status)}</Badge>
-                        <Badge color="slate">{detail.report_type}</Badge>
-                        {detail.ai_model_used && (
-                          <Badge color="blue">{detail.ai_model_used}</Badge>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="min-w-[200px] rounded-xl border border-tremor-border bg-white px-4 py-3 dark:border-dark-tremor-border dark:bg-dark-tremor-background">
-                      <Text className="text-xs">{t(lang, "period")}</Text>
-                      <Text className="mt-1 text-sm font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
-                        {formatDate(detail.period_start)} - {formatDate(detail.period_end)}
-                      </Text>
-                    </div>
-                  </div>
-
-                  <Grid numItems={1} numItemsSm={2} numItemsLg={3} className="mt-4 gap-3">
-                    <div className="rounded-xl border border-tremor-border bg-white px-4 py-3 dark:border-dark-tremor-border dark:bg-dark-tremor-background">
-                      <Text className="text-xs">{t(lang, "report_meta_quality")}</Text>
-                      <Text className="mt-1 text-base font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
-                        {percent(detail.quality_score)}
-                      </Text>
-                    </div>
-
-                    <div className="rounded-xl border border-tremor-border bg-white px-4 py-3 dark:border-dark-tremor-border dark:bg-dark-tremor-background">
-                      <Text className="text-xs">{t(lang, "report_meta_generation_time")}</Text>
-                      <Text className="mt-1 text-base font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
-                        {detail.generation_time != null ? `${detail.generation_time.toFixed(1)}s` : "--"}
-                      </Text>
-                    </div>
-
-                    <div className="rounded-xl border border-tremor-border bg-white px-4 py-3 dark:border-dark-tremor-border dark:bg-dark-tremor-background">
-                      <Text className="text-xs">{t(lang, "sections")}</Text>
-                      <Text className="mt-1 text-base font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
-                        {detail.sections.length}
-                      </Text>
-                    </div>
-                  </Grid>
-                </div>
-
-                <div className="min-h-0 space-y-5 overflow-y-auto p-6">
-                  {detail.summary && (
-                    <div className="rounded-xl bg-tremor-background-subtle p-4 text-sm leading-6 text-tremor-content-strong dark:bg-dark-tremor-background-subtle dark:text-dark-tremor-content-strong">
-                      {detail.summary}
-                    </div>
-                  )}
-
-                  {(detail.key_findings?.length ?? 0) > 0 && (
-                    <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4 dark:border-emerald-900/30 dark:bg-emerald-950/20">
-                      <Text className="mb-2 text-sm font-semibold text-emerald-800 dark:text-emerald-200">
-                        {t(lang, "report_key_findings")}
-                      </Text>
-                      <ul className="list-disc space-y-1 pl-5 text-sm text-emerald-900 dark:text-emerald-100">
-                        {detail.key_findings.map((finding, index) => (
-                          <li key={`${finding}-${index}`}>{finding}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {(detail.recommendations?.length ?? 0) > 0 && (
-                    <div className="rounded-xl border border-indigo-200 bg-indigo-50/70 p-4 dark:border-indigo-900/30 dark:bg-indigo-950/20">
-                      <Text className="mb-2 text-sm font-semibold text-indigo-800 dark:text-indigo-200">
-                        {t(lang, "report_recommendations")}
-                      </Text>
-                      <ul className="list-disc space-y-1 pl-5 text-sm text-indigo-900 dark:text-indigo-100">
-                        {detail.recommendations.map((item, index) => (
-                          <li key={`${item}-${index}`}>{item}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {detail.error_message && (
-                    <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-medium text-rose-700 dark:border-rose-900/30 dark:bg-rose-950/30 dark:text-rose-300">
-                      {detail.error_message}
-                    </div>
-                  )}
-
-                  <div className="space-y-4">
-                    {detail.sections.length > 0 ? (
-                      sectionsByDisease.map((group) => (
-                        <div
-                          key={group.disease}
-                          className="rounded-xl border border-tremor-border bg-tremor-background-subtle/60 p-3 dark:border-dark-tremor-border dark:bg-dark-tremor-background-subtle/50"
-                        >
-                          <div className="mb-3 flex items-center justify-between gap-2 px-1">
-                            <Text className="text-sm font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
-                              {group.disease}
-                            </Text>
-                            <Badge color="slate" size="xs">{group.sections.length}</Badge>
-                          </div>
-
-                          <div className="space-y-3">
-                            {group.sections.map((sec) => (
-                              <details key={sec.id} className="group overflow-hidden rounded-xl border border-tremor-border bg-white/80 dark:border-dark-tremor-border dark:bg-dark-tremor-background/80">
-                                <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-semibold text-tremor-content-strong transition-colors hover:bg-tremor-background-subtle dark:text-dark-tremor-content-strong dark:hover:bg-dark-tremor-background-subtle [&::-webkit-details-marker]:hidden">
-                                  <ChevronDown className="h-4 w-4 shrink-0 text-tremor-content-subtle transition-transform group-open:rotate-180 dark:text-dark-tremor-content-subtle" />
-                                  <span className="truncate">
-                                    {sec.section_order}. {sec.title || sec.section_type || "Section"}
-                                  </span>
-                                </summary>
-
-                                <div className="prose max-w-none border-t border-tremor-border px-4 py-4 dark:border-dark-tremor-border dark:prose-invert">
-                                  <ReactMarkdown>{sec.content ?? ""}</ReactMarkdown>
-                                </div>
-
-                                {(sec.ai_model || sec.generation_time != null) && (
-                                  <div className="border-t border-tremor-border bg-tremor-background-subtle px-4 py-2 text-[11px] text-tremor-content-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background-subtle dark:text-dark-tremor-content-subtle">
-                                    {sec.ai_model ? `Model: ${sec.ai_model}` : "Model: --"}
-                                    {sec.generation_time != null && ` · ${sec.generation_time.toFixed(1)}s`}
-                                  </div>
-                                )}
-                              </details>
-                            ))}
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="rounded-xl border border-dashed border-tremor-border px-4 py-8 text-center dark:border-dark-tremor-border">
-                        <Text className="text-sm text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
-                          {t(lang, "report_no_sections")}
-                        </Text>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                </div>
-              </Card>
-            ) : (
-              <Card className="border-dashed">
-                <div className="flex flex-col items-center justify-center py-14 text-center">
-                  <FileText className="h-12 w-12 text-tremor-content-subtle dark:text-dark-tremor-content-subtle" />
-                  <Text className="mt-3 max-w-md text-sm text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
-                    {t(lang, "report_select_hint")}
-                  </Text>
-                </div>
-              </Card>
-            )}
-          </Col>
-        </Grid>
+        <DataTable
+          columns={columns}
+          rows={filteredReports}
+          getRowKey={(report) => report.report_uuid}
+          selectedRowKey={selectedUuid}
+          onRowClick={(report) => setSelectedUuid(report.report_uuid)}
+          emptyState={
+            <EmptyState
+              icon={<FileText className="h-10 w-10" />}
+              title={t(lang, "flow_empty")}
+              description={
+                hasFilters
+                  ? lang === "zh"
+                    ? "当前筛选条件下没有报告。"
+                    : "No reports match the current filters."
+                  : lang === "zh"
+                    ? "当前国家还没有生成报告。"
+                    : "No reports have been generated for the current country."
+              }
+            />
+          }
+        />
       )}
+
+      <DetailDrawer
+        open={Boolean(selectedUuid)}
+        title={selectedReport?.title ?? (lang === "zh" ? "报告详情" : "Report Detail")}
+        subtitle={
+          selectedReport ? (
+            <span className="flex min-w-0 items-center gap-2">
+              <StatusBadge status={selectedReport.status}>{statusLabel(lang, selectedReport.status)}</StatusBadge>
+              <span className="truncate">{selectedReport.report_type}</span>
+              <span>{formatDate(selectedReport.created_at)}</span>
+            </span>
+          ) : null
+        }
+        onClose={() => setSelectedUuid(null)}
+        className="sm:w-[820px] sm:max-w-[820px]"
+      >
+        <ReportDetailPanel detail={detail} lang={lang} loading={detailLoading} />
+      </DetailDrawer>
     </div>
   );
 }

@@ -8,7 +8,7 @@ import { TopNavbar } from "./TopNavbar";
 export function TremorAppShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { sidebarCollapsed, setSidebarCollapsed } = useAppStore();
-  const desktopSidebarWidth = sidebarCollapsed ? "lg:pl-20" : "lg:pl-72";
+  const desktopSidebarWidth = sidebarCollapsed ? "lg:pl-24" : "lg:pl-72";
 
   return (
     <div className="m-0 min-h-screen w-full bg-tremor-background-subtle pt-0 text-tremor-content-strong">
@@ -26,7 +26,7 @@ export function TremorAppShell({ children }: { children: React.ReactNode }) {
         />
 
         <main className="flex-1 pb-10">
-          <div className={`mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 ${sidebarCollapsed ? "lg:px-6" : "lg:px-8"}`}>
+          <div className={`mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 ${sidebarCollapsed ? "lg:px-6" : "lg:px-8"}`}>
             {children}
           </div>
         </main>
