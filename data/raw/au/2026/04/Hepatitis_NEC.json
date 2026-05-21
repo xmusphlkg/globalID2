@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-05-18T22:45:42.999912+00:00",
+  "fetched_at": "2026-05-20T22:45:58.835696+00:00",
   "disease": "Hepatitis (NEC)",
   "year": 2026,
   "month": 4,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1779144342662)/",
-            "rootActivityId": "96ed1f5a-50ee-4d20-a8be-f3bdc3a9f7dd",
+            "timestamp": "/Date(1779317158539)/",
+            "rootActivityId": "3688833d-9b2e-4fd2-9f80-b04e586f38f7",
             "descriptor": {
               "Select": [
                 {

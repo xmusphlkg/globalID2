@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-05-18T22:45:45.636871+00:00",
+  "fetched_at": "2026-05-20T22:46:02.185057+00:00",
   "disease": "Q fever",
   "year": 2026,
   "month": 4,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1779144345260)/",
-            "rootActivityId": "1e8a2355-b48e-4c81-8eac-a328490d2459",
+            "timestamp": "/Date(1779317161851)/",
+            "rootActivityId": "1c2a73a8-c07c-4ff6-906e-83899d01cad2",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'52'"
+                          "A0": "'53'"
                         }
                       ]
                     },
@@ -400,7 +400,7 @@
                         {
                           "C": [
                             "QLD",
-                            "'33'"
+                            "'34'"
                           ]
                         },
                         {
@@ -447,7 +447,7 @@
     "ACT": 0,
     "NSW": 16,
     "NT": 0,
-    "QLD": 33,
+    "QLD": 34,
     "SA": 0,
     "TAS": 0,
     "VIC": "'<5'",

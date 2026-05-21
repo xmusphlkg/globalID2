@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-05-18T22:45:48.322345+00:00",
+  "fetched_at": "2026-05-20T22:46:04.498543+00:00",
   "disease": "Vibrio parahaemolyticus infection",
   "year": 2026,
   "month": 4,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1779144347953)/",
-            "rootActivityId": "0e47b9f7-3c05-4b24-a8d1-5a8e9ba4c31b",
+            "timestamp": "/Date(1779317164051)/",
+            "rootActivityId": "1621babe-1cff-4bb4-a5b8-f52855b8a110",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'41'"
+                          "A0": "'48'"
                         }
                       ]
                     },
@@ -418,7 +418,7 @@
                         {
                           "C": [
                             "VIC",
-                            "0L"
+                            "'7'"
                           ]
                         },
                         {
@@ -450,7 +450,7 @@
     "QLD": 17,
     "SA": 5,
     "TAS": "'<5'",
-    "VIC": 0,
+    "VIC": 7,
     "WA": 6
   }
 }
