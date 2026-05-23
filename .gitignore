@@ -77,6 +77,7 @@ pnpm-debug.log*
 /data/recovered/
 /data/backups/
 /data/system-settings.json
+/data/raw/br/final/2024/DENGBR24.dbc
 !/data/.gitkeep
 astro-site/src/data/disease-knowledge/
 
