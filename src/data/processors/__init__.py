@@ -13,6 +13,7 @@ from .nz import NZMonthlyUpdater
 from .tw import TWMonthlyUpdater
 from .br import BRMonthlyUpdater
 from .kr import KRMonthlyUpdater
+from .hk import HKMonthlyUpdater
 
 __all__ = [
     "DataProcessor",
@@ -24,4 +25,5 @@ __all__ = [
     "TWMonthlyUpdater",
     "BRMonthlyUpdater",
     "KRMonthlyUpdater",
+    "HKMonthlyUpdater",
 ]

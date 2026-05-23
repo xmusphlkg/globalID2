@@ -35,6 +35,9 @@ export function getSourceDisplayLabel(
   if (s === "nidss_open_data" || s === "nidss" || ((s === "all" || s === "tw") && cc === "TW")) {
     return lang === "zh" ? "中国台湾 CDC NIDSS" : "Taiwan, China CDC NIDSS";
   }
+  if (s === "chp_notifiable" || s === "chp" || s === "hk_chp" || ((s === "all" || s === "hk") && cc === "HK")) {
+    return lang === "zh" ? "中国香港 CHP 法定传染病" : "Hong Kong, China CHP Notifiable Diseases";
+  }
   if (s === "sinan_datasus" || s === "sinan" || s === "datasus" || ((s === "all" || s === "br") && cc === "BR")) {
     return lang === "zh" ? "巴西 DATASUS SINAN" : "Brazil DATASUS SINAN";
   }
@@ -87,6 +90,9 @@ export function getSourceOptionsForCountry(
   }
   if (code === "TW") {
     return [{ value: "nidss_open_data", label: lang === "zh" ? "中国台湾 CDC NIDSS" : "Taiwan, China CDC NIDSS" }];
+  }
+  if (code === "HK") {
+    return [{ value: "chp_notifiable", label: lang === "zh" ? "中国香港 CHP 法定传染病" : "Hong Kong, China CHP Notifiable Diseases" }];
   }
   if (code === "BR") {
     return [{ value: "sinan_datasus", label: lang === "zh" ? "巴西 DATASUS SINAN" : "Brazil DATASUS SINAN" }];

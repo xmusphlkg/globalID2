@@ -419,7 +419,7 @@ export default function CountriesMapView({ metaCountries = [], height = 450 }: P
         const accentColor = isSupported ? palette.supported : palette.scheduled;
         const borderColor = isSupported ? palette.boxSupportedBorder : palette.boxScheduledBorder;
         const href = isSupported ? `/countries/${d.iso2.toLowerCase()}/` : undefined;
-        const flagCode = d.iso2 === 'TW' ? 'cn' : d.iso2.toLowerCase();
+        const flagCode = d.iso2 === 'TW' || d.iso2 === 'HK' ? 'cn' : d.iso2.toLowerCase();
 
         const boxStyles: React.CSSProperties = {
           position: 'absolute',
