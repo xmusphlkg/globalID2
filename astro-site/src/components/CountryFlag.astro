@@ -13,7 +13,7 @@ const normalized = (code || '')
   .replace('UK', 'GB');
 
 const iso2 = /^[A-Z]{2}$/.test(normalized) ? normalized : 'UN';
-const flagIso2 = iso2 === 'TW' ? 'CN' : iso2;
+const flagIso2 = iso2 === 'TW' || iso2 === 'HK' ? 'CN' : iso2;
 const cdnCode = flagIso2.toLowerCase();
 
 function toFlagEmoji(countryCode: string) {

@@ -12,6 +12,7 @@ from .nz import NewZealandPHFCrawler
 from .tw import TaiwanNIDSSCrawler
 from .br import BrazilSINANCrawler
 from .kr import KoreaKDCAOpenAPICrawler
+from .hk import HongKongCHPCrawler
 
 # Backward-compatible aliases
 JPIDWRCrawler = JapanIDWRCrawler
@@ -28,4 +29,5 @@ __all__ = [
     "TaiwanNIDSSCrawler",
     "BrazilSINANCrawler",
     "KoreaKDCAOpenAPICrawler",
+    "HongKongCHPCrawler",
 ]

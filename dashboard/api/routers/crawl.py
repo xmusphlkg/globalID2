@@ -34,7 +34,7 @@ class CrawlStartRequest(BaseModel):
         "all",
         description=(
             "Crawl source: nndss_api / cdc_weekly / nhc / pubmed / "
-            "jp_weekly / nidss_open_data / sinan_datasus / kdca_open_api "
+            "jp_weekly / nidss_open_data / chp_notifiable / sinan_datasus / kdca_open_api "
             "(KR OpenAPI or portal/KOSIS download) / all"
         ),
     )

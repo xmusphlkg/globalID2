@@ -201,3 +201,5 @@ D202,Domestic sexual and other violence,家庭/性及其他暴力,Other,,,SINAN 
 D203,Crimean-Congo hemorrhagic fever,克里米亚-刚果出血热,Viral,A98.0,1D60.0,Crimean-Congo hemorrhagic fever surveillance concept,Korea KDCA EID
 D204,South American hemorrhagic fever,南美出血热,Viral,A96.0-A96.1,1D61,South American arenaviral hemorrhagic fever surveillance concept,Korea KDCA EID
 D205,Tick-borne encephalitis,蜱传脑炎,Viral,A84,1D49,Tick-borne encephalitis surveillance concept,Korea KDCA EID
+D206,Community-associated methicillin-resistant Staphylococcus aureus infection,社区相关耐甲氧西林金黄色葡萄球菌感染,Bacterial,B95.6,,Community-associated MRSA infection surveillance concept,Hong Kong, China CHP
+D207,Enterovirus 71 infection,肠病毒71型感染,Viral,B34.1,1F01,Enterovirus 71 infection surveillance concept,Hong Kong, China CHP

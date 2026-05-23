@@ -10,6 +10,7 @@ EXPECTED_SCOPES_BY_COUNTRY = {
     "JP": ["jp_weekly"],
     "AU": ["all"],
     "TW": ["nidss_open_data"],
+    "HK": ["chp_notifiable"],
     "BR": ["sinan_datasus"],
     "KR": ["kdca_open_api"],
 }
@@ -43,6 +44,10 @@ SOURCE_SCOPE_LABELS: dict[str, dict[str, str]] = {
         "en": "Taiwan, China CDC NIDSS",
         "zh": "中国台湾 CDC NIDSS",
     },
+    "chp_notifiable": {
+        "en": "Hong Kong, China CHP Notifiable Diseases",
+        "zh": "中国香港 CHP 法定传染病",
+    },
     "sinan_datasus": {
         "en": "Brazil DATASUS SINAN",
         "zh": "巴西 DATASUS SINAN",
@@ -71,6 +76,12 @@ _EXACT_SCOPE_BY_DATA_SOURCE = {
     "taiwan, china cdc nidss": "nidss_open_data",
     "taiwan cdc nidss open data": "nidss_open_data",
     "taiwan cdc nidss": "nidss_open_data",
+    "hong kong, china chp notifiable infectious diseases": "chp_notifiable",
+    "hong kong, china chp notifiable diseases": "chp_notifiable",
+    "hong kong, china chp": "chp_notifiable",
+    "hong kong chp notifiable infectious diseases": "chp_notifiable",
+    "hong kong chp notifiable diseases": "chp_notifiable",
+    "hong kong chp": "chp_notifiable",
     "brazil datasus sinan open data": "sinan_datasus",
     "brazil datasus sinan": "sinan_datasus",
     "korea kdca eid open api": "kdca_open_api",
@@ -97,6 +108,11 @@ _TASK_SOURCE_ALIASES = {
     "tw": "nidss_open_data",
     "taiwan": "nidss_open_data",
     "taiwan_cdc": "nidss_open_data",
+    "chp": "chp_notifiable",
+    "chp_notifiable": "chp_notifiable",
+    "hk": "chp_notifiable",
+    "hk_chp": "chp_notifiable",
+    "hong_kong": "chp_notifiable",
     "sinan": "sinan_datasus",
     "sinan_datasus": "sinan_datasus",
     "datasus": "sinan_datasus",
@@ -126,6 +142,8 @@ def canonicalize_task_source(
 
     if normalized == "local" and (country_code or "").strip().upper() == "JP":
         return "jp_weekly"
+    if normalized == "all" and (country_code or "").strip().upper() == "HK":
+        return "chp_notifiable"
     if normalized == "all" and (country_code or "").strip().upper() == "KR":
         return "kdca_open_api"
 
@@ -234,6 +252,8 @@ def scope_from_data_source(data_source: Optional[str]) -> str:
         return "nndss_api"
     if "nidss" in text or "taiwan cdc" in text or "taiwan, china cdc" in text:
         return "nidss_open_data"
+    if "hong kong, china chp" in text or "hong kong chp" in text or "chp notifiable" in text:
+        return "chp_notifiable"
     if "sinan" in text or "datasus" in text:
         return "sinan_datasus"
     if "kdca" in text or "korea" in text or "data.go.kr" in text:
@@ -272,6 +292,15 @@ def canonical_data_source_label(
         "taiwan cdc nidss",
     }:
         return "Taiwan, China CDC NIDSS"
+    if text in {
+        "hong kong, china chp notifiable infectious diseases",
+        "hong kong, china chp notifiable diseases",
+        "hong kong, china chp",
+        "hong kong chp notifiable infectious diseases",
+        "hong kong chp notifiable diseases",
+        "hong kong chp",
+    }:
+        return "Hong Kong, China CHP Notifiable Diseases"
     if text in {"brazil datasus sinan open data", "brazil datasus sinan"}:
         return "Brazil DATASUS SINAN"
     if text in {

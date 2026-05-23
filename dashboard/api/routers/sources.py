@@ -45,6 +45,19 @@ DATA_PIPELINE_STAGES = [
 ]
 
 
+def _contains_chinese(text: str | None) -> bool:
+    if not text:
+        return False
+    return any("\u4e00" <= ch <= "\u9fff" for ch in text)
+
+
+def _country_name_zh(country: Country) -> str:
+    resolved = get_country_display_name(country.code, "zh")
+    if not _contains_chinese(resolved) and _contains_chinese(country.name_local):
+        return country.name_local
+    return resolved
+
+
 def _history_start_year(country_code: Optional[str]) -> Optional[int]:
     cfg = get_country_bootstrap_config(country_code or "")
     crawler_cfg = cfg.get("crawler_config", {}) if isinstance(cfg, dict) else {}
@@ -94,7 +107,7 @@ def _country_source_config(country: Country, *, lang: str = "en") -> CountrySour
         country_code=code,
         country_name=country.name_en or country.name or code,
         country_name_en=country.name_en or country.name or code,
-        country_name_zh=get_country_display_name(code, "zh"),
+        country_name_zh=_country_name_zh(country),
         language=country.language or cfg.get("report_config", {}).get("lang") or "en",
         timezone=country.timezone or "UTC",
         supports_crawl=bool(get_expected_scopes_for_country(code)),

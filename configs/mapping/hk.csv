@@ -1,0 +1,66 @@
+disease_id,local_name,local_code,category,aliases,notes,data_source
+D013,Acute poliomyelitis,,Notifiable,Acute Poliomyelitis,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D165,Amoebic dysentery,,Notifiable,Amoebic Dysentery|Amebiasis,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D023,Anthrax,,Notifiable,,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D105,Bacillary dysentery,,Notifiable,Bacillary Dysentery|Shigellosis,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D091,Botulism,,Notifiable,,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D054,Chickenpox,,Notifiable,Varicella,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D052,Chikungunya fever,,Notifiable,Chikungunya,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D002,Cholera,,Notifiable,,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D206,Community-associated methicillin-resistant Staphylococcus aureus infection,,Notifiable,CA-MRSA|Community-associated MRSA infection,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D004,Coronavirus disease 2019 (COVID-19),,Notifiable,COVID-19|Coronavirus disease 2019,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D144,Creutzfeldt-Jakob disease,,Notifiable,CJD,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D021,Dengue fever,,Notifiable,Dengue Fever|Dengue,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D029,Diphtheria,,Notifiable,,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D207,Enterovirus 71 infection,,Notifiable,EV71,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D115,Escherichia coli O157:H7 infection,,Notifiable,Shiga toxin-producing Escherichia coli infection|STEC|E. coli O157:H7,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D196,Food poisoning - Outbreaks,,Notifiable,Food Poisoning - Outbreaks|Food poisoning- Outbreaks|Food Poisoning- Outbreaks,Hong Kong, China CHP mapping; count is outbreaks not persons affected,Hong Kong, China CHP Notifiable Infectious Diseases
+D100,Haemophilus influenzae type b infection (invasive),,Notifiable,Haemophilus influenzae type b|Hib,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D102,Hantavirus infection,,Notifiable,,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D016,Influenza A(H2) Influenza A(H5) Influenza A(H7) Influenza A(H9),,Notifiable,"Influenza A(H2), Influenza A(H5), Influenza A(H7), Influenza A(H9)|Influenza A(H5) , Influenza A(H7) or Influenza A(H9)|Influenza A(H5), Influenza A(H7) or Influenza A(H9)|Influenza A - Influenza A (H2)|Influenza A - Influenza A (H5)|Influenza A - Influenza A (H7)|Influenza A - Influenza A (H9)|Influenza A - Swine Influenza|Influenza A - Variant Influenza A (H3N2)|Novel influenza A infection - Influenza A (H5)|Novel influenza A infection - Influenza A (H7)|Novel influenza A infection - Others|Novel influenza A infection - Variant Influenza A (H3N2)",Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D016,"Influenza A(H2), Influenza A(H5), Influenza A(H7), Influenza A(H9)",,Notifiable,,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D016,"Influenza A(H5) , Influenza A(H7) or Influenza A(H9)",,Notifiable,,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D016,"Influenza A(H5), Influenza A(H7) or Influenza A(H9)",,Notifiable,,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D106,Invasive pneumococcal disease,,Notifiable,,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D020,Japanese encephalitis,,Notifiable,Japanese Encephalitis,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D107,Legionnaires' disease,,Notifiable,Legionnaires' Disease|Legionellosis,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D042,Leprosy,,Notifiable,,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D035,Leptospirosis,,Notifiable,,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D108,Listeriosis,,Notifiable,,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D037,Malaria,,Notifiable,,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D017,Measles,,Notifiable,,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D116,Melioidosis,,Notifiable,,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D110,Meningococcal infection (invasive),,Notifiable,Meningococcal Infections|Meningococcal disease,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D049,Middle East Respiratory Syndrome,,Notifiable,MERS|Severe Respiratory Disease associated with Novel Coronavirus,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D065,Mpox (Monkeypox),,Notifiable,Mpox|Monkeypox,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D039,Mumps,,Notifiable,,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D026,Paratyphoid fever,,Notifiable,Paratyphoid Fever,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D001,Plague,,Notifiable,,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D112,Psittacosis,,Notifiable,Ornithosis,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D113,Q fever,,Notifiable,,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D019,Rabies,,Notifiable,Rabies(Human),Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D145,Relapsing fever,,Notifiable,Relapsing Fever,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D040,Rubella and congenital rubella syndrome - Rubella,,Notifiable,Rubella,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D168,Rubella and congenital rubella syndrome - Congenital rubella syndrome,,Notifiable,Congenital rubella syndrome,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D031,Scarlet fever,,Notifiable,Scarlet Fever,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D003,Severe Acute Respiratory Syndrome,,Notifiable,SARS,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D064,Smallpox,,Notifiable,,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D056,Streptococcus suis infection,,Notifiable,Streptococcus suis Infection,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D120,Tetanus,,Notifiable,,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D025,Tuberculosis,,Notifiable,,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D124,Typhoid fever,,Notifiable,Typhoid Fever,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D043,Typhus,,Notifiable,Typhus Fever|Typhus and other rickettsial diseases - Unclassified,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D058,Typhus and other rickettsial diseases - Scrub typhus,,Notifiable,Typhus - Scrub,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D118,Typhus and other rickettsial diseases - Spotted fever,,Notifiable,Spotted fever rickettsiosis,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D169,Typhus and other rickettsial diseases - Urban typhus,,Notifiable,Typhus - Urban|Urban typhus,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D127,Viral haemorrhagic fever,,Notifiable,Viral hemorrhagic fever,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D007,Viral hepatitis - A,,Notifiable,Viral Hepatitis - A|Hepatitis A,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D008,Viral hepatitis - B,,Notifiable,Viral Hepatitis - B|Hepatitis B,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D009,Viral hepatitis - C,,Notifiable,Viral Hepatitis - C|Hepatitis C,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D010,Viral hepatitis - D,,Notifiable,Hepatitis D,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D011,Viral hepatitis - E,,Notifiable,Viral Hepatitis - E|Hepatitis E,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D071,Viral Hepatitis - Unclassified,,Notifiable,Viral hepatitis - Unclassified|Unspecified viral hepatitis,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D128,West Nile Virus Infection,,Notifiable,West Nile virus,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D028,Whooping cough,,Notifiable,Whooping Cough|Pertussis,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D059,Yellow fever,,Notifiable,Yellow Fever,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
+D051,Zika Virus Infection,,Notifiable,Zika virus disease|Zika,Hong Kong, China CHP mapping,Hong Kong, China CHP Notifiable Infectious Diseases
