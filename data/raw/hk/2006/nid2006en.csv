@@ -1,0 +1,39 @@
+Disease,Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec,Total
+Cholera,0,0,0,0,0,0,0,1,0,0,0,0,1
+Plague,0,0,0,0,0,0,0,0,0,0,0,0,0
+Yellow Fever,0,0,0,0,0,0,0,0,0,0,0,0,0
+Acute Poliomyelitis,0,0,0,0,0,0,0,0,0,0,0,0,0
+Amoebic Dysentery,1,1,0,1,0,1,0,0,0,0,0,0,4
+Bacillary Dysentery,6,7,8,4,7,12,8,20,17,37,7,7,140
+Chickenpox,1254,943,986,819,900,1225,1071,585,595,1149,2202,2685,14414
+Dengue Fever,3,1,1,4,2,3,4,5,1,4,2,1,31
+Diphtheria,0,0,0,0,0,0,0,0,0,0,0,0,0
+Food Poisoning - Outbreaks,126,199,71,62,84,83,141,84,94,58,42,50,1094
+Food Poisoning - Persons affected,480,918,221,214,287,305,460,249,452,263,120,175,4144
+"Influenza A(H5) , Influenza A(H7) or Influenza A(H9)",0,0,0,0,0,0,0,0,0,0,0,0,0
+Japanese Encephalitis,0,0,0,0,0,0,0,0,0,0,0,0,0
+Legionnaires' Disease,0,1,1,1,5,1,2,1,1,2,1,0,16
+Leprosy,0,1,0,0,1,2,1,0,0,1,0,0,6
+Malaria,3,0,2,2,2,9,6,6,2,4,4,0,40
+Measles,2,6,11,10,24,12,17,6,4,6,4,4,106
+Meningococcal Infections,0,0,1,0,0,1,0,0,0,2,1,1,6
+Mumps,6,7,15,20,8,13,15,13,19,25,24,19,184
+Paratyphoid Fever,2,3,1,1,4,7,4,3,8,4,1,1,39
+Rabies,0,0,0,0,0,0,0,0,0,0,0,0,0
+Relapsing Fever,0,0,0,0,0,0,0,0,0,0,0,0,0
+Rubella,0,5,2,7,2,3,2,1,1,1,5,5,34
+Scarlet Fever,24,21,33,19,20,20,24,13,9,11,16,20,230
+Severe Acute Respiratory Syndrome,0,0,0,0,0,0,0,0,0,0,0,0,0
+Streptococcus suis Infection,1,0,0,0,0,0,2,2,1,2,0,0,8
+Tetanus,0,0,0,0,0,0,0,1,0,0,1,0,2
+Tuberculosis,432,428,525,420,510,548,509,546,533,429,481,405,5766
+Typhoid Fever,8,4,3,2,4,6,4,1,6,4,3,1,46
+Typhus - Scrub,1,0,0,1,0,5,1,6,3,1,2,0,20
+Typhus - Urban,0,0,1,1,0,0,0,0,1,0,1,0,4
+Viral Hepatitis - A,4,10,6,4,10,3,5,8,12,4,4,6,76
+Viral Hepatitis - B,11,6,13,7,13,6,9,10,21,10,15,2,123
+Viral Hepatitis - C,0,0,0,0,0,0,1,0,1,0,0,0,2
+Viral Hepatitis - E,2,5,9,1,2,2,4,1,2,3,2,1,34
+Viral Hepatitis - Unclassified,0,0,0,0,0,0,0,0,0,0,0,0,0
+Whooping Cough,2,8,3,1,0,2,1,1,2,0,1,0,21
+Total (persons affected in Food poisoning outbreaks were excluded in the monthly total and grand total),1888,1656,1692,1387,1598,1964,1831,1314,1333,1757,2819,3208,22447

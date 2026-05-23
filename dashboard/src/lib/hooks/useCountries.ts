@@ -13,8 +13,18 @@ export interface Country {
   is_active: boolean;
 }
 
+function hasChineseName(value?: string | null): boolean {
+  return typeof value === "string" && /[\u4e00-\u9fff]/.test(value);
+}
+
 export function getCountryDisplayName(country: Country, lang: "en" | "zh") {
   if (lang === "zh") {
+    if (hasChineseName(country.name_zh)) {
+      return country.name_zh;
+    }
+    if (hasChineseName(country.name_local)) {
+      return country.name_local;
+    }
     return (
       country.name_zh ||
       country.name_local ||

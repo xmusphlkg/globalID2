@@ -1,0 +1,34 @@
+Disease,Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec,Total
+Cholera,0,0,0,0,1,0,2,1,0,0,0,0,4
+Plague,0,0,0,0,0,0,0,0,0,0,0,0,0
+Yellow Fever,0,0,0,0,0,0,0,0,0,0,0,0,0
+Acute Poliomyelitis,0,0,0,0,0,0,0,0,0,0,0,0,0
+Amoebic Dysentery,0,0,0,0,0,0,0,1,2,1,0,1,5
+Bacillary Dysentery,17,5,10,12,17,25,38,45,52,25,23,15,284
+Chickenpox,2692,1712,1813,1333,1280,1512,1560,583,411,848,1414,1569,16727
+Dengue Fever,2,0,0,1,3,0,0,4,17,12,4,1,44
+Diphtheria,0,0,0,0,0,0,0,0,0,0,0,0,0
+Food Poisoning - Outbreaks,37,44,26,38,40,69,152,78,65,50,37,34,670
+Food Poisoning - Persons affected,168,152,84,239,118,278,616,242,300,194,132,117,2640
+Legionnaires' Disease,1,0,0,0,0,0,1,1,0,0,0,1,4
+Leprosy,2,0,0,2,1,0,0,0,0,0,1,0,6
+Malaria,2,2,4,3,2,5,7,6,4,6,5,8,54
+Measles,1,7,7,13,6,10,6,2,4,3,2,0,61
+Meningococcal Infections,2,0,1,2,0,1,0,0,0,0,0,0,6
+Mumps,2,8,6,3,7,8,10,11,9,10,8,7,89
+Paratyphoid Fever,0,0,0,3,2,2,3,0,2,3,5,1,21
+Rabies(Human),0,0,0,0,0,0,0,0,0,0,0,0,0
+Relapsing Fever,0,0,0,0,0,0,0,0,0,0,0,0,0
+Rubella,5,4,5,5,2,5,2,1,2,3,2,0,36
+Scarlet Fever,7,19,6,9,13,11,7,6,8,10,12,11,119
+Tetanus,0,0,0,0,0,0,0,1,0,0,1,0,2
+Tuberculosis,527,438,530,596,540,509,652,599,551,579,486,595,6602
+Typhoid Fever,2,2,1,4,6,6,14,4,4,10,5,9,67
+Typhus Fever,0,0,0,1,0,2,1,2,4,1,2,0,13
+Viral Hepatitis - A,37,67,50,31,17,19,12,6,14,6,4,4,267
+Viral Hepatitis - B,13,4,11,9,8,12,14,10,7,16,12,5,121
+Viral Hepatitis - C,0,0,0,0,2,0,1,0,1,0,0,0,4
+Viral Hepatitis - E,1,1,4,4,6,4,2,0,1,1,3,1,28
+Viral Hepatitis - Unclassified,0,1,1,3,2,1,1,0,0,1,0,0,10
+Whooping Cough,0,1,2,3,7,4,2,1,0,0,1,2,23
+Total (persons affected in Food poisoning outbreaks were excluded in the monthly total and grand total),3350,2315,2477,2075,1962,2205,2487,1362,1158,1585,2027,2264,25267

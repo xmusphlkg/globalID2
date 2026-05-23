@@ -1,0 +1,66 @@
+Disease,Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec,Total
+Acute poliomyelitis,0,0,0,0,0,0,0,0,0,0,0,0,0
+Amoebic dysentery,1,0,0,0,1,0,3,1,2,1,0,1,10
+Anthrax,0,0,0,0,0,0,0,0,0,0,0,0,0
+Bacillary dysentery,0,0,0,0,3,3,0,0,2,5,12,3,28
+Botulism,0,0,0,0,0,2,1,2,0,1,4,1,11
+Chickenpox,117,122,117,154,147,124,105,144,149,191,158,158,1686
+Chikungunya fever,0,0,0,0,0,0,0,0,0,0,0,0,0
+Cholera,0,0,0,0,1,1,0,0,0,0,0,0,2
+Community-associated methicillin-resistant Staphylococcus aureus infection,56,50,40,54,59,39,68,55,39,43,38,38,579
+Coronavirus disease 2019 (COVID-19),225,318,532,278,264,121,159,216,99,42,22,14,2290
+Creutzfeldt-Jakob disease,3,0,1,1,2,0,1,1,1,1,1,3,15
+Dengue fever,6,3,1,10,7,6,7,15,18,52,30,6,161
+Diphtheria,0,0,0,0,0,0,0,0,0,0,0,0,0
+Enterovirus 71 infection,0,0,0,0,0,2,0,0,0,1,7,0,10
+Food poisoning - Outbreaks,14,26,15,5,15,53,10,6,7,8,22,29,210
+Food poisoning - Persons affected,61,78,45,12,57,118,34,16,105,18,71,159,774
+Haemophilus influenzae type b infection (invasive),0,0,0,0,0,0,0,0,0,0,0,0,0
+Hantavirus infection,0,1,0,0,0,0,1,0,0,0,0,0,2
+Invasive pneumococcal disease,17,5,10,5,7,9,8,11,8,10,5,31,126
+Japanese encephalitis,0,0,0,0,0,0,0,0,0,0,0,0,0
+Legionnaires' disease,4,4,8,13,8,14,10,14,14,15,21,10,135
+Leprosy,0,2,0,0,0,2,1,0,0,0,0,0,5
+Leptospirosis,0,0,0,0,0,0,0,0,0,0,0,0,0
+Listeriosis,1,0,3,0,2,0,0,1,3,0,2,1,13
+Malaria,3,2,1,0,1,0,4,4,0,0,0,1,16
+Measles,2,1,3,1,1,0,0,0,1,0,1,0,10
+Melioidosis,1,0,0,1,1,0,2,8,3,5,1,1,23
+Meningococcal infection (invasive),2,1,0,0,0,1,0,0,1,0,0,0,5
+Middle East Respiratory Syndrome,0,0,0,0,0,0,0,0,0,0,0,0,0
+Mpox (Monkeypox),2,2,0,0,5,0,3,1,0,1,0,0,14
+Mumps,2,7,2,1,2,4,6,3,4,2,3,2,38
+Novel influenza A infection - Influenza A (H5),0,0,0,0,0,0,0,0,0,0,0,0,0
+Novel influenza A infection - Influenza A (H7),0,0,0,0,0,0,0,0,0,0,0,0,0
+Novel influenza A infection - Others,0,1,0,0,0,0,0,0,0,0,0,0,1
+Paratyphoid fever,0,2,0,1,0,1,1,0,2,1,0,0,8
+Plague,0,0,0,0,0,0,0,0,0,0,0,0,0
+Psittacosis,0,2,0,0,3,5,2,3,1,1,2,2,21
+Q fever,0,0,0,0,0,0,0,0,0,0,0,0,0
+Rabies,0,0,0,0,0,0,0,0,0,0,0,0,0
+Relapsing fever,0,0,0,0,0,0,0,0,0,0,0,0,0
+Rubella and congenital rubella syndrome - Rubella,0,0,0,0,0,0,0,0,0,0,0,0,0
+Rubella and congenital rubella syndrome - Congenital rubella syndrome,0,0,0,0,0,0,0,0,0,0,0,0,0
+Scarlet fever,86,50,115,138,246,264,221,117,99,188,303,327,2154
+Severe Acute Respiratory Syndrome,0,0,0,0,0,0,0,0,0,0,0,0,0
+Shiga toxin-producing Escherichia coli infection,1,0,1,0,0,0,0,1,0,1,1,0,5
+Smallpox,0,0,0,0,0,0,0,0,0,0,0,0,0
+Streptococcus suis infection,0,0,0,0,0,0,1,0,1,1,0,0,3
+Tetanus,0,0,0,0,0,0,0,0,0,0,0,0,0
+Tuberculosis,263,249,247,269,287,292,269,264,269,275,246,264,3194
+Typhoid fever,1,2,0,1,2,1,0,1,1,2,0,2,13
+Typhus and other rickettsial diseases - Scrub typhus,0,0,0,1,1,0,0,1,0,0,0,0,3
+Typhus and other rickettsial diseases - Urban typhus,0,0,0,0,0,1,0,0,0,0,0,0,1
+Typhus and other rickettsial diseases - Spotted fever,2,0,3,1,2,3,2,1,1,1,2,1,19
+Typhus and other rickettsial diseases - Unclassified,0,0,0,0,1,1,0,1,0,1,0,0,4
+Viral haemorrhagic fever,0,0,0,0,0,0,0,0,0,0,0,0,0
+Viral hepatitis - A,3,6,4,10,6,5,4,3,5,3,2,1,52
+Viral hepatitis - B,0,0,2,2,2,0,1,0,2,0,1,1,11
+Viral hepatitis - C,0,1,2,3,2,4,2,1,0,1,0,3,19
+Viral hepatitis - D,0,0,0,0,0,0,0,0,0,0,0,0,0
+Viral hepatitis - E,12,10,16,17,11,13,13,14,11,5,10,9,141
+West Nile Virus Infection,0,0,0,0,0,0,0,0,0,0,0,0,0
+Whooping cough,7,4,13,4,2,1,2,0,2,1,1,1,38
+Yellow fever,0,0,0,0,0,0,0,0,0,0,0,0,0
+Zika Virus Infection,0,0,0,2,1,0,0,0,0,0,0,0,3
+Total (persons affected in Food poisoning outbreaks were excluded in the monthly total and grand total),831,871,1136,972,1092,972,907,889,745,859,895,910,11079

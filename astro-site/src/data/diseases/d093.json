@@ -2165,7 +2165,8 @@
         "2026-04-18",
         "2026-04-25",
         "2026-05-02",
-        "2026-05-09"
+        "2026-05-09",
+        "2026-05-16"
       ],
       "cases": [
         1,
@@ -2405,7 +2406,8 @@
         0,
         0,
         0,
-        0
+        0,
+        1
       ],
       "weekly_equiv_cases": [
         1.0,
@@ -2645,9 +2647,11 @@
         0.0,
         0.0,
         0.0,
-        0.0
+        0.0,
+        1.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -3125,7 +3129,8 @@
         0.0,
         0.0,
         0.0,
-        0.0
+        0.0,
+        0.00028650381327693854
       ],
       "incidence_sources": [
         "wpp_computed",
@@ -3365,9 +3370,10 @@
         "wpp_computed",
         "wpp_computed",
         "wpp_computed",
+        "wpp_computed",
         "wpp_computed"
       ],
-      "total_cases": 46,
+      "total_cases": 47,
       "total_deaths": 0
     }
   },
@@ -4008,7 +4014,7 @@
       0,
       2,
       0,
-      0
+      1
     ],
     "deaths": [
       0,
@@ -4330,7 +4336,7 @@
       0
     ]
   },
-  "total_cases": 47,
+  "total_cases": 48,
   "total_deaths": 0,
   "generated_at": "2026-05-16T00:00:00+00:00",
   "source_info": [

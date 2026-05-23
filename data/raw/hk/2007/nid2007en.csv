@@ -1,0 +1,40 @@
+Disease,Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec,Total
+Cholera,0,0,0,0,0,0,0,2,0,0,1,0,3
+Plague,0,0,0,0,0,0,0,0,0,0,0,0,0
+Yellow Fever,0,0,0,0,0,0,0,0,0,0,0,0,0
+Acute Poliomyelitis,0,0,0,0,0,0,0,0,0,0,0,0,0
+Amoebic Dysentery,1,0,1,0,0,0,1,1,0,0,0,0,4
+Bacillary Dysentery,7,2,2,8,2,7,4,12,6,6,8,3,67
+Chickenpox,3357,2263,1833,1194,1290,1331,1069,521,533,1126,1554,1862,17933
+Community-associated methicillin-resistant Staphylococcus aureus infection,13,11,8,11,12,15,25,15,14,19,12,18,173
+Dengue Fever,2,1,1,2,2,3,6,23,6,6,4,2,58
+Diphtheria,0,0,0,0,0,0,0,0,0,0,0,0,0
+Food Poisoning - Outbreaks,44,55,53,39,51,61,51,77,98,31,30,31,621
+Food Poisoning - Persons affected,157,150,163,112,133,170,147,308,376,79,82,115,1992
+"Influenza A(H5) , Influenza A(H7) or Influenza A(H9)",0,0,1,0,0,0,0,0,0,0,0,0,1
+Japanese Encephalitis,0,0,0,0,0,0,1,0,1,0,0,0,2
+Legionnaires' Disease,1,1,0,0,1,2,2,1,2,0,0,1,11
+Leprosy,0,0,0,0,0,0,0,0,0,0,1,1,2
+Malaria,3,0,4,1,4,3,3,1,4,1,4,5,33
+Measles,3,6,3,4,11,9,14,11,7,5,7,8,88
+Meningococcal Infections,0,0,0,0,0,0,0,0,0,1,1,0,2
+Mumps,11,12,19,19,13,15,9,13,18,17,15,19,180
+Paratyphoid Fever,2,1,1,6,3,2,1,0,3,2,4,3,28
+Rabies,0,0,0,0,0,0,0,0,0,0,0,0,0
+Relapsing Fever,0,0,0,0,0,0,0,0,0,0,0,0,0
+Rubella,7,4,1,6,4,4,2,7,0,0,2,1,38
+Scarlet Fever,30,15,16,16,25,19,13,6,6,14,19,45,224
+Severe Acute Respiratory Syndrome,0,0,0,0,0,0,0,0,0,0,0,0,0
+Streptococcus suis Infection,0,0,0,0,3,0,0,2,1,0,0,0,6
+Tetanus,0,0,0,0,0,0,0,0,0,0,1,0,1
+Tuberculosis,422,381,526,443,544,459,456,516,405,489,463,359,5463
+Typhoid Fever,6,2,8,5,6,2,1,5,5,4,1,1,46
+Typhus - Scrub,0,0,1,0,0,4,2,2,2,3,1,0,15
+Typhus - Urban,0,0,0,0,1,0,0,0,0,2,0,0,3
+Viral Hepatitis - A,8,7,7,8,8,1,4,6,6,2,2,10,69
+Viral Hepatitis - B,2,3,6,9,13,8,7,4,6,5,7,4,74
+Viral Hepatitis - C,0,0,0,0,0,0,1,0,0,0,0,0,1
+Viral Hepatitis - E,5,6,12,8,7,3,2,5,4,4,6,3,65
+Viral Hepatitis - Unclassified,0,0,0,0,0,0,0,0,0,0,0,0,0
+Whooping Cough,2,3,2,3,6,6,0,2,2,0,3,2,31
+Total (persons affected in Food poisoning outbreaks were excluded in the monthly total and grand total),3926,2773,2505,1782,2006,1954,1674,1232,1129,1737,2146,2378,25242

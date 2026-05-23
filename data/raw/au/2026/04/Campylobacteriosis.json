@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-05-20T22:45:57.650184+00:00",
+  "fetched_at": "2026-05-21T22:45:49.671593+00:00",
   "disease": "Campylobacteriosis",
   "year": 2026,
   "month": 4,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1779317157300)/",
-            "rootActivityId": "1812f760-3f37-4e37-8825-feb01e8fef5f",
+            "timestamp": "/Date(1779403549310)/",
+            "rootActivityId": "42e786e1-197c-41d1-a886-27a9dec09e29",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'2,901'"
+                          "A0": "'2,903'"
                         }
                       ]
                     },
@@ -394,7 +394,7 @@
                         {
                           "C": [
                             "NT",
-                            "'43'"
+                            "'44'"
                           ]
                         },
                         {
@@ -406,7 +406,7 @@
                         {
                           "C": [
                             "SA",
-                            "'220'"
+                            "'221'"
                           ]
                         },
                         {
@@ -446,9 +446,9 @@
   "parsed_counts": {
     "ACT": 57,
     "NSW": 832,
-    "NT": 43,
+    "NT": 44,
     "QLD": 675,
-    "SA": 220,
+    "SA": 221,
     "TAS": 65,
     "VIC": 683,
     "WA": 326

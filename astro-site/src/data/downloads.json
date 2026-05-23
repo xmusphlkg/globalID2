@@ -138,6 +138,43 @@
     },
     {
       "kind": "country",
+      "id": "hk",
+      "code": "HK",
+      "name": "Hong Kong, China",
+      "generated_at": "2026-05-16T00:00:00+00:00",
+      "record_count": 16669,
+      "date_range": {
+        "start": "1997-01-01",
+        "end": "2026-03-01"
+      },
+      "json_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/countries/hk.json",
+      "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/countries/hk.csv",
+      "relative_json_path": "countries/hk.json",
+      "relative_csv_path": "countries/hk.csv",
+      "site_json_path": "/site-data/countries/hk.json",
+      "source_info": {
+        "country_code": "HK",
+        "primary_scope": "chp_notifiable",
+        "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+        "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+        "primary_type": "open_data_csv",
+        "parser_primary": "hk_chp_notifiable_monthly",
+        "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+        "sources": [
+          {
+            "scope": "chp_notifiable",
+            "label": "Hong Kong, China CHP Notifiable Diseases",
+            "url": "https://www.chp.gov.hk/en/static/24012.html",
+            "machine_url": null,
+            "type": "open_data_csv",
+            "cadence": "monthly",
+            "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+          }
+        ]
+      }
+    },
+    {
+      "kind": "country",
       "id": "jp",
       "code": "JP",
       "name": "Japan",
@@ -253,7 +290,7 @@
       "code": "TW",
       "name": "Taiwan, China",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 6286,
+      "record_count": 6287,
       "date_range": {
         "start": "2003-01-01",
         "end": "2026-05-01"
@@ -290,10 +327,10 @@
       "code": "US",
       "name": "United States",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 26881,
+      "record_count": 26935,
       "date_range": {
         "start": "2006-01-07",
-        "end": "2026-05-09"
+        "end": "2026-05-16"
       },
       "json_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/countries/us.json",
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/countries/us.csv",
@@ -331,8 +368,8 @@
       "name_en": "Plague",
       "name_zh": "鼠疫",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 1472,
-      "country_count": 5,
+      "record_count": 1824,
+      "country_count": 6,
       "countries": [
         {
           "code": "BR",
@@ -341,6 +378,10 @@
         {
           "code": "CN",
           "name": "China"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "JP",
@@ -422,6 +463,27 @@
           "country_name": "China"
         },
         {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
+        },
+        {
           "country_code": "JP",
           "primary_scope": "jp_weekly",
           "primary_label": "JP NIID Weekly",
@@ -494,8 +556,8 @@
       "name_en": "Cholera",
       "name_zh": "霍乱",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 1753,
-      "country_count": 7,
+      "record_count": 2105,
+      "country_count": 8,
       "countries": [
         {
           "code": "AU",
@@ -508,6 +570,10 @@
         {
           "code": "CN",
           "name": "China"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "JP",
@@ -614,6 +680,27 @@
           "country_name": "China"
         },
         {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
+        },
+        {
           "country_code": "JP",
           "primary_scope": "jp_weekly",
           "primary_label": "JP NIID Weekly",
@@ -707,12 +794,16 @@
       "name_en": "SARS",
       "name_zh": "传染性非典型肺炎",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 1171,
-      "country_count": 4,
+      "record_count": 1448,
+      "country_count": 5,
       "countries": [
         {
           "code": "CN",
           "name": "China"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "JP",
@@ -771,6 +862,27 @@
             }
           ],
           "country_name": "China"
+        },
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
         },
         {
           "country_code": "JP",
@@ -845,8 +957,8 @@
       "name_en": "COVID-19",
       "name_zh": "新型冠状病毒感染",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 653,
-      "country_count": 5,
+      "record_count": 728,
+      "country_count": 6,
       "countries": [
         {
           "code": "AU",
@@ -855,6 +967,10 @@
         {
           "code": "CN",
           "name": "China"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "JP",
@@ -934,6 +1050,27 @@
             }
           ],
           "country_name": "China"
+        },
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
         },
         {
           "country_code": "JP",
@@ -1209,8 +1346,8 @@
       "name_en": "Hepatitis A",
       "name_zh": "甲型肝炎",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 2095,
-      "country_count": 7,
+      "record_count": 2446,
+      "country_count": 8,
       "countries": [
         {
           "code": "AU",
@@ -1219,6 +1356,10 @@
         {
           "code": "CN",
           "name": "China"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "JP",
@@ -1306,6 +1447,27 @@
             }
           ],
           "country_name": "China"
+        },
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
         },
         {
           "country_code": "JP",
@@ -1422,8 +1584,8 @@
       "name_en": "Hepatitis B",
       "name_zh": "乙型肝炎",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 1054,
-      "country_count": 5,
+      "record_count": 1405,
+      "country_count": 6,
       "countries": [
         {
           "code": "AU",
@@ -1432,6 +1594,10 @@
         {
           "code": "CN",
           "name": "China"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "KR",
@@ -1513,6 +1679,27 @@
           "country_name": "China"
         },
         {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
+        },
+        {
           "country_code": "KR",
           "primary_scope": "kdca_open_api",
           "primary_label": "Korea KDCA EID",
@@ -1585,8 +1772,8 @@
       "name_en": "Hepatitis C",
       "name_zh": "丙型肝炎",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 1395,
-      "country_count": 6,
+      "record_count": 1747,
+      "country_count": 7,
       "countries": [
         {
           "code": "AU",
@@ -1595,6 +1782,10 @@
         {
           "code": "CN",
           "name": "China"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "KR",
@@ -1678,6 +1869,27 @@
             }
           ],
           "country_name": "China"
+        },
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
         },
         {
           "country_code": "KR",
@@ -1773,8 +1985,8 @@
       "name_en": "Hepatitis D",
       "name_zh": "丁型肝炎",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 475,
-      "country_count": 3,
+      "record_count": 550,
+      "country_count": 4,
       "countries": [
         {
           "code": "AU",
@@ -1783,6 +1995,10 @@
         {
           "code": "CN",
           "name": "China"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "TW",
@@ -1856,6 +2072,27 @@
           "country_name": "China"
         },
         {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
+        },
+        {
           "country_code": "TW",
           "primary_scope": "nidss_open_data",
           "primary_label": "Taiwan, China CDC NIDSS",
@@ -1886,8 +2123,8 @@
       "name_en": "Hepatitis E",
       "name_zh": "戊型肝炎",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 1645,
-      "country_count": 5,
+      "record_count": 1996,
+      "country_count": 6,
       "countries": [
         {
           "code": "AU",
@@ -1896,6 +2133,10 @@
         {
           "code": "CN",
           "name": "China"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "JP",
@@ -1975,6 +2216,27 @@
             }
           ],
           "country_name": "China"
+        },
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
         },
         {
           "country_code": "JP",
@@ -2112,8 +2374,8 @@
       "name_en": "Poliomyelitis",
       "name_zh": "脊髓灰质炎",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 1482,
-      "country_count": 4,
+      "record_count": 1833,
+      "country_count": 5,
       "countries": [
         {
           "code": "AU",
@@ -2122,6 +2384,10 @@
         {
           "code": "CN",
           "name": "China"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "JP",
@@ -2197,6 +2463,27 @@
             }
           ],
           "country_name": "China"
+        },
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
         },
         {
           "country_code": "JP",
@@ -2426,8 +2713,8 @@
       "name_en": "Novel influenza A",
       "name_zh": "人感染新亚型流感",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 1521,
-      "country_count": 6,
+      "record_count": 1789,
+      "country_count": 7,
       "countries": [
         {
           "code": "AU",
@@ -2436,6 +2723,10 @@
         {
           "code": "CN",
           "name": "China"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "JP",
@@ -2519,6 +2810,27 @@
             }
           ],
           "country_name": "China"
+        },
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
         },
         {
           "country_code": "JP",
@@ -2614,8 +2926,8 @@
       "name_en": "Measles",
       "name_zh": "麻疹",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 1766,
-      "country_count": 7,
+      "record_count": 2118,
+      "country_count": 8,
       "countries": [
         {
           "code": "AU",
@@ -2624,6 +2936,10 @@
         {
           "code": "CN",
           "name": "China"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "JP",
@@ -2711,6 +3027,27 @@
             }
           ],
           "country_name": "China"
+        },
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
         },
         {
           "country_code": "JP",
@@ -2940,8 +3277,8 @@
       "name_en": "Rabies",
       "name_zh": "狂犬病",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 1871,
-      "country_count": 7,
+      "record_count": 2223,
+      "country_count": 8,
       "countries": [
         {
           "code": "AU",
@@ -2954,6 +3291,10 @@
         {
           "code": "CN",
           "name": "China"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "JP",
@@ -3060,6 +3401,27 @@
           "country_name": "China"
         },
         {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
+        },
+        {
           "country_code": "JP",
           "primary_scope": "jp_weekly",
           "primary_label": "JP NIID Weekly",
@@ -3153,8 +3515,8 @@
       "name_en": "Japanese Encephalitis",
       "name_zh": "流行性乙型脑炎",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 1592,
-      "country_count": 5,
+      "record_count": 1859,
+      "country_count": 6,
       "countries": [
         {
           "code": "AU",
@@ -3163,6 +3525,10 @@
         {
           "code": "CN",
           "name": "China"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "JP",
@@ -3244,6 +3610,27 @@
           "country_name": "China"
         },
         {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
+        },
+        {
           "country_code": "JP",
           "primary_scope": "jp_weekly",
           "primary_label": "JP NIID Weekly",
@@ -3316,8 +3703,8 @@
       "name_en": "Dengue",
       "name_zh": "登革热",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 2278,
-      "country_count": 8,
+      "record_count": 2629,
+      "country_count": 9,
       "countries": [
         {
           "code": "AU",
@@ -3330,6 +3717,10 @@
         {
           "code": "CN",
           "name": "China"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "JP",
@@ -3438,6 +3829,27 @@
             }
           ],
           "country_name": "China"
+        },
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
         },
         {
           "country_code": "JP",
@@ -3554,8 +3966,8 @@
       "name_en": "Anthrax",
       "name_zh": "炭疽",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 1709,
-      "country_count": 5,
+      "record_count": 1923,
+      "country_count": 6,
       "countries": [
         {
           "code": "AU",
@@ -3564,6 +3976,10 @@
         {
           "code": "CN",
           "name": "China"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "JP",
@@ -3643,6 +4059,27 @@
             }
           ],
           "country_name": "China"
+        },
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
         },
         {
           "country_code": "JP",
@@ -3830,8 +4267,8 @@
       "name_en": "Tuberculosis",
       "name_zh": "肺结核",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 1941,
-      "country_count": 6,
+      "record_count": 2293,
+      "country_count": 7,
       "countries": [
         {
           "code": "AU",
@@ -3844,6 +4281,10 @@
         {
           "code": "CN",
           "name": "China"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "JP",
@@ -3946,6 +4387,27 @@
           "country_name": "China"
         },
         {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
+        },
+        {
           "country_code": "JP",
           "primary_scope": "jp_weekly",
           "primary_label": "JP NIID Weekly",
@@ -4018,8 +4480,8 @@
       "name_en": "Typhoid and Paratyphoid fever",
       "name_zh": "伤寒和副伤寒",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 1923,
-      "country_count": 7,
+      "record_count": 2275,
+      "country_count": 8,
       "countries": [
         {
           "code": "AU",
@@ -4028,6 +4490,10 @@
         {
           "code": "CN",
           "name": "China"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "JP",
@@ -4115,6 +4581,27 @@
             }
           ],
           "country_name": "China"
+        },
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
         },
         {
           "country_code": "JP",
@@ -4231,8 +4718,8 @@
       "name_en": "Pertussis",
       "name_zh": "百日咳",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 3073,
-      "country_count": 8,
+      "record_count": 3425,
+      "country_count": 9,
       "countries": [
         {
           "code": "AU",
@@ -4245,6 +4732,10 @@
         {
           "code": "CN",
           "name": "China"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "JP",
@@ -4353,6 +4844,27 @@
             }
           ],
           "country_name": "China"
+        },
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
         },
         {
           "country_code": "JP",
@@ -4469,8 +4981,8 @@
       "name_en": "Diphtheria",
       "name_zh": "白喉",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 1658,
-      "country_count": 5,
+      "record_count": 2009,
+      "country_count": 6,
       "countries": [
         {
           "code": "AU",
@@ -4483,6 +4995,10 @@
         {
           "code": "CN",
           "name": "China"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "JP",
@@ -4579,6 +5095,27 @@
             }
           ],
           "country_name": "China"
+        },
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
         },
         {
           "country_code": "JP",
@@ -4720,12 +5257,16 @@
       "name_en": "Scarlet fever",
       "name_zh": "猩红热",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 453,
-      "country_count": 2,
+      "record_count": 804,
+      "country_count": 3,
       "countries": [
         {
           "code": "CN",
           "name": "China"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "KR",
@@ -4778,6 +5319,27 @@
           "country_name": "China"
         },
         {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
+        },
+        {
           "country_code": "KR",
           "primary_scope": "kdca_open_api",
           "primary_label": "Korea KDCA EID",
@@ -4808,7 +5370,7 @@
       "name_en": "Brucellosis",
       "name_zh": "布鲁氏菌病",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 1774,
+      "record_count": 1775,
       "country_count": 6,
       "countries": [
         {
@@ -4996,7 +5558,7 @@
       "name_en": "Gonorrhea",
       "name_zh": "淋病",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 1258,
+      "record_count": 1259,
       "country_count": 2,
       "countries": [
         {
@@ -5222,8 +5784,8 @@
       "name_en": "Leptospirosis",
       "name_zh": "钩端螺旋体病",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 2382,
-      "country_count": 8,
+      "record_count": 2596,
+      "country_count": 9,
       "countries": [
         {
           "code": "AU",
@@ -5236,6 +5798,10 @@
         {
           "code": "CN",
           "name": "China"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "JP",
@@ -5344,6 +5910,27 @@
             }
           ],
           "country_name": "China"
+        },
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
         },
         {
           "country_code": "JP",
@@ -5548,8 +6135,8 @@
       "name_en": "Malaria",
       "name_zh": "疟疾",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 3032,
-      "country_count": 8,
+      "record_count": 3384,
+      "country_count": 9,
       "countries": [
         {
           "code": "AU",
@@ -5562,6 +6149,10 @@
         {
           "code": "CN",
           "name": "China"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "JP",
@@ -5670,6 +6261,27 @@
             }
           ],
           "country_name": "China"
+        },
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
         },
         {
           "country_code": "JP",
@@ -5899,8 +6511,8 @@
       "name_en": "Mumps",
       "name_zh": "流行性腮腺炎",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 2337,
-      "country_count": 7,
+      "record_count": 2689,
+      "country_count": 8,
       "countries": [
         {
           "code": "AU",
@@ -5909,6 +6521,10 @@
         {
           "code": "CN",
           "name": "China"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "JP",
@@ -5996,6 +6612,27 @@
             }
           ],
           "country_name": "China"
+        },
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
         },
         {
           "country_code": "JP",
@@ -6112,8 +6749,8 @@
       "name_en": "Rubella",
       "name_zh": "风疹",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 1843,
-      "country_count": 7,
+      "record_count": 2195,
+      "country_count": 8,
       "countries": [
         {
           "code": "AU",
@@ -6122,6 +6759,10 @@
         {
           "code": "CN",
           "name": "China"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "JP",
@@ -6209,6 +6850,27 @@
             }
           ],
           "country_name": "China"
+        },
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
         },
         {
           "country_code": "JP",
@@ -6413,8 +7075,8 @@
       "name_en": "Leprosy",
       "name_zh": "麻风病",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 1294,
-      "country_count": 5,
+      "record_count": 1646,
+      "country_count": 6,
       "countries": [
         {
           "code": "AU",
@@ -6427,6 +7089,10 @@
         {
           "code": "CN",
           "name": "China"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "KR",
@@ -6525,6 +7191,27 @@
           "country_name": "China"
         },
         {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
+        },
+        {
           "country_code": "KR",
           "primary_scope": "kdca_open_api",
           "primary_label": "Korea KDCA EID",
@@ -6576,12 +7263,16 @@
       "name_en": "Typhus",
       "name_zh": "流行性和地方性斑疹伤寒",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 862,
-      "country_count": 2,
+      "record_count": 1165,
+      "country_count": 3,
       "countries": [
         {
           "code": "CN",
           "name": "China"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "JP",
@@ -6632,6 +7323,27 @@
             }
           ],
           "country_name": "China"
+        },
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
         },
         {
           "country_code": "JP",
@@ -7129,12 +7841,16 @@
       "name_en": "MERS",
       "name_zh": "中东呼吸综合征",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 876,
-      "country_count": 3,
+      "record_count": 1039,
+      "country_count": 4,
       "countries": [
         {
           "code": "CN",
           "name": "China"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "JP",
@@ -7189,6 +7905,27 @@
             }
           ],
           "country_name": "China"
+        },
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
         },
         {
           "country_code": "JP",
@@ -7380,8 +8117,8 @@
       "name_en": "Zika virus disease",
       "name_zh": "寨卡病毒病",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 1143,
-      "country_count": 6,
+      "record_count": 1267,
+      "country_count": 7,
       "countries": [
         {
           "code": "BR",
@@ -7390,6 +8127,10 @@
         {
           "code": "CN",
           "name": "China"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "JP",
@@ -7473,6 +8214,27 @@
             }
           ],
           "country_name": "China"
+        },
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
         },
         {
           "country_code": "JP",
@@ -7568,8 +8330,8 @@
       "name_en": "Chikungunya",
       "name_zh": "基孔肯雅热",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 1733,
-      "country_count": 7,
+      "record_count": 1939,
+      "country_count": 8,
       "countries": [
         {
           "code": "AU",
@@ -7582,6 +8344,10 @@
         {
           "code": "CN",
           "name": "China"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "JP",
@@ -7686,6 +8452,27 @@
             }
           ],
           "country_name": "China"
+        },
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
         },
         {
           "country_code": "JP",
@@ -7919,8 +8706,8 @@
       "name_en": "Varicella",
       "name_zh": "水痘",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 2245,
-      "country_count": 6,
+      "record_count": 2572,
+      "country_count": 7,
       "countries": [
         {
           "code": "AU",
@@ -7933,6 +8720,10 @@
         {
           "code": "CN",
           "name": "China"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "JP",
@@ -8033,6 +8824,27 @@
             }
           ],
           "country_name": "China"
+        },
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
         },
         {
           "country_code": "JP",
@@ -8170,12 +8982,16 @@
       "name_en": "Streptococcus suis",
       "name_zh": "人感染猪链球菌病",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 4,
-      "country_count": 1,
+      "record_count": 259,
+      "country_count": 2,
       "countries": [
         {
           "code": "CN",
           "name": "China"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         }
       ],
       "json_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d056.json",
@@ -8222,6 +9038,27 @@
             }
           ],
           "country_name": "China"
+        },
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
         }
       ]
     },
@@ -8346,12 +9183,16 @@
       "name_en": "Scrub Typhus",
       "name_zh": "恙虫病",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 1295,
-      "country_count": 4,
+      "record_count": 1550,
+      "country_count": 5,
       "countries": [
         {
           "code": "CN",
           "name": "China"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "JP",
@@ -8410,6 +9251,27 @@
             }
           ],
           "country_name": "China"
+        },
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
         },
         {
           "country_code": "JP",
@@ -8484,9 +9346,13 @@
       "name_en": "Yellow fever",
       "name_zh": "黄热病",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 1196,
-      "country_count": 3,
+      "record_count": 1548,
+      "country_count": 4,
       "countries": [
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
+        },
         {
           "code": "JP",
           "name": "Japan"
@@ -8506,6 +9372,27 @@
       "relative_csv_path": "diseases/d059.csv",
       "site_json_path": "/site-data/diseases/d059.json",
       "source_info": [
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
+        },
         {
           "country_code": "JP",
           "primary_scope": "jp_weekly",
@@ -8705,9 +9592,13 @@
       "name_en": "Smallpox",
       "name_zh": "天花",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 1196,
-      "country_count": 3,
+      "record_count": 1410,
+      "country_count": 4,
       "countries": [
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
+        },
         {
           "code": "JP",
           "name": "Japan"
@@ -8727,6 +9618,27 @@
       "relative_csv_path": "diseases/d064.csv",
       "site_json_path": "/site-data/diseases/d064.json",
       "source_info": [
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
+        },
         {
           "country_code": "JP",
           "primary_scope": "jp_weekly",
@@ -8800,8 +9712,8 @@
       "name_en": "Monkeypox",
       "name_zh": "猴痘",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 977,
-      "country_count": 7,
+      "record_count": 1024,
+      "country_count": 8,
       "countries": [
         {
           "code": "AU",
@@ -8810,6 +9722,10 @@
         {
           "code": "CN",
           "name": "China"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "JP",
@@ -8897,6 +9813,27 @@
             }
           ],
           "country_name": "China"
+        },
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
         },
         {
           "country_code": "JP",
@@ -9155,9 +10092,13 @@
       "name_en": "Unspecified viral hepatitis",
       "name_zh": "未明示的病毒性肝炎",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 98,
-      "country_count": 1,
+      "record_count": 230,
+      "country_count": 2,
       "countries": [
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
+        },
         {
           "code": "TW",
           "name": "Taiwan, China"
@@ -9169,6 +10110,27 @@
       "relative_csv_path": "diseases/d071.csv",
       "site_json_path": "/site-data/diseases/d071.json",
       "source_info": [
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
+        },
         {
           "country_code": "TW",
           "primary_scope": "nidss_open_data",
@@ -9659,8 +10621,8 @@
       "name_en": "Botulism",
       "name_zh": "肉毒杆菌中毒",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 1404,
-      "country_count": 5,
+      "record_count": 1617,
+      "country_count": 6,
       "countries": [
         {
           "code": "AU",
@@ -9669,6 +10631,10 @@
         {
           "code": "BR",
           "name": "Brazil"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "JP",
@@ -9730,6 +10696,27 @@
             }
           ],
           "country_name": "Brazil"
+        },
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
         },
         {
           "country_code": "JP",
@@ -9804,7 +10791,7 @@
       "name_en": "Campylobacteriosis",
       "name_zh": "弯曲杆菌病",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 1031,
+      "record_count": 1032,
       "country_count": 3,
       "countries": [
         {
@@ -9899,7 +10886,7 @@
       "name_en": "Chancroid",
       "name_zh": "软下疳",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 555,
+      "record_count": 556,
       "country_count": 2,
       "countries": [
         {
@@ -9969,7 +10956,7 @@
       "name_en": "Chlamydia trachomatis infection",
       "name_zh": "沙眼衣原体感染",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 1170,
+      "record_count": 1171,
       "country_count": 2,
       "countries": [
         {
@@ -10039,7 +11026,7 @@
       "name_en": "Coccidioidomycosis",
       "name_zh": "球孢子菌病",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 1719,
+      "record_count": 1720,
       "country_count": 2,
       "countries": [
         {
@@ -10109,7 +11096,7 @@
       "name_en": "Cryptosporidiosis",
       "name_zh": "隐孢子虫病",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 2214,
+      "record_count": 2215,
       "country_count": 4,
       "countries": [
         {
@@ -10229,7 +11216,7 @@
       "name_en": "Cyclosporiasis",
       "name_zh": "环孢子虫病",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 346,
+      "record_count": 347,
       "country_count": 1,
       "countries": [
         {
@@ -10292,7 +11279,7 @@
       "name_en": "Giardiasis",
       "name_zh": "贾第虫病",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 1897,
+      "record_count": 1898,
       "country_count": 3,
       "countries": [
         {
@@ -10387,12 +11374,16 @@
       "name_en": "Haemophilus influenzae",
       "name_zh": "流感嗜血杆菌",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 2547,
-      "country_count": 6,
+      "record_count": 2761,
+      "country_count": 7,
       "countries": [
         {
           "code": "AU",
           "name": "Australia"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "JP",
@@ -10441,6 +11432,27 @@
             }
           ],
           "country_name": "Australia"
+        },
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
         },
         {
           "country_code": "JP",
@@ -10557,7 +11569,7 @@
       "name_en": "Candida auris infection",
       "name_zh": "耳念珠菌感染",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 243,
+      "record_count": 244,
       "country_count": 1,
       "countries": [
         {
@@ -10602,12 +11614,16 @@
       "name_en": "Hantavirus infection",
       "name_zh": "汉坦病毒感染",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 1207,
-      "country_count": 3,
+      "record_count": 1421,
+      "country_count": 4,
       "countries": [
         {
           "code": "BR",
           "name": "Brazil"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "JP",
@@ -10644,6 +11660,27 @@
             }
           ],
           "country_name": "Brazil"
+        },
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
         },
         {
           "country_code": "JP",
@@ -10697,7 +11734,7 @@
       "name_en": "Hemolytic uremic syndrome",
       "name_zh": "溶血性尿毒症综合征",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 338,
+      "record_count": 339,
       "country_count": 1,
       "countries": [
         {
@@ -10742,7 +11779,7 @@
       "name_en": "Influenza-associated mortality",
       "name_zh": "流行性感冒相关死亡",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 285,
+      "record_count": 286,
       "country_count": 1,
       "countries": [
         {
@@ -10787,12 +11824,16 @@
       "name_en": "Shigellosis",
       "name_zh": "志贺菌病",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 1759,
-      "country_count": 4,
+      "record_count": 2111,
+      "country_count": 5,
       "countries": [
         {
           "code": "AU",
           "name": "Australia"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "KR",
@@ -10833,6 +11874,27 @@
             }
           ],
           "country_name": "Australia"
+        },
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
         },
         {
           "country_code": "KR",
@@ -10907,12 +11969,16 @@
       "name_en": "Invasive pneumococcal disease",
       "name_zh": "侵袭性肺炎球菌病",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 2248,
-      "country_count": 6,
+      "record_count": 2384,
+      "country_count": 7,
       "countries": [
         {
           "code": "AU",
           "name": "Australia"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "JP",
@@ -10961,6 +12027,27 @@
             }
           ],
           "country_name": "Australia"
+        },
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
         },
         {
           "country_code": "JP",
@@ -11077,12 +12164,16 @@
       "name_en": "Legionellosis",
       "name_zh": "军团菌病",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 2751,
-      "country_count": 6,
+      "record_count": 3103,
+      "country_count": 7,
       "countries": [
         {
           "code": "AU",
           "name": "Australia"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "JP",
@@ -11131,6 +12222,27 @@
             }
           ],
           "country_name": "Australia"
+        },
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
         },
         {
           "country_code": "JP",
@@ -11247,12 +12359,16 @@
       "name_en": "Listeriosis",
       "name_zh": "李斯特菌病",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 821,
-      "country_count": 4,
+      "record_count": 1035,
+      "country_count": 5,
       "countries": [
         {
           "code": "AU",
           "name": "Australia"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "NZ",
@@ -11293,6 +12409,27 @@
             }
           ],
           "country_name": "Australia"
+        },
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
         },
         {
           "country_code": "NZ",
@@ -11487,8 +12624,8 @@
       "name_en": "Meningococcal disease",
       "name_zh": "脑膜炎球菌病",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 2639,
-      "country_count": 7,
+      "record_count": 2991,
+      "country_count": 8,
       "countries": [
         {
           "code": "AU",
@@ -11497,6 +12634,10 @@
         {
           "code": "CN",
           "name": "China"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "JP",
@@ -11584,6 +12725,27 @@
             }
           ],
           "country_name": "China"
+        },
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
         },
         {
           "country_code": "JP",
@@ -11700,12 +12862,16 @@
       "name_en": "Psittacosis",
       "name_zh": "鹦鹉热",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 1260,
-      "country_count": 3,
+      "record_count": 1474,
+      "country_count": 4,
       "countries": [
         {
           "code": "AU",
           "name": "Australia"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "JP",
@@ -11742,6 +12908,27 @@
             }
           ],
           "country_name": "Australia"
+        },
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
         },
         {
           "country_code": "JP",
@@ -11795,12 +12982,16 @@
       "name_en": "Q fever",
       "name_zh": "Q热",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 1785,
-      "country_count": 6,
+      "record_count": 1999,
+      "country_count": 7,
       "countries": [
         {
           "code": "AU",
           "name": "Australia"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "JP",
@@ -11849,6 +13040,27 @@
             }
           ],
           "country_name": "Australia"
+        },
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
         },
         {
           "country_code": "JP",
@@ -11965,7 +13177,7 @@
       "name_en": "Salmonellosis",
       "name_zh": "沙门氏菌病",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 1449,
+      "record_count": 1450,
       "country_count": 3,
       "countries": [
         {
@@ -12060,12 +13272,16 @@
       "name_en": "Shiga toxin-producing Escherichia coli infection",
       "name_zh": "产志贺毒素大肠杆菌感染",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 2350,
-      "country_count": 5,
+      "record_count": 2564,
+      "country_count": 6,
       "countries": [
         {
           "code": "AU",
           "name": "Australia"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "JP",
@@ -12110,6 +13326,27 @@
             }
           ],
           "country_name": "Australia"
+        },
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
         },
         {
           "country_code": "JP",
@@ -12205,9 +13442,13 @@
       "name_en": "Melioidosis",
       "name_zh": "类鼻疽",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 1375,
-      "country_count": 4,
+      "record_count": 1427,
+      "country_count": 5,
       "countries": [
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
+        },
         {
           "code": "JP",
           "name": "Japan"
@@ -12231,6 +13472,27 @@
       "relative_csv_path": "diseases/d116.csv",
       "site_json_path": "/site-data/diseases/d116.json",
       "source_info": [
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
+        },
         {
           "country_code": "JP",
           "primary_scope": "jp_weekly",
@@ -12325,7 +13587,7 @@
       "name_en": "Cronobacter invasive infection",
       "name_zh": "克罗诺杆菌侵袭性感染",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 123,
+      "record_count": 124,
       "country_count": 1,
       "countries": [
         {
@@ -12370,12 +13632,16 @@
       "name_en": "Spotted fever rickettsiosis",
       "name_zh": "斑点热立克次体病",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 1119,
-      "country_count": 3,
+      "record_count": 1332,
+      "country_count": 4,
       "countries": [
         {
           "code": "BR",
           "name": "Brazil"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "JP",
@@ -12412,6 +13678,27 @@
             }
           ],
           "country_name": "Brazil"
+        },
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
         },
         {
           "country_code": "JP",
@@ -12535,8 +13822,8 @@
       "name_en": "Tetanus",
       "name_zh": "破伤风",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 1782,
-      "country_count": 5,
+      "record_count": 2134,
+      "country_count": 6,
       "countries": [
         {
           "code": "AU",
@@ -12545,6 +13832,10 @@
         {
           "code": "BR",
           "name": "Brazil"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "JP",
@@ -12606,6 +13897,27 @@
             }
           ],
           "country_name": "Brazil"
+        },
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
         },
         {
           "country_code": "JP",
@@ -12698,7 +14010,7 @@
       "name_en": "Trichinellosis",
       "name_zh": "旋毛虫病",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 232,
+      "record_count": 233,
       "country_count": 1,
       "countries": [
         {
@@ -12743,7 +14055,7 @@
       "name_en": "Tularemia",
       "name_zh": "土拉菌病",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 1571,
+      "record_count": 1572,
       "country_count": 5,
       "countries": [
         {
@@ -12888,8 +14200,8 @@
       "name_en": "Typhoid fever",
       "name_zh": "伤寒",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 2114,
-      "country_count": 7,
+      "record_count": 2466,
+      "country_count": 8,
       "countries": [
         {
           "code": "AU",
@@ -12898,6 +14210,10 @@
         {
           "code": "BR",
           "name": "Brazil"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "JP",
@@ -12967,6 +14283,27 @@
             }
           ],
           "country_name": "Brazil"
+        },
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
         },
         {
           "country_code": "JP",
@@ -13128,7 +14465,7 @@
       "name_en": "Vibriosis",
       "name_zh": "弧菌病",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 902,
+      "record_count": 903,
       "country_count": 3,
       "countries": [
         {
@@ -13223,9 +14560,13 @@
       "name_en": "Viral hemorrhagic fevers",
       "name_zh": "病毒性出血热",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 712,
-      "country_count": 1,
+      "record_count": 925,
+      "country_count": 2,
       "countries": [
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
+        },
         {
           "code": "JP",
           "name": "Japan"
@@ -13237,6 +14578,27 @@
       "relative_csv_path": "diseases/d127.csv",
       "site_json_path": "/site-data/diseases/d127.json",
       "source_info": [
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
+        },
         {
           "country_code": "JP",
           "primary_scope": "jp_weekly",
@@ -13268,12 +14630,16 @@
       "name_en": "West Nile virus",
       "name_zh": "西尼罗病毒",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 1334,
-      "country_count": 4,
+      "record_count": 1547,
+      "country_count": 5,
       "countries": [
         {
           "code": "AU",
           "name": "Australia"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "JP",
@@ -13314,6 +14680,27 @@
             }
           ],
           "country_name": "Australia"
+        },
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
         },
         {
           "country_code": "JP",
@@ -13388,7 +14775,7 @@
       "name_en": "Oropouche virus disease",
       "name_zh": "奥罗普切病毒病",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 15,
+      "record_count": 16,
       "country_count": 1,
       "countries": [
         {
@@ -13433,7 +14820,7 @@
       "name_en": "Vancomycin-intermediate Staphylococcus aureus infection",
       "name_zh": "万古霉素中介金黄色葡萄球菌感染",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 258,
+      "record_count": 259,
       "country_count": 1,
       "countries": [
         {
@@ -13478,7 +14865,7 @@
       "name_en": "Vancomycin-resistant Staphylococcus aureus infection",
       "name_zh": "万古霉素耐药金黄色葡萄球菌感染",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 1196,
+      "record_count": 1197,
       "country_count": 3,
       "countries": [
         {
@@ -13573,7 +14960,7 @@
       "name_en": "Carbapenemase-producing organism infection",
       "name_zh": "产碳青霉烯酶微生物感染",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 1164,
+      "record_count": 1165,
       "country_count": 3,
       "countries": [
         {
@@ -14168,8 +15555,8 @@
       "name_en": "Creutzfeldt-Jakob disease",
       "name_zh": "克雅氏病",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 1470,
-      "country_count": 5,
+      "record_count": 1683,
+      "country_count": 6,
       "countries": [
         {
           "code": "AU",
@@ -14178,6 +15565,10 @@
         {
           "code": "BR",
           "name": "Brazil"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "JP",
@@ -14239,6 +15630,27 @@
             }
           ],
           "country_name": "Brazil"
+        },
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
         },
         {
           "country_code": "JP",
@@ -14313,9 +15725,13 @@
       "name_en": "Relapsing fever",
       "name_zh": "回归热",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 712,
-      "country_count": 1,
+      "record_count": 1063,
+      "country_count": 2,
       "countries": [
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
+        },
         {
           "code": "JP",
           "name": "Japan"
@@ -14327,6 +15743,27 @@
       "relative_csv_path": "diseases/d145.csv",
       "site_json_path": "/site-data/diseases/d145.json",
       "source_info": [
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
+        },
         {
           "country_code": "JP",
           "primary_scope": "jp_weekly",
@@ -15112,9 +16549,13 @@
       "name_en": "Amebiasis",
       "name_zh": "阿米巴病",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 281,
-      "country_count": 1,
+      "record_count": 632,
+      "country_count": 2,
       "countries": [
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
+        },
         {
           "code": "TW",
           "name": "Taiwan, China"
@@ -15126,6 +16567,27 @@
       "relative_csv_path": "diseases/d165.csv",
       "site_json_path": "/site-data/diseases/d165.json",
       "source_info": [
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
+        },
         {
           "country_code": "TW",
           "primary_scope": "nidss_open_data",
@@ -15220,12 +16682,16 @@
       "name_en": "Congenital rubella syndrome",
       "name_zh": "先天性风疹综合征",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 444,
-      "country_count": 3,
+      "record_count": 657,
+      "country_count": 4,
       "countries": [
         {
           "code": "BR",
           "name": "Brazil"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         },
         {
           "code": "KR",
@@ -15262,6 +16728,27 @@
             }
           ],
           "country_name": "Brazil"
+        },
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
         },
         {
           "country_code": "KR",
@@ -15315,9 +16802,13 @@
       "name_en": "Endemic typhus fever",
       "name_zh": "地方性斑疹伤寒",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 475,
-      "country_count": 2,
+      "record_count": 730,
+      "country_count": 3,
       "countries": [
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
+        },
         {
           "code": "KR",
           "name": "South Korea"
@@ -15333,6 +16824,27 @@
       "relative_csv_path": "diseases/d169.csv",
       "site_json_path": "/site-data/diseases/d169.json",
       "source_info": [
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
+        },
         {
           "country_code": "KR",
           "primary_scope": "kdca_open_api",
@@ -16382,12 +17894,16 @@
       "name_en": "Foodborne disease outbreak",
       "name_zh": "食源性疾病暴发",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 60,
-      "country_count": 1,
+      "record_count": 411,
+      "country_count": 2,
       "countries": [
         {
           "code": "BR",
           "name": "Brazil"
+        },
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
         }
       ],
       "json_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d196.json",
@@ -16416,6 +17932,27 @@
             }
           ],
           "country_name": "Brazil"
+        },
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
         }
       ]
     },
@@ -16794,6 +18331,96 @@
             }
           ],
           "country_name": "South Korea"
+        }
+      ]
+    },
+    {
+      "kind": "disease",
+      "id": "d206",
+      "disease_id": "D206",
+      "slug": "community-associated-methicillin-resistant-staphylococcus-aureus-infection",
+      "name_en": "Community-associated methicillin-resistant Staphylococcus aureus infection",
+      "name_zh": "社区相关耐甲氧西林金黄色葡萄球菌感染",
+      "generated_at": "2026-05-16T00:00:00+00:00",
+      "record_count": 231,
+      "country_count": 1,
+      "countries": [
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
+        }
+      ],
+      "json_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d206.json",
+      "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d206.csv",
+      "relative_json_path": "diseases/d206.json",
+      "relative_csv_path": "diseases/d206.csv",
+      "site_json_path": "/site-data/diseases/d206.json",
+      "source_info": [
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
+        }
+      ]
+    },
+    {
+      "kind": "disease",
+      "id": "d207",
+      "disease_id": "D207",
+      "slug": "enterovirus-71-infection",
+      "name_en": "Enterovirus 71 infection",
+      "name_zh": "肠病毒71型感染",
+      "generated_at": "2026-05-16T00:00:00+00:00",
+      "record_count": 205,
+      "country_count": 1,
+      "countries": [
+        {
+          "code": "HK",
+          "name": "Hong Kong, China"
+        }
+      ],
+      "json_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d207.json",
+      "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/main/diseases/d207.csv",
+      "relative_json_path": "diseases/d207.json",
+      "relative_csv_path": "diseases/d207.csv",
+      "site_json_path": "/site-data/diseases/d207.json",
+      "source_info": [
+        {
+          "country_code": "HK",
+          "primary_scope": "chp_notifiable",
+          "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+          "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+          "primary_type": "open_data_csv",
+          "parser_primary": "hk_chp_notifiable_monthly",
+          "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+          "sources": [
+            {
+              "scope": "chp_notifiable",
+              "label": "Hong Kong, China CHP Notifiable Diseases",
+              "url": "https://www.chp.gov.hk/en/static/24012.html",
+              "machine_url": null,
+              "type": "open_data_csv",
+              "cadence": "monthly",
+              "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+            }
+          ],
+          "country_name": "Hong Kong, China"
         }
       ]
     }

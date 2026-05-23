@@ -14,13 +14,26 @@ from src.domain.country import Country
 router = APIRouter()
 
 
+def _contains_chinese(text: str | None) -> bool:
+    if not text:
+        return False
+    return any("\u4e00" <= ch <= "\u9fff" for ch in text)
+
+
+def _country_name_zh(country: Country) -> str:
+    resolved = get_country_display_name(country.code, "zh")
+    if not _contains_chinese(resolved) and _contains_chinese(country.name_local):
+        return country.name_local
+    return resolved
+
+
 def _country_to_out(country: Country) -> dict:
     return {
         "id": country.id,
         "code": country.code,
         "name": country.name,
         "name_en": country.name_en,
-        "name_zh": get_country_display_name(country.code, "zh"),
+        "name_zh": _country_name_zh(country),
         "name_local": country.name_local,
         "language": country.language,
         "timezone": country.timezone,

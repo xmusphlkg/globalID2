@@ -1,14 +1,14 @@
 {
   "generated_at": "2026-05-16T00:00:00+00:00",
-  "total_countries": 8,
-  "total_diseases": 197,
+  "total_countries": 9,
+  "total_diseases": 199,
   "total_reports": 1,
   "countries": [
     {
       "code": "AU",
       "name": "Australia",
       "language": "en-AU",
-      "total_cases": 20128976,
+      "total_cases": 20131065,
       "total_deaths": 0,
       "disease_count": 66,
       "date_range": {
@@ -119,6 +119,38 @@
       }
     },
     {
+      "code": "HK",
+      "name": "Hong Kong, China",
+      "language": "zh-HK",
+      "total_cases": 3621314,
+      "total_deaths": 0,
+      "disease_count": 62,
+      "date_range": {
+        "start": "1997-01-01",
+        "end": "2026-03-01"
+      },
+      "source_info": {
+        "country_code": "HK",
+        "primary_scope": "chp_notifiable",
+        "primary_label": "Hong Kong, China CHP Notifiable Diseases",
+        "primary_url": "https://www.chp.gov.hk/en/static/24012.html",
+        "primary_type": "open_data_csv",
+        "parser_primary": "hk_chp_notifiable_monthly",
+        "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+        "sources": [
+          {
+            "scope": "chp_notifiable",
+            "label": "Hong Kong, China CHP Notifiable Diseases",
+            "url": "https://www.chp.gov.hk/en/static/24012.html",
+            "machine_url": null,
+            "type": "open_data_csv",
+            "cadence": "monthly",
+            "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
+          }
+        ]
+      }
+    },
+    {
       "code": "JP",
       "name": "Japan",
       "language": "ja-JP",
@@ -218,7 +250,7 @@
       "code": "TW",
       "name": "Taiwan, China",
       "language": "zh-TW",
-      "total_cases": 11163669,
+      "total_cases": 11163682,
       "total_deaths": 0,
       "disease_count": 48,
       "date_range": {
@@ -250,12 +282,12 @@
       "code": "US",
       "name": "United States",
       "language": "en-US",
-      "total_cases": 16112973,
+      "total_cases": 16132959,
       "total_deaths": 0,
       "disease_count": 64,
       "date_range": {
         "start": "2006-01-07",
-        "end": "2026-05-09"
+        "end": "2026-05-16"
       },
       "source_info": {
         "country_code": "US",

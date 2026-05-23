@@ -1968,5 +1968,25 @@
     "icd_11": "1D49",
     "description": "Tick-borne encephalitis surveillance concept",
     "slug": "tick-borne-encephalitis"
+  },
+  {
+    "disease_id": "D206",
+    "name_en": "Community-associated methicillin-resistant Staphylococcus aureus infection",
+    "name_zh": "社区相关耐甲氧西林金黄色葡萄球菌感染",
+    "category": "Bacterial",
+    "icd_10": "B95.6",
+    "icd_11": "",
+    "description": "Community-associated MRSA infection surveillance concept",
+    "slug": "community-associated-methicillin-resistant-staphylococcus-aureus-infection"
+  },
+  {
+    "disease_id": "D207",
+    "name_en": "Enterovirus 71 infection",
+    "name_zh": "肠病毒71型感染",
+    "category": "Viral",
+    "icd_10": "B34.1",
+    "icd_11": "1F01",
+    "description": "Enterovirus 71 infection surveillance concept",
+    "slug": "enterovirus-71-infection"
   }
 ]

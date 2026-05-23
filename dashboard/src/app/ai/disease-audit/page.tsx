@@ -43,6 +43,14 @@ const copy = {
     degradedRouteHint: "No healthy route is available; the run will still try enabled, non-rate-limited routes and record each attempt.",
     loading: "Analyzing...",
     error: "Audit failed",
+    runError500: "Disease audit request failed on server (500).",
+    runError500Hint:
+      "Common causes: model center route base URL points to a web page, proxy timeout, model quota/permission, or backend/frontend version mismatch. "
+      + "Please check model route test results, proxy timeout settings, and backend logs around the request time.",
+    runErrorTimeout: "Request timeout. The AI audit may be slow; please reduce AI candidates or check proxy timeout.",
+    networkError: "Cannot reach the AI audit API route. Check that Next.js proxy and backend are both running.",
+    runErrorUnknown: "Unable to get a clear error message. Retry once, then check browser console + backend logs.",
+    rawErrorPrefix: "Raw error/response",
     merge: "Merge",
     keep: "Keep separate",
     add: "Add disease",
@@ -72,6 +80,14 @@ const copy = {
     degradedRouteHint: "当前没有健康路由；运行时仍会尝试已启用且未限流的路由，并记录每一次尝试。",
     loading: "分析中...",
     error: "审计失败",
+    runError500: "服务器返回 500（内部错误）。",
+    runError500Hint:
+      "常见原因：模型中心路由 base_url 配置成了网页地址、代理超时、模型配额/鉴权异常、前后端版本不一致。"
+      + "请先检查模型路由测试结果、代理超时配置，并查看对应时刻后端日志。",
+    runErrorTimeout: "请求超时。AI 审计可能耗时过长，请减小候选上限或检查代理超时配置。",
+    networkError: "无法访问 AI 审计接口，请确认 Next.js 代理与 FastAPI 后端均已启动且可通信。",
+    runErrorUnknown: "暂未提取到完整报错，请重试后查看浏览器控制台与后端日志。",
+    rawErrorPrefix: "原始错误/响应",
     merge: "建议合并",
     keep: "建议保留",
     add: "建议新增",
@@ -93,7 +109,17 @@ function decisionLabel(decision: string | undefined, lang: "en" | "zh") {
   return copy[lang].review;
 }
 
-function AlertPanel({ title, message, tone }: { title: string; message: string; tone: "warning" | "danger" }) {
+function AlertPanel({
+  title,
+  message,
+  details,
+  tone,
+}: {
+  title: string;
+  message: string;
+  details?: string | null;
+  tone: "warning" | "danger";
+}) {
   const toneClass =
     tone === "danger"
       ? "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-200"
@@ -105,7 +131,12 @@ function AlertPanel({ title, message, tone }: { title: string; message: string; 
         <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
         <div>
           <h2 className="text-sm font-semibold">{title}</h2>
-          <p className="mt-1 text-sm">{message}</p>
+          <p className="mt-1 whitespace-pre-wrap text-sm">{message}</p>
+          {details ? (
+            <pre className="mt-2 max-h-48 overflow-auto rounded-tremor-default bg-white/80 px-3 py-2 text-xs dark:bg-black/10">
+              {details}
+            </pre>
+          ) : null}
         </div>
       </div>
     </section>
@@ -207,6 +238,79 @@ function logTone(level: string) {
   return "neutral" as const;
 }
 
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return Object.prototype.toString.call(value) === "[object Object]";
+}
+
+function trimLongText(value: string, max = 1600): string {
+  const safe = value.trim();
+  return safe.length <= max ? safe : `${safe.slice(0, max)}…`;
+}
+
+function parseRunError(error: unknown) {
+  const message = error instanceof Error
+    ? error.message
+    : isPlainObject(error) && typeof error.message === "string"
+      ? error.message
+      : String(error || "Unknown error");
+  const status = isPlainObject(error) && Number.isInteger(error.status as number)
+    ? Number(error.status)
+    : undefined;
+  return {
+    status,
+    message: message || "Unknown error",
+    lowerMessage: message.toLowerCase(),
+  };
+}
+
+function formatDiseaseRunError(error: unknown, ui: (typeof copy)["en" | "zh"]) {
+  const { status, message, lowerMessage } = parseRunError(error);
+
+  if (status === 404 || lowerMessage.includes("not found")) {
+    return {
+      message: ui.routeMissing,
+      details: trimLongText(message),
+    };
+  }
+
+  if (status === 408 || lowerMessage.includes("timeout")) {
+    return {
+      message: ui.runErrorTimeout,
+      details: trimLongText(message),
+    };
+  }
+
+  if (status === 500 || lowerMessage.includes("internal server error")) {
+    return {
+      message: ui.runError500,
+      details: trimLongText(`${ui.runError500Hint}\n\n${ui.rawErrorPrefix}：\n${message}`),
+    };
+  }
+
+  if (
+    lowerMessage.includes("failed to fetch")
+    || lowerMessage.includes("networkerror")
+    || lowerMessage.includes("network error")
+  ) {
+    return {
+      message: ui.networkError,
+      details: trimLongText(message),
+    };
+  }
+
+  if (!message || message === "Unknown error") {
+    return {
+      message: ui.runErrorUnknown,
+      details: undefined,
+    };
+  }
+
+  return {
+    message,
+    details: undefined,
+  };
+}
+
 function formatMetadata(metadata: Record<string, unknown> | undefined): string | null {
   if (!metadata || Object.keys(metadata).length === 0) return null;
   return JSON.stringify(metadata, null, 2);
@@ -284,6 +388,8 @@ export default function DiseaseAuditPage() {
     [status],
   );
   const auditLogs = result?.logs?.length ? result.logs : persistedLogs ?? [];
+  const runAuditError = runAudit.error ? formatDiseaseRunError(runAudit.error, ui) : null;
+  const statusApiError = statusError ? formatDiseaseRunError(statusError, ui) : null;
 
   const run = (includeAI: boolean) => {
     runAudit.mutate({
@@ -372,11 +478,8 @@ export default function DiseaseAuditPage() {
         <AlertPanel
           title={ui.error}
           tone="warning"
-          message={
-            String(statusError.message || statusError).includes("Not Found")
-              ? ui.routeMissing
-              : String(statusError.message || statusError)
-          }
+          message={statusApiError?.message || ui.runErrorUnknown}
+          details={statusApiError?.details}
         />
       ) : null}
 
@@ -384,11 +487,8 @@ export default function DiseaseAuditPage() {
         <AlertPanel
           title={ui.error}
           tone="danger"
-          message={
-            String(runAudit.error.message || runAudit.error).includes("Not Found")
-              ? ui.routeMissing
-              : String(runAudit.error.message || runAudit.error)
-          }
+          message={runAuditError?.message || ui.runErrorUnknown}
+          details={runAuditError?.details}
         />
       ) : null}
 

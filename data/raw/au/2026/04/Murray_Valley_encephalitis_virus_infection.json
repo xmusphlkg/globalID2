@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-05-20T22:46:01.264497+00:00",
+  "fetched_at": "2026-05-21T22:45:53.118694+00:00",
   "disease": "Murray Valley encephalitis virus infection",
   "year": 2026,
   "month": 4,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1779317160927)/",
-            "rootActivityId": "4a9328a4-efea-4612-afa9-db563c0a9970",
+            "timestamp": "/Date(1779403552767)/",
+            "rootActivityId": "da262e48-d15b-441d-bc51-34af194b05d0",
             "descriptor": {
               "Select": [
                 {

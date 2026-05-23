@@ -57,6 +57,13 @@ COUNTRY_OVERRIDES: dict[str, dict[str, str]] = {
         "language": "zh-TW",
         "timezone": "Asia/Taipei",
     },
+    "HK": {
+        "name": "Hong Kong, China",
+        "name_en": "Hong Kong, China",
+        "name_local": "中国香港",
+        "language": "zh-HK",
+        "timezone": "Asia/Hong_Kong",
+    },
     "KR": {
         "name": "South Korea",
         "name_en": "South Korea",
@@ -80,6 +87,7 @@ COUNTRY_NAMES_ZH: dict[str, str] = {
     "KR": "韩国",
     "NZ": "新西兰",
     "TW": "中国台湾",
+    "HK": "中国香港",
     "US": "美国",
 }
 
@@ -208,6 +216,31 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
             "lang": "zh-TW",
         },
         "notes": "Taiwan, China CDC NIDSS open data CSV aggregated to national monthly totals",
+    },
+    "HK": {
+        "data_source_url": "https://www.chp.gov.hk/en/static/24012.html",
+        "data_source_type": "open_data_csv",
+        "crawler_config": {
+            "sources": ["chp_notifiable"],
+            "cadence": "monthly",
+            "index_url": "https://www.chp.gov.hk/en/static/24012.html",
+            "annual_csv_url_template": "https://www.chp.gov.hk/files/misc/nid{year}en.csv",
+            "refresh_recent_months": 3,
+            "full_history_start_year": 1997,
+            "reporting_area": "national",
+        },
+        "parser_config": {
+            "primary": "hk_chp_notifiable_monthly",
+        },
+        "disease_mapping_rules": {
+            "strategy": "db_first",
+            "fallback": "learning_suggestions",
+        },
+        "report_config": {
+            "default_type": "MONTHLY",
+            "lang": "zh-HK",
+        },
+        "notes": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
     },
     "KR": {
         "data_source_url": "https://www.data.go.kr/data/15139178/openapi.do",
