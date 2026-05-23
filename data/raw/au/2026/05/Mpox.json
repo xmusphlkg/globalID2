@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-05-21T22:45:59.447943+00:00",
+  "fetched_at": "2026-05-22T22:45:40.219116+00:00",
   "disease": "Mpox",
   "year": 2026,
   "month": 5,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1779403559073)/",
-            "rootActivityId": "4af0462a-cfb0-4f4d-ab02-0b5ba78fb602",
+            "timestamp": "/Date(1779489939853)/",
+            "rootActivityId": "388ea7bf-e97d-459a-886f-5eb9ffe75382",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'30'"
+                          "A0": "'31'"
                         }
                       ]
                     },
@@ -424,7 +424,7 @@
                         {
                           "C": [
                             "WA",
-                            "'6'"
+                            "'7'"
                           ]
                         }
                       ]
@@ -451,6 +451,6 @@
     "SA": "'<5'",
     "TAS": 0,
     "VIC": 11,
-    "WA": 6
+    "WA": 7
   }
 }

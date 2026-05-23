@@ -290,7 +290,7 @@
       "code": "TW",
       "name": "Taiwan, China",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 6287,
+      "record_count": 6288,
       "date_range": {
         "start": "2003-01-01",
         "end": "2026-05-01"
@@ -13442,7 +13442,7 @@
       "name_en": "Melioidosis",
       "name_zh": "类鼻疽",
       "generated_at": "2026-05-16T00:00:00+00:00",
-      "record_count": 1427,
+      "record_count": 1428,
       "country_count": 5,
       "countries": [
         {

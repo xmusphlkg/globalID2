@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-05-21T22:45:53.266817+00:00",
+  "fetched_at": "2026-05-22T22:45:33.120711+00:00",
   "disease": "Paratyphoid",
   "year": 2026,
   "month": 4,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1779403552913)/",
-            "rootActivityId": "eb2371dc-5506-486a-805e-626bb82fbed8",
+            "timestamp": "/Date(1779489932766)/",
+            "rootActivityId": "28fc530b-bbe6-4f99-9ee2-41dc7acc5dc4",
             "descriptor": {
               "Select": [
                 {

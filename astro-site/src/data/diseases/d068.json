@@ -2491,7 +2491,7 @@
         8,
         12,
         14,
-        6
+        7
       ],
       "weekly_equiv_cases": [
         5.870967741935484,
@@ -2774,7 +2774,7 @@
         1.8064516129032258,
         3.0,
         3.161290322580645,
-        1.4000000000000001
+        1.6333333333333333
       ],
       "deaths": [
         0,
@@ -3625,7 +3625,7 @@
         "missing_population",
         "missing_population"
       ],
-      "total_cases": 4263,
+      "total_cases": 4264,
       "total_deaths": 0
     }
   },
@@ -4266,7 +4266,7 @@
       8,
       12,
       14,
-      6
+      7
     ],
     "deaths": [
       0,
@@ -4588,7 +4588,7 @@
       0
     ]
   },
-  "total_cases": 9515,
+  "total_cases": 9516,
   "total_deaths": 0,
   "generated_at": "2026-05-16T00:00:00+00:00",
   "source_info": [
