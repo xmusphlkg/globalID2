@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-05-22T22:45:38.868382+00:00",
+  "fetched_at": "2026-05-23T22:45:57.125979+00:00",
   "disease": "Influenza (laboratory confirmed)",
   "year": 2026,
   "month": 5,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1779489938505)/",
-            "rootActivityId": "91dacce9-0af4-452a-ac23-aabb12ce8aab",
+            "timestamp": "/Date(1779576356748)/",
+            "rootActivityId": "2faac5a1-dd9c-42da-9051-d034f30ffdef",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'2,495'"
+                          "A0": "'2,562'"
                         }
                       ]
                     },
@@ -388,31 +388,31 @@
                         {
                           "C": [
                             "NSW",
-                            "'1,183'"
+                            "'1,224'"
                           ]
                         },
                         {
                           "C": [
                             "NT",
-                            "'41'"
+                            "'46'"
                           ]
                         },
                         {
                           "C": [
                             "QLD",
-                            "'422'"
+                            "'440'"
                           ]
                         },
                         {
                           "C": [
                             "SA",
-                            "'101'"
+                            "'103'"
                           ]
                         },
                         {
                           "C": [
                             "TAS",
-                            "'14'"
+                            "'15'"
                           ]
                         },
                         {
@@ -445,11 +445,11 @@
   },
   "parsed_counts": {
     "ACT": 15,
-    "NSW": 1183,
-    "NT": 41,
-    "QLD": 422,
-    "SA": 101,
-    "TAS": 14,
+    "NSW": 1224,
+    "NT": 46,
+    "QLD": 440,
+    "SA": 103,
+    "TAS": 15,
     "VIC": 505,
     "WA": 214
   }

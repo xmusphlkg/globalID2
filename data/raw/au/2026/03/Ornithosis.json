@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-05-22T22:45:24.966436+00:00",
+  "fetched_at": "2026-05-23T22:45:44.445268+00:00",
   "disease": "Ornithosis",
   "year": 2026,
   "month": 3,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1779489924623)/",
-            "rootActivityId": "5a87c5de-69d4-4a0e-a447-9df93bd4696a",
+            "timestamp": "/Date(1779576344068)/",
+            "rootActivityId": "2a09a968-fdb3-4ad4-aa39-d271a5bc4f17",
             "descriptor": {
               "Select": [
                 {
