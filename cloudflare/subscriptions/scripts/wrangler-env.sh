@@ -66,6 +66,7 @@ write_config() {
   local pending_expiry_days="${SUBSCRIPTIONS__PENDING_EXPIRY_DAYS:-14}"
   local submission_rate_limit_per_hour="${SUBSCRIPTIONS__SUBMISSION_RATE_LIMIT_PER_HOUR:-30}"
   local confirmation_email_limit="${SUBSCRIPTIONS__CONFIRMATION_EMAIL_LIMIT_PER_10_MINUTES:-2}"
+  local notification_batch_size="${SUBSCRIPTIONS__NOTIFICATION_BATCH_SIZE:-20}"
   local maintenance_cron="${SUBSCRIPTIONS__MAINTENANCE_CRON:-}"
 
   {
@@ -83,6 +84,7 @@ write_config() {
     printf 'PENDING_EXPIRY_DAYS = "%s"\n' "$(toml_escape "$pending_expiry_days")"
     printf 'SUBMISSION_RATE_LIMIT_PER_HOUR = "%s"\n' "$(toml_escape "$submission_rate_limit_per_hour")"
     printf 'CONFIRMATION_EMAIL_LIMIT_PER_10_MINUTES = "%s"\n' "$(toml_escape "$confirmation_email_limit")"
+    printf 'NOTIFICATION_BATCH_SIZE = "%s"\n' "$(toml_escape "$notification_batch_size")"
     if [ -n "$smtp_host" ]; then
       printf 'SMTP_HOST = "%s"\n' "$(toml_escape "$smtp_host")"
       printf 'SMTP_PORT = "%s"\n' "$(toml_escape "$smtp_port")"

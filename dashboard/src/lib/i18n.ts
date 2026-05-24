@@ -7,6 +7,7 @@ const dict = {
     tasks: "Tasks",
     reports: "Reports",
     subscriptions: "Subscriptions",
+    notifications: "Notifications",
     explorer: "Data Explorer",
     quality: "Data Quality",
     // Workflow modules
@@ -188,6 +189,7 @@ const dict = {
     tasks: "任务管理",
     reports: "报告监控",
     subscriptions: "订阅管理",
+    notifications: "通知发送",
     explorer: "数据浏览",
     quality: "数据质量",
     // 工作流模块

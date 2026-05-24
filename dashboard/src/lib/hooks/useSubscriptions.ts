@@ -79,6 +79,90 @@ export interface SubscriptionRecordFilters {
   offset?: number;
 }
 
+export interface NotificationProgress {
+  total: number;
+  queued: number;
+  sent: number;
+  failed: number;
+  skipped: number;
+  completed: number;
+  percent: number;
+}
+
+export interface NotificationContent {
+  subject: string;
+  markdown: string;
+}
+
+export interface NotificationDelivery {
+  id: string;
+  status: string;
+  provider?: string;
+  attempts: number;
+  last_error?: string | null;
+  queued_at: string;
+  sent_at?: string | null;
+  delivered_at?: string | null;
+  failed_at?: string | null;
+  email_masked: string;
+  locale: string;
+  list_code: string;
+}
+
+export interface NotificationCampaign {
+  id: string;
+  subject: string;
+  status: string;
+  created_at: string;
+  scheduled_at?: string | null;
+  sent_at?: string | null;
+  source_locale?: string | null;
+  default_locale: string;
+  target_locales: string[];
+  list_codes: string[];
+  audience_count: number;
+  progress: NotificationProgress;
+  contents?: Record<string, NotificationContent>;
+  deliveries?: NotificationDelivery[];
+  metadata?: {
+    template_version?: string;
+    created_by?: string;
+    ai?: {
+      status?: string;
+      model_route?: {
+        model_name?: string;
+        provider_key?: string;
+        provider_name?: string;
+      };
+      locales?: string[];
+    } | null;
+  };
+}
+
+export interface NotificationCampaignsResponse {
+  campaigns: NotificationCampaign[];
+  pagination: {
+    total: number;
+    limit: number;
+    offset: number;
+  };
+}
+
+export interface NotificationCampaignResponse {
+  campaign: NotificationCampaign;
+}
+
+export interface CreateNotificationPayload {
+  subject?: string;
+  markdown: string;
+  source_locale: string;
+  target_locales: string[];
+  list_codes?: string[];
+  start_sending?: boolean;
+  batch_size?: number;
+  max_recipients?: number;
+}
+
 function recordsParams(filters: SubscriptionRecordFilters) {
   const params = new URLSearchParams();
   if (filters.status) params.set("status", filters.status);
@@ -86,6 +170,13 @@ function recordsParams(filters: SubscriptionRecordFilters) {
   if (filters.q) params.set("q", filters.q);
   if (filters.limit) params.set("limit", String(filters.limit));
   if (filters.offset) params.set("offset", String(filters.offset));
+  return params.toString();
+}
+
+function paginationParams(limit = 25, offset = 0) {
+  const params = new URLSearchParams();
+  params.set("limit", String(limit));
+  params.set("offset", String(offset));
   return params.toString();
 }
 
@@ -144,6 +235,66 @@ export function useSyncSubscriptionOptions() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["subscriptions", "options"] });
       queryClient.invalidateQueries({ queryKey: ["subscriptions", "stats"] });
+    },
+  });
+}
+
+export function useNotificationCampaigns(limit = 25, offset = 0) {
+  return useQuery<NotificationCampaignsResponse>({
+    queryKey: ["subscriptions", "notifications", { limit, offset }],
+    queryFn: () => apiFetch(`/subscriptions/notifications?${paginationParams(limit, offset)}`),
+    refetchInterval: (query) => {
+      const active = query.state.data?.campaigns?.some(
+        (campaign) => campaign.status === "queued" || campaign.status === "sending",
+      );
+      return active ? 3000 : false;
+    },
+    staleTime: 10 * 1000,
+  });
+}
+
+export function useNotificationCampaignDetail(campaignId?: string | null, deliveryLimit = 100) {
+  return useQuery<NotificationCampaignResponse>({
+    queryKey: ["subscriptions", "notifications", campaignId, { deliveryLimit }],
+    queryFn: () => apiFetch(`/subscriptions/notifications/${campaignId}?delivery_limit=${deliveryLimit}`),
+    enabled: Boolean(campaignId),
+    refetchInterval: (query) => {
+      const status = query.state.data?.campaign?.status;
+      return status === "queued" || status === "sending" ? 3000 : false;
+    },
+    staleTime: 5000,
+  });
+}
+
+export function useCreateNotificationCampaign() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: CreateNotificationPayload) =>
+      apiFetch<NotificationCampaignResponse & { send_started?: boolean }>("/subscriptions/notifications", {
+        method: "POST",
+        body: JSON.stringify(payload),
+        timeoutMs: 180000,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["subscriptions", "notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["subscriptions", "stats"] });
+    },
+  });
+}
+
+export function useStartNotificationSend() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ campaignId, batchSize = 20 }: { campaignId: string; batchSize?: number }) =>
+      apiFetch(`/subscriptions/notifications/${campaignId}/send?batch_size=${batchSize}`, {
+        method: "POST",
+        timeoutMs: 30000,
+      }),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["subscriptions", "notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["subscriptions", "notifications", variables.campaignId] });
     },
   });
 }
