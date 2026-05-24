@@ -20,6 +20,7 @@ interface Env {
   PENDING_EXPIRY_DAYS?: string;
   SUBMISSION_RATE_LIMIT_PER_HOUR?: string;
   CONFIRMATION_EMAIL_LIMIT_PER_10_MINUTES?: string;
+  NOTIFICATION_BATCH_SIZE?: string;
 }
 
 interface D1Database {
@@ -63,9 +64,47 @@ interface SmtpConfig {
   useTls: boolean;
 }
 
+interface NotificationContent {
+  subject: string;
+  markdown: string;
+}
+
+interface NotificationMetadata {
+  source_locale?: string;
+  default_locale?: string;
+  target_locales?: string[];
+  list_codes?: string[];
+  contents?: Record<string, NotificationContent>;
+  template_version?: string;
+  created_by?: string;
+  ai?: JsonValue;
+  [key: string]: unknown;
+}
+
+interface CampaignProgress {
+  total: number;
+  queued: number;
+  sent: number;
+  failed: number;
+  skipped: number;
+  completed: number;
+  percent: number;
+}
+
 const TEXT = new TextEncoder();
 const FREQUENCIES = new Set(["instant", "daily", "weekly", "monthly"]);
-const LOCALES = new Set(["en", "zh"]);
+const SUPPORTED_LOCALES = ["en", "zh", "ja", "ko", "es", "fr", "de", "pt"];
+const LOCALES = new Set(SUPPORTED_LOCALES);
+const LOCALE_LABELS: Record<string, { label_en: string; label_zh: string }> = {
+  en: { label_en: "English", label_zh: "英文" },
+  zh: { label_en: "Chinese", label_zh: "中文" },
+  ja: { label_en: "Japanese", label_zh: "日文" },
+  ko: { label_en: "Korean", label_zh: "韩文" },
+  es: { label_en: "Spanish", label_zh: "西班牙文" },
+  fr: { label_en: "French", label_zh: "法文" },
+  de: { label_en: "German", label_zh: "德文" },
+  pt: { label_en: "Portuguese", label_zh: "葡萄牙文" },
+};
 const SUBSCRIPTION_STATUSES = new Set(["pending", "active", "paused", "unsubscribed", "expired"]);
 
 export default {
@@ -108,6 +147,24 @@ export default {
 
       if (request.method === "GET" && path === "/api/admin/subscriptions") {
         return listSubscriptionsAdmin(request, env);
+      }
+
+      if (request.method === "GET" && path === "/api/admin/notifications") {
+        return listNotificationCampaigns(request, env);
+      }
+
+      if (request.method === "POST" && path === "/api/admin/notifications") {
+        return createNotificationCampaign(request, env);
+      }
+
+      const notificationProcessMatch = path.match(/^\/api\/admin\/notifications\/([^/]+)\/process$/);
+      if (request.method === "POST" && notificationProcessMatch) {
+        return processNotificationCampaign(request, env, decodeURIComponent(notificationProcessMatch[1]));
+      }
+
+      const notificationMatch = path.match(/^\/api\/admin\/notifications\/([^/]+)$/);
+      if (request.method === "GET" && notificationMatch) {
+        return getNotificationCampaign(request, env, decodeURIComponent(notificationMatch[1]));
       }
 
       if (request.method === "POST" && path === "/api/admin/maintenance") {
@@ -187,10 +244,11 @@ async function listSubscriptionOptions(request: Request, env: Env): Promise<Resp
       description_zh: list.description_zh || list.description || "",
       default_frequency: list.default_frequency,
     })),
-    locales: [
-      { value: "en", label_en: "English", label_zh: "英文" },
-      { value: "zh", label_en: "Chinese", label_zh: "中文" },
-    ],
+    locales: SUPPORTED_LOCALES.map((locale) => ({
+      value: locale,
+      label_en: LOCALE_LABELS[locale]?.label_en || locale,
+      label_zh: LOCALE_LABELS[locale]?.label_zh || locale,
+    })),
     frequencies: [
       { value: "weekly", label_en: "Weekly", label_zh: "每周" },
       { value: "monthly", label_en: "Monthly", label_zh: "每月" },
@@ -212,7 +270,7 @@ async function createSubscription(request: Request, env: Env): Promise<Response>
   await enforceSubmissionRateLimit(request, env);
 
   const now = new Date().toISOString();
-  const locale = pick(valueAsString(payload.locale), LOCALES, "en");
+  const locale = normalizeLocale(valueAsString(payload.locale), "en");
   const timezone = boundedText(valueAsString(payload.timezone), "UTC", 80);
   const requestedFrequency = valueAsString(payload.frequency).trim().toLowerCase();
   const frequency = FREQUENCIES.has(requestedFrequency) ? requestedFrequency : "";
@@ -797,6 +855,793 @@ async function listSubscriptionsAdmin(request: Request, env: Env): Promise<Respo
       offset,
     },
   }, request, env);
+}
+
+async function listNotificationCampaigns(request: Request, env: Env): Promise<Response> {
+  requireAdmin(request, env);
+  const url = new URL(request.url);
+  const requestedLimit = Number(url.searchParams.get("limit") || 25);
+  const requestedOffset = Number(url.searchParams.get("offset") || 0);
+  const limit = Math.min(Math.max(Number.isFinite(requestedLimit) ? Math.trunc(requestedLimit) : 25, 1), 100);
+  const offset = Math.max(Number.isFinite(requestedOffset) ? Math.trunc(requestedOffset) : 0, 0);
+
+  const total = await env.DB.prepare(
+    "SELECT COUNT(*) AS count FROM message_campaigns WHERE trigger_type = 'admin_notification'"
+  ).first<{ count: number }>();
+
+  const rows = await env.DB.prepare(
+    `SELECT id, subject, content_ref, metadata_json, status, created_at, scheduled_at, sent_at
+     FROM message_campaigns
+     WHERE trigger_type = 'admin_notification'
+     ORDER BY created_at DESC
+     LIMIT ? OFFSET ?`
+  ).bind(limit, offset).all<{
+    id: string;
+    subject: string;
+    content_ref?: string | null;
+    metadata_json?: string | null;
+    status: string;
+    created_at: string;
+    scheduled_at?: string | null;
+    sent_at?: string | null;
+  }>();
+
+  const campaigns: JsonValue[] = [];
+  for (const row of rows.results || []) {
+    campaigns.push(await notificationCampaignSummary(env, row));
+  }
+
+  return json({
+    ok: true,
+    campaigns,
+    pagination: {
+      total: Number(total?.count || 0),
+      limit,
+      offset,
+    },
+  }, request, env);
+}
+
+async function getNotificationCampaign(request: Request, env: Env, campaignId: string): Promise<Response> {
+  requireAdmin(request, env);
+  const url = new URL(request.url);
+  const requestedLimit = Number(url.searchParams.get("delivery_limit") || 100);
+  const deliveryLimit = Math.min(Math.max(Number.isFinite(requestedLimit) ? Math.trunc(requestedLimit) : 100, 1), 500);
+  const campaign = await notificationCampaignDetail(env, campaignId, deliveryLimit);
+  if (!campaign) {
+    throw new HttpError(404, "notification_campaign_not_found");
+  }
+  return json({ ok: true, campaign }, request, env);
+}
+
+async function createNotificationCampaign(request: Request, env: Env): Promise<Response> {
+  requireAdmin(request, env);
+  const payload = await readPayload(request);
+  const contents = normalizeNotificationContents(payload);
+  const defaultLocale = normalizeLocale(valueAsString(payload.default_locale), "en");
+  const fallbackLocale = contents[defaultLocale] ? defaultLocale : Object.keys(contents)[0];
+  const defaultContent = contents[fallbackLocale];
+  if (!defaultContent?.subject || !defaultContent.markdown) {
+    throw new HttpError(400, "notification_content_required");
+  }
+
+  const listCodes = normalizeCampaignListCodes(payload);
+  const listId = await campaignListId(env, listCodes[0] || "reports");
+  if (!listId) {
+    throw new HttpError(400, "notification_list_not_found");
+  }
+
+  const maxRecipientsRaw = Number(payload.max_recipients ?? 10000);
+  const maxRecipients = Math.min(Math.max(Number.isFinite(maxRecipientsRaw) ? Math.trunc(maxRecipientsRaw) : 10000, 1), 50000);
+  const recipients = await notificationAudience(env, listCodes, maxRecipients);
+  const now = new Date().toISOString();
+  const campaignId = crypto.randomUUID();
+  const sourceLocale = normalizeLocale(valueAsString(payload.source_locale), fallbackLocale);
+  const targetLocales = normalizeTargetLocales(payload, contents);
+  const metadata: NotificationMetadata = {
+    source_locale: sourceLocale,
+    default_locale: fallbackLocale,
+    target_locales: targetLocales,
+    list_codes: listCodes,
+    contents,
+    template_version: "admin-notification-v1",
+    created_by: boundedText(valueAsString(payload.created_by), "dashboard", 80),
+    audience_count: recipients.length,
+    ai: isRecord(payload.ai) ? payload.ai as JsonValue : undefined,
+  };
+
+  await env.DB.prepare(
+    `INSERT INTO message_campaigns (
+       id, list_id, trigger_type, subject, content_ref, metadata_json, status, created_at, scheduled_at, sent_at
+     ) VALUES (?, ?, 'admin_notification', ?, 'metadata_json.contents', ?, ?, ?, NULL, NULL)`
+  ).bind(
+    campaignId,
+    listId,
+    cleanHeaderValue(defaultContent.subject, 200),
+    JSON.stringify(metadata),
+    recipients.length > 0 ? "queued" : "sent",
+    now,
+  ).run();
+
+  for (const recipient of recipients) {
+    await env.DB.prepare(
+      `INSERT INTO message_deliveries (
+         id, campaign_id, subscription_id, contact_id, status, provider, attempts, queued_at
+       ) VALUES (?, ?, ?, ?, 'queued', 'smtp', 0, ?)`
+    ).bind(
+      crypto.randomUUID(),
+      campaignId,
+      recipient.subscription_id,
+      recipient.contact_id,
+      now,
+    ).run();
+  }
+
+  const campaign = await notificationCampaignDetail(env, campaignId, 25);
+  return json({ ok: true, campaign }, request, env, 201);
+}
+
+async function processNotificationCampaign(request: Request, env: Env, campaignId: string): Promise<Response> {
+  requireAdmin(request, env);
+  const payload = await readPayload(request);
+  const requestedBatch = Number(payload.batch_size ?? new URL(request.url).searchParams.get("batch_size") ?? env.NOTIFICATION_BATCH_SIZE ?? 20);
+  const batchSize = Math.min(Math.max(Number.isFinite(requestedBatch) ? Math.trunc(requestedBatch) : 20, 1), 100);
+  const campaignRow = await loadNotificationCampaignRow(env, campaignId);
+  if (!campaignRow) {
+    throw new HttpError(404, "notification_campaign_not_found");
+  }
+
+  const config = smtpConfig(env);
+  if (!config) {
+    const now = new Date().toISOString();
+    await env.DB.prepare(
+      `UPDATE message_deliveries
+       SET status = 'failed', provider = 'smtp', attempts = attempts + 1,
+           last_error = 'smtp_not_configured', failed_at = COALESCE(failed_at, ?)
+       WHERE campaign_id = ? AND status = 'queued'`
+    ).bind(now, campaignId).run();
+    const state = await refreshNotificationCampaignStatus(env, campaignId);
+    return json({
+      ok: true,
+      campaign_id: campaignId,
+      processed: 0,
+      status: state.status,
+      progress: state.progress,
+      reason: "smtp_not_configured",
+    }, request, env);
+  }
+
+  const metadata = parseNotificationMetadata(campaignRow.metadata_json || "");
+  const deliveries = await env.DB.prepare(
+    `SELECT
+       d.id AS delivery_id,
+       d.subscription_id,
+       d.contact_id,
+       d.attempts,
+       s.subscriber_id,
+       sub.locale,
+       c.address AS email
+     FROM message_deliveries d
+     JOIN subscriptions s ON s.id = d.subscription_id
+     JOIN subscriber_contacts c ON c.id = d.contact_id
+     JOIN subscribers sub ON sub.id = s.subscriber_id
+     WHERE d.campaign_id = ? AND d.status = 'queued'
+     ORDER BY d.queued_at ASC
+     LIMIT ?`
+  ).bind(campaignId, batchSize).all<{
+    delivery_id: string;
+    subscription_id: string;
+    contact_id: string;
+    attempts: number;
+    subscriber_id: string;
+    locale?: string | null;
+    email: string;
+  }>();
+
+  if ((deliveries.results || []).length > 0) {
+    await env.DB.prepare(
+      "UPDATE message_campaigns SET status = 'sending' WHERE id = ? AND status IN ('queued', 'draft', 'sending')"
+    ).bind(campaignId).run();
+  }
+
+  let processed = 0;
+  for (const delivery of deliveries.results || []) {
+    processed += 1;
+    const recipientLocale = normalizeLocale(delivery.locale || "", metadata.default_locale || "en");
+    const content = localizedNotificationContent(metadata, recipientLocale);
+    const unsubscribeUrl = `${publicBaseUrl(request, env)}/api/subscriptions/unsubscribe?token=${
+      await createSignedToken(env, "unsubscribe", delivery.subscription_id, 60 * 60 * 24 * 365)
+    }`;
+    const email = buildNotificationEmail(recipientLocale, content, unsubscribeUrl);
+    const transactionalDeliveryId = crypto.randomUUID();
+    const attemptStartedAt = new Date().toISOString();
+
+    await insertEmailDelivery(env, {
+      deliveryId: transactionalDeliveryId,
+      subscriberId: delivery.subscriber_id,
+      contactId: delivery.contact_id,
+      subscriptionId: delivery.subscription_id,
+      recipient: delivery.email,
+      subject: email.subject,
+      deliveryType: "admin_notification",
+      provider: "smtp",
+      status: "queued",
+      attempts: Number(delivery.attempts || 0) + 1,
+      source: "admin_notification",
+      metadata: {
+        campaign_id: campaignId,
+        message_delivery_id: delivery.delivery_id,
+        locale: recipientLocale,
+      },
+      now: attemptStartedAt,
+    });
+
+    try {
+      await sendSmtpEmail(config, {
+        to: delivery.email,
+        subject: email.subject,
+        text: email.text,
+        html: email.html,
+      });
+      const sentAt = new Date().toISOString();
+      await env.DB.prepare(
+        `UPDATE message_deliveries
+         SET status = 'sent', provider = 'smtp', attempts = attempts + 1,
+             last_error = NULL, sent_at = ?, failed_at = NULL
+         WHERE id = ?`
+      ).bind(sentAt, delivery.delivery_id).run();
+      await updateEmailDelivery(env, {
+        deliveryId: transactionalDeliveryId,
+        status: "sent",
+        sentAt,
+      });
+    } catch (error) {
+      const errorMessage = boundedText(error instanceof Error ? error.message : "smtp_delivery_failed", "smtp_delivery_failed", 500);
+      await env.DB.prepare(
+        `UPDATE message_deliveries
+         SET status = 'failed', provider = 'smtp', attempts = attempts + 1,
+             last_error = ?, failed_at = ?
+         WHERE id = ?`
+      ).bind(errorMessage, new Date().toISOString(), delivery.delivery_id).run();
+      await updateEmailDelivery(env, {
+        deliveryId: transactionalDeliveryId,
+        status: "failed",
+        errorCode: "smtp_delivery_failed",
+        errorMessage,
+      });
+    }
+  }
+
+  const state = await refreshNotificationCampaignStatus(env, campaignId);
+  return json({
+    ok: true,
+    campaign_id: campaignId,
+    processed,
+    status: state.status,
+    progress: state.progress,
+  }, request, env);
+}
+
+async function campaignListId(env: Env, code: string): Promise<string | null> {
+  const requested = normalizeCode(code || "reports");
+  const row = await env.DB.prepare(
+    "SELECT id FROM subscription_lists WHERE code = ?"
+  ).bind(requested).first<{ id: string }>();
+  if (row?.id) return row.id;
+  const fallback = await env.DB.prepare(
+    "SELECT id FROM subscription_lists ORDER BY sort_order ASC, created_at ASC LIMIT 1"
+  ).first<{ id: string }>();
+  return fallback?.id || null;
+}
+
+async function notificationAudience(
+  env: Env,
+  listCodes: string[],
+  maxRecipients: number,
+): Promise<Array<{ subscription_id: string; subscriber_id: string; contact_id: string; email: string; locale: string }>> {
+  const clauses = [
+    "s.status = 'active'",
+    "c.channel = 'email'",
+    "c.status = 'active'",
+    "sub.status = 'active'",
+  ];
+  const binds: unknown[] = [];
+  if (listCodes.length > 0) {
+    clauses.push(`l.code IN (${listCodes.map(() => "?").join(", ")})`);
+    binds.push(...listCodes);
+  }
+  binds.push(maxRecipients);
+
+  const rows = await env.DB.prepare(
+    `SELECT
+       MIN(s.id) AS subscription_id,
+       MIN(s.subscriber_id) AS subscriber_id,
+       s.contact_id AS contact_id,
+       c.address AS email,
+       COALESCE(NULLIF(sub.locale, ''), 'en') AS locale,
+       MIN(s.created_at) AS first_subscription_at
+     FROM subscriptions s
+     JOIN subscriber_contacts c ON c.id = s.contact_id
+     JOIN subscribers sub ON sub.id = s.subscriber_id
+     JOIN subscription_lists l ON l.id = s.list_id
+     WHERE ${clauses.join(" AND ")}
+     GROUP BY s.contact_id, c.address, sub.locale
+     ORDER BY first_subscription_at ASC
+     LIMIT ?`
+  ).bind(...binds).all<{
+    subscription_id: string;
+    subscriber_id: string;
+    contact_id: string;
+    email: string;
+    locale: string;
+  }>();
+
+  return (rows.results || []).filter((row) => row.subscription_id && row.contact_id && row.email);
+}
+
+async function loadNotificationCampaignRow(env: Env, campaignId: string): Promise<{
+  id: string;
+  subject: string;
+  content_ref?: string | null;
+  metadata_json?: string | null;
+  status: string;
+  created_at: string;
+  scheduled_at?: string | null;
+  sent_at?: string | null;
+} | null> {
+  return await env.DB.prepare(
+    `SELECT id, subject, content_ref, metadata_json, status, created_at, scheduled_at, sent_at
+     FROM message_campaigns
+     WHERE id = ? AND trigger_type = 'admin_notification'`
+  ).bind(campaignId).first<{
+    id: string;
+    subject: string;
+    content_ref?: string | null;
+    metadata_json?: string | null;
+    status: string;
+    created_at: string;
+    scheduled_at?: string | null;
+    sent_at?: string | null;
+  }>();
+}
+
+async function notificationCampaignSummary(
+  env: Env,
+  row: {
+    id: string;
+    subject: string;
+    content_ref?: string | null;
+    metadata_json?: string | null;
+    status: string;
+    created_at: string;
+    scheduled_at?: string | null;
+    sent_at?: string | null;
+  },
+): Promise<JsonValue> {
+  const metadata = parseNotificationMetadata(row.metadata_json || "");
+  const progress = await campaignProgress(env, row.id);
+  return {
+    id: row.id,
+    subject: row.subject,
+    status: row.status,
+    created_at: row.created_at,
+    scheduled_at: row.scheduled_at || null,
+    sent_at: row.sent_at || null,
+    source_locale: metadata.source_locale || null,
+    default_locale: metadata.default_locale || "en",
+    target_locales: metadata.target_locales || Object.keys(metadata.contents || {}),
+    list_codes: metadata.list_codes || [],
+    audience_count: Number((metadata as Record<string, unknown>).audience_count || progress.total),
+    progress,
+  };
+}
+
+async function notificationCampaignDetail(
+  env: Env,
+  campaignId: string,
+  deliveryLimit: number,
+): Promise<JsonValue | null> {
+  const row = await loadNotificationCampaignRow(env, campaignId);
+  if (!row) return null;
+
+  const summary = await notificationCampaignSummary(env, row) as Record<string, JsonValue>;
+  const metadata = parseNotificationMetadata(row.metadata_json || "");
+  const deliveries = await env.DB.prepare(
+    `SELECT
+       d.id,
+       d.status,
+       d.provider,
+       d.attempts,
+       d.last_error,
+       d.queued_at,
+       d.sent_at,
+       d.delivered_at,
+       d.failed_at,
+       c.address AS email,
+       sub.locale,
+       l.code AS list_code
+     FROM message_deliveries d
+     JOIN subscriptions s ON s.id = d.subscription_id
+     JOIN subscriber_contacts c ON c.id = d.contact_id
+     JOIN subscribers sub ON sub.id = s.subscriber_id
+     JOIN subscription_lists l ON l.id = s.list_id
+     WHERE d.campaign_id = ?
+     ORDER BY d.queued_at DESC
+     LIMIT ?`
+  ).bind(campaignId, deliveryLimit).all<{
+    id: string;
+    status: string;
+    provider?: string | null;
+    attempts: number;
+    last_error?: string | null;
+    queued_at: string;
+    sent_at?: string | null;
+    delivered_at?: string | null;
+    failed_at?: string | null;
+    email: string;
+    locale?: string | null;
+    list_code: string;
+  }>();
+
+  return {
+    ...summary,
+    metadata: {
+      source_locale: metadata.source_locale || null,
+      default_locale: metadata.default_locale || "en",
+      target_locales: metadata.target_locales || Object.keys(metadata.contents || {}),
+      list_codes: metadata.list_codes || [],
+      template_version: metadata.template_version || "admin-notification-v1",
+      created_by: metadata.created_by || "dashboard",
+      ai: metadata.ai || null,
+    },
+    contents: metadata.contents || {},
+    deliveries: (deliveries.results || []).map((delivery) => ({
+      id: delivery.id,
+      status: delivery.status,
+      provider: delivery.provider || "smtp",
+      attempts: Number(delivery.attempts || 0),
+      last_error: delivery.last_error || null,
+      queued_at: delivery.queued_at,
+      sent_at: delivery.sent_at || null,
+      delivered_at: delivery.delivered_at || null,
+      failed_at: delivery.failed_at || null,
+      email_masked: maskEmail(delivery.email),
+      locale: normalizeLocale(delivery.locale || "", metadata.default_locale || "en"),
+      list_code: delivery.list_code,
+    })),
+  };
+}
+
+async function campaignProgress(env: Env, campaignId: string): Promise<CampaignProgress> {
+  const rows = await env.DB.prepare(
+    "SELECT status, COUNT(*) AS count FROM message_deliveries WHERE campaign_id = ? GROUP BY status"
+  ).bind(campaignId).all<{ status: string; count: number }>();
+  const counts = rowsToCounts(rows.results || []);
+  const total = Object.values(counts).reduce((sum, value) => sum + Number(value || 0), 0);
+  const queued = Number(counts.queued || 0);
+  const sent = Number(counts.sent || 0);
+  const failed = Number(counts.failed || 0);
+  const skipped = Number(counts.skipped || 0);
+  const completed = sent + failed + skipped;
+  return {
+    total,
+    queued,
+    sent,
+    failed,
+    skipped,
+    completed,
+    percent: total > 0 ? Math.round((completed / total) * 100) : 100,
+  };
+}
+
+async function refreshNotificationCampaignStatus(
+  env: Env,
+  campaignId: string,
+): Promise<{ status: string; progress: CampaignProgress }> {
+  const progress = await campaignProgress(env, campaignId);
+  let status = "queued";
+  if (progress.total === 0) {
+    status = "sent";
+  } else if (progress.queued > 0) {
+    status = progress.completed > 0 ? "sending" : "queued";
+  } else if (progress.failed > 0 && progress.sent > 0) {
+    status = "partial_failed";
+  } else if (progress.failed > 0) {
+    status = "failed";
+  } else {
+    status = "sent";
+  }
+
+  const finishedAt = progress.queued === 0 ? new Date().toISOString() : null;
+  await env.DB.prepare(
+    `UPDATE message_campaigns
+     SET status = ?, sent_at = CASE WHEN ? IS NOT NULL THEN COALESCE(sent_at, ?) ELSE sent_at END
+     WHERE id = ?`
+  ).bind(status, finishedAt, finishedAt, campaignId).run();
+  return { status, progress };
+}
+
+function normalizeNotificationContents(payload: Payload): Record<string, NotificationContent> {
+  const result: Record<string, NotificationContent> = {};
+  const rawContents = payload.contents;
+  if (isRecord(rawContents)) {
+    for (const [rawLocale, rawContent] of Object.entries(rawContents)) {
+      if (!isRecord(rawContent)) continue;
+      const locale = normalizeLocale(rawLocale, "");
+      if (!locale) continue;
+      const subject = cleanHeaderValue(valueAsString(rawContent.subject), 200);
+      const markdown = cleanMarkdown(valueAsString(rawContent.markdown ?? rawContent.body ?? rawContent.content));
+      if (subject && markdown) {
+        result[locale] = { subject, markdown };
+      }
+    }
+  }
+
+  const topLevelMarkdown = cleanMarkdown(valueAsString(payload.markdown ?? payload.body ?? payload.content));
+  if (topLevelMarkdown) {
+    const locale = normalizeLocale(valueAsString(payload.source_locale ?? payload.default_locale), "en");
+    const subject = cleanHeaderValue(valueAsString(payload.subject) || subjectFromMarkdown(topLevelMarkdown), 200);
+    if (subject) {
+      result[locale] = { subject, markdown: topLevelMarkdown };
+    }
+  }
+
+  return result;
+}
+
+function normalizeCampaignListCodes(payload: Payload): string[] {
+  const raw = toArray(payload.list_codes ?? payload.list_code ?? payload.lists);
+  const codes = raw.map(normalizeCode).filter(Boolean);
+  return [...new Set(codes)];
+}
+
+function normalizeTargetLocales(payload: Payload, contents: Record<string, NotificationContent>): string[] {
+  const requested = toArray(payload.target_locales ?? payload.locales);
+  const locales = requested.length > 0
+    ? requested.map((item) => normalizeLocale(item, "")).filter(Boolean)
+    : Object.keys(contents);
+  return [...new Set(locales)];
+}
+
+function parseNotificationMetadata(value: string): NotificationMetadata {
+  const parsed = parseJsonObject(value);
+  const contents: Record<string, NotificationContent> = {};
+  if (isRecord(parsed.contents)) {
+    for (const [rawLocale, rawContent] of Object.entries(parsed.contents)) {
+      if (!isRecord(rawContent)) continue;
+      const locale = normalizeLocale(rawLocale, "");
+      if (!locale) continue;
+      const subject = cleanHeaderValue(valueAsString(rawContent.subject), 200);
+      const markdown = cleanMarkdown(valueAsString(rawContent.markdown));
+      if (subject && markdown) {
+        contents[locale] = { subject, markdown };
+      }
+    }
+  }
+  return {
+    ...parsed,
+    source_locale: normalizeLocale(valueAsString(parsed.source_locale), ""),
+    default_locale: normalizeLocale(valueAsString(parsed.default_locale), "en"),
+    target_locales: toArray(parsed.target_locales).map((item) => normalizeLocale(item, "")).filter(Boolean),
+    list_codes: toArray(parsed.list_codes).map(normalizeCode).filter(Boolean),
+    contents,
+  };
+}
+
+function localizedNotificationContent(metadata: NotificationMetadata, locale: string): NotificationContent {
+  const contents = metadata.contents || {};
+  const requested = normalizeLocale(locale, metadata.default_locale || "en");
+  return (
+    contents[requested] ||
+    contents[metadata.default_locale || "en"] ||
+    contents.en ||
+    contents.zh ||
+    Object.values(contents)[0] ||
+    { subject: "GIDS Update", markdown: "GIDS update." }
+  );
+}
+
+function buildNotificationEmail(
+  locale: string,
+  content: NotificationContent,
+  unsubscribeUrl: string,
+): { subject: string; text: string; html: string } {
+  const labels = notificationTemplateLabels(locale);
+  const subject = cleanHeaderValue(content.subject, 200) || labels.title;
+  const markdown = cleanMarkdown(content.markdown);
+  const bodyHtml = markdownToHtml(markdown);
+  const text = [
+    subject,
+    "",
+    markdown,
+    "",
+    `${labels.unsubscribe}: ${unsubscribeUrl}`,
+    "",
+    "GIDS - Global Infectious Disease Surveillance",
+  ].join("\n");
+  const html = `<!doctype html>
+<html lang="${escapeHtml(locale)}">
+  <head>
+    <meta charset="utf-8">
+    <title>${escapeHtml(subject)}</title>
+  </head>
+  <body style="margin:0;background:#f8fafc;color:#0f172a;font-family:Arial,'Helvetica Neue',sans-serif;line-height:1.6">
+    <div style="max-width:680px;margin:0 auto;padding:28px 20px">
+      <div style="border:1px solid #dbe5e1;background:#ffffff;padding:26px">
+        <p style="margin:0 0 12px;color:#0f766e;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase">GIDS Alerts</p>
+        <h1 style="margin:0 0 18px;font-size:24px;line-height:1.25">${escapeHtml(subject)}</h1>
+        <div style="font-size:15px;color:#0f172a">${bodyHtml}</div>
+        <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 14px">
+        <p style="margin:0;color:#64748b;font-size:12px">${escapeHtml(labels.reason)}</p>
+        <p style="margin:8px 0 0;color:#64748b;font-size:12px">
+          <a href="${escapeHtml(unsubscribeUrl)}" style="color:#0f766e">${escapeHtml(labels.unsubscribe)}</a>
+        </p>
+      </div>
+      <p style="margin:14px 0 0;color:#64748b;font-size:12px">GIDS - Global Infectious Disease Surveillance</p>
+    </div>
+  </body>
+</html>`;
+
+  return { subject, text, html };
+}
+
+function notificationTemplateLabels(locale: string): { title: string; reason: string; unsubscribe: string } {
+  const normalized = normalizeLocale(locale, "en");
+  const labels: Record<string, { title: string; reason: string; unsubscribe: string }> = {
+    en: {
+      title: "GIDS Update",
+      reason: "You are receiving this message because you subscribed to GIDS updates.",
+      unsubscribe: "Unsubscribe",
+    },
+    zh: {
+      title: "GIDS 更新通知",
+      reason: "你收到这封邮件，是因为你订阅了 GIDS 更新。",
+      unsubscribe: "退订",
+    },
+    ja: {
+      title: "GIDS 更新",
+      reason: "GIDS の更新を購読しているため、このメールをお送りしています。",
+      unsubscribe: "購読解除",
+    },
+    ko: {
+      title: "GIDS 업데이트",
+      reason: "GIDS 업데이트를 구독하셨기 때문에 이 메일을 보내드립니다.",
+      unsubscribe: "구독 해지",
+    },
+    es: {
+      title: "Actualización de GIDS",
+      reason: "Recibes este mensaje porque te suscribiste a las actualizaciones de GIDS.",
+      unsubscribe: "Cancelar suscripción",
+    },
+    fr: {
+      title: "Mise a jour GIDS",
+      reason: "Vous recevez ce message car vous etes abonne aux mises a jour de GIDS.",
+      unsubscribe: "Se desabonner",
+    },
+    de: {
+      title: "GIDS Update",
+      reason: "Sie erhalten diese Nachricht, weil Sie GIDS Updates abonniert haben.",
+      unsubscribe: "Abbestellen",
+    },
+    pt: {
+      title: "Atualizacao GIDS",
+      reason: "Voce esta recebendo esta mensagem porque assinou as atualizacoes do GIDS.",
+      unsubscribe: "Cancelar assinatura",
+    },
+  };
+  return labels[normalized] || labels.en;
+}
+
+function markdownToHtml(markdown: string): string {
+  const lines = markdown.replace(/\r\n/g, "\n").split("\n");
+  const html: string[] = [];
+  let paragraph: string[] = [];
+  let listType: "ul" | "ol" | null = null;
+  let inCode = false;
+  let codeLines: string[] = [];
+
+  const flushParagraph = () => {
+    if (paragraph.length === 0) return;
+    html.push(`<p style="margin:0 0 14px">${renderInlineMarkdown(paragraph.join(" "))}</p>`);
+    paragraph = [];
+  };
+  const closeList = () => {
+    if (!listType) return;
+    html.push(`</${listType}>`);
+    listType = null;
+  };
+
+  for (const line of lines) {
+    const raw = line.replace(/\s+$/, "");
+    if (/^```/.test(raw.trim())) {
+      if (inCode) {
+        html.push(`<pre style="margin:0 0 14px;overflow:auto;background:#f1f5f9;padding:12px"><code>${escapeHtml(codeLines.join("\n"))}</code></pre>`);
+        codeLines = [];
+        inCode = false;
+      } else {
+        flushParagraph();
+        closeList();
+        inCode = true;
+      }
+      continue;
+    }
+    if (inCode) {
+      codeLines.push(raw);
+      continue;
+    }
+
+    const trimmed = raw.trim();
+    if (!trimmed) {
+      flushParagraph();
+      closeList();
+      continue;
+    }
+
+    const heading = /^(#{1,4})\s+(.+)$/.exec(trimmed);
+    if (heading) {
+      flushParagraph();
+      closeList();
+      const level = Math.min(heading[1].length + 1, 4);
+      html.push(`<h${level} style="margin:18px 0 8px;font-size:${level === 2 ? 18 : 16}px;line-height:1.3">${renderInlineMarkdown(heading[2])}</h${level}>`);
+      continue;
+    }
+
+    const unordered = /^[-*]\s+(.+)$/.exec(trimmed);
+    const ordered = /^\d+[.)]\s+(.+)$/.exec(trimmed);
+    if (unordered || ordered) {
+      flushParagraph();
+      const nextType = unordered ? "ul" : "ol";
+      if (listType !== nextType) {
+        closeList();
+        listType = nextType;
+        html.push(`<${listType} style="margin:0 0 14px 20px;padding:0">`);
+      }
+      html.push(`<li style="margin:6px 0">${renderInlineMarkdown((unordered || ordered)?.[1] || "")}</li>`);
+      continue;
+    }
+
+    closeList();
+    paragraph.push(trimmed);
+  }
+
+  if (inCode) {
+    html.push(`<pre style="margin:0 0 14px;overflow:auto;background:#f1f5f9;padding:12px"><code>${escapeHtml(codeLines.join("\n"))}</code></pre>`);
+  }
+  flushParagraph();
+  closeList();
+  return html.join("\n");
+}
+
+function renderInlineMarkdown(value: string): string {
+  const links: string[] = [];
+  let text = value.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, (_match, label, url) => {
+    const token = `@@GIDS_LINK_${links.length}@@`;
+    links.push(`<a href="${escapeHtml(url)}" style="color:#0f766e">${escapeHtml(label)}</a>`);
+    return token;
+  });
+  text = escapeHtml(text);
+  text = text.replace(/`([^`]+)`/g, "<code style=\"background:#f1f5f9;padding:1px 4px\">$1</code>");
+  text = text.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  text = text.replace(/\*([^*]+)\*/g, "<em>$1</em>");
+  text = text.replace(/@@GIDS_LINK_(\d+)@@/g, (_match, index) => links[Number(index)] || "");
+  return text;
+}
+
+function subjectFromMarkdown(markdown: string): string {
+  for (const line of markdown.split(/\r?\n/)) {
+    const heading = /^#\s+(.+)$/.exec(line.trim());
+    if (heading) return heading[1].trim();
+  }
+  const first = markdown.split(/\r?\n/).find((line) => line.trim());
+  return first ? first.trim().replace(/^#+\s*/, "").slice(0, 80) : "GIDS Update";
+}
+
+function cleanMarkdown(value: string): string {
+  return value.replace(/\u0000/g, "").trim().slice(0, 50000);
+}
+
+function cleanHeaderValue(value: string, maxLength: number): string {
+  return value.replace(/[\r\n]+/g, " ").replace(/\s+/g, " ").trim().slice(0, maxLength);
 }
 
 async function runMaintenance(env: Env): Promise<JsonValue> {
@@ -1540,6 +2385,28 @@ function corsHeaders(request: Request, env: Env): HeadersInit {
 function trimTrailingSlash(path: string): string {
   if (path === "/") return path;
   return path.replace(/\/+$/, "");
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function parseJsonObject(value: string): Record<string, unknown> {
+  if (!value.trim()) return {};
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return isRecord(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function normalizeLocale(value: string, fallback: string): string {
+  const normalized = value.trim().toLowerCase().replace(/_/g, "-");
+  if (LOCALES.has(normalized)) return normalized;
+  const base = normalized.split("-")[0];
+  if (LOCALES.has(base)) return base;
+  return fallback;
 }
 
 function normalizeEmail(value: string): string {
