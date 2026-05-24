@@ -10,6 +10,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..deps import get_db
+from ..enum_utils import parse_enum_member
 from ..schemas.report import (
     AIConversationOut,
     AIInteractionOut,
@@ -20,7 +21,7 @@ from ..schemas.report import (
     ReportSectionRunOut,
 )
 from src.domain.country import Country
-from src.domain.report import AIConversation, Report, ReportSection, ReportSectionRun
+from src.domain.report import AIConversation, Report, ReportSection, ReportSectionRun, ReportStatus, ReportType
 from src.domain.task import Task
 
 router = APIRouter()
@@ -67,6 +68,15 @@ def _enum_value(value: Any) -> Any:
     return getattr(value, "value", value)
 
 
+def _maybe_report_type(raw: Any) -> ReportType | None:
+    if not isinstance(raw, str) or not raw.strip():
+        return None
+    try:
+        return parse_enum_member(ReportType, raw, "report_type")
+    except HTTPException:
+        return None
+
+
 def _parse_task_datetime(value: Any) -> Optional[datetime]:
     if not isinstance(value, str):
         return None
@@ -105,7 +115,7 @@ async def _resolve_task_report_id(task: Task, db: AsyncSession) -> Optional[int]
             return report_id
 
     input_data = task.input_data if isinstance(task.input_data, dict) else {}
-    report_type = input_data.get("report_type")
+    report_type = _maybe_report_type(input_data.get("report_type"))
     period_start = _parse_task_datetime(input_data.get("period_start"))
     period_end = _parse_task_datetime(input_data.get("period_end"))
 
@@ -113,8 +123,8 @@ async def _resolve_task_report_id(task: Task, db: AsyncSession) -> Optional[int]
 
     exact_q = select(Report).where(Report.country_id == task.country_id)
     has_exact_filters = False
-    if isinstance(report_type, str) and report_type.strip():
-        exact_q = exact_q.where(Report.report_type == report_type.strip())
+    if report_type is not None:
+        exact_q = exact_q.where(Report.report_type == report_type)
         has_exact_filters = True
     if period_start is not None:
         exact_q = exact_q.where(Report.period_start == period_start)
@@ -125,11 +135,11 @@ async def _resolve_task_report_id(task: Task, db: AsyncSession) -> Optional[int]
     if has_exact_filters:
         candidate_queries.append(exact_q)
 
-    if isinstance(report_type, str) and report_type.strip():
+    if report_type is not None:
         candidate_queries.append(
             select(Report).where(
                 Report.country_id == task.country_id,
-                Report.report_type == report_type.strip(),
+                Report.report_type == report_type,
             )
         )
 
@@ -176,7 +186,7 @@ async def list_reports(
     if country_id is not None:
         q = q.where(Report.country_id == country_id)
     if status:
-        q = q.where(Report.status == status)
+        q = q.where(Report.status == parse_enum_member(ReportStatus, status, "status"))
 
     rows = (await db.execute(q)).all()
 
