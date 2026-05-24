@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BarChart3,
+  Bell,
   Home,
   Activity,
   FileText,
@@ -76,6 +77,7 @@ const navGroups: NavGroup[] = [
     items: [
       { href: "/reports", labelKey: "reports", icon: FileText },
       { href: "/subscriptions", labelKey: "subscriptions", icon: Mail },
+      { href: "/subscriptions/notifications", labelKey: "notifications", icon: Bell },
     ],
   },
   {
