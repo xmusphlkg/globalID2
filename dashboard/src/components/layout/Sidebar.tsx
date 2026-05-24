@@ -8,6 +8,7 @@ import {
   Activity,
   FileText,
   Database,
+  Mail,
   ShieldCheck,
   Download,
   Cpu,
@@ -74,6 +75,7 @@ const navGroups: NavGroup[] = [
     icon: Send,
     items: [
       { href: "/reports", labelKey: "reports", icon: FileText },
+      { href: "/subscriptions", labelKey: "subscriptions", icon: Mail },
     ],
   },
   {

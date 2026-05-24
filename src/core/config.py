@@ -378,6 +378,11 @@ class AppSettings(BaseSettings):
     github_data_share_raw_base_url: str = Field(default="", description="下载数据分享公开 raw base URL")
     cloudflare_api_token: str = Field(default="", description="Cloudflare API token")
     cloudflare_account_id: str = Field(default="", description="Cloudflare account id")
+    dashboard_api_key: str = Field(
+        default="",
+        validation_alias="DASHBOARD_API_KEY",
+        description="Optional shared secret required by dashboard HTTP API requests",
+    )
     
     # 子配置
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)
