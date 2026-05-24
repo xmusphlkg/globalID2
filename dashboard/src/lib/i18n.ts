@@ -6,6 +6,7 @@ const dict = {
     diseases: "Disease Analysis",
     tasks: "Tasks",
     reports: "Reports",
+    subscriptions: "Subscriptions",
     explorer: "Data Explorer",
     quality: "Data Quality",
     // Workflow modules
@@ -186,6 +187,7 @@ const dict = {
     diseases: "疾病分析",
     tasks: "任务管理",
     reports: "报告监控",
+    subscriptions: "订阅管理",
     explorer: "数据浏览",
     quality: "数据质量",
     // 工作流模块

@@ -29,10 +29,17 @@ from src.domain import DataReleaseJob, Task, TaskPriority, TaskStatus, TaskType
 from src.services.exceptions import TaskCancelledError
 from src.services.settings_service import system_settings_service
 
+try:
+    from dotenv import dotenv_values
+except ImportError:  # pragma: no cover - python-dotenv is part of project requirements.
+    dotenv_values = None
+
 logger = get_logger(__name__)
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
 ASTRO_DIR = ROOT_DIR / "astro-site"
+ENV_PATH = ROOT_DIR / ".env"
+SUBSCRIPTIONS_SCRIPT = ROOT_DIR / "cloudflare" / "subscriptions" / "scripts" / "wrangler-env.sh"
 RELEASE_PATHS = ("astro-site/src/data", "astro-site/dist")
 AUTO_RELEASE_TASK_TYPES = (
     TaskType.CRAWL_DATA,
@@ -640,6 +647,32 @@ class DataReleaseService:
         )
         await task_manager.update_task_progress(task.task_uuid, 60)
 
+        subscription_options_synced = False
+        should_sync_subscription_options, sync_reason = self._subscription_options_sync_plan()
+        if should_sync_subscription_options:
+            await self._run_logged_command(
+                task.task_uuid,
+                title="Sync Subscription Options",
+                cmd=[str(SUBSCRIPTIONS_SCRIPT), "sync-options-remote"],
+                cwd=ROOT_DIR,
+                env={
+                    "CI": "1",
+                    "CLOUDFLARE_API_TOKEN": self._cloudflare_api_token(),
+                    "CLOUDFLARE_ACCOUNT_ID": self._cloudflare_account_id(),
+                },
+                metadata={"event": "subscription_options_sync", "release_job_id": job.job_id},
+            )
+            subscription_options_synced = True
+        else:
+            await task_manager.add_workbook_entry(
+                task.task_uuid,
+                entry_type="info",
+                title="Subscription Options Sync Skipped",
+                content=sync_reason,
+                content_type="text",
+                metadata={"event": "subscription_options_sync_skip", "release_job_id": job.job_id},
+            )
+
         changed_release_paths = await self._git_dirty_release_paths()
         download_repo_published = bool(job.include_git_push)
         pages_deployed = False
@@ -722,6 +755,7 @@ class DataReleaseService:
             "commit_message": publish_commit_message,
             "git_pushed": download_repo_published,
             "pages_deployed": pages_deployed,
+            "subscription_options_synced": subscription_options_synced,
             "changed_release_paths": changed_release_paths,
             "preflight": checks,
         }
@@ -740,6 +774,7 @@ class DataReleaseService:
                 f"Release job: {job.name}\n"
                 f"Download repo published: {'yes' if download_repo_published else 'no'}\n"
                 f"Cloudflare deployed: {'yes' if pages_deployed else 'no'}\n"
+                f"Subscription options synced: {'yes' if subscription_options_synced else 'no'}\n"
                 f"Download repo: {download_repo_url or '-'}"
             ),
             content_type="text",
@@ -834,6 +869,34 @@ class DataReleaseService:
 
     def _cloudflare_account_id(self) -> str:
         return system_settings_service.cloudflare_runtime()["cloudflare_account_id"].strip()
+
+    def _env_file_values(self) -> dict[str, str]:
+        if dotenv_values is None or not ENV_PATH.exists():
+            return {}
+        values = dotenv_values(ENV_PATH)
+        return {key: str(value) for key, value in values.items() if value is not None}
+
+    def _env_value(self, name: str, default: str = "") -> str:
+        return (os.getenv(name) or self._env_file_values().get(name) or default).strip()
+
+    def _subscription_options_sync_plan(self) -> tuple[bool, str]:
+        raw = self._env_value("SUBSCRIPTIONS__SYNC_OPTIONS_ON_RELEASE", "auto").lower()
+        if raw in {"0", "false", "no", "off", "disabled"}:
+            return False, "SUBSCRIPTIONS__SYNC_OPTIONS_ON_RELEASE is disabled."
+        if not SUBSCRIPTIONS_SCRIPT.exists():
+            return False, f"Subscription helper script is missing: {SUBSCRIPTIONS_SCRIPT}"
+
+        missing = [
+            name
+            for name in ("SUBSCRIPTIONS__D1_DATABASE_NAME", "SUBSCRIPTIONS__D1_DATABASE_ID")
+            if not self._env_value(name)
+        ]
+        if not self._cloudflare_api_token():
+            missing.append("CLOUDFLARE_API_TOKEN")
+        if missing and raw not in {"1", "true", "yes", "on"}:
+            return False, "Subscription D1 sync is in auto mode and skipped because settings are missing: " + ", ".join(missing)
+
+        return True, "Subscription D1 option sync is enabled."
 
     def _is_github_ssh_repo_url(self, repo_url: str) -> bool:
         normalized = (repo_url or "").strip().lower()

@@ -5,7 +5,7 @@ This directory contains the GIDS dashboard subsystem, which has two parts:
 - Next.js frontend, listening on `http://localhost:3000` by default
 - FastAPI backend, listening on `http://localhost:8000` by default
 
-The frontend uses `next.config.ts` to proxy `/api/v1/*` to `API_PROXY_TARGET`, which defaults to `http://localhost:8000`. If you start only the frontend and not the backend, the country selector in the UI will show `Countries unavailable`.
+The frontend proxies `/api/v1/*` to `API_PROXY_TARGET`, which defaults to `http://localhost:8000`. The server-side proxy can inject `DASHBOARD_API_KEY` for protected API deployments. If you start only the frontend and not the backend, the country selector in the UI will show `Countries unavailable`.
 
 ## Directory Layout
 
@@ -14,7 +14,7 @@ dashboard/
 ├── api/                # FastAPI backend entrypoint and routers
 ├── src/                # Next.js frontend source
 ├── .env.local          # Local frontend proxy and WebSocket config
-├── next.config.ts      # /api/v1 -> localhost:8000 proxy
+├── next.config.ts      # Next.js runtime config
 └── package.json        # Frontend dependencies and npm scripts
 ```
 
@@ -116,6 +116,7 @@ The default `dashboard/.env.local` is:
 NEXT_PUBLIC_API_URL=/api/v1
 NEXT_PUBLIC_WS_URL=ws://localhost:8000/api/v1
 API_PROXY_TARGET=http://localhost:8000
+DASHBOARD_API_KEY=
 ```
 
 Meaning:
@@ -123,8 +124,11 @@ Meaning:
 - `NEXT_PUBLIC_API_URL=/api/v1`: the browser calls the frontend on the same origin, and Next.js proxies the request
 - `API_PROXY_TARGET=http://localhost:8000`: the actual backend target used by the Next.js proxy
 - `NEXT_PUBLIC_WS_URL=ws://localhost:8000/api/v1`: the WebSocket base URL used for task streams and notifications
+- `DASHBOARD_API_KEY`: optional shared secret. When set on the FastAPI backend, `/api/v1/*` HTTP endpoints require it; the Next.js server-side proxy injects it without exposing it to browser code.
 
 If the API runs on another port, update both `API_PROXY_TARGET` and `NEXT_PUBLIC_WS_URL`.
+
+For manual startup with API protection enabled, set the same `DASHBOARD_API_KEY` in the API process and the dashboard web process. The root `./scripts/dashboard.sh` helper reads it from the root `.env` for the web process when the shell has not already exported it.
 
 ## Why `Countries unavailable` Appears
 

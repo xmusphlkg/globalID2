@@ -162,6 +162,34 @@ read_pid() {
   fi
 }
 
+env_file_value() {
+  local key="$1"
+  local env_file="$ROOT_DIR/.env"
+  [[ -f "$env_file" ]] || return 0
+
+  awk -F= -v key="$key" '
+    $1 == key {
+      sub(/^[^=]*=/, "", $0)
+      sub(/\r$/, "", $0)
+      gsub(/^["'\''"]|["'\''"]$/, "", $0)
+      print
+      exit
+    }
+  ' "$env_file"
+}
+
+export_env_from_root_if_unset() {
+  local key="$1"
+  local value
+  if [[ -n "${!key:-}" ]]; then
+    return
+  fi
+  value="$(env_file_value "$key")"
+  if [[ -n "$value" ]]; then
+    export "$key=$value"
+  fi
+}
+
 cleanup_pid_file_if_stale() {
   local pid_file="$1"
   local pid
@@ -297,6 +325,7 @@ start_web() {
   echo "Starting dashboard web on http://localhost:3000"
   (
     cd "$DASHBOARD_DIR"
+    export_env_from_root_if_unset "DASHBOARD_API_KEY"
     nohup npm run dev -- --port 3000 > "$WEB_LOG" 2>&1 &
     echo $! > "$WEB_PID_FILE"
   )
