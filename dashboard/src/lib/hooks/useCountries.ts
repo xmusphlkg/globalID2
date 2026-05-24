@@ -13,7 +13,7 @@ export interface Country {
   is_active: boolean;
 }
 
-function hasChineseName(value?: string | null): boolean {
+function hasChineseName(value?: string | null): value is string {
   return typeof value === "string" && /[\u4e00-\u9fff]/.test(value);
 }
 

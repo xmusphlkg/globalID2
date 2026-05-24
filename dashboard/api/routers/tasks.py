@@ -10,11 +10,12 @@ from sqlalchemy import Text, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..deps import get_db
+from ..enum_utils import parse_enum_csv, parse_enum_member
 from ..schemas.task import TaskCreateRequest, TaskDetailOut, TaskOut, WorkbookEntryOut, WorkerStatusOut
 from src.core.config import get_config
 from src.core.task_manager import task_manager
 from src.domain.country import Country
-from src.domain.task import Task, TaskStatus, TaskType, TaskWorkbook
+from src.domain.task import Task, TaskPriority, TaskStatus, TaskType, TaskWorkbook
 
 router = APIRouter()
 
@@ -130,10 +131,10 @@ async def list_tasks(
 ):
     filters = []
     if status:
-        vals = [s.strip() for s in status.split(",") if s.strip()]
+        vals = parse_enum_csv(TaskStatus, status, "status")
         filters.append(Task.status.in_(vals))
     if task_type:
-        vals = [t.strip() for t in task_type.split(",") if t.strip()]
+        vals = parse_enum_csv(TaskType, task_type, "task_type")
         filters.append(Task.task_type.in_(vals))
     if country_id is not None:
         filters.append(Task.country_id == country_id)
@@ -311,11 +312,13 @@ async def get_task(task_uuid: str, db: AsyncSession = Depends(get_db)):
 
 @router.post("/tasks", response_model=TaskOut, status_code=201)
 async def create_task(body: TaskCreateRequest, db: AsyncSession = Depends(get_db)):
+    task_type = parse_enum_member(TaskType, body.task_type, "task_type")
+    priority = parse_enum_member(TaskPriority, body.priority, "priority")
     task = await task_manager.create_task(
-        task_type=body.task_type,
+        task_type=task_type,
         task_name=body.task_name,
         country_id=body.country_id,
-        priority=body.priority,
+        priority=priority,
         description=body.description,
         input_data=body.input_data or {},
     )
