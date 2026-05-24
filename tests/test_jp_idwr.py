@@ -4,12 +4,7 @@ from dataclasses import dataclass
 
 import pytest
 
-from src.data.crawlers.jp import (
-    CsvCandidate,
-    DiscoveredWeekPage,
-    JPCrawlerError,
-    JapanIDWRCrawler,
-)
+from src.data.crawlers.jp import JapanIDWRCrawler
 
 
 @dataclass
@@ -39,9 +34,8 @@ def test_discover_year_pages_from_direct_week_entry(crawler: JapanIDWRCrawler, m
         )
 
     monkeypatch.setattr(crawler, "get", fake_get)
-    logs: list[str] = []
 
-    assert crawler._discover_year_index_urls(logs) == [
+    assert crawler._discover_year_index_urls() == [
         "https://id-info.jihs.go.jp/provisional/2025/index.html"
     ]
 
@@ -89,45 +83,63 @@ def test_discover_week_pages_from_relative_links(crawler: JapanIDWRCrawler, monk
         )
 
     monkeypatch.setattr(crawler, "get", fake_get)
-    logs: list[str] = []
-    pages = crawler._discover_week_index_urls(year_url, logs)
+    pages = crawler._discover_week_index_urls(year_url)
 
-    assert [(page.year, page.week) for page in pages] == [(2025, 12), (2025, 11)]
+    assert [crawler._parse_year_week_from_url(page) for page in pages] == [(2025, 12), (2025, 11)]
 
 
-def test_choose_csv_candidates_rejects_ambiguous_best_match(crawler: JapanIDWRCrawler) -> None:
-    week_page = DiscoveredWeekPage(year=2025, week=12, url="https://example.com/2025/12/index.html")
-    logs: list[str] = []
-    candidates = [
-        CsvCandidate(
-            url="https://example.com/zensu_weekly_202512.csv",
-            source_kind="zensu",
-            score=100,
-            year=2025,
-            week=12,
-        ),
-        CsvCandidate(
-            url="https://mirror.example.com/zensu_weekly_202512.csv",
-            source_kind="zensu",
-            score=100,
-            year=2025,
-            week=12,
-        ),
+def test_discover_weekly_csv_urls_selects_known_csv_kinds(
+    crawler: JapanIDWRCrawler,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    year_url = "https://id-info.jihs.go.jp/en/surveillance/idwr/rapid/2025/index.html"
+    week_url = "https://id-info.jihs.go.jp/en/surveillance/idwr/rapid/2025/12/index.html"
+
+    monkeypatch.setattr(crawler, "_discover_year_index_urls", lambda: [year_url])
+    monkeypatch.setattr(crawler, "_discover_week_index_urls", lambda _url: [week_url])
+
+    def fake_get(url: str):
+        assert url == week_url
+        return _FakeResponse(
+            text="""
+            <html><body>
+              <a href="./zensu202512.csv">zensu</a>
+              <a href="./teiten202512.csv">teiten</a>
+              <a href="./metadata202512.csv">metadata</a>
+            </body></html>
+            """,
+            url=week_url,
+        )
+
+    monkeypatch.setattr(crawler, "get", fake_get)
+
+    csv_urls, raw_csv_urls, logs = crawler._discover_weekly_csv_urls(existing_weeks=set())
+
+    assert csv_urls == [
+        "https://id-info.jihs.go.jp/en/surveillance/idwr/rapid/2025/12/zensu202512.csv",
+        "https://id-info.jihs.go.jp/en/surveillance/idwr/rapid/2025/12/teiten202512.csv",
     ]
+    assert set(raw_csv_urls) == {
+        "https://id-info.jihs.go.jp/en/surveillance/idwr/rapid/2025/12/zensu202512.csv",
+        "https://id-info.jihs.go.jp/en/surveillance/idwr/rapid/2025/12/teiten202512.csv",
+        "https://id-info.jihs.go.jp/en/surveillance/idwr/rapid/2025/12/metadata202512.csv",
+    }
+    assert any("[week] 2025-W12 csvs:" in line for line in logs)
 
-    with pytest.raises(JPCrawlerError, match="Ambiguous JP CSV candidate selection"):
-        crawler._choose_csv_candidates(candidates, week_page, logs)
 
+def test_download_csv_table_decodes_japanese_csv(
+    crawler: JapanIDWRCrawler,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
+    csv_url = "https://example.com/rapid/2025/12/zensu202512.csv"
+    crawler.raw_dir = tmp_path
+    payload = "疾病,報告\n総数,5\n".encode("cp932")
 
-def test_decode_csv_text_rejects_html_payload(crawler: JapanIDWRCrawler) -> None:
-    response = _FakeResponse(
-        url="https://example.com/file.csv",
-        content=b"<html><body>oops</body></html>",
-        headers={"Content-Type": "text/html; charset=utf-8"},
-    )
+    monkeypatch.setattr(crawler, "get", lambda _url: _FakeResponse(url=csv_url, content=payload))
 
-    with pytest.raises(JPCrawlerError, match="Expected CSV but received HTML"):
-        crawler._decode_csv_text("https://example.com/file.csv", response.content, response)
+    assert crawler._download_csv_table(csv_url) == [["疾病", "報告"], ["総数", "5"]]
+    assert (tmp_path / "2025" / "12" / "zensu202512.csv").read_bytes() == payload
 
 
 def test_parse_legacy_standardized_rows_clamps_negative_and_filters_area(crawler: JapanIDWRCrawler) -> None:
@@ -137,12 +149,11 @@ def test_parse_legacy_standardized_rows_clamps_negative_and_filters_area(crawler
         ["東京都", "2025", "12", "Influenza", "3", ""],
     ]
 
-    parsed, diagnostics = crawler._parse_csv_rows(rows, reporting_area="総数")
+    parsed = crawler._normalize_rows(rows, reporting_area="総数", source_kind="zensu")
 
-    assert diagnostics.source_format == "legacy_standardized"
     assert len(parsed) == 1
-    assert parsed[0].cases == 0
-    assert parsed[0].reporting_area == "総数"
+    assert parsed[0]["Current week"] == "0"
+    assert parsed[0]["Reporting Area"] == "総数"
 
 
 def test_parse_jihs_matrix_rows_with_shifted_header(crawler: JapanIDWRCrawler) -> None:
@@ -152,14 +163,12 @@ def test_parse_jihs_matrix_rows_with_shifted_header(crawler: JapanIDWRCrawler) -
         ["", "", "総数", "15", "2"],
     ]
 
-    parsed, diagnostics = crawler._parse_csv_rows(rows, reporting_area="総数")
+    parsed = crawler._normalize_rows(rows, reporting_area="総数", source_kind="zensu")
 
-    assert diagnostics.source_format == "jihs_matrix"
-    assert [(row.disease, row.cases) for row in parsed] == [("AIDS", 2), ("Influenza", 15)]
+    assert [(row["Disease"], row["Current week"]) for row in parsed] == [("AIDS", "2"), ("Influenza", "15")]
 
 
 def test_parse_unknown_format_returns_diagnostics(crawler: JapanIDWRCrawler) -> None:
     rows = [["foo", "bar"], ["baz", "qux"]]
 
-    with pytest.raises(JPCrawlerError, match="Unknown JP CSV format"):
-        crawler._parse_csv_rows(rows, reporting_area="総数")
+    assert crawler._normalize_rows(rows, reporting_area="総数", source_kind="zensu") == []
