@@ -1,0 +1,601 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const updatedAt = 'May 24, 2026';
+
+const summaryItems = [
+  {
+    labelEn: 'Purpose',
+    labelZh: '服务目的',
+    valueEn: 'Public-interest infectious disease surveillance, charts, reports, and email updates.',
+    valueZh: '面向公共利益的传染病监测、图表、报告与邮件更新。',
+  },
+  {
+    labelEn: 'Source basis',
+    labelZh: '来源基础',
+    valueEn: 'Official public health feeds, open data, public reports, and automated normalization.',
+    valueZh: '官方公共卫生数据源、开放数据、公开报告与自动标准化处理。',
+  },
+  {
+    labelEn: 'Use boundary',
+    labelZh: '使用边界',
+    valueEn: 'Informational only; not medical advice, legal advice, or an official emergency alert system.',
+    valueZh: '仅供信息参考；不构成医疗建议、法律建议或官方应急预警系统。',
+  },
+  {
+    labelEn: 'Commercial use',
+    labelZh: '商业使用',
+    valueEn: 'Not-for-profit public-interest service; unauthorized commercial use is prohibited.',
+    valueZh: '非营利公共利益服务；禁止未经授权的商业使用。',
+  },
+];
+
+const sections = [
+  {
+    titleEn: '1. Acceptance and Scope',
+    titleZh: '1. 接受协议与适用范围',
+    paragraphs: [
+      {
+        en: 'These Service Terms and Privacy Notice govern access to and use of GIDS, including the public website, disease and country pages, generated reports, charts, downloadable or machine-readable data, and subscription-related services.',
+        zh: '本《服务协议与隐私说明》适用于你访问和使用 GIDS，包括公开网站、疾病与国家页面、生成报告、图表、可下载或机器可读数据，以及订阅相关服务。',
+      },
+      {
+        en: 'By browsing the website, using published data, submitting a subscription form, or otherwise interacting with GIDS, you agree to these terms. If you do not agree, do not use the service or submit subscription information.',
+        zh: '当你浏览网站、使用公开数据、提交订阅表单或以其他方式与 GIDS 交互，即表示你同意本协议。若你不同意，请勿使用服务或提交订阅信息。',
+      },
+    ],
+  },
+  {
+    titleEn: '2. Service Purpose',
+    titleZh: '2. 服务目的',
+    paragraphs: [
+      {
+        en: 'GIDS is a Global Infectious Disease Surveillance project built to make official infectious disease surveillance data easier to find, compare, visualize, and monitor across jurisdictions.',
+        zh: 'GIDS 是 Global Infectious Disease Surveillance 项目，旨在让不同司法辖区的官方传染病监测数据更易检索、比较、可视化和持续关注。',
+      },
+      {
+        en: 'The service may include automated data collection, parsing, disease-name normalization, public-health source attribution, AI-assisted bilingual summaries, report generation, alert or digest subscriptions, and open-source project materials.',
+        zh: '服务内容可能包括自动化数据采集、解析、疾病名称标准化、公共卫生来源标注、AI 辅助双语摘要、报告生成、提醒或摘要订阅，以及开源项目资料。',
+      },
+      {
+        en: 'GIDS is provided for research, education, journalism, open-data exploration, and public-interest monitoring. It is not a substitute for official public health systems, clinical judgment, professional epidemiological review, or emergency communications.',
+        zh: 'GIDS 用于研究、教育、新闻报道、开放数据探索和公共利益监测，不替代官方公共卫生系统、临床判断、专业流行病学复核或应急通信。',
+      },
+    ],
+  },
+  {
+    titleEn: '3. Not-for-Profit Nature and Commercial Use Restrictions',
+    titleZh: '3. 非营利性质与商业使用限制',
+    paragraphs: [
+      {
+        en: 'The public GIDS website and subscription service are operated on a not-for-profit, public-interest, research-oriented basis. Unless GIDS expressly states otherwise, access to the public website and public subscription features is provided without charge.',
+        zh: 'GIDS 公开网站和订阅服务以非营利、公共利益、研究导向方式运营。除非 GIDS 另有明确说明，公开网站和公开订阅功能均免费提供。',
+      },
+      {
+        en: 'This statement describes the operating purpose of the public service. It does not represent that GIDS is a registered charity, tax-exempt organization, foundation, or other regulated non-profit legal entity unless a separate official notice expressly says so.',
+        zh: '上述表述用于说明公开服务的运营目的，并不表示 GIDS 已登记为慈善机构、免税组织、基金会或其他受监管的非营利法律实体，除非另有正式公告明确说明。',
+      },
+      {
+        en: 'Without prior written authorization from GIDS, you may not use the GIDS website, public data views, generated reports, charts, summaries, subscription system, name, logos, or branding for commercial products or services, resale, paid monitoring, proprietary datasets, advertising, lead generation, model training, automated commercial scraping, or any other revenue-generating activity.',
+        zh: '未经 GIDS 事先书面授权，你不得将 GIDS 网站、公开数据视图、生成报告、图表、摘要、订阅系统、名称、标识或品牌用于商业产品或服务、转售、付费监测、专有数据集、广告、获客、模型训练、自动化商业抓取或任何其他营利性活动。',
+      },
+      {
+        en: 'Permitted non-commercial uses include personal learning, academic citation, classroom use, public-interest journalism, non-commercial research, and internal evaluation, provided that you preserve attribution, do not misrepresent the data, and comply with source-specific terms.',
+        zh: '允许的非商业使用包括个人学习、学术引用、课堂教学、公共利益新闻报道、非商业研究和内部评估，但你必须保留署名，不得歪曲数据，并遵守来源特定条款。',
+      },
+      {
+        en: 'Commercial authorization must be explicit and in writing. Silence, lack of technical blocking, public availability, repository visibility, or receipt of subscription emails does not grant commercial permission.',
+        zh: '商业授权必须是明确且书面的。沉默、未设置技术阻断、公开可访问、仓库可见或收到订阅邮件，均不构成商业许可。',
+      },
+      {
+        en: 'This commercial-use restriction applies to the public service and GIDS-created content. It does not override any separate open-source software license published in the project repository; code reuse is governed by the repository license, while third-party source data remains governed by the original providers\' terms.',
+        zh: '本商业使用限制适用于公开服务和 GIDS 创建的内容，不覆盖项目仓库中单独公布的开源软件许可；代码复用以仓库许可为准，第三方来源数据仍以原始提供方条款为准。',
+      },
+    ],
+  },
+  {
+    titleEn: '4. Informational Use Only',
+    titleZh: '4. 仅供信息参考',
+    paragraphs: [
+      {
+        en: 'GIDS content does not constitute medical advice, diagnosis, treatment advice, legal advice, policy instruction, travel advice, or an official public health directive.',
+        zh: 'GIDS 内容不构成医疗建议、诊断、治疗建议、法律建议、政策指令、旅行建议或官方公共卫生指令。',
+      },
+      {
+        en: 'For personal medical questions, consult qualified healthcare professionals. For official case counts, reporting definitions, outbreaks, travel restrictions, public-health measures, or emergencies, consult the relevant government or health authority directly.',
+        zh: '如涉及个人医疗问题，请咨询合格医疗专业人员。如涉及官方病例数、报告定义、暴发事件、旅行限制、公共卫生措施或紧急情况，请直接查阅相关政府或卫生主管机构信息。',
+      },
+      {
+        en: 'Do not use GIDS as the sole basis for clinical decisions, emergency response, procurement, legal compliance, investment, insurance, employment, school closure, border control, or other high-impact decisions.',
+        zh: '请勿将 GIDS 作为临床决策、应急响应、采购、法律合规、投资、保险、雇佣、停课、边境管理或其他重大影响决策的唯一依据。',
+      },
+    ],
+  },
+  {
+    titleEn: '5. Data Sources and Methodology',
+    titleZh: '5. 数据来源与处理方法',
+    paragraphs: [
+      {
+        en: 'GIDS aggregates and republishes derived views of public infectious disease information from official health authorities, open-data portals, public dashboards, reports, APIs, and other source materials identified on the website.',
+        zh: 'GIDS 会聚合并再发布来自官方卫生机构、开放数据门户、公共仪表板、报告、API 及网站列明来源材料的传染病公开信息衍生视图。',
+      },
+      {
+        en: 'The project normalizes names, countries, time periods, cases, deaths, and related fields into a shared data model. This improves comparability but may also introduce mapping assumptions, aggregation choices, or temporary inconsistencies.',
+        zh: '项目会将名称、国家、时间周期、病例数、死亡数及相关字段标准化到统一数据模型中。这有助于比较，但也可能引入映射假设、聚合选择或临时不一致。',
+      },
+      {
+        en: 'Source data may be delayed, corrected, withdrawn, preliminary, incomplete, revised, or subject to different case definitions. GIDS may update records when source materials change, but it cannot guarantee real-time synchronization or complete historical correction.',
+        zh: '来源数据可能存在延迟、修订、撤回、初步统计、不完整、定义差异等情况。GIDS 可在来源材料变化时更新记录，但无法保证实时同步或完整追溯修正。',
+      },
+    ],
+  },
+  {
+    titleEn: '6. AI-Assisted Reports and Automated Processing',
+    titleZh: '6. AI 辅助报告与自动化处理',
+    paragraphs: [
+      {
+        en: 'Some summaries, insights, translations, labels, or reports may be generated or assisted by automated systems, including language models, based on database-backed surveillance records and source metadata.',
+        zh: '部分摘要、洞察、翻译、标签或报告可能由自动化系统（包括语言模型）基于数据库监测记录和来源元数据生成或辅助生成。',
+      },
+      {
+        en: 'AI-assisted content may contain omissions, outdated interpretations, translation issues, unsupported inferences, or reasoning errors. Users should verify important statements against cited sources and official publications.',
+        zh: 'AI 辅助内容可能存在遗漏、过时解读、翻译问题、缺乏充分支持的推断或推理错误。对于重要陈述，用户应结合引用来源和官方发布内容自行核验。',
+      },
+      {
+        en: 'GIDS may use review workflows and quality checks, but publication does not mean every automated statement has been independently reviewed by a licensed physician, attorney, public-health authority, or regulator.',
+        zh: 'GIDS 可能使用审核流程和质量检查，但内容发布并不表示每一条自动化陈述均已由持证医生、律师、公共卫生主管机构或监管机构独立复核。',
+      },
+    ],
+  },
+  {
+    titleEn: '7. Subscriptions and Email Communications',
+    titleZh: '7. 订阅与邮件通信',
+    paragraphs: [
+      {
+        en: 'When you submit a subscription request, GIDS records your email address, selected lists, country and disease preferences, language, delivery frequency, timezone, source page, confirmation status, and related delivery metadata needed to provide the requested updates.',
+        zh: '当你提交订阅请求时，GIDS 会记录你的邮箱地址、所选列表、国家和疾病偏好、语言、投递频率、时区、来源页面、确认状态以及提供所请求更新所需的相关投递元数据。',
+      },
+      {
+        en: 'Subscriptions may require email confirmation before activation. Confirmation messages, digests, reports, alerts, resubmission notices, or service messages may be sent by GIDS Alerts or another sender published by GIDS.',
+        zh: '订阅可能需要邮件确认后才会激活。确认邮件、摘要、报告、提醒、重新提交通知或服务消息可能由 GIDS Alerts 或 GIDS 公布的其他发件人发送。',
+      },
+      {
+        en: 'Every subscription delivery is intended to include an unsubscribe or preference-control mechanism where technically available and legally required. You may stop future subscription emails by using the signed unsubscribe link or the contact channel published by GIDS.',
+        zh: '在技术可用且法律要求的范围内，每次订阅投递均应包含退订或偏好控制机制。你可以通过签名退订链接或 GIDS 公布的联系渠道停止后续订阅邮件。',
+      },
+      {
+        en: 'Subscription emails should accurately identify the sender and should not use materially deceptive subject lines or routing information. Where a message is promotional or otherwise requires additional disclosures, GIDS should include the legally required sender, contact, and opt-out information.',
+        zh: '订阅邮件应准确标识发件人，不应使用具有实质误导性的主题行或路由信息。若邮件属于推广性质或依法需要额外披露，GIDS 应包含法律要求的发件人、联系方式和退订信息。',
+      },
+      {
+        en: 'Email delivery is not guaranteed. Messages may be delayed, filtered, blocked, duplicated, or fail because of provider limits, recipient settings, security checks, or third-party infrastructure.',
+        zh: '邮件投递不作保证。由于服务商限制、收件人设置、安全检查或第三方基础设施原因，邮件可能延迟、被过滤、被拦截、重复或发送失败。',
+      },
+    ],
+  },
+  {
+    titleEn: '8. User Responsibilities',
+    titleZh: '8. 用户责任',
+    paragraphs: [
+      {
+        en: 'You are responsible for evaluating whether GIDS content is suitable for your use case, confirming information against primary sources, and complying with laws, professional duties, institutional review requirements, and source-specific terms that apply to your use.',
+        zh: '你应自行评估 GIDS 内容是否适合你的使用场景，结合一手来源进行确认，并遵守适用于你使用行为的法律、专业义务、机构审查要求和来源特定条款。',
+      },
+      {
+        en: 'You must not submit another person\'s email address without authorization, interfere with the service, bypass security controls, misrepresent GIDS output as an official government publication, remove source attribution, or use the service to send spam, malware, deceptive content, or unlawful material.',
+        zh: '你不得未经授权提交他人邮箱地址，不得干扰服务、绕过安全控制、将 GIDS 输出误称为政府官方发布、移除来源标注，或利用服务发送垃圾邮件、恶意软件、欺骗性内容或违法材料。',
+      },
+      {
+        en: 'Automated access, scraping, mirroring, or bulk download should respect robots directives, published API guidance, rate limits, cache headers, source terms, and reasonable load constraints.',
+        zh: '自动化访问、抓取、镜像或批量下载应遵守 robots 指令、已发布 API 指南、速率限制、缓存头、来源条款和合理负载约束。',
+      },
+    ],
+  },
+  {
+    titleEn: '9. Intellectual Property, Attribution, and Reuse',
+    titleZh: '9. 知识产权、署名与复用',
+    paragraphs: [
+      {
+        en: 'The GIDS software project, website design, generated views, documentation, and original text are protected by applicable intellectual property laws and any license published in the project repository.',
+        zh: 'GIDS 软件项目、网站设计、生成视图、文档和原创文本受适用知识产权法律以及项目仓库公布许可的保护。',
+      },
+      {
+        en: 'Public health source data remains subject to the rights, licenses, disclaimers, and attribution requirements of the original source authorities or data providers. GIDS does not claim ownership of third-party source materials.',
+        zh: '公共卫生来源数据仍受原始来源机构或数据提供方的权利、许可、免责声明和署名要求约束。GIDS 不主张拥有第三方来源材料。',
+      },
+      {
+        en: 'When reusing GIDS-derived datasets, charts, or reports, preserve source attribution, cite GIDS and the relevant primary sources, identify the retrieval or build date, and avoid implying endorsement by GIDS or any health authority.',
+        zh: '当你复用 GIDS 衍生数据集、图表或报告时，应保留来源标注，引用 GIDS 及相关一手来源，注明获取日期或构建日期，并避免暗示 GIDS 或任何卫生主管机构对你的使用背书。',
+      },
+      {
+        en: 'You may not use GIDS names, logos, trade dress, screenshots, reports, charts, or data views in a way that suggests sponsorship, certification, partnership, official approval, or public-health authority status without express written permission.',
+        zh: '未经明确书面许可，你不得以暗示赞助、认证、合作关系、官方批准或公共卫生主管机构身份的方式使用 GIDS 名称、标识、商业外观、截图、报告、图表或数据视图。',
+      },
+    ],
+  },
+  {
+    titleEn: '10. Privacy Notice',
+    titleZh: '10. 隐私说明',
+    paragraphs: [
+      {
+        en: 'GIDS collects only the personal information reasonably needed to provide subscriptions, maintain security, diagnose errors, prevent abuse, record consent and audit events, and operate the website.',
+        zh: 'GIDS 仅收集为提供订阅、维护安全、诊断错误、防止滥用、记录同意和审计事件、运营网站而合理需要的个人信息。',
+      },
+      {
+        en: 'Subscription records may include email address, hashed email lookup values, preferences, locale, timezone, confirmation and unsubscribe tokens, delivery status, recipient domain, technical logs, user agent, and hashed or otherwise reduced IP metadata.',
+        zh: '订阅记录可能包括邮箱地址、邮箱哈希查询值、偏好、语言、时区、确认与退订令牌、投递状态、收件域名、技术日志、用户代理，以及经过哈希或其他降维处理的 IP 元数据。',
+      },
+      {
+        en: 'GIDS does not sell subscriber email addresses and does not use subscription addresses for targeted advertising. Service providers such as hosting, database, security, email, analytics, or repository platforms may process information only as needed to support the service.',
+        zh: 'GIDS 不出售订阅者邮箱地址，也不将订阅邮箱用于定向广告。托管、数据库、安全、邮件、分析或代码托管等服务提供商可能仅在支持服务所需范围内处理信息。',
+      },
+      {
+        en: 'Data may be processed in countries other than where you live. GIDS applies reasonable technical and organizational safeguards, but no internet service can guarantee absolute security.',
+        zh: '数据可能在你居住地以外的国家或地区处理。GIDS 会采取合理技术和组织性保护措施，但任何互联网服务都无法保证绝对安全。',
+      },
+      {
+        en: 'Subscription data is generally retained while your subscription is active and for a reasonable period afterward for audit, security, suppression-list, backup, legal, or operational purposes. Aggregated, de-identified, or security logs may be retained longer where appropriate.',
+        zh: '订阅数据通常会在订阅有效期间保留，并在之后为审计、安全、退订抑制列表、备份、法律或运营目的保留合理期限。汇总、去标识化或安全日志可在适当情况下保留更长时间。',
+      },
+      {
+        en: 'Depending on your location, you may have rights to access, correct, delete, restrict, export, object to processing, withdraw consent, or lodge a complaint with a supervisory authority. Use the published contact channel to make a privacy request.',
+        zh: '根据你所在地法律，你可能享有访问、更正、删除、限制处理、导出、反对处理、撤回同意或向监管机构投诉的权利。请通过公布的联系渠道提交隐私请求。',
+      },
+      {
+        en: 'Where consent is used as the basis for subscription emails, withdrawing consent will stop future subscription delivery after the request is processed, but it does not affect processing already completed or information retained for lawful security, audit, suppression, or legal purposes.',
+        zh: '当订阅邮件以同意为处理基础时，撤回同意会在请求处理后停止未来订阅投递，但不影响已经完成的处理，也不影响为合法安全、审计、退订抑制或法律目的保留的信息。',
+      },
+    ],
+  },
+  {
+    titleEn: '11. Local Storage, Cookies, and Security Controls',
+    titleZh: '11. 本地存储、Cookie 与安全控制',
+    paragraphs: [
+      {
+        en: 'The website may use local storage or similar browser features to remember language and theme preferences. These preferences are stored in your browser and can be cleared through browser settings.',
+        zh: '网站可能使用本地存储或类似浏览器功能记住语言和主题偏好。这些偏好保存在你的浏览器中，可通过浏览器设置清除。',
+      },
+      {
+        en: 'GIDS may use cookies, anti-abuse tokens, rate-limit signals, security headers, email verification links, or third-party security services to protect the subscription system and public website.',
+        zh: 'GIDS 可能使用 Cookie、反滥用令牌、速率限制信号、安全响应头、邮件验证链接或第三方安全服务保护订阅系统和公开网站。',
+      },
+      {
+        en: 'The current public website is not designed around targeted advertising or behavioral ad tracking. If that changes, GIDS should update this notice before using subscription information for materially different purposes.',
+        zh: '当前公开网站并非围绕定向广告或行为广告追踪设计。若未来发生变化，GIDS 应在将订阅信息用于实质不同目的前更新本说明。',
+      },
+    ],
+  },
+  {
+    titleEn: '12. Children and Minors',
+    titleZh: '12. 儿童与未成年人',
+    paragraphs: [
+      {
+        en: 'GIDS is intended for researchers, students, journalists, public-health practitioners, developers, and general readers interested in surveillance data. It is not directed to children under 13 or to children below the minimum digital-consent age in their jurisdiction.',
+        zh: 'GIDS 面向对监测数据感兴趣的研究者、学生、新闻工作者、公共卫生从业者、开发者和一般读者，并非面向 13 岁以下儿童或其所在地最低数字同意年龄以下儿童。',
+      },
+      {
+        en: 'Minors should use GIDS only with permission and supervision from a parent, guardian, teacher, or other responsible adult. Do not submit personal information for a child unless you are authorized to do so.',
+        zh: '未成年人应在父母、监护人、教师或其他负责任成年人许可和监督下使用 GIDS。除非你已获得授权，请勿为儿童提交个人信息。',
+      },
+      {
+        en: 'If GIDS learns that it has collected subscription personal information from a child where parental consent or another lawful basis is required but not available, it may delete or disable the relevant subscription information.',
+        zh: '如果 GIDS 发现已收集儿童订阅个人信息，而依法需要但无法取得父母同意或其他合法处理基础，GIDS 可删除或停用相关订阅信息。',
+      },
+    ],
+  },
+  {
+    titleEn: '13. Third-Party Services and Links',
+    titleZh: '13. 第三方服务与链接',
+    paragraphs: [
+      {
+        en: 'GIDS may link to official health authorities, source portals, GitHub, infrastructure providers, email providers, analytics tools, or other third-party services. These services are governed by their own terms and privacy practices.',
+        zh: 'GIDS 可能链接至官方卫生机构、来源门户、GitHub、基础设施提供商、邮件服务商、分析工具或其他第三方服务。这些服务受其自身条款和隐私实践约束。',
+      },
+      {
+        en: 'GIDS is not responsible for the availability, accuracy, security, or policies of third-party websites or services. Links are provided for source transparency and convenience, not endorsement.',
+        zh: 'GIDS 不负责第三方网站或服务的可用性、准确性、安全性或政策。链接用于提高来源透明度和便利访问，并不表示背书。',
+      },
+    ],
+  },
+  {
+    titleEn: '14. Availability, Maintenance, and Changes',
+    titleZh: '14. 可用性、维护与变更',
+    paragraphs: [
+      {
+        en: 'GIDS may add, change, suspend, restrict, or discontinue features, countries, diseases, reports, subscription lists, datasets, or access methods at any time, including for maintenance, data-quality review, abuse prevention, legal compliance, cost control, or project priorities.',
+        zh: 'GIDS 可随时新增、变更、暂停、限制或终止功能、国家、疾病、报告、订阅列表、数据集或访问方式，包括出于维护、数据质量审查、防滥用、法律合规、成本控制或项目优先级考虑。',
+      },
+      {
+        en: 'The service may be unavailable during rebuilds, deployments, source outages, security checks, infrastructure incidents, or upstream provider disruptions.',
+        zh: '在重建、部署、来源不可用、安全检查、基础设施事件或上游服务中断期间，服务可能不可用。',
+      },
+    ],
+  },
+  {
+    titleEn: '15. Disclaimers',
+    titleZh: '15. 免责声明',
+    paragraphs: [
+      {
+        en: 'GIDS is provided on an "as is" and "as available" basis. To the fullest extent permitted by law, GIDS disclaims warranties of accuracy, completeness, timeliness, reliability, fitness for a particular purpose, non-infringement, uninterrupted availability, or error-free operation.',
+        zh: 'GIDS 按“现状”和“可用状态”提供。在法律允许的最大范围内，GIDS 不对准确性、完整性、及时性、可靠性、特定用途适用性、不侵权、持续可用性或无错误运行作出保证。',
+      },
+      {
+        en: 'GIDS does not warrant that published data reflects the latest official situation, that automated mappings are correct, that generated reports are complete, or that subscription alerts will arrive before a relevant public-health event changes.',
+        zh: 'GIDS 不保证已发布数据反映最新官方情况，不保证自动映射正确，不保证生成报告完整，也不保证订阅提醒会在相关公共卫生事件变化前送达。',
+      },
+    ],
+  },
+  {
+    titleEn: '16. Limitation of Liability',
+    titleZh: '16. 责任限制',
+    paragraphs: [
+      {
+        en: 'To the fullest extent permitted by law, GIDS, its maintainers, contributors, infrastructure providers, and related project participants will not be liable for indirect, incidental, special, consequential, exemplary, punitive, or reliance-based damages arising from use of or inability to use the service.',
+        zh: '在法律允许的最大范围内，GIDS、其维护者、贡献者、基础设施提供商及相关项目参与者不对因使用或无法使用服务产生的间接、偶发、特殊、后果性、惩戒性或基于信赖的损害承担责任。',
+      },
+      {
+        en: 'This includes, without limitation, losses related to medical, public-health, operational, business, academic, regulatory, travel, procurement, financial, or reputational decisions made using GIDS content.',
+        zh: '该限制包括但不限于因使用 GIDS 内容作出医疗、公共卫生、运营、商业、学术、监管、旅行、采购、财务或声誉相关决策而产生的损失。',
+      },
+      {
+        en: 'Nothing in these terms limits liability that cannot be limited under applicable law.',
+        zh: '本协议不限制适用法律不允许限制的责任。',
+      },
+    ],
+  },
+  {
+    titleEn: '17. Suspension and Enforcement',
+    titleZh: '17. 暂停与执行',
+    paragraphs: [
+      {
+        en: 'GIDS may block, rate-limit, suspend, remove, or refuse access, subscriptions, or automated requests that appear abusive, unlawful, security-sensitive, privacy-invasive, misleading, or inconsistent with these terms.',
+        zh: '对于疑似滥用、违法、影响安全、侵犯隐私、具有误导性或不符合本协议的访问、订阅或自动化请求，GIDS 可采取阻断、限速、暂停、移除或拒绝等措施。',
+      },
+      {
+        en: 'If you believe access was restricted in error, use the published contact channel and provide enough context for review.',
+        zh: '如果你认为访问被错误限制，请通过公布的联系渠道说明情况，并提供足够背景供复核。',
+      },
+      {
+        en: 'Unauthorized commercial use may result in termination of access, withdrawal of permission, removal requests, attribution correction requests, suspension of subscriptions, and any other remedies available under applicable law.',
+        zh: '未经授权的商业使用可能导致访问终止、许可撤回、移除请求、署名更正请求、订阅暂停，以及适用法律允许的其他救济措施。',
+      },
+    ],
+  },
+  {
+    titleEn: '18. Changes to These Terms',
+    titleZh: '18. 协议变更',
+    paragraphs: [
+      {
+        en: 'GIDS may update these terms as the project, data sources, subscription system, privacy practices, or applicable requirements evolve. The "Last updated" date indicates the latest published version.',
+        zh: '随着项目、数据来源、订阅系统、隐私实践或适用要求变化，GIDS 可能更新本协议。“最后更新”日期表示最新发布版本。',
+      },
+      {
+        en: 'Material changes may be announced on the website, repository, or subscription communications where practical. Continued use after an update means you accept the updated terms.',
+        zh: '如发生重大变化，GIDS 可在可行情况下通过网站、仓库或订阅通信进行说明。协议更新后继续使用服务，即表示你接受更新后的条款。',
+      },
+      {
+        en: 'If any provision is held invalid or unenforceable, the remaining provisions will continue to apply to the fullest extent permitted by law. Failure to enforce a provision does not waive the right to enforce it later.',
+        zh: '若任何条款被认定无效或不可执行，其余条款仍在法律允许的最大范围内继续适用。未执行某一条款，不表示放弃日后执行该条款的权利。',
+      },
+    ],
+  },
+  {
+    titleEn: '19. Contact and Requests',
+    titleZh: '19. 联系与请求',
+    paragraphs: [
+      {
+        en: 'For data-quality issues, source corrections, subscription problems, privacy requests, security concerns, or legal notices, use the project issue tracker or another contact channel published by GIDS.',
+        zh: '如需反馈数据质量问题、来源修正、订阅问题、隐私请求、安全问题或法律通知，请使用 GIDS 公布的项目 issue tracker 或其他联系渠道。',
+      },
+      {
+        en: 'When reporting data-quality or safety issues, include the page URL, source URL if available, disease or country, date range, a concise description, and any supporting evidence that helps reproduce the issue.',
+        zh: '反馈数据质量或安全问题时，请提供页面 URL、可用的来源 URL、疾病或国家、日期范围、简要说明，以及有助于复现问题的支持材料。',
+      },
+    ],
+  },
+];
+---
+
+<BaseLayout
+  title="Service Terms"
+  description="GIDS service terms and privacy notice for public infectious disease surveillance data, AI-assisted reports, and email subscriptions."
+>
+  <section class="terms-page">
+    <div class="mx-auto max-w-5xl px-4 py-14 sm:px-6 lg:px-8">
+      <div class="terms-hero">
+        <p class="terms-kicker" data-lang-en="Official notice" data-lang-zh="官方说明">Official notice</p>
+        <h1 data-lang-en="GIDS Service Terms and Privacy Notice" data-lang-zh="GIDS 服务协议与隐私说明">
+          GIDS Service Terms and Privacy Notice
+        </h1>
+        <p
+          class="terms-updated"
+          data-lang-en={`Last updated: ${updatedAt}`}
+          data-lang-zh="最后更新：2026 年 5 月 24 日"
+        >
+          Last updated: {updatedAt}
+        </p>
+        <p
+          class="terms-lead"
+          data-lang-en="This page explains the rules for using GIDS, the limits of public infectious disease surveillance information, and how subscription data is handled."
+          data-lang-zh="本页说明 GIDS 的使用规则、公开传染病监测信息的使用边界，以及订阅数据的处理方式。"
+        >
+          This page explains the rules for using GIDS, the limits of public infectious disease surveillance information, and how subscription data is handled.
+        </p>
+      </div>
+
+      <div class="terms-summary" aria-label="Terms summary">
+        {summaryItems.map((item) => (
+          <article>
+            <p class="terms-summary-label" data-lang-en={item.labelEn} data-lang-zh={item.labelZh}>
+              {item.labelEn}
+            </p>
+            <p class="terms-summary-value" data-lang-en={item.valueEn} data-lang-zh={item.valueZh}>
+              {item.valueEn}
+            </p>
+          </article>
+        ))}
+      </div>
+
+      <div class="terms-surface">
+        {sections.map((section) => (
+          <section>
+            <h2 data-lang-en={section.titleEn} data-lang-zh={section.titleZh}>{section.titleEn}</h2>
+            {section.paragraphs.map((paragraph) => (
+              <p data-lang-en={paragraph.en} data-lang-zh={paragraph.zh}>{paragraph.en}</p>
+            ))}
+          </section>
+        ))}
+
+        <section>
+          <h2 data-lang-en="Project Links" data-lang-zh="项目链接">Project Links</h2>
+          <div class="terms-link-list">
+            <a href="https://github.com/xmusphlkg/globalID2" target="_blank" rel="noopener noreferrer">
+              <span data-lang-en="Source repository" data-lang-zh="源码仓库">Source repository</span>
+            </a>
+            <a href="https://github.com/xmusphlkg/globalID2/issues" target="_blank" rel="noopener noreferrer">
+              <span data-lang-en="Issue tracker" data-lang-zh="问题反馈">Issue tracker</span>
+            </a>
+            <a href="/subscribe/">
+              <span data-lang-en="Subscription center" data-lang-zh="订阅中心">Subscription center</span>
+            </a>
+          </div>
+        </section>
+      </div>
+
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+.terms-page {
+  min-height: 100%;
+}
+
+.terms-hero {
+  border-left: 2px solid rgb(20 184 166 / 0.7);
+  padding-left: clamp(1rem, 3vw, 1.35rem);
+}
+
+.terms-page h1 {
+  margin-top: 0.35rem;
+  max-width: 820px;
+  font-family: var(--font-serif, Georgia, serif);
+  font-size: clamp(2.25rem, 6vw, 3.75rem);
+  font-weight: 650;
+  line-height: 1.08;
+  color: rgb(var(--text-strong));
+}
+
+.terms-kicker {
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  color: rgb(20 184 166);
+}
+
+.terms-updated {
+  margin-top: 0.8rem;
+  color: rgb(var(--text-faint));
+  font-size: 0.92rem;
+}
+
+.terms-lead {
+  margin-top: 1.1rem;
+  max-width: 760px;
+  color: rgb(var(--text-muted));
+  font-size: 1rem;
+  line-height: 1.75;
+}
+
+.terms-summary {
+  display: grid;
+  gap: 0.85rem;
+  margin: 2rem 0;
+}
+
+.terms-summary article {
+  border: 1px solid rgb(var(--border) / 0.78);
+  background: rgb(var(--surface-raised) / 0.56);
+  padding: 1rem;
+}
+
+.terms-summary-label {
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  color: rgb(var(--text-faint));
+}
+
+.terms-summary-value {
+  margin-top: 0.35rem;
+  color: rgb(var(--text-strong));
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.terms-surface {
+  border: 1px solid rgb(var(--border) / 0.82);
+  background: linear-gradient(180deg, rgb(var(--surface) / 0.98), rgb(var(--surface-raised) / 0.72));
+  padding: clamp(1.25rem, 4vw, 2rem);
+  box-shadow: var(--paper-shadow);
+}
+
+.terms-surface section + section {
+  margin-top: 1.55rem;
+  border-top: 1px solid rgb(var(--border) / 0.62);
+  padding-top: 1.35rem;
+}
+
+.terms-surface h2 {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: rgb(var(--text-strong));
+}
+
+.terms-surface p {
+  margin-top: 0.62rem;
+  color: rgb(var(--text-muted));
+  font-size: 0.96rem;
+  line-height: 1.76;
+}
+
+.terms-link-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  margin-top: 0.85rem;
+}
+
+.terms-link-list a {
+  border: 1px solid rgb(20 184 166 / 0.38);
+  background: rgb(20 184 166 / 0.08);
+  color: rgb(15 118 110);
+  padding: 0.55rem 0.72rem;
+  font-size: 0.84rem;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+:global(.dark) .terms-link-list a {
+  color: rgb(45 212 191);
+}
+
+.terms-link-list a:hover {
+  border-color: rgb(20 184 166 / 0.68);
+  background: rgb(20 184 166 / 0.14);
+}
+
+@media (min-width: 768px) {
+  .terms-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .terms-summary {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+</style>

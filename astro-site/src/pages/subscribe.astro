@@ -1,52 +1,1008 @@
 ---
 // src/pages/subscribe.astro — Subscribe page
 import BaseLayout from '../layouts/BaseLayout.astro';
+
+const subscriptionsApiBase = (
+  import.meta.env.PUBLIC_SUBSCRIPTIONS_API_BASE ||
+  process.env.PUBLIC_SUBSCRIPTIONS_API_BASE ||
+  process.env.SUBSCRIPTIONS__PUBLIC_BASE_URL ||
+  'https://subscriptions.globalinfectiousdisease.com'
+).replace(/\/+$/, '');
 ---
 
 <BaseLayout
   title="Subscribe"
-  description="Subscribe to GIDS disease surveillance alerts via Microsoft Form."
+  description="Subscribe to GIDS disease surveillance alerts and report updates."
 >
-  <!-- Hero -->
-  <section class="relative overflow-hidden py-16 sm:py-20">
-    <div class="absolute inset-0 -z-10">
-      <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[350px] bg-teal-600/10 rounded-full blur-3xl" />
-    </div>
-    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-      <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-none bg-[rgb(var(--surface-raised))] border border-[rgb(var(--border))] text-[rgb(var(--text-muted))] text-xs font-semibold mb-6">
-        <span class="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse" />
-        <span data-lang-en="GIDS — Global Infectious Disease Surveillance" data-lang-zh="GIDS — 全球传染病监测">GIDS — Global Infectious Disease Surveillance</span>
+  <section class="subscribe-page">
+    <div class="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-18 lg:px-8">
+      <div class="grid gap-10 lg:grid-cols-[minmax(0,0.82fr)_minmax(520px,1fr)] lg:items-start">
+        <div class="subscribe-intro">
+          <div class="mb-6 inline-flex items-center gap-2 border border-teal-500/25 bg-teal-500/10 px-3 py-1.5 text-xs font-semibold text-teal-400">
+            <span class="h-1.5 w-1.5 rounded-full bg-teal-400"></span>
+            <span data-lang-en="GIDS subscription center" data-lang-zh="GIDS 订阅中心">GIDS subscription center</span>
+          </div>
+
+          <h1 class="font-serif text-4xl font-semibold leading-tight tracking-tight text-[rgb(var(--text-strong))] sm:text-5xl">
+            <span data-lang-en="Disease surveillance updates, matched to your scope" data-lang-zh="按你的关注范围接收传染病监测更新">
+              Disease surveillance updates, matched to your scope
+            </span>
+          </h1>
+
+          <p class="mt-5 max-w-2xl text-base leading-7 text-[rgb(var(--text-muted))] sm:text-lg">
+            <span data-lang-en="Choose the reports, countries, and diseases you want to follow. GIDS records your preferences securely and includes a signed unsubscribe link in every delivery." data-lang-zh="选择你想关注的报告、国家和疾病。GIDS 会安全记录你的偏好，并在每次投递中附带签名退订链接。">
+              Choose the reports, countries, and diseases you want to follow. GIDS records your preferences securely and includes a signed unsubscribe link in every delivery.
+            </span>
+          </p>
+
+          <dl class="subscribe-facts mt-8 grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+            <div>
+              <dt data-lang-en="Delivery" data-lang-zh="投递内容">Delivery</dt>
+              <dd data-lang-en="Reports, digests, and priority alerts" data-lang-zh="报告、摘要和重点提醒">
+                Reports, digests, and priority alerts
+              </dd>
+            </div>
+            <div>
+              <dt data-lang-en="Filters" data-lang-zh="过滤条件">Filters</dt>
+              <dd data-lang-en="Country and disease preferences" data-lang-zh="国家和疾病偏好">
+                Country and disease preferences
+              </dd>
+            </div>
+            <div>
+              <dt data-lang-en="Control" data-lang-zh="控制权">Control</dt>
+              <dd data-lang-en="One-click unsubscribe link" data-lang-zh="一键退订链接">
+                One-click unsubscribe link
+              </dd>
+            </div>
+          </dl>
+        </div>
+
+        <form
+          id="subscription-form"
+          class="subscribe-form"
+          data-api-base={subscriptionsApiBase}
+          novalidate
+        >
+          <div class="subscribe-form-header">
+            <div>
+              <p class="subscribe-kicker" data-lang-en="Preferences" data-lang-zh="订阅偏好">Preferences</p>
+              <h2 data-lang-en="Create a subscription" data-lang-zh="创建订阅">Create a subscription</h2>
+            </div>
+            <span class="subscribe-service-badge" data-lang-en="Official GIDS service" data-lang-zh="GIDS 官方服务">Official GIDS service</span>
+          </div>
+
+          <div class="subscribe-field">
+            <label for="subscriber-email" data-lang-en="Email address" data-lang-zh="邮箱地址">Email address</label>
+            <input
+              id="subscriber-email"
+              class="site-control-input subscribe-input"
+              name="email"
+              type="email"
+              inputmode="email"
+              autocomplete="email"
+              required
+              placeholder="name@example.com"
+            />
+          </div>
+
+          <div class="subscribe-grid">
+            <fieldset class="subscribe-field">
+              <legend data-lang-en="Language" data-lang-zh="语言">Language</legend>
+              <div class="subscribe-segmented" id="locale-options"></div>
+            </fieldset>
+
+            <fieldset class="subscribe-field">
+              <legend data-lang-en="Frequency" data-lang-zh="频率">Frequency</legend>
+              <div class="subscribe-segmented" id="frequency-options"></div>
+            </fieldset>
+          </div>
+
+          <fieldset class="subscribe-field">
+            <legend data-lang-en="Subscription lists" data-lang-zh="订阅列表">Subscription lists</legend>
+            <div class="subscribe-option-grid" id="list-options"></div>
+          </fieldset>
+
+          <fieldset class="subscribe-field">
+            <div class="subscribe-field-title">
+              <legend data-lang-en="Countries" data-lang-zh="国家和地区">Countries</legend>
+              <label class="subscribe-inline-check">
+                <input id="all-countries" type="checkbox" checked />
+                <span data-lang-en="All countries" data-lang-zh="全部国家和地区">All countries</span>
+              </label>
+            </div>
+            <div class="subscribe-chip-grid" id="country-options"></div>
+          </fieldset>
+
+          <fieldset class="subscribe-field">
+            <div class="subscribe-field-title">
+              <legend data-lang-en="Diseases" data-lang-zh="疾病">Diseases</legend>
+              <span data-lang-en="Leave empty for all" data-lang-zh="留空表示全部">Leave empty for all</span>
+            </div>
+            <input
+              id="disease-search"
+              class="site-control-input subscribe-input mt-3"
+              type="text"
+              placeholder="Search diseases"
+              data-lang-en-placeholder="Search diseases"
+              data-lang-zh-placeholder="搜索疾病"
+            />
+            <div class="subscribe-chip-grid mt-3" id="disease-options"></div>
+          </fieldset>
+
+          <label class="subscribe-consent">
+            <input type="checkbox" name="consent" required />
+            <span>
+              <span data-lang-en="I agree to receive GIDS subscription emails and accept the" data-lang-zh="我同意接收 GIDS 订阅邮件，并接受">
+                I agree to receive GIDS subscription emails and accept the
+              </span>
+              <a href="/terms/" target="_blank" rel="noopener" data-lang-en="Service Terms" data-lang-zh="服务协议">
+                Service Terms
+              </a>
+              <span data-lang-en="." data-lang-zh="。">.</span>
+            </span>
+          </label>
+
+          <div id="subscription-status" class="subscribe-status" role="status" aria-live="polite" hidden></div>
+
+          <div class="subscribe-actions">
+            <button id="subscription-submit" type="submit" class="subscribe-submit">
+              <span data-lang-en="Subscribe" data-lang-zh="提交订阅">Subscribe</span>
+            </button>
+            <p data-lang-en="We only send updates you request. Every email includes a secure unsubscribe link." data-lang-zh="我们只发送你选择接收的更新。每封邮件都会包含安全退订链接。">
+              We only send updates you request. Every email includes a secure unsubscribe link.
+            </p>
+          </div>
+        </form>
       </div>
-      <h1 class="text-4xl sm:text-5xl font-bold text-slate-100 tracking-tight mb-6">
-        <span data-lang-en="Subscribe Alerts" data-lang-zh="订阅提醒">Subscribe Alerts</span>
-      </h1>
-      <p class="text-lg text-slate-400 leading-relaxed">
-        <span data-lang-en="GIDS monitors infectious diseases globally. Fill out the form below to receive alerts when new reports are published and to share your feedback." data-lang-zh="GIDS 在全球范围内监测传染病。请填写以下表单，以便在新报告发布时接收提醒，并分享您的反馈。">
-          GIDS monitors infectious diseases globally. Fill out the form below to receive alerts when new reports are published and to share your feedback.
-        </span>
-      </p>
     </div>
   </section>
 
-  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-20">
-
-    <!-- MS Form embed -->
-    <section class="mb-16">
-      <div class="rounded-none border border-slate-700/50 bg-slate-800/30 overflow-hidden" style="min-height:800px;">
-        <iframe
-          src="https://forms.office.com/Pages/ResponsePage.aspx?id=6-Sl81f1K0auaA_vKW7hg57W8blB75tHvQVpO5Wc8kVUNVJZQ0dPWEw3RFA0REtRTzBWMkdUMFkzUC4u&embed=true"
-          frameborder="0"
-          marginwidth="0"
-          marginheight="0"
-          allowfullscreen
-          style="width:100%; height:100%; min-height:800px; border:none;"
-          title="GIDS Subscription Form"
-        ></iframe>
+  <div id="subscription-modal" class="subscribe-modal" role="dialog" aria-modal="true" aria-labelledby="subscription-modal-title" hidden>
+    <div class="subscribe-modal-backdrop" data-modal-close></div>
+    <div class="subscribe-modal-panel">
+      <button class="subscribe-modal-close" type="button" aria-label="Close" data-modal-close>
+        <span aria-hidden="true">×</span>
+      </button>
+      <p class="subscribe-kicker" data-lang-en="Subscription received" data-lang-zh="订阅已收到">Subscription received</p>
+      <h2 id="subscription-modal-title" data-lang-en="Check your inbox" data-lang-zh="请检查你的邮箱">Check your inbox</h2>
+      <p id="subscription-modal-message" class="subscribe-modal-message"></p>
+      <div class="subscribe-trust-note">
+        <strong data-lang-en="Trusted sender" data-lang-zh="可信发件人">Trusted sender</strong>
+        <span>GIDS Alerts &lt;noreply@globalinfectiousdisease.com&gt;</span>
       </div>
-      <p class="text-slate-700 text-xs mt-3 text-center" data-lang-en="Form provided via Microsoft Forms." data-lang-zh="表单由 Microsoft Forms 提供。">
-        Form provided via Microsoft Forms.
+      <p class="subscribe-modal-help" data-lang-en="Add this sender to your contacts or allowlist so future GIDS updates are not filtered as spam." data-lang-zh="请将该发件人加入联系人或信任列表，帮助后续 GIDS 更新顺利送达。">
+        Add this sender to your contacts or allowlist so future GIDS updates are not filtered as spam.
       </p>
-    </section>
-
+      <div class="subscribe-modal-actions">
+        <button id="subscription-resend" class="subscribe-modal-secondary" type="button">
+          <span data-lang-en="Resend confirmation" data-lang-zh="再次发送确认邮件">Resend confirmation</span>
+        </button>
+        <button class="subscribe-modal-primary" type="button" data-modal-close>
+          <span data-lang-en="Done" data-lang-zh="完成">Done</span>
+        </button>
+      </div>
+      <p id="subscription-resend-status" class="subscribe-modal-resend" role="status" aria-live="polite"></p>
+    </div>
   </div>
+
+  <script is:inline>
+    (() => {
+      const form = document.getElementById('subscription-form');
+      if (!form) return;
+
+      const apiBase = form.getAttribute('data-api-base') || 'https://subscriptions.globalinfectiousdisease.com';
+      const submitButton = document.getElementById('subscription-submit');
+      const statusEl = document.getElementById('subscription-status');
+      const modal = document.getElementById('subscription-modal');
+      const modalMessage = document.getElementById('subscription-modal-message');
+      const resendButton = document.getElementById('subscription-resend');
+      const resendStatus = document.getElementById('subscription-resend-status');
+      const allCountries = document.getElementById('all-countries');
+      const localeOptions = document.getElementById('locale-options');
+      const frequencyOptions = document.getElementById('frequency-options');
+      const listOptions = document.getElementById('list-options');
+      const countryOptions = document.getElementById('country-options');
+      const diseaseOptions = document.getElementById('disease-options');
+      const diseaseSearch = document.getElementById('disease-search');
+      const optionState = {
+        locales: [],
+        frequencies: [],
+        lists: [],
+        countries: [],
+        diseases: [],
+      };
+      let lastSubmittedPayload = null;
+
+      const copy = {
+        en: {
+          missingEmail: 'Enter a valid email address.',
+          missingList: 'Select at least one subscription list.',
+          missingConsent: 'Accept the service terms before subscribing.',
+          submitting: 'Submitting subscription...',
+          received: 'Subscription received. A confirmation email will be sent by GIDS Alerts. Please keep the sender trusted so future updates can reach you.',
+          emailSent: 'Subscription received. We sent a confirmation email from GIDS Alerts. Please keep the sender trusted so future updates can reach you.',
+          failed: 'Subscription failed. Please try again in a moment.',
+          network: 'Network error while contacting the subscription service.',
+          optionsLoading: 'Loading subscription choices...',
+          optionsFailed: 'Subscription choices could not be loaded. Please refresh in a moment.',
+          rateLimited: 'Too many subscription attempts. Please wait a little before trying again.',
+          emailRateLimited: 'Subscription saved. A confirmation email was already sent recently; please wait before requesting another one.',
+          resendSending: 'Requesting another confirmation email...',
+          resendDone: 'Confirmation request sent again.',
+          resendUnavailable: 'Confirmation delivery is not connected yet. Your subscription request is still saved.',
+        },
+        zh: {
+          missingEmail: '请输入有效的邮箱地址。',
+          missingList: '请至少选择一个订阅列表。',
+          missingConsent: '请先接受服务协议。',
+          submitting: '正在提交订阅...',
+          received: '订阅已收到。确认邮件将由 GIDS Alerts 发送。请将该发件人加入信任列表，帮助后续更新顺利送达。',
+          emailSent: '订阅已收到。我们已通过 GIDS Alerts 发送确认邮件。请将该发件人加入信任列表，帮助后续更新顺利送达。',
+          failed: '订阅提交失败，请稍后再试。',
+          network: '连接订阅服务时发生网络错误。',
+          optionsLoading: '正在加载订阅选项...',
+          optionsFailed: '订阅选项暂时无法加载，请稍后刷新页面。',
+          rateLimited: '订阅请求过于频繁，请稍后再试。',
+          emailRateLimited: '订阅已保存。确认邮件刚刚发送过，请稍后再请求重新发送。',
+          resendSending: '正在请求再次发送确认邮件...',
+          resendDone: '确认邮件请求已再次发送。',
+          resendUnavailable: '确认邮件投递尚未接入。你的订阅请求仍已保存。',
+        },
+      };
+
+      function currentLang() {
+        return document.documentElement.getAttribute('data-lang') === 'zh' || localStorage.getItem('lang') === 'zh'
+          ? 'zh'
+          : 'en';
+      }
+
+      function setStatus(type, message) {
+        if (!statusEl) return;
+        statusEl.hidden = false;
+        statusEl.dataset.type = type;
+        statusEl.textContent = message;
+      }
+
+      function setSubmitting(isSubmitting) {
+        if (!submitButton) return;
+        submitButton.disabled = isSubmitting;
+        submitButton.setAttribute('aria-busy', String(isSubmitting));
+      }
+
+      function showModal(message) {
+        if (!modal) return;
+        if (modalMessage) modalMessage.textContent = message;
+        if (resendStatus) resendStatus.textContent = '';
+        modal.hidden = false;
+        document.documentElement.classList.add('subscribe-modal-open');
+        resendButton?.focus();
+      }
+
+      function closeModal() {
+        if (!modal) return;
+        modal.hidden = true;
+        document.documentElement.classList.remove('subscribe-modal-open');
+      }
+
+      modal?.querySelectorAll('[data-modal-close]').forEach((element) => {
+        element.addEventListener('click', closeModal);
+      });
+
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && modal && !modal.hidden) closeModal();
+      });
+
+      function labelFor(item, lang = currentLang()) {
+        return lang === 'zh'
+          ? (item.label_zh || item.name_zh || item.label_en || item.name_en || item.value || item.code)
+          : (item.label_en || item.name_en || item.label_zh || item.name_zh || item.value || item.code);
+      }
+
+      function descriptionFor(item, lang = currentLang()) {
+        return lang === 'zh'
+          ? (item.description_zh || item.description_en || '')
+          : (item.description_en || item.description_zh || '');
+      }
+
+      function checkedValues(name) {
+        return new Set(Array.from(form.querySelectorAll(`input[name="${name}"]:checked`)).map((input) => input.value));
+      }
+
+      function renderRadioOptions(container, name, items, defaultValue) {
+        if (!container) return;
+        const selected = form.querySelector(`input[name="${name}"]:checked`)?.value || defaultValue;
+        container.replaceChildren();
+        items.forEach((item) => {
+          const label = document.createElement('label');
+          const input = document.createElement('input');
+          const span = document.createElement('span');
+          input.type = 'radio';
+          input.name = name;
+          input.value = item.value;
+          input.defaultChecked = item.value === defaultValue;
+          input.checked = item.value === selected;
+          span.textContent = labelFor(item);
+          label.append(input, span);
+          container.append(label);
+        });
+      }
+
+      function renderListOptions() {
+        if (!listOptions) return;
+        const selected = checkedValues('list_codes');
+        const hasSelection = selected.size > 0;
+        listOptions.replaceChildren();
+        optionState.lists.forEach((item, index) => {
+          const label = document.createElement('label');
+          const input = document.createElement('input');
+          const body = document.createElement('span');
+          const title = document.createElement('strong');
+          const detail = document.createElement('small');
+          label.className = 'subscribe-check';
+          input.type = 'checkbox';
+          input.name = 'list_codes';
+          input.value = item.code;
+          input.defaultChecked = index === 0 || item.code === 'reports';
+          input.checked = hasSelection ? selected.has(item.code) : input.defaultChecked;
+          title.textContent = labelFor(item);
+          detail.textContent = descriptionFor(item);
+          body.append(title, detail);
+          label.append(input, body);
+          listOptions.append(label);
+        });
+      }
+
+      function renderChipOptions(container, name, items, disabled = false) {
+        if (!container) return;
+        const selected = checkedValues(name);
+        container.replaceChildren();
+        items.forEach((item) => {
+          const label = document.createElement('label');
+          const input = document.createElement('input');
+          const span = document.createElement('span');
+          label.className = 'subscribe-chip';
+          input.type = 'checkbox';
+          input.name = name;
+          input.value = item.value;
+          input.disabled = disabled;
+          input.checked = selected.has(item.value);
+          span.textContent = labelFor(item);
+          label.append(input, span);
+          container.append(label);
+        });
+      }
+
+      function renderDiseaseOptions() {
+        const query = String(diseaseSearch?.value || '').trim().toLowerCase();
+        const visible = query
+          ? optionState.diseases.filter((item) => {
+              const haystack = `${item.value} ${item.label_en || ''} ${item.label_zh || ''}`.toLowerCase();
+              return haystack.includes(query);
+            })
+          : optionState.diseases.slice(0, 24);
+        renderChipOptions(diseaseOptions, 'diseases', visible, false);
+      }
+
+      function renderAllOptions() {
+        if (diseaseSearch) {
+          diseaseSearch.setAttribute('placeholder', currentLang() === 'zh' ? '搜索疾病' : 'Search diseases');
+        }
+        renderRadioOptions(localeOptions, 'locale', optionState.locales, currentLang());
+        renderRadioOptions(frequencyOptions, 'frequency', optionState.frequencies, 'weekly');
+        renderListOptions();
+        renderChipOptions(countryOptions, 'countries', optionState.countries, Boolean(allCountries?.checked));
+        renderDiseaseOptions();
+      }
+
+      async function loadOptions() {
+        const messages = copy[currentLang()];
+        setSubmitting(true);
+        setStatus('pending', messages.optionsLoading);
+        try {
+          const response = await fetch(`${apiBase}/api/subscriptions/options`, {
+            headers: { accept: 'application/json' },
+          });
+          const result = await response.json().catch(() => ({}));
+          if (!response.ok || result.error) {
+            throw new Error(result.error || 'options_failed');
+          }
+          optionState.locales = Array.isArray(result.locales) ? result.locales : [];
+          optionState.frequencies = Array.isArray(result.frequencies) ? result.frequencies : [];
+          optionState.lists = Array.isArray(result.lists) ? result.lists : [];
+          optionState.countries = Array.isArray(result.filters?.country) ? result.filters.country : [];
+          optionState.diseases = Array.isArray(result.filters?.disease) ? result.filters.disease : [];
+          renderAllOptions();
+          if (statusEl && statusEl.dataset.type === 'pending') statusEl.hidden = true;
+          setSubmitting(false);
+        } catch (error) {
+          setStatus('error', messages.optionsFailed);
+          setSubmitting(true);
+        }
+      }
+
+      function syncCountryInputs() {
+        const all = Boolean(allCountries && allCountries.checked);
+        form.querySelectorAll('input[name="countries"]').forEach((input) => {
+          input.disabled = all;
+          if (all) input.checked = false;
+        });
+      }
+
+      allCountries?.addEventListener('change', syncCountryInputs);
+      diseaseSearch?.addEventListener('input', renderDiseaseOptions);
+      loadOptions();
+
+      const langObserver = new MutationObserver(() => renderAllOptions());
+      langObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-lang'] });
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const lang = currentLang();
+        const messages = copy[lang];
+        const data = new FormData(form);
+        const email = String(data.get('email') || '').trim();
+        const consent = data.get('consent') === 'on';
+        const listCodes = data.getAll('list_codes').map(String);
+
+        if (!email || !email.includes('@')) {
+          setStatus('error', messages.missingEmail);
+          return;
+        }
+
+        if (listCodes.length === 0) {
+          setStatus('error', messages.missingList);
+          return;
+        }
+
+        if (!consent) {
+          setStatus('error', messages.missingConsent);
+          return;
+        }
+
+        const selectedCountries = allCountries?.checked
+          ? []
+          : data.getAll('countries').map(String);
+        const checkedDiseases = data.getAll('diseases').map(String);
+
+        const payload = {
+          email,
+          locale: String(data.get('locale') || lang),
+          frequency: String(data.get('frequency') || 'weekly'),
+          list_codes: listCodes,
+          countries: selectedCountries,
+          diseases: Array.from(new Set(checkedDiseases)),
+          source: 'website-subscribe-page',
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+        };
+
+        setSubmitting(true);
+        setStatus('pending', messages.submitting);
+
+        try {
+          const response = await fetch(`${apiBase}/api/subscriptions`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          const result = await response.json().catch(() => ({}));
+
+          if (!response.ok || result.error) {
+            setStatus('error', result.error === 'rate_limited' ? messages.rateLimited : (result.error || messages.failed));
+            return;
+          }
+
+          lastSubmittedPayload = payload;
+          const emailStatus = result?.email?.status || result?.notification?.status || '';
+          const emailReason = result?.email?.reason || result?.notification?.reason || '';
+          const successMessage = emailReason === 'confirmation_rate_limited'
+            ? messages.emailRateLimited
+            : emailStatus === 'sent' || emailStatus === 'queued'
+            ? messages.emailSent
+            : messages.received;
+          setStatus('success', successMessage);
+          showModal(successMessage);
+          form.reset();
+          if (diseaseSearch) diseaseSearch.value = '';
+          renderAllOptions();
+        } catch (error) {
+          setStatus('error', messages.network);
+        } finally {
+          setSubmitting(false);
+        }
+      });
+
+      resendButton?.addEventListener('click', async () => {
+        const lang = currentLang();
+        const messages = copy[lang];
+        if (!lastSubmittedPayload) {
+          if (resendStatus) resendStatus.textContent = messages.resendUnavailable;
+          return;
+        }
+
+        resendButton.disabled = true;
+        if (resendStatus) resendStatus.textContent = messages.resendSending;
+
+        try {
+          const response = await fetch(`${apiBase}/api/subscriptions`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ ...lastSubmittedPayload, source: 'website-subscribe-page-resend' }),
+          });
+          const result = await response.json().catch(() => ({}));
+          if (!response.ok || result.error) {
+            if (resendStatus) resendStatus.textContent = result.error === 'rate_limited' ? messages.rateLimited : (result.error || messages.failed);
+            return;
+          }
+          const emailStatus = result?.email?.status || result?.notification?.status || '';
+          const emailReason = result?.email?.reason || result?.notification?.reason || '';
+          if (resendStatus) {
+            resendStatus.textContent = emailReason === 'confirmation_rate_limited'
+              ? messages.emailRateLimited
+              : emailStatus === 'sent' || emailStatus === 'queued'
+              ? messages.resendDone
+              : messages.resendUnavailable;
+          }
+        } catch (error) {
+          if (resendStatus) resendStatus.textContent = messages.network;
+        } finally {
+          resendButton.disabled = false;
+        }
+      });
+    })();
+  </script>
 </BaseLayout>
+
+<style is:global>
+.subscribe-page {
+  min-height: 100%;
+}
+
+.subscribe-intro {
+  padding-top: 0.75rem;
+}
+
+.subscribe-facts {
+  color: rgb(var(--text-muted));
+}
+
+.subscribe-facts div {
+  border-left: 2px solid rgb(20 184 166 / 0.55);
+  padding-left: 1rem;
+}
+
+.subscribe-facts dt {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  color: rgb(var(--text-faint));
+}
+
+.subscribe-facts dd {
+  margin-top: 0.35rem;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: rgb(var(--text-muted));
+}
+
+.subscribe-form {
+  border: 1px solid rgb(var(--border) / 0.82);
+  background: linear-gradient(180deg, rgb(var(--surface) / 0.98), rgb(var(--surface-raised) / 0.74));
+  box-shadow: 0 28px 70px rgb(2 6 23 / 0.18), inset 0 1px 0 rgb(255 255 255 / 0.1);
+  padding: clamp(1.25rem, 3vw, 2rem);
+}
+
+.subscribe-form-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid rgb(var(--border) / 0.68);
+  padding-bottom: 1.1rem;
+}
+
+.subscribe-form-header h2 {
+  margin-top: 0.2rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: rgb(var(--text-strong));
+}
+
+.subscribe-kicker {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  color: rgb(20 184 166);
+}
+
+.subscribe-service-badge {
+  flex: 0 0 auto;
+  border: 1px solid rgb(var(--border) / 0.74);
+  background: rgb(var(--surface-raised) / 0.58);
+  padding: 0.35rem 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: rgb(var(--text-faint));
+}
+
+.subscribe-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.subscribe-field {
+  margin-top: 1.25rem;
+  min-width: 0;
+}
+
+.subscribe-field label,
+.subscribe-field legend {
+  display: block;
+  margin-bottom: 0.55rem;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: rgb(var(--text-strong));
+}
+
+.subscribe-field-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.7rem;
+}
+
+.subscribe-field-title legend {
+  margin-bottom: 0;
+}
+
+.subscribe-field-title > span {
+  font-size: 0.78rem;
+  color: rgb(var(--text-faint));
+}
+
+.subscribe-input {
+  width: 100%;
+  border-width: 1px;
+  padding: 0.78rem 0.9rem;
+  font-size: 0.95rem;
+  outline: none;
+}
+
+.subscribe-input:focus {
+  border-color: rgb(20 184 166 / 0.85);
+  box-shadow: 0 0 0 3px rgb(20 184 166 / 0.16);
+}
+
+.subscribe-segmented,
+.subscribe-option-grid,
+.subscribe-chip-grid {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.subscribe-segmented {
+  grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+}
+
+.subscribe-segmented label,
+.subscribe-chip,
+.subscribe-check,
+.subscribe-inline-check,
+.subscribe-consent {
+  cursor: pointer;
+}
+
+.subscribe-segmented label {
+  margin: 0;
+  border: 1px solid rgb(var(--border) / 0.78);
+  background: rgb(var(--surface-raised) / 0.42);
+  padding: 0.68rem 0.72rem;
+  text-align: center;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: rgb(var(--text-muted));
+}
+
+.subscribe-segmented input,
+.subscribe-chip input,
+.subscribe-check input,
+.subscribe-inline-check input,
+.subscribe-consent input {
+  accent-color: rgb(20 184 166);
+}
+
+.subscribe-segmented label:has(input:checked) {
+  border-color: rgb(20 184 166 / 0.75);
+  background: rgb(20 184 166 / 0.14);
+  color: rgb(var(--text-strong));
+}
+
+.subscribe-segmented input {
+  position: absolute;
+  opacity: 0;
+}
+
+.subscribe-option-grid {
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.subscribe-check {
+  display: flex;
+  gap: 0.7rem;
+  border: 1px solid rgb(var(--border) / 0.74);
+  background: rgb(var(--surface-raised) / 0.34);
+  padding: 0.85rem;
+}
+
+.subscribe-check strong,
+.subscribe-check small {
+  display: block;
+}
+
+.subscribe-check strong {
+  color: rgb(var(--text-strong));
+  font-size: 0.88rem;
+}
+
+.subscribe-check small {
+  margin-top: 0.25rem;
+  color: rgb(var(--text-faint));
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+.subscribe-chip-grid {
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+}
+
+.subscribe-chip {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid rgb(var(--border) / 0.72);
+  background: rgb(var(--surface) / 0.55);
+  padding: 0.58rem 0.65rem;
+  font-size: 0.82rem;
+  font-weight: 650;
+  color: rgb(var(--text-muted));
+}
+
+.subscribe-chip:has(input:checked) {
+  border-color: rgb(20 184 166 / 0.72);
+  background: rgb(20 184 166 / 0.12);
+  color: rgb(var(--text-strong));
+}
+
+.subscribe-chip:has(input:disabled) {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.subscribe-inline-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: rgb(var(--text-muted));
+}
+
+.subscribe-hidden-label {
+  margin-top: 0.95rem;
+}
+
+.subscribe-consent {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 1.25rem;
+  border-top: 1px solid rgb(var(--border) / 0.62);
+  padding-top: 1rem;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: rgb(var(--text-muted));
+}
+
+.subscribe-consent a {
+  color: rgb(20 184 166);
+  font-weight: 750;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.subscribe-status {
+  margin-top: 1rem;
+  border: 1px solid rgb(var(--border) / 0.72);
+  padding: 0.78rem 0.9rem;
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+
+.subscribe-status[data-type='pending'] {
+  border-color: rgb(59 130 246 / 0.5);
+  background: rgb(59 130 246 / 0.12);
+  color: rgb(147 197 253);
+}
+
+.subscribe-status[data-type='success'] {
+  border-color: rgb(20 184 166 / 0.54);
+  background: rgb(20 184 166 / 0.12);
+  color: rgb(45 212 191);
+}
+
+.subscribe-status[data-type='error'] {
+  border-color: rgb(244 63 94 / 0.52);
+  background: rgb(244 63 94 / 0.12);
+  color: rgb(251 113 133);
+}
+
+.subscribe-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1.2rem;
+}
+
+.subscribe-actions p {
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: rgb(var(--text-faint));
+}
+
+.subscribe-submit {
+  width: 100%;
+  border: 1px solid rgb(20 184 166 / 0.65);
+  background: rgb(20 184 166);
+  color: rgb(4 20 24);
+  padding: 0.85rem 1rem;
+  font-weight: 800;
+  transition: transform 0.16s ease, opacity 0.16s ease, background 0.16s ease;
+}
+
+.subscribe-submit:hover:not(:disabled) {
+  background: rgb(45 212 191);
+  transform: translateY(-1px);
+}
+
+.subscribe-submit:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
+.subscribe-modal[hidden] {
+  display: none;
+}
+
+.subscribe-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.subscribe-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgb(2 6 23 / 0.72);
+  backdrop-filter: blur(5px);
+}
+
+.subscribe-modal-panel {
+  position: relative;
+  width: min(100%, 560px);
+  border: 1px solid rgb(var(--border) / 0.86);
+  background: linear-gradient(180deg, rgb(var(--surface) / 1), rgb(var(--surface-raised) / 0.96));
+  box-shadow: 0 30px 90px rgb(2 6 23 / 0.34);
+  padding: clamp(1.25rem, 4vw, 2rem);
+}
+
+.subscribe-modal-close {
+  position: absolute;
+  right: 0.8rem;
+  top: 0.8rem;
+  display: inline-flex;
+  height: 2rem;
+  width: 2rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(var(--border) / 0.72);
+  background: rgb(var(--surface-raised) / 0.48);
+  color: rgb(var(--text-muted));
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.subscribe-modal-panel h2 {
+  margin-top: 0.35rem;
+  font-size: 1.65rem;
+  font-weight: 800;
+  color: rgb(var(--text-strong));
+}
+
+.subscribe-modal-message,
+.subscribe-modal-help,
+.subscribe-modal-resend {
+  margin-top: 0.85rem;
+  color: rgb(var(--text-muted));
+  font-size: 0.94rem;
+  line-height: 1.6;
+}
+
+.subscribe-trust-note {
+  display: grid;
+  gap: 0.25rem;
+  margin-top: 1rem;
+  border: 1px solid rgb(20 184 166 / 0.32);
+  background: rgb(20 184 166 / 0.1);
+  padding: 0.85rem;
+}
+
+.subscribe-trust-note strong {
+  font-size: 0.78rem;
+  color: rgb(20 184 166);
+}
+
+.subscribe-trust-note span {
+  color: rgb(var(--text-strong));
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.86rem;
+  overflow-wrap: anywhere;
+}
+
+.subscribe-modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.2rem;
+}
+
+.subscribe-modal-primary,
+.subscribe-modal-secondary {
+  border: 1px solid rgb(var(--border) / 0.78);
+  padding: 0.72rem 1rem;
+  font-weight: 800;
+}
+
+.subscribe-modal-primary {
+  background: rgb(20 184 166);
+  border-color: rgb(20 184 166 / 0.68);
+  color: rgb(4 20 24);
+}
+
+.subscribe-modal-secondary {
+  background: rgb(var(--surface-raised) / 0.54);
+  color: rgb(var(--text-strong));
+}
+
+.subscribe-modal-secondary:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
+.subscribe-modal-open {
+  overflow: hidden;
+}
+
+@media (min-width: 640px) {
+  .subscribe-grid {
+    grid-template-columns: 1fr 1.35fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .subscribe-form-header {
+    flex-direction: column;
+  }
+
+  .subscribe-chip-grid,
+  .subscribe-option-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
