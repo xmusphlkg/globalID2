@@ -196,6 +196,25 @@ curl "$WORKER_URL/api/admin/stats" \
   -H "authorization: Bearer $SUBSCRIPTIONS__ADMIN_API_TOKEN"
 ```
 
+List subscriptions for local dashboard/admin review:
+
+```bash
+curl "$WORKER_URL/api/admin/subscriptions?status=pending&limit=50" \
+  -H "authorization: Bearer $SUBSCRIPTIONS__ADMIN_API_TOKEN"
+```
+
+The local dashboard proxies these admin calls through FastAPI under
+`/api/v1/subscriptions/*`, so the browser never receives
+`SUBSCRIPTIONS__ADMIN_API_TOKEN`. The dashboard also exposes a manual option
+sync action that runs:
+
+```bash
+cloudflare/subscriptions/scripts/wrangler-env.sh sync-options-remote
+```
+
+During data release, `SUBSCRIPTIONS__SYNC_OPTIONS_ON_RELEASE=auto` syncs D1
+country and disease options when the subscription D1 settings are present.
+
 ## Notes
 
 - Subscriptions start as `pending` and become `active` when the recipient clicks the signed confirmation link.

@@ -2,11 +2,13 @@
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from src.core.database import get_engine
 from src.core.logging import get_logger
+from .deps import require_dashboard_api_key
 
 from .routers import (
     ai,
@@ -21,10 +23,12 @@ from .routers import (
     reports,
     settings,
     sources,
+    subscriptions,
     tasks,
 )
 
 logger = get_logger(__name__)
+AUTH_EXEMPT_PATHS = {"/health", "/api/v1/health"}
 
 
 @asynccontextmanager
@@ -72,6 +76,22 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    @app.middleware("http")
+    async def dashboard_api_key_middleware(request: Request, call_next):
+        if (
+            request.method == "OPTIONS"
+            or not request.url.path.startswith("/api/v1")
+            or request.url.path in AUTH_EXEMPT_PATHS
+        ):
+            return await call_next(request)
+
+        try:
+            require_dashboard_api_key(request)
+        except HTTPException as exc:
+            return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+
+        return await call_next(request)
+
     # Mount routers
     prefix = "/api/v1"
     app.include_router(countries.router, prefix=prefix, tags=["Countries"])
@@ -86,6 +106,7 @@ def create_app() -> FastAPI:
     app.include_router(sources.router, prefix=prefix, tags=["Sources"])
     app.include_router(release.router, prefix=prefix, tags=["Data Release"])
     app.include_router(settings.router, prefix=prefix, tags=["Settings"])
+    app.include_router(subscriptions.router, prefix=prefix, tags=["Subscriptions"])
     app.include_router(explorer.router, prefix=prefix, tags=["Explorer"])
 
     @app.get("/api/v1/health", tags=["Health"])
