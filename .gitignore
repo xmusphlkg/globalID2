@@ -21,6 +21,8 @@ ENV/
 .env.*
 !.env.example
 !.env.*.example
+cloudflare/subscriptions/wrangler.toml
+cloudflare/subscriptions/wrangler.generated.toml
 dashboard/.env.local
 dashboard/.env.development.local
 dashboard/.env.test.local
@@ -51,6 +53,7 @@ dashboard/.vercel/
 dashboard/coverage/
 dashboard/next-env.d.ts
 dashboard/tmp-app/
+**/.wrangler/
 *.tsbuildinfo
 .eslintcache
 npm-debug.log*
