@@ -1,6 +1,10 @@
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+asyncio_default_test_loop_scope = "session"
+asyncio_default_fixture_loop_scope = "session"
 testpaths = ["tests"]
+norecursedirs = ["deprecated"]
 markers = [
     "slow: marks tests that make many network calls and run for several minutes (run with -m slow)",
+    "network: marks tests that call live external services (run with --run-network)",
 ]

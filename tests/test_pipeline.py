@@ -265,7 +265,7 @@ COUNTRY_SOURCES = {
     "HK": "chp_notifiable",
 }
 
-# Skip network tests if explicitly disabled (e.g. CI without external access)
+# Skip network tests if explicitly disabled even when --run-network is passed.
 _skip_network = pytest.mark.skipif(
     os.environ.get("SKIP_NETWORK_TESTS", "").lower() in ("1", "true", "yes"),
     reason="SKIP_NETWORK_TESTS is set",
@@ -273,6 +273,7 @@ _skip_network = pytest.mark.skipif(
 
 
 @pytest.mark.asyncio
+@pytest.mark.network
 @_skip_network
 async def test_cn_fetch_list(app_ready):
     """CN crawler fetch_list returns at least one CrawlerResult."""
@@ -300,6 +301,7 @@ async def test_cn_fetch_list(app_ready):
 
 
 @pytest.mark.asyncio
+@pytest.mark.network
 @_skip_network
 async def test_jp_discover_index(app_ready):
     """JP crawler can discover the NIID IDWR year-index URLs."""
@@ -317,6 +319,7 @@ async def test_jp_discover_index(app_ready):
     )
 
 @pytest.mark.asyncio
+@pytest.mark.network
 @_skip_network
 async def test_au_crawl_monthly(app_ready):
     """AU crawler crawl() fetches NINDSS data via Playwright Power BI token capture."""
@@ -746,6 +749,7 @@ async def test_quality_sources_merges_canonical_labels(app_ready):
 
 
 @pytest.mark.asyncio
+@pytest.mark.network
 @_skip_network
 async def test_us_fetch_raw_pages(app_ready):
     """US crawler fetch_raw_pages returns paginated NNDSS rows."""
@@ -774,6 +778,7 @@ async def test_us_fetch_raw_pages(app_ready):
 # ══════════════════════════════════════════════════════════════════════════════
 
 @pytest.mark.asyncio
+@pytest.mark.network
 @_skip_network
 @pytest.mark.parametrize("country", ["CN", "US"])
 async def test_crawl_service_dispatch(country: str, app_ready):
@@ -847,6 +852,7 @@ async def test_crawl_service_dispatch(country: str, app_ready):
 
 @pytest.mark.asyncio
 @pytest.mark.slow
+@pytest.mark.network
 @_skip_network
 @pytest.mark.parametrize("country", ["JP", "AU"])
 async def test_crawl_service_dispatch_slow(country: str, app_ready):

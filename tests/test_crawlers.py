@@ -257,6 +257,7 @@ async def _test_single_source(
 # Test Classes (Pytest Mode)
 # ============================================================================
 
+@pytest.mark.network
 class TestCrawlerSources:
     """
     Test suite for all data crawler sources.
@@ -278,7 +279,7 @@ class TestCrawlerSources:
         
         Expected: ~40-50 disease records per report
         """
-        result = await test_single_source("cdc_weekly", crawler, processor)
+        result = await _test_single_source("cdc_weekly", crawler, processor)
         
         assert result["status"] == "PASS", f"CDC Weekly test failed: {result['status']}"
         assert result["diseases"] > 0, "Should have disease data"
