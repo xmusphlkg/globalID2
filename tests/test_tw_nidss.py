@@ -6,7 +6,7 @@ from src.core.source_scopes import (
     scope_display_label,
     scope_from_data_source,
 )
-from src.data.crawlers.tw import TWDiseaseSource, aggregate_monthly_csv_rows
+from src.data.crawlers.tw import DEFAULT_SOURCE_NAME, TWDiseaseSource, aggregate_monthly_csv_rows
 
 
 def test_tw_nidss_monthly_aggregation_keeps_local_and_imported_counts():
@@ -34,7 +34,7 @@ def test_tw_nidss_monthly_aggregation_keeps_local_and_imported_counts():
             "Cases": "5",
             "LocalCases": "2",
             "ImportedCases": "3",
-            "Source": "Taiwan CDC NIDSS Open Data",
+            "Source": DEFAULT_SOURCE_NAME,
             "SourceURL": "https://od.cdc.gov.tw/eic/Age_County_Gender_061.csv",
         }
     ]
@@ -43,6 +43,8 @@ def test_tw_nidss_monthly_aggregation_keeps_local_and_imported_counts():
 def test_tw_nidss_source_scope_aliases():
     assert canonicalize_task_source("nidss", country_code="TW") == "nidss_open_data"
     assert canonicalize_task_source("tw", country_code="TW") == "nidss_open_data"
+    assert scope_from_data_source(DEFAULT_SOURCE_NAME) == "nidss_open_data"
     assert scope_from_data_source("Taiwan CDC NIDSS Open Data") == "nidss_open_data"
-    assert canonical_data_source_label("Taiwan CDC NIDSS Open Data") == "Taiwan CDC NIDSS"
-    assert scope_display_label("nidss_open_data", country_code="TW") == "Taiwan CDC NIDSS"
+    assert canonical_data_source_label(DEFAULT_SOURCE_NAME) == "Taiwan, China CDC NIDSS"
+    assert canonical_data_source_label("Taiwan CDC NIDSS Open Data") == "Taiwan, China CDC NIDSS"
+    assert scope_display_label("nidss_open_data", country_code="TW") == "Taiwan, China CDC NIDSS"

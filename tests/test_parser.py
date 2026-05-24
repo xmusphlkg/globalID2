@@ -19,6 +19,7 @@ from src.data.processors import DataProcessor
 
 
 @pytest.mark.asyncio
+@pytest.mark.network
 async def test_parser_basic():
     """测试基础解析功能"""
     print("=" * 60)
@@ -57,6 +58,7 @@ async def test_parser_basic():
 
 
 @pytest.mark.asyncio
+@pytest.mark.network
 async def test_crawler_integration():
     """测试爬虫集成"""
     print("\n" + "=" * 60)
