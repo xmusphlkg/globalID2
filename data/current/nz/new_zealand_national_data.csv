@@ -1,114 +1,61 @@
 ,Disease,Year,Month,Date,Cases,CumulativeTotal,Rate,Source
-1,Campylobacteriosis,2020,1,2020-01-01,680,680,121.4,NZ PHF Science Monthly Notifiable Disease Surveillance
-2,Cryptosporidiosis,2020,1,2020-01-01,33,33,20.7,NZ PHF Science Monthly Notifiable Disease Surveillance
-3,Dengue fever,2020,1,2020-01-01,14,14,4.7,NZ PHF Science Monthly Notifiable Disease Surveillance
-4,Gastroenteritis,2020,1,2020-01-01,47,47,10.2,NZ PHF Science Monthly Notifiable Disease Surveillance
-5,Giardiasis,2020,1,2020-01-01,146,146,35.6,NZ PHF Science Monthly Notifiable Disease Surveillance
-6,Haemophilus influenzae type b,2020,1,2020-01-01,3,3,0.1,NZ PHF Science Monthly Notifiable Disease Surveillance
-7,Hepatitis A,2020,1,2020-01-01,4,4,1.2,NZ PHF Science Monthly Notifiable Disease Surveillance
-8,Hepatitis B,2020,1,2020-01-01,1,1,0.6,NZ PHF Science Monthly Notifiable Disease Surveillance
-9,Hepatitis C,2020,1,2020-01-01,4,4,0.6,NZ PHF Science Monthly Notifiable Disease Surveillance
-10,Invasive pneumococcal disease,2020,1,2020-01-01,35,35,10.3,NZ PHF Science Monthly Notifiable Disease Surveillance
-11,Legionellosis,2020,1,2020-01-01,30,30,3.9,NZ PHF Science Monthly Notifiable Disease Surveillance
-12,Leptospirosis,2020,1,2020-01-01,11,11,2.1,NZ PHF Science Monthly Notifiable Disease Surveillance
-13,Listeriosis,2020,1,2020-01-01,9,9,0.8,NZ PHF Science Monthly Notifiable Disease Surveillance
-14,Malaria,2020,1,2020-01-01,3,3,0.6,NZ PHF Science Monthly Notifiable Disease Surveillance
-15,Measles,2020,1,2020-01-01,9,9,45.2,NZ PHF Science Monthly Notifiable Disease Surveillance
-16,Meningococcal disease,2020,1,2020-01-01,3,3,2.7,NZ PHF Science Monthly Notifiable Disease Surveillance
-17,Mumps,2020,1,2020-01-01,66,66,6.6,NZ PHF Science Monthly Notifiable Disease Surveillance
-18,Paratyphoid fever,2020,1,2020-01-01,3,3,0.4,NZ PHF Science Monthly Notifiable Disease Surveillance
-19,Pertussis,2020,1,2020-01-01,40,40,21.3,NZ PHF Science Monthly Notifiable Disease Surveillance
-20,Rheumatic fever,2020,1,2020-01-01,14,14,3.5,NZ PHF Science Monthly Notifiable Disease Surveillance
-21,Rickettsial disease,2020,1,2020-01-01,0,0,0.1,NZ PHF Science Monthly Notifiable Disease Surveillance
-22,Salmonellosis,2020,1,2020-01-01,93,93,22.2,NZ PHF Science Monthly Notifiable Disease Surveillance
-23,Shigellosis,2020,1,2020-01-01,30,30,4.6,NZ PHF Science Monthly Notifiable Disease Surveillance
-24,Tuberculosis disease,2020,1,2020-01-01,27,27,6.6,NZ PHF Science Monthly Notifiable Disease Surveillance
-25,Typhoid fever,2020,1,2020-01-01,9,9,1.2,NZ PHF Science Monthly Notifiable Disease Surveillance
-26,VTEC/STEC infection,2020,1,2020-01-01,81,81,22.1,NZ PHF Science Monthly Notifiable Disease Surveillance
-27,Yersiniosis,2020,1,2020-01-01,111,111,24.8,NZ PHF Science Monthly Notifiable Disease Surveillance
-28,Campylobacteriosis,2020,2,2020-02-01,381,1061,119.2,NZ PHF Science Monthly Notifiable Disease Surveillance
-29,Cryptosporidiosis,2020,2,2020-02-01,40,73,20.5,NZ PHF Science Monthly Notifiable Disease Surveillance
-30,Dengue fever,2020,2,2020-02-01,13,26,4.7,NZ PHF Science Monthly Notifiable Disease Surveillance
-31,Gastroenteritis,2020,2,2020-02-01,29,73,9.6,NZ PHF Science Monthly Notifiable Disease Surveillance
-32,Giardiasis,2020,2,2020-02-01,134,280,34.9,NZ PHF Science Monthly Notifiable Disease Surveillance
-33,Haemophilus influenzae type b,2020,2,2020-02-01,3,4,0.1,NZ PHF Science Monthly Notifiable Disease Surveillance
-34,Hepatitis A,2020,2,2020-02-01,6,10,1.0,NZ PHF Science Monthly Notifiable Disease Surveillance
-35,Hepatitis B,2020,2,2020-02-01,3,4,0.6,NZ PHF Science Monthly Notifiable Disease Surveillance
-36,Hepatitis C,2020,2,2020-02-01,3,7,0.6,NZ PHF Science Monthly Notifiable Disease Surveillance
-37,Invasive pneumococcal disease,2020,2,2020-02-01,19,55,10.5,NZ PHF Science Monthly Notifiable Disease Surveillance
-38,Legionellosis,2020,2,2020-02-01,7,37,3.7,NZ PHF Science Monthly Notifiable Disease Surveillance
-39,Leptospirosis,2020,2,2020-02-01,10,17,2.0,NZ PHF Science Monthly Notifiable Disease Surveillance
-40,Listeriosis,2020,2,2020-02-01,2,11,0.7,NZ PHF Science Monthly Notifiable Disease Surveillance
-41,Malaria,2020,2,2020-02-01,2,5,0.6,NZ PHF Science Monthly Notifiable Disease Surveillance
-42,Measles,2020,2,2020-02-01,2,11,45.1,NZ PHF Science Monthly Notifiable Disease Surveillance
-43,Meningococcal disease,2020,2,2020-02-01,3,6,2.8,NZ PHF Science Monthly Notifiable Disease Surveillance
-44,Mumps,2020,2,2020-02-01,35,101,7.2,NZ PHF Science Monthly Notifiable Disease Surveillance
-45,Paratyphoid fever,2020,2,2020-02-01,3,6,0.4,NZ PHF Science Monthly Notifiable Disease Surveillance
-46,Pertussis,2020,2,2020-02-01,56,96,17.9,NZ PHF Science Monthly Notifiable Disease Surveillance
-47,Rheumatic fever,2020,2,2020-02-01,22,37,3.6,NZ PHF Science Monthly Notifiable Disease Surveillance
-48,Rickettsial disease,2020,2,2020-02-01,1,1,0.0,NZ PHF Science Monthly Notifiable Disease Surveillance
-49,Salmonellosis,2020,2,2020-02-01,93,185,22.0,NZ PHF Science Monthly Notifiable Disease Surveillance
-50,Shigellosis,2020,2,2020-02-01,25,46,4.2,NZ PHF Science Monthly Notifiable Disease Surveillance
-51,Tuberculosis disease,2020,2,2020-02-01,22,48,6.4,NZ PHF Science Monthly Notifiable Disease Surveillance
-52,Typhoid fever,2020,2,2020-02-01,3,12,1.1,NZ PHF Science Monthly Notifiable Disease Surveillance
-53,VTEC/STEC infection,2020,2,2020-02-01,97,176,21.7,NZ PHF Science Monthly Notifiable Disease Surveillance
-54,Yersiniosis,2020,2,2020-02-01,106,217,24.9,NZ PHF Science Monthly Notifiable Disease Surveillance
-55,Campylobacteriosis,2020,3,2020-03-01,267,1328,116.8,NZ PHF Science Monthly Notifiable Disease Surveillance
-56,Cryptosporidiosis,2020,3,2020-03-01,30,103,19.5,NZ PHF Science Monthly Notifiable Disease Surveillance
-57,Dengue fever,2020,3,2020-03-01,15,40,4.7,NZ PHF Science Monthly Notifiable Disease Surveillance
-58,Gastroenteritis,2020,3,2020-03-01,23,96,9.1,NZ PHF Science Monthly Notifiable Disease Surveillance
-59,Giardiasis,2020,3,2020-03-01,137,417,34.1,NZ PHF Science Monthly Notifiable Disease Surveillance
-60,Haemophilus influenzae type b,2020,3,2020-03-01,1,3,0.1,NZ PHF Science Monthly Notifiable Disease Surveillance
-61,Hepatitis A,2020,3,2020-03-01,5,15,0.9,NZ PHF Science Monthly Notifiable Disease Surveillance
-62,Hepatitis B,2020,3,2020-03-01,5,9,0.6,NZ PHF Science Monthly Notifiable Disease Surveillance
-63,Hepatitis C,2020,3,2020-03-01,3,9,0.6,NZ PHF Science Monthly Notifiable Disease Surveillance
-64,Invasive pneumococcal disease,2020,3,2020-03-01,30,85,10.5,NZ PHF Science Monthly Notifiable Disease Surveillance
-65,Legionellosis,2020,3,2020-03-01,15,52,3.9,NZ PHF Science Monthly Notifiable Disease Surveillance
-66,Leptospirosis,2020,3,2020-03-01,5,22,2.0,NZ PHF Science Monthly Notifiable Disease Surveillance
-67,Listeriosis,2020,3,2020-03-01,1,12,0.7,NZ PHF Science Monthly Notifiable Disease Surveillance
-68,Malaria,2020,3,2020-03-01,1,6,0.6,NZ PHF Science Monthly Notifiable Disease Surveillance
-69,Measles,2020,3,2020-03-01,3,12,44.2,NZ PHF Science Monthly Notifiable Disease Surveillance
-70,Meningococcal disease,2020,3,2020-03-01,2,8,2.6,NZ PHF Science Monthly Notifiable Disease Surveillance
-71,Mumps,2020,3,2020-03-01,23,122,7.5,NZ PHF Science Monthly Notifiable Disease Surveillance
-72,Paratyphoid fever,2020,3,2020-03-01,9,15,0.6,NZ PHF Science Monthly Notifiable Disease Surveillance
-73,Pertussis,2020,3,2020-03-01,33,127,15.9,NZ PHF Science Monthly Notifiable Disease Surveillance
-74,Q fever,2020,3,2020-03-01,0,1,0.0,NZ PHF Science Monthly Notifiable Disease Surveillance
-75,Rheumatic fever,2020,3,2020-03-01,17,54,3.6,NZ PHF Science Monthly Notifiable Disease Surveillance
-76,Rickettsial disease,2020,3,2020-03-01,0,1,0.0,NZ PHF Science Monthly Notifiable Disease Surveillance
-77,Rubella,2020,3,2020-03-01,0,0,0.0,NZ PHF Science Monthly Notifiable Disease Surveillance
-78,Salmonellosis,2020,3,2020-03-01,74,258,22.0,NZ PHF Science Monthly Notifiable Disease Surveillance
-79,Shigellosis,2020,3,2020-03-01,12,57,4.1,NZ PHF Science Monthly Notifiable Disease Surveillance
-80,Tuberculosis disease,2020,3,2020-03-01,29,73,6.5,NZ PHF Science Monthly Notifiable Disease Surveillance
-81,Typhoid fever,2020,3,2020-03-01,5,17,1.1,NZ PHF Science Monthly Notifiable Disease Surveillance
-82,VTEC/STEC infection,2020,3,2020-03-01,109,285,20.7,NZ PHF Science Monthly Notifiable Disease Surveillance
-83,Yersiniosis,2020,3,2020-03-01,96,313,25.1,NZ PHF Science Monthly Notifiable Disease Surveillance
-84,COVID-1,2020,4,2020-04-01,742,1491,30.5,NZ PHF Science Monthly Notifiable Disease Surveillance
-85,Campylobacteriosis,2020,4,2020-04-01,94,1422,112.4,NZ PHF Science Monthly Notifiable Disease Surveillance
-86,Cryptosporidiosis,2020,4,2020-04-01,10,113,18.5,NZ PHF Science Monthly Notifiable Disease Surveillance
-87,Dengue fever,2020,4,2020-04-01,4,44,4.2,NZ PHF Science Monthly Notifiable Disease Surveillance
-88,Gastroenteritis,2020,4,2020-04-01,3,99,8.4,NZ PHF Science Monthly Notifiable Disease Surveillance
-89,Giardiasis,2020,4,2020-04-01,50,467,32.5,NZ PHF Science Monthly Notifiable Disease Surveillance
-90,Haemophilus influenzae type b,2020,4,2020-04-01,0,3,0.1,NZ PHF Science Monthly Notifiable Disease Surveillance
-91,Hepatitis A,2020,4,2020-04-01,1,16,0.8,NZ PHF Science Monthly Notifiable Disease Surveillance
-92,Hepatitis B,2020,4,2020-04-01,4,12,0.6,NZ PHF Science Monthly Notifiable Disease Surveillance
-93,Hepatitis C,2020,4,2020-04-01,1,9,0.6,NZ PHF Science Monthly Notifiable Disease Surveillance
-94,Invasive pneumococcal disease,2020,4,2020-04-01,7,91,9.9,NZ PHF Science Monthly Notifiable Disease Surveillance
-95,Legionellosis,2020,4,2020-04-01,3,43,3.6,NZ PHF Science Monthly Notifiable Disease Surveillance
-96,Leptospirosis,2020,4,2020-04-01,2,23,1.9,NZ PHF Science Monthly Notifiable Disease Surveillance
-97,Listeriosis,2020,4,2020-04-01,2,14,0.7,NZ PHF Science Monthly Notifiable Disease Surveillance
-98,Malaria,2020,4,2020-04-01,2,8,0.6,NZ PHF Science Monthly Notifiable Disease Surveillance
-99,Measles,2020,4,2020-04-01,0,9,43.3,NZ PHF Science Monthly Notifiable Disease Surveillance
-100,Meningococcal disease,2020,4,2020-04-01,0,8,2.5,NZ PHF Science Monthly Notifiable Disease Surveillance
-101,Mumps,2020,4,2020-04-01,22,144,7.8,NZ PHF Science Monthly Notifiable Disease Surveillance
-102,Paratyphoid fever,2020,4,2020-04-01,1,15,0.5,NZ PHF Science Monthly Notifiable Disease Surveillance
-103,Pertussis,2020,4,2020-04-01,7,134,14.4,NZ PHF Science Monthly Notifiable Disease Surveillance
-104,Q fever,2020,4,2020-04-01,1,1,0.0,NZ PHF Science Monthly Notifiable Disease Surveillance
-105,Rheumatic fever,2020,4,2020-04-01,24,78,3.7,NZ PHF Science Monthly Notifiable Disease Surveillance
-106,Rickettsial disease,2020,4,2020-04-01,0,1,0.0,NZ PHF Science Monthly Notifiable Disease Surveillance
-107,Rubella,2020,4,2020-04-01,0,0,0.0,NZ PHF Science Monthly Notifiable Disease Surveillance
-108,Salmonellosis,2020,4,2020-04-01,23,283,20.5,NZ PHF Science Monthly Notifiable Disease Surveillance
-109,Shigellosis,2020,4,2020-04-01,4,61,4.0,NZ PHF Science Monthly Notifiable Disease Surveillance
-110,Tuberculosis disease,2020,4,2020-04-01,25,94,6.3,NZ PHF Science Monthly Notifiable Disease Surveillance
-111,Typhoid fever,2020,4,2020-04-01,5,22,1.1,NZ PHF Science Monthly Notifiable Disease Surveillance
-112,VTEC/STEC infection,2020,4,2020-04-01,31,314,19.3,NZ PHF Science Monthly Notifiable Disease Surveillance
-113,Yersiniosis,2020,4,2020-04-01,23,337,24.3,NZ PHF Science Monthly Notifiable Disease Surveillance
+1,COVID-19,2026,3,2026-03-01,2407,,,NZ PHF Science Monthly Notifiable Disease Surveillance
+2,Campylobacteriosis,2026,3,2026-03-01,421,,,NZ PHF Science Monthly Notifiable Disease Surveillance
+3,Cryptosporidiosis,2026,3,2026-03-01,27,,,NZ PHF Science Monthly Notifiable Disease Surveillance
+4,Dengue fever,2026,3,2026-03-01,60,,,NZ PHF Science Monthly Notifiable Disease Surveillance
+5,Gastroenteritis,2026,3,2026-03-01,48,,,NZ PHF Science Monthly Notifiable Disease Surveillance
+6,Giardiasis,2026,3,2026-03-01,75,,,NZ PHF Science Monthly Notifiable Disease Surveillance
+7,Haemophilus influenzae type b,2026,3,2026-03-01,0,,,NZ PHF Science Monthly Notifiable Disease Surveillance
+8,Hepatitis A,2026,3,2026-03-01,4,,,NZ PHF Science Monthly Notifiable Disease Surveillance
+9,Hepatitis B,2026,3,2026-03-01,0,,,NZ PHF Science Monthly Notifiable Disease Surveillance
+10,Hepatitis C,2026,3,2026-03-01,4,,,NZ PHF Science Monthly Notifiable Disease Surveillance
+11,Invasive group A streptococcal infection,2026,3,2026-03-01,55,,,NZ PHF Science Monthly Notifiable Disease Surveillance
+12,Invasive pneumococcal disease,2026,3,2026-03-01,48,,,NZ PHF Science Monthly Notifiable Disease Surveillance
+13,Legionellosis,2026,3,2026-03-01,9,,,NZ PHF Science Monthly Notifiable Disease Surveillance
+14,Leptospirosis,2026,3,2026-03-01,6,,,NZ PHF Science Monthly Notifiable Disease Surveillance
+15,Listeriosis,2026,3,2026-03-01,1,,,NZ PHF Science Monthly Notifiable Disease Surveillance
+16,Malaria,2026,3,2026-03-01,4,,,NZ PHF Science Monthly Notifiable Disease Surveillance
+17,Measles,2026,3,2026-03-01,0,,,NZ PHF Science Monthly Notifiable Disease Surveillance
+18,Meningococcal disease,2026,3,2026-03-01,3,,,NZ PHF Science Monthly Notifiable Disease Surveillance
+19,Mpox,2026,3,2026-03-01,8,,,NZ PHF Science Monthly Notifiable Disease Surveillance
+20,Mumps,2026,3,2026-03-01,0,,,NZ PHF Science Monthly Notifiable Disease Surveillance
+21,Paratyphoid fever,2026,3,2026-03-01,2,,,NZ PHF Science Monthly Notifiable Disease Surveillance
+22,Pertussis,2026,3,2026-03-01,117,,,NZ PHF Science Monthly Notifiable Disease Surveillance
+23,Rheumatic fever,2026,3,2026-03-01,19,,,NZ PHF Science Monthly Notifiable Disease Surveillance
+24,Rickettsial disease,2026,3,2026-03-01,0,,,NZ PHF Science Monthly Notifiable Disease Surveillance
+25,Salmonellosis,2026,3,2026-03-01,81,,,NZ PHF Science Monthly Notifiable Disease Surveillance
+26,Shigellosis,2026,3,2026-03-01,8,,,NZ PHF Science Monthly Notifiable Disease Surveillance
+27,Tuberculosis disease,2026,3,2026-03-01,49,,,NZ PHF Science Monthly Notifiable Disease Surveillance
+28,Typhoid fever,2026,3,2026-03-01,6,,,NZ PHF Science Monthly Notifiable Disease Surveillance
+29,VTEC/STEC infection,2026,3,2026-03-01,99,,,NZ PHF Science Monthly Notifiable Disease Surveillance
+30,Yersiniosis,2026,3,2026-03-01,75,,,NZ PHF Science Monthly Notifiable Disease Surveillance
+31,COVID-19,2026,4,2026-04-01,764,5388,396.2202499560868,NZ PHF Science Monthly Notifiable Disease Surveillance
+32,Campylobacteriosis,2026,4,2026-04-01,343,1802,107.03499649638401,NZ PHF Science Monthly Notifiable Disease Surveillance
+33,Cryptosporidiosis,2026,4,2026-04-01,38,125,14.902172619665958,NZ PHF Science Monthly Notifiable Disease Surveillance
+34,Dengue fever,2026,4,2026-04-01,37,348,12.86233150062423,NZ PHF Science Monthly Notifiable Disease Surveillance
+35,Gastroenteritis,2026,4,2026-04-01,33,167,9.330384377839016,NZ PHF Science Monthly Notifiable Disease Surveillance
+36,Giardiasis,2026,4,2026-04-01,68,280,15.563232241577628,NZ PHF Science Monthly Notifiable Disease Surveillance
+37,Haemophilus influenzae type b,2026,4,2026-04-01,0,0,0.037774835537809776,NZ PHF Science Monthly Notifiable Disease Surveillance
+38,Hepatitis A,2026,4,2026-04-01,3,11,0.8310463818318151,NZ PHF Science Monthly Notifiable Disease Surveillance
+39,Hepatitis B,2026,4,2026-04-01,10,11,0.43441060868481246,NZ PHF Science Monthly Notifiable Disease Surveillance
+40,Hepatitis C,2026,4,2026-04-01,6,12,0.4532980264537173,NZ PHF Science Monthly Notifiable Disease Surveillance
+41,Invasive group A streptococcal infection,2026,4,2026-04-01,45,230,11.559099674569792,NZ PHF Science Monthly Notifiable Disease Surveillance
+42,Invasive pneumococcal disease,2026,4,2026-04-01,37,140,12.975656007237658,NZ PHF Science Monthly Notifiable Disease Surveillance
+43,Legionellosis,2026,4,2026-04-01,13,43,2.9653245897180676,NZ PHF Science Monthly Notifiable Disease Surveillance
+44,Leptospirosis,2026,4,2026-04-01,11,28,1.2276821549788177,NZ PHF Science Monthly Notifiable Disease Surveillance
+45,Listeriosis,2026,4,2026-04-01,2,8,0.7177218752183858,NZ PHF Science Monthly Notifiable Disease Surveillance
+46,Malaria,2026,4,2026-04-01,6,20,0.9443708884452444,NZ PHF Science Monthly Notifiable Disease Surveillance
+47,Measles,2026,4,2026-04-01,2,5,1.189907319441008,NZ PHF Science Monthly Notifiable Disease Surveillance
+48,Meningococcal disease,2026,4,2026-04-01,1,8,0.8310463818318151,NZ PHF Science Monthly Notifiable Disease Surveillance
+49,Mpox,2026,4,2026-04-01,1,9,0.8877086351385297,NZ PHF Science Monthly Notifiable Disease Surveillance
+50,Mumps,2026,4,2026-04-01,1,1,0.18887417768904888,NZ PHF Science Monthly Notifiable Disease Surveillance
+51,Paratyphoid fever,2026,4,2026-04-01,4,8,0.26442384876466846,NZ PHF Science Monthly Notifiable Disease Surveillance
+52,Pertussis,2026,4,2026-04-01,112,644,40.740160127527844,NZ PHF Science Monthly Notifiable Disease Surveillance
+53,Rheumatic fever,2026,4,2026-04-01,24,76,4.023019984776742,NZ PHF Science Monthly Notifiable Disease Surveillance
+54,Rickettsial disease,2026,4,2026-04-01,0,1,0.09443708884452444,NZ PHF Science Monthly Notifiable Disease Surveillance
+55,Salmonellosis,2026,4,2026-04-01,97,369,21.531656256551575,NZ PHF Science Monthly Notifiable Disease Surveillance
+56,Shigellosis,2026,4,2026-04-01,8,42,2.9086623364113526,NZ PHF Science Monthly Notifiable Disease Surveillance
+57,Tuberculosis disease,2026,4,2026-04-01,35,157,8.083814805091292,NZ PHF Science Monthly Notifiable Disease Surveillance
+58,Typhoid fever,2026,4,2026-04-01,6,25,0.9065960529074346,NZ PHF Science Monthly Notifiable Disease Surveillance
+59,VTEC/STEC infection,2026,4,2026-04-01,86,389,21.663868180933907,NZ PHF Science Monthly Notifiable Disease Surveillance
+60,Yersiniosis,2026,4,2026-04-01,64,318,19.54847739081656,NZ PHF Science Monthly Notifiable Disease Surveillance

@@ -27,6 +27,7 @@ from src.core.source_scopes import (
     canonicalize_task_source,
     default_source_for_country,
     get_expected_scopes_for_country,
+    get_known_task_sources,
     scope_display_label,
     scope_from_data_source,
     source_options_for_country,
@@ -150,17 +151,7 @@ def _scope_from_task(task: Task) -> str:
         (inp.get("source") or "") if isinstance(inp, dict) else "",
         country_code=country_code,
     )
-    if source in {
-        "nndss_api",
-        "jp_weekly",
-        "cdc_weekly",
-        "nhc",
-        "pubmed",
-        "nidss_open_data",
-        "sinan_datasus",
-        "kdca_open_api",
-        "all",
-    }:
+    if source in get_known_task_sources(country_code):
         return source
 
     # Backward compatibility: old tasks only stored data_source text.
