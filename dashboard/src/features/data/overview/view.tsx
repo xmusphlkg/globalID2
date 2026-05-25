@@ -11,9 +11,8 @@ import { MetricTile } from "@/components/ui/MetricTile";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { CHART_TOKENS } from "@/lib/chart-theme";
-import { useDiseases } from "@/lib/hooks/useDiseases";
-import { useOverviewSummary, useOverviewTrend } from "@/lib/hooks/useOverview";
-import { type ReportListItem, useReports } from "@/lib/hooks/useReports";
+import { useDiseases, useOverviewSummary, useOverviewTrend } from "@/features/data/api";
+import { type ReportListItem, useReports } from "@/features/reports/api";
 import { t } from "@/lib/i18n";
 import { formatDate, formatNumber } from "@/lib/utils";
 import { useAppStore } from "@/stores/app-store";
@@ -160,7 +159,7 @@ export default function DataDashboardPage() {
       </FilterToolbar>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <section className="rounded-tremor-default border border-tremor-border bg-tremor-background p-4 dark:border-dark-tremor-border dark:bg-dark-tremor-background">
+        <section className="app-panel p-4">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-base font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
@@ -221,7 +220,7 @@ export default function DataDashboardPage() {
         </section>
 
         <aside className="space-y-4">
-          <section className="rounded-tremor-default border border-tremor-border bg-tremor-background p-4 dark:border-dark-tremor-border dark:bg-dark-tremor-background">
+          <section className="app-panel p-4">
             <h2 className="text-base font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
               {t(lang, "top_diseases")}
             </h2>
@@ -251,7 +250,7 @@ export default function DataDashboardPage() {
             )}
           </section>
 
-          <section className="rounded-tremor-default border border-tremor-border bg-tremor-background p-4 dark:border-dark-tremor-border dark:bg-dark-tremor-background">
+          <section className="app-panel p-4">
             <h2 className="text-base font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
               {t(lang, "release_snapshot")}
             </h2>

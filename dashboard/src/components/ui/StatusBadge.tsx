@@ -4,8 +4,8 @@ import { cn } from "@/lib/utils";
 type StatusTone = "neutral" | "info" | "success" | "warning" | "danger" | "primary";
 
 const toneClasses: Record<StatusTone, string> = {
-  neutral: "border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-300",
-  info: "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900/50 dark:bg-sky-950/30 dark:text-sky-300",
+  neutral: "border-stone-200 bg-stone-50 text-stone-700 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-300",
+  info: "border-blue-200 bg-blue-50 text-blue-700 dark:border-sky-900/50 dark:bg-sky-950/30 dark:text-sky-300",
   success: "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-300",
   warning: "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300",
   danger: "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-300",
@@ -45,7 +45,7 @@ export function StatusBadge({ children, status, tone, className }: StatusBadgePr
   return (
     <span
       className={cn(
-        "inline-flex h-6 max-w-full items-center rounded-tremor-default border px-2 text-xs font-medium",
+        "inline-flex h-6 max-w-full items-center rounded-tremor-default border px-2 text-xs font-semibold",
         toneClasses[resolvedTone],
         className,
       )}

@@ -21,7 +21,7 @@ import {
 import { ApiError } from "@/lib/api";
 import { useAppStore } from "@/stores/app-store";
 import { t } from "@/lib/i18n";
-import { useTaskWebSocket } from "@/lib/hooks/useTasks";
+import { useTaskWebSocket } from "@/features/operations/tasks/api";
 import {
   type AgentRunSummary,
   type AgentWorkflowEvidence,
@@ -30,7 +30,7 @@ import {
   useAgentRuns,
   useCancelAgentRun,
   useResumeAgentRun,
-} from "@/lib/hooks/useAgentRuns";
+} from "@/features/ai/api";
 import { cn } from "@/lib/utils";
 import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
 import { DetailDrawer } from "@/components/ui/DetailDrawer";

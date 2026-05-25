@@ -22,7 +22,7 @@ import { MetricTile } from "@/components/ui/MetricTile";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { CHART_TOKENS } from "@/lib/chart-theme";
-import { type TaskItem, useTaskDetail, useTasks, useTaskWebSocket } from "@/lib/hooks/useTasks";
+import { type TaskItem, useTaskDetail, useTasks, useTaskWebSocket } from "@/features/operations/tasks/api";
 import { t } from "@/lib/i18n";
 import { formatDate } from "@/lib/utils";
 import { useAppStore } from "@/stores/app-store";
@@ -410,7 +410,7 @@ export default function TasksPage() {
 
       {!isLoading && tasks && tasks.length > 0 ? (
         <div className="grid gap-4 lg:grid-cols-2">
-          <section className="rounded-tremor-default border border-tremor-border bg-tremor-background p-4 dark:border-dark-tremor-border dark:bg-dark-tremor-background">
+          <section className="app-panel p-4">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-sm font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
@@ -425,7 +425,7 @@ export default function TasksPage() {
             <Chart option={statusOption} height={220} />
           </section>
 
-          <section className="rounded-tremor-default border border-tremor-border bg-tremor-background p-4 dark:border-dark-tremor-border dark:bg-dark-tremor-background">
+          <section className="app-panel p-4">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-sm font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">

@@ -16,12 +16,12 @@ import { StatusBadge as UiStatusBadge } from "@/components/ui/StatusBadge";
 import { CHART_TOKENS } from "@/lib/chart-theme";
 import { ApiError } from "@/lib/api";
 import { t } from "@/lib/i18n";
-import { usePaginatedTasks, useTaskDetail, useTaskWebSocket } from "@/lib/hooks/useTasks";
+import { usePaginatedTasks, useTaskDetail, useTaskWebSocket } from "@/features/operations/tasks/api";
 import {
   useAIInteractions,
   useAIInteractionSummary,
   type AIInteractionItem,
-} from "@/lib/hooks/useAIInteractions";
+} from "@/features/ai/api";
 
 function queryErrorText(error: unknown, lang: "en" | "zh"): string {
   const fallback = lang === "zh" ? "请检查后端 API 路由和服务状态。" : "Please check backend API route and server status.";
