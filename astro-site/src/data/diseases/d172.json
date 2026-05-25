@@ -2081,7 +2081,9 @@
           "description": "Taiwan, China monthly notifiable infectious disease open-data CSV feed."
         }
       ],
-      "country_name": "Taiwan, China"
+      "country_name": "Taiwan, China",
+      "country_name_en": "Taiwan, China",
+      "country_name_zh": "中国台湾"
     }
   ]
 }

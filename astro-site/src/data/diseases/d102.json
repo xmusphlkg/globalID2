@@ -1632,6 +1632,100 @@
       "total_cases": 20198,
       "total_deaths": 0
     },
+    "CH": {
+      "dates": [
+        "2013-01-01",
+        "2014-01-01",
+        "2015-01-01",
+        "2016-01-01",
+        "2017-01-01",
+        "2018-01-01",
+        "2019-01-01",
+        "2020-01-01",
+        "2021-01-01",
+        "2022-01-01",
+        "2023-01-01",
+        "2024-01-01",
+        "2025-01-01"
+      ],
+      "cases": [
+        0,
+        1,
+        2,
+        3,
+        1,
+        1,
+        0,
+        0,
+        6,
+        0,
+        0,
+        0,
+        2
+      ],
+      "weekly_equiv_cases": [
+        0.0,
+        0.019178082191780823,
+        0.038356164383561646,
+        0.05753424657534246,
+        0.01912568306010929,
+        0.019178082191780823,
+        0.0,
+        0.0,
+        0.11475409836065574,
+        0.0,
+        0.0,
+        0.0,
+        0.03825136612021858
+      ],
+      "deaths": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "incidence_rates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "incidence_sources": [
+        "missing_population",
+        "missing_population",
+        "missing_population",
+        "missing_population",
+        "missing_population",
+        "missing_population",
+        "missing_population",
+        "missing_population",
+        "missing_population",
+        "missing_population",
+        "missing_population",
+        "missing_population",
+        "missing_population"
+      ],
+      "total_cases": 16,
+      "total_deaths": 0
+    },
     "HK": {
       "dates": [
         "2008-07-01",
@@ -9072,7 +9166,7 @@
       146,
       128,
       121,
-      128,
+      129,
       117,
       158,
       128,
@@ -9084,6 +9178,7 @@
       114,
       133,
       92,
+      2,
       0,
       0,
       0,
@@ -9095,8 +9190,7 @@
       0,
       0,
       0,
-      0,
-      175,
+      178,
       174,
       236,
       223,
@@ -9108,7 +9202,7 @@
       88,
       63,
       86,
-      0,
+      1,
       0,
       1,
       0,
@@ -9120,7 +9214,7 @@
       0,
       0,
       0,
-      1,
+      2,
       0,
       0,
       1,
@@ -9156,7 +9250,7 @@
       36,
       16,
       23,
-      31,
+      37,
       42,
       29,
       21,
@@ -9204,7 +9298,7 @@
       75,
       75,
       86,
-      60,
+      62,
       74,
       85,
       75,
@@ -9534,7 +9628,7 @@
       0
     ]
   },
-  "total_cases": 20217,
+  "total_cases": 20233,
   "total_deaths": 0,
   "generated_at": "2026-05-16T00:00:00+00:00",
   "source_info": [
@@ -9557,7 +9651,32 @@
           "description": "Brazil Ministry of Health DATASUS/SINAN public DBC microdata aggregated to national monthly notification counts."
         }
       ],
-      "country_name": "Brazil"
+      "country_name": "Brazil",
+      "country_name_en": "Brazil",
+      "country_name_zh": "巴西"
+    },
+    {
+      "country_code": "CH",
+      "primary_scope": "foph_idd",
+      "primary_label": "Switzerland FOPH IDD",
+      "primary_url": "https://www.idd.bag.admin.ch/en/portal-data",
+      "primary_type": "rest_api",
+      "parser_primary": "ch_foph_idd_cases",
+      "notes": "Switzerland FOPH/BAG IDD mandatory reporting API normalized to national case rows. Monthly series may use the dashboard CHFL aggregate where CH-only monthly series are not exposed.",
+      "sources": [
+        {
+          "scope": "foph_idd",
+          "label": "Switzerland FOPH IDD",
+          "url": "https://www.idd.bag.admin.ch/en/portal-data",
+          "machine_url": null,
+          "type": "rest_api",
+          "cadence": "weekly",
+          "description": "Switzerland FOPH/BAG IDD mandatory reporting API normalized to national case rows. Monthly series may use the dashboard CHFL aggregate where CH-only monthly series are not exposed."
+        }
+      ],
+      "country_name": "Switzerland",
+      "country_name_en": "Switzerland",
+      "country_name_zh": "瑞士"
     },
     {
       "country_code": "HK",
@@ -9578,7 +9697,9 @@
           "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
         }
       ],
-      "country_name": "Hong Kong, China"
+      "country_name": "Hong Kong, China",
+      "country_name_en": "Hong Kong, China",
+      "country_name_zh": "中国香港"
     },
     {
       "country_code": "JP",
@@ -9599,7 +9720,9 @@
           "description": "Japan weekly infectious disease surveillance via NIID/JIHS."
         }
       ],
-      "country_name": "Japan"
+      "country_name": "Japan",
+      "country_name_en": "Japan",
+      "country_name_zh": "日本"
     },
     {
       "country_code": "US",
@@ -9620,7 +9743,9 @@
           "description": "CDC National Notifiable Diseases Surveillance System provisional data."
         }
       ],
-      "country_name": "United States"
+      "country_name": "United States",
+      "country_name_en": "United States",
+      "country_name_zh": "美国"
     }
   ]
 }

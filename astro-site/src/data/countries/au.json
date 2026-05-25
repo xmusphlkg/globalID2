@@ -1,6 +1,8 @@
 {
   "country_code": "AU",
   "country_name": "Australia",
+  "country_name_en": "Australia",
+  "country_name_zh": "澳大利亚",
   "total_cases": 20134290,
   "total_deaths": 0,
   "disease_count": 66,

@@ -6457,7 +6457,9 @@
           "description": "Australian national notifiable diseases surveillance dashboard."
         }
       ],
-      "country_name": "Australia"
+      "country_name": "Australia",
+      "country_name_en": "Australia",
+      "country_name_zh": "澳大利亚"
     },
     {
       "country_code": "KR",
@@ -6478,7 +6480,9 @@
           "description": "Korea KDCA notifiable infectious disease OpenAPI or portal/KOSIS downloads aggregated to national monthly notification counts."
         }
       ],
-      "country_name": "South Korea"
+      "country_name": "South Korea",
+      "country_name_en": "South Korea",
+      "country_name_zh": "韩国"
     },
     {
       "country_code": "US",
@@ -6499,7 +6503,9 @@
           "description": "CDC National Notifiable Diseases Surveillance System provisional data."
         }
       ],
-      "country_name": "United States"
+      "country_name": "United States",
+      "country_name_en": "United States",
+      "country_name_zh": "美国"
     }
   ]
 }

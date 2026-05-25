@@ -2909,7 +2909,9 @@
           "description": "Australian national notifiable diseases surveillance dashboard."
         }
       ],
-      "country_name": "Australia"
+      "country_name": "Australia",
+      "country_name_en": "Australia",
+      "country_name_zh": "澳大利亚"
     }
   ]
 }

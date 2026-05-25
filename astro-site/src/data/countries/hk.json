@@ -1,6 +1,8 @@
 {
   "country_code": "HK",
   "country_name": "Hong Kong, China",
+  "country_name_en": "Hong Kong, China",
+  "country_name_zh": "中国香港",
   "total_cases": 3621314,
   "total_deaths": 0,
   "disease_count": 62,
@@ -136394,9 +136396,9 @@
     ]
   },
   "brief_en": "Hong Kong, China page consolidates infectious disease surveillance records from Hong Kong, China CHP Notifiable Diseases. It combines source metadata, time-series charts, and downloadable machine-readable datasets.",
-  "brief_zh": "Hong Kong, China页面整合来自Hong Kong, China CHP Notifiable Diseases 的传染病监测记录，包含来源信息、时间序列图表和可下载数据。",
+  "brief_zh": "中国香港页面整合来自中国香港 CHP 法定传染病 的传染病监测记录，包含来源信息、时间序列图表和可下载数据。",
   "surveillance_system_en": "The dataset is built from configured official feeds for Hong Kong, China; current primary sources include Hong Kong, China CHP Notifiable Diseases.",
-  "surveillance_system_zh": "该数据集来自Hong Kong, China已配置的官方数据源；当前主要来源包括Hong Kong, China CHP Notifiable Diseases。",
+  "surveillance_system_zh": "该数据集来自中国香港已配置的官方数据源；当前主要来源包括中国香港 CHP 法定传染病。",
   "interpretation_en": "Coverage currently spans 1997-01-01 to 2026-03-01 across 62 tracked diseases.",
   "interpretation_zh": "当前覆盖区间为 1997-01-01 至 2026-03-01，覆盖 62 种追踪疾病。",
   "reporting_cadence_en": "Source reporting frequency is inferred as MONTHLY; charts use weekly-equivalent normalization where applicable.",
@@ -136404,7 +136406,7 @@
   "limitations_en": "Counts reflect reported surveillance records and may be affected by case definitions, reporting lag, source cadence, and missing population denominators.",
   "limitations_zh": "病例数反映已报告的监测记录，可能受病例定义、报告延迟、来源频率和人口分母缺失影响。",
   "source_summary_en": "Hong Kong, China CHP Notifiable Diseases",
-  "source_summary_zh": "Hong Kong, China CHP Notifiable Diseases",
+  "source_summary_zh": "中国香港 CHP 法定传染病",
   "country_brief_status": "fallback",
   "country_brief_updated_at": null,
   "generated_at": "2026-05-16T00:00:00+00:00"

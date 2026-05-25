@@ -1926,6 +1926,100 @@
       "total_cases": 46397,
       "total_deaths": 0
     },
+    "CH": {
+      "dates": [
+        "2013-01-01",
+        "2014-01-01",
+        "2015-01-01",
+        "2016-01-01",
+        "2017-01-01",
+        "2018-01-01",
+        "2019-01-01",
+        "2020-01-01",
+        "2021-01-01",
+        "2022-01-01",
+        "2023-01-01",
+        "2024-01-01",
+        "2025-01-01"
+      ],
+      "cases": [
+        908,
+        787,
+        875,
+        849,
+        974,
+        956,
+        854,
+        525,
+        501,
+        822,
+        916,
+        1069,
+        1100
+      ],
+      "weekly_equiv_cases": [
+        17.413698630136984,
+        15.093150684931507,
+        16.78082191780822,
+        16.28219178082192,
+        18.62841530054645,
+        18.334246575342465,
+        16.37808219178082,
+        10.068493150684931,
+        9.581967213114755,
+        15.764383561643834,
+        17.567123287671233,
+        20.5013698630137,
+        21.038251366120218
+      ],
+      "deaths": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "incidence_rates": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "incidence_sources": [
+        "missing_population",
+        "missing_population",
+        "missing_population",
+        "missing_population",
+        "missing_population",
+        "missing_population",
+        "missing_population",
+        "missing_population",
+        "missing_population",
+        "missing_population",
+        "missing_population",
+        "missing_population",
+        "missing_population"
+      ],
+      "total_cases": 11136,
+      "total_deaths": 0
+    },
     "HK": {
       "dates": [
         "2015-01-01",
@@ -14902,7 +14996,7 @@
       193,
       199,
       160,
-      145,
+      1053,
       156,
       152,
       232,
@@ -14914,7 +15008,7 @@
       178,
       270,
       277,
-      1054,
+      1841,
       999,
       1197,
       927,
@@ -14926,7 +15020,7 @@
       612,
       785,
       906,
-      1611,
+      2486,
       1015,
       1023,
       1106,
@@ -14938,7 +15032,7 @@
       870,
       853,
       1115,
-      1852,
+      2701,
       1351,
       1387,
       1614,
@@ -14950,7 +15044,7 @@
       941,
       935,
       1411,
-      1867,
+      2841,
       1366,
       1331,
       1550,
@@ -14962,7 +15056,7 @@
       825,
       1009,
       1614,
-      2347,
+      3303,
       2025,
       1639,
       1388,
@@ -14974,7 +15068,7 @@
       835,
       920,
       1467,
-      1833,
+      2687,
       1195,
       1714,
       1381,
@@ -14986,7 +15080,7 @@
       832,
       1348,
       1785,
-      1882,
+      2407,
       1455,
       1065,
       457,
@@ -14998,7 +15092,7 @@
       508,
       459,
       480,
-      704,
+      1205,
       412,
       434,
       478,
@@ -15010,7 +15104,7 @@
       638,
       772,
       824,
-      1107,
+      1929,
       483,
       514,
       893,
@@ -15022,7 +15116,7 @@
       905,
       980,
       1468,
-      1731,
+      2647,
       1185,
       1046,
       1344,
@@ -15034,7 +15128,7 @@
       923,
       1168,
       1692,
-      1785,
+      2854,
       1363,
       1610,
       1296,
@@ -15046,7 +15140,7 @@
       892,
       1233,
       1522,
-      1886,
+      2986,
       1776,
       1882,
       1321,
@@ -15384,7 +15478,7 @@
       0
     ]
   },
-  "total_cases": 185402,
+  "total_cases": 196538,
   "total_deaths": 0,
   "generated_at": "2026-05-16T00:00:00+00:00",
   "source_info": [
@@ -15407,7 +15501,32 @@
           "description": "Australian national notifiable diseases surveillance dashboard."
         }
       ],
-      "country_name": "Australia"
+      "country_name": "Australia",
+      "country_name_en": "Australia",
+      "country_name_zh": "澳大利亚"
+    },
+    {
+      "country_code": "CH",
+      "primary_scope": "foph_idd",
+      "primary_label": "Switzerland FOPH IDD",
+      "primary_url": "https://www.idd.bag.admin.ch/en/portal-data",
+      "primary_type": "rest_api",
+      "parser_primary": "ch_foph_idd_cases",
+      "notes": "Switzerland FOPH/BAG IDD mandatory reporting API normalized to national case rows. Monthly series may use the dashboard CHFL aggregate where CH-only monthly series are not exposed.",
+      "sources": [
+        {
+          "scope": "foph_idd",
+          "label": "Switzerland FOPH IDD",
+          "url": "https://www.idd.bag.admin.ch/en/portal-data",
+          "machine_url": null,
+          "type": "rest_api",
+          "cadence": "weekly",
+          "description": "Switzerland FOPH/BAG IDD mandatory reporting API normalized to national case rows. Monthly series may use the dashboard CHFL aggregate where CH-only monthly series are not exposed."
+        }
+      ],
+      "country_name": "Switzerland",
+      "country_name_en": "Switzerland",
+      "country_name_zh": "瑞士"
     },
     {
       "country_code": "HK",
@@ -15428,7 +15547,9 @@
           "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
         }
       ],
-      "country_name": "Hong Kong, China"
+      "country_name": "Hong Kong, China",
+      "country_name_en": "Hong Kong, China",
+      "country_name_zh": "中国香港"
     },
     {
       "country_code": "JP",
@@ -15449,7 +15570,9 @@
           "description": "Japan weekly infectious disease surveillance via NIID/JIHS."
         }
       ],
-      "country_name": "Japan"
+      "country_name": "Japan",
+      "country_name_en": "Japan",
+      "country_name_zh": "日本"
     },
     {
       "country_code": "KR",
@@ -15470,7 +15593,9 @@
           "description": "Korea KDCA notifiable infectious disease OpenAPI or portal/KOSIS downloads aggregated to national monthly notification counts."
         }
       ],
-      "country_name": "South Korea"
+      "country_name": "South Korea",
+      "country_name_en": "South Korea",
+      "country_name_zh": "韩国"
     },
     {
       "country_code": "NZ",
@@ -15491,7 +15616,9 @@
           "description": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler"
         }
       ],
-      "country_name": "New Zealand"
+      "country_name": "New Zealand",
+      "country_name_en": "New Zealand",
+      "country_name_zh": "新西兰"
     },
     {
       "country_code": "TW",
@@ -15512,7 +15639,9 @@
           "description": "Taiwan, China monthly notifiable infectious disease open-data CSV feed."
         }
       ],
-      "country_name": "Taiwan, China"
+      "country_name": "Taiwan, China",
+      "country_name_en": "Taiwan, China",
+      "country_name_zh": "中国台湾"
     },
     {
       "country_code": "US",
@@ -15533,7 +15662,9 @@
           "description": "CDC National Notifiable Diseases Surveillance System provisional data."
         }
       ],
-      "country_name": "United States"
+      "country_name": "United States",
+      "country_name_en": "United States",
+      "country_name_zh": "美国"
     }
   ]
 }

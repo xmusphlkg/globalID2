@@ -1,23 +1,23 @@
 {
   "generated_at": "2026-05-16T00:00:00+00:00",
   "summary": {
-    "total_countries": 9,
+    "total_countries": 10,
     "total_diseases": 199,
     "total_reports": 1,
-    "total_cases": 354296145,
+    "total_cases": 359524508,
     "total_deaths": 363160,
     "coverage_start": "1997-01-01",
     "coverage_end": "2026-05-16",
-    "source_count": 11,
+    "source_count": 12,
     "cadence_en": "Monthly / Weekly",
     "cadence_zh": "每月 / 每周",
-    "source_type_summary": "MICROSOFT_BI / FTP_DBC / WEB / OPEN_DATA_CSV / OPEN_API_OR_PORTAL_DOWNLOAD / API"
+    "source_type_summary": "MICROSOFT_BI / FTP_DBC / REST_API / WEB / OPEN_DATA_CSV / OPEN_API_OR_PORTAL_DOWNLOAD / API"
   },
   "metrics": [
     {
       "label_en": "Countries in database",
       "label_zh": "数据库国家数",
-      "value": 9,
+      "value": 10,
       "value_type": "number",
       "note_en": "Official surveillance feeds currently exported to the public site.",
       "note_zh": "当前已导出到公开站点的官方监测国家。",
@@ -35,7 +35,7 @@
     {
       "label_en": "Cumulative cases",
       "label_zh": "累计病例",
-      "value": 354296145,
+      "value": 359524508,
       "value_type": "number",
       "note_en": "Summed from the latest PostgreSQL-backed export.",
       "note_zh": "来自最新 PostgreSQL 导出快照的累计病例。",
@@ -88,12 +88,12 @@
   "architecture": {
     "source_label_en": "Official Health Sources",
     "source_label_zh": "官方卫生数据源",
-    "source_detail_en": "11 configured feeds across 9 countries",
-    "source_detail_zh": "9 个国家，共 11 个已配置来源",
+    "source_detail_en": "12 configured feeds across 10 countries",
+    "source_detail_zh": "10 个国家，共 12 个已配置来源",
     "scraper_label_en": "Collectors",
     "scraper_label_zh": "采集器",
-    "scraper_detail_en": "Python ingestion for MICROSOFT_BI / FTP_DBC / WEB / OPEN_DATA_CSV / OPEN_API_OR_PORTAL_DOWNLOAD / API source types",
-    "scraper_detail_zh": "面向 MICROSOFT_BI / FTP_DBC / WEB / OPEN_DATA_CSV / OPEN_API_OR_PORTAL_DOWNLOAD / API 类型来源的 Python 采集链路",
+    "scraper_detail_en": "Python ingestion for MICROSOFT_BI / FTP_DBC / REST_API / WEB / OPEN_DATA_CSV / OPEN_API_OR_PORTAL_DOWNLOAD / API source types",
+    "scraper_detail_zh": "面向 MICROSOFT_BI / FTP_DBC / REST_API / WEB / OPEN_DATA_CSV / OPEN_API_OR_PORTAL_DOWNLOAD / API 类型来源的 Python 采集链路",
     "database_label_en": "Parser + PostgreSQL",
     "database_label_zh": "解析器 + PostgreSQL",
     "database_detail_en": "199 diseases normalised in the database",
@@ -120,8 +120,8 @@
       "icon": "M10.5 6a7.5 7.5 0 107.5 7.5h-7.5V6z M13.5 10.5H21A7.5 7.5 0 0013.5 3v7.5z",
       "title_en": "Multi-country coverage",
       "title_zh": "多国覆盖",
-      "description_en": "The current export covers 9 countries and 199 standardised diseases from the database.",
-      "description_zh": "当前导出覆盖 9 个国家、199 种已标准化疾病数据。",
+      "description_en": "The current export covers 10 countries and 199 standardised diseases from the database.",
+      "description_zh": "当前导出覆盖 10 个国家、199 种已标准化疾病数据。",
       "accent": "teal"
     },
     {
@@ -187,6 +187,20 @@
       "cadence_zh": "每月"
     },
     {
+      "country_code": "CH",
+      "country_name_en": "Switzerland",
+      "country_name_zh": "瑞士",
+      "label_en": "Switzerland FOPH IDD",
+      "label_zh": "瑞士 FOPH/BAG IDD",
+      "description_en": "Switzerland FOPH/BAG IDD mandatory reporting API normalized to national case rows. Monthly series may use the dashboard CHFL aggregate where CH-only monthly series are not exposed.",
+      "description_zh": "瑞士 FOPH/BAG IDD 法定传染病报告 API，标准化为全国病例记录。",
+      "url": "https://www.idd.bag.admin.ch/en/portal-data",
+      "machine_url": null,
+      "type": "rest_api",
+      "cadence_en": "Weekly",
+      "cadence_zh": "每周"
+    },
+    {
       "country_code": "CN",
       "country_name_en": "China",
       "country_name_zh": "中国",
@@ -233,9 +247,9 @@
       "country_name_en": "Hong Kong, China",
       "country_name_zh": "中国香港",
       "label_en": "Hong Kong, China CHP Notifiable Diseases",
-      "label_zh": "Hong Kong, China CHP Notifiable Diseases",
+      "label_zh": "中国香港 CHP 法定传染病",
       "description_en": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
-      "description_zh": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals",
+      "description_zh": "中国香港 CHP 年度法定传染病 CSV，标准化为全国月度病例数。",
       "url": "https://www.chp.gov.hk/en/static/24012.html",
       "machine_url": null,
       "type": "open_data_csv",
@@ -273,11 +287,11 @@
     {
       "country_code": "NZ",
       "country_name_en": "New Zealand",
-      "country_name_zh": "New Zealand",
+      "country_name_zh": "新西兰",
       "label_en": "phf_monthly",
-      "label_zh": "phf_monthly",
+      "label_zh": "新西兰 PHF Science 法定传染病",
       "description_en": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler",
-      "description_zh": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler",
+      "description_zh": "新西兰 PHF Science 法定传染病月度监测数据。",
       "url": "https://www.phfscience.nz/digital-library/",
       "machine_url": null,
       "type": "web",
@@ -343,6 +357,20 @@
       "cadence_zh": "每月"
     },
     {
+      "code": "CH",
+      "name_en": "Switzerland",
+      "name_zh": "瑞士",
+      "disease_count": 43,
+      "total_cases": 5228363,
+      "total_deaths": 0,
+      "coverage_start": "2013-01-01",
+      "coverage_end": "2026-05-11",
+      "primary_source_label_en": "Switzerland FOPH IDD",
+      "primary_source_label_zh": "瑞士 FOPH/BAG IDD",
+      "cadence_en": "Weekly",
+      "cadence_zh": "每周"
+    },
+    {
       "code": "CN",
       "name_en": "China",
       "name_zh": "中国",
@@ -366,7 +394,7 @@
       "coverage_start": "1997-01-01",
       "coverage_end": "2026-03-01",
       "primary_source_label_en": "Hong Kong, China CHP Notifiable Diseases",
-      "primary_source_label_zh": "Hong Kong, China CHP Notifiable Diseases",
+      "primary_source_label_zh": "中国香港 CHP 法定传染病",
       "cadence_en": "Monthly",
       "cadence_zh": "每月"
     },
@@ -401,14 +429,14 @@
     {
       "code": "NZ",
       "name_en": "New Zealand",
-      "name_zh": "New Zealand",
+      "name_zh": "新西兰",
       "disease_count": 31,
       "total_cases": 2862123,
       "total_deaths": 0,
       "coverage_start": "2016-01-01",
       "coverage_end": "2026-03-01",
       "primary_source_label_en": "phf_monthly",
-      "primary_source_label_zh": "phf_monthly",
+      "primary_source_label_zh": "新西兰 PHF Science 法定传染病",
       "cadence_en": "Monthly",
       "cadence_zh": "每月"
     },

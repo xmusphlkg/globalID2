@@ -14345,7 +14345,9 @@
           "description": "Australian national notifiable diseases surveillance dashboard."
         }
       ],
-      "country_name": "Australia"
+      "country_name": "Australia",
+      "country_name_en": "Australia",
+      "country_name_zh": "澳大利亚"
     },
     {
       "country_code": "JP",
@@ -14366,7 +14368,9 @@
           "description": "Japan weekly infectious disease surveillance via NIID/JIHS."
         }
       ],
-      "country_name": "Japan"
+      "country_name": "Japan",
+      "country_name_en": "Japan",
+      "country_name_zh": "日本"
     },
     {
       "country_code": "NZ",
@@ -14387,7 +14391,9 @@
           "description": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler"
         }
       ],
-      "country_name": "New Zealand"
+      "country_name": "New Zealand",
+      "country_name_en": "New Zealand",
+      "country_name_zh": "新西兰"
     },
     {
       "country_code": "US",
@@ -14408,7 +14414,9 @@
           "description": "CDC National Notifiable Diseases Surveillance System provisional data."
         }
       ],
-      "country_name": "United States"
+      "country_name": "United States",
+      "country_name_en": "United States",
+      "country_name_zh": "美国"
     }
   ]
 }

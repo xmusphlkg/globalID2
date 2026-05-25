@@ -1,0 +1,44 @@
+disease_id,local_name,local_code,category,aliases,data_source,notes
+D005,AIDS,aids,Notifiable,HIV/AIDS|Acquired Immunodeficiency Syndrome,Switzerland FOPH IDD,IDD annual AIDS case series
+D091,Botulism,botulism,Notifiable,,Switzerland FOPH IDD,IDD annual case series
+D032,Brucellosis,brucellosis,Notifiable,,Switzerland FOPH IDD,IDD annual case series
+D092,Campylobacteriosis,campylobacteriosis,Notifiable,Campylobacter,Switzerland FOPH IDD,IDD monthly case series
+D052,Chikungunya,chikungunya,Notifiable,Chikungunya fever,Switzerland FOPH IDD,IDD annual case series
+D094,Chlamydia,chlamydiosis,Notifiable,Chlamydiosis|Chlamydia trachomatis infection,Switzerland FOPH IDD,IDD monthly case series
+D002,Cholera,cholera,Notifiable,,Switzerland FOPH IDD,IDD annual case series
+D144,Creutzfeldt-Jakob disease,cjd,Notifiable,CJD,Switzerland FOPH IDD,IDD annual case series
+D004,SARS-CoV-2 (Covid-19),covid19,Notifiable,COVID-19|Covid-19|SARS-CoV-2,Switzerland FOPH IDD,IDD ISO-week case series
+D021,Dengue fever,dengueFever,Notifiable,Dengue,Switzerland FOPH IDD,IDD annual case series
+D029,Diphtheria,diphtheria,Notifiable,,Switzerland FOPH IDD,IDD annual case series
+D115,EHEC,ehec,Notifiable,Enterohemorrhagic Escherichia coli infection|STEC|Shiga toxin-producing Escherichia coli infection,Switzerland FOPH IDD,IDD monthly case series
+D033,Gonorrhoea,gonorrhea,Notifiable,Gonorrhea,Switzerland FOPH IDD,IDD monthly case series
+D100,Haemophilus influenzae disease,haemophilusInfluenzae,Notifiable,Haemophilus influenzae|Hib,Switzerland FOPH IDD,IDD annual case series
+D102,Hantavirus infection,hanta,Notifiable,Hanta,Switzerland FOPH IDD,IDD annual case series
+D007,Hepatitis A,hepatitis_a,Notifiable,,Switzerland FOPH IDD,IDD monthly case series
+D008,Hepatitis B,hepatitis_b,Notifiable,,Switzerland FOPH IDD,IDD monthly case series
+D009,Hepatitis C,hepatitis_c,Notifiable,,Switzerland FOPH IDD,IDD monthly case series
+D011,Hepatitis E,hepatitis_e,Notifiable,,Switzerland FOPH IDD,IDD monthly case series
+D162,Human Immunodeficiency Virus (HIV),hiv,Notifiable,HIV|HIV infection,Switzerland FOPH IDD,IDD monthly case series
+D038,Influenza (Seasonal flu),influenza,Notifiable,Influenza|Seasonal flu|Flu,Switzerland FOPH IDD,IDD ISO-week case series
+D106,Invasive pneumococcal disease,ipd,Notifiable,IPD|Pneumococcal disease,Switzerland FOPH IDD,IDD annual case series
+D107,Legionellosis,legionellosis,Notifiable,Legionnaires' disease,Switzerland FOPH IDD,IDD annual case series
+D108,Listeriosis,listeriosis,Notifiable,,Switzerland FOPH IDD,IDD annual case series
+D109,Lyme disease,lyme_borreliosis,Notifiable,Lyme borreliosis,Switzerland FOPH IDD,IDD monthly case series
+D037,Malaria,malaria,Notifiable,,Switzerland FOPH IDD,IDD annual case series
+D017,Measles,measles,Notifiable,,Switzerland FOPH IDD,IDD annual case series
+D110,Meningococcal disease,meningo,Notifiable,Meningococcal infection,Switzerland FOPH IDD,IDD annual case series
+D065,Mpox,monkeypox,Notifiable,Monkeypox,Switzerland FOPH IDD,IDD annual case series
+D113,Q fever,qFever,Notifiable,,Switzerland FOPH IDD,IDD annual case series
+D040,Rubella,rubella,Notifiable,,Switzerland FOPH IDD,IDD annual case series
+D114,Salmonellosis,salmonellosis,Notifiable,Salmonella,Switzerland FOPH IDD,IDD monthly case series
+D105,Shigellosis,shigellosis,Notifiable,Shigella,Switzerland FOPH IDD,IDD monthly case series
+D034,Syphilis,syphilis,Notifiable,,Switzerland FOPH IDD,IDD monthly case series
+D120,Tetanus,tetanus,Notifiable,,Switzerland FOPH IDD,IDD annual case series
+D205,Tick-borne encephalitis (TBE),tick-borne_encephalitis,Notifiable,TBE|Tick-borne encephalitis,Switzerland FOPH IDD,IDD monthly case series
+D122,Trichinellosis,trichinellosis,Notifiable,,Switzerland FOPH IDD,IDD annual case series
+D025,Tuberculosis,tuberculosis,Notifiable,TB,Switzerland FOPH IDD,IDD annual case series
+D123,Tularaemia,tularemia,Notifiable,Tularemia,Switzerland FOPH IDD,IDD monthly case series
+D026,Typhoid and paratyphoid fever,typhoidParatyphoidFever,Notifiable,Typhoid fever|Paratyphoid fever,Switzerland FOPH IDD,IDD annual aggregate case series
+D128,West Nile fever,westnileFever,Notifiable,West Nile virus,Switzerland FOPH IDD,IDD annual case series
+D059,Yellow fever,yellowFever,Notifiable,,Switzerland FOPH IDD,IDD annual case series
+D051,Zika virus infection,zika,Notifiable,Zika virus disease|Zika,Switzerland FOPH IDD,IDD annual case series

@@ -1,6 +1,8 @@
 {
   "country_code": "JP",
   "country_name": "Japan",
+  "country_name_en": "Japan",
+  "country_name_zh": "日本",
   "total_cases": 48114166,
   "total_deaths": 0,
   "disease_count": 86,

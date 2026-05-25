@@ -6565,7 +6565,9 @@
           "description": "Biomedical literature discovery feed used as supplementary context."
         }
       ],
-      "country_name": "China"
+      "country_name": "China",
+      "country_name_en": "China",
+      "country_name_zh": "中国"
     },
     {
       "country_code": "JP",
@@ -6586,7 +6588,9 @@
           "description": "Japan weekly infectious disease surveillance via NIID/JIHS."
         }
       ],
-      "country_name": "Japan"
+      "country_name": "Japan",
+      "country_name_en": "Japan",
+      "country_name_zh": "日本"
     },
     {
       "country_code": "KR",
@@ -6607,7 +6611,9 @@
           "description": "Korea KDCA notifiable infectious disease OpenAPI or portal/KOSIS downloads aggregated to national monthly notification counts."
         }
       ],
-      "country_name": "South Korea"
+      "country_name": "South Korea",
+      "country_name_en": "South Korea",
+      "country_name_zh": "韩国"
     }
   ]
 }

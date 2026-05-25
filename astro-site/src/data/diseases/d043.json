@@ -8011,7 +8011,9 @@
           "description": "Biomedical literature discovery feed used as supplementary context."
         }
       ],
-      "country_name": "China"
+      "country_name": "China",
+      "country_name_en": "China",
+      "country_name_zh": "中国"
     },
     {
       "country_code": "HK",
@@ -8032,7 +8034,9 @@
           "description": "Hong Kong, China CHP annual notifiable infectious disease CSVs normalized to national monthly totals"
         }
       ],
-      "country_name": "Hong Kong, China"
+      "country_name": "Hong Kong, China",
+      "country_name_en": "Hong Kong, China",
+      "country_name_zh": "中国香港"
     },
     {
       "country_code": "JP",
@@ -8053,7 +8057,9 @@
           "description": "Japan weekly infectious disease surveillance via NIID/JIHS."
         }
       ],
-      "country_name": "Japan"
+      "country_name": "Japan",
+      "country_name_en": "Japan",
+      "country_name_zh": "日本"
     }
   ]
 }

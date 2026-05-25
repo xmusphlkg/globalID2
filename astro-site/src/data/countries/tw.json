@@ -1,6 +1,8 @@
 {
   "country_code": "TW",
   "country_name": "Taiwan, China",
+  "country_name_en": "Taiwan, China",
+  "country_name_zh": "中国台湾",
   "total_cases": 11163721,
   "total_deaths": 0,
   "disease_count": 48,

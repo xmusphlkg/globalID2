@@ -135,7 +135,8 @@ const currentPath = Astro.url.pathname;
     applyTheme(currentTheme);
   });
 
-  let currentLang = localStorage.getItem('lang') || 'en';
+  const storedLang = localStorage.getItem('lang');
+  let currentLang = storedLang === 'zh' ? 'zh' : 'en';
   updateLang(currentLang);
 
   toggleBtn?.addEventListener('click', () => {
@@ -146,6 +147,7 @@ const currentPath = Astro.url.pathname;
 
   function updateLang(lang: string) {
     document.documentElement.setAttribute('data-lang', lang);
+    document.documentElement.setAttribute('lang', lang === 'zh' ? 'zh-CN' : 'en');
     if (toggleLabel) toggleLabel.textContent = lang === 'en' ? '中文' : 'EN';
 
     // Update all elements with data-lang-en / data-lang-zh attributes

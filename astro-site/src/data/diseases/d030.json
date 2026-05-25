@@ -1908,7 +1908,9 @@
           "description": "Brazil Ministry of Health DATASUS/SINAN public DBC microdata aggregated to national monthly notification counts."
         }
       ],
-      "country_name": "Brazil"
+      "country_name": "Brazil",
+      "country_name_en": "Brazil",
+      "country_name_zh": "巴西"
     },
     {
       "country_code": "CN",
@@ -1947,7 +1949,9 @@
           "description": "Biomedical literature discovery feed used as supplementary context."
         }
       ],
-      "country_name": "China"
+      "country_name": "China",
+      "country_name_en": "China",
+      "country_name_zh": "中国"
     }
   ]
 }

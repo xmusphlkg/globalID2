@@ -3582,7 +3582,9 @@
           "description": "Brazil Ministry of Health DATASUS/SINAN public DBC microdata aggregated to national monthly notification counts."
         }
       ],
-      "country_name": "Brazil"
+      "country_name": "Brazil",
+      "country_name_en": "Brazil",
+      "country_name_zh": "巴西"
     },
     {
       "country_code": "TW",
@@ -3603,7 +3605,9 @@
           "description": "Taiwan, China monthly notifiable infectious disease open-data CSV feed."
         }
       ],
-      "country_name": "Taiwan, China"
+      "country_name": "Taiwan, China",
+      "country_name_en": "Taiwan, China",
+      "country_name_zh": "中国台湾"
     }
   ]
 }

@@ -98,7 +98,11 @@ const structuredData = {
       (() => {
         const storedTheme = localStorage.getItem('theme');
         const theme = storedTheme === 'light' || storedTheme === 'dark' ? storedTheme : 'light';
+        const storedLang = localStorage.getItem('lang');
+        const lang = storedLang === 'zh' ? 'zh' : 'en';
         document.documentElement.setAttribute('data-theme', theme);
+        document.documentElement.setAttribute('data-lang', lang);
+        document.documentElement.setAttribute('lang', lang === 'zh' ? 'zh-CN' : 'en');
         document.documentElement.classList.toggle('dark', theme === 'dark');
       })();
     </script>
@@ -119,11 +123,5 @@ const structuredData = {
       <slot />
     </main>
     <Footer />
-
-    <!-- Language toggle script (localStorage based) -->
-    <script is:inline>
-      const stored = localStorage.getItem('lang');
-      if (stored === 'zh') document.documentElement.setAttribute('data-lang', 'zh');
-    </script>
   </body>
 </html>

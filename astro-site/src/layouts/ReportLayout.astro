@@ -5,7 +5,7 @@ import BaseLayout from './BaseLayout.astro';
 interface Props {
   title: string;
   description?: string;
-  breadcrumbs?: Array<{ label: string; href?: string }>;
+  breadcrumbs?: Array<{ label: string; labelZh?: string; href?: string }>;
 }
 
 const { title, description, breadcrumbs = [] } = Astro.props;
@@ -18,18 +18,32 @@ const { title, description, breadcrumbs = [] } = Astro.props;
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
         <ol class="site-breadcrumb-list flex flex-wrap items-center gap-2 text-sm">
           <li>
-            <a href="/" class="site-breadcrumb-link academic-kicker tracking-[0.16em] transition-colors">Home</a>
+            <a
+              href="/"
+              class="site-breadcrumb-link academic-kicker tracking-[0.16em] transition-colors"
+              data-lang-en="Home"
+              data-lang-zh="首页"
+            >Home</a>
           </li>
           {breadcrumbs.map((crumb, i) => (
             <>
               <li class="site-breadcrumb-separator">/</li>
               <li>
                 {crumb.href && i < breadcrumbs.length - 1 ? (
-                  <a href={crumb.href} class="site-breadcrumb-link transition-colors">
+                  <a
+                    href={crumb.href}
+                    class="site-breadcrumb-link transition-colors"
+                    data-lang-en={crumb.label}
+                    data-lang-zh={crumb.labelZh ?? crumb.label}
+                  >
                     {crumb.label}
                   </a>
                 ) : (
-                  <span class="site-breadcrumb-current">{crumb.label}</span>
+                  <span
+                    class="site-breadcrumb-current"
+                    data-lang-en={crumb.label}
+                    data-lang-zh={crumb.labelZh ?? crumb.label}
+                  >{crumb.label}</span>
                 )}
               </li>
             </>

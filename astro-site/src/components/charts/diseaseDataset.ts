@@ -26,6 +26,7 @@ export interface DiseaseDataset {
 interface CompactDiseaseDatasetSeriesEntry {
   cc: string;
   n?: string;
+  n_zh?: string;
   tc?: number;
   td?: number;
   x: number[];
@@ -77,7 +78,7 @@ function normalizeDiseaseDataset(raw: DiseaseDataset | CompactDiseaseDataset): D
         {
           disease_id: entry.cc,
           name_en: entry.n ?? entry.cc,
-          name_zh: entry.cc,
+          name_zh: entry.n_zh ?? entry.n ?? entry.cc,
           dates,
           cases: entry.c ?? [],
           weekly_equiv_cases: entry.w ?? [],

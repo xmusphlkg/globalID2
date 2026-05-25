@@ -1,12 +1,14 @@
 {
   "generated_at": "2026-05-16T00:00:00+00:00",
-  "total_countries": 9,
+  "total_countries": 10,
   "total_diseases": 199,
   "total_reports": 1,
   "countries": [
     {
       "code": "AU",
       "name": "Australia",
+      "name_en": "Australia",
+      "name_zh": "澳大利亚",
       "language": "en-AU",
       "total_cases": 20134290,
       "total_deaths": 0,
@@ -39,6 +41,8 @@
     {
       "code": "BR",
       "name": "Brazil",
+      "name_en": "Brazil",
+      "name_zh": "巴西",
       "language": "pt-BR",
       "total_cases": 60603848,
       "total_deaths": 0,
@@ -69,8 +73,44 @@
       }
     },
     {
+      "code": "CH",
+      "name": "Switzerland",
+      "name_en": "Switzerland",
+      "name_zh": "瑞士",
+      "language": "en-CH",
+      "total_cases": 5228363,
+      "total_deaths": 0,
+      "disease_count": 43,
+      "date_range": {
+        "start": "2013-01-01",
+        "end": "2026-05-11"
+      },
+      "source_info": {
+        "country_code": "CH",
+        "primary_scope": "foph_idd",
+        "primary_label": "Switzerland FOPH IDD",
+        "primary_url": "https://www.idd.bag.admin.ch/en/portal-data",
+        "primary_type": "rest_api",
+        "parser_primary": "ch_foph_idd_cases",
+        "notes": "Switzerland FOPH/BAG IDD mandatory reporting API normalized to national case rows. Monthly series may use the dashboard CHFL aggregate where CH-only monthly series are not exposed.",
+        "sources": [
+          {
+            "scope": "foph_idd",
+            "label": "Switzerland FOPH IDD",
+            "url": "https://www.idd.bag.admin.ch/en/portal-data",
+            "machine_url": null,
+            "type": "rest_api",
+            "cadence": "weekly",
+            "description": "Switzerland FOPH/BAG IDD mandatory reporting API normalized to national case rows. Monthly series may use the dashboard CHFL aggregate where CH-only monthly series are not exposed."
+          }
+        ]
+      }
+    },
+    {
       "code": "CN",
       "name": "China",
+      "name_en": "China",
+      "name_zh": "中国",
       "language": "zh-CN",
       "total_cases": 188813770,
       "total_deaths": 363160,
@@ -121,6 +161,8 @@
     {
       "code": "HK",
       "name": "Hong Kong, China",
+      "name_en": "Hong Kong, China",
+      "name_zh": "中国香港",
       "language": "zh-HK",
       "total_cases": 3621314,
       "total_deaths": 0,
@@ -153,6 +195,8 @@
     {
       "code": "JP",
       "name": "Japan",
+      "name_en": "Japan",
+      "name_zh": "日本",
       "language": "ja-JP",
       "total_cases": 48114166,
       "total_deaths": 0,
@@ -185,6 +229,8 @@
     {
       "code": "KR",
       "name": "South Korea",
+      "name_en": "South Korea",
+      "name_zh": "韩国",
       "language": "ko-KR",
       "total_cases": 2849954,
       "total_deaths": 0,
@@ -217,6 +263,8 @@
     {
       "code": "NZ",
       "name": "New Zealand",
+      "name_en": "New Zealand",
+      "name_zh": "新西兰",
       "language": "en",
       "total_cases": 2862123,
       "total_deaths": 0,
@@ -249,6 +297,8 @@
     {
       "code": "TW",
       "name": "Taiwan, China",
+      "name_en": "Taiwan, China",
+      "name_zh": "中国台湾",
       "language": "zh-TW",
       "total_cases": 11163721,
       "total_deaths": 0,
@@ -281,6 +331,8 @@
     {
       "code": "US",
       "name": "United States",
+      "name_en": "United States",
+      "name_zh": "美国",
       "language": "en-US",
       "total_cases": 16132959,
       "total_deaths": 0,

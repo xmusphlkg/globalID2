@@ -1,6 +1,8 @@
 {
   "country_code": "BR",
   "country_name": "Brazil",
+  "country_name_en": "Brazil",
+  "country_name_zh": "巴西",
   "total_cases": 60603848,
   "total_deaths": 0,
   "disease_count": 45,

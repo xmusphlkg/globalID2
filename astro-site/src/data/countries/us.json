@@ -1,6 +1,8 @@
 {
   "country_code": "US",
   "country_name": "United States",
+  "country_name_en": "United States",
+  "country_name_zh": "美国",
   "total_cases": 16132959,
   "total_deaths": 0,
   "disease_count": 64,

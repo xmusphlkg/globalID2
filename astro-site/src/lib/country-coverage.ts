@@ -16,6 +16,7 @@ export const COUNTRY_COVERAGE: CountryCoverageItem[] = [
   { code: 'AU', name_en: 'Australia', name_zh: '澳大利亚', lat: -25, lng: 133, status: 'Supported', labelOffset: [92, -38] },
   { code: 'BR', name_en: 'Brazil', name_zh: '巴西', lat: -14.2, lng: -51.9, status: 'Supported', labelOffset: [112, 34] },
   { code: 'US', name_en: 'United States', name_zh: '美国', lat: 39, lng: -98, status: 'Supported', labelOffset: [-120, -28] },
+  { code: 'CH', name_en: 'Switzerland', name_zh: '瑞士', lat: 46.8, lng: 8.2, status: 'Supported', labelOffset: [-76, 10] },
   { code: 'GB', name_en: 'United Kingdom', name_zh: '英国', lat: 54, lng: -3, status: 'Scheduled', labelOffset: [-112, -34] },
   { code: 'KR', name_en: 'South Korea', name_zh: '韩国', lat: 36.5, lng: 127.5, status: 'Supported', labelOffset: [-92, -86] },
   { code: 'TW', name_en: 'Taiwan, China', name_zh: '中国台湾', lat: 23.7, lng: 121, status: 'Supported', labelOffset: [118, 28] },

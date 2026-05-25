@@ -1,6 +1,8 @@
 {
   "country_code": "CN",
   "country_name": "China",
+  "country_name_en": "China",
+  "country_name_zh": "中国",
   "total_cases": 188813770,
   "total_deaths": 363160,
   "disease_count": 58,
