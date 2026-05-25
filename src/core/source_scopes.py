@@ -203,6 +203,29 @@ def get_expected_scopes_for_country(country_code: Optional[str]) -> list[str]:
     return ordered
 
 
+def get_known_task_sources(country_code: Optional[str] = None) -> set[str]:
+    """Return source values accepted by task/source views.
+
+    Source scopes are declared in the country bootstrap registry. This helper
+    keeps dashboard task parsing in sync with that registry so new country
+    sources do not need a second hand-maintained whitelist.
+    """
+    code = (country_code or "").strip().upper()
+    scopes: set[str] = set(SOURCE_SCOPE_LABELS.keys()) | {"all"}
+    if code:
+        scopes.update(get_expected_scopes_for_country(code))
+    else:
+        scopes.update(scope for values in EXPECTED_SCOPES_BY_COUNTRY.values() for scope in values)
+        try:
+            from src.core.country_library import get_standard_country_codes
+
+            for country in get_standard_country_codes():
+                scopes.update(get_expected_scopes_for_country(country))
+        except Exception:
+            pass
+    return scopes
+
+
 def source_scope_label(
     scope: str,
     *,

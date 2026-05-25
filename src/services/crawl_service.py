@@ -27,8 +27,64 @@ class CrawlResult:
     crawl_run_id: Optional[int]
 
 
+@dataclass(frozen=True)
+class _PipelineSpec:
+    handler_name: str
+    updater_name: Optional[str] = None
+
+
 class CrawlService:
     """Orchestrates the three-phase crawl → parse → store pipeline."""
+
+    _PIPELINES: Dict[str, _PipelineSpec] = {
+        "CN": _PipelineSpec("_execute_cn_cdc"),
+        "US": _PipelineSpec("_execute_us_weekly", "USWeeklyUpdater"),
+        "JP": _PipelineSpec("_execute_jp_weekly", "JPWeeklyUpdater"),
+        "AU": _PipelineSpec("_execute_au_monthly", "AUMonthlyUpdater"),
+        "NZ": _PipelineSpec("_execute_nz_monthly", "NZMonthlyUpdater"),
+        "TW": _PipelineSpec("_execute_tw_monthly", "TWMonthlyUpdater"),
+        "HK": _PipelineSpec("_execute_hk_monthly", "HKMonthlyUpdater"),
+        "BR": _PipelineSpec("_execute_br_monthly", "BRMonthlyUpdater"),
+        "KR": _PipelineSpec("_execute_kr_monthly", "KRMonthlyUpdater"),
+        "CH": _PipelineSpec("_execute_ch_monthly", "CHMonthlyUpdater"),
+    }
+
+    @classmethod
+    def supported_country_codes(cls) -> List[str]:
+        """Return country codes with implemented crawl pipelines."""
+        return list(cls._PIPELINES.keys())
+
+    @classmethod
+    def supported_country_text(cls) -> str:
+        """Human-readable supported country list for validation errors."""
+        return ", ".join(cls.supported_country_codes())
+
+    @staticmethod
+    def _make_updater(updater_name: str):
+        from src.data.processors import (
+            AUMonthlyUpdater,
+            BRMonthlyUpdater,
+            CHMonthlyUpdater,
+            HKMonthlyUpdater,
+            JPWeeklyUpdater,
+            KRMonthlyUpdater,
+            NZMonthlyUpdater,
+            TWMonthlyUpdater,
+            USWeeklyUpdater,
+        )
+
+        updaters = {
+            "AUMonthlyUpdater": AUMonthlyUpdater,
+            "BRMonthlyUpdater": BRMonthlyUpdater,
+            "CHMonthlyUpdater": CHMonthlyUpdater,
+            "HKMonthlyUpdater": HKMonthlyUpdater,
+            "JPWeeklyUpdater": JPWeeklyUpdater,
+            "KRMonthlyUpdater": KRMonthlyUpdater,
+            "NZMonthlyUpdater": NZMonthlyUpdater,
+            "TWMonthlyUpdater": TWMonthlyUpdater,
+            "USWeeklyUpdater": USWeeklyUpdater,
+        }
+        return updaters[updater_name]()
 
     async def execute(
         self,
@@ -46,116 +102,67 @@ class CrawlService:
         Progress is reported via task_manager (0 → 100 %).
         Raises on unrecoverable errors (caller handles via task_lifecycle).
         """
+        normalized_country = (country_code or "").strip().upper()
+        pipeline = self._PIPELINES.get(normalized_country)
+        if pipeline is None:
+            raise ValueError(
+                f"Unsupported country: {normalized_country or country_code}. "
+                f"Available: {self.supported_country_text()}"
+            )
+
+        if pipeline.handler_name != "_execute_cn_cdc":
+            updater = self._make_updater(pipeline.updater_name or "")
+            if normalized_country == "BR":
+                start_year = (
+                    task.input_data.get("start_year")
+                    if isinstance(task.input_data, dict)
+                    else None
+                )
+                return await self._execute_br_monthly(
+                    task=task,
+                    source=source,
+                    force=force,
+                    process=process,
+                    save_raw=save_raw,
+                    fill_missing=fill_missing,
+                    start_year=start_year,
+                    updater=updater,
+                )
+
+            handler = getattr(self, pipeline.handler_name)
+            return await handler(
+                task=task,
+                source=source,
+                force=force,
+                process=process,
+                save_raw=save_raw,
+                fill_missing=fill_missing,
+                updater=updater,
+            )
+
+        return await self._execute_cn_cdc(
+            task=task,
+            country_code=normalized_country,
+            source=source,
+            force=force,
+            process=process,
+            save_raw=save_raw,
+            fill_missing=fill_missing,
+        )
+
+    async def _execute_cn_cdc(
+        self,
+        *,
+        task: Task,
+        country_code: str,
+        source: str,
+        force: bool,
+        process: bool,
+        save_raw: bool,
+        fill_missing: bool,
+    ) -> CrawlResult:
         from src.data.crawlers import ChinaCDCCrawler
-        from src.data.processors import AUMonthlyUpdater, DataProcessor, JPWeeklyUpdater, USWeeklyUpdater, NZMonthlyUpdater, TWMonthlyUpdater, BRMonthlyUpdater, KRMonthlyUpdater, HKMonthlyUpdater, CHMonthlyUpdater
-
-        if country_code not in ("CN", "US", "JP", "AU", "NZ", "TW", "HK", "BR", "KR", "CH"):
-            raise ValueError(f"Unsupported country: {country_code}. Available: CN, US, JP, AU, NZ, TW, HK, BR, KR, CH")
-
-        if country_code == "US":
-            return await self._execute_us_weekly(
-                task=task,
-                source=source,
-                force=force,
-                process=process,
-                save_raw=save_raw,
-                fill_missing=fill_missing,
-                updater=USWeeklyUpdater(),
-            )
-
-        if country_code == "JP":
-            return await self._execute_jp_weekly(
-                task=task,
-                source=source,
-                force=force,
-                process=process,
-                save_raw=save_raw,
-                fill_missing=fill_missing,
-                updater=JPWeeklyUpdater(),
-            )
-
-        if country_code == "AU":
-            return await self._execute_au_monthly(
-                task=task,
-                source=source,
-                force=force,
-                process=process,
-                save_raw=save_raw,
-                fill_missing=fill_missing,
-                updater=AUMonthlyUpdater(),
-            )
-
-        if country_code == "NZ":
-            return await self._execute_nz_monthly(
-                task=task,
-                source=source,
-                force=force,
-                process=process,
-                save_raw=save_raw,
-                fill_missing=fill_missing,
-                updater=NZMonthlyUpdater(),
-            )
-
-        if country_code == "TW":
-            return await self._execute_tw_monthly(
-                task=task,
-                source=source,
-                force=force,
-                process=process,
-                save_raw=save_raw,
-                fill_missing=fill_missing,
-                updater=TWMonthlyUpdater(),
-            )
-
-        if country_code == "HK":
-            return await self._execute_hk_monthly(
-                task=task,
-                source=source,
-                force=force,
-                process=process,
-                save_raw=save_raw,
-                fill_missing=fill_missing,
-                updater=HKMonthlyUpdater(),
-            )
-
-        if country_code == "BR":
-            start_year = (
-                task.input_data.get("start_year")
-                if isinstance(task.input_data, dict)
-                else None
-            )
-            return await self._execute_br_monthly(
-                task=task,
-                source=source,
-                force=force,
-                process=process,
-                save_raw=save_raw,
-                fill_missing=fill_missing,
-                start_year=start_year,
-                updater=BRMonthlyUpdater(),
-            )
-
-        if country_code == "KR":
-            return await self._execute_kr_monthly(
-                task=task,
-                source=source,
-                force=force,
-                process=process,
-                save_raw=save_raw,
-                fill_missing=fill_missing,
-                updater=KRMonthlyUpdater(),
-            )
-
-        if country_code == "CH":
-            return await self._execute_ch_monthly(
-                task=task,
-                source=source,
-                force=force,
-                process=process,
-                save_raw=save_raw,
-                fill_missing=fill_missing,
-                updater=CHMonthlyUpdater(),
-            )
+        from src.data.processors import DataProcessor
 
         crawler = ChinaCDCCrawler()
         raw_dir = Path("data/raw") / country_code.lower()

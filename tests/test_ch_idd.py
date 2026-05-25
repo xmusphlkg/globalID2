@@ -1,15 +1,20 @@
 from __future__ import annotations
 
 from datetime import date
+from types import SimpleNamespace
+
+import pytest
 
 from src.core.source_scopes import (
     canonical_data_source_label,
     canonicalize_task_source,
+    get_known_task_sources,
     scope_display_label,
     scope_from_data_source,
 )
 from src.data.crawlers.ch import choose_national_series_config, parse_idd_period
 from src.data.processors.ch import CHMonthlyUpdater
+from src.services.crawl_service import CrawlService
 
 
 def test_idd_period_parser_accepts_month_week_and_year_values():
@@ -72,9 +77,46 @@ def test_ch_idd_source_scope_aliases():
     assert canonicalize_task_source("foph", country_code="CH") == "foph_idd"
     assert canonicalize_task_source("ch", country_code="CH") == "foph_idd"
     assert canonicalize_task_source("all", country_code="CH") == "foph_idd"
+    assert "foph_idd" in get_known_task_sources("CH")
     assert scope_from_data_source("Switzerland FOPH IDD Mandatory Reporting System") == "foph_idd"
     assert canonical_data_source_label("Switzerland FOPH IDD Mandatory Reporting System") == "Switzerland FOPH IDD"
     assert scope_display_label("foph_idd", country_code="CH") == "Switzerland FOPH IDD"
+
+
+def test_ch_task_scope_is_recognized_from_dynamic_source_registry():
+    from dashboard.api.routers.sources import _scope_from_task
+
+    task = SimpleNamespace(
+        input_data={"country_code": "CH", "source": "foph_idd"},
+        task_name="Crawl CH Data (foph_idd)",
+    )
+
+    assert _scope_from_task(task) == "foph_idd"
+
+
+def test_crawl_service_supported_country_registry_includes_ch():
+    assert "CH" in CrawlService.supported_country_codes()
+    assert "CH" in CrawlService.supported_country_text()
+
+
+@pytest.mark.asyncio
+async def test_crawl_service_unsupported_country_error_uses_registry_list():
+    task = SimpleNamespace(input_data={})
+
+    with pytest.raises(ValueError) as exc_info:
+        await CrawlService().execute(
+            task=task,
+            country_code="XX",
+            source="all",
+            force=False,
+            process=False,
+            save_raw=False,
+            fill_missing=False,
+        )
+
+    assert "Unsupported country: XX" in str(exc_info.value)
+    assert f"Available: {CrawlService.supported_country_text()}" in str(exc_info.value)
+    assert "CH" in str(exc_info.value)
 
 
 def test_ch_monthly_updater_loads_idd_csv_shape(tmp_path):
