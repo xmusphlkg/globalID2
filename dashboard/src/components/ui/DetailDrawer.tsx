@@ -44,16 +44,16 @@ export function DetailDrawer({
       <button
         type="button"
         aria-label="Close detail drawer"
-        className="absolute inset-0 h-full w-full bg-slate-950/35"
+        className="absolute inset-0 h-full w-full bg-tremor-background-emphasis/45"
         onClick={onClose}
       />
       <aside
         className={cn(
-          "absolute right-0 top-0 flex h-full w-full max-w-3xl flex-col border-l border-tremor-border bg-tremor-background shadow-xl dark:border-dark-tremor-border dark:bg-dark-tremor-background sm:w-[720px]",
+          "absolute right-0 top-0 flex h-full w-full max-w-3xl flex-col border-l border-tremor-border bg-tremor-background shadow-2xl dark:border-dark-tremor-border dark:bg-dark-tremor-background sm:w-[720px]",
           className,
         )}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-tremor-border px-5 py-4 dark:border-dark-tremor-border">
+        <div className="flex items-start justify-between gap-4 border-b border-tremor-border bg-tremor-background-subtle/70 px-5 py-4 dark:border-dark-tremor-border">
           <div className="min-w-0">
             <h2 className="truncate text-base font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
               {title}

@@ -232,3 +232,26 @@ backend contracts:
 - Feature code can be moved, tested, or deleted independently.
 - Future modules can register navigation, breadcrumbs, and permissions without
   editing layout components.
+
+## Implementation Status
+
+Completed in the first restructuring pass:
+
+- Main dashboard pages were moved from `app/**/page.tsx` into `features/**/view.tsx`.
+- Existing URLs remain active through thin `app` wrappers.
+- `shared/navigation/route-registry.ts` now owns sidebar/home navigation metadata.
+- `shared/layout/AppShell.tsx` is the root dashboard shell.
+- `shared/ui`, `shared/api`, `shared/config`, `shared/i18n`, `shared/query`, and
+  `shared/utils` provide stable import boundaries.
+- Feature API facades were added for operations, data, reports, AI, and admin.
+- A visual redesign pass introduced the dark operational sidebar, route-aware
+  top bar, refreshed global palette, shared panel/control classes, denser data
+  tables, stronger metric tiles, and a new workbench home view.
+- Common panel styling was rolled through data, operations, AI, reports, and
+  admin feature pages so the dashboard reads as one product surface.
+- Navigation was regrouped by workflow: collection/tasks, data assets, AI
+  production, publishing, and system configuration.
+- Route metadata now declares `countryScope` (`required`, `optional`, `none`),
+  letting the header show the country selector only on pages where it affects
+  the current workflow.
+- Frontend type check and production build both pass.

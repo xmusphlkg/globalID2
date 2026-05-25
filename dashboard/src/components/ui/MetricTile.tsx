@@ -4,12 +4,21 @@ import { cn } from "@/lib/utils";
 type MetricTone = "neutral" | "primary" | "success" | "warning" | "danger" | "info";
 
 const toneClasses: Record<MetricTone, string> = {
-  neutral: "bg-slate-50 text-slate-700 dark:bg-slate-900/30 dark:text-slate-300",
+  neutral: "bg-stone-100 text-stone-700 dark:bg-slate-900/30 dark:text-slate-300",
   primary: "bg-teal-50 text-teal-700 dark:bg-teal-950/30 dark:text-teal-300",
   success: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300",
   warning: "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300",
   danger: "bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-300",
-  info: "bg-sky-50 text-sky-700 dark:bg-sky-950/30 dark:text-sky-300",
+  info: "bg-blue-50 text-blue-700 dark:bg-sky-950/30 dark:text-sky-300",
+};
+
+const accentClasses: Record<MetricTone, string> = {
+  neutral: "bg-stone-300",
+  primary: "bg-teal-500",
+  success: "bg-emerald-500",
+  warning: "bg-amber-500",
+  danger: "bg-rose-500",
+  info: "bg-blue-500",
 };
 
 interface MetricTileProps {
@@ -32,16 +41,17 @@ export function MetricTile({
   return (
     <div
       className={cn(
-        "min-h-[104px] rounded-tremor-default border border-tremor-border bg-tremor-background px-4 py-3 dark:border-dark-tremor-border dark:bg-dark-tremor-background",
+        "group relative min-h-[112px] overflow-hidden rounded-tremor-default border border-tremor-border bg-tremor-background px-4 py-3 shadow-[0_1px_2px_rgba(23,33,31,0.04)] transition hover:-translate-y-0.5 hover:shadow-[0_8px_18px_rgba(23,33,31,0.08)] dark:border-dark-tremor-border dark:bg-dark-tremor-background",
         className,
       )}
     >
+      <div className={cn("absolute inset-x-0 top-0 h-0.5", accentClasses[tone])} />
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-xs font-medium text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+          <p className="text-[11px] font-semibold uppercase text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
             {label}
           </p>
-          <p className="mt-2 truncate text-2xl font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
+          <p className="mt-2 truncate text-[1.7rem] font-semibold leading-8 text-tremor-content-strong dark:text-dark-tremor-content-strong">
             {value}
           </p>
         </div>

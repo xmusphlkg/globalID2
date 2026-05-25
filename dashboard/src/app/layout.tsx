@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
-import { TremorAppShell } from "@/components/layout/TremorAppShell";
+import { AppShell } from "@/shared/layout/AppShell";
 
 export const metadata: Metadata = {
   title: {
@@ -32,9 +32,9 @@ export default function RootLayout({
       </head>
       <body className="h-full bg-tremor-background-subtle text-tremor-content-strong antialiased m-0">
         <Providers>
-          <TremorAppShell>
+          <AppShell>
             {children}
-          </TremorAppShell>
+          </AppShell>
         </Providers>
       </body>
     </html>

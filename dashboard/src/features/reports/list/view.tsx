@@ -11,7 +11,7 @@ import { FilterToolbar } from "@/components/ui/FilterToolbar";
 import { MetricTile } from "@/components/ui/MetricTile";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { type ReportDetail, type ReportListItem, useReportDetail, useReports } from "@/lib/hooks/useReports";
+import { type ReportDetail, type ReportListItem, useReportDetail, useReports } from "@/features/reports/api";
 import { t } from "@/lib/i18n";
 import { formatDate } from "@/lib/utils";
 import { useAppStore } from "@/stores/app-store";

@@ -40,7 +40,7 @@ import {
   useTestAIProvider,
   useUpdateAIModel,
   useUpdateAIProvider,
-} from "@/lib/hooks/useAIModels";
+} from "@/features/ai/api";
 import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
 import { DetailDrawer } from "@/components/ui/DetailDrawer";
 import { EmptyState } from "@/components/ui/EmptyState";

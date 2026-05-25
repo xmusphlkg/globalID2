@@ -21,18 +21,18 @@ export function PageHeader({
   return (
     <div
       className={cn(
-        "flex flex-col gap-4 border-b border-tremor-border pb-5 dark:border-dark-tremor-border sm:flex-row sm:items-end sm:justify-between",
+        "flex flex-col gap-4 border-b border-tremor-border pb-5 dark:border-dark-tremor-border lg:flex-row lg:items-end lg:justify-between",
         className,
       )}
     >
       <div className="min-w-0 space-y-2">
         {eyebrow ? (
-          <div className="text-xs font-semibold uppercase text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+          <div className="inline-flex items-center rounded-tremor-default bg-tremor-background-muted px-2 py-1 text-[11px] font-semibold uppercase text-tremor-content-subtle dark:bg-dark-tremor-background-muted dark:text-dark-tremor-content-subtle">
             {eyebrow}
           </div>
         ) : null}
         <div>
-          <h1 className="text-2xl font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
+          <h1 className="text-2xl font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong sm:text-[1.7rem]">
             {title}
           </h1>
           {description ? (

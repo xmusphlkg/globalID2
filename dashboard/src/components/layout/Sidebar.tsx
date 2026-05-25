@@ -3,92 +3,28 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  BarChart3,
-  Bell,
-  Home,
-  Activity,
-  FileText,
-  Database,
-  Mail,
-  ShieldCheck,
-  Download,
-  Cpu,
-  Settings2,
-  Send,
-  Search as SearchIcon,
-  GitBranch,
-  BookOpen,
   X,
-  ChevronRight,
+  CircleDot,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAppStore } from "@/stores/app-store";
-import { t, type LangKey } from "@/lib/i18n";
+import { t } from "@/lib/i18n";
+import { type CountryScope, homeRoute, visibleNavigationSections } from "@/shared/navigation/route-registry";
 
-interface NavGroup {
-  step: number;
-  titleKey: LangKey;
-  icon: React.ElementType;
-  items: { href: string; labelKey: LangKey; icon: React.ElementType }[];
+const topLevelItems = [homeRoute];
+const navGroups = visibleNavigationSections;
+
+function scopeLabel(lang: "en" | "zh", scope: CountryScope) {
+  if (scope === "required") return t(lang, "nav_country_required");
+  if (scope === "optional") return t(lang, "nav_country_optional");
+  return t(lang, "nav_country_global");
 }
 
-const topLevelItems: NavGroup["items"] = [{ href: "/", labelKey: "home", icon: Home }];
-
-const navGroups: NavGroup[] = [
-  {
-    step: 1,
-    titleKey: "mod_sources",
-    icon: Download,
-    items: [
-      { href: "/sources/flow", labelKey: "flow_nav_label", icon: GitBranch },
-      { href: "/sources/tasks", labelKey: "crawl_tasks", icon: Download },
-      { href: "/sources/automation", labelKey: "automation", icon: Settings2 },
-    ],
-  },
-  {
-    step: 2,
-    titleKey: "mod_database",
-    icon: Database,
-    items: [
-      { href: "/data/dashboard", labelKey: "dashboard", icon: BarChart3 },
-      { href: "/data/release", labelKey: "data_release", icon: Send },
-      { href: "/data/diseases", labelKey: "diseases", icon: Activity },
-      { href: "/data/knowledge", labelKey: "knowledge_base", icon: BookOpen },
-      { href: "/data/explorer", labelKey: "explorer", icon: SearchIcon },
-      { href: "/data/quality", labelKey: "quality", icon: ShieldCheck },
-    ],
-  },
-  {
-    step: 3,
-    titleKey: "mod_ai",
-    icon: Cpu,
-    items: [
-      { href: "/ai/models", labelKey: "ai_models", icon: Settings2 },
-      { href: "/ai/disease-audit", labelKey: "disease_audit", icon: ShieldCheck },
-      { href: "/ai/tasks", labelKey: "ai_tasks", icon: Cpu },
-      { href: "/ai/agent-runs", labelKey: "agent_runs", icon: GitBranch },
-      { href: "/ai/interactions", labelKey: "ai_interactions", icon: SearchIcon },
-    ],
-  },
-  {
-    step: 4,
-    titleKey: "mod_results",
-    icon: Send,
-    items: [
-      { href: "/reports", labelKey: "reports", icon: FileText },
-      { href: "/subscriptions", labelKey: "subscriptions", icon: Mail },
-      { href: "/subscriptions/notifications", labelKey: "notifications", icon: Bell },
-    ],
-  },
-  {
-    step: 5,
-    titleKey: "mod_settings",
-    icon: Settings2,
-    items: [
-      { href: "/setting", labelKey: "settings", icon: Settings2 },
-    ],
-  },
-];
+function scopeClass(scope: CountryScope) {
+  if (scope === "required") return "border-emerald-200/30 bg-emerald-300/[0.12] text-emerald-100";
+  if (scope === "optional") return "border-blue-200/25 bg-blue-300/[0.12] text-blue-100";
+  return "border-white/10 bg-white/[0.06] text-white/[0.55]";
+}
 
 export function Sidebar({
   mobileOpen,
@@ -120,21 +56,41 @@ export function Sidebar({
   };
 
   const SidebarContent = (
-    <div className={`flex grow flex-col gap-y-4 overflow-y-auto border-r border-tremor-border bg-tremor-background pb-6 ${collapsed ? "px-2.5" : "px-5"}`}>
-      <div className={`flex shrink-0 flex-col gap-3 pt-6 ${collapsed ? "items-center" : ""}`}>
-        <div>
-          <span className={`font-bold text-tremor-brand ${collapsed ? "text-base" : "text-xl"}`}>{t(lang, "brand_name")}</span>
-          {!collapsed ? <p className="mt-1 text-sm text-tremor-content">{t(lang, "workspace_subtitle")}</p> : null}
-        </div>
+    <div
+      className={cn(
+        "flex grow flex-col gap-y-4 overflow-y-auto border-r border-[#263a35] bg-[#17211f] pb-6 text-white shadow-[8px_0_24px_rgba(23,33,31,0.08)]",
+        collapsed ? "px-2.5" : "px-5",
+      )}
+    >
+      <div className={cn("flex shrink-0 flex-col gap-4 pt-5", collapsed ? "items-center" : "")}>
+        <Link
+          href="/"
+          onClick={onClose}
+          className={cn(
+            "group flex items-center rounded-tremor-default transition hover:bg-white/[0.08]",
+            collapsed ? "h-11 w-11 justify-center" : "gap-3 px-2 py-2",
+          )}
+          title={t(lang, "brand_name")}
+        >
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-tremor-default bg-[#dbeee8] text-sm font-bold text-[#17352f]">
+            G
+          </span>
+          {!collapsed ? (
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-semibold text-white">{t(lang, "brand_name")}</span>
+              <span className="block truncate text-xs text-white/[0.58]">{t(lang, "workspace_subtitle")}</span>
+            </span>
+          ) : null}
+        </Link>
+
         {!collapsed ? (
-          <div className="rounded-tremor-default border border-tremor-border bg-tremor-background-subtle p-3">
-            <p className="text-[11px] font-semibold uppercase text-tremor-content-subtle">
-              {t(lang, "nav_overview")}
-            </p>
-            <p className="mt-1 text-sm font-medium text-tremor-content-strong">
-              {t(lang, "home")}
-            </p>
-            <p className="mt-1 text-xs text-tremor-content">{t(lang, "active_country_hint")}</p>
+          <div className="rounded-tremor-default border border-white/10 bg-white/[0.06] px-3 py-3">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-[11px] font-semibold uppercase text-white/[0.48]">{t(lang, "country_scope")}</p>
+              <span className="flex h-2 w-2 rounded-full bg-emerald-300" />
+            </div>
+            <p className="mt-2 text-sm font-semibold text-white">{t(lang, "country_scope_optional")}</p>
+            <p className="mt-1 text-xs leading-5 text-white/[0.58]">{t(lang, "active_country_hint")}</p>
           </div>
         ) : null}
       </div>
@@ -152,22 +108,26 @@ export function Sidebar({
                       onClick={onClose}
                       className={cn(
                         active
-                          ? "bg-tremor-brand text-tremor-brand-inverted font-medium"
-                          : "text-tremor-content hover:bg-tremor-background-subtle hover:text-tremor-content-strong",
+                          ? "bg-white text-[#17211f] shadow-sm"
+                          : "text-white/[0.72] hover:bg-white/[0.08] hover:text-white",
                         collapsed
                           ? "group mx-auto flex h-10 w-10 items-center justify-center rounded-tremor-default text-sm leading-6 transition-colors"
-                          : "group flex items-center gap-x-3 rounded-tremor-default px-2.5 py-2 text-sm leading-6 transition-colors"
+                          : "group flex items-center gap-x-3 rounded-tremor-default px-2.5 py-2.5 text-sm leading-6 transition-colors"
                       )}
                     >
                       <item.icon
                         className={cn(
-                          active ? "text-tremor-brand-inverted" : "text-tremor-content-subtle group-hover:text-tremor-content-strong",
+                          active ? "text-[#0f6b62]" : "text-white/[0.46] group-hover:text-white",
                           "h-5 w-5 shrink-0"
                         )}
                         aria-hidden="true"
                       />
                       {!collapsed ? <span>{t(lang, item.labelKey)}</span> : null}
-                      {!collapsed ? <ChevronRight className={cn("ml-auto h-4 w-4 transition", active ? "opacity-100" : "opacity-0 group-hover:opacity-60")} /> : null}
+                      {!collapsed ? (
+                        <span className={cn("ml-auto rounded-tremor-default border px-1.5 py-0.5 text-[10px] font-semibold", active ? "border-[#0f6b62]/20 bg-[#0f6b62]/10 text-[#0f6b62]" : scopeClass(item.countryScope))}>
+                          {scopeLabel(lang, item.countryScope)}
+                        </span>
+                      ) : null}
                     </Link>
                   </li>
                 );
@@ -185,18 +145,24 @@ export function Sidebar({
                       title={t(lang, group.titleKey)}
                       className={cn(
                         "flex h-7 w-7 items-center justify-center rounded-tremor-default text-[10px] font-semibold",
-                        groupActive ? "bg-tremor-brand text-tremor-brand-inverted" : "bg-tremor-background-muted text-tremor-content",
+                        groupActive ? "bg-[#dbeee8] text-[#17352f]" : "bg-white/[0.08] text-white/[0.48]",
                       )}
                     >
-                      {group.step}
+                      <group.icon className="h-3.5 w-3.5" />
                     </span>
                   </div>
                 ) : (
-                  <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase text-tremor-content-subtle">
-                    <span className={cn("flex h-5 w-5 items-center justify-center rounded-tremor-default text-[10px]", groupActive ? "bg-tremor-brand text-tremor-brand-inverted" : "bg-tremor-background-muted text-tremor-content" )}>
-                      {group.step}
-                    </span>
-                    {t(lang, group.titleKey)}
+                  <div className="mb-2 px-0.5">
+                    <div className="flex items-center gap-2 text-xs font-semibold uppercase text-white/[0.50]">
+                      <span className={cn("flex h-5 w-5 items-center justify-center rounded-tremor-default text-[10px]", groupActive ? "bg-[#dbeee8] text-[#17352f]" : "bg-white/[0.08] text-white/[0.48]" )}>
+                        <group.icon className="h-3 w-3" />
+                      </span>
+                      {t(lang, group.titleKey)}
+                      {groupActive ? <CircleDot className="ml-auto h-3.5 w-3.5 text-emerald-300" /> : null}
+                    </div>
+                    <p className="mt-1 pl-7 text-[11px] font-medium normal-case leading-4 text-white/[0.40]">
+                      {t(lang, group.descriptionKey)}
+                    </p>
                   </div>
                 )}
                 <ul role="list" className={cn(collapsed ? "space-y-1.5" : "-mx-2 space-y-1")}>
@@ -210,22 +176,26 @@ export function Sidebar({
                           onClick={onClose}
                           className={cn(
                             active
-                              ? "bg-tremor-brand text-tremor-brand-inverted font-medium"
-                              : "text-tremor-content hover:bg-tremor-background-subtle hover:text-tremor-content-strong",
+                              ? "bg-white text-[#17211f] shadow-sm"
+                              : "text-white/[0.72] hover:bg-white/[0.08] hover:text-white",
                             collapsed
                               ? "group mx-auto flex h-10 w-10 items-center justify-center rounded-tremor-default text-sm leading-6 transition-colors"
-                              : "group flex items-center gap-x-3 rounded-tremor-default px-2.5 py-2 text-sm leading-6 transition-colors"
+                              : "group flex items-center gap-x-3 rounded-tremor-default px-2.5 py-2.5 text-sm leading-6 transition-colors"
                           )}
                         >
                           <item.icon
                             className={cn(
-                              active ? "text-tremor-brand-inverted" : "text-tremor-content-subtle group-hover:text-tremor-content-strong",
+                              active ? "text-[#0f6b62]" : "text-white/[0.46] group-hover:text-white",
                               "h-5 w-5 shrink-0"
                             )}
                             aria-hidden="true"
                           />
                           {!collapsed ? <span>{t(lang, item.labelKey)}</span> : null}
-                          {!collapsed ? <ChevronRight className={cn("ml-auto h-4 w-4 transition", active ? "opacity-100" : "opacity-0 group-hover:opacity-60")} /> : null}
+                          {!collapsed ? (
+                            <span className={cn("ml-auto rounded-tremor-default border px-1.5 py-0.5 text-[10px] font-semibold", active ? "border-[#0f6b62]/20 bg-[#0f6b62]/10 text-[#0f6b62]" : scopeClass(item.countryScope))}>
+                              {scopeLabel(lang, item.countryScope)}
+                            </span>
+                          ) : null}
                         </Link>
                       </li>
                     );
@@ -260,7 +230,7 @@ export function Sidebar({
       )}
 
       {/* Desktop Sidebar */}
-      <div className={`hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:flex-col ${collapsed ? "lg:w-24" : "lg:w-72"}`}>
+      <div className={`hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:flex-col ${collapsed ? "lg:w-24" : "lg:w-80"}`}>
         {SidebarContent}
       </div>
     </>

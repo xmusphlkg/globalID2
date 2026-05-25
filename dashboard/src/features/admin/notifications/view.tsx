@@ -25,7 +25,7 @@ import {
   useNotificationCampaigns,
   useStartNotificationSend,
   useSubscriptionOptions,
-} from "@/lib/hooks/useSubscriptions";
+} from "@/features/admin/api";
 import { formatNumber } from "@/lib/utils";
 import { useAppStore } from "@/stores/app-store";
 
@@ -299,7 +299,7 @@ export default function SubscriptionNotificationsPage() {
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.72fr)]">
         <form
-          className="space-y-4 rounded-tremor-default border border-tremor-border bg-tremor-background p-4 dark:border-dark-tremor-border dark:bg-dark-tremor-background"
+          className="space-y-4 app-panel p-4"
           onSubmit={(event) => {
             event.preventDefault();
             if (!canSubmit) return;
@@ -423,7 +423,7 @@ export default function SubscriptionNotificationsPage() {
           </div>
         </form>
 
-        <div className="rounded-tremor-default border border-tremor-border bg-tremor-background p-4 dark:border-dark-tremor-border dark:bg-dark-tremor-background">
+        <div className="app-panel p-4">
           <div className="mb-3 flex items-center justify-between gap-3">
             <h2 className="text-base font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
               {isZh ? "Markdown 预览" : "Markdown Preview"}
@@ -459,7 +459,7 @@ export default function SubscriptionNotificationsPage() {
 
       {selectedCampaign ? (
         <section className="grid gap-4 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)]">
-          <div className="rounded-tremor-default border border-tremor-border bg-tremor-background p-4 dark:border-dark-tremor-border dark:bg-dark-tremor-background">
+          <div className="app-panel p-4">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="text-base font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">

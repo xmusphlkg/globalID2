@@ -31,20 +31,20 @@ export function DataTable<T,>({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-tremor-default border border-tremor-border bg-tremor-background dark:border-dark-tremor-border dark:bg-dark-tremor-background",
+        "overflow-hidden rounded-tremor-default border border-tremor-border bg-tremor-background shadow-[0_1px_2px_rgba(23,33,31,0.04)] dark:border-dark-tremor-border dark:bg-dark-tremor-background",
         className,
       )}
     >
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-tremor-border text-sm dark:divide-dark-tremor-border">
-          <thead className="bg-tremor-background-subtle dark:bg-dark-tremor-background-subtle">
+          <thead className="bg-tremor-background-subtle/80 dark:bg-dark-tremor-background-subtle">
             <tr>
               {columns.map((column) => (
                 <th
                   key={column.key}
                   scope="col"
                   className={cn(
-                    "whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase text-tremor-content-subtle dark:text-dark-tremor-content-subtle",
+                    "whitespace-nowrap px-4 py-3 text-left text-[11px] font-semibold uppercase text-tremor-content-subtle dark:text-dark-tremor-content-subtle",
                     column.headerClassName,
                   )}
                 >
@@ -77,14 +77,14 @@ export function DataTable<T,>({
                     className={cn(
                       "transition-colors",
                       onRowClick ? "cursor-pointer hover:bg-tremor-background-subtle/80 dark:hover:bg-dark-tremor-background-subtle/70" : null,
-                      selected ? "bg-teal-50/70 dark:bg-teal-950/20" : null,
+                      selected ? "bg-teal-50/80 shadow-[inset_3px_0_0_#0f6b62] dark:bg-teal-950/20" : null,
                     )}
                   >
                     {columns.map((column) => (
                       <td
                         key={column.key}
                         className={cn(
-                          "px-4 py-3 align-middle text-tremor-content dark:text-dark-tremor-content",
+                          "px-4 py-3.5 align-middle text-tremor-content dark:text-dark-tremor-content",
                           column.className,
                         )}
                       >

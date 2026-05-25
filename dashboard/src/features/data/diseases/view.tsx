@@ -10,7 +10,7 @@ import { MetricTile } from "@/components/ui/MetricTile";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { CHART_TOKENS } from "@/lib/chart-theme";
-import { useCompare, useDiseaseRecords, useDiseases } from "@/lib/hooks/useDiseases";
+import { useCompare, useDiseaseRecords, useDiseases } from "@/features/data/api";
 import { t } from "@/lib/i18n";
 import { formatNumber } from "@/lib/utils";
 import { useAppStore } from "@/stores/app-store";
@@ -165,7 +165,7 @@ export default function DiseasesPage() {
             />
           </div>
 
-          <section className="rounded-tremor-default border border-tremor-border bg-tremor-background p-4 dark:border-dark-tremor-border dark:bg-dark-tremor-background">
+          <section className="app-panel p-4">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="text-base font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
@@ -225,7 +225,7 @@ export default function DiseasesPage() {
           </section>
         </>
       ) : (
-        <section className="rounded-tremor-default border border-tremor-border bg-tremor-background p-4 dark:border-dark-tremor-border dark:bg-dark-tremor-background">
+        <section className="app-panel p-4">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-base font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">

@@ -30,7 +30,7 @@ import {
   useTasks,
   useTaskWebSocket,
   useWorkerStatus,
-} from "@/lib/hooks/useTasks";
+} from "@/features/operations/tasks/api";
 import { t } from "@/lib/i18n";
 import { formatDate } from "@/lib/utils";
 import { useAppStore } from "@/stores/app-store";
