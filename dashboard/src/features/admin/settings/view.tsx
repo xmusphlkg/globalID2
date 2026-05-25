@@ -30,7 +30,7 @@ import {
   type CloudflareSettingsInput,
   type GithubSettingsInput,
   type SmtpSettingsInput,
-} from "@/lib/hooks/useSettings";
+} from "@/features/admin/api";
 
 type NoticeState = {
   kind: "success" | "error";

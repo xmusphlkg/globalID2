@@ -1,29 +1,29 @@
 /** Shared ECharts color palette and default options */
 export const CHART_COLORS = [
-  "#0f766e", // teal
-  "#14b8a6", // aqua teal
-  "#0b7285", // deep cyan
-  "#d97706", // amber
-  "#22c55e", // green
-  "#f97316", // orange
+  "#0f6b62", // brand green
   "#2563eb", // blue
-  "#e11d48", // rose
-  "#7c3aed", // violet accent
-  "#475569", // slate
+  "#d97706", // amber
+  "#16a34a", // green
+  "#c24139", // red
+  "#7c3aed", // violet
+  "#0b7285", // cyan
+  "#f97316", // orange
+  "#64748b", // slate
+  "#be185d", // magenta
 ];
 
 export const CHART_TOKENS = {
-  gridLine: "#d8e2df",
-  axisText: "#5b7077",
-  text: "#1d2d36",
-  neutral: "#6f8188",
-  neutralSoft: "rgba(91, 112, 119, 0.22)",
-  primary: "#0f766e",
-  primarySoft: "rgba(15, 118, 110, 0.12)",
-  info: "#0b7285",
-  infoSoft: "rgba(11, 114, 133, 0.12)",
-  success: "#0d9488",
-  successSoft: "rgba(13, 148, 136, 0.12)",
+  gridLine: "#d9dfd9",
+  axisText: "#5f6f6a",
+  text: "#17211f",
+  neutral: "#697873",
+  neutralSoft: "rgba(95, 111, 106, 0.2)",
+  primary: "#0f6b62",
+  primarySoft: "rgba(15, 107, 98, 0.12)",
+  info: "#2563eb",
+  infoSoft: "rgba(37, 99, 235, 0.12)",
+  success: "#16a34a",
+  successSoft: "rgba(22, 163, 74, 0.12)",
   warning: "#d97706",
   warningSoft: "rgba(217, 119, 6, 0.14)",
   destructive: "#c24139",
@@ -35,11 +35,11 @@ export const CHART_DEFAULTS: Record<string, unknown> = {
   tooltip: {
     trigger: "axis",
     backgroundColor: "rgba(255, 255, 255, 0.97)",
-    borderColor: "#d8e2df",
+    borderColor: "#d9dfd9",
     borderWidth: 1,
-    textStyle: { color: "#1d2d36", fontSize: 12 },
+    textStyle: { color: "#17211f", fontSize: 12 },
     padding: [8, 12],
-    extraCssText: "border-radius: 10px; box-shadow: 0 10px 24px rgba(17,34,39,0.12);",
+    extraCssText: "border-radius: 8px; box-shadow: 0 10px 24px rgba(23,33,31,0.12);",
   },
   grid: {
     left: 60,
@@ -50,7 +50,7 @@ export const CHART_DEFAULTS: Record<string, unknown> = {
   },
   legend: {
     top: 0,
-    textStyle: { fontSize: 12, color: "#5b7077" },
+    textStyle: { fontSize: 12, color: "#5f6f6a" },
     icon: "roundRect",
     itemWidth: 12,
     itemHeight: 8,

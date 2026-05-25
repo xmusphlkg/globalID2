@@ -17,7 +17,7 @@ import {
   useSubscriptionRecords,
   useSubscriptionStats,
   useSyncSubscriptionOptions,
-} from "@/lib/hooks/useSubscriptions";
+} from "@/features/admin/api";
 import { formatNumber } from "@/lib/utils";
 import { useAppStore } from "@/stores/app-store";
 
@@ -257,7 +257,7 @@ export default function SubscriptionsPage() {
         />
       </div>
 
-      <section className="rounded-tremor-default border border-tremor-border bg-tremor-background p-4 dark:border-dark-tremor-border dark:bg-dark-tremor-background">
+      <section className="app-panel p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-base font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">

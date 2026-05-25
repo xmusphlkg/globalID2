@@ -10,13 +10,12 @@ import {
   useSourceConfigs,
   useSourcesFlow,
   useStartCrawl,
-} from "@/lib/hooks/useSources";
-import { useTaskWebSocket } from "@/lib/hooks/useTasks";
+} from "@/features/operations/sources/api";
+import { useTaskWebSocket } from "@/features/operations/tasks/api";
 import { formatDate } from "@/lib/utils";
 import { getConfiguredSourceOptions, getSourceDisplayLabel } from "@/lib/source-labels";
 import {
   Badge,
-  Card,
   Text,
   Title,
   ProgressBar,
@@ -138,7 +137,7 @@ function FlowRow({
       : null;
 
   return (
-    <Card className="p-4 overflow-hidden">
+    <div className="app-panel overflow-hidden p-4">
       <div className="flex flex-col md:flex-row md:items-center gap-4">
         {/* Source name + stats */}
         <div className="w-full md:w-[320px] flex-shrink-0 space-y-1.5">
@@ -186,7 +185,7 @@ function FlowRow({
           ))}
         </div>
       </div>
-    </Card>
+    </div>
   );
 }
 
@@ -548,13 +547,13 @@ export default function SourcesFlowPage() {
       </FilterToolbar>
 
       {scopeMode === "selected" && countryId && !countrySupported && (
-        <Card>
+        <div className="app-panel p-4">
           <Text>
             {lang === "zh"
               ? "当前国家的自动爬取工作流尚未设计，flow 仅展示已入库数据来源。"
               : "Automated crawl workflow is not designed for this country yet. Flow currently shows ingested source data only."}
           </Text>
-        </Card>
+        </div>
       )}
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -586,13 +585,13 @@ export default function SourcesFlowPage() {
 
       {/* Country guard */}
       {scopeMode === "selected" && !countryId ? (
-        <Card>
+        <div className="app-panel p-4">
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <GitBranch className="mb-4 h-12 w-12 text-tremor-content-subtle dark:text-dark-tremor-content-subtle" />
             <Title>{t(lang, "flow_select_country")}</Title>
             <Text>{t(lang, "flow_select_country_hint")}</Text>
           </div>
-        </Card>
+        </div>
       ) : isLoading ? (
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
@@ -600,7 +599,7 @@ export default function SourcesFlowPage() {
           ))}
         </div>
       ) : error ? (
-        <Card>
+        <div className="app-panel p-4">
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <AlertCircle className="mb-4 h-12 w-12 text-rose-500" />
             <Title>{lang === "zh" ? "加载失败" : "Failed to load flow"}</Title>
@@ -613,9 +612,9 @@ export default function SourcesFlowPage() {
                 : "If you just updated the dashboard code, restart the API service. Older API builds do not support the all-countries flow endpoint."}
             </Text>
           </div>
-        </Card>
+        </div>
       ) : !flows || flows.length === 0 ? (
-        <Card>
+        <div className="app-panel p-4">
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <GitBranch className="mb-4 h-12 w-12 text-tremor-content-subtle dark:text-dark-tremor-content-subtle" />
             <Title>{t(lang, "no_data")}</Title>
@@ -628,7 +627,7 @@ export default function SourcesFlowPage() {
               {t(lang, "flow_create_first_task")}
             </button>
           </div>
-        </Card>
+        </div>
       ) : (
         <div className="space-y-4">
           {scopeMode === "all" ? (

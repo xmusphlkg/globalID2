@@ -28,7 +28,7 @@ import { FilterToolbar } from "@/components/ui/FilterToolbar";
 import { MetricTile } from "@/components/ui/MetricTile";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { getCountryDisplayName, type Country, useCountries } from "@/lib/hooks/useCountries";
+import { getCountryDisplayName, type Country, useCountries } from "@/shared/config/countries";
 import {
   type AutomationJob,
   type AutomationJobInput,
@@ -40,8 +40,8 @@ import {
   useRunAutomationJob,
   useSourceConfigs,
   useUpdateAutomationJob,
-} from "@/lib/hooks/useSources";
-import { useTaskWebSocket, useWorkerStatus } from "@/lib/hooks/useTasks";
+} from "@/features/operations/automation/api";
+import { useTaskWebSocket, useWorkerStatus } from "@/features/operations/tasks/api";
 import { t } from "@/lib/i18n";
 import { getConfiguredSourceOptions, getSourceDisplayLabel } from "@/lib/source-labels";
 import { cn } from "@/lib/utils";

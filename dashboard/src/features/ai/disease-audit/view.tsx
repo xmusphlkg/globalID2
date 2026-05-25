@@ -15,7 +15,7 @@ import {
   useDiseaseDuplicateAuditLogs,
   useDiseaseDuplicateAuditStatus,
   useRunDiseaseDuplicateAudit,
-} from "@/lib/hooks/useDiseaseDuplicateAudit";
+} from "@/features/ai/api";
 import { useAppStore } from "@/stores/app-store";
 
 const copy = {
@@ -153,7 +153,7 @@ function FindingList({
   empty: string;
 }) {
   return (
-    <section className="rounded-tremor-default border border-tremor-border bg-tremor-background p-4 dark:border-dark-tremor-border dark:bg-dark-tremor-background">
+    <section className="app-panel p-4">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-base font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">{title}</h2>
         <StatusBadge tone={items?.length ? "warning" : "success"}>{items?.length ?? 0}</StatusBadge>
@@ -207,7 +207,7 @@ function RecommendationList({
       {items.map((item, index) => (
         <div
           key={`${item.decision}-${index}`}
-          className="rounded-tremor-default border border-tremor-border bg-tremor-background p-4 dark:border-dark-tremor-border dark:bg-dark-tremor-background"
+          className="app-panel p-4"
         >
           <div className="flex flex-wrap items-center gap-2">
             <StatusBadge tone={decisionTone(item.decision)}>{decisionLabel(item.decision, lang)}</StatusBadge>
@@ -327,7 +327,7 @@ function AuditLogPanel({
   const visibleLogs = [...logs].reverse().slice(0, 80);
 
   return (
-    <section className="rounded-tremor-default border border-tremor-border bg-tremor-background p-4 dark:border-dark-tremor-border dark:bg-dark-tremor-background">
+    <section className="app-panel p-4">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-base font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
           {title}

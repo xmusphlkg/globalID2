@@ -12,14 +12,14 @@ import {
   useExecuteTask,
   useCancelTask,
   useWorkerStatus,
-} from "@/lib/hooks/useTasks";
+} from "@/features/operations/tasks/api";
 import {
   useDiseaseKnowledgeCatalogue,
   useStartAITask,
   useStartDiseaseKnowledgeTasks,
   type StartDiseaseKnowledgeTaskResult,
-} from "@/lib/hooks/useAI";
-import { useReports } from "@/lib/hooks/useReports";
+} from "@/features/ai/api";
+import { useReports } from "@/features/reports/api";
 import { formatDate } from "@/lib/utils";
 import { CHART_TOKENS } from "@/lib/chart-theme";
 import { Chart } from "@/components/charts/Chart";
@@ -46,7 +46,7 @@ import {
   GitBranch,
 } from "lucide-react";
 import { Badge, Card, Grid, Text, Title, Color } from "@tremor/react";
-import { useSettings } from "@/lib/hooks/useSettings";
+import { useSettings } from "@/features/admin/api";
 
 const AI_TYPES = "process_data,generate_report,generate_section,review_section,update_disease_knowledge,agent_workflow";
 const TASK_PAGE_SIZE = 100;

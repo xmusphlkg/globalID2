@@ -3,23 +3,23 @@
 
 @theme {
   --font-sans: "IBM Plex Sans", sans-serif;
-  --color-tremor-brand: #0f766e;
-  --color-tremor-brand-muted: #ccfbf1;
-  --color-tremor-brand-subtle: #2dd4bf;
+  --color-tremor-brand: #0f6b62;
+  --color-tremor-brand-muted: #d7efea;
+  --color-tremor-brand-subtle: #4fa79a;
   --color-tremor-brand-inverted: #ffffff;
 
   --color-tremor-background: #ffffff;
-  --color-tremor-background-subtle: #f6f8fa;
-  --color-tremor-background-muted: #eef2f4;
-  --color-tremor-background-emphasis: #172026;
+  --color-tremor-background-subtle: #f5f6f3;
+  --color-tremor-background-muted: #ecefeb;
+  --color-tremor-background-emphasis: #17211f;
 
-  --color-tremor-border: #d9e1e5;
-  --color-tremor-ring: #8bc7bd;
+  --color-tremor-border: #d7ddd7;
+  --color-tremor-ring: #8ec9bd;
 
-  --color-tremor-content: #4b5f68;
-  --color-tremor-content-subtle: #71828a;
-  --color-tremor-content-emphasis: #263942;
-  --color-tremor-content-strong: #17262d;
+  --color-tremor-content: #4f5f5a;
+  --color-tremor-content-subtle: #76827d;
+  --color-tremor-content-emphasis: #293934;
+  --color-tremor-content-strong: #17211f;
   --color-tremor-content-inverted: #ffffff;
 
   --color-dark-tremor-brand: #3b82f6;
@@ -65,7 +65,10 @@ body {
   @apply bg-tremor-background-subtle;
   color: var(--color-tremor-content-strong);
   font-family: var(--font-sans);
-  background: var(--color-tremor-background-subtle);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.74) 0%, rgba(245, 246, 243, 0) 320px),
+    var(--color-tremor-background-subtle);
+  letter-spacing: 0;
 }
 
 a {
@@ -77,6 +80,28 @@ a {
 }
 
 .glass-panel {
-  background: rgba(255, 255, 255, 0.96);
-  backdrop-filter: blur(8px);
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(14px);
+}
+
+@layer components {
+  .app-panel {
+    @apply rounded-tremor-default border border-tremor-border bg-tremor-background shadow-[0_1px_2px_rgba(23,33,31,0.04)];
+  }
+
+  .app-panel-muted {
+    @apply rounded-tremor-default border border-tremor-border bg-tremor-background-subtle;
+  }
+
+  .control-input {
+    @apply h-10 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm text-tremor-content-strong outline-none transition focus:border-tremor-brand-subtle focus:ring-2 focus:ring-tremor-brand-muted;
+  }
+
+  .icon-button {
+    @apply inline-flex h-9 w-9 items-center justify-center rounded-tremor-default border border-tremor-border bg-tremor-background text-tremor-content-subtle transition hover:border-tremor-ring hover:bg-tremor-background-muted hover:text-tremor-content-strong;
+  }
+
+  .primary-action {
+    @apply inline-flex h-10 items-center justify-center gap-2 rounded-tremor-default bg-tremor-brand px-4 text-sm font-semibold text-tremor-brand-inverted transition hover:brightness-95;
+  }
 }

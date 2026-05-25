@@ -14,7 +14,7 @@ import {
   useQualityGaps,
   useQualitySources,
   useQualityStats,
-} from "@/lib/hooks/useQuality";
+} from "@/features/data/api";
 import { t } from "@/lib/i18n";
 import { formatNumber } from "@/lib/utils";
 import { useAppStore } from "@/stores/app-store";
@@ -175,7 +175,7 @@ export default function QualityPage() {
 
       {stats ? (
         <section className="grid gap-4 lg:grid-cols-2">
-          <div className="rounded-tremor-default border border-tremor-border bg-tremor-background p-4 dark:border-dark-tremor-border dark:bg-dark-tremor-background">
+          <div className="app-panel p-4">
             <div className="mb-3 flex items-center justify-between gap-3">
               <h2 className="text-base font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
                 Zero Cases
@@ -188,7 +188,7 @@ export default function QualityPage() {
             </p>
           </div>
 
-          <div className="rounded-tremor-default border border-tremor-border bg-tremor-background p-4 dark:border-dark-tremor-border dark:bg-dark-tremor-background">
+          <div className="app-panel p-4">
             <div className="mb-3 flex items-center justify-between gap-3">
               <h2 className="text-base font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
                 Zero Deaths
@@ -205,7 +205,7 @@ export default function QualityPage() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         {gaps && gaps.length > 0 ? (
-          <section className="rounded-tremor-default border border-tremor-border bg-tremor-background p-4 dark:border-dark-tremor-border dark:bg-dark-tremor-background">
+          <section className="app-panel p-4">
             <h2 className="mb-3 text-base font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
               {t(lang, "time_gaps")}
             </h2>
@@ -234,7 +234,7 @@ export default function QualityPage() {
         ) : null}
 
         {sources && sources.length > 0 ? (
-          <section className="rounded-tremor-default border border-tremor-border bg-tremor-background p-4 dark:border-dark-tremor-border dark:bg-dark-tremor-background">
+          <section className="app-panel p-4">
             <h2 className="mb-3 text-base font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
               {t(lang, "data_sources")}
             </h2>

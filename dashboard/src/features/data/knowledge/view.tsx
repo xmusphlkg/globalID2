@@ -17,8 +17,8 @@ import {
   useDiseaseKnowledgeCatalogue,
   useDiseaseKnowledgeDetail,
   useStartDiseaseKnowledgeTasks,
-} from "@/lib/hooks/useAI";
-import { useTaskWebSocket } from "@/lib/hooks/useTasks";
+} from "@/features/ai/api";
+import { useTaskWebSocket } from "@/features/operations/tasks/api";
 import {
   AlertTriangle,
   ArrowRight,
@@ -140,7 +140,7 @@ function Panel({
   return (
     <section
       className={cn(
-        "rounded-tremor-default border border-tremor-border bg-tremor-background p-4 dark:border-dark-tremor-border dark:bg-dark-tremor-background",
+        "app-panel p-4",
         className,
       )}
     >
