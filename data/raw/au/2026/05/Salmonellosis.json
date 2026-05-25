@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-05-23T22:45:59.692383+00:00",
+  "fetched_at": "2026-05-24T22:46:09.083485+00:00",
   "disease": "Salmonellosis",
   "year": 2026,
   "month": 5,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1779576359323)/",
-            "rootActivityId": "f775ce40-5e6c-4e1e-b2f1-b22580dc6c08",
+            "timestamp": "/Date(1779662768717)/",
+            "rootActivityId": "1cfa795b-1a7d-44a1-ac3e-d30995ebcbd2",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'683'"
+                          "A0": "'693'"
                         }
                       ]
                     },
@@ -388,25 +388,25 @@
                         {
                           "C": [
                             "NSW",
-                            "'158'"
+                            "'159'"
                           ]
                         },
                         {
                           "C": [
                             "NT",
-                            "'15'"
+                            "'16'"
                           ]
                         },
                         {
                           "C": [
                             "QLD",
-                            "'262'"
+                            "'268'"
                           ]
                         },
                         {
                           "C": [
                             "SA",
-                            "'39'"
+                            "'41'"
                           ]
                         },
                         {
@@ -445,10 +445,10 @@
   },
   "parsed_counts": {
     "ACT": 9,
-    "NSW": 158,
-    "NT": 15,
-    "QLD": 262,
-    "SA": 39,
+    "NSW": 159,
+    "NT": 16,
+    "QLD": 268,
+    "SA": 41,
     "TAS": 9,
     "VIC": 107,
     "WA": 84
