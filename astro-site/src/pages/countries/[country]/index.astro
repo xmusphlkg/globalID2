@@ -82,15 +82,16 @@ const diseaseRows = countryData
 const coverageLabel = countryData?.date_range
   ? `${countryData.date_range.start} → ${countryData.date_range.end ?? 'present'}`
   : '—';
-const countryName = countryData?.country_name ?? country.toUpperCase();
+const countryName = countryData?.country_name_en ?? countryData?.country_name ?? country.toUpperCase();
+const countryNameZh = countryData?.country_name_zh ?? countryDownload?.name_zh ?? countryName;
 const countryBriefEn = countryData?.brief_en
   ?? `${countryName} surveillance page consolidates infectious disease records, charts, and source metadata for exploratory review.`;
 const countryBriefZh = countryData?.brief_zh
-  ?? `${countryName} 监测页面整合传染病记录、图表和来源信息，供探索性分析使用。`;
+  ?? `${countryNameZh}监测页面整合传染病记录、图表和来源信息，供探索性分析使用。`;
 const surveillanceSystemEn = countryData?.surveillance_system_en
   ?? `Current records are built from configured public surveillance sources for ${countryName}.`;
 const surveillanceSystemZh = countryData?.surveillance_system_zh
-  ?? `当前记录来自 ${countryName} 已配置的公开监测来源。`;
+  ?? `当前记录来自 ${countryNameZh} 已配置的公开监测来源。`;
 const interpretationEn = countryData?.interpretation_en
   ?? `Coverage spans ${coverageLabel} across ${countryData?.disease_count ?? 0} tracked diseases.`;
 const interpretationZh = countryData?.interpretation_zh
@@ -120,8 +121,8 @@ const countryDataUrl = countryDownload?.site_json_path ?? `/site-data/countries/
   title={countryName}
   description={`Disease surveillance data for ${countryName}`}
   breadcrumbs={[
-    { label: 'Countries', href: '/countries/' },
-    { label: countryName },
+    { label: 'Countries', labelZh: '国家', href: '/countries/' },
+    { label: countryName, labelZh: countryNameZh },
   ]}
 >
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
@@ -140,7 +141,7 @@ const countryDataUrl = countryDownload?.site_json_path ?? `/site-data/countries/
             <span class="text-sm uppercase tracking-[0.18em] text-[rgb(var(--text-muted))]">{countryData?.country_code ?? country.toUpperCase()}</span>
           </div>
           <div>
-            <h1 class="academic-title">
+            <h1 class="academic-title" data-lang-en={countryName} data-lang-zh={countryNameZh}>
               {countryName}
             </h1>
           </div>
