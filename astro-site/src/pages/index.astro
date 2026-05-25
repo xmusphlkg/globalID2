@@ -320,8 +320,8 @@ const features = [
     {(meta.countries ?? []).map((c: any) => (
       <CountryCard
         code={c.code}
-        name={c.name}
-        nameZh={getCountryCoverage(c.code)?.name_zh}
+        name={c.name_en ?? c.name}
+        nameZh={c.name_zh ?? getCountryCoverage(c.code)?.name_zh}
         totalCases={c.total_cases}
         totalDeaths={c.total_deaths}
         diseaseCount={c.disease_count}

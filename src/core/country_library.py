@@ -77,11 +77,18 @@ COUNTRY_OVERRIDES: dict[str, dict[str, str]] = {
         "language": "pt-BR",
         "timezone": "America/Sao_Paulo",
     },
+    "CH": {
+        "name": "Switzerland",
+        "name_local": "Schweiz / Suisse / Svizzera",
+        "language": "en-CH",
+        "timezone": "Europe/Zurich",
+    },
 }
 
 COUNTRY_NAMES_ZH: dict[str, str] = {
     "AU": "澳大利亚",
     "BR": "巴西",
+    "CH": "瑞士",
     "CN": "中国",
     "JP": "日本",
     "KR": "韩国",
@@ -302,6 +309,35 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
             "lang": "pt-BR",
         },
         "notes": "Brazil Ministry of Health DATASUS/SINAN public DBC microdata aggregated to national monthly notification counts.",
+    },
+    "CH": {
+        "data_source_url": "https://www.idd.bag.admin.ch/en/portal-data",
+        "data_source_type": "rest_api",
+        "crawler_config": {
+            "sources": ["foph_idd"],
+            "cadence": "weekly",
+            "portal_url": "https://www.idd.bag.admin.ch/en/portal-data",
+            "api_base_url": "https://www.idd.bag.admin.ch/api/v1",
+            "full_history_start_year": 2013,
+            "refresh_recent_months": 6,
+            "refresh_recent_weeks": 12,
+            "refresh_recent_years": 2,
+            "reporting_area": "national",
+            "primary_geography": "CH",
+            "fallback_geography": "CHFL",
+        },
+        "parser_config": {
+            "primary": "ch_foph_idd_cases",
+        },
+        "disease_mapping_rules": {
+            "strategy": "db_first",
+            "fallback": "learning_suggestions",
+        },
+        "report_config": {
+            "default_type": "WEEKLY",
+            "lang": "en-CH",
+        },
+        "notes": "Switzerland FOPH/BAG IDD mandatory reporting API normalized to national case rows. Monthly series may use the dashboard CHFL aggregate where CH-only monthly series are not exposed.",
     },
 }
 

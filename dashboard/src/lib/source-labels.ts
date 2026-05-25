@@ -53,6 +53,16 @@ export function getSourceDisplayLabel(
   ) {
     return lang === "zh" ? "韩国 KDCA EID" : "Korea KDCA EID";
   }
+  if (
+    s === "foph_idd" ||
+    s === "foph" ||
+    s === "bag" ||
+    s === "bag_idd" ||
+    s === "idd" ||
+    ((s === "all" || s === "ch" || s === "switzerland") && cc === "CH")
+  ) {
+    return lang === "zh" ? "瑞士 FOPH/BAG IDD" : "Switzerland FOPH IDD";
+  }
   if (s === "pubmed" || s === "pubmed_rss") return "PubMed";
   if (s === "cdc_weekly") return "China CDC Weekly";
   if (s === "nhc") return lang === "zh" ? "国家卫健委" : "NHC";
@@ -99,6 +109,9 @@ export function getSourceOptionsForCountry(
   }
   if (code === "KR") {
     return [{ value: "kdca_open_api", label: lang === "zh" ? "韩国 KDCA EID" : "Korea KDCA EID" }];
+  }
+  if (code === "CH") {
+    return [{ value: "foph_idd", label: lang === "zh" ? "瑞士 FOPH/BAG IDD" : "Switzerland FOPH IDD" }];
   }
   return [{ value: "all", label: lang === "zh" ? "全部来源" : "All Sources" }];
 }

@@ -13,6 +13,7 @@ EXPECTED_SCOPES_BY_COUNTRY = {
     "HK": ["chp_notifiable"],
     "BR": ["sinan_datasus"],
     "KR": ["kdca_open_api"],
+    "CH": ["foph_idd"],
 }
 
 SOURCE_SCOPE_LABELS: dict[str, dict[str, str]] = {
@@ -56,6 +57,10 @@ SOURCE_SCOPE_LABELS: dict[str, dict[str, str]] = {
         "en": "Korea KDCA EID",
         "zh": "韩国 KDCA EID",
     },
+    "foph_idd": {
+        "en": "Switzerland FOPH IDD",
+        "zh": "瑞士 FOPH/BAG IDD",
+    },
 }
 
 COUNTRY_SOURCE_LABEL_OVERRIDES: dict[tuple[str, str], dict[str, str]] = {
@@ -89,6 +94,11 @@ _EXACT_SCOPE_BY_DATA_SOURCE = {
     "korea kosis download": "kdca_open_api",
     "korea kdca eid": "kdca_open_api",
     "korea kdca": "kdca_open_api",
+    "switzerland foph idd mandatory reporting system": "foph_idd",
+    "switzerland foph idd": "foph_idd",
+    "switzerland bag idd": "foph_idd",
+    "foph idd": "foph_idd",
+    "bag idd": "foph_idd",
     "nhc": "nhc",
     "gov data": "nhc",
     "pubmed": "pubmed",
@@ -126,6 +136,13 @@ _TASK_SOURCE_ALIASES = {
     "kdca_portal": "kdca_open_api",
     "kosis": "kdca_open_api",
     "kosis_file": "kdca_open_api",
+    "foph": "foph_idd",
+    "foph_idd": "foph_idd",
+    "bag": "foph_idd",
+    "bag_idd": "foph_idd",
+    "idd": "foph_idd",
+    "ch": "foph_idd",
+    "switzerland": "foph_idd",
 }
 
 
@@ -146,6 +163,8 @@ def canonicalize_task_source(
         return "chp_notifiable"
     if normalized == "all" and (country_code or "").strip().upper() == "KR":
         return "kdca_open_api"
+    if normalized == "all" and (country_code or "").strip().upper() == "CH":
+        return "foph_idd"
 
     return normalized
 
@@ -258,6 +277,8 @@ def scope_from_data_source(data_source: Optional[str]) -> str:
         return "sinan_datasus"
     if "kdca" in text or "korea" in text or "data.go.kr" in text:
         return "kdca_open_api"
+    if "foph" in text or "bag" in text or "idd" in text or "switzerland" in text:
+        return "foph_idd"
     if "nhc" in text or "gov" in text or "ndcpa" in text or "卫健" in text or "疾控局" in text:
         return "nhc"
     if "cdc" in text or "weekly" in text:
@@ -311,6 +332,14 @@ def canonical_data_source_label(
         "korea kdca",
     }:
         return "Korea KDCA EID"
+    if text in {
+        "switzerland foph idd mandatory reporting system",
+        "switzerland foph idd",
+        "switzerland bag idd",
+        "foph idd",
+        "bag idd",
+    }:
+        return "Switzerland FOPH IDD"
 
     scope = scope_from_data_source(data_source)
     if scope != "all":

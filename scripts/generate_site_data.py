@@ -40,6 +40,7 @@ from src.core.data_share import (  # noqa: E402
 )
 from src.core.country_library import (  # noqa: E402
     get_country_bootstrap_config,
+    get_country_display_name,
     get_country_profile,
     get_standard_country_codes,
 )
@@ -183,9 +184,12 @@ DOWNLOAD_CSV_FIELDS = [
 ABOUT_COUNTRY_NAMES_ZH: dict[str, str] = {
     "AU": "澳大利亚",
     "BR": "巴西",
+    "CH": "瑞士",
     "CN": "中国",
+    "HK": "中国香港",
     "JP": "日本",
     "KR": "韩国",
+    "NZ": "新西兰",
     "TW": "中国台湾",
     "US": "美国",
 }
@@ -193,11 +197,14 @@ ABOUT_COUNTRY_NAMES_ZH: dict[str, str] = {
 ABOUT_SOURCE_LABELS_ZH: dict[tuple[str, str], str] = {
     ("AU", "all"): "澳大利亚 NINDSS",
     ("BR", "sinan_datasus"): "巴西 DATASUS SINAN",
+    ("CH", "foph_idd"): "瑞士 FOPH/BAG IDD",
     ("CN", "cdc_weekly"): "中国疾控中心周报",
     ("CN", "nhc"): "国家疾病预防控制局",
     ("CN", "pubmed"): "PubMed 生物医学文献库",
+    ("HK", "chp_notifiable"): "中国香港 CHP 法定传染病",
     ("JP", "jp_weekly"): "日本 NIID/JIHS 周报",
     ("KR", "kdca_open_api"): "韩国 KDCA EID",
+    ("NZ", "phf_monthly"): "新西兰 PHF Science 法定传染病",
     ("TW", "nidss_open_data"): "中国台湾 CDC NIDSS",
     ("US", "nndss_api"): "美国 CDC NNDSS",
 }
@@ -205,11 +212,14 @@ ABOUT_SOURCE_LABELS_ZH: dict[tuple[str, str], str] = {
 ABOUT_SOURCE_DESCRIPTIONS_ZH: dict[tuple[str, str], str] = {
     ("AU", "all"): "澳大利亚国家法定传染病监测系统仪表板。",
     ("BR", "sinan_datasus"): "巴西卫生部 DATASUS/SINAN 的 SUS 开放 DBC 微数据，按通报月份聚合为全国月度病例数。",
+    ("CH", "foph_idd"): "瑞士 FOPH/BAG IDD 法定传染病报告 API，标准化为全国病例记录。",
     ("CN", "cdc_weekly"): "中国疾控中心发布的月度法定传染病报告。",
     ("CN", "nhc"): "中国官方公共卫生公报与查询门户。",
     ("CN", "pubmed"): "作为补充上下文使用的生物医学文献发现源。",
+    ("HK", "chp_notifiable"): "中国香港 CHP 年度法定传染病 CSV，标准化为全国月度病例数。",
     ("JP", "jp_weekly"): "日本 NIID/JIHS 的周度传染病监测数据。",
     ("KR", "kdca_open_api"): "韩国 KDCA 法定传染病 OpenAPI 或门户/KOSIS 导出，按月聚合为全国通报病例数。",
+    ("NZ", "phf_monthly"): "新西兰 PHF Science 法定传染病月度监测数据。",
     ("TW", "nidss_open_data"): "中国台湾月度法定传染病开放数据 CSV。",
     ("US", "nndss_api"): "美国 CDC 国家法定传染病监测系统的临时数据。",
 }
@@ -222,6 +232,25 @@ CADENCE_LABELS_ZH: dict[str, str] = {
     "weekly": "每周",
     "yearly": "每年",
 }
+
+
+def resolve_country_display_names(code: str, row: dict | None = None) -> tuple[str, str]:
+    """Resolve stable English and Chinese country names for public exports."""
+    normalized = (code or "").strip().upper()
+    row = row or {}
+    name_en = (
+        row.get("name_en")
+        or row.get("name")
+        or get_country_display_name(normalized, "en")
+        or normalized
+    )
+    name_zh = (
+        row.get("name_zh")
+        or get_country_display_name(normalized, "zh")
+        or row.get("name_local")
+        or name_en
+    )
+    return name_en, name_zh
 
 
 def safe_float(v) -> float | None:
@@ -782,16 +811,7 @@ def build_about_snapshot(
 
     for country in sorted(countries_simple, key=lambda item: item.get("code") or ""):
         code = (country.get("code") or "").upper()
-        country_name_en = country.get("name") or code or "Unknown"
-        try:
-            profile = get_country_profile(code) if code else None
-        except Exception:
-            profile = None
-        country_name_zh = (
-            ABOUT_COUNTRY_NAMES_ZH.get(code)
-            or (profile.name_local if profile else None)
-            or country_name_en
-        )
+        country_name_en, country_name_zh = resolve_country_display_names(code, country)
 
         source_info = country.get("source_info") or {}
         sources = source_info.get("sources") or []
@@ -1270,7 +1290,7 @@ async def fetch_countries(session) -> list[dict]:
     rows = await session.execute(
         text(
             """
-            SELECT code, name, language, timezone
+            SELECT code, name, name_en, name_local, language, timezone
             FROM countries
             ORDER BY code
             """
@@ -1757,14 +1777,20 @@ def apply_country_brief_fields(country_data: dict, brief_by_language: dict[str, 
     source_labels = [src.get("label") for src in source_info.get("sources") or [] if src.get("label")]
     source_label_en = ", ".join(source_labels) or source_info.get("primary_label") or "official surveillance sources"
     country_code = str(country_data.get("country_code") or "").upper()
-    country_name_zh = ABOUT_COUNTRY_NAMES_ZH.get(country_code, country_data.get("country_name") or country_code)
+    country_name_zh = (
+        country_data.get("country_name_zh")
+        or ABOUT_COUNTRY_NAMES_ZH.get(country_code)
+        or get_country_display_name(country_code, "zh")
+        or country_data.get("country_name")
+        or country_code
+    )
     source_labels_zh = [
         ABOUT_SOURCE_LABELS_ZH.get((country_code, src.get("scope")), src.get("label"))
         for src in source_info.get("sources") or []
         if src.get("label")
     ]
     source_label_zh = ", ".join(label for label in source_labels_zh if label) or source_label_en
-    country_name = country_data.get("country_name") or country_data.get("country_code")
+    country_name = country_data.get("country_name_en") or country_data.get("country_name") or country_data.get("country_code")
     date_range = country_data.get("date_range") or {}
     frequency = (country_data.get("frequency_meta") or {}).get("source_frequency") or "UNKNOWN"
 
@@ -1909,9 +1935,16 @@ def build_country_data(
         disease_series[d]["name_en"] for d in heatmap_diseases
     ]
 
+    country_name_en, country_name_zh = resolve_country_display_names(
+        country_code,
+        {"name": country_name},
+    )
+
     return {
         "country_code": country_code,
-        "country_name": country_name,
+        "country_name": country_name_en,
+        "country_name_en": country_name_en,
+        "country_name_zh": country_name_zh,
         "total_cases": total_cases,
         "total_deaths": total_deaths,
         "disease_count": len(by_disease),
@@ -2018,6 +2051,7 @@ def build_country_site_data(country_data: dict) -> dict:
         "meta": {
             "cc": country_data.get("country_code"),
             "cn": country_data.get("country_name"),
+            "cn_zh": country_data.get("country_name_zh"),
             "tc": country_data.get("total_cases"),
             "td": country_data.get("total_deaths"),
             "dc": country_data.get("disease_count"),
@@ -2107,6 +2141,7 @@ def build_disease_data(
 def build_disease_site_data(
     disease_data: dict,
     country_name_by_code: dict[str, str] | None = None,
+    country_name_zh_by_code: dict[str, str] | None = None,
 ) -> dict:
     """Build a compact disease payload used only by the site charts."""
     country_series = disease_data.get("country_series") or {}
@@ -2157,6 +2192,7 @@ def build_disease_site_data(
         compact_entry = {
             "cc": country_code,
             "n": (country_name_by_code or {}).get(country_code) or country_code,
+            "n_zh": (country_name_zh_by_code or {}).get(country_code) or country_code,
             "tc": entry.get("total_cases", 0),
             "td": entry.get("total_deaths", 0),
             "x": [date_index[date] for date in dates if date in date_index],
@@ -2246,18 +2282,28 @@ async def export(
 
         # ── Countries ──
         countries = await fetch_countries(session)
-        countries_simple = [
-            {"code": c["code"], "name": c["name"], "language": c["language"]}
-            for c in countries
-        ]
+        countries_simple = []
+        for country in countries:
+            name_en, name_zh = resolve_country_display_names(country["code"], country)
+            countries_simple.append(
+                {
+                    "code": country["code"],
+                    "name": name_en,
+                    "name_en": name_en,
+                    "name_zh": name_zh,
+                    "language": country["language"],
+                }
+            )
 
         all_records_by_country: dict[str, list] = {}
         country_sources_by_code: dict[str, dict] = {}
-        country_name_by_code = {c["code"]: c["name"] for c in countries}
+        country_name_by_code = {c["code"]: c["name"] for c in countries_simple}
+        country_name_zh_by_code = {c["code"]: c["name_zh"] for c in countries_simple}
         country_download_entries: list[dict] = []
         disease_download_entries: list[dict] = []
         for country in countries:
             code = country["code"]
+            country_name_en = country_name_by_code.get(code) or country["name"]
             print(f"  Fetching records for {code}…")
             frequency_meta = await fetch_country_frequency_meta(session, code)
             country_source_info = build_country_source_info(code, frequency_meta)
@@ -2273,7 +2319,7 @@ async def export(
             all_records_by_country[code] = records
             country_sources_by_code[code] = country_source_info
             country_data = build_country_data(
-                code, country["name"], records, diseases_by_id, frequency_meta
+                code, country_name_en, records, diseases_by_id, frequency_meta
             )
             country_data["source_info"] = country_source_info
             country_data = apply_country_brief_fields(country_data, country_briefs.get(code.upper()))
@@ -2289,7 +2335,8 @@ async def export(
             country_exports.append(
                 {
                     "code": code,
-                    "country_name": country["name"],
+                    "country_name": country_name_en,
+                    "country_name_zh": country_name_zh_by_code.get(code),
                     "country_data": country_data,
                     "source_info": country_source_info,
                 }
@@ -2312,6 +2359,7 @@ async def export(
         for country_export in country_exports:
             code = country_export["code"]
             country_name = country_export["country_name"]
+            country_name_zh = country_export.get("country_name_zh") or country_name_zh_by_code.get(code)
             country_data = country_export["country_data"]
             country_source_info = country_export["source_info"]
             country_data["generated_at"] = generated_at
@@ -2325,6 +2373,7 @@ async def export(
                     "dataset_id": code.lower(),
                     "dataset_slug": code.lower(),
                     "dataset_name": country_name,
+                    "dataset_name_zh": country_name_zh,
                     "generated_at": generated_at,
                     "record_count": len(country_download_rows),
                     "date_range": country_data.get("date_range"),
@@ -2336,6 +2385,8 @@ async def export(
                 "summary": {
                     "country_code": code,
                     "country_name": country_name,
+                    "country_name_en": country_name,
+                    "country_name_zh": country_name_zh,
                     "total_cases": country_data.get("total_cases"),
                     "total_deaths": country_data.get("total_deaths"),
                     "disease_count": country_data.get("disease_count"),
@@ -2351,6 +2402,8 @@ async def export(
                     "id": code.lower(),
                     "code": code,
                     "name": country_name,
+                    "name_en": country_name,
+                    "name_zh": country_name_zh,
                     "generated_at": generated_at,
                     "record_count": len(country_download_rows),
                     "date_range": country_data.get("date_range"),
@@ -2374,12 +2427,15 @@ async def export(
             disease_site_data = build_disease_site_data(
                 disease_data,
                 country_name_by_code,
+                country_name_zh_by_code,
             )
             disease_countries = sorted((disease_data.get("country_series") or {}).keys())
             disease_source_info = []
             for country_code in disease_countries:
                 country_source = dict(country_sources_by_code.get(country_code, {}))
                 country_source["country_name"] = country_name_by_code.get(country_code)
+                country_source["country_name_en"] = country_name_by_code.get(country_code)
+                country_source["country_name_zh"] = country_name_zh_by_code.get(country_code)
                 disease_source_info.append(country_source)
             disease_data["generated_at"] = generated_at
             disease_data["source_info"] = disease_source_info
@@ -2436,6 +2492,8 @@ async def export(
                         {
                             "code": country_code,
                             "name": country_name_by_code.get(country_code),
+                            "name_en": country_name_by_code.get(country_code),
+                            "name_zh": country_name_zh_by_code.get(country_code),
                         }
                         for country_code in disease_countries
                     ],

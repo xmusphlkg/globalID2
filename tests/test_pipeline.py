@@ -210,6 +210,7 @@ def test_crawlers_importable():
     from src.data.crawlers.tw import TaiwanNIDSSCrawler
     from src.data.crawlers.kr import KoreaKDCAOpenAPICrawler
     from src.data.crawlers.hk import HongKongCHPCrawler
+    from src.data.crawlers.ch import SwitzerlandIDDCrawler
 
     crawlers = {
         "CN": ChinaCDCCrawler(),
@@ -220,6 +221,7 @@ def test_crawlers_importable():
         "TW": TaiwanNIDSSCrawler(),
         "KR": KoreaKDCAOpenAPICrawler(),
         "HK": HongKongCHPCrawler(),
+        "CH": SwitzerlandIDDCrawler(),
     }
     for code, crawler in crawlers.items():
         assert crawler is not None
@@ -236,6 +238,7 @@ def test_processors_importable():
     from src.data.processors.tw import TWMonthlyUpdater
     from src.data.processors.kr import KRMonthlyUpdater
     from src.data.processors.hk import HKMonthlyUpdater
+    from src.data.processors.ch import CHMonthlyUpdater
 
     for cls in (
         DataProcessor,
@@ -246,6 +249,7 @@ def test_processors_importable():
         TWMonthlyUpdater,
         KRMonthlyUpdater,
         HKMonthlyUpdater,
+        CHMonthlyUpdater,
     ):
         assert cls is not None
         print(f"\n  ✅ {cls.__name__} importable")
@@ -263,6 +267,7 @@ COUNTRY_SOURCES = {
     "TW": "nidss_open_data",
     "KR": "kdca_open_api",
     "HK": "chp_notifiable",
+    "CH": "foph_idd",
 }
 
 # Skip network tests if explicitly disabled even when --run-network is passed.

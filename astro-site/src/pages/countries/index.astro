@@ -9,7 +9,7 @@ import metaRaw from '../../data/meta.json';
 
 const meta = metaRaw as any;
 const supportedCountries = (meta.countries ?? []) as Array<{
-  code: string; name: string; language: string;
+  code: string; name: string; name_en?: string; name_zh?: string; language: string;
   total_cases: number; total_deaths: number; disease_count: number;
   date_range: { start: string | null; end: string | null };
 }>;
@@ -18,7 +18,26 @@ const metaByCode = Object.fromEntries(
   supportedCountries.map(c => [c.code.toUpperCase(), c])
 ) as Record<string, typeof supportedCountries[0]>;
 
-const ORDERED_COUNTRIES = [...COUNTRY_COVERAGE].sort((a, b) => {
+const coverageByCode = Object.fromEntries(
+  COUNTRY_COVERAGE.map(c => [c.code.toUpperCase(), c])
+);
+
+const CARD_COUNTRIES = [
+  ...COUNTRY_COVERAGE,
+  ...supportedCountries
+    .filter(c => !coverageByCode[c.code.toUpperCase()])
+    .map(c => ({
+      code: c.code.toUpperCase(),
+      name_en: c.name_en ?? c.name,
+      name_zh: c.name_zh ?? c.name,
+      lat: 0,
+      lng: 0,
+      status: 'Supported' as const,
+      labelOffset: [80, -30] as [number, number],
+    })),
+];
+
+const ORDERED_COUNTRIES = [...CARD_COUNTRIES].sort((a, b) => {
   const aSupported = resolveCoverageStatus(a, Boolean(metaByCode[a.code])) === 'Supported';
   const bSupported = resolveCoverageStatus(b, Boolean(metaByCode[b.code])) === 'Supported';
   if (aSupported === bSupported) return 0;
@@ -30,7 +49,7 @@ const ORDERED_COUNTRIES = [...COUNTRY_COVERAGE].sort((a, b) => {
 <ReportLayout
   title="Countries"
   description="Global disease surveillance coverage by country."
-  breadcrumbs={[{ label: 'Countries' }]}
+  breadcrumbs={[{ label: 'Countries', labelZh: '国家' }]}
 >
   <div class="coverage-page max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
     <section class="card coverage-surface p-6 sm:p-8">
@@ -87,8 +106,8 @@ const ORDERED_COUNTRIES = [...COUNTRY_COVERAGE].sort((a, b) => {
             return (
               <CountryCard
                 code={m.code}
-                name={m.name}
-                nameZh={c.name_zh}
+                name={m.name_en ?? m.name}
+                nameZh={m.name_zh ?? c.name_zh}
                 totalCases={m.total_cases}
                 totalDeaths={m.total_deaths}
                 diseaseCount={m.disease_count}

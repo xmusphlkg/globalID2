@@ -13,12 +13,29 @@ export interface Country {
   is_active: boolean;
 }
 
+const COUNTRY_NAMES_ZH: Record<string, string> = {
+  AU: "澳大利亚",
+  BR: "巴西",
+  CH: "瑞士",
+  CN: "中国",
+  HK: "中国香港",
+  JP: "日本",
+  KR: "韩国",
+  NZ: "新西兰",
+  TW: "中国台湾",
+  US: "美国",
+};
+
 function hasChineseName(value?: string | null): value is string {
   return typeof value === "string" && /[\u4e00-\u9fff]/.test(value);
 }
 
 export function getCountryDisplayName(country: Country, lang: "en" | "zh") {
   if (lang === "zh") {
+    const codeName = COUNTRY_NAMES_ZH[country.code?.toUpperCase()];
+    if (codeName) {
+      return codeName;
+    }
     if (hasChineseName(country.name_zh)) {
       return country.name_zh;
     }
