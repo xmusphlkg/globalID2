@@ -4,6 +4,7 @@ GlobalID V2 Report Formatter
 报告格式化器：将报告内容转换为不同格式（Markdown/HTML/PDF）
 """
 import os
+import importlib.util
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -60,6 +61,11 @@ class ReportFormatter:
         
         logger.info(f"ReportFormatter initialized with template dir: {template_dir}")
 
+    @staticmethod
+    def is_pdf_available() -> bool:
+        """Return whether the optional PDF backend is installed."""
+        return importlib.util.find_spec("weasyprint") is not None
+
     def _markdown_to_html(self, value: Any) -> str:
         """Render Markdown for Jinja templates."""
         safe_value = value if isinstance(value, str) else ("" if value is None else str(value))
@@ -85,17 +91,26 @@ class ReportFormatter:
         lines = []
         
         # 标题和元数据
+        is_v3 = metadata.get('report_layout') == 'analytical_v3'
+        language = metadata.get('language', 'en')
         lines.append(f"# {metadata.get('title', '疾病监测报告')}")
         lines.append("")
-        lines.append(f"**生成时间**: {metadata.get('generated_at', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))}")
-        lines.append(f"**报告周期**: {metadata.get('period_start', '')} 至 {metadata.get('period_end', '')}")
-        lines.append(f"**国家/地区**: {metadata.get('country', '中国')}")
+        if is_v3 and language != 'zh':
+            lines.append(f"**Prepared**: {metadata.get('generated_at', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))}")
+            lines.append(f"**Coverage**: {metadata.get('period_start', '')} to {metadata.get('period_end', '')}")
+            lines.append(f"**Jurisdiction**: {metadata.get('country', 'Unknown')}")
+            if metadata.get('quality_score_label'):
+                lines.append(f"**Quality gate**: {metadata.get('quality_score_label')}")
+        else:
+            lines.append(f"**生成时间**: {metadata.get('generated_at', datetime.now().strftime('%Y-%m-%d %H:%M:%S'))}")
+            lines.append(f"**报告周期**: {metadata.get('period_start', '')} 至 {metadata.get('period_end', '')}")
+            lines.append(f"**国家/地区**: {metadata.get('country', '中国')}")
         lines.append("")
         lines.append("---")
         lines.append("")
         
         # 目录
-        lines.append("## 目录")
+        lines.append("## Contents" if is_v3 and language != 'zh' else "## 目录")
         lines.append("")
         for idx, section in enumerate(sections, 1):
             lines.append(f"{idx}. [{section.get('title', f'章节{idx}')}](#{self._slugify(section.get('title', f'section{idx}'))})")
@@ -113,6 +128,18 @@ class ReportFormatter:
             safe_content = content if isinstance(content, str) else ("" if content is None else str(content))
             lines.append(safe_content)
             lines.append("")
+
+            for figure in section.get('figures') or []:
+                title = figure.get('title') or section_title
+                number = figure.get('number') or ''
+                prefix = f"Figure {number}. " if number else "Figure. "
+                lines.append(f"**{prefix}{title}**")
+                if figure.get('caption'):
+                    lines.append(str(figure.get('caption')))
+                if figure.get('legend'):
+                    for item in figure.get('legend') or []:
+                        lines.append(f"- {item}")
+                lines.append("")
             
             # 如果有图表
             chart_path = section.get('chart_path')
@@ -126,7 +153,10 @@ class ReportFormatter:
         # 页脚
         lines.append("---")
         lines.append("")
-        lines.append(f"*本报告由 GlobalID V2 自动生成*")
+        if is_v3 and language != 'zh':
+            lines.append("*Prepared by GlobalID V2. Numeric statements are backed by stored evidence metadata.*")
+        else:
+            lines.append(f"*本报告由 GlobalID V2 自动生成*")
         lines.append("")
         
         markdown_text = "\n".join("" if item is None else str(item) for item in lines)

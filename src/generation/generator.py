@@ -4,6 +4,8 @@ GlobalID V2 Report Generator
 报告生成器：整合所有组件生成完整报告
 """
 import asyncio
+import json
+import shutil
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -11,7 +13,7 @@ from typing import Any, Dict, List, Optional
 import pandas as pd
 from sqlalchemy import select
 
-from src.core import get_config, get_database, get_logger, normalize_rate_columns
+from src.core import get_config, get_database, get_logger, normalize_rate_columns, normalize_rate_value
 from src.core.task_manager import task_manager
 from src.domain import (
     AIConversation,
@@ -22,12 +24,13 @@ from src.domain import (
     ReportStatus,
     ReportType,
 )
-from src.ai.agents import AnalystAgent, WriterAgent, ReviewerAgent
+from src.ai.agents import AnalystAgent, DeepAnalystAgent, WriterAgent, ReviewerAgent
 from src.services.exceptions import TaskCancelledError
-from .charts import ChartGenerator
 from .data_exporter import DataExporter
+from .evidence import EvidenceAnalyzer, METHOD_VERSION, ReportFactChecker
 from .formatter import ReportFormatter
 from .email_service import EmailService
+from .report_figures import ReportFigureLibrary
 
 logger = get_logger(__name__)
 
@@ -58,7 +61,7 @@ class ReportGenerator:
         # 初始化各组件
         # Note: AnalystAgent, WriterAgent, ReviewerAgent are instantiated per-task
         # in process_disease() to prevent shared-state race conditions in parallel execution.
-        self.chart_generator = ChartGenerator()
+        self.chart_generator = None
         self.data_exporter = DataExporter()
         self.formatter = ReportFormatter()
         self.email_service = EmailService()
@@ -68,6 +71,81 @@ class ReportGenerator:
         self.output_dir.mkdir(parents=True, exist_ok=True)
         
         logger.info("ReportGenerator initialized")
+
+    def _get_chart_generator(self):
+        """Lazy-load the legacy Plotly generator only when old report paths need it."""
+        if self.chart_generator is None:
+            from .charts import ChartGenerator
+
+            self.chart_generator = ChartGenerator()
+        return self.chart_generator
+
+    def _ensure_report_assets(self) -> None:
+        """Copy reusable static report assets into the report output directory."""
+        assets_dir = self.output_dir / "assets"
+        assets_dir.mkdir(parents=True, exist_ok=True)
+
+        source_target_pairs = [
+            (
+                Path(__file__).parent / "templates" / "report_figures.js",
+                assets_dir / "report_figures.js",
+            ),
+            (
+                Path(self.config.app.base_dir) / "dashboard" / "node_modules" / "echarts" / "dist" / "echarts.min.js",
+                assets_dir / "echarts.min.js",
+            ),
+        ]
+
+        for source, target in source_target_pairs:
+            if not source.exists():
+                logger.warning(f"Report asset missing: {source}")
+                continue
+
+            try:
+                if target.exists() and target.read_bytes() == source.read_bytes():
+                    continue
+                shutil.copyfile(source, target)
+            except Exception as exc:
+                logger.warning(f"Failed to copy report asset {source}: {exc}")
+
+    def _write_report_figure_payload(
+        self,
+        *,
+        filename_prefix: str,
+        metadata: Dict[str, Any],
+    ) -> Optional[Dict[str, str]]:
+        """Write report-specific figure data as reusable local payload assets."""
+        figures = metadata.get("figures") or []
+        if not figures:
+            return None
+
+        assets_dir = self.output_dir / "assets"
+        assets_dir.mkdir(parents=True, exist_ok=True)
+        json_asset_name = f"{filename_prefix}.figure-data.json"
+        js_asset_name = f"{filename_prefix}.figure-data.js"
+        json_target = assets_dir / json_asset_name
+        js_target = assets_dir / js_asset_name
+        payload = {
+            "figures": figures,
+            "data": metadata.get("figure_data") or {},
+            "language": metadata.get("language", "en"),
+        }
+
+        try:
+            serialized = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+            json_target.write_text(f"{serialized}\n", encoding="utf-8")
+            js_target.write_text(
+                "window.__GLOBALID_REPORT_FIGURE_PAYLOAD__ = "
+                f"{serialized};\n",
+                encoding="utf-8",
+            )
+            return {
+                "json": f"assets/{json_asset_name}",
+                "js": f"assets/{js_asset_name}",
+            }
+        except Exception as exc:
+            logger.warning(f"Failed to write report figure payload: {exc}")
+            return None
 
     async def _log_task_event(
         self,
@@ -196,6 +274,8 @@ class ReportGenerator:
                 **(report.generation_config or {}),
                 **({"language": kwargs.get("language")} if kwargs.get("language") else {}),
                 **({"report_layout": kwargs.get("report_layout")} if kwargs.get("report_layout") else {}),
+                **({"analysis_depth": kwargs.get("analysis_depth")} if kwargs.get("analysis_depth") else {}),
+                **({"quality_threshold": kwargs.get("quality_threshold")} if kwargs.get("quality_threshold") is not None else {}),
             }
             generation_config.pop("email_delivery", None)
             report = existing_report
@@ -251,7 +331,7 @@ class ReportGenerator:
             sections_kwargs = dict(kwargs)
             sections_kwargs['progress_callback'] = lambda cur, tot, msg: notify_progress("analysis", cur, tot, msg)
             
-            report_layout = kwargs.get("report_layout", "structured")
+            report_layout = kwargs.get("report_layout", "analytical_v3")
             if report_layout == "legacy":
                 sections = await self._generate_sections(
                     db,
@@ -260,8 +340,17 @@ class ReportGenerator:
                     raw_sources=raw_sources,
                     **sections_kwargs
                 )
-            else:
+            elif report_layout == "structured":
                 sections = await self._generate_structured_sections(
+                    db,
+                    report=report,
+                    data=data,
+                    raw_sources=raw_sources,
+                    **sections_kwargs,
+                )
+            else:
+                report_layout = "analytical_v3"
+                sections = await self._generate_analytical_v3_sections(
                     db,
                     report=report,
                     data=data,
@@ -328,6 +417,11 @@ class ReportGenerator:
                     # 仅当尚未有质量分时写入一个基础值
                     if report.quality_score is None and avg_quality is not None:
                         report.quality_score = avg_quality
+            elif report_layout == "analytical_v3":
+                quality_gate = (report.metadata_ or {}).get("quality_gate") or {}
+                if isinstance(quality_gate.get("overall_score"), (int, float)):
+                    report.quality_score = float(quality_gate["overall_score"])
+                report.status = ReportStatus.APPROVED if quality_gate.get("passed") else ReportStatus.REVIEWING
             else:
                 report.status = ReportStatus.APPROVED if report_layout != "legacy" else ReportStatus.COMPLETED
 
@@ -384,8 +478,11 @@ class ReportGenerator:
         generation_config = dict(kwargs.get('config', {}) or {})
         if kwargs.get("language"):
             generation_config["language"] = kwargs.get("language")
-        if kwargs.get("report_layout"):
-            generation_config["report_layout"] = kwargs.get("report_layout")
+        generation_config["report_layout"] = kwargs.get("report_layout", generation_config.get("report_layout", "analytical_v3"))
+        if kwargs.get("analysis_depth"):
+            generation_config["analysis_depth"] = kwargs.get("analysis_depth")
+        if kwargs.get("quality_threshold") is not None:
+            generation_config["quality_threshold"] = kwargs.get("quality_threshold")
 
         report = Report(
             country_id=country_id,
@@ -413,8 +510,8 @@ class ReportGenerator:
         diseases: Optional[List[int]] = None,
     ) -> pd.DataFrame:
         """提取数据"""
-        from sqlalchemy import select, desc
-        from src.domain import DiseaseRecord, Disease
+        from sqlalchemy import select
+        from src.domain import DiseaseRecord, PopulationRecord
         
         logger.debug(f"Extracting data for country {country_id}")
         
@@ -435,26 +532,1312 @@ class ReportGenerator:
         # 转换为DataFrame
         if not records:
             return pd.DataFrame()
+
+        population_by_year = {}
+        try:
+            year_start = int(period_start.year)
+            year_end = int(period_end.year)
+            pop_result = await db.execute(
+                select(PopulationRecord).where(
+                    PopulationRecord.country_id == country_id,
+                    PopulationRecord.year >= year_start,
+                    PopulationRecord.year <= year_end,
+                )
+            )
+            population_by_year = {int(row.year): row for row in pop_result.scalars().all()}
+        except Exception as exc:
+            logger.warning("Could not load population denominators for report incidence fallback: %s", exc)
+
+        def incidence_fields(record: DiseaseRecord) -> Dict[str, Any]:
+            raw_incidence = normalize_rate_value(record.incidence_rate)
+            record_time = record.time
+            year = int(record_time.year) if record_time is not None else None
+            population_record = population_by_year.get(year) if year is not None else None
+            population = float(population_record.population) if population_record and population_record.population else None
+            cases = record.cases
+
+            if raw_incidence is not None:
+                incidence_rate = raw_incidence
+                incidence_source = "original_db"
+            elif population and population > 0 and cases is not None:
+                incidence_rate = round((float(cases) / population) * 100000.0, 6)
+                incidence_source = "wpp_computed_crude"
+            else:
+                incidence_rate = None
+                incidence_source = "missing_population"
+
+            return {
+                "incidence_rate": incidence_rate,
+                "incidence_rate_source": incidence_source,
+                "population_denominator": population,
+                "population_year": year if population is not None else None,
+                "population_source": population_record.source if population_record else None,
+            }
         
-        data = pd.DataFrame([{
-            'time': r.time,
-            'disease_id': r.disease_id,
-            'cases': r.cases,
-            'deaths': r.deaths,
-            'new_cases': r.new_cases,
-            'new_deaths': r.new_deaths,
-            'recoveries': r.recoveries,
-            'incidence_rate': r.incidence_rate,
-            'mortality_rate': r.mortality_rate,
-            'recovery_rate': r.recovery_rate,
-            'data_source': r.data_source,
-            'data_quality': r.data_quality,
-            'confidence_score': r.confidence_score,
-        } for r in records])
+        data = pd.DataFrame([
+            {
+                'time': r.time,
+                'disease_id': r.disease_id,
+                'cases': r.cases,
+                'deaths': r.deaths,
+                'new_cases': r.new_cases,
+                'new_deaths': r.new_deaths,
+                'recoveries': r.recoveries,
+                **incidence_fields(r),
+                'mortality_rate': r.mortality_rate,
+                'recovery_rate': r.recovery_rate,
+                'data_source': r.data_source,
+                'data_quality': r.data_quality,
+                'confidence_score': r.confidence_score,
+            }
+            for r in records
+        ])
         
         data = normalize_rate_columns(data, copy=False)
         logger.info(f"Extracted {len(data)} records")
         return data
+
+    async def _generate_analytical_v3_sections(
+        self,
+        db,
+        report: Report,
+        data: pd.DataFrame,
+        raw_sources: Optional[List[Dict[str, Any]]] = None,
+        **kwargs,
+    ) -> List[Dict[str, Any]]:
+        """Generate the v3 evidence-bound analytical report."""
+        from sqlalchemy import select
+        from src.domain import Country, Disease, DiseaseKnowledgeBrief, ReportSection
+
+        logger.info("Generating analytical v3 report sections")
+        task_uuid = kwargs.get("task_uuid")
+        language = kwargs.get("language", "en")
+        analysis_depth = kwargs.get("analysis_depth", "deep")
+        quality_threshold = float(kwargs.get("quality_threshold", 0.85))
+        progress_callback = kwargs.get("progress_callback")
+
+        existing_sections = (
+            await db.execute(
+                select(ReportSection)
+                .where(ReportSection.report_id == report.id)
+                .order_by(ReportSection.section_order)
+            )
+        ).scalars().all()
+
+        country = (
+            await db.execute(select(Country).where(Country.id == report.country_id))
+        ).scalar_one_or_none()
+        country_name = (country.name_en or country.name) if country else "Unknown"
+        country_payload = {
+            "id": report.country_id,
+            "code": country.code if country else "",
+            "name": country_name,
+            "name_local": getattr(country, "name_local", None) if country else None,
+        }
+
+        disease_ids_needed = [int(id_) for id_ in data["disease_id"].unique()]
+        disease_rows = (
+            await db.execute(select(Disease).where(Disease.id.in_(disease_ids_needed)))
+        ).scalars().all()
+        disease_payloads = {
+            row.id: {
+                "code": row.name,
+                "name": row.name,
+                "name_en": row.name_en or row.name,
+                "name_zh": self._first_alias(row) or row.name_en or row.name,
+                "category": row.category,
+                "icd_10": row.icd_10,
+                "icd_11": row.icd_11,
+            }
+            for row in disease_rows
+            if row.name not in self.SKIP_DISEASE_CODES
+        }
+        usable_data = data[data["disease_id"].isin(disease_payloads.keys())].copy()
+
+        standard_ids = [payload["code"] for payload in disease_payloads.values()]
+        knowledge_status: Dict[str, Dict[str, Any]] = {}
+        if standard_ids:
+            from src.knowledge.catalogue import build_catalogue_disease_brief, knowledge_brief_publication_tier
+            from src.knowledge.citations import normalize_knowledge_citations
+
+            brief_rows = (
+                await db.execute(
+                    select(DiseaseKnowledgeBrief).where(
+                        DiseaseKnowledgeBrief.disease_id.in_(standard_ids),
+                        DiseaseKnowledgeBrief.language == ("zh" if language == "zh" else "en"),
+                    )
+                )
+            ).scalars().all()
+            for brief in brief_rows:
+                normalized = normalize_knowledge_citations(
+                    {
+                        "brief": brief.brief,
+                        "definition": brief.definition,
+                        "clinical_features": brief.clinical_features or brief.clinical_summary,
+                        "epidemiology": brief.epidemiology,
+                        "transmission": brief.transmission,
+                        "prevention": brief.prevention,
+                        "surveillance_note": brief.surveillance_note,
+                        "risk_groups": brief.risk_groups,
+                        "source_attribution": brief.source_attribution or [],
+                        "source_ids": brief.source_ids or [],
+                        "metadata": brief.metadata_ or {},
+                    }
+                )
+                knowledge_status[brief.disease_id] = {
+                    "status": knowledge_brief_publication_tier(brief),
+                    "updated_at": brief.updated_at.isoformat() if brief.updated_at else None,
+                    "brief": normalized.get("brief"),
+                    "definition": normalized.get("definition"),
+                    "clinical_features": normalized.get("clinical_features"),
+                    "epidemiology": normalized.get("epidemiology"),
+                    "transmission": normalized.get("transmission"),
+                    "prevention": normalized.get("prevention"),
+                    "surveillance_note": normalized.get("surveillance_note"),
+                    "risk_groups": normalized.get("risk_groups"),
+                    "source_attribution": normalized.get("source_attribution") or [],
+                    "source_confidence": brief.source_confidence,
+                    "disclaimer": brief.disclaimer,
+                }
+            disease_by_code = {row.name: row for row in disease_rows if row.name in standard_ids}
+            for disease_code, disease in disease_by_code.items():
+                if disease_code in knowledge_status:
+                    continue
+                fallback = build_catalogue_disease_brief(disease, language)
+                knowledge_status[disease_code] = {
+                    "status": "fallback",
+                    "updated_at": None,
+                    "brief": fallback.get("brief"),
+                    "definition": fallback.get("definition"),
+                    "clinical_features": fallback.get("clinical_features") or fallback.get("clinical_summary"),
+                    "epidemiology": fallback.get("epidemiology"),
+                    "transmission": fallback.get("transmission"),
+                    "prevention": fallback.get("prevention"),
+                    "surveillance_note": fallback.get("surveillance_note"),
+                    "risk_groups": fallback.get("risk_groups"),
+                    "source_attribution": [],
+                    "source_confidence": "low",
+                    "disclaimer": fallback.get("disclaimer"),
+                }
+
+        if progress_callback:
+            await progress_callback(0, 4, "Building deterministic evidence packet...")
+
+        evidence_packet = EvidenceAnalyzer().build_packet(
+            data=usable_data,
+            country=country_payload,
+            diseases=disease_payloads,
+            period_start=report.period_start,
+            period_end=report.period_end,
+            raw_sources=raw_sources or [],
+            knowledge_status=knowledge_status,
+        )
+
+        if existing_sections and (report.metadata_ or {}).get("report_layout") == "analytical_v3":
+            existing_signature = (report.metadata_ or {}).get("data_signature")
+            current_signature = evidence_packet.get("data_signature")
+            if existing_signature and existing_signature == current_signature:
+                reused_payloads = [
+                    {
+                        "title": section.title,
+                        "content": section.content,
+                        "type": section.section_type,
+                        "section_type": section.section_type,
+                        "display_type": (section.metadata_ or {}).get("display_type"),
+                        "visual_components": (section.metadata_ or {}).get("visual_components") or [],
+                        "figures": [],
+                        "chart_html": None,
+                        "disease_name": "",
+                        "is_verified": bool(section.is_verified),
+                        "quality_scores": {"overall": report.quality_score or 0.0},
+                        "metadata": section.metadata_ or {},
+                    }
+                    for section in existing_sections
+                ]
+                figure_library = ReportFigureLibrary()
+                figure_specs = figure_library.plan_figures(
+                    packet=evidence_packet,
+                    deep_analysis=(report.metadata_ or {}).get("deep_analysis") or {},
+                    language=language,
+                )
+                figures = figure_library.render_figures(
+                    packet=evidence_packet,
+                    specs=figure_specs,
+                    language=language,
+                )
+                self._attach_v3_figures(section_payloads=reused_payloads, figures=figures)
+                report.metadata_ = {
+                    **(report.metadata_ or {}),
+                    "figure_plan": [spec.to_metadata() for spec in figure_specs],
+                    "figures": ReportFigureLibrary.strip_html(figures),
+                    "figure_data": figure_library.build_figure_data(
+                        packet=evidence_packet,
+                        figures=figures,
+                        language=language,
+                    ),
+                }
+                await db.commit()
+                return reused_payloads
+            logger.warning(
+                "Discarding stale analytical v3 sections for report %s: signature %s != %s",
+                report.id,
+                existing_signature,
+                current_signature,
+            )
+            for section in existing_sections:
+                await db.delete(section)
+            await db.flush()
+
+        if progress_callback:
+            await progress_callback(1, 4, "Running deep analytical interpretation...")
+
+        deep_analysis: Dict[str, Any]
+        deep_conversations: List[Dict[str, Any]] = []
+        if analysis_depth == "deep":
+            analyst = DeepAnalystAgent()
+            deep_analysis = await analyst.process(evidence_packet=evidence_packet, language=language)
+            deep_conversations = analyst.get_conversation_history()
+            if deep_conversations:
+                report.ai_model_used = deep_conversations[-1].get("model")
+        else:
+            deep_analysis = DeepAnalystAgent.fallback(evidence_packet, language=language, reason="analysis_depth != deep")
+
+        if progress_callback:
+            await progress_callback(2, 4, "Rendering evidence-bound report sections...")
+
+        section_payloads = self._build_analytical_v3_section_payloads(
+            evidence_packet=evidence_packet,
+            deep_analysis=deep_analysis,
+            language=language,
+        )
+        self._attach_v3_visual_components(
+            section_payloads=section_payloads,
+            evidence_packet=evidence_packet,
+            deep_analysis=deep_analysis,
+            language=language,
+        )
+        figure_library = ReportFigureLibrary()
+        figure_specs = figure_library.plan_figures(
+            packet=evidence_packet,
+            deep_analysis=deep_analysis,
+            language=language,
+        )
+        figures = figure_library.render_figures(
+            packet=evidence_packet,
+            specs=figure_specs,
+            language=language,
+        )
+        self._attach_v3_figures(section_payloads=section_payloads, figures=figures)
+        figure_plan_metadata = [spec.to_metadata() for spec in figure_specs]
+        figure_metadata = ReportFigureLibrary.strip_html(figures)
+        figure_data = figure_library.build_figure_data(
+            packet=evidence_packet,
+            figures=figures,
+            language=language,
+        )
+
+        if progress_callback:
+            await progress_callback(3, 4, "Running rule-based fact checks...")
+
+        quality_gate = ReportFactChecker().check_report(
+            sections=section_payloads,
+            evidence_packet=evidence_packet,
+            quality_threshold=quality_threshold,
+            deep_confidence=deep_analysis.get("confidence"),
+        )
+
+        for payload in section_payloads:
+            payload.setdefault("metadata", {})
+            if payload.get("visual_components"):
+                payload["metadata"]["visual_components"] = payload.get("visual_components")
+            if payload.get("figures"):
+                payload["metadata"]["figure_specs"] = ReportFigureLibrary.compact_specs(payload.get("figures") or [])
+            payload["metadata"]["quality_flags"] = [
+                issue for issue in quality_gate.get("issues", []) if issue.get("section") == payload["title"]
+            ]
+
+        summary = evidence_packet.get("summary_metrics") or {}
+        top_risk = evidence_packet.get("risk_ranking") or []
+        report.title = self._analytical_title(country_name, report, language)
+        report.summary = self._analytical_summary_text(country_name, report, evidence_packet, language)
+        report.key_findings = self._analytical_key_findings(evidence_packet, deep_analysis, language)
+        report.recommendations = self._analytical_recommendations(evidence_packet, language)
+        report.quality_score = quality_gate.get("overall_score")
+        report.metadata_ = {
+            **(report.metadata_ or {}),
+            "report_layout": "analytical_v3",
+            "method_version": evidence_packet.get("method_version", METHOD_VERSION),
+            "data_signature": evidence_packet.get("data_signature"),
+            "analysis_depth": analysis_depth,
+            "analysis_summary": evidence_packet.get("analysis_summary") or {},
+            "quality_gate": quality_gate,
+            "data_quality": evidence_packet.get("data_quality") or {},
+            "risk_ranking": top_risk[:20],
+            "disease_cards": evidence_packet.get("diseases") or [],
+            "visual_diagnostics": [
+                {
+                    "disease_id": item.get("disease_id"),
+                    "name_en": item.get("name_en"),
+                    "name_zh": item.get("name_zh"),
+                    "visual_diagnostics": item.get("visual_diagnostics"),
+                }
+                for item in (evidence_packet.get("diseases") or [])
+            ],
+            "summary_metrics": summary,
+            "figure_plan": figure_plan_metadata,
+            "figures": figure_metadata,
+            "figure_data": figure_data,
+            "evidence_packet": {
+                key: value
+                for key, value in evidence_packet.items()
+                if key not in {"diseases", "evidence_index"}
+            },
+            "deep_analysis": deep_analysis,
+        }
+
+        persisted_sections: List[Dict[str, Any]] = []
+        for order, payload in enumerate(section_payloads, 1):
+            section = ReportSection(
+                report_id=report.id,
+                title=payload["title"],
+                content=payload["content"],
+                section_type=payload["section_type"],
+                section_order=order,
+                data_sources=evidence_packet.get("sources") or [],
+                charts=payload.get("charts") or [],
+                is_verified=bool(quality_gate.get("passed")),
+                metadata_=payload.get("metadata") or {},
+            )
+            db.add(section)
+            await db.flush()
+            persisted_sections.append(
+                {
+                    "title": section.title,
+                    "content": section.content,
+                    "type": section.section_type,
+                    "display_type": payload.get("display_type"),
+                    "visual_components": payload.get("visual_components") or [],
+                    "figures": payload.get("figures") or [],
+                    "chart_html": payload.get("chart_html"),
+                    "section_id": section.id,
+                    "disease_name": "",
+                    "token_usage": self._aggregate_tokens(deep_conversations),
+                    "quality_scores": quality_gate,
+                    "is_verified": bool(quality_gate.get("passed")),
+                    "metadata": section.metadata_ or {},
+                }
+            )
+
+        await db.commit()
+        if progress_callback:
+            await progress_callback(4, 4, "Analytical v3 report complete")
+
+        await self._log_task_event(
+            task_uuid,
+            entry_type="success" if quality_gate.get("passed") else "warning",
+            title="Analytical v3 Report Generated",
+            content=(
+                f"Country: {country_name}\n"
+                f"Diseases: {summary.get('disease_count', 0)}\n"
+                f"High-risk diseases: {summary.get('high_risk_diseases', 0)}\n"
+                f"Quality gate: {'passed' if quality_gate.get('passed') else 'needs review'}\n"
+                f"Quality score: {quality_gate.get('overall_score')}"
+            ),
+            metadata={
+                "scope": "report",
+                "event": "analytical_v3_report_generated",
+                "report_id": report.id,
+                "quality_gate": quality_gate,
+                "data_signature": evidence_packet.get("data_signature"),
+            },
+            prompt=self._find_last_ai_exchange(deep_conversations)[0],
+            response=self._find_last_ai_exchange(deep_conversations)[1],
+            model_used=deep_conversations[-1].get("model") if deep_conversations else None,
+            tokens_used=self._aggregate_tokens(deep_conversations).get("total", 0),
+            success=bool(quality_gate.get("passed")),
+            error_message=None if quality_gate.get("passed") else "Quality gate requires review",
+        )
+        logger.info("Analytical v3 report generated with %s sections", len(persisted_sections))
+        return persisted_sections
+
+    def _build_analytical_v3_section_payloads(
+        self,
+        *,
+        evidence_packet: Dict[str, Any],
+        deep_analysis: Dict[str, Any],
+        language: str,
+    ) -> List[Dict[str, Any]]:
+        summary = evidence_packet.get("summary_metrics") or {}
+        ranking = evidence_packet.get("risk_ranking") or []
+        diseases = evidence_packet.get("diseases") or []
+        quality = evidence_packet.get("data_quality") or {}
+        period = evidence_packet.get("period") or {}
+        is_zh = language == "zh"
+
+        executive_refs = ["summary:total_cases", "summary:total_deaths", "summary:high_risk_diseases", "quality:score"]
+        for item in ranking[:3]:
+            executive_refs.extend(item.get("evidence_refs") or [])
+        priority_refs = [ref for item in ranking[:10] for ref in (item.get("evidence_refs") or [])] or ["summary:total_cases"]
+        trend_refs = [
+            f"disease:{item.get('disease_id')}.change_pct"
+            for item in diseases
+            if item.get("trend", {}).get("label") in {"increasing", "new_or_reappearing"}
+        ][:20] or ["summary:total_cases"]
+        visual_refs = [
+            ref
+            for item in diseases[:10]
+            for ref in (
+                f"disease:{item.get('disease_id')}.latest_4_period_cases",
+                f"disease:{item.get('disease_id')}.last4_change_pct",
+                f"disease:{item.get('disease_id')}.peak_cases",
+            )
+        ]
+        profile_refs = [
+            f"disease:{item.get('disease_id')}.latest_cases"
+            for item in diseases[:20]
+        ] or ["summary:total_cases"]
+
+        sections = [
+            {
+                "section_type": "executive_brief",
+                "title": "Executive Brief" if not is_zh else "执行简报",
+                "display_type": "Briefing" if not is_zh else "简报",
+                "content": self._render_v3_executive(evidence_packet, deep_analysis, language),
+                "metadata": {
+                    "display_type": "Briefing" if not is_zh else "简报",
+                    "evidence_refs": executive_refs,
+                    "claims": [
+                        {
+                            "type": "summary_metric",
+                            "value": summary.get("total_cases"),
+                            "evidence_ref": "summary:total_cases",
+                        }
+                    ],
+                },
+            },
+            {
+                "section_type": "priority_signals",
+                "title": "Signal Assessment" if not is_zh else "信号研判",
+                "display_type": "Assessment" if not is_zh else "研判",
+                "content": self._render_v3_priority_signals(evidence_packet, language),
+                "metadata": {
+                    "display_type": "Assessment" if not is_zh else "研判",
+                    "evidence_refs": priority_refs,
+                    "risk_level": ranking[0].get("risk_level") if ranking else "low",
+                },
+            },
+            {
+                "section_type": "trend_anomaly_analysis",
+                "title": "Epidemic Curve & Pattern" if not is_zh else "流行曲线与模式",
+                "display_type": "Analysis" if not is_zh else "分析",
+                "content": self._render_v3_trends(evidence_packet, language),
+                "charts": [
+                    {
+                        "type": "time_series_cases",
+                        "diseases": [
+                            {
+                                "disease_id": item.get("disease_id"),
+                                "name_en": item.get("name_en"),
+                                "name_zh": item.get("name_zh"),
+                                "visual_diagnostics": item.get("visual_diagnostics"),
+                            }
+                            for item in diseases[:5]
+                        ],
+                    }
+                ],
+                "metadata": {
+                    "display_type": "Analysis" if not is_zh else "分析",
+                    "evidence_refs": list(dict.fromkeys(trend_refs + visual_refs)),
+                    "chart_specs": [
+                        {
+                            "disease_id": item.get("disease_id"),
+                            "name_en": item.get("name_en"),
+                            "name_zh": item.get("name_zh"),
+                            "visual_diagnostics": item.get("visual_diagnostics"),
+                        }
+                        for item in diseases[:10]
+                    ],
+                },
+            },
+            {
+                "section_type": "disease_profiles",
+                "title": "Disease Context & Interpretation" if not is_zh else "疾病背景与解读",
+                "display_type": "Interpretation" if not is_zh else "解读",
+                "content": self._render_v3_disease_profiles(evidence_packet, language),
+                "metadata": {
+                    "display_type": "Interpretation" if not is_zh else "解读",
+                    "evidence_refs": profile_refs,
+                    "disease_count": len(diseases),
+                },
+            },
+            {
+                "section_type": "data_quality_limitations",
+                "title": "Confidence & Limitations" if not is_zh else "置信度与限制",
+                "display_type": "Confidence" if not is_zh else "置信度",
+                "content": self._render_v3_quality(evidence_packet, language),
+                "metadata": {
+                    "display_type": "Confidence" if not is_zh else "置信度",
+                    "evidence_refs": ["quality:score"],
+                    "data_quality": quality,
+                },
+            },
+            {
+                "section_type": "methodology",
+                "title": "Reading Notes" if not is_zh else "阅读说明",
+                "display_type": "Note" if not is_zh else "说明",
+                "content": self._render_v3_methodology(evidence_packet, language),
+                "metadata": {
+                    "display_type": "Note" if not is_zh else "说明",
+                    "evidence_refs": ["quality:score"],
+                    "method_version": evidence_packet.get("method_version"),
+                    "period": period,
+                },
+            },
+            {
+                "section_type": "evidence_appendix",
+                "title": "Evidence Trace" if not is_zh else "证据追溯",
+                "display_type": "Appendix" if not is_zh else "附录",
+                "content": self._render_v3_appendix(evidence_packet, language),
+                "metadata": {
+                    "display_type": "Appendix" if not is_zh else "附录",
+                    "evidence_refs": list((evidence_packet.get("evidence_index") or {}).keys())[:80],
+                    "data_signature": evidence_packet.get("data_signature"),
+                },
+            },
+        ]
+        for section in sections:
+            section["content"] = self._strip_leading_markdown_heading(
+                str(section.get("content") or ""),
+                str(section.get("title") or ""),
+            )
+        return sections
+
+    def _attach_v3_visual_components(
+        self,
+        *,
+        section_payloads: List[Dict[str, Any]],
+        evidence_packet: Dict[str, Any],
+        deep_analysis: Dict[str, Any],
+        language: str,
+    ) -> None:
+        """Attach lightweight report-native visuals selected from evidence."""
+        component_map = self._build_v3_visual_component_map(evidence_packet, language)
+        for payload in section_payloads:
+            section_type = payload.get("section_type")
+            components = component_map.get(section_type) or []
+            if components:
+                payload["visual_components"] = components
+
+    @staticmethod
+    def _attach_v3_figures(
+        *,
+        section_payloads: List[Dict[str, Any]],
+        figures: List[Dict[str, Any]],
+    ) -> None:
+        """Attach rendered professional figures to their selected sections."""
+        figures_by_section: Dict[str, List[Dict[str, Any]]] = {}
+        for figure in figures:
+            section_type = str(figure.get("section_type") or "")
+            if not section_type:
+                continue
+            figures_by_section.setdefault(section_type, []).append(figure)
+
+        for payload in section_payloads:
+            section_type = str(payload.get("section_type") or "")
+            attached = figures_by_section.get(section_type) or []
+            if not attached:
+                continue
+            payload["figures"] = attached
+            payload.setdefault("charts", [])
+            payload["charts"].extend(ReportFigureLibrary.strip_html(attached))
+
+    def _build_v3_visual_component_map(
+        self,
+        packet: Dict[str, Any],
+        language: str,
+    ) -> Dict[str, List[Dict[str, Any]]]:
+        is_zh = language == "zh"
+        ranking = packet.get("risk_ranking") or []
+        diseases = packet.get("diseases") or []
+        top = ranking[0] if ranking else {}
+        top_disease = next(
+            (
+                item for item in diseases
+                if item.get("disease_id") == top.get("disease_id")
+            ),
+            diseases[0] if diseases else {},
+        )
+        metrics = top_disease.get("metrics") or {}
+        visual = top_disease.get("visual_diagnostics") or {}
+        risk = top_disease.get("risk") or {}
+        name = top_disease.get("name_zh") if is_zh else top_disease.get("name_en")
+
+        risk_level = risk.get("level") or top.get("risk_level") or "low"
+        movement = "rising" if (metrics.get("change_pct") or 0) > 0 else "under review"
+        judgement_body = (
+            f"Latest observation: {int(metrics.get('latest_cases') or 0):,} cases; "
+            f"{self._fmt_pct(metrics.get('change_pct'))} versus the previous reporting period."
+            if not is_zh
+            else f"最新一期 {int(metrics.get('latest_cases') or 0):,} 例；较前一期 {self._fmt_pct(metrics.get('change_pct'))}。"
+        )
+        latest_incidence = metrics.get("latest_incidence_rate_per_100k")
+        if isinstance(latest_incidence, (int, float)):
+            judgement_body += (
+                f" Crude incidence is {self._fmt_rate(latest_incidence)} per 100,000."
+                if not is_zh
+                else f" 粗发病率为每10万人 {self._fmt_rate(latest_incidence)}。"
+            )
+
+        ladder_items = []
+        for item in ranking[:5]:
+            score = float(item.get("risk_score") or 0)
+            ladder_items.append(
+                {
+                    "label": item.get("name_zh") if is_zh else item.get("name_en"),
+                    "value": item.get("risk_level") or "low",
+                    "detail": (
+                        f"{int(item.get('latest_cases') or 0):,} cases; {self._fmt_pct(item.get('change_pct'))}"
+                        if not is_zh
+                        else f"{int(item.get('latest_cases') or 0):,} 例；{self._fmt_pct(item.get('change_pct'))}"
+                    ),
+                    "bar_pct": max(0, min(100, int(round(score)))),
+                    "tone": item.get("risk_level") or "low",
+                }
+            )
+
+        timeline_items = [
+            {
+                "label": "Recent 4 periods" if not is_zh else "最近4期",
+                "value": f"{int(visual.get('latest_4_period_cases') or 0):,}",
+                "detail": (
+                    f"{self._fmt_pct(visual.get('last4_change_pct'))} vs prior 4"
+                    if not is_zh
+                    else f"较前4期 {self._fmt_pct(visual.get('last4_change_pct'))}"
+                ),
+            },
+            {
+                "label": "Latest point" if not is_zh else "最新点",
+                "value": f"{int(metrics.get('latest_cases') or 0):,}",
+                "detail": str(top_disease.get("latest_period") or ""),
+            },
+            {
+                "label": "Observed peak" if not is_zh else "观察峰值",
+                "value": f"{int(visual.get('peak_cases') or 0):,}",
+                "detail": str(visual.get("peak_period") or ""),
+            },
+        ]
+        if isinstance(latest_incidence, (int, float)):
+            timeline_items.append(
+                {
+                    "label": "Crude incidence" if not is_zh else "粗发病率",
+                    "value": self._fmt_rate(latest_incidence),
+                    "detail": "per 100k population" if not is_zh else "每10万人",
+                }
+            )
+
+        profile_metrics = [
+            {
+                "label": "Risk reading" if not is_zh else "风险读数",
+                "value": str(risk_level).title() if not is_zh else str(risk_level),
+                "note": f"{movement} signal" if not is_zh else "监测信号",
+            },
+            {
+                "label": "Latest cases" if not is_zh else "最新病例",
+                "value": f"{int(metrics.get('latest_cases') or 0):,}",
+                "note": self._fmt_pct(metrics.get("change_pct")),
+            },
+            {
+                "label": "Period burden" if not is_zh else "期间负担",
+                "value": f"{int(metrics.get('total_cases') or 0):,}",
+                "note": "reported cases" if not is_zh else "报告病例",
+            },
+            {
+                "label": "Deaths" if not is_zh else "死亡",
+                "value": f"{int(metrics.get('total_deaths') or 0):,}",
+                "note": "current extract" if not is_zh else "当前抽取",
+            },
+        ]
+
+        quality = packet.get("data_quality") or {}
+        quality_items = [
+            {
+                "label": "Evidence quality" if not is_zh else "证据质量",
+                "value": self._fmt_score(quality.get("score")),
+            },
+            {
+                "label": "Rate basis" if not is_zh else "率值基础",
+                "value": (
+                    "WPP crude incidence"
+                    if (quality.get("incidence_rate_sources") or {}).get("wpp_computed_crude")
+                    else "source-provided or unavailable"
+                ),
+            },
+            {
+                "label": "Main caveat" if not is_zh else "主要限制",
+                "value": (
+                    "sentinel source; per-site rate preferred"
+                    if any("sentinel" in str(source).lower() for source in top_disease.get("source_coverage", []))
+                    else "stratification unavailable"
+                ),
+            },
+        ]
+
+        return {
+            "executive_brief": [
+                {
+                    "type": "judgement_panel",
+                    "tone": risk_level,
+                    "title": "Analytical judgement" if not is_zh else "分析判断",
+                    "headline": (
+                        f"{name or 'Top signal'}: {risk_level} priority, {movement}"
+                        if not is_zh
+                        else f"{name or '首要信号'}：{risk_level} 优先级"
+                    ),
+                    "body": judgement_body,
+                    "footnote": "Generated from structured evidence; not free-text chart interpretation." if not is_zh else "基于结构化证据生成，不依赖自由文本图表解读。",
+                }
+            ],
+            "priority_signals": [
+                {
+                    "type": "signal_ladder",
+                    "title": "Signal ranking" if not is_zh else "信号排序",
+                    "items": ladder_items,
+                }
+            ] if ladder_items else [],
+            "trend_anomaly_analysis": [
+                {
+                    "type": "timeline",
+                    "title": "Curve markers" if not is_zh else "曲线标记",
+                    "items": timeline_items,
+                }
+            ],
+            "disease_profiles": [
+                {
+                    "type": "metric_tiles",
+                    "title": name or ("Disease metrics" if not is_zh else "疾病指标"),
+                    "items": profile_metrics,
+                }
+            ],
+            "data_quality_limitations": [
+                {
+                    "type": "caveat_strip",
+                    "title": "Interpretation guardrails" if not is_zh else "解释边界",
+                    "items": quality_items,
+                }
+            ],
+        }
+
+    @staticmethod
+    def _strip_leading_markdown_heading(content: str, title: str) -> str:
+        lines = content.splitlines()
+        if not lines:
+            return content
+        first = lines[0].strip()
+        normalized_title = title.strip().lower()
+        normalized_first = first.lstrip("#").strip().lower()
+        if first.startswith("#") and normalized_first == normalized_title:
+            return "\n".join(lines[1:]).lstrip()
+        return content
+
+    @staticmethod
+    def _analytical_title(country_name: str, report: Report, language: str) -> str:
+        if language == "zh":
+            return f"{country_name} 传染病监测分析报告 | {report.period_start:%Y-%m-%d} 至 {report.period_end:%Y-%m-%d}"
+        return f"{country_name} Infectious Disease Analytical Report | {report.period_start:%Y-%m-%d} to {report.period_end:%Y-%m-%d}"
+
+    @staticmethod
+    def _analytical_summary_text(
+        country_name: str,
+        report: Report,
+        packet: Dict[str, Any],
+        language: str,
+    ) -> str:
+        summary = packet.get("summary_metrics") or {}
+        period = f"{report.period_start:%Y-%m-%d} to {report.period_end:%Y-%m-%d}"
+        if language == "zh":
+            return (
+                f"本报告基于 {country_name} 在 {period} 的标准化监测记录生成，覆盖 "
+                f"{summary.get('disease_count', 0)} 种疾病，累计 {summary.get('total_cases', 0):,} 例病例和 "
+                f"{summary.get('total_deaths', 0):,} 例死亡；其中 {summary.get('high_risk_diseases', 0)} 种疾病达到高优先级信号。"
+            )
+        return (
+            f"This report analyzes standardized surveillance records for {country_name} during {period}, "
+            f"covering {summary.get('disease_count', 0)} diseases, {summary.get('total_cases', 0):,} cumulative cases, "
+            f"and {summary.get('total_deaths', 0):,} deaths; {summary.get('high_risk_diseases', 0)} diseases meet high-priority signal criteria."
+        )
+
+    @staticmethod
+    def _analytical_key_findings(packet: Dict[str, Any], deep_analysis: Dict[str, Any], language: str) -> List[str]:
+        findings: List[str] = []
+        for item in (deep_analysis.get("insights") or [])[:3]:
+            text = item.get("interpretation") or item.get("title")
+            if text:
+                findings.append(str(text))
+        ranking = packet.get("risk_ranking") or []
+        if ranking:
+            top = ranking[0]
+            if language == "zh":
+                findings.append(f"最高优先级信号为 {top.get('name_zh') or top.get('name_en')}，风险分 {top.get('risk_score')}。")
+            else:
+                findings.append(f"The highest-priority signal is {top.get('name_en')}, with risk score {top.get('risk_score')}.")
+        if not findings:
+            summary = packet.get("summary_metrics") or {}
+            findings.append(
+                f"{summary.get('disease_count', 0)} diseases analyzed with {summary.get('total_cases', 0):,} cumulative cases."
+            )
+        return findings[:5]
+
+    @staticmethod
+    def _analytical_recommendations(packet: Dict[str, Any], language: str) -> List[str]:
+        ranking = packet.get("risk_ranking") or []
+        high = [item for item in ranking if item.get("risk_level") in {"critical", "high"}][:5]
+        if language == "zh":
+            if high:
+                names = "、".join(item.get("name_zh") or item.get("name_en") for item in high)
+                return [
+                    f"优先复核高风险信号：{names}。",
+                    "结合来源定义、报告延迟和地区/人群分层数据复核异常增幅。",
+                    "对数据质量分较低或缺失率较高的疾病，先补齐来源证据后再作行动判断。",
+                ]
+            return ["维持常规监测，并对新增或重新出现信号进行人工复核。"]
+        if high:
+            names = ", ".join(item.get("name_en") for item in high)
+            return [
+                f"Prioritize review of high-risk signals: {names}.",
+                "Triangulate unusual increases with source definitions, reporting lag, and subnational or population strata where available.",
+                "For diseases with lower data-quality scores, improve source evidence before making operational decisions.",
+            ]
+        return ["Maintain routine monitoring and manually review new or reappearing signals."]
+
+    @staticmethod
+    def _fmt_pct(value: Any) -> str:
+        return ReportGenerator._fmt_pct_value(value, signed=True)
+
+    @staticmethod
+    def _fmt_pct_unsigned(value: Any) -> str:
+        return ReportGenerator._fmt_pct_value(value, signed=False)
+
+    @staticmethod
+    def _fmt_pct_value(value: Any, *, signed: bool) -> str:
+        if value is None:
+            return "N/A"
+        try:
+            sign = "+" if signed else ""
+            return f"{float(value):{sign}.1f}%"
+        except (TypeError, ValueError):
+            return "N/A"
+
+    @staticmethod
+    def _fmt_score(value: Any) -> str:
+        try:
+            return f"{float(value) * 100:.0f}%"
+        except (TypeError, ValueError):
+            return "N/A"
+
+    @staticmethod
+    def _fmt_rate(value: Any, digits: int = 3) -> str:
+        try:
+            return f"{float(value):,.{digits}f}"
+        except (TypeError, ValueError):
+            return "N/A"
+
+    @staticmethod
+    def _fmt_ratio(value: Any, digits: int = 1) -> str:
+        try:
+            return f"{float(value):,.{digits}f}x"
+        except (TypeError, ValueError):
+            return "N/A"
+
+    def _render_v3_executive(self, packet: Dict[str, Any], deep_analysis: Dict[str, Any], language: str) -> str:
+        is_zh = language == "zh"
+        summary = packet.get("summary_metrics") or {}
+        period = packet.get("period") or {}
+        ranking = packet.get("risk_ranking") or []
+        top = ranking[0] if ranking else {}
+        top_name = top.get("name_zh") if is_zh else top.get("name_en")
+        top_disease = next(
+            (
+                item for item in (packet.get("diseases") or [])
+                if item.get("disease_id") == top.get("disease_id")
+            ),
+            {},
+        )
+        top_visual = top_disease.get("visual_diagnostics") or {}
+        top_metrics = top_disease.get("metrics") or {}
+        quality = packet.get("data_quality") or {}
+        latest_incidence = top_metrics.get("latest_incidence_rate_per_100k")
+        incidence_sources = top_metrics.get("incidence_rate_sources") or {}
+        sentinel_context = any(
+            "sentinel" in str(source).lower()
+            for source in top_disease.get("source_coverage", [])
+        )
+        if latest_incidence is not None:
+            if sentinel_context and incidence_sources.get("wpp_computed_crude"):
+                rate_context = (
+                    f"The latest crude population incidence is {self._fmt_rate(latest_incidence)} per 100,000, "
+                    "but the source is sentinel surveillance, so that rate is contextual rather than a substitute for source-specific sentinel rates."
+                    if not is_zh
+                    else f"最新粗发病率为每10万人 {self._fmt_rate(latest_incidence)}，但来源属于定点监测，因此该率值只用于规模参照，不能替代来源体系中的定点率。"
+                )
+            else:
+                rate_context = (
+                    f"The latest crude population incidence is {self._fmt_rate(latest_incidence)} per 100,000, adding a population-denominator view to the count trend."
+                    if not is_zh
+                    else f"最新粗发病率为每10万人 {self._fmt_rate(latest_incidence)}，可为病例数趋势提供人口分母视角。"
+                )
+        else:
+            rate_context = (
+                "Rate denominators are unavailable, so this report should be read as a burden-and-trend assessment rather than a population-risk estimate."
+                if not is_zh
+                else "当前缺少率值分母，因此本报告应被视为负担与趋势研判，而非人群风险率估计。"
+            )
+        disease_count = int(summary.get("disease_count", 0) or 0)
+        disease_label = "disease" if disease_count == 1 else "diseases"
+        change_pct = top.get("change_pct")
+        last4_change_pct = top_visual.get("last4_change_pct")
+        try:
+            latest_rising = float(change_pct) > 0
+        except (TypeError, ValueError):
+            latest_rising = False
+        try:
+            short_window_rising = float(last4_change_pct) > 0
+        except (TypeError, ValueError):
+            short_window_rising = False
+        if latest_rising:
+            movement = "rising" if not is_zh else "正在上升"
+        elif short_window_rising:
+            movement = "short-window pressure" if not is_zh else "短窗口承压"
+        else:
+            movement = "stable-to-declining" if not is_zh else "稳定至下降"
+        lines = [
+            "## Executive Brief" if not is_zh else "## 执行简报",
+            "",
+            (
+                f"**Bottom line.** **{top_name or 'The monitored disease set'}** is a **{top.get('risk_level', 'low')}-priority, "
+                f"{movement} surveillance signal**. It warrants active review, but the present evidence does not by itself establish an emergency. "
+                f"Across {period.get('start')} to {period.get('end')}, the dataset records {summary.get('total_cases', 0):,} cases and "
+                f"{summary.get('total_deaths', 0):,} deaths across {disease_count} {disease_label}; the latest observation contributes "
+                f"{summary.get('latest_cases', 0):,} cases."
+                if not is_zh
+                else f"**核心判断。** **{top_name or '监测疾病组'}** 是一个 **{top.get('risk_level', 'low')} 优先级、{movement} 的监测信号**。当前证据提示需要主动复核，但尚不能单独构成应急结论。{period.get('start')} 至 {period.get('end')} 期间，数据集记录 {summary.get('total_cases', 0):,} 例病例、{summary.get('total_deaths', 0):,} 例死亡，覆盖 {summary.get('disease_count', 0)} 种疾病；最新一期贡献 {summary.get('latest_cases', 0):,} 例。"
+            ),
+            "",
+            (
+                f"**Why it matters.** The practical question is whether the short-window pressure is becoming persistent or whether it reflects seasonality, reporting catch-up, "
+                f"or ascertainment changes. {rate_context} "
+                f"Numeric confidence is {self._fmt_score(quality.get('score'))}, with the main uncertainty sitting in source definitions and lag."
+                if not is_zh
+                else f"**为什么重要。** 当前最需要判断的是短窗口压力是否会持续，还是主要反映季节性回升、补报或发现方式变化。{rate_context} 数值置信度为 {self._fmt_score(quality.get('score'))}，主要不确定性来自来源定义和报告延迟。"
+            ),
+            "",
+            "### What Changed" if not is_zh else "### 发生了什么变化",
+            (
+                f"- Latest burden changed {self._fmt_pct(change_pct)} versus the previous observation.\n"
+                f"- The latest 4 reporting periods changed {self._fmt_pct(last4_change_pct)} versus the preceding 4-period window.\n"
+                f"- The latest observation is {self._fmt_ratio(top_visual.get('latest_to_baseline_ratio'))} the pre-latest median background."
+                if not is_zh
+                else f"- 最新负担较上一期变化 {self._fmt_pct(change_pct)}。\n"
+                f"- 最近4个报告期较前4期变化 {self._fmt_pct(last4_change_pct)}。\n"
+                f"- 最新一期是最新期前中位背景水平的 {self._fmt_ratio(top_visual.get('latest_to_baseline_ratio'))}。"
+            ),
+            "",
+            "### Decision Implications" if not is_zh else "### 决策含义",
+            (
+                "- Classify the finding as a monitoring signal requiring active review, not as a confirmed outbreak or emergency by itself.\n"
+                "- Prioritize checks for persistence, reporting lag, and concentration by age, geography, or sentinel source before escalating.\n"
+                "- Use crude population incidence for scale context only when the underlying source is sentinel surveillance."
+                if not is_zh
+                else "- 将该发现归类为需要主动复核的监测信号，而非仅凭当前证据即可确认的暴发或应急事件。\n"
+                "- 升级判断前，应优先核查持续性、报告延迟，以及是否集中于年龄、地区或定点来源。\n"
+                "- 当底层来源为定点监测时，粗发病率只作为规模参照，不替代来源体系内的定点率。"
+            ),
+            "",
+            "### Near-Term Watch" if not is_zh else "### 近期观察重点",
+            (
+                "- Confirm whether the next reporting periods remain above the recent background level.\n"
+                "- Check whether increases are concentrated by place, age group, or reporting source once stratified data are available.\n"
+                "- Treat corroborating event-based reports as signal-strengthening evidence; treat a return toward background as support for a timing or seasonal explanation."
+                if not is_zh
+                else "- 观察后续报告期是否继续高于近期背景水平。\n- 一旦有分层数据，优先检查增长是否集中在地区、年龄组或特定报告来源。\n- 若事件报告相互印证，可提高信号强度；若回落至背景水平，则更支持时点或季节性解释。"
+            ),
+        ]
+        insights = deep_analysis.get("insights") or []
+        narrative_insights = [] if deep_analysis.get("fallback_reason") else [
+            item for item in insights
+            if "deterministic" not in str(item.get("title", "")).lower()
+        ]
+        if narrative_insights:
+            lines.extend(["", "### Analytical Readout" if not is_zh else "### 分析解读"])
+            for insight in narrative_insights[:3]:
+                lines.append(f"- **{insight.get('title', 'Insight')}**: {insight.get('interpretation', '')}")
+        elif insights and not deep_analysis.get("fallback_reason"):
+            lines.extend(["", "### Analytical Readout" if not is_zh else "### 分析解读"])
+            for insight in insights[:4]:
+                lines.append(f"- **{insight.get('title', 'Insight')}**: {insight.get('interpretation', '')}")
+        open_questions = deep_analysis.get("open_questions") or []
+        if open_questions:
+            lines.extend(["", "### Open Questions" if not is_zh else "### 待复核问题"])
+            for question in open_questions[:4]:
+                lines.append(f"- {question}")
+        return "\n".join(lines)
+
+    def _render_v3_priority_signals(self, packet: Dict[str, Any], language: str) -> str:
+        is_zh = language == "zh"
+        summary = packet.get("summary_metrics") or {}
+        high_count = int(summary.get("high_risk_diseases", 0) or 0)
+        high_label = "disease" if high_count == 1 else "diseases"
+        lines = [
+            "## Signal Assessment" if not is_zh else "## 信号研判",
+            "",
+            (
+                f"The priority list separates signals that need immediate review from signals that can remain under routine watch. "
+                f"In this packet, {high_count} {high_label} meet high/critical criteria; the leading signal is still important when its recent window remains above background."
+                if not is_zh
+                else f"优先级列表用于区分需要立即复核的信号和可继续常规观察的信号。本证据包中 {summary.get('high_risk_diseases', 0)} 种疾病达到高/极高风险阈值；当近期窗口仍高于背景水平时，首要信号仍需关注。"
+            ),
+            "",
+            "| Priority | Signal | Current reading | Why it matters | Watch next |" if not is_zh else "| 优先级 | 信号 | 当前读数 | 研判理由 | 下一步观察 |",
+            "| --- | --- | ---: | --- | --- |",
+        ]
+        ranking = packet.get("risk_ranking") or []
+        for rank, item in enumerate(ranking[:15], 1):
+            disease = item.get("name_zh") if is_zh else item.get("name_en")
+            interpretation = (
+                "short-term acceleration without high-risk classification"
+                if item.get("risk_level") == "moderate"
+                else f"{item.get('risk_level')} priority signal"
+            )
+            lines.append(
+                f"| {rank} | {disease} | {item.get('latest_cases', 0):,} cases; {self._fmt_pct(item.get('change_pct'))} vs previous | "
+                f"{interpretation} | Persistence, reporting timing, and concentration by place or age. |"
+            )
+        if not ranking:
+            lines.append("| - | - | - | - | - |")
+        return "\n".join(lines)
+
+    def _render_v3_trends(self, packet: Dict[str, Any], language: str) -> str:
+        is_zh = language == "zh"
+        diseases = packet.get("diseases") or []
+        increasing = [
+            item for item in diseases
+            if item.get("trend", {}).get("label") in {"increasing", "new_or_reappearing"}
+        ][:10]
+        anomalies = [item for item in diseases if item.get("anomaly", {}).get("is_anomaly")][:10]
+        lines = ["## Epidemic Curve & Pattern" if not is_zh else "## 流行曲线与模式", ""]
+        lines.append("### Curve Reading" if not is_zh else "### 曲线解读")
+        if increasing:
+            for item in increasing:
+                metric = item.get("metrics") or {}
+                visual = item.get("visual_diagnostics") or {}
+                name = item.get("name_zh") if is_zh else item.get("name_en")
+                lines.append(
+                    f"**{name}** is moving from background monitoring into active review. The latest point is "
+                    f"{metric.get('latest_cases', 0):,} cases, {self._fmt_pct(metric.get('change_pct'))} from the previous observation. "
+                    f"The most recent 4 reporting periods contain {visual.get('latest_4_period_cases', 0):,} cases, "
+                    f"{self._fmt_pct(visual.get('last4_change_pct'))} versus the preceding 4-period window. The highest observed point in this extract is "
+                    f"{visual.get('peak_period')} with {visual.get('peak_cases', 0):,} cases."
+                )
+        else:
+            lines.append("- No increasing or reappearing signal met the v3 threshold." if not is_zh else "- 未发现达到 v3 阈值的上升或重新出现信号。")
+        lines.extend(["", "### Working Interpretation" if not is_zh else "### 工作解释"])
+        for item in diseases[:10]:
+            name = item.get("name_zh") if is_zh else item.get("name_en")
+            metric = item.get("metrics") or {}
+            visual = item.get("visual_diagnostics") or {}
+            observations = visual.get("observations") or []
+            try:
+                latest_change = float(metric.get("change_pct"))
+            except (TypeError, ValueError):
+                latest_change = 0.0
+            if latest_change > 0:
+                interpretation = "treat the rise as a near-term pressure signal"
+            else:
+                interpretation = "treat the recent multi-period build-up as pressure even though the latest point did not increase"
+            lines.append(f"- **{name}**: {interpretation}. The next analytical step is to distinguish persistent transmission from reporting timing, seasonal behavior, or a narrower cluster that is hidden by national aggregation.")
+            for observation in observations[:3]:
+                lines.append(f"  - {observation}")
+        lines.extend(["", "### Anomaly Check" if not is_zh else "### 异常检查"])
+        if anomalies:
+            for item in anomalies:
+                anomaly = item.get("anomaly") or {}
+                name = item.get("name_zh") if is_zh else item.get("name_en")
+                lines.append(
+                    f"- **{name}**: the latest point is a {anomaly.get('severity')} statistical anomaly under the robust baseline rule."
+                )
+        else:
+            lines.append("- The latest point is elevated, but it does not clear the anomaly threshold. That keeps the judgement at “rising signal for review” rather than an automatic alert.")
+        return "\n".join(lines)
+
+    def _render_v3_disease_profiles(self, packet: Dict[str, Any], language: str) -> str:
+        is_zh = language == "zh"
+        lines = ["## Disease Context & Interpretation" if not is_zh else "## 疾病背景与解读", ""]
+        for item in sorted(packet.get("diseases") or [], key=lambda row: row.get("risk", {}).get("score", 0), reverse=True)[:20]:
+            name = item.get("name_zh") if is_zh else item.get("name_en")
+            metrics = item.get("metrics") or {}
+            risk = item.get("risk") or {}
+            anomaly = item.get("anomaly") or {}
+            baseline = item.get("baseline") or {}
+            visual = item.get("visual_diagnostics") or {}
+            knowledge = item.get("knowledge_context") or {}
+            latest_incidence = metrics.get("latest_incidence_rate_per_100k")
+            period_incidence = metrics.get("period_crude_incidence_per_100k")
+            incidence_sources = metrics.get("incidence_rate_sources") or {}
+            sentinel_context = any("sentinel" in str(source).lower() for source in item.get("source_coverage", []))
+            if latest_incidence is not None:
+                incidence_sentence = (
+                    f"The latest crude incidence is {self._fmt_rate(latest_incidence)} per 100,000 population"
+                    + (
+                        f"; cumulative period crude incidence is {self._fmt_rate(period_incidence)} per 100,000."
+                        if period_incidence is not None
+                        else "."
+                    )
+                )
+                if incidence_sources.get("wpp_computed_crude"):
+                    incidence_sentence += " This rate is computed from WPP annual population denominators."
+                if sentinel_context:
+                    incidence_sentence += " Because the source is sentinel surveillance, source-specific per-sentinel rates would remain preferable when available."
+            else:
+                incidence_sentence = (
+                    "No population-denominator incidence rate is available for this disease in the current extract."
+                )
+            lines.extend(
+                [
+                    f"### {name}",
+                    "",
+                    "**Context.**",
+                    knowledge.get("brief") or "No knowledge-base brief is available; use surveillance metrics only.",
+                    "",
+                    "**Current reading.**",
+                    (
+                        f"The signal is classified as **{risk.get('level')} risk** for this reporting window. The latest observation "
+                        f"records {metrics.get('latest_cases', 0):,} cases, compared with {metrics.get('previous_cases') if metrics.get('previous_cases') is not None else 'N/A'} "
+                        f"in the previous observation ({self._fmt_pct(metrics.get('change_pct'))}). Against the comparable period last year, "
+                        f"the change is {self._fmt_pct(metrics.get('yoy_change_pct'))}."
+                    ),
+                    "",
+                    incidence_sentence,
+                    "",
+                    (
+                        f"The short-term signal is stronger than the annual total alone suggests: the latest 4 reporting periods contain "
+                        f"{visual.get('latest_4_period_cases', 0):,} cases, or {self._fmt_pct_unsigned(visual.get('last4_share_pct'))} of the annual total. "
+                        f"The latest value is being compared with a recent background median of {baseline.get('median_cases', 'N/A')} cases."
+                    ),
+                    "",
+                    (
+                        f"No deaths are recorded in the current extract." if metrics.get("total_deaths", 0) == 0
+                        else f"The extract records {metrics.get('total_deaths', 0):,} deaths, including {metrics.get('latest_deaths', 0):,} in the latest observation."
+                    ),
+                    "",
+                    "",
+                    "**Interpretation.**",
+                    knowledge.get("surveillance_note") or "Current data support trend and burden interpretation, but not causal attribution.",
+                    "",
+                    "**What would change the judgement.**",
+                    "Evidence of continued increases across the next reporting periods, concentration in severe age groups, or corroborating event-based reports would move the signal closer to an operational alert. A return toward baseline would support a seasonal or reporting-timing explanation.",
+                    "",
+                ]
+            )
+        return "\n".join(lines)
+
+    def _render_v3_quality(self, packet: Dict[str, Any], language: str) -> str:
+        is_zh = language == "zh"
+        quality = packet.get("data_quality") or {}
+        lines = ["## Confidence & Limitations" if not is_zh else "## 置信度与限制", ""]
+        missing = quality.get("missing_rates") or {}
+        cases_missing = float(missing.get("cases", 0.0) or 0.0)
+        deaths_missing = float(missing.get("deaths", 0.0) or 0.0)
+        incidence_missing = float(missing.get("incidence_rate", 0.0) or 0.0)
+        mortality_missing = float(missing.get("mortality_rate", 0.0) or 0.0)
+        incidence_sources = quality.get("incidence_rate_sources") or {}
+        if is_zh:
+            lines.append(
+                f"本报告的数值抽取足以支持监测信号复核，整体置信度为 **{self._fmt_score(quality.get('score'))}**。"
+                f"病例和死亡字段{'基本完整' if cases_missing <= 0.01 and deaths_missing <= 0.01 else '存在缺失'}；"
+                f"当前使用 {quality.get('source_count', 0)} 个来源。"
+            )
+        else:
+            lines.append(
+                f"The numerical extract is strong enough for signal review, with an overall confidence rating of **{self._fmt_score(quality.get('score'))}**. "
+                f"Case and death fields are {'substantially complete' if cases_missing <= 0.01 and deaths_missing <= 0.01 else 'incomplete'}; "
+                f"the current assessment is based on {quality.get('source_count', 0)} source."
+            )
+        lines.append("")
+        if incidence_missing >= 0.95:
+            lines.append(
+                "- Population-denominator incidence rates are not available, so interpretation relies on count burden and trend."
+                if not is_zh
+                else "- 当前缺少人口分母发病率，因此解释主要依赖病例负担和时间变化。"
+            )
+        elif incidence_sources.get("wpp_computed_crude"):
+            lines.append(
+                "- Crude incidence is available through WPP population denominators; it supports scale comparison but should be distinguished from source-published rates."
+                if not is_zh
+                else "- 已通过 WPP 人口分母补算粗发病率；它可支持规模比较，但应与来源发布的正式率值区分。"
+            )
+        if mortality_missing >= 0.95:
+            lines.append(
+                "- Mortality-rate fields remain unavailable, so severity interpretation relies on death counts and case-fatality calculations."
+                if not is_zh
+                else "- 死亡率字段仍不可用，因此严重程度解释主要依赖死亡数和病死率计算。"
+            )
+        for issue in quality.get("issues") or []:
+            lines.append(f"- Limitation: {issue}" if not is_zh else f"- 限制：{issue}")
+        if not quality.get("issues"):
+            lines.append("- No critical data-quality issue was detected by deterministic checks." if not is_zh else "- 确定性检查未发现严重数据质量问题。")
+        knowledge_missing = [
+            item.get("name_zh") if is_zh else item.get("name_en")
+            for item in packet.get("diseases") or []
+            if item.get("knowledge_status") not in {"published", "draft", "requires_review"}
+        ]
+        if knowledge_missing:
+            lines.append(
+                f"- Knowledge-base fallback used for: {', '.join(str(name) for name in knowledge_missing[:8])}."
+                if not is_zh
+                else f"- 以下疾病使用知识库兜底 brief：{', '.join(str(name) for name in knowledge_missing[:8])}。"
+            )
+        lines.append(
+            "- Interpretation remains sensitive to case definitions, reporting lag, and unavailable subnational or demographic strata."
+            if not is_zh
+            else "- 解释仍受病例定义、报告延迟以及缺失的地区/人群分层影响。"
+        )
+        return "\n".join(lines)
+
+    @staticmethod
+    def _render_v3_methodology(packet: Dict[str, Any], language: str) -> str:
+        if language == "zh":
+            return (
+                "## 阅读说明\n"
+                "本报告把病例、死亡、变化率、短期加速和风险排序先计算为可复核证据，再交由 AI 组织解释。"
+                "当来源未提供发病率且人口分母可用时，系统会补算每10万人粗发病率，并标注为 WPP 人口分母计算值。"
+                "图表与正文使用同一条时间序列；AI 不读取截图，也不能独立创造数字、日期或因果结论。"
+                "附录和 metadata 保留完整证据追溯，供审计、复算和前端展示使用。"
+            )
+        return (
+            "## Reading Notes\n"
+            "This report first calculates cases, deaths, changes, short-window acceleration, and priority ranking as auditable evidence, "
+            "then uses AI to organize the interpretation. When source-published incidence is missing and a population denominator is available, "
+            "the system computes crude incidence per 100,000 and labels it as WPP denominator-derived. The chart and the narrative read from the same time series; AI does not read screenshots "
+            "and cannot independently create numbers, dates, or causal conclusions. The evidence trace and metadata remain available for audit, "
+            "recalculation, and dashboard display."
+        )
+
+    @staticmethod
+    def _render_v3_appendix(packet: Dict[str, Any], language: str) -> str:
+        lines = ["## Evidence Trace" if language != "zh" else "## 证据追溯", ""]
+        lines.append(
+            "The table below is an audit aid for reviewers and system integrations; it is not intended to replace the narrative assessment."
+            if language != "zh"
+            else "下表用于审阅和系统集成追溯，不替代正文研判。"
+        )
+        lines.append("")
+        lines.append(f"- Data signature: `{packet.get('data_signature')}`")
+        lines.append(f"- Calculation version: `{packet.get('method_version')}`")
+        lines.append("")
+        lines.append("| Evidence item | Value |")
+        lines.append("| --- | --- |")
+        for ref, value in list((packet.get("evidence_index") or {}).items())[:80]:
+            lines.append(f"| `{ref}` | {value} |")
+        return "\n".join(lines)
 
     async def _generate_structured_sections(
         self,
@@ -1654,7 +3037,7 @@ class ReportGenerator:
                         disease_name=disease_display_name,
                     )
                     if chart:
-                        chart_html = self.chart_generator.get_chart_html(chart)
+                        chart_html = self._get_chart_generator().get_chart_html(chart)
 
                 # 序列化 raw_sources 为 data_sources（供 dashboard 展示）
                 data_sources = []
@@ -2477,6 +3860,52 @@ class ReportGenerator:
                 country_name = country_obj.name_en or country_obj.name or "Unknown"
         except Exception as e:
             logger.warning(f"Could not fetch country name: {e}")
+
+        try:
+            quality_score_label = f"{float(report.quality_score) * 100:.0f}%" if report.quality_score is not None else "N/A"
+        except (TypeError, ValueError):
+            quality_score_label = "N/A"
+
+        report_metadata = report.metadata_ or {}
+        language = (report.generation_config or {}).get('language', 'en')
+        is_zh = language == 'zh'
+        summary_metrics = report_metadata.get('summary_metrics') or {}
+        risk_ranking = report_metadata.get('risk_ranking') or []
+        disease_cards = report_metadata.get('disease_cards') or []
+        top_card = disease_cards[0] if disease_cards else {}
+        top_metrics = top_card.get('metrics') or {}
+        presentation_cards = []
+        if top_card or risk_ranking:
+            top_signal = risk_ranking[0] if risk_ranking else {}
+            name = top_card.get('name_zh' if is_zh else 'name_en') or top_signal.get('name_zh' if is_zh else 'name_en')
+            level = top_signal.get('risk_level') or (top_card.get('risk') or {}).get('level')
+            presentation_cards.append({
+                'label': '首要信号' if is_zh else 'Top signal',
+                'value': name or 'N/A',
+                'note': f"{level} priority" if level and not is_zh else (f"{level} 优先级" if level else ''),
+            })
+        if top_metrics:
+            change_pct = top_metrics.get('change_pct')
+            note = ''
+            if isinstance(change_pct, (int, float)):
+                note = f"{change_pct:+.1f}% vs previous" if not is_zh else f"较前一期 {change_pct:+.1f}%"
+            presentation_cards.append({
+                'label': '最新病例' if is_zh else 'Latest cases',
+                'value': f"{int(top_metrics.get('latest_cases') or 0):,}",
+                'note': note,
+            })
+            latest_incidence = top_metrics.get('latest_incidence_rate_per_100k')
+            if isinstance(latest_incidence, (int, float)):
+                presentation_cards.append({
+                    'label': '粗发病率' if is_zh else 'Crude incidence',
+                    'value': f"{float(latest_incidence):.3f}",
+                    'note': '每10万人；WPP 补算' if is_zh else 'per 100k; WPP-derived',
+                })
+        presentation_cards.append({
+            'label': '质量门' if is_zh else 'Quality gate',
+            'value': quality_score_label,
+            'note': '已通过' if (report_metadata.get('quality_gate') or {}).get('passed') and is_zh else ('passed' if (report_metadata.get('quality_gate') or {}).get('passed') else ''),
+        })
         
         # 准备元数据
         metadata = {
@@ -2487,13 +3916,34 @@ class ReportGenerator:
             'country': country_name,
             'summary': report.summary,
             'key_findings': report.key_findings,
-            'report_layout': (report.metadata_ or {}).get('report_layout', 'legacy'),
-            'language': (report.generation_config or {}).get('language', 'en'),
+            'report_layout': report_metadata.get('report_layout', 'legacy'),
+            'language': language,
+            'quality_score': report.quality_score,
+            'quality_score_label': quality_score_label,
+            'quality_gate': report_metadata.get('quality_gate') or {},
+            'method_version': report_metadata.get('method_version'),
+            'data_quality': report_metadata.get('data_quality') or {},
+            'summary_metrics': summary_metrics,
+            'risk_ranking': risk_ranking,
+            'disease_cards': disease_cards,
+            'presentation_cards': presentation_cards,
+            'figure_plan': report_metadata.get('figure_plan') or [],
+            'figures': report_metadata.get('figures') or [],
+            'figure_data': report_metadata.get('figure_data') or {},
         }
         
         # 生成文件名前缀
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         filename_prefix = f"report_{report.id}_{timestamp}"
+
+        self._ensure_report_assets()
+        figure_payload_assets = self._write_report_figure_payload(
+            filename_prefix=filename_prefix,
+            metadata=metadata,
+        )
+        if figure_payload_assets:
+            metadata["figure_payload_asset"] = figure_payload_assets["json"]
+            metadata["figure_payload_js_asset"] = figure_payload_assets["js"]
         
         # 生成Markdown
         markdown_content = self.formatter.format_markdown(sections, metadata)
@@ -2508,13 +3958,31 @@ class ReportGenerator:
         report.html_path = str(html_path)
         
         # 生成PDF（可选）
-        try:
-            pdf_content = self.formatter.format_pdf(sections, metadata)
-            pdf_path = self.output_dir / f"{filename_prefix}.pdf"
-            self.formatter.save(pdf_content, str(pdf_path), format='binary')
-            report.pdf_path = str(pdf_path)
-        except Exception as e:
-            logger.warning(f"PDF generation failed: {e}")
+        if self.formatter.is_pdf_available():
+            try:
+                pdf_content = self.formatter.format_pdf(sections, metadata)
+                pdf_path = self.output_dir / f"{filename_prefix}.pdf"
+                self.formatter.save(pdf_content, str(pdf_path), format='binary')
+                report.pdf_path = str(pdf_path)
+                report.metadata_ = {
+                    **(report.metadata_ or {}),
+                    "pdf_generation": {"status": "generated", "path": str(pdf_path)},
+                }
+            except Exception as e:
+                report.metadata_ = {
+                    **(report.metadata_ or {}),
+                    "pdf_generation": {"status": "failed", "reason": str(e)},
+                }
+                logger.warning(f"PDF generation failed: {e}")
+        else:
+            report.metadata_ = {
+                **(report.metadata_ or {}),
+                "pdf_generation": {
+                    "status": "skipped",
+                    "reason": "optional dependency weasyprint is not installed",
+                },
+            }
+            logger.info("PDF generation skipped: optional dependency weasyprint is not installed")
         
         await db.commit()
         logger.info(f"Report files saved: {filename_prefix}")
@@ -2633,7 +4101,7 @@ class ReportGenerator:
             # 双轴折线图：病例数（左轴）+ 死亡数（右轴）
             has_deaths = 'deaths' in data.columns and data['deaths'].notna().any()
             if has_deaths:
-                return self.chart_generator.generate_dual_axis(
+                return self._get_chart_generator().generate_dual_axis(
                     data=data.sort_values('time'),
                     x_col='time',
                     y1_col='cases',
@@ -2643,7 +4111,7 @@ class ReportGenerator:
                     y2_label='死亡数',
                 )
             else:
-                return self.chart_generator.generate_time_series(
+                return self._get_chart_generator().generate_time_series(
                     data=data.sort_values('time'),
                     x_col='time',
                     y_cols=['cases'],
@@ -2652,7 +4120,7 @@ class ReportGenerator:
                 )
         elif section_type == 'summary':
             # 双子图：病例柱状 + 发病率折线（如有数据）
-            return self.chart_generator.generate_cases_incidence_subplots(
+            return self._get_chart_generator().generate_cases_incidence_subplots(
                 data=data.sort_values('time').tail(24),  # 最近24个月
                 x_col='time',
                 cases_col='cases',

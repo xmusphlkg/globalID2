@@ -74,7 +74,15 @@ def long_to_wide(
     if df.empty or time_col not in df.columns:
         return pd.DataFrame()
 
-    default_cols = ["cases", "deaths", "new_cases", "new_deaths", "incidence_rate", "mortality_rate"]
+    default_cols = [
+        "cases",
+        "deaths",
+        "new_cases",
+        "new_deaths",
+        "incidence_rate",
+        "mortality_rate",
+        "population_denominator",
+    ]
     cols = value_cols or [c for c in default_cols if c in df.columns]
     if not cols:
         cols = [c for c in df.columns if c not in (time_col, "disease_id") and df[c].dtype in ("int64", "float64")]
@@ -95,7 +103,7 @@ def long_to_wide(
     elif freq == "weekly":
         # W-MON: 周一起始，符合 ISO 周习惯
         grouper = pd.Grouper(key=time_col, freq="W-MON", label="left", closed="left")
-        grouped = df.set_index(time_col).groupby(grouper)
+        grouped = df.groupby(grouper)
         wide = grouped.agg(agg_dict).reset_index()
         wide = wide.rename(columns={time_col: "_period"})
     else:

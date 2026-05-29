@@ -113,6 +113,9 @@ def generate_report(
     period_end: Optional[str] = typer.Option(None, help="End date YYYY-MM-DD (defaults to today)"),
     send_email: bool = typer.Option(False, help="Send report via email"),
     enable_review: bool = typer.Option(True, help="Enable AI content review"),
+    report_layout: str = typer.Option("analytical_v3", help="Report layout (analytical_v3/structured/legacy)"),
+    analysis_depth: str = typer.Option("deep", help="Analytical v3 depth (deep/deterministic)"),
+    quality_threshold: float = typer.Option(0.85, help="Quality gate threshold for automatic approval"),
 ):
     """Generate disease surveillance report with AI analysis."""
 
@@ -133,6 +136,9 @@ def generate_report(
                 "period_end": period_end,
                 "send_email": send_email,
                 "enable_review": enable_review,
+                "report_layout": report_layout,
+                "analysis_depth": analysis_depth,
+                "quality_threshold": quality_threshold,
             },
         )
 

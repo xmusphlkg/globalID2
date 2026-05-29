@@ -294,6 +294,9 @@ async def _run_report(task: Task) -> Dict[str, Any]:
     days = inp.get("days", 365)
     enable_review = inp.get("enable_review", True)
     send_email = inp.get("send_email", False)
+    report_layout = inp.get("report_layout", "analytical_v3")
+    analysis_depth = inp.get("analysis_depth", "deep")
+    quality_threshold = float(inp.get("quality_threshold", 0.85))
     reuse_from_failed = inp.get("reuse_from_failed", True)
     reuse_strategy = inp.get("reuse_strategy", "auto")
     reuse_report_id = inp.get("reuse_report_id")
@@ -311,6 +314,9 @@ async def _run_report(task: Task) -> Dict[str, Any]:
             days=days,
             enable_review=enable_review,
             send_email=send_email,
+            report_layout=report_layout,
+            analysis_depth=analysis_depth,
+            quality_threshold=quality_threshold,
             reuse_from_failed=reuse_from_failed,
             reuse_strategy=reuse_strategy,
             reuse_report_id=reuse_report_id,

@@ -209,6 +209,21 @@ async def list_reports(
             for report_id, names in grouped_diseases.items()
         }
 
+    for row in rows:
+        report_id = row.Report.id
+        if disease_map.get(report_id):
+            continue
+        metadata = row.Report.metadata_ if isinstance(row.Report.metadata_, dict) else {}
+        cards = metadata.get("disease_cards") if isinstance(metadata, dict) else None
+        if isinstance(cards, list):
+            names = [
+                str(card.get("name_en") or card.get("name_zh") or card.get("disease_id")).strip()
+                for card in cards[:20]
+                if isinstance(card, dict) and str(card.get("name_en") or card.get("name_zh") or card.get("disease_id") or "").strip()
+            ]
+            if names:
+                disease_map[report_id] = sorted(set(names))
+
     return [
         ReportOut(
             id=r.Report.id,
@@ -243,6 +258,7 @@ async def get_report(report_uuid: UUID, db: AsyncSession = Depends(get_db)):
         raise HTTPException(404, "Report not found")
 
     report = row.Report
+    metadata = report.metadata_ if isinstance(report.metadata_, dict) else {}
     # Eager-load sections
     sec_q = (
         select(ReportSection)
@@ -272,6 +288,11 @@ async def get_report(report_uuid: UUID, db: AsyncSession = Depends(get_db)):
         pdf_path=report.pdf_path,
         markdown_path=report.markdown_path,
         error_message=report.error_message,
+        metadata=metadata,
+        analysis_summary=metadata.get("analysis_summary") if isinstance(metadata.get("analysis_summary"), dict) else None,
+        quality_gate=metadata.get("quality_gate") if isinstance(metadata.get("quality_gate"), dict) else None,
+        data_quality=metadata.get("data_quality") if isinstance(metadata.get("data_quality"), dict) else None,
+        method_version=metadata.get("method_version"),
         created_at=report.created_at,
         sections=[
             ReportSectionOut(
@@ -284,6 +305,7 @@ async def get_report(report_uuid: UUID, db: AsyncSession = Depends(get_db)):
                 generation_time=s.generation_time,
                 data_sources=s.data_sources,
                 charts=s.charts,
+                metadata=s.metadata_ if isinstance(s.metadata_, dict) else {},
                 created_at=s.created_at,
             )
             for s in sections
