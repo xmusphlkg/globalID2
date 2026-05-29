@@ -185,7 +185,7 @@ export default function DiseaseHeatmap({ data = null, series: initialSeries, dat
     return result;
   }, [activeData.z]);
 
-  const peakCell = useMemo(() => {
+  const peakCell = useMemo<{ value: number; row: number; col: number } | null>(() => {
     let best: { value: number; row: number; col: number } | null = null;
     activeData.z.forEach((row, rowIdx) => {
       row.forEach((logValue, colIdx) => {

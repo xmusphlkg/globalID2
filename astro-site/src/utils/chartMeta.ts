@@ -24,6 +24,8 @@ export interface DownloadEntry {
   source_info?: SourceInfoGroup | SourceInfoGroup[] | { sources?: SourceSummary[] };
 }
 
+type SourceInfoLike = SourceInfoGroup | { sources?: SourceSummary[] };
+
 export interface ChartSourceMeta {
   label: string;
   href?: string;
@@ -52,13 +54,14 @@ export function flattenSourceEntries(rawSourceInfo?: DownloadEntry['source_info'
       ? [rawSourceInfo]
       : [];
 
-  return sourceGroups.flatMap((group) => {
+  return sourceGroups.flatMap((group: SourceInfoLike) => {
     const nested = Array.isArray(group?.sources) ? group.sources : [];
+    const groupMeta = group as SourceInfoGroup;
     if (nested.length > 0) {
       return nested.map((source) => ({
         ...source,
-        country_code: source.country_code ?? group.country_code,
-        country_name: source.country_name ?? group.country_name,
+        country_code: source.country_code ?? groupMeta.country_code,
+        country_name: source.country_name ?? groupMeta.country_name,
       }));
     }
     return [group as SourceSummary];
