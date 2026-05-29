@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-05-24T22:46:09.905539+00:00",
+  "fetched_at": "2026-05-28T22:46:55.405270+00:00",
   "disease": "Varicella zoster (chickenpox)",
   "year": 2026,
   "month": 5,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1779662769550)/",
-            "rootActivityId": "59bc5b97-fe2a-46fc-aec1-ddaa77e700cc",
+            "timestamp": "/Date(1780008414977)/",
+            "rootActivityId": "adb1efcf-dd9e-4f97-a7de-9e6fa7c5234a",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'130'"
+                          "A0": "'169'"
                         }
                       ]
                     },
@@ -382,7 +382,7 @@
                           ],
                           "C": [
                             "ACT",
-                            "'9'"
+                            "'10'"
                           ]
                         },
                         {
@@ -400,31 +400,31 @@
                         {
                           "C": [
                             "QLD",
-                            "'29'"
+                            "'39'"
                           ]
                         },
                         {
                           "C": [
                             "SA",
-                            "'14'"
+                            "'16'"
                           ]
                         },
                         {
                           "C": [
                             "TAS",
-                            "'<5'"
+                            "'6'"
                           ]
                         },
                         {
                           "C": [
                             "VIC",
-                            "'46'"
+                            "'63'"
                           ]
                         },
                         {
                           "C": [
                             "WA",
-                            "'27'"
+                            "'34'"
                           ]
                         }
                       ]
@@ -444,13 +444,13 @@
     ]
   },
   "parsed_counts": {
-    "ACT": 9,
+    "ACT": 10,
     "NSW": 0,
     "NT": "'<5'",
-    "QLD": 29,
-    "SA": 14,
-    "TAS": "'<5'",
-    "VIC": 46,
-    "WA": 27
+    "QLD": 39,
+    "SA": 16,
+    "TAS": 6,
+    "VIC": 63,
+    "WA": 34
   }
 }

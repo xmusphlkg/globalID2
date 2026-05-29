@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-05-24T22:46:05.003104+00:00",
+  "fetched_at": "2026-05-28T22:46:50.340213+00:00",
   "disease": "Donovanosis",
   "year": 2026,
   "month": 5,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1779662764674)/",
-            "rootActivityId": "62713038-4f87-4a69-a8ff-016ccc9ef19e",
+            "timestamp": "/Date(1780008409969)/",
+            "rootActivityId": "1420f1a7-97d7-4073-aded-8fbbe1744d93",
             "descriptor": {
               "Select": [
                 {

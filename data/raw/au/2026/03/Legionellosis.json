@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-05-24T22:45:40.309650+00:00",
+  "fetched_at": "2026-05-28T22:46:37.594639+00:00",
   "disease": "Legionellosis",
   "year": 2026,
   "month": 3,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1779662739938)/",
-            "rootActivityId": "774fe5bd-31d8-4ff7-83a0-421a2b61c9b1",
+            "timestamp": "/Date(1780008397158)/",
+            "rootActivityId": "068800a4-558c-4b1f-94e9-3d5634a45153",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'88'"
+                          "A0": "'89'"
                         }
                       ]
                     },
@@ -388,7 +388,7 @@
                         {
                           "C": [
                             "NSW",
-                            "'27'"
+                            "'28'"
                           ]
                         },
                         {
@@ -445,7 +445,7 @@
   },
   "parsed_counts": {
     "ACT": 0,
-    "NSW": 27,
+    "NSW": 28,
     "NT": 0,
     "QLD": 13,
     "SA": 6,

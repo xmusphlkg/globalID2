@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-05-24T22:46:06.240032+00:00",
+  "fetched_at": "2026-05-28T22:46:51.908697+00:00",
   "disease": "Invasive Group A Streptococcal disease (iGAS)",
   "year": 2026,
   "month": 5,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1779662765864)/",
-            "rootActivityId": "e258e9e1-7f9a-45ad-a84e-3cc670675160",
+            "timestamp": "/Date(1780008411491)/",
+            "rootActivityId": "8306b3d0-0483-402f-bcdf-972cb9d09ad8",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'88'"
+                          "A0": "'104'"
                         }
                       ]
                     },
@@ -388,7 +388,7 @@
                         {
                           "C": [
                             "NSW",
-                            "'26'"
+                            "'29'"
                           ]
                         },
                         {
@@ -400,7 +400,7 @@
                         {
                           "C": [
                             "QLD",
-                            "'34'"
+                            "'38'"
                           ]
                         },
                         {
@@ -418,13 +418,13 @@
                         {
                           "C": [
                             "VIC",
-                            "'10'"
+                            "'15'"
                           ]
                         },
                         {
                           "C": [
                             "WA",
-                            "'13'"
+                            "'16'"
                           ]
                         }
                       ]
@@ -445,12 +445,12 @@
   },
   "parsed_counts": {
     "ACT": 0,
-    "NSW": 26,
+    "NSW": 29,
     "NT": "'<5'",
-    "QLD": 34,
+    "QLD": 38,
     "SA": "'<5'",
     "TAS": 0,
-    "VIC": 10,
-    "WA": 13
+    "VIC": 15,
+    "WA": 16
   }
 }

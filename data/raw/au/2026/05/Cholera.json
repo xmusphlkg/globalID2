@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-05-24T22:46:04.503035+00:00",
+  "fetched_at": "2026-05-28T22:46:50.307599+00:00",
   "disease": "Cholera",
   "year": 2026,
   "month": 5,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1779662762940)/",
-            "rootActivityId": "6829cec5-d016-4818-8677-1cbe8aa375dd",
+            "timestamp": "/Date(1780008409886)/",
+            "rootActivityId": "dbedca01-6db1-4e6f-b62f-5858645b7ae6",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "0L"
+                          "A0": "'<5'"
                         }
                       ]
                     },
@@ -417,15 +417,15 @@
                         },
                         {
                           "C": [
-                            "VIC"
-                          ],
-                          "R": 2
+                            "VIC",
+                            "'<5'"
+                          ]
                         },
                         {
                           "C": [
-                            "WA"
-                          ],
-                          "R": 2
+                            "WA",
+                            "0L"
+                          ]
                         }
                       ]
                     }
@@ -450,7 +450,7 @@
     "QLD": 0,
     "SA": 0,
     "TAS": 0,
-    "VIC": 0,
+    "VIC": "'<5'",
     "WA": 0
   }
 }

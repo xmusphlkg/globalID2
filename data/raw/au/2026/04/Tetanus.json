@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-05-24T22:45:58.049302+00:00",
+  "fetched_at": "2026-05-28T22:46:47.705274+00:00",
   "disease": "Tetanus",
   "year": 2026,
   "month": 4,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1779662757683)/",
-            "rootActivityId": "d9b6665d-ffc8-4512-a413-002175dae58c",
+            "timestamp": "/Date(1780008407308)/",
+            "rootActivityId": "476236b0-9faf-4fa5-88e9-adcb5a3996d4",
             "descriptor": {
               "Select": [
                 {
