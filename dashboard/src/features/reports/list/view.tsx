@@ -12,6 +12,7 @@ import { MetricTile } from "@/components/ui/MetricTile";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { type ReportDetail, type ReportListItem, useReportDetail, useReports } from "@/features/reports/api";
+import { ReportFigureList } from "@/features/reports/report-figures";
 import { t } from "@/lib/i18n";
 import { formatDate } from "@/lib/utils";
 import { useAppStore } from "@/stores/app-store";
@@ -66,6 +67,26 @@ function extractSectionDisease(sectionTitle: string | null | undefined, fallback
   return fallback;
 }
 
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+}
+
+function asArray(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
+}
+
+function asNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function asString(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+function formatRiskName(item: Record<string, unknown>, lang: "en" | "zh") {
+  return asString(lang === "zh" ? item.name_zh : item.name_en) || asString(item.name_en) || asString(item.disease_id) || "-";
+}
+
 function QualityCell({ score }: { score: number | null | undefined }) {
   if (score == null) {
     return <span className="text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">--</span>;
@@ -96,6 +117,133 @@ function ReportTitleCell({ report }: { report: ReportListItem }) {
         {report.primary_disease || report.disease_names?.join(", ") || report.country_name || "-"}
       </p>
     </div>
+  );
+}
+
+function AnalyticalV3Summary({ detail, lang }: { detail: ReportDetail; lang: "en" | "zh" }) {
+  const metadata = asRecord(detail.metadata);
+  if (metadata.report_layout !== "analytical_v3") return null;
+
+  const qualityGate = asRecord(detail.quality_gate ?? metadata.quality_gate);
+  const dataQuality = asRecord(detail.data_quality ?? metadata.data_quality);
+  const summaryMetrics = asRecord(metadata.summary_metrics);
+  const riskRanking = asArray(metadata.risk_ranking).map(asRecord).slice(0, 8);
+  const diseaseCards = asArray(metadata.disease_cards).map(asRecord).slice(0, 6);
+  const passed = qualityGate.passed === true;
+  const qualityScore = asNumber(qualityGate.overall_score);
+  const dataQualityScore = asNumber(dataQuality.score);
+  const methodVersion = asString(detail.method_version ?? metadata.method_version);
+
+  return (
+    <section className="space-y-3">
+      <div className="grid gap-3 sm:grid-cols-4">
+        <div className="rounded-tremor-default border border-tremor-border bg-tremor-background-subtle px-3 py-3 dark:border-dark-tremor-border dark:bg-dark-tremor-background-subtle">
+          <p className="text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+            {lang === "zh" ? "质量门" : "Quality Gate"}
+          </p>
+          <p className={`mt-1 text-base font-semibold ${passed ? "text-emerald-700 dark:text-emerald-300" : "text-amber-700 dark:text-amber-300"}`}>
+            {passed ? (lang === "zh" ? "通过" : "Passed") : lang === "zh" ? "需审核" : "Review"}
+          </p>
+        </div>
+        <div className="rounded-tremor-default border border-tremor-border bg-tremor-background-subtle px-3 py-3 dark:border-dark-tremor-border dark:bg-dark-tremor-background-subtle">
+          <p className="text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+            {lang === "zh" ? "门控分" : "Gate Score"}
+          </p>
+          <p className="mt-1 text-base font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
+            {percent(qualityScore)}
+          </p>
+        </div>
+        <div className="rounded-tremor-default border border-tremor-border bg-tremor-background-subtle px-3 py-3 dark:border-dark-tremor-border dark:bg-dark-tremor-background-subtle">
+          <p className="text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+            {lang === "zh" ? "数据质量" : "Data Quality"}
+          </p>
+          <p className="mt-1 text-base font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
+            {percent(dataQualityScore)}
+          </p>
+        </div>
+        <div className="rounded-tremor-default border border-tremor-border bg-tremor-background-subtle px-3 py-3 dark:border-dark-tremor-border dark:bg-dark-tremor-background-subtle">
+          <p className="text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+            {lang === "zh" ? "方法版本" : "Method"}
+          </p>
+          <p className="mt-1 truncate text-base font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
+            {methodVersion || "-"}
+          </p>
+        </div>
+      </div>
+
+      <div className="rounded-tremor-default border border-tremor-border bg-tremor-background px-4 py-3 dark:border-dark-tremor-border dark:bg-dark-tremor-background">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <StatusBadge tone="info">
+            {lang === "zh" ? "病例" : "Cases"} {String(summaryMetrics.total_cases ?? "-")}
+          </StatusBadge>
+          <StatusBadge tone="neutral">
+            {lang === "zh" ? "死亡" : "Deaths"} {String(summaryMetrics.total_deaths ?? "-")}
+          </StatusBadge>
+          <StatusBadge tone="warning">
+            {lang === "zh" ? "高风险" : "High Risk"} {String(summaryMetrics.high_risk_diseases ?? "0")}
+          </StatusBadge>
+        </div>
+        <h3 className="text-sm font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
+          {lang === "zh" ? "风险排序" : "Risk Ranking"}
+        </h3>
+        <div className="mt-2 overflow-hidden rounded-tremor-default border border-tremor-border dark:border-dark-tremor-border">
+          <table className="min-w-full divide-y divide-tremor-border text-sm dark:divide-dark-tremor-border">
+            <thead className="bg-tremor-background-subtle dark:bg-dark-tremor-background-subtle">
+              <tr>
+                <th className="px-3 py-2 text-left text-xs font-medium text-tremor-content-subtle">#</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-tremor-content-subtle">{lang === "zh" ? "疾病" : "Disease"}</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-tremor-content-subtle">{lang === "zh" ? "风险" : "Risk"}</th>
+                <th className="px-3 py-2 text-right text-xs font-medium text-tremor-content-subtle">{lang === "zh" ? "最近病例" : "Latest"}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-tremor-border dark:divide-dark-tremor-border">
+              {riskRanking.map((item, index) => (
+                <tr key={`${asString(item.disease_id)}-${index}`}>
+                  <td className="px-3 py-2 text-tremor-content dark:text-dark-tremor-content">{index + 1}</td>
+                  <td className="px-3 py-2 font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">{formatRiskName(item, lang)}</td>
+                  <td className="px-3 py-2">
+                    <StatusBadge tone={asString(item.risk_level) === "high" || asString(item.risk_level) === "critical" ? "danger" : "neutral"}>
+                      {asString(item.risk_level) || "-"} {String(item.risk_score ?? "")}
+                    </StatusBadge>
+                  </td>
+                  <td className="px-3 py-2 text-right text-tremor-content dark:text-dark-tremor-content">{String(item.latest_cases ?? "-")}</td>
+                </tr>
+              ))}
+              {riskRanking.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="px-3 py-4 text-center text-sm text-tremor-content-subtle">
+                    {lang === "zh" ? "暂无风险排序" : "No risk ranking available"}
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {diseaseCards.length > 0 ? (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {diseaseCards.map((card, index) => {
+            const metrics = asRecord(card.metrics);
+            const risk = asRecord(card.risk);
+            return (
+              <div key={`${asString(card.disease_id)}-${index}`} className="rounded-tremor-default border border-tremor-border bg-tremor-background-subtle px-3 py-3 dark:border-dark-tremor-border dark:bg-dark-tremor-background-subtle">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-sm font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">{formatRiskName(card, lang)}</p>
+                  <StatusBadge tone={asString(risk.level) === "high" || asString(risk.level) === "critical" ? "danger" : "neutral"}>{asString(risk.level) || "-"}</StatusBadge>
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-tremor-content dark:text-dark-tremor-content">
+                  <span>{lang === "zh" ? "最近病例" : "Latest cases"}: {String(metrics.latest_cases ?? "-")}</span>
+                  <span>{lang === "zh" ? "累计病例" : "Total cases"}: {String(metrics.total_cases ?? "-")}</span>
+                  <span>{lang === "zh" ? "变化" : "Change"}: {String(metrics.change_pct ?? "N/A")}%</span>
+                  <span>{lang === "zh" ? "风险分" : "Risk score"}: {String(risk.score ?? "-")}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
+    </section>
   );
 }
 
@@ -154,6 +302,9 @@ function ReportDetailPanel({
       />
     );
   }
+
+  const metadata = asRecord(detail.metadata);
+  const figureData = asRecord(metadata.figure_data);
 
   return (
     <div className="space-y-5">
@@ -233,6 +384,8 @@ function ReportDetailPanel({
         </section>
       ) : null}
 
+      <AnalyticalV3Summary detail={detail} lang={lang} />
+
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-3">
           <h3 className="text-sm font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
@@ -267,8 +420,22 @@ function ReportDetailPanel({
                       </span>
                     </summary>
 
-                    <div className="prose max-w-none border-t border-tremor-border px-4 py-4 dark:border-dark-tremor-border dark:prose-invert">
-                      <ReactMarkdown>{section.content ?? ""}</ReactMarkdown>
+                    <div className="border-t border-tremor-border px-4 py-4 dark:border-dark-tremor-border">
+                      <ReportFigureList
+                        figures={asArray(section.charts).map(asRecord)}
+                        figureData={figureData}
+                        lang={lang}
+                        placement="before_content"
+                      />
+                      <div className="prose max-w-none dark:prose-invert">
+                        <ReactMarkdown>{section.content ?? ""}</ReactMarkdown>
+                      </div>
+                      <ReportFigureList
+                        figures={asArray(section.charts).map(asRecord)}
+                        figureData={figureData}
+                        lang={lang}
+                        placement="after_content"
+                      />
                     </div>
 
                     {section.ai_model || section.generation_time != null ? (

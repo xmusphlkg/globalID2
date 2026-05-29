@@ -5,14 +5,20 @@ import * as echarts from "echarts/core";
 import {
   BarChart as EBarChart,
   GraphChart as EGraphChart,
+  HeatmapChart as EHeatmapChart,
   LineChart as ELineChart,
   PieChart as EPieChart,
+  ScatterChart as EScatterChart,
 } from "echarts/charts";
 import {
+  AriaComponent,
   GridComponent,
   TooltipComponent,
   LegendComponent,
   DataZoomComponent,
+  MarkLineComponent,
+  TitleComponent,
+  VisualMapComponent,
 } from "echarts/components";
 import { CanvasRenderer } from "echarts/renderers";
 import { withTheme } from "@/lib/chart-theme";
@@ -20,12 +26,18 @@ import { withTheme } from "@/lib/chart-theme";
 echarts.use([
   EBarChart,
   EGraphChart,
+  EHeatmapChart,
   ELineChart,
   EPieChart,
+  EScatterChart,
+  AriaComponent,
   GridComponent,
   TooltipComponent,
   LegendComponent,
   DataZoomComponent,
+  MarkLineComponent,
+  TitleComponent,
+  VisualMapComponent,
   CanvasRenderer,
 ]);
 

@@ -37,6 +37,11 @@ export interface ReportDetail {
   token_usage: Record<string, unknown> | null;
   ai_model_used: string | null;
   error_message: string | null;
+  metadata: Record<string, unknown> | null;
+  analysis_summary: Record<string, unknown> | null;
+  quality_gate: Record<string, unknown> | null;
+  data_quality: Record<string, unknown> | null;
+  method_version: string | null;
   created_at: string;
   sections: ReportSection[];
 }
@@ -51,6 +56,7 @@ export interface ReportSection {
   generation_time: number | null;
   data_sources: unknown;
   charts: unknown;
+  metadata: Record<string, unknown> | null;
   created_at: string;
 }
 
