@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-16T00:00:00+00:00",
+  "generated_at": "2026-05-23T00:00:00+00:00",
   "total_countries": 10,
   "total_diseases": 199,
   "total_reports": 1,
@@ -10,7 +10,7 @@
       "name_en": "Australia",
       "name_zh": "澳大利亚",
       "language": "en-AU",
-      "total_cases": 20134290,
+      "total_cases": 20142624,
       "total_deaths": 0,
       "disease_count": 66,
       "date_range": {
@@ -78,12 +78,12 @@
       "name_en": "Switzerland",
       "name_zh": "瑞士",
       "language": "en-CH",
-      "total_cases": 5228363,
+      "total_cases": 5228392,
       "total_deaths": 0,
       "disease_count": 43,
       "date_range": {
         "start": "2013-01-01",
-        "end": "2026-05-11"
+        "end": "2026-05-18"
       },
       "source_info": {
         "country_code": "CH",
@@ -198,12 +198,12 @@
       "name_en": "Japan",
       "name_zh": "日本",
       "language": "ja-JP",
-      "total_cases": 48114166,
+      "total_cases": 48141172,
       "total_deaths": 0,
       "disease_count": 86,
       "date_range": {
         "start": "2012-09-14",
-        "end": "2026-05-16"
+        "end": "2026-05-23"
       },
       "source_info": {
         "country_code": "JP",
@@ -266,12 +266,12 @@
       "name_en": "New Zealand",
       "name_zh": "新西兰",
       "language": "en",
-      "total_cases": 2862123,
+      "total_cases": 2848349,
       "total_deaths": 0,
-      "disease_count": 31,
+      "disease_count": 33,
       "date_range": {
         "start": "2016-01-01",
-        "end": "2026-03-01"
+        "end": "2026-04-01"
       },
       "source_info": {
         "country_code": "NZ",
@@ -300,7 +300,7 @@
       "name_en": "Taiwan, China",
       "name_zh": "中国台湾",
       "language": "zh-TW",
-      "total_cases": 11163721,
+      "total_cases": 11163785,
       "total_deaths": 0,
       "disease_count": 48,
       "date_range": {

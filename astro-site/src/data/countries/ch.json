@@ -3,7 +3,7 @@
   "country_name": "Switzerland",
   "country_name_en": "Switzerland",
   "country_name_zh": "瑞士",
-  "total_cases": 5228363,
+  "total_cases": 5228392,
   "total_deaths": 0,
   "disease_count": 43,
   "frequency_meta": {
@@ -13,7 +13,7 @@
   },
   "date_range": {
     "start": "2013-01-01",
-    "end": "2026-05-11"
+    "end": "2026-05-18"
   },
   "comparison_basis": {
     "frequency": "WEEKLY_EQUIVALENT_7D",
@@ -24,7 +24,7 @@
     "unit": "per_100k",
     "population_source": "WPP",
     "source_counts": {
-      "missing_population": 3609
+      "missing_population": 3611
     },
     "note_en": "Incidence Rate is computed from WPP population data during site generation; when population is unavailable, original database incidence is shown.",
     "note_zh": "发病率在网页数据生成阶段按 WPP 人口重算（每10万人）；若缺少人口数据则回退显示数据库原始发病率。"
@@ -18522,7 +18522,8 @@
         "2026-04-20",
         "2026-04-27",
         "2026-05-04",
-        "2026-05-11"
+        "2026-05-11",
+        "2026-05-18"
       ],
       "cases": [
         106,
@@ -19221,7 +19222,8 @@
         14,
         8,
         11,
-        8
+        11,
+        12
       ],
       "weekly_equiv_cases": [
         106.0,
@@ -19920,9 +19922,11 @@
         14.0,
         8.0,
         11.0,
-        8.0
+        11.0,
+        12.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -21318,9 +21322,11 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
+        "missing_population",
         "missing_population",
         "missing_population",
         "missing_population",
@@ -22716,11 +22722,12 @@
         null,
         null,
         null,
+        null,
         null
       ],
-      "total_cases": 174348,
+      "total_cases": 174363,
       "total_deaths": 0,
-      "latest_cases": 8,
+      "latest_cases": 12,
       "latest_deaths": 0
     },
     "D011": {
@@ -24399,7 +24406,8 @@
         "2026-04-20",
         "2026-04-27",
         "2026-05-04",
-        "2026-05-11"
+        "2026-05-11",
+        "2026-05-18"
       ],
       "cases": [
         57,
@@ -24726,7 +24734,8 @@
         9,
         11,
         15,
-        12
+        12,
+        14
       ],
       "weekly_equiv_cases": [
         57.0,
@@ -25053,9 +25062,11 @@
         9.0,
         11.0,
         15.0,
-        12.0
+        12.0,
+        14.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -25707,9 +25718,11 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
+        "missing_population",
         "missing_population",
         "missing_population",
         "missing_population",
@@ -26361,11 +26374,12 @@
         null,
         null,
         null,
+        null,
         null
       ],
-      "total_cases": 4493076,
+      "total_cases": 4493090,
       "total_deaths": 0,
-      "latest_cases": 12,
+      "latest_cases": 14,
       "latest_deaths": 0
     }
   },
@@ -26785,7 +26799,7 @@
         2.7403626894942437,
         2.4099331233312946,
         1.863322860120456,
-        1.4471580313422192
+        1.6232492903979006
       ],
       [
         2.929418925714293,
@@ -26948,7 +26962,7 @@
         3.4148062795010126,
         2.6053050461411096,
         1.8573324964312685,
-        1.3010299956639813
+        1.5440680443502757
       ],
       [
         2.884228769632604,
@@ -33659,8 +33673,8 @@
   "brief_zh": "瑞士页面整合来自瑞士 FOPH/BAG IDD 的传染病监测记录，包含来源信息、时间序列图表和可下载数据。",
   "surveillance_system_en": "The dataset is built from configured official feeds for Switzerland; current primary sources include Switzerland FOPH IDD.",
   "surveillance_system_zh": "该数据集来自瑞士已配置的官方数据源；当前主要来源包括瑞士 FOPH/BAG IDD。",
-  "interpretation_en": "Coverage currently spans 2013-01-01 to 2026-05-11 across 43 tracked diseases.",
-  "interpretation_zh": "当前覆盖区间为 2013-01-01 至 2026-05-11，覆盖 43 种追踪疾病。",
+  "interpretation_en": "Coverage currently spans 2013-01-01 to 2026-05-18 across 43 tracked diseases.",
+  "interpretation_zh": "当前覆盖区间为 2013-01-01 至 2026-05-18，覆盖 43 种追踪疾病。",
   "reporting_cadence_en": "Source reporting frequency is inferred as WEEKLY; charts use weekly-equivalent normalization where applicable.",
   "reporting_cadence_zh": "来源报告频率推断为 WEEKLY；相关图表在适用时使用周等价归一化。",
   "limitations_en": "Counts reflect reported surveillance records and may be affected by case definitions, reporting lag, source cadence, and missing population denominators.",
@@ -33669,5 +33683,5 @@
   "source_summary_zh": "瑞士 FOPH/BAG IDD",
   "country_brief_status": "fallback",
   "country_brief_updated_at": null,
-  "generated_at": "2026-05-16T00:00:00+00:00"
+  "generated_at": "2026-05-23T00:00:00+00:00"
 }

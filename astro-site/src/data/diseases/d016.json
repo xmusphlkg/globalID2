@@ -4317,9 +4317,11 @@
         "2026-04-25",
         "2026-05-02",
         "2026-05-09",
-        "2026-05-16"
+        "2026-05-16",
+        "2026-05-23"
       ],
       "cases": [
+        0,
         0,
         0,
         0,
@@ -5737,9 +5739,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -7157,9 +7161,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "incidence_sources": [
+        "wpp_computed",
         "wpp_computed",
         "wpp_computed",
         "wpp_computed",
@@ -9426,6 +9432,40 @@
         "missing_population",
         "missing_population",
         "missing_population"
+      ],
+      "total_cases": 0,
+      "total_deaths": 0
+    },
+    "NZ": {
+      "dates": [
+        "2018-09-01",
+        "2018-10-01",
+        "2018-11-01"
+      ],
+      "cases": [
+        0,
+        0,
+        0
+      ],
+      "weekly_equiv_cases": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "deaths": [
+        0,
+        0,
+        0
+      ],
+      "incidence_rates": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "incidence_sources": [
+        "wpp_computed",
+        "wpp_computed",
+        "wpp_computed"
       ],
       "total_cases": 0,
       "total_deaths": 0
@@ -11816,7 +11856,7 @@
   },
   "total_cases": 36964,
   "total_deaths": 0,
-  "generated_at": "2026-05-16T00:00:00+00:00",
+  "generated_at": "2026-05-23T00:00:00+00:00",
   "source_info": [
     {
       "country_code": "AU",
@@ -11950,6 +11990,29 @@
       "country_name": "South Korea",
       "country_name_en": "South Korea",
       "country_name_zh": "韩国"
+    },
+    {
+      "country_code": "NZ",
+      "primary_scope": "phf_monthly",
+      "primary_label": "phf_monthly",
+      "primary_url": "https://www.phfscience.nz/digital-library/",
+      "primary_type": "web",
+      "parser_primary": "nz_phf_internal_crawler",
+      "notes": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler",
+      "sources": [
+        {
+          "scope": "phf_monthly",
+          "label": "phf_monthly",
+          "url": "https://www.phfscience.nz/digital-library/",
+          "machine_url": null,
+          "type": "web",
+          "cadence": "monthly",
+          "description": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler"
+        }
+      ],
+      "country_name": "New Zealand",
+      "country_name_en": "New Zealand",
+      "country_name_zh": "新西兰"
     },
     {
       "country_code": "TW",

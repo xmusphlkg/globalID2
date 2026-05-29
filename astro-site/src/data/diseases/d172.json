@@ -461,7 +461,7 @@
         49,
         44,
         38,
-        25
+        30
       ],
       "weekly_equiv_cases": [
         1.3548387096774193,
@@ -688,7 +688,7 @@
         11.064516129032258,
         11.0,
         8.580645161290322,
-        5.833333333333334
+        7.0
       ],
       "deaths": [
         0,
@@ -1371,7 +1371,7 @@
         "missing_population",
         "missing_population"
       ],
-      "total_cases": 23081,
+      "total_cases": 23086,
       "total_deaths": 0
     }
   },
@@ -1828,7 +1828,7 @@
       49,
       44,
       38,
-      25
+      30
     ],
     "deaths": [
       0,
@@ -2058,9 +2058,9 @@
       0
     ]
   },
-  "total_cases": 23081,
+  "total_cases": 23086,
   "total_deaths": 0,
-  "generated_at": "2026-05-16T00:00:00+00:00",
+  "generated_at": "2026-05-23T00:00:00+00:00",
   "source_info": [
     {
       "country_code": "TW",
