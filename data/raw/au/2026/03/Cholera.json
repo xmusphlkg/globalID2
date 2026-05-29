@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-05-28T22:46:34.539915+00:00",
+  "fetched_at": "2026-05-29T22:45:29.592277+00:00",
   "disease": "Cholera",
   "year": 2026,
   "month": 3,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1780008394183)/",
-            "rootActivityId": "8a4ea05f-10d6-4ff6-97de-7171f8f8953e",
+            "timestamp": "/Date(1780094729256)/",
+            "rootActivityId": "206632d9-fc5e-48a4-8dc7-27367176e8dd",
             "descriptor": {
               "Select": [
                 {

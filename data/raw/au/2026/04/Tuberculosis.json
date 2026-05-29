@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-05-28T22:46:47.701370+00:00",
+  "fetched_at": "2026-05-29T22:45:43.642570+00:00",
   "disease": "Tuberculosis",
   "year": 2026,
   "month": 4,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1780008407302)/",
-            "rootActivityId": "59d05e65-17bb-491f-856f-c318e2eb6ef9",
+            "timestamp": "/Date(1780094743244)/",
+            "rootActivityId": "46edfca1-7651-465a-bd9d-8712a57352ab",
             "descriptor": {
               "Select": [
                 {

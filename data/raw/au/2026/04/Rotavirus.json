@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-05-28T22:46:47.140041+00:00",
+  "fetched_at": "2026-05-29T22:45:42.492562+00:00",
   "disease": "Rotavirus",
   "year": 2026,
   "month": 4,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1780008406740)/",
-            "rootActivityId": "51935546-2f3f-4e28-8fe2-69917dd7c432",
+            "timestamp": "/Date(1780094742093)/",
+            "rootActivityId": "7c6d1838-a8f6-49d9-a922-92054ba4f51a",
             "descriptor": {
               "Select": [
                 {

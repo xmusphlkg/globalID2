@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-05-28T22:46:41.346176+00:00",
+  "fetched_at": "2026-05-29T22:45:36.505078+00:00",
   "disease": "Yersiniosis (NEC)",
   "year": 2026,
   "month": 3,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1780008400975)/",
-            "rootActivityId": "d826f744-a6b7-4d66-98e6-e7ad74c806ef",
+            "timestamp": "/Date(1780094736147)/",
+            "rootActivityId": "fd00a285-d42a-48c0-99f2-f8f366dab6e7",
             "descriptor": {
               "Select": [
                 {
