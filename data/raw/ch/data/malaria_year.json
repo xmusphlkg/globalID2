@@ -1,0 +1,105 @@
+{
+  "request": {
+    "country": "CH",
+    "georegion": "country",
+    "type": "all"
+  },
+  "response": {
+    "source": "mandatory_reporting_system",
+    "sourceDate": "2026-05-26",
+    "version": "20260527",
+    "values": [
+      {
+        "x": 2013,
+        "y": 160,
+        "properties": {
+          "trend": null
+        }
+      },
+      {
+        "x": 2014,
+        "y": 302,
+        "properties": {
+          "trend": null
+        }
+      },
+      {
+        "x": 2015,
+        "y": 419,
+        "properties": {
+          "trend": "rising"
+        }
+      },
+      {
+        "x": 2016,
+        "y": 316,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 2017,
+        "y": 352,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 2018,
+        "y": 282,
+        "properties": {
+          "trend": "falling"
+        }
+      },
+      {
+        "x": 2019,
+        "y": 292,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 2020,
+        "y": 117,
+        "properties": {
+          "trend": "falling"
+        }
+      },
+      {
+        "x": 2021,
+        "y": 258,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 2022,
+        "y": 317,
+        "properties": {
+          "trend": "rising"
+        }
+      },
+      {
+        "x": 2023,
+        "y": 352,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 2024,
+        "y": 298,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 2025,
+        "y": 284,
+        "properties": {
+          "trend": "stagnant"
+        }
+      }
+    ]
+  }
+}

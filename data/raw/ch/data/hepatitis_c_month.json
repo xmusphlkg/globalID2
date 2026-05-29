@@ -1,0 +1,1116 @@
+{
+  "request": {
+    "CHFL": "CHFL",
+    "agegroup": "agegroup_sti",
+    "agegroup_sti": "all",
+    "georegion": "CHFL",
+    "sex": "all",
+    "type": "all"
+  },
+  "response": {
+    "source": "mandatory_reporting_system",
+    "sourceDate": "2026-05-05",
+    "version": "20260527",
+    "values": [
+      {
+        "x": 201301,
+        "y": 96,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201302,
+        "y": 174,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201303,
+        "y": 152,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201304,
+        "y": 156,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201305,
+        "y": 111,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201306,
+        "y": 134,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201307,
+        "y": 219,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201308,
+        "y": 104,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201309,
+        "y": 151,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201310,
+        "y": 119,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201311,
+        "y": 153,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201312,
+        "y": 152,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201401,
+        "y": 109,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201402,
+        "y": 124,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201403,
+        "y": 136,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201404,
+        "y": 142,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201405,
+        "y": 138,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201406,
+        "y": 169,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201407,
+        "y": 146,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201408,
+        "y": 109,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201409,
+        "y": 113,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201410,
+        "y": 169,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201411,
+        "y": 146,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201412,
+        "y": 154,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201501,
+        "y": 110,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201502,
+        "y": 138,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201503,
+        "y": 146,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201504,
+        "y": 120,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201505,
+        "y": 100,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201506,
+        "y": 138,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201507,
+        "y": 112,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201508,
+        "y": 94,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201509,
+        "y": 105,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201510,
+        "y": 97,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201511,
+        "y": 119,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201512,
+        "y": 160,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201601,
+        "y": 137,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201602,
+        "y": 150,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201603,
+        "y": 121,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201604,
+        "y": 138,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201605,
+        "y": 137,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201606,
+        "y": 130,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201607,
+        "y": 97,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201608,
+        "y": 101,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201609,
+        "y": 127,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201610,
+        "y": 104,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201611,
+        "y": 138,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201612,
+        "y": 121,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201701,
+        "y": 110,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201702,
+        "y": 120,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201703,
+        "y": 126,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201704,
+        "y": 102,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201705,
+        "y": 101,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201706,
+        "y": 119,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201707,
+        "y": 122,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201708,
+        "y": 105,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201709,
+        "y": 105,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201710,
+        "y": 125,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201711,
+        "y": 131,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201712,
+        "y": 106,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201801,
+        "y": 110,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201802,
+        "y": 117,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201803,
+        "y": 136,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201804,
+        "y": 88,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201805,
+        "y": 116,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201806,
+        "y": 116,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201807,
+        "y": 120,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201808,
+        "y": 93,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201809,
+        "y": 92,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201810,
+        "y": 100,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201811,
+        "y": 101,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201812,
+        "y": 82,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201901,
+        "y": 87,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201902,
+        "y": 83,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201903,
+        "y": 97,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201904,
+        "y": 85,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201905,
+        "y": 76,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201906,
+        "y": 73,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201907,
+        "y": 110,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201908,
+        "y": 66,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201909,
+        "y": 83,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201910,
+        "y": 73,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201911,
+        "y": 91,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 201912,
+        "y": 84,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202001,
+        "y": 74,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202002,
+        "y": 93,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202003,
+        "y": 66,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202004,
+        "y": 42,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202005,
+        "y": 49,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202006,
+        "y": 70,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202007,
+        "y": 84,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202008,
+        "y": 71,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202009,
+        "y": 93,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202010,
+        "y": 66,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202011,
+        "y": 88,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202012,
+        "y": 69,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202101,
+        "y": 68,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202102,
+        "y": 84,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202103,
+        "y": 80,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202104,
+        "y": 81,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202105,
+        "y": 63,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202106,
+        "y": 87,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202107,
+        "y": 76,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202108,
+        "y": 47,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202109,
+        "y": 75,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202110,
+        "y": 79,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202111,
+        "y": 80,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202112,
+        "y": 81,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202201,
+        "y": 59,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202202,
+        "y": 61,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202203,
+        "y": 82,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202204,
+        "y": 84,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202205,
+        "y": 108,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202206,
+        "y": 85,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202207,
+        "y": 83,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202208,
+        "y": 90,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202209,
+        "y": 107,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202210,
+        "y": 91,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202211,
+        "y": 88,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202212,
+        "y": 91,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202301,
+        "y": 76,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202302,
+        "y": 89,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202303,
+        "y": 72,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202304,
+        "y": 80,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202305,
+        "y": 105,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202306,
+        "y": 111,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202307,
+        "y": 94,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202308,
+        "y": 67,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202309,
+        "y": 89,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202310,
+        "y": 96,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202311,
+        "y": 75,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202312,
+        "y": 86,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202401,
+        "y": 101,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202402,
+        "y": 77,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202403,
+        "y": 86,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202404,
+        "y": 96,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202405,
+        "y": 84,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202406,
+        "y": 78,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202407,
+        "y": 77,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202408,
+        "y": 84,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202409,
+        "y": 101,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202410,
+        "y": 89,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202411,
+        "y": 84,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202412,
+        "y": 97,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202501,
+        "y": 91,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202502,
+        "y": 87,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202503,
+        "y": 89,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202504,
+        "y": 70,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202505,
+        "y": 83,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202506,
+        "y": 80,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202507,
+        "y": 82,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202508,
+        "y": 57,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202509,
+        "y": 86,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202510,
+        "y": 100,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202511,
+        "y": 72,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202512,
+        "y": 72,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 202601,
+        "y": 61,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      }
+    ]
+  }
+}

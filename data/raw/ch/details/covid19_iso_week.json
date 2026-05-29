@@ -1,0 +1,469 @@
+{
+  "version": "20260527",
+  "details": {
+    "identifier": "covid19/cases/value/iso_week",
+    "source": "mandatory_reporting_system",
+    "sourceDate": "2026-05-26",
+    "version": "20260527",
+    "properties": {
+      "CHFL": {
+        "allValue": "all",
+        "possibleValues": [
+          "CHFL",
+          "all"
+        ]
+      },
+      "agegroup": {
+        "allValue": null,
+        "possibleValues": [
+          "agegroup_ili_ari"
+        ]
+      },
+      "agegroup_ili_ari": {
+        "allValue": "all",
+        "possibleValues": [
+          "0 - 4",
+          "15 - 29",
+          "30 - 64",
+          "5 - 14",
+          "65+",
+          "unknown",
+          "all"
+        ]
+      },
+      "all": {
+        "allValue": "all",
+        "possibleValues": [
+          "positive",
+          "all"
+        ]
+      },
+      "canton": {
+        "allValue": "all",
+        "possibleValues": [
+          "AG",
+          "AI",
+          "AR",
+          "BE",
+          "BL",
+          "BS",
+          "FR",
+          "GE",
+          "GL",
+          "GR",
+          "JU",
+          "LU",
+          "NE",
+          "NW",
+          "OW",
+          "SG",
+          "SH",
+          "SO",
+          "SZ",
+          "TG",
+          "TI",
+          "unknown",
+          "UR",
+          "VD",
+          "VS",
+          "ZG",
+          "ZH",
+          "all"
+        ]
+      },
+      "country": {
+        "allValue": "all",
+        "possibleValues": [
+          "CH",
+          "FL",
+          "all"
+        ]
+      },
+      "georegion": {
+        "allValue": null,
+        "possibleValues": [
+          "canton",
+          "CHFL",
+          "country"
+        ]
+      },
+      "sex": {
+        "allValue": "all",
+        "possibleValues": [
+          "female",
+          "male",
+          "unknown",
+          "all"
+        ]
+      },
+      "testResult": {
+        "allValue": null,
+        "possibleValues": [
+          "all"
+        ]
+      }
+    },
+    "availableSeriesConfigurations": [
+      {
+        "agegroup": "agegroup_ili_ari",
+        "agegroup_ili_ari": "all",
+        "all": "positive",
+        "canton": "AG",
+        "georegion": "canton",
+        "sex": "all",
+        "testResult": "all"
+      },
+      {
+        "agegroup": "agegroup_ili_ari",
+        "agegroup_ili_ari": "all",
+        "all": "positive",
+        "canton": "AI",
+        "georegion": "canton",
+        "sex": "all",
+        "testResult": "all"
+      },
+      {
+        "agegroup": "agegroup_ili_ari",
+        "agegroup_ili_ari": "all",
+        "all": "positive",
+        "canton": "AR",
+        "georegion": "canton",
+        "sex": "all",
+        "testResult": "all"
+      },
+      {
+        "agegroup": "agegroup_ili_ari",
+        "agegroup_ili_ari": "all",
+        "all": "positive",
+        "canton": "BE",
+        "georegion": "canton",
+        "sex": "all",
+        "testResult": "all"
+      },
+      {
+        "agegroup": "agegroup_ili_ari",
+        "agegroup_ili_ari": "all",
+        "all": "positive",
+        "canton": "BL",
+        "georegion": "canton",
+        "sex": "all",
+        "testResult": "all"
+      },
+      {
+        "agegroup": "agegroup_ili_ari",
+        "agegroup_ili_ari": "all",
+        "all": "positive",
+        "canton": "BS",
+        "georegion": "canton",
+        "sex": "all",
+        "testResult": "all"
+      },
+      {
+        "agegroup": "agegroup_ili_ari",
+        "agegroup_ili_ari": "all",
+        "all": "positive",
+        "canton": "FR",
+        "georegion": "canton",
+        "sex": "all",
+        "testResult": "all"
+      },
+      {
+        "agegroup": "agegroup_ili_ari",
+        "agegroup_ili_ari": "all",
+        "all": "positive",
+        "canton": "GE",
+        "georegion": "canton",
+        "sex": "all",
+        "testResult": "all"
+      },
+      {
+        "agegroup": "agegroup_ili_ari",
+        "agegroup_ili_ari": "all",
+        "all": "positive",
+        "canton": "GL",
+        "georegion": "canton",
+        "sex": "all",
+        "testResult": "all"
+      },
+      {
+        "agegroup": "agegroup_ili_ari",
+        "agegroup_ili_ari": "all",
+        "all": "positive",
+        "canton": "GR",
+        "georegion": "canton",
+        "sex": "all",
+        "testResult": "all"
+      },
+      {
+        "agegroup": "agegroup_ili_ari",
+        "agegroup_ili_ari": "all",
+        "all": "positive",
+        "canton": "JU",
+        "georegion": "canton",
+        "sex": "all",
+        "testResult": "all"
+      },
+      {
+        "agegroup": "agegroup_ili_ari",
+        "agegroup_ili_ari": "all",
+        "all": "positive",
+        "canton": "LU",
+        "georegion": "canton",
+        "sex": "all",
+        "testResult": "all"
+      },
+      {
+        "agegroup": "agegroup_ili_ari",
+        "agegroup_ili_ari": "all",
+        "all": "positive",
+        "canton": "NE",
+        "georegion": "canton",
+        "sex": "all",
+        "testResult": "all"
+      },
+      {
+        "agegroup": "agegroup_ili_ari",
+        "agegroup_ili_ari": "all",
+        "all": "positive",
+        "canton": "NW",
+        "georegion": "canton",
+        "sex": "all",
+        "testResult": "all"
+      },
+      {
+        "agegroup": "agegroup_ili_ari",
+        "agegroup_ili_ari": "all",
+        "all": "positive",
+        "canton": "OW",
+        "georegion": "canton",
+        "sex": "all",
+        "testResult": "all"
+      },
+      {
+        "agegroup": "agegroup_ili_ari",
+        "agegroup_ili_ari": "all",
+        "all": "positive",
+        "canton": "SG",
+        "georegion": "canton",
+        "sex": "all",
+        "testResult": "all"
+      },
+      {
+        "agegroup": "agegroup_ili_ari",
+        "agegroup_ili_ari": "all",
+        "all": "positive",
+        "canton": "SH",
+        "georegion": "canton",
+        "sex": "all",
+        "testResult": "all"
+      },
+      {
+        "agegroup": "agegroup_ili_ari",
+        "agegroup_ili_ari": "all",
+        "all": "positive",
+        "canton": "SO",
+        "georegion": "canton",
+        "sex": "all",
+        "testResult": "all"
+      },
+      {
+        "agegroup": "agegroup_ili_ari",
+        "agegroup_ili_ari": "all",
+        "all": "positive",
+        "canton": "SZ",
+        "georegion": "canton",
+        "sex": "all",
+        "testResult": "all"
+      },
+      {
+        "agegroup": "agegroup_ili_ari",
+        "agegroup_ili_ari": "all",
+        "all": "positive",
+        "canton": "TG",
+        "georegion": "canton",
+        "sex": "all",
+        "testResult": "all"
+      },
+      {
+        "agegroup": "agegroup_ili_ari",
+        "agegroup_ili_ari": "all",
+        "all": "positive",
+        "canton": "TI",
+        "georegion": "canton",
+        "sex": "all",
+        "testResult": "all"
+      },
+      {
+        "agegroup": "agegroup_ili_ari",
+        "agegroup_ili_ari": "all",
+        "all": "positive",
+        "canton": "unknown",
+        "georegion": "canton",
+        "sex": "all",
+        "testResult": "all"
+      },
+      {
+        "agegroup": "agegroup_ili_ari",
+        "agegroup_ili_ari": "all",
+        "all": "positive",
+        "canton": "UR",
+        "georegion": "canton",
+        "sex": "all",
+        "testResult": "all"
+      },
+      {
+        "agegroup": "agegroup_ili_ari",
+        "agegroup_ili_ari": "all",
+        "all": "positive",
+        "canton": "VD",
+        "georegion": "canton",
+        "sex": "all",
+        "testResult": "all"
+      },
+      {
+        "agegroup": "agegroup_ili_ari",
+        "agegroup_ili_ari": "all",
+        "all": "positive",
+        "canton": "VS",
+        "georegion": "canton",
+        "sex": "all",
+        "testResult": "all"
+      },
+      {
+        "agegroup": "agegroup_ili_ari",
+        "agegroup_ili_ari": "all",
+        "all": "positive",
+        "canton": "ZG",
+        "georegion": "canton",
+        "sex": "all",
+        "testResult": "all"
+      },
+      {
+        "agegroup": "agegroup_ili_ari",
+        "agegroup_ili_ari": "all",
+        "all": "positive",
+        "canton": "ZH",
+        "georegion": "canton",
+        "sex": "all",
+        "testResult": "all"
+      },
+      {
+        "agegroup": "agegroup_ili_ari",
+        "agegroup_ili_ari": "all",
+        "all": "positive",
+        "country": "CH",
+        "georegion": "country",
+        "sex": "all",
+        "testResult": "all"
+      },
+      {
+        "agegroup": "agegroup_ili_ari",
+        "agegroup_ili_ari": "all",
+        "all": "positive",
+        "country": "FL",
+        "georegion": "country",
+        "sex": "all",
+        "testResult": "all"
+      },
+      {
+        "CHFL": "CHFL",
+        "agegroup": "agegroup_ili_ari",
+        "agegroup_ili_ari": "0 - 4",
+        "all": "positive",
+        "georegion": "CHFL",
+        "sex": "all",
+        "testResult": "all"
+      },
+      {
+        "CHFL": "CHFL",
+        "agegroup": "agegroup_ili_ari",
+        "agegroup_ili_ari": "15 - 29",
+        "all": "positive",
+        "georegion": "CHFL",
+        "sex": "all",
+        "testResult": "all"
+      },
+      {
+        "CHFL": "CHFL",
+        "agegroup": "agegroup_ili_ari",
+        "agegroup_ili_ari": "30 - 64",
+        "all": "positive",
+        "georegion": "CHFL",
+        "sex": "all",
+        "testResult": "all"
+      },
+      {
+        "CHFL": "CHFL",
+        "agegroup": "agegroup_ili_ari",
+        "agegroup_ili_ari": "5 - 14",
+        "all": "positive",
+        "georegion": "CHFL",
+        "sex": "all",
+        "testResult": "all"
+      },
+      {
+        "CHFL": "CHFL",
+        "agegroup": "agegroup_ili_ari",
+        "agegroup_ili_ari": "65+",
+        "all": "positive",
+        "georegion": "CHFL",
+        "sex": "all",
+        "testResult": "all"
+      },
+      {
+        "CHFL": "CHFL",
+        "agegroup": "agegroup_ili_ari",
+        "agegroup_ili_ari": "all",
+        "all": "positive",
+        "georegion": "CHFL",
+        "sex": "all",
+        "testResult": "all"
+      },
+      {
+        "CHFL": "CHFL",
+        "agegroup": "agegroup_ili_ari",
+        "agegroup_ili_ari": "all",
+        "all": "positive",
+        "georegion": "CHFL",
+        "sex": "female",
+        "testResult": "all"
+      },
+      {
+        "CHFL": "CHFL",
+        "agegroup": "agegroup_ili_ari",
+        "agegroup_ili_ari": "all",
+        "all": "positive",
+        "georegion": "CHFL",
+        "sex": "male",
+        "testResult": "all"
+      },
+      {
+        "CHFL": "CHFL",
+        "agegroup": "agegroup_ili_ari",
+        "agegroup_ili_ari": "all",
+        "all": "positive",
+        "georegion": "CHFL",
+        "sex": "unknown",
+        "testResult": "all"
+      },
+      {
+        "CHFL": "CHFL",
+        "agegroup": "agegroup_ili_ari",
+        "agegroup_ili_ari": "unknown",
+        "all": "positive",
+        "georegion": "CHFL",
+        "sex": "all",
+        "testResult": "all"
+      }
+    ]
+  },
+  "selected_config": {
+    "agegroup": "agegroup_ili_ari",
+    "agegroup_ili_ari": "all",
+    "all": "positive",
+    "country": "CH",
+    "georegion": "country",
+    "sex": "all",
+    "testResult": "all"
+  }
+}

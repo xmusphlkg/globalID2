@@ -1,0 +1,42 @@
+{
+  "version": "20260527",
+  "details": {
+    "identifier": "diphtheria/cases/value/year",
+    "source": "mandatory_reporting_system",
+    "sourceDate": "2026-05-26",
+    "version": "20260527",
+    "properties": {
+      "country": {
+        "allValue": "all",
+        "possibleValues": [
+          "CH",
+          "all"
+        ]
+      },
+      "georegion": {
+        "allValue": null,
+        "possibleValues": [
+          "country"
+        ]
+      },
+      "type": {
+        "allValue": "all",
+        "possibleValues": [
+          "all"
+        ]
+      }
+    },
+    "availableSeriesConfigurations": [
+      {
+        "country": "CH",
+        "georegion": "country",
+        "type": "all"
+      }
+    ]
+  },
+  "selected_config": {
+    "country": "CH",
+    "georegion": "country",
+    "type": "all"
+  }
+}

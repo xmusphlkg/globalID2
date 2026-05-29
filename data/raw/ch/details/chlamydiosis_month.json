@@ -1,0 +1,93 @@
+{
+  "version": "20260527",
+  "details": {
+    "identifier": "chlamydiosis/cases/value/month",
+    "source": "mandatory_reporting_system",
+    "sourceDate": "2026-05-05",
+    "version": "20260527",
+    "properties": {
+      "CHFL": {
+        "allValue": "all",
+        "possibleValues": [
+          "CHFL",
+          "all"
+        ]
+      },
+      "agegroup": {
+        "allValue": null,
+        "possibleValues": [
+          "agegroup_sti"
+        ]
+      },
+      "agegroup_sti": {
+        "allValue": "all",
+        "possibleValues": [
+          "0 - 14",
+          "15 - 24",
+          "25 - 34",
+          "35 - 44",
+          "45 - 54",
+          "55 - 64",
+          "65+",
+          "unknown",
+          "all"
+        ]
+      },
+      "country": {
+        "allValue": "all",
+        "possibleValues": [
+          "CH",
+          "FL",
+          "all"
+        ]
+      },
+      "georegion": {
+        "allValue": null,
+        "possibleValues": [
+          "CHFL",
+          "country",
+          "grossregion"
+        ]
+      },
+      "grossregion": {
+        "allValue": "all",
+        "possibleValues": [
+          "espace_mittelland",
+          "nordwestschweiz",
+          "ostschweiz",
+          "région_lémanique",
+          "ticino",
+          "unknown",
+          "zentralschweiz",
+          "zürich",
+          "all"
+        ]
+      },
+      "sex": {
+        "allValue": "all",
+        "possibleValues": [
+          "female",
+          "male",
+          "unknown",
+          "all"
+        ]
+      }
+    },
+    "availableSeriesConfigurations": [
+      {
+        "CHFL": "CHFL",
+        "agegroup": "agegroup_sti",
+        "agegroup_sti": "all",
+        "georegion": "CHFL",
+        "sex": "all"
+      }
+    ]
+  },
+  "selected_config": {
+    "CHFL": "CHFL",
+    "agegroup": "agegroup_sti",
+    "agegroup_sti": "all",
+    "georegion": "CHFL",
+    "sex": "all"
+  }
+}

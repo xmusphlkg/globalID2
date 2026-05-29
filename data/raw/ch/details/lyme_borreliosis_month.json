@@ -1,0 +1,58 @@
+{
+  "version": "20260527",
+  "details": {
+    "identifier": "lyme_borreliosis/cases/value/month",
+    "source": "sentinella_reporting_system",
+    "sourceDate": "2026-05-19",
+    "version": "20260527",
+    "properties": {
+      "agegroup": {
+        "allValue": null,
+        "possibleValues": [
+          "agegroup_tick"
+        ]
+      },
+      "agegroup_tick": {
+        "allValue": "all",
+        "possibleValues": [
+          "all"
+        ]
+      },
+      "country": {
+        "allValue": "all",
+        "possibleValues": [
+          "CH",
+          "all"
+        ]
+      },
+      "georegion": {
+        "allValue": null,
+        "possibleValues": [
+          "country"
+        ]
+      },
+      "sex": {
+        "allValue": "all",
+        "possibleValues": [
+          "all"
+        ]
+      }
+    },
+    "availableSeriesConfigurations": [
+      {
+        "agegroup": "agegroup_tick",
+        "agegroup_tick": "all",
+        "country": "CH",
+        "georegion": "country",
+        "sex": "all"
+      }
+    ]
+  },
+  "selected_config": {
+    "agegroup": "agegroup_tick",
+    "agegroup_tick": "all",
+    "country": "CH",
+    "georegion": "country",
+    "sex": "all"
+  }
+}

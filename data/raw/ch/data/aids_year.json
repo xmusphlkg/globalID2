@@ -1,0 +1,100 @@
+{
+  "request": {
+    "CHFL": "CHFL",
+    "agegroup": "agegroup_sti",
+    "agegroup_sti": "all",
+    "georegion": "CHFL",
+    "sex": "all"
+  },
+  "response": {
+    "source": "mandatory_reporting_system",
+    "sourceDate": "2026-05-05",
+    "version": "20260527",
+    "values": [
+      {
+        "x": 2013,
+        "y": 104,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 2014,
+        "y": 79,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 2015,
+        "y": 64,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 2016,
+        "y": 69,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 2017,
+        "y": 71,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 2018,
+        "y": 65,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 2019,
+        "y": 72,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 2020,
+        "y": 45,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 2021,
+        "y": 41,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 2022,
+        "y": 40,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 2023,
+        "y": 40,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      },
+      {
+        "x": 2024,
+        "y": 47,
+        "properties": {
+          "dataComplete": "TRUE"
+        }
+      }
+    ]
+  }
+}
