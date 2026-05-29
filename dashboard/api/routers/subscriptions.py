@@ -6,6 +6,8 @@ import asyncio
 import json
 import os
 import re
+import ssl
+import time
 from pathlib import Path
 from typing import Any, Optional
 from urllib import error as urlerror
@@ -40,6 +42,8 @@ ROOT_DIR = Path(__file__).resolve().parents[3]
 ENV_PATH = ROOT_DIR / ".env"
 SUBSCRIPTION_SCRIPT = ROOT_DIR / "cloudflare" / "subscriptions" / "scripts" / "wrangler-env.sh"
 SUPPORTED_NOTIFICATION_LOCALES = ["en", "zh", "ja", "ko", "es", "fr", "de", "pt"]
+WORKER_NETWORK_ATTEMPTS = 3
+WORKER_RETRY_DELAY_SECONDS = 0.35
 LOCALE_NAMES = {
     "en": "English",
     "zh": "Simplified Chinese",
@@ -121,14 +125,26 @@ async def _worker_request(
 
     def send() -> dict[str, Any]:
         req = urlrequest.Request(url, data=body, headers=headers, method=method)
-        try:
-            with urlrequest.urlopen(req, timeout=timeout) as response:
-                raw = response.read().decode("utf-8", errors="replace")
-        except urlerror.HTTPError as exc:
-            detail = exc.read().decode("utf-8", errors="replace") or str(exc)
-            raise HTTPException(exc.code, detail) from exc
-        except (urlerror.URLError, TimeoutError) as exc:
-            raise HTTPException(502, f"Subscription Worker is unreachable: {exc}") from exc
+        raw = ""
+        for attempt in range(1, WORKER_NETWORK_ATTEMPTS + 1):
+            try:
+                with urlrequest.urlopen(req, timeout=timeout) as response:
+                    raw = response.read().decode("utf-8", errors="replace")
+                break
+            except urlerror.HTTPError as exc:
+                detail = exc.read().decode("utf-8", errors="replace") or str(exc)
+                raise HTTPException(exc.code, detail) from exc
+            except (urlerror.URLError, TimeoutError, ssl.SSLError, OSError) as exc:
+                if attempt >= WORKER_NETWORK_ATTEMPTS:
+                    raise HTTPException(
+                        502,
+                        f"Subscription Worker is unreachable after {attempt} attempts: {exc}",
+                    ) from exc
+                logger.warning(
+                    f"Subscription Worker request failed "
+                    f"({attempt}/{WORKER_NETWORK_ATTEMPTS}) for {method} {path}: {exc}"
+                )
+                time.sleep(WORKER_RETRY_DELAY_SECONDS * attempt)
 
         try:
             data = json.loads(raw) if raw else {}
