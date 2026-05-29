@@ -1,6 +1,6 @@
 disease_id,local_name,local_code,category,aliases,notes,data_source
 D092,Campylobacteriosis,,Bacterial,,NZ PHF Science mapping,NZ Monthly Notifiable
-D004,COVID-19,,Viral,,NZ PHF Science mapping,NZ Monthly Notifiable
+D004,COVID-19,,Viral,COVID-1,NZ PHF Science mapping,NZ Monthly Notifiable
 D096,Cryptosporidiosis,,Parasitic,,NZ PHF Science mapping,NZ Monthly Notifiable
 D021,Dengue fever,,Viral,Dengue,NZ PHF Science mapping,NZ Monthly Notifiable
 D156,Gastroenteritis,,Bacterial,Gastroenteritis³,NZ PHF Science mapping,NZ Monthly Notifiable
@@ -9,7 +9,7 @@ D100,Haemophilus influenzae type b,,Bacterial,Haemophilus influenzae,NZ PHF Scie
 D007,Hepatitis A,,Viral,,NZ PHF Science mapping,NZ Monthly Notifiable
 D008,Hepatitis B,,Viral,Hepatitis B⁴,NZ PHF Science mapping,NZ Monthly Notifiable
 D009,Hepatitis C,,Viral,Hepatitis C⁴,NZ PHF Science mapping,NZ Monthly Notifiable
-D157,Invasive group A streptococcal infection,,Bacterial,iGAS,NZ PHF Science mapping,NZ Monthly Notifiable
+D157,Invasive group A streptococcal infection,,Bacterial,iGAS|Invasive Group A Streptococcal,NZ PHF Science mapping,NZ Monthly Notifiable
 D106,Invasive pneumococcal disease,,Bacterial,IPD,NZ PHF Science mapping,NZ Monthly Notifiable
 D107,Legionellosis,,Bacterial,,NZ PHF Science mapping,NZ Monthly Notifiable
 D035,Leptospirosis,,Bacterial,,NZ PHF Science mapping,NZ Monthly Notifiable
@@ -19,6 +19,7 @@ D017,Measles,,Viral,,NZ PHF Science mapping,NZ Monthly Notifiable
 D110,Meningococcal disease,,Bacterial,,NZ PHF Science mapping,NZ Monthly Notifiable
 D065,Mpox,,Viral,Monkeypox,NZ PHF Science mapping,NZ Monthly Notifiable
 D039,Mumps,,Viral,,NZ PHF Science mapping,NZ Monthly Notifiable
+D016,Non seasonal influenza A (H1N1),,Viral,Novel influenza A|H1N1,NZ PHF Science mapping,NZ Monthly Notifiable
 D026,Paratyphoid fever,,Bacterial,Typhoid and Paratyphoid fever,NZ PHF Science mapping,NZ Monthly Notifiable
 D028,Pertussis,,Bacterial,Whooping cough,NZ PHF Science mapping,NZ Monthly Notifiable
 D158,Rheumatic fever,,Bacterial,Rheumatic fever⁵|Rheumatic fever⁴,NZ PHF Science mapping,NZ Monthly Notifiable
@@ -27,6 +28,7 @@ D114,Salmonellosis,,Bacterial,,NZ PHF Science mapping,NZ Monthly Notifiable
 D105,Shigellosis,,Bacterial,,NZ PHF Science mapping,NZ Monthly Notifiable
 D025,Tuberculosis disease,,Bacterial,Tuberculosis,NZ PHF Science mapping,NZ Monthly Notifiable
 D124,Typhoid fever,,Bacterial,,NZ PHF Science mapping,NZ Monthly Notifiable
+D018,Viral Haemorrhagic Fever,,Viral,Viral Hemorrhagic Fever|VHF,NZ PHF Science mapping,NZ Monthly Notifiable
 D115,VTEC/STEC infection,,Bacterial,Verotoxin-producing E. coli|Shiga toxin-producing Escherichia coli infection|Shiga toxin-producing Escherichia coli (STEC)|STEC|VTEC,NZ PHF Science mapping,NZ Monthly Notifiable
 D155,Yersiniosis,,Bacterial,,NZ PHF Science mapping,NZ Monthly Notifiable
 D052,Chikungunya fever,,Viral,Chikungunya,NZ PHF Science mapping,NZ Monthly Notifiable
