@@ -10,6 +10,9 @@ export interface StartAITaskPayload {
   period_end?: string | null;
   days?: number;
   enable_review?: boolean;
+  report_layout?: "analytical_v3" | "structured" | "legacy";
+  analysis_depth?: "deep" | "deterministic";
+  quality_threshold?: number;
   send_email?: boolean;
   reuse_from_failed?: boolean;
   priority?: "low" | "normal" | "high" | "urgent";

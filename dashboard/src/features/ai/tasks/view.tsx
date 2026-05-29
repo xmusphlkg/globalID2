@@ -84,6 +84,9 @@ function CreateAITaskModal({
 }) {
   const [reportType, setReportType] = useState<"daily" | "weekly" | "monthly" | "special">("monthly");
   const [reportLanguage, setReportLanguage] = useState<"en" | "zh">("en");
+  const [reportLayout, setReportLayout] = useState<"analytical_v3" | "structured" | "legacy">("analytical_v3");
+  const [analysisDepth, setAnalysisDepth] = useState<"deep" | "deterministic">("deep");
+  const [qualityThreshold, setQualityThreshold] = useState(0.85);
   const [priority, setPriority] = useState<"low" | "normal" | "high" | "urgent">("normal");
   const [days, setDays] = useState(365);
   const [enableReview, setEnableReview] = useState(true);
@@ -112,6 +115,9 @@ function CreateAITaskModal({
         report_type: reportType,
         language: reportLanguage,
         days,
+        report_layout: reportLayout,
+        analysis_depth: analysisDepth,
+        quality_threshold: qualityThreshold,
         enable_review: enableReview,
         send_email: sendEmail,
         reuse_from_failed: reuseFromFailed,
@@ -186,6 +192,32 @@ function CreateAITaskModal({
               </select>
             </div>
 
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className={labelCls}>{lang === "zh" ? "报告布局" : "Report Layout"}</label>
+                <select
+                  value={reportLayout}
+                  onChange={(e) => setReportLayout(e.target.value as typeof reportLayout)}
+                  className={inputCls}
+                >
+                  <option value="analytical_v3">analytical_v3</option>
+                  <option value="structured">structured</option>
+                  <option value="legacy">legacy</option>
+                </select>
+              </div>
+              <div>
+                <label className={labelCls}>{lang === "zh" ? "分析深度" : "Analysis Depth"}</label>
+                <select
+                  value={analysisDepth}
+                  onChange={(e) => setAnalysisDepth(e.target.value as typeof analysisDepth)}
+                  className={inputCls}
+                >
+                  <option value="deep">deep</option>
+                  <option value="deterministic">deterministic</option>
+                </select>
+              </div>
+            </div>
+
             <div>
               <label className={labelCls}>{t(lang, "priority")}</label>
               <select value={priority} onChange={(e) => setPriority(e.target.value as typeof priority)} className={inputCls}>
@@ -204,6 +236,22 @@ function CreateAITaskModal({
                 max={3650}
                 value={days}
                 onChange={(e) => setDays(Math.max(1, Number(e.target.value) || 1))}
+                className={inputCls}
+              />
+            </div>
+
+            <div>
+              <label className={labelCls}>{lang === "zh" ? "质量阈值" : "Quality Threshold"}</label>
+              <input
+                type="number"
+                min={0}
+                max={1}
+                step={0.01}
+                value={qualityThreshold}
+                onChange={(e) => {
+                  const next = Number(e.target.value);
+                  setQualityThreshold(Number.isFinite(next) ? Math.max(0, Math.min(1, next)) : 0.85);
+                }}
                 className={inputCls}
               />
             </div>
