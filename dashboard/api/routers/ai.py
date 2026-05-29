@@ -45,6 +45,20 @@ class AIStartRequest(BaseModel):
     language: str = Field("en", description="Report language: zh or en")
     days: int = Field(365, ge=1, le=3650, description="Fallback period in days")
     enable_review: bool = Field(True, description="Enable reviewer agent")
+    report_layout: str = Field(
+        "analytical_v3",
+        description="Report layout: analytical_v3 | structured | legacy",
+    )
+    analysis_depth: str = Field(
+        "deep",
+        description="Analytical v3 depth: deep | deterministic",
+    )
+    quality_threshold: float = Field(
+        0.85,
+        ge=0.0,
+        le=1.0,
+        description="Minimum quality gate score for automatic approval",
+    )
     send_email: bool = Field(
         False,
         description="Send the completed report email to the centralized Settings recipients after generation",
@@ -542,6 +556,8 @@ async def start_ai_task(
     report_type = _normalize_report_type(body.report_type)
     priority = _normalize_priority(body.priority)
     reuse_strategy = _normalize_reuse_strategy(body.reuse_strategy)
+    report_layout = _normalize_report_layout(body.report_layout)
+    analysis_depth = _normalize_analysis_depth(body.analysis_depth)
 
     running_q = select(Task).where(
         Task.task_type == TaskType.GENERATE_REPORT,
@@ -560,6 +576,9 @@ async def start_ai_task(
     description = body.description or (
         f"Report Type: {report_type}, Days: {body.days}, "
         f"Language: {body.language}, "
+        f"Layout: {report_layout}, "
+        f"Analysis Depth: {analysis_depth}, "
+        f"Quality Threshold: {body.quality_threshold:.2f}, "
         f"Review: {'Yes' if body.enable_review else 'No'}, "
         f"Email: {'Yes' if body.send_email else 'No'}, "
         f"Reuse Failed: {'Yes' if body.reuse_from_failed else 'No'}, "
@@ -586,6 +605,9 @@ async def start_ai_task(
             "language": language,
             "days": body.days,
             "enable_review": body.enable_review,
+            "report_layout": report_layout,
+            "analysis_depth": analysis_depth,
+            "quality_threshold": body.quality_threshold,
             "send_email": body.send_email,
             "reuse_from_failed": body.reuse_from_failed,
             "reuse_strategy": reuse_strategy,
@@ -940,6 +962,24 @@ def _normalize_reuse_strategy(value: str) -> str:
     if normalized not in allowed:
         joined = ", ".join(sorted(allowed))
         raise HTTPException(422, f"Invalid reuse_strategy '{value}'. Allowed values: {joined}")
+    return normalized
+
+
+def _normalize_report_layout(value: str) -> str:
+    normalized = (value or "analytical_v3").strip().lower()
+    allowed = {"analytical_v3", "structured", "legacy"}
+    if normalized not in allowed:
+        joined = ", ".join(sorted(allowed))
+        raise HTTPException(422, f"Invalid report_layout '{value}'. Allowed values: {joined}")
+    return normalized
+
+
+def _normalize_analysis_depth(value: str) -> str:
+    normalized = (value or "deep").strip().lower()
+    allowed = {"deep", "deterministic"}
+    if normalized not in allowed:
+        joined = ", ".join(sorted(allowed))
+        raise HTTPException(422, f"Invalid analysis_depth '{value}'. Allowed values: {joined}")
     return normalized
 
 

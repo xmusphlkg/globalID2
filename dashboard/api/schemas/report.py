@@ -46,6 +46,11 @@ class ReportDetailOut(BaseModel):
     pdf_path: Optional[str] = None
     markdown_path: Optional[str] = None
     error_message: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+    analysis_summary: Optional[Dict[str, Any]] = None
+    quality_gate: Optional[Dict[str, Any]] = None
+    data_quality: Optional[Dict[str, Any]] = None
+    method_version: Optional[str] = None
     created_at: datetime
     sections: List["ReportSectionOut"] = []
 
@@ -62,6 +67,7 @@ class ReportSectionOut(BaseModel):
     generation_time: Optional[float] = None
     data_sources: Optional[Any] = None
     charts: Optional[Any] = None
+    metadata: Optional[Dict[str, Any]] = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
