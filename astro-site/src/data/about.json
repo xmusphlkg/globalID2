@@ -3,8 +3,8 @@
   "summary": {
     "total_countries": 10,
     "total_diseases": 199,
-    "total_reports": 1,
-    "total_cases": 359570400,
+    "total_reports": 18,
+    "total_cases": 359591668,
     "total_deaths": 363160,
     "coverage_start": "1997-01-01",
     "coverage_end": "2026-05-23",
@@ -35,7 +35,7 @@
     {
       "label_en": "Cumulative cases",
       "label_zh": "累计病例",
-      "value": 359570400,
+      "value": 359591668,
       "value_type": "number",
       "note_en": "Summed from the latest PostgreSQL-backed export.",
       "note_zh": "来自最新 PostgreSQL 导出快照的累计病例。",
@@ -72,8 +72,8 @@
       "step": 3,
       "title_en": "AI Analysis",
       "title_zh": "AI 分析",
-      "description_en": "Database-backed records drive bilingual AI summaries and 1 published report entry in the current release.",
-      "description_zh": "数据库记录会驱动中英双语 AI 摘要，并生成当前版本中的 1 份报告条目。",
+      "description_en": "Database-backed records drive bilingual AI summaries and 18 published report entries in the current release.",
+      "description_zh": "数据库记录会驱动中英双语 AI 摘要，并生成当前版本中的 18 份报告条目。",
       "accent": "amber"
     },
     {
@@ -100,8 +100,8 @@
     "database_detail_zh": "199 种疾病数据已标准化入库",
     "llm_label_en": "AI Report Engine",
     "llm_label_zh": "AI 报告引擎",
-    "llm_detail_en": "1 report entry in the current public release",
-    "llm_detail_zh": "当前公开版本含 1 份报告条目",
+    "llm_detail_en": "18 report entries in the current public release",
+    "llm_detail_zh": "当前公开版本含 18 份报告条目",
     "website_label_en": "This Website",
     "website_label_zh": "本网站",
     "website_detail_en": "Astro build consumes regenerated JSON snapshots",
@@ -136,8 +136,8 @@
       "icon": "M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z",
       "title_en": "AI-generated reports",
       "title_zh": "AI 生成报告",
-      "description_en": "The current public release includes 1 AI-generated report entry derived from database-backed surveillance records.",
-      "description_zh": "当前公开版本包含 1 份由数据库监测记录生成的 AI 报告条目。",
+      "description_en": "The current public release includes 18 AI-generated report entries derived from database-backed surveillance records.",
+      "description_zh": "当前公开版本包含 18 份由数据库监测记录生成的 AI 报告条目。",
       "accent": "purple"
     },
     {
@@ -347,7 +347,7 @@
       "name_en": "Brazil",
       "name_zh": "巴西",
       "disease_count": 45,
-      "total_cases": 60628081,
+      "total_cases": 60649349,
       "total_deaths": 0,
       "coverage_start": "2000-01-01",
       "coverage_end": "2026-05-01",

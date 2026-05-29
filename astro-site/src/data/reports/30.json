@@ -1,0 +1,1894 @@
+{
+  "id": 30,
+  "title": "Japan Infectious Disease Analytical Report | 2025-05-24 to 2026-05-23",
+  "report_type": "WEEKLY",
+  "period_start": "2025-05-24",
+  "period_end": "2026-05-23",
+  "created_at": "2026-05-29T05:40:45.114919+00:00",
+  "ai_model_used": null,
+  "quality_score": 0.942,
+  "summary": "This report analyzes standardized surveillance records for Japan during 2025-05-24 to 2026-05-23, covering 1 diseases, 30,836 cumulative cases, and 0 deaths; 0 diseases meet high-priority signal criteria.",
+  "key_findings": [
+    "The report covers 1 disease, 30,836 cumulative cases, and 0 high-risk diseases.",
+    "The highest-priority signal is Hand-Foot-Mouth Disease, with risk score 50."
+  ],
+  "metadata": {
+    "report_layout": "analytical_v3",
+    "method_version": "analytical_v3.3",
+    "data_signature": "473c1a01346c9f49e97e63eff244cf25cec4e031d4e0e0df8ea1a010dd840037",
+    "analysis_depth": "deterministic",
+    "analysis_summary": {
+      "top_risk_diseases": [
+        {
+          "disease_id": "D048",
+          "name_en": "Hand-Foot-Mouth Disease",
+          "name_zh": "Hand-Foot-Mouth Disease",
+          "risk_score": 50,
+          "risk_level": "moderate",
+          "latest_cases": 1477,
+          "change_pct": 84.62,
+          "evidence_refs": [
+            "disease:D048.risk_score",
+            "disease:D048.latest_cases",
+            "disease:D048.change_pct",
+            "disease:D048.latest_incidence_rate_per_100k"
+          ]
+        }
+      ],
+      "high_risk_count": 0,
+      "data_quality_score": 0.95,
+      "data_signature": "473c1a01346c9f49e97e63eff244cf25cec4e031d4e0e0df8ea1a010dd840037"
+    },
+    "quality_gate": {
+      "passed": true,
+      "threshold": 0.85,
+      "overall_score": 0.942,
+      "evidence_quality_score": 0.95,
+      "fact_score": 1.0,
+      "deep_analysis_confidence": 0.82,
+      "issues": [],
+      "critical_count": 0,
+      "major_count": 0
+    },
+    "data_quality": {
+      "score": 0.95,
+      "confidence": "high",
+      "issues": [
+        "Some incidence rates are WPP-computed crude population rates, not source-provided rates.",
+        "Sentinel surveillance data are present; crude population incidence should be interpreted as contextual, not as a sentinel per-site rate."
+      ],
+      "missing_rates": {
+        "cases": 0.0,
+        "deaths": 0.0,
+        "incidence_rate": 0.0,
+        "mortality_rate": 1.0
+      },
+      "negative_value_count": 0,
+      "future_record_count": 0,
+      "source_count": 1,
+      "incidence_rate_sources": {
+        "wpp_computed_crude": 52
+      }
+    },
+    "summary_metrics": {
+      "record_count": 52,
+      "disease_count": 1,
+      "active_latest_diseases": 1,
+      "high_risk_diseases": 0,
+      "total_cases": 30836,
+      "total_deaths": 0,
+      "latest_cases": 1477,
+      "latest_deaths": 0
+    },
+    "risk_ranking": [
+      {
+        "disease_id": "D048",
+        "name_en": "Hand-Foot-Mouth Disease",
+        "name_zh": "Hand-Foot-Mouth Disease",
+        "risk_score": 50,
+        "risk_level": "moderate",
+        "latest_cases": 1477,
+        "change_pct": 84.62,
+        "evidence_refs": [
+          "disease:D048.risk_score",
+          "disease:D048.latest_cases",
+          "disease:D048.change_pct",
+          "disease:D048.latest_incidence_rate_per_100k"
+        ]
+      }
+    ],
+    "disease_cards": [
+      {
+        "evidence_id": "disease:D048",
+        "disease_id": "D048",
+        "db_disease_id": 172,
+        "name_en": "Hand-Foot-Mouth Disease",
+        "name_zh": "Hand-Foot-Mouth Disease",
+        "category": "Viral",
+        "period_start": "2025-05-19",
+        "period_end": "2026-05-18",
+        "record_count": 52,
+        "observation_count": 53,
+        "latest_period": "2026-W21",
+        "previous_period": "2026-W20",
+        "metrics": {
+          "total_cases": 30836,
+          "total_deaths": 0,
+          "latest_cases": 1477,
+          "latest_deaths": 0,
+          "previous_cases": 800,
+          "previous_deaths": 0,
+          "change_pct": 84.62,
+          "death_change_pct": 0.0,
+          "latest_incidence_rate_per_100k": 1.2064,
+          "previous_incidence_rate_per_100k": 0.6534,
+          "incidence_change_pct": 84.62,
+          "period_crude_incidence_per_100k": 25.1871,
+          "population_denominator": 122427731.0,
+          "population_years": [
+            2025,
+            2026
+          ],
+          "population_sources": [
+            "WPP"
+          ],
+          "incidence_rate_sources": {
+            "wpp_computed_crude": 52
+          },
+          "yoy_change_pct": 250.83,
+          "rolling_mean_cases": 1045.0,
+          "fatality_rate_pct": 0.0
+        },
+        "baseline": {
+          "period_count": 52,
+          "mean_cases": 564.6,
+          "median_cases": 416.0,
+          "max_cases": 1474,
+          "mean_deaths": 0.0
+        },
+        "trend": {
+          "label": "increasing",
+          "change_pct": 84.62,
+          "yoy_change_pct": 250.83
+        },
+        "anomaly": {
+          "is_anomaly": false,
+          "method": "robust_mad",
+          "metric": "cases",
+          "latest_value": 1477.0,
+          "baseline_median": 416.0,
+          "robust_z": 2.52,
+          "z_score": 1.976,
+          "severity": "none"
+        },
+        "visual_diagnostics": {
+          "chart_kind": "time_series_cases",
+          "chart_spec": {
+            "x": "period",
+            "y": [
+              "cases"
+            ],
+            "baseline": "pre_latest_median_cases",
+            "recommended_marks": [
+              "line",
+              "points",
+              "latest_marker",
+              "peak_marker"
+            ]
+          },
+          "series": [
+            {
+              "period": "2025-W22",
+              "cases": 375,
+              "deaths": 0,
+              "incidence_rate_per_100k": 0.3046
+            },
+            {
+              "period": "2025-W23",
+              "cases": 444,
+              "deaths": 0,
+              "incidence_rate_per_100k": 0.3607
+            },
+            {
+              "period": "2025-W24",
+              "cases": 600,
+              "deaths": 0,
+              "incidence_rate_per_100k": 0.4874
+            },
+            {
+              "period": "2025-W25",
+              "cases": 773,
+              "deaths": 0,
+              "incidence_rate_per_100k": 0.6279
+            },
+            {
+              "period": "2025-W26",
+              "cases": 992,
+              "deaths": 0,
+              "incidence_rate_per_100k": 0.8058
+            },
+            {
+              "period": "2025-W27",
+              "cases": 1215,
+              "deaths": 0,
+              "incidence_rate_per_100k": 0.987
+            },
+            {
+              "period": "2025-W28",
+              "cases": 1351,
+              "deaths": 0,
+              "incidence_rate_per_100k": 1.0975
+            },
+            {
+              "period": "2025-W29",
+              "cases": 1395,
+              "deaths": 0,
+              "incidence_rate_per_100k": 1.1332
+            },
+            {
+              "period": "2025-W30",
+              "cases": 1380,
+              "deaths": 0,
+              "incidence_rate_per_100k": 1.121
+            },
+            {
+              "period": "2025-W31",
+              "cases": 1474,
+              "deaths": 0,
+              "incidence_rate_per_100k": 1.1974
+            },
+            {
+              "period": "2025-W32",
+              "cases": 1335,
+              "deaths": 0,
+              "incidence_rate_per_100k": 1.0845
+            },
+            {
+              "period": "2025-W33",
+              "cases": 752,
+              "deaths": 0,
+              "incidence_rate_per_100k": 0.6109
+            },
+            {
+              "period": "2025-W34",
+              "cases": 1063,
+              "deaths": 0,
+              "incidence_rate_per_100k": 0.8635
+            },
+            {
+              "period": "2025-W35",
+              "cases": 1199,
+              "deaths": 0,
+              "incidence_rate_per_100k": 0.974
+            },
+            {
+              "period": "2025-W36",
+              "cases": 1337,
+              "deaths": 0,
+              "incidence_rate_per_100k": 1.0861
+            },
+            {
+              "period": "2025-W37",
+              "cases": 1360,
+              "deaths": 0,
+              "incidence_rate_per_100k": 1.1048
+            },
+            {
+              "period": "2025-W38",
+              "cases": 1068,
+              "deaths": 0,
+              "incidence_rate_per_100k": 0.8676
+            },
+            {
+              "period": "2025-W39",
+              "cases": 933,
+              "deaths": 0,
+              "incidence_rate_per_100k": 0.7579
+            },
+            {
+              "period": "2025-W40",
+              "cases": 913,
+              "deaths": 0,
+              "incidence_rate_per_100k": 0.7417
+            },
+            {
+              "period": "2025-W41",
+              "cases": 850,
+              "deaths": 0,
+              "incidence_rate_per_100k": 0.6905
+            },
+            {
+              "period": "2025-W42",
+              "cases": 653,
+              "deaths": 0,
+              "incidence_rate_per_100k": 0.5304
+            },
+            {
+              "period": "2025-W43",
+              "cases": 504,
+              "deaths": 0,
+              "incidence_rate_per_100k": 0.4094
+            },
+            {
+              "period": "2025-W44",
+              "cases": 482,
+              "deaths": 0,
+              "incidence_rate_per_100k": 0.3915
+            },
+            {
+              "period": "2025-W45",
+              "cases": 340,
+              "deaths": 0,
+              "incidence_rate_per_100k": 0.2762
+            },
+            {
+              "period": "2025-W46",
+              "cases": 299,
+              "deaths": 0,
+              "incidence_rate_per_100k": 0.2429
+            },
+            {
+              "period": "2025-W47",
+              "cases": 286,
+              "deaths": 0,
+              "incidence_rate_per_100k": 0.2323
+            },
+            {
+              "period": "2025-W48",
+              "cases": 243,
+              "deaths": 0,
+              "incidence_rate_per_100k": 0.1974
+            },
+            {
+              "period": "2025-W49",
+              "cases": 193,
+              "deaths": 0,
+              "incidence_rate_per_100k": 0.1568
+            },
+            {
+              "period": "2025-W50",
+              "cases": 157,
+              "deaths": 0,
+              "incidence_rate_per_100k": 0.1275
+            },
+            {
+              "period": "2025-W51",
+              "cases": 136,
+              "deaths": 0,
+              "incidence_rate_per_100k": 0.1105
+            },
+            {
+              "period": "2025-W52",
+              "cases": 131,
+              "deaths": 0,
+              "incidence_rate_per_100k": 0.1064
+            },
+            {
+              "period": "2025-W01",
+              "cases": 0,
+              "deaths": 0,
+              "incidence_rate_per_100k": null
+            },
+            {
+              "period": "2026-W02",
+              "cases": 68,
+              "deaths": 0,
+              "incidence_rate_per_100k": 0.0555
+            },
+            {
+              "period": "2026-W03",
+              "cases": 82,
+              "deaths": 0,
+              "incidence_rate_per_100k": 0.067
+            },
+            {
+              "period": "2026-W04",
+              "cases": 100,
+              "deaths": 0,
+              "incidence_rate_per_100k": 0.0817
+            },
+            {
+              "period": "2026-W05",
+              "cases": 149,
+              "deaths": 0,
+              "incidence_rate_per_100k": 0.1217
+            },
+            {
+              "period": "2026-W06",
+              "cases": 139,
+              "deaths": 0,
+              "incidence_rate_per_100k": 0.1135
+            },
+            {
+              "period": "2026-W07",
+              "cases": 136,
+              "deaths": 0,
+              "incidence_rate_per_100k": 0.1111
+            },
+            {
+              "period": "2026-W08",
+              "cases": 138,
+              "deaths": 0,
+              "incidence_rate_per_100k": 0.1127
+            },
+            {
+              "period": "2026-W09",
+              "cases": 110,
+              "deaths": 0,
+              "incidence_rate_per_100k": 0.0898
+            },
+            {
+              "period": "2026-W10",
+              "cases": 123,
+              "deaths": 0,
+              "incidence_rate_per_100k": 0.1005
+            },
+            {
+              "period": "2026-W11",
+              "cases": 148,
+              "deaths": 0,
+              "incidence_rate_per_100k": 0.1209
+            },
+            {
+              "period": "2026-W12",
+              "cases": 146,
+              "deaths": 0,
+              "incidence_rate_per_100k": 0.1193
+            },
+            {
+              "period": "2026-W13",
+              "cases": 139,
+              "deaths": 0,
+              "incidence_rate_per_100k": 0.1135
+            },
+            {
+              "period": "2026-W14",
+              "cases": 133,
+              "deaths": 0,
+              "incidence_rate_per_100k": 0.1086
+            },
+            {
+              "period": "2026-W15",
+              "cases": 186,
+              "deaths": 0,
+              "incidence_rate_per_100k": 0.1519
+            },
+            {
+              "period": "2026-W16",
+              "cases": 251,
+              "deaths": 0,
+              "incidence_rate_per_100k": 0.205
+            },
+            {
+              "period": "2026-W17",
+              "cases": 411,
+              "deaths": 0,
+              "incidence_rate_per_100k": 0.3357
+            },
+            {
+              "period": "2026-W18",
+              "cases": 588,
+              "deaths": 0,
+              "incidence_rate_per_100k": 0.4803
+            },
+            {
+              "period": "2026-W19",
+              "cases": 858,
+              "deaths": 0,
+              "incidence_rate_per_100k": 0.7008
+            },
+            {
+              "period": "2026-W20",
+              "cases": 800,
+              "deaths": 0,
+              "incidence_rate_per_100k": 0.6534
+            },
+            {
+              "period": "2026-W21",
+              "cases": 1477,
+              "deaths": 0,
+              "incidence_rate_per_100k": 1.2064
+            }
+          ],
+          "peak_period": "2026-W21",
+          "peak_cases": 1477,
+          "latest_4_period_cases": 3723,
+          "previous_4_period_cases": 981,
+          "last4_change_pct": 279.51,
+          "last4_share_pct": 12.07,
+          "pre_latest_median_cases": 416.0,
+          "latest_to_baseline_ratio": 3.55,
+          "recent_slope_cases_per_period": 216.2,
+          "consecutive_increase_periods": 1,
+          "observations": [
+            "Last 4 periods changed +279.5% versus the preceding 4 periods.",
+            "Latest value is 3.5x the pre-latest median.",
+            "Latest crude incidence is 1.206 per 100,000 population.",
+            "Peak observed period is 2026-W21 with 1,477 cases."
+          ]
+        },
+        "risk": {
+          "score": 50,
+          "level": "moderate",
+          "drivers": [
+            "latest_cases_present",
+            "recent_increase"
+          ]
+        },
+        "data_quality": {
+          "score": 1.0,
+          "confidence": "high",
+          "missing_rates": {
+            "cases": 0.0,
+            "deaths": 0.0,
+            "incidence_rate": 0.0,
+            "mortality_rate": 1.0
+          },
+          "source_count": 1
+        },
+        "limitations": [
+          "Crude incidence rates were computed from WPP annual population denominators and are not source-provided rates.",
+          "The source is sentinel surveillance; crude population incidence is contextual and should not be read as an official sentinel per-site rate."
+        ],
+        "source_coverage": [
+          "Japan NIID Weekly Sentinel"
+        ],
+        "knowledge_status": "published",
+        "knowledge_updated_at": "2026-05-20T14:19:57.286210",
+        "knowledge_context": {
+          "brief": "Hand-foot-and-mouth disease (HFMD) is a common viral illness of childhood that is associated mainly with enteroviruses and occurs worldwide, with particular public-health concern because it can reach epidemic levels and, in some settings, mortality is reported to be high [1][2]. Most cases are self-limited, but a minority may progress to severe neurological and cardiopulmonary complications [1][2]. Source-backed detail on local burden patterns beyond these general observations is not yet available [1][2].",
+          "definition": "Hand-foot-and-mouth disease is an enterovirus-associated viral infection, with most cases attributed to enteroviruses within the Picornaviridae family [1]. It is described as a common childhood disease and is commonly seen in children five years of age or younger [1][2]. The available sources characterize it as a clinical syndrome rather than a single-pathogen entity, with multiple enteroviruses implicated [1].",
+          "clinical_features": "The typical presentation includes fever, mucosal herpangina, oral ulcerations, and skin rashes on the hands and feet [1]. One review describes the oral findings as a painful oral enanthem with an asymptomatic exanthem on the palms and soles [2]. Most cases resolve without consequence, and one source notes usual recovery within 7 to 10 days without sequelae [1][2]. A minority of patients develop severe neurological and cardiopulmonary complications, which can be fatal; reported fatal pathways include circulatory failure secondary to myocardial impairment and neurogenic pulmonary edema secondary to brainstem damage [1][2].",
+          "epidemiology": "HFMD is reported as a significant public-health issue worldwide and has received increasing global attention over the past two decades [1]. It commonly affects young children, especially those five years of age or younger [1][2]. The sources state that the disease has the potential to reach epidemic levels and that mortality is high in some countries, but they do not provide region-specific incidence estimates in the supplied material [2]. Emerging enterovirus infections, including EV-D68, EV-A71, coxsackieviruses, and echoviruses, are noted as part of the broader surveillance context for HFMD [1].",
+          "transmission": "The provided sources identify enteroviruses as the leading causes of most HFMD cases, but they do not specify a detailed transmission route or exposure mechanism [1]. Source-backed detail on duration of infectiousness, environmental persistence, or specific person-to-person spread pathways is not yet available in the supplied material [1][2].",
+          "prevention": "The review literature emphasizes preventive strategies and states that developing efficacious vaccines has become a priority because there is not adequate treatment for EV infections [1]. It also highlights the need for a vigilant global surveillance system for enterovirus infections worldwide [1]. Specific non-pharmaceutical prevention measures, vaccine schedules, or exposure-control recommendations are not described in the supplied snippets and are therefore not stated here [1].",
+          "surveillance_note": "In surveillance settings, HFMD should be read as a common, usually self-limited enteroviral syndrome of early childhood that may occasionally signal severe neurologic or cardiopulmonary disease [1][2]. Because the disease can reach epidemic levels and its impact is described as increasing globally, trend monitoring and event-based awareness are important [1][2]. The supplied sources support attention to evolving enterovirus ecology, including EV-A71, EV-D68, coxsackieviruses, and echoviruses, but do not provide operational case definitions or reporting thresholds [1].",
+          "risk_groups": "Young children are the principal affected group, with children five years of age or younger most commonly reported [1][2]. The supplied sources do not provide additional source-backed high-risk categories such as pregnancy status, immunocompromise, or occupational exposure [1][2].",
+          "source_confidence": "medium",
+          "disclaimer": "This brief is for surveillance and public information only. It is not medical advice, diagnosis, or treatment guidance.",
+          "source_attribution": [
+            {
+              "id": 1401,
+              "source_name": "PubMed",
+              "source_type": "pubmed",
+              "title": "A review of enterovirus-associated hand-foot and mouth disease: preventive strategies and the need for a global enterovirus surveillance network",
+              "url": "https://pubmed.ncbi.nlm.nih.gov/39229797/",
+              "resolved_url": "https://pubmed.ncbi.nlm.nih.gov/39229797/",
+              "license": "PubMed/PMC open-access abstracts; NLM terms; cite PMID/DOI",
+              "source_id": 1401,
+              "citation_index": 1
+            },
+            {
+              "id": 1402,
+              "source_name": "PubMed",
+              "source_type": "pubmed",
+              "title": "Hand, Foot, and Mouth Disease: A Narrative Review",
+              "url": "https://pubmed.ncbi.nlm.nih.gov/36284392/",
+              "resolved_url": "https://pubmed.ncbi.nlm.nih.gov/36284392/",
+              "license": "PubMed/PMC open-access abstracts; NLM terms; cite PMID/DOI",
+              "source_id": 1402,
+              "citation_index": 2
+            },
+            {
+              "id": 1397,
+              "source_name": "PubMed",
+              "source_type": "pubmed",
+              "title": "Onychomadesis: literature review",
+              "url": "https://pubmed.ncbi.nlm.nih.gov/25132198/",
+              "resolved_url": "https://pubmed.ncbi.nlm.nih.gov/25132198/",
+              "license": "PubMed/PMC open-access abstracts; NLM terms; cite PMID/DOI",
+              "source_id": 1397,
+              "citation_index": 3
+            },
+            {
+              "id": 1395,
+              "source_name": "Crossref scholarly metadata",
+              "source_type": "web_search",
+              "title": "Hand‐Foot‐Mouth Disease",
+              "url": "https://doi.org/10.1002/9781118660584.ese1082",
+              "resolved_url": "https://doi.org/10.1002/9781118660584.ese1082",
+              "license": "Trusted web search discovery snippets/page metadata; cite URL; source-specific reuse terms apply",
+              "source_id": 1395,
+              "citation_index": 4
+            },
+            {
+              "id": 1396,
+              "source_name": "Crossref scholarly metadata",
+              "source_type": "web_search",
+              "title": "Hand-Foot-Mouth Disease",
+              "url": "https://doi.org/10.1007/978-94-017-9882-2_17",
+              "resolved_url": "https://doi.org/10.1007/978-94-017-9882-2_17",
+              "license": "Trusted web search discovery snippets/page metadata; cite URL; source-specific reuse terms apply",
+              "source_id": 1396,
+              "citation_index": 5
+            }
+          ]
+        },
+        "burden_rank": 1,
+        "risk_rank": 1
+      }
+    ],
+    "figure_plan": [
+      {
+        "figure_type": "epidemic_curve",
+        "section_type": "trend_anomaly_analysis",
+        "disease_id": "D048",
+        "position": "after_content",
+        "rationale": "The leading signal needs a time-series curve with baseline and peak markers.",
+        "source": "rules"
+      },
+      {
+        "figure_type": "recent_window_heatmap",
+        "section_type": "trend_anomaly_analysis",
+        "disease_id": "D048",
+        "position": "after_content",
+        "rationale": "A recent-window heatmap makes recurrence and clustering easier to scan.",
+        "source": "rules"
+      },
+      {
+        "figure_type": "cases_incidence_panel",
+        "section_type": "disease_profiles",
+        "disease_id": "D048",
+        "position": "after_content",
+        "rationale": "Case counts and crude incidence should be read together when denominators are available.",
+        "source": "rules"
+      }
+    ],
+    "figures": [
+      {
+        "figure_type": "epidemic_curve",
+        "section_type": "trend_anomaly_analysis",
+        "disease_id": "D048",
+        "position": "after_content",
+        "rationale": "The leading signal needs a time-series curve with baseline and peak markers.",
+        "source": "rules",
+        "id": "fig-1-epidemic_curve",
+        "number": 1,
+        "title": "Hand-Foot-Mouth Disease epidemic curve",
+        "caption": "Hand-Foot-Mouth Disease reported cases by weekly period. The dashed reference line marks the pre-latest median; the diamond marks the observed peak.",
+        "legend": [
+          "Solid line = reported cases.",
+          "Dotted line = 3-period moving mean.",
+          "Dashed reference = pre-latest median."
+        ],
+        "evidence_refs": [
+          "disease:D048.latest_cases",
+          "disease:D048.change_pct",
+          "disease:D048.latest_4_period_cases",
+          "disease:D048.peak_cases"
+        ]
+      },
+      {
+        "figure_type": "recent_window_heatmap",
+        "section_type": "trend_anomaly_analysis",
+        "disease_id": "D048",
+        "position": "after_content",
+        "rationale": "A recent-window heatmap makes recurrence and clustering easier to scan.",
+        "source": "rules",
+        "id": "fig-2-recent_window_heatmap",
+        "number": 2,
+        "title": "Hand-Foot-Mouth Disease recent-period heatmap",
+        "caption": "Recent reporting periods are arranged sequentially; darker cells represent higher reported case counts.",
+        "legend": [
+          "Each cell = one reporting period.",
+          "Color intensity = reported cases.",
+          "Blank cells are padding, not missing observations."
+        ],
+        "evidence_refs": [
+          "disease:D048.latest_cases",
+          "disease:D048.change_pct",
+          "disease:D048.latest_4_period_cases",
+          "disease:D048.peak_cases"
+        ]
+      },
+      {
+        "figure_type": "cases_incidence_panel",
+        "section_type": "disease_profiles",
+        "disease_id": "D048",
+        "position": "after_content",
+        "rationale": "Case counts and crude incidence should be read together when denominators are available.",
+        "source": "rules",
+        "id": "fig-3-cases_incidence_panel",
+        "number": 3,
+        "title": "Hand-Foot-Mouth Disease: cases and crude incidence",
+        "caption": "Counts and crude incidence per 100,000 are shown together so the burden signal can be read with its available denominator context.",
+        "legend": [
+          "Upper panel = reported cases.",
+          "Lower panel = crude incidence per 100,000 population.",
+          "Computed rates are contextual when source data are sentinel-based."
+        ],
+        "evidence_refs": [
+          "disease:D048.latest_cases",
+          "disease:D048.change_pct",
+          "disease:D048.latest_4_period_cases",
+          "disease:D048.peak_cases",
+          "disease:D048.latest_incidence_rate_per_100k",
+          "disease:D048.period_crude_incidence_per_100k"
+        ]
+      }
+    ],
+    "figure_data": {}
+  },
+  "country_code": "JP",
+  "country_name": "Japan",
+  "analysis_summary": {
+    "top_risk_diseases": [
+      {
+        "disease_id": "D048",
+        "name_en": "Hand-Foot-Mouth Disease",
+        "name_zh": "Hand-Foot-Mouth Disease",
+        "risk_score": 50,
+        "risk_level": "moderate",
+        "latest_cases": 1477,
+        "change_pct": 84.62,
+        "evidence_refs": [
+          "disease:D048.risk_score",
+          "disease:D048.latest_cases",
+          "disease:D048.change_pct",
+          "disease:D048.latest_incidence_rate_per_100k"
+        ]
+      }
+    ],
+    "high_risk_count": 0,
+    "data_quality_score": 0.95,
+    "data_signature": "473c1a01346c9f49e97e63eff244cf25cec4e031d4e0e0df8ea1a010dd840037"
+  },
+  "quality_gate": {
+    "passed": true,
+    "threshold": 0.85,
+    "overall_score": 0.942,
+    "evidence_quality_score": 0.95,
+    "fact_score": 1.0,
+    "deep_analysis_confidence": 0.82,
+    "issues": [],
+    "critical_count": 0,
+    "major_count": 0
+  },
+  "data_quality": {
+    "score": 0.95,
+    "confidence": "high",
+    "issues": [
+      "Some incidence rates are WPP-computed crude population rates, not source-provided rates.",
+      "Sentinel surveillance data are present; crude population incidence should be interpreted as contextual, not as a sentinel per-site rate."
+    ],
+    "missing_rates": {
+      "cases": 0.0,
+      "deaths": 0.0,
+      "incidence_rate": 0.0,
+      "mortality_rate": 1.0
+    },
+    "negative_value_count": 0,
+    "future_record_count": 0,
+    "source_count": 1,
+    "incidence_rate_sources": {
+      "wpp_computed_crude": 52
+    }
+  },
+  "method_version": "analytical_v3.3",
+  "sections": [
+    {
+      "section_type": "executive_brief",
+      "section_order": 1,
+      "title": "Executive Brief",
+      "content": "**Bottom line.** **Hand-Foot-Mouth Disease** is a **moderate-priority, rising surveillance signal**. It warrants active review, but the present evidence does not by itself establish an emergency. Across 2025-05-24 to 2026-05-23, the dataset records 30,836 cases and 0 deaths across 1 disease; the latest observation contributes 1,477 cases.\n\n**Why it matters.** The practical question is whether the short-window pressure is becoming persistent or whether it reflects seasonality, reporting catch-up, or ascertainment changes. The latest crude population incidence is 1.206 per 100,000, but the source is sentinel surveillance, so that rate is contextual rather than a substitute for source-specific sentinel rates. Numeric confidence is 95%, with the main uncertainty sitting in source definitions and lag.\n\n### Near-Term Watch\n- Confirm whether the next reporting periods remain above the recent background level.\n- Check whether increases are concentrated by place, age group, or reporting source once stratified data are available.\n- Treat corroborating event-based reports as signal-strengthening evidence; treat a return toward background as support for a timing or seasonal explanation.",
+      "content_html": null,
+      "charts": [],
+      "metadata": {
+        "display_type": "Briefing",
+        "evidence_refs": [
+          "summary:total_cases",
+          "summary:total_deaths",
+          "summary:high_risk_diseases",
+          "quality:score",
+          "disease:D048.risk_score",
+          "disease:D048.latest_cases",
+          "disease:D048.change_pct",
+          "disease:D048.latest_incidence_rate_per_100k"
+        ],
+        "claims": [
+          {
+            "type": "summary_metric",
+            "value": 30836,
+            "evidence_ref": "summary:total_cases"
+          }
+        ],
+        "visual_components": [
+          {
+            "type": "judgement_panel",
+            "tone": "moderate",
+            "title": "Analytical judgement",
+            "headline": "Hand-Foot-Mouth Disease: moderate priority, rising",
+            "body": "Latest observation: 1,477 cases; +84.6% versus the previous reporting period. Crude incidence is 1.206 per 100,000.",
+            "footnote": "Generated from structured evidence; not free-text chart interpretation."
+          }
+        ],
+        "quality_flags": []
+      }
+    },
+    {
+      "section_type": "priority_signals",
+      "section_order": 2,
+      "title": "Signal Assessment",
+      "content": "The priority list separates signals that need immediate review from signals that can remain under routine watch. In this packet, 0 diseases meet high/critical criteria; the leading signal is still important when its recent window remains above background.\n\n| Priority | Signal | Current reading | Why it matters | Watch next |\n| --- | --- | ---: | --- | --- |\n| 1 | Hand-Foot-Mouth Disease | 1,477 cases; +84.6% vs previous | short-term acceleration without high-risk classification | Persistence, reporting timing, and concentration by place or age. |",
+      "content_html": null,
+      "charts": [],
+      "metadata": {
+        "display_type": "Assessment",
+        "evidence_refs": [
+          "disease:D048.risk_score",
+          "disease:D048.latest_cases",
+          "disease:D048.change_pct",
+          "disease:D048.latest_incidence_rate_per_100k"
+        ],
+        "risk_level": "moderate",
+        "visual_components": [
+          {
+            "type": "signal_ladder",
+            "title": "Signal ranking",
+            "items": [
+              {
+                "label": "Hand-Foot-Mouth Disease",
+                "value": "moderate",
+                "detail": "1,477 cases; +84.6%",
+                "bar_pct": 50,
+                "tone": "moderate"
+              }
+            ]
+          }
+        ],
+        "quality_flags": []
+      }
+    },
+    {
+      "section_type": "trend_anomaly_analysis",
+      "section_order": 3,
+      "title": "Epidemic Curve & Pattern",
+      "content": "### Curve Reading\n**Hand-Foot-Mouth Disease** is moving from background monitoring into active review. The latest point is 1,477 cases, +84.6% from the previous observation. The most recent 4 reporting periods contain 3,723 cases, +279.5% versus the preceding 4-period window. The highest observed point in this extract is 2026-W21 with 1,477 cases.\n\n### Working Interpretation\n- **Hand-Foot-Mouth Disease**: treat the rise as a near-term pressure signal. The next analytical step is to distinguish persistent transmission from reporting timing, seasonal behavior, or a narrower cluster that is hidden by national aggregation.\n  - Last 4 periods changed +279.5% versus the preceding 4 periods.\n  - Latest value is 3.5x the pre-latest median.\n  - Latest crude incidence is 1.206 per 100,000 population.\n\n### Anomaly Check\n- The latest point is elevated, but it does not clear the anomaly threshold. That keeps the judgement at “rising signal for review” rather than an automatic alert.",
+      "content_html": null,
+      "charts": [
+        {
+          "type": "time_series_cases",
+          "diseases": [
+            {
+              "disease_id": "D048",
+              "name_en": "Hand-Foot-Mouth Disease",
+              "name_zh": "Hand-Foot-Mouth Disease",
+              "visual_diagnostics": {
+                "chart_kind": "time_series_cases",
+                "chart_spec": {
+                  "x": "period",
+                  "y": [
+                    "cases"
+                  ],
+                  "baseline": "pre_latest_median_cases",
+                  "recommended_marks": [
+                    "line",
+                    "points",
+                    "latest_marker",
+                    "peak_marker"
+                  ]
+                },
+                "series": [
+                  {
+                    "period": "2025-W22",
+                    "cases": 375,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 0.3046
+                  },
+                  {
+                    "period": "2025-W23",
+                    "cases": 444,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 0.3607
+                  },
+                  {
+                    "period": "2025-W24",
+                    "cases": 600,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 0.4874
+                  },
+                  {
+                    "period": "2025-W25",
+                    "cases": 773,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 0.6279
+                  },
+                  {
+                    "period": "2025-W26",
+                    "cases": 992,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 0.8058
+                  },
+                  {
+                    "period": "2025-W27",
+                    "cases": 1215,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 0.987
+                  },
+                  {
+                    "period": "2025-W28",
+                    "cases": 1351,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 1.0975
+                  },
+                  {
+                    "period": "2025-W29",
+                    "cases": 1395,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 1.1332
+                  },
+                  {
+                    "period": "2025-W30",
+                    "cases": 1380,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 1.121
+                  },
+                  {
+                    "period": "2025-W31",
+                    "cases": 1474,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 1.1974
+                  },
+                  {
+                    "period": "2025-W32",
+                    "cases": 1335,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 1.0845
+                  },
+                  {
+                    "period": "2025-W33",
+                    "cases": 752,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 0.6109
+                  },
+                  {
+                    "period": "2025-W34",
+                    "cases": 1063,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 0.8635
+                  },
+                  {
+                    "period": "2025-W35",
+                    "cases": 1199,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 0.974
+                  },
+                  {
+                    "period": "2025-W36",
+                    "cases": 1337,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 1.0861
+                  },
+                  {
+                    "period": "2025-W37",
+                    "cases": 1360,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 1.1048
+                  },
+                  {
+                    "period": "2025-W38",
+                    "cases": 1068,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 0.8676
+                  },
+                  {
+                    "period": "2025-W39",
+                    "cases": 933,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 0.7579
+                  },
+                  {
+                    "period": "2025-W40",
+                    "cases": 913,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 0.7417
+                  },
+                  {
+                    "period": "2025-W41",
+                    "cases": 850,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 0.6905
+                  },
+                  {
+                    "period": "2025-W42",
+                    "cases": 653,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 0.5304
+                  },
+                  {
+                    "period": "2025-W43",
+                    "cases": 504,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 0.4094
+                  },
+                  {
+                    "period": "2025-W44",
+                    "cases": 482,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 0.3915
+                  },
+                  {
+                    "period": "2025-W45",
+                    "cases": 340,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 0.2762
+                  },
+                  {
+                    "period": "2025-W46",
+                    "cases": 299,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 0.2429
+                  },
+                  {
+                    "period": "2025-W47",
+                    "cases": 286,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 0.2323
+                  },
+                  {
+                    "period": "2025-W48",
+                    "cases": 243,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 0.1974
+                  },
+                  {
+                    "period": "2025-W49",
+                    "cases": 193,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 0.1568
+                  },
+                  {
+                    "period": "2025-W50",
+                    "cases": 157,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 0.1275
+                  },
+                  {
+                    "period": "2025-W51",
+                    "cases": 136,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 0.1105
+                  },
+                  {
+                    "period": "2025-W52",
+                    "cases": 131,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 0.1064
+                  },
+                  {
+                    "period": "2025-W01",
+                    "cases": 0,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": null
+                  },
+                  {
+                    "period": "2026-W02",
+                    "cases": 68,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 0.0555
+                  },
+                  {
+                    "period": "2026-W03",
+                    "cases": 82,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 0.067
+                  },
+                  {
+                    "period": "2026-W04",
+                    "cases": 100,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 0.0817
+                  },
+                  {
+                    "period": "2026-W05",
+                    "cases": 149,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 0.1217
+                  },
+                  {
+                    "period": "2026-W06",
+                    "cases": 139,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 0.1135
+                  },
+                  {
+                    "period": "2026-W07",
+                    "cases": 136,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 0.1111
+                  },
+                  {
+                    "period": "2026-W08",
+                    "cases": 138,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 0.1127
+                  },
+                  {
+                    "period": "2026-W09",
+                    "cases": 110,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 0.0898
+                  },
+                  {
+                    "period": "2026-W10",
+                    "cases": 123,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 0.1005
+                  },
+                  {
+                    "period": "2026-W11",
+                    "cases": 148,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 0.1209
+                  },
+                  {
+                    "period": "2026-W12",
+                    "cases": 146,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 0.1193
+                  },
+                  {
+                    "period": "2026-W13",
+                    "cases": 139,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 0.1135
+                  },
+                  {
+                    "period": "2026-W14",
+                    "cases": 133,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 0.1086
+                  },
+                  {
+                    "period": "2026-W15",
+                    "cases": 186,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 0.1519
+                  },
+                  {
+                    "period": "2026-W16",
+                    "cases": 251,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 0.205
+                  },
+                  {
+                    "period": "2026-W17",
+                    "cases": 411,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 0.3357
+                  },
+                  {
+                    "period": "2026-W18",
+                    "cases": 588,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 0.4803
+                  },
+                  {
+                    "period": "2026-W19",
+                    "cases": 858,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 0.7008
+                  },
+                  {
+                    "period": "2026-W20",
+                    "cases": 800,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 0.6534
+                  },
+                  {
+                    "period": "2026-W21",
+                    "cases": 1477,
+                    "deaths": 0,
+                    "incidence_rate_per_100k": 1.2064
+                  }
+                ],
+                "peak_period": "2026-W21",
+                "peak_cases": 1477,
+                "latest_4_period_cases": 3723,
+                "previous_4_period_cases": 981,
+                "last4_change_pct": 279.51,
+                "last4_share_pct": 12.07,
+                "pre_latest_median_cases": 416.0,
+                "latest_to_baseline_ratio": 3.55,
+                "recent_slope_cases_per_period": 216.2,
+                "consecutive_increase_periods": 1,
+                "observations": [
+                  "Last 4 periods changed +279.5% versus the preceding 4 periods.",
+                  "Latest value is 3.5x the pre-latest median.",
+                  "Latest crude incidence is 1.206 per 100,000 population.",
+                  "Peak observed period is 2026-W21 with 1,477 cases."
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "figure_type": "epidemic_curve",
+          "section_type": "trend_anomaly_analysis",
+          "disease_id": "D048",
+          "position": "after_content",
+          "rationale": "The leading signal needs a time-series curve with baseline and peak markers.",
+          "source": "rules",
+          "id": "fig-1-epidemic_curve",
+          "number": 1,
+          "title": "Hand-Foot-Mouth Disease epidemic curve",
+          "caption": "Hand-Foot-Mouth Disease reported cases by weekly period. The dashed reference line marks the pre-latest median; the diamond marks the observed peak.",
+          "legend": [
+            "Solid line = reported cases.",
+            "Dotted line = 3-period moving mean.",
+            "Dashed reference = pre-latest median."
+          ],
+          "evidence_refs": [
+            "disease:D048.latest_cases",
+            "disease:D048.change_pct",
+            "disease:D048.latest_4_period_cases",
+            "disease:D048.peak_cases"
+          ]
+        },
+        {
+          "figure_type": "recent_window_heatmap",
+          "section_type": "trend_anomaly_analysis",
+          "disease_id": "D048",
+          "position": "after_content",
+          "rationale": "A recent-window heatmap makes recurrence and clustering easier to scan.",
+          "source": "rules",
+          "id": "fig-2-recent_window_heatmap",
+          "number": 2,
+          "title": "Hand-Foot-Mouth Disease recent-period heatmap",
+          "caption": "Recent reporting periods are arranged sequentially; darker cells represent higher reported case counts.",
+          "legend": [
+            "Each cell = one reporting period.",
+            "Color intensity = reported cases.",
+            "Blank cells are padding, not missing observations."
+          ],
+          "evidence_refs": [
+            "disease:D048.latest_cases",
+            "disease:D048.change_pct",
+            "disease:D048.latest_4_period_cases",
+            "disease:D048.peak_cases"
+          ]
+        }
+      ],
+      "metadata": {
+        "display_type": "Analysis",
+        "evidence_refs": [
+          "disease:D048.change_pct",
+          "disease:D048.latest_4_period_cases",
+          "disease:D048.last4_change_pct",
+          "disease:D048.peak_cases"
+        ],
+        "chart_specs": [
+          {
+            "disease_id": "D048",
+            "name_en": "Hand-Foot-Mouth Disease",
+            "name_zh": "Hand-Foot-Mouth Disease",
+            "visual_diagnostics": {
+              "chart_kind": "time_series_cases",
+              "chart_spec": {
+                "x": "period",
+                "y": [
+                  "cases"
+                ],
+                "baseline": "pre_latest_median_cases",
+                "recommended_marks": [
+                  "line",
+                  "points",
+                  "latest_marker",
+                  "peak_marker"
+                ]
+              },
+              "series": [
+                {
+                  "period": "2025-W22",
+                  "cases": 375,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 0.3046
+                },
+                {
+                  "period": "2025-W23",
+                  "cases": 444,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 0.3607
+                },
+                {
+                  "period": "2025-W24",
+                  "cases": 600,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 0.4874
+                },
+                {
+                  "period": "2025-W25",
+                  "cases": 773,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 0.6279
+                },
+                {
+                  "period": "2025-W26",
+                  "cases": 992,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 0.8058
+                },
+                {
+                  "period": "2025-W27",
+                  "cases": 1215,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 0.987
+                },
+                {
+                  "period": "2025-W28",
+                  "cases": 1351,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 1.0975
+                },
+                {
+                  "period": "2025-W29",
+                  "cases": 1395,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 1.1332
+                },
+                {
+                  "period": "2025-W30",
+                  "cases": 1380,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 1.121
+                },
+                {
+                  "period": "2025-W31",
+                  "cases": 1474,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 1.1974
+                },
+                {
+                  "period": "2025-W32",
+                  "cases": 1335,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 1.0845
+                },
+                {
+                  "period": "2025-W33",
+                  "cases": 752,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 0.6109
+                },
+                {
+                  "period": "2025-W34",
+                  "cases": 1063,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 0.8635
+                },
+                {
+                  "period": "2025-W35",
+                  "cases": 1199,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 0.974
+                },
+                {
+                  "period": "2025-W36",
+                  "cases": 1337,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 1.0861
+                },
+                {
+                  "period": "2025-W37",
+                  "cases": 1360,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 1.1048
+                },
+                {
+                  "period": "2025-W38",
+                  "cases": 1068,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 0.8676
+                },
+                {
+                  "period": "2025-W39",
+                  "cases": 933,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 0.7579
+                },
+                {
+                  "period": "2025-W40",
+                  "cases": 913,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 0.7417
+                },
+                {
+                  "period": "2025-W41",
+                  "cases": 850,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 0.6905
+                },
+                {
+                  "period": "2025-W42",
+                  "cases": 653,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 0.5304
+                },
+                {
+                  "period": "2025-W43",
+                  "cases": 504,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 0.4094
+                },
+                {
+                  "period": "2025-W44",
+                  "cases": 482,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 0.3915
+                },
+                {
+                  "period": "2025-W45",
+                  "cases": 340,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 0.2762
+                },
+                {
+                  "period": "2025-W46",
+                  "cases": 299,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 0.2429
+                },
+                {
+                  "period": "2025-W47",
+                  "cases": 286,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 0.2323
+                },
+                {
+                  "period": "2025-W48",
+                  "cases": 243,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 0.1974
+                },
+                {
+                  "period": "2025-W49",
+                  "cases": 193,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 0.1568
+                },
+                {
+                  "period": "2025-W50",
+                  "cases": 157,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 0.1275
+                },
+                {
+                  "period": "2025-W51",
+                  "cases": 136,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 0.1105
+                },
+                {
+                  "period": "2025-W52",
+                  "cases": 131,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 0.1064
+                },
+                {
+                  "period": "2025-W01",
+                  "cases": 0,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": null
+                },
+                {
+                  "period": "2026-W02",
+                  "cases": 68,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 0.0555
+                },
+                {
+                  "period": "2026-W03",
+                  "cases": 82,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 0.067
+                },
+                {
+                  "period": "2026-W04",
+                  "cases": 100,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 0.0817
+                },
+                {
+                  "period": "2026-W05",
+                  "cases": 149,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 0.1217
+                },
+                {
+                  "period": "2026-W06",
+                  "cases": 139,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 0.1135
+                },
+                {
+                  "period": "2026-W07",
+                  "cases": 136,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 0.1111
+                },
+                {
+                  "period": "2026-W08",
+                  "cases": 138,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 0.1127
+                },
+                {
+                  "period": "2026-W09",
+                  "cases": 110,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 0.0898
+                },
+                {
+                  "period": "2026-W10",
+                  "cases": 123,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 0.1005
+                },
+                {
+                  "period": "2026-W11",
+                  "cases": 148,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 0.1209
+                },
+                {
+                  "period": "2026-W12",
+                  "cases": 146,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 0.1193
+                },
+                {
+                  "period": "2026-W13",
+                  "cases": 139,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 0.1135
+                },
+                {
+                  "period": "2026-W14",
+                  "cases": 133,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 0.1086
+                },
+                {
+                  "period": "2026-W15",
+                  "cases": 186,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 0.1519
+                },
+                {
+                  "period": "2026-W16",
+                  "cases": 251,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 0.205
+                },
+                {
+                  "period": "2026-W17",
+                  "cases": 411,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 0.3357
+                },
+                {
+                  "period": "2026-W18",
+                  "cases": 588,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 0.4803
+                },
+                {
+                  "period": "2026-W19",
+                  "cases": 858,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 0.7008
+                },
+                {
+                  "period": "2026-W20",
+                  "cases": 800,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 0.6534
+                },
+                {
+                  "period": "2026-W21",
+                  "cases": 1477,
+                  "deaths": 0,
+                  "incidence_rate_per_100k": 1.2064
+                }
+              ],
+              "peak_period": "2026-W21",
+              "peak_cases": 1477,
+              "latest_4_period_cases": 3723,
+              "previous_4_period_cases": 981,
+              "last4_change_pct": 279.51,
+              "last4_share_pct": 12.07,
+              "pre_latest_median_cases": 416.0,
+              "latest_to_baseline_ratio": 3.55,
+              "recent_slope_cases_per_period": 216.2,
+              "consecutive_increase_periods": 1,
+              "observations": [
+                "Last 4 periods changed +279.5% versus the preceding 4 periods.",
+                "Latest value is 3.5x the pre-latest median.",
+                "Latest crude incidence is 1.206 per 100,000 population.",
+                "Peak observed period is 2026-W21 with 1,477 cases."
+              ]
+            }
+          }
+        ],
+        "visual_components": [
+          {
+            "type": "timeline",
+            "title": "Curve markers",
+            "items": [
+              {
+                "label": "Recent 4 periods",
+                "value": "3,723",
+                "detail": "+279.5% vs prior 4"
+              },
+              {
+                "label": "Latest point",
+                "value": "1,477",
+                "detail": "2026-W21"
+              },
+              {
+                "label": "Observed peak",
+                "value": "1,477",
+                "detail": "2026-W21"
+              },
+              {
+                "label": "Crude incidence",
+                "value": "1.206",
+                "detail": "per 100k population"
+              }
+            ]
+          }
+        ],
+        "figure_specs": [
+          {
+            "figure_type": "epidemic_curve",
+            "section_type": "trend_anomaly_analysis",
+            "disease_id": "D048",
+            "position": "after_content",
+            "rationale": "The leading signal needs a time-series curve with baseline and peak markers.",
+            "source": "rules",
+            "id": "fig-1-epidemic_curve",
+            "number": 1,
+            "title": "Hand-Foot-Mouth Disease epidemic curve",
+            "caption": "Hand-Foot-Mouth Disease reported cases by weekly period. The dashed reference line marks the pre-latest median; the diamond marks the observed peak.",
+            "legend": [
+              "Solid line = reported cases.",
+              "Dotted line = 3-period moving mean.",
+              "Dashed reference = pre-latest median."
+            ],
+            "evidence_refs": [
+              "disease:D048.latest_cases",
+              "disease:D048.change_pct",
+              "disease:D048.latest_4_period_cases",
+              "disease:D048.peak_cases"
+            ]
+          },
+          {
+            "figure_type": "recent_window_heatmap",
+            "section_type": "trend_anomaly_analysis",
+            "disease_id": "D048",
+            "position": "after_content",
+            "rationale": "A recent-window heatmap makes recurrence and clustering easier to scan.",
+            "source": "rules",
+            "id": "fig-2-recent_window_heatmap",
+            "number": 2,
+            "title": "Hand-Foot-Mouth Disease recent-period heatmap",
+            "caption": "Recent reporting periods are arranged sequentially; darker cells represent higher reported case counts.",
+            "legend": [
+              "Each cell = one reporting period.",
+              "Color intensity = reported cases.",
+              "Blank cells are padding, not missing observations."
+            ],
+            "evidence_refs": [
+              "disease:D048.latest_cases",
+              "disease:D048.change_pct",
+              "disease:D048.latest_4_period_cases",
+              "disease:D048.peak_cases"
+            ]
+          }
+        ],
+        "quality_flags": []
+      }
+    },
+    {
+      "section_type": "disease_profiles",
+      "section_order": 4,
+      "title": "Disease Context & Interpretation",
+      "content": "### Hand-Foot-Mouth Disease\n\n**Context.**\nHand-foot-and-mouth disease (HFMD) is a common viral illness of childhood that is associated mainly with enteroviruses and occurs worldwide, with particular public-health concern because it can reach epidemic levels and, in some settings, mortality is reported to be high [1][2]. Most cases are self-limited, but a minority may progress to severe neurological and cardiopulmonary complications [1][2]. Source-backed detail on local burden patterns beyond these general observations is not yet available [1][2].\n\n**Current reading.**\nThe signal is classified as **moderate risk** for this reporting window. The latest observation records 1,477 cases, compared with 800 in the previous observation (+84.6%). Against the comparable period last year, the change is +250.8%.\n\nThe latest crude incidence is 1.206 per 100,000 population; cumulative period crude incidence is 25.187 per 100,000. This rate is computed from WPP annual population denominators. Because the source is sentinel surveillance, source-specific per-sentinel rates would remain preferable when available.\n\nThe short-term signal is stronger than the annual total alone suggests: the latest 4 reporting periods contain 3,723 cases, or 12.1% of the annual total. The latest value is being compared with a recent background median of 416.0 cases.\n\nNo deaths are recorded in the current extract.\n\n\n**Interpretation.**\nIn surveillance settings, HFMD should be read as a common, usually self-limited enteroviral syndrome of early childhood that may occasionally signal severe neurologic or cardiopulmonary disease [1][2]. Because the disease can reach epidemic levels and its impact is described as increasing globally, trend monitoring and event-based awareness are important [1][2]. The supplied sources support attention to evolving enterovirus ecology, including EV-A71, EV-D68, coxsackieviruses, and echoviruses, but do not provide operational case definitions or reporting thresholds [1].\n\n**What would change the judgement.**\nEvidence of continued increases across the next reporting periods, concentration in severe age groups, or corroborating event-based reports would move the signal closer to an operational alert. A return toward baseline would support a seasonal or reporting-timing explanation.",
+      "content_html": null,
+      "charts": [
+        {
+          "figure_type": "cases_incidence_panel",
+          "section_type": "disease_profiles",
+          "disease_id": "D048",
+          "position": "after_content",
+          "rationale": "Case counts and crude incidence should be read together when denominators are available.",
+          "source": "rules",
+          "id": "fig-3-cases_incidence_panel",
+          "number": 3,
+          "title": "Hand-Foot-Mouth Disease: cases and crude incidence",
+          "caption": "Counts and crude incidence per 100,000 are shown together so the burden signal can be read with its available denominator context.",
+          "legend": [
+            "Upper panel = reported cases.",
+            "Lower panel = crude incidence per 100,000 population.",
+            "Computed rates are contextual when source data are sentinel-based."
+          ],
+          "evidence_refs": [
+            "disease:D048.latest_cases",
+            "disease:D048.change_pct",
+            "disease:D048.latest_4_period_cases",
+            "disease:D048.peak_cases",
+            "disease:D048.latest_incidence_rate_per_100k",
+            "disease:D048.period_crude_incidence_per_100k"
+          ]
+        }
+      ],
+      "metadata": {
+        "display_type": "Interpretation",
+        "evidence_refs": [
+          "disease:D048.latest_cases"
+        ],
+        "disease_count": 1,
+        "visual_components": [
+          {
+            "type": "metric_tiles",
+            "title": "Hand-Foot-Mouth Disease",
+            "items": [
+              {
+                "label": "Risk reading",
+                "value": "Moderate",
+                "note": "rising signal"
+              },
+              {
+                "label": "Latest cases",
+                "value": "1,477",
+                "note": "+84.6%"
+              },
+              {
+                "label": "Period burden",
+                "value": "30,836",
+                "note": "reported cases"
+              },
+              {
+                "label": "Deaths",
+                "value": "0",
+                "note": "current extract"
+              }
+            ]
+          }
+        ],
+        "figure_specs": [
+          {
+            "figure_type": "cases_incidence_panel",
+            "section_type": "disease_profiles",
+            "disease_id": "D048",
+            "position": "after_content",
+            "rationale": "Case counts and crude incidence should be read together when denominators are available.",
+            "source": "rules",
+            "id": "fig-3-cases_incidence_panel",
+            "number": 3,
+            "title": "Hand-Foot-Mouth Disease: cases and crude incidence",
+            "caption": "Counts and crude incidence per 100,000 are shown together so the burden signal can be read with its available denominator context.",
+            "legend": [
+              "Upper panel = reported cases.",
+              "Lower panel = crude incidence per 100,000 population.",
+              "Computed rates are contextual when source data are sentinel-based."
+            ],
+            "evidence_refs": [
+              "disease:D048.latest_cases",
+              "disease:D048.change_pct",
+              "disease:D048.latest_4_period_cases",
+              "disease:D048.peak_cases",
+              "disease:D048.latest_incidence_rate_per_100k",
+              "disease:D048.period_crude_incidence_per_100k"
+            ]
+          }
+        ],
+        "quality_flags": []
+      }
+    },
+    {
+      "section_type": "data_quality_limitations",
+      "section_order": 5,
+      "title": "Confidence & Limitations",
+      "content": "The numerical extract is strong enough for signal review, with an overall confidence rating of **95%**. Case and death fields are substantially complete; the current assessment is based on 1 source.\n\n- Crude incidence is available through WPP population denominators; it supports scale comparison but should be distinguished from source-published rates.\n- Mortality-rate fields remain unavailable, so severity interpretation relies on death counts and case-fatality calculations.\n- Limitation: Some incidence rates are WPP-computed crude population rates, not source-provided rates.\n- Limitation: Sentinel surveillance data are present; crude population incidence should be interpreted as contextual, not as a sentinel per-site rate.\n- Interpretation remains sensitive to case definitions, reporting lag, and unavailable subnational or demographic strata.",
+      "content_html": null,
+      "charts": [],
+      "metadata": {
+        "display_type": "Confidence",
+        "evidence_refs": [
+          "quality:score"
+        ],
+        "data_quality": {
+          "score": 0.95,
+          "confidence": "high",
+          "issues": [
+            "Some incidence rates are WPP-computed crude population rates, not source-provided rates.",
+            "Sentinel surveillance data are present; crude population incidence should be interpreted as contextual, not as a sentinel per-site rate."
+          ],
+          "missing_rates": {
+            "cases": 0.0,
+            "deaths": 0.0,
+            "incidence_rate": 0.0,
+            "mortality_rate": 1.0
+          },
+          "negative_value_count": 0,
+          "future_record_count": 0,
+          "source_count": 1,
+          "incidence_rate_sources": {
+            "wpp_computed_crude": 52
+          }
+        },
+        "visual_components": [
+          {
+            "type": "caveat_strip",
+            "title": "Interpretation guardrails",
+            "items": [
+              {
+                "label": "Evidence quality",
+                "value": "95%"
+              },
+              {
+                "label": "Rate basis",
+                "value": "WPP crude incidence"
+              },
+              {
+                "label": "Main caveat",
+                "value": "sentinel source; per-site rate preferred"
+              }
+            ]
+          }
+        ],
+        "quality_flags": []
+      }
+    },
+    {
+      "section_type": "methodology",
+      "section_order": 6,
+      "title": "Reading Notes",
+      "content": "This report first calculates cases, deaths, changes, short-window acceleration, and priority ranking as auditable evidence, then uses AI to organize the interpretation. When source-published incidence is missing and a population denominator is available, the system computes crude incidence per 100,000 and labels it as WPP denominator-derived. The chart and the narrative read from the same time series; AI does not read screenshots and cannot independently create numbers, dates, or causal conclusions. The evidence trace and metadata remain available for audit, recalculation, and dashboard display.",
+      "content_html": null,
+      "charts": [],
+      "metadata": {
+        "display_type": "Note",
+        "evidence_refs": [
+          "quality:score"
+        ],
+        "method_version": "analytical_v3.3",
+        "period": {
+          "start": "2025-05-24",
+          "end": "2026-05-23"
+        },
+        "quality_flags": []
+      }
+    },
+    {
+      "section_type": "evidence_appendix",
+      "section_order": 7,
+      "title": "Evidence Trace",
+      "content": "The table below is an audit aid for reviewers and system integrations; it is not intended to replace the narrative assessment.\n\n- Data signature: `473c1a01346c9f49e97e63eff244cf25cec4e031d4e0e0df8ea1a010dd840037`\n- Calculation version: `analytical_v3.3`\n\n| Evidence item | Value |\n| --- | --- |\n| `summary:total_cases` | 30836 |\n| `summary:total_deaths` | 0 |\n| `summary:latest_cases` | 1477 |\n| `summary:high_risk_diseases` | 0 |\n| `quality:score` | 0.95 |\n| `disease:D048.latest_cases` | 1477 |\n| `disease:D048.total_cases` | 30836 |\n| `disease:D048.change_pct` | 84.62 |\n| `disease:D048.latest_incidence_rate_per_100k` | 1.2064 |\n| `disease:D048.period_crude_incidence_per_100k` | 25.1871 |\n| `disease:D048.risk_score` | 50 |\n| `disease:D048.latest_4_period_cases` | 3723 |\n| `disease:D048.last4_change_pct` | 279.51 |\n| `disease:D048.peak_cases` | 1477 |",
+      "content_html": null,
+      "charts": [],
+      "metadata": {
+        "display_type": "Appendix",
+        "evidence_refs": [
+          "summary:total_cases",
+          "summary:total_deaths",
+          "summary:latest_cases",
+          "summary:high_risk_diseases",
+          "quality:score",
+          "disease:D048.latest_cases",
+          "disease:D048.total_cases",
+          "disease:D048.change_pct",
+          "disease:D048.latest_incidence_rate_per_100k",
+          "disease:D048.period_crude_incidence_per_100k",
+          "disease:D048.risk_score",
+          "disease:D048.latest_4_period_cases",
+          "disease:D048.last4_change_pct",
+          "disease:D048.peak_cases"
+        ],
+        "data_signature": "473c1a01346c9f49e97e63eff244cf25cec4e031d4e0e0df8ea1a010dd840037",
+        "quality_flags": []
+      }
+    }
+  ]
+}

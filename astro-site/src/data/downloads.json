@@ -54,7 +54,7 @@
       "name_en": "Brazil",
       "name_zh": "巴西",
       "generated_at": "2026-05-23T00:00:00+00:00",
-      "record_count": 8123,
+      "record_count": 8125,
       "date_range": {
         "start": "2000-01-01",
         "end": "2026-05-01"
@@ -12578,7 +12578,7 @@
       "name_en": "Botulism",
       "name_zh": "肉毒杆菌中毒",
       "generated_at": "2026-05-23T00:00:00+00:00",
-      "record_count": 1631,
+      "record_count": 1633,
       "country_count": 7,
       "countries": [
         {

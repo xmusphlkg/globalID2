@@ -2,7 +2,7 @@
   "generated_at": "2026-05-23T00:00:00+00:00",
   "total_countries": 10,
   "total_diseases": 199,
-  "total_reports": 1,
+  "total_reports": 18,
   "countries": [
     {
       "code": "AU",
@@ -44,7 +44,7 @@
       "name_en": "Brazil",
       "name_zh": "巴西",
       "language": "pt-BR",
-      "total_cases": 60628081,
+      "total_cases": 60649349,
       "total_deaths": 0,
       "disease_count": 45,
       "date_range": {

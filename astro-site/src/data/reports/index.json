@@ -1,5 +1,2514 @@
 [
   {
+    "id": 35,
+    "title": "Japan Infectious Disease Analytical Report | 2025-05-24 to 2026-05-23",
+    "report_type": "WEEKLY",
+    "status": "APPROVED",
+    "period_start": "2025-05-24",
+    "period_end": "2026-05-23",
+    "created_at": "2026-05-29T06:33:02.919740+00:00",
+    "summary": "This report analyzes standardized surveillance records for Japan during 2025-05-24 to 2026-05-23, covering 1 diseases, 30,836 cumulative cases, and 0 deaths; 0 diseases meet high-priority signal criteria.",
+    "quality_score": 0.942,
+    "metadata": {
+      "report_layout": "analytical_v3",
+      "method_version": "analytical_v3.3",
+      "data_signature": "473c1a01346c9f49e97e63eff244cf25cec4e031d4e0e0df8ea1a010dd840037",
+      "analysis_depth": "deterministic",
+      "analysis_summary": {
+        "top_risk_diseases": [
+          {
+            "disease_id": "D048",
+            "name_en": "Hand-Foot-Mouth Disease",
+            "name_zh": "Hand-Foot-Mouth Disease",
+            "risk_score": 50,
+            "risk_level": "moderate",
+            "latest_cases": 1477,
+            "change_pct": 84.62,
+            "evidence_refs": [
+              "disease:D048.risk_score",
+              "disease:D048.latest_cases",
+              "disease:D048.change_pct",
+              "disease:D048.latest_incidence_rate_per_100k"
+            ]
+          }
+        ],
+        "high_risk_count": 0,
+        "data_quality_score": 0.95,
+        "data_signature": "473c1a01346c9f49e97e63eff244cf25cec4e031d4e0e0df8ea1a010dd840037"
+      },
+      "quality_gate": {
+        "passed": true,
+        "threshold": 0.85,
+        "overall_score": 0.942,
+        "evidence_quality_score": 0.95,
+        "fact_score": 1.0,
+        "deep_analysis_confidence": 0.82,
+        "issues": [],
+        "critical_count": 0,
+        "major_count": 0
+      },
+      "data_quality": {
+        "score": 0.95,
+        "confidence": "high",
+        "issues": [
+          "Some incidence rates are WPP-computed crude population rates, not source-provided rates.",
+          "Sentinel surveillance data are present; crude population incidence should be interpreted as contextual, not as a sentinel per-site rate."
+        ],
+        "missing_rates": {
+          "cases": 0.0,
+          "deaths": 0.0,
+          "incidence_rate": 0.0,
+          "mortality_rate": 1.0
+        },
+        "negative_value_count": 0,
+        "future_record_count": 0,
+        "source_count": 1,
+        "incidence_rate_sources": {
+          "wpp_computed_crude": 52
+        }
+      },
+      "summary_metrics": {
+        "record_count": 52,
+        "disease_count": 1,
+        "active_latest_diseases": 1,
+        "high_risk_diseases": 0,
+        "total_cases": 30836,
+        "total_deaths": 0,
+        "latest_cases": 1477,
+        "latest_deaths": 0
+      },
+      "risk_ranking": [
+        {
+          "disease_id": "D048",
+          "name_en": "Hand-Foot-Mouth Disease",
+          "name_zh": "Hand-Foot-Mouth Disease",
+          "risk_score": 50,
+          "risk_level": "moderate",
+          "latest_cases": 1477,
+          "change_pct": 84.62,
+          "evidence_refs": [
+            "disease:D048.risk_score",
+            "disease:D048.latest_cases",
+            "disease:D048.change_pct",
+            "disease:D048.latest_incidence_rate_per_100k"
+          ]
+        }
+      ],
+      "pdf_generation": {
+        "status": "skipped",
+        "reason": "optional dependency weasyprint is not installed"
+      }
+    },
+    "country_code": "JP",
+    "country_name": "Japan",
+    "analysis_summary": {
+      "top_risk_diseases": [
+        {
+          "disease_id": "D048",
+          "name_en": "Hand-Foot-Mouth Disease",
+          "name_zh": "Hand-Foot-Mouth Disease",
+          "risk_score": 50,
+          "risk_level": "moderate",
+          "latest_cases": 1477,
+          "change_pct": 84.62,
+          "evidence_refs": [
+            "disease:D048.risk_score",
+            "disease:D048.latest_cases",
+            "disease:D048.change_pct",
+            "disease:D048.latest_incidence_rate_per_100k"
+          ]
+        }
+      ],
+      "high_risk_count": 0,
+      "data_quality_score": 0.95,
+      "data_signature": "473c1a01346c9f49e97e63eff244cf25cec4e031d4e0e0df8ea1a010dd840037"
+    },
+    "quality_gate": {
+      "passed": true,
+      "threshold": 0.85,
+      "overall_score": 0.942,
+      "evidence_quality_score": 0.95,
+      "fact_score": 1.0,
+      "deep_analysis_confidence": 0.82,
+      "issues": [],
+      "critical_count": 0,
+      "major_count": 0
+    },
+    "data_quality": {
+      "score": 0.95,
+      "confidence": "high",
+      "issues": [
+        "Some incidence rates are WPP-computed crude population rates, not source-provided rates.",
+        "Sentinel surveillance data are present; crude population incidence should be interpreted as contextual, not as a sentinel per-site rate."
+      ],
+      "missing_rates": {
+        "cases": 0.0,
+        "deaths": 0.0,
+        "incidence_rate": 0.0,
+        "mortality_rate": 1.0
+      },
+      "negative_value_count": 0,
+      "future_record_count": 0,
+      "source_count": 1,
+      "incidence_rate_sources": {
+        "wpp_computed_crude": 52
+      }
+    },
+    "method_version": "analytical_v3.3"
+  },
+  {
+    "id": 34,
+    "title": "Japan Infectious Disease Analytical Report | 2025-05-24 to 2026-05-23",
+    "report_type": "WEEKLY",
+    "status": "APPROVED",
+    "period_start": "2025-05-24",
+    "period_end": "2026-05-23",
+    "created_at": "2026-05-29T06:20:17.172658+00:00",
+    "summary": "This report analyzes standardized surveillance records for Japan during 2025-05-24 to 2026-05-23, covering 1 diseases, 30,836 cumulative cases, and 0 deaths; 0 diseases meet high-priority signal criteria.",
+    "quality_score": 0.942,
+    "metadata": {
+      "report_layout": "analytical_v3",
+      "method_version": "analytical_v3.3",
+      "data_signature": "473c1a01346c9f49e97e63eff244cf25cec4e031d4e0e0df8ea1a010dd840037",
+      "analysis_depth": "deterministic",
+      "analysis_summary": {
+        "top_risk_diseases": [
+          {
+            "disease_id": "D048",
+            "name_en": "Hand-Foot-Mouth Disease",
+            "name_zh": "Hand-Foot-Mouth Disease",
+            "risk_score": 50,
+            "risk_level": "moderate",
+            "latest_cases": 1477,
+            "change_pct": 84.62,
+            "evidence_refs": [
+              "disease:D048.risk_score",
+              "disease:D048.latest_cases",
+              "disease:D048.change_pct",
+              "disease:D048.latest_incidence_rate_per_100k"
+            ]
+          }
+        ],
+        "high_risk_count": 0,
+        "data_quality_score": 0.95,
+        "data_signature": "473c1a01346c9f49e97e63eff244cf25cec4e031d4e0e0df8ea1a010dd840037"
+      },
+      "quality_gate": {
+        "passed": true,
+        "threshold": 0.85,
+        "overall_score": 0.942,
+        "evidence_quality_score": 0.95,
+        "fact_score": 1.0,
+        "deep_analysis_confidence": 0.82,
+        "issues": [],
+        "critical_count": 0,
+        "major_count": 0
+      },
+      "data_quality": {
+        "score": 0.95,
+        "confidence": "high",
+        "issues": [
+          "Some incidence rates are WPP-computed crude population rates, not source-provided rates.",
+          "Sentinel surveillance data are present; crude population incidence should be interpreted as contextual, not as a sentinel per-site rate."
+        ],
+        "missing_rates": {
+          "cases": 0.0,
+          "deaths": 0.0,
+          "incidence_rate": 0.0,
+          "mortality_rate": 1.0
+        },
+        "negative_value_count": 0,
+        "future_record_count": 0,
+        "source_count": 1,
+        "incidence_rate_sources": {
+          "wpp_computed_crude": 52
+        }
+      },
+      "summary_metrics": {
+        "record_count": 52,
+        "disease_count": 1,
+        "active_latest_diseases": 1,
+        "high_risk_diseases": 0,
+        "total_cases": 30836,
+        "total_deaths": 0,
+        "latest_cases": 1477,
+        "latest_deaths": 0
+      },
+      "risk_ranking": [
+        {
+          "disease_id": "D048",
+          "name_en": "Hand-Foot-Mouth Disease",
+          "name_zh": "Hand-Foot-Mouth Disease",
+          "risk_score": 50,
+          "risk_level": "moderate",
+          "latest_cases": 1477,
+          "change_pct": 84.62,
+          "evidence_refs": [
+            "disease:D048.risk_score",
+            "disease:D048.latest_cases",
+            "disease:D048.change_pct",
+            "disease:D048.latest_incidence_rate_per_100k"
+          ]
+        }
+      ]
+    },
+    "country_code": "JP",
+    "country_name": "Japan",
+    "analysis_summary": {
+      "top_risk_diseases": [
+        {
+          "disease_id": "D048",
+          "name_en": "Hand-Foot-Mouth Disease",
+          "name_zh": "Hand-Foot-Mouth Disease",
+          "risk_score": 50,
+          "risk_level": "moderate",
+          "latest_cases": 1477,
+          "change_pct": 84.62,
+          "evidence_refs": [
+            "disease:D048.risk_score",
+            "disease:D048.latest_cases",
+            "disease:D048.change_pct",
+            "disease:D048.latest_incidence_rate_per_100k"
+          ]
+        }
+      ],
+      "high_risk_count": 0,
+      "data_quality_score": 0.95,
+      "data_signature": "473c1a01346c9f49e97e63eff244cf25cec4e031d4e0e0df8ea1a010dd840037"
+    },
+    "quality_gate": {
+      "passed": true,
+      "threshold": 0.85,
+      "overall_score": 0.942,
+      "evidence_quality_score": 0.95,
+      "fact_score": 1.0,
+      "deep_analysis_confidence": 0.82,
+      "issues": [],
+      "critical_count": 0,
+      "major_count": 0
+    },
+    "data_quality": {
+      "score": 0.95,
+      "confidence": "high",
+      "issues": [
+        "Some incidence rates are WPP-computed crude population rates, not source-provided rates.",
+        "Sentinel surveillance data are present; crude population incidence should be interpreted as contextual, not as a sentinel per-site rate."
+      ],
+      "missing_rates": {
+        "cases": 0.0,
+        "deaths": 0.0,
+        "incidence_rate": 0.0,
+        "mortality_rate": 1.0
+      },
+      "negative_value_count": 0,
+      "future_record_count": 0,
+      "source_count": 1,
+      "incidence_rate_sources": {
+        "wpp_computed_crude": 52
+      }
+    },
+    "method_version": "analytical_v3.3"
+  },
+  {
+    "id": 33,
+    "title": "Japan Infectious Disease Analytical Report | 2025-05-24 to 2026-05-23",
+    "report_type": "WEEKLY",
+    "status": "APPROVED",
+    "period_start": "2025-05-24",
+    "period_end": "2026-05-23",
+    "created_at": "2026-05-29T06:14:07.701600+00:00",
+    "summary": "This report analyzes standardized surveillance records for Japan during 2025-05-24 to 2026-05-23, covering 1 diseases, 30,836 cumulative cases, and 0 deaths; 0 diseases meet high-priority signal criteria.",
+    "quality_score": 0.942,
+    "metadata": {
+      "report_layout": "analytical_v3",
+      "method_version": "analytical_v3.3",
+      "data_signature": "473c1a01346c9f49e97e63eff244cf25cec4e031d4e0e0df8ea1a010dd840037",
+      "analysis_depth": "deterministic",
+      "analysis_summary": {
+        "top_risk_diseases": [
+          {
+            "disease_id": "D048",
+            "name_en": "Hand-Foot-Mouth Disease",
+            "name_zh": "Hand-Foot-Mouth Disease",
+            "risk_score": 50,
+            "risk_level": "moderate",
+            "latest_cases": 1477,
+            "change_pct": 84.62,
+            "evidence_refs": [
+              "disease:D048.risk_score",
+              "disease:D048.latest_cases",
+              "disease:D048.change_pct",
+              "disease:D048.latest_incidence_rate_per_100k"
+            ]
+          }
+        ],
+        "high_risk_count": 0,
+        "data_quality_score": 0.95,
+        "data_signature": "473c1a01346c9f49e97e63eff244cf25cec4e031d4e0e0df8ea1a010dd840037"
+      },
+      "quality_gate": {
+        "passed": true,
+        "threshold": 0.85,
+        "overall_score": 0.942,
+        "evidence_quality_score": 0.95,
+        "fact_score": 1.0,
+        "deep_analysis_confidence": 0.82,
+        "issues": [],
+        "critical_count": 0,
+        "major_count": 0
+      },
+      "data_quality": {
+        "score": 0.95,
+        "confidence": "high",
+        "issues": [
+          "Some incidence rates are WPP-computed crude population rates, not source-provided rates.",
+          "Sentinel surveillance data are present; crude population incidence should be interpreted as contextual, not as a sentinel per-site rate."
+        ],
+        "missing_rates": {
+          "cases": 0.0,
+          "deaths": 0.0,
+          "incidence_rate": 0.0,
+          "mortality_rate": 1.0
+        },
+        "negative_value_count": 0,
+        "future_record_count": 0,
+        "source_count": 1,
+        "incidence_rate_sources": {
+          "wpp_computed_crude": 52
+        }
+      },
+      "summary_metrics": {
+        "record_count": 52,
+        "disease_count": 1,
+        "active_latest_diseases": 1,
+        "high_risk_diseases": 0,
+        "total_cases": 30836,
+        "total_deaths": 0,
+        "latest_cases": 1477,
+        "latest_deaths": 0
+      },
+      "risk_ranking": [
+        {
+          "disease_id": "D048",
+          "name_en": "Hand-Foot-Mouth Disease",
+          "name_zh": "Hand-Foot-Mouth Disease",
+          "risk_score": 50,
+          "risk_level": "moderate",
+          "latest_cases": 1477,
+          "change_pct": 84.62,
+          "evidence_refs": [
+            "disease:D048.risk_score",
+            "disease:D048.latest_cases",
+            "disease:D048.change_pct",
+            "disease:D048.latest_incidence_rate_per_100k"
+          ]
+        }
+      ]
+    },
+    "country_code": "JP",
+    "country_name": "Japan",
+    "analysis_summary": {
+      "top_risk_diseases": [
+        {
+          "disease_id": "D048",
+          "name_en": "Hand-Foot-Mouth Disease",
+          "name_zh": "Hand-Foot-Mouth Disease",
+          "risk_score": 50,
+          "risk_level": "moderate",
+          "latest_cases": 1477,
+          "change_pct": 84.62,
+          "evidence_refs": [
+            "disease:D048.risk_score",
+            "disease:D048.latest_cases",
+            "disease:D048.change_pct",
+            "disease:D048.latest_incidence_rate_per_100k"
+          ]
+        }
+      ],
+      "high_risk_count": 0,
+      "data_quality_score": 0.95,
+      "data_signature": "473c1a01346c9f49e97e63eff244cf25cec4e031d4e0e0df8ea1a010dd840037"
+    },
+    "quality_gate": {
+      "passed": true,
+      "threshold": 0.85,
+      "overall_score": 0.942,
+      "evidence_quality_score": 0.95,
+      "fact_score": 1.0,
+      "deep_analysis_confidence": 0.82,
+      "issues": [],
+      "critical_count": 0,
+      "major_count": 0
+    },
+    "data_quality": {
+      "score": 0.95,
+      "confidence": "high",
+      "issues": [
+        "Some incidence rates are WPP-computed crude population rates, not source-provided rates.",
+        "Sentinel surveillance data are present; crude population incidence should be interpreted as contextual, not as a sentinel per-site rate."
+      ],
+      "missing_rates": {
+        "cases": 0.0,
+        "deaths": 0.0,
+        "incidence_rate": 0.0,
+        "mortality_rate": 1.0
+      },
+      "negative_value_count": 0,
+      "future_record_count": 0,
+      "source_count": 1,
+      "incidence_rate_sources": {
+        "wpp_computed_crude": 52
+      }
+    },
+    "method_version": "analytical_v3.3"
+  },
+  {
+    "id": 32,
+    "title": "Japan Infectious Disease Analytical Report | 2025-05-24 to 2026-05-23",
+    "report_type": "WEEKLY",
+    "status": "APPROVED",
+    "period_start": "2025-05-24",
+    "period_end": "2026-05-23",
+    "created_at": "2026-05-29T05:52:46.910323+00:00",
+    "summary": "This report analyzes standardized surveillance records for Japan during 2025-05-24 to 2026-05-23, covering 1 diseases, 30,836 cumulative cases, and 0 deaths; 0 diseases meet high-priority signal criteria.",
+    "quality_score": 0.942,
+    "metadata": {
+      "report_layout": "analytical_v3",
+      "method_version": "analytical_v3.3",
+      "data_signature": "473c1a01346c9f49e97e63eff244cf25cec4e031d4e0e0df8ea1a010dd840037",
+      "analysis_depth": "deterministic",
+      "analysis_summary": {
+        "top_risk_diseases": [
+          {
+            "disease_id": "D048",
+            "name_en": "Hand-Foot-Mouth Disease",
+            "name_zh": "Hand-Foot-Mouth Disease",
+            "risk_score": 50,
+            "risk_level": "moderate",
+            "latest_cases": 1477,
+            "change_pct": 84.62,
+            "evidence_refs": [
+              "disease:D048.risk_score",
+              "disease:D048.latest_cases",
+              "disease:D048.change_pct",
+              "disease:D048.latest_incidence_rate_per_100k"
+            ]
+          }
+        ],
+        "high_risk_count": 0,
+        "data_quality_score": 0.95,
+        "data_signature": "473c1a01346c9f49e97e63eff244cf25cec4e031d4e0e0df8ea1a010dd840037"
+      },
+      "quality_gate": {
+        "passed": true,
+        "threshold": 0.85,
+        "overall_score": 0.942,
+        "evidence_quality_score": 0.95,
+        "fact_score": 1.0,
+        "deep_analysis_confidence": 0.82,
+        "issues": [],
+        "critical_count": 0,
+        "major_count": 0
+      },
+      "data_quality": {
+        "score": 0.95,
+        "confidence": "high",
+        "issues": [
+          "Some incidence rates are WPP-computed crude population rates, not source-provided rates.",
+          "Sentinel surveillance data are present; crude population incidence should be interpreted as contextual, not as a sentinel per-site rate."
+        ],
+        "missing_rates": {
+          "cases": 0.0,
+          "deaths": 0.0,
+          "incidence_rate": 0.0,
+          "mortality_rate": 1.0
+        },
+        "negative_value_count": 0,
+        "future_record_count": 0,
+        "source_count": 1,
+        "incidence_rate_sources": {
+          "wpp_computed_crude": 52
+        }
+      },
+      "summary_metrics": {
+        "record_count": 52,
+        "disease_count": 1,
+        "active_latest_diseases": 1,
+        "high_risk_diseases": 0,
+        "total_cases": 30836,
+        "total_deaths": 0,
+        "latest_cases": 1477,
+        "latest_deaths": 0
+      },
+      "risk_ranking": [
+        {
+          "disease_id": "D048",
+          "name_en": "Hand-Foot-Mouth Disease",
+          "name_zh": "Hand-Foot-Mouth Disease",
+          "risk_score": 50,
+          "risk_level": "moderate",
+          "latest_cases": 1477,
+          "change_pct": 84.62,
+          "evidence_refs": [
+            "disease:D048.risk_score",
+            "disease:D048.latest_cases",
+            "disease:D048.change_pct",
+            "disease:D048.latest_incidence_rate_per_100k"
+          ]
+        }
+      ]
+    },
+    "country_code": "JP",
+    "country_name": "Japan",
+    "analysis_summary": {
+      "top_risk_diseases": [
+        {
+          "disease_id": "D048",
+          "name_en": "Hand-Foot-Mouth Disease",
+          "name_zh": "Hand-Foot-Mouth Disease",
+          "risk_score": 50,
+          "risk_level": "moderate",
+          "latest_cases": 1477,
+          "change_pct": 84.62,
+          "evidence_refs": [
+            "disease:D048.risk_score",
+            "disease:D048.latest_cases",
+            "disease:D048.change_pct",
+            "disease:D048.latest_incidence_rate_per_100k"
+          ]
+        }
+      ],
+      "high_risk_count": 0,
+      "data_quality_score": 0.95,
+      "data_signature": "473c1a01346c9f49e97e63eff244cf25cec4e031d4e0e0df8ea1a010dd840037"
+    },
+    "quality_gate": {
+      "passed": true,
+      "threshold": 0.85,
+      "overall_score": 0.942,
+      "evidence_quality_score": 0.95,
+      "fact_score": 1.0,
+      "deep_analysis_confidence": 0.82,
+      "issues": [],
+      "critical_count": 0,
+      "major_count": 0
+    },
+    "data_quality": {
+      "score": 0.95,
+      "confidence": "high",
+      "issues": [
+        "Some incidence rates are WPP-computed crude population rates, not source-provided rates.",
+        "Sentinel surveillance data are present; crude population incidence should be interpreted as contextual, not as a sentinel per-site rate."
+      ],
+      "missing_rates": {
+        "cases": 0.0,
+        "deaths": 0.0,
+        "incidence_rate": 0.0,
+        "mortality_rate": 1.0
+      },
+      "negative_value_count": 0,
+      "future_record_count": 0,
+      "source_count": 1,
+      "incidence_rate_sources": {
+        "wpp_computed_crude": 52
+      }
+    },
+    "method_version": "analytical_v3.3"
+  },
+  {
+    "id": 31,
+    "title": "Japan Infectious Disease Analytical Report | 2025-05-24 to 2026-05-23",
+    "report_type": "WEEKLY",
+    "status": "APPROVED",
+    "period_start": "2025-05-24",
+    "period_end": "2026-05-23",
+    "created_at": "2026-05-29T05:51:34.406764+00:00",
+    "summary": "This report analyzes standardized surveillance records for Japan during 2025-05-24 to 2026-05-23, covering 1 diseases, 30,836 cumulative cases, and 0 deaths; 0 diseases meet high-priority signal criteria.",
+    "quality_score": 0.942,
+    "metadata": {
+      "report_layout": "analytical_v3",
+      "method_version": "analytical_v3.3",
+      "data_signature": "473c1a01346c9f49e97e63eff244cf25cec4e031d4e0e0df8ea1a010dd840037",
+      "analysis_depth": "deterministic",
+      "analysis_summary": {
+        "top_risk_diseases": [
+          {
+            "disease_id": "D048",
+            "name_en": "Hand-Foot-Mouth Disease",
+            "name_zh": "Hand-Foot-Mouth Disease",
+            "risk_score": 50,
+            "risk_level": "moderate",
+            "latest_cases": 1477,
+            "change_pct": 84.62,
+            "evidence_refs": [
+              "disease:D048.risk_score",
+              "disease:D048.latest_cases",
+              "disease:D048.change_pct",
+              "disease:D048.latest_incidence_rate_per_100k"
+            ]
+          }
+        ],
+        "high_risk_count": 0,
+        "data_quality_score": 0.95,
+        "data_signature": "473c1a01346c9f49e97e63eff244cf25cec4e031d4e0e0df8ea1a010dd840037"
+      },
+      "quality_gate": {
+        "passed": true,
+        "threshold": 0.85,
+        "overall_score": 0.942,
+        "evidence_quality_score": 0.95,
+        "fact_score": 1.0,
+        "deep_analysis_confidence": 0.82,
+        "issues": [],
+        "critical_count": 0,
+        "major_count": 0
+      },
+      "data_quality": {
+        "score": 0.95,
+        "confidence": "high",
+        "issues": [
+          "Some incidence rates are WPP-computed crude population rates, not source-provided rates.",
+          "Sentinel surveillance data are present; crude population incidence should be interpreted as contextual, not as a sentinel per-site rate."
+        ],
+        "missing_rates": {
+          "cases": 0.0,
+          "deaths": 0.0,
+          "incidence_rate": 0.0,
+          "mortality_rate": 1.0
+        },
+        "negative_value_count": 0,
+        "future_record_count": 0,
+        "source_count": 1,
+        "incidence_rate_sources": {
+          "wpp_computed_crude": 52
+        }
+      },
+      "summary_metrics": {
+        "record_count": 52,
+        "disease_count": 1,
+        "active_latest_diseases": 1,
+        "high_risk_diseases": 0,
+        "total_cases": 30836,
+        "total_deaths": 0,
+        "latest_cases": 1477,
+        "latest_deaths": 0
+      },
+      "risk_ranking": [
+        {
+          "disease_id": "D048",
+          "name_en": "Hand-Foot-Mouth Disease",
+          "name_zh": "Hand-Foot-Mouth Disease",
+          "risk_score": 50,
+          "risk_level": "moderate",
+          "latest_cases": 1477,
+          "change_pct": 84.62,
+          "evidence_refs": [
+            "disease:D048.risk_score",
+            "disease:D048.latest_cases",
+            "disease:D048.change_pct",
+            "disease:D048.latest_incidence_rate_per_100k"
+          ]
+        }
+      ]
+    },
+    "country_code": "JP",
+    "country_name": "Japan",
+    "analysis_summary": {
+      "top_risk_diseases": [
+        {
+          "disease_id": "D048",
+          "name_en": "Hand-Foot-Mouth Disease",
+          "name_zh": "Hand-Foot-Mouth Disease",
+          "risk_score": 50,
+          "risk_level": "moderate",
+          "latest_cases": 1477,
+          "change_pct": 84.62,
+          "evidence_refs": [
+            "disease:D048.risk_score",
+            "disease:D048.latest_cases",
+            "disease:D048.change_pct",
+            "disease:D048.latest_incidence_rate_per_100k"
+          ]
+        }
+      ],
+      "high_risk_count": 0,
+      "data_quality_score": 0.95,
+      "data_signature": "473c1a01346c9f49e97e63eff244cf25cec4e031d4e0e0df8ea1a010dd840037"
+    },
+    "quality_gate": {
+      "passed": true,
+      "threshold": 0.85,
+      "overall_score": 0.942,
+      "evidence_quality_score": 0.95,
+      "fact_score": 1.0,
+      "deep_analysis_confidence": 0.82,
+      "issues": [],
+      "critical_count": 0,
+      "major_count": 0
+    },
+    "data_quality": {
+      "score": 0.95,
+      "confidence": "high",
+      "issues": [
+        "Some incidence rates are WPP-computed crude population rates, not source-provided rates.",
+        "Sentinel surveillance data are present; crude population incidence should be interpreted as contextual, not as a sentinel per-site rate."
+      ],
+      "missing_rates": {
+        "cases": 0.0,
+        "deaths": 0.0,
+        "incidence_rate": 0.0,
+        "mortality_rate": 1.0
+      },
+      "negative_value_count": 0,
+      "future_record_count": 0,
+      "source_count": 1,
+      "incidence_rate_sources": {
+        "wpp_computed_crude": 52
+      }
+    },
+    "method_version": "analytical_v3.3"
+  },
+  {
+    "id": 30,
+    "title": "Japan Infectious Disease Analytical Report | 2025-05-24 to 2026-05-23",
+    "report_type": "WEEKLY",
+    "status": "APPROVED",
+    "period_start": "2025-05-24",
+    "period_end": "2026-05-23",
+    "created_at": "2026-05-29T05:40:45.114919+00:00",
+    "summary": "This report analyzes standardized surveillance records for Japan during 2025-05-24 to 2026-05-23, covering 1 diseases, 30,836 cumulative cases, and 0 deaths; 0 diseases meet high-priority signal criteria.",
+    "quality_score": 0.942,
+    "metadata": {
+      "report_layout": "analytical_v3",
+      "method_version": "analytical_v3.3",
+      "data_signature": "473c1a01346c9f49e97e63eff244cf25cec4e031d4e0e0df8ea1a010dd840037",
+      "analysis_depth": "deterministic",
+      "analysis_summary": {
+        "top_risk_diseases": [
+          {
+            "disease_id": "D048",
+            "name_en": "Hand-Foot-Mouth Disease",
+            "name_zh": "Hand-Foot-Mouth Disease",
+            "risk_score": 50,
+            "risk_level": "moderate",
+            "latest_cases": 1477,
+            "change_pct": 84.62,
+            "evidence_refs": [
+              "disease:D048.risk_score",
+              "disease:D048.latest_cases",
+              "disease:D048.change_pct",
+              "disease:D048.latest_incidence_rate_per_100k"
+            ]
+          }
+        ],
+        "high_risk_count": 0,
+        "data_quality_score": 0.95,
+        "data_signature": "473c1a01346c9f49e97e63eff244cf25cec4e031d4e0e0df8ea1a010dd840037"
+      },
+      "quality_gate": {
+        "passed": true,
+        "threshold": 0.85,
+        "overall_score": 0.942,
+        "evidence_quality_score": 0.95,
+        "fact_score": 1.0,
+        "deep_analysis_confidence": 0.82,
+        "issues": [],
+        "critical_count": 0,
+        "major_count": 0
+      },
+      "data_quality": {
+        "score": 0.95,
+        "confidence": "high",
+        "issues": [
+          "Some incidence rates are WPP-computed crude population rates, not source-provided rates.",
+          "Sentinel surveillance data are present; crude population incidence should be interpreted as contextual, not as a sentinel per-site rate."
+        ],
+        "missing_rates": {
+          "cases": 0.0,
+          "deaths": 0.0,
+          "incidence_rate": 0.0,
+          "mortality_rate": 1.0
+        },
+        "negative_value_count": 0,
+        "future_record_count": 0,
+        "source_count": 1,
+        "incidence_rate_sources": {
+          "wpp_computed_crude": 52
+        }
+      },
+      "summary_metrics": {
+        "record_count": 52,
+        "disease_count": 1,
+        "active_latest_diseases": 1,
+        "high_risk_diseases": 0,
+        "total_cases": 30836,
+        "total_deaths": 0,
+        "latest_cases": 1477,
+        "latest_deaths": 0
+      },
+      "risk_ranking": [
+        {
+          "disease_id": "D048",
+          "name_en": "Hand-Foot-Mouth Disease",
+          "name_zh": "Hand-Foot-Mouth Disease",
+          "risk_score": 50,
+          "risk_level": "moderate",
+          "latest_cases": 1477,
+          "change_pct": 84.62,
+          "evidence_refs": [
+            "disease:D048.risk_score",
+            "disease:D048.latest_cases",
+            "disease:D048.change_pct",
+            "disease:D048.latest_incidence_rate_per_100k"
+          ]
+        }
+      ]
+    },
+    "country_code": "JP",
+    "country_name": "Japan",
+    "analysis_summary": {
+      "top_risk_diseases": [
+        {
+          "disease_id": "D048",
+          "name_en": "Hand-Foot-Mouth Disease",
+          "name_zh": "Hand-Foot-Mouth Disease",
+          "risk_score": 50,
+          "risk_level": "moderate",
+          "latest_cases": 1477,
+          "change_pct": 84.62,
+          "evidence_refs": [
+            "disease:D048.risk_score",
+            "disease:D048.latest_cases",
+            "disease:D048.change_pct",
+            "disease:D048.latest_incidence_rate_per_100k"
+          ]
+        }
+      ],
+      "high_risk_count": 0,
+      "data_quality_score": 0.95,
+      "data_signature": "473c1a01346c9f49e97e63eff244cf25cec4e031d4e0e0df8ea1a010dd840037"
+    },
+    "quality_gate": {
+      "passed": true,
+      "threshold": 0.85,
+      "overall_score": 0.942,
+      "evidence_quality_score": 0.95,
+      "fact_score": 1.0,
+      "deep_analysis_confidence": 0.82,
+      "issues": [],
+      "critical_count": 0,
+      "major_count": 0
+    },
+    "data_quality": {
+      "score": 0.95,
+      "confidence": "high",
+      "issues": [
+        "Some incidence rates are WPP-computed crude population rates, not source-provided rates.",
+        "Sentinel surveillance data are present; crude population incidence should be interpreted as contextual, not as a sentinel per-site rate."
+      ],
+      "missing_rates": {
+        "cases": 0.0,
+        "deaths": 0.0,
+        "incidence_rate": 0.0,
+        "mortality_rate": 1.0
+      },
+      "negative_value_count": 0,
+      "future_record_count": 0,
+      "source_count": 1,
+      "incidence_rate_sources": {
+        "wpp_computed_crude": 52
+      }
+    },
+    "method_version": "analytical_v3.3"
+  },
+  {
+    "id": 29,
+    "title": "Japan Infectious Disease Analytical Report | 2025-05-24 to 2026-05-23",
+    "report_type": "WEEKLY",
+    "status": "APPROVED",
+    "period_start": "2025-05-24",
+    "period_end": "2026-05-23",
+    "created_at": "2026-05-29T05:29:59.001033+00:00",
+    "summary": "This report analyzes standardized surveillance records for Japan during 2025-05-24 to 2026-05-23, covering 1 diseases, 30,415 cumulative cases, and 0 deaths; 0 diseases meet high-priority signal criteria.",
+    "quality_score": 0.942,
+    "metadata": {
+      "report_layout": "analytical_v3",
+      "method_version": "analytical_v3.3",
+      "data_signature": "d230316c445bf0f208f8fd0a9a23949f68bfff68077c48680f2bebd6a1ac69bb",
+      "analysis_depth": "deterministic",
+      "analysis_summary": {
+        "top_risk_diseases": [
+          {
+            "disease_id": "D048",
+            "name_en": "Hand-Foot-Mouth Disease",
+            "name_zh": "Hand-Foot-Mouth Disease",
+            "risk_score": 50,
+            "risk_level": "moderate",
+            "latest_cases": 1477,
+            "change_pct": 84.62,
+            "evidence_refs": [
+              "disease:D048.risk_score",
+              "disease:D048.latest_cases",
+              "disease:D048.change_pct",
+              "disease:D048.latest_incidence_rate_per_100k"
+            ]
+          }
+        ],
+        "high_risk_count": 0,
+        "data_quality_score": 0.95,
+        "data_signature": "d230316c445bf0f208f8fd0a9a23949f68bfff68077c48680f2bebd6a1ac69bb"
+      },
+      "quality_gate": {
+        "passed": true,
+        "threshold": 0.85,
+        "overall_score": 0.942,
+        "evidence_quality_score": 0.95,
+        "fact_score": 1.0,
+        "deep_analysis_confidence": 0.82,
+        "issues": [],
+        "critical_count": 0,
+        "major_count": 0
+      },
+      "data_quality": {
+        "score": 0.95,
+        "confidence": "high",
+        "issues": [
+          "Some incidence rates are WPP-computed crude population rates, not source-provided rates.",
+          "Sentinel surveillance data are present; crude population incidence should be interpreted as contextual, not as a sentinel per-site rate."
+        ],
+        "missing_rates": {
+          "cases": 0.0,
+          "deaths": 0.0,
+          "incidence_rate": 0.0,
+          "mortality_rate": 1.0
+        },
+        "negative_value_count": 0,
+        "future_record_count": 0,
+        "source_count": 1,
+        "incidence_rate_sources": {
+          "wpp_computed_crude": 51
+        }
+      },
+      "summary_metrics": {
+        "record_count": 51,
+        "disease_count": 1,
+        "active_latest_diseases": 1,
+        "high_risk_diseases": 0,
+        "total_cases": 30415,
+        "total_deaths": 0,
+        "latest_cases": 1477,
+        "latest_deaths": 0
+      },
+      "risk_ranking": [
+        {
+          "disease_id": "D048",
+          "name_en": "Hand-Foot-Mouth Disease",
+          "name_zh": "Hand-Foot-Mouth Disease",
+          "risk_score": 50,
+          "risk_level": "moderate",
+          "latest_cases": 1477,
+          "change_pct": 84.62,
+          "evidence_refs": [
+            "disease:D048.risk_score",
+            "disease:D048.latest_cases",
+            "disease:D048.change_pct",
+            "disease:D048.latest_incidence_rate_per_100k"
+          ]
+        }
+      ]
+    },
+    "country_code": "JP",
+    "country_name": "Japan",
+    "analysis_summary": {
+      "top_risk_diseases": [
+        {
+          "disease_id": "D048",
+          "name_en": "Hand-Foot-Mouth Disease",
+          "name_zh": "Hand-Foot-Mouth Disease",
+          "risk_score": 50,
+          "risk_level": "moderate",
+          "latest_cases": 1477,
+          "change_pct": 84.62,
+          "evidence_refs": [
+            "disease:D048.risk_score",
+            "disease:D048.latest_cases",
+            "disease:D048.change_pct",
+            "disease:D048.latest_incidence_rate_per_100k"
+          ]
+        }
+      ],
+      "high_risk_count": 0,
+      "data_quality_score": 0.95,
+      "data_signature": "d230316c445bf0f208f8fd0a9a23949f68bfff68077c48680f2bebd6a1ac69bb"
+    },
+    "quality_gate": {
+      "passed": true,
+      "threshold": 0.85,
+      "overall_score": 0.942,
+      "evidence_quality_score": 0.95,
+      "fact_score": 1.0,
+      "deep_analysis_confidence": 0.82,
+      "issues": [],
+      "critical_count": 0,
+      "major_count": 0
+    },
+    "data_quality": {
+      "score": 0.95,
+      "confidence": "high",
+      "issues": [
+        "Some incidence rates are WPP-computed crude population rates, not source-provided rates.",
+        "Sentinel surveillance data are present; crude population incidence should be interpreted as contextual, not as a sentinel per-site rate."
+      ],
+      "missing_rates": {
+        "cases": 0.0,
+        "deaths": 0.0,
+        "incidence_rate": 0.0,
+        "mortality_rate": 1.0
+      },
+      "negative_value_count": 0,
+      "future_record_count": 0,
+      "source_count": 1,
+      "incidence_rate_sources": {
+        "wpp_computed_crude": 51
+      }
+    },
+    "method_version": "analytical_v3.3"
+  },
+  {
+    "id": 28,
+    "title": "Japan Infectious Disease Analytical Report | 2025-05-24 to 2026-05-23",
+    "report_type": "WEEKLY",
+    "status": "APPROVED",
+    "period_start": "2025-05-24",
+    "period_end": "2026-05-23",
+    "created_at": "2026-05-29T05:24:55.141311+00:00",
+    "summary": "This report analyzes standardized surveillance records for Japan during 2025-05-24 to 2026-05-23, covering 1 diseases, 30,415 cumulative cases, and 0 deaths; 0 diseases meet high-priority signal criteria.",
+    "quality_score": 0.942,
+    "metadata": {
+      "report_layout": "analytical_v3",
+      "method_version": "analytical_v3.3",
+      "data_signature": "d230316c445bf0f208f8fd0a9a23949f68bfff68077c48680f2bebd6a1ac69bb",
+      "analysis_depth": "deterministic",
+      "analysis_summary": {
+        "top_risk_diseases": [
+          {
+            "disease_id": "D048",
+            "name_en": "Hand-Foot-Mouth Disease",
+            "name_zh": "Hand-Foot-Mouth Disease",
+            "risk_score": 50,
+            "risk_level": "moderate",
+            "latest_cases": 1477,
+            "change_pct": 84.62,
+            "evidence_refs": [
+              "disease:D048.risk_score",
+              "disease:D048.latest_cases",
+              "disease:D048.change_pct",
+              "disease:D048.latest_incidence_rate_per_100k"
+            ]
+          }
+        ],
+        "high_risk_count": 0,
+        "data_quality_score": 0.95,
+        "data_signature": "d230316c445bf0f208f8fd0a9a23949f68bfff68077c48680f2bebd6a1ac69bb"
+      },
+      "quality_gate": {
+        "passed": true,
+        "threshold": 0.85,
+        "overall_score": 0.942,
+        "evidence_quality_score": 0.95,
+        "fact_score": 1.0,
+        "deep_analysis_confidence": 0.82,
+        "issues": [],
+        "critical_count": 0,
+        "major_count": 0
+      },
+      "data_quality": {
+        "score": 0.95,
+        "confidence": "high",
+        "issues": [
+          "Some incidence rates are WPP-computed crude population rates, not source-provided rates.",
+          "Sentinel surveillance data are present; crude population incidence should be interpreted as contextual, not as a sentinel per-site rate."
+        ],
+        "missing_rates": {
+          "cases": 0.0,
+          "deaths": 0.0,
+          "incidence_rate": 0.0,
+          "mortality_rate": 1.0
+        },
+        "negative_value_count": 0,
+        "future_record_count": 0,
+        "source_count": 1,
+        "incidence_rate_sources": {
+          "wpp_computed_crude": 51
+        }
+      },
+      "summary_metrics": {
+        "record_count": 51,
+        "disease_count": 1,
+        "active_latest_diseases": 1,
+        "high_risk_diseases": 0,
+        "total_cases": 30415,
+        "total_deaths": 0,
+        "latest_cases": 1477,
+        "latest_deaths": 0
+      },
+      "risk_ranking": [
+        {
+          "disease_id": "D048",
+          "name_en": "Hand-Foot-Mouth Disease",
+          "name_zh": "Hand-Foot-Mouth Disease",
+          "risk_score": 50,
+          "risk_level": "moderate",
+          "latest_cases": 1477,
+          "change_pct": 84.62,
+          "evidence_refs": [
+            "disease:D048.risk_score",
+            "disease:D048.latest_cases",
+            "disease:D048.change_pct",
+            "disease:D048.latest_incidence_rate_per_100k"
+          ]
+        }
+      ]
+    },
+    "country_code": "JP",
+    "country_name": "Japan",
+    "analysis_summary": {
+      "top_risk_diseases": [
+        {
+          "disease_id": "D048",
+          "name_en": "Hand-Foot-Mouth Disease",
+          "name_zh": "Hand-Foot-Mouth Disease",
+          "risk_score": 50,
+          "risk_level": "moderate",
+          "latest_cases": 1477,
+          "change_pct": 84.62,
+          "evidence_refs": [
+            "disease:D048.risk_score",
+            "disease:D048.latest_cases",
+            "disease:D048.change_pct",
+            "disease:D048.latest_incidence_rate_per_100k"
+          ]
+        }
+      ],
+      "high_risk_count": 0,
+      "data_quality_score": 0.95,
+      "data_signature": "d230316c445bf0f208f8fd0a9a23949f68bfff68077c48680f2bebd6a1ac69bb"
+    },
+    "quality_gate": {
+      "passed": true,
+      "threshold": 0.85,
+      "overall_score": 0.942,
+      "evidence_quality_score": 0.95,
+      "fact_score": 1.0,
+      "deep_analysis_confidence": 0.82,
+      "issues": [],
+      "critical_count": 0,
+      "major_count": 0
+    },
+    "data_quality": {
+      "score": 0.95,
+      "confidence": "high",
+      "issues": [
+        "Some incidence rates are WPP-computed crude population rates, not source-provided rates.",
+        "Sentinel surveillance data are present; crude population incidence should be interpreted as contextual, not as a sentinel per-site rate."
+      ],
+      "missing_rates": {
+        "cases": 0.0,
+        "deaths": 0.0,
+        "incidence_rate": 0.0,
+        "mortality_rate": 1.0
+      },
+      "negative_value_count": 0,
+      "future_record_count": 0,
+      "source_count": 1,
+      "incidence_rate_sources": {
+        "wpp_computed_crude": 51
+      }
+    },
+    "method_version": "analytical_v3.3"
+  },
+  {
+    "id": 27,
+    "title": "Japan Infectious Disease Analytical Report | 2025-05-24 to 2026-05-23",
+    "report_type": "WEEKLY",
+    "status": "APPROVED",
+    "period_start": "2025-05-24",
+    "period_end": "2026-05-23",
+    "created_at": "2026-05-29T05:19:24.716697+00:00",
+    "summary": "This report analyzes standardized surveillance records for Japan during 2025-05-24 to 2026-05-23, covering 1 diseases, 30,415 cumulative cases, and 0 deaths; 0 diseases meet high-priority signal criteria.",
+    "quality_score": 0.942,
+    "metadata": {
+      "report_layout": "analytical_v3",
+      "method_version": "analytical_v3.3",
+      "data_signature": "d230316c445bf0f208f8fd0a9a23949f68bfff68077c48680f2bebd6a1ac69bb",
+      "analysis_depth": "deterministic",
+      "analysis_summary": {
+        "top_risk_diseases": [
+          {
+            "disease_id": "D048",
+            "name_en": "Hand-Foot-Mouth Disease",
+            "name_zh": "Hand-Foot-Mouth Disease",
+            "risk_score": 50,
+            "risk_level": "moderate",
+            "latest_cases": 1477,
+            "change_pct": 84.62,
+            "evidence_refs": [
+              "disease:D048.risk_score",
+              "disease:D048.latest_cases",
+              "disease:D048.change_pct",
+              "disease:D048.latest_incidence_rate_per_100k"
+            ]
+          }
+        ],
+        "high_risk_count": 0,
+        "data_quality_score": 0.95,
+        "data_signature": "d230316c445bf0f208f8fd0a9a23949f68bfff68077c48680f2bebd6a1ac69bb"
+      },
+      "quality_gate": {
+        "passed": true,
+        "threshold": 0.85,
+        "overall_score": 0.942,
+        "evidence_quality_score": 0.95,
+        "fact_score": 1.0,
+        "deep_analysis_confidence": 0.82,
+        "issues": [],
+        "critical_count": 0,
+        "major_count": 0
+      },
+      "data_quality": {
+        "score": 0.95,
+        "confidence": "high",
+        "issues": [
+          "Some incidence rates are WPP-computed crude population rates, not source-provided rates.",
+          "Sentinel surveillance data are present; crude population incidence should be interpreted as contextual, not as a sentinel per-site rate."
+        ],
+        "missing_rates": {
+          "cases": 0.0,
+          "deaths": 0.0,
+          "incidence_rate": 0.0,
+          "mortality_rate": 1.0
+        },
+        "negative_value_count": 0,
+        "future_record_count": 0,
+        "source_count": 1,
+        "incidence_rate_sources": {
+          "wpp_computed_crude": 51
+        }
+      },
+      "summary_metrics": {
+        "record_count": 51,
+        "disease_count": 1,
+        "active_latest_diseases": 1,
+        "high_risk_diseases": 0,
+        "total_cases": 30415,
+        "total_deaths": 0,
+        "latest_cases": 1477,
+        "latest_deaths": 0
+      },
+      "risk_ranking": [
+        {
+          "disease_id": "D048",
+          "name_en": "Hand-Foot-Mouth Disease",
+          "name_zh": "Hand-Foot-Mouth Disease",
+          "risk_score": 50,
+          "risk_level": "moderate",
+          "latest_cases": 1477,
+          "change_pct": 84.62,
+          "evidence_refs": [
+            "disease:D048.risk_score",
+            "disease:D048.latest_cases",
+            "disease:D048.change_pct",
+            "disease:D048.latest_incidence_rate_per_100k"
+          ]
+        }
+      ]
+    },
+    "country_code": "JP",
+    "country_name": "Japan",
+    "analysis_summary": {
+      "top_risk_diseases": [
+        {
+          "disease_id": "D048",
+          "name_en": "Hand-Foot-Mouth Disease",
+          "name_zh": "Hand-Foot-Mouth Disease",
+          "risk_score": 50,
+          "risk_level": "moderate",
+          "latest_cases": 1477,
+          "change_pct": 84.62,
+          "evidence_refs": [
+            "disease:D048.risk_score",
+            "disease:D048.latest_cases",
+            "disease:D048.change_pct",
+            "disease:D048.latest_incidence_rate_per_100k"
+          ]
+        }
+      ],
+      "high_risk_count": 0,
+      "data_quality_score": 0.95,
+      "data_signature": "d230316c445bf0f208f8fd0a9a23949f68bfff68077c48680f2bebd6a1ac69bb"
+    },
+    "quality_gate": {
+      "passed": true,
+      "threshold": 0.85,
+      "overall_score": 0.942,
+      "evidence_quality_score": 0.95,
+      "fact_score": 1.0,
+      "deep_analysis_confidence": 0.82,
+      "issues": [],
+      "critical_count": 0,
+      "major_count": 0
+    },
+    "data_quality": {
+      "score": 0.95,
+      "confidence": "high",
+      "issues": [
+        "Some incidence rates are WPP-computed crude population rates, not source-provided rates.",
+        "Sentinel surveillance data are present; crude population incidence should be interpreted as contextual, not as a sentinel per-site rate."
+      ],
+      "missing_rates": {
+        "cases": 0.0,
+        "deaths": 0.0,
+        "incidence_rate": 0.0,
+        "mortality_rate": 1.0
+      },
+      "negative_value_count": 0,
+      "future_record_count": 0,
+      "source_count": 1,
+      "incidence_rate_sources": {
+        "wpp_computed_crude": 51
+      }
+    },
+    "method_version": "analytical_v3.3"
+  },
+  {
+    "id": 26,
+    "title": "Japan Infectious Disease Analytical Report | 2025-05-24 to 2026-05-23",
+    "report_type": "WEEKLY",
+    "status": "APPROVED",
+    "period_start": "2025-05-24",
+    "period_end": "2026-05-23",
+    "created_at": "2026-05-29T04:25:22.610117+00:00",
+    "summary": "This report analyzes standardized surveillance records for Japan during 2025-05-24 to 2026-05-23, covering 1 diseases, 30,415 cumulative cases, and 0 deaths; 0 diseases meet high-priority signal criteria.",
+    "quality_score": 0.919,
+    "metadata": {
+      "report_layout": "analytical_v3",
+      "method_version": "analytical_v3.2",
+      "data_signature": "abd2fea9bf26e172334969b047e1ce35b9e8eb0687cc06befdd6000f72dd1223",
+      "analysis_depth": "deterministic",
+      "analysis_summary": {
+        "top_risk_diseases": [
+          {
+            "disease_id": "D048",
+            "name_en": "Hand-Foot-Mouth Disease",
+            "name_zh": "Hand-Foot-Mouth Disease",
+            "risk_score": 50,
+            "risk_level": "moderate",
+            "latest_cases": 1477,
+            "change_pct": 84.62,
+            "evidence_refs": [
+              "disease:D048.risk_score",
+              "disease:D048.latest_cases",
+              "disease:D048.change_pct"
+            ]
+          }
+        ],
+        "high_risk_count": 0,
+        "data_quality_score": 0.9,
+        "data_signature": "abd2fea9bf26e172334969b047e1ce35b9e8eb0687cc06befdd6000f72dd1223"
+      },
+      "quality_gate": {
+        "passed": true,
+        "threshold": 0.85,
+        "overall_score": 0.919,
+        "evidence_quality_score": 0.9,
+        "fact_score": 1.0,
+        "deep_analysis_confidence": 0.82,
+        "issues": [],
+        "critical_count": 0,
+        "major_count": 0
+      },
+      "data_quality": {
+        "score": 0.9,
+        "confidence": "high",
+        "issues": [
+          "Incidence or mortality rate fields are largely unavailable; interpretation is count-based."
+        ],
+        "missing_rates": {
+          "cases": 0.0,
+          "deaths": 0.0,
+          "incidence_rate": 1.0,
+          "mortality_rate": 1.0
+        },
+        "negative_value_count": 0,
+        "future_record_count": 0,
+        "source_count": 1
+      },
+      "summary_metrics": {
+        "record_count": 51,
+        "disease_count": 1,
+        "active_latest_diseases": 1,
+        "high_risk_diseases": 0,
+        "total_cases": 30415,
+        "total_deaths": 0,
+        "latest_cases": 1477,
+        "latest_deaths": 0
+      },
+      "risk_ranking": [
+        {
+          "disease_id": "D048",
+          "name_en": "Hand-Foot-Mouth Disease",
+          "name_zh": "Hand-Foot-Mouth Disease",
+          "risk_score": 50,
+          "risk_level": "moderate",
+          "latest_cases": 1477,
+          "change_pct": 84.62,
+          "evidence_refs": [
+            "disease:D048.risk_score",
+            "disease:D048.latest_cases",
+            "disease:D048.change_pct"
+          ]
+        }
+      ]
+    },
+    "country_code": "JP",
+    "country_name": "Japan",
+    "analysis_summary": {
+      "top_risk_diseases": [
+        {
+          "disease_id": "D048",
+          "name_en": "Hand-Foot-Mouth Disease",
+          "name_zh": "Hand-Foot-Mouth Disease",
+          "risk_score": 50,
+          "risk_level": "moderate",
+          "latest_cases": 1477,
+          "change_pct": 84.62,
+          "evidence_refs": [
+            "disease:D048.risk_score",
+            "disease:D048.latest_cases",
+            "disease:D048.change_pct"
+          ]
+        }
+      ],
+      "high_risk_count": 0,
+      "data_quality_score": 0.9,
+      "data_signature": "abd2fea9bf26e172334969b047e1ce35b9e8eb0687cc06befdd6000f72dd1223"
+    },
+    "quality_gate": {
+      "passed": true,
+      "threshold": 0.85,
+      "overall_score": 0.919,
+      "evidence_quality_score": 0.9,
+      "fact_score": 1.0,
+      "deep_analysis_confidence": 0.82,
+      "issues": [],
+      "critical_count": 0,
+      "major_count": 0
+    },
+    "data_quality": {
+      "score": 0.9,
+      "confidence": "high",
+      "issues": [
+        "Incidence or mortality rate fields are largely unavailable; interpretation is count-based."
+      ],
+      "missing_rates": {
+        "cases": 0.0,
+        "deaths": 0.0,
+        "incidence_rate": 1.0,
+        "mortality_rate": 1.0
+      },
+      "negative_value_count": 0,
+      "future_record_count": 0,
+      "source_count": 1
+    },
+    "method_version": "analytical_v3.2"
+  },
+  {
+    "id": 25,
+    "title": "Japan Infectious Disease Analytical Report | 2025-05-23 to 2026-05-22",
+    "report_type": "WEEKLY",
+    "status": "APPROVED",
+    "period_start": "2025-05-23",
+    "period_end": "2026-05-22",
+    "created_at": "2026-05-29T04:23:40.452900+00:00",
+    "summary": "This report analyzes standardized surveillance records for Japan during 2025-05-23 to 2026-05-22, covering 1 diseases, 29,359 cumulative cases, and 0 deaths; 0 diseases meet high-priority signal criteria.",
+    "quality_score": 0.919,
+    "metadata": {
+      "report_layout": "analytical_v3",
+      "method_version": "analytical_v3.2",
+      "data_signature": "fd8e7f4c442a6ace8e1a060817de73fe8eafaad4e5ca5801bb20455535bc5138",
+      "analysis_depth": "deterministic",
+      "analysis_summary": {
+        "top_risk_diseases": [
+          {
+            "disease_id": "D048",
+            "name_en": "Hand-Foot-Mouth Disease",
+            "name_zh": "Hand-Foot-Mouth Disease",
+            "risk_score": 33,
+            "risk_level": "low",
+            "latest_cases": 800,
+            "change_pct": -6.76,
+            "evidence_refs": [
+              "disease:D048.risk_score",
+              "disease:D048.latest_cases",
+              "disease:D048.change_pct"
+            ]
+          }
+        ],
+        "high_risk_count": 0,
+        "data_quality_score": 0.9,
+        "data_signature": "fd8e7f4c442a6ace8e1a060817de73fe8eafaad4e5ca5801bb20455535bc5138"
+      },
+      "quality_gate": {
+        "passed": true,
+        "threshold": 0.85,
+        "overall_score": 0.919,
+        "evidence_quality_score": 0.9,
+        "fact_score": 1.0,
+        "deep_analysis_confidence": 0.82,
+        "issues": [],
+        "critical_count": 0,
+        "major_count": 0
+      },
+      "data_quality": {
+        "score": 0.9,
+        "confidence": "high",
+        "issues": [
+          "Incidence or mortality rate fields are largely unavailable; interpretation is count-based."
+        ],
+        "missing_rates": {
+          "cases": 0.0,
+          "deaths": 0.0,
+          "incidence_rate": 1.0,
+          "mortality_rate": 1.0
+        },
+        "negative_value_count": 0,
+        "future_record_count": 0,
+        "source_count": 1
+      },
+      "summary_metrics": {
+        "record_count": 51,
+        "disease_count": 1,
+        "active_latest_diseases": 1,
+        "high_risk_diseases": 0,
+        "total_cases": 29359,
+        "total_deaths": 0,
+        "latest_cases": 800,
+        "latest_deaths": 0
+      },
+      "risk_ranking": [
+        {
+          "disease_id": "D048",
+          "name_en": "Hand-Foot-Mouth Disease",
+          "name_zh": "Hand-Foot-Mouth Disease",
+          "risk_score": 33,
+          "risk_level": "low",
+          "latest_cases": 800,
+          "change_pct": -6.76,
+          "evidence_refs": [
+            "disease:D048.risk_score",
+            "disease:D048.latest_cases",
+            "disease:D048.change_pct"
+          ]
+        }
+      ]
+    },
+    "country_code": "JP",
+    "country_name": "Japan",
+    "analysis_summary": {
+      "top_risk_diseases": [
+        {
+          "disease_id": "D048",
+          "name_en": "Hand-Foot-Mouth Disease",
+          "name_zh": "Hand-Foot-Mouth Disease",
+          "risk_score": 33,
+          "risk_level": "low",
+          "latest_cases": 800,
+          "change_pct": -6.76,
+          "evidence_refs": [
+            "disease:D048.risk_score",
+            "disease:D048.latest_cases",
+            "disease:D048.change_pct"
+          ]
+        }
+      ],
+      "high_risk_count": 0,
+      "data_quality_score": 0.9,
+      "data_signature": "fd8e7f4c442a6ace8e1a060817de73fe8eafaad4e5ca5801bb20455535bc5138"
+    },
+    "quality_gate": {
+      "passed": true,
+      "threshold": 0.85,
+      "overall_score": 0.919,
+      "evidence_quality_score": 0.9,
+      "fact_score": 1.0,
+      "deep_analysis_confidence": 0.82,
+      "issues": [],
+      "critical_count": 0,
+      "major_count": 0
+    },
+    "data_quality": {
+      "score": 0.9,
+      "confidence": "high",
+      "issues": [
+        "Incidence or mortality rate fields are largely unavailable; interpretation is count-based."
+      ],
+      "missing_rates": {
+        "cases": 0.0,
+        "deaths": 0.0,
+        "incidence_rate": 1.0,
+        "mortality_rate": 1.0
+      },
+      "negative_value_count": 0,
+      "future_record_count": 0,
+      "source_count": 1
+    },
+    "method_version": "analytical_v3.2"
+  },
+  {
+    "id": 24,
+    "title": "Japan Infectious Disease Analytical Report | 2025-05-24 to 2026-05-23",
+    "report_type": "WEEKLY",
+    "status": "APPROVED",
+    "period_start": "2025-05-24",
+    "period_end": "2026-05-23",
+    "created_at": "2026-05-29T04:18:33.555281+00:00",
+    "summary": "This report analyzes standardized surveillance records for Japan during 2025-05-24 to 2026-05-23, covering 1 diseases, 30,836 cumulative cases, and 0 deaths; 0 diseases meet high-priority signal criteria.",
+    "quality_score": 0.919,
+    "metadata": {
+      "report_layout": "analytical_v3",
+      "method_version": "analytical_v3.2",
+      "data_signature": "843e56d58d303164d39e749408ba243028f71ac792166b07094d1f7b0af9d074",
+      "analysis_depth": "deterministic",
+      "analysis_summary": {
+        "top_risk_diseases": [
+          {
+            "disease_id": "D048",
+            "name_en": "Hand-Foot-Mouth Disease",
+            "name_zh": "Hand-Foot-Mouth Disease",
+            "risk_score": 50,
+            "risk_level": "moderate",
+            "latest_cases": 1477,
+            "change_pct": 84.62,
+            "evidence_refs": [
+              "disease:D048.risk_score",
+              "disease:D048.latest_cases",
+              "disease:D048.change_pct"
+            ]
+          }
+        ],
+        "high_risk_count": 0,
+        "data_quality_score": 0.9,
+        "data_signature": "843e56d58d303164d39e749408ba243028f71ac792166b07094d1f7b0af9d074"
+      },
+      "quality_gate": {
+        "passed": true,
+        "threshold": 0.85,
+        "overall_score": 0.919,
+        "evidence_quality_score": 0.9,
+        "fact_score": 1.0,
+        "deep_analysis_confidence": 0.82,
+        "issues": [],
+        "critical_count": 0,
+        "major_count": 0
+      },
+      "data_quality": {
+        "score": 0.9,
+        "confidence": "high",
+        "issues": [
+          "Incidence or mortality rate fields are largely unavailable; interpretation is count-based."
+        ],
+        "missing_rates": {
+          "cases": 0.0,
+          "deaths": 0.0,
+          "incidence_rate": 1.0,
+          "mortality_rate": 1.0
+        },
+        "negative_value_count": 0,
+        "future_record_count": 0,
+        "source_count": 1
+      },
+      "summary_metrics": {
+        "record_count": 52,
+        "disease_count": 1,
+        "active_latest_diseases": 1,
+        "high_risk_diseases": 0,
+        "total_cases": 30836,
+        "total_deaths": 0,
+        "latest_cases": 1477,
+        "latest_deaths": 0
+      },
+      "risk_ranking": [
+        {
+          "disease_id": "D048",
+          "name_en": "Hand-Foot-Mouth Disease",
+          "name_zh": "Hand-Foot-Mouth Disease",
+          "risk_score": 50,
+          "risk_level": "moderate",
+          "latest_cases": 1477,
+          "change_pct": 84.62,
+          "evidence_refs": [
+            "disease:D048.risk_score",
+            "disease:D048.latest_cases",
+            "disease:D048.change_pct"
+          ]
+        }
+      ]
+    },
+    "country_code": "JP",
+    "country_name": "Japan",
+    "analysis_summary": {
+      "top_risk_diseases": [
+        {
+          "disease_id": "D048",
+          "name_en": "Hand-Foot-Mouth Disease",
+          "name_zh": "Hand-Foot-Mouth Disease",
+          "risk_score": 50,
+          "risk_level": "moderate",
+          "latest_cases": 1477,
+          "change_pct": 84.62,
+          "evidence_refs": [
+            "disease:D048.risk_score",
+            "disease:D048.latest_cases",
+            "disease:D048.change_pct"
+          ]
+        }
+      ],
+      "high_risk_count": 0,
+      "data_quality_score": 0.9,
+      "data_signature": "843e56d58d303164d39e749408ba243028f71ac792166b07094d1f7b0af9d074"
+    },
+    "quality_gate": {
+      "passed": true,
+      "threshold": 0.85,
+      "overall_score": 0.919,
+      "evidence_quality_score": 0.9,
+      "fact_score": 1.0,
+      "deep_analysis_confidence": 0.82,
+      "issues": [],
+      "critical_count": 0,
+      "major_count": 0
+    },
+    "data_quality": {
+      "score": 0.9,
+      "confidence": "high",
+      "issues": [
+        "Incidence or mortality rate fields are largely unavailable; interpretation is count-based."
+      ],
+      "missing_rates": {
+        "cases": 0.0,
+        "deaths": 0.0,
+        "incidence_rate": 1.0,
+        "mortality_rate": 1.0
+      },
+      "negative_value_count": 0,
+      "future_record_count": 0,
+      "source_count": 1
+    },
+    "method_version": "analytical_v3.2"
+  },
+  {
+    "id": 23,
+    "title": "Japan Infectious Disease Analytical Report | 2025-05-24 to 2026-05-23",
+    "report_type": "WEEKLY",
+    "status": "APPROVED",
+    "period_start": "2025-05-24",
+    "period_end": "2026-05-23",
+    "created_at": "2026-05-29T04:13:28.834083+00:00",
+    "summary": "This report analyzes standardized surveillance records for Japan during 2025-05-24 to 2026-05-23, covering 1 diseases, 30,836 cumulative cases, and 0 deaths; 0 diseases meet high-priority signal criteria.",
+    "quality_score": 0.919,
+    "metadata": {
+      "report_layout": "analytical_v3",
+      "method_version": "analytical_v3.2",
+      "data_signature": "843e56d58d303164d39e749408ba243028f71ac792166b07094d1f7b0af9d074",
+      "analysis_depth": "deterministic",
+      "analysis_summary": {
+        "top_risk_diseases": [
+          {
+            "disease_id": "D048",
+            "name_en": "Hand-Foot-Mouth Disease",
+            "name_zh": "Hand-Foot-Mouth Disease",
+            "risk_score": 50,
+            "risk_level": "moderate",
+            "latest_cases": 1477,
+            "change_pct": 84.62,
+            "evidence_refs": [
+              "disease:D048.risk_score",
+              "disease:D048.latest_cases",
+              "disease:D048.change_pct"
+            ]
+          }
+        ],
+        "high_risk_count": 0,
+        "data_quality_score": 0.9,
+        "data_signature": "843e56d58d303164d39e749408ba243028f71ac792166b07094d1f7b0af9d074"
+      },
+      "quality_gate": {
+        "passed": true,
+        "threshold": 0.85,
+        "overall_score": 0.919,
+        "evidence_quality_score": 0.9,
+        "fact_score": 1.0,
+        "deep_analysis_confidence": 0.82,
+        "issues": [],
+        "critical_count": 0,
+        "major_count": 0
+      },
+      "data_quality": {
+        "score": 0.9,
+        "confidence": "high",
+        "issues": [
+          "Incidence or mortality rate fields are largely unavailable; interpretation is count-based."
+        ],
+        "missing_rates": {
+          "cases": 0.0,
+          "deaths": 0.0,
+          "incidence_rate": 1.0,
+          "mortality_rate": 1.0
+        },
+        "negative_value_count": 0,
+        "future_record_count": 0,
+        "source_count": 1
+      },
+      "summary_metrics": {
+        "record_count": 52,
+        "disease_count": 1,
+        "active_latest_diseases": 1,
+        "high_risk_diseases": 0,
+        "total_cases": 30836,
+        "total_deaths": 0,
+        "latest_cases": 1477,
+        "latest_deaths": 0
+      },
+      "risk_ranking": [
+        {
+          "disease_id": "D048",
+          "name_en": "Hand-Foot-Mouth Disease",
+          "name_zh": "Hand-Foot-Mouth Disease",
+          "risk_score": 50,
+          "risk_level": "moderate",
+          "latest_cases": 1477,
+          "change_pct": 84.62,
+          "evidence_refs": [
+            "disease:D048.risk_score",
+            "disease:D048.latest_cases",
+            "disease:D048.change_pct"
+          ]
+        }
+      ]
+    },
+    "country_code": "JP",
+    "country_name": "Japan",
+    "analysis_summary": {
+      "top_risk_diseases": [
+        {
+          "disease_id": "D048",
+          "name_en": "Hand-Foot-Mouth Disease",
+          "name_zh": "Hand-Foot-Mouth Disease",
+          "risk_score": 50,
+          "risk_level": "moderate",
+          "latest_cases": 1477,
+          "change_pct": 84.62,
+          "evidence_refs": [
+            "disease:D048.risk_score",
+            "disease:D048.latest_cases",
+            "disease:D048.change_pct"
+          ]
+        }
+      ],
+      "high_risk_count": 0,
+      "data_quality_score": 0.9,
+      "data_signature": "843e56d58d303164d39e749408ba243028f71ac792166b07094d1f7b0af9d074"
+    },
+    "quality_gate": {
+      "passed": true,
+      "threshold": 0.85,
+      "overall_score": 0.919,
+      "evidence_quality_score": 0.9,
+      "fact_score": 1.0,
+      "deep_analysis_confidence": 0.82,
+      "issues": [],
+      "critical_count": 0,
+      "major_count": 0
+    },
+    "data_quality": {
+      "score": 0.9,
+      "confidence": "high",
+      "issues": [
+        "Incidence or mortality rate fields are largely unavailable; interpretation is count-based."
+      ],
+      "missing_rates": {
+        "cases": 0.0,
+        "deaths": 0.0,
+        "incidence_rate": 1.0,
+        "mortality_rate": 1.0
+      },
+      "negative_value_count": 0,
+      "future_record_count": 0,
+      "source_count": 1
+    },
+    "method_version": "analytical_v3.2"
+  },
+  {
+    "id": 22,
+    "title": "Japan Infectious Disease Analytical Report | 2025-05-24 to 2026-05-23",
+    "report_type": "WEEKLY",
+    "status": "APPROVED",
+    "period_start": "2025-05-24",
+    "period_end": "2026-05-23",
+    "created_at": "2026-05-29T04:12:39.566314+00:00",
+    "summary": "This report analyzes standardized surveillance records for Japan during 2025-05-24 to 2026-05-23, covering 1 diseases, 30,836 cumulative cases, and 0 deaths; 0 diseases meet high-priority signal criteria.",
+    "quality_score": 0.919,
+    "metadata": {
+      "report_layout": "analytical_v3",
+      "method_version": "analytical_v3.2",
+      "data_signature": "843e56d58d303164d39e749408ba243028f71ac792166b07094d1f7b0af9d074",
+      "analysis_depth": "deterministic",
+      "analysis_summary": {
+        "top_risk_diseases": [
+          {
+            "disease_id": "D048",
+            "name_en": "Hand-Foot-Mouth Disease",
+            "name_zh": "Hand-Foot-Mouth Disease",
+            "risk_score": 50,
+            "risk_level": "moderate",
+            "latest_cases": 1477,
+            "change_pct": 84.62,
+            "evidence_refs": [
+              "disease:D048.risk_score",
+              "disease:D048.latest_cases",
+              "disease:D048.change_pct"
+            ]
+          }
+        ],
+        "high_risk_count": 0,
+        "data_quality_score": 0.9,
+        "data_signature": "843e56d58d303164d39e749408ba243028f71ac792166b07094d1f7b0af9d074"
+      },
+      "quality_gate": {
+        "passed": true,
+        "threshold": 0.85,
+        "overall_score": 0.919,
+        "evidence_quality_score": 0.9,
+        "fact_score": 1.0,
+        "deep_analysis_confidence": 0.82,
+        "issues": [],
+        "critical_count": 0,
+        "major_count": 0
+      },
+      "data_quality": {
+        "score": 0.9,
+        "confidence": "high",
+        "issues": [
+          "Incidence or mortality rate fields are largely unavailable; interpretation is count-based."
+        ],
+        "missing_rates": {
+          "cases": 0.0,
+          "deaths": 0.0,
+          "incidence_rate": 1.0,
+          "mortality_rate": 1.0
+        },
+        "negative_value_count": 0,
+        "future_record_count": 0,
+        "source_count": 1
+      },
+      "summary_metrics": {
+        "record_count": 52,
+        "disease_count": 1,
+        "active_latest_diseases": 1,
+        "high_risk_diseases": 0,
+        "total_cases": 30836,
+        "total_deaths": 0,
+        "latest_cases": 1477,
+        "latest_deaths": 0
+      },
+      "risk_ranking": [
+        {
+          "disease_id": "D048",
+          "name_en": "Hand-Foot-Mouth Disease",
+          "name_zh": "Hand-Foot-Mouth Disease",
+          "risk_score": 50,
+          "risk_level": "moderate",
+          "latest_cases": 1477,
+          "change_pct": 84.62,
+          "evidence_refs": [
+            "disease:D048.risk_score",
+            "disease:D048.latest_cases",
+            "disease:D048.change_pct"
+          ]
+        }
+      ]
+    },
+    "country_code": "JP",
+    "country_name": "Japan",
+    "analysis_summary": {
+      "top_risk_diseases": [
+        {
+          "disease_id": "D048",
+          "name_en": "Hand-Foot-Mouth Disease",
+          "name_zh": "Hand-Foot-Mouth Disease",
+          "risk_score": 50,
+          "risk_level": "moderate",
+          "latest_cases": 1477,
+          "change_pct": 84.62,
+          "evidence_refs": [
+            "disease:D048.risk_score",
+            "disease:D048.latest_cases",
+            "disease:D048.change_pct"
+          ]
+        }
+      ],
+      "high_risk_count": 0,
+      "data_quality_score": 0.9,
+      "data_signature": "843e56d58d303164d39e749408ba243028f71ac792166b07094d1f7b0af9d074"
+    },
+    "quality_gate": {
+      "passed": true,
+      "threshold": 0.85,
+      "overall_score": 0.919,
+      "evidence_quality_score": 0.9,
+      "fact_score": 1.0,
+      "deep_analysis_confidence": 0.82,
+      "issues": [],
+      "critical_count": 0,
+      "major_count": 0
+    },
+    "data_quality": {
+      "score": 0.9,
+      "confidence": "high",
+      "issues": [
+        "Incidence or mortality rate fields are largely unavailable; interpretation is count-based."
+      ],
+      "missing_rates": {
+        "cases": 0.0,
+        "deaths": 0.0,
+        "incidence_rate": 1.0,
+        "mortality_rate": 1.0
+      },
+      "negative_value_count": 0,
+      "future_record_count": 0,
+      "source_count": 1
+    },
+    "method_version": "analytical_v3.2"
+  },
+  {
+    "id": 21,
+    "title": "Japan Infectious Disease Analytical Report | 2025-05-24 to 2026-05-23",
+    "report_type": "WEEKLY",
+    "status": "APPROVED",
+    "period_start": "2025-05-24",
+    "period_end": "2026-05-23",
+    "created_at": "2026-05-29T00:19:18.140598+00:00",
+    "summary": "This report analyzes standardized surveillance records for Japan during 2025-05-24 to 2026-05-23, covering 1 diseases, 30,836 cumulative cases, and 0 deaths; 0 diseases meet high-priority signal criteria.",
+    "quality_score": 0.919,
+    "metadata": {
+      "report_layout": "analytical_v3",
+      "method_version": "analytical_v3.1",
+      "data_signature": "843e56d58d303164d39e749408ba243028f71ac792166b07094d1f7b0af9d074",
+      "analysis_depth": "deterministic",
+      "analysis_summary": {
+        "top_risk_diseases": [
+          {
+            "disease_id": "D048",
+            "name_en": "Hand-Foot-Mouth Disease",
+            "name_zh": "Hand-Foot-Mouth Disease",
+            "risk_score": 50,
+            "risk_level": "moderate",
+            "latest_cases": 1477,
+            "change_pct": 84.62,
+            "evidence_refs": [
+              "disease:D048.risk_score",
+              "disease:D048.latest_cases",
+              "disease:D048.change_pct"
+            ]
+          }
+        ],
+        "high_risk_count": 0,
+        "data_quality_score": 0.9,
+        "data_signature": "843e56d58d303164d39e749408ba243028f71ac792166b07094d1f7b0af9d074"
+      },
+      "quality_gate": {
+        "passed": true,
+        "threshold": 0.85,
+        "overall_score": 0.919,
+        "evidence_quality_score": 0.9,
+        "fact_score": 1.0,
+        "deep_analysis_confidence": 0.82,
+        "issues": [],
+        "critical_count": 0,
+        "major_count": 0
+      },
+      "data_quality": {
+        "score": 0.9,
+        "confidence": "high",
+        "issues": [
+          "Incidence or mortality rate fields are largely unavailable; interpretation is count-based."
+        ],
+        "missing_rates": {
+          "cases": 0.0,
+          "deaths": 0.0,
+          "incidence_rate": 1.0,
+          "mortality_rate": 1.0
+        },
+        "negative_value_count": 0,
+        "future_record_count": 0,
+        "source_count": 1
+      },
+      "summary_metrics": {
+        "record_count": 52,
+        "disease_count": 1,
+        "active_latest_diseases": 1,
+        "high_risk_diseases": 0,
+        "total_cases": 30836,
+        "total_deaths": 0,
+        "latest_cases": 1477,
+        "latest_deaths": 0
+      },
+      "risk_ranking": [
+        {
+          "disease_id": "D048",
+          "name_en": "Hand-Foot-Mouth Disease",
+          "name_zh": "Hand-Foot-Mouth Disease",
+          "risk_score": 50,
+          "risk_level": "moderate",
+          "latest_cases": 1477,
+          "change_pct": 84.62,
+          "evidence_refs": [
+            "disease:D048.risk_score",
+            "disease:D048.latest_cases",
+            "disease:D048.change_pct"
+          ]
+        }
+      ]
+    },
+    "country_code": "JP",
+    "country_name": "Japan",
+    "analysis_summary": {
+      "top_risk_diseases": [
+        {
+          "disease_id": "D048",
+          "name_en": "Hand-Foot-Mouth Disease",
+          "name_zh": "Hand-Foot-Mouth Disease",
+          "risk_score": 50,
+          "risk_level": "moderate",
+          "latest_cases": 1477,
+          "change_pct": 84.62,
+          "evidence_refs": [
+            "disease:D048.risk_score",
+            "disease:D048.latest_cases",
+            "disease:D048.change_pct"
+          ]
+        }
+      ],
+      "high_risk_count": 0,
+      "data_quality_score": 0.9,
+      "data_signature": "843e56d58d303164d39e749408ba243028f71ac792166b07094d1f7b0af9d074"
+    },
+    "quality_gate": {
+      "passed": true,
+      "threshold": 0.85,
+      "overall_score": 0.919,
+      "evidence_quality_score": 0.9,
+      "fact_score": 1.0,
+      "deep_analysis_confidence": 0.82,
+      "issues": [],
+      "critical_count": 0,
+      "major_count": 0
+    },
+    "data_quality": {
+      "score": 0.9,
+      "confidence": "high",
+      "issues": [
+        "Incidence or mortality rate fields are largely unavailable; interpretation is count-based."
+      ],
+      "missing_rates": {
+        "cases": 0.0,
+        "deaths": 0.0,
+        "incidence_rate": 1.0,
+        "mortality_rate": 1.0
+      },
+      "negative_value_count": 0,
+      "future_record_count": 0,
+      "source_count": 1
+    },
+    "method_version": "analytical_v3.1"
+  },
+  {
+    "id": 20,
+    "title": "Japan Infectious Disease Analytical Report | 2025-05-24 to 2026-05-23",
+    "report_type": "WEEKLY",
+    "status": "APPROVED",
+    "period_start": "2025-05-24",
+    "period_end": "2026-05-23",
+    "created_at": "2026-05-29T00:18:17.599376+00:00",
+    "summary": "This report analyzes standardized surveillance records for Japan during 2025-05-24 to 2026-05-23, covering 1 diseases, 30,836 cumulative cases, and 0 deaths; 0 diseases meet high-priority signal criteria.",
+    "quality_score": 0.964,
+    "metadata": {
+      "report_layout": "analytical_v3",
+      "method_version": "analytical_v3.1",
+      "data_signature": "843e56d58d303164d39e749408ba243028f71ac792166b07094d1f7b0af9d074",
+      "analysis_depth": "deterministic",
+      "analysis_summary": {
+        "top_risk_diseases": [
+          {
+            "disease_id": "D048",
+            "name_en": "Hand-Foot-Mouth Disease",
+            "name_zh": "Hand-Foot-Mouth Disease",
+            "risk_score": 50,
+            "risk_level": "moderate",
+            "latest_cases": 1477,
+            "change_pct": 84.62,
+            "evidence_refs": [
+              "disease:D048.risk_score",
+              "disease:D048.latest_cases",
+              "disease:D048.change_pct"
+            ]
+          }
+        ],
+        "high_risk_count": 0,
+        "data_quality_score": 1.0,
+        "data_signature": "843e56d58d303164d39e749408ba243028f71ac792166b07094d1f7b0af9d074"
+      },
+      "quality_gate": {
+        "passed": true,
+        "threshold": 0.85,
+        "overall_score": 0.964,
+        "evidence_quality_score": 1.0,
+        "fact_score": 1.0,
+        "deep_analysis_confidence": 0.82,
+        "issues": [],
+        "critical_count": 0,
+        "major_count": 0
+      },
+      "data_quality": {
+        "score": 1.0,
+        "confidence": "high",
+        "issues": [],
+        "missing_rates": {
+          "cases": 0.0,
+          "deaths": 0.0,
+          "incidence_rate": 1.0,
+          "mortality_rate": 1.0
+        },
+        "negative_value_count": 0,
+        "future_record_count": 0,
+        "source_count": 1
+      },
+      "summary_metrics": {
+        "record_count": 52,
+        "disease_count": 1,
+        "active_latest_diseases": 1,
+        "high_risk_diseases": 0,
+        "total_cases": 30836,
+        "total_deaths": 0,
+        "latest_cases": 1477,
+        "latest_deaths": 0
+      },
+      "risk_ranking": [
+        {
+          "disease_id": "D048",
+          "name_en": "Hand-Foot-Mouth Disease",
+          "name_zh": "Hand-Foot-Mouth Disease",
+          "risk_score": 50,
+          "risk_level": "moderate",
+          "latest_cases": 1477,
+          "change_pct": 84.62,
+          "evidence_refs": [
+            "disease:D048.risk_score",
+            "disease:D048.latest_cases",
+            "disease:D048.change_pct"
+          ]
+        }
+      ]
+    },
+    "country_code": "JP",
+    "country_name": "Japan",
+    "analysis_summary": {
+      "top_risk_diseases": [
+        {
+          "disease_id": "D048",
+          "name_en": "Hand-Foot-Mouth Disease",
+          "name_zh": "Hand-Foot-Mouth Disease",
+          "risk_score": 50,
+          "risk_level": "moderate",
+          "latest_cases": 1477,
+          "change_pct": 84.62,
+          "evidence_refs": [
+            "disease:D048.risk_score",
+            "disease:D048.latest_cases",
+            "disease:D048.change_pct"
+          ]
+        }
+      ],
+      "high_risk_count": 0,
+      "data_quality_score": 1.0,
+      "data_signature": "843e56d58d303164d39e749408ba243028f71ac792166b07094d1f7b0af9d074"
+    },
+    "quality_gate": {
+      "passed": true,
+      "threshold": 0.85,
+      "overall_score": 0.964,
+      "evidence_quality_score": 1.0,
+      "fact_score": 1.0,
+      "deep_analysis_confidence": 0.82,
+      "issues": [],
+      "critical_count": 0,
+      "major_count": 0
+    },
+    "data_quality": {
+      "score": 1.0,
+      "confidence": "high",
+      "issues": [],
+      "missing_rates": {
+        "cases": 0.0,
+        "deaths": 0.0,
+        "incidence_rate": 1.0,
+        "mortality_rate": 1.0
+      },
+      "negative_value_count": 0,
+      "future_record_count": 0,
+      "source_count": 1
+    },
+    "method_version": "analytical_v3.1"
+  },
+  {
+    "id": 19,
+    "title": "Japan Infectious Disease Analytical Report | 2025-05-24 to 2026-05-23",
+    "report_type": "WEEKLY",
+    "status": "APPROVED",
+    "period_start": "2025-05-24",
+    "period_end": "2026-05-23",
+    "created_at": "2026-05-29T00:17:19.063068+00:00",
+    "summary": "This report analyzes standardized surveillance records for Japan during 2025-05-24 to 2026-05-23, covering 1 diseases, 30,836 cumulative cases, and 0 deaths; 0 diseases meet high-priority signal criteria.",
+    "quality_score": 0.964,
+    "metadata": {
+      "report_layout": "analytical_v3",
+      "method_version": "analytical_v3.1",
+      "data_signature": "843e56d58d303164d39e749408ba243028f71ac792166b07094d1f7b0af9d074",
+      "analysis_depth": "deterministic",
+      "analysis_summary": {
+        "top_risk_diseases": [
+          {
+            "disease_id": "D048",
+            "name_en": "Hand-Foot-Mouth Disease",
+            "name_zh": "Hand-Foot-Mouth Disease",
+            "risk_score": 50,
+            "risk_level": "moderate",
+            "latest_cases": 1477,
+            "change_pct": 84.62,
+            "evidence_refs": [
+              "disease:D048.risk_score",
+              "disease:D048.latest_cases",
+              "disease:D048.change_pct"
+            ]
+          }
+        ],
+        "high_risk_count": 0,
+        "data_quality_score": 1.0,
+        "data_signature": "843e56d58d303164d39e749408ba243028f71ac792166b07094d1f7b0af9d074"
+      },
+      "quality_gate": {
+        "passed": true,
+        "threshold": 0.85,
+        "overall_score": 0.964,
+        "evidence_quality_score": 1.0,
+        "fact_score": 1.0,
+        "deep_analysis_confidence": 0.82,
+        "issues": [],
+        "critical_count": 0,
+        "major_count": 0
+      },
+      "data_quality": {
+        "score": 1.0,
+        "confidence": "high",
+        "issues": [],
+        "missing_rates": {
+          "cases": 0.0,
+          "deaths": 0.0,
+          "incidence_rate": 1.0,
+          "mortality_rate": 1.0
+        },
+        "negative_value_count": 0,
+        "future_record_count": 0,
+        "source_count": 1
+      },
+      "summary_metrics": {
+        "record_count": 52,
+        "disease_count": 1,
+        "active_latest_diseases": 1,
+        "high_risk_diseases": 0,
+        "total_cases": 30836,
+        "total_deaths": 0,
+        "latest_cases": 1477,
+        "latest_deaths": 0
+      },
+      "risk_ranking": [
+        {
+          "disease_id": "D048",
+          "name_en": "Hand-Foot-Mouth Disease",
+          "name_zh": "Hand-Foot-Mouth Disease",
+          "risk_score": 50,
+          "risk_level": "moderate",
+          "latest_cases": 1477,
+          "change_pct": 84.62,
+          "evidence_refs": [
+            "disease:D048.risk_score",
+            "disease:D048.latest_cases",
+            "disease:D048.change_pct"
+          ]
+        }
+      ]
+    },
+    "country_code": "JP",
+    "country_name": "Japan",
+    "analysis_summary": {
+      "top_risk_diseases": [
+        {
+          "disease_id": "D048",
+          "name_en": "Hand-Foot-Mouth Disease",
+          "name_zh": "Hand-Foot-Mouth Disease",
+          "risk_score": 50,
+          "risk_level": "moderate",
+          "latest_cases": 1477,
+          "change_pct": 84.62,
+          "evidence_refs": [
+            "disease:D048.risk_score",
+            "disease:D048.latest_cases",
+            "disease:D048.change_pct"
+          ]
+        }
+      ],
+      "high_risk_count": 0,
+      "data_quality_score": 1.0,
+      "data_signature": "843e56d58d303164d39e749408ba243028f71ac792166b07094d1f7b0af9d074"
+    },
+    "quality_gate": {
+      "passed": true,
+      "threshold": 0.85,
+      "overall_score": 0.964,
+      "evidence_quality_score": 1.0,
+      "fact_score": 1.0,
+      "deep_analysis_confidence": 0.82,
+      "issues": [],
+      "critical_count": 0,
+      "major_count": 0
+    },
+    "data_quality": {
+      "score": 1.0,
+      "confidence": "high",
+      "issues": [],
+      "missing_rates": {
+        "cases": 0.0,
+        "deaths": 0.0,
+        "incidence_rate": 1.0,
+        "mortality_rate": 1.0
+      },
+      "negative_value_count": 0,
+      "future_record_count": 0,
+      "source_count": 1
+    },
+    "method_version": "analytical_v3.1"
+  },
+  {
     "id": 13,
     "title": "monthly报告",
     "report_type": "MONTHLY",
@@ -9,7 +2518,12 @@
     "created_at": "2026-03-15T00:58:25.490640+00:00",
     "summary": null,
     "quality_score": null,
+    "metadata": {},
     "country_code": "CN",
-    "country_name": "China"
+    "country_name": "China",
+    "analysis_summary": null,
+    "quality_gate": null,
+    "data_quality": null,
+    "method_version": null
   }
 ]
