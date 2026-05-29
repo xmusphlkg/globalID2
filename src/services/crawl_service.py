@@ -987,7 +987,7 @@ class CrawlService:
             title="Phase 1/3: Fetching NZ Source",
             content=(
                 "Scraping PHF Science Digital Library for monthly notifiable disease reports...\n"
-                f"Mode: {'fill missing months' if fill_missing else 'recent 3 months'}"
+                f"Mode: {'all history' if force else ('fill missing months' if fill_missing else 'recent 3 months')}"
                 + (" + force re-fetch" if force else "")
             ),
             content_type="text",
@@ -1008,7 +1008,13 @@ class CrawlService:
                 recent.append((y, m))
             months_set = set(recent)
 
-            if fill_missing:
+            if force:
+                # NZ archive backfills need a full re-parse when parser logic changes.
+                start_year = 2016
+                for fy in range(start_year, now_dt.year + 1):
+                    for fm in range(1, 13 if fy < now_dt.year else now_dt.month + 1):
+                        months_set.add((fy, fm))
+            elif fill_missing:
                 async with get_database() as db:
                     existing_months = await updater.get_db_months(db)
                 # NZ data available from ~2016 onwards on PHF Science
