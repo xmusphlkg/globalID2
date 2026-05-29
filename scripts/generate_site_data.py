@@ -275,6 +275,32 @@ def iso_or_none(value) -> str | None:
     return value.isoformat() if hasattr(value, "isoformat") else value
 
 
+def compact_report_metadata(metadata: dict | None, *, include_figures: bool = False) -> dict:
+    """Return site-facing report metadata without heavyweight agent internals."""
+    if not isinstance(metadata, dict):
+        return {}
+
+    keep_keys = (
+        "report_layout",
+        "method_version",
+        "data_signature",
+        "analysis_depth",
+        "analysis_summary",
+        "quality_gate",
+        "data_quality",
+        "summary_metrics",
+        "risk_ranking",
+        "pdf_generation",
+    )
+    compact = {key: metadata.get(key) for key in keep_keys if key in metadata}
+    if include_figures:
+        compact["disease_cards"] = metadata.get("disease_cards") or []
+        compact["figure_plan"] = metadata.get("figure_plan") or []
+        compact["figures"] = metadata.get("figures") or []
+        compact["figure_data"] = metadata.get("figure_data") or {}
+    return compact
+
+
 def source_metadata_field(source: dict, key: str):
     metadata = source.get("metadata")
     if isinstance(metadata, dict):
@@ -1523,6 +1549,7 @@ async def fetch_reports(session) -> list[dict]:
                 r.created_at,
                 r.summary,
                 r.quality_score,
+                r.metadata,
                 c.code                AS country_code,
                 c.name                AS country_name
             FROM reports r
@@ -1539,6 +1566,12 @@ async def fetch_reports(session) -> list[dict]:
         r["period_end"] = r["period_end"].isoformat() if r["period_end"] else None
         r["created_at"] = r["created_at"].isoformat() if r["created_at"] else None
         r["quality_score"] = safe_float(r["quality_score"])
+        metadata = r.get("metadata") if isinstance(r.get("metadata"), dict) else {}
+        r["metadata"] = compact_report_metadata(metadata, include_figures=False)
+        r["analysis_summary"] = metadata.get("analysis_summary") if isinstance(metadata.get("analysis_summary"), dict) else None
+        r["quality_gate"] = metadata.get("quality_gate") if isinstance(metadata.get("quality_gate"), dict) else None
+        r["data_quality"] = metadata.get("data_quality") if isinstance(metadata.get("data_quality"), dict) else None
+        r["method_version"] = metadata.get("method_version")
         result.append(r)
     return result
 
@@ -1553,6 +1586,7 @@ async def fetch_report_detail(session, report_id: int) -> dict | None:
                 r.period_end::date   AS period_end,
                 r.created_at, r.ai_model_used, r.quality_score,
                 r.summary, r.key_findings,
+                r.metadata,
                 c.code               AS country_code,
                 c.name               AS country_name
             FROM reports r
@@ -1570,6 +1604,12 @@ async def fetch_report_detail(session, report_id: int) -> dict | None:
     report["period_end"] = report["period_end"].isoformat() if report["period_end"] else None
     report["created_at"] = report["created_at"].isoformat() if report["created_at"] else None
     report["quality_score"] = safe_float(report["quality_score"])
+    metadata = report.get("metadata") if isinstance(report.get("metadata"), dict) else {}
+    report["metadata"] = compact_report_metadata(metadata, include_figures=True)
+    report["analysis_summary"] = metadata.get("analysis_summary") if isinstance(metadata.get("analysis_summary"), dict) else None
+    report["quality_gate"] = metadata.get("quality_gate") if isinstance(metadata.get("quality_gate"), dict) else None
+    report["data_quality"] = metadata.get("data_quality") if isinstance(metadata.get("data_quality"), dict) else None
+    report["method_version"] = metadata.get("method_version")
 
     # Fetch sections
     srows = await session.execute(
@@ -1577,7 +1617,7 @@ async def fetch_report_detail(session, report_id: int) -> dict | None:
             """
             SELECT
                 section_type, section_order, title,
-                content, content_html
+                content, content_html, charts, metadata
             FROM report_sections
             WHERE report_id = :id
             ORDER BY section_order

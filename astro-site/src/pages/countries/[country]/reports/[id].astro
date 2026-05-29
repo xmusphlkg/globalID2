@@ -2,6 +2,7 @@
 // src/pages/countries/[country]/reports/[id].astro — Individual report page
 import ReportLayout from '../../../../layouts/ReportLayout.astro';
 import DownloadPanel from '../../../../components/DownloadPanel.astro';
+import AnalyticalReportV3Panel from '../../../../components/charts/AnalyticalReportV3Panel';
 import DiseaseReportPanel from '../../../../components/charts/DiseaseReportPanel';
 import type { DiseaseReportData } from '../../../../components/charts/DiseaseReportPanel';
 import { buildChartSourceMeta } from '../../../../utils/chartMeta';
@@ -142,6 +143,7 @@ const scoreColor = !report?.quality_score ? 'text-slate-500'
   : 'text-red-400';
 
 const countryName = report?.country_name ?? country.toUpperCase();
+const isAnalyticalV3 = report?.metadata?.report_layout === 'analytical_v3';
 const keyFindings = report?.key_findings
   ? (Array.isArray(report.key_findings) ? report.key_findings : Object.values(report.key_findings))
   : [];
@@ -243,7 +245,9 @@ const chartSourceMeta = buildChartSourceMeta(
           </section>
         )}
 
-        {diseasePanelData.length > 0 && (
+        {isAnalyticalV3 ? (
+          <AnalyticalReportV3Panel client:only="react" report={report} />
+        ) : diseasePanelData.length > 0 && (
           <section class="figure-panel">
             <p class="figure-kicker" data-lang-en="Interactive appendix" data-lang-zh="交互附录">Interactive appendix</p>
             <h2 class="figure-title" data-lang-en="Disease Analysis" data-lang-zh="疾病分析">
