@@ -66,6 +66,8 @@ _FILENAME_PATTERN = re.compile(
 # Unicode superscript footnote markers to strip from disease names
 _FOOTNOTE_PATTERN = re.compile(r"[¹²³⁴⁵⁶⁷⁸⁹⁰]+$")
 
+_NON_NATIONAL_PDF_HINTS = ("rolling", "dhb", "district")
+
 
 @dataclass
 class NZFetchSummary:
@@ -85,6 +87,33 @@ def _clean_disease_name(raw: str) -> str:
 def _parse_month_name(name: str) -> Optional[int]:
     """Convert month name to number."""
     return _MONTH_NAMES.get(name.lower().strip())
+
+
+def _is_national_filename(name: str) -> bool:
+    """Return true when a NZ surveillance archive member is the national file."""
+    filename = Path(name).name.lower()
+    stem = filename.rsplit(".", 1)[0]
+    return "national" in stem or stem.endswith("nat")
+
+
+def _select_national_pdf(pdf_files: List[str]) -> Optional[str]:
+    """Pick the national PDF from a monthly archive, avoiding rolling/DHB tables."""
+    if not pdf_files:
+        return None
+
+    national_pdfs = [name for name in pdf_files if _is_national_filename(name)]
+    if national_pdfs:
+        return min(national_pdfs, key=lambda value: (len(Path(value).name), value.lower()))
+
+    non_rolling_pdfs = [
+        name
+        for name in pdf_files
+        if not any(hint in Path(name).name.lower() for hint in _NON_NATIONAL_PDF_HINTS)
+    ]
+    if non_rolling_pdfs:
+        return non_rolling_pdfs[0]
+
+    return pdf_files[0]
 
 
 class NewZealandPHFCrawler(BaseCrawler):
@@ -316,17 +345,17 @@ class NewZealandPHFCrawler(BaseCrawler):
                 # Categorize files
                 xlsx_national = None
                 xls_national = None
-                pdf_file = None
+                pdf_files: List[str] = []
                 nested_zip = None
 
                 for name in zf.namelist():
                     name_lower = name.lower()
-                    if name_lower.endswith(".xlsx") and ("national" in name_lower or "nat" in name_lower):
+                    if name_lower.endswith(".xlsx") and _is_national_filename(name):
                         xlsx_national = name
-                    elif name_lower.endswith(".xls") and ("national" in name_lower or "nat" in name_lower):
+                    elif name_lower.endswith(".xls") and _is_national_filename(name):
                         xls_national = name
                     elif name_lower.endswith(".pdf"):
-                        pdf_file = name
+                        pdf_files.append(name)
                     elif name_lower.endswith(".zip"):
                         nested_zip = name
 
@@ -342,6 +371,7 @@ class NewZealandPHFCrawler(BaseCrawler):
                     with zf.open(xls_national) as f:
                         return parse_nz_xls(f.read(), year, month)
 
+                pdf_file = _select_national_pdf(pdf_files)
                 if pdf_file:
                     from src.data.parsers.nz_pdf_parser import parse_nz_pdf
                     with zf.open(pdf_file) as f:
@@ -386,6 +416,17 @@ class NewZealandPHFCrawler(BaseCrawler):
             # Fallback: assume data starts at row 4
             data_start = 4
 
+        value_col_offset = 0
+        for row_idx in range(data_start, min(ws.max_row + 1, data_start + 8)):
+            disease_raw = ws.cell(row=row_idx, column=1).value
+            if not disease_raw or not str(disease_raw).strip():
+                continue
+            col_b_cases = self._safe_int(ws.cell(row=row_idx, column=2).value)
+            col_c_cases = self._safe_int(ws.cell(row=row_idx, column=3).value)
+            if col_b_cases is None and col_c_cases is not None:
+                value_col_offset = 1
+            break
+
         for row_idx in range(data_start, ws.max_row + 1):
             disease_raw = ws.cell(row=row_idx, column=1).value
             if not disease_raw or not str(disease_raw).strip():
@@ -406,27 +447,27 @@ class NewZealandPHFCrawler(BaseCrawler):
                 continue
 
             # Column B: Current month cases
-            cases_val = ws.cell(row=row_idx, column=2).value
+            cases_val = ws.cell(row=row_idx, column=2 + value_col_offset).value
             cases = self._safe_int(cases_val)
 
             # Column C: Cumulative total since 1 Jan
-            cumulative_val = ws.cell(row=row_idx, column=3).value
+            cumulative_val = ws.cell(row=row_idx, column=3 + value_col_offset).value
             cumulative = self._safe_int(cumulative_val)
 
             # Column D: Current 12-month rate (per 100,000)
-            rate_val = ws.cell(row=row_idx, column=4).value
+            rate_val = ws.cell(row=row_idx, column=4 + value_col_offset).value
             rate = self._safe_float(rate_val)
 
             # Column E: Previous year same month cases
-            prev_cases_val = ws.cell(row=row_idx, column=5).value
+            prev_cases_val = ws.cell(row=row_idx, column=5 + value_col_offset).value
             prev_cases = self._safe_int(prev_cases_val)
 
             # Column F: Previous year cumulative
-            prev_cumulative_val = ws.cell(row=row_idx, column=6).value
+            prev_cumulative_val = ws.cell(row=row_idx, column=6 + value_col_offset).value
             prev_cumulative = self._safe_int(prev_cumulative_val)
 
             # Column G: Previous year 12-month rate
-            prev_rate_val = ws.cell(row=row_idx, column=7).value
+            prev_rate_val = ws.cell(row=row_idx, column=7 + value_col_offset).value
             prev_rate = self._safe_float(prev_rate_val)
 
             if cases is None and cumulative is None:
