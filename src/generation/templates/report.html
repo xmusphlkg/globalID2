@@ -77,6 +77,32 @@
       font-weight: 700;
       font-size: 14px;
     }
+    .metric-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin: 24px 0;
+    }
+    .metric-card {
+      border-top: 3px solid var(--accent);
+      background: #f8fafc;
+      padding: 14px 14px 13px;
+    }
+    .metric-card .meta-label {
+      display: block;
+      margin-bottom: 7px;
+    }
+    .metric-value {
+      font-size: 22px;
+      font-weight: 800;
+      line-height: 1.2;
+      word-break: break-word;
+    }
+    .metric-note {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 12px;
+    }
     .toc {
       border: 1px solid var(--line);
       padding: 16px 18px;
@@ -154,6 +180,225 @@
       border: 1px solid var(--line);
       padding: 12px;
     }
+    .figure-stack {
+      display: grid;
+      gap: 18px;
+      margin: 18px 0 20px;
+    }
+    .report-figure {
+      border: 1px solid var(--line);
+      background: #fff;
+      padding: 14px 14px 12px;
+      margin: 0;
+      break-inside: avoid;
+    }
+    .figure-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 8px;
+    }
+    .figure-kicker {
+      margin: 0 0 3px;
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+    }
+    .figure-title {
+      margin: 0;
+      font-size: 16px;
+      line-height: 1.3;
+    }
+    .figure-type {
+      flex: 0 0 auto;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .figure-body {
+      width: 100%;
+      overflow-x: auto;
+    }
+    .echart-canvas {
+      width: 100% !important;
+      height: var(--figure-height, 420px);
+      min-width: 640px;
+    }
+    .figure-caption {
+      margin-top: 10px;
+      color: #263647;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .figure-legend {
+      margin: 8px 0 0;
+      padding-left: 18px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .figure-evidence {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 11px;
+      word-break: break-word;
+    }
+    .visual-stack {
+      display: grid;
+      gap: 12px;
+      margin: 16px 0;
+    }
+    .visual-component {
+      border: 1px solid var(--line);
+      background: #fbfcfd;
+      padding: 14px;
+    }
+    .visual-title {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .judgement-panel {
+      border-left: 4px solid var(--accent);
+      background: #f8fbfc;
+    }
+    .judgement-headline {
+      margin: 0 0 8px;
+      font-size: 18px;
+      font-weight: 800;
+      line-height: 1.25;
+    }
+    .judgement-body {
+      margin: 0;
+      color: #263647;
+    }
+    .component-footnote {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .signal-ladder {
+      display: grid;
+      gap: 10px;
+    }
+    .signal-row {
+      display: grid;
+      grid-template-columns: minmax(120px, 1fr) minmax(160px, 2fr);
+      gap: 12px;
+      align-items: center;
+    }
+    .signal-label {
+      font-weight: 800;
+      line-height: 1.25;
+    }
+    .signal-detail {
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .signal-track {
+      height: 10px;
+      background: #e8edf3;
+      overflow: hidden;
+    }
+    .signal-fill {
+      height: 100%;
+      width: var(--bar-width, 0%);
+      background: var(--accent);
+    }
+    .timeline-component {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .timeline-item {
+      border-left: 3px solid var(--accent-2);
+      padding-left: 10px;
+      min-height: 64px;
+    }
+    .timeline-label,
+    .tile-label,
+    .caveat-label {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .timeline-value,
+    .tile-value {
+      margin-top: 4px;
+      font-size: 18px;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+    .timeline-detail,
+    .tile-note {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .tile-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .tile {
+      background: #f7f9fb;
+      border: 1px solid #e3e8ef;
+      padding: 12px;
+    }
+    .caveat-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .caveat-chip {
+      border: 1px solid #d5dde7;
+      background: #f8fafc;
+      padding: 8px 10px;
+      max-width: 100%;
+    }
+    .caveat-value {
+      margin-top: 3px;
+      color: #263647;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .audit-disclosure {
+      border-top: 1px solid var(--line);
+      padding-top: 20px;
+      margin-top: 26px;
+      break-inside: avoid;
+    }
+    .audit-disclosure summary {
+      cursor: pointer;
+      list-style: none;
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 20px;
+    }
+    .audit-disclosure summary::-webkit-details-marker { display: none; }
+    .audit-disclosure summary::after {
+      content: "Open";
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .audit-disclosure[open] summary::after { content: "Close"; }
+    .audit-content {
+      margin-top: 16px;
+      color: #243447;
+    }
     .footer {
       margin-top: 44px;
       border-top: 1px solid var(--line);
@@ -171,13 +416,152 @@
       .page { padding: 28px 20px 42px; }
       h1 { font-size: 26px; }
       .meta-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .metric-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .timeline-component,
+      .tile-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .figure-header { display: block; }
+      .figure-type { display: inline-block; margin-top: 4px; }
+      .echart-canvas { min-width: 560px; }
+      .signal-row { grid-template-columns: 1fr; }
       .toc ol { columns: 1; }
       .section-header { display: block; }
       .section-type { display: inline-block; margin-top: 6px; }
     }
+    @media (max-width: 520px) {
+      .meta-grid,
+      .metric-strip { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
+  {% set is_v3 = metadata.get('report_layout') == 'analytical_v3' %}
+  {% set is_zh = metadata.get('language') == 'zh' %}
+  {% macro render_visual_components(section) %}
+    {% set components = section.get('visual_components') or [] %}
+    {% if components %}
+      <div class="visual-stack">
+        {% for component in components %}
+          {% set kind = component.get('type') %}
+          {% if kind == 'judgement_panel' %}
+            <aside class="visual-component judgement-panel">
+              <p class="visual-title">{{ component.get('title', '') }}</p>
+              <p class="judgement-headline">{{ component.get('headline', '') }}</p>
+              <p class="judgement-body">{{ component.get('body', '') }}</p>
+              {% if component.get('footnote') %}
+                <div class="component-footnote">{{ component.get('footnote') }}</div>
+              {% endif %}
+            </aside>
+          {% elif kind == 'signal_ladder' %}
+            <aside class="visual-component">
+              <p class="visual-title">{{ component.get('title', '') }}</p>
+              <div class="signal-ladder">
+                {% for item in component.get('items') or [] %}
+                  <div class="signal-row">
+                    <div>
+                      <div class="signal-label">{{ item.get('label', '') }}</div>
+                      <div class="signal-detail">{{ item.get('detail', '') }}</div>
+                    </div>
+                    <div>
+                      <div class="signal-track">
+                        <div class="signal-fill" style="--bar-width: {{ item.get('bar_pct', 0) }}%;"></div>
+                      </div>
+                      <div class="signal-detail">{{ item.get('value', '') }}</div>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+            </aside>
+          {% elif kind == 'timeline' %}
+            <aside class="visual-component">
+              <p class="visual-title">{{ component.get('title', '') }}</p>
+              <div class="timeline-component">
+                {% for item in component.get('items') or [] %}
+                  <div class="timeline-item">
+                    <div class="timeline-label">{{ item.get('label', '') }}</div>
+                    <div class="timeline-value">{{ item.get('value', '') }}</div>
+                    <div class="timeline-detail">{{ item.get('detail', '') }}</div>
+                  </div>
+                {% endfor %}
+              </div>
+            </aside>
+          {% elif kind == 'metric_tiles' %}
+            <aside class="visual-component">
+              <p class="visual-title">{{ component.get('title', '') }}</p>
+              <div class="tile-grid">
+                {% for item in component.get('items') or [] %}
+                  <div class="tile">
+                    <div class="tile-label">{{ item.get('label', '') }}</div>
+                    <div class="tile-value">{{ item.get('value', '') }}</div>
+                    {% if item.get('note') %}
+                      <div class="tile-note">{{ item.get('note') }}</div>
+                    {% endif %}
+                  </div>
+                {% endfor %}
+              </div>
+            </aside>
+          {% elif kind == 'caveat_strip' %}
+            <aside class="visual-component">
+              <p class="visual-title">{{ component.get('title', '') }}</p>
+              <div class="caveat-strip">
+                {% for item in component.get('items') or [] %}
+                  <div class="caveat-chip">
+                    <div class="caveat-label">{{ item.get('label', '') }}</div>
+                    <div class="caveat-value">{{ item.get('value', '') }}</div>
+                  </div>
+                {% endfor %}
+              </div>
+            </aside>
+          {% endif %}
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endmacro %}
+  {% macro render_figures(section, position) %}
+    {% set figures = section.get('figures') or [] %}
+    {% set ns = namespace(open=false) %}
+    {% for figure in figures %}
+      {% if (figure.get('position') or 'after_content') == position %}
+        {% if not ns.open %}
+          <div class="figure-stack">
+          {% set ns.open = true %}
+        {% endif %}
+        <figure class="report-figure" id="{{ figure.get('id', '') }}">
+          <header class="figure-header">
+            <div>
+              <p class="figure-kicker">Figure {{ figure.get('number', loop.index) }}</p>
+              <h3 class="figure-title">{{ figure.get('title', '') }}</h3>
+            </div>
+            <span class="figure-type">{{ (figure.get('figure_type') or 'figure') | replace('_', ' ') }}</span>
+          </header>
+          <div class="figure-body">
+            <div
+              class="echart-canvas"
+              data-report-figure-id="{{ figure.get('id', '') }}"
+              style="--figure-height: {{ figure.get('height', 420) }}px;"
+              role="img"
+              aria-label="{{ figure.get('title', '') }}"
+            ></div>
+          </div>
+          {% if figure.get('caption') %}
+            <figcaption class="figure-caption">{{ figure.get('caption') }}</figcaption>
+          {% endif %}
+          {% if figure.get('legend') %}
+            <ul class="figure-legend">
+              {% for item in figure.get('legend') %}
+                <li>{{ item }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+          {% if figure.get('evidence_refs') %}
+            <div class="figure-evidence">Evidence: {{ (figure.get('evidence_refs') or [])[:4] | join(', ') }}</div>
+          {% endif %}
+        </figure>
+      {% endif %}
+    {% endfor %}
+    {% if ns.open %}
+      </div>
+    {% endif %}
+  {% endmacro %}
   <main class="page">
     <header class="cover">
       <p class="kicker">GlobalID Infectious Disease Surveillance</p>
@@ -195,15 +579,29 @@
           <div class="meta-value">{{ metadata.get('period_start', '') }} to {{ metadata.get('period_end', '') }}</div>
         </div>
         <div class="meta-item">
-          <div class="meta-label">Generated</div>
+          <div class="meta-label">{{ 'Prepared' if is_v3 else 'Generated' }}</div>
           <div class="meta-value">{{ metadata.get('generated_at', '') }}</div>
         </div>
         <div class="meta-item">
-          <div class="meta-label">Layout</div>
-          <div class="meta-value">{{ metadata.get('report_layout', 'structured') }}</div>
+          <div class="meta-label">{{ 'Quality Gate' if is_v3 else 'Layout' }}</div>
+          <div class="meta-value">{{ metadata.get('quality_score_label', 'N/A') if is_v3 else metadata.get('report_layout', 'structured') }}</div>
         </div>
       </div>
     </header>
+
+    {% if is_v3 and metadata.get('presentation_cards') %}
+      <section class="metric-strip" aria-label="Report highlights">
+        {% for card in metadata.get('presentation_cards') %}
+          <div class="metric-card">
+            <span class="meta-label">{{ card.get('label', '') }}</span>
+            <div class="metric-value">{{ card.get('value', 'N/A') }}</div>
+            {% if card.get('note') %}
+              <div class="metric-note">{{ card.get('note') }}</div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </section>
+    {% endif %}
 
     <nav class="toc">
       <h2>Contents</h2>
@@ -215,21 +613,54 @@
     </nav>
 
     {% for section in sections %}
-      <section class="section" id="section-{{ loop.index }}">
-        <div class="section-header">
-          <h2 class="section-title">{{ section.get('title', 'Section ' ~ loop.index) }}</h2>
-          <span class="section-type">{{ section.get('type') or section.get('section_type') or 'section' }}</span>
-        </div>
-        <div class="content">{{ section.get('content', '') | markdown | safe }}</div>
-        {% if section.get('chart_html') %}
-          <div class="chart">{{ section.get('chart_html') | safe }}</div>
-        {% endif %}
-      </section>
+      {% set section_kind = section.get('type') or section.get('section_type') or 'section' %}
+      {% set is_audit_section = is_v3 and section_kind in ['methodology', 'evidence_appendix'] %}
+      {% if is_audit_section %}
+        <details class="audit-disclosure" id="section-{{ loop.index }}">
+          <summary>
+            <span class="section-title">{{ section.get('title', 'Section ' ~ loop.index) }}</span>
+            <span class="section-type">{{ section.get('display_type') or section_kind }}</span>
+          </summary>
+          {{ render_visual_components(section) }}
+          {{ render_figures(section, 'before_content') }}
+          <div class="content audit-content">{{ section.get('content', '') | markdown | safe }}</div>
+          {{ render_figures(section, 'after_content') }}
+          {% if section.get('chart_html') %}
+            <div class="chart">{{ section.get('chart_html') | safe }}</div>
+          {% endif %}
+        </details>
+      {% else %}
+        <section class="section" id="section-{{ loop.index }}">
+          <div class="section-header">
+            <h2 class="section-title">{{ section.get('title', 'Section ' ~ loop.index) }}</h2>
+            <span class="section-type">{{ section.get('display_type') or section_kind }}</span>
+          </div>
+          {{ render_visual_components(section) }}
+          {{ render_figures(section, 'before_content') }}
+          <div class="content">{{ section.get('content', '') | markdown | safe }}</div>
+          {{ render_figures(section, 'after_content') }}
+          {% if section.get('chart_html') %}
+            <div class="chart">{{ section.get('chart_html') | safe }}</div>
+          {% endif %}
+        </section>
+      {% endif %}
     {% endfor %}
 
     <footer class="footer">
       Generated by GlobalID V2. Disease briefs are for surveillance and public information only.
     </footer>
   </main>
+  {% if is_v3 and metadata.get('figures') %}
+    {% set figure_payload = {'figures': metadata.get('figures') or [], 'data': metadata.get('figure_data') or {}, 'language': metadata.get('language', 'en')} %}
+    {% if metadata.get('figure_payload_asset') %}
+      <script id="report-figures-json" type="application/json" data-src="{{ metadata.get('figure_payload_asset') }}"></script>
+      {% if metadata.get('figure_payload_js_asset') %}
+        <script src="{{ metadata.get('figure_payload_js_asset') }}"></script>
+      {% endif %}
+    {% else %}
+      <script id="report-figures-json" type="application/json">{{ figure_payload | tojson }}</script>
+    {% endif %}
+    <script src="assets/report_figures.js"></script>
+  {% endif %}
 </body>
 </html>
