@@ -4,15 +4,29 @@ import BrandLogo from './BrandLogo.astro';
 import metaData from '../data/meta.json';
 import sitePackage from '../../package.json';
 
+interface Props {
+  initialLanguage?: 'en' | 'zh';
+}
+
+const { initialLanguage = 'en' } = Astro.props;
 const year = new Date().getFullYear();
 const siteVersion = sitePackage?.version ? `v${sitePackage.version}` : 'Unknown';
 const dataVersion = metaData?.generated_at
-  ? new Date(metaData.generated_at).toLocaleDateString('en-US', {
+  ? new Date(metaData.generated_at).toLocaleDateString(initialLanguage === 'zh' ? 'zh-CN' : 'en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
     })
   : 'Unknown';
+
+const links = [
+  { href: '/', label: 'Home', labelZh: '首页' },
+  { href: '/countries/', label: 'Countries', labelZh: '国家/地区' },
+  { href: '/diseases/', label: 'Disease Directory', labelZh: '疾病目录' },
+  { href: '/about/', label: 'About', labelZh: '关于' },
+  { href: '/subscribe/', label: 'Subscribe', labelZh: '订阅' },
+  { href: '/terms/', label: 'Service Terms', labelZh: '服务条款' },
+];
 ---
 
 <footer class="site-footer border-t mt-20">
@@ -27,26 +41,22 @@ const dataVersion = metaData?.generated_at
           wordmarkClass="h-11 w-auto max-w-[280px]"
         />
         <p class="site-footer-copy text-sm leading-relaxed">
-          Global Infectious Disease Surveillance.
-          Data sourced from official public health authorities.
+          {initialLanguage === 'zh'
+            ? '全球传染病监测。数据来自官方公共卫生机构。'
+            : 'Global Infectious Disease Surveillance. Data sourced from official public health authorities.'}
         </p>
       </div>
 
       <!-- Quick links -->
       <div>
-        <h3 class="site-footer-section-title font-semibold text-sm mb-3">Navigate</h3>
+        <h3 class="site-footer-section-title font-semibold text-sm mb-3">
+          {initialLanguage === 'zh' ? '导航' : 'Navigate'}
+        </h3>
         <ul class="space-y-2">
-          {[
-            { href: '/', label: 'Home' },
-            { href: '/countries/', label: 'Countries' },
-            { href: '/diseases/', label: 'Disease Directory' },
-            { href: '/about/', label: 'About' },
-            { href: '/subscribe/', label: 'Subscribe' },
-            { href: '/terms/', label: 'Service Terms' },
-          ].map(({ href, label }) => (
+          {links.map(({ href, label, labelZh }) => (
             <li>
-              <a href={href} class="site-footer-link text-sm transition-colors">
-                {label}
+              <a href={href} class="site-footer-link text-sm transition-colors" data-lang-en={label} data-lang-zh={labelZh}>
+                {initialLanguage === 'zh' ? labelZh : label}
               </a>
             </li>
           ))}
@@ -55,23 +65,29 @@ const dataVersion = metaData?.generated_at
 
       <!-- Data info -->
       <div>
-        <h3 class="site-footer-section-title font-semibold text-sm mb-3">Data</h3>
+        <h3 class="site-footer-section-title font-semibold text-sm mb-3">
+          {initialLanguage === 'zh' ? '数据' : 'Data'}
+        </h3>
         <ul class="site-footer-meta space-y-1.5 text-sm">
-          <li>Site version: <span class="site-footer-meta-value">{siteVersion}</span></li>
-          <li>Countries: <span class="site-footer-meta-value">{metaData?.total_countries ?? '—'}</span></li>
-          <li>Diseases tracked: <span class="site-footer-meta-value">{metaData?.total_diseases ?? '—'}</span></li>
-          <li>Reports generated: <span class="site-footer-meta-value">{metaData?.total_reports ?? '—'}</span></li>
-          <li>Data version: <span class="site-footer-meta-value">{dataVersion}</span></li>
+          <li>{initialLanguage === 'zh' ? '站点版本' : 'Site version'}: <span class="site-footer-meta-value">{siteVersion}</span></li>
+          <li>{initialLanguage === 'zh' ? '国家/地区' : 'Countries'}: <span class="site-footer-meta-value">{metaData?.total_countries ?? '—'}</span></li>
+          <li>{initialLanguage === 'zh' ? '监测疾病' : 'Diseases tracked'}: <span class="site-footer-meta-value">{metaData?.total_diseases ?? '—'}</span></li>
+          <li>{initialLanguage === 'zh' ? '已生成报告' : 'Reports generated'}: <span class="site-footer-meta-value">{metaData?.total_reports ?? '—'}</span></li>
+          <li>{initialLanguage === 'zh' ? '数据版本' : 'Data version'}: <span class="site-footer-meta-value">{dataVersion}</span></li>
         </ul>
       </div>
     </div>
 
     <div class="site-footer-divider border-t mt-10 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
       <p class="site-footer-legal text-xs">
-        © {year} GIDS. Site {siteVersion}. Generated automatically by the GIDS pipeline.
+        {initialLanguage === 'zh'
+          ? `© ${year} GIDS。站点 ${siteVersion}，由 GIDS 流水线自动生成。`
+          : `© ${year} GIDS. Site ${siteVersion}. Generated automatically by the GIDS pipeline.`}
       </p>
       <p class="site-footer-legal-note text-xs">
-        Data provided for informational purposes only. Always refer to official health authorities.
+        {initialLanguage === 'zh'
+          ? '数据仅供信息参考，请以官方卫生机构发布为准。'
+          : 'Data provided for informational purposes only. Always refer to official health authorities.'}
       </p>
     </div>
   </div>

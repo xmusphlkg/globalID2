@@ -19,7 +19,10 @@ const reportsPath = resolve('./src/data/reports/index.json');
 let reports: any[] = [];
 if (existsSync(reportsPath)) {
   const all = JSON.parse(readFileSync(reportsPath, 'utf-8')) as any[];
-  reports = all.filter(r => r.country_code?.toLowerCase() === country);
+  reports = all.filter(r => (
+    r.country_code?.toLowerCase() === country
+    && (r.metadata?.report_layout === 'report_v4' || r.metadata?.report_document_v4 || r.report_document_v4)
+  ));
 }
 
 const countryName = reports[0]?.country_name ?? country.toUpperCase();

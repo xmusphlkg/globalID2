@@ -354,6 +354,51 @@ export function renderCitations(text: string, sources: CitationSource[]): string
   return rendered;
 }
 
+/**
+ * Convert citation markers inside already-rendered, trusted/escaped HTML.
+ *
+ * Use this after Markdown rendering when the original text has already been
+ * escaped by the renderer pipeline. Unlike renderCitations(), this does not
+ * escape the full input HTML; it only injects citation links for marker groups.
+ */
+export function renderCitationMarkersInHtml(
+  html: string,
+  sources: CitationSource[],
+  referencePrefix = 'ref',
+): string {
+  if (!html) return '';
+
+  const normalizedSources = sources.some((source) => toInt(source.citation_index) != null)
+    ? [...sources].sort((a, b) => (toInt(a.citation_index) ?? Number.MAX_SAFE_INTEGER) - (toInt(b.citation_index) ?? Number.MAX_SAFE_INTEGER))
+    : normalizeCitationSources(sources, [html]);
+  const byNumber = new Map<number, CitationSource>();
+  normalizedSources.forEach((source, index) => {
+    const citationIndex = toInt(source.citation_index) ?? index + 1;
+    byNumber.set(citationIndex, source);
+    const sourceId = toInt(source.source_id) ?? toInt(source.id);
+    if (sourceId != null && !byNumber.has(sourceId)) byNumber.set(sourceId, source);
+  });
+
+  return html.replace(CITATION_GROUP_RE, (group) => {
+    const displayNumbers: number[] = [];
+    for (const marker of extractMarkers([group])) {
+      const source = byNumber.get(marker);
+      if (!source) continue;
+      const citationIndex = toInt(source.citation_index) ?? normalizedSources.indexOf(source) + 1;
+      if (!displayNumbers.includes(citationIndex)) displayNumbers.push(citationIndex);
+    }
+    if (displayNumbers.length === 0) return group;
+
+    return displayNumbers
+      .map((displayNumber) => {
+        const source = normalizedSources.find((entry, index) => (toInt(entry.citation_index) ?? index + 1) === displayNumber);
+        const tooltip = escapeHtml(referenceTooltip(source ?? {}, displayNumber));
+        return `<sup class="citation-ref"><a href="#${referencePrefix}-${displayNumber}" class="citation-link" title="${tooltip}" data-citation-tooltip="${tooltip}" aria-label="Reference ${displayNumber}">[${displayNumber}]</a></sup>`;
+      })
+      .join('');
+  });
+}
+
 export function hasCitations(text: string | null | undefined): boolean {
   if (!text) return false;
   return /\[\d+\]/.test(text);
