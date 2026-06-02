@@ -31,41 +31,74 @@ export const CHART_TOKENS = {
   accentBlue: "#2563eb",
 } as const;
 
-export const CHART_DEFAULTS: Record<string, unknown> = {
-  tooltip: {
-    trigger: "axis",
-    backgroundColor: "rgba(255, 255, 255, 0.97)",
-    borderColor: "#d9dfd9",
-    borderWidth: 1,
-    textStyle: { color: "#17211f", fontSize: 12 },
-    padding: [8, 12],
-    extraCssText: "border-radius: 8px; box-shadow: 0 10px 24px rgba(23,33,31,0.12);",
-  },
-  grid: {
-    left: 60,
-    right: 24,
-    bottom: 50,
-    top: 40,
-    containLabel: true,
-  },
-  legend: {
-    top: 0,
-    textStyle: { fontSize: 12, color: "#5f6f6a" },
-    icon: "roundRect",
-    itemWidth: 12,
-    itemHeight: 8,
-    itemGap: 16,
-  },
-};
+export type ChartTheme = "light" | "dark";
+
+function chartDefaults(theme: ChartTheme): Record<string, unknown> {
+  const isDark = theme === "dark";
+  const text = isDark ? "#cbd5e1" : "#17211f";
+  const axisText = isDark ? "#94a3b8" : "#5f6f6a";
+  const gridLine = isDark ? "#1e293b" : "#d9dfd9";
+  return {
+    tooltip: {
+      trigger: "axis",
+      backgroundColor: isDark ? "rgba(15, 23, 42, 0.97)" : "rgba(255, 255, 255, 0.97)",
+      borderColor: gridLine,
+      borderWidth: 1,
+      textStyle: { color: text, fontSize: 12 },
+      padding: [8, 12],
+      extraCssText: `border-radius: 8px; box-shadow: 0 10px 24px ${isDark ? "rgba(0,0,0,0.28)" : "rgba(23,33,31,0.12)"};`,
+    },
+    grid: {
+      left: 60,
+      right: 24,
+      bottom: 50,
+      top: 40,
+      containLabel: true,
+    },
+    legend: {
+      top: 0,
+      textStyle: { fontSize: 12, color: axisText },
+      icon: "roundRect",
+      itemWidth: 12,
+      itemHeight: 8,
+      itemGap: 16,
+    },
+    textStyle: { color: text },
+  };
+}
+
+function remapForDark(value: unknown): unknown {
+  const replacements: Record<string, string> = {
+    "#5d6978": "#94a3b8",
+    "#5f6f6a": "#94a3b8",
+    "#263647": "#cbd5e1",
+    "#17211f": "#cbd5e1",
+    "#e7ebf0": "#1e293b",
+    "#d7dde5": "#334155",
+    "#d9dfd9": "#1e293b",
+    "#f7fafc": "#17283a",
+    "rgba(255,255,255,0.28)": "rgba(255,255,255,0.06)",
+  };
+  if (typeof value === "string") return replacements[value] || value;
+  if (Array.isArray(value)) return value.map(remapForDark);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, item]) => [key, remapForDark(item)]),
+    );
+  }
+  return value;
+}
 
 /** Merge user options with theme defaults */
-export function withTheme(option: Record<string, unknown>): Record<string, unknown> {
-  const defaultTooltip = CHART_DEFAULTS.tooltip as Record<string, unknown>;
+export function withTheme(option: Record<string, unknown>, theme: ChartTheme = "light"): Record<string, unknown> {
+  const defaults = chartDefaults(theme);
+  const defaultTooltip = defaults.tooltip as Record<string, unknown>;
   const userTooltip = (option.tooltip ?? {}) as Record<string, unknown>;
-  return {
+  const merged = {
     color: CHART_COLORS,
-    ...CHART_DEFAULTS,
+    ...defaults,
     ...option,
     tooltip: { ...defaultTooltip, ...userTooltip },
   };
+  return theme === "dark" ? (remapForDark(merged) as Record<string, unknown>) : merged;
 }

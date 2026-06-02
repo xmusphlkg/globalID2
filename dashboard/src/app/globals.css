@@ -104,4 +104,96 @@ a {
   .primary-action {
     @apply inline-flex h-10 items-center justify-center gap-2 rounded-tremor-default bg-tremor-brand px-4 text-sm font-semibold text-tremor-brand-inverted transition hover:brightness-95;
   }
+
+  .report-markdown {
+    @apply max-w-none text-sm leading-7 text-tremor-content dark:text-dark-tremor-content;
+  }
+
+  .report-markdown > * + * {
+    @apply mt-3;
+  }
+
+  .report-markdown h1,
+  .report-markdown h2,
+  .report-markdown h3,
+  .report-markdown h4 {
+    @apply font-semibold tracking-normal text-tremor-content-strong dark:text-dark-tremor-content-strong;
+  }
+
+  .report-markdown h1 {
+    @apply text-xl;
+  }
+
+  .report-markdown h2 {
+    @apply text-lg;
+  }
+
+  .report-markdown h3 {
+    @apply text-base;
+  }
+
+  .report-markdown h4 {
+    @apply text-sm;
+  }
+
+  .report-markdown strong {
+    @apply font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong;
+  }
+
+  .report-markdown ul {
+    @apply list-disc pl-5;
+  }
+
+  .report-markdown ol {
+    @apply list-decimal pl-5;
+  }
+
+  .report-markdown li + li {
+    @apply mt-1;
+  }
+
+  .report-markdown table {
+    @apply my-4 w-full border-collapse overflow-hidden rounded-tremor-default border border-tremor-border text-sm dark:border-dark-tremor-border;
+  }
+
+  .report-markdown th,
+  .report-markdown td {
+    @apply border border-tremor-border px-3 py-2 align-top dark:border-dark-tremor-border;
+  }
+
+  .report-markdown th {
+    @apply bg-tremor-background-subtle font-semibold text-tremor-content-strong dark:bg-dark-tremor-background-subtle dark:text-dark-tremor-content-strong;
+  }
+
+  .report-markdown blockquote {
+    @apply border-l-4 border-tremor-brand bg-tremor-background-subtle px-4 py-3 text-tremor-content dark:border-dark-tremor-brand dark:bg-dark-tremor-background-subtle dark:text-dark-tremor-content;
+  }
+
+  .report-markdown code {
+    @apply rounded-tremor-small bg-tremor-background-subtle px-1 py-0.5 font-mono text-[0.86em] text-tremor-content-strong dark:bg-dark-tremor-background-subtle dark:text-dark-tremor-content-strong;
+  }
+
+  .report-markdown pre {
+    @apply overflow-x-auto rounded-tremor-default border border-tremor-border bg-tremor-background-subtle p-3 dark:border-dark-tremor-border dark:bg-dark-tremor-background-subtle;
+  }
+
+  .report-markdown pre code {
+    @apply bg-transparent p-0;
+  }
+
+  .citation-ref {
+    font-size: 0.72em;
+    line-height: 1;
+    vertical-align: super;
+    margin-left: 1px;
+    margin-right: 1px;
+  }
+
+  .citation-link {
+    @apply font-semibold text-tremor-brand underline-offset-2 hover:underline dark:text-dark-tremor-brand;
+  }
+
+  li:target {
+    @apply rounded-tremor-small bg-tremor-brand-muted/60 px-2 py-1 dark:bg-dark-tremor-brand-muted/40;
+  }
 }
