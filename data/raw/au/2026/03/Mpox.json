@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-05-29T22:45:33.137106+00:00",
+  "fetched_at": "2026-05-30T22:45:38.428866+00:00",
   "disease": "Mpox",
   "year": 2026,
   "month": 3,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1780094732757)/",
-            "rootActivityId": "5dba5015-904d-4ae2-93b1-41d5e141f3cb",
+            "timestamp": "/Date(1780181138089)/",
+            "rootActivityId": "7a232e3f-a5dc-4828-8c08-473dceafb393",
             "descriptor": {
               "Select": [
                 {

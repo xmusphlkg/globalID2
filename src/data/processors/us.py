@@ -327,6 +327,8 @@ class USWeeklyUpdater:
                 "source_file": row.get("__source_file", ""),
                 "update_mode": row.get("UpdateMode", ""),
                 "is_provisional": row.get("IsProvisional", ""),
+                "death_reporting": "not_provided_by_source",
+                "death_reporting_note": "NNDSS case notification feed used here does not provide death counts.",
             }
 
             key = (day, disease_id, country_id)
@@ -340,7 +342,7 @@ class USWeeklyUpdater:
                     "disease_id": disease_id,
                     "country_id": country_id,
                     "cases": cases if cases is not None else 0,
-                    "deaths": 0,
+                    "deaths": None,
                     "data_source": row.get("Source", self.source_name),
                     "metadata": json.dumps(metadata_obj),
                     "raw_data": json.dumps(row),

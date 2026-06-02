@@ -263,6 +263,8 @@ class JPWeeklyUpdater:
                 "mmwr_week": row.get("MMWRWeek", ""),
                 "current_week_flag": row.get("CurrentWeekFlag", ""),
                 "source_file": row.get("__source_file", ""),
+                "death_reporting": "not_provided_by_source",
+                "death_reporting_note": "Japan IDWR weekly feed used here reports cases only.",
             }
 
             key = (day, disease_id, country_id)
@@ -276,7 +278,7 @@ class JPWeeklyUpdater:
                     "disease_id": disease_id,
                     "country_id": country_id,
                     "cases": cases if cases is not None else 0,
-                    "deaths": 0,
+                    "deaths": None,
                     "data_source": row.get("Source", self.source_name),
                     "metadata": json.dumps(metadata_obj),
                     "raw_data": json.dumps(row),

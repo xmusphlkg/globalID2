@@ -67,7 +67,7 @@ class ReportService:
         days: int,
         enable_review: bool,
         send_email: bool,
-        report_layout: str = "analytical_v3",
+        report_layout: str = "report_v4",
         analysis_depth: str = "deep",
         quality_threshold: float = 0.85,
         reuse_from_failed: bool = True,
@@ -84,9 +84,8 @@ class ReportService:
         from src.ai.model_check import ensure_available_models_checked_async
         from src.generation import ReportGenerator
 
-        language = (language or "en").strip().lower()
-        if language not in {"zh", "en"}:
-            language = "en"
+        language = "zh"
+        report_layout = "report_v4"
 
         # Check model availability once
         await ensure_available_models_checked_async()
@@ -245,7 +244,7 @@ class ReportService:
                 task.task_uuid,
                 entry_type="info",
                 title="Phase 2/5: AI Analysis & Generation",
-                content="Starting multi-agent AI workflow (Analyst → Writer → Reviewer)...",
+                content="Starting report_v4 evidence-bound generation workflow...",
                 content_type="text",
             )
 
@@ -517,7 +516,11 @@ class ReportService:
             strategy=reuse_strategy,
         )
 
-        if attached_report and attached_report.id not in {c.report.id for c in candidates}:
+        if (
+            attached_report
+            and self._is_reusable_v4_report(attached_report)
+            and attached_report.id not in {c.report.id for c in candidates}
+        ):
             attached_sig = await self._compute_data_signature(
                 db,
                 country_id=country.id,
@@ -548,6 +551,8 @@ class ReportService:
             explicit = await db.get(Report, reuse_report_id)
             if explicit is None:
                 raise ValueError(f"Manual reuse report not found: {reuse_report_id}")
+            if not self._is_reusable_v4_report(explicit):
+                raise ValueError(f"Report #{reuse_report_id} is not a validated report_v4 document")
             if explicit.country_id != country.id or explicit.report_type != report_type:
                 raise ValueError(
                     f"Report #{reuse_report_id} does not match country/type scope for current task"
@@ -635,6 +640,8 @@ class ReportService:
         candidates: list[ReuseCandidate] = []
         for row in rows:
             report = row[0]
+            if not self._is_reusable_v4_report(report):
+                continue
             section_count = int(row[1] or 0)
             sig = await self._compute_data_signature(
                 db,
@@ -673,6 +680,15 @@ class ReportService:
             "json decode",
         ]
         return any(marker in text for marker in hard_markers)
+
+    @staticmethod
+    def _is_reusable_v4_report(report: Report) -> bool:
+        metadata = report.metadata_ if isinstance(report.metadata_, dict) else {}
+        return (
+            metadata.get("report_layout") == "report_v4"
+            and isinstance(metadata.get("report_document_v4"), dict)
+            and (metadata.get("quality_gate") or {}).get("passed") is True
+        )
 
     @staticmethod
     def _status_str(status_value: object) -> str:

@@ -28,3 +28,5 @@ Requirements:
 - Base analysis strictly on provided data
 - Highlight important patterns and trends
 - The structural format remains, but output the content strictly in the target language: {language}.
+- Do not mix English and Chinese prose. Preserve only official disease names, acronyms, units, and source titles when needed.
+- If death or mortality fields are missing/unavailable, state that they are unavailable; do not interpret missing death data as zero mortality.

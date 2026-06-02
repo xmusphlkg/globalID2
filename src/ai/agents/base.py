@@ -385,6 +385,73 @@ class BaseAgent(ABC):
         match = re.search(r"unexpected keyword argument '([^']+)'", str(error))
         return match.group(1) if match else None
 
+    @staticmethod
+    def _completion_content_to_text(content: Any) -> str:
+        if content is None:
+            return ""
+        if isinstance(content, str):
+            return content
+        if isinstance(content, list):
+            parts: List[str] = []
+            for item in content:
+                if isinstance(item, str):
+                    parts.append(item)
+                elif isinstance(item, dict):
+                    text = item.get("text") or item.get("content")
+                    if text is not None:
+                        parts.append(str(text))
+                else:
+                    text = getattr(item, "text", None) or getattr(item, "content", None)
+                    if text is not None:
+                        parts.append(str(text))
+            return "\n".join(part for part in parts if part)
+        return str(content)
+
+    @classmethod
+    def _extract_openai_compatible_response(cls, response: Any) -> Tuple[str, Dict[str, int]]:
+        """Normalize OpenAI-compatible responses, including string-returning proxies."""
+        token_usage: Dict[str, int] = {}
+        usage = response.get("usage") if isinstance(response, dict) else getattr(response, "usage", None)
+        if usage:
+            prompt_tokens = usage.get("prompt_tokens") if isinstance(usage, dict) else getattr(usage, "prompt_tokens", None)
+            completion_tokens = usage.get("completion_tokens") if isinstance(usage, dict) else getattr(usage, "completion_tokens", None)
+            total_tokens = usage.get("total_tokens") if isinstance(usage, dict) else getattr(usage, "total_tokens", None)
+            token_usage = {
+                "prompt": int(prompt_tokens or 0),
+                "completion": int(completion_tokens or 0),
+                "total": int(total_tokens or ((prompt_tokens or 0) + (completion_tokens or 0))),
+            }
+
+        if isinstance(response, str):
+            return response, token_usage
+
+        if isinstance(response, dict):
+            choices = response.get("choices")
+            if isinstance(choices, list) and choices:
+                first = choices[0]
+                if isinstance(first, dict):
+                    message = first.get("message")
+                    if isinstance(message, dict):
+                        return cls._completion_content_to_text(message.get("content")), token_usage
+                    return cls._completion_content_to_text(first.get("text") or first.get("content")), token_usage
+            output_text = response.get("output_text")
+            if output_text is not None:
+                return cls._completion_content_to_text(output_text), token_usage
+            return cls._completion_content_to_text(response.get("content")), token_usage
+
+        choices = getattr(response, "choices", None)
+        if choices:
+            first = choices[0]
+            message = getattr(first, "message", None)
+            if message is not None:
+                return cls._completion_content_to_text(getattr(message, "content", None)), token_usage
+            return cls._completion_content_to_text(getattr(first, "text", None)), token_usage
+
+        output_text = getattr(response, "output_text", None)
+        if output_text is not None:
+            return cls._completion_content_to_text(output_text), token_usage
+        return cls._completion_content_to_text(getattr(response, "content", response)), token_usage
+
     async def _safe_openai_completion_create(
         self,
         client: AsyncOpenAI,
@@ -840,14 +907,7 @@ class BaseAgent(ABC):
         }
         response = await self._safe_openai_completion_create(client, request_payload)
 
-        token_usage = {}
-        if hasattr(response, "usage") and response.usage:
-            token_usage = {
-                "prompt": response.usage.prompt_tokens,
-                "completion": response.usage.completion_tokens,
-                "total": response.usage.total_tokens,
-            }
-        return response.choices[0].message.content, token_usage
+        return self._extract_openai_compatible_response(response)
     
     async def _complete_with_provider(
         self, 
@@ -893,16 +953,7 @@ class BaseAgent(ABC):
         }
         response = await self._safe_openai_completion_create(client, request_payload)
         
-        # Extract token usage
-        token_usage = {}
-        if hasattr(response, 'usage') and response.usage:
-            token_usage = {
-                "prompt": response.usage.prompt_tokens,
-                "completion": response.usage.completion_tokens,
-                "total": response.usage.total_tokens,
-            }
-        
-        return response.choices[0].message.content, token_usage
+        return self._extract_openai_compatible_response(response)
     
     async def _complete_anthropic(
         self,

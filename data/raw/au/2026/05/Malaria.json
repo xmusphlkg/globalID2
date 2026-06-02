@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-05-29T22:45:48.609611+00:00",
+  "fetched_at": "2026-06-01T22:45:41.940902+00:00",
   "disease": "Malaria",
   "year": 2026,
   "month": 5,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1780094748228)/",
-            "rootActivityId": "23695711-73ee-4ae0-b25d-24f8bf28173e",
+            "timestamp": "/Date(1780353941576)/",
+            "rootActivityId": "51cf939e-933c-464b-a0ff-6a4f2add8b47",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'20'"
+                          "A0": "'23'"
                         }
                       ]
                     },

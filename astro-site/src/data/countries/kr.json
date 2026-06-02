@@ -13,7 +13,7 @@
   },
   "date_range": {
     "start": "2005-01-01",
-    "end": "2026-05-01"
+    "end": "2026-06-01"
   },
   "comparison_basis": {
     "frequency": "WEEKLY_EQUIVALENT_7D",
@@ -24,7 +24,7 @@
     "unit": "per_100k",
     "population_source": "WPP",
     "source_counts": {
-      "missing_population": 16448
+      "missing_population": 16512
     },
     "note_en": "Incidence Rate is computed from WPP population data during site generation; when population is unavailable, original database incidence is shown.",
     "note_zh": "发病率在网页数据生成阶段按 WPP 人口重算（每10万人）；若缺少人口数据则回退显示数据库原始发病率。"
@@ -293,9 +293,11 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
+        0,
         0,
         0,
         0,
@@ -811,9 +813,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -1329,6 +1333,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -1588,9 +1593,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -2117,7 +2124,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         16,
@@ -2299,6 +2307,7 @@
         0,
         0,
         1,
+        0,
         0,
         0,
         0,
@@ -2635,9 +2644,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -3153,6 +3164,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -3412,9 +3424,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -3941,9 +3955,11 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
+        0,
         0,
         0,
         0,
@@ -4459,9 +4475,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -4977,6 +4995,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -5236,9 +5255,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -5765,7 +5786,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         0,
@@ -6003,6 +6025,7 @@
         128,
         125,
         60,
+        0,
         0,
         0,
         0,
@@ -6283,9 +6306,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -6801,6 +6826,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -7060,9 +7086,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -7589,7 +7617,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         0,
@@ -7827,6 +7856,7 @@
         16,
         23,
         7,
+        0,
         0,
         0,
         0,
@@ -8107,9 +8137,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -8625,6 +8657,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -8884,9 +8917,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -9413,7 +9448,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         0,
@@ -9651,6 +9687,7 @@
         576,
         530,
         235,
+        0,
         0,
         0,
         0,
@@ -9931,9 +9968,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -10449,6 +10488,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -10708,9 +10748,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -11237,7 +11279,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         0,
@@ -11475,6 +11518,7 @@
         44,
         52,
         23,
+        0,
         0,
         0,
         0,
@@ -11755,9 +11799,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -12273,6 +12319,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -12532,9 +12579,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -13061,9 +13110,11 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
+        0,
         0,
         0,
         0,
@@ -13579,9 +13630,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -14097,6 +14150,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -14356,9 +14410,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -14885,9 +14941,11 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
+        0,
         0,
         0,
         0,
@@ -15403,9 +15461,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -15921,6 +15981,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -16180,9 +16241,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -16709,7 +16772,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         7,
@@ -16946,6 +17010,7 @@
         4,
         24,
         8,
+        0,
         0,
         0,
         0,
@@ -17227,9 +17292,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -17745,6 +17812,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -18004,9 +18072,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -18533,7 +18603,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         421,
@@ -18771,6 +18842,7 @@
         22,
         33,
         9,
+        0,
         0,
         0,
         0,
@@ -19051,9 +19123,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -19569,6 +19643,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -19828,9 +19903,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -20357,9 +20434,11 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
+        0,
         0,
         0,
         0,
@@ -20875,9 +20954,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -21393,6 +21474,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -21652,9 +21734,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -22181,7 +22265,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         6,
@@ -22412,6 +22497,7 @@
         5,
         10,
         1,
+        0,
         0,
         0,
         0,
@@ -22699,9 +22785,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -23217,6 +23305,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -23476,9 +23565,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -24005,7 +24096,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         34,
@@ -24243,6 +24335,7 @@
         12,
         22,
         6,
+        0,
         0,
         0,
         0,
@@ -24523,9 +24616,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -25041,6 +25136,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -25300,9 +25396,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -25829,9 +25927,11 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
+        0,
         0,
         0,
         0,
@@ -26347,9 +26447,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -26865,6 +26967,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -27124,9 +27227,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -27653,7 +27758,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         31,
@@ -27891,6 +27997,7 @@
         2,
         2,
         3,
+        0,
         0,
         0,
         0,
@@ -28171,9 +28278,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -28689,6 +28798,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -28948,9 +29058,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -29477,7 +29589,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         11,
@@ -29715,6 +29828,7 @@
         205,
         895,
         1096,
+        0,
         0,
         0,
         0,
@@ -29995,9 +30109,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -30513,6 +30629,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -30772,9 +30889,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -31301,9 +31420,11 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
+        0,
         0,
         0,
         0,
@@ -31819,9 +31940,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -32337,6 +32460,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -32596,9 +32720,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -33125,7 +33251,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         87,
@@ -33363,6 +33490,7 @@
         380,
         784,
         382,
+        0,
         0,
         0,
         0,
@@ -33643,9 +33771,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -34161,6 +34291,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -34420,9 +34551,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -34949,7 +35082,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         158,
@@ -35186,6 +35320,7 @@
         0,
         1,
         1,
+        0,
         0,
         0,
         0,
@@ -35467,9 +35602,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -35985,6 +36122,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -36244,9 +36382,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -36773,7 +36913,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         0,
@@ -37011,6 +37152,7 @@
         217,
         246,
         99,
+        0,
         0,
         0,
         0,
@@ -37291,9 +37433,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -37809,6 +37953,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -38068,9 +38213,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -38597,7 +38744,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         83,
@@ -38834,6 +38982,7 @@
         1,
         1,
         3,
+        0,
         0,
         0,
         0,
@@ -39115,9 +39264,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -39633,6 +39784,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -39892,9 +40044,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -40421,7 +40575,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         1369,
@@ -40659,6 +40814,7 @@
         17,
         75,
         38,
+        0,
         0,
         0,
         0,
@@ -40939,9 +41095,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -41457,6 +41615,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -41716,9 +41875,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -42245,7 +42406,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         1863,
@@ -42483,6 +42645,7 @@
         749,
         1011,
         451,
+        0,
         0,
         0,
         0,
@@ -42763,9 +42926,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -43281,6 +43446,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -43540,9 +43706,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -44069,7 +44237,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         0,
@@ -44256,6 +44425,7 @@
         1,
         0,
         1,
+        0,
         0,
         0,
         0,
@@ -44587,9 +44757,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -45105,6 +45277,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -45364,9 +45537,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -45893,7 +46068,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         0,
@@ -46127,6 +46303,7 @@
         1,
         0,
         1,
+        0,
         0,
         0,
         0,
@@ -46411,9 +46588,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -46929,6 +47108,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -47188,9 +47368,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -47717,7 +47899,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         0,
@@ -47886,6 +48069,7 @@
         0,
         0,
         1,
+        0,
         0,
         0,
         0,
@@ -48235,9 +48419,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -48753,6 +48939,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -49012,9 +49199,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -49541,9 +49730,11 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
+        0,
         0,
         0,
         0,
@@ -50059,9 +50250,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -50577,6 +50770,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -50836,9 +51030,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -51365,7 +51561,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         0,
@@ -51595,6 +51792,7 @@
         0,
         0,
         1,
+        0,
         0,
         0,
         0,
@@ -51883,9 +52081,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -52401,6 +52601,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -52660,9 +52861,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -53189,7 +53392,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         0,
@@ -53420,6 +53624,7 @@
         1,
         0,
         2,
+        0,
         0,
         0,
         0,
@@ -53707,9 +53912,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -54225,6 +54432,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -54484,9 +54692,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -55013,9 +55223,11 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
+        0,
         0,
         0,
         0,
@@ -55531,9 +55743,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -56049,6 +56263,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -56308,9 +56523,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -56837,7 +57054,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         1934,
@@ -57075,6 +57293,7 @@
         2987,
         4189,
         1737,
+        0,
         0,
         0,
         0,
@@ -57355,9 +57574,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -57873,6 +58094,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -58132,9 +58354,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -58661,7 +58885,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         0,
@@ -58899,6 +59124,7 @@
         3,
         17,
         2,
+        0,
         0,
         0,
         0,
@@ -59179,9 +59405,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -59697,6 +59925,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -59956,9 +60185,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -60485,7 +60716,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         6780,
@@ -60723,6 +60955,7 @@
         102,
         138,
         51,
+        0,
         0,
         0,
         0,
@@ -61003,9 +61236,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -61521,6 +61756,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -61780,9 +62016,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -62309,9 +62547,11 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
+        0,
         0,
         0,
         0,
@@ -62827,9 +63067,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -63345,6 +63587,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -63604,9 +63847,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -64133,9 +64378,11 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
+        0,
         0,
         0,
         0,
@@ -64651,9 +64898,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -65169,6 +65418,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -65428,9 +65678,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -65957,7 +66209,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         0,
@@ -66195,6 +66448,7 @@
         1,
         1,
         1,
+        0,
         0,
         0,
         0,
@@ -66475,9 +66729,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -66993,6 +67249,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -67252,9 +67509,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -67781,7 +68040,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         0,
@@ -68002,6 +68262,7 @@
         0,
         1,
         1,
+        0,
         0,
         0,
         0,
@@ -68299,9 +68560,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -68817,6 +69080,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -69076,9 +69340,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -69605,7 +69871,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         0,
@@ -69842,6 +70109,7 @@
         0,
         1,
         1,
+        0,
         0,
         0,
         0,
@@ -70123,9 +70391,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -70641,6 +70911,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -70900,9 +71171,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -71429,7 +71702,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         317,
@@ -71667,6 +71941,7 @@
         3,
         2,
         3,
+        0,
         0,
         0,
         0,
@@ -71947,9 +72222,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -72465,6 +72742,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -72724,9 +73002,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -73253,7 +73533,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         0,
@@ -73491,6 +73772,7 @@
         17,
         16,
         7,
+        0,
         0,
         0,
         0,
@@ -73771,9 +74053,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -74289,6 +74573,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -74548,9 +74833,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -75077,7 +75364,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         6,
@@ -75315,6 +75603,7 @@
         21,
         32,
         14,
+        0,
         0,
         0,
         0,
@@ -75595,9 +75884,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -76113,6 +76404,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -76372,9 +76664,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -76901,7 +77195,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         0,
@@ -77138,6 +77433,7 @@
         2,
         2,
         1,
+        0,
         0,
         0,
         0,
@@ -77419,9 +77715,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -77937,6 +78235,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -78196,9 +78495,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -78725,7 +79026,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         7,
@@ -78962,6 +79264,7 @@
         3,
         1,
         1,
+        0,
         0,
         0,
         0,
@@ -79243,9 +79546,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -79761,6 +80066,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -80020,9 +80326,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -80549,7 +80857,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         0,
@@ -80786,6 +81095,7 @@
         5,
         3,
         6,
+        0,
         0,
         0,
         0,
@@ -81067,9 +81377,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -81585,6 +81897,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -81844,9 +82157,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -82373,7 +82688,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         43,
@@ -82611,6 +82927,7 @@
         11,
         22,
         12,
+        0,
         0,
         0,
         0,
@@ -82891,9 +83208,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -83409,6 +83728,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -83668,9 +83988,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -84197,7 +84519,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         0,
@@ -84431,6 +84754,7 @@
         1,
         0,
         1,
+        0,
         0,
         0,
         0,
@@ -84715,9 +85039,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -85233,6 +85559,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -85492,9 +85819,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -86021,7 +86350,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         11,
@@ -86257,6 +86587,7 @@
         0,
         0,
         1,
+        0,
         0,
         0,
         0,
@@ -86539,9 +86870,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -87057,6 +87390,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -87316,9 +87650,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -87845,9 +88181,11 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
+        0,
         0,
         0,
         0,
@@ -88363,9 +88701,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -88881,6 +89221,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -89140,9 +89481,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -89669,7 +90012,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         190,
@@ -89907,6 +90251,7 @@
         1,
         7,
         6,
+        0,
         0,
         0,
         0,
@@ -90187,9 +90532,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -90705,6 +91052,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -90964,9 +91312,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -91493,7 +91843,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         57,
@@ -91730,6 +92081,7 @@
         0,
         0,
         1,
+        0,
         0,
         0,
         0,
@@ -92011,9 +92363,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -92529,6 +92883,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -92788,9 +93143,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -93317,7 +93674,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         0,
@@ -93414,6 +93772,7 @@
         0,
         0,
         1,
+        0,
         0,
         0,
         0,
@@ -93835,9 +94194,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -94353,6 +94714,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -94612,9 +94974,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -95141,7 +95505,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         0,
@@ -95372,6 +95737,7 @@
         0,
         0,
         2,
+        0,
         0,
         0,
         0,
@@ -95659,9 +96025,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -96177,6 +96545,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -96436,9 +96805,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -96965,7 +97336,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         0,
@@ -97203,6 +97575,7 @@
         3920,
         4743,
         2011,
+        0,
         0,
         0,
         0,
@@ -97483,9 +97856,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -98001,6 +98376,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -98260,9 +98636,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -98789,7 +99167,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         0,
@@ -99026,6 +99405,7 @@
         4,
         0,
         1,
+        0,
         0,
         0,
         0,
@@ -99307,9 +99687,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -99825,6 +100207,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -100084,9 +100467,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -100613,7 +100998,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         0,
@@ -100851,6 +101237,7 @@
         0,
         2,
         1,
+        0,
         0,
         0,
         0,
@@ -101131,9 +101518,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -101649,6 +102038,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -101908,9 +102298,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -102437,9 +102829,11 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
+        0,
         0,
         0,
         0,
@@ -102955,9 +103349,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -103473,6 +103869,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -103732,9 +104129,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -104261,7 +104660,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         35,
@@ -104499,6 +104899,7 @@
         2,
         1,
         2,
+        0,
         0,
         0,
         0,
@@ -104779,9 +105180,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -105297,6 +105700,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -105556,9 +105960,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -106085,9 +106491,11 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
+        0,
         0,
         0,
         0,
@@ -106603,9 +107011,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -107121,6 +107531,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -107380,9 +107791,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -107909,9 +108322,11 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
+        0,
         0,
         0,
         0,
@@ -108427,9 +108842,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -108945,6 +109362,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -109204,9 +109622,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -109733,9 +110153,11 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
+        0,
         0,
         0,
         0,
@@ -110251,9 +110673,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -110769,6 +111193,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -111028,9 +111453,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -111557,9 +111984,11 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
+        0,
         0,
         0,
         0,
@@ -112075,9 +112504,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -112593,6 +113024,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -112852,9 +113284,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -113381,9 +113815,11 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
+        0,
         0,
         0,
         0,
@@ -113899,9 +114335,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -114417,6 +114855,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -114676,9 +115115,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -115205,9 +115646,11 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
+        0,
         0,
         0,
         0,
@@ -115723,9 +116166,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -116241,6 +116686,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -116500,9 +116946,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
       "mortality_rates": [
+        null,
         null,
         null,
         null,
@@ -117129,7 +117577,8 @@
       "2026-02",
       "2026-03",
       "2026-04",
-      "2026-05"
+      "2026-05",
+      "2026-06"
     ],
     "z": [
       [
@@ -117368,6 +117817,7 @@
         3.475380593143361,
         3.622214022966295,
         3.2400497721126476,
+        0.0,
         0.0,
         0.0,
         0.0,
@@ -117648,6 +118098,7 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       [
@@ -117886,6 +118337,7 @@
         3.5933968423002067,
         3.6761446803562063,
         3.30362797638389,
+        0.0,
         0.0,
         0.0,
         0.0,
@@ -118166,6 +118618,7 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       [
@@ -118404,6 +118857,7 @@
         2.5809249756756194,
         2.8948696567452523,
         2.583198773968623,
+        0.0,
         0.0,
         0.0,
         0.0,
@@ -118684,6 +119138,7 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       [
@@ -118922,6 +119377,7 @@
         2.110589710299249,
         2.100370545117563,
         1.7853298350107671,
+        0.0,
         0.0,
         0.0,
         0.0,
@@ -119202,6 +119658,7 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       [
@@ -119440,6 +119897,7 @@
         1.3617278360175928,
         1.5314789170422551,
         1.0,
+        0.0,
         0.0,
         0.0,
         0.0,
@@ -119720,6 +120178,7 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       [
@@ -119958,6 +120417,7 @@
         1.2304489213782739,
         1.380211241711606,
         0.9030899869919435,
+        0.0,
         0.0,
         0.0,
         0.0,
@@ -120238,6 +120698,7 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       [
@@ -120476,6 +120937,7 @@
         1.3424226808222062,
         1.5185139398778875,
         1.1760912590556813,
+        0.0,
         0.0,
         0.0,
         0.0,
@@ -120756,6 +121218,7 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       [
@@ -120994,6 +121457,7 @@
         1.1139433523068367,
         1.3617278360175928,
         0.8450980400142568,
+        0.0,
         0.0,
         0.0,
         0.0,
@@ -121274,6 +121738,7 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       [
@@ -121512,6 +121977,7 @@
         1.0791812460476249,
         1.3617278360175928,
         1.1139433523068367,
+        0.0,
         0.0,
         0.0,
         0.0,
@@ -121792,6 +122258,7 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       [
@@ -122051,6 +122518,7 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       [
@@ -122288,6 +122756,7 @@
         0.3010299956639812,
         0.3010299956639812,
         0.6020599913279624,
+        0.0,
         0.0,
         0.0,
         0.0,
@@ -122569,6 +123038,7 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       [
@@ -122806,6 +123276,7 @@
         0.6989700043360189,
         1.3979400086720377,
         0.9542425094393249,
+        0.0,
         0.0,
         0.0,
         0.0,
@@ -123087,6 +123558,7 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       [
@@ -123346,6 +123818,7 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       [
@@ -123583,6 +124056,7 @@
         0.7781512503836436,
         0.6020599913279624,
         0.8450980400142568,
+        0.0,
         0.0,
         0.0,
         0.0,
@@ -123864,6 +124338,7 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       [
@@ -124101,6 +124576,7 @@
         0.6989700043360189,
         0.0,
         0.3010299956639812,
+        0.0,
         0.0,
         0.0,
         0.0,
@@ -124382,6 +124858,7 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       [
@@ -124618,6 +125095,7 @@
         0.0,
         0.0,
         0.3010299956639812,
+        0.0,
         0.0,
         0.0,
         0.0,
@@ -124900,6 +125378,7 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       [
@@ -125159,6 +125638,7 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       [
@@ -125328,6 +125808,7 @@
         0.0,
         0.0,
         0.3010299956639812,
+        0.0,
         0.0,
         0.0,
         0.0,
@@ -125677,6 +126158,7 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       [
@@ -125936,6 +126418,7 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       [
@@ -126195,6 +126678,7 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       [
@@ -126429,6 +126913,7 @@
         0.3010299956639812,
         0.0,
         0.3010299956639812,
+        0.0,
         0.0,
         0.0,
         0.0,
@@ -126713,6 +127198,7 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       [
@@ -126947,6 +127433,7 @@
         0.3010299956639812,
         0.0,
         0.3010299956639812,
+        0.0,
         0.0,
         0.0,
         0.0,
@@ -127231,6 +127718,7 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       [
@@ -127490,6 +127978,7 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       [
@@ -127677,6 +128166,7 @@
         0.3010299956639812,
         0.0,
         0.3010299956639812,
+        0.0,
         0.0,
         0.0,
         0.0,
@@ -128008,6 +128498,7 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       [
@@ -128229,6 +128720,7 @@
         0.0,
         0.3010299956639812,
         0.3010299956639812,
+        0.0,
         0.0,
         0.0,
         0.0,
@@ -128526,6 +129018,7 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       [
@@ -128785,527 +129278,11 @@
         0.0,
         0.0,
         0.0,
-        0.0
-      ],
-      [
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
         0.0,
         0.0
       ],
       [
         0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0
-      ],
-      [
         0.0,
         0.0,
         0.0,
@@ -129821,9 +129798,531 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
         0.0,
         0.0,
         0.0,
@@ -130108,8 +130607,8 @@
   "brief_zh": "韩国页面整合来自韩国 KDCA EID 的传染病监测记录，包含来源信息、时间序列图表和可下载数据。",
   "surveillance_system_en": "The dataset is built from configured official feeds for South Korea; current primary sources include Korea KDCA EID.",
   "surveillance_system_zh": "该数据集来自韩国已配置的官方数据源；当前主要来源包括韩国 KDCA EID。",
-  "interpretation_en": "Coverage currently spans 2005-01-01 to 2026-05-01 across 64 tracked diseases.",
-  "interpretation_zh": "当前覆盖区间为 2005-01-01 至 2026-05-01，覆盖 64 种追踪疾病。",
+  "interpretation_en": "Coverage currently spans 2005-01-01 to 2026-06-01 across 64 tracked diseases.",
+  "interpretation_zh": "当前覆盖区间为 2005-01-01 至 2026-06-01，覆盖 64 种追踪疾病。",
   "reporting_cadence_en": "Source reporting frequency is inferred as MONTHLY; charts use weekly-equivalent normalization where applicable.",
   "reporting_cadence_zh": "来源报告频率推断为 MONTHLY；相关图表在适用时使用周等价归一化。",
   "limitations_en": "Counts reflect reported surveillance records and may be affected by case definitions, reporting lag, source cadence, and missing population denominators.",
@@ -130118,5 +130617,5 @@
   "source_summary_zh": "韩国 KDCA EID",
   "country_brief_status": "fallback",
   "country_brief_updated_at": null,
-  "generated_at": "2026-05-23T00:00:00+00:00"
+  "generated_at": "2026-06-01T00:00:00+00:00"
 }

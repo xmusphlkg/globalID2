@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-05-29T22:45:51.286091+00:00",
+  "fetched_at": "2026-06-01T22:45:44.543828+00:00",
   "disease": "Syphilis congenital",
   "year": 2026,
   "month": 5,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1780094750911)/",
-            "rootActivityId": "98d239fd-ec43-46fd-ac28-c76ad04dd95e",
+            "timestamp": "/Date(1780353944168)/",
+            "rootActivityId": "9fcb3a58-f2e3-4ba4-a3b6-347d4cb75a11",
             "descriptor": {
               "Select": [
                 {
@@ -399,15 +399,15 @@
                         },
                         {
                           "C": [
-                            "QLD"
-                          ],
-                          "R": 2
+                            "QLD",
+                            "'<5'"
+                          ]
                         },
                         {
                           "C": [
-                            "SA"
-                          ],
-                          "R": 2
+                            "SA",
+                            "0L"
+                          ]
                         },
                         {
                           "C": [
@@ -447,7 +447,7 @@
     "ACT": 0,
     "NSW": 0,
     "NT": 0,
-    "QLD": 0,
+    "QLD": "'<5'",
     "SA": 0,
     "TAS": 0,
     "VIC": "'<5'",

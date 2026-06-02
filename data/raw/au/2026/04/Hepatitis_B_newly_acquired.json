@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-05-29T22:45:39.167512+00:00",
+  "fetched_at": "2026-06-01T22:45:32.453639+00:00",
   "disease": "Hepatitis B (newly acquired)",
   "year": 2026,
   "month": 4,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1780094738793)/",
-            "rootActivityId": "927dd4c5-4e50-414e-9417-4be770c1fcd8",
+            "timestamp": "/Date(1780353932084)/",
+            "rootActivityId": "007f7274-3f45-4eb0-b849-9b879ca4b910",
             "descriptor": {
               "Select": [
                 {

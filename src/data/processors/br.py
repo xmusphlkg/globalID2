@@ -156,6 +156,35 @@ class BRMonthlyUpdater:
         }
         return requested.issubset(present)
 
+    def _prior_rows_candidate(
+        self,
+        rows: List[Dict[str, str]],
+        months: List[Tuple[int, int]],
+    ) -> Tuple[List[Dict[str, str]], Optional[date], int]:
+        if not rows:
+            return [], None, 0
+
+        if self._rows_cover_months(rows, months):
+            return (
+                self._filter_rows_for_months(rows, months),
+                self._latest_row_date(rows),
+                len(months),
+            )
+
+        latest = self._latest_row_date(rows)
+        if latest is None:
+            return [], None, 0
+
+        covered_request = [
+            (year, month)
+            for year, month in months
+            if date(year, month, 1) <= latest
+        ]
+        if not covered_request or not self._rows_cover_months(rows, covered_request):
+            return [], latest, 0
+
+        return self._filter_rows_for_months(rows, covered_request), latest, len(covered_request)
+
     def _filter_rows_for_months(
         self,
         rows: List[Dict[str, str]],
@@ -248,10 +277,9 @@ class BRMonthlyUpdater:
             live_error = exc
             logs.append(f"[crawler] live fetch failed: {type(exc).__name__}: {exc}")
 
-        prior_candidate = (
-            self._filter_rows_for_months(prior_rows, requested_months)
-            if prior_rows and self._rows_cover_months(prior_rows, requested_months)
-            else []
+        prior_candidate, prior_latest, prior_months_covered = self._prior_rows_candidate(
+            prior_rows,
+            requested_months,
         )
 
         candidates: List[Tuple[str, List[Dict[str, str]], int]] = []
@@ -268,6 +296,11 @@ class BRMonthlyUpdater:
         selected_label, rows, _ = max(candidates, key=lambda item: (len(item[1]), item[2]))
         if selected_label != "live fetch":
             logs.append(f"[recovery] using {selected_label} with {len(rows)} rows")
+            if prior_latest is not None and prior_months_covered < len(requested_months):
+                logs.append(
+                    f"[recovery] previous CSV covers {prior_months_covered}/{len(requested_months)} "
+                    f"requested months through {prior_latest.isoformat()}; later months treated as unavailable"
+                )
 
         return BRUpdateFetchResult(
             rows=rows,
@@ -297,7 +330,7 @@ class BRMonthlyUpdater:
         ]
 
         with self.output_csv.open("w", encoding="utf-8", newline="") as handle:
-            writer = csv.DictWriter(handle, fieldnames=fieldnames)
+            writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
             writer.writeheader()
             for idx, row in enumerate(ordered_rows, start=1):
                 parsed_date = _parse_date(row)
@@ -469,7 +502,7 @@ class BRMonthlyUpdater:
                     "disease_id": disease_id,
                     "country_id": country_id,
                     "cases": 0,
-                    "deaths": 0,
+                    "deaths": None,
                     "data_source": row.get("Source", self.source_name),
                     "raw_disease_labels": [],
                     "disease_codes": [],
@@ -504,6 +537,8 @@ class BRMonthlyUpdater:
                 "source_files": bucket["source_files"],
                 "source_urls": bucket["source_urls"],
                 "case_definition": "SINAN notification records aggregated by notification month",
+                "death_reporting": "not_provided_by_source",
+                "death_reporting_note": "Brazil SINAN notification extract used here is case-count based.",
             }
             upsert_rows.append(
                 {

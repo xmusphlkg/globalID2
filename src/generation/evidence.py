@@ -19,10 +19,11 @@ import pandas as pd
 from src.core import get_logger
 from src.core.missing_values import normalize_rate_columns
 from src.generation.data_cleaner import Frequency, infer_frequency, long_to_wide
+from src.generation.v3_historical import build_historical_context
 
 logger = get_logger(__name__)
 
-METHOD_VERSION = "analytical_v3.3"
+METHOD_VERSION = "report_v4.0"
 
 
 def _json_safe(value: Any) -> Any:
@@ -53,6 +54,11 @@ def _num(value: Any) -> Optional[float]:
 def _int(value: Any) -> int:
     number = _num(value)
     return int(number) if number is not None else 0
+
+
+def _optional_int(value: Any) -> Optional[int]:
+    number = _num(value)
+    return int(number) if number is not None else None
 
 
 def _pct_change(current: Optional[float], previous: Optional[float]) -> Optional[float]:
@@ -88,6 +94,11 @@ def _confidence_from_quality(score: float) -> str:
     if score >= 0.65:
         return "medium"
     return "low"
+
+
+def _metric_int(value: Any) -> int:
+    number = _num(value)
+    return int(number) if number is not None else 0
 
 
 @dataclass
@@ -136,6 +147,7 @@ class EvidenceAnalyzer:
         self,
         *,
         data: pd.DataFrame,
+        historical_data: Optional[pd.DataFrame] = None,
         country: Dict[str, Any],
         diseases: Dict[int, Dict[str, Any]],
         period_start: datetime,
@@ -145,9 +157,10 @@ class EvidenceAnalyzer:
     ) -> Dict[str, Any]:
         builder = DatasetBuilder(period_start=period_start, period_end=period_end)
         df = builder.build(data)
+        history_df = builder.build(historical_data) if historical_data is not None else df
         frequency_input = df.drop_duplicates("time") if not df.empty and "time" in df.columns else df
         frequency = infer_frequency(frequency_input, "time") if not df.empty else "monthly"
-        disease_packets = self._build_diseases(df, diseases, frequency, knowledge_status or {})
+        disease_packets = self._build_diseases(df, diseases, frequency, knowledge_status or {}, history_df)
         self._rank_diseases(disease_packets)
 
         summary_metrics = self._summary_metrics(df, disease_packets)
@@ -178,10 +191,17 @@ class EvidenceAnalyzer:
         diseases: Dict[int, Dict[str, Any]],
         frequency: Frequency,
         knowledge_status: Dict[str, Dict[str, Any]],
+        historical_df: Optional[pd.DataFrame] = None,
     ) -> List[Dict[str, Any]]:
         packets: List[Dict[str, Any]] = []
         if df.empty or "disease_id" not in df.columns:
             return packets
+        historical_groups = {}
+        if historical_df is not None and not historical_df.empty and "disease_id" in historical_df.columns:
+            historical_groups = {
+                int(history_disease_id): history_group.copy()
+                for history_disease_id, history_group in historical_df.groupby("disease_id")
+            }
 
         for disease_id, group in df.groupby("disease_id"):
             meta = diseases.get(int(disease_id), {})
@@ -196,14 +216,15 @@ class EvidenceAnalyzer:
 
             latest_cases = _int(latest.get("cases"))
             previous_cases = _int(previous.get("cases")) if previous is not None else None
-            latest_deaths = _int(latest.get("deaths"))
-            previous_deaths = _int(previous.get("deaths")) if previous is not None else None
             latest_incidence = _num(latest.get("incidence_rate"))
             previous_incidence = _num(previous.get("incidence_rate")) if previous is not None else None
             incidence_change_pct = _pct_change(latest_incidence, previous_incidence)
             latest_population = _num(latest.get("population_denominator"))
             total_cases = int(pd.to_numeric(wide.get("cases", pd.Series(dtype=float)), errors="coerce").fillna(0).sum())
-            total_deaths = int(pd.to_numeric(wide.get("deaths", pd.Series(dtype=float)), errors="coerce").fillna(0).sum())
+            death_reporting = self._death_reporting(group, wide)
+            latest_deaths = death_reporting.get("latest_deaths")
+            previous_deaths = death_reporting.get("previous_deaths")
+            total_deaths = death_reporting.get("total_deaths")
             period_crude_incidence = (
                 round((total_cases / latest_population) * 100000.0, 6)
                 if latest_population and latest_population > 0
@@ -214,7 +235,11 @@ class EvidenceAnalyzer:
             yoy_cases = self._prior_year_change(wide, "cases", frequency)
             rolling_cases = self._rolling_mean(wide, "cases")
             anomaly = self._latest_anomaly(wide, "cases")
-            fatality_rate = round((total_deaths / total_cases) * 100.0, 4) if total_cases > 0 else 0.0
+            fatality_rate = (
+                round((_metric_int(total_deaths) / total_cases) * 100.0, 4)
+                if total_cases > 0 and total_deaths is not None
+                else None
+            )
             missing_rates = self._missing_rates(group)
             quality_score = self._disease_quality_score(group, missing_rates)
             incidence_sources = self._incidence_sources(group)
@@ -227,14 +252,24 @@ class EvidenceAnalyzer:
             population_sources = sorted(
                 [str(value) for value in group.get("population_source", pd.Series(dtype=str)).dropna().unique()]
             )
+            visual_diagnostics = self._visual_diagnostics(
+                wide,
+                death_unavailable=death_reporting.get("status") == "unavailable",
+            )
+            history_group = historical_groups.get(int(disease_id), group)
+            historical_wide = long_to_wide(history_group.copy(), frequency, time_col="time")
+            if not historical_wide.empty:
+                historical_wide = historical_wide.sort_values("_period").reset_index(drop=True)
+            historical_context = build_historical_context(historical_wide if not historical_wide.empty else wide, frequency)
             risk_score = self._risk_score(
                 latest_cases=latest_cases,
                 total_cases=total_cases,
-                latest_deaths=latest_deaths,
-                total_deaths=total_deaths,
+                latest_deaths=_metric_int(latest_deaths),
+                total_deaths=_metric_int(total_deaths),
                 change_pct=change_pct,
                 anomaly=anomaly,
                 quality_score=quality_score,
+                historical_context=historical_context,
             )
             status = knowledge_status.get(disease_code, {})
 
@@ -255,12 +290,15 @@ class EvidenceAnalyzer:
                     "metrics": {
                         "total_cases": total_cases,
                         "total_deaths": total_deaths,
+                        "total_deaths_reported": _metric_int(total_deaths),
                         "latest_cases": latest_cases,
                         "latest_deaths": latest_deaths,
                         "previous_cases": previous_cases,
                         "previous_deaths": previous_deaths,
                         "change_pct": change_pct,
                         "death_change_pct": death_change_pct,
+                        "death_reporting_status": death_reporting.get("status"),
+                        "death_reporting": death_reporting,
                         "latest_incidence_rate_per_100k": latest_incidence,
                         "previous_incidence_rate_per_100k": previous_incidence,
                         "incidence_change_pct": incidence_change_pct,
@@ -280,11 +318,12 @@ class EvidenceAnalyzer:
                         "yoy_change_pct": yoy_cases,
                     },
                     "anomaly": anomaly,
-                    "visual_diagnostics": self._visual_diagnostics(wide),
+                    "visual_diagnostics": visual_diagnostics,
+                    "historical_context": historical_context,
                     "risk": {
                         "score": risk_score,
                         "level": self._risk_level(risk_score),
-                        "drivers": self._risk_drivers(latest_cases, latest_deaths, change_pct, anomaly, quality_score),
+                        "drivers": self._risk_drivers(latest_cases, _metric_int(latest_deaths), change_pct, anomaly, quality_score, historical_context),
                     },
                     "data_quality": {
                         "score": quality_score,
@@ -292,7 +331,7 @@ class EvidenceAnalyzer:
                         "missing_rates": missing_rates,
                         "source_count": int(group["data_source"].nunique()) if "data_source" in group.columns else 0,
                     },
-                    "limitations": self._limitations(group, missing_rates, incidence_sources),
+                    "limitations": self._limitations(group, missing_rates, incidence_sources, death_reporting),
                     "source_coverage": sorted(
                         [str(s) for s in group.get("data_source", pd.Series(dtype=str)).dropna().unique()]
                     )[:8],
@@ -313,17 +352,41 @@ class EvidenceAnalyzer:
 
     @staticmethod
     def _summary_metrics(df: pd.DataFrame, disease_packets: List[Dict[str, Any]]) -> Dict[str, Any]:
-        active_latest = sum(1 for d in disease_packets if d["metrics"]["latest_cases"] > 0 or d["metrics"]["latest_deaths"] > 0)
+        active_latest = sum(1 for d in disease_packets if _metric_int(d["metrics"].get("latest_cases")) > 0 or _metric_int(d["metrics"].get("latest_deaths")) > 0)
         high_risk = sum(1 for d in disease_packets if d["risk"]["level"] in {"critical", "high"})
+        death_status_counts: Dict[str, int] = {}
+        for disease in disease_packets:
+            status = str((disease.get("metrics") or {}).get("death_reporting_status") or "unknown")
+            death_status_counts[status] = death_status_counts.get(status, 0) + 1
+        if disease_packets and death_status_counts.get("unavailable", 0) == len(disease_packets):
+            death_status = "unavailable"
+        elif any(status in death_status_counts for status in ("reported_nonzero", "partial_reported_nonzero")):
+            death_status = "reported_nonzero"
+        elif death_status_counts.get("partial_reported_zero"):
+            death_status = "partial_reported_zero"
+        elif death_status_counts.get("reported_zero"):
+            death_status = "reported_zero"
+        else:
+            death_status = "unknown"
         return {
             "record_count": int(len(df)),
             "disease_count": len(disease_packets),
             "active_latest_diseases": active_latest,
             "high_risk_diseases": high_risk,
-            "total_cases": int(sum(d["metrics"]["total_cases"] for d in disease_packets)),
-            "total_deaths": int(sum(d["metrics"]["total_deaths"] for d in disease_packets)),
-            "latest_cases": int(sum(d["metrics"]["latest_cases"] for d in disease_packets)),
-            "latest_deaths": int(sum(d["metrics"]["latest_deaths"] for d in disease_packets)),
+            "total_cases": int(sum(_metric_int(d["metrics"].get("total_cases")) for d in disease_packets)),
+            "total_deaths": int(sum(_metric_int(d["metrics"].get("total_deaths")) for d in disease_packets)),
+            "latest_cases": int(sum(_metric_int(d["metrics"].get("latest_cases")) for d in disease_packets)),
+            "latest_deaths": int(sum(_metric_int(d["metrics"].get("latest_deaths")) for d in disease_packets)),
+            "death_reporting": {
+                "status": death_status,
+                "status_counts": death_status_counts,
+                "unavailable_diseases": int(death_status_counts.get("unavailable", 0)),
+                "reported_zero_diseases": int(death_status_counts.get("reported_zero", 0)),
+                "reported_nonzero_diseases": int(
+                    death_status_counts.get("reported_nonzero", 0)
+                    + death_status_counts.get("partial_reported_nonzero", 0)
+                ),
+            },
         }
 
     @staticmethod
@@ -338,9 +401,20 @@ class EvidenceAnalyzer:
 
         issues: List[str] = []
         missing_rates = {}
+        death_unavailable = EvidenceAnalyzer._source_likely_no_deaths(df)
+        death_values = pd.to_numeric(df.get("deaths", pd.Series(dtype=float)), errors="coerce")
+        if death_unavailable and not (death_values.dropna() > 0).any():
+            issues.append("Death count field is not provided by this source; legacy zero values should be treated as unavailable.")
+
         for column in ("cases", "deaths", "incidence_rate", "mortality_rate"):
             if column in df.columns:
-                missing_rates[column] = round(float(df[column].isna().mean()), 4)
+                missing_rate = float(df[column].isna().mean())
+                if column == "deaths" and death_unavailable and not (death_values.dropna() > 0).any():
+                    missing_rate = 1.0
+                missing_rates[column] = round(missing_rate, 4)
+            elif column in {"cases", "deaths"}:
+                missing_rates[column] = 1.0
+                issues.append(f"{column.title()} field is unavailable in the extracted records.")
         negative_count = 0
         for column in ("cases", "deaths", "new_cases", "new_deaths"):
             if column in df.columns:
@@ -359,8 +433,7 @@ class EvidenceAnalyzer:
             if future_count:
                 issues.append(f"{future_count} records are after the report period end")
 
-        required_missing = [missing_rates.get("cases", 0.0), missing_rates.get("deaths", 0.0)]
-        score = 1.0 - (sum(required_missing) / max(len(required_missing), 1))
+        score = 1.0 - (0.45 * missing_rates.get("cases", 1.0) + 0.25 * missing_rates.get("deaths", 1.0))
         optional_rate_missing = [
             missing_rates[column]
             for column in ("incidence_rate", "mortality_rate")
@@ -442,6 +515,7 @@ class EvidenceAnalyzer:
                     "incidence_rate_source",
                     "population_denominator",
                     "data_source",
+                    "metadata",
                 )
                 if c in df.columns
             ]
@@ -475,14 +549,20 @@ class EvidenceAnalyzer:
             prefix = f"disease:{disease['disease_id']}"
             index[f"{prefix}.latest_cases"] = disease["metrics"]["latest_cases"]
             index[f"{prefix}.total_cases"] = disease["metrics"]["total_cases"]
+            index[f"{prefix}.latest_deaths"] = disease["metrics"].get("latest_deaths")
+            index[f"{prefix}.total_deaths"] = disease["metrics"].get("total_deaths")
             index[f"{prefix}.change_pct"] = disease["metrics"]["change_pct"]
             index[f"{prefix}.latest_incidence_rate_per_100k"] = disease["metrics"].get("latest_incidence_rate_per_100k")
             index[f"{prefix}.period_crude_incidence_per_100k"] = disease["metrics"].get("period_crude_incidence_per_100k")
             index[f"{prefix}.risk_score"] = disease["risk"]["score"]
             visual = disease.get("visual_diagnostics") or {}
+            history = disease.get("historical_context") or {}
             index[f"{prefix}.latest_4_period_cases"] = visual.get("latest_4_period_cases")
             index[f"{prefix}.last4_change_pct"] = visual.get("last4_change_pct")
             index[f"{prefix}.peak_cases"] = visual.get("peak_cases")
+            index[f"{prefix}.latest_percentile_prior"] = history.get("latest_percentile_prior")
+            index[f"{prefix}.long_window_change_pct"] = history.get("long_window_change_pct")
+            index[f"{prefix}.latest_to_same_season_median_ratio"] = history.get("latest_to_same_season_median_ratio")
         return index
 
     @staticmethod
@@ -496,11 +576,115 @@ class EvidenceAnalyzer:
         }
 
     @staticmethod
+    def _source_likely_no_deaths(group: pd.DataFrame) -> bool:
+        """Detect case-only feeds that historically stored missing deaths as zero."""
+        if group is None or group.empty:
+            return False
+
+        text_parts: List[str] = []
+        if "data_source" in group.columns:
+            text_parts.extend(str(value) for value in group["data_source"].dropna().unique())
+        if "metadata" in group.columns:
+            for value in group["metadata"].dropna().head(20):
+                if isinstance(value, dict):
+                    text_parts.append(json.dumps(value, ensure_ascii=False))
+                else:
+                    text_parts.append(str(value))
+        source_text = " ".join(text_parts).lower()
+        explicit_markers = (
+            "not_provided_by_source",
+            "source_does_not_report_deaths",
+            "death_reporting\": \"not_provided",
+            "death_reporting: not_provided",
+        )
+        if any(marker in source_text for marker in explicit_markers):
+            return True
+        case_only_markers = (
+            "japan niid weekly sentinel",
+            "idwr",
+            "nndss",
+            "australia national notifiable",
+            "australia nndss",
+            "hong kong",
+            "new zealand",
+            "switzerland idd",
+            "brazil sinan",
+            "korea kdca",
+            "taiwan cdc",
+        )
+        return any(marker in source_text for marker in case_only_markers)
+
+    @staticmethod
+    def _death_reporting(group: pd.DataFrame, wide: pd.DataFrame) -> Dict[str, Any]:
+        record_count = int(len(group)) if group is not None else 0
+        source_likely_unavailable = EvidenceAnalyzer._source_likely_no_deaths(group)
+        if group is None or group.empty or "deaths" not in group.columns:
+            raw_values = pd.Series([math.nan] * record_count, dtype=float)
+        else:
+            raw_values = pd.to_numeric(group["deaths"], errors="coerce")
+
+        nonzero_reported = bool((raw_values.dropna() > 0).any())
+        treat_as_unavailable = bool(source_likely_unavailable and not nonzero_reported)
+        effective_values = pd.Series([math.nan] * record_count, dtype=float) if treat_as_unavailable else raw_values
+        observed = effective_values.dropna()
+        observed_count = int(observed.count())
+        missing_count = int(record_count - observed_count)
+        zero_count = int((observed == 0).sum()) if observed_count else 0
+        nonzero_count = int((observed > 0).sum()) if observed_count else 0
+
+        wide_deaths = pd.to_numeric(wide.get("deaths", pd.Series(dtype=float)), errors="coerce")
+        if treat_as_unavailable:
+            wide_deaths = pd.Series([math.nan] * len(wide), dtype=float)
+        latest_deaths = _optional_int(wide_deaths.iloc[-1]) if len(wide_deaths) else None
+        previous_deaths = _optional_int(wide_deaths.iloc[-2]) if len(wide_deaths) >= 2 else None
+
+        if observed_count == 0:
+            status = "unavailable"
+        elif nonzero_count > 0 and missing_count > 0:
+            status = "partial_reported_nonzero"
+        elif nonzero_count > 0:
+            status = "reported_nonzero"
+        elif missing_count > 0:
+            status = "partial_reported_zero"
+        else:
+            status = "reported_zero"
+
+        return {
+            "status": status,
+            "source_likely_case_only": treat_as_unavailable,
+            "record_count": record_count,
+            "observed_count": observed_count,
+            "missing_count": missing_count,
+            "zero_count": zero_count,
+            "nonzero_count": nonzero_count,
+            "all_reported_values_zero": bool(observed_count > 0 and nonzero_count == 0),
+            "has_reported_deaths": bool(nonzero_count > 0),
+            "total_deaths": int(observed.sum()) if observed_count else None,
+            "latest_deaths": latest_deaths,
+            "previous_deaths": previous_deaths,
+            "latest_is_missing": latest_deaths is None,
+            "interpretation": (
+                "death_counts_not_reported_by_source"
+                if status == "unavailable"
+                else "reported_death_values_are_all_zero"
+                if status in {"reported_zero", "partial_reported_zero"}
+                else "reported_deaths_present"
+            ),
+        }
+
+    @staticmethod
     def _missing_rates(group: pd.DataFrame) -> Dict[str, float]:
         rates = {}
         for column in ("cases", "deaths", "incidence_rate", "mortality_rate"):
             if column in group.columns:
-                rates[column] = round(float(group[column].isna().mean()), 4)
+                missing_rate = float(group[column].isna().mean())
+                if column == "deaths" and EvidenceAnalyzer._source_likely_no_deaths(group):
+                    values = pd.to_numeric(group[column], errors="coerce")
+                    if not (values.dropna() > 0).any():
+                        missing_rate = 1.0
+                rates[column] = round(missing_rate, 4)
+            elif column in {"cases", "deaths"}:
+                rates[column] = 1.0
         return rates
 
     @staticmethod
@@ -586,7 +770,7 @@ class EvidenceAnalyzer:
         }
 
     @staticmethod
-    def _visual_diagnostics(wide: pd.DataFrame) -> Dict[str, Any]:
+    def _visual_diagnostics(wide: pd.DataFrame, *, death_unavailable: bool = False) -> Dict[str, Any]:
         """Build chart-ready time-series diagnostics for AI and UI review."""
         if wide.empty:
             return {
@@ -597,14 +781,18 @@ class EvidenceAnalyzer:
             }
 
         values = pd.to_numeric(wide.get("cases", pd.Series(dtype=float)), errors="coerce").fillna(0)
-        deaths = pd.to_numeric(wide.get("deaths", pd.Series(dtype=float)), errors="coerce").fillna(0)
+        death_raw = pd.to_numeric(wide.get("deaths", pd.Series(dtype=float)), errors="coerce")
+        if death_unavailable:
+            death_raw = pd.Series([math.nan] * len(wide), dtype=float)
+        deaths = death_raw.fillna(0)
         incidence = pd.to_numeric(wide.get("incidence_rate", pd.Series(dtype=float)), errors="coerce")
         periods = wide.get("_period_str", pd.Series([str(i) for i in range(len(wide))]))
         series = [
             {
                 "period": str(periods.iloc[i]),
                 "cases": int(values.iloc[i]),
-                "deaths": int(deaths.iloc[i]) if i < len(deaths) else 0,
+                "deaths": int(deaths.iloc[i]) if i < len(deaths) and pd.notna(death_raw.iloc[i]) else None,
+                "deaths_observed": bool(i < len(death_raw) and pd.notna(death_raw.iloc[i])),
                 "incidence_rate_per_100k": (
                     round(float(incidence.iloc[i]), 6)
                     if i < len(incidence) and pd.notna(incidence.iloc[i])
@@ -744,6 +932,7 @@ class EvidenceAnalyzer:
         change_pct: Optional[float],
         anomaly: Dict[str, Any],
         quality_score: float,
+        historical_context: Optional[Dict[str, Any]] = None,
     ) -> int:
         latest_cases = max(0, latest_cases)
         total_cases = max(0, total_cases)
@@ -753,8 +942,21 @@ class EvidenceAnalyzer:
         mortality = min(25.0, math.log1p(max(latest_deaths, total_deaths * 0.25)) * 7.0)
         change = 0.0 if change_pct is None else min(20.0, max(0.0, change_pct) / 5.0)
         anomaly_score = 15.0 if anomaly.get("is_anomaly") else 0.0
+        historical_context = historical_context or {}
+        historical_percentile = _num(historical_context.get("latest_percentile_prior"))
+        historical_score = 0.0
+        if historical_percentile is not None and historical_percentile >= 90:
+            historical_score += 7.0
+        elif historical_percentile is not None and historical_percentile >= 75:
+            historical_score += 4.0
+        long_window_change = _num(historical_context.get("long_window_change_pct"))
+        if long_window_change is not None and long_window_change > 0:
+            historical_score += min(8.0, long_window_change / 12.5)
+        same_season_ratio = _num(historical_context.get("latest_to_same_season_median_ratio"))
+        if same_season_ratio is not None and same_season_ratio >= 2:
+            historical_score += min(5.0, same_season_ratio)
         quality_penalty = (1.0 - quality_score) * 10.0
-        return int(round(max(0.0, min(100.0, burden + mortality + change + anomaly_score - quality_penalty))))
+        return int(round(max(0.0, min(100.0, burden + mortality + change + anomaly_score + historical_score - quality_penalty))))
 
     @staticmethod
     def _risk_level(score: int) -> str:
@@ -773,6 +975,7 @@ class EvidenceAnalyzer:
         change_pct: Optional[float],
         anomaly: Dict[str, Any],
         quality_score: float,
+        historical_context: Optional[Dict[str, Any]] = None,
     ) -> List[str]:
         drivers: List[str] = []
         if latest_cases > 0:
@@ -785,6 +988,13 @@ class EvidenceAnalyzer:
             drivers.append("recent_increase")
         if anomaly.get("is_anomaly"):
             drivers.append("statistical_anomaly")
+        historical_context = historical_context or {}
+        historical_percentile = _num(historical_context.get("latest_percentile_prior"))
+        if historical_percentile is not None and historical_percentile >= 90:
+            drivers.append("high_historical_percentile")
+        long_window_change = _num(historical_context.get("long_window_change_pct"))
+        if long_window_change is not None and long_window_change >= 25:
+            drivers.append("long_window_increase")
         if quality_score < 0.75:
             drivers.append("lower_data_confidence")
         return drivers or ["low_current_signal"]
@@ -794,6 +1004,7 @@ class EvidenceAnalyzer:
         group: pd.DataFrame,
         missing_rates: Dict[str, float],
         incidence_sources: Optional[Dict[str, int]] = None,
+        death_reporting: Optional[Dict[str, Any]] = None,
     ) -> List[str]:
         limitations: List[str] = []
         if len(group) < 3:
@@ -813,7 +1024,15 @@ class EvidenceAnalyzer:
             limitations.append(
                 "The source is sentinel surveillance; crude population incidence is contextual and should not be read as an official sentinel per-site rate."
             )
-        if missing_rates.get("deaths", 0) > 0:
+        death_reporting = death_reporting or {}
+        death_status = death_reporting.get("status")
+        if death_status == "unavailable":
+            limitations.append("Death counts are not source-reported; zero should not be interpreted as no deaths.")
+        elif death_status == "partial_reported_zero":
+            limitations.append("Some death records are missing; reported death values are zero where available.")
+        elif death_status == "reported_zero":
+            limitations.append("Death values are source-reported as zero in the available records.")
+        elif missing_rates.get("deaths", 0) > 0:
             limitations.append("Death values are missing for some records.")
         if "data_source" in group.columns and group["data_source"].nunique() > 1:
             limitations.append("Multiple source labels are present; reporting definitions may differ.")
@@ -829,12 +1048,15 @@ class EvidenceAnalyzer:
                 "risk_score": item["risk"]["score"],
                 "risk_level": item["risk"]["level"],
                 "latest_cases": item["metrics"]["latest_cases"],
+                "latest_deaths": item["metrics"].get("latest_deaths"),
                 "change_pct": item["metrics"]["change_pct"],
                 "evidence_refs": [
                     f"disease:{item['disease_id']}.risk_score",
                     f"disease:{item['disease_id']}.latest_cases",
                     f"disease:{item['disease_id']}.change_pct",
                     f"disease:{item['disease_id']}.latest_incidence_rate_per_100k",
+                    f"disease:{item['disease_id']}.latest_percentile_prior",
+                    f"disease:{item['disease_id']}.long_window_change_pct",
                 ],
             }
             for item in sorted(disease_packets, key=lambda packet: packet["risk"]["score"], reverse=True)
@@ -850,7 +1072,12 @@ class ReportFactChecker:
         r"|(?<![A-Za-z0-9])[+-]?\d+(?:\.\d+)?%?"
     )
     CAUSAL_RE = re.compile(r"\b(caused by|due to|driven by|resulted from|attributable to)\b|由于|导致|归因于", re.I)
-    CAUTION_RE = re.compile(r"\b(may|might|could|hypothesis|requires|should be interpreted|uncertain|not establish|不能|可能|需|不等同)\b", re.I)
+    CAUTION_RE = re.compile(
+        r"\b(may|might|could|hypothesis|requires|should be interpreted|uncertain|not establish|unavailable|not reported)\b"
+        r"|不能|可能|需|不等同|不应|未提供",
+        re.I,
+    )
+    ZERO_DEATH_RE = re.compile(r"\b(?:0|zero|no)\s+(?:reported\s+)?deaths?\b|零死亡|0\s*死亡|未记录死亡|无死亡", re.I)
 
     def check_report(
         self,
@@ -947,6 +1174,16 @@ class ReportFactChecker:
                 }
             )
 
+        if self._death_counts_unavailable(evidence_packet) and self.ZERO_DEATH_RE.search(content) and not self.CAUTION_RE.search(content):
+            issues.append(
+                {
+                    "severity": "major",
+                    "section": title,
+                    "code": "zero_deaths_from_unavailable_field",
+                    "message": "Content describes zero deaths even though death counts are unavailable in the evidence packet.",
+                }
+            )
+
         return issues
 
     @staticmethod
@@ -995,6 +1232,17 @@ class ReportFactChecker:
         walk(packet.get("diseases") or [])
         walk(packet.get("data_quality") or {})
         return numbers
+
+    @staticmethod
+    def _death_counts_unavailable(packet: Dict[str, Any]) -> bool:
+        summary_death_reporting = ((packet.get("summary_metrics") or {}).get("death_reporting") or {})
+        if summary_death_reporting.get("status") == "unavailable":
+            return True
+        diseases = packet.get("diseases") or []
+        return bool(diseases) and all(
+            ((item.get("metrics") or {}).get("death_reporting_status") == "unavailable")
+            for item in diseases
+        )
 
     @staticmethod
     def _ignore_number(value: float, raw_text: str) -> bool:

@@ -6059,7 +6059,7 @@
         8,
         14,
         9,
-        11
+        12
       ],
       "weekly_equiv_cases": [
         2.258064516129032,
@@ -6342,7 +6342,7 @@
         1.8064516129032258,
         3.5,
         2.032258064516129,
-        2.5666666666666664
+        2.8000000000000003
       ],
       "deaths": [
         0,
@@ -7193,7 +7193,7 @@
         "missing_population",
         "missing_population"
       ],
-      "total_cases": 3796,
+      "total_cases": 3797,
       "total_deaths": 0
     }
   },
@@ -7762,7 +7762,7 @@
       1540,
       1721,
       1931,
-      28
+      29
     ],
     "deaths": [
       0,
@@ -8048,9 +8048,9 @@
       0
     ]
   },
-  "total_cases": 1855811,
+  "total_cases": 1855812,
   "total_deaths": 332,
-  "generated_at": "2026-05-23T00:00:00+00:00",
+  "generated_at": "2026-06-01T00:00:00+00:00",
   "source_info": [
     {
       "country_code": "CN",

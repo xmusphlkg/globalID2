@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-import shutil
 import json
+import os
+import shutil
 from datetime import date, datetime, timezone
 from pathlib import Path
 
@@ -239,6 +240,34 @@ def test_aggregate_file_uses_full_scope_cache_without_reparse(tmp_path, monkeypa
     }]
 
 
+def test_fetch_file_index_uses_stale_cache_when_live_listing_fails(tmp_path, monkeypatch) -> None:
+    crawler = BrazilSINANCrawler(save_raw=True, raw_dir=tmp_path / "raw", cache_dir=tmp_path / "cache")
+    cached_file = SINANFile(
+        prefix="DENG",
+        disease_name="Dengue",
+        year=2026,
+        filename="DENGBR26.dbc",
+        url="ftp://example/DENGBR26.dbc",
+        dataset_status="preliminary",
+        size_bytes=123,
+        modified_at=datetime(2026, 5, 1, tzinfo=timezone.utc),
+    )
+    crawler._write_cached_file_index([cached_file])
+    cache_path = crawler._file_index_cache_path()
+    old_mtime = datetime(2026, 1, 1, tzinfo=timezone.utc).timestamp()
+    os.utime(cache_path, (old_mtime, old_mtime))
+
+    monkeypatch.setattr(
+        crawler,
+        "_fetch_listing_text",
+        lambda _url: (_ for _ in ()).throw(TimeoutError("listing timeout")),
+    )
+
+    files = crawler.fetch_file_index()
+
+    assert files == [cached_file]
+
+
 def test_br_monthly_updater_history_months_respects_year_window(tmp_path) -> None:
     updater = BRMonthlyUpdater(output_csv=tmp_path / "brazil_national_monthly.csv")
     assert updater.history_months(start_year=2025, end_date=date(2026, 2, 1)) == [
@@ -306,6 +335,52 @@ def test_br_refresh_source_can_skip_csv_fallback_and_live_write(tmp_path) -> Non
 
     assert len(fetched.rows) == 2
     assert not output_csv.exists()
+
+
+def test_br_refresh_source_recovers_with_csv_when_only_trailing_month_missing(tmp_path) -> None:
+    output_csv = tmp_path / "brazil_national_monthly.csv"
+    updater = BRMonthlyUpdater(output_csv=output_csv)
+    updater._write_rows_to_output_csv(
+        [
+            {
+                "Date": "2026-04-01",
+                "RawDiseaseLabel": "Dengue",
+                "DiseaseCode": "DENG",
+                "Cases": "13",
+                "DatasetStatus": "preliminary",
+                "SourceFiles": "DENGBR26.dbc",
+                "SourceURLs": "http://example/DENGBR26.dbc",
+                "Source": "Brazil DATASUS SINAN Open Data",
+            },
+            {
+                "Date": "2026-05-01",
+                "RawDiseaseLabel": "Dengue",
+                "DiseaseCode": "DENG",
+                "Cases": "21",
+                "DatasetStatus": "preliminary",
+                "SourceFiles": "DENGBR26.dbc",
+                "SourceURLs": "http://example/DENGBR26.dbc",
+                "Source": "Brazil DATASUS SINAN Open Data",
+            },
+        ]
+    )
+
+    class FailingCrawler:
+        def crawl_monthly_national(self, *_args, **_kwargs):
+            raise RuntimeError("[BR-SINAN] No SINAN DBC files matched requested months/prefixes")
+
+    fetched = updater.refresh_source(
+        source="sinan_datasus",
+        months=[(2026, 4), (2026, 5), (2026, 6)],
+        crawler=FailingCrawler(),
+    )
+
+    assert [(row["Date"], row["Cases"]) for row in fetched.rows] == [
+        ("2026-04-01", "13"),
+        ("2026-05-01", "21"),
+    ]
+    assert fetched.source_latest_date == date(2026, 5, 1)
+    assert any("previous CSV covers 2/3" in line for line in fetched.script_logs)
 
 
 def test_br_write_rows_to_output_csv_keeps_sorted_output(tmp_path) -> None:

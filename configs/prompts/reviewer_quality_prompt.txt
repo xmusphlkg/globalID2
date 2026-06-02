@@ -1,6 +1,7 @@
 As a professional medical reviewer, assess the quality of the following {content_type} content.
 
 Target language for descriptive outputs (like reasoning): {language}
+Do not mix English and Chinese prose except official disease names, acronyms, units, and source titles.
 
 Content:
 {content}

@@ -437,11 +437,14 @@ class BrazilSINANCrawler(BaseCrawler):
     def _file_index_cache_path(self) -> Path:
         return self.cache_dir / "index.json"
 
-    def _read_cached_file_index(self) -> Optional[List[SINANFile]]:
+    def _read_cached_file_index(self, *, ignore_ttl: bool = False) -> Optional[List[SINANFile]]:
         cache_path = self._file_index_cache_path()
         if not cache_path.exists():
             return None
-        if time.time() - cache_path.stat().st_mtime > self.file_index_ttl_seconds:
+        if (
+            not ignore_ttl
+            and time.time() - cache_path.stat().st_mtime > self.file_index_ttl_seconds
+        ):
             return None
 
         try:
@@ -517,7 +520,9 @@ class BrazilSINANCrawler(BaseCrawler):
             )
             return list(self._file_index)
 
+        stale_index = self._read_cached_file_index(ignore_ttl=True)
         all_files: List[SINANFile] = []
+        failed_listings: List[str] = []
         for url, status in (
             (self.final_url, "final"),
             (self.prelim_url, "preliminary"),
@@ -525,10 +530,24 @@ class BrazilSINANCrawler(BaseCrawler):
             try:
                 listing_text = self._fetch_listing_text(url)
             except Exception as exc:
+                failed_listings.append(url)
                 logger.warning(f"[BR-SINAN] listing fetch failed | url={url} error={exc}")
                 continue
             all_files.extend(
                 parse_ftp_listing(listing_text, base_url=url, dataset_status=status)
+            )
+
+        if failed_listings and stale_index:
+            all_files.extend(stale_index)
+            logger.warning(
+                f"[BR-SINAN] using cached index entries after listing failure | "
+                f"failed={len(failed_listings)} cached_files={len(stale_index)}"
+            )
+        elif not all_files and stale_index:
+            all_files.extend(stale_index)
+            logger.warning(
+                f"[BR-SINAN] using stale cached index because live listing returned no files | "
+                f"cached_files={len(stale_index)}"
             )
 
         # Prefer final files when the same prefix/year is present in both folders.
@@ -753,7 +772,7 @@ class BrazilSINANCrawler(BaseCrawler):
                 "Source",
             ]
             with output_csv.open("w", encoding="utf-8", newline="") as handle:
-                writer = csv.DictWriter(handle, fieldnames=fieldnames)
+                writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
                 writer.writeheader()
                 for idx, row in enumerate(output_rows, start=1):
                     writer.writerow(

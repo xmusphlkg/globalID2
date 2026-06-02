@@ -407,7 +407,7 @@ class KRMonthlyUpdater:
                     "disease_id": disease_id,
                     "country_id": country_id,
                     "cases": 0,
-                    "deaths": 0,
+                    "deaths": None,
                     "data_source": row.get("Source", self.source_name),
                     "local_cases": 0,
                     "imported_cases": 0,
@@ -442,6 +442,8 @@ class KRMonthlyUpdater:
                 "local_cases": bucket["local_cases"],
                 "imported_cases": bucket["imported_cases"],
                 "source_urls": bucket["source_urls"],
+                "death_reporting": "not_provided_by_source",
+                "death_reporting_note": "Korea KDCA case feed used here reports cases, not death counts.",
             }
             upsert_rows.append(
                 {

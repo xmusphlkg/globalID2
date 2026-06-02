@@ -211,6 +211,8 @@ async def run_import(args: argparse.Namespace) -> None:
                 "mmwr_week": normalize_text(row.get("MMWR WEEK")),
                 "update_mode": normalize_text(row.get("UpdateMode")),
                 "import_policy": "strict_us_history_v1",
+                "death_reporting": "not_provided_by_source",
+                "death_reporting_note": "NNDSS case notification feed used here does not provide death counts.",
             }
 
             payload.append(
@@ -219,7 +221,7 @@ async def run_import(args: argparse.Namespace) -> None:
                     "disease_id": disease_db_id,
                     "country_id": country_id,
                     "cases": max(0, cases),
-                    "deaths": 0,
+                    "deaths": None,
                     "data_source": normalize_text(row.get("Source")) or args.source_name,
                     "metadata": json.dumps(metadata_obj),
                     "raw_data": json.dumps(row),

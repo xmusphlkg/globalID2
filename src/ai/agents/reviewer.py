@@ -151,7 +151,10 @@ class ReviewerAgent(BaseAgent):
                 "Data summary:\n{data_summary}"
             ),
         )
-        system_msg = """You are a strict and verifiable medical reviewer. Output valid JSON only. All outputs must be logically sound but formatted per requested language."""
+        system_msg = self._language_guard(
+            "You are a strict and verifiable medical reviewer. Output valid JSON only. All outputs must be logically sound but formatted per requested language.",
+            language,
+        )
 
         try:
             response = await self.complete(prompt=prompt, system=system_msg)
@@ -242,7 +245,10 @@ class ReviewerAgent(BaseAgent):
                 "Return JSON with accuracy, completeness, clarity, logic, professionalism, overall, reasoning."
             ),
         )
-        system_msg = "You are a strict academic reviewer, skilled at evaluating the quality of scientific reports. Please provide objective and fair scoring."
+        system_msg = self._language_guard(
+            "You are a strict academic reviewer, skilled at evaluating the quality of scientific reports. Please provide objective and fair scoring.",
+            language,
+        )
         
         try:
             response = await self.complete(
@@ -328,7 +334,10 @@ class ReviewerAgent(BaseAgent):
                 "Data summary:\n{data_summary}"
             ),
         )
-        system_msg = "You are a meticulous fact-checker, focused on finding inconsistencies in data and statements."
+        system_msg = self._language_guard(
+            "You are a meticulous fact-checker, focused on finding inconsistencies in data and statements.",
+            language,
+        )
         
         try:
             response = await self.complete(
@@ -378,7 +387,10 @@ class ReviewerAgent(BaseAgent):
                 "Content:\n{content}"
             ),
         )
-        system_msg = "You are an experienced scientific editor skilled at providing constructive improvement suggestions."
+        system_msg = self._language_guard(
+            "You are an experienced scientific editor skilled at providing constructive improvement suggestions.",
+            language,
+        )
         
         try:
             response = await self.complete(
@@ -436,6 +448,16 @@ class ReviewerAgent(BaseAgent):
 
         return assessment
     
+    @staticmethod
+    def _language_guard(system_prompt: str, language: str) -> str:
+        target = "Simplified Chinese" if language == "zh" else "English"
+        opposite = "English prose" if language == "zh" else "Chinese prose"
+        return (
+            f"{system_prompt}\n\n"
+            f"Language control: all descriptive text values must be strictly in {target}. "
+            f"Do not mix in {opposite} except for official disease names, acronyms, units, JSON keys, and source titles."
+        )
+
     @staticmethod
     def _extract_numbers_from_data(data: Dict[str, Any]) -> List[float]:
         """Extract numeric values from nested data structures."""
