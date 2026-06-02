@@ -247,6 +247,8 @@ async def upsert_records(
             "mmwr_year": row.year,
             "mmwr_week": row.week,
             "current_week_flag": row.flag,
+            "death_reporting": "not_provided_by_source",
+            "death_reporting_note": "Japan IDWR weekly feed used here reports cases only.",
         }
         raw_obj = {
             "Reporting Area": row.report_area,
@@ -263,7 +265,7 @@ async def upsert_records(
                 "disease_id": disease_id,
                 "country_id": country_id,
                 "cases": row.cases,
-                "deaths": 0,
+                "deaths": None,
                 "region": None,
                 "data_source": source_name,
                 "metadata": json.dumps(row_meta),

@@ -364,7 +364,7 @@ class HKMonthlyUpdater:
                     "disease_id": disease_id,
                     "country_id": country_id,
                     "cases": 0,
-                    "deaths": 0,
+                    "deaths": None,
                     "data_source": row.get("Source", self.source_name),
                     "raw_disease_labels": [],
                     "source_urls": [],
@@ -389,6 +389,8 @@ class HKMonthlyUpdater:
                 "raw_disease_labels": bucket["raw_disease_labels"],
                 "source_urls": bucket["source_urls"],
                 "record_types": bucket["record_types"],
+                "death_reporting": "not_provided_by_source",
+                "death_reporting_note": "Hong Kong notification tables used here report case counts, not death counts.",
             }
             upsert_rows.append(
                 {

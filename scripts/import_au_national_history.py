@@ -346,6 +346,8 @@ async def upsert_records(
             "group": row.group,
             "population": row.population,
             "incidence": row.incidence,
+            "death_reporting": "not_provided_by_source",
+            "death_reporting_note": "Australia NNDSS notification feed used here reports cases, not death counts.",
         }
 
         raw_obj = {
@@ -364,7 +366,7 @@ async def upsert_records(
                 "disease_id": disease_id,
                 "country_id": country_id,
                 "cases": row.cases,
-                "deaths": 0,
+                "deaths": None,
                 "region": None,
                 "data_source": source_name,
                 "incidence_rate": row.incidence,

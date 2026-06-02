@@ -280,25 +280,32 @@ def compact_report_metadata(metadata: dict | None, *, include_figures: bool = Fa
     if not isinstance(metadata, dict):
         return {}
 
-    keep_keys = (
-        "report_layout",
-        "method_version",
-        "data_signature",
-        "analysis_depth",
-        "analysis_summary",
-        "quality_gate",
-        "data_quality",
-        "summary_metrics",
-        "risk_ranking",
-        "pdf_generation",
-    )
-    compact = {key: metadata.get(key) for key in keep_keys if key in metadata}
-    if include_figures:
-        compact["disease_cards"] = metadata.get("disease_cards") or []
-        compact["figure_plan"] = metadata.get("figure_plan") or []
-        compact["figures"] = metadata.get("figures") or []
-        compact["figure_data"] = metadata.get("figure_data") or {}
-    return compact
+    document = metadata.get("report_document_v4")
+    if isinstance(document, dict):
+        compact = {
+            "report_layout": "report_v4",
+            "schema_version": metadata.get("schema_version") or document.get("schema_version"),
+            "method_version": metadata.get("method_version") or document.get("schema_version"),
+            "default_locale": document.get("default_locale"),
+            "locales": document.get("locales") or ["zh", "en"],
+            "quality_gate": metadata.get("quality_gate") or {},
+            "data_quality": document.get("data_quality") or metadata.get("data_quality") or {},
+            "summary_metrics": {
+                **(document.get("metrics") or {}),
+                "death_reporting": document.get("death_reporting") or {},
+            },
+            "death_reporting": document.get("death_reporting") or {},
+            "disease_directory": document.get("disease_directory") or [],
+            "risk_ranking": document.get("risk_ranking") or [],
+            "references": document.get("references") or [],
+        }
+        if include_figures:
+            compact["figures"] = document.get("figures") or []
+            compact["figure_data"] = metadata.get("figure_data") or {}
+            compact["report_document_v4"] = document
+        return compact
+
+    return {}
 
 
 def source_metadata_field(source: dict, key: str):
@@ -1550,8 +1557,11 @@ async def fetch_reports(session) -> list[dict]:
                 r.summary,
                 r.quality_score,
                 r.metadata,
+                r.generation_config,
                 c.code                AS country_code,
-                c.name                AS country_name
+                c.name                AS country_name,
+                c.name_en             AS country_name_en,
+                c.name_local          AS country_name_local
             FROM reports r
             JOIN countries c ON c.id = r.country_id
             WHERE r.status IN ('COMPLETED', 'APPROVED', 'PUBLISHED')
@@ -1562,16 +1572,26 @@ async def fetch_reports(session) -> list[dict]:
     result = []
     for row in rows:
         r = dict(row._mapping)
+        metadata = r.get("metadata") if isinstance(r.get("metadata"), dict) else {}
+        document = metadata.get("report_document_v4")
+        if not isinstance(document, dict):
+            continue
         r["period_start"] = r["period_start"].isoformat() if r["period_start"] else None
         r["period_end"] = r["period_end"].isoformat() if r["period_end"] else None
         r["created_at"] = r["created_at"].isoformat() if r["created_at"] else None
         r["quality_score"] = safe_float(r["quality_score"])
-        metadata = r.get("metadata") if isinstance(r.get("metadata"), dict) else {}
+        report_language = "zh"
+        r["title"] = (document.get("title") or {}).get("zh") or r.get("title")
+        r["summary"] = (document.get("summary") or {}).get("zh") or r.get("summary")
+        r["key_findings"] = (document.get("key_findings") or {}).get("zh") or []
         r["metadata"] = compact_report_metadata(metadata, include_figures=False)
-        r["analysis_summary"] = metadata.get("analysis_summary") if isinstance(metadata.get("analysis_summary"), dict) else None
-        r["quality_gate"] = metadata.get("quality_gate") if isinstance(metadata.get("quality_gate"), dict) else None
-        r["data_quality"] = metadata.get("data_quality") if isinstance(metadata.get("data_quality"), dict) else None
-        r["method_version"] = metadata.get("method_version")
+        r["metadata"]["language"] = report_language
+        r["language"] = report_language
+        r.pop("generation_config", None)
+        r["analysis_summary"] = None
+        r["quality_gate"] = r["metadata"].get("quality_gate")
+        r["data_quality"] = r["metadata"].get("data_quality")
+        r["method_version"] = r["metadata"].get("method_version")
         result.append(r)
     return result
 
@@ -1587,8 +1607,11 @@ async def fetch_report_detail(session, report_id: int) -> dict | None:
                 r.created_at, r.ai_model_used, r.quality_score,
                 r.summary, r.key_findings,
                 r.metadata,
+                r.generation_config,
                 c.code               AS country_code,
-                c.name               AS country_name
+                c.name               AS country_name,
+                c.name_en            AS country_name_en,
+                c.name_local         AS country_name_local
             FROM reports r
             JOIN countries c ON c.id = r.country_id
             WHERE r.id = :id
@@ -1605,27 +1628,46 @@ async def fetch_report_detail(session, report_id: int) -> dict | None:
     report["created_at"] = report["created_at"].isoformat() if report["created_at"] else None
     report["quality_score"] = safe_float(report["quality_score"])
     metadata = report.get("metadata") if isinstance(report.get("metadata"), dict) else {}
+    document = metadata.get("report_document_v4")
+    if not isinstance(document, dict):
+        return None
+    report_language = "zh"
+    report["title"] = (document.get("title") or {}).get("zh") or report.get("title")
+    report["summary"] = (document.get("summary") or {}).get("zh") or report.get("summary")
+    report["key_findings"] = (document.get("key_findings") or {}).get("zh") or []
+    report["report_document_v4"] = document
     report["metadata"] = compact_report_metadata(metadata, include_figures=True)
-    report["analysis_summary"] = metadata.get("analysis_summary") if isinstance(metadata.get("analysis_summary"), dict) else None
-    report["quality_gate"] = metadata.get("quality_gate") if isinstance(metadata.get("quality_gate"), dict) else None
-    report["data_quality"] = metadata.get("data_quality") if isinstance(metadata.get("data_quality"), dict) else None
-    report["method_version"] = metadata.get("method_version")
-
-    # Fetch sections
-    srows = await session.execute(
-        text(
-            """
-            SELECT
-                section_type, section_order, title,
-                content, content_html, charts, metadata
-            FROM report_sections
-            WHERE report_id = :id
-            ORDER BY section_order
-            """
-        ),
-        {"id": report_id},
-    )
-    report["sections"] = [dict(s._mapping) for s in srows]
+    report["metadata"]["language"] = report_language
+    report["language"] = report_language
+    report.pop("generation_config", None)
+    report["analysis_summary"] = None
+    report["quality_gate"] = report["metadata"].get("quality_gate")
+    report["data_quality"] = report["metadata"].get("data_quality")
+    report["method_version"] = report["metadata"].get("method_version")
+    report["sections"] = [
+        {
+            "section_type": section.get("type"),
+            "section_order": section.get("order"),
+            "title": (section.get("title") or {}).get("zh"),
+            "content": (section.get("body") or {}).get("zh"),
+            "charts": section.get("figures") or [],
+            "metadata": {
+                "locales": {
+                    "zh": {
+                        "title": (section.get("title") or {}).get("zh"),
+                        "content": (section.get("body") or {}).get("zh"),
+                    },
+                    "en": {
+                        "title": (section.get("title") or {}).get("en"),
+                        "content": (section.get("body") or {}).get("en"),
+                    },
+                },
+                "evidence_refs": section.get("evidence_refs") or [],
+                "quality_flags": section.get("quality_flags") or [],
+            },
+        }
+        for section in document.get("sections") or []
+    ]
     return report
 
 

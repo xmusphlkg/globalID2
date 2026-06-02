@@ -8,4 +8,6 @@ Word count: 100-110 words.
 Data: {data_context}
 
 Target output language: {language}
+Language hygiene: write only in the target language, except official disease names, acronyms, units, and source titles.
+Death-data rule: only state zero deaths when the source explicitly reports death counts as zero; otherwise say death counts are unavailable.
 {context_injection}

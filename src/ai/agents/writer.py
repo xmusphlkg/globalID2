@@ -518,7 +518,7 @@ class WriterAgent(BaseAgent):
 
         response = await self.complete(
             prompt=prompt,
-            system=self.system_prompt
+            system=self._get_system_prompt(language, "formal")
         )
 
         return response.strip()
@@ -565,7 +565,7 @@ class WriterAgent(BaseAgent):
 
         response = await self.complete(
             prompt=prompt,
-            system=self.system_prompt
+            system=self._get_system_prompt(language, "formal")
         )
 
         return response.strip()
@@ -595,7 +595,7 @@ class WriterAgent(BaseAgent):
 
         response = await self.complete(
             prompt=prompt,
-            system=self.system_prompt
+            system=self._get_system_prompt(language, "formal")
         )
 
         return response.strip()
@@ -625,7 +625,7 @@ class WriterAgent(BaseAgent):
 
         response = await self.complete(
             prompt=prompt,
-            system=self.system_prompt
+            system=self._get_system_prompt(language, "formal")
         )
 
         return response.strip()
