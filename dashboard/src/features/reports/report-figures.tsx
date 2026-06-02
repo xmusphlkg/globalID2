@@ -428,39 +428,6 @@ function anomalyMarkerCurveOption(figure: RecordValue, figureData: RecordValue, 
   };
 }
 
-function dataQualityTimelineOption(figure: RecordValue, figureData: RecordValue, lang: "en" | "zh"): echarts.EChartsCoreOption | null {
-  const series = dataSeries(figure, figureData);
-  const periods = asArray(series.periods).map(String);
-  if (periods.length < 2) return null;
-  const availability = asRecord(asRecord(asRecord(series.visual).derived).availability);
-  const rows = [
-    { key: "cases", label: lang === "zh" ? "病例" : "Cases" },
-    { key: "deaths", label: lang === "zh" ? "死亡" : "Deaths" },
-    { key: "incidence_rate_per_100k", label: lang === "zh" ? "粗发病率" : "Crude incidence" },
-  ];
-  const cells = rows.flatMap((row, rowIndex) => {
-    const values = numberArray(availability[row.key]);
-    return periods.map((period, index) => [index, rowIndex, Number(values[index] || 0), period, row.label]);
-  });
-  return {
-    animation: false,
-    tooltip: {
-      trigger: "item",
-      confine: true,
-      formatter: (params: { data?: unknown }) => {
-        const item = Array.isArray(params.data) ? params.data : [];
-        return `${String(item[4] || "")}<br/>${String(item[3] || "")}: ${Number(item[2]) ? "available" : "missing"}`;
-      },
-    },
-    aria: { enabled: true },
-    grid: { left: 96, right: 32, top: 20, bottom: 64 },
-    xAxis: { type: "category", data: periods, axisLabel: { rotate: periods.length > 10 ? 35 : 0, color: "#5d6978" }, axisLine: { lineStyle: { color: "#d7dde5" } } },
-    yAxis: { type: "category", data: rows.map((row) => row.label), axisLabel: { color: "#5d6978" }, axisLine: { lineStyle: { color: "#d7dde5" } } },
-    visualMap: { show: false, min: 0, max: 1, inRange: { color: ["#d7dde5", "#0f766e"] } },
-    series: [{ name: lang === "zh" ? "可用性" : "Availability", type: "heatmap", data: cells, label: { show: false } }],
-  };
-}
-
 function riskMatrixOption(figureData: RecordValue, lang: "en" | "zh"): echarts.EChartsCoreOption | null {
   const rows = asArray(figureData.risk_ranking).map(asRecord).slice(0, 12);
   if (rows.length < 2) return null;
@@ -499,7 +466,6 @@ function buildOption(figure: RecordValue, figureData: RecordValue, lang: "en" | 
   if (type === "risk_ranking_bar") return riskRankingBarOption(figureData, lang);
   if (type === "seasonal_baseline_band") return seasonalBaselineBandOption(figure, figureData, lang);
   if (type === "anomaly_marker_curve") return anomalyMarkerCurveOption(figure, figureData, lang);
-  if (type === "data_quality_timeline") return dataQualityTimelineOption(figure, figureData, lang);
   if (type === "risk_matrix") return riskMatrixOption(figureData, lang);
   return null;
 }
@@ -511,7 +477,6 @@ function figureHeight(figure: RecordValue): number {
   if (type === "cases_incidence_panel") return 500;
   if (type === "signal_context_panel") return 330;
   if (type === "recent_window_heatmap") return 320;
-  if (type === "data_quality_timeline") return 270;
   if (type === "risk_matrix") return 420;
   if (type === "seasonal_baseline_band") return 440;
   return 430;
@@ -533,7 +498,8 @@ export function ReportFigureList({ figures, figureData, lang, placement }: Repor
         const caption = asString(figure.caption);
         const legend = asArray(figure.legend).map(String).filter(Boolean);
         const refs = asArray(figure.evidence_refs).map(String).filter(Boolean);
-        const number = figure.number == null ? "" : String(figure.number);
+        const displayNumber = figure.display_number ?? figure.number;
+        const number = displayNumber == null ? "" : String(displayNumber);
         return (
           <figure
             key={asString(figure.id) || `${asString(figure.figure_type)}-${index}`}

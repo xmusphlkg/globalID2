@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { type ComponentPropsWithoutRef, useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { ChevronDown, FileText, Gauge, Layers3, Search, Send, TimerReset } from "lucide-react";
 
@@ -11,7 +11,7 @@ import { FilterToolbar } from "@/components/ui/FilterToolbar";
 import { MetricTile } from "@/components/ui/MetricTile";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { type ReportDetail, type ReportListItem, useReportDetail, useReports } from "@/features/reports/api";
+import { type ReportDetail, type ReportListItem, type ReportSection, useReportDetail, useReports } from "@/features/reports/api";
 import { ReportFigureList } from "@/features/reports/report-figures";
 import { t } from "@/lib/i18n";
 import { formatDate } from "@/lib/utils";
@@ -83,8 +83,251 @@ function asString(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
+function asNullableString(value: unknown): string | null {
+  const text = typeof value === "string" || typeof value === "number" ? String(value).trim() : "";
+  return text || null;
+}
+
 function formatRiskName(item: Record<string, unknown>, lang: "en" | "zh") {
   return asString(lang === "zh" ? item.name_zh : item.name_en) || asString(item.name_en) || asString(item.disease_id) || "-";
+}
+
+function sourceIdentity(source: Record<string, unknown>, index: number) {
+  const id = asNullableString(source.source_id) ?? asNullableString(source.id);
+  if (id) return `id:${id}`;
+  const url = asNullableString(source.resolved_url) ?? asNullableString(source.url);
+  if (url) return `url:${url}`;
+  const title = asNullableString(source.title) ?? asNullableString(source.source_name);
+  if (title) return `title:${title.toLowerCase()}`;
+  return `index:${index}`;
+}
+
+function referenceIndex(source: Record<string, unknown>, fallbackIndex: number) {
+  const value = Number(source.citation_index);
+  return Number.isFinite(value) && value > 0 ? value : fallbackIndex;
+}
+
+function referenceUrl(source: Record<string, unknown>) {
+  return asNullableString(source.resolved_url) ?? asNullableString(source.url);
+}
+
+function referenceLinkLabel(source: Record<string, unknown>) {
+  const lookup = [
+    source.source_type,
+    source.source_name,
+    source.url,
+    source.resolved_url,
+  ].map((value) => asString(value).toLowerCase()).join(" ");
+  if (lookup.includes("pubmed")) return "PubMed";
+  if (lookup.includes("doi.org") || asNullableString(source.doi)) return "DOI";
+  return "Available from";
+}
+
+function formatReferenceCitation(source: Record<string, unknown>, fallbackIndex: number) {
+  const title = asNullableString(source.title) ?? `Reference ${fallbackIndex}`;
+  const sourceName = asNullableString(source.source_name) ?? asNullableString(source.source_type);
+  const date = asNullableString(source.publication_date) ?? asNullableString(source.published_at) ?? asNullableString(source.fetched_at);
+  const pmid = referenceUrl(source)?.match(/pubmed\.ncbi\.nlm\.nih\.gov\/(\d+)/i)?.[1];
+  return [
+    sourceName && sourceName.toLowerCase() !== title.toLowerCase() ? `${sourceName}.` : null,
+    /[.!?。！？]$/.test(title) ? title : `${title}.`,
+    date ? `${date}.` : null,
+    pmid ? `PMID: ${pmid}.` : null,
+  ].filter(Boolean).join(" ");
+}
+
+function collectReportReferences(detail: ReportDetail, sectionTexts: string[]) {
+  const metadata = asRecord(detail.metadata);
+  const rawSources: Record<string, unknown>[] = [];
+
+  asArray(metadata.references).map(asRecord).forEach((source) => rawSources.push(source));
+  asArray(metadata.disease_cards).map(asRecord).forEach((card) => {
+    const context = asRecord(card.knowledge_context);
+    asArray(context.source_attribution).map(asRecord).forEach((source) => rawSources.push(source));
+  });
+
+  const markers = new Set<number>();
+  sectionTexts.forEach((text) => {
+    for (const match of text.matchAll(/\[(\d+)\]/g)) markers.add(Number(match[1]));
+  });
+
+  const seen = new Set<string>();
+  const deduped = rawSources.filter((source, index) => {
+    if (Object.keys(source).length === 0) return false;
+    const key = sourceIdentity(source, index);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  const normalized = deduped.map((source, index) => ({
+    ...source,
+    citation_index: referenceIndex(source, index + 1),
+  }));
+  normalized.sort((a, b) => referenceIndex(a, Number.MAX_SAFE_INTEGER) - referenceIndex(b, Number.MAX_SAFE_INTEGER));
+  return markers.size > 0
+    ? normalized.filter((source, index) => markers.has(referenceIndex(source, index + 1)) || asArray(metadata.references).length > 0)
+    : normalized;
+}
+
+function linkCitationMarkers(content: string, references: Record<string, unknown>[]) {
+  if (!content || references.length === 0) return content;
+  const valid = new Set(references.map((source, index) => referenceIndex(source, index + 1)));
+  return content.replace(/\[(\d+)\](?!\()/g, (match, value: string) => {
+    const index = Number(value);
+    return valid.has(index) ? `[[${index}]](#report-ref-${index})` : match;
+  });
+}
+
+type MarkdownAnchorProps = ComponentPropsWithoutRef<"a"> & { node?: unknown };
+
+function CitationAnchor({ node: _node, href, children, ...props }: MarkdownAnchorProps) {
+  if (href?.startsWith("#report-ref-")) {
+    return (
+      <sup className="citation-ref">
+        <a href={href} className="citation-link" {...props}>
+          {children}
+        </a>
+      </sup>
+    );
+  }
+
+  return (
+    <a href={href} {...props}>
+      {children}
+    </a>
+  );
+}
+
+function assignFigureNumbers(sections: ReportSection[], allFigures: Record<string, unknown>[]) {
+  let nextFigureNumber = 1;
+  return sections.map((section) => {
+    const charts = sectionFigures(section, allFigures);
+    const numberFigures = (placement: "before_content" | "after_content") =>
+      charts
+        .filter((figure) => (asString(figure.position) || "after_content") === placement)
+        .map((figure) => ({
+          ...figure,
+          display_number: nextFigureNumber++,
+        }));
+
+    return {
+      section,
+      beforeFigures: numberFigures("before_content"),
+      afterFigures: numberFigures("after_content"),
+    };
+  });
+}
+
+function isAuditReportSection(section: ReportSection) {
+  return section.section_type === "methodology" || section.section_type === "evidence_appendix";
+}
+
+function ReportReferences({ references, lang }: { references: Record<string, unknown>[]; lang: "en" | "zh" }) {
+  if (references.length === 0) return null;
+
+  return (
+    <section className="rounded-tremor-default border border-tremor-border bg-tremor-background px-4 py-4 dark:border-dark-tremor-border dark:bg-dark-tremor-background">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+        {lang === "zh" ? "参考文献" : "References"}
+      </p>
+      <ol className="mt-3 space-y-3">
+        {references.map((source, index) => {
+          const citationIndex = referenceIndex(source, index + 1);
+          const url = referenceUrl(source);
+          return (
+            <li key={`${citationIndex}-${url || asString(source.title) || index}`} id={`report-ref-${citationIndex}`}>
+              <div className="flex items-start gap-3 text-sm leading-6 text-tremor-content dark:text-dark-tremor-content">
+                <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-tremor-small border border-tremor-border bg-tremor-background-subtle font-mono text-[10px] font-semibold text-tremor-content-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background-subtle dark:text-dark-tremor-content-subtle">
+                  {citationIndex}
+                </span>
+                <span className="min-w-0">
+                  <span className="font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
+                    {formatReferenceCitation(source, citationIndex)}
+                  </span>
+                  {url ? (
+                    <span className="mt-1 block break-all text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+                      {referenceLinkLabel(source)}:{" "}
+                      <a href={url} target="_blank" rel="noreferrer" className="text-tremor-brand underline-offset-2 hover:underline dark:text-dark-tremor-brand">
+                        {url}
+                      </a>
+                    </span>
+                  ) : null}
+                </span>
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
+}
+
+function sectionFigures(section: ReportSection, allFigures: Record<string, unknown>[]) {
+  const directCharts = asArray(section.charts).map(asRecord);
+  if (directCharts.length > 0) return curateSectionFigures(section, directCharts);
+
+  const metadata = asRecord(section.metadata);
+  const metadataFigures = asArray(metadata.figure_specs).map(asRecord);
+  if (metadataFigures.length > 0) return curateSectionFigures(section, metadataFigures);
+
+  const sectionType = asString(section.section_type);
+  if (!sectionType) return [];
+  return curateSectionFigures(section, allFigures.filter((figure) => asString(figure.section_type) === sectionType));
+}
+
+function sectionDisplayType(section: ReportSection) {
+  const metadata = asRecord(section.metadata);
+  return asString(metadata.display_type) || asString(section.section_type) || "section";
+}
+
+function firstFigureOfType(figures: Record<string, unknown>[], types: string[]) {
+  for (const type of types) {
+    const found = figures.find((figure) => asString(figure.figure_type) === type);
+    if (found) return found;
+  }
+  return null;
+}
+
+function sectionNeedsDataQualityFigure(section: ReportSection) {
+  const metadata = asRecord(section.metadata);
+  const quality = asRecord(metadata.data_quality);
+  const score = asNumber(quality.score);
+  if (score !== null && score < 0.9) return true;
+  const missing = asRecord(quality.missing_rates);
+  return Object.values(missing).some((value) => Number(value) >= 0.2);
+}
+
+function curateSectionFigures(section: ReportSection, figures: Record<string, unknown>[]) {
+  const renderable = figures.filter((figure) => asString(figure.renderer) === "echarts" || !asString(figure.renderer));
+  const sectionType = asString(section.section_type) || asString(renderable[0]?.section_type);
+
+  if (sectionType === "trend_anomaly_analysis") {
+    const primary = firstFigureOfType(renderable, ["anomaly_marker_curve", "seasonal_baseline_band", "epidemic_curve"]);
+    const secondary = firstFigureOfType(
+      renderable.filter((figure) => figure !== primary),
+      ["epidemic_curve", "recent_window_heatmap"],
+    );
+    return [primary, secondary].filter((figure): figure is Record<string, unknown> => Boolean(figure));
+  }
+
+  if (sectionType === "priority_signals") {
+    return [firstFigureOfType(renderable, ["risk_matrix", "risk_ranking_bar", "signal_context_panel"])].filter(
+      (figure): figure is Record<string, unknown> => Boolean(figure),
+    );
+  }
+
+  if (sectionType === "disease_profiles") {
+    return [firstFigureOfType(renderable, ["cases_incidence_panel", "epidemic_curve"])].filter(
+      (figure): figure is Record<string, unknown> => Boolean(figure),
+    );
+  }
+
+  if (sectionType === "data_quality_limitations" && !sectionNeedsDataQualityFigure(section)) {
+    return [];
+  }
+
+  return renderable.slice(0, 1);
 }
 
 function QualityCell({ score }: { score: number | null | undefined }) {
@@ -124,38 +367,27 @@ function AnalyticalV3Summary({ detail, lang }: { detail: ReportDetail; lang: "en
   const metadata = asRecord(detail.metadata);
   if (metadata.report_layout !== "analytical_v3") return null;
 
-  const qualityGate = asRecord(detail.quality_gate ?? metadata.quality_gate);
   const dataQuality = asRecord(detail.data_quality ?? metadata.data_quality);
   const summaryMetrics = asRecord(metadata.summary_metrics);
   const riskRanking = asArray(metadata.risk_ranking).map(asRecord).slice(0, 8);
   const diseaseCards = asArray(metadata.disease_cards).map(asRecord).slice(0, 6);
-  const passed = qualityGate.passed === true;
-  const qualityScore = asNumber(qualityGate.overall_score);
   const dataQualityScore = asNumber(dataQuality.score);
-  const methodVersion = asString(detail.method_version ?? metadata.method_version);
+  const leadSignal = riskRanking[0];
 
   return (
     <section className="space-y-3">
       <div className="grid gap-3 sm:grid-cols-4">
         <div className="rounded-tremor-default border border-tremor-border bg-tremor-background-subtle px-3 py-3 dark:border-dark-tremor-border dark:bg-dark-tremor-background-subtle">
           <p className="text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
-            {lang === "zh" ? "质量门" : "Quality Gate"}
+            {lang === "zh" ? "主要信号" : "Lead Signal"}
           </p>
-          <p className={`mt-1 text-base font-semibold ${passed ? "text-emerald-700 dark:text-emerald-300" : "text-amber-700 dark:text-amber-300"}`}>
-            {passed ? (lang === "zh" ? "通过" : "Passed") : lang === "zh" ? "需审核" : "Review"}
-          </p>
-        </div>
-        <div className="rounded-tremor-default border border-tremor-border bg-tremor-background-subtle px-3 py-3 dark:border-dark-tremor-border dark:bg-dark-tremor-background-subtle">
-          <p className="text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
-            {lang === "zh" ? "门控分" : "Gate Score"}
-          </p>
-          <p className="mt-1 text-base font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
-            {percent(qualityScore)}
+          <p className="mt-1 truncate text-base font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
+            {leadSignal ? formatRiskName(leadSignal, lang) : "-"}
           </p>
         </div>
         <div className="rounded-tremor-default border border-tremor-border bg-tremor-background-subtle px-3 py-3 dark:border-dark-tremor-border dark:bg-dark-tremor-background-subtle">
           <p className="text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
-            {lang === "zh" ? "数据质量" : "Data Quality"}
+            {lang === "zh" ? "数据置信度" : "Data Confidence"}
           </p>
           <p className="mt-1 text-base font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
             {percent(dataQualityScore)}
@@ -163,10 +395,18 @@ function AnalyticalV3Summary({ detail, lang }: { detail: ReportDetail; lang: "en
         </div>
         <div className="rounded-tremor-default border border-tremor-border bg-tremor-background-subtle px-3 py-3 dark:border-dark-tremor-border dark:bg-dark-tremor-background-subtle">
           <p className="text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
-            {lang === "zh" ? "方法版本" : "Method"}
+            {lang === "zh" ? "研判信号" : "Signals Reviewed"}
+          </p>
+          <p className="mt-1 text-base font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
+            {String(summaryMetrics.disease_count ?? diseaseCards.length ?? "-")}
+          </p>
+        </div>
+        <div className="rounded-tremor-default border border-tremor-border bg-tremor-background-subtle px-3 py-3 dark:border-dark-tremor-border dark:bg-dark-tremor-background-subtle">
+          <p className="text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+            {lang === "zh" ? "高优先级" : "High Priority"}
           </p>
           <p className="mt-1 truncate text-base font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
-            {methodVersion || "-"}
+            {String(summaryMetrics.high_risk_diseases ?? "0")}
           </p>
         </div>
       </div>
@@ -203,7 +443,7 @@ function AnalyticalV3Summary({ detail, lang }: { detail: ReportDetail; lang: "en
                   <td className="px-3 py-2 font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">{formatRiskName(item, lang)}</td>
                   <td className="px-3 py-2">
                     <StatusBadge tone={asString(item.risk_level) === "high" || asString(item.risk_level) === "critical" ? "danger" : "neutral"}>
-                      {asString(item.risk_level) || "-"} {String(item.risk_score ?? "")}
+                      {asString(item.risk_level) || "-"}
                     </StatusBadge>
                   </td>
                   <td className="px-3 py-2 text-right text-tremor-content dark:text-dark-tremor-content">{String(item.latest_cases ?? "-")}</td>
@@ -243,6 +483,81 @@ function AnalyticalV3Summary({ detail, lang }: { detail: ReportDetail; lang: "en
           })}
         </div>
       ) : null}
+    </section>
+  );
+}
+
+function AnalyticalV3ReportBody({ detail, lang }: { detail: ReportDetail; lang: "en" | "zh" }) {
+  const metadata = asRecord(detail.metadata);
+  const figureData = asRecord(metadata.figure_data);
+  const allFigures = asArray(metadata.figures).map(asRecord);
+  const sections = useMemo(
+    () => [...detail.sections]
+      .sort((a, b) => a.section_order - b.section_order)
+      .filter((section) => !isAuditReportSection(section)),
+    [detail.sections],
+  );
+  const references = useMemo(
+    () => collectReportReferences(detail, sections.map((section) => section.content ?? "")),
+    [detail, sections],
+  );
+  const preparedSections = useMemo(() => assignFigureNumbers(sections, allFigures), [sections, allFigures]);
+
+  if (sections.length === 0) {
+    return (
+      <EmptyState
+        title={t(lang, "report_no_sections")}
+        className="rounded-tremor-default border border-dashed border-tremor-border py-10 dark:border-dark-tremor-border"
+      />
+    );
+  }
+
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-sm font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
+          {lang === "zh" ? "分析报告正文" : "Analytical Report Body"}
+        </h3>
+        <StatusBadge>{sections.length}</StatusBadge>
+      </div>
+
+      <div className="space-y-3">
+        {preparedSections.map(({ section, beforeFigures, afterFigures }) => {
+          const chartCount = beforeFigures.length + afterFigures.length;
+          const body = (
+            <>
+              <ReportFigureList figures={beforeFigures} figureData={figureData} lang={lang} />
+              <div className="report-markdown">
+                <ReactMarkdown components={{ a: CitationAnchor }}>
+                  {linkCitationMarkers(section.content ?? "", references)}
+                </ReactMarkdown>
+              </div>
+              <ReportFigureList figures={afterFigures} figureData={figureData} lang={lang} />
+            </>
+          );
+
+          return (
+            <article
+              key={section.id}
+              className="rounded-tremor-default border border-tremor-border bg-tremor-background px-4 py-4 dark:border-dark-tremor-border dark:bg-dark-tremor-background"
+            >
+              <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+                    {sectionDisplayType(section)}
+                  </p>
+                  <h3 className="mt-1 text-base font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
+                    {section.section_order}. {section.title || section.section_type || "Section"}
+                  </h3>
+                </div>
+                <StatusBadge>{chartCount ? `${chartCount} fig` : lang === "zh" ? "文字" : "Text"}</StatusBadge>
+              </div>
+              {body}
+            </article>
+          );
+        })}
+      </div>
+      <ReportReferences references={references} lang={lang} />
     </section>
   );
 }
@@ -305,6 +620,7 @@ function ReportDetailPanel({
 
   const metadata = asRecord(detail.metadata);
   const figureData = asRecord(metadata.figure_data);
+  const isAnalyticalV3 = metadata.report_layout === "analytical_v3";
 
   return (
     <div className="space-y-5">
@@ -385,7 +701,9 @@ function ReportDetailPanel({
       ) : null}
 
       <AnalyticalV3Summary detail={detail} lang={lang} />
+      {isAnalyticalV3 ? <AnalyticalV3ReportBody detail={detail} lang={lang} /> : null}
 
+      {!isAnalyticalV3 ? (
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-3">
           <h3 className="text-sm font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
@@ -453,6 +771,7 @@ function ReportDetailPanel({
           <EmptyState title={t(lang, "report_no_sections")} className="rounded-tremor-default border border-dashed border-tremor-border py-10 dark:border-dark-tremor-border" />
         )}
       </section>
+      ) : null}
     </div>
   );
 }
