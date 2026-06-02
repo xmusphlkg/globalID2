@@ -699,6 +699,114 @@
     @apply mt-2 max-w-3xl text-sm leading-6;
   }
 
+  .report-markdown {
+    color: rgb(var(--text));
+    @apply max-w-none text-[0.95rem] leading-7;
+  }
+
+  .report-markdown>*+* {
+    margin-top: 0.9rem;
+  }
+
+  .report-markdown h1,
+  .report-markdown h2,
+  .report-markdown h3,
+  .report-markdown h4 {
+    color: rgb(var(--text-strong));
+    letter-spacing: 0;
+    @apply font-serif font-semibold;
+  }
+
+  .report-markdown h1 {
+    @apply text-2xl;
+  }
+
+  .report-markdown h2 {
+    @apply text-xl;
+  }
+
+  .report-markdown h3 {
+    @apply text-lg;
+  }
+
+  .report-markdown h4 {
+    @apply text-base;
+  }
+
+  .report-markdown strong {
+    color: rgb(var(--text-strong));
+    @apply font-semibold;
+  }
+
+  .report-markdown em {
+    color: rgb(var(--text-muted));
+  }
+
+  .report-markdown ul,
+  .report-markdown ol {
+    @apply pl-5;
+  }
+
+  .report-markdown ul {
+    @apply list-disc;
+  }
+
+  .report-markdown ol {
+    @apply list-decimal;
+  }
+
+  .report-markdown li+li {
+    @apply mt-1;
+  }
+
+  .report-markdown table {
+    border-collapse: collapse;
+    width: 100%;
+    overflow: hidden;
+    border: 1px solid rgb(var(--border));
+    @apply my-4 text-sm;
+  }
+
+  .report-markdown th,
+  .report-markdown td {
+    border: 1px solid rgb(var(--border));
+    @apply px-3 py-2 align-top;
+  }
+
+  .report-markdown th {
+    color: rgb(var(--text-strong));
+    background-color: rgb(var(--bg-soft) / 0.58);
+    @apply font-semibold;
+  }
+
+  .report-markdown blockquote {
+    border-left: 3px solid rgb(var(--color-brand));
+    color: rgb(var(--text-muted));
+    background-color: rgb(var(--bg-soft) / 0.32);
+    @apply my-4 px-4 py-3;
+  }
+
+  .report-markdown code {
+    color: rgb(var(--text-strong));
+    background-color: rgb(var(--bg-soft) / 0.58);
+    @apply px-1 py-0.5 font-mono text-[0.86em];
+  }
+
+  .report-markdown pre {
+    border: 1px solid rgb(var(--border));
+    background-color: rgb(var(--bg-soft) / 0.52);
+    @apply overflow-x-auto p-3;
+  }
+
+  .report-markdown pre code {
+    background-color: transparent;
+    @apply p-0;
+  }
+
+  .report-markdown-compact {
+    @apply text-sm leading-6;
+  }
+
   .academic-note {
     border: 1px solid rgb(var(--border) / 0.68);
     background-color: rgb(var(--bg-soft) / 0.34);

@@ -1,56 +1,64 @@
 ---
 // src/pages/countries/[country]/reports/[id]/[disease].astro
-// Individual disease detail page within a report — journal publication style.
+// Disease detail pages generated from the report_v4 disease directory.
 import ReportLayout from '../../../../../layouts/ReportLayout.astro';
 import DownloadPanel from '../../../../../components/DownloadPanel.astro';
 import DiseaseDetailView from '../../../../../components/charts/DiseaseDetailView';
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
-import { marked } from 'marked';
 
-// Configure marked for clean HTML output
-marked.setOptions({ gfm: true, breaks: true });
+type Lang = 'zh' | 'en';
+
+function readJson(path: string) {
+  return existsSync(path) ? JSON.parse(readFileSync(path, 'utf-8')) : null;
+}
+
+function isReportV4(value: any) {
+  return value?.metadata?.report_layout === 'report_v4'
+    || value?.metadata?.report_document_v4
+    || value?.report_document_v4
+    || value?.schema_version === 'report_v4.0';
+}
+
+function documentFor(report: any) {
+  return report?.report_document_v4 ?? report?.metadata?.report_document_v4 ?? report;
+}
+
+function directoryFor(report: any) {
+  const document = documentFor(report);
+  return Array.isArray(document?.disease_directory) ? document.disease_directory : [];
+}
 
 export async function getStaticPaths() {
-  const reportsIndexPath = resolve('./src/data/reports/index.json');
-  if (!existsSync(reportsIndexPath)) return [];
-  const reportsIndex = JSON.parse(readFileSync(reportsIndexPath, 'utf-8')) as any[];
+  const readStaticJson = (path: string) => existsSync(path) ? JSON.parse(readFileSync(path, 'utf-8')) : null;
+  const isStaticReportV4 = (value: any) => value?.metadata?.report_layout === 'report_v4'
+    || value?.metadata?.report_document_v4
+    || value?.report_document_v4
+    || value?.schema_version === 'report_v4.0';
+  const staticDocumentFor = (report: any) => report?.report_document_v4 ?? report?.metadata?.report_document_v4 ?? report;
+  const staticDirectoryFor = (report: any) => {
+    const document = staticDocumentFor(report);
+    return Array.isArray(document?.disease_directory) ? document.disease_directory : [];
+  };
+  const reportsPath = resolve('./src/data/reports/index.json');
+  const reports = readStaticJson(reportsPath);
+  if (!Array.isArray(reports)) return [];
 
   const paths: any[] = [];
-
-  for (const reportMeta of reportsIndex) {
-    const country = (reportMeta.country_code ?? 'cn').toLowerCase();
-    const reportPath = resolve(`./src/data/reports/${reportMeta.id}.json`);
-    const countryPath = resolve(`./src/data/countries/${country}.json`);
-    if (!existsSync(reportPath) || !existsSync(countryPath)) continue;
-
-    const reportData = JSON.parse(readFileSync(reportPath, 'utf-8'));
-    const cData = JSON.parse(readFileSync(countryPath, 'utf-8'));
-
-    // Build slug → disease_id mapping from country series
-    const slugMap: Record<string, string> = {};
-    for (const [did, s] of Object.entries(cData.disease_series as Record<string, any>)) {
-      if (s.slug) slugMap[s.name_en] = s.slug;
-    }
-
-    // Find all diseases present in report sections
-    const seen = new Set<string>();
-    for (const sec of (reportData.sections ?? [])) {
-      const diseaseName: string = sec.title.split(' - ').slice(0, -1).join(' - ');
-      const slug = slugMap[diseaseName];
-      if (slug && !seen.has(slug)) {
-        seen.add(slug);
-        paths.push({
-          params: {
-            country,
-            id: String(reportMeta.id),
-            disease: slug,
-          },
-        });
-      }
+  for (const report of reports.filter(isStaticReportV4)) {
+    const detailPath = resolve(`./src/data/reports/${report.id}.json`);
+    const detail = readStaticJson(detailPath) ?? report;
+    for (const row of staticDirectoryFor(detail)) {
+      if (!row?.slug) continue;
+      paths.push({
+        params: {
+          country: String(report.country_code ?? 'cn').toLowerCase(),
+          id: String(report.id),
+          disease: String(row.slug),
+        },
+      });
     }
   }
-
   return paths;
 }
 
@@ -60,109 +68,250 @@ const reportPath = resolve(`./src/data/reports/${id}.json`);
 const countryPath = resolve(`./src/data/countries/${country}.json`);
 const downloadsPath = resolve('./src/data/downloads.json');
 
-let report: any = null;
-let diseaseMeta: any = null;
-let sections: any[] = [];
-let fullSeries: any = null;
-let diseaseDownload: any = null;
+const report = readJson(reportPath);
+const document = documentFor(report);
+const diseaseRow = directoryFor(report).find((row: any) => row.slug === disease) ?? null;
+const countryData = readJson(countryPath);
+const downloads = readJson(downloadsPath);
+const diseaseDownload = (downloads?.diseases ?? []).find((entry: any) => entry.slug === disease) ?? null;
+const countryNameEn = report?.country_name_en ?? report?.country_name ?? country?.toUpperCase();
+const countryNameZh = report?.country_name_local ?? countryData?.country_name_zh ?? countryNameEn;
 
-if (existsSync(downloadsPath)) {
-  const downloads = JSON.parse(readFileSync(downloadsPath, 'utf-8')) as any;
-  diseaseDownload = (downloads.diseases ?? []).find(
-    (entry: any) => entry.slug === disease
-  ) ?? null;
+function fmtNumber(value: any) {
+  if (value === null || value === undefined || value === '') return '—';
+  const number = Number(value);
+  return Number.isFinite(number) ? number.toLocaleString() : '—';
 }
 
-if (existsSync(reportPath) && existsSync(countryPath)) {
-  report = JSON.parse(readFileSync(reportPath, 'utf-8'));
-  const cData = JSON.parse(readFileSync(countryPath, 'utf-8'));
+function fmtPct(value: any, lang: Lang) {
+  if (value === null || value === undefined || value === '') return lang === 'zh' ? '暂无可比数据' : 'not comparable';
+  const number = Number(value);
+  if (!Number.isFinite(number)) return lang === 'zh' ? '暂无可比数据' : 'not comparable';
+  const digits = Math.abs(number) >= 10 ? 0 : 1;
+  return `${number > 0 ? '+' : ''}${number.toFixed(digits)}%`;
+}
 
-  // Find disease by slug in country series
-  for (const [did, s] of Object.entries(cData.disease_series as Record<string, any>)) {
-    if (s.slug === disease) {
-      diseaseMeta = {
-        disease_id: did,
-        name_en: s.name_en,
-        name_zh: s.name_zh ?? '',
-        category: s.category ?? '',
-        slug: s.slug,
-      };
-      fullSeries = {
-        dates: s.dates as string[],
-        cases: s.cases as number[],
-        deaths: s.deaths as number[],
-        incidence_rates: (s.incidence_rates as (number | null)[]) ?? [],
-        total_cases: (s.cases as number[]).reduce((a: number, b: number) => a + b, 0),
-        total_deaths: (s.deaths as number[]).reduce((a: number, b: number) => a + b, 0),
-      };
-      break;
-    }
+function fmtRatio(value: any, lang: Lang) {
+  if (value === null || value === undefined || value === '') return lang === 'zh' ? '暂无同期基线' : 'no same-season baseline';
+  const number = Number(value);
+  return Number.isFinite(number) ? `${number.toFixed(2)}x` : (lang === 'zh' ? '暂无同期基线' : 'no same-season baseline');
+}
+
+function fmtPercentile(value: any, lang: Lang) {
+  if (value === null || value === undefined || value === '') return lang === 'zh' ? '暂无历史分位' : 'no historical percentile';
+  const number = Number(value);
+  return Number.isFinite(number) ? `${number.toFixed(1)} 分位` : (lang === 'zh' ? '暂无历史分位' : 'no historical percentile');
+}
+
+function riskLabel(value: any, lang: Lang) {
+  const key = String(value ?? 'low').toLowerCase();
+  if (lang === 'en') return key;
+  return ({ critical: '极高', high: '高', moderate: '中等', low: '低' } as Record<string, string>)[key] ?? '待观察';
+}
+
+function trendLabel(row: any, lang: Lang) {
+  return row?.trend?.[lang] ?? (lang === 'zh' ? '待观察' : 'Watch');
+}
+
+function sourceDeathNote(lang: Lang) {
+  return document?.death_reporting?.display_note?.[lang]
+    ?? (lang === 'zh' ? '死亡数据按来源口径解释。' : 'Death data are interpreted under the source scope.');
+}
+
+function sourceScopeNote(lang: Lang) {
+  const sourcePolicy = document?.death_reporting?.source_policy ?? {};
+  const caseScope = String(sourcePolicy.case_scope ?? '').toLowerCase();
+  if (caseScope === 'sentinel') {
+    return lang === 'zh'
+      ? '该来源为哨点监测口径，病例数反映哨点报告信号；不宜直接当作全国真实感染人数。'
+      : 'This source is sentinel surveillance; counts reflect reported sentinel signals and should not be read as total national infections.';
   }
-
-  // Extract sections for this disease
-  if (diseaseMeta) {
-    sections = (report.sections ?? [])
-      .filter((sec: any) => {
-        const sName: string = sec.title.split(' - ').slice(0, -1).join(' - ');
-        return sName === diseaseMeta.name_en;
-      })
-      .map((sec: any) => ({
-        ...sec,
-        content_html: sec.content_html ?? marked(sec.content ?? '') as string,
-      }));
+  if (caseScope === 'national') {
+    return lang === 'zh'
+      ? '该来源为全国报告口径，仍需结合报告延迟、检测量和病例定义变化解释。'
+      : 'This source uses national reporting, but reporting lag, testing volume, and case-definition changes still need review.';
   }
+  return lang === 'zh'
+    ? '病例口径按来源定义解释，趋势判断需结合分层数据复核。'
+    : 'Case scope follows the source definition; trend interpretation still requires stratified review.';
 }
 
-function fmtDate(d: string) {
-  return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+function diseaseSeries(row: any) {
+  if (!row || !countryData?.disease_series) return null;
+  const byId = countryData.disease_series[row.disease_id];
+  const bySlug = Object.values(countryData.disease_series).find((item: any) => item.slug === row.slug) as any;
+  const source = byId ?? bySlug;
+  if (!source) return null;
+  const deaths = Array.isArray(source.deaths) ? source.deaths : [];
+  return {
+    dates: source.dates ?? [],
+    cases: source.cases ?? [],
+    deaths,
+    incidence_rates: source.incidence_rates ?? [],
+    total_cases: Number(row.total_cases ?? 0),
+    total_deaths: deaths.some((value: number) => Number(value) > 0)
+      ? deaths.reduce((sum: number, value: number) => sum + Number(value || 0), 0)
+      : 0,
+  };
 }
 
+function buildSections(row: any, series: any) {
+  if (!row) return [];
+  if (Array.isArray(row.analysis_sections) && row.analysis_sections.length > 0) {
+    return row.analysis_sections;
+  }
+  const zhName = row.name_zh || row.name_en || row.disease_id;
+  const enName = row.name_en || row.name_zh || row.disease_id;
+  const basis = row.trend_basis ?? {};
+  const current = row.current_movement ?? {};
+  const seasonal = row.seasonal_position ?? {};
+  const latest = fmtNumber(row.latest_cases);
+  const previous = fmtNumber(row.previous_cases);
+  const total = fmtNumber(row.total_cases);
+  const absoluteDelta = Number.isFinite(Number(basis.absolute_delta))
+    ? Number(basis.absolute_delta)
+    : (Number.isFinite(Number(row.latest_cases)) && Number.isFinite(Number(row.previous_cases))
+      ? Number(row.latest_cases) - Number(row.previous_cases)
+      : null);
+  const deltaZh = absoluteDelta === null ? '暂无可比差值' : `${absoluteDelta > 0 ? '+' : ''}${fmtNumber(absoluteDelta)} 例`;
+  const deltaEn = absoluteDelta === null ? 'not comparable' : `${absoluteDelta > 0 ? '+' : ''}${fmtNumber(absoluteDelta)} cases`;
+  const momZh = fmtPct(row.mom_change_pct, 'zh');
+  const momEn = fmtPct(row.mom_change_pct, 'en');
+  const yoyZh = fmtPct(row.yoy_change_pct, 'zh');
+  const yoyEn = fmtPct(row.yoy_change_pct, 'en');
+  const recentZh = fmtPct(row.recent_change_pct, 'zh');
+  const recentEn = fmtPct(row.recent_change_pct, 'en');
+  const longWindowZh = fmtPct(row.long_window_change_pct, 'zh');
+  const longWindowEn = fmtPct(row.long_window_change_pct, 'en');
+  const sameSeasonZh = fmtRatio(seasonal.same_season_ratio ?? basis.same_season_ratio, 'zh');
+  const sameSeasonEn = fmtRatio(seasonal.same_season_ratio ?? basis.same_season_ratio, 'en');
+  const percentileZh = fmtPercentile(seasonal.latest_percentile_prior ?? basis.latest_percentile_prior, 'zh');
+  const percentileEn = fmtPercentile(seasonal.latest_percentile_prior ?? basis.latest_percentile_prior, 'en');
+  const baselineCount = fmtNumber(seasonal.same_season_baseline_count ?? basis.same_season_baseline_count);
+  const trendZh = trendLabel(row, 'zh');
+  const trendEn = trendLabel(row, 'en');
+  const currentZh = current.zh ?? trendZh;
+  const currentEn = current.en ?? trendEn;
+  const seasonalZh = seasonal.zh ?? '暂无同期基线';
+  const seasonalEn = seasonal.en ?? 'No same-season baseline';
+  const riskZh = riskLabel(row.risk_level, 'zh');
+  const riskEn = riskLabel(row.risk_level, 'en');
+  const riskScore = fmtNumber(row.risk_score);
+  const latestDate = series?.dates?.length ? String(series.dates[series.dates.length - 1]) : '';
+  const previousDate = series?.dates?.length > 1 ? String(series.dates[series.dates.length - 2]) : '';
+  const datePhraseZh = latestDate ? `最新观测期 ${latestDate}` : '最新观测期';
+  const datePhraseEn = latestDate ? `latest observation ${latestDate}` : 'the latest observation';
+  const comparisonPhraseZh = previousDate ? `上一期 ${previousDate}` : '上一期';
+  const comparisonPhraseEn = previousDate ? `previous observation ${previousDate}` : 'the previous observation';
+  const historicalInterpretationZh = Number(seasonal.latest_percentile_prior ?? basis.latest_percentile_prior) >= 90
+    ? '同时处于历史高分位，应优先排查是否进入异常高位。'
+    : '但历史分位并未显示极端异常，更像是季节性上升通道中的快速抬升，需要连续观察确认。';
+  const historicalInterpretationEn = Number(seasonal.latest_percentile_prior ?? basis.latest_percentile_prior) >= 90
+    ? 'It is also in a high historical percentile, so an unusually elevated signal should be ruled out first.'
+    : 'The historical percentile is not extreme, so this reads more like a rapid rise within a seasonal upswing that needs confirmation over subsequent observations.';
+
+  return [
+    {
+      section_type: 'summary',
+      title: '摘要',
+      content: `${zhName} 在本报告窗口累计 ${total} 例，${datePhraseZh}报告 ${latest} 例；较${comparisonPhraseZh}的 ${previous} 例增加 ${deltaZh}，环比 ${momZh}。综合判定为${trendZh}，风险等级为${riskZh}（${riskScore}）。`,
+      title_i18n: { zh: '摘要', en: 'Summary' },
+      content_i18n: {
+        zh: `${zhName} 在本报告窗口累计 ${total} 例，${datePhraseZh}报告 ${latest} 例；较${comparisonPhraseZh}的 ${previous} 例增加 ${deltaZh}，环比 ${momZh}。近4期相较前4期变化 ${recentZh}，说明信号不是只有单周小幅抖动。综合判定为${trendZh}，风险等级为${riskZh}（${riskScore}）。`,
+        en: `${enName} recorded ${total} cases in this reporting window. In the ${datePhraseEn}, it reported ${latest} cases, ${deltaEn} versus ${previous} in ${comparisonPhraseEn} (${momEn}). The latest four observations changed ${recentEn} versus the prior four, so this is not just a one-period twitch. The combined judgement is ${trendEn}, with ${riskEn} risk (${riskScore}).`,
+      },
+    },
+    {
+      section_type: 'highlights',
+      title: '要点',
+      content: `- 当前移动：${currentZh}；最新 ${latest} 例，较上一期 ${deltaZh}，环比 ${momZh}\n- 近期动量：近4期相较前4期 ${recentZh}，长窗口变化 ${longWindowZh}\n- 同期背景：${seasonalZh}；同期中位数比 ${sameSeasonZh}，可用同期基线 ${baselineCount} 个\n- 历史位置：最新值处于既往观测 ${percentileZh}\n- 口径限制：${sourceScopeNote('zh')} ${sourceDeathNote('zh')}`,
+      title_i18n: { zh: '要点', en: 'Highlights' },
+      content_i18n: {
+        zh: `- 当前移动：${currentZh}；最新 ${latest} 例，较上一期 ${deltaZh}，环比 ${momZh}\n- 近期动量：近4期相较前4期 ${recentZh}，长窗口变化 ${longWindowZh}\n- 同期背景：${seasonalZh}；同期中位数比 ${sameSeasonZh}，可用同期基线 ${baselineCount} 个\n- 历史位置：最新值处于既往观测 ${percentileZh}\n- 口径限制：${sourceScopeNote('zh')} ${sourceDeathNote('zh')}`,
+        en: `- Current movement: ${currentEn}; latest ${latest} cases, ${deltaEn} versus the previous observation (${momEn})\n- Recent momentum: latest four observations versus prior four ${recentEn}; long-window change ${longWindowEn}\n- Seasonal context: ${seasonalEn}; same-season median ratio ${sameSeasonEn}, based on ${baselineCount} same-season baselines\n- Historical position: latest value is at the ${percentileEn} of prior observations\n- Scope limit: ${sourceScopeNote('en')} ${sourceDeathNote('en')}`,
+      },
+    },
+    {
+      section_type: 'key_findings',
+      title: '关键发现',
+      content: `- 短期上升有实际病例量支撑：最新一期比上一期多 ${deltaZh}，不是低基数百分比造成的假信号。\n- 同期背景提示${seasonalZh}，同比 ${yoyZh}、同期中位数比 ${sameSeasonZh}；${historicalInterpretationZh}\n- 风险等级为${riskZh}，但不是最高优先级；建议把它放入连续复核队列，而不是直接按事件暴发定性。\n- ${sourceScopeNote('zh')}`,
+      title_i18n: { zh: '关键发现', en: 'Key findings' },
+      content_i18n: {
+        zh: `- 短期上升有实际病例量支撑：最新一期比上一期多 ${deltaZh}，不是低基数百分比造成的假信号。\n- 同期背景提示${seasonalZh}，同比 ${yoyZh}、同期中位数比 ${sameSeasonZh}；${historicalInterpretationZh}\n- 风险等级为${riskZh}，但不是最高优先级；建议把它放入连续复核队列，而不是直接按事件暴发定性。\n- ${sourceScopeNote('zh')}`,
+        en: `- The short-term rise has case-volume support: the latest observation is ${deltaEn} above the previous observation, not merely a low-denominator percentage artifact.\n- Seasonal context is ${seasonalEn}: YoY ${yoyEn}, same-season median ratio ${sameSeasonEn}. ${historicalInterpretationEn}\n- Risk is ${riskEn}, but not the highest priority tier; keep it in active review rather than classifying it as an event-level outbreak from this signal alone.\n- ${sourceScopeNote('en')}`,
+      },
+    },
+    {
+      section_type: 'trend_analysis',
+      title: '趋势分析',
+      content: `趋势判断：${trendZh}。当前最重要的不是“最新病例很多”这一句，而是三个证据同时出现：一是最新一期相较上一期增加 ${deltaZh}；二是近4期相较前4期 ${recentZh}，提示近期斜率明显变陡；三是长窗口仍为 ${longWindowZh}，说明过去一段时间的背景也在上行。同期比较为 ${sameSeasonZh}，历史位置为 ${percentileZh}，因此应把它解释为需要连续确认的季节性上升/高位上升信号。下一步应复核都道府县分布、年龄组、哨点数或报告完整性，以及是否存在学校/托幼机构聚集线索。`,
+      title_i18n: { zh: '趋势分析', en: 'Trend analysis' },
+      content_i18n: {
+        zh: `趋势判断：${trendZh}。当前最重要的不是“最新病例很多”这一句，而是三个证据同时出现：一是最新一期相较上一期增加 ${deltaZh}；二是近4期相较前4期 ${recentZh}，提示近期斜率明显变陡；三是长窗口仍为 ${longWindowZh}，说明过去一段时间的背景也在上行。同期比较为 ${sameSeasonZh}，历史位置为 ${percentileZh}，因此应把它解释为需要连续确认的季节性上升/高位上升信号。下一步应复核都道府县分布、年龄组、哨点数或报告完整性，以及是否存在学校/托幼机构聚集线索。`,
+        en: `Trend judgement: ${trendEn}. The important point is not simply that the latest count is high; three pieces of evidence line up. First, the latest observation is ${deltaEn} above the previous one. Second, the latest four observations changed ${recentEn} versus the prior four, indicating a steeper recent slope. Third, the long-window change remains ${longWindowEn}, so the background is also moving upward. With a same-season ratio of ${sameSeasonEn} and historical position at the ${percentileEn}, this should be treated as a seasonal/elevated rise that needs confirmation. Review prefecture distribution, age groups, sentinel coverage or reporting completeness, and any school or childcare-cluster signals next.`,
+      },
+    },
+  ];
+}
+
+const series = diseaseSeries(diseaseRow);
+const sections = buildSections(diseaseRow, series);
+const diseaseMeta = diseaseRow ? {
+  disease_id: diseaseRow.disease_id,
+  name_en: diseaseRow.name_en,
+  name_zh: diseaseRow.name_zh ?? '',
+  category: diseaseRow.category ?? '',
+  slug: diseaseRow.slug,
+} : null;
+
+const reportTitleZh = document?.title?.zh ?? report?.title ?? `报告 #${id}`;
+const reportTitleEn = document?.title?.en ?? report?.title ?? `Report #${id}`;
 const pageTitle = diseaseMeta
-  ? `${diseaseMeta.name_en} — Report #${id}`
-  : `Disease Detail — Report #${id}`;
-
-const countryName = report?.country_name ?? country.toUpperCase();
+  ? `${diseaseMeta.name_zh || diseaseMeta.name_en}｜${countryNameZh}报告 #${id}`
+  : `疾病详情｜报告 #${id}`;
 ---
 
 <ReportLayout
   title={pageTitle}
-  description={`${diseaseMeta?.name_en ?? 'Disease'} surveillance analysis from ${countryName} report #${id}.`}
+  description={`${diseaseMeta?.name_en ?? 'Disease'} disease-level view from ${countryNameEn} report #${id}.`}
+  initialLanguage="zh"
   breadcrumbs={[
-    { label: 'Countries', href: '/countries/' },
-    { label: countryName, href: `/countries/${country}/` },
-    { label: 'Reports', href: `/countries/${country}/reports/` },
-    { label: `#${id}`, href: `/countries/${country}/reports/${id}/` },
-    { label: diseaseMeta?.name_en ?? disease },
+    { label: 'Countries', labelZh: '国家/地区', href: '/countries/' },
+    { label: countryNameEn, labelZh: countryNameZh, href: `/countries/${country}/` },
+    { label: 'Reports', labelZh: '报告', href: `/countries/${country}/reports/` },
+    { label: reportTitleEn, labelZh: reportTitleZh, href: `/countries/${country}/reports/${id}/` },
+    { label: diseaseMeta?.name_en ?? String(disease), labelZh: diseaseMeta?.name_zh ?? String(disease) },
   ]}
 >
-  {!diseaseMeta || !report ? (
+  {!diseaseMeta || !report || !isReportV4(report) ? (
     <div class="max-w-4xl mx-auto px-4 py-24 text-center text-slate-500">
-      Disease not found.
-      <a href={`/countries/${country}/reports/${id}/`} class="text-brand-400 hover:underline ml-2">← Back to report</a>
+      <span data-lang-en="Disease page not found." data-lang-zh="未找到该疾病页面。">未找到该疾病页面。</span>
+      <a href={`/countries/${country}/reports/${id}/`} class="text-brand-400 hover:underline ml-2" data-lang-en="← Back to overview" data-lang-zh="← 返回国家总览">← 返回国家总览</a>
     </div>
   ) : (
     <div class="max-w-6xl mx-auto px-4 py-10 space-y-8">
       <DiseaseDetailView
-        client:only="react"
+        client:load
         diseaseMeta={diseaseMeta}
         sections={sections}
-        series={fullSeries}
+        series={series}
         reportMeta={{
           id: Number(id),
-          title: report.title,
+          title: reportTitleZh,
           period_start: report.period_start,
           period_end: report.period_end,
-          country_name: countryName,
-          country_code: country,
+          country_name: countryNameZh,
+          country_code: String(country),
         }}
       />
 
       {diseaseDownload && (
         <DownloadPanel
           entry={diseaseDownload}
-          title="Download Disease Dataset"
+          title="下载疾病数据集"
+          initialLanguage="zh"
           descriptionEn="Download the full disease dataset referenced by this report section, including source metadata."
-          descriptionZh="下载本报告章节对应的完整疾病数据集，并附带数据源信息。"
+          descriptionZh="下载本报告疾病页面对应的完整数据集，并附带数据源信息。"
         />
       )}
     </div>
