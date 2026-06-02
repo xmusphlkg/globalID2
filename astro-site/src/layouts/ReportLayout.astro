@@ -6,12 +6,14 @@ interface Props {
   title: string;
   description?: string;
   breadcrumbs?: Array<{ label: string; labelZh?: string; href?: string }>;
+  initialLanguage?: 'en' | 'zh';
 }
 
-const { title, description, breadcrumbs = [] } = Astro.props;
+const { title, description, breadcrumbs = [], initialLanguage = 'en' } = Astro.props;
+const homeLabel = initialLanguage === 'zh' ? '首页' : 'Home';
 ---
 
-<BaseLayout title={title} description={description}>
+<BaseLayout title={title} description={description} initialLanguage={initialLanguage}>
   <!-- Breadcrumb -->
   {breadcrumbs.length > 0 && (
     <nav class="site-breadcrumb border-b backdrop-blur-sm sticky top-16 z-40">
@@ -23,7 +25,7 @@ const { title, description, breadcrumbs = [] } = Astro.props;
               class="site-breadcrumb-link academic-kicker tracking-[0.16em] transition-colors"
               data-lang-en="Home"
               data-lang-zh="首页"
-            >Home</a>
+            >{homeLabel}</a>
           </li>
           {breadcrumbs.map((crumb, i) => (
             <>
@@ -36,14 +38,14 @@ const { title, description, breadcrumbs = [] } = Astro.props;
                     data-lang-en={crumb.label}
                     data-lang-zh={crumb.labelZh ?? crumb.label}
                   >
-                    {crumb.label}
+                    {initialLanguage === 'zh' ? (crumb.labelZh ?? crumb.label) : crumb.label}
                   </a>
                 ) : (
                   <span
                     class="site-breadcrumb-current"
                     data-lang-en={crumb.label}
                     data-lang-zh={crumb.labelZh ?? crumb.label}
-                  >{crumb.label}</span>
+                  >{initialLanguage === 'zh' ? (crumb.labelZh ?? crumb.label) : crumb.label}</span>
                 )}
               </li>
             </>

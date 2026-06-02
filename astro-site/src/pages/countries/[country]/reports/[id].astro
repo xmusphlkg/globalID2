@@ -1,19 +1,27 @@
 ---
-// src/pages/countries/[country]/reports/[id].astro — Individual report page
 import ReportLayout from '../../../../layouts/ReportLayout.astro';
 import DownloadPanel from '../../../../components/DownloadPanel.astro';
-import AnalyticalReportV3Panel from '../../../../components/charts/AnalyticalReportV3Panel';
-import DiseaseReportPanel from '../../../../components/charts/DiseaseReportPanel';
-import type { DiseaseReportData } from '../../../../components/charts/DiseaseReportPanel';
-import { buildChartSourceMeta } from '../../../../utils/chartMeta';
+import ReportV4Panel from '../../../../components/charts/ReportV4Panel';
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
+
+function isReportV4(value: any) {
+  return value?.metadata?.report_layout === 'report_v4'
+    || value?.metadata?.report_document_v4
+    || value?.report_document_v4
+    || value?.schema_version === 'report_v4.0';
+}
 
 export async function getStaticPaths() {
   const reportsPath = resolve('./src/data/reports/index.json');
   if (!existsSync(reportsPath)) return [];
   const reports = JSON.parse(readFileSync(reportsPath, 'utf-8')) as any[];
-  return reports.map(r => ({
+  return reports.filter((r: any) => (
+    r?.metadata?.report_layout === 'report_v4'
+    || r?.metadata?.report_document_v4
+    || r?.report_document_v4
+    || r?.schema_version === 'report_v4.0'
+  )).map(r => ({
     params: {
       country: (r.country_code ?? 'cn').toLowerCase(),
       id: String(r.id),
@@ -24,12 +32,24 @@ export async function getStaticPaths() {
 const { country, id } = Astro.params;
 const reportPath = resolve(`./src/data/reports/${id}.json`);
 const downloadsPath = resolve('./src/data/downloads.json');
+const reportsIndexPath = resolve('./src/data/reports/index.json');
+const countryDataPath = resolve(`./src/data/countries/${country}.json`);
 
 let report: any = null;
 let countryDownload: any = null;
+let prevReport: any = null;
+let nextReport: any = null;
+let countryData: any = null;
+
 if (existsSync(reportPath)) {
-  report = JSON.parse(readFileSync(reportPath, 'utf-8'));
+  const loaded = JSON.parse(readFileSync(reportPath, 'utf-8'));
+  report = isReportV4(loaded) ? loaded : null;
 }
+
+if (existsSync(countryDataPath)) {
+  countryData = JSON.parse(readFileSync(countryDataPath, 'utf-8'));
+}
+
 if (existsSync(downloadsPath)) {
   const downloads = JSON.parse(readFileSync(downloadsPath, 'utf-8')) as any;
   countryDownload = (downloads.countries ?? []).find(
@@ -37,162 +57,155 @@ if (existsSync(downloadsPath)) {
   ) ?? null;
 }
 
-const reportsIndexPath = resolve('./src/data/reports/index.json');
-let prevReport: any = null;
-let nextReport: any = null;
 if (existsSync(reportsIndexPath)) {
   const allReports = (JSON.parse(readFileSync(reportsIndexPath, 'utf-8')) as any[])
-    .filter(r => r.country_code?.toLowerCase() === country)
+    .filter(r => isReportV4(r) && r.country_code?.toLowerCase() === country)
     .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
   const idx = allReports.findIndex(r => String(r.id) === id);
   if (idx > 0) prevReport = allReports[idx - 1];
-  if (idx < allReports.length - 1) nextReport = allReports[idx + 1];
+  if (idx >= 0 && idx < allReports.length - 1) nextReport = allReports[idx + 1];
 }
 
-const countryPath = resolve(`./src/data/countries/${country}.json`);
-let countrySeries: any = null;
-if (existsSync(countryPath) && report?.period_start && report?.period_end) {
-  const cData = JSON.parse(readFileSync(countryPath, 'utf-8'));
-  const startMs = new Date(report.period_start).getTime();
-  const endMs = new Date(report.period_end).getTime();
-  const filteredSeries: Record<string, any> = {};
-  for (const [did, s] of Object.entries(cData.disease_series ?? {})) {
-    const ds = s as any;
-    const indices = ds.dates
-      .map((d: string, i: number) => ({ d, i }))
-      .filter(({ d }: { d: string }) => {
-        const t = new Date(d).getTime();
-        return t >= startMs && t <= endMs;
-      });
-    if (indices.length > 0 && ds.cases.some((c: number) => c > 0)) {
-      filteredSeries[did] = {
-        ...ds,
-        dates: indices.map(({ d }: { d: string }) => d),
-        cases: indices.map(({ i }: { i: number }) => ds.cases[i]),
-        deaths: indices.map(({ i }: { i: number }) => ds.deaths[i]),
-        incidence_rates: indices.map(({ i }: { i: number }) => ds.incidence_rates[i]),
-      };
-    }
-  }
-  if (Object.keys(filteredSeries).length > 0) countrySeries = filteredSeries;
-}
-
-let diseasePanelData: DiseaseReportData[] = [];
-
-if (existsSync(countryPath)) {
-  const cData = JSON.parse(readFileSync(countryPath, 'utf-8'));
-  const allSeries = Object.values(cData.disease_series ?? {}) as any[];
-  const latestDate = allSeries
-    .filter((s: any) => s.category !== 'Summary')
-    .flatMap((s: any) => s.dates as string[])
-    .sort()
-    .at(-1);
-
-  if (latestDate) {
-    const [ly, lm] = latestDate.split('-');
-    const compCurrentYM = `${ly}-${lm}`;
-    const pd = new Date(+ly, +lm - 2, 1);
-    const compPrevYM = `${pd.getFullYear()}-${String(pd.getMonth() + 1).padStart(2, '0')}`;
-    const compPrevYearYM = `${+ly - 1}-${lm}`;
-
-    const sectionsByDiseaseName: Record<string, any[]> = {};
-    for (const sec of (report?.sections ?? [])) {
-      const name = sec.title?.split(' - ').slice(0, -1).join(' - ') ?? '';
-      if (!sectionsByDiseaseName[name]) sectionsByDiseaseName[name] = [];
-      sectionsByDiseaseName[name].push(sec);
-    }
-
-    for (const s of allSeries) {
-      if (s.category === 'Summary') continue;
-      function getForYM(ym: string, arr: number[]): number {
-        const idx = (s.dates as string[]).findIndex((d: string) => d.startsWith(ym));
-        return idx >= 0 ? (arr[idx] ?? 0) : 0;
-      }
-      const reportSeries = countrySeries?.[s.disease_id] ?? null;
-      diseasePanelData.push({
-        disease_id: s.disease_id,
-        name_en: s.name_en,
-        name_zh: s.name_zh,
-        category: s.category,
-        slug: s.slug,
-        cases: getForYM(compCurrentYM, s.cases),
-        deaths: getForYM(compCurrentYM, s.deaths),
-        cases_prev_month: getForYM(compPrevYM, s.cases),
-        cases_prev_year: getForYM(compPrevYearYM, s.cases),
-        sections: sectionsByDiseaseName[s.name_en] ?? [],
-        series: reportSeries ? {
-          dates: reportSeries.dates,
-          cases: reportSeries.cases,
-          deaths: reportSeries.deaths,
-          incidence_rates: reportSeries.incidence_rates,
-          total_cases: reportSeries.total_cases ?? 0,
-        } : undefined,
-      });
-    }
-    diseasePanelData.sort((a, b) => b.cases - a.cases);
-  }
-}
-
-function fmtDate(d: string) {
-  return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-}
-
+const document = report?.report_document_v4 ?? report?.metadata?.report_document_v4 ?? report;
+const reportLanguage = 'zh';
+const countryNameEn = report?.country_name_en ?? report?.country_name ?? country?.toUpperCase();
+const countryNameZh = report?.country_name_local ?? report?.country_name ?? countryNameEn;
+const reportTitleEn = document?.title?.en ?? report?.title ?? `Report #${id}`;
+const reportTitleZh = document?.title?.zh ?? report?.title ?? `报告 #${id}`;
+const reportSummary = document?.summary?.zh ?? report?.summary ?? '';
 const scoreColor = !report?.quality_score ? 'text-slate-500'
   : report.quality_score >= 0.85 ? 'text-green-400'
   : report.quality_score >= 0.65 ? 'text-amber-400'
   : 'text-red-400';
+const countryDataUrl = countryDownload?.site_json_path ?? `/site-data/countries/${country}.json`;
 
-const countryName = report?.country_name ?? country.toUpperCase();
-const isAnalyticalV3 = report?.metadata?.report_layout === 'analytical_v3';
-const keyFindings = report?.key_findings
-  ? (Array.isArray(report.key_findings) ? report.key_findings : Object.values(report.key_findings))
-  : [];
-const chartSourceMeta = buildChartSourceMeta(
-  countryDownload,
-  `${countryName} surveillance dataset`
+function numericList(value: any): number[] {
+  return Array.isArray(value)
+    ? value.map((item: any) => Number(item || 0)).filter((item: number) => Number.isFinite(item))
+    : [];
+}
+
+function preferredCaseValues(entry: any): number[] {
+  const weekly = numericList(entry?.weekly_equiv_cases);
+  if (weekly.some((value) => value > 0)) return weekly;
+  return numericList(entry?.cases);
+}
+
+function aggregateTrend(entry: any, period: 'month' | 'year', limit: number): number[] {
+  const dates = Array.isArray(entry?.dates) ? entry.dates : [];
+  const values = preferredCaseValues(entry);
+  if (dates.length === 0 || values.length === 0) return [];
+
+  const buckets = new Map<string, number>();
+  dates.forEach((date: string, index: number) => {
+    const key = String(date || '').slice(0, period === 'month' ? 7 : 4);
+    if ((period === 'month' && key.length !== 7) || (period === 'year' && key.length !== 4)) return;
+    buckets.set(key, (buckets.get(key) || 0) + Number(values[index] || 0));
+  });
+
+  return [...buckets.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([, value]) => value)
+    .slice(-limit);
+}
+
+function latestYear(entry: any): string | null {
+  const dates = Array.isArray(entry?.dates) ? entry.dates : [];
+  const latest = dates.at(-1);
+  const year = String(latest || '').slice(0, 4);
+  return year.length === 4 ? year : null;
+}
+
+function currentYearCumulativeCases(entry: any): number | null {
+  const year = latestYear(entry);
+  const dates = Array.isArray(entry?.dates) ? entry.dates : [];
+  const values = preferredCaseValues(entry);
+  if (!year || dates.length === 0 || values.length === 0) return null;
+  const total = dates.reduce((sum: number, date: string, index: number) => (
+    String(date || '').startsWith(year) ? sum + Number(values[index] || 0) : sum
+  ), 0);
+  return Number.isFinite(total) ? total : null;
+}
+
+const directoryTrendSeries = Object.fromEntries(
+  (document?.disease_directory ?? []).map((row: any) => {
+    const entry = countryData?.disease_series?.[row.disease_id];
+    const weekly = Array.isArray(entry?.weekly_equiv_cases) ? entry.weekly_equiv_cases.slice(-24) : [];
+    const cases = Array.isArray(entry?.cases) ? entry.cases.slice(-24) : [];
+    const currentYear = latestYear(entry);
+    return [
+      row.disease_id,
+      {
+        weekly_equiv_cases: weekly,
+        cases,
+        monthly_cases: aggregateTrend(entry, 'month', 12),
+        annual_cases: aggregateTrend(entry, 'year', 10),
+        current_year: currentYear,
+        current_year_cumulative_cases: currentYearCumulativeCases(entry),
+      },
+    ];
+  }).filter(([diseaseId]: [string, any]) => !!diseaseId)
 );
+
+function fmtDate(d: string) {
+  return new Date(d).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+function reportTypeLabel(value: string | undefined, lang: 'zh' | 'en') {
+  const key = String(value ?? '').toUpperCase();
+  const labels: Record<string, { zh: string; en: string }> = {
+    DAILY: { zh: '日报', en: 'Daily report' },
+    WEEKLY: { zh: '周报', en: 'Weekly report' },
+    MONTHLY: { zh: '月报', en: 'Monthly report' },
+    QUARTERLY: { zh: '季报', en: 'Quarterly report' },
+    ANNUAL: { zh: '年报', en: 'Annual report' },
+  };
+  return labels[key]?.[lang] ?? (lang === 'zh' ? '报告' : 'Report');
+}
 ---
 
 <ReportLayout
-  title={report?.title ?? `Report #${id}`}
-  description={`Surveillance report for ${countryName}. ${report?.period_start ? `Period: ${report.period_start} to ${report.period_end}` : ''}`}
+  title={reportTitleZh}
+  description={`Surveillance report for ${countryNameEn}. ${report?.period_start ? `Period: ${report.period_start} to ${report.period_end}` : ''}`}
+  initialLanguage={reportLanguage}
   breadcrumbs={[
-    { label: 'Countries', href: '/countries/' },
-    { label: countryName, href: `/countries/${country}/` },
-    { label: 'Reports', href: `/countries/${country}/reports/` },
+    { label: 'Countries', labelZh: '国家/地区', href: '/countries/' },
+    { label: countryNameEn, labelZh: countryNameZh, href: `/countries/${country}/` },
+    { label: 'Reports', labelZh: '报告', href: `/countries/${country}/reports/` },
     { label: `#${id}` },
   ]}
 >
   <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
     {!report ? (
       <div class="text-center py-24 text-slate-500">
-        Report #{id} not found. <a href={`/countries/${country}/reports/`} class="text-brand-400 hover:underline">← Back to reports</a>
+        <span data-lang-en={`Report #${id} is not available.`} data-lang-zh={`报告 #${id} 暂不可用。`}>报告 #{id} 暂不可用。</span>
+        <a href={`/countries/${country}/reports/`} class="text-brand-400 hover:underline ml-2" data-lang-en="← Back to reports" data-lang-zh="← 返回报告列表">← 返回报告列表</a>
       </div>
     ) : (
       <>
         <section class="academic-hero">
           <div class="flex items-start justify-between flex-wrap gap-4 mb-6">
             <div>
-              <p class="academic-kicker mb-3" data-lang-en="Analytical report" data-lang-zh="分析报告">
-                Analytical report
-              </p>
+              <p class="academic-kicker mb-3" data-lang-en="Decision brief" data-lang-zh="决策简报">决策简报</p>
               <div class="flex items-center gap-3 mb-3 flex-wrap">
                 <span class="text-xs font-semibold px-2.5 py-1 rounded-none bg-brand-500/15 text-brand-300 ring-1 ring-brand-500/30">
-                  {report.report_type}
+                  <span data-lang-en={reportTypeLabel(report.report_type, 'en')} data-lang-zh={reportTypeLabel(report.report_type, 'zh')}>
+                    {reportTypeLabel(report.report_type, 'zh')}
+                  </span>
                 </span>
-                <span class="text-sm text-slate-500">{countryName}</span>
-                {report.ai_model_used && (
-                  <span class="text-xs text-slate-600 font-mono">{report.ai_model_used}</span>
-                )}
+                <span class="text-sm text-slate-500" data-lang-en={countryNameEn} data-lang-zh={countryNameZh}>{countryNameZh}</span>
+                <span class="text-xs text-slate-600" data-lang-en="Version 4" data-lang-zh="第四版">第四版</span>
               </div>
-              <h1 class="academic-title text-3xl sm:text-4xl leading-tight">{report.title}</h1>
+              <h1 class="academic-title text-3xl sm:text-4xl leading-tight" data-lang-en={reportTitleEn} data-lang-zh={reportTitleZh}>
+                {reportTitleZh}
+              </h1>
             </div>
             {report.quality_score != null && (
               <div class="text-center">
                 <div class={`font-serif text-3xl font-semibold ${scoreColor}`}>
                   {(report.quality_score * 100).toFixed(0)}%
                 </div>
-                <div class="text-xs text-slate-600 mt-1" data-lang-en="Quality Score" data-lang-zh="质量评分">Quality Score</div>
+                <div class="text-xs text-slate-600 mt-1" data-lang-en="Data confidence" data-lang-zh="数据置信度">数据置信度</div>
               </div>
             )}
           </div>
@@ -200,82 +213,47 @@ const chartSourceMeta = buildChartSourceMeta(
           <div class="academic-meta-grid text-sm">
             {report.period_start && (
               <div class="academic-meta-item">
-                <div class="academic-meta-label" data-lang-en="Reporting window" data-lang-zh="报告周期">Reporting window</div>
+                <div class="academic-meta-label" data-lang-en="Reporting window" data-lang-zh="报告周期">报告周期</div>
                 <div class="academic-meta-value text-sm font-medium">{fmtDate(report.period_start)} → {fmtDate(report.period_end)}</div>
               </div>
             )}
             {report.created_at && (
               <div class="academic-meta-item">
-                <div class="academic-meta-label" data-lang-en="Generated" data-lang-zh="生成时间">Generated</div>
+                <div class="academic-meta-label" data-lang-en="Generated" data-lang-zh="生成时间">生成时间</div>
                 <div class="academic-meta-value text-sm font-medium">{fmtDate(report.created_at)}</div>
               </div>
             )}
             <div class="academic-meta-item">
-              <div class="academic-meta-label" data-lang-en="Country" data-lang-zh="国家">Country</div>
-              <div class="academic-meta-value text-sm font-medium">{countryName}</div>
+              <div class="academic-meta-label" data-lang-en="Country" data-lang-zh="国家/地区">国家/地区</div>
+              <div class="academic-meta-value text-sm font-medium" data-lang-en={countryNameEn} data-lang-zh={countryNameZh}>{countryNameZh}</div>
             </div>
             <div class="academic-meta-item">
-              <div class="academic-meta-label" data-lang-en="Disease sections" data-lang-zh="疾病章节">Disease sections</div>
-              <div class="academic-meta-value font-serif">{diseasePanelData.length}</div>
+              <div class="academic-meta-label" data-lang-en="Signals reviewed" data-lang-zh="研判信号">研判信号</div>
+              <div class="academic-meta-value font-serif">{document?.metrics?.disease_count ?? document?.sections?.length ?? 0}</div>
             </div>
           </div>
         </section>
 
-        {(report.summary || keyFindings.length > 0) && (
+        {reportSummary && (
           <section class="figure-panel">
-            <p class="figure-kicker" data-lang-en="Executive summary" data-lang-zh="执行摘要">Executive summary</p>
-            <h2 class="figure-title" data-lang-en="Key Findings" data-lang-zh="关键发现">Key Findings</h2>
-            <div class="mt-5">
-              {report.summary && (
-                <p class="mb-4 text-sm leading-7 text-slate-400">
-                  {report.summary}
-                </p>
-              )}
-              {keyFindings.length > 0 && (
-                <ul class="space-y-2">
-                  {keyFindings.map((finding: any) => (
-                    <li class="flex gap-3 text-slate-400 text-sm">
-                      <span class="text-teal-400 flex-shrink-0 mt-0.5">→</span>
-                      <span>{typeof finding === 'string' ? finding : JSON.stringify(finding)}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+            <p class="figure-kicker" data-lang-en="Executive summary" data-lang-zh="执行摘要">执行摘要</p>
+            <h2 class="figure-title" data-lang-en="Current Situation" data-lang-zh="当前态势">当前态势</h2>
+            <p class="mt-5 text-sm leading-7 text-slate-400" data-lang-en={document?.summary?.en ?? reportSummary} data-lang-zh={reportSummary}>
+              {reportSummary}
+            </p>
           </section>
         )}
 
-        {isAnalyticalV3 ? (
-          <AnalyticalReportV3Panel client:only="react" report={report} />
-        ) : diseasePanelData.length > 0 && (
-          <section class="figure-panel">
-            <p class="figure-kicker" data-lang-en="Interactive appendix" data-lang-zh="交互附录">Interactive appendix</p>
-            <h2 class="figure-title" data-lang-en="Disease Analysis" data-lang-zh="疾病分析">
-              Disease Analysis
-            </h2>
-            <p class="figure-caption">
-              <span data-lang-en="Expand any disease to inspect trend charts, raw data tables, source metadata, and narrative analysis." data-lang-zh="展开任一疾病可查看趋势图、原始数据表、来源信息和文字分析。">
-                Expand any disease to inspect trend charts, raw data tables, source metadata, and narrative analysis.
-              </span>
-            </p>
-            <div class="mt-6">
-              <DiseaseReportPanel
-                client:only="react"
-                diseases={diseasePanelData}
-                countryCode={country}
-                reportId={id}
-                sourceMeta={chartSourceMeta}
-              />
-            </div>
-          </section>
-        )}
+        <ReportV4Panel
+          client:only="react"
+          report={report}
+          countryDataUrl={countryDataUrl}
+          sparklineSeries={directoryTrendSeries}
+        />
 
         <div class="flex items-center justify-between pt-6 border-t border-slate-800">
           {prevReport ? (
-            <a
-              href={`/countries/${country}/reports/${prevReport.id}/`}
-              class="flex items-center gap-2 text-sm text-slate-400 hover:text-brand-400 transition-colors group"
-            >
+            <a href={`/countries/${country}/reports/${prevReport.id}/`} class="flex items-center gap-2 text-sm text-slate-400 hover:text-brand-400 transition-colors group">
               <svg class="w-4 h-4 group-hover:-translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
               </svg>
@@ -284,10 +262,7 @@ const chartSourceMeta = buildChartSourceMeta(
           ) : <span />}
 
           {nextReport ? (
-            <a
-              href={`/countries/${country}/reports/${nextReport.id}/`}
-              class="flex items-center gap-2 text-sm text-slate-400 hover:text-brand-400 transition-colors group text-right"
-            >
+            <a href={`/countries/${country}/reports/${nextReport.id}/`} class="flex items-center gap-2 text-sm text-slate-400 hover:text-brand-400 transition-colors group text-right">
               <span class="max-w-[200px] truncate">{nextReport.title}</span>
               <svg class="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
@@ -300,6 +275,7 @@ const chartSourceMeta = buildChartSourceMeta(
           <DownloadPanel
             entry={countryDownload}
             title="Download Underlying Dataset"
+            initialLanguage="zh"
             descriptionEn="Download the country dataset used to generate this report, including source metadata."
             descriptionZh="下载生成本报告所依据的国家数据集，并附带数据源信息。"
           />

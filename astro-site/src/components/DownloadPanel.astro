@@ -30,6 +30,7 @@ interface Props {
   title?: string;
   descriptionEn?: string;
   descriptionZh?: string;
+  initialLanguage?: 'en' | 'zh';
 }
 
 const {
@@ -37,7 +38,12 @@ const {
   title = 'Download Data',
   descriptionEn = 'Export the dataset behind this view in JSON or CSV, including source metadata.',
   descriptionZh = '下载当前视图对应的数据集，支持 JSON 与 CSV，并附带数据源元信息。',
+  initialLanguage = 'en',
 } = Astro.props;
+
+function pick(en: string, zh: string) {
+  return initialLanguage === 'zh' ? zh : en;
+}
 
 function formatDate(value?: string | null) {
   if (!value) return '—';
@@ -49,6 +55,37 @@ function formatDate(value?: string | null) {
 function formatCount(value?: number | null) {
   if (value == null) return '—';
   return value.toLocaleString();
+}
+
+const CADENCE_ZH: Record<string, string> = {
+  daily: '每日',
+  weekly: '每周',
+  monthly: '每月',
+  quarterly: '每季度',
+  yearly: '每年',
+};
+
+const TYPE_ZH: Record<string, string> = {
+  api: '接口',
+  csv: '表格',
+  open_data_csv: '开放数据',
+  web: '网页',
+};
+
+const SOURCE_LABEL_ZH: Record<string, string> = {
+  jp_weekly: '日本 NIID/JIHS 周报',
+};
+
+const SOURCE_DESCRIPTION_ZH: Record<string, string> = {
+  jp_weekly: '日本 NIID/JIHS 周度传染病监测数据。',
+};
+
+function sourceZhLabel(source: SourceSummary) {
+  return SOURCE_LABEL_ZH[source.scope ?? ''] ?? source.label ?? source.scope ?? '未知来源';
+}
+
+function sourceZhDescription(source: SourceSummary) {
+  return SOURCE_DESCRIPTION_ZH[source.scope ?? ''] ?? source.description ?? '';
 }
 
 const rawSourceInfo = entry?.source_info;
@@ -80,13 +117,13 @@ const coverageLabel = (entry?.date_range?.start || entry?.date_range?.end)
     <div class="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
       <div class="space-y-3">
         <p class="figure-kicker" data-lang-en="Dataset Archive" data-lang-zh="数据归档">
-          Dataset Archive
+          {pick('Dataset Archive', '数据归档')}
         </p>
         <h2 class="figure-title" data-lang-en={title} data-lang-zh="下载数据">
-          {title}
+          {pick(title, '下载数据')}
         </h2>
         <p class="figure-caption" data-lang-en={descriptionEn} data-lang-zh={descriptionZh}>
-          {descriptionEn}
+          {pick(descriptionEn, descriptionZh)}
         </p>
       </div>
 
@@ -100,7 +137,7 @@ const coverageLabel = (entry?.date_range?.start || entry?.date_range?.end)
             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16V4m0 12-4-4m4 4 4-4M4 20h16" />
             </svg>
-            <span data-lang-en="JSON export" data-lang-zh="JSON 导出">JSON export</span>
+            <span data-lang-en="JSON export" data-lang-zh="JSON 导出">{pick('JSON export', 'JSON 导出')}</span>
           </a>
         )}
         {entry.csv_path && (
@@ -112,7 +149,7 @@ const coverageLabel = (entry?.date_range?.start || entry?.date_range?.end)
             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16V4m0 12-4-4m4 4 4-4M4 20h16" />
             </svg>
-            <span data-lang-en="CSV export" data-lang-zh="CSV 导出">CSV export</span>
+            <span data-lang-en="CSV export" data-lang-zh="CSV 导出">{pick('CSV export', 'CSV 导出')}</span>
           </a>
         )}
       </div>
@@ -120,18 +157,18 @@ const coverageLabel = (entry?.date_range?.start || entry?.date_range?.end)
 
     <div class="academic-meta-grid">
       <div class="academic-meta-item">
-        <div class="academic-meta-label">Rows</div>
+        <div class="academic-meta-label" data-lang-en="Rows" data-lang-zh="记录数">{pick('Rows', '记录数')}</div>
         <div class="academic-meta-value font-serif">{formatCount(entry.record_count)}</div>
       </div>
       <div class="academic-meta-item">
         <div class="academic-meta-label" data-lang-en="Data Version" data-lang-zh="数据版本">
-          Data Version
+          {pick('Data Version', '数据版本')}
         </div>
         <div class="academic-meta-value font-serif">{formatDate(entry.generated_at)}</div>
       </div>
       <div class="academic-meta-item">
         <div class="academic-meta-label" data-lang-en="Coverage" data-lang-zh="覆盖区间">
-          Coverage
+          {pick('Coverage', '覆盖区间')}
         </div>
         <div class="academic-meta-value text-sm font-medium">
           {coverageLabel}
@@ -139,10 +176,10 @@ const coverageLabel = (entry?.date_range?.start || entry?.date_range?.end)
       </div>
       <div class="academic-meta-item">
         <div class="academic-meta-label" data-lang-en="Included metadata" data-lang-zh="附带元数据">
-          Included metadata
+          {pick('Included metadata', '附带元数据')}
         </div>
         <div class="academic-meta-value text-sm font-medium" data-lang-en="Source links, scope, cadence" data-lang-zh="来源链接、范围、频率">
-          Source links, scope, cadence
+          {pick('Source links, scope, cadence', '来源链接、范围、频率')}
         </div>
       </div>
     </div>
@@ -151,10 +188,13 @@ const coverageLabel = (entry?.date_range?.start || entry?.date_range?.end)
       <div class="space-y-4 border-t border-slate-800 pt-5">
         <div>
           <h3 class="academic-kicker" data-lang-en="Source Register" data-lang-zh="数据源信息">
-            Source Register
+            {pick('Source Register', '数据源信息')}
           </h3>
           <p class="source-register-intro mt-2 text-sm leading-6" data-lang-en="Official sources and update cadences used to construct the downloadable dataset." data-lang-zh="构建当前可下载数据集所使用的官方来源及更新频率。">
-            Official sources and update cadences used to construct the downloadable dataset.
+            {pick(
+              'Official sources and update cadences used to construct the downloadable dataset.',
+              '构建当前可下载数据集所使用的官方来源及更新频率。'
+            )}
           </p>
         </div>
 
@@ -169,15 +209,29 @@ const coverageLabel = (entry?.date_range?.start || entry?.date_range?.end)
                 )}
                 <div class="min-w-0 flex-1">
                   <div class="flex flex-wrap items-center gap-2">
-                    <span class="source-register-title">{source.label ?? source.scope ?? 'Unknown Source'}</span>
+                    <span
+                      class="source-register-title"
+                      data-lang-en={source.label ?? source.scope ?? 'Unknown Source'}
+                      data-lang-zh={sourceZhLabel(source)}
+                    >
+                      {pick(source.label ?? source.scope ?? 'Unknown Source', sourceZhLabel(source))}
+                    </span>
                     {source.cadence && (
-                      <span class="source-register-cadence">
-                        {source.cadence}
+                      <span
+                        class="source-register-cadence"
+                        data-lang-en={source.cadence}
+                        data-lang-zh={CADENCE_ZH[source.cadence] ?? source.cadence}
+                      >
+                        {pick(source.cadence, CADENCE_ZH[source.cadence] ?? source.cadence)}
                       </span>
                     )}
                     {source.type && (
-                      <span class="source-register-type">
-                        {source.type}
+                      <span
+                        class="source-register-type"
+                        data-lang-en={source.type}
+                        data-lang-zh={TYPE_ZH[source.type] ?? source.type}
+                      >
+                        {pick(source.type, TYPE_ZH[source.type] ?? source.type)}
                       </span>
                     )}
                   </div>
@@ -187,7 +241,13 @@ const coverageLabel = (entry?.date_range?.start || entry?.date_range?.end)
                   )}
 
                   {source.description && (
-                    <p class="source-register-description mt-3 text-sm leading-relaxed">{source.description}</p>
+                    <p
+                      class="source-register-description mt-3 text-sm leading-relaxed"
+                      data-lang-en={source.description}
+                      data-lang-zh={sourceZhDescription(source)}
+                    >
+                      {pick(source.description, sourceZhDescription(source))}
+                    </p>
                   )}
 
                   {source.url && (
@@ -197,7 +257,7 @@ const coverageLabel = (entry?.date_range?.start || entry?.date_range?.end)
                       rel="noopener noreferrer"
                       class="source-register-link mt-4 inline-flex items-center gap-1.5 text-sm transition-colors"
                     >
-                      <span data-lang-en="Official source" data-lang-zh="官方来源">Official source</span>
+                      <span data-lang-en="Official source" data-lang-zh="官方来源">{pick('Official source', '官方来源')}</span>
                       <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5h5m0 0v5m0-5L10 14m-3 5h11a2 2 0 002-2V9m-5 10H6a2 2 0 01-2-2V6a2 2 0 012-2h5" />
                       </svg>
@@ -212,8 +272,8 @@ const coverageLabel = (entry?.date_range?.start || entry?.date_range?.end)
     )}
 
     <div class="academic-note">
-      <span data-lang-en="Suggested presentation pattern:" data-lang-zh="建议呈现方式：">Suggested presentation pattern:</span>
-      <span data-lang-en=" cite the data version and coverage window when exporting charts or tables for publication." data-lang-zh=" 在导出图表或表格用于发布时，建议同时标注数据版本和覆盖区间。"> cite the data version and coverage window when exporting charts or tables for publication.</span>
+      <span data-lang-en="Suggested presentation pattern:" data-lang-zh="建议呈现方式：">{pick('Suggested presentation pattern:', '建议呈现方式：')}</span>
+      <span data-lang-en=" cite the data version and coverage window when exporting charts or tables for publication." data-lang-zh=" 在导出图表或表格用于发布时，建议同时标注数据版本和覆盖区间。">{pick(' cite the data version and coverage window when exporting charts or tables for publication.', ' 在导出图表或表格用于发布时，建议同时标注数据版本和覆盖区间。')}</span>
     </div>
   </section>
 )}

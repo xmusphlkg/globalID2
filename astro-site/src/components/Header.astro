@@ -2,12 +2,17 @@
 // src/components/Header.astro
 import BrandLogo from './BrandLogo.astro';
 
+interface Props {
+  initialLanguage?: 'en' | 'zh';
+}
+
 const navLinks = [
   { href: '/', label: 'Home', labelZh: '首页' },
   { href: '/countries/', label: 'Countries', labelZh: '国家' },
   { href: '/diseases/', label: 'Diseases', labelZh: '疾病' },
 ];
 
+const { initialLanguage = 'en' } = Astro.props;
 const currentPath = Astro.url.pathname;
 ---
 
@@ -45,7 +50,7 @@ const currentPath = Astro.url.pathname;
                   : '',
               ]}
             >
-              <span data-lang-en={label} data-lang-zh={labelZh}>{label}</span>
+              <span data-lang-en={label} data-lang-zh={labelZh}>{initialLanguage === 'zh' ? labelZh : label}</span>
             </a>
           ))
         }
@@ -97,7 +102,7 @@ const currentPath = Astro.url.pathname;
                 : '',
             ]}
           >
-            <span data-lang-en={label} data-lang-zh={labelZh}>{label}</span>
+            <span data-lang-en={label} data-lang-zh={labelZh}>{initialLanguage === 'zh' ? labelZh : label}</span>
           </a>
         ))
       }
@@ -136,7 +141,10 @@ const currentPath = Astro.url.pathname;
   });
 
   const storedLang = localStorage.getItem('lang');
-  let currentLang = storedLang === 'zh' ? 'zh' : 'en';
+  const initialLang = document.documentElement.getAttribute('data-initial-lang');
+  let currentLang = storedLang === 'zh' || storedLang === 'en'
+    ? storedLang
+    : (initialLang === 'zh' ? 'zh' : 'en');
   updateLang(currentLang);
 
   toggleBtn?.addEventListener('click', () => {
@@ -165,6 +173,8 @@ const currentPath = Astro.url.pathname;
         : el.getAttribute('data-lang-en-html');
       if (target) el.innerHTML = target;
     });
+
+    document.dispatchEvent(new CustomEvent('globalid:language-change', { detail: { lang } }));
   }
 
   mobileMenuBtn?.addEventListener('click', () => {

@@ -9,6 +9,7 @@ interface Props {
   description?: string;
   image?: string;
   noindex?: boolean;
+  initialLanguage?: 'en' | 'zh';
 }
 
 const {
@@ -16,6 +17,7 @@ const {
   description = 'GIDS — Global Infectious Disease Surveillance',
   image = '/logo-2.png',
   noindex = false,
+  initialLanguage = 'en',
 } = Astro.props;
 
 const canonicalURL = new URL(Astro.url.pathname, Astro.site);
@@ -60,7 +62,7 @@ const structuredData = {
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang={initialLanguage === 'zh' ? 'zh-CN' : 'en'} data-initial-lang={initialLanguage}>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -99,7 +101,10 @@ const structuredData = {
         const storedTheme = localStorage.getItem('theme');
         const theme = storedTheme === 'light' || storedTheme === 'dark' ? storedTheme : 'light';
         const storedLang = localStorage.getItem('lang');
-        const lang = storedLang === 'zh' ? 'zh' : 'en';
+        const initialLang = document.documentElement.getAttribute('data-initial-lang');
+        const lang = storedLang === 'zh' || storedLang === 'en'
+          ? storedLang
+          : (initialLang === 'zh' ? 'zh' : 'en');
         document.documentElement.setAttribute('data-theme', theme);
         document.documentElement.setAttribute('data-lang', lang);
         document.documentElement.setAttribute('lang', lang === 'zh' ? 'zh-CN' : 'en');
@@ -108,20 +113,22 @@ const structuredData = {
     </script>
   </head>
   <body class="min-h-screen flex flex-col">
-    <Header />
+    <Header initialLanguage={initialLanguage} />
     <div class="site-update-banner border-b" role="status" aria-live="polite">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 text-sm font-medium text-center">
         <span
           data-lang-en="Data is currently being updated. Some features may be temporarily unstable."
           data-lang-zh="网站正在更新数据，部分功能可能暂时不稳定。"
         >
-          Data is currently being updated. Some features may be temporarily unstable.
+          {initialLanguage === 'zh'
+            ? '网站正在更新数据，部分功能可能暂时不稳定。'
+            : 'Data is currently being updated. Some features may be temporarily unstable.'}
         </span>
       </div>
     </div>
     <main class="flex-1 academic-shell">
       <slot />
     </main>
-    <Footer />
+    <Footer initialLanguage={initialLanguage} />
   </body>
 </html>
