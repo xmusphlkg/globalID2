@@ -2,4 +2,5 @@ Give a brief introduction to {disease_name}, without analysis or commentary.
 Word limit: 90-100 words.
 
 Target output language: {language}
+Language hygiene: write only in the target language, except official disease names, acronyms, units, and source titles.
 {context_injection}

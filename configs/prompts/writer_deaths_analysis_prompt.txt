@@ -4,4 +4,6 @@ Focus on mortality patterns, case-fatality dynamics, and death trends.
 Data: {data_context}
 
 Target output language: {language}
+Language hygiene: write only in the target language, except official disease names, acronyms, units, and source titles.
+Death-data rule: distinguish source-reported zero deaths from missing/unavailable death fields. If death counts are unavailable or shown as "-", say they are unavailable and do not call them zero deaths.
 {context_injection}

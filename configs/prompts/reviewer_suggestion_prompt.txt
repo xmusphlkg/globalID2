@@ -1,6 +1,7 @@
 As a senior editor, please provide improvement suggestions for the following {content_type} content.
 
 Target language for suggestions: {language}
+Do not mix English and Chinese prose except official disease names, acronyms, units, and source titles.
 
 Content:
 {content}

@@ -31,12 +31,15 @@ class DeepAnalystAgent(BaseAgent):
         compact_packet = self._compact_packet(evidence_packet)
         prompt = (
             "You are a senior infectious-disease surveillance analyst. "
-            "Interpret the deterministic evidence packet for professional public-health decision makers.\n\n"
+            "Interpret the deterministic evidence packet for a clear situation brief read by public-health decision makers and business stakeholders.\n\n"
             "Rules:\n"
             "- Do not invent numbers, dates, countries, diseases, causes, or recommendations.\n"
             "- Every insight must include evidence_refs copied from the packet.\n"
             "- Hypotheses must be clearly labeled as hypotheses and include remaining_uncertainties.\n"
-            "- You may propose figure_plan items from this whitelist only: epidemic_curve, cases_incidence_panel, recent_window_heatmap, risk_ranking_bar, signal_context_panel, seasonal_baseline_band, anomaly_marker_curve, data_quality_timeline, risk_matrix.\n"
+            "- Prefer plain-language implications and next-watch framing over methodology-heavy wording.\n"
+            "- You may propose figure_plan items from this whitelist only: epidemic_curve, cases_incidence_panel, recent_window_heatmap, risk_ranking_bar, signal_context_panel, seasonal_baseline_band, anomaly_marker_curve, risk_matrix.\n"
+            "- Choose figures sparingly: 2-3 figures is typical, 4 is the maximum. Do not list every possible chart.\n"
+            "- Include a figure only when it directly supports a specific judgement in the report; otherwise omit it.\n"
             "- Each figure_plan item must include figure_type, section_type, disease_id when disease-specific, position, and rationale.\n"
             "- Allowed section_type values for figures: priority_signals, trend_anomaly_analysis, disease_profiles, data_quality_limitations.\n"
             "- Return JSON only with keys: insights, hypotheses, open_questions, figure_plan, confidence.\n"
@@ -103,9 +106,11 @@ class DeepAnalystAgent(BaseAgent):
                 {
                     "disease_id": item.get("disease_id"),
                     "name_en": item.get("name_en"),
+                    "name_zh": item.get("name_zh"),
                     "metrics": item.get("metrics"),
                     "trend": item.get("trend"),
                     "anomaly": item.get("anomaly"),
+                    "historical_context": item.get("historical_context"),
                     "visual_diagnostics": {
                         key: value
                         for key, value in (item.get("visual_diagnostics") or {}).items()
@@ -144,18 +149,26 @@ class DeepAnalystAgent(BaseAgent):
             refs = item.get("evidence_refs")
             if not isinstance(refs, list):
                 refs = []
+            interpretation = (
+                item.get("interpretation")
+                or item.get("summary")
+                or item.get("text")
+                or item.get("description")
+                or item.get("conclusion")
+                or ""
+            )
             normalized_insights.append(
                 {
                     "title": str(item.get("title") or "Insight"),
-                    "interpretation": str(item.get("interpretation") or item.get("summary") or ""),
+                    "interpretation": str(interpretation),
                     "evidence_refs": [str(ref) for ref in refs if str(ref).strip()][:8],
                     "confidence": _clamp_float(item.get("confidence"), default=0.7),
                 }
             )
         return {
             "insights": normalized_insights,
-            "hypotheses": _ensure_list(payload.get("hypotheses"))[:5],
-            "open_questions": _ensure_list(payload.get("open_questions"))[:5],
+            "hypotheses": _normalize_text_items(payload.get("hypotheses"))[:5],
+            "open_questions": _normalize_text_items(payload.get("open_questions"))[:5],
             "figure_plan": _normalize_figure_plan(payload.get("figure_plan")),
             "confidence": _clamp_float(payload.get("confidence"), default=0.75),
         }
@@ -167,6 +180,29 @@ def _ensure_list(value: Any) -> List[Any]:
     if value is None:
         return []
     return [value]
+
+
+def _normalize_text_items(value: Any) -> List[str]:
+    items = _ensure_list(value)
+    normalized: List[str] = []
+    for item in items:
+        if isinstance(item, dict):
+            text = (
+                item.get("text")
+                or item.get("question")
+                or item.get("hypothesis")
+                or item.get("summary")
+                or item.get("interpretation")
+                or item.get("title")
+            )
+            if text:
+                normalized.append(str(text))
+            continue
+        if item is not None:
+            text = str(item).strip()
+            if text:
+                normalized.append(text)
+    return normalized
 
 
 def _clamp_float(value: Any, default: float) -> float:
@@ -188,12 +224,11 @@ def _normalize_figure_plan(value: Any) -> List[Dict[str, Any]]:
         "signal_context_panel",
         "seasonal_baseline_band",
         "anomaly_marker_curve",
-        "data_quality_timeline",
         "risk_matrix",
     }
     allowed_sections = {"priority_signals", "trend_anomaly_analysis", "disease_profiles", "data_quality_limitations"}
     normalized: List[Dict[str, Any]] = []
-    for item in value[:8]:
+    for item in value[:4]:
         if not isinstance(item, dict):
             continue
         figure_type = str(item.get("figure_type") or "").strip()

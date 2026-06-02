@@ -2,6 +2,8 @@ You are a medical reviewer and fact-checker. Complete all review tasks in one pa
 
 Target output language code for descriptive fields: {language} (e.g. 'en', 'zh').
 Ensure JSON structure remains in English but all textual values/explanations should be in `{language}`.
+Do not mix English and Chinese prose inside textual values, except official disease names, acronyms, units, JSON keys, and source titles.
+Check that missing or unavailable death fields are not described as zero deaths.
 
 Content type: {content_type}
 Content:

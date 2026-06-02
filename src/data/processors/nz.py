@@ -350,6 +350,8 @@ class NZMonthlyUpdater:
                 "raw_disease_label": label,
                 "cumulative_total": row.get("CumulativeTotal", ""),
                 "source": row.get("Source", ""),
+                "death_reporting": "not_provided_by_source",
+                "death_reporting_note": "New Zealand notifiable disease feed used here reports cases, not death counts.",
             }
 
             key = (day, disease_id, country_id)
@@ -360,9 +362,9 @@ class NZMonthlyUpdater:
             upsert_rows.append({
                 "time": day,
                 "disease_id": disease_id,
-                "country_id": country_id,
-                "cases": cases if cases is not None else 0,
-                "deaths": 0,
+                    "country_id": country_id,
+                    "cases": cases if cases is not None else 0,
+                    "deaths": None,
                 "data_source": row.get("Source", self.source_name),
                 "incidence_rate": incidence,
                 "metadata": json.dumps(metadata_obj),

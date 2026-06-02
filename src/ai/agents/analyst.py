@@ -129,11 +129,23 @@ class AnalystAgent(BaseAgent):
         
         # Death statistics (column is named 'deaths' in the DataFrame)
         if "deaths" in data.columns:
-            stats["total_deaths"] = int(data["deaths"].sum())
-            stats["avg_deaths"] = float(data["deaths"].mean())
+            deaths = pd.to_numeric(data["deaths"], errors="coerce")
+            observed_deaths = deaths.dropna()
+            if observed_deaths.empty:
+                stats["total_deaths"] = None
+                stats["avg_deaths"] = None
+                stats["death_reporting_status"] = "unavailable"
+            else:
+                stats["total_deaths"] = int(observed_deaths.sum())
+                stats["avg_deaths"] = float(observed_deaths.mean())
+                stats["death_reporting_status"] = (
+                    "reported_nonzero" if (observed_deaths > 0).any()
+                    else "partial_reported_zero" if deaths.isna().any()
+                    else "reported_zero"
+                )
             
             # Fatality rate
-            if stats.get("total_cases", 0) > 0:
+            if stats.get("total_cases", 0) > 0 and stats.get("total_deaths") is not None:
                 stats["fatality_rate"] = round(
                     (stats["total_deaths"] / stats["total_cases"]) * 100, 2
                 )
@@ -212,7 +224,7 @@ class AnalystAgent(BaseAgent):
 
         # Deaths trend (if available)
         if "deaths" in data.columns:
-            deaths = data["deaths"].values
+            deaths = pd.to_numeric(data["deaths"], errors="coerce").dropna().values
             if len(deaths) >= 2:
                 change_rate = ((deaths[-1] - deaths[0]) / (deaths[0] + 1)) * 100
                 trends["deaths_change_rate"] = round(change_rate, 2)
@@ -304,7 +316,7 @@ class AnalystAgent(BaseAgent):
         try:
             insights = await self.complete(
                 prompt=prompt,
-                system=self.system_prompt
+                system=self._language_guard(self.system_prompt, language)
             )
             return insights
         except Exception as e:
@@ -343,6 +355,16 @@ class AnalystAgent(BaseAgent):
         
         return quality
     
+    @staticmethod
+    def _language_guard(system_prompt: str, language: str) -> str:
+        target = "Simplified Chinese" if language == "zh" else "English"
+        opposite = "English prose" if language == "zh" else "Chinese prose"
+        return (
+            f"{system_prompt}\n\n"
+            f"Language control: write final user-facing analysis strictly in {target}. "
+            f"Do not mix in {opposite} except for official disease names, acronyms, units, and source titles."
+        )
+
     @staticmethod
     def _format_dict(d: Dict) -> str:
         """Format dictionary to readable string"""

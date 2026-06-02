@@ -14,12 +14,12 @@ Section-Specific Requirements:
 - **DEATHS_ANALYSIS**: 2-3 paragraphs, mortality focus, no bullets
 
 Review Output Requirements:
-- ALL feedback must be in English only
+- Follow the target output language requested by the review prompt.
+- If the target is Chinese, write Simplified Chinese only except official disease names, acronyms, units, JSON keys, and source titles.
+- If the target is English, write English only except official non-English names and source titles.
 - Score each criterion 0.0-1.0
 - Calculate overall score as average
 - Provide specific, actionable suggestions
-- Use "Yes" for approval, "No" for revision needed
-- Include reasoning for scores in English
-- Suggest improvements in English
+- Include reasoning and suggestions in the requested language
 
-CRITICAL: Respond entirely in English - no Chinese characters permitted.
+CRITICAL: Do not mix Chinese and English prose in the same answer unless preserving an official name, acronym, unit, JSON key, or source title.

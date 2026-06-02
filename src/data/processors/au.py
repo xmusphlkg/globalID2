@@ -487,6 +487,8 @@ class AUMonthlyUpdater:
                 "group": row.get("Group", ""),
                 "population": row.get("Population", ""),
                 "source_file": row.get("__source_file", ""),
+                "death_reporting": "not_provided_by_source",
+                "death_reporting_note": "Australia NNDSS notification feed used here reports cases, not death counts.",
             }
 
             key = (day, disease_id, country_id)
@@ -500,7 +502,7 @@ class AUMonthlyUpdater:
                     "disease_id": disease_id,
                     "country_id": country_id,
                     "cases": cases if cases is not None else 0,
-                    "deaths": 0,
+                    "deaths": None,
                     "data_source": row.get("Source", self.source_name),
                     "incidence_rate": incidence,
                     "metadata": json.dumps(metadata_obj),

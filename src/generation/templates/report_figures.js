@@ -402,35 +402,6 @@
     return option;
   }
 
-  function dataQualityTimelineOption(figure, payload) {
-    var series = seriesFor(payload, figure);
-    if (!series) return null;
-    var periods = series.periods || [];
-    var availability = (((series.visual || {}).derived || {}).availability) || {};
-    var rows = [
-      { key: 'cases', label: payload.language === 'zh' ? '病例' : 'Cases' },
-      { key: 'deaths', label: payload.language === 'zh' ? '死亡' : 'Deaths' },
-      { key: 'incidence_rate_per_100k', label: payload.language === 'zh' ? '粗发病率' : 'Crude incidence' }
-    ];
-    var cells = [];
-    rows.forEach(function (row, rowIndex) {
-      var values = availability[row.key] || [];
-      periods.forEach(function (period, index) {
-        cells.push([index, rowIndex, Number(values[index] || 0), period, row.label]);
-      });
-    });
-    var option = baseOption();
-    Object.assign(option, {
-      tooltip: { trigger: 'item', confine: true, formatter: function (params) { var item = params.data || []; return item[4] + '<br/>' + item[3] + ': ' + (Number(item[2]) ? 'available' : 'missing'); } },
-      grid: { left: 96, right: 32, top: 20, bottom: 64 },
-      xAxis: { type: 'category', data: periods, axisLabel: { rotate: periods.length > 10 ? 35 : 0, color: '#5d6978' }, axisLine: { lineStyle: { color: '#d7dde5' } } },
-      yAxis: { type: 'category', data: rows.map(function (row) { return row.label; }), axisLabel: { color: '#5d6978' }, axisLine: { lineStyle: { color: '#d7dde5' } } },
-      visualMap: { show: false, min: 0, max: 1, inRange: { color: ['#d7dde5', '#0f766e'] } },
-      series: [{ name: payload.language === 'zh' ? '可用性' : 'Availability', type: 'heatmap', data: cells, label: { show: false } }]
-    });
-    return option;
-  }
-
   function riskMatrixOption(figure, payload) {
     var rows = (((payload.data || {}).risk_ranking) || []).slice(0, 12);
     if (rows.length < 2) return null;
@@ -465,7 +436,6 @@
     if (figure.figure_type === 'risk_ranking_bar') return riskRankingBarOption(figure, payload);
     if (figure.figure_type === 'seasonal_baseline_band') return seasonalBaselineBandOption(figure, payload);
     if (figure.figure_type === 'anomaly_marker_curve') return anomalyMarkerCurveOption(figure, payload);
-    if (figure.figure_type === 'data_quality_timeline') return dataQualityTimelineOption(figure, payload);
     if (figure.figure_type === 'risk_matrix') return riskMatrixOption(figure, payload);
     return null;
   }

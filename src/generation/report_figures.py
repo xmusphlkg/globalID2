@@ -48,7 +48,6 @@ class ReportFigureLibrary:
         "signal_context_panel",
         "seasonal_baseline_band",
         "anomaly_marker_curve",
-        "data_quality_timeline",
         "risk_matrix",
     }
     ALLOWED_SECTIONS = {
@@ -65,7 +64,7 @@ class ReportFigureLibrary:
         packet: Dict[str, Any],
         deep_analysis: Optional[Dict[str, Any]] = None,
         language: str = "en",
-        max_figures: int = 7,
+        max_figures: int = 4,
     ) -> List[ReportFigureSpec]:
         """Build a small, validated figure plan from AI selections plus rules."""
 
@@ -145,9 +144,12 @@ class ReportFigureLibrary:
             series[key] = {
                 "disease_id": disease_id,
                 "name": self._disease_name(disease, language),
+                "name_en": self._disease_name(disease, "en"),
+                "name_zh": self._disease_name(disease, "zh"),
                 "periods": df["period"].tolist(),
                 "cases": [int(value) for value in df["cases"].tolist()],
                 "deaths": [int(value) for value in df["deaths"].tolist()],
+                "death_observed": [int(value) for value in df["_death_observed"].tolist()],
                 "incidence_rate_per_100k": [
                     None if pd.isna(value) else round(float(value), 6)
                     for value in pd.to_numeric(df.get("incidence_rate_per_100k"), errors="coerce").tolist()
@@ -177,6 +179,8 @@ class ReportFigureLibrary:
                 {
                     "disease_id": row.get("disease_id"),
                     "name": row.get("name_zh") if language == "zh" else row.get("name_en"),
+                    "name_en": row.get("name_en"),
+                    "name_zh": row.get("name_zh"),
                     "risk_score": row.get("risk_score"),
                     "risk_level": row.get("risk_level"),
                     "latest_cases": row.get("latest_cases"),
@@ -185,7 +189,7 @@ class ReportFigureLibrary:
             )
 
         return {
-            "version": "analytical_v3.figure_data.1",
+            "version": "report_v4.figure_data.1",
             "language": language,
             "series": series,
             "risk_ranking": ranking_rows,
@@ -218,7 +222,7 @@ class ReportFigureLibrary:
 
         specs: List[ReportFigureSpec] = []
         top_id = self._top_disease(packet).get("disease_id")
-        for item in raw_plan[:8]:
+        for item in raw_plan[:4]:
             if not isinstance(item, dict):
                 continue
             figure_type = str(item.get("figure_type") or "").strip()
@@ -250,20 +254,14 @@ class ReportFigureLibrary:
     def _default_specs(self, packet: Dict[str, Any], language: str) -> List[ReportFigureSpec]:
         top = self._top_disease(packet)
         top_id = top.get("disease_id")
+        series_len = self._series_len(top)
         specs: List[ReportFigureSpec] = []
         if len(packet.get("risk_ranking") or []) >= 2:
             specs.append(
                 ReportFigureSpec(
-                    figure_type="risk_ranking_bar",
+                    figure_type="risk_matrix" if len(packet.get("risk_ranking") or []) >= 5 else "risk_ranking_bar",
                     section_type="priority_signals",
-                    rationale="Multiple diseases are present, so a ranked risk view supports prioritization.",
-                )
-            )
-            specs.append(
-                ReportFigureSpec(
-                    figure_type="risk_matrix",
-                    section_type="priority_signals",
-                    rationale="A risk matrix separates high-burden, fast-changing signals from routine findings.",
+                    rationale="Multiple diseases are present, so one compact prioritization figure is sufficient.",
                 )
             )
         if top_id:
@@ -275,7 +273,16 @@ class ReportFigureLibrary:
                     rationale="A compact signal-context panel summarizes latest burden against baseline and recent-window comparators.",
                 )
             )
-            if len((top.get("visual_diagnostics") or {}).get("series") or []) >= 8:
+            if self._has_notable_anomaly(top):
+                specs.append(
+                    ReportFigureSpec(
+                        figure_type="anomaly_marker_curve",
+                        section_type="trend_anomaly_analysis",
+                        disease_id=str(top_id),
+                        rationale="An anomaly marker is included only when the deterministic anomaly rule is relevant.",
+                    )
+                )
+            elif series_len >= 8:
                 specs.append(
                     ReportFigureSpec(
                         figure_type="seasonal_baseline_band",
@@ -284,30 +291,13 @@ class ReportFigureLibrary:
                         rationale="A baseline band makes the latest signal readable against expected background variability.",
                     )
                 )
-            if len((top.get("visual_diagnostics") or {}).get("series") or []) >= 4:
+            elif series_len >= 2:
                 specs.append(
                     ReportFigureSpec(
-                        figure_type="anomaly_marker_curve",
+                        figure_type="epidemic_curve",
                         section_type="trend_anomaly_analysis",
                         disease_id=str(top_id),
-                        rationale="Marked latest, peak, and threshold points make anomaly interpretation auditable.",
-                    )
-                )
-            specs.append(
-                ReportFigureSpec(
-                    figure_type="epidemic_curve",
-                    section_type="trend_anomaly_analysis",
-                    disease_id=str(top_id),
-                    rationale="The leading signal needs a time-series curve with baseline and peak markers.",
-                )
-            )
-            if len((top.get("visual_diagnostics") or {}).get("series") or []) >= 12:
-                specs.append(
-                    ReportFigureSpec(
-                        figure_type="recent_window_heatmap",
-                        section_type="trend_anomaly_analysis",
-                        disease_id=str(top_id),
-                        rationale="A recent-window heatmap makes recurrence and clustering easier to scan.",
+                        rationale="The leading signal needs a time-series curve when baseline context is limited.",
                     )
                 )
             if self._has_incidence(top):
@@ -319,14 +309,15 @@ class ReportFigureLibrary:
                         rationale="Case counts and crude incidence should be read together when denominators are available.",
                     )
                 )
-            specs.append(
-                ReportFigureSpec(
-                    figure_type="data_quality_timeline",
-                    section_type="data_quality_limitations",
-                    disease_id=str(top_id),
-                    rationale="A data availability timeline helps readers distinguish signal changes from measurement gaps.",
+            elif series_len >= 24 and self._strong_short_window(top):
+                specs.append(
+                    ReportFigureSpec(
+                        figure_type="recent_window_heatmap",
+                        section_type="trend_anomaly_analysis",
+                        disease_id=str(top_id),
+                        rationale="A recent-window heatmap is useful when the main question is persistence across many periods.",
+                    )
                 )
-            )
         return specs
 
     def _can_render(self, packet: Dict[str, Any], spec: ReportFigureSpec) -> bool:
@@ -348,8 +339,6 @@ class ReportFigureLibrary:
             return len(series) >= 4
         if spec.figure_type == "cases_incidence_panel":
             return len(series) >= 2 and self._has_incidence(disease)
-        if spec.figure_type == "data_quality_timeline":
-            return len(series) >= 2
         return False
 
     def _height_for(self, packet: Dict[str, Any], spec: ReportFigureSpec) -> int:
@@ -362,8 +351,6 @@ class ReportFigureLibrary:
             return 420
         if spec.figure_type == "signal_context_panel":
             return 330
-        if spec.figure_type == "data_quality_timeline":
-            return 270
         if spec.figure_type == "recent_window_heatmap":
             disease = self._find_disease(packet, spec.disease_id)
             series = ((disease or {}).get("visual_diagnostics") or {}).get("series") or []
@@ -383,6 +370,28 @@ class ReportFigureLibrary:
             return "risk_ranking"
         return f"disease:{spec.disease_id}"
 
+    @staticmethod
+    def _series_len(disease: Dict[str, Any]) -> int:
+        return len((disease.get("visual_diagnostics") or {}).get("series") or [])
+
+    @staticmethod
+    def _has_notable_anomaly(disease: Dict[str, Any]) -> bool:
+        anomaly = disease.get("anomaly") or {}
+        if anomaly.get("is_anomaly"):
+            return True
+        try:
+            return abs(float(anomaly.get("robust_z"))) >= 3.0
+        except (TypeError, ValueError):
+            return False
+
+    @staticmethod
+    def _strong_short_window(disease: Dict[str, Any]) -> bool:
+        visual = disease.get("visual_diagnostics") or {}
+        try:
+            return abs(float(visual.get("last4_change_pct"))) >= 50.0
+        except (TypeError, ValueError):
+            return False
+
     def _figure_text(
         self,
         packet: Dict[str, Any],
@@ -397,21 +406,21 @@ class ReportFigureLibrary:
             caption = (
                 "Deterministic priority scores combine burden, short-term change, mortality signals, anomaly status, and data quality."
                 if language != "zh"
-                else "确定性优先级分综合病例负担、短期变化、死亡信号、异常状态和数据质量。"
+                else "按病例负担、近期变化、死亡线索、异常提示和数据完整性综合排序。"
             )
             refs = [
                 ref
                 for item in (packet.get("risk_ranking") or [])[:10]
                 for ref in (item.get("evidence_refs") or [])
             ]
-            legend = ["Bar length = v3 risk score.", "Color encodes risk level."] if language != "zh" else ["条形长度 = v3 风险分。", "颜色表示风险等级。"]
+            legend = ["Bar length = v3 risk score.", "Color encodes risk level."] if language != "zh" else ["条形越长，优先级越高。", "颜色表示关注等级。"]
             return title, caption, legend, list(dict.fromkeys(refs))[:24]
         if spec.figure_type == "risk_matrix":
-            title = "Risk matrix: burden versus acceleration" if language != "zh" else "风险矩阵：负担与加速度"
+            title = "Risk matrix: burden versus acceleration" if language != "zh" else "关注矩阵：病例数与增长"
             caption = (
                 "Diseases are positioned by latest burden and short-term percentage change; color and size encode the deterministic risk score."
                 if language != "zh"
-                else "按最新负担和短期变化率定位疾病；颜色和点大小表示确定性风险分。"
+                else "按最新病例数和近期变化定位疾病；颜色和点大小表示关注优先级。"
             )
             refs = [
                 ref
@@ -421,7 +430,7 @@ class ReportFigureLibrary:
             legend = (
                 ["X axis = latest reported cases.", "Y axis = change versus previous observation.", "Bubble size/color = v3 risk score and level."]
                 if language != "zh"
-                else ["横轴 = 最新报告病例数。", "纵轴 = 较上一期变化。", "气泡大小/颜色 = v3 风险分与等级。"]
+                else ["横轴 = 最新报告病例数。", "纵轴 = 较上一期变化。", "气泡越大、颜色越深，优先级越高。"]
             )
             return title, caption, legend, list(dict.fromkeys(refs))[:24]
 
@@ -431,25 +440,25 @@ class ReportFigureLibrary:
             caption = (
                 f"{name} reported cases by {cadence} period. The dashed reference line marks the pre-latest median; the diamond marks the observed peak."
                 if language != "zh"
-                else f"{name} 按{cadence}报告期的病例曲线。虚线为最新期前中位数，菱形为观察峰值。"
+                else f"{name} 按{cadence}报告期的病例曲线。虚线为近期常态中位数，菱形为观察峰值。"
             )
             legend = (
                 ["Solid line = reported cases.", "Dotted line = 3-period moving mean.", "Dashed reference = pre-latest median."]
                 if language != "zh"
-                else ["实线 = 报告病例。", "点线 = 3期移动均值。", "虚线参考 = 最新期前中位数。"]
+                else ["实线 = 报告病例。", "点线 = 3期移动均值。", "虚线参考 = 近期常态中位数。"]
             )
             return title, caption, legend, refs
         if spec.figure_type == "seasonal_baseline_band":
-            title = f"{name} baseline band" if language != "zh" else f"{name} 背景带"
+            title = f"{name} baseline band" if language != "zh" else f"{name} 趋势参照区间"
             caption = (
                 "Reported cases are shown against a deterministic baseline band derived from the same pre-latest time series."
                 if language != "zh"
-                else "报告病例与由同一条最新期前时间序列推导出的确定性背景带对照展示。"
+                else "将病例曲线与近期通常波动范围放在一起，帮助判断本期是否明显偏高。"
             )
             legend = (
                 ["Line = reported cases.", "Shaded band = pre-latest median +/- robust dispersion.", "Dashed line = pre-latest median."]
                 if language != "zh"
-                else ["折线 = 报告病例。", "阴影带 = 最新期前中位数 ± 稳健离散度。", "虚线 = 最新期前中位数。"]
+                else ["折线 = 报告病例。", "阴影带 = 近期通常波动范围。", "虚线 = 近期常态中位数。"]
             )
             return title, caption, legend, refs
         if spec.figure_type == "anomaly_marker_curve":
@@ -457,51 +466,38 @@ class ReportFigureLibrary:
             caption = (
                 "Latest, peak, and robust-threshold markers show whether the current signal clears the statistical alert rule."
                 if language != "zh"
-                else "以最新值、峰值和稳健阈值标注当前信号是否达到统计预警规则。"
+                else "用最新值、观察峰值和预警线标出当前变化是否需要升级关注。"
             )
             legend = (
                 ["Line = reported cases.", "Diamond = observed peak.", "Red marker = latest point.", "Threshold = robust baseline rule when available."]
                 if language != "zh"
-                else ["折线 = 报告病例。", "菱形 = 观察峰值。", "红点 = 最新一期。", "阈值 = 可用时的稳健背景规则。"]
+                else ["折线 = 报告病例。", "菱形 = 观察峰值。", "红点 = 最新一期。", "预警线 = 达到时需要升级关注。"]
             )
             return title, caption, legend, refs
         if spec.figure_type == "cases_incidence_panel":
-            title = f"{name}: cases and crude incidence" if language != "zh" else f"{name}：病例与粗发病率"
+            title = f"{name}: cases and crude incidence" if language != "zh" else f"{name}：病例与规模参照"
             caption = (
                 "Counts and crude incidence per 100,000 are shown together so the burden signal can be read with its available denominator context."
                 if language != "zh"
-                else "病例数与每10万人粗发病率并列展示，用于同时阅读负担信号和可用分母背景。"
+                else "病例数与每10万人估算率值并列展示，用于判断病例规模和趋势是否同步变化。"
             )
             legend = (
                 ["Upper panel = reported cases.", "Lower panel = crude incidence per 100,000 population.", "Computed rates are contextual when source data are sentinel-based."]
                 if language != "zh"
-                else ["上方面板 = 报告病例。", "下方面板 = 每10万人粗发病率。", "当来源为定点监测时，补算率值仅作背景参照。"]
-            )
-            return title, caption, legend, refs
-        if spec.figure_type == "data_quality_timeline":
-            title = f"{name} data availability timeline" if language != "zh" else f"{name} 数据可用性时间轴"
-            caption = (
-                "Field availability is shown by reporting period so measurement gaps can be separated from epidemiological movement."
-                if language != "zh"
-                else "按报告期展示字段可用性，帮助区分测量缺口与真实流行病学变化。"
-            )
-            legend = (
-                ["Rows = key fields.", "Green = available.", "Gray = unavailable or not supplied in the source extract."]
-                if language != "zh"
-                else ["行 = 关键字段。", "绿色 = 可用。", "灰色 = 不可用或来源未提供。"]
+                else ["上方面板 = 报告病例。", "下方面板 = 每10万人估算率值。", "定点监测来源下，率值只作规模参照。"]
             )
             return title, caption, legend, refs
         if spec.figure_type == "signal_context_panel":
-            title = f"{name} signal context" if language != "zh" else f"{name} 信号背景"
+            title = f"{name} signal context" if language != "zh" else f"{name} 近期变化对照"
             caption = (
                 "Latest burden is compared with the previous observation, the pre-latest median, the rolling mean, and recent 4-period windows."
                 if language != "zh"
-                else "将最新负担与上一期、最新期前中位数、滚动均值和近期4期窗口进行对照。"
+                else "将最新病例数与上一期、近期常态、近期平均和最近4期累计进行对照。"
             )
             legend = (
                 ["Bars compare observed cases across deterministic evidence windows.", "Reference values are derived from the same standardized time series."]
                 if language != "zh"
-                else ["条形用于比较确定性证据窗口中的病例数。", "参考值均由同一条标准化时间序列生成。"]
+                else ["柱形用于比较不同时间参照下的病例数。", "所有参照均来自同一条监测时间序列。"]
             )
             return title, caption, legend, refs
         title = f"{name} recent-period heatmap" if language != "zh" else f"{name} 近期热图"
@@ -538,10 +534,15 @@ class ReportFigureLibrary:
         series = (disease.get("visual_diagnostics") or {}).get("series") or []
         df = pd.DataFrame(series)
         if df.empty:
-            return pd.DataFrame(columns=["period", "cases", "deaths", "incidence_rate_per_100k"])
+            return pd.DataFrame(columns=["period", "cases", "deaths", "_death_observed", "incidence_rate_per_100k"])
         df["period"] = df["period"].astype(str)
         df["cases"] = pd.to_numeric(df.get("cases"), errors="coerce").fillna(0)
-        df["deaths"] = pd.to_numeric(df.get("deaths"), errors="coerce").fillna(0)
+        raw_deaths = pd.to_numeric(df.get("deaths"), errors="coerce")
+        if "deaths_observed" in df.columns:
+            df["_death_observed"] = df["deaths_observed"].astype(bool).astype(int)
+        else:
+            df["_death_observed"] = raw_deaths.notna().astype(int)
+        df["deaths"] = raw_deaths.fillna(0)
         df["incidence_rate_per_100k"] = pd.to_numeric(df.get("incidence_rate_per_100k"), errors="coerce")
         return df.reset_index(drop=True)
 
@@ -586,7 +587,7 @@ class ReportFigureLibrary:
             "anomaly_threshold": constant(threshold),
             "availability": {
                 "cases": [0 if pd.isna(value) else 1 for value in pd.to_numeric(df.get("cases"), errors="coerce").tolist()],
-                "deaths": [0 if pd.isna(value) else 1 for value in pd.to_numeric(df.get("deaths"), errors="coerce").tolist()],
+                "deaths": [int(value) for value in df.get("_death_observed", pd.Series(dtype=int)).tolist()],
                 "incidence_rate_per_100k": [0 if pd.isna(value) else 1 for value in incidence.tolist()],
             },
         }

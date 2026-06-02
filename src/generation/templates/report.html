@@ -1,666 +1,110 @@
-<!DOCTYPE html>
-<html lang="{{ metadata.get('language', 'en') }}">
+<!doctype html>
+<html lang="zh-CN">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{{ metadata.get('title', 'Disease Surveillance Report') }}</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ document.title.zh }}</title>
   <style>
     :root {
       color-scheme: light;
-      --ink: #17202c;
-      --muted: #5d6978;
-      --line: #d7dde5;
-      --soft: #f5f7fa;
+      --ink: #142033;
+      --muted: #5c6677;
+      --line: #d9e1ea;
+      --paper: #ffffff;
+      --soft: #f5f8fb;
       --accent: #116a8c;
-      --accent-2: #0f766e;
     }
-    * { box-sizing: border-box; }
     body {
       margin: 0;
-      background: #eef2f6;
+      background: var(--soft);
       color: var(--ink);
-      font-family: "Inter", "Segoe UI", Arial, sans-serif;
-      line-height: 1.58;
+      font-family: "Source Sans 3", "Inter", "Noto Sans SC", Arial, sans-serif;
+      line-height: 1.68;
     }
-    .page {
-      max-width: 1120px;
-      margin: 0 auto;
-      background: #fff;
-      min-height: 100vh;
-      padding: 40px 54px 64px;
-    }
-    .cover {
-      border-bottom: 2px solid var(--ink);
-      padding-bottom: 24px;
-      margin-bottom: 24px;
-    }
-    .kicker {
-      margin: 0 0 12px;
-      color: var(--accent);
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
+    main {
+      width: min(980px, calc(100% - 40px));
+      margin: 32px auto;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      padding: 42px;
     }
     h1 {
       margin: 0;
-      font-size: 34px;
-      line-height: 1.16;
-      letter-spacing: 0;
+      font-size: 32px;
+      line-height: 1.22;
+    }
+    h2 {
+      margin: 34px 0 12px;
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
+      color: var(--accent);
+      font-size: 21px;
+    }
+    .meta,
+    .schema {
+      color: var(--muted);
+      font-size: 14px;
     }
     .summary {
-      margin: 18px 0 0;
-      max-width: 860px;
-      color: var(--muted);
-      font-size: 15px;
-    }
-    .meta-grid {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 10px;
-      margin-top: 22px;
-    }
-    .meta-item {
-      border: 1px solid var(--line);
+      margin: 24px 0;
+      padding: 18px 20px;
       background: var(--soft);
-      padding: 10px 12px;
-    }
-    .meta-label {
-      color: var(--muted);
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-    }
-    .meta-value {
-      margin-top: 4px;
-      font-weight: 700;
-      font-size: 14px;
-    }
-    .metric-strip {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 12px;
-      margin: 24px 0;
-    }
-    .metric-card {
-      border-top: 3px solid var(--accent);
-      background: #f8fafc;
-      padding: 14px 14px 13px;
-    }
-    .metric-card .meta-label {
-      display: block;
-      margin-bottom: 7px;
-    }
-    .metric-value {
-      font-size: 22px;
-      font-weight: 800;
-      line-height: 1.2;
-      word-break: break-word;
-    }
-    .metric-note {
-      margin-top: 6px;
-      color: var(--muted);
-      font-size: 12px;
-    }
-    .toc {
-      border: 1px solid var(--line);
-      padding: 16px 18px;
-      margin: 24px 0;
-      background: #fbfcfd;
-    }
-    .toc h2 {
-      margin: 0 0 10px;
-      font-size: 14px;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-    }
-    .toc ol {
-      margin: 0;
-      padding-left: 20px;
-      columns: 2;
-      column-gap: 36px;
-    }
-    .toc a { color: var(--accent); text-decoration: none; }
-    .section {
-      border-top: 1px solid var(--line);
-      padding-top: 24px;
-      margin-top: 28px;
-      break-inside: avoid;
-    }
-    .section-header {
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: 20px;
-      margin-bottom: 14px;
-    }
-    .section-title {
-      margin: 0;
-      font-size: 23px;
-      line-height: 1.25;
-    }
-    .section-type {
-      flex: 0 0 auto;
-      color: var(--accent-2);
-      font-size: 11px;
-      font-weight: 800;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-    .content h1,
-    .content h2,
-    .content h3 {
-      margin: 20px 0 8px;
-      line-height: 1.3;
-    }
-    .content h1 { font-size: 24px; }
-    .content h2 { font-size: 20px; }
-    .content h3 { font-size: 16px; color: #243447; }
-    .content p { margin: 0 0 12px; }
-    .content ul,
-    .content ol { margin: 8px 0 14px; padding-left: 24px; }
-    .content li { margin-bottom: 5px; }
-    .content a { color: var(--accent); }
-    .content table {
-      border-collapse: collapse;
-      width: 100%;
-      margin: 12px 0;
-      font-size: 13px;
-    }
-    .content th,
-    .content td {
-      border: 1px solid var(--line);
-      padding: 7px 9px;
-      text-align: left;
-    }
-    .content th { background: var(--soft); }
-    .chart {
-      margin-top: 16px;
-      border: 1px solid var(--line);
-      padding: 12px;
-    }
-    .figure-stack {
-      display: grid;
-      gap: 18px;
-      margin: 18px 0 20px;
-    }
-    .report-figure {
-      border: 1px solid var(--line);
-      background: #fff;
-      padding: 14px 14px 12px;
-      margin: 0;
-      break-inside: avoid;
-    }
-    .figure-header {
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: 18px;
-      margin-bottom: 8px;
-    }
-    .figure-kicker {
-      margin: 0 0 3px;
-      color: var(--accent);
-      font-size: 11px;
-      font-weight: 800;
-      letter-spacing: 0.07em;
-      text-transform: uppercase;
-    }
-    .figure-title {
-      margin: 0;
-      font-size: 16px;
-      line-height: 1.3;
-    }
-    .figure-type {
-      flex: 0 0 auto;
-      color: var(--muted);
-      font-size: 11px;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-    }
-    .figure-body {
-      width: 100%;
-      overflow-x: auto;
-    }
-    .echart-canvas {
-      width: 100% !important;
-      height: var(--figure-height, 420px);
-      min-width: 640px;
-    }
-    .figure-caption {
-      margin-top: 10px;
-      color: #263647;
-      font-size: 13px;
-      line-height: 1.5;
-    }
-    .figure-legend {
-      margin: 8px 0 0;
-      padding-left: 18px;
-      color: var(--muted);
-      font-size: 12px;
-    }
-    .figure-evidence {
-      margin-top: 8px;
-      color: var(--muted);
-      font-size: 11px;
-      word-break: break-word;
-    }
-    .visual-stack {
-      display: grid;
-      gap: 12px;
-      margin: 16px 0;
-    }
-    .visual-component {
-      border: 1px solid var(--line);
-      background: #fbfcfd;
-      padding: 14px;
-    }
-    .visual-title {
-      margin: 0 0 10px;
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 800;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-    }
-    .judgement-panel {
       border-left: 4px solid var(--accent);
-      background: #f8fbfc;
     }
-    .judgement-headline {
-      margin: 0 0 8px;
-      font-size: 18px;
-      font-weight: 800;
-      line-height: 1.25;
+    .findings {
+      padding-left: 20px;
     }
-    .judgement-body {
-      margin: 0;
-      color: #263647;
+    .section-body :first-child {
+      margin-top: 0;
     }
-    .component-footnote {
-      margin-top: 8px;
+    code {
+      background: #eef3f8;
+      padding: 2px 5px;
+      border-radius: 4px;
+    }
+    footer {
+      margin-top: 42px;
+      padding-top: 18px;
+      border-top: 1px solid var(--line);
       color: var(--muted);
-      font-size: 12px;
-    }
-    .signal-ladder {
-      display: grid;
-      gap: 10px;
-    }
-    .signal-row {
-      display: grid;
-      grid-template-columns: minmax(120px, 1fr) minmax(160px, 2fr);
-      gap: 12px;
-      align-items: center;
-    }
-    .signal-label {
-      font-weight: 800;
-      line-height: 1.25;
-    }
-    .signal-detail {
-      color: var(--muted);
-      font-size: 12px;
-    }
-    .signal-track {
-      height: 10px;
-      background: #e8edf3;
-      overflow: hidden;
-    }
-    .signal-fill {
-      height: 100%;
-      width: var(--bar-width, 0%);
-      background: var(--accent);
-    }
-    .timeline-component {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 10px;
-    }
-    .timeline-item {
-      border-left: 3px solid var(--accent-2);
-      padding-left: 10px;
-      min-height: 64px;
-    }
-    .timeline-label,
-    .tile-label,
-    .caveat-label {
-      color: var(--muted);
-      font-size: 11px;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-    .timeline-value,
-    .tile-value {
-      margin-top: 4px;
-      font-size: 18px;
-      font-weight: 800;
-      line-height: 1.2;
-    }
-    .timeline-detail,
-    .tile-note {
-      margin-top: 4px;
-      color: var(--muted);
-      font-size: 12px;
-    }
-    .tile-grid {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 10px;
-    }
-    .tile {
-      background: #f7f9fb;
-      border: 1px solid #e3e8ef;
-      padding: 12px;
-    }
-    .caveat-strip {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-    .caveat-chip {
-      border: 1px solid #d5dde7;
-      background: #f8fafc;
-      padding: 8px 10px;
-      max-width: 100%;
-    }
-    .caveat-value {
-      margin-top: 3px;
-      color: #263647;
       font-size: 13px;
-      font-weight: 700;
-    }
-    .audit-disclosure {
-      border-top: 1px solid var(--line);
-      padding-top: 20px;
-      margin-top: 26px;
-      break-inside: avoid;
-    }
-    .audit-disclosure summary {
-      cursor: pointer;
-      list-style: none;
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: 20px;
-    }
-    .audit-disclosure summary::-webkit-details-marker { display: none; }
-    .audit-disclosure summary::after {
-      content: "Open";
-      color: var(--accent);
-      font-size: 12px;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-    }
-    .audit-disclosure[open] summary::after { content: "Close"; }
-    .audit-content {
-      margin-top: 16px;
-      color: #243447;
-    }
-    .footer {
-      margin-top: 44px;
-      border-top: 1px solid var(--line);
-      padding-top: 14px;
-      color: var(--muted);
-      font-size: 12px;
-    }
-    @media print {
-      body { background: #fff; }
-      .page { padding: 28px; }
-      .toc ol { columns: 1; }
-      .section { break-inside: avoid; }
-    }
-    @media (max-width: 760px) {
-      .page { padding: 28px 20px 42px; }
-      h1 { font-size: 26px; }
-      .meta-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .metric-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .timeline-component,
-      .tile-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .figure-header { display: block; }
-      .figure-type { display: inline-block; margin-top: 4px; }
-      .echart-canvas { min-width: 560px; }
-      .signal-row { grid-template-columns: 1fr; }
-      .toc ol { columns: 1; }
-      .section-header { display: block; }
-      .section-type { display: inline-block; margin-top: 6px; }
-    }
-    @media (max-width: 520px) {
-      .meta-grid,
-      .metric-strip { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
-  {% set is_v3 = metadata.get('report_layout') == 'analytical_v3' %}
-  {% set is_zh = metadata.get('language') == 'zh' %}
-  {% macro render_visual_components(section) %}
-    {% set components = section.get('visual_components') or [] %}
-    {% if components %}
-      <div class="visual-stack">
-        {% for component in components %}
-          {% set kind = component.get('type') %}
-          {% if kind == 'judgement_panel' %}
-            <aside class="visual-component judgement-panel">
-              <p class="visual-title">{{ component.get('title', '') }}</p>
-              <p class="judgement-headline">{{ component.get('headline', '') }}</p>
-              <p class="judgement-body">{{ component.get('body', '') }}</p>
-              {% if component.get('footnote') %}
-                <div class="component-footnote">{{ component.get('footnote') }}</div>
-              {% endif %}
-            </aside>
-          {% elif kind == 'signal_ladder' %}
-            <aside class="visual-component">
-              <p class="visual-title">{{ component.get('title', '') }}</p>
-              <div class="signal-ladder">
-                {% for item in component.get('items') or [] %}
-                  <div class="signal-row">
-                    <div>
-                      <div class="signal-label">{{ item.get('label', '') }}</div>
-                      <div class="signal-detail">{{ item.get('detail', '') }}</div>
-                    </div>
-                    <div>
-                      <div class="signal-track">
-                        <div class="signal-fill" style="--bar-width: {{ item.get('bar_pct', 0) }}%;"></div>
-                      </div>
-                      <div class="signal-detail">{{ item.get('value', '') }}</div>
-                    </div>
-                  </div>
-                {% endfor %}
-              </div>
-            </aside>
-          {% elif kind == 'timeline' %}
-            <aside class="visual-component">
-              <p class="visual-title">{{ component.get('title', '') }}</p>
-              <div class="timeline-component">
-                {% for item in component.get('items') or [] %}
-                  <div class="timeline-item">
-                    <div class="timeline-label">{{ item.get('label', '') }}</div>
-                    <div class="timeline-value">{{ item.get('value', '') }}</div>
-                    <div class="timeline-detail">{{ item.get('detail', '') }}</div>
-                  </div>
-                {% endfor %}
-              </div>
-            </aside>
-          {% elif kind == 'metric_tiles' %}
-            <aside class="visual-component">
-              <p class="visual-title">{{ component.get('title', '') }}</p>
-              <div class="tile-grid">
-                {% for item in component.get('items') or [] %}
-                  <div class="tile">
-                    <div class="tile-label">{{ item.get('label', '') }}</div>
-                    <div class="tile-value">{{ item.get('value', '') }}</div>
-                    {% if item.get('note') %}
-                      <div class="tile-note">{{ item.get('note') }}</div>
-                    {% endif %}
-                  </div>
-                {% endfor %}
-              </div>
-            </aside>
-          {% elif kind == 'caveat_strip' %}
-            <aside class="visual-component">
-              <p class="visual-title">{{ component.get('title', '') }}</p>
-              <div class="caveat-strip">
-                {% for item in component.get('items') or [] %}
-                  <div class="caveat-chip">
-                    <div class="caveat-label">{{ item.get('label', '') }}</div>
-                    <div class="caveat-value">{{ item.get('value', '') }}</div>
-                  </div>
-                {% endfor %}
-              </div>
-            </aside>
-          {% endif %}
-        {% endfor %}
-      </div>
-    {% endif %}
-  {% endmacro %}
-  {% macro render_figures(section, position) %}
-    {% set figures = section.get('figures') or [] %}
-    {% set ns = namespace(open=false) %}
-    {% for figure in figures %}
-      {% if (figure.get('position') or 'after_content') == position %}
-        {% if not ns.open %}
-          <div class="figure-stack">
-          {% set ns.open = true %}
-        {% endif %}
-        <figure class="report-figure" id="{{ figure.get('id', '') }}">
-          <header class="figure-header">
-            <div>
-              <p class="figure-kicker">Figure {{ figure.get('number', loop.index) }}</p>
-              <h3 class="figure-title">{{ figure.get('title', '') }}</h3>
-            </div>
-            <span class="figure-type">{{ (figure.get('figure_type') or 'figure') | replace('_', ' ') }}</span>
-          </header>
-          <div class="figure-body">
-            <div
-              class="echart-canvas"
-              data-report-figure-id="{{ figure.get('id', '') }}"
-              style="--figure-height: {{ figure.get('height', 420) }}px;"
-              role="img"
-              aria-label="{{ figure.get('title', '') }}"
-            ></div>
-          </div>
-          {% if figure.get('caption') %}
-            <figcaption class="figure-caption">{{ figure.get('caption') }}</figcaption>
-          {% endif %}
-          {% if figure.get('legend') %}
-            <ul class="figure-legend">
-              {% for item in figure.get('legend') %}
-                <li>{{ item }}</li>
-              {% endfor %}
-            </ul>
-          {% endif %}
-          {% if figure.get('evidence_refs') %}
-            <div class="figure-evidence">Evidence: {{ (figure.get('evidence_refs') or [])[:4] | join(', ') }}</div>
-          {% endif %}
-        </figure>
-      {% endif %}
-    {% endfor %}
-    {% if ns.open %}
-      </div>
-    {% endif %}
-  {% endmacro %}
-  <main class="page">
-    <header class="cover">
-      <p class="kicker">GlobalID Infectious Disease Surveillance</p>
-      <h1>{{ metadata.get('title', 'Disease Surveillance Report') }}</h1>
-      {% if metadata.get('summary') %}
-        <p class="summary">{{ metadata.get('summary') }}</p>
-      {% endif %}
-      <div class="meta-grid">
-        <div class="meta-item">
-          <div class="meta-label">Country</div>
-          <div class="meta-value">{{ metadata.get('country', 'Unknown') }}</div>
-        </div>
-        <div class="meta-item">
-          <div class="meta-label">Period</div>
-          <div class="meta-value">{{ metadata.get('period_start', '') }} to {{ metadata.get('period_end', '') }}</div>
-        </div>
-        <div class="meta-item">
-          <div class="meta-label">{{ 'Prepared' if is_v3 else 'Generated' }}</div>
-          <div class="meta-value">{{ metadata.get('generated_at', '') }}</div>
-        </div>
-        <div class="meta-item">
-          <div class="meta-label">{{ 'Quality Gate' if is_v3 else 'Layout' }}</div>
-          <div class="meta-value">{{ metadata.get('quality_score_label', 'N/A') if is_v3 else metadata.get('report_layout', 'structured') }}</div>
-        </div>
-      </div>
-    </header>
+  <main>
+    <p class="schema">第四版报告</p>
+    <h1>{{ document.title.zh }}</h1>
+    <p class="meta">
+      {{ metadata.period_start }} 至 {{ metadata.period_end }}
+      {% if document.metrics.reporting_cadence %} · 按来源周期更新{% endif %}
+    </p>
 
-    {% if is_v3 and metadata.get('presentation_cards') %}
-      <section class="metric-strip" aria-label="Report highlights">
-        {% for card in metadata.get('presentation_cards') %}
-          <div class="metric-card">
-            <span class="meta-label">{{ card.get('label', '') }}</span>
-            <div class="metric-value">{{ card.get('value', 'N/A') }}</div>
-            {% if card.get('note') %}
-              <div class="metric-note">{{ card.get('note') }}</div>
-            {% endif %}
-          </div>
+    <section class="summary">
+      {{ document.summary.zh | markdown }}
+    </section>
+
+    {% if document.key_findings.zh %}
+      <h2>关键发现</h2>
+      <ul class="findings">
+        {% for finding in document.key_findings.zh %}
+          <li>{{ finding }}</li>
         {% endfor %}
+      </ul>
+    {% endif %}
+
+    {% for section in document.sections %}
+      <section>
+        <h2>{{ section.order }}. {{ section.title.zh }}</h2>
+        <div class="section-body">
+          {{ section.body.zh | markdown }}
+        </div>
       </section>
-    {% endif %}
-
-    <nav class="toc">
-      <h2>Contents</h2>
-      <ol>
-        {% for section in sections %}
-          <li><a href="#section-{{ loop.index }}">{{ section.get('title', 'Section ' ~ loop.index) }}</a></li>
-        {% endfor %}
-      </ol>
-    </nav>
-
-    {% for section in sections %}
-      {% set section_kind = section.get('type') or section.get('section_type') or 'section' %}
-      {% set is_audit_section = is_v3 and section_kind in ['methodology', 'evidence_appendix'] %}
-      {% if is_audit_section %}
-        <details class="audit-disclosure" id="section-{{ loop.index }}">
-          <summary>
-            <span class="section-title">{{ section.get('title', 'Section ' ~ loop.index) }}</span>
-            <span class="section-type">{{ section.get('display_type') or section_kind }}</span>
-          </summary>
-          {{ render_visual_components(section) }}
-          {{ render_figures(section, 'before_content') }}
-          <div class="content audit-content">{{ section.get('content', '') | markdown | safe }}</div>
-          {{ render_figures(section, 'after_content') }}
-          {% if section.get('chart_html') %}
-            <div class="chart">{{ section.get('chart_html') | safe }}</div>
-          {% endif %}
-        </details>
-      {% else %}
-        <section class="section" id="section-{{ loop.index }}">
-          <div class="section-header">
-            <h2 class="section-title">{{ section.get('title', 'Section ' ~ loop.index) }}</h2>
-            <span class="section-type">{{ section.get('display_type') or section_kind }}</span>
-          </div>
-          {{ render_visual_components(section) }}
-          {{ render_figures(section, 'before_content') }}
-          <div class="content">{{ section.get('content', '') | markdown | safe }}</div>
-          {{ render_figures(section, 'after_content') }}
-          {% if section.get('chart_html') %}
-            <div class="chart">{{ section.get('chart_html') | safe }}</div>
-          {% endif %}
-        </section>
-      {% endif %}
     {% endfor %}
 
-    <footer class="footer">
-      Generated by GlobalID V2. Disease briefs are for surveillance and public information only.
+    <footer>
+      GlobalID 自动生成。数值结论来自已存储证据。
     </footer>
   </main>
-  {% if is_v3 and metadata.get('figures') %}
-    {% set figure_payload = {'figures': metadata.get('figures') or [], 'data': metadata.get('figure_data') or {}, 'language': metadata.get('language', 'en')} %}
-    {% if metadata.get('figure_payload_asset') %}
-      <script id="report-figures-json" type="application/json" data-src="{{ metadata.get('figure_payload_asset') }}"></script>
-      {% if metadata.get('figure_payload_js_asset') %}
-        <script src="{{ metadata.get('figure_payload_js_asset') }}"></script>
-      {% endif %}
-    {% else %}
-      <script id="report-figures-json" type="application/json">{{ figure_payload | tojson }}</script>
-    {% endif %}
-    <script src="assets/report_figures.js"></script>
-  {% endif %}
 </body>
 </html>

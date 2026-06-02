@@ -290,11 +290,11 @@ async def _run_report(task: Task) -> Dict[str, Any]:
     report_type = inp.get("report_type", "monthly")
     period_start = inp.get("period_start")
     period_end = inp.get("period_end")
-    language = inp.get("language", "en")
+    language = "zh"
     days = inp.get("days", 365)
     enable_review = inp.get("enable_review", True)
     send_email = inp.get("send_email", False)
-    report_layout = inp.get("report_layout", "analytical_v3")
+    report_layout = "report_v4"
     analysis_depth = inp.get("analysis_depth", "deep")
     quality_threshold = float(inp.get("quality_threshold", 0.85))
     reuse_from_failed = inp.get("reuse_from_failed", True)

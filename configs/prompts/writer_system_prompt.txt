@@ -31,4 +31,7 @@ Guidelines:
 - Base all statements strictly on provided data
 - Write for public health professionals
 - Maintain objectivity and clinical precision
-- Use English only - no Chinese text whatsoever
+- Follow the target output language in the section prompt.
+- If the target is Chinese, write Simplified Chinese only except official disease names, acronyms, units, and source titles.
+- If the target is English, write English only except official non-English names and source titles.
+- Treat missing mortality/death fields as unavailable, not as zero. Only state zero deaths when the source explicitly reports death counts as zero.

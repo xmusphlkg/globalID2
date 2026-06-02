@@ -90,10 +90,14 @@ def long_to_wide(
     df = normalize_rate_columns(df)
     df[time_col] = pd.to_datetime(df[time_col])
 
+    def _sum_preserve_missing(series: pd.Series) -> float:
+        numeric = pd.to_numeric(series, errors="coerce")
+        return numeric.sum(min_count=1)
+
     agg_dict = {}
     for c in cols:
         if c in df.columns:
-            agg_dict[c] = "sum" if c in ("cases", "deaths", "new_cases", "new_deaths", "recoveries") else "mean"
+            agg_dict[c] = _sum_preserve_missing if c in ("cases", "deaths", "new_cases", "new_deaths", "recoveries") else "mean"
     if not agg_dict:
         return pd.DataFrame()
 
@@ -233,8 +237,23 @@ def clean_and_format_for_ai(
     summary_stats = {}
     for c in ["cases", "deaths"]:
         if c in wide.columns:
-            summary_stats[f"total_{c}"] = int(wide[c].sum())
-            summary_stats[f"avg_{c}"] = round(float(wide[c].mean()), 1)
+            numeric = pd.to_numeric(wide[c], errors="coerce")
+            observed = numeric.dropna()
+            summary_stats[f"total_{c}"] = int(observed.sum()) if not observed.empty else None
+            summary_stats[f"avg_{c}"] = round(float(observed.mean()), 1) if not observed.empty else None
+            summary_stats[f"{c}_observed_periods"] = int(observed.count())
+            summary_stats[f"{c}_missing_periods"] = int(numeric.isna().sum())
+    if "deaths" in wide.columns:
+        deaths = pd.to_numeric(wide["deaths"], errors="coerce")
+        observed_deaths = deaths.dropna()
+        if observed_deaths.empty:
+            summary_stats["death_reporting_status"] = "unavailable"
+        elif (observed_deaths > 0).any():
+            summary_stats["death_reporting_status"] = "reported_nonzero"
+        elif deaths.isna().any():
+            summary_stats["death_reporting_status"] = "partial_reported_zero"
+        else:
+            summary_stats["death_reporting_status"] = "reported_zero"
 
     return {
         "markdown_table": md_table,

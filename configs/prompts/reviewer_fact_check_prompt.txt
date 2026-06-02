@@ -1,6 +1,8 @@
 Please fact-check if the following content is consistent with the original data.
 
 Target language for any output explanations: {language}
+Do not mix English and Chinese prose except official disease names, acronyms, units, and source titles.
+Flag any statement that treats missing/unavailable death fields as zero deaths.
 
 Content:
 {content}

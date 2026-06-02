@@ -1,6 +1,7 @@
 import hashlib
 import json
 import sys
+from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -11,7 +12,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from src.core.config import AISettings
-from src.generation.generator import ReportGenerator
+from src.generation.report_v4.composer import compose_report_document
 from src.knowledge.brief_generator import DISCLAIMER_EN, SourceGroundedBriefGenerator
 from src.knowledge.catalogue import (
     CATALOGUE_FALLBACK_BRIEF_TIER,
@@ -585,31 +586,54 @@ def test_ai_brief_preferred_models_follow_shard_rotation(monkeypatch) -> None:
     assert preferred_models == expected_models
 
 
-def test_structured_report_disease_card_markdown_contains_official_brief_and_sources() -> None:
-    markdown = ReportGenerator._render_disease_card(
-        {
-            "name_en": "Influenza",
-            "official_brief": "Source-grounded official brief.",
-            "transmission": "Transmission context.",
-            "prevention": "Prevention context.",
-            "risk_groups": "Risk group context.",
-            "current_interpretation": "Current surveillance interpretation.",
-            "trend_assessment": "Increasing",
-            "risk_note": "Monitor recent increases.",
-            "data_limitations": "Reported surveillance records only.",
-            "disclaimer": "This brief is for surveillance and public information only. It is not medical advice.",
-            "source_attribution": [{"title": "WHO Influenza", "url": "https://www.who.int"}],
-            "metrics": {
+def test_report_v4_disease_context_is_locale_first_and_evidence_bound() -> None:
+    document = compose_report_document(
+        evidence_packet={
+            "summary_metrics": {
+                "disease_count": 1,
                 "total_cases": 100,
-                "total_deaths": 1,
                 "latest_cases": 10,
-                "latest_deaths": 0,
+                "high_risk_diseases": 1,
             },
+            "death_reporting": {
+                "status": "reported_positive",
+                "total_deaths": 1,
+                "observed_periods": 2,
+                "missing_periods": 0,
+                "reported_zero_periods": 1,
+                "display_note": {
+                    "zh": "当前来源报告了死亡数，报告中的死亡指标均来自已存储证据。",
+                    "en": "The current source reports death counts; mortality metrics in this report are evidence-bound.",
+                },
+            },
+            "risk_ranking": [
+                {
+                    "disease_id": "D001",
+                    "name_en": "Influenza",
+                    "name_zh": "流感",
+                    "latest_cases": 10,
+                    "risk_level": "high",
+                }
+            ],
+            "diseases": [
+                {
+                    "disease_id": "D001",
+                    "name_en": "Influenza",
+                    "name_zh": "流感",
+                    "metrics": {"total_cases": 100},
+                }
+            ],
+            "data_quality": {"score": 0.95, "confidence": "high"},
+            "evidence_index": {"disease:D001.total_cases": 100},
         },
-        "en",
-    )
+        country={"name_zh": "测试地区", "name_en": "Testland"},
+        period_start=datetime(2026, 1, 1),
+        period_end=datetime(2026, 1, 31),
+    ).to_dict()
 
-    assert "### Official Brief" in markdown
-    assert "Source-grounded official brief." in markdown
-    assert "- Total cases: 100" in markdown
-    assert "[WHO Influenza](https://www.who.int)" in markdown
+    disease_context = next(section for section in document["sections"] if section["type"] == "disease_context")
+    assert disease_context["title"]["zh"] == "疾病背景"
+    assert disease_context["title"]["en"] == "Disease Context"
+    assert "流感" in disease_context["body"]["zh"]
+    assert "Influenza" in disease_context["body"]["en"]
+    assert "disease:D001.total_cases" in disease_context["evidence_refs"]

@@ -1,0 +1,50 @@
+AU:
+  default:
+    death_counts: not_reported
+    case_scope: national
+    rate_basis: unavailable
+BR:
+  default:
+    death_counts: not_reported
+    case_scope: national
+    rate_basis: unavailable
+CH:
+  default:
+    death_counts: not_reported
+    case_scope: national
+    rate_basis: unavailable
+CN:
+  default:
+    death_counts: reported
+    case_scope: national
+    rate_basis: source_rate
+HK:
+  default:
+    death_counts: not_reported
+    case_scope: national
+    rate_basis: unavailable
+JP:
+  default:
+    death_counts: not_reported
+    case_scope: sentinel
+    rate_basis: unavailable
+KR:
+  default:
+    death_counts: not_reported
+    case_scope: national
+    rate_basis: unavailable
+NZ:
+  default:
+    death_counts: not_reported
+    case_scope: national
+    rate_basis: unavailable
+TW:
+  default:
+    death_counts: not_reported
+    case_scope: national
+    rate_basis: unavailable
+US:
+  default:
+    death_counts: not_reported
+    case_scope: national
+    rate_basis: unavailable
