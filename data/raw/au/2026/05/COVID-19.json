@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-06-01T22:45:38.690333+00:00",
+  "fetched_at": "2026-06-29T22:45:34.326184+00:00",
   "disease": "COVID-19",
   "year": 2026,
   "month": 5,
@@ -7,8 +7,8 @@
   "api_url": "https://86715f84e812421e972f2211acc9903a.pbidedicated.windows.net/webapi/capacities/86715F84-E812-421E-972F-2211ACC9903A/workloads/QES/QueryExecutionService/automatic/public/query",
   "runtime_hints": {
     "location": {
-      "fact_alias": "d1",
-      "location_alias": "d",
+      "fact_alias": "d",
+      "location_alias": "d1",
       "disease_alias": "d2",
       "case_alias": "d3",
       "state_property": "STATE",
@@ -28,12 +28,12 @@
                   "Version": 2,
                   "From": [
                     {
-                      "Name": "d1",
+                      "Name": "d",
                       "Entity": "DELTALOAD_DATAMART NOTIFIABLE_EVENT_FACT",
                       "Type": 0
                     },
                     {
-                      "Name": "d",
+                      "Name": "d1",
                       "Entity": "DELTALOAD_DATAMART LOCATION_DIM",
                       "Type": 0
                     },
@@ -53,7 +53,7 @@
                       "Column": {
                         "Expression": {
                           "SourceRef": {
-                            "Source": "d"
+                            "Source": "d1"
                           }
                         },
                         "Property": "STATE"
@@ -64,7 +64,7 @@
                       "Measure": {
                         "Expression": {
                           "SourceRef": {
-                            "Source": "d1"
+                            "Source": "d"
                           }
                         },
                         "Property": "Count_Notification"
@@ -83,7 +83,7 @@
                                   "Column": {
                                     "Expression": {
                                       "SourceRef": {
-                                        "Source": "d"
+                                        "Source": "d1"
                                       }
                                     },
                                     "Property": "STATE"
@@ -146,7 +146,7 @@
                               "Column": {
                                 "Expression": {
                                   "SourceRef": {
-                                    "Source": "d1"
+                                    "Source": "d"
                                   }
                                 },
                                 "Property": "DIAGNOSIS_YEAR_HIERARCHY"
@@ -156,7 +156,7 @@
                               "Column": {
                                 "Expression": {
                                   "SourceRef": {
-                                    "Source": "d1"
+                                    "Source": "d"
                                   }
                                 },
                                 "Property": "DIAGNOSIS_QUARTER"
@@ -166,7 +166,7 @@
                               "Column": {
                                 "Expression": {
                                   "SourceRef": {
-                                    "Source": "d1"
+                                    "Source": "d"
                                   }
                                 },
                                 "Property": "DIAGNOSIS_MONTHNAME"
@@ -203,7 +203,7 @@
                             "Column": {
                               "Expression": {
                                 "SourceRef": {
-                                  "Source": "d1"
+                                  "Source": "d"
                                 }
                               },
                               "Property": "DAX_Year"
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1780353938324)/",
-            "rootActivityId": "9a920e22-45db-43de-b7c5-8fe509bd0a17",
+            "timestamp": "/Date(1782773133935)/",
+            "rootActivityId": "e18e48e7-90f0-476b-ac7f-9bec6c88d82c",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'8,272'"
+                          "A0": "'8,445'"
                         }
                       ]
                     },
@@ -382,49 +382,49 @@
                           ],
                           "C": [
                             "ACT",
-                            "'133'"
+                            "'136'"
                           ]
                         },
                         {
                           "C": [
                             "NSW",
-                            "'4,491'"
+                            "'4,508'"
                           ]
                         },
                         {
                           "C": [
                             "NT",
-                            "'50'"
+                            "'53'"
                           ]
                         },
                         {
                           "C": [
                             "QLD",
-                            "'1,134'"
+                            "'1,140'"
                           ]
                         },
                         {
                           "C": [
                             "SA",
-                            "'535'"
+                            "'533'"
                           ]
                         },
                         {
                           "C": [
                             "TAS",
-                            "'93'"
+                            "'114'"
                           ]
                         },
                         {
                           "C": [
                             "VIC",
-                            "'1,463'"
+                            "'1,461'"
                           ]
                         },
                         {
                           "C": [
                             "WA",
-                            "'373'"
+                            "'500'"
                           ]
                         }
                       ]
@@ -444,13 +444,13 @@
     ]
   },
   "parsed_counts": {
-    "ACT": 133,
-    "NSW": 4491,
-    "NT": 50,
-    "QLD": 1134,
-    "SA": 535,
-    "TAS": 93,
-    "VIC": 1463,
-    "WA": 373
+    "ACT": 136,
+    "NSW": 4508,
+    "NT": 53,
+    "QLD": 1140,
+    "SA": 533,
+    "TAS": 114,
+    "VIC": 1461,
+    "WA": 500
   }
 }

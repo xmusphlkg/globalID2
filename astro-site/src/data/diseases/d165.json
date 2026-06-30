@@ -361,7 +361,8 @@
         "2026-01-01",
         "2026-02-01",
         "2026-03-01",
-        "2026-04-01"
+        "2026-04-01",
+        "2026-05-01"
       ],
       "cases": [
         2,
@@ -715,7 +716,8 @@
         1,
         0,
         1,
-        2
+        2,
+        3
       ],
       "weekly_equiv_cases": [
         0.45161290322580644,
@@ -1069,9 +1071,11 @@
         0.22580645161290322,
         0.0,
         0.25,
-        0.45161290322580644
+        0.45161290322580644,
+        0.7000000000000001
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -1777,6 +1781,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -2131,9 +2136,10 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
-      "total_cases": 232,
+      "total_cases": 235,
       "total_deaths": 0
     },
     "TW": {
@@ -2418,7 +2424,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         32,
@@ -2701,7 +2708,8 @@
         18,
         41,
         28,
-        20
+        22,
+        3
       ],
       "weekly_equiv_cases": [
         7.225806451612903,
@@ -2984,9 +2992,11 @@
         4.064516129032258,
         10.25,
         6.32258064516129,
-        4.666666666666666
+        5.133333333333333,
+        0.6774193548387096
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -3550,6 +3560,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -3833,9 +3844,10 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
-      "total_cases": 6264,
+      "total_cases": 6269,
       "total_deaths": 0
     }
   },
@@ -4193,7 +4205,8 @@
       "2026-02",
       "2026-03",
       "2026-04",
-      "2026-05"
+      "2026-05",
+      "2026-06"
     ],
     "cases": [
       2,
@@ -4548,9 +4561,11 @@
       18,
       42,
       30,
-      20
+      25,
+      3
     ],
     "deaths": [
+      0,
       0,
       0,
       0,
@@ -4906,9 +4921,9 @@
       0
     ]
   },
-  "total_cases": 6496,
+  "total_cases": 6504,
   "total_deaths": 0,
-  "generated_at": "2026-06-01T00:00:00+00:00",
+  "generated_at": "2026-06-20T00:00:00+00:00",
   "source_info": [
     {
       "country_code": "HK",

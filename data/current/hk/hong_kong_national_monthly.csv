@@ -1,253 +1,316 @@
 ,Disease,DiseaseCode,Year,Month,Date,Cases,AnnualTotal,RecordType,Source,SourceURL
 1,Acute poliomyelitis,,2026,1,2026-01-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-2,Amoebic dysentery,,2026,1,2026-01-01,1,4,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+2,Amoebic dysentery,,2026,1,2026-01-01,1,7,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 3,Anthrax,,2026,1,2026-01-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-4,Bacillary dysentery,,2026,1,2026-01-01,2,5,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-5,Botulism,,2026,1,2026-01-01,0,1,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-6,Chickenpox,,2026,1,2026-01-01,166,578,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+4,Bacillary dysentery,,2026,1,2026-01-01,2,6,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+5,Botulism,,2026,1,2026-01-01,0,2,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+6,Chickenpox,,2026,1,2026-01-01,166,715,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 7,Chikungunya fever,,2026,1,2026-01-01,2,2,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 8,Cholera,,2026,1,2026-01-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-9,Community-associated methicillin-resistant Staphylococcus aureus infection,,2026,1,2026-01-01,40,117,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-10,Coronavirus disease 2019 (COVID-19),,2026,1,2026-01-01,5,14,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-11,Creutzfeldt-Jakob disease,,2026,1,2026-01-01,1,7,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-12,Dengue fever,,2026,1,2026-01-01,5,17,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+9,Community-associated methicillin-resistant Staphylococcus aureus infection,,2026,1,2026-01-01,40,149,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+10,Coronavirus disease 2019 (COVID-19),,2026,1,2026-01-01,5,21,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+11,Creutzfeldt-Jakob disease,,2026,1,2026-01-01,1,8,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+12,Dengue fever,,2026,1,2026-01-01,5,21,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 13,Diphtheria,,2026,1,2026-01-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 14,Enterovirus 71 infection,,2026,1,2026-01-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-15,Food poisoning - Outbreaks,,2026,1,2026-01-01,19,75,outbreaks,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+15,Food poisoning - Outbreaks,,2026,1,2026-01-01,19,85,outbreaks,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 16,Haemophilus influenzae type b infection (invasive),,2026,1,2026-01-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 17,Hantavirus infection,,2026,1,2026-01-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-18,Invasive pneumococcal disease,,2026,1,2026-01-01,16,51,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+18,Invasive pneumococcal disease,,2026,1,2026-01-01,16,57,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 19,Japanese encephalitis,,2026,1,2026-01-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-20,Legionnaires' disease,,2026,1,2026-01-01,7,40,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+20,Legionnaires' disease,,2026,1,2026-01-01,7,68,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 21,Leprosy,,2026,1,2026-01-01,0,1,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 22,Leptospirosis,,2026,1,2026-01-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 23,Listeriosis,,2026,1,2026-01-01,0,4,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-24,Malaria,,2026,1,2026-01-01,0,1,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+24,Malaria,,2026,1,2026-01-01,0,2,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 25,Measles,,2026,1,2026-01-01,0,7,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 26,Melioidosis,,2026,1,2026-01-01,2,6,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 27,Meningococcal infection (invasive),,2026,1,2026-01-01,0,5,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 28,Middle East Respiratory Syndrome,,2026,1,2026-01-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-29,Mpox (Monkeypox),,2026,1,2026-01-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-30,Mumps,,2026,1,2026-01-01,2,12,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+29,Mpox (Monkeypox),,2026,1,2026-01-01,0,3,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+30,Mumps,,2026,1,2026-01-01,2,15,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 31,Novel influenza A infection - Influenza A (H5),,2026,1,2026-01-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 32,Novel influenza A infection - Influenza A (H7),,2026,1,2026-01-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 33,Novel influenza A infection - Others,,2026,1,2026-01-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-34,Paratyphoid fever,,2026,1,2026-01-01,0,2,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+34,Paratyphoid fever,,2026,1,2026-01-01,0,4,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 35,Plague,,2026,1,2026-01-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-36,Psittacosis,,2026,1,2026-01-01,2,5,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+36,Psittacosis,,2026,1,2026-01-01,2,6,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 37,Q fever,,2026,1,2026-01-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 38,Rabies,,2026,1,2026-01-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 39,Relapsing fever,,2026,1,2026-01-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 40,Rubella and congenital rubella syndrome - Congenital rubella syndrome,,2026,1,2026-01-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 41,Rubella and congenital rubella syndrome - Rubella,,2026,1,2026-01-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-42,Scarlet fever,,2026,1,2026-01-01,83,282,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+42,Scarlet fever,,2026,1,2026-01-01,83,358,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 43,Severe Acute Respiratory Syndrome,,2026,1,2026-01-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 44,Shiga toxin-producing Escherichia coli infection,,2026,1,2026-01-01,0,1,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 45,Smallpox,,2026,1,2026-01-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 46,Streptococcus suis infection,,2026,1,2026-01-01,0,1,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 47,Tetanus,,2026,1,2026-01-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-48,Tuberculosis,,2026,1,2026-01-01,271,952,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-49,Typhoid fever,,2026,1,2026-01-01,1,5,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-50,Typhus and other rickettsial diseases - Scrub typhus,,2026,1,2026-01-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-51,Typhus and other rickettsial diseases - Spotted fever,,2026,1,2026-01-01,1,3,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+48,Tuberculosis,,2026,1,2026-01-01,271,1211,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+49,Typhoid fever,,2026,1,2026-01-01,1,6,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+50,Typhus and other rickettsial diseases - Scrub typhus,,2026,1,2026-01-01,0,2,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+51,Typhus and other rickettsial diseases - Spotted fever,,2026,1,2026-01-01,1,4,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 52,Typhus and other rickettsial diseases - Unclassified,,2026,1,2026-01-01,1,1,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 53,Typhus and other rickettsial diseases - Urban typhus,,2026,1,2026-01-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 54,Viral haemorrhagic fever,,2026,1,2026-01-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-55,Viral hepatitis - A,,2026,1,2026-01-01,15,35,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-56,Viral hepatitis - B,,2026,1,2026-01-01,3,3,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-57,Viral hepatitis - C,,2026,1,2026-01-01,6,13,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+55,Viral hepatitis - A,,2026,1,2026-01-01,15,39,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+56,Viral hepatitis - B,,2026,1,2026-01-01,3,4,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+57,Viral hepatitis - C,,2026,1,2026-01-01,6,21,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 58,Viral hepatitis - D,,2026,1,2026-01-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-59,Viral hepatitis - E,,2026,1,2026-01-01,13,49,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+59,Viral hepatitis - E,,2026,1,2026-01-01,13,67,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 60,West Nile Virus Infection,,2026,1,2026-01-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-61,Whooping cough,,2026,1,2026-01-01,1,2,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+61,Whooping cough,,2026,1,2026-01-01,1,3,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 62,Yellow fever,,2026,1,2026-01-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 63,Zika Virus Infection,,2026,1,2026-01-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 64,Acute poliomyelitis,,2026,2,2026-02-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-65,Amoebic dysentery,,2026,2,2026-02-01,0,4,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+65,Amoebic dysentery,,2026,2,2026-02-01,0,7,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 66,Anthrax,,2026,2,2026-02-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-67,Bacillary dysentery,,2026,2,2026-02-01,1,5,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-68,Botulism,,2026,2,2026-02-01,0,1,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-69,Chickenpox,,2026,2,2026-02-01,148,578,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+67,Bacillary dysentery,,2026,2,2026-02-01,1,6,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+68,Botulism,,2026,2,2026-02-01,0,2,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+69,Chickenpox,,2026,2,2026-02-01,148,715,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 70,Chikungunya fever,,2026,2,2026-02-01,0,2,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 71,Cholera,,2026,2,2026-02-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-72,Community-associated methicillin-resistant Staphylococcus aureus infection,,2026,2,2026-02-01,19,117,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-73,Coronavirus disease 2019 (COVID-19),,2026,2,2026-02-01,4,14,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-74,Creutzfeldt-Jakob disease,,2026,2,2026-02-01,1,7,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-75,Dengue fever,,2026,2,2026-02-01,4,17,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+72,Community-associated methicillin-resistant Staphylococcus aureus infection,,2026,2,2026-02-01,20,149,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+73,Coronavirus disease 2019 (COVID-19),,2026,2,2026-02-01,4,21,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+74,Creutzfeldt-Jakob disease,,2026,2,2026-02-01,1,8,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+75,Dengue fever,,2026,2,2026-02-01,4,21,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 76,Diphtheria,,2026,2,2026-02-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 77,Enterovirus 71 infection,,2026,2,2026-02-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-78,Food poisoning - Outbreaks,,2026,2,2026-02-01,40,75,outbreaks,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+78,Food poisoning - Outbreaks,,2026,2,2026-02-01,40,85,outbreaks,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 79,Haemophilus influenzae type b infection (invasive),,2026,2,2026-02-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 80,Hantavirus infection,,2026,2,2026-02-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-81,Invasive pneumococcal disease,,2026,2,2026-02-01,13,51,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+81,Invasive pneumococcal disease,,2026,2,2026-02-01,13,57,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 82,Japanese encephalitis,,2026,2,2026-02-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-83,Legionnaires' disease,,2026,2,2026-02-01,4,40,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+83,Legionnaires' disease,,2026,2,2026-02-01,4,68,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 84,Leprosy,,2026,2,2026-02-01,0,1,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 85,Leptospirosis,,2026,2,2026-02-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 86,Listeriosis,,2026,2,2026-02-01,1,4,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-87,Malaria,,2026,2,2026-02-01,0,1,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+87,Malaria,,2026,2,2026-02-01,0,2,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 88,Measles,,2026,2,2026-02-01,0,7,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 89,Melioidosis,,2026,2,2026-02-01,0,6,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 90,Meningococcal infection (invasive),,2026,2,2026-02-01,2,5,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 91,Middle East Respiratory Syndrome,,2026,2,2026-02-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-92,Mpox (Monkeypox),,2026,2,2026-02-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-93,Mumps,,2026,2,2026-02-01,3,12,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+92,Mpox (Monkeypox),,2026,2,2026-02-01,0,3,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+93,Mumps,,2026,2,2026-02-01,3,15,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 94,Novel influenza A infection - Influenza A (H5),,2026,2,2026-02-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 95,Novel influenza A infection - Influenza A (H7),,2026,2,2026-02-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 96,Novel influenza A infection - Others,,2026,2,2026-02-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-97,Paratyphoid fever,,2026,2,2026-02-01,0,2,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+97,Paratyphoid fever,,2026,2,2026-02-01,0,4,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 98,Plague,,2026,2,2026-02-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-99,Psittacosis,,2026,2,2026-02-01,2,5,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+99,Psittacosis,,2026,2,2026-02-01,2,6,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 100,Q fever,,2026,2,2026-02-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 101,Rabies,,2026,2,2026-02-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 102,Relapsing fever,,2026,2,2026-02-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 103,Rubella and congenital rubella syndrome - Congenital rubella syndrome,,2026,2,2026-02-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 104,Rubella and congenital rubella syndrome - Rubella,,2026,2,2026-02-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-105,Scarlet fever,,2026,2,2026-02-01,55,282,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+105,Scarlet fever,,2026,2,2026-02-01,55,358,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 106,Severe Acute Respiratory Syndrome,,2026,2,2026-02-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 107,Shiga toxin-producing Escherichia coli infection,,2026,2,2026-02-01,1,1,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 108,Smallpox,,2026,2,2026-02-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 109,Streptococcus suis infection,,2026,2,2026-02-01,1,1,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 110,Tetanus,,2026,2,2026-02-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-111,Tuberculosis,,2026,2,2026-02-01,194,952,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-112,Typhoid fever,,2026,2,2026-02-01,1,5,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-113,Typhus and other rickettsial diseases - Scrub typhus,,2026,2,2026-02-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-114,Typhus and other rickettsial diseases - Spotted fever,,2026,2,2026-02-01,0,3,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+111,Tuberculosis,,2026,2,2026-02-01,194,1211,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+112,Typhoid fever,,2026,2,2026-02-01,1,6,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+113,Typhus and other rickettsial diseases - Scrub typhus,,2026,2,2026-02-01,0,2,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+114,Typhus and other rickettsial diseases - Spotted fever,,2026,2,2026-02-01,0,4,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 115,Typhus and other rickettsial diseases - Unclassified,,2026,2,2026-02-01,0,1,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 116,Typhus and other rickettsial diseases - Urban typhus,,2026,2,2026-02-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 117,Viral haemorrhagic fever,,2026,2,2026-02-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-118,Viral hepatitis - A,,2026,2,2026-02-01,7,35,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-119,Viral hepatitis - B,,2026,2,2026-02-01,0,3,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-120,Viral hepatitis - C,,2026,2,2026-02-01,3,13,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+118,Viral hepatitis - A,,2026,2,2026-02-01,7,39,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+119,Viral hepatitis - B,,2026,2,2026-02-01,0,4,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+120,Viral hepatitis - C,,2026,2,2026-02-01,3,21,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 121,Viral hepatitis - D,,2026,2,2026-02-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-122,Viral hepatitis - E,,2026,2,2026-02-01,12,49,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+122,Viral hepatitis - E,,2026,2,2026-02-01,13,67,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 123,West Nile Virus Infection,,2026,2,2026-02-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-124,Whooping cough,,2026,2,2026-02-01,0,2,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+124,Whooping cough,,2026,2,2026-02-01,0,3,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 125,Yellow fever,,2026,2,2026-02-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 126,Zika Virus Infection,,2026,2,2026-02-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 127,Acute poliomyelitis,,2026,3,2026-03-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-128,Amoebic dysentery,,2026,3,2026-03-01,1,4,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+128,Amoebic dysentery,,2026,3,2026-03-01,1,7,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 129,Anthrax,,2026,3,2026-03-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-130,Bacillary dysentery,,2026,3,2026-03-01,0,5,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-131,Botulism,,2026,3,2026-03-01,1,1,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-132,Chickenpox,,2026,3,2026-03-01,156,578,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+130,Bacillary dysentery,,2026,3,2026-03-01,0,6,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+131,Botulism,,2026,3,2026-03-01,1,2,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+132,Chickenpox,,2026,3,2026-03-01,156,715,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 133,Chikungunya fever,,2026,3,2026-03-01,0,2,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 134,Cholera,,2026,3,2026-03-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-135,Community-associated methicillin-resistant Staphylococcus aureus infection,,2026,3,2026-03-01,32,117,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-136,Coronavirus disease 2019 (COVID-19),,2026,3,2026-03-01,1,14,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-137,Creutzfeldt-Jakob disease,,2026,3,2026-03-01,3,7,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-138,Dengue fever,,2026,3,2026-03-01,1,17,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+135,Community-associated methicillin-resistant Staphylococcus aureus infection,,2026,3,2026-03-01,32,149,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+136,Coronavirus disease 2019 (COVID-19),,2026,3,2026-03-01,1,21,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+137,Creutzfeldt-Jakob disease,,2026,3,2026-03-01,3,8,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+138,Dengue fever,,2026,3,2026-03-01,1,21,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 139,Diphtheria,,2026,3,2026-03-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 140,Enterovirus 71 infection,,2026,3,2026-03-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-141,Food poisoning - Outbreaks,,2026,3,2026-03-01,7,75,outbreaks,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+141,Food poisoning - Outbreaks,,2026,3,2026-03-01,7,85,outbreaks,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 142,Haemophilus influenzae type b infection (invasive),,2026,3,2026-03-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 143,Hantavirus infection,,2026,3,2026-03-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-144,Invasive pneumococcal disease,,2026,3,2026-03-01,10,51,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+144,Invasive pneumococcal disease,,2026,3,2026-03-01,10,57,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 145,Japanese encephalitis,,2026,3,2026-03-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-146,Legionnaires' disease,,2026,3,2026-03-01,10,40,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+146,Legionnaires' disease,,2026,3,2026-03-01,10,68,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 147,Leprosy,,2026,3,2026-03-01,1,1,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 148,Leptospirosis,,2026,3,2026-03-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 149,Listeriosis,,2026,3,2026-03-01,2,4,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-150,Malaria,,2026,3,2026-03-01,1,1,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+150,Malaria,,2026,3,2026-03-01,1,2,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 151,Measles,,2026,3,2026-03-01,1,7,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 152,Melioidosis,,2026,3,2026-03-01,3,6,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 153,Meningococcal infection (invasive),,2026,3,2026-03-01,2,5,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 154,Middle East Respiratory Syndrome,,2026,3,2026-03-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-155,Mpox (Monkeypox),,2026,3,2026-03-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-156,Mumps,,2026,3,2026-03-01,5,12,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+155,Mpox (Monkeypox),,2026,3,2026-03-01,0,3,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+156,Mumps,,2026,3,2026-03-01,5,15,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 157,Novel influenza A infection - Influenza A (H5),,2026,3,2026-03-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 158,Novel influenza A infection - Influenza A (H7),,2026,3,2026-03-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 159,Novel influenza A infection - Others,,2026,3,2026-03-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-160,Paratyphoid fever,,2026,3,2026-03-01,1,2,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+160,Paratyphoid fever,,2026,3,2026-03-01,1,4,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 161,Plague,,2026,3,2026-03-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-162,Psittacosis,,2026,3,2026-03-01,1,5,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+162,Psittacosis,,2026,3,2026-03-01,1,6,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 163,Q fever,,2026,3,2026-03-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 164,Rabies,,2026,3,2026-03-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 165,Relapsing fever,,2026,3,2026-03-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 166,Rubella and congenital rubella syndrome - Congenital rubella syndrome,,2026,3,2026-03-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 167,Rubella and congenital rubella syndrome - Rubella,,2026,3,2026-03-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-168,Scarlet fever,,2026,3,2026-03-01,80,282,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+168,Scarlet fever,,2026,3,2026-03-01,80,358,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 169,Severe Acute Respiratory Syndrome,,2026,3,2026-03-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 170,Shiga toxin-producing Escherichia coli infection,,2026,3,2026-03-01,0,1,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 171,Smallpox,,2026,3,2026-03-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 172,Streptococcus suis infection,,2026,3,2026-03-01,0,1,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 173,Tetanus,,2026,3,2026-03-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-174,Tuberculosis,,2026,3,2026-03-01,246,952,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-175,Typhoid fever,,2026,3,2026-03-01,3,5,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-176,Typhus and other rickettsial diseases - Scrub typhus,,2026,3,2026-03-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-177,Typhus and other rickettsial diseases - Spotted fever,,2026,3,2026-03-01,1,3,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+174,Tuberculosis,,2026,3,2026-03-01,246,1211,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+175,Typhoid fever,,2026,3,2026-03-01,3,6,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+176,Typhus and other rickettsial diseases - Scrub typhus,,2026,3,2026-03-01,0,2,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+177,Typhus and other rickettsial diseases - Spotted fever,,2026,3,2026-03-01,1,4,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 178,Typhus and other rickettsial diseases - Unclassified,,2026,3,2026-03-01,0,1,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 179,Typhus and other rickettsial diseases - Urban typhus,,2026,3,2026-03-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 180,Viral haemorrhagic fever,,2026,3,2026-03-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-181,Viral hepatitis - A,,2026,3,2026-03-01,8,35,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-182,Viral hepatitis - B,,2026,3,2026-03-01,0,3,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-183,Viral hepatitis - C,,2026,3,2026-03-01,3,13,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+181,Viral hepatitis - A,,2026,3,2026-03-01,8,39,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+182,Viral hepatitis - B,,2026,3,2026-03-01,0,4,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+183,Viral hepatitis - C,,2026,3,2026-03-01,3,21,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 184,Viral hepatitis - D,,2026,3,2026-03-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-185,Viral hepatitis - E,,2026,3,2026-03-01,14,49,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+185,Viral hepatitis - E,,2026,3,2026-03-01,14,67,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 186,West Nile Virus Infection,,2026,3,2026-03-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-187,Whooping cough,,2026,3,2026-03-01,1,2,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+187,Whooping cough,,2026,3,2026-03-01,1,3,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 188,Yellow fever,,2026,3,2026-03-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 189,Zika Virus Infection,,2026,3,2026-03-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 190,Acute poliomyelitis,,2026,4,2026-04-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-191,Amoebic dysentery,,2026,4,2026-04-01,2,4,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+191,Amoebic dysentery,,2026,4,2026-04-01,2,7,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 192,Anthrax,,2026,4,2026-04-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-193,Bacillary dysentery,,2026,4,2026-04-01,2,5,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-194,Botulism,,2026,4,2026-04-01,0,1,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-195,Chickenpox,,2026,4,2026-04-01,108,578,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+193,Bacillary dysentery,,2026,4,2026-04-01,2,6,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+194,Botulism,,2026,4,2026-04-01,0,2,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+195,Chickenpox,,2026,4,2026-04-01,108,715,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 196,Chikungunya fever,,2026,4,2026-04-01,0,2,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 197,Cholera,,2026,4,2026-04-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-198,Community-associated methicillin-resistant Staphylococcus aureus infection,,2026,4,2026-04-01,26,117,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-199,Coronavirus disease 2019 (COVID-19),,2026,4,2026-04-01,4,14,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-200,Creutzfeldt-Jakob disease,,2026,4,2026-04-01,2,7,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-201,Dengue fever,,2026,4,2026-04-01,7,17,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+198,Community-associated methicillin-resistant Staphylococcus aureus infection,,2026,4,2026-04-01,29,149,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+199,Coronavirus disease 2019 (COVID-19),,2026,4,2026-04-01,4,21,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+200,Creutzfeldt-Jakob disease,,2026,4,2026-04-01,2,8,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+201,Dengue fever,,2026,4,2026-04-01,7,21,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 202,Diphtheria,,2026,4,2026-04-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 203,Enterovirus 71 infection,,2026,4,2026-04-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-204,Food poisoning - Outbreaks,,2026,4,2026-04-01,9,75,outbreaks,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+204,Food poisoning - Outbreaks,,2026,4,2026-04-01,9,85,outbreaks,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 205,Haemophilus influenzae type b infection (invasive),,2026,4,2026-04-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 206,Hantavirus infection,,2026,4,2026-04-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-207,Invasive pneumococcal disease,,2026,4,2026-04-01,12,51,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+207,Invasive pneumococcal disease,,2026,4,2026-04-01,12,57,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 208,Japanese encephalitis,,2026,4,2026-04-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-209,Legionnaires' disease,,2026,4,2026-04-01,19,40,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+209,Legionnaires' disease,,2026,4,2026-04-01,19,68,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 210,Leprosy,,2026,4,2026-04-01,0,1,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 211,Leptospirosis,,2026,4,2026-04-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 212,Listeriosis,,2026,4,2026-04-01,1,4,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-213,Malaria,,2026,4,2026-04-01,0,1,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+213,Malaria,,2026,4,2026-04-01,0,2,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 214,Measles,,2026,4,2026-04-01,6,7,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 215,Melioidosis,,2026,4,2026-04-01,1,6,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 216,Meningococcal infection (invasive),,2026,4,2026-04-01,1,5,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 217,Middle East Respiratory Syndrome,,2026,4,2026-04-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-218,Mpox (Monkeypox),,2026,4,2026-04-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-219,Mumps,,2026,4,2026-04-01,2,12,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+218,Mpox (Monkeypox),,2026,4,2026-04-01,0,3,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+219,Mumps,,2026,4,2026-04-01,2,15,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 220,Novel influenza A infection - Influenza A (H5),,2026,4,2026-04-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 221,Novel influenza A infection - Influenza A (H7),,2026,4,2026-04-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 222,Novel influenza A infection - Others,,2026,4,2026-04-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-223,Paratyphoid fever,,2026,4,2026-04-01,1,2,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+223,Paratyphoid fever,,2026,4,2026-04-01,1,4,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 224,Plague,,2026,4,2026-04-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-225,Psittacosis,,2026,4,2026-04-01,0,5,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+225,Psittacosis,,2026,4,2026-04-01,0,6,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 226,Q fever,,2026,4,2026-04-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 227,Rabies,,2026,4,2026-04-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 228,Relapsing fever,,2026,4,2026-04-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 229,Rubella and congenital rubella syndrome - Congenital rubella syndrome,,2026,4,2026-04-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 230,Rubella and congenital rubella syndrome - Rubella,,2026,4,2026-04-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-231,Scarlet fever,,2026,4,2026-04-01,64,282,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+231,Scarlet fever,,2026,4,2026-04-01,63,358,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 232,Severe Acute Respiratory Syndrome,,2026,4,2026-04-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 233,Shiga toxin-producing Escherichia coli infection,,2026,4,2026-04-01,0,1,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 234,Smallpox,,2026,4,2026-04-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 235,Streptococcus suis infection,,2026,4,2026-04-01,0,1,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 236,Tetanus,,2026,4,2026-04-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-237,Tuberculosis,,2026,4,2026-04-01,241,952,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-238,Typhoid fever,,2026,4,2026-04-01,0,5,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-239,Typhus and other rickettsial diseases - Scrub typhus,,2026,4,2026-04-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-240,Typhus and other rickettsial diseases - Spotted fever,,2026,4,2026-04-01,1,3,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+237,Tuberculosis,,2026,4,2026-04-01,241,1211,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+238,Typhoid fever,,2026,4,2026-04-01,0,6,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+239,Typhus and other rickettsial diseases - Scrub typhus,,2026,4,2026-04-01,0,2,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+240,Typhus and other rickettsial diseases - Spotted fever,,2026,4,2026-04-01,1,4,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 241,Typhus and other rickettsial diseases - Unclassified,,2026,4,2026-04-01,0,1,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 242,Typhus and other rickettsial diseases - Urban typhus,,2026,4,2026-04-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 243,Viral haemorrhagic fever,,2026,4,2026-04-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-244,Viral hepatitis - A,,2026,4,2026-04-01,5,35,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-245,Viral hepatitis - B,,2026,4,2026-04-01,0,3,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-246,Viral hepatitis - C,,2026,4,2026-04-01,1,13,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+244,Viral hepatitis - A,,2026,4,2026-04-01,4,39,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+245,Viral hepatitis - B,,2026,4,2026-04-01,0,4,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+246,Viral hepatitis - C,,2026,4,2026-04-01,2,21,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 247,Viral hepatitis - D,,2026,4,2026-04-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-248,Viral hepatitis - E,,2026,4,2026-04-01,10,49,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+248,Viral hepatitis - E,,2026,4,2026-04-01,12,67,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 249,West Nile Virus Infection,,2026,4,2026-04-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
-250,Whooping cough,,2026,4,2026-04-01,0,2,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+250,Whooping cough,,2026,4,2026-04-01,0,3,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 251,Yellow fever,,2026,4,2026-04-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
 252,Zika Virus Infection,,2026,4,2026-04-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+253,Acute poliomyelitis,,2026,5,2026-05-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+254,Amoebic dysentery,,2026,5,2026-05-01,3,7,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+255,Anthrax,,2026,5,2026-05-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+256,Bacillary dysentery,,2026,5,2026-05-01,1,6,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+257,Botulism,,2026,5,2026-05-01,1,2,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+258,Chickenpox,,2026,5,2026-05-01,137,715,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+259,Chikungunya fever,,2026,5,2026-05-01,0,2,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+260,Cholera,,2026,5,2026-05-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+261,Community-associated methicillin-resistant Staphylococcus aureus infection,,2026,5,2026-05-01,28,149,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+262,Coronavirus disease 2019 (COVID-19),,2026,5,2026-05-01,7,21,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+263,Creutzfeldt-Jakob disease,,2026,5,2026-05-01,1,8,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+264,Dengue fever,,2026,5,2026-05-01,4,21,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+265,Diphtheria,,2026,5,2026-05-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+266,Enterovirus 71 infection,,2026,5,2026-05-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+267,Food poisoning - Outbreaks,,2026,5,2026-05-01,10,85,outbreaks,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+268,Haemophilus influenzae type b infection (invasive),,2026,5,2026-05-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+269,Hantavirus infection,,2026,5,2026-05-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+270,Invasive pneumococcal disease,,2026,5,2026-05-01,6,57,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+271,Japanese encephalitis,,2026,5,2026-05-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+272,Legionnaires' disease,,2026,5,2026-05-01,28,68,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+273,Leprosy,,2026,5,2026-05-01,0,1,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+274,Leptospirosis,,2026,5,2026-05-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+275,Listeriosis,,2026,5,2026-05-01,0,4,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+276,Malaria,,2026,5,2026-05-01,1,2,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+277,Measles,,2026,5,2026-05-01,0,7,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+278,Melioidosis,,2026,5,2026-05-01,0,6,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+279,Meningococcal infection (invasive),,2026,5,2026-05-01,0,5,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+280,Middle East Respiratory Syndrome,,2026,5,2026-05-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+281,Mpox (Monkeypox),,2026,5,2026-05-01,3,3,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+282,Mumps,,2026,5,2026-05-01,3,15,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+283,Novel influenza A infection - Influenza A (H5),,2026,5,2026-05-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+284,Novel influenza A infection - Influenza A (H7),,2026,5,2026-05-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+285,Novel influenza A infection - Others,,2026,5,2026-05-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+286,Paratyphoid fever,,2026,5,2026-05-01,2,4,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+287,Plague,,2026,5,2026-05-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+288,Psittacosis,,2026,5,2026-05-01,1,6,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+289,Q fever,,2026,5,2026-05-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+290,Rabies,,2026,5,2026-05-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+291,Relapsing fever,,2026,5,2026-05-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+292,Rubella and congenital rubella syndrome - Congenital rubella syndrome,,2026,5,2026-05-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+293,Rubella and congenital rubella syndrome - Rubella,,2026,5,2026-05-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+294,Scarlet fever,,2026,5,2026-05-01,77,358,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+295,Severe Acute Respiratory Syndrome,,2026,5,2026-05-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+296,Shiga toxin-producing Escherichia coli infection,,2026,5,2026-05-01,0,1,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+297,Smallpox,,2026,5,2026-05-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+298,Streptococcus suis infection,,2026,5,2026-05-01,0,1,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+299,Tetanus,,2026,5,2026-05-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+300,Tuberculosis,,2026,5,2026-05-01,259,1211,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+301,Typhoid fever,,2026,5,2026-05-01,1,6,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+302,Typhus and other rickettsial diseases - Scrub typhus,,2026,5,2026-05-01,2,2,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+303,Typhus and other rickettsial diseases - Spotted fever,,2026,5,2026-05-01,1,4,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+304,Typhus and other rickettsial diseases - Unclassified,,2026,5,2026-05-01,0,1,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+305,Typhus and other rickettsial diseases - Urban typhus,,2026,5,2026-05-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+306,Viral haemorrhagic fever,,2026,5,2026-05-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+307,Viral hepatitis - A,,2026,5,2026-05-01,5,39,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+308,Viral hepatitis - B,,2026,5,2026-05-01,1,4,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+309,Viral hepatitis - C,,2026,5,2026-05-01,7,21,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+310,Viral hepatitis - D,,2026,5,2026-05-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+311,Viral hepatitis - E,,2026,5,2026-05-01,15,67,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+312,West Nile Virus Infection,,2026,5,2026-05-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+313,Whooping cough,,2026,5,2026-05-01,1,3,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+314,Yellow fever,,2026,5,2026-05-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv
+315,Zika Virus Infection,,2026,5,2026-05-01,0,0,cases,"Hong Kong, China CHP Notifiable Infectious Diseases",https://www.chp.gov.hk/files/misc/nid2026en.csv

@@ -2791,7 +2791,8 @@
         "2026-01-01",
         "2026-02-01",
         "2026-03-01",
-        "2026-04-01"
+        "2026-04-01",
+        "2026-05-01"
       ],
       "cases": [
         0,
@@ -3007,7 +3008,8 @@
         0,
         0,
         1,
-        0
+        0,
+        1
       ],
       "weekly_equiv_cases": [
         0.0,
@@ -3223,9 +3225,11 @@
         0.0,
         0.0,
         0.25,
-        0.0
+        0.0,
+        0.23333333333333334
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -3655,6 +3659,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -3871,9 +3876,10 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
-      "total_cases": 46,
+      "total_cases": 47,
       "total_deaths": 0
     },
     "JP": {
@@ -4590,7 +4596,11 @@
         "2026-05-02",
         "2026-05-09",
         "2026-05-16",
-        "2026-05-23"
+        "2026-05-23",
+        "2026-05-30",
+        "2026-06-06",
+        "2026-06-13",
+        "2026-06-20"
       ],
       "cases": [
         0,
@@ -5240,6 +5250,10 @@
         0,
         0,
         1,
+        0,
+        0,
+        0,
+        0,
         0,
         0,
         0,
@@ -6020,9 +6034,17 @@
         0.0,
         0.0,
         0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
+        0,
+        0,
+        0,
         0,
         0,
         0,
@@ -7450,9 +7472,17 @@
         0.0,
         0.0,
         0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
         0.0
       ],
       "incidence_sources": [
+        "wpp_computed",
+        "wpp_computed",
+        "wpp_computed",
+        "wpp_computed",
         "wpp_computed",
         "wpp_computed",
         "wpp_computed",
@@ -10575,7 +10605,7 @@
       0,
       5,
       2,
-      0,
+      1,
       0
     ],
     "deaths": [
@@ -10899,9 +10929,9 @@
       0
     ]
   },
-  "total_cases": 469,
+  "total_cases": 470,
   "total_deaths": 0,
-  "generated_at": "2026-06-01T00:00:00+00:00",
+  "generated_at": "2026-06-20T00:00:00+00:00",
   "source_info": [
     {
       "country_code": "AU",

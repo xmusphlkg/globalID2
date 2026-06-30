@@ -8,8 +8,8 @@
   },
   "response": {
     "source": "mandatory_reporting_system",
-    "sourceDate": "2026-05-19",
-    "version": "20260527",
+    "sourceDate": "2026-06-16",
+    "version": "20260624",
     "values": [
       {
         "x": 201301,
@@ -32,7 +32,7 @@
         "y": 1,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "rising"
+          "trend": null
         }
       },
       {
@@ -72,7 +72,7 @@
         "y": 31,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "falling"
+          "trend": "stagnant"
         }
       },
       {
@@ -120,7 +120,7 @@
         "y": 1,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "rising"
+          "trend": "falling"
         }
       },
       {
@@ -144,7 +144,7 @@
         "y": 9,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "stagnant"
+          "trend": "rising"
         }
       },
       {
@@ -160,7 +160,7 @@
         "y": 22,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "stagnant"
+          "trend": "rising"
         }
       },
       {
@@ -168,7 +168,7 @@
         "y": 10,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "falling"
+          "trend": "stagnant"
         }
       },
       {
@@ -176,7 +176,7 @@
         "y": 13,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "stagnant"
+          "trend": "falling"
         }
       },
       {
@@ -192,7 +192,7 @@
         "y": 4,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "falling"
+          "trend": "stagnant"
         }
       },
       {
@@ -224,7 +224,7 @@
         "y": 0,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "falling"
+          "trend": "stagnant"
         }
       },
       {
@@ -232,7 +232,7 @@
         "y": 4,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "rising"
+          "trend": "stagnant"
         }
       },
       {
@@ -256,7 +256,7 @@
         "y": 26,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "stagnant"
+          "trend": "rising"
         }
       },
       {
@@ -264,7 +264,7 @@
         "y": 8,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "falling"
+          "trend": "stagnant"
         }
       },
       {
@@ -280,7 +280,7 @@
         "y": 10,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "rising"
+          "trend": "falling"
         }
       },
       {
@@ -288,7 +288,7 @@
         "y": 12,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "rising"
+          "trend": "stagnant"
         }
       },
       {
@@ -296,7 +296,7 @@
         "y": 2,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "falling"
+          "trend": "stagnant"
         }
       },
       {
@@ -304,7 +304,7 @@
         "y": 2,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "stagnant"
+          "trend": "falling"
         }
       },
       {
@@ -320,7 +320,7 @@
         "y": 3,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "rising"
+          "trend": "stagnant"
         }
       },
       {
@@ -352,7 +352,7 @@
         "y": 50,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "stagnant"
+          "trend": "rising"
         }
       },
       {
@@ -360,7 +360,7 @@
         "y": 33,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "falling"
+          "trend": "stagnant"
         }
       },
       {
@@ -376,7 +376,7 @@
         "y": 13,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "stagnant"
+          "trend": "falling"
         }
       },
       {
@@ -400,7 +400,7 @@
         "y": 1,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "stagnant"
+          "trend": "falling"
         }
       },
       {
@@ -416,7 +416,7 @@
         "y": 2,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "rising"
+          "trend": "stagnant"
         }
       },
       {
@@ -456,7 +456,7 @@
         "y": 31,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "falling"
+          "trend": "stagnant"
         }
       },
       {
@@ -472,7 +472,7 @@
         "y": 40,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "rising"
+          "trend": "stagnant"
         }
       },
       {
@@ -480,7 +480,7 @@
         "y": 8,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "falling"
+          "trend": "stagnant"
         }
       },
       {
@@ -504,7 +504,7 @@
         "y": 1,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "falling"
+          "trend": "stagnant"
         }
       },
       {
@@ -552,7 +552,7 @@
         "y": 32,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "falling"
+          "trend": "stagnant"
         }
       },
       {
@@ -608,7 +608,7 @@
         "y": 1,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "rising"
+          "trend": "falling"
         }
       },
       {
@@ -648,7 +648,7 @@
         "y": 24,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "falling"
+          "trend": "stagnant"
         }
       },
       {
@@ -664,7 +664,7 @@
         "y": 17,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "stagnant"
+          "trend": "falling"
         }
       },
       {
@@ -696,7 +696,7 @@
         "y": 1,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "stagnant"
+          "trend": "falling"
         }
       },
       {
@@ -736,7 +736,7 @@
         "y": 118,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "stagnant"
+          "trend": "rising"
         }
       },
       {
@@ -744,7 +744,7 @@
         "y": 45,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "falling"
+          "trend": "stagnant"
         }
       },
       {
@@ -768,7 +768,7 @@
         "y": 12,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "stagnant"
+          "trend": "falling"
         }
       },
       {
@@ -792,7 +792,7 @@
         "y": 2,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "stagnant"
+          "trend": "falling"
         }
       },
       {
@@ -800,7 +800,7 @@
         "y": 6,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "rising"
+          "trend": "stagnant"
         }
       },
       {
@@ -832,7 +832,7 @@
         "y": 69,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "stagnant"
+          "trend": "rising"
         }
       },
       {
@@ -840,7 +840,7 @@
         "y": 32,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "falling"
+          "trend": "stagnant"
         }
       },
       {
@@ -888,7 +888,7 @@
         "y": 1,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "stagnant"
+          "trend": "falling"
         }
       },
       {
@@ -896,7 +896,7 @@
         "y": 6,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "rising"
+          "trend": "stagnant"
         }
       },
       {
@@ -928,7 +928,7 @@
         "y": 75,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "stagnant"
+          "trend": "rising"
         }
       },
       {
@@ -936,7 +936,7 @@
         "y": 42,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "falling"
+          "trend": "stagnant"
         }
       },
       {
@@ -952,7 +952,7 @@
         "y": 28,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "stagnant"
+          "trend": "falling"
         }
       },
       {
@@ -960,7 +960,7 @@
         "y": 22,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "stagnant"
+          "trend": "falling"
         }
       },
       {
@@ -968,7 +968,7 @@
         "y": 2,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "falling"
+          "trend": "stagnant"
         }
       },
       {
@@ -976,7 +976,7 @@
         "y": 2,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "stagnant"
+          "trend": "falling"
         }
       },
       {
@@ -984,7 +984,7 @@
         "y": 3,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "rising"
+          "trend": "falling"
         }
       },
       {
@@ -992,7 +992,7 @@
         "y": 6,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "rising"
+          "trend": "stagnant"
         }
       },
       {
@@ -1032,7 +1032,7 @@
         "y": 31,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "falling"
+          "trend": "stagnant"
         }
       },
       {
@@ -1048,7 +1048,7 @@
         "y": 30,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "stagnant"
+          "trend": "falling"
         }
       },
       {
@@ -1064,7 +1064,7 @@
         "y": 6,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "falling"
+          "trend": "stagnant"
         }
       },
       {
@@ -1080,7 +1080,7 @@
         "y": 8,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "rising"
+          "trend": "stagnant"
         }
       },
       {
@@ -1120,7 +1120,7 @@
         "y": 85,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "stagnant"
+          "trend": "rising"
         }
       },
       {
@@ -1128,7 +1128,7 @@
         "y": 62,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "falling"
+          "trend": "stagnant"
         }
       },
       {
@@ -1160,7 +1160,7 @@
         "y": 5,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "falling"
+          "trend": "stagnant"
         }
       },
       {
@@ -1184,12 +1184,12 @@
         "y": 5,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "rising"
+          "trend": "stagnant"
         }
       },
       {
         "x": 202504,
-        "y": 30,
+        "y": 31,
         "properties": {
           "dataComplete": "TRUE",
           "trend": "rising"
@@ -1205,7 +1205,7 @@
       },
       {
         "x": 202506,
-        "y": 131,
+        "y": 133,
         "properties": {
           "dataComplete": "TRUE",
           "trend": "rising"
@@ -1213,10 +1213,10 @@
       },
       {
         "x": 202507,
-        "y": 130,
+        "y": 127,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "stagnant"
+          "trend": "rising"
         }
       },
       {
@@ -1224,7 +1224,7 @@
         "y": 63,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "falling"
+          "trend": "stagnant"
         }
       },
       {
@@ -1240,7 +1240,7 @@
         "y": 29,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "stagnant"
+          "trend": "falling"
         }
       },
       {
@@ -1264,7 +1264,7 @@
         "y": 4,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "stagnant"
+          "trend": "falling"
         }
       },
       {
@@ -1272,7 +1272,7 @@
         "y": 3,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "stagnant"
+          "trend": "falling"
         }
       },
       {
@@ -1285,7 +1285,15 @@
       },
       {
         "x": 202604,
-        "y": 26,
+        "y": 33,
+        "properties": {
+          "dataComplete": "TRUE",
+          "trend": "rising"
+        }
+      },
+      {
+        "x": 202605,
+        "y": 60,
         "properties": {
           "dataComplete": "TRUE",
           "trend": "rising"

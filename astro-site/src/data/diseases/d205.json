@@ -169,7 +169,8 @@
         "2026-01-01",
         "2026-02-01",
         "2026-03-01",
-        "2026-04-01"
+        "2026-04-01",
+        "2026-05-01"
       ],
       "cases": [
         0,
@@ -331,7 +332,8 @@
         4,
         3,
         10,
-        26
+        33,
+        60
       ],
       "weekly_equiv_cases": [
         0.0,
@@ -493,9 +495,11 @@
         0.9032258064516129,
         0.6774193548387096,
         2.5,
-        5.870967741935484
+        7.451612903225806,
+        14.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -817,6 +821,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -979,9 +984,10 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
-      "total_cases": 3873,
+      "total_cases": 3940,
       "total_deaths": 0
     },
     "KR": {
@@ -3066,8 +3072,8 @@
       4,
       3,
       10,
-      26,
-      0,
+      33,
+      60,
       0
     ],
     "deaths": [
@@ -3331,9 +3337,9 @@
       0
     ]
   },
-  "total_cases": 3873,
+  "total_cases": 3940,
   "total_deaths": 0,
-  "generated_at": "2026-06-01T00:00:00+00:00",
+  "generated_at": "2026-06-20T00:00:00+00:00",
   "source_info": [
     {
       "country_code": "CH",

@@ -1,11 +1,18 @@
 {
-  "version": "20260527",
+  "version": "20260624",
   "details": {
     "identifier": "trichinellosis/cases/value/year",
     "source": "mandatory_reporting_system",
-    "sourceDate": "2026-05-26",
-    "version": "20260527",
+    "sourceDate": "2026-06-23",
+    "version": "20260624",
     "properties": {
+      "CHFL": {
+        "allValue": "all",
+        "possibleValues": [
+          "CHFL",
+          "all"
+        ]
+      },
       "country": {
         "allValue": "all",
         "possibleValues": [
@@ -16,6 +23,7 @@
       "georegion": {
         "allValue": null,
         "possibleValues": [
+          "CHFL",
           "country"
         ]
       },
@@ -27,6 +35,11 @@
       }
     },
     "availableSeriesConfigurations": [
+      {
+        "CHFL": "CHFL",
+        "georegion": "CHFL",
+        "type": "all"
+      },
       {
         "country": "CH",
         "georegion": "country",

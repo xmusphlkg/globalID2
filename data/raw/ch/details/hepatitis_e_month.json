@@ -1,10 +1,10 @@
 {
-  "version": "20260527",
+  "version": "20260624",
   "details": {
     "identifier": "hepatitis_e/cases/value/month",
     "source": "mandatory_reporting_system",
-    "sourceDate": "2026-05-12",
-    "version": "20260527",
+    "sourceDate": "2026-06-09",
+    "version": "20260624",
     "properties": {
       "CHFL": {
         "allValue": "all",

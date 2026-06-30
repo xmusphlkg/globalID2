@@ -9,1106 +9,1271 @@
   },
   "response": {
     "source": "mandatory_reporting_system",
-    "sourceDate": "2026-05-05",
-    "version": "20260527",
+    "sourceDate": "2026-06-02",
+    "version": "20260624",
     "values": [
       {
         "x": 201301,
         "y": 82,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201302,
         "y": 155,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201303,
         "y": 91,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201304,
         "y": 121,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201305,
         "y": 105,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201306,
         "y": 133,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201307,
         "y": 167,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201308,
         "y": 83,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201309,
         "y": 136,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201310,
         "y": 95,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201311,
         "y": 125,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201312,
         "y": 133,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201401,
         "y": 107,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201402,
         "y": 135,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201403,
         "y": 112,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201404,
         "y": 123,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201405,
         "y": 137,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201406,
         "y": 110,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201407,
         "y": 110,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201408,
         "y": 87,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201409,
         "y": 105,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201410,
         "y": 177,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201411,
         "y": 107,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201412,
         "y": 91,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201501,
         "y": 89,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201502,
         "y": 85,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201503,
         "y": 120,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201504,
         "y": 132,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201505,
         "y": 111,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201506,
         "y": 112,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201507,
         "y": 140,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201508,
         "y": 96,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201509,
         "y": 109,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201510,
         "y": 101,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201511,
-        "y": 138,
+        "y": 139,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201512,
         "y": 160,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201601,
         "y": 122,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201602,
         "y": 145,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201603,
         "y": 121,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201604,
         "y": 138,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201605,
         "y": 117,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201606,
         "y": 133,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201607,
         "y": 74,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201608,
         "y": 98,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201609,
         "y": 111,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201610,
         "y": 129,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201611,
         "y": 123,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201612,
         "y": 121,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201701,
         "y": 102,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201702,
         "y": 90,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201703,
         "y": 107,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201704,
         "y": 91,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201705,
         "y": 99,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201706,
         "y": 98,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201707,
         "y": 100,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201708,
         "y": 78,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201709,
         "y": 111,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201710,
         "y": 82,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201711,
         "y": 120,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201712,
         "y": 121,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201801,
         "y": 110,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201802,
         "y": 86,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201803,
         "y": 116,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201804,
         "y": 87,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201805,
         "y": 102,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201806,
         "y": 131,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201807,
         "y": 100,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201808,
         "y": 81,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201809,
         "y": 103,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201810,
         "y": 104,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201811,
         "y": 98,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201812,
         "y": 86,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201901,
         "y": 107,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201902,
         "y": 91,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201903,
         "y": 100,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201904,
         "y": 87,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201905,
         "y": 86,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201906,
         "y": 75,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201907,
         "y": 105,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201908,
         "y": 77,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201909,
         "y": 76,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201910,
         "y": 81,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201911,
         "y": 96,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 201912,
         "y": 113,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202001,
         "y": 99,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202002,
         "y": 89,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202003,
         "y": 60,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202004,
         "y": 58,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202005,
         "y": 80,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202006,
-        "y": 94,
+        "y": 93,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202007,
         "y": 68,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202008,
         "y": 57,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202009,
         "y": 82,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202010,
         "y": 55,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202011,
         "y": 88,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202012,
         "y": 76,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202101,
         "y": 83,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202102,
         "y": 85,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202103,
         "y": 86,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202104,
         "y": 76,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202105,
         "y": 83,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202106,
         "y": 90,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202107,
         "y": 80,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202108,
         "y": 50,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202109,
         "y": 82,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202110,
         "y": 86,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202111,
         "y": 92,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202112,
         "y": 80,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202201,
         "y": 73,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202202,
         "y": 78,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202203,
         "y": 110,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202204,
         "y": 93,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202205,
-        "y": 115,
+        "y": 114,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202206,
         "y": 99,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202207,
         "y": 76,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202208,
         "y": 75,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202209,
         "y": 80,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202210,
         "y": 85,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202211,
         "y": 104,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202212,
         "y": 105,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202301,
         "y": 94,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202302,
-        "y": 86,
+        "y": 87,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202303,
         "y": 116,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202304,
         "y": 85,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202305,
         "y": 103,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202306,
         "y": 118,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202307,
         "y": 84,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202308,
         "y": 67,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202309,
         "y": 83,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202310,
         "y": 100,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202311,
         "y": 108,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202312,
-        "y": 74,
+        "y": 73,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202401,
         "y": 107,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202402,
         "y": 81,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202403,
         "y": 114,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202404,
         "y": 112,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202405,
         "y": 109,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202406,
         "y": 107,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202407,
         "y": 98,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202408,
         "y": 103,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202409,
         "y": 96,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202410,
         "y": 92,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202411,
-        "y": 97,
+        "y": 98,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202412,
         "y": 89,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202501,
         "y": 121,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202502,
-        "y": 110,
+        "y": 109,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202503,
         "y": 102,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202504,
         "y": 90,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202505,
         "y": 124,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202506,
         "y": 110,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202507,
         "y": 90,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202508,
         "y": 88,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202509,
-        "y": 115,
+        "y": 114,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202510,
-        "y": 99,
+        "y": 98,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202511,
         "y": 87,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202512,
         "y": 106,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
         }
       },
       {
         "x": 202601,
-        "y": 122,
+        "y": 121,
         "properties": {
-          "dataComplete": "TRUE"
+          "dataComplete": "TRUE",
+          "trend": null
+        }
+      },
+      {
+        "x": 202602,
+        "y": 143,
+        "properties": {
+          "dataComplete": "TRUE",
+          "trend": null
         }
       }
     ]

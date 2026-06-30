@@ -6,8 +6,8 @@
   },
   "response": {
     "source": "mandatory_reporting_system",
-    "sourceDate": "2026-05-26",
-    "version": "20260527",
+    "sourceDate": "2026-06-02",
+    "version": "20260603",
     "values": [
       {
         "x": 2013,
@@ -95,7 +95,7 @@
       },
       {
         "x": 2025,
-        "y": 182,
+        "y": 184,
         "properties": {
           "trend": "falling"
         }

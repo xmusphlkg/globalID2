@@ -1,12 +1,12 @@
 {
-  "captured_at": "2026-06-01T22:45:25.770152+00:00",
+  "captured_at": "2026-06-29T22:45:21.481949+00:00",
   "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
   "api_url": "https://86715f84e812421e972f2211acc9903a.pbidedicated.windows.net/webapi/capacities/86715F84-E812-421E-972F-2211ACC9903A/workloads/QES/QueryExecutionService/automatic/public/query",
   "report_id": "bc027587-5e9e-4920-bf03-a45fd3079f25",
   "runtime_hints": {
     "location": {
-      "fact_alias": "d1",
-      "location_alias": "d",
+      "fact_alias": "d",
+      "location_alias": "d1",
       "disease_alias": "d2",
       "case_alias": "d3",
       "state_property": "STATE",

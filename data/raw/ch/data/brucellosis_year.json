@@ -6,8 +6,8 @@
   },
   "response": {
     "source": "mandatory_reporting_system",
-    "sourceDate": "2026-05-26",
-    "version": "20260527",
+    "sourceDate": "2026-06-23",
+    "version": "20260624",
     "values": [
       {
         "x": 2013,
@@ -27,14 +27,14 @@
         "x": 2015,
         "y": 1,
         "properties": {
-          "trend": "falling"
+          "trend": "stagnant"
         }
       },
       {
         "x": 2016,
         "y": 7,
         "properties": {
-          "trend": "rising"
+          "trend": "stagnant"
         }
       },
       {
@@ -48,7 +48,7 @@
         "x": 2018,
         "y": 5,
         "properties": {
-          "trend": "falling"
+          "trend": "stagnant"
         }
       },
       {
@@ -62,7 +62,7 @@
         "x": 2020,
         "y": 3,
         "properties": {
-          "trend": "falling"
+          "trend": "stagnant"
         }
       },
       {
@@ -83,14 +83,14 @@
         "x": 2023,
         "y": 9,
         "properties": {
-          "trend": "rising"
+          "trend": "stagnant"
         }
       },
       {
         "x": 2024,
         "y": 4,
         "properties": {
-          "trend": "falling"
+          "trend": "stagnant"
         }
       },
       {

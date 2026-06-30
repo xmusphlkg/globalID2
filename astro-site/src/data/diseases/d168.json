@@ -1343,7 +1343,8 @@
         "2026-01-01",
         "2026-02-01",
         "2026-03-01",
-        "2026-04-01"
+        "2026-04-01",
+        "2026-05-01"
       ],
       "cases": [
         0,
@@ -1484,6 +1485,7 @@
         0,
         0,
         1,
+        0,
         0,
         0,
         0,
@@ -1775,9 +1777,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -2207,9 +2211,11 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
+        "missing_population",
         "missing_population",
         "missing_population",
         "missing_population",
@@ -4811,7 +4817,7 @@
   },
   "total_cases": 1782,
   "total_deaths": 0,
-  "generated_at": "2026-06-01T00:00:00+00:00",
+  "generated_at": "2026-06-20T00:00:00+00:00",
   "source_info": [
     {
       "country_code": "BR",

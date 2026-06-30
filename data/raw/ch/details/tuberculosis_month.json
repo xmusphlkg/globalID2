@@ -1,0 +1,50 @@
+{
+  "version": "20260624",
+  "details": {
+    "identifier": "tuberculosis/cases/value/month",
+    "source": "mandatory_reporting_system",
+    "sourceDate": "2026-06-23",
+    "version": "20260624",
+    "properties": {
+      "CHFL": {
+        "allValue": "all",
+        "possibleValues": [
+          "CHFL",
+          "all"
+        ]
+      },
+      "country": {
+        "allValue": "all",
+        "possibleValues": [
+          "CH",
+          "all"
+        ]
+      },
+      "georegion": {
+        "allValue": null,
+        "possibleValues": [
+          "CHFL",
+          "country"
+        ]
+      },
+      "type": {
+        "allValue": "all",
+        "possibleValues": [
+          "all"
+        ]
+      }
+    },
+    "availableSeriesConfigurations": [
+      {
+        "CHFL": "CHFL",
+        "georegion": "CHFL",
+        "type": "all"
+      }
+    ]
+  },
+  "selected_config": {
+    "CHFL": "CHFL",
+    "georegion": "CHFL",
+    "type": "all"
+  }
+}

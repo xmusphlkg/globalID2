@@ -6,91 +6,28 @@
   },
   "response": {
     "source": "mandatory_reporting_system",
-    "sourceDate": "2026-05-26",
-    "version": "20260527",
+    "sourceDate": "2026-06-23",
+    "version": "20260624",
     "values": [
-      {
-        "x": 2013,
-        "y": 0,
-        "properties": {
-          "trend": null
-        }
-      },
-      {
-        "x": 2014,
-        "y": 0,
-        "properties": {
-          "trend": null
-        }
-      },
-      {
-        "x": 2015,
-        "y": 0,
-        "properties": {
-          "trend": "falling"
-        }
-      },
-      {
-        "x": 2016,
-        "y": 0,
-        "properties": {
-          "trend": "falling"
-        }
-      },
-      {
-        "x": 2017,
-        "y": 0,
-        "properties": {
-          "trend": "falling"
-        }
-      },
-      {
-        "x": 2018,
-        "y": 0,
-        "properties": {
-          "trend": "falling"
-        }
-      },
-      {
-        "x": 2019,
-        "y": 0,
-        "properties": {
-          "trend": "falling"
-        }
-      },
-      {
-        "x": 2020,
-        "y": 0,
-        "properties": {
-          "trend": "falling"
-        }
-      },
-      {
-        "x": 2021,
-        "y": 0,
-        "properties": {
-          "trend": "falling"
-        }
-      },
       {
         "x": 2022,
         "y": 552,
         "properties": {
-          "trend": "rising"
+          "trend": null
         }
       },
       {
         "x": 2023,
         "y": 13,
         "properties": {
-          "trend": "stagnant"
+          "trend": null
         }
       },
       {
         "x": 2024,
         "y": 36,
         "properties": {
-          "trend": "stagnant"
+          "trend": "falling"
         }
       },
       {

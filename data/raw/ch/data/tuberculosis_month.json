@@ -1,0 +1,1127 @@
+{
+  "request": {
+    "CHFL": "CHFL",
+    "georegion": "CHFL",
+    "type": "all"
+  },
+  "response": {
+    "source": "mandatory_reporting_system",
+    "sourceDate": "2026-06-23",
+    "version": "20260624",
+    "values": [
+      {
+        "x": 201301,
+        "y": 35,
+        "properties": {
+          "trend": null
+        }
+      },
+      {
+        "x": 201302,
+        "y": 52,
+        "properties": {
+          "trend": null
+        }
+      },
+      {
+        "x": 201303,
+        "y": 39,
+        "properties": {
+          "trend": null
+        }
+      },
+      {
+        "x": 201304,
+        "y": 35,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201305,
+        "y": 53,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201306,
+        "y": 53,
+        "properties": {
+          "trend": "rising"
+        }
+      },
+      {
+        "x": 201307,
+        "y": 50,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201308,
+        "y": 49,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201309,
+        "y": 36,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201310,
+        "y": 40,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201311,
+        "y": 46,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201312,
+        "y": 38,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201401,
+        "y": 38,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201402,
+        "y": 39,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201403,
+        "y": 29,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201404,
+        "y": 43,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201405,
+        "y": 34,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201406,
+        "y": 40,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201407,
+        "y": 46,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201408,
+        "y": 48,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201409,
+        "y": 41,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201410,
+        "y": 44,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201411,
+        "y": 32,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201412,
+        "y": 41,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201501,
+        "y": 43,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201502,
+        "y": 46,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201503,
+        "y": 39,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201504,
+        "y": 40,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201505,
+        "y": 50,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201506,
+        "y": 49,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201507,
+        "y": 44,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201508,
+        "y": 46,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201509,
+        "y": 44,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201510,
+        "y": 53,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201511,
+        "y": 44,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201512,
+        "y": 46,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201601,
+        "y": 45,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201602,
+        "y": 38,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201603,
+        "y": 42,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201604,
+        "y": 64,
+        "properties": {
+          "trend": "rising"
+        }
+      },
+      {
+        "x": 201605,
+        "y": 56,
+        "properties": {
+          "trend": "rising"
+        }
+      },
+      {
+        "x": 201606,
+        "y": 55,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201607,
+        "y": 53,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201608,
+        "y": 64,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201609,
+        "y": 43,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201610,
+        "y": 42,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201611,
+        "y": 56,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201612,
+        "y": 47,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201701,
+        "y": 56,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201702,
+        "y": 50,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201703,
+        "y": 38,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201704,
+        "y": 48,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201705,
+        "y": 57,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201706,
+        "y": 43,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201707,
+        "y": 38,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201708,
+        "y": 41,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201709,
+        "y": 51,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201710,
+        "y": 42,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201711,
+        "y": 36,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201712,
+        "y": 32,
+        "properties": {
+          "trend": "falling"
+        }
+      },
+      {
+        "x": 201801,
+        "y": 34,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201802,
+        "y": 55,
+        "properties": {
+          "trend": "rising"
+        }
+      },
+      {
+        "x": 201803,
+        "y": 60,
+        "properties": {
+          "trend": "rising"
+        }
+      },
+      {
+        "x": 201804,
+        "y": 51,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201805,
+        "y": 44,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201806,
+        "y": 45,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201807,
+        "y": 49,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201808,
+        "y": 38,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201809,
+        "y": 35,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201810,
+        "y": 28,
+        "properties": {
+          "trend": "falling"
+        }
+      },
+      {
+        "x": 201811,
+        "y": 31,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201812,
+        "y": 30,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201901,
+        "y": 38,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201902,
+        "y": 34,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201903,
+        "y": 37,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201904,
+        "y": 36,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201905,
+        "y": 44,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201906,
+        "y": 38,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201907,
+        "y": 45,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201908,
+        "y": 37,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201909,
+        "y": 30,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201910,
+        "y": 30,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201911,
+        "y": 30,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 201912,
+        "y": 24,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202001,
+        "y": 35,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202002,
+        "y": 65,
+        "properties": {
+          "trend": "rising"
+        }
+      },
+      {
+        "x": 202003,
+        "y": 19,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202004,
+        "y": 21,
+        "properties": {
+          "trend": "falling"
+        }
+      },
+      {
+        "x": 202005,
+        "y": 37,
+        "properties": {
+          "trend": "falling"
+        }
+      },
+      {
+        "x": 202006,
+        "y": 37,
+        "properties": {
+          "trend": "rising"
+        }
+      },
+      {
+        "x": 202007,
+        "y": 38,
+        "properties": {
+          "trend": "rising"
+        }
+      },
+      {
+        "x": 202008,
+        "y": 28,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202009,
+        "y": 26,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202010,
+        "y": 19,
+        "properties": {
+          "trend": "falling"
+        }
+      },
+      {
+        "x": 202011,
+        "y": 24,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202012,
+        "y": 25,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202101,
+        "y": 22,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202102,
+        "y": 21,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202103,
+        "y": 36,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202104,
+        "y": 33,
+        "properties": {
+          "trend": "rising"
+        }
+      },
+      {
+        "x": 202105,
+        "y": 43,
+        "properties": {
+          "trend": "rising"
+        }
+      },
+      {
+        "x": 202106,
+        "y": 33,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202107,
+        "y": 40,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202108,
+        "y": 23,
+        "properties": {
+          "trend": "falling"
+        }
+      },
+      {
+        "x": 202109,
+        "y": 21,
+        "properties": {
+          "trend": "falling"
+        }
+      },
+      {
+        "x": 202110,
+        "y": 25,
+        "properties": {
+          "trend": "falling"
+        }
+      },
+      {
+        "x": 202111,
+        "y": 23,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202112,
+        "y": 26,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202201,
+        "y": 31,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202202,
+        "y": 25,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202203,
+        "y": 25,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202204,
+        "y": 34,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202205,
+        "y": 35,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202206,
+        "y": 41,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202207,
+        "y": 33,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202208,
+        "y": 28,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202209,
+        "y": 30,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202210,
+        "y": 25,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202211,
+        "y": 26,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202212,
+        "y": 26,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202301,
+        "y": 31,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202302,
+        "y": 22,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202303,
+        "y": 38,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202304,
+        "y": 27,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202305,
+        "y": 33,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202306,
+        "y": 39,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202307,
+        "y": 39,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202308,
+        "y": 51,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202309,
+        "y": 31,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202310,
+        "y": 39,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202311,
+        "y": 33,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202312,
+        "y": 33,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202401,
+        "y": 28,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202402,
+        "y": 27,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202403,
+        "y": 35,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202404,
+        "y": 41,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202405,
+        "y": 45,
+        "properties": {
+          "trend": "rising"
+        }
+      },
+      {
+        "x": 202406,
+        "y": 21,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202407,
+        "y": 37,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202408,
+        "y": 44,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202409,
+        "y": 29,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202410,
+        "y": 41,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202411,
+        "y": 31,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202412,
+        "y": 32,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202501,
+        "y": 32,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202502,
+        "y": 37,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202503,
+        "y": 39,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202504,
+        "y": 47,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202505,
+        "y": 50,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202506,
+        "y": 65,
+        "properties": {
+          "trend": "rising"
+        }
+      },
+      {
+        "x": 202507,
+        "y": 50,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202508,
+        "y": 52,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202509,
+        "y": 46,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202510,
+        "y": 35,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202511,
+        "y": 29,
+        "properties": {
+          "trend": "falling"
+        }
+      },
+      {
+        "x": 202512,
+        "y": 43,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202601,
+        "y": 47,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202602,
+        "y": 45,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202603,
+        "y": 42,
+        "properties": {
+          "trend": "stagnant"
+        }
+      }
+    ]
+  }
+}
