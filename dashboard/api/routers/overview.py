@@ -3,6 +3,7 @@
 All queries use parameterised binds to prevent SQL injection.
 """
 
+from datetime import date, datetime, time
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Query
@@ -11,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..deps import get_db
 from ..frequency import infer_country_frequency
-from ..schemas.disease_record import OverviewSummary, TopDiseaseItem, TrendPoint
+from ..schemas.disease_record import MonthlyComparisonPoint, OverviewSummary, TopDiseaseItem, TrendPoint
 from src.domain.disease import Disease
 from src.domain.disease_record import DiseaseRecord
 from src.domain.standard_disease import StandardDisease
@@ -111,6 +112,8 @@ async def overview_trend(
     country_id: int = Query(..., ge=1),
     disease_code: Optional[str] = Query(None, description="Disease code, e.g. D001. Omit for total (D999)."),
     interval: Optional[int] = Query(None, description="Days to look back. Omit for all time."),
+    start_date: Optional[date] = Query(None, description="Inclusive start date. Overrides interval when present."),
+    end_date: Optional[date] = Query(None, description="Inclusive end date. Overrides interval when present."),
     db: AsyncSession = Depends(get_db),
 ):
     """Monthly trend data for a given country and (optional) disease."""
@@ -123,6 +126,12 @@ async def overview_trend(
             time_period,
             func.sum(DiseaseRecord.cases).label("cases"),
             func.sum(DiseaseRecord.deaths).label("deaths"),
+            func.avg(DiseaseRecord.incidence_rate)
+            .filter(DiseaseRecord.incidence_rate >= 0)
+            .label("incidence_rate"),
+            func.avg(DiseaseRecord.mortality_rate)
+            .filter(DiseaseRecord.mortality_rate >= 0)
+            .label("mortality_rate"),
         )
         .join(Disease, DiseaseRecord.disease_id == Disease.id)
         .where(DiseaseRecord.country_id == country_id)
@@ -135,7 +144,12 @@ async def overview_trend(
         if has_total:
             q = q.where(Disease.name == "D999")
 
-    if interval is not None:
+    if start_date is not None:
+        q = q.where(DiseaseRecord.time >= datetime.combine(start_date, time.min))
+    if end_date is not None:
+        q = q.where(DiseaseRecord.time <= datetime.combine(end_date, time.max))
+
+    if interval is not None and start_date is None and end_date is None:
         q = q.where(
             DiseaseRecord.time > func.now() - text(f"INTERVAL '{int(interval)} days'")
         )
@@ -148,6 +162,72 @@ async def overview_trend(
             time_period=r.time_period.strftime("%Y-%m-%d") if r.time_period else "",
             cases=int(r.cases or 0),
             deaths=int(r.deaths or 0),
+            incidence_rate=round(float(r.incidence_rate), 4) if r.incidence_rate is not None else None,
+            mortality_rate=round(float(r.mortality_rate), 4) if r.mortality_rate is not None else None,
+        )
+        for r in rows
+    ]
+
+
+@router.get("/overview/monthly-comparison", response_model=List[MonthlyComparisonPoint])
+async def overview_monthly_comparison(
+    country_id: int = Query(..., ge=1),
+    disease_code: Optional[str] = Query(None, description="Disease code, e.g. D001. Omit for total (D999)."),
+    interval: Optional[int] = Query(None, description="Days to look back. Omit for all time."),
+    start_date: Optional[date] = Query(None, description="Inclusive start date. Overrides interval when present."),
+    end_date: Optional[date] = Query(None, description="Inclusive end date. Overrides interval when present."),
+    db: AsyncSession = Depends(get_db),
+):
+    """Year-by-month comparison for seasonality and structural shifts."""
+
+    year_part = func.extract("year", DiseaseRecord.time).label("year")
+    month_part = func.extract("month", DiseaseRecord.time).label("month")
+
+    q = (
+        select(
+            year_part,
+            month_part,
+            func.sum(DiseaseRecord.cases).label("cases"),
+            func.sum(DiseaseRecord.deaths).label("deaths"),
+            func.avg(DiseaseRecord.incidence_rate)
+            .filter(DiseaseRecord.incidence_rate >= 0)
+            .label("incidence_rate"),
+            func.avg(DiseaseRecord.mortality_rate)
+            .filter(DiseaseRecord.mortality_rate >= 0)
+            .label("mortality_rate"),
+        )
+        .join(Disease, DiseaseRecord.disease_id == Disease.id)
+        .where(DiseaseRecord.country_id == country_id)
+    )
+
+    if disease_code:
+        q = q.where(Disease.name == disease_code)
+    else:
+        has_total = await _country_has_total_disease(country_id, db)
+        if has_total:
+            q = q.where(Disease.name == "D999")
+
+    if start_date is not None:
+        q = q.where(DiseaseRecord.time >= datetime.combine(start_date, time.min))
+    if end_date is not None:
+        q = q.where(DiseaseRecord.time <= datetime.combine(end_date, time.max))
+
+    if interval is not None and start_date is None and end_date is None:
+        q = q.where(
+            DiseaseRecord.time > func.now() - text(f"INTERVAL '{int(interval)} days'")
+        )
+
+    q = q.group_by(year_part, month_part).order_by(year_part, month_part)
+    rows = (await db.execute(q)).all()
+
+    return [
+        MonthlyComparisonPoint(
+            year=int(r.year),
+            month=int(r.month),
+            cases=int(r.cases or 0),
+            deaths=int(r.deaths or 0),
+            incidence_rate=round(float(r.incidence_rate), 4) if r.incidence_rate is not None else None,
+            mortality_rate=round(float(r.mortality_rate), 4) if r.mortality_rate is not None else None,
         )
         for r in rows
     ]
