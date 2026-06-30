@@ -47,6 +47,8 @@ AUTO_RELEASE_TASK_TYPES = (
     TaskType.GENERATE_REPORT,
 )
 GITHUB_SSH_PREFIXES = ("git@github.com:", "ssh://git@github.com/")
+SUBSCRIPTION_SYNC_FALSE_VALUES = {"0", "false", "no", "off", "disabled"}
+SUBSCRIPTION_SYNC_STRICT_VALUES = {"1", "true", "yes", "on", "required", "strict", "force"}
 
 
 def _iso(value: Optional[datetime]) -> Optional[str]:
@@ -647,31 +649,10 @@ class DataReleaseService:
         )
         await task_manager.update_task_progress(task.task_uuid, 60)
 
-        subscription_options_synced = False
-        should_sync_subscription_options, sync_reason = self._subscription_options_sync_plan()
-        if should_sync_subscription_options:
-            await self._run_logged_command(
-                task.task_uuid,
-                title="Sync Subscription Options",
-                cmd=[str(SUBSCRIPTIONS_SCRIPT), "sync-options-remote"],
-                cwd=ROOT_DIR,
-                env={
-                    "CI": "1",
-                    "CLOUDFLARE_API_TOKEN": self._cloudflare_api_token(),
-                    "CLOUDFLARE_ACCOUNT_ID": self._cloudflare_account_id(),
-                },
-                metadata={"event": "subscription_options_sync", "release_job_id": job.job_id},
-            )
-            subscription_options_synced = True
-        else:
-            await task_manager.add_workbook_entry(
-                task.task_uuid,
-                entry_type="info",
-                title="Subscription Options Sync Skipped",
-                content=sync_reason,
-                content_type="text",
-                metadata={"event": "subscription_options_sync_skip", "release_job_id": job.job_id},
-            )
+        subscription_options_synced = await self._sync_subscription_options_if_needed(
+            task.task_uuid,
+            job_id=job.job_id,
+        )
 
         changed_release_paths = await self._git_dirty_release_paths()
         download_repo_published = bool(job.include_git_push)
@@ -881,7 +862,7 @@ class DataReleaseService:
 
     def _subscription_options_sync_plan(self) -> tuple[bool, str]:
         raw = self._env_value("SUBSCRIPTIONS__SYNC_OPTIONS_ON_RELEASE", "auto").lower()
-        if raw in {"0", "false", "no", "off", "disabled"}:
+        if raw in SUBSCRIPTION_SYNC_FALSE_VALUES:
             return False, "SUBSCRIPTIONS__SYNC_OPTIONS_ON_RELEASE is disabled."
         if not SUBSCRIPTIONS_SCRIPT.exists():
             return False, f"Subscription helper script is missing: {SUBSCRIPTIONS_SCRIPT}"
@@ -893,10 +874,62 @@ class DataReleaseService:
         ]
         if not self._cloudflare_api_token():
             missing.append("CLOUDFLARE_API_TOKEN")
-        if missing and raw not in {"1", "true", "yes", "on"}:
+        if missing and raw not in SUBSCRIPTION_SYNC_STRICT_VALUES:
             return False, "Subscription D1 sync is in auto mode and skipped because settings are missing: " + ", ".join(missing)
 
         return True, "Subscription D1 option sync is enabled."
+
+    def _subscription_options_sync_is_strict(self) -> bool:
+        raw = self._env_value("SUBSCRIPTIONS__SYNC_OPTIONS_ON_RELEASE", "auto").lower()
+        return raw in SUBSCRIPTION_SYNC_STRICT_VALUES
+
+    async def _sync_subscription_options_if_needed(self, task_uuid: str, *, job_id: str) -> bool:
+        should_sync, sync_reason = self._subscription_options_sync_plan()
+        metadata = {"event": "subscription_options_sync", "release_job_id": job_id}
+        if not should_sync:
+            await task_manager.add_workbook_entry(
+                task_uuid,
+                entry_type="info",
+                title="Subscription Options Sync Skipped",
+                content=sync_reason,
+                content_type="text",
+                metadata={**metadata, "event": "subscription_options_sync_skip"},
+            )
+            return False
+
+        try:
+            await self._run_logged_command(
+                task_uuid,
+                title="Sync Subscription Options",
+                cmd=[str(SUBSCRIPTIONS_SCRIPT), "sync-options-remote"],
+                cwd=ROOT_DIR,
+                env={
+                    "CI": "1",
+                    "CLOUDFLARE_API_TOKEN": self._cloudflare_api_token(),
+                    "CLOUDFLARE_ACCOUNT_ID": self._cloudflare_account_id(),
+                },
+                metadata=metadata,
+            )
+            return True
+        except RuntimeError as exc:
+            if self._subscription_options_sync_is_strict():
+                raise
+            message = (
+                f"{sync_reason}\n\n"
+                "Subscription option sync is running in auto mode, so this release will continue. "
+                "Set SUBSCRIPTIONS__SYNC_OPTIONS_ON_RELEASE=true to make this step blocking.\n\n"
+                f"{exc}"
+            )
+            await task_manager.add_workbook_entry(
+                task_uuid,
+                entry_type="warning",
+                title="Subscription Options Sync Failed",
+                content=message,
+                content_type="text",
+                metadata={**metadata, "event": "subscription_options_sync_failed"},
+            )
+            logger.warning("Subscription options sync failed in auto mode; release will continue: %s", exc)
+            return False
 
     def _is_github_ssh_repo_url(self, repo_url: str) -> bool:
         normalized = (repo_url or "").strip().lower()

@@ -242,7 +242,10 @@ class TaiwanNIDSSCrawler(BaseCrawler):
                 time.sleep(attempt)
 
         if last_error is not None:
-            raise last_error
+            logger.warning(
+                f"[TW-NIDSS] CSV skipped after retries | code={disease.code} "
+                f"name={disease.name} error={last_error}"
+            )
         return None
 
     def _save_raw_csv(self, disease: TWDiseaseSource, csv_text: str) -> None:
@@ -275,12 +278,23 @@ class TaiwanNIDSSCrawler(BaseCrawler):
 
         all_rows: List[Dict[str, str]] = []
         fetched_count = 0
+        failed_count = 0
+        skipped_count = 0
         for disease in diseases:
             if requested_codes and disease.code not in requested_codes:
                 continue
 
-            csv_text = self._download_csv_text(disease)
+            try:
+                csv_text = self._download_csv_text(disease)
+            except Exception as exc:
+                failed_count += 1
+                logger.warning(
+                    f"[TW-NIDSS] CSV skipped after unexpected error | "
+                    f"code={disease.code} name={disease.name} error={exc}"
+                )
+                continue
             if not csv_text:
+                skipped_count += 1
                 continue
 
             self._save_raw_csv(disease, csv_text)
@@ -295,7 +309,16 @@ class TaiwanNIDSSCrawler(BaseCrawler):
             fetched_count += 1
 
         if not all_rows:
-            raise RuntimeError("[TW-NIDSS] No national monthly rows parsed from CSV source")
+            raise RuntimeError(
+                "[TW-NIDSS] No national monthly rows parsed from CSV source "
+                f"(fetched=0, skipped={skipped_count}, failed={failed_count})"
+            )
+
+        if failed_count or skipped_count:
+            logger.warning(
+                f"[TW-NIDSS] Completed with skipped disease CSVs | "
+                f"fetched={fetched_count} skipped={skipped_count} failed={failed_count}"
+            )
 
         all_rows.sort(key=lambda row: (row["Date"], row["RawDiseaseLabel"]))
         output_csv.parent.mkdir(parents=True, exist_ok=True)
