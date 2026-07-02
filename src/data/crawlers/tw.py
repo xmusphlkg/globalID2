@@ -11,18 +11,17 @@ from __future__ import annotations
 
 import csv
 import io
-import tempfile
 import time
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
-from urllib.parse import urlparse
 
 import requests
 
 from src.core import get_logger
 from src.core.country_library import get_country_bootstrap_config
+from src.core.tls import RequestsTLSChainFallback
 
 from .base import BaseCrawler, CrawlerResult
 
@@ -41,7 +40,6 @@ TWCA_SSL_CA_CERT = (
     / "certs"
     / "twca_ssl_certification_authority_2023.pem"
 )
-_TWCA_AUGMENTED_BUNDLE: Optional[Path] = None
 
 
 @dataclass(frozen=True)
@@ -96,30 +94,6 @@ def _decode_csv_response(content: bytes) -> str:
         except UnicodeDecodeError:
             continue
     return content.decode("utf-8", errors="replace")
-
-
-def _twca_augmented_ca_bundle() -> str:
-    """Return a certifi CA bundle augmented with Taiwan CDC's missing TWCA CA."""
-    global _TWCA_AUGMENTED_BUNDLE
-    if _TWCA_AUGMENTED_BUNDLE and _TWCA_AUGMENTED_BUNDLE.exists():
-        return str(_TWCA_AUGMENTED_BUNDLE)
-
-    base_bundle = Path(requests.certs.where())
-    bundle_path = Path(tempfile.gettempdir()) / "globalid_twca_nidss_bundle.pem"
-    bundle_bytes = (
-        base_bundle.read_bytes().rstrip()
-        + b"\n"
-        + TWCA_SSL_CA_CERT.read_bytes().strip()
-        + b"\n"
-    )
-    if not bundle_path.exists() or bundle_path.read_bytes() != bundle_bytes:
-        bundle_path.write_bytes(bundle_bytes)
-    _TWCA_AUGMENTED_BUNDLE = bundle_path
-    return str(bundle_path)
-
-
-def _is_tw_open_data_url(url: str) -> bool:
-    return (urlparse(url).hostname or "").lower() == "od.cdc.gov.tw"
 
 
 def aggregate_monthly_csv_rows(
@@ -203,7 +177,10 @@ class TaiwanNIDSSCrawler(BaseCrawler):
         )
         self.save_raw = save_raw
         self.raw_dir = Path(raw_dir) if raw_dir else Path("data/raw/tw")
-        self._csv_verify: bool | str = True
+        self._tls_fallback = RequestsTLSChainFallback(
+            extra_ca_certs=[TWCA_SSL_CA_CERT],
+            log_label="[TW-NIDSS]",
+        )
 
     def fetch_disease_index(self) -> List[TWDiseaseSource]:
         """Discover NIDSS disease codes that are exposed in the dashboard selector."""
@@ -282,23 +259,12 @@ class TaiwanNIDSSCrawler(BaseCrawler):
         return None
 
     def _get_csv_response(self, url: str) -> requests.Response:
-        try:
-            return self.session.get(
-                url,
-                timeout=self.timeout,
-                verify=self._csv_verify,
-            )
-        except requests.exceptions.SSLError as exc:
-            if self._csv_verify is not True or not _is_tw_open_data_url(url):
-                raise
-            bundle = _twca_augmented_ca_bundle()
-            logger.warning(
-                f"[TW-NIDSS] CSV TLS chain fallback enabled for od.cdc.gov.tw | "
-                f"url={url} error={exc}"
-            )
-            response = self.session.get(url, timeout=self.timeout, verify=bundle)
-            self._csv_verify = bundle
-            return response
+        return self._tls_fallback.request(
+            self.session,
+            "GET",
+            url,
+            timeout=self.timeout,
+        )
 
     def _save_raw_csv(self, disease: TWDiseaseSource, csv_text: str) -> None:
         if not self.save_raw:

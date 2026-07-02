@@ -8,7 +8,11 @@ from src.core.source_scopes import (
     scope_display_label,
     scope_from_data_source,
 )
-from src.data.crawlers.tw import DEFAULT_SOURCE_NAME, TWDiseaseSource, aggregate_monthly_csv_rows
+from src.data.crawlers.tw import (
+    DEFAULT_SOURCE_NAME,
+    TWDiseaseSource,
+    aggregate_monthly_csv_rows,
+)
 
 
 def test_tw_nidss_monthly_aggregation_keeps_local_and_imported_counts():
@@ -19,9 +23,24 @@ def test_tw_nidss_monthly_aggregation_keeps_local_and_imported_counts():
         weekly_csv_url="https://od.cdc.gov.tw/eic/Weekly_Age_County_Gender_061.csv",
     )
     rows = [
-        {"發病年份": "2026", "發病月份": "01", "是否為境外移入": "0", "確定病例數": "2"},
-        {"發病年份": "2026", "發病月份": "01", "是否為境外移入": "1", "確定病例數": "3"},
-        {"發病年份": "2026", "發病月份": "02", "是否為境外移入": "0", "確定病例數": "5"},
+        {
+            "發病年份": "2026",
+            "發病月份": "01",
+            "是否為境外移入": "0",
+            "確定病例數": "2",
+        },
+        {
+            "發病年份": "2026",
+            "發病月份": "01",
+            "是否為境外移入": "1",
+            "確定病例數": "3",
+        },
+        {
+            "發病年份": "2026",
+            "發病月份": "02",
+            "是否為境外移入": "0",
+            "確定病例數": "5",
+        },
     ]
 
     aggregated = aggregate_monthly_csv_rows(disease, rows, months={(2026, 1)})
@@ -48,8 +67,14 @@ def test_tw_nidss_source_scope_aliases():
     assert scope_from_data_source(DEFAULT_SOURCE_NAME) == "nidss_open_data"
     assert scope_from_data_source("Taiwan CDC NIDSS Open Data") == "nidss_open_data"
     assert canonical_data_source_label(DEFAULT_SOURCE_NAME) == "Taiwan, China CDC NIDSS"
-    assert canonical_data_source_label("Taiwan CDC NIDSS Open Data") == "Taiwan, China CDC NIDSS"
-    assert scope_display_label("nidss_open_data", country_code="TW") == "Taiwan, China CDC NIDSS"
+    assert (
+        canonical_data_source_label("Taiwan CDC NIDSS Open Data")
+        == "Taiwan, China CDC NIDSS"
+    )
+    assert (
+        scope_display_label("nidss_open_data", country_code="TW")
+        == "Taiwan, China CDC NIDSS"
+    )
 
 
 def test_tw_nidss_csv_download_failure_is_skipped(monkeypatch):
@@ -63,19 +88,24 @@ def test_tw_nidss_csv_download_failure_is_skipped(monkeypatch):
     )
     crawler = TaiwanNIDSSCrawler()
 
-    monkeypatch.setattr("src.data.crawlers.tw.time.sleep", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(
+        "src.data.crawlers.tw.time.sleep", lambda *_args, **_kwargs: None
+    )
     monkeypatch.setattr(
         crawler.session,
-        "get",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(requests.exceptions.SSLError("ssl eof")),
+        "request",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            requests.exceptions.SSLError("ssl eof")
+        ),
     )
 
     assert crawler._download_csv_text(disease) is None
 
 
-def test_tw_nidss_csv_download_uses_twca_bundle_on_ssl_chain_error(tmp_path, monkeypatch):
+def test_tw_nidss_csv_download_uses_twca_bundle_on_ssl_chain_error(
+    tmp_path, monkeypatch
+):
     from src.data.crawlers.tw import TaiwanNIDSSCrawler
-    from src.data.crawlers import tw as tw_module
 
     disease = TWDiseaseSource(
         code="050",
@@ -96,15 +126,23 @@ def test_tw_nidss_csv_download_uses_twca_bundle_on_ssl_chain_error(tmp_path, mon
         def raise_for_status(self):
             return None
 
-    def fake_get(_url, **kwargs):
+    def fake_request(_method, _url, **kwargs):
         calls.append(kwargs)
         if len(calls) == 1:
-            raise requests.exceptions.SSLError("unable to get local issuer certificate")
+            raise requests.exceptions.SSLError(
+                "[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: "
+                "unable to get local issuer certificate"
+            )
         return FakeResponse()
 
-    monkeypatch.setattr("src.data.crawlers.tw.time.sleep", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr(tw_module, "_twca_augmented_ca_bundle", lambda: str(bundle))
-    monkeypatch.setattr(crawler.session, "get", fake_get)
+    monkeypatch.setattr(
+        "src.data.crawlers.tw.time.sleep", lambda *_args, **_kwargs: None
+    )
+    monkeypatch.setattr(
+        "src.core.tls.build_augmented_ca_bundle_for_url",
+        lambda *_args, **_kwargs: str(bundle),
+    )
+    monkeypatch.setattr(crawler.session, "request", fake_request)
 
     csv_text = crawler._download_csv_text(disease)
 
@@ -113,7 +151,7 @@ def test_tw_nidss_csv_download_uses_twca_bundle_on_ssl_chain_error(tmp_path, mon
     assert calls[0]["verify"] is True
     assert calls[1]["verify"] == str(bundle)
     assert all(call["verify"] is not False for call in calls)
-    assert crawler._csv_verify == str(bundle)
+    assert crawler._tls_fallback._verify_by_host["od.cdc.gov.tw"] == str(bundle)
 
 
 def test_tw_nidss_crawl_continues_when_one_disease_fails(tmp_path, monkeypatch):

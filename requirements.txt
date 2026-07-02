@@ -25,6 +25,7 @@ dbfread  # DBF reader for DATASUS/SINAN files
 
 # Web Scraping
 requests
+cryptography
 playwright
 beautifulsoup4
 lxml
