@@ -73,6 +73,49 @@ def test_tw_nidss_csv_download_failure_is_skipped(monkeypatch):
     assert crawler._download_csv_text(disease) is None
 
 
+def test_tw_nidss_csv_download_uses_twca_bundle_on_ssl_chain_error(tmp_path, monkeypatch):
+    from src.data.crawlers.tw import TaiwanNIDSSCrawler
+    from src.data.crawlers import tw as tw_module
+
+    disease = TWDiseaseSource(
+        code="050",
+        name="天花",
+        monthly_csv_url="https://od.cdc.gov.tw/eic/Age_County_Gender_050.csv",
+        weekly_csv_url="https://od.cdc.gov.tw/eic/Weekly_Age_County_Gender_050.csv",
+    )
+    bundle = tmp_path / "twca-bundle.pem"
+    bundle.write_text("bundle", encoding="utf-8")
+    crawler = TaiwanNIDSSCrawler()
+    calls = []
+
+    class FakeResponse:
+        status_code = 200
+        headers = {"content-type": "text/csv"}
+        content = "發病年份,發病月份,是否為境外移入,確定病例數\n2026,6,0,1\n".encode()
+
+        def raise_for_status(self):
+            return None
+
+    def fake_get(_url, **kwargs):
+        calls.append(kwargs)
+        if len(calls) == 1:
+            raise requests.exceptions.SSLError("unable to get local issuer certificate")
+        return FakeResponse()
+
+    monkeypatch.setattr("src.data.crawlers.tw.time.sleep", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(tw_module, "_twca_augmented_ca_bundle", lambda: str(bundle))
+    monkeypatch.setattr(crawler.session, "get", fake_get)
+
+    csv_text = crawler._download_csv_text(disease)
+
+    assert csv_text is not None
+    assert "確定病例數" in csv_text
+    assert calls[0]["verify"] is True
+    assert calls[1]["verify"] == str(bundle)
+    assert all(call["verify"] is not False for call in calls)
+    assert crawler._csv_verify == str(bundle)
+
+
 def test_tw_nidss_crawl_continues_when_one_disease_fails(tmp_path, monkeypatch):
     from src.data.crawlers.tw import TaiwanNIDSSCrawler
 
