@@ -14,12 +14,13 @@ from __future__ import annotations
 
 import html
 import json
-from datetime import datetime, timezone
+import re
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from sqlalchemy import select
 
-from src.core import get_database, get_logger
+from src.core import get_config, get_database, get_logger
 from src.domain import Country, Task, TaskStatus, TaskWorkbook
 from src.services.smtp_email_service import smtp_email_service
 from src.services.settings_service import system_settings_service
@@ -28,6 +29,10 @@ logger = get_logger(__name__)
 
 # Metadata key pattern: "alert_sent_failed" / "alert_sent_cancelled"
 _DEDUP_KEY_TMPL = "alert_sent_{status}"
+_SUPPRESSED_KEY_TMPL = "alert_suppressed_{status}"
+_UUID_RE = re.compile(r"\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b", re.I)
+_SHA_RE = re.compile(r"\b[0-9a-f]{12,40}\b", re.I)
+_PATH_RE = re.compile(r"/[^\s'\"<>]+")
 
 
 class TaskAlertService:
@@ -67,8 +72,30 @@ class TaskAlertService:
 
             # Idempotency guard — don't send a second alert for same task+status.
             dedup_key = _DEDUP_KEY_TMPL.format(status=final_status.value)
+            suppressed_key = _SUPPRESSED_KEY_TMPL.format(status=final_status.value)
             metadata = dict(task.metadata_ or {})
-            if metadata.get(dedup_key):
+            if metadata.get(dedup_key) or metadata.get(suppressed_key):
+                return
+
+            alert_signature = _alert_signature(task, final_status)
+            suppressed_by = await _find_recent_alert_group(
+                db,
+                task=task,
+                final_status=final_status,
+                alert_signature=alert_signature,
+            )
+            if suppressed_by is not None:
+                metadata["alert_signature"] = alert_signature
+                metadata[suppressed_key] = datetime.now(timezone.utc).isoformat()
+                metadata["alert_suppressed_by_task_uuid"] = suppressed_by.task_uuid
+                task.metadata_ = metadata
+                await db.commit()
+                logger.info(
+                    "Task alert (%s) suppressed for %s; same alert group already sent by %s",
+                    final_status.value,
+                    task_uuid,
+                    suppressed_by.task_uuid,
+                )
                 return
 
             workbook_entries: list[TaskWorkbook] = list(
@@ -100,7 +127,10 @@ class TaskAlertService:
             if not sent:
                 return
 
-            metadata[dedup_key] = datetime.now(timezone.utc).isoformat()
+            now = datetime.now(timezone.utc).isoformat()
+            metadata[dedup_key] = now
+            metadata["alert_signature"] = alert_signature
+            metadata["alert_group_sent_at"] = now
             task.metadata_ = metadata
             await db.commit()
 
@@ -110,6 +140,80 @@ class TaskAlertService:
             task_uuid,
             len(admin_emails),
         )
+
+
+# ── Alert grouping ───────────────────────────────────────────────────────────
+
+def _task_type_value(task: Task) -> str:
+    return str(task.task_type.value if hasattr(task.task_type, "value") else task.task_type)
+
+
+def _normalize_alert_text(value: str) -> str:
+    text = value.lower()
+    text = _UUID_RE.sub("<uuid>", text)
+    text = _SHA_RE.sub("<sha>", text)
+    text = _PATH_RE.sub("<path>", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
+def _alert_signature(task: Task, final_status: TaskStatus) -> str:
+    task_type = _task_type_value(task)
+    metadata = dict(task.metadata_ or {})
+    error_text = task.last_error or ""
+    normalized = _normalize_alert_text(error_text)
+
+    if task_type == "export_data":
+        release_job_id = str(metadata.get("release_job_id") or "unknown")
+        if (
+            "download-data repo" in normalized
+            or "generate site data failed" in normalized
+            or "git pull" in normalized
+            or "git fetch" in normalized
+            or "git ls-remote" in normalized
+        ):
+            return f"{final_status.value}:export_data:{release_job_id}:download_repo_git"
+
+    if "od.cdc.gov.tw" in error_text and "ssl" in normalized:
+        return f"{final_status.value}:crawl_data:tw_nidss_ssl"
+
+    return f"{final_status.value}:{task_type}:{normalized[:220]}"
+
+
+async def _find_recent_alert_group(
+    db,
+    *,
+    task: Task,
+    final_status: TaskStatus,
+    alert_signature: str,
+) -> Optional[Task]:
+    cooldown_minutes = int(get_config().automation.alert_group_cooldown_minutes or 0)
+    if cooldown_minutes <= 0:
+        return None
+
+    cutoff = datetime.now(timezone.utc) - timedelta(minutes=cooldown_minutes)
+    recent_tasks = (
+        await db.execute(
+            select(Task)
+            .where(
+                Task.status == final_status,
+                Task.completed_at.is_not(None),
+                Task.completed_at >= cutoff,
+            )
+            .order_by(Task.completed_at.desc())
+            .limit(200)
+        )
+    ).scalars().all()
+
+    for candidate in recent_tasks:
+        if candidate.id == task.id:
+            continue
+        metadata = dict(candidate.metadata_ or {})
+        if metadata.get("alert_signature") != alert_signature:
+            continue
+        if metadata.get("alert_group_sent_at"):
+            return candidate
+    return None
 
 
 # ── HTML builder ──────────────────────────────────────────────────────────────

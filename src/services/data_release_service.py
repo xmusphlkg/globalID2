@@ -63,6 +63,14 @@ def _coerce_status(value: Any, fallback: str = "idle") -> str:
     return str(value)
 
 
+def _as_aware_utc(value: Optional[datetime]) -> Optional[datetime]:
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        return value.replace(tzinfo=ZoneInfo("UTC"))
+    return value.astimezone(ZoneInfo("UTC"))
+
+
 @dataclass
 class DataReleaseJobConfig:
     job_id: str
@@ -358,6 +366,15 @@ class DataReleaseService:
         for job in enabled_jobs:
             if await self._release_up_to_date(job.job_id, latest_data_completion):
                 continue
+            cooldown_reason = await self._release_failure_cooldown_reason(job.job_id)
+            if cooldown_reason:
+                state = self._states.setdefault(job.job_id, DataReleaseJobState())
+                state.skipped_count += 1
+                state.last_status = "cooldown"
+                state.last_error = cooldown_reason
+                state.last_finished_at = datetime.now(ZoneInfo(job.timezone or self._config().timezone))
+                logger.warning("Auto-triggered data release %s suppressed: %s", job.job_id, cooldown_reason)
+                continue
             try:
                 await self.trigger_job(
                     job.job_id,
@@ -376,7 +393,10 @@ class DataReleaseService:
             tasks = (
                 await db.execute(
                     select(Task)
-                    .where(Task.task_type == TaskType.EXPORT_DATA)
+                    .where(
+                        Task.task_type == TaskType.EXPORT_DATA,
+                        Task.status == TaskStatus.COMPLETED,
+                    )
                     .order_by(Task.created_at.desc())
                 )
             ).scalars().all()
@@ -384,9 +404,46 @@ class DataReleaseService:
             metadata = dict(task.metadata_ or {})
             if metadata.get("release_job_id") != job_id:
                 continue
-            task_time = task.completed_at or task.created_at
-            return bool(task_time and task_time >= crawl_completed_at)
+            task_time = _as_aware_utc(task.completed_at or task.created_at)
+            crawl_time = _as_aware_utc(crawl_completed_at)
+            return bool(task_time and crawl_time and task_time >= crawl_time)
         return False
+
+    async def _release_failure_cooldown_reason(self, job_id: str) -> Optional[str]:
+        cooldown_minutes = int(self._config().auto_failure_cooldown_minutes or 0)
+        if cooldown_minutes <= 0:
+            return None
+
+        now = datetime.now(ZoneInfo("UTC"))
+        cutoff = now - timedelta(minutes=cooldown_minutes)
+        tasks = await self._recent_failed_release_tasks()
+
+        for task in tasks:
+            metadata = dict(task.metadata_ or {})
+            if metadata.get("release_job_id") != job_id:
+                continue
+            task_time = _as_aware_utc(task.completed_at or task.created_at)
+            if task_time is None or task_time < cutoff:
+                continue
+            until = task_time + timedelta(minutes=cooldown_minutes)
+            return (
+                f"latest release task {task.task_uuid} failed at {task_time.isoformat()}; "
+                f"auto release is cooling down until {until.isoformat()}"
+            )
+        return None
+
+    async def _recent_failed_release_tasks(self) -> list[Task]:
+        async with get_database() as db:
+            result = await db.execute(
+                select(Task)
+                .where(
+                    Task.task_type == TaskType.EXPORT_DATA,
+                    Task.status == TaskStatus.FAILED,
+                )
+                .order_by(Task.created_at.desc())
+                .limit(100)
+            )
+            return list(result.scalars().all())
 
     async def _enqueue_release_task(
         self,
@@ -510,6 +567,7 @@ class DataReleaseService:
             "enabled": cfg.enabled,
             "timezone": cfg.timezone,
             "poll_interval_seconds": cfg.poll_interval_seconds,
+            "auto_failure_cooldown_minutes": cfg.auto_failure_cooldown_minutes,
             "last_tick_at": _iso(self._last_tick_at),
             "jobs": jobs_payload,
         }

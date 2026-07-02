@@ -36,6 +36,7 @@ class DataReleaseConfigOut(BaseModel):
     enabled: bool
     timezone: str
     poll_interval_seconds: int
+    auto_failure_cooldown_minutes: int = 0
     last_tick_at: Optional[str] = None
     jobs: List[DataReleaseJobOut] = []
 

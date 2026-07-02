@@ -547,24 +547,49 @@ def remote_branch_exists(repo_url: str, branch: str) -> bool:
     return bool(output)
 
 
-def ensure_download_repo(repo_url: str, branch: str, workdir: Path) -> None:
-    """Clone or update the dedicated download repository."""
-    if not (workdir / ".git").exists():
-        if workdir.exists():
-            shutil.rmtree(workdir)
-        workdir.parent.mkdir(parents=True, exist_ok=True)
-        clone_cmd = ["clone"]
-        if remote_branch_exists(repo_url, branch):
-            clone_cmd.extend(["--branch", branch])
-        clone_cmd.extend([repo_url, str(workdir)])
-        run_git(clone_cmd, workdir.parent, repo_url=repo_url)
+def clone_download_repo(repo_url: str, branch: str, workdir: Path, *, branch_exists: bool) -> None:
+    """Create a fresh checkout for the generated download repository."""
+    if workdir.exists():
+        shutil.rmtree(workdir)
+    workdir.parent.mkdir(parents=True, exist_ok=True)
+    clone_cmd = ["clone"]
+    if branch_exists:
+        clone_cmd.extend(["--branch", branch])
+    clone_cmd.extend([repo_url, str(workdir)])
+    run_git(clone_cmd, workdir.parent, repo_url=repo_url)
+    if branch_exists:
+        run_git(["checkout", "-B", branch, f"origin/{branch}"], workdir, repo_url=repo_url)
+    else:
         run_git(["checkout", "-B", branch], workdir, repo_url=repo_url)
+
+
+def ensure_download_repo(repo_url: str, branch: str, workdir: Path) -> None:
+    """Clone or reset the dedicated download repository.
+
+    The checkout under /tmp is a disposable publishing cache.  It should not keep
+    local history: if it diverges from the remote branch or contains corrupt git
+    objects, reset or rebuild it from the remote before copying generated files.
+    """
+    branch_exists = remote_branch_exists(repo_url, branch)
+    if not (workdir / ".git").exists():
+        clone_download_repo(repo_url, branch, workdir, branch_exists=branch_exists)
         return
 
-    run_git(["fetch", "origin"], workdir, repo_url=repo_url)
-    run_git(["checkout", "-B", branch], workdir, repo_url=repo_url)
-    if remote_branch_exists(repo_url, branch):
-        run_git(["pull", "--ff-only", "origin", branch], workdir, repo_url=repo_url)
+    try:
+        origin_url = run_git(["remote", "get-url", "origin"], workdir, repo_url=repo_url)
+        if origin_url.strip() != repo_url.strip():
+            run_git(["remote", "set-url", "origin", repo_url], workdir, repo_url=repo_url)
+
+        if branch_exists:
+            run_git(["fetch", "--prune", "origin", branch], workdir, repo_url=repo_url)
+            run_git(["checkout", "-B", branch, f"origin/{branch}"], workdir, repo_url=repo_url)
+            run_git(["reset", "--hard", f"origin/{branch}"], workdir, repo_url=repo_url)
+        else:
+            run_git(["fetch", "--prune", "origin"], workdir, repo_url=repo_url)
+            run_git(["checkout", "-B", branch], workdir, repo_url=repo_url)
+    except RuntimeError as exc:
+        print(f"  Download repo cache reset required: {exc}")
+        clone_download_repo(repo_url, branch, workdir, branch_exists=branch_exists)
 
 
 def clean_download_repo_paths(workdir: Path) -> None:
@@ -2706,7 +2731,7 @@ async def export(
     (output_dir / "meta.json").write_text(
         json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8"
     )
-    print(f"  ✓ meta.json")
+    print("  ✓ meta.json")
 
     about_snapshot = build_about_snapshot(
         countries_simple=countries_simple,
@@ -2717,7 +2742,7 @@ async def export(
     (output_dir / "about.json").write_text(
         json.dumps(about_snapshot, ensure_ascii=False, indent=2), encoding="utf-8"
     )
-    print(f"  ✓ about.json")
+    print("  ✓ about.json")
 
     downloads_manifest = {
         "generated_at": generated_at,
@@ -2736,7 +2761,7 @@ async def export(
         json.dumps(downloads_manifest, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
-    print(f"  ✓ downloads manifest")
+    print("  ✓ downloads manifest")
     print(f"\nDone. Data written to: {output_dir}")
 
 

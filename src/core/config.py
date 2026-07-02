@@ -239,6 +239,12 @@ class AutomationSettings(_BaseEnvSettings):
     timezone: str = Field(default="UTC", description="自动化调度时区")
     poll_interval_seconds: int = Field(default=30, ge=5, description="自动化轮询间隔秒数")
     default_retry_threshold: int = Field(default=3, ge=1, le=20, description="失败告警触发阈值")
+    alert_group_cooldown_minutes: int = Field(
+        default=360,
+        ge=0,
+        validation_alias="AUTOMATION__ALERT_GROUP_COOLDOWN_MINUTES",
+        description="同类任务失败告警聚合冷却分钟数，0 表示不聚合",
+    )
     jobs_json: str = Field(default="[]", description="自动化任务 JSON 列表")
     admin_emails_raw: str = Field(default="", description="管理员邮箱，逗号分隔")
     smtp_host: str = Field(default="", description="SMTP 服务器地址 (如 email-smtp.us-east-1.amazonaws.com)")
@@ -272,6 +278,12 @@ class DataReleaseSettings(_BaseEnvSettings):
     enabled: bool = Field(default=True, description="是否启用 data release 调度")
     timezone: str = Field(default="UTC", description="默认 data release 调度时区")
     poll_interval_seconds: int = Field(default=30, ge=5, description="data release 轮询间隔秒数")
+    auto_failure_cooldown_minutes: int = Field(
+        default=720,
+        ge=0,
+        validation_alias="DATA_RELEASE__AUTO_FAILURE_COOLDOWN_MINUTES",
+        description="自动触发 data release 失败后的冷却分钟数，0 表示不冷却",
+    )
     default_github_remote: str = Field(default="origin", description="默认 Git 远端名称")
     default_github_branch: str = Field(default="", description="默认 Git 分支，为空时读取当前分支")
     default_cloudflare_project_name: str = Field(
@@ -443,7 +455,6 @@ config = get_config()
 if __name__ == "__main__":
     # 测试配置
     from rich import print as rprint
-    from rich.panel import Panel
     from rich.table import Table
     
     cfg = get_config()
