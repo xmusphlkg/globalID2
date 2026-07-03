@@ -416,34 +416,36 @@ class DataReleaseService:
 
         now = datetime.now(ZoneInfo("UTC"))
         cutoff = now - timedelta(minutes=cooldown_minutes)
-        tasks = await self._recent_failed_release_tasks()
+        task = await self._latest_terminal_release_task(job_id)
+        if task is None or task.status != TaskStatus.FAILED:
+            return None
 
-        for task in tasks:
-            metadata = dict(task.metadata_ or {})
-            if metadata.get("release_job_id") != job_id:
-                continue
-            task_time = _as_aware_utc(task.completed_at or task.created_at)
-            if task_time is None or task_time < cutoff:
-                continue
-            until = task_time + timedelta(minutes=cooldown_minutes)
-            return (
-                f"latest release task {task.task_uuid} failed at {task_time.isoformat()}; "
-                f"auto release is cooling down until {until.isoformat()}"
-            )
-        return None
+        task_time = _as_aware_utc(task.completed_at or task.created_at)
+        if task_time is None or task_time < cutoff:
+            return None
+        until = task_time + timedelta(minutes=cooldown_minutes)
+        return (
+            f"latest release task {task.task_uuid} failed at {task_time.isoformat()}; "
+            f"auto release is cooling down until {until.isoformat()}"
+        )
 
-    async def _recent_failed_release_tasks(self) -> list[Task]:
+    async def _latest_terminal_release_task(self, job_id: str) -> Optional[Task]:
         async with get_database() as db:
             result = await db.execute(
                 select(Task)
                 .where(
                     Task.task_type == TaskType.EXPORT_DATA,
-                    Task.status == TaskStatus.FAILED,
+                    Task.status.in_([TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED]),
                 )
-                .order_by(Task.created_at.desc())
+                .order_by(Task.completed_at.desc().nullslast(), Task.created_at.desc())
                 .limit(100)
             )
-            return list(result.scalars().all())
+            tasks = list(result.scalars().all())
+        for task in tasks:
+            metadata = dict(task.metadata_ or {})
+            if metadata.get("release_job_id") == job_id:
+                return task
+        return None
 
     async def _enqueue_release_task(
         self,

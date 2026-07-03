@@ -5,6 +5,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from src.domain import TaskStatus
 from src.services.data_release_service import DataReleaseService
 
 
@@ -58,6 +59,7 @@ async def test_release_failure_cooldown_suppresses_recent_failed_auto_release(mo
     now = datetime.now(timezone.utc)
     failed_task = SimpleNamespace(
         task_uuid="failed-release-1",
+        status=TaskStatus.FAILED,
         metadata_={"release_job_id": "site-release"},
         created_at=now - timedelta(minutes=10),
         completed_at=now - timedelta(minutes=5),
@@ -65,10 +67,11 @@ async def test_release_failure_cooldown_suppresses_recent_failed_auto_release(mo
 
     monkeypatch.setattr(service, "_config", lambda: SimpleNamespace(auto_failure_cooldown_minutes=720))
 
-    async def recent_failed_release_tasks():
-        return [failed_task]
+    async def latest_terminal_release_task(job_id):
+        assert job_id == "site-release"
+        return failed_task
 
-    monkeypatch.setattr(service, "_recent_failed_release_tasks", recent_failed_release_tasks)
+    monkeypatch.setattr(service, "_latest_terminal_release_task", latest_terminal_release_task)
 
     reason = await service._release_failure_cooldown_reason("site-release")
 
@@ -83,22 +86,41 @@ async def test_release_failure_cooldown_ignores_old_or_other_jobs(monkeypatch):
     now = datetime.now(timezone.utc)
     old_task = SimpleNamespace(
         task_uuid="old-failure",
+        status=TaskStatus.FAILED,
         metadata_={"release_job_id": "site-release"},
         created_at=now - timedelta(hours=24),
         completed_at=now - timedelta(hours=24),
     )
-    other_job_task = SimpleNamespace(
-        task_uuid="other-job-failure",
-        metadata_={"release_job_id": "other-release"},
-        created_at=now,
-        completed_at=now,
-    )
 
     monkeypatch.setattr(service, "_config", lambda: SimpleNamespace(auto_failure_cooldown_minutes=60))
 
-    async def recent_failed_release_tasks():
-        return [old_task, other_job_task]
+    async def latest_terminal_release_task(job_id):
+        assert job_id == "site-release"
+        return old_task
 
-    monkeypatch.setattr(service, "_recent_failed_release_tasks", recent_failed_release_tasks)
+    monkeypatch.setattr(service, "_latest_terminal_release_task", latest_terminal_release_task)
+
+    assert await service._release_failure_cooldown_reason("site-release") is None
+
+
+@pytest.mark.asyncio
+async def test_release_failure_cooldown_clears_after_later_success(monkeypatch):
+    service = DataReleaseService()
+    now = datetime.now(timezone.utc)
+    successful_task = SimpleNamespace(
+        task_uuid="successful-release",
+        status=TaskStatus.COMPLETED,
+        metadata_={"release_job_id": "site-release"},
+        created_at=now - timedelta(minutes=1),
+        completed_at=now - timedelta(minutes=1),
+    )
+
+    monkeypatch.setattr(service, "_config", lambda: SimpleNamespace(auto_failure_cooldown_minutes=720))
+
+    async def latest_terminal_release_task(job_id):
+        assert job_id == "site-release"
+        return successful_task
+
+    monkeypatch.setattr(service, "_latest_terminal_release_task", latest_terminal_release_task)
 
     assert await service._release_failure_cooldown_reason("site-release") is None
