@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-06-29T22:45:34.326184+00:00",
+  "fetched_at": "2026-07-04T22:45:38.599554+00:00",
   "disease": "COVID-19",
   "year": 2026,
   "month": 5,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1782773133935)/",
-            "rootActivityId": "e18e48e7-90f0-476b-ac7f-9bec6c88d82c",
+            "timestamp": "/Date(1783205138256)/",
+            "rootActivityId": "ddeda166-6caa-4b6b-9cac-60b3ef565446",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'8,445'"
+                          "A0": "'8,447'"
                         }
                       ]
                     },
@@ -424,7 +424,7 @@
                         {
                           "C": [
                             "WA",
-                            "'500'"
+                            "'502'"
                           ]
                         }
                       ]
@@ -451,6 +451,6 @@
     "SA": 533,
     "TAS": 114,
     "VIC": 1461,
-    "WA": 500
+    "WA": 502
   }
 }

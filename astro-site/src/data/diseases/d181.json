@@ -32,7 +32,8 @@
         "2026-03-01",
         "2026-04-01",
         "2026-05-01",
-        "2026-06-01"
+        "2026-06-01",
+        "2026-07-01"
       ],
       "cases": [
         22,
@@ -57,6 +58,7 @@
         13,
         3,
         6,
+        31,
         3
       ],
       "weekly_equiv_cases": [
@@ -82,9 +84,11 @@
         3.25,
         0.6774193548387096,
         1.4000000000000001,
-        0.6774193548387096
+        7.0,
+        0.7000000000000001
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -132,6 +136,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -157,9 +162,10 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
-      "total_cases": 2325,
+      "total_cases": 2356,
       "total_deaths": 0
     }
   },
@@ -187,7 +193,8 @@
       "2026-03",
       "2026-04",
       "2026-05",
-      "2026-06"
+      "2026-06",
+      "2026-07"
     ],
     "cases": [
       22,
@@ -212,6 +219,7 @@
       13,
       3,
       6,
+      31,
       3
     ],
     "deaths": [
@@ -237,12 +245,13 @@
       0,
       0,
       0,
+      0,
       0
     ]
   },
-  "total_cases": 2325,
+  "total_cases": 2356,
   "total_deaths": 0,
-  "generated_at": "2026-06-20T00:00:00+00:00",
+  "generated_at": "2026-07-01T00:00:00+00:00",
   "source_info": [
     {
       "country_code": "TW",

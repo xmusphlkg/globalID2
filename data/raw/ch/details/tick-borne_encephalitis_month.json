@@ -1,10 +1,10 @@
 {
-  "version": "20260624",
+  "version": "20260701",
   "details": {
     "identifier": "tick-borne_encephalitis/cases/value/month",
     "source": "mandatory_reporting_system",
     "sourceDate": "2026-06-16",
-    "version": "20260624",
+    "version": "20260701",
     "properties": {
       "CHFL": {
         "allValue": "all",

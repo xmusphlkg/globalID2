@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-06-29T22:45:38.009393+00:00",
+  "fetched_at": "2026-07-04T22:45:43.106316+00:00",
   "disease": "Pertussis",
   "year": 2026,
   "month": 5,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1782773137673)/",
-            "rootActivityId": "eb7cbb14-beec-46ad-a794-3d70256efc07",
+            "timestamp": "/Date(1783205142757)/",
+            "rootActivityId": "dcf00ea0-5edf-437f-a737-8dd2ad790852",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'762'"
+                          "A0": "'764'"
                         }
                       ]
                     },
@@ -388,7 +388,7 @@
                         {
                           "C": [
                             "NSW",
-                            "'288'"
+                            "'289'"
                           ]
                         },
                         {
@@ -418,7 +418,7 @@
                         {
                           "C": [
                             "VIC",
-                            "'113'"
+                            "'114'"
                           ]
                         },
                         {
@@ -445,12 +445,12 @@
   },
   "parsed_counts": {
     "ACT": 12,
-    "NSW": 288,
+    "NSW": 289,
     "NT": 11,
     "QLD": 95,
     "SA": 113,
     "TAS": 15,
-    "VIC": 113,
+    "VIC": 114,
     "WA": 115
   }
 }

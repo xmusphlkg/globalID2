@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-06-29T22:45:36.460472+00:00",
+  "fetched_at": "2026-07-04T22:45:41.433001+00:00",
   "disease": "Invasive Group A Streptococcal disease (iGAS)",
   "year": 2026,
   "month": 5,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1782773136108)/",
-            "rootActivityId": "0a3d3509-e93a-4f58-852a-54b3410db5b9",
+            "timestamp": "/Date(1783205141116)/",
+            "rootActivityId": "4b1ca5ba-422e-456a-89ae-1c4bd8ab5597",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'145'"
+                          "A0": "'146'"
                         }
                       ]
                     },
@@ -418,7 +418,7 @@
                         {
                           "C": [
                             "VIC",
-                            "'25'"
+                            "'26'"
                           ]
                         },
                         {
@@ -450,7 +450,7 @@
     "QLD": 46,
     "SA": "'<5'",
     "TAS": 0,
-    "VIC": 25,
+    "VIC": 26,
     "WA": 23
   }
 }

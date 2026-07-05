@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-20T00:00:00+00:00",
+  "generated_at": "2026-07-01T00:00:00+00:00",
   "total_countries": 10,
   "total_diseases": 199,
   "total_reports": 1,
@@ -10,12 +10,12 @@
       "name_en": "Australia",
       "name_zh": "澳大利亚",
       "language": "en-AU",
-      "total_cases": 20203666,
+      "total_cases": 20218350,
       "total_deaths": 0,
       "disease_count": 66,
       "date_range": {
         "start": "2000-01-01",
-        "end": "2026-06-01"
+        "end": "2026-07-01"
       },
       "source_info": {
         "country_code": "AU",
@@ -44,7 +44,7 @@
       "name_en": "Brazil",
       "name_zh": "巴西",
       "language": "pt-BR",
-      "total_cases": 60857428,
+      "total_cases": 60894174,
       "total_deaths": 0,
       "disease_count": 45,
       "date_range": {
@@ -78,7 +78,7 @@
       "name_en": "Switzerland",
       "name_zh": "瑞士",
       "language": "en-CH",
-      "total_cases": 5277163,
+      "total_cases": 5277150,
       "total_deaths": 0,
       "disease_count": 43,
       "date_range": {
@@ -198,12 +198,12 @@
       "name_en": "Japan",
       "name_zh": "日本",
       "language": "ja-JP",
-      "total_cases": 48260117,
+      "total_cases": 48294590,
       "total_deaths": 0,
       "disease_count": 86,
       "date_range": {
         "start": "2012-09-14",
-        "end": "2026-06-20"
+        "end": "2026-06-27"
       },
       "source_info": {
         "country_code": "JP",
@@ -300,12 +300,12 @@
       "name_en": "Taiwan, China",
       "name_zh": "中国台湾",
       "language": "zh-TW",
-      "total_cases": 11163901,
+      "total_cases": 11164299,
       "total_deaths": 0,
       "disease_count": 48,
       "date_range": {
         "start": "2003-01-01",
-        "end": "2026-06-01"
+        "end": "2026-07-01"
       },
       "source_info": {
         "country_code": "TW",
@@ -334,12 +334,12 @@
       "name_en": "United States",
       "name_zh": "美国",
       "language": "en-US",
-      "total_cases": 16208312,
+      "total_cases": 16224474,
       "total_deaths": 0,
       "disease_count": 64,
       "date_range": {
         "start": "2006-01-07",
-        "end": "2026-06-20"
+        "end": "2026-06-27"
       },
       "source_info": {
         "country_code": "US",

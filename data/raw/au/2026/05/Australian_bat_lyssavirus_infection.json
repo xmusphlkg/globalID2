@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-06-29T22:45:33.520630+00:00",
+  "fetched_at": "2026-07-04T22:45:37.630088+00:00",
   "disease": "Australian bat lyssavirus infection",
   "year": 2026,
   "month": 5,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1782773133223)/",
-            "rootActivityId": "6aae9f6d-bbae-48eb-a4e2-aee7286bf696",
+            "timestamp": "/Date(1783205137315)/",
+            "rootActivityId": "e1c763a0-38c9-4c11-a525-56bbce924767",
             "descriptor": {
               "Select": [
                 {

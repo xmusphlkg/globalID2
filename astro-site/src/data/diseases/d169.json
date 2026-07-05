@@ -3349,7 +3349,9 @@
         "2025-06-01",
         "2026-01-01",
         "2026-03-01",
-        "2026-04-01"
+        "2026-04-01",
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         1,
@@ -3569,7 +3571,9 @@
         3,
         2,
         1,
-        1
+        1,
+        1,
+        2
       ],
       "weekly_equiv_cases": [
         0.23333333333333334,
@@ -3789,9 +3793,13 @@
         0.6774193548387096,
         0.06542056074766354,
         0.11864406779661017,
-        0.22580645161290322
+        0.22580645161290322,
+        0.23333333333333334,
+        0.45161290322580644
       ],
       "deaths": [
+        0,
+        0,
         0,
         0,
         0,
@@ -4229,6 +4237,8 @@
         null,
         null,
         null,
+        null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -4449,9 +4459,11 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
+        "missing_population",
         "missing_population"
       ],
-      "total_cases": 677,
+      "total_cases": 680,
       "total_deaths": 0
     }
   },
@@ -4999,8 +5011,8 @@
       0,
       1,
       1,
-      0,
-      0
+      1,
+      2
     ],
     "deaths": [
       0,
@@ -5276,9 +5288,9 @@
       0
     ]
   },
-  "total_cases": 1802,
+  "total_cases": 1805,
   "total_deaths": 0,
-  "generated_at": "2026-06-20T00:00:00+00:00",
+  "generated_at": "2026-07-01T00:00:00+00:00",
   "source_info": [
     {
       "country_code": "HK",

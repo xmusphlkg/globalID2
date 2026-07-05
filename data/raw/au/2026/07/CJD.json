@@ -1,0 +1,456 @@
+{
+  "fetched_at": "2026-07-04T22:45:53.977697+00:00",
+  "disease": "CJD",
+  "year": 2026,
+  "month": 7,
+  "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
+  "api_url": "https://86715f84e812421e972f2211acc9903a.pbidedicated.windows.net/webapi/capacities/86715F84-E812-421E-972F-2211ACC9903A/workloads/QES/QueryExecutionService/automatic/public/query",
+  "runtime_hints": {
+    "location": {
+      "fact_alias": "d",
+      "location_alias": "d1",
+      "disease_alias": "d2",
+      "case_alias": "d3",
+      "state_property": "STATE",
+      "measure_property": "Count_Notification",
+      "_score": 18
+    }
+  },
+  "request_payload": {
+    "version": "1.0.0",
+    "queries": [
+      {
+        "Query": {
+          "Commands": [
+            {
+              "SemanticQueryDataShapeCommand": {
+                "Query": {
+                  "Version": 2,
+                  "From": [
+                    {
+                      "Name": "d",
+                      "Entity": "DELTALOAD_DATAMART NOTIFIABLE_EVENT_FACT",
+                      "Type": 0
+                    },
+                    {
+                      "Name": "d1",
+                      "Entity": "DELTALOAD_DATAMART LOCATION_DIM",
+                      "Type": 0
+                    },
+                    {
+                      "Name": "d2",
+                      "Entity": "DELTALOAD_DATAMART DISEASE_DIM",
+                      "Type": 0
+                    },
+                    {
+                      "Name": "d3",
+                      "Entity": "DELTALOAD_DATAMART CASE_DIM",
+                      "Type": 0
+                    }
+                  ],
+                  "Select": [
+                    {
+                      "Column": {
+                        "Expression": {
+                          "SourceRef": {
+                            "Source": "d1"
+                          }
+                        },
+                        "Property": "STATE"
+                      },
+                      "Name": "DELTALOAD_DATAMART LOCATION_DIM.STATE"
+                    },
+                    {
+                      "Measure": {
+                        "Expression": {
+                          "SourceRef": {
+                            "Source": "d"
+                          }
+                        },
+                        "Property": "Count_Notification"
+                      },
+                      "Name": "DELTALOAD_DATAMART NOTIFIABLE_EVENT_FACT.M_Notification"
+                    }
+                  ],
+                  "Where": [
+                    {
+                      "Condition": {
+                        "Not": {
+                          "Expression": {
+                            "In": {
+                              "Expressions": [
+                                {
+                                  "Column": {
+                                    "Expression": {
+                                      "SourceRef": {
+                                        "Source": "d1"
+                                      }
+                                    },
+                                    "Property": "STATE"
+                                  }
+                                }
+                              ],
+                              "Values": [
+                                [
+                                  {
+                                    "Literal": {
+                                      "Value": "'AUS'"
+                                    }
+                                  }
+                                ],
+                                [
+                                  {
+                                    "Literal": {
+                                      "Value": "'Unknown'"
+                                    }
+                                  }
+                                ]
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "Condition": {
+                        "In": {
+                          "Expressions": [
+                            {
+                              "Column": {
+                                "Expression": {
+                                  "SourceRef": {
+                                    "Source": "d2"
+                                  }
+                                },
+                                "Property": "DISEASE NAME"
+                              }
+                            }
+                          ],
+                          "Values": [
+                            [
+                              {
+                                "Literal": {
+                                  "Value": "'CJD'"
+                                }
+                              }
+                            ]
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "Condition": {
+                        "In": {
+                          "Expressions": [
+                            {
+                              "Column": {
+                                "Expression": {
+                                  "SourceRef": {
+                                    "Source": "d"
+                                  }
+                                },
+                                "Property": "DIAGNOSIS_YEAR_HIERARCHY"
+                              }
+                            },
+                            {
+                              "Column": {
+                                "Expression": {
+                                  "SourceRef": {
+                                    "Source": "d"
+                                  }
+                                },
+                                "Property": "DIAGNOSIS_QUARTER"
+                              }
+                            },
+                            {
+                              "Column": {
+                                "Expression": {
+                                  "SourceRef": {
+                                    "Source": "d"
+                                  }
+                                },
+                                "Property": "DIAGNOSIS_MONTHNAME"
+                              }
+                            }
+                          ],
+                          "Values": [
+                            [
+                              {
+                                "Literal": {
+                                  "Value": "'2026'"
+                                }
+                              },
+                              {
+                                "Literal": {
+                                  "Value": "'Quarter  3'"
+                                }
+                              },
+                              {
+                                "Literal": {
+                                  "Value": "'July'"
+                                }
+                              }
+                            ]
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "Condition": {
+                        "Comparison": {
+                          "ComparisonKind": 1,
+                          "Left": {
+                            "Column": {
+                              "Expression": {
+                                "SourceRef": {
+                                  "Source": "d"
+                                }
+                              },
+                              "Property": "DAX_Year"
+                            }
+                          },
+                          "Right": {
+                            "Literal": {
+                              "Value": "1990L"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "Condition": {
+                        "In": {
+                          "Expressions": [
+                            {
+                              "Column": {
+                                "Expression": {
+                                  "SourceRef": {
+                                    "Source": "d3"
+                                  }
+                                },
+                                "Property": "CONFIRMATION_STATUS"
+                              }
+                            }
+                          ],
+                          "Values": [
+                            [
+                              {
+                                "Literal": {
+                                  "Value": "'Confirmed'"
+                                }
+                              }
+                            ],
+                            [
+                              {
+                                "Literal": {
+                                  "Value": "'Probable'"
+                                }
+                              }
+                            ]
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                },
+                "Binding": {
+                  "Primary": {
+                    "Groupings": [
+                      {
+                        "Projections": [
+                          0,
+                          1
+                        ]
+                      }
+                    ]
+                  },
+                  "DataReduction": {
+                    "DataVolume": 4,
+                    "Primary": {
+                      "Window": {
+                        "Count": 200
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "ApplicationContext": {
+          "DatasetId": "3471d96b-c14c-403f-b3a6-016f1deac28e",
+          "Sources": [
+            {
+              "ReportId": "bc027587-5e9e-4920-bf03-a45fd3079f25"
+            }
+          ]
+        }
+      }
+    ],
+    "modelId": 3305775,
+    "cancelRequests": true
+  },
+  "response_json": {
+    "results": [
+      {
+        "jobId": "0",
+        "fromCache": false,
+        "result": {
+          "data": {
+            "timestamp": "/Date(1783205153691)/",
+            "rootActivityId": "b32bfb88-0d7d-4210-ad13-332ff4fa1455",
+            "descriptor": {
+              "Select": [
+                {
+                  "Kind": 1,
+                  "Depth": 0,
+                  "Value": "G0",
+                  "GroupKeys": [
+                    {
+                      "Source": {
+                        "Entity": "DELTALOAD_DATAMART LOCATION_DIM",
+                        "Property": "STATE"
+                      },
+                      "Calc": "G0",
+                      "IsSameAsSelect": true
+                    }
+                  ],
+                  "Name": "DELTALOAD_DATAMART LOCATION_DIM.STATE"
+                },
+                {
+                  "Kind": 2,
+                  "Value": "M0",
+                  "Subtotal": [
+                    "A0"
+                  ],
+                  "Name": "DELTALOAD_DATAMART NOTIFIABLE_EVENT_FACT.M_Notification"
+                }
+              ],
+              "Expressions": {
+                "Primary": {
+                  "Groupings": [
+                    {
+                      "Keys": [
+                        {
+                          "Source": {
+                            "Entity": "DELTALOAD_DATAMART LOCATION_DIM",
+                            "Property": "STATE"
+                          },
+                          "Select": 0
+                        }
+                      ],
+                      "Member": "DM1",
+                      "SubtotalMember": "DM0"
+                    }
+                  ]
+                }
+              },
+              "Version": 2
+            },
+            "dsr": {
+              "Version": 2,
+              "MinorVersion": 1,
+              "DS": [
+                {
+                  "N": "DS0",
+                  "PH": [
+                    {
+                      "DM0": [
+                        {
+                          "S": [
+                            {
+                              "N": "A0",
+                              "T": 13
+                            }
+                          ],
+                          "A0": "0L"
+                        }
+                      ]
+                    },
+                    {
+                      "DM1": [
+                        {
+                          "S": [
+                            {
+                              "N": "G0",
+                              "T": 1
+                            },
+                            {
+                              "N": "M0",
+                              "T": 13
+                            }
+                          ],
+                          "C": [
+                            "ACT",
+                            "0L"
+                          ]
+                        },
+                        {
+                          "C": [
+                            "NSW"
+                          ],
+                          "R": 2
+                        },
+                        {
+                          "C": [
+                            "NT"
+                          ],
+                          "R": 2
+                        },
+                        {
+                          "C": [
+                            "QLD"
+                          ],
+                          "R": 2
+                        },
+                        {
+                          "C": [
+                            "SA"
+                          ],
+                          "R": 2
+                        },
+                        {
+                          "C": [
+                            "TAS"
+                          ],
+                          "R": 2
+                        },
+                        {
+                          "C": [
+                            "VIC"
+                          ],
+                          "R": 2
+                        },
+                        {
+                          "C": [
+                            "WA"
+                          ],
+                          "R": 2
+                        }
+                      ]
+                    }
+                  ],
+                  "IC": true,
+                  "HAD": true
+                }
+              ]
+            }
+          }
+        }
+      }
+    ],
+    "jobIds": [
+      "0"
+    ]
+  },
+  "parsed_counts": {
+    "ACT": 0,
+    "NSW": 0,
+    "NT": 0,
+    "QLD": 0,
+    "SA": 0,
+    "TAS": 0,
+    "VIC": 0,
+    "WA": 0
+  }
+}
