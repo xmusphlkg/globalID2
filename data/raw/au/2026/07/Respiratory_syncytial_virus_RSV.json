@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-04T22:45:58.881868+00:00",
+  "fetched_at": "2026-07-05T22:46:00.671904+00:00",
   "disease": "Respiratory syncytial virus (RSV)",
   "year": 2026,
   "month": 7,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1783205158568)/",
-            "rootActivityId": "72e860ca-9d24-4238-81c5-55794fca8cc3",
+            "timestamp": "/Date(1783291560331)/",
+            "rootActivityId": "a3d52633-8f09-4dfb-b8bd-d03ccee0685c",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'2,314'"
+                          "A0": "'2,466'"
                         }
                       ]
                     },
@@ -382,7 +382,7 @@
                           ],
                           "C": [
                             "ACT",
-                            "'9'"
+                            "'51'"
                           ]
                         },
                         {
@@ -394,19 +394,19 @@
                         {
                           "C": [
                             "NT",
-                            "'6'"
+                            "'8'"
                           ]
                         },
                         {
                           "C": [
                             "QLD",
-                            "'379'"
+                            "'458'"
                           ]
                         },
                         {
                           "C": [
                             "SA",
-                            "'256'"
+                            "'285'"
                           ]
                         },
                         {
@@ -444,11 +444,11 @@
     ]
   },
   "parsed_counts": {
-    "ACT": 9,
+    "ACT": 51,
     "NSW": 989,
-    "NT": 6,
-    "QLD": 379,
-    "SA": 256,
+    "NT": 8,
+    "QLD": 458,
+    "SA": 285,
     "TAS": 27,
     "VIC": 535,
     "WA": 113
