@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-05T22:45:45.683932+00:00",
+  "fetched_at": "2026-07-06T22:45:29.024322+00:00",
   "disease": "Pertussis",
   "year": 2026,
   "month": 5,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1783291545335)/",
-            "rootActivityId": "cf6ca61c-b5ce-4a34-8121-8cb2a390ac05",
+            "timestamp": "/Date(1783377928706)/",
+            "rootActivityId": "0a5407de-4b68-48c2-b3a1-4b17b721fce8",
             "descriptor": {
               "Select": [
                 {

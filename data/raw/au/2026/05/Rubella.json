@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-05T22:45:47.078029+00:00",
+  "fetched_at": "2026-07-06T22:45:29.643365+00:00",
   "disease": "Rubella",
   "year": 2026,
   "month": 5,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1783291546752)/",
-            "rootActivityId": "7391ba43-73e1-48f2-9595-e58f722b7e16",
+            "timestamp": "/Date(1783377929359)/",
+            "rootActivityId": "d53e1d52-e309-467f-b394-1712027dfed7",
             "descriptor": {
               "Select": [
                 {
