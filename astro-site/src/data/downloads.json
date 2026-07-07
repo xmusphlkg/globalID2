@@ -345,7 +345,7 @@
       "name_en": "Taiwan, China",
       "name_zh": "中国台湾",
       "generated_at": "2026-07-01T00:00:00+00:00",
-      "record_count": 6323,
+      "record_count": 6327,
       "date_range": {
         "start": "2003-01-01",
         "end": "2026-07-01"
@@ -5002,7 +5002,7 @@
       "name_en": "Dysentery",
       "name_zh": "细菌性和阿米巴性痢疾",
       "generated_at": "2026-07-01T00:00:00+00:00",
-      "record_count": 1197,
+      "record_count": 1198,
       "country_count": 3,
       "countries": [
         {
@@ -11572,7 +11572,7 @@
       "name_en": "Monkeypox",
       "name_zh": "猴痘",
       "generated_at": "2026-07-01T00:00:00+00:00",
-      "record_count": 1057,
+      "record_count": 1058,
       "country_count": 9,
       "countries": [
         {
@@ -14520,7 +14520,7 @@
       "name_en": "Legionellosis",
       "name_zh": "军团菌病",
       "generated_at": "2026-07-01T00:00:00+00:00",
-      "record_count": 3140,
+      "record_count": 3141,
       "country_count": 8,
       "countries": [
         {
@@ -19808,7 +19808,7 @@
       "name_en": "Amebiasis",
       "name_zh": "阿米巴病",
       "generated_at": "2026-07-01T00:00:00+00:00",
-      "record_count": 635,
+      "record_count": 636,
       "country_count": 2,
       "countries": [
         {
