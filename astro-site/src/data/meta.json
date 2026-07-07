@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-01T00:00:00+00:00",
+  "generated_at": "2026-07-04T00:00:00+00:00",
   "total_countries": 10,
   "total_diseases": 199,
   "total_reports": 1,
@@ -10,7 +10,7 @@
       "name_en": "Australia",
       "name_zh": "澳大利亚",
       "language": "en-AU",
-      "total_cases": 20220629,
+      "total_cases": 20223103,
       "total_deaths": 0,
       "disease_count": 66,
       "date_range": {
@@ -198,12 +198,12 @@
       "name_en": "Japan",
       "name_zh": "日本",
       "language": "ja-JP",
-      "total_cases": 48294590,
+      "total_cases": 48332549,
       "total_deaths": 0,
       "disease_count": 86,
       "date_range": {
         "start": "2012-09-14",
-        "end": "2026-06-27"
+        "end": "2026-07-04"
       },
       "source_info": {
         "country_code": "JP",

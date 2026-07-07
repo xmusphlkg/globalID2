@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-06T22:45:27.984254+00:00",
+  "fetched_at": "2026-07-07T22:45:43.918164+00:00",
   "disease": "Leprosy",
   "year": 2026,
   "month": 5,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1783377927539)/",
-            "rootActivityId": "6e731700-9d6a-4cb9-9661-a2e9d05fdf46",
+            "timestamp": "/Date(1783464343618)/",
+            "rootActivityId": "7b43b2eb-42bc-4103-9db7-b0fbb8d8f977",
             "descriptor": {
               "Select": [
                 {

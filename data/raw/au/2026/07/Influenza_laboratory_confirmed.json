@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-06T22:45:40.599732+00:00",
+  "fetched_at": "2026-07-07T22:45:57.812406+00:00",
   "disease": "Influenza (laboratory confirmed)",
   "year": 2026,
   "month": 7,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1783377940270)/",
-            "rootActivityId": "81ebc792-8af1-4c8b-88b7-cfbd9935452b",
+            "timestamp": "/Date(1783464357463)/",
+            "rootActivityId": "32e89591-9e2a-4dd7-ad92-95c0faf8cc45",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'1,820'"
+                          "A0": "'2,516'"
                         }
                       ]
                     },
@@ -382,13 +382,13 @@
                           ],
                           "C": [
                             "ACT",
-                            "'10'"
+                            "'12'"
                           ]
                         },
                         {
                           "C": [
                             "NSW",
-                            "'1,213'"
+                            "'1,874'"
                           ]
                         },
                         {
@@ -412,13 +412,13 @@
                         {
                           "C": [
                             "TAS",
-                            "0L"
+                            "'<5'"
                           ]
                         },
                         {
                           "C": [
                             "VIC",
-                            "'144'"
+                            "'174'"
                           ]
                         },
                         {
@@ -444,13 +444,13 @@
     ]
   },
   "parsed_counts": {
-    "ACT": 10,
-    "NSW": 1213,
+    "ACT": 12,
+    "NSW": 1874,
     "NT": 0,
     "QLD": 162,
     "SA": 26,
-    "TAS": 0,
-    "VIC": 144,
+    "TAS": "'<5'",
+    "VIC": 174,
     "WA": 265
   }
 }

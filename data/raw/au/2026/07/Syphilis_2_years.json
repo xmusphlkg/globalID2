@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-06T22:45:43.186953+00:00",
+  "fetched_at": "2026-07-07T22:46:00.523321+00:00",
   "disease": "Syphilis < 2 years",
   "year": 2026,
   "month": 7,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1783377942881)/",
-            "rootActivityId": "715ab485-82d2-43cb-9073-4e9255929e78",
+            "timestamp": "/Date(1783464360203)/",
+            "rootActivityId": "5fe1deb6-3761-42cf-b976-573d2a1cda11",
             "descriptor": {
               "Select": [
                 {
@@ -387,15 +387,15 @@
                         },
                         {
                           "C": [
-                            "NSW",
-                            "'<5'"
-                          ]
+                            "NSW"
+                          ],
+                          "R": 2
                         },
                         {
                           "C": [
-                            "NT",
-                            "0L"
-                          ]
+                            "NT"
+                          ],
+                          "R": 2
                         },
                         {
                           "C": [
@@ -418,14 +418,14 @@
                         {
                           "C": [
                             "VIC",
-                            "'<5'"
+                            "'5'"
                           ]
                         },
                         {
                           "C": [
-                            "WA"
-                          ],
-                          "R": 2
+                            "WA",
+                            "'<5'"
+                          ]
                         }
                       ]
                     }
@@ -445,12 +445,12 @@
   },
   "parsed_counts": {
     "ACT": 0,
-    "NSW": "'<5'",
+    "NSW": 0,
     "NT": 0,
     "QLD": 11,
     "SA": 0,
     "TAS": 0,
-    "VIC": "'<5'",
-    "WA": 0
+    "VIC": 5,
+    "WA": "'<5'"
   }
 }
