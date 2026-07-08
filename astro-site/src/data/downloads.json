@@ -54,10 +54,10 @@
       "name_en": "Brazil",
       "name_zh": "巴西",
       "generated_at": "2026-07-04T00:00:00+00:00",
-      "record_count": 8154,
+      "record_count": 8157,
       "date_range": {
         "start": "2000-01-01",
-        "end": "2026-06-01"
+        "end": "2026-07-01"
       },
       "json_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/master/countries/br.json",
       "csv_path": "https://raw.githubusercontent.com/xmusphlkg/globalID2_data_download/master/countries/br.csv",
@@ -345,7 +345,7 @@
       "name_en": "Taiwan, China",
       "name_zh": "中国台湾",
       "generated_at": "2026-07-04T00:00:00+00:00",
-      "record_count": 6327,
+      "record_count": 6328,
       "date_range": {
         "start": "2003-01-01",
         "end": "2026-07-01"
@@ -1610,7 +1610,7 @@
       "name_en": "Hepatitis A",
       "name_zh": "甲型肝炎",
       "generated_at": "2026-07-04T00:00:00+00:00",
-      "record_count": 2623,
+      "record_count": 2624,
       "country_count": 9,
       "countries": [
         {
@@ -4462,7 +4462,7 @@
       "name_en": "Dengue",
       "name_zh": "登革热",
       "generated_at": "2026-07-04T00:00:00+00:00",
-      "record_count": 2664,
+      "record_count": 2665,
       "country_count": 10,
       "countries": [
         {
@@ -9702,7 +9702,7 @@
       "name_en": "Zika virus disease",
       "name_zh": "寨卡病毒病",
       "generated_at": "2026-07-04T00:00:00+00:00",
-      "record_count": 1298,
+      "record_count": 1299,
       "country_count": 8,
       "countries": [
         {
@@ -9972,7 +9972,7 @@
       "name_en": "Chikungunya",
       "name_zh": "基孔肯雅热",
       "generated_at": "2026-07-04T00:00:00+00:00",
-      "record_count": 1978,
+      "record_count": 1979,
       "country_count": 9,
       "countries": [
         {
