@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-07T22:45:42.488309+00:00",
+  "fetched_at": "2026-07-08T22:45:32.718994+00:00",
   "disease": "Gonococcal infection",
   "year": 2026,
   "month": 5,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1783464342017)/",
-            "rootActivityId": "a4f05160-b8ee-411f-be56-9a78df68ee7d",
+            "timestamp": "/Date(1783550732373)/",
+            "rootActivityId": "f3ccdb3e-0091-448a-a779-ba82883aef53",
             "descriptor": {
               "Select": [
                 {

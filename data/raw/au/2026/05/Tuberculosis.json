@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-07T22:45:47.176645+00:00",
+  "fetched_at": "2026-07-08T22:45:37.300306+00:00",
   "disease": "Tuberculosis",
   "year": 2026,
   "month": 5,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1783464346851)/",
-            "rootActivityId": "7673226d-0667-493e-af88-218ba06334ab",
+            "timestamp": "/Date(1783550736958)/",
+            "rootActivityId": "a01ea1fe-299d-4d71-bda6-d252676058bc",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'116'"
+                          "A0": "'119'"
                         }
                       ]
                     },
@@ -406,7 +406,7 @@
                         {
                           "C": [
                             "SA",
-                            "'5'"
+                            "'8'"
                           ]
                         },
                         {
@@ -448,7 +448,7 @@
     "NSW": 44,
     "NT": "'<5'",
     "QLD": 18,
-    "SA": 5,
+    "SA": 8,
     "TAS": "'<5'",
     "VIC": 31,
     "WA": 15

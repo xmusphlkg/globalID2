@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-07T22:45:53.793664+00:00",
+  "fetched_at": "2026-07-08T22:45:44.352648+00:00",
   "disease": "Syphilis > 2 years or unspecified duration",
   "year": 2026,
   "month": 6,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1783464353477)/",
-            "rootActivityId": "fb60f511-b718-4c71-82ec-e561c1fd82bd",
+            "timestamp": "/Date(1783550744021)/",
+            "rootActivityId": "d2e3ef8c-6660-4e89-9ec0-d9210a755f4d",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'216'"
+                          "A0": "'218'"
                         }
                       ]
                     },
@@ -388,7 +388,7 @@
                         {
                           "C": [
                             "NSW",
-                            "'53'"
+                            "'54'"
                           ]
                         },
                         {
@@ -418,13 +418,13 @@
                         {
                           "C": [
                             "VIC",
-                            "'90'"
+                            "'89'"
                           ]
                         },
                         {
                           "C": [
                             "WA",
-                            "'38'"
+                            "'40'"
                           ]
                         }
                       ]
@@ -445,12 +445,12 @@
   },
   "parsed_counts": {
     "ACT": 0,
-    "NSW": 53,
+    "NSW": 54,
     "NT": "'<5'",
     "QLD": 26,
     "SA": 5,
     "TAS": 0,
-    "VIC": 90,
-    "WA": 38
+    "VIC": 89,
+    "WA": 40
   }
 }

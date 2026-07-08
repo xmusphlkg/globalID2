@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-07T22:45:58.479346+00:00",
+  "fetched_at": "2026-07-08T22:45:49.281793+00:00",
   "disease": "Meningococcal disease (invasive)",
   "year": 2026,
   "month": 7,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1783464358198)/",
-            "rootActivityId": "72faa24a-6501-4a0f-8adf-17f5ac3b4bac",
+            "timestamp": "/Date(1783550748945)/",
+            "rootActivityId": "5002940f-8f17-41ac-bb06-c60efc8ed55a",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "0L"
+                          "A0": "'<5'"
                         }
                       ]
                     },
@@ -405,15 +405,15 @@
                         },
                         {
                           "C": [
-                            "SA"
-                          ],
-                          "R": 2
+                            "SA",
+                            "'<5'"
+                          ]
                         },
                         {
                           "C": [
-                            "TAS"
-                          ],
-                          "R": 2
+                            "TAS",
+                            "0L"
+                          ]
                         },
                         {
                           "C": [
@@ -448,7 +448,7 @@
     "NSW": 0,
     "NT": 0,
     "QLD": 0,
-    "SA": 0,
+    "SA": "'<5'",
     "TAS": 0,
     "VIC": 0,
     "WA": 0

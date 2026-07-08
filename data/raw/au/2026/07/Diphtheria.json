@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-07T22:45:56.307170+00:00",
+  "fetched_at": "2026-07-08T22:45:46.981935+00:00",
   "disease": "Diphtheria",
   "year": 2026,
   "month": 7,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1783464355980)/",
-            "rootActivityId": "8e18dd6d-3358-43d2-b794-5926d21ce011",
+            "timestamp": "/Date(1783550746644)/",
+            "rootActivityId": "0c7fdf4c-9aea-49e4-9cb8-e5bff3d7cfaa",
             "descriptor": {
               "Select": [
                 {
@@ -393,27 +393,27 @@
                         },
                         {
                           "C": [
-                            "NT"
-                          ],
-                          "R": 2
+                            "NT",
+                            "'<5'"
+                          ]
                         },
                         {
                           "C": [
-                            "QLD"
-                          ],
-                          "R": 2
+                            "QLD",
+                            "0L"
+                          ]
                         },
                         {
                           "C": [
-                            "SA"
-                          ],
-                          "R": 2
+                            "SA",
+                            "'<5'"
+                          ]
                         },
                         {
                           "C": [
-                            "TAS"
-                          ],
-                          "R": 2
+                            "TAS",
+                            "0L"
+                          ]
                         },
                         {
                           "C": [
@@ -446,9 +446,9 @@
   "parsed_counts": {
     "ACT": 0,
     "NSW": 0,
-    "NT": 0,
+    "NT": "'<5'",
     "QLD": 0,
-    "SA": 0,
+    "SA": "'<5'",
     "TAS": 0,
     "VIC": 0,
     "WA": "'<5'"
