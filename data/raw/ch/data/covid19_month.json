@@ -10,8 +10,8 @@
   },
   "response": {
     "source": "mandatory_reporting_system",
-    "sourceDate": "2026-06-30",
-    "version": "20260701",
+    "sourceDate": "2026-07-07",
+    "version": "20260708",
     "values": [
       {
         "x": 202002,
@@ -551,7 +551,7 @@
       },
       {
         "x": 202509,
-        "y": 1527,
+        "y": 1524,
         "properties": {
           "dataComplete": "TRUE",
           "trend": "rising"
@@ -567,7 +567,7 @@
       },
       {
         "x": 202511,
-        "y": 2145,
+        "y": 2143,
         "properties": {
           "dataComplete": "TRUE",
           "trend": "rising"
@@ -575,15 +575,15 @@
       },
       {
         "x": 202512,
-        "y": 2596,
+        "y": 2595,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "rising"
+          "trend": "stagnant"
         }
       },
       {
         "x": 202601,
-        "y": 1389,
+        "y": 1388,
         "properties": {
           "dataComplete": "TRUE",
           "trend": "stagnant"
@@ -610,7 +610,7 @@
         "y": 97,
         "properties": {
           "dataComplete": "TRUE",
-          "trend": "falling"
+          "trend": "stagnant"
         }
       },
       {

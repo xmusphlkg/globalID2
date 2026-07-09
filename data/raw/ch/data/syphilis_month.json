@@ -9,8 +9,8 @@
   },
   "response": {
     "source": "mandatory_reporting_system",
-    "sourceDate": "2026-06-02",
-    "version": "20260701",
+    "sourceDate": "2026-07-07",
+    "version": "20260708",
     "values": [
       {
         "x": 201901,
@@ -422,7 +422,7 @@
       },
       {
         "x": 202304,
-        "y": 73,
+        "y": 72,
         "properties": {
           "dataComplete": "TRUE",
           "trend": null
@@ -430,7 +430,7 @@
       },
       {
         "x": 202305,
-        "y": 83,
+        "y": 82,
         "properties": {
           "dataComplete": "TRUE",
           "trend": null
@@ -454,7 +454,7 @@
       },
       {
         "x": 202308,
-        "y": 94,
+        "y": 93,
         "properties": {
           "dataComplete": "TRUE",
           "trend": null
@@ -606,7 +606,7 @@
       },
       {
         "x": 202503,
-        "y": 82,
+        "y": 83,
         "properties": {
           "dataComplete": "TRUE",
           "trend": null
@@ -630,7 +630,7 @@
       },
       {
         "x": 202506,
-        "y": 78,
+        "y": 79,
         "properties": {
           "dataComplete": "TRUE",
           "trend": null
@@ -646,7 +646,7 @@
       },
       {
         "x": 202508,
-        "y": 93,
+        "y": 94,
         "properties": {
           "dataComplete": "TRUE",
           "trend": null
@@ -662,7 +662,7 @@
       },
       {
         "x": 202510,
-        "y": 102,
+        "y": 105,
         "properties": {
           "dataComplete": "TRUE",
           "trend": null
@@ -670,7 +670,7 @@
       },
       {
         "x": 202511,
-        "y": 90,
+        "y": 91,
         "properties": {
           "dataComplete": "TRUE",
           "trend": null
@@ -686,7 +686,7 @@
       },
       {
         "x": 202601,
-        "y": 101,
+        "y": 103,
         "properties": {
           "dataComplete": "TRUE",
           "trend": null
@@ -694,7 +694,15 @@
       },
       {
         "x": 202602,
-        "y": 101,
+        "y": 103,
+        "properties": {
+          "dataComplete": "TRUE",
+          "trend": null
+        }
+      },
+      {
+        "x": 202603,
+        "y": 108,
         "properties": {
           "dataComplete": "TRUE",
           "trend": null

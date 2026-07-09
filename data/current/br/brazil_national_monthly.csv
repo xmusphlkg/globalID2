@@ -6,31 +6,33 @@
 5,Exanthematous diseases,EXAN,2026,5,2026-05-01,1,preliminary,EXANBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/EXANBR26.dbc,Brazil DATASUS SINAN Open Data
 6,Exogenous poisoning,IEXO,2026,5,2026-05-01,14989,preliminary,IEXOBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/IEXOBR26.dbc,Brazil DATASUS SINAN Open Data
 7,Hantavirus disease,HANT,2026,5,2026-05-01,5,preliminary,HANTBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/HANTBR26.dbc,Brazil DATASUS SINAN Open Data
-8,Meningitis,MENI,2026,5,2026-05-01,1762,preliminary,MENIBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/MENIBR26.dbc,Brazil DATASUS SINAN Open Data
-9,Noise-induced hearing loss,PAIR,2026,5,2026-05-01,8,preliminary,PAIRBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/PAIRBR26.dbc,Brazil DATASUS SINAN Open Data
-10,Pertussis,COQU,2026,5,2026-05-01,407,preliminary,COQUBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/COQUBR26.dbc,Brazil DATASUS SINAN Open Data
-11,Pneumoconiosis,PNEU,2026,5,2026-05-01,32,preliminary,PNEUBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/PNEUBR26.dbc,Brazil DATASUS SINAN Open Data
-12,Rabies post-exposure prophylaxis,ANTR,2026,5,2026-05-01,14419,preliminary,ANTRBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/ANTRBR26.dbc,Brazil DATASUS SINAN Open Data
-13,Schistosomiasis,ESQU,2026,5,2026-05-01,95,preliminary,ESQUBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/ESQUBR26.dbc,Brazil DATASUS SINAN Open Data
-14,Serious work accident,ACGR,2026,5,2026-05-01,18605,preliminary,ACGRBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/ACGRBR26.dbc,Brazil DATASUS SINAN Open Data
-15,Tetanus,TETA,2026,5,2026-05-01,60,preliminary,TETABR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/TETABR26.dbc,Brazil DATASUS SINAN Open Data
-16,Trachoma,TRAC,2026,5,2026-05-01,4,preliminary,TRACBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/TRACBR26.dbc,Brazil DATASUS SINAN Open Data
-17,Typhoid fever,FTIF,2026,5,2026-05-01,9,preliminary,FTIFBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/FTIFBR26.dbc,Brazil DATASUS SINAN Open Data
-18,Work accident with biological material,ACBI,2026,5,2026-05-01,3073,preliminary,ACBIBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/ACBIBR26.dbc,Brazil DATASUS SINAN Open Data
-19,Work-related cancer,CANC,2026,5,2026-05-01,120,preliminary,CANCBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/CANCBR26.dbc,Brazil DATASUS SINAN Open Data
-20,Work-related dermatosis,DERM,2026,5,2026-05-01,74,preliminary,DERMBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/DERMBR26.dbc,Brazil DATASUS SINAN Open Data
-21,Work-related disorder,NTRA,2026,5,2026-05-01,15,preliminary,NTRABR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/NTRABR26.dbc,Brazil DATASUS SINAN Open Data
-22,Work-related mental disorder,MENT,2026,5,2026-05-01,206,preliminary,MENTBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/MENTBR26.dbc,Brazil DATASUS SINAN Open Data
-23,Work-related repetitive strain injury,LERD,2026,5,2026-05-01,547,preliminary,LERDBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/LERDBR26.dbc,Brazil DATASUS SINAN Open Data
-24,Zika virus disease,ZIKA,2026,5,2026-05-01,1455,preliminary,ZIKABR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/ZIKABR26.dbc,Brazil DATASUS SINAN Open Data
-25,Accident caused by venomous animals,ANIM,2026,6,2026-06-01,307,preliminary,ANIMBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/ANIMBR26.dbc,Brazil DATASUS SINAN Open Data
-26,Chikungunya fever,CHIK,2026,6,2026-06-01,10096,preliminary,CHIKBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/CHIKBR26.dbc,Brazil DATASUS SINAN Open Data
-27,Dengue,DENG,2026,6,2026-06-01,64136,preliminary,DENGBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/DENGBR26.dbc,Brazil DATASUS SINAN Open Data
-28,Exogenous poisoning,IEXO,2026,6,2026-06-01,744,preliminary,IEXOBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/IEXOBR26.dbc,Brazil DATASUS SINAN Open Data
-29,Meningitis,MENI,2026,6,2026-06-01,50,preliminary,MENIBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/MENIBR26.dbc,Brazil DATASUS SINAN Open Data
-30,Pertussis,COQU,2026,6,2026-06-01,230,preliminary,COQUBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/COQUBR26.dbc,Brazil DATASUS SINAN Open Data
-31,Tetanus,TETA,2026,6,2026-06-01,15,preliminary,TETABR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/TETABR26.dbc,Brazil DATASUS SINAN Open Data
-32,Zika virus disease,ZIKA,2026,6,2026-06-01,550,preliminary,ZIKABR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/ZIKABR26.dbc,Brazil DATASUS SINAN Open Data
-33,Chikungunya fever,CHIK,2026,7,2026-07-01,455,preliminary,CHIKBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/CHIKBR26.dbc,Brazil DATASUS SINAN Open Data
-34,Dengue,DENG,2026,7,2026-07-01,4891,preliminary,DENGBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/DENGBR26.dbc,Brazil DATASUS SINAN Open Data
-35,Zika virus disease,ZIKA,2026,7,2026-07-01,1,preliminary,ZIKABR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/ZIKABR26.dbc,Brazil DATASUS SINAN Open Data
+8,Leprosy,HANS,2026,5,2026-05-01,911,preliminary,HANSBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/HANSBR26.dbc,Brazil DATASUS SINAN Open Data
+9,Meningitis,MENI,2026,5,2026-05-01,2268,preliminary,MENIBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/MENIBR26.dbc,Brazil DATASUS SINAN Open Data
+10,Noise-induced hearing loss,PAIR,2026,5,2026-05-01,8,preliminary,PAIRBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/PAIRBR26.dbc,Brazil DATASUS SINAN Open Data
+11,Pertussis,COQU,2026,5,2026-05-01,407,preliminary,COQUBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/COQUBR26.dbc,Brazil DATASUS SINAN Open Data
+12,Pneumoconiosis,PNEU,2026,5,2026-05-01,32,preliminary,PNEUBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/PNEUBR26.dbc,Brazil DATASUS SINAN Open Data
+13,Rabies post-exposure prophylaxis,ANTR,2026,5,2026-05-01,14419,preliminary,ANTRBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/ANTRBR26.dbc,Brazil DATASUS SINAN Open Data
+14,Schistosomiasis,ESQU,2026,5,2026-05-01,95,preliminary,ESQUBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/ESQUBR26.dbc,Brazil DATASUS SINAN Open Data
+15,Serious work accident,ACGR,2026,5,2026-05-01,18605,preliminary,ACGRBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/ACGRBR26.dbc,Brazil DATASUS SINAN Open Data
+16,Tetanus,TETA,2026,5,2026-05-01,60,preliminary,TETABR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/TETABR26.dbc,Brazil DATASUS SINAN Open Data
+17,Trachoma,TRAC,2026,5,2026-05-01,4,preliminary,TRACBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/TRACBR26.dbc,Brazil DATASUS SINAN Open Data
+18,Typhoid fever,FTIF,2026,5,2026-05-01,9,preliminary,FTIFBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/FTIFBR26.dbc,Brazil DATASUS SINAN Open Data
+19,Work accident with biological material,ACBI,2026,5,2026-05-01,3073,preliminary,ACBIBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/ACBIBR26.dbc,Brazil DATASUS SINAN Open Data
+20,Work-related cancer,CANC,2026,5,2026-05-01,120,preliminary,CANCBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/CANCBR26.dbc,Brazil DATASUS SINAN Open Data
+21,Work-related dermatosis,DERM,2026,5,2026-05-01,74,preliminary,DERMBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/DERMBR26.dbc,Brazil DATASUS SINAN Open Data
+22,Work-related disorder,NTRA,2026,5,2026-05-01,15,preliminary,NTRABR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/NTRABR26.dbc,Brazil DATASUS SINAN Open Data
+23,Work-related mental disorder,MENT,2026,5,2026-05-01,206,preliminary,MENTBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/MENTBR26.dbc,Brazil DATASUS SINAN Open Data
+24,Work-related repetitive strain injury,LERD,2026,5,2026-05-01,547,preliminary,LERDBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/LERDBR26.dbc,Brazil DATASUS SINAN Open Data
+25,Zika virus disease,ZIKA,2026,5,2026-05-01,1455,preliminary,ZIKABR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/ZIKABR26.dbc,Brazil DATASUS SINAN Open Data
+26,Accident caused by venomous animals,ANIM,2026,6,2026-06-01,307,preliminary,ANIMBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/ANIMBR26.dbc,Brazil DATASUS SINAN Open Data
+27,Chikungunya fever,CHIK,2026,6,2026-06-01,10096,preliminary,CHIKBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/CHIKBR26.dbc,Brazil DATASUS SINAN Open Data
+28,Dengue,DENG,2026,6,2026-06-01,64136,preliminary,DENGBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/DENGBR26.dbc,Brazil DATASUS SINAN Open Data
+29,Exogenous poisoning,IEXO,2026,6,2026-06-01,744,preliminary,IEXOBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/IEXOBR26.dbc,Brazil DATASUS SINAN Open Data
+30,Meningitis,MENI,2026,6,2026-06-01,1397,preliminary,MENIBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/MENIBR26.dbc,Brazil DATASUS SINAN Open Data
+31,Pertussis,COQU,2026,6,2026-06-01,230,preliminary,COQUBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/COQUBR26.dbc,Brazil DATASUS SINAN Open Data
+32,Tetanus,TETA,2026,6,2026-06-01,15,preliminary,TETABR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/TETABR26.dbc,Brazil DATASUS SINAN Open Data
+33,Zika virus disease,ZIKA,2026,6,2026-06-01,550,preliminary,ZIKABR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/ZIKABR26.dbc,Brazil DATASUS SINAN Open Data
+34,Chikungunya fever,CHIK,2026,7,2026-07-01,455,preliminary,CHIKBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/CHIKBR26.dbc,Brazil DATASUS SINAN Open Data
+35,Dengue,DENG,2026,7,2026-07-01,4891,preliminary,DENGBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/DENGBR26.dbc,Brazil DATASUS SINAN Open Data
+36,Meningitis,MENI,2026,7,2026-07-01,9,preliminary,MENIBR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/MENIBR26.dbc,Brazil DATASUS SINAN Open Data
+37,Zika virus disease,ZIKA,2026,7,2026-07-01,1,preliminary,ZIKABR26.dbc,ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/ZIKABR26.dbc,Brazil DATASUS SINAN Open Data

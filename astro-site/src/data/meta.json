@@ -44,7 +44,7 @@
       "name_en": "Brazil",
       "name_zh": "巴西",
       "language": "pt-BR",
-      "total_cases": 60907563,
+      "total_cases": 60910336,
       "total_deaths": 0,
       "disease_count": 45,
       "date_range": {
@@ -112,12 +112,12 @@
       "name_en": "China",
       "name_zh": "中国",
       "language": "zh-CN",
-      "total_cases": 190103231,
-      "total_deaths": 365233,
+      "total_cases": 191681245,
+      "total_deaths": 367602,
       "disease_count": 58,
       "date_range": {
         "start": "2010-01-01",
-        "end": "2026-05-01"
+        "end": "2026-06-01"
       },
       "source_info": {
         "country_code": "CN",
@@ -300,7 +300,7 @@
       "name_en": "Taiwan, China",
       "name_zh": "中国台湾",
       "language": "zh-TW",
-      "total_cases": 11164357,
+      "total_cases": 11164382,
       "total_deaths": 0,
       "disease_count": 48,
       "date_range": {
@@ -334,12 +334,12 @@
       "name_en": "United States",
       "name_zh": "美国",
       "language": "en-US",
-      "total_cases": 16224474,
+      "total_cases": 16240732,
       "total_deaths": 0,
       "disease_count": 64,
       "date_range": {
         "start": "2006-01-07",
-        "end": "2026-06-27"
+        "end": "2026-07-04"
       },
       "source_info": {
         "country_code": "US",

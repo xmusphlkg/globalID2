@@ -6,8 +6,8 @@
   },
   "response": {
     "source": "mandatory_reporting_system",
-    "sourceDate": "2026-06-30",
-    "version": "20260701",
+    "sourceDate": "2026-07-07",
+    "version": "20260708",
     "values": [
       {
         "x": 201301,
@@ -1103,14 +1103,14 @@
       },
       {
         "x": 202601,
-        "y": 9,
+        "y": 10,
         "properties": {
           "trend": "falling"
         }
       },
       {
         "x": 202602,
-        "y": 9,
+        "y": 10,
         "properties": {
           "trend": "falling"
         }
@@ -1118,6 +1118,13 @@
       {
         "x": 202603,
         "y": 10,
+        "properties": {
+          "trend": "stagnant"
+        }
+      },
+      {
+        "x": 202604,
+        "y": 8,
         "properties": {
           "trend": "stagnant"
         }

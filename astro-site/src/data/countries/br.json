@@ -3,7 +3,7 @@
   "country_name": "Brazil",
   "country_name_en": "Brazil",
   "country_name_zh": "巴西",
-  "total_cases": 60907563,
+  "total_cases": 60910336,
   "total_deaths": 0,
   "disease_count": 45,
   "frequency_meta": {
@@ -24,7 +24,7 @@
     "unit": "per_100k",
     "population_source": "WPP",
     "source_counts": {
-      "missing_population": 8157
+      "missing_population": 8159
     },
     "note_en": "Incidence Rate is computed from WPP population data during site generation; when population is unavailable, original database incidence is shown.",
     "note_zh": "发病率在网页数据生成阶段按 WPP 人口重算（每10万人）；若缺少人口数据则回退显示数据库原始发病率。"
@@ -13719,7 +13719,8 @@
         "2025-11-01",
         "2025-12-01",
         "2026-01-01",
-        "2026-02-01"
+        "2026-02-01",
+        "2026-05-01"
       ],
       "cases": [
         3703,
@@ -13999,7 +14000,8 @@
         2379,
         2205,
         1815,
-        543
+        543,
+        911
       ],
       "weekly_equiv_cases": [
         836.1612903225806,
@@ -14279,9 +14281,11 @@
         537.1935483870967,
         514.5,
         409.83870967741933,
-        122.61290322580645
+        122.61290322580645,
+        71.65168539325843
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -14839,9 +14843,11 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
+        "missing_population",
         "missing_population",
         "missing_population",
         "missing_population",
@@ -15399,11 +15405,12 @@
         null,
         null,
         null,
+        null,
         null
       ],
-      "total_cases": 945769,
+      "total_cases": 946680,
       "total_deaths": 0,
-      "latest_cases": 543,
+      "latest_cases": 911,
       "latest_deaths": 0
     },
     "D037": {
@@ -38701,7 +38708,8 @@
         "2026-03-01",
         "2026-04-01",
         "2026-05-01",
-        "2026-06-01"
+        "2026-06-01",
+        "2026-07-01"
       ],
       "cases": [
         3620,
@@ -38900,8 +38908,9 @@
         1971,
         2402,
         2529,
-        1762,
-        50
+        2268,
+        1397,
+        9
       ],
       "weekly_equiv_cases": [
         817.4193548387098,
@@ -39100,10 +39109,12 @@
         445.06451612903226,
         600.5,
         571.0645161290322,
-        411.1333333333333,
-        11.29032258064516
+        529.1999999999999,
+        315.4516129032258,
+        2.1
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -39501,9 +39512,11 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
+        "missing_population",
         "missing_population",
         "missing_population",
         "missing_population",
@@ -39901,11 +39914,12 @@
         null,
         null,
         null,
+        null,
         null
       ],
-      "total_cases": 439542,
+      "total_cases": 441404,
       "total_deaths": 0,
-      "latest_cases": 50,
+      "latest_cases": 9,
       "latest_deaths": 0
     },
     "D144": {
@@ -61878,7 +61892,7 @@
         2.73559889969818,
         0.0,
         0.0,
-        0.0,
+        2.959994838328416,
         0.0,
         0.0
       ],
@@ -63162,9 +63176,9 @@
         3.2949069106051923,
         3.3807537708039,
         3.403120521175818,
-        3.246252312299322,
-        1.7075701760979363,
-        0.0
+        3.355834495884936,
+        3.1455071714096627,
+        1.0
       ],
       [
         3.0969100130080562,

@@ -1,10 +1,10 @@
 {
-  "version": "20260701",
+  "version": "20260708",
   "details": {
     "identifier": "lyme_borreliosis/cases/value/month",
     "source": "sentinella_reporting_system",
     "sourceDate": "2026-06-16",
-    "version": "20260701",
+    "version": "20260708",
     "properties": {
       "agegroup": {
         "allValue": null,
