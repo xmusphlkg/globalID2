@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-08T22:45:51.551752+00:00",
+  "fetched_at": "2026-07-09T22:46:00.099323+00:00",
   "disease": "Tetanus",
   "year": 2026,
   "month": 7,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1783550751234)/",
-            "rootActivityId": "ebd835b6-5926-4c28-b963-410810047f88",
+            "timestamp": "/Date(1783637159801)/",
+            "rootActivityId": "497d9dd9-621f-42e5-a399-c4d52fea0791",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "0L"
+                          "A0": "'<5'"
                         }
                       ]
                     },
@@ -387,15 +387,15 @@
                         },
                         {
                           "C": [
-                            "NSW"
-                          ],
-                          "R": 2
+                            "NSW",
+                            "'<5'"
+                          ]
                         },
                         {
                           "C": [
-                            "NT"
-                          ],
-                          "R": 2
+                            "NT",
+                            "0L"
+                          ]
                         },
                         {
                           "C": [
@@ -445,7 +445,7 @@
   },
   "parsed_counts": {
     "ACT": 0,
-    "NSW": 0,
+    "NSW": "'<5'",
     "NT": 0,
     "QLD": 0,
     "SA": 0,

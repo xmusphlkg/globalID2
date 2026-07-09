@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-08T22:45:48.625001+00:00",
+  "fetched_at": "2026-07-09T22:45:57.479797+00:00",
   "disease": "Invasive Group A Streptococcal disease (iGAS)",
   "year": 2026,
   "month": 7,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1783550748292)/",
-            "rootActivityId": "77e9fde9-e91e-4096-aa79-63bcc9ab1485",
+            "timestamp": "/Date(1783637157156)/",
+            "rootActivityId": "9a2aeef2-c8eb-4159-9720-4aac52eabd04",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'14'"
+                          "A0": "'17'"
                         }
                       ]
                     },
@@ -406,26 +406,26 @@
                         {
                           "C": [
                             "SA",
-                            "0L"
-                          ]
-                        },
-                        {
-                          "C": [
-                            "TAS"
-                          ],
-                          "R": 2
-                        },
-                        {
-                          "C": [
-                            "VIC",
                             "'<5'"
                           ]
                         },
                         {
                           "C": [
-                            "WA"
-                          ],
-                          "R": 2
+                            "TAS",
+                            "0L"
+                          ]
+                        },
+                        {
+                          "C": [
+                            "VIC",
+                            "'5'"
+                          ]
+                        },
+                        {
+                          "C": [
+                            "WA",
+                            "'<5'"
+                          ]
                         }
                       ]
                     }
@@ -448,9 +448,9 @@
     "NSW": "'<5'",
     "NT": 0,
     "QLD": 7,
-    "SA": 0,
+    "SA": "'<5'",
     "TAS": 0,
-    "VIC": "'<5'",
-    "WA": 0
+    "VIC": 5,
+    "WA": "'<5'"
   }
 }

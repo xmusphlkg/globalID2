@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-08T22:45:51.897576+00:00",
+  "fetched_at": "2026-07-09T22:46:00.560172+00:00",
   "disease": "Varicella zoster (chickenpox)",
   "year": 2026,
   "month": 7,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1783550751554)/",
-            "rootActivityId": "fa718f3c-ea0a-4888-a289-deac2c8573ac",
+            "timestamp": "/Date(1783637160218)/",
+            "rootActivityId": "b39da284-8471-4f3d-af95-27dbf9377e08",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'21'"
+                          "A0": "'26'"
                         }
                       ]
                     },
@@ -400,31 +400,31 @@
                         {
                           "C": [
                             "QLD",
-                            "'8'"
+                            "'9'"
                           ]
                         },
                         {
                           "C": [
                             "SA",
+                            "'<5'"
+                          ]
+                        },
+                        {
+                          "C": [
+                            "TAS",
                             "0L"
                           ]
                         },
                         {
                           "C": [
-                            "TAS"
-                          ],
-                          "R": 2
-                        },
-                        {
-                          "C": [
                             "VIC",
-                            "'6'"
+                            "'7'"
                           ]
                         },
                         {
                           "C": [
                             "WA",
-                            "'7'"
+                            "'9'"
                           ]
                         }
                       ]
@@ -447,10 +447,10 @@
     "ACT": 0,
     "NSW": 0,
     "NT": 0,
-    "QLD": 8,
-    "SA": 0,
+    "QLD": 9,
+    "SA": "'<5'",
     "TAS": 0,
-    "VIC": 6,
-    "WA": 7
+    "VIC": 7,
+    "WA": 9
   }
 }
