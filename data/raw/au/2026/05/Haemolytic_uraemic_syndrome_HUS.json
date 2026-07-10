@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-09T22:45:43.107216+00:00",
+  "fetched_at": "2026-07-10T22:45:28.110754+00:00",
   "disease": "Haemolytic uraemic syndrome (HUS)",
   "year": 2026,
   "month": 5,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1783637142782)/",
-            "rootActivityId": "2e390e5e-16d2-4709-9473-c9bb0fa8ffee",
+            "timestamp": "/Date(1783723527788)/",
+            "rootActivityId": "0fe4a75d-d0da-4d42-a74a-2cb0a95f7d37",
             "descriptor": {
               "Select": [
                 {

@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-09T22:46:00.731128+00:00",
+  "fetched_at": "2026-07-10T22:45:47.847896+00:00",
   "disease": "West Nile/Kunjin virus infection",
   "year": 2026,
   "month": 7,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1783637160446)/",
-            "rootActivityId": "aebfa2a3-ea85-4ece-aa16-3bddfb94a3c1",
+            "timestamp": "/Date(1783723547530)/",
+            "rootActivityId": "3bb14f28-2647-4696-846c-a77c15f74383",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "0L"
+                          "A0": "'<5'"
                         }
                       ]
                     },
@@ -387,15 +387,15 @@
                         },
                         {
                           "C": [
-                            "NSW"
-                          ],
-                          "R": 2
+                            "NSW",
+                            "'<5'"
+                          ]
                         },
                         {
                           "C": [
-                            "NT"
-                          ],
-                          "R": 2
+                            "NT",
+                            "0L"
+                          ]
                         },
                         {
                           "C": [
@@ -445,7 +445,7 @@
   },
   "parsed_counts": {
     "ACT": 0,
-    "NSW": 0,
+    "NSW": "'<5'",
     "NT": 0,
     "QLD": 0,
     "SA": 0,

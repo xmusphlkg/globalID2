@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-09T22:46:00.604763+00:00",
+  "fetched_at": "2026-07-10T22:45:47.751843+00:00",
   "disease": "Varicella zoster (shingles)",
   "year": 2026,
   "month": 7,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1783637160280)/",
-            "rootActivityId": "fd1a4acb-acd1-4d41-bc4a-2cbe8dbc3299",
+            "timestamp": "/Date(1783723547404)/",
+            "rootActivityId": "252acd79-e664-40ff-9df9-dd5974957ba8",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'98'"
+                          "A0": "'127'"
                         }
                       ]
                     },
@@ -400,13 +400,13 @@
                         {
                           "C": [
                             "QLD",
-                            "'54'"
+                            "'68'"
                           ]
                         },
                         {
                           "C": [
                             "SA",
-                            "'6'"
+                            "'13'"
                           ]
                         },
                         {
@@ -418,13 +418,13 @@
                         {
                           "C": [
                             "VIC",
-                            "'26'"
+                            "'30'"
                           ]
                         },
                         {
                           "C": [
                             "WA",
-                            "'11'"
+                            "'15'"
                           ]
                         }
                       ]
@@ -447,10 +447,10 @@
     "ACT": "'<5'",
     "NSW": 0,
     "NT": 0,
-    "QLD": 54,
-    "SA": 6,
+    "QLD": 68,
+    "SA": 13,
     "TAS": 0,
-    "VIC": 26,
-    "WA": 11
+    "VIC": 30,
+    "WA": 15
   }
 }
