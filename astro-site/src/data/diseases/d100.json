@@ -1957,7 +1957,8 @@
         "2026-01-01",
         "2026-02-01",
         "2026-03-01",
-        "2026-04-01"
+        "2026-04-01",
+        "2026-05-01"
       ],
       "cases": [
         85,
@@ -1977,7 +1978,8 @@
         23,
         13,
         19,
-        14
+        14,
+        17
       ],
       "weekly_equiv_cases": [
         1.6301369863013697,
@@ -1997,9 +1999,11 @@
         5.193548387096774,
         2.935483870967742,
         4.75,
-        3.161290322580645
+        3.161290322580645,
+        3.966666666666667
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -2037,6 +2041,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -2057,9 +2062,10 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
-      "total_cases": 1343,
+      "total_cases": 1360,
       "total_deaths": 0
     },
     "HK": {
@@ -17576,7 +17582,7 @@
       237,
       256,
       241,
-      242,
+      259,
       228,
       50
     ],
@@ -17902,7 +17908,7 @@
       0
     ]
   },
-  "total_cases": 40819,
+  "total_cases": 40836,
   "total_deaths": 0,
   "generated_at": "2026-07-04T00:00:00+00:00",
   "source_info": [
