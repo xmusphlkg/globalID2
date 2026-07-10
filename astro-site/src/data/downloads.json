@@ -345,7 +345,7 @@
       "name_en": "Taiwan, China",
       "name_zh": "中国台湾",
       "generated_at": "2026-07-04T00:00:00+00:00",
-      "record_count": 6329,
+      "record_count": 6332,
       "date_range": {
         "start": "2003-01-01",
         "end": "2026-07-01"
@@ -9702,7 +9702,7 @@
       "name_en": "Zika virus disease",
       "name_zh": "寨卡病毒病",
       "generated_at": "2026-07-04T00:00:00+00:00",
-      "record_count": 1301,
+      "record_count": 1302,
       "country_count": 8,
       "countries": [
         {
@@ -9972,7 +9972,7 @@
       "name_en": "Chikungunya",
       "name_zh": "基孔肯雅热",
       "generated_at": "2026-07-04T00:00:00+00:00",
-      "record_count": 1981,
+      "record_count": 1982,
       "country_count": 9,
       "countries": [
         {
@@ -11572,7 +11572,7 @@
       "name_en": "Monkeypox",
       "name_zh": "猴痘",
       "generated_at": "2026-07-04T00:00:00+00:00",
-      "record_count": 1061,
+      "record_count": 1062,
       "country_count": 9,
       "countries": [
         {
