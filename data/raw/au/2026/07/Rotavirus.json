@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-10T22:45:46.176826+00:00",
+  "fetched_at": "2026-07-11T22:46:00.434579+00:00",
   "disease": "Rotavirus",
   "year": 2026,
   "month": 7,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1783723545834)/",
-            "rootActivityId": "99151125-eefc-4a2e-989a-4a4765b3926b",
+            "timestamp": "/Date(1783809960093)/",
+            "rootActivityId": "8a3fda07-f31f-4cfc-96cd-2dd1109dc9eb",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'63'"
+                          "A0": "'66'"
                         }
                       ]
                     },
@@ -388,7 +388,7 @@
                         {
                           "C": [
                             "NSW",
-                            "'30'"
+                            "'31'"
                           ]
                         },
                         {
@@ -400,7 +400,7 @@
                         {
                           "C": [
                             "QLD",
-                            "'21'"
+                            "'23'"
                           ]
                         },
                         {
@@ -445,9 +445,9 @@
   },
   "parsed_counts": {
     "ACT": 0,
-    "NSW": 30,
+    "NSW": 31,
     "NT": 0,
-    "QLD": 21,
+    "QLD": 23,
     "SA": 6,
     "TAS": 0,
     "VIC": 5,

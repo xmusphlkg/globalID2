@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-10T22:45:27.227441+00:00",
+  "fetched_at": "2026-07-11T22:45:41.523068+00:00",
   "disease": "Campylobacteriosis",
   "year": 2026,
   "month": 5,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1783723526890)/",
-            "rootActivityId": "0bb59566-3110-49f6-ab4a-c1c0a8707140",
+            "timestamp": "/Date(1783809941187)/",
+            "rootActivityId": "8490b6db-8351-4388-96a1-0dbbaa90b25c",
             "descriptor": {
               "Select": [
                 {
