@@ -3,7 +3,7 @@
   "country_name": "Brazil",
   "country_name_en": "Brazil",
   "country_name_zh": "巴西",
-  "total_cases": 60910336,
+  "total_cases": 60910346,
   "total_deaths": 0,
   "disease_count": 45,
   "frequency_meta": {
@@ -24,7 +24,7 @@
     "unit": "per_100k",
     "population_source": "WPP",
     "source_counts": {
-      "missing_population": 8159
+      "missing_population": 8160
     },
     "note_en": "Incidence Rate is computed from WPP population data during site generation; when population is unavailable, original database incidence is shown.",
     "note_zh": "发病率在网页数据生成阶段按 WPP 人口重算（每10万人）；若缺少人口数据则回退显示数据库原始发病率。"
@@ -42709,7 +42709,8 @@
         "2025-07-01",
         "2025-08-01",
         "2025-09-01",
-        "2025-10-01"
+        "2025-10-01",
+        "2026-05-01"
       ],
       "cases": [
         49,
@@ -42901,7 +42902,8 @@
         36,
         32,
         17,
-        1
+        1,
+        10
       ],
       "weekly_equiv_cases": [
         11.064516129032258,
@@ -43093,9 +43095,11 @@
         8.4,
         7.225806451612903,
         3.8387096774193545,
-        0.23333333333333334
+        0.23333333333333334,
+        0.33018867924528306
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -43477,9 +43481,11 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
+        "missing_population",
         "missing_population",
         "missing_population",
         "missing_population",
@@ -43861,11 +43867,12 @@
         null,
         null,
         null,
+        null,
         null
       ],
-      "total_cases": 8265,
+      "total_cases": 8275,
       "total_deaths": 0,
-      "latest_cases": 1,
+      "latest_cases": 10,
       "latest_deaths": 0
     },
     "D184": {
@@ -69275,7 +69282,7 @@
         0.0,
         0.0,
         0.0,
-        0.0,
+        1.041392685158225,
         0.0,
         0.0
       ],

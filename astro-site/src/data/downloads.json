@@ -54,7 +54,7 @@
       "name_en": "Brazil",
       "name_zh": "巴西",
       "generated_at": "2026-07-04T00:00:00+00:00",
-      "record_count": 8159,
+      "record_count": 8160,
       "date_range": {
         "start": "2000-01-01",
         "end": "2026-07-01"
@@ -20446,7 +20446,7 @@
       "name_en": "Acute flaccid paralysis",
       "name_zh": "急性无力肢体麻痹",
       "generated_at": "2026-07-04T00:00:00+00:00",
-      "record_count": 451,
+      "record_count": 452,
       "country_count": 2,
       "countries": [
         {
