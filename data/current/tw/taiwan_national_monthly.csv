@@ -56,11 +56,11 @@
 55,屈公病,A920,2026,7,2026-07-01,1,0,1,"Taiwan, China CDC NIDSS Open Data",https://od.cdc.gov.tw/eic/Age_County_Gender_A920.csv
 56,急性病毒性Ａ型肝炎,0701,2026,7,2026-07-01,2,2,0,"Taiwan, China CDC NIDSS Open Data",https://od.cdc.gov.tw/eic/Age_County_Gender_0701.csv
 57,急性病毒性Ｂ型肝炎,0703,2026,7,2026-07-01,2,2,0,"Taiwan, China CDC NIDSS Open Data",https://od.cdc.gov.tw/eic/Age_County_Gender_0703.csv
-58,急性病毒性Ｃ型肝炎,0705,2026,7,2026-07-01,6,6,0,"Taiwan, China CDC NIDSS Open Data",https://od.cdc.gov.tw/eic/Age_County_Gender_0705.csv
+58,急性病毒性Ｃ型肝炎,0705,2026,7,2026-07-01,7,7,0,"Taiwan, China CDC NIDSS Open Data",https://od.cdc.gov.tw/eic/Age_County_Gender_0705.csv
 59,新冠併發重症,19SC,2026,7,2026-07-01,12,12,0,"Taiwan, China CDC NIDSS Open Data",https://od.cdc.gov.tw/eic/Age_County_Gender_19SC.csv
-60,李斯特菌症,027,2026,7,2026-07-01,2,2,0,"Taiwan, China CDC NIDSS Open Data",https://od.cdc.gov.tw/eic/Age_County_Gender_027.csv
+60,李斯特菌症,027,2026,7,2026-07-01,3,3,0,"Taiwan, China CDC NIDSS Open Data",https://od.cdc.gov.tw/eic/Age_County_Gender_027.csv
 61,桿菌性痢疾,004,2026,7,2026-07-01,3,3,0,"Taiwan, China CDC NIDSS Open Data",https://od.cdc.gov.tw/eic/Age_County_Gender_004.csv
-62,流感併發重症,487a,2026,7,2026-07-01,36,36,0,"Taiwan, China CDC NIDSS Open Data",https://od.cdc.gov.tw/eic/Age_County_Gender_487a.csv
-63,退伍軍人病,4828,2026,7,2026-07-01,14,13,1,"Taiwan, China CDC NIDSS Open Data",https://od.cdc.gov.tw/eic/Age_County_Gender_4828.csv
-64,阿米巴性痢疾,006,2026,7,2026-07-01,8,6,2,"Taiwan, China CDC NIDSS Open Data",https://od.cdc.gov.tw/eic/Age_County_Gender_006.csv
+62,流感併發重症,487a,2026,7,2026-07-01,37,37,0,"Taiwan, China CDC NIDSS Open Data",https://od.cdc.gov.tw/eic/Age_County_Gender_487a.csv
+63,退伍軍人病,4828,2026,7,2026-07-01,15,13,2,"Taiwan, China CDC NIDSS Open Data",https://od.cdc.gov.tw/eic/Age_County_Gender_4828.csv
+64,阿米巴性痢疾,006,2026,7,2026-07-01,8,5,3,"Taiwan, China CDC NIDSS Open Data",https://od.cdc.gov.tw/eic/Age_County_Gender_006.csv
 65,Ｍ痘,MPXV,2026,7,2026-07-01,2,0,2,"Taiwan, China CDC NIDSS Open Data",https://od.cdc.gov.tw/eic/Age_County_Gender_MPXV.csv
