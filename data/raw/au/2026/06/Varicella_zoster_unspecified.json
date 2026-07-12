@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-11T22:45:55.298061+00:00",
+  "fetched_at": "2026-07-12T22:45:38.146725+00:00",
   "disease": "Varicella zoster (unspecified)",
   "year": 2026,
   "month": 6,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1783809954965)/",
-            "rootActivityId": "57b9503f-ca7b-4b9d-8866-c045afe3dd79",
+            "timestamp": "/Date(1783896337818)/",
+            "rootActivityId": "1293f064-18ab-425e-871f-605e178ff872",
             "descriptor": {
               "Select": [
                 {

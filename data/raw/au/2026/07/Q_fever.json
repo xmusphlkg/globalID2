@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-11T22:46:00.230463+00:00",
+  "fetched_at": "2026-07-12T22:45:42.926534+00:00",
   "disease": "Q fever",
   "year": 2026,
   "month": 7,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1783809959872)/",
-            "rootActivityId": "3eb2c1b8-677e-44da-9ac2-b73b712a8324",
+            "timestamp": "/Date(1783896342632)/",
+            "rootActivityId": "fba241cd-ca20-4868-aa49-1bb7a9e2a4f2",
             "descriptor": {
               "Select": [
                 {

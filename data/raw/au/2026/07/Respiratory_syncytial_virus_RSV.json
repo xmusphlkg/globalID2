@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-11T22:46:00.214298+00:00",
+  "fetched_at": "2026-07-12T22:45:42.985410+00:00",
   "disease": "Respiratory syncytial virus (RSV)",
   "year": 2026,
   "month": 7,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1783809959865)/",
-            "rootActivityId": "fb06fe76-ac44-4992-b049-08f87c9e462d",
+            "timestamp": "/Date(1783896342690)/",
+            "rootActivityId": "dec0f5fe-6d61-401a-b147-0fb04ddb6a96",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'8,561'"
+                          "A0": "'8,834'"
                         }
                       ]
                     },
@@ -388,7 +388,7 @@
                         {
                           "C": [
                             "NSW",
-                            "'3,160'"
+                            "'3,295'"
                           ]
                         },
                         {
@@ -400,13 +400,13 @@
                         {
                           "C": [
                             "QLD",
-                            "'1,169'"
+                            "'1,234'"
                           ]
                         },
                         {
                           "C": [
                             "SA",
-                            "'913'"
+                            "'986'"
                           ]
                         },
                         {
@@ -445,10 +445,10 @@
   },
   "parsed_counts": {
     "ACT": 54,
-    "NSW": 3160,
+    "NSW": 3295,
     "NT": 18,
-    "QLD": 1169,
-    "SA": 913,
+    "QLD": 1234,
+    "SA": 986,
     "TAS": 157,
     "VIC": 2327,
     "WA": 763
