@@ -345,7 +345,7 @@
       "name_en": "Taiwan, China",
       "name_zh": "中国台湾",
       "generated_at": "2026-07-04T00:00:00+00:00",
-      "record_count": 6332,
+      "record_count": 6334,
       "date_range": {
         "start": "2003-01-01",
         "end": "2026-07-01"
@@ -10954,7 +10954,7 @@
       "name_en": "Scrub Typhus",
       "name_zh": "恙虫病",
       "generated_at": "2026-07-04T00:00:00+00:00",
-      "record_count": 1561,
+      "record_count": 1562,
       "country_count": 5,
       "countries": [
         {
@@ -14268,7 +14268,7 @@
       "name_en": "Invasive pneumococcal disease",
       "name_zh": "侵袭性肺炎球菌病",
       "generated_at": "2026-07-04T00:00:00+00:00",
-      "record_count": 2425,
+      "record_count": 2426,
       "country_count": 8,
       "countries": [
         {

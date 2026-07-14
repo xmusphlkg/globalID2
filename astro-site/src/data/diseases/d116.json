@@ -6705,7 +6705,7 @@
         6,
         2,
         2,
-        2
+        3
       ],
       "weekly_equiv_cases": [
         0.22580645161290322,
@@ -6940,7 +6940,7 @@
         1.5,
         0.45161290322580644,
         0.4666666666666667,
-        0.45161290322580644
+        0.6774193548387096
       ],
       "deaths": [
         0,
@@ -7647,7 +7647,7 @@
         "missing_population",
         "missing_population"
       ],
-      "total_cases": 951,
+      "total_cases": 952,
       "total_deaths": 0
     },
     "US": {
@@ -9309,7 +9309,7 @@
       9,
       3,
       2,
-      2,
+      3,
       0
     ],
     "deaths": [
@@ -9586,7 +9586,7 @@
       0
     ]
   },
-  "total_cases": 1132,
+  "total_cases": 1133,
   "total_deaths": 0,
   "generated_at": "2026-07-04T00:00:00+00:00",
   "source_info": [
