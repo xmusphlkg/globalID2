@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-13T22:45:42.613043+00:00",
+  "fetched_at": "2026-07-14T22:45:27.236941+00:00",
   "disease": "Avian influenza in humans (AIH)",
   "year": 2026,
   "month": 5,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1783982742314)/",
-            "rootActivityId": "bc7ec28b-b83a-4397-b1e9-0f13faa12d7c",
+            "timestamp": "/Date(1784069126921)/",
+            "rootActivityId": "0b82d1eb-264f-450d-9564-86dcf8a4cd3e",
             "descriptor": {
               "Select": [
                 {
