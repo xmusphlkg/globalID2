@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-14T22:45:41.617208+00:00",
+  "fetched_at": "2026-07-15T22:45:58.083940+00:00",
   "disease": "Syphilis > 2 years or unspecified duration",
   "year": 2026,
   "month": 6,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1784069141286)/",
-            "rootActivityId": "d856a987-2b50-4c64-bdb1-bb154d646f26",
+            "timestamp": "/Date(1784155557767)/",
+            "rootActivityId": "cc0e71b4-77e3-4871-b629-ce1bf4a38b58",
             "descriptor": {
               "Select": [
                 {
@@ -388,19 +388,19 @@
                         {
                           "C": [
                             "NSW",
-                            "'55'"
+                            "'53'"
                           ]
                         },
                         {
                           "C": [
                             "NT",
-                            "'<5'"
+                            "'5'"
                           ]
                         },
                         {
                           "C": [
                             "QLD",
-                            "'28'"
+                            "'29'"
                           ]
                         },
                         {
@@ -418,13 +418,13 @@
                         {
                           "C": [
                             "VIC",
-                            "'88'"
+                            "'87'"
                           ]
                         },
                         {
                           "C": [
                             "WA",
-                            "'42'"
+                            "'43'"
                           ]
                         }
                       ]
@@ -445,12 +445,12 @@
   },
   "parsed_counts": {
     "ACT": 0,
-    "NSW": 55,
-    "NT": "'<5'",
-    "QLD": 28,
+    "NSW": 53,
+    "NT": 5,
+    "QLD": 29,
     "SA": 6,
     "TAS": 0,
-    "VIC": 88,
-    "WA": 42
+    "VIC": 87,
+    "WA": 43
   }
 }

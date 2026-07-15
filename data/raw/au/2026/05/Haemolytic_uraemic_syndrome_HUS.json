@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-14T22:45:29.710041+00:00",
+  "fetched_at": "2026-07-15T22:45:46.883862+00:00",
   "disease": "Haemolytic uraemic syndrome (HUS)",
   "year": 2026,
   "month": 5,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1784069129369)/",
-            "rootActivityId": "7609f18c-caf4-4af0-a2a1-beb5ee60d764",
+            "timestamp": "/Date(1784155546552)/",
+            "rootActivityId": "d17e56d0-d42d-431c-ad8a-d572d70ce7b9",
             "descriptor": {
               "Select": [
                 {
@@ -417,15 +417,15 @@
                         },
                         {
                           "C": [
-                            "VIC"
-                          ],
-                          "R": 2
+                            "VIC",
+                            "'<5'"
+                          ]
                         },
                         {
                           "C": [
-                            "WA"
-                          ],
-                          "R": 2
+                            "WA",
+                            "0L"
+                          ]
                         }
                       ]
                     }
@@ -450,7 +450,7 @@
     "QLD": "'<5'",
     "SA": 0,
     "TAS": 0,
-    "VIC": 0,
+    "VIC": "'<5'",
     "WA": 0
   }
 }

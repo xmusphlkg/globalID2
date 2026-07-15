@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-14T22:45:40.502183+00:00",
+  "fetched_at": "2026-07-15T22:45:56.848196+00:00",
   "disease": "Pneumococcal disease (invasive)",
   "year": 2026,
   "month": 6,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1784069139988)/",
-            "rootActivityId": "c5e9ef19-8de7-4c1d-a93e-b3667d799f2d",
+            "timestamp": "/Date(1784155556509)/",
+            "rootActivityId": "3a7d2d07-7697-4897-83de-34af2adc59ca",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'228'"
+                          "A0": "'229'"
                         }
                       ]
                     },
@@ -406,7 +406,7 @@
                         {
                           "C": [
                             "SA",
-                            "'20'"
+                            "'21'"
                           ]
                         },
                         {
@@ -448,7 +448,7 @@
     "NSW": 80,
     "NT": 5,
     "QLD": 37,
-    "SA": 20,
+    "SA": 21,
     "TAS": "'<5'",
     "VIC": 55,
     "WA": 26

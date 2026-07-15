@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-14T22:45:45.792477+00:00",
+  "fetched_at": "2026-07-15T22:46:01.991402+00:00",
   "disease": "Hepatitis C (unspecified active)",
   "year": 2026,
   "month": 7,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1784069145470)/",
-            "rootActivityId": "a5f6e88c-aceb-46ae-bb15-fe84dbc9f35d",
+            "timestamp": "/Date(1784155561659)/",
+            "rootActivityId": "72bba976-5421-4206-96ee-0597a5b8d3d8",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'193'"
+                          "A0": "'200'"
                         }
                       ]
                     },
@@ -388,7 +388,7 @@
                         {
                           "C": [
                             "NSW",
-                            "'38'"
+                            "'36'"
                           ]
                         },
                         {
@@ -400,7 +400,7 @@
                         {
                           "C": [
                             "QLD",
-                            "'66'"
+                            "'69'"
                           ]
                         },
                         {
@@ -418,13 +418,13 @@
                         {
                           "C": [
                             "VIC",
-                            "'50'"
+                            "'54'"
                           ]
                         },
                         {
                           "C": [
                             "WA",
-                            "'30'"
+                            "'31'"
                           ]
                         }
                       ]
@@ -445,12 +445,12 @@
   },
   "parsed_counts": {
     "ACT": "'<5'",
-    "NSW": 38,
+    "NSW": 36,
     "NT": 0,
-    "QLD": 66,
+    "QLD": 69,
     "SA": 5,
     "TAS": "'<5'",
-    "VIC": 50,
-    "WA": 30
+    "VIC": 54,
+    "WA": 31
   }
 }
