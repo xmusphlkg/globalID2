@@ -2506,7 +2506,7 @@
         12,
         15,
         17,
-        6,
+        7,
         2
       ],
       "weekly_equiv_cases": [
@@ -2791,7 +2791,7 @@
         3.0,
         3.3870967741935485,
         3.966666666666667,
-        1.3548387096774193,
+        1.5806451612903225,
         0.4666666666666667
       ],
       "deaths": [
@@ -3649,7 +3649,7 @@
         "missing_population",
         "missing_population"
       ],
-      "total_cases": 4283,
+      "total_cases": 4284,
       "total_deaths": 0
     }
   },
@@ -4293,7 +4293,7 @@
       12,
       15,
       17,
-      11,
+      12,
       2
     ],
     "deaths": [
@@ -4618,9 +4618,9 @@
       0
     ]
   },
-  "total_cases": 9540,
+  "total_cases": 9541,
   "total_deaths": 0,
-  "generated_at": "2026-07-04T00:00:00+00:00",
+  "generated_at": "2026-07-11T00:00:00+00:00",
   "source_info": [
     {
       "country_code": "AU",

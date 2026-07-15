@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-04T00:00:00+00:00",
+  "generated_at": "2026-07-11T00:00:00+00:00",
   "total_countries": 10,
   "total_diseases": 199,
   "total_reports": 1,
@@ -44,7 +44,7 @@
       "name_en": "Brazil",
       "name_zh": "巴西",
       "language": "pt-BR",
-      "total_cases": 60910346,
+      "total_cases": 60922655,
       "total_deaths": 0,
       "disease_count": 45,
       "date_range": {
@@ -198,12 +198,12 @@
       "name_en": "Japan",
       "name_zh": "日本",
       "language": "ja-JP",
-      "total_cases": 48332549,
+      "total_cases": 48377869,
       "total_deaths": 0,
       "disease_count": 86,
       "date_range": {
         "start": "2012-09-14",
-        "end": "2026-07-04"
+        "end": "2026-07-11"
       },
       "source_info": {
         "country_code": "JP",
@@ -300,7 +300,7 @@
       "name_en": "Taiwan, China",
       "name_zh": "中国台湾",
       "language": "zh-TW",
-      "total_cases": 11164455,
+      "total_cases": 11164501,
       "total_deaths": 0,
       "disease_count": 48,
       "date_range": {
