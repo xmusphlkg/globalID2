@@ -3,7 +3,7 @@
   "country_name": "Switzerland",
   "country_name_en": "Switzerland",
   "country_name_zh": "瑞士",
-  "total_cases": 5280902,
+  "total_cases": 5283206,
   "total_deaths": 0,
   "disease_count": 43,
   "frequency_meta": {
@@ -24,7 +24,7 @@
     "unit": "per_100k",
     "population_source": "WPP",
     "source_counts": {
-      "missing_population": 3709
+      "missing_population": 3714
     },
     "note_en": "Incidence Rate is computed from WPP population data during site generation; when population is unavailable, original database incidence is shown.",
     "note_zh": "发病率在网页数据生成阶段按 WPP 人口重算（每10万人）；若缺少人口数据则回退显示数据库原始发病率。"
@@ -10896,7 +10896,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         295,
@@ -11059,7 +11060,8 @@
         127,
         254,
         381,
-        849
+        849,
+        2079
       ],
       "weekly_equiv_cases": [
         66.61290322580645,
@@ -11222,9 +11224,11 @@
         28.677419354838708,
         63.5,
         86.03225806451613,
-        198.1
+        198.1,
+        469.4516129032258
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -11548,9 +11552,11 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
+        "missing_population",
         "missing_population",
         "missing_population",
         "missing_population",
@@ -11874,11 +11880,12 @@
         null,
         null,
         null,
+        null,
         null
       ],
-      "total_cases": 138730,
+      "total_cases": 140809,
       "total_deaths": 0,
-      "latest_cases": 849,
+      "latest_cases": 2079,
       "latest_deaths": 0
     },
     "D110": {
@@ -14872,7 +14879,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         0,
@@ -15031,11 +15039,12 @@
         17,
         11,
         6,
-        5,
+        6,
         5,
         6,
-        9,
-        9
+        10,
+        19,
+        15
       ],
       "weekly_equiv_cases": [
         0.0,
@@ -15194,13 +15203,15 @@
         3.966666666666667,
         2.4838709677419355,
         1.4000000000000001,
-        1.129032258064516,
+        1.3548387096774193,
         1.129032258064516,
         1.5,
-        2.032258064516129,
-        2.1
+        2.258064516129032,
+        4.433333333333334,
+        3.3870967741935485
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -15524,9 +15535,11 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
+        "missing_population",
         "missing_population",
         "missing_population",
         "missing_population",
@@ -15850,11 +15863,12 @@
         null,
         null,
         null,
+        null,
         null
       ],
-      "total_cases": 1568,
+      "total_cases": 1595,
       "total_deaths": 0,
-      "latest_cases": 9,
+      "latest_cases": 15,
       "latest_deaths": 0
     },
     "D128": {
@@ -17394,7 +17408,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         0,
@@ -17555,9 +17570,10 @@
         2,
         4,
         3,
-        10,
-        33,
-        60
+        11,
+        32,
+        68,
+        107
       ],
       "weekly_equiv_cases": [
         0.0,
@@ -17718,11 +17734,13 @@
         0.4666666666666667,
         0.9032258064516129,
         0.6774193548387096,
-        2.5,
-        7.451612903225806,
-        14.0
+        2.75,
+        7.225806451612903,
+        15.866666666666667,
+        24.161290322580644
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -18046,9 +18064,11 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
+        "missing_population",
         "missing_population",
         "missing_population",
         "missing_population",
@@ -18372,11 +18392,12 @@
         null,
         null,
         null,
+        null,
         null
       ],
-      "total_cases": 3940,
+      "total_cases": 4055,
       "total_deaths": 0,
-      "latest_cases": 60,
+      "latest_cases": 107,
       "latest_deaths": 0
     },
     "D038": {
@@ -19090,7 +19111,8 @@
         "2026-05-04",
         "2026-05-11",
         "2026-05-18",
-        "2026-05-25"
+        "2026-05-25",
+        "2026-06-01"
       ],
       "cases": [
         106,
@@ -19797,7 +19819,8 @@
         11,
         10,
         11,
-        7
+        7,
+        37
       ],
       "weekly_equiv_cases": [
         106.0,
@@ -20504,9 +20527,11 @@
         25.666666666666664,
         10.0,
         11.0,
-        7.0
+        7.0,
+        37.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -21918,9 +21943,11 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
+        "missing_population",
         "missing_population",
         "missing_population",
         "missing_population",
@@ -23332,11 +23359,12 @@
         null,
         null,
         null,
+        null,
         null
       ],
-      "total_cases": 214834,
+      "total_cases": 214871,
       "total_deaths": 0,
-      "latest_cases": 7,
+      "latest_cases": 37,
       "latest_deaths": 0
     },
     "D011": {
@@ -25051,7 +25079,8 @@
         "2026-05-04",
         "2026-05-11",
         "2026-05-18",
-        "2026-05-25"
+        "2026-05-25",
+        "2026-06-01"
       ],
       "cases": [
         57,
@@ -25386,7 +25415,8 @@
         14,
         12,
         17,
-        7
+        7,
+        46
       ],
       "weekly_equiv_cases": [
         57.0,
@@ -25721,9 +25751,11 @@
         32.66666666666667,
         12.0,
         17.0,
-        7.0
+        7.0,
+        46.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -26391,9 +26423,11 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
+        "missing_population",
         "missing_population",
         "missing_population",
         "missing_population",
@@ -27061,11 +27095,12 @@
         null,
         null,
         null,
+        null,
         null
       ],
-      "total_cases": 4501699,
+      "total_cases": 4501745,
       "total_deaths": 0,
-      "latest_cases": 7,
+      "latest_cases": 46,
       "latest_deaths": 0
     }
   },
@@ -27487,7 +27522,7 @@
         2.69284691927723,
         2.230448921378274,
         2.0293837776852097,
-        0.0
+        1.6720978579357175
       ],
       [
         2.929418925714293,
@@ -27651,7 +27686,7 @@
         2.900913067737669,
         2.230448921378274,
         1.9138138523837167,
-        0.0
+        1.5797835966168101
       ],
       [
         2.884228769632604,
@@ -27979,7 +28014,7 @@
         2.406540180433955,
         2.582063362911709,
         2.929418925714293,
-        0.0
+        3.3180633349627615
       ],
       [
         2.909020854211156,
@@ -29944,10 +29979,10 @@
         0.47712125471966244,
         0.6989700043360189,
         0.6020599913279624,
-        1.041392685158225,
-        1.5314789170422551,
-        1.7853298350107671,
-        0.0
+        1.0791812460476249,
+        1.5185139398778875,
+        1.8388490907372552,
+        2.03342375548695
       ],
       [
         2.2068258760318495,
@@ -30598,12 +30633,12 @@
         1.255272505103306,
         1.0791812460476249,
         0.8450980400142568,
-        0.7781512503836436,
+        0.8450980400142568,
         0.7781512503836436,
         0.8450980400142568,
-        1.0,
-        1.0,
-        0.0
+        1.041392685158225,
+        1.3010299956639813,
+        1.2041199826559248
       ],
       [
         1.9344984512435677,

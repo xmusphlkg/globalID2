@@ -93,7 +93,7 @@
       "name_en": "Switzerland",
       "name_zh": "瑞士",
       "generated_at": "2026-07-11T00:00:00+00:00",
-      "record_count": 3709,
+      "record_count": 3714,
       "date_range": {
         "start": "2013-01-01",
         "end": "2026-06-01"
@@ -1119,7 +1119,7 @@
       "name_en": "COVID-19",
       "name_zh": "新型冠状病毒感染",
       "generated_at": "2026-07-11T00:00:00+00:00",
-      "record_count": 1077,
+      "record_count": 1078,
       "country_count": 7,
       "countries": [
         {
@@ -7729,7 +7729,7 @@
       "name_en": "Influenza",
       "name_zh": "流行性感冒",
       "generated_at": "2026-07-11T00:00:00+00:00",
-      "record_count": 1939,
+      "record_count": 1940,
       "country_count": 4,
       "countries": [
         {
@@ -14966,7 +14966,7 @@
       "name_en": "Lyme disease",
       "name_zh": "莱姆病",
       "generated_at": "2026-07-11T00:00:00+00:00",
-      "record_count": 1732,
+      "record_count": 1733,
       "country_count": 5,
       "countries": [
         {
@@ -16924,7 +16924,7 @@
       "name_en": "Tularemia",
       "name_zh": "土拉菌病",
       "generated_at": "2026-07-11T00:00:00+00:00",
-      "record_count": 1751,
+      "record_count": 1752,
       "country_count": 6,
       "countries": [
         {
@@ -21716,7 +21716,7 @@
       "name_en": "Tick-borne encephalitis",
       "name_zh": "蜱传脑炎",
       "generated_at": "2026-07-11T00:00:00+00:00",
-      "record_count": 419,
+      "record_count": 420,
       "country_count": 2,
       "countries": [
         {

@@ -1,10 +1,10 @@
 {
-  "version": "20260708",
+  "version": "20260715",
   "details": {
     "identifier": "brucellosis/cases/value/year",
     "source": "mandatory_reporting_system",
-    "sourceDate": "2026-07-07",
-    "version": "20260708",
+    "sourceDate": "2026-07-14",
+    "version": "20260715",
     "properties": {
       "CHFL": {
         "allValue": "all",
