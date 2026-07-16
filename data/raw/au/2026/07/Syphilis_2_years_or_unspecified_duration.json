@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-15T22:46:05.626672+00:00",
+  "fetched_at": "2026-07-16T22:45:55.121116+00:00",
   "disease": "Syphilis > 2 years or unspecified duration",
   "year": 2026,
   "month": 7,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1784155565287)/",
-            "rootActivityId": "1baf4578-bbf0-4768-a24a-805debb5adf8",
+            "timestamp": "/Date(1784241954808)/",
+            "rootActivityId": "e1825454-a4c2-4ed5-865e-1f0122e94ba8",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'90'"
+                          "A0": "'93'"
                         }
                       ]
                     },
@@ -388,7 +388,7 @@
                         {
                           "C": [
                             "NSW",
-                            "'16'"
+                            "'18'"
                           ]
                         },
                         {
@@ -400,7 +400,7 @@
                         {
                           "C": [
                             "QLD",
-                            "'14'"
+                            "'15'"
                           ]
                         },
                         {
@@ -418,13 +418,13 @@
                         {
                           "C": [
                             "VIC",
-                            "'46'"
+                            "'45'"
                           ]
                         },
                         {
                           "C": [
                             "WA",
-                            "'10'"
+                            "'9'"
                           ]
                         }
                       ]
@@ -445,12 +445,12 @@
   },
   "parsed_counts": {
     "ACT": 0,
-    "NSW": 16,
+    "NSW": 18,
     "NT": "'<5'",
-    "QLD": 14,
+    "QLD": 15,
     "SA": "'<5'",
     "TAS": 0,
-    "VIC": 46,
-    "WA": 10
+    "VIC": 45,
+    "WA": 9
   }
 }

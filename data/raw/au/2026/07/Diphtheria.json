@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-15T22:46:00.941836+00:00",
+  "fetched_at": "2026-07-16T22:45:50.345140+00:00",
   "disease": "Diphtheria",
   "year": 2026,
   "month": 7,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1784155560607)/",
-            "rootActivityId": "2bcbd677-7612-4b63-b6ae-ed532c0b26ef",
+            "timestamp": "/Date(1784241950015)/",
+            "rootActivityId": "6d6c5083-aaad-4afa-af12-d9a0539c19b8",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'14'"
+                          "A0": "'15'"
                         }
                       ]
                     },
