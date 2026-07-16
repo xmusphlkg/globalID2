@@ -334,12 +334,12 @@
       "name_en": "United States",
       "name_zh": "美国",
       "language": "en-US",
-      "total_cases": 16240732,
+      "total_cases": 16262894,
       "total_deaths": 0,
       "disease_count": 64,
       "date_range": {
         "start": "2006-01-07",
-        "end": "2026-07-04"
+        "end": "2026-07-11"
       },
       "source_info": {
         "country_code": "US",
