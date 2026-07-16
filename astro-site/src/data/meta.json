@@ -266,12 +266,12 @@
       "name_en": "New Zealand",
       "name_zh": "新西兰",
       "language": "en",
-      "total_cases": 2850249,
+      "total_cases": 2851886,
       "total_deaths": 0,
       "disease_count": 33,
       "date_range": {
         "start": "2016-01-01",
-        "end": "2026-05-01"
+        "end": "2026-06-01"
       },
       "source_info": {
         "country_code": "NZ",
