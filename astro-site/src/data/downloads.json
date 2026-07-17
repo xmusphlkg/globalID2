@@ -345,7 +345,7 @@
       "name_en": "Taiwan, China",
       "name_zh": "中国台湾",
       "generated_at": "2026-07-11T00:00:00+00:00",
-      "record_count": 6334,
+      "record_count": 6335,
       "date_range": {
         "start": "2003-01-01",
         "end": "2026-07-01"
@@ -4250,7 +4250,7 @@
       "name_en": "Japanese Encephalitis",
       "name_zh": "流行性乙型脑炎",
       "generated_at": "2026-07-11T00:00:00+00:00",
-      "record_count": 1876,
+      "record_count": 1877,
       "country_count": 6,
       "countries": [
         {
