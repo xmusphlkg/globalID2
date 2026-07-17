@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-16T22:45:50.102087+00:00",
+  "fetched_at": "2026-07-17T22:46:07.430400+00:00",
   "disease": "Dengue virus infection",
   "year": 2026,
   "month": 7,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1784241949782)/",
-            "rootActivityId": "24ba29db-641b-4cd4-a585-911504ab006e",
+            "timestamp": "/Date(1784328367095)/",
+            "rootActivityId": "db9fe403-da13-4caf-b67d-87270a0c6dfd",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'12'"
+                          "A0": "'16'"
                         }
                       ]
                     },
@@ -393,15 +393,15 @@
                         },
                         {
                           "C": [
-                            "NT",
-                            "0L"
-                          ]
+                            "NT"
+                          ],
+                          "R": 2
                         },
                         {
                           "C": [
-                            "QLD",
-                            "'<5'"
-                          ]
+                            "QLD"
+                          ],
+                          "R": 2
                         },
                         {
                           "C": [
@@ -423,9 +423,9 @@
                         },
                         {
                           "C": [
-                            "WA"
-                          ],
-                          "R": 2
+                            "WA",
+                            "'5'"
+                          ]
                         }
                       ]
                     }
@@ -447,10 +447,10 @@
     "ACT": 0,
     "NSW": "'<5'",
     "NT": 0,
-    "QLD": "'<5'",
+    "QLD": 0,
     "SA": 0,
     "TAS": 0,
     "VIC": "'<5'",
-    "WA": 0
+    "WA": 5
   }
 }

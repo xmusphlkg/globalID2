@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-16T22:45:49.934782+00:00",
+  "fetched_at": "2026-07-17T22:46:07.108242+00:00",
   "disease": "Chikungunya virus infection",
   "year": 2026,
   "month": 7,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1784241949646)/",
-            "rootActivityId": "d7b2fe02-fab1-4a04-9de5-701191930e37",
+            "timestamp": "/Date(1784328366773)/",
+            "rootActivityId": "d71eb46c-ea2f-444f-8476-26dc9e4e5d6d",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "0L"
+                          "A0": "'<5'"
                         }
                       ]
                     },
@@ -423,9 +423,9 @@
                         },
                         {
                           "C": [
-                            "WA"
-                          ],
-                          "R": 2
+                            "WA",
+                            "'<5'"
+                          ]
                         }
                       ]
                     }
@@ -451,6 +451,6 @@
     "SA": 0,
     "TAS": 0,
     "VIC": 0,
-    "WA": 0
+    "WA": "'<5'"
   }
 }

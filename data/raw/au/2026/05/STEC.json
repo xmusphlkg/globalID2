@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-16T22:45:38.362648+00:00",
+  "fetched_at": "2026-07-17T22:45:58.458557+00:00",
   "disease": "STEC",
   "year": 2026,
   "month": 5,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1784241938057)/",
-            "rootActivityId": "42650485-3f6f-4469-aff4-bb949d4e31a2",
+            "timestamp": "/Date(1784328358134)/",
+            "rootActivityId": "f66de4c6-8ab5-40cf-832b-c3aec85791e2",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'76'"
+                          "A0": "'77'"
                         }
                       ]
                     },
@@ -418,7 +418,7 @@
                         {
                           "C": [
                             "VIC",
-                            "'16'"
+                            "'17'"
                           ]
                         },
                         {
@@ -450,7 +450,7 @@
     "QLD": 10,
     "SA": 20,
     "TAS": "'<5'",
-    "VIC": 16,
+    "VIC": 17,
     "WA": 8
   }
 }

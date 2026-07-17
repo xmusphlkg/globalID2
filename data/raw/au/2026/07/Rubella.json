@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-16T22:45:54.712124+00:00",
+  "fetched_at": "2026-07-17T22:46:10.684089+00:00",
   "disease": "Rubella",
   "year": 2026,
   "month": 7,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1784241954445)/",
-            "rootActivityId": "97fe1b57-2fa1-48f0-b45c-93041f3b66c6",
+            "timestamp": "/Date(1784328370369)/",
+            "rootActivityId": "c4952f6d-42ac-448f-b514-b5b1242f1625",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "0L"
+                          "A0": "'<5'"
                         }
                       ]
                     },
@@ -423,9 +423,9 @@
                         },
                         {
                           "C": [
-                            "WA"
-                          ],
-                          "R": 2
+                            "WA",
+                            "'<5'"
+                          ]
                         }
                       ]
                     }
@@ -451,6 +451,6 @@
     "SA": 0,
     "TAS": 0,
     "VIC": 0,
-    "WA": 0
+    "WA": "'<5'"
   }
 }

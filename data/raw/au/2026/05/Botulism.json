@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-16T22:45:32.054349+00:00",
+  "fetched_at": "2026-07-17T22:45:50.332111+00:00",
   "disease": "Botulism",
   "year": 2026,
   "month": 5,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1784241931627)/",
-            "rootActivityId": "cc39d617-03cb-46df-99bf-94626cff3773",
+            "timestamp": "/Date(1784328349613)/",
+            "rootActivityId": "8c7dd219-0150-44b5-935c-1e4290f285b7",
             "descriptor": {
               "Select": [
                 {

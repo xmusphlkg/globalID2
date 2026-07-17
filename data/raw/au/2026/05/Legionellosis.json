@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-16T22:45:35.662232+00:00",
+  "fetched_at": "2026-07-17T22:45:56.568731+00:00",
   "disease": "Legionellosis",
   "year": 2026,
   "month": 5,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1784241935349)/",
-            "rootActivityId": "03f4341f-31c6-4a22-a7c2-8bc2e6a07c6c",
+            "timestamp": "/Date(1784328356246)/",
+            "rootActivityId": "fd5f917d-4591-4a88-a587-f2b94852cbde",
             "descriptor": {
               "Select": [
                 {
