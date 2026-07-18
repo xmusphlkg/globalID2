@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-17T22:46:11.525609+00:00",
+  "fetched_at": "2026-07-18T22:45:55.191728+00:00",
   "disease": "Syphilis > 2 years or unspecified duration",
   "year": 2026,
   "month": 7,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1784328371196)/",
-            "rootActivityId": "6701911d-1ef7-4cff-8a73-4fa1e9468cd7",
+            "timestamp": "/Date(1784414754862)/",
+            "rootActivityId": "5061e599-29eb-48b0-804b-747da6b924d9",
             "descriptor": {
               "Select": [
                 {

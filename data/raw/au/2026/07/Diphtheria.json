@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-17T22:46:07.551408+00:00",
+  "fetched_at": "2026-07-18T22:45:51.040761+00:00",
   "disease": "Diphtheria",
   "year": 2026,
   "month": 7,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1784328367228)/",
-            "rootActivityId": "13c4fc78-5971-40e1-9414-d6e69205f32c",
+            "timestamp": "/Date(1784414750708)/",
+            "rootActivityId": "b3a4b362-e899-4e70-965c-fba1a5bc9332",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'16'"
+                          "A0": "'18'"
                         }
                       ]
                     },
@@ -394,7 +394,7 @@
                         {
                           "C": [
                             "NT",
-                            "'5'"
+                            "'7'"
                           ]
                         },
                         {
@@ -446,7 +446,7 @@
   "parsed_counts": {
     "ACT": 0,
     "NSW": 0,
-    "NT": 5,
+    "NT": 7,
     "QLD": 0,
     "SA": 0,
     "TAS": 0,
