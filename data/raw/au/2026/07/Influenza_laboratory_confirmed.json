@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-18T22:45:52.459121+00:00",
+  "fetched_at": "2026-07-19T22:46:06.770559+00:00",
   "disease": "Influenza (laboratory confirmed)",
   "year": 2026,
   "month": 7,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1784414752109)/",
-            "rootActivityId": "f2795cf7-32b7-4f30-9a30-09f357f88d9c",
+            "timestamp": "/Date(1784501166459)/",
+            "rootActivityId": "f6eff5eb-e9ac-49d8-a848-4b9594c6a147",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'9,696'"
+                          "A0": "'10,010'"
                         }
                       ]
                     },
@@ -388,25 +388,25 @@
                         {
                           "C": [
                             "NSW",
-                            "'6,808'"
+                            "'7,083'"
                           ]
                         },
                         {
                           "C": [
                             "NT",
-                            "'14'"
+                            "'17'"
                           ]
                         },
                         {
                           "C": [
                             "QLD",
-                            "'815'"
+                            "'847'"
                           ]
                         },
                         {
                           "C": [
                             "SA",
-                            "'185'"
+                            "'189'"
                           ]
                         },
                         {
@@ -445,10 +445,10 @@
   },
   "parsed_counts": {
     "ACT": 48,
-    "NSW": 6808,
-    "NT": 14,
-    "QLD": 815,
-    "SA": 185,
+    "NSW": 7083,
+    "NT": 17,
+    "QLD": 847,
+    "SA": 189,
     "TAS": 28,
     "VIC": 683,
     "WA": 1115

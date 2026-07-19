@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-18T22:45:54.695876+00:00",
+  "fetched_at": "2026-07-19T22:46:09.121906+00:00",
   "disease": "STEC",
   "year": 2026,
   "month": 7,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1784414754361)/",
-            "rootActivityId": "c7a0221f-b978-48a6-a1bb-a58abf95ebbc",
+            "timestamp": "/Date(1784501168796)/",
+            "rootActivityId": "4d2c3197-d8c6-4c75-a8ab-05f6cdf1cab2",
             "descriptor": {
               "Select": [
                 {
