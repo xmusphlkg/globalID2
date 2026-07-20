@@ -3,7 +3,7 @@
   "country_name": "Taiwan, China",
   "country_name_en": "Taiwan, China",
   "country_name_zh": "中国台湾",
-  "total_cases": 11164600,
+  "total_cases": 11164601,
   "total_deaths": 0,
   "disease_count": 48,
   "frequency_meta": {
@@ -6780,7 +6780,7 @@
         10,
         14,
         10,
-        6
+        7
       ],
       "weekly_equiv_cases": [
         2.258064516129032,
@@ -7065,7 +7065,7 @@
         2.258064516129032,
         3.2666666666666666,
         2.258064516129032,
-        1.4000000000000001
+        1.6333333333333333
       ],
       "deaths": [
         0,
@@ -8207,9 +8207,9 @@
         null,
         null
       ],
-      "total_cases": 3816,
+      "total_cases": 3817,
       "total_deaths": 0,
-      "latest_cases": 6,
+      "latest_cases": 7,
       "latest_deaths": 0
     },
     "D028": {
@@ -49096,7 +49096,7 @@
         1.041392685158225,
         1.1760912590556813,
         1.041392685158225,
-        0.8450980400142568
+        0.9030899869919435
       ],
       [
         0.0,
