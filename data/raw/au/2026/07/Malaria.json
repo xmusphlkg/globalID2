@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-19T22:46:07.457509+00:00",
+  "fetched_at": "2026-07-21T22:47:09.789331+00:00",
   "disease": "Malaria",
   "year": 2026,
   "month": 7,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1784501167143)/",
-            "rootActivityId": "7b784eb0-500a-40b1-8eba-4ce1657bdad0",
+            "timestamp": "/Date(1784674029494)/",
+            "rootActivityId": "9a641710-ada4-4d41-a652-b2e7d60d98b6",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'9'"
+                          "A0": "'12'"
                         }
                       ]
                     },
@@ -387,15 +387,15 @@
                         },
                         {
                           "C": [
-                            "NSW"
-                          ],
-                          "R": 2
+                            "NSW",
+                            "'<5'"
+                          ]
                         },
                         {
                           "C": [
-                            "NT"
-                          ],
-                          "R": 2
+                            "NT",
+                            "0L"
+                          ]
                         },
                         {
                           "C": [
@@ -445,7 +445,7 @@
   },
   "parsed_counts": {
     "ACT": 0,
-    "NSW": 0,
+    "NSW": "'<5'",
     "NT": 0,
     "QLD": 6,
     "SA": "'<5'",

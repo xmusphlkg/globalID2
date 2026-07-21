@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-19T22:45:49.832239+00:00",
+  "fetched_at": "2026-07-21T22:46:51.141208+00:00",
   "disease": "COVID-19",
   "year": 2026,
   "month": 5,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1784501149469)/",
-            "rootActivityId": "0e143ea9-5e75-4a0a-be4f-995e815d2e75",
+            "timestamp": "/Date(1784674010832)/",
+            "rootActivityId": "72b0f596-7b88-4f71-b2a2-7c9cf0900a89",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'8,516'"
+                          "A0": "'8,514'"
                         }
                       ]
                     },
@@ -388,7 +388,7 @@
                         {
                           "C": [
                             "NSW",
-                            "'4,573'"
+                            "'4,571'"
                           ]
                         },
                         {
@@ -445,7 +445,7 @@
   },
   "parsed_counts": {
     "ACT": 136,
-    "NSW": 4573,
+    "NSW": 4571,
     "NT": 53,
     "QLD": 1140,
     "SA": 534,

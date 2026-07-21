@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-19T22:46:08.878215+00:00",
+  "fetched_at": "2026-07-21T22:47:11.607177+00:00",
   "disease": "Ross River virus infection",
   "year": 2026,
   "month": 7,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1784501168551)/",
-            "rootActivityId": "46660d4a-dd19-4408-9dc1-52ebc00cf7bf",
+            "timestamp": "/Date(1784674031315)/",
+            "rootActivityId": "95fafdc8-3591-4e1b-a4df-5795a1696968",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'48'"
+                          "A0": "'56'"
                         }
                       ]
                     },
@@ -388,7 +388,7 @@
                         {
                           "C": [
                             "NSW",
-                            "'13'"
+                            "'15'"
                           ]
                         },
                         {
@@ -400,20 +400,20 @@
                         {
                           "C": [
                             "QLD",
-                            "'28'"
+                            "'35'"
                           ]
                         },
                         {
                           "C": [
                             "SA",
-                            "'<5'"
+                            "0L"
                           ]
                         },
                         {
                           "C": [
-                            "TAS"
-                          ],
-                          "R": 2
+                            "TAS",
+                            "'<5'"
+                          ]
                         },
                         {
                           "C": [
@@ -445,11 +445,11 @@
   },
   "parsed_counts": {
     "ACT": 0,
-    "NSW": 13,
+    "NSW": 15,
     "NT": "'<5'",
-    "QLD": 28,
-    "SA": "'<5'",
-    "TAS": 0,
+    "QLD": 35,
+    "SA": 0,
+    "TAS": "'<5'",
     "VIC": 0,
     "WA": 0
   }
