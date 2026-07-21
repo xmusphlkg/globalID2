@@ -345,7 +345,7 @@
       "name_en": "Taiwan, China",
       "name_zh": "中国台湾",
       "generated_at": "2026-07-11T00:00:00+00:00",
-      "record_count": 6335,
+      "record_count": 6336,
       "date_range": {
         "start": "2003-01-01",
         "end": "2026-07-01"
@@ -2574,7 +2574,7 @@
       "name_en": "Hepatitis E",
       "name_zh": "戊型肝炎",
       "generated_at": "2026-07-11T00:00:00+00:00",
-      "record_count": 2113,
+      "record_count": 2114,
       "country_count": 7,
       "countries": [
         {
