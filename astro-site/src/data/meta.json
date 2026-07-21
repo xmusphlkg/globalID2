@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-11T00:00:00+00:00",
+  "generated_at": "2026-07-18T00:00:00+00:00",
   "total_countries": 10,
   "total_diseases": 199,
   "total_reports": 1,
@@ -198,12 +198,12 @@
       "name_en": "Japan",
       "name_zh": "日本",
       "language": "ja-JP",
-      "total_cases": 48377869,
+      "total_cases": 48430194,
       "total_deaths": 0,
       "disease_count": 86,
       "date_range": {
         "start": "2012-09-14",
-        "end": "2026-07-11"
+        "end": "2026-07-18"
       },
       "source_info": {
         "country_code": "JP",
