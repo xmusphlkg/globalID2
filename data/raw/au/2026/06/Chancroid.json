@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-21T22:46:59.039257+00:00",
+  "fetched_at": "2026-07-22T22:45:45.984386+00:00",
   "disease": "Chancroid",
   "year": 2026,
   "month": 6,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1784674018807)/",
-            "rootActivityId": "6e104b7b-e97a-46ca-8b96-653fbe3c918d",
+            "timestamp": "/Date(1784760345705)/",
+            "rootActivityId": "32f5f9fa-ab85-4937-81fd-47401df21924",
             "descriptor": {
               "Select": [
                 {

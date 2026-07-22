@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-21T22:47:11.607177+00:00",
+  "fetched_at": "2026-07-22T22:45:56.619217+00:00",
   "disease": "Ross River virus infection",
   "year": 2026,
   "month": 7,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1784674031315)/",
-            "rootActivityId": "95fafdc8-3591-4e1b-a4df-5795a1696968",
+            "timestamp": "/Date(1784760356308)/",
+            "rootActivityId": "4c721d91-b9e2-4642-896c-5c21b6330b9f",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'56'"
+                          "A0": "'61'"
                         }
                       ]
                     },
@@ -400,20 +400,20 @@
                         {
                           "C": [
                             "QLD",
-                            "'35'"
+                            "'37'"
                           ]
                         },
                         {
                           "C": [
                             "SA",
-                            "0L"
+                            "'<5'"
                           ]
                         },
                         {
                           "C": [
-                            "TAS",
-                            "'<5'"
-                          ]
+                            "TAS"
+                          ],
+                          "R": 2
                         },
                         {
                           "C": [
@@ -447,9 +447,9 @@
     "ACT": 0,
     "NSW": 15,
     "NT": "'<5'",
-    "QLD": 35,
-    "SA": 0,
-    "TAS": "'<5'",
+    "QLD": 37,
+    "SA": "'<5'",
+    "TAS": 0,
     "VIC": 0,
     "WA": 0
   }

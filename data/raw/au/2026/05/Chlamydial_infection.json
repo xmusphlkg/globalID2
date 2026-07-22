@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-21T22:46:51.176266+00:00",
+  "fetched_at": "2026-07-22T22:45:37.973889+00:00",
   "disease": "Chlamydial infection",
   "year": 2026,
   "month": 5,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1784674010868)/",
-            "rootActivityId": "2ad825b3-1cb8-4026-999a-3d0f3541b562",
+            "timestamp": "/Date(1784760337626)/",
+            "rootActivityId": "727f70c4-be5c-421d-b4fb-9ca92b624195",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'7,582'"
+                          "A0": "'7,583'"
                         }
                       ]
                     },
@@ -424,7 +424,7 @@
                         {
                           "C": [
                             "WA",
-                            "'1,005'"
+                            "'1,006'"
                           ]
                         }
                       ]
@@ -451,6 +451,6 @@
     "SA": 444,
     "TAS": 90,
     "VIC": 1707,
-    "WA": 1005
+    "WA": 1006
   }
 }

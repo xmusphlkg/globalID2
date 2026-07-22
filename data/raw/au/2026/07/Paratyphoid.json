@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-21T22:47:10.541217+00:00",
+  "fetched_at": "2026-07-22T22:45:56.063501+00:00",
   "disease": "Paratyphoid",
   "year": 2026,
   "month": 7,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1784674030270)/",
-            "rootActivityId": "dfb7a9dc-a29d-4a6b-9391-e547b1036f7d",
+            "timestamp": "/Date(1784760355759)/",
+            "rootActivityId": "e7b6b1dc-0c43-4c7a-bb22-2320245099dc",
             "descriptor": {
               "Select": [
                 {
@@ -417,15 +417,15 @@
                         },
                         {
                           "C": [
-                            "VIC"
-                          ],
-                          "R": 2
+                            "VIC",
+                            "'<5'"
+                          ]
                         },
                         {
                           "C": [
-                            "WA"
-                          ],
-                          "R": 2
+                            "WA",
+                            "0L"
+                          ]
                         }
                       ]
                     }
@@ -450,7 +450,7 @@
     "QLD": 0,
     "SA": "'<5'",
     "TAS": 0,
-    "VIC": 0,
+    "VIC": "'<5'",
     "WA": 0
   }
 }

@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-21T22:46:53.484423+00:00",
+  "fetched_at": "2026-07-22T22:45:40.566079+00:00",
   "disease": "Influenza (laboratory confirmed)",
   "year": 2026,
   "month": 5,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1784674013200)/",
-            "rootActivityId": "f790bbf7-712b-413e-8e34-1da1a71953f8",
+            "timestamp": "/Date(1784760340083)/",
+            "rootActivityId": "1d827387-3527-4c90-bd54-3d38bebd5a70",
             "descriptor": {
               "Select": [
                 {

@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-21T22:46:59.942053+00:00",
+  "fetched_at": "2026-07-22T22:45:46.707909+00:00",
   "disease": "Gonococcal infection",
   "year": 2026,
   "month": 6,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1784674019643)/",
-            "rootActivityId": "7cc4ac61-405f-4d54-97f6-cf0fee8e4d66",
+            "timestamp": "/Date(1784760346378)/",
+            "rootActivityId": "d65fccc4-4ed6-439e-a25e-273e724dd39f",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'3,608'"
+                          "A0": "'3,613'"
                         }
                       ]
                     },
@@ -394,7 +394,7 @@
                         {
                           "C": [
                             "NT",
-                            "'182'"
+                            "'186'"
                           ]
                         },
                         {
@@ -418,7 +418,7 @@
                         {
                           "C": [
                             "VIC",
-                            "'917'"
+                            "'918'"
                           ]
                         },
                         {
@@ -446,11 +446,11 @@
   "parsed_counts": {
     "ACT": 29,
     "NSW": 1121,
-    "NT": 182,
+    "NT": 186,
     "QLD": 655,
     "SA": 208,
     "TAS": 24,
-    "VIC": 917,
+    "VIC": 918,
     "WA": 472
   }
 }

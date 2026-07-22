@@ -649,7 +649,7 @@
         0,
         0,
         0,
-        0
+        5
       ],
       "weekly_equiv_cases": [
         11.741935483870968,
@@ -970,7 +970,7 @@
         0.0,
         0.0,
         0.0,
-        0.0
+        1.1666666666666665
       ],
       "deaths": [
         0,
@@ -1612,7 +1612,7 @@
         0.0,
         0.0,
         0.0,
-        0.0
+        0.01836405909759895
       ],
       "incidence_sources": [
         "wpp_computed",
@@ -1935,7 +1935,7 @@
         "wpp_computed",
         "wpp_computed"
       ],
-      "total_cases": 7263,
+      "total_cases": 7268,
       "total_deaths": 0
     },
     "CH": {
@@ -19052,7 +19052,7 @@
       40,
       34,
       33,
-      5
+      10
     ],
     "deaths": [
       0,
@@ -19412,7 +19412,7 @@
       0
     ]
   },
-  "total_cases": 17198,
+  "total_cases": 17203,
   "total_deaths": 214,
   "generated_at": "2026-07-18T00:00:00+00:00",
   "source_info": [
