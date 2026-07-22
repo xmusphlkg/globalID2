@@ -345,7 +345,7 @@
       "name_en": "Taiwan, China",
       "name_zh": "中国台湾",
       "generated_at": "2026-07-18T00:00:00+00:00",
-      "record_count": 6336,
+      "record_count": 6337,
       "date_range": {
         "start": "2003-01-01",
         "end": "2026-07-01"
@@ -20446,7 +20446,7 @@
       "name_en": "Acute flaccid paralysis",
       "name_zh": "急性无力肢体麻痹",
       "generated_at": "2026-07-18T00:00:00+00:00",
-      "record_count": 452,
+      "record_count": 453,
       "country_count": 2,
       "countries": [
         {
