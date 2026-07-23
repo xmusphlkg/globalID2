@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-22T22:45:58.145555+00:00",
+  "fetched_at": "2026-07-23T22:46:22.694646+00:00",
   "disease": "Varicella zoster (unspecified)",
   "year": 2026,
   "month": 7,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1784760357831)/",
-            "rootActivityId": "5e60aa7a-fdca-4ab3-97c5-ecc5bd50a9f0",
+            "timestamp": "/Date(1784846781961)/",
+            "rootActivityId": "cdd6a079-ad30-43c1-ab7b-44a494b7ae5c",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'1,225'"
+                          "A0": "'1,282'"
                         }
                       ]
                     },
@@ -406,25 +406,25 @@
                         {
                           "C": [
                             "SA",
-                            "'91'"
+                            "'95'"
                           ]
                         },
                         {
                           "C": [
                             "TAS",
-                            "'26'"
+                            "'31'"
                           ]
                         },
                         {
                           "C": [
                             "VIC",
-                            "'518'"
+                            "'555'"
                           ]
                         },
                         {
                           "C": [
                             "WA",
-                            "'166'"
+                            "'177'"
                           ]
                         }
                       ]
@@ -448,9 +448,9 @@
     "NSW": 0,
     "NT": "'<5'",
     "QLD": 397,
-    "SA": 91,
-    "TAS": 26,
-    "VIC": 518,
-    "WA": 166
+    "SA": 95,
+    "TAS": 31,
+    "VIC": 555,
+    "WA": 177
   }
 }

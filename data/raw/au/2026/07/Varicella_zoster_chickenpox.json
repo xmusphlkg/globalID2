@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-22T22:45:57.841145+00:00",
+  "fetched_at": "2026-07-23T22:46:21.754026+00:00",
   "disease": "Varicella zoster (chickenpox)",
   "year": 2026,
   "month": 7,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1784760357533)/",
-            "rootActivityId": "10ae304a-de90-4d12-a912-ab33850af4d0",
+            "timestamp": "/Date(1784846781179)/",
+            "rootActivityId": "1cef0a41-5e87-472b-9ce1-f60035bc74bd",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'115'"
+                          "A0": "'122'"
                         }
                       ]
                     },
@@ -406,25 +406,25 @@
                         {
                           "C": [
                             "SA",
+                            "'5'"
+                          ]
+                        },
+                        {
+                          "C": [
+                            "TAS",
                             "'<5'"
                           ]
                         },
                         {
                           "C": [
-                            "TAS"
-                          ],
-                          "R": 2
-                        },
-                        {
-                          "C": [
                             "VIC",
-                            "'38'"
+                            "'41'"
                           ]
                         },
                         {
                           "C": [
                             "WA",
-                            "'30'"
+                            "'33'"
                           ]
                         }
                       ]
@@ -448,9 +448,9 @@
     "NSW": 0,
     "NT": 0,
     "QLD": 36,
-    "SA": "'<5'",
-    "TAS": 0,
-    "VIC": 38,
-    "WA": 30
+    "SA": 5,
+    "TAS": "'<5'",
+    "VIC": 41,
+    "WA": 33
   }
 }
