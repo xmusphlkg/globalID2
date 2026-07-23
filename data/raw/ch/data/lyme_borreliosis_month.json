@@ -9,7 +9,7 @@
   "response": {
     "source": "sentinella_reporting_system",
     "sourceDate": "2026-07-14",
-    "version": "20260715",
+    "version": "20260722",
     "values": [
       {
         "x": 201301,
@@ -1261,7 +1261,7 @@
       },
       {
         "x": 202601,
-        "y": 85.1,
+        "y": 86,
         "properties": {
           "dataComplete": "TRUE",
           "trend": "falling"
@@ -1269,7 +1269,7 @@
       },
       {
         "x": 202602,
-        "y": 127.6,
+        "y": 128.5,
         "properties": {
           "dataComplete": "TRUE",
           "trend": "falling"
@@ -1277,7 +1277,7 @@
       },
       {
         "x": 202603,
-        "y": 254.3,
+        "y": 257,
         "properties": {
           "dataComplete": "TRUE",
           "trend": "stagnant"
@@ -1285,7 +1285,7 @@
       },
       {
         "x": 202604,
-        "y": 381.9,
+        "y": 384.7,
         "properties": {
           "dataComplete": "TRUE",
           "trend": "rising"
@@ -1293,7 +1293,7 @@
       },
       {
         "x": 202605,
-        "y": 849,
+        "y": 855.3,
         "properties": {
           "dataComplete": "TRUE",
           "trend": "rising"
@@ -1301,7 +1301,7 @@
       },
       {
         "x": 202606,
-        "y": 2079.9,
+        "y": 2096.2,
         "properties": {
           "dataComplete": "TRUE",
           "trend": "rising"

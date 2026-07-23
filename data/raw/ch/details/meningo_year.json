@@ -1,10 +1,10 @@
 {
-  "version": "20260715",
+  "version": "20260722",
   "details": {
     "identifier": "meningo/cases/value/year",
     "source": "mandatory_reporting_system",
-    "sourceDate": "2026-07-14",
-    "version": "20260715",
+    "sourceDate": "2026-07-21",
+    "version": "20260722",
     "properties": {
       "CHFL": {
         "allValue": "all",

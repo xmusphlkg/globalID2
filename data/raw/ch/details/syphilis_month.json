@@ -1,10 +1,10 @@
 {
-  "version": "20260715",
+  "version": "20260722",
   "details": {
     "identifier": "syphilis/cases/value/month",
     "source": "mandatory_reporting_system",
     "sourceDate": "2026-07-07",
-    "version": "20260715",
+    "version": "20260722",
     "properties": {
       "CHFL": {
         "allValue": "all",
