@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-23T22:45:30.828878+00:00",
+  "fetched_at": "2026-07-24T22:45:36.859099+00:00",
   "disease": "Brucellosis",
   "year": 2026,
   "month": 5,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1784846727910)/",
-            "rootActivityId": "e6466ec2-d4c2-4894-a998-48de10d569de",
+            "timestamp": "/Date(1784933136519)/",
+            "rootActivityId": "f9c3878b-0e9a-4aac-8052-58f5ca34e6d8",
             "descriptor": {
               "Select": [
                 {

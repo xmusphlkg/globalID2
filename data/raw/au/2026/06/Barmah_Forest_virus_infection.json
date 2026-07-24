@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-23T22:45:52.337254+00:00",
+  "fetched_at": "2026-07-24T22:45:44.315522+00:00",
   "disease": "Barmah Forest virus infection",
   "year": 2026,
   "month": 6,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1784846751399)/",
-            "rootActivityId": "d0b6bc50-a6c8-4207-ab3f-8b4d870dc61c",
+            "timestamp": "/Date(1784933143983)/",
+            "rootActivityId": "cea0fea8-7c5c-4dbe-8e8e-8bc4a6b45a29",
             "descriptor": {
               "Select": [
                 {
