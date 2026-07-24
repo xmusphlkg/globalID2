@@ -345,7 +345,7 @@
       "name_en": "Taiwan, China",
       "name_zh": "中国台湾",
       "generated_at": "2026-07-18T00:00:00+00:00",
-      "record_count": 6337,
+      "record_count": 6339,
       "date_range": {
         "start": "2003-01-01",
         "end": "2026-07-01"
@@ -16177,7 +16177,7 @@
       "name_en": "Melioidosis",
       "name_zh": "类鼻疽",
       "generated_at": "2026-07-18T00:00:00+00:00",
-      "record_count": 1450,
+      "record_count": 1451,
       "country_count": 5,
       "countries": [
         {
@@ -20196,7 +20196,7 @@
       "name_en": "Complicated varicella",
       "name_zh": "水痘并发症",
       "generated_at": "2026-07-18T00:00:00+00:00",
-      "record_count": 148,
+      "record_count": 149,
       "country_count": 1,
       "countries": [
         {
