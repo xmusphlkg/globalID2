@@ -3,7 +3,7 @@
   "country_name": "Brazil",
   "country_name_en": "Brazil",
   "country_name_zh": "巴西",
-  "total_cases": 60922655,
+  "total_cases": 60949361,
   "total_deaths": 0,
   "disease_count": 45,
   "frequency_meta": {
@@ -24,7 +24,7 @@
     "unit": "per_100k",
     "population_source": "WPP",
     "source_counts": {
-      "missing_population": 8160
+      "missing_population": 8161
     },
     "note_en": "Incidence Rate is computed from WPP population data during site generation; when population is unavailable, original database incidence is shown.",
     "note_zh": "发病率在网页数据生成阶段按 WPP 人口重算（每10万人）；若缺少人口数据则回退显示数据库原始发病率。"
@@ -44091,7 +44091,8 @@
         "2026-03-01",
         "2026-04-01",
         "2026-05-01",
-        "2026-06-01"
+        "2026-06-01",
+        "2026-07-01"
       ],
       "cases": [
         10312,
@@ -44302,8 +44303,9 @@
         33909,
         35451,
         34632,
-        22193,
-        307
+        32004,
+        16945,
+        257
       ],
       "weekly_equiv_cases": [
         2328.516129032258,
@@ -44514,10 +44516,12 @@
         7656.870967741935,
         8862.75,
         7820.129032258065,
-        5178.366666666667,
-        69.32258064516128
+        7467.599999999999,
+        3826.2903225806454,
+        59.96666666666667
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -44939,9 +44943,11 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
+        "missing_population",
         "missing_population",
         "missing_population",
         "missing_population",
@@ -45363,11 +45369,12 @@
         null,
         null,
         null,
+        null,
         null
       ],
-      "total_cases": 3882302,
+      "total_cases": 3909008,
       "total_deaths": 0,
-      "latest_cases": 307,
+      "latest_cases": 257,
       "latest_deaths": 0
     },
     "D188": {
@@ -59973,9 +59980,9 @@
         4.530327789778086,
         4.5496407406322845,
         4.539490112889759,
-        4.3462355816990375,
-        2.4885507165004443,
-        0.0
+        4.505217831531809,
+        4.229067202070865,
+        2.41161970596323
       ],
       [
         0.0,

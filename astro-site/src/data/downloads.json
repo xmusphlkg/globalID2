@@ -54,7 +54,7 @@
       "name_en": "Brazil",
       "name_zh": "巴西",
       "generated_at": "2026-07-18T00:00:00+00:00",
-      "record_count": 8160,
+      "record_count": 8161,
       "date_range": {
         "start": "2000-01-01",
         "end": "2026-07-01"
@@ -20689,7 +20689,7 @@
       "name_en": "Accident caused by venomous animals",
       "name_zh": "毒性动物伤害",
       "generated_at": "2026-07-18T00:00:00+00:00",
-      "record_count": 210,
+      "record_count": 211,
       "country_count": 1,
       "countries": [
         {
