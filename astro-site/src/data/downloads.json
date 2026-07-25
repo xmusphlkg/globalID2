@@ -345,7 +345,7 @@
       "name_en": "Taiwan, China",
       "name_zh": "中国台湾",
       "generated_at": "2026-07-18T00:00:00+00:00",
-      "record_count": 6339,
+      "record_count": 6340,
       "date_range": {
         "start": "2003-01-01",
         "end": "2026-07-01"
@@ -7006,7 +7006,7 @@
       "name_en": "Leptospirosis",
       "name_zh": "钩端螺旋体病",
       "generated_at": "2026-07-18T00:00:00+00:00",
-      "record_count": 2626,
+      "record_count": 2627,
       "country_count": 9,
       "countries": [
         {
