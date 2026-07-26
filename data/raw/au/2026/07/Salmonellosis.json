@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-24T22:45:56.007892+00:00",
+  "fetched_at": "2026-07-25T22:45:45.199601+00:00",
   "disease": "Salmonellosis",
   "year": 2026,
   "month": 7,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1784933155681)/",
-            "rootActivityId": "feba934d-167c-493b-85e8-960d444992d5",
+            "timestamp": "/Date(1785019544872)/",
+            "rootActivityId": "c0703a9e-edd7-43ec-8972-3d99ce9c6c50",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'469'"
+                          "A0": "'479'"
                         }
                       ]
                     },
@@ -388,7 +388,7 @@
                         {
                           "C": [
                             "NSW",
-                            "'123'"
+                            "'126'"
                           ]
                         },
                         {
@@ -400,7 +400,7 @@
                         {
                           "C": [
                             "QLD",
-                            "'113'"
+                            "'120'"
                           ]
                         },
                         {
@@ -445,9 +445,9 @@
   },
   "parsed_counts": {
     "ACT": "'<5'",
-    "NSW": 123,
+    "NSW": 126,
     "NT": 10,
-    "QLD": 113,
+    "QLD": 120,
     "SA": 35,
     "TAS": 7,
     "VIC": 115,

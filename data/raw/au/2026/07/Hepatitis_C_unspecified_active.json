@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-24T22:45:53.221096+00:00",
+  "fetched_at": "2026-07-25T22:45:42.471236+00:00",
   "disease": "Hepatitis C (unspecified active)",
   "year": 2026,
   "month": 7,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1784933152897)/",
-            "rootActivityId": "d358b87c-7568-44a5-8a29-bc199968370f",
+            "timestamp": "/Date(1785019542123)/",
+            "rootActivityId": "5e9aab09-42a1-4a68-b557-4036363c1855",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'316'"
+                          "A0": "'317'"
                         }
                       ]
                     },
@@ -388,7 +388,7 @@
                         {
                           "C": [
                             "NSW",
-                            "'61'"
+                            "'59'"
                           ]
                         },
                         {
@@ -400,7 +400,7 @@
                         {
                           "C": [
                             "QLD",
-                            "'106'"
+                            "'109'"
                           ]
                         },
                         {
@@ -445,9 +445,9 @@
   },
   "parsed_counts": {
     "ACT": "'<5'",
-    "NSW": 61,
+    "NSW": 59,
     "NT": 0,
-    "QLD": 106,
+    "QLD": 109,
     "SA": 7,
     "TAS": "'<5'",
     "VIC": 85,

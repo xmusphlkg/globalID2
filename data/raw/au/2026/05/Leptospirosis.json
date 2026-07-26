@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-24T22:45:40.676570+00:00",
+  "fetched_at": "2026-07-25T22:45:29.259840+00:00",
   "disease": "Leptospirosis",
   "year": 2026,
   "month": 5,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1784933140343)/",
-            "rootActivityId": "f19e265b-fc75-4e05-ab40-f94906ea6229",
+            "timestamp": "/Date(1785019528913)/",
+            "rootActivityId": "475d4679-9328-40ab-88f3-5e56baf3730b",
             "descriptor": {
               "Select": [
                 {

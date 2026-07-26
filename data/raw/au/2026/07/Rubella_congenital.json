@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-24T22:45:55.835658+00:00",
+  "fetched_at": "2026-07-25T22:45:45.054318+00:00",
   "disease": "Rubella congenital",
   "year": 2026,
   "month": 7,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1784933155544)/",
-            "rootActivityId": "5cd1d5b6-e12e-48b1-bde6-b4052f322518",
+            "timestamp": "/Date(1785019544750)/",
+            "rootActivityId": "dbfc86c2-23d9-4213-9bf0-6a8ddaeaaf6f",
             "descriptor": {
               "Select": [
                 {
