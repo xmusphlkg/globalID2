@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-25T22:45:30.950092+00:00",
+  "fetched_at": "2026-07-27T22:45:32.387728+00:00",
   "disease": "Ross River virus infection",
   "year": 2026,
   "month": 5,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785019530621)/",
-            "rootActivityId": "ad42f959-c149-4d1b-9f16-4ba8fa48c375",
+            "timestamp": "/Date(1785192332042)/",
+            "rootActivityId": "2ce363f3-5760-4964-a8e4-b4508e4f0b1d",
             "descriptor": {
               "Select": [
                 {

@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-25T22:45:34.733406+00:00",
+  "fetched_at": "2026-07-27T22:45:36.275190+00:00",
   "disease": "Gonococcal infection",
   "year": 2026,
   "month": 6,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785019534408)/",
-            "rootActivityId": "92abcad1-8ad9-4cca-b589-09ad2e5c77b3",
+            "timestamp": "/Date(1785192335787)/",
+            "rootActivityId": "87ab921a-2737-4a77-a020-1ccfe285218c",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'3,618'"
+                          "A0": "'3,619'"
                         }
                       ]
                     },
@@ -424,7 +424,7 @@
                         {
                           "C": [
                             "WA",
-                            "'473'"
+                            "'474'"
                           ]
                         }
                       ]
@@ -451,6 +451,6 @@
     "SA": 208,
     "TAS": 25,
     "VIC": 919,
-    "WA": 473
+    "WA": 474
   }
 }
