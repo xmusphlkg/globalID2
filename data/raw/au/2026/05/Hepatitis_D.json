@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-27T22:45:29.215000+00:00",
+  "fetched_at": "2026-07-28T22:46:27.947403+00:00",
   "disease": "Hepatitis D",
   "year": 2026,
   "month": 5,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785192328831)/",
-            "rootActivityId": "8ff838c5-f4cd-41ed-9f48-9c44e9c72233",
+            "timestamp": "/Date(1785278787537)/",
+            "rootActivityId": "f1da0561-2bdb-40d1-b5f7-a4fb9cb3beee",
             "descriptor": {
               "Select": [
                 {

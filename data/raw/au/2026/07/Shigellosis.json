@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-27T22:45:49.289301+00:00",
+  "fetched_at": "2026-07-28T22:46:48.348095+00:00",
   "disease": "Shigellosis",
   "year": 2026,
   "month": 7,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785192348902)/",
-            "rootActivityId": "d7cf7258-29c6-46ca-8c35-ee6498739317",
+            "timestamp": "/Date(1785278807989)/",
+            "rootActivityId": "a4a9d6b3-31c8-4822-bb8b-09496f93ee0e",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'139'"
+                          "A0": "'141'"
                         }
                       ]
                     },
@@ -388,7 +388,7 @@
                         {
                           "C": [
                             "NSW",
-                            "'48'"
+                            "'49'"
                           ]
                         },
                         {
@@ -400,7 +400,7 @@
                         {
                           "C": [
                             "QLD",
-                            "'26'"
+                            "'27'"
                           ]
                         },
                         {
@@ -445,9 +445,9 @@
   },
   "parsed_counts": {
     "ACT": "'<5'",
-    "NSW": 48,
+    "NSW": 49,
     "NT": 5,
-    "QLD": 26,
+    "QLD": 27,
     "SA": 11,
     "TAS": 0,
     "VIC": 32,

@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-27T22:45:46.307910+00:00",
+  "fetched_at": "2026-07-28T22:46:46.519714+00:00",
   "disease": "Mumps",
   "year": 2026,
   "month": 7,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785192345935)/",
-            "rootActivityId": "38569dd0-5df6-4292-9f26-ccd8c9722d82",
+            "timestamp": "/Date(1785278806171)/",
+            "rootActivityId": "0c832d8d-6e1e-48fb-a673-3e63cc4d1bc6",
             "descriptor": {
               "Select": [
                 {

@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-27T22:45:44.123325+00:00",
+  "fetched_at": "2026-07-28T22:46:45.121051+00:00",
   "disease": "Hepatitis C (newly acquired)",
   "year": 2026,
   "month": 7,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785192343700)/",
-            "rootActivityId": "e7a37677-b3b5-46b6-b371-63f95534177a",
+            "timestamp": "/Date(1785278804719)/",
+            "rootActivityId": "3287d906-d24a-49c5-811f-1b21f5bbc539",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'36'"
+                          "A0": "'38'"
                         }
                       ]
                     },
@@ -387,9 +387,9 @@
                         },
                         {
                           "C": [
-                            "NSW"
-                          ],
-                          "R": 2
+                            "NSW",
+                            "'6'"
+                          ]
                         },
                         {
                           "C": [
@@ -445,7 +445,7 @@
   },
   "parsed_counts": {
     "ACT": "'<5'",
-    "NSW": 0,
+    "NSW": 6,
     "NT": 0,
     "QLD": 30,
     "SA": 0,

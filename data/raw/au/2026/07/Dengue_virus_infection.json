@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-27T22:45:42.943553+00:00",
+  "fetched_at": "2026-07-28T22:46:43.846705+00:00",
   "disease": "Dengue virus infection",
   "year": 2026,
   "month": 7,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785192342617)/",
-            "rootActivityId": "2b828df0-4e85-4a1a-8aad-075a618f2fdd",
+            "timestamp": "/Date(1785278803453)/",
+            "rootActivityId": "599cdd82-4c88-4758-a283-1a5719764179",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'31'"
+                          "A0": "'43'"
                         }
                       ]
                     },
@@ -388,7 +388,7 @@
                         {
                           "C": [
                             "NSW",
-                            "'11'"
+                            "'14'"
                           ]
                         },
                         {
@@ -418,13 +418,13 @@
                         {
                           "C": [
                             "VIC",
-                            "'5'"
+                            "'9'"
                           ]
                         },
                         {
                           "C": [
                             "WA",
-                            "'7'"
+                            "'11'"
                           ]
                         }
                       ]
@@ -445,12 +445,12 @@
   },
   "parsed_counts": {
     "ACT": 0,
-    "NSW": 11,
+    "NSW": 14,
     "NT": "'<5'",
     "QLD": 0,
     "SA": 0,
     "TAS": 0,
-    "VIC": 5,
-    "WA": 7
+    "VIC": 9,
+    "WA": 11
   }
 }
