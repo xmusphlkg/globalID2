@@ -1718,7 +1718,8 @@
         "2026-06-27",
         "2026-07-04",
         "2026-07-11",
-        "2026-07-18"
+        "2026-07-18",
+        "2026-07-25"
       ],
       "cases": [
         0,
@@ -2441,7 +2442,8 @@
         0,
         0,
         0,
-        0
+        0,
+        1
       ],
       "weekly_equiv_cases": [
         0.0,
@@ -3164,9 +3166,11 @@
         0.0,
         0.0,
         0.0,
-        0.0
+        0.0,
+        1.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -4610,7 +4614,8 @@
         0.0,
         0.0,
         0.0,
-        0.0
+        0.0,
+        0.0008168084075657662
       ],
       "incidence_sources": [
         "wpp_computed",
@@ -5333,9 +5338,10 @@
         "wpp_computed",
         "wpp_computed",
         "wpp_computed",
+        "wpp_computed",
         "wpp_computed"
       ],
-      "total_cases": 156,
+      "total_cases": 157,
       "total_deaths": 0
     },
     "KR": {
@@ -11014,7 +11020,7 @@
       384,
       855,
       2096,
-      0
+      1
     ],
     "deaths": [
       0,
@@ -11278,9 +11284,9 @@
       0
     ]
   },
-  "total_cases": 247736,
+  "total_cases": 247737,
   "total_deaths": 0,
-  "generated_at": "2026-07-18T00:00:00+00:00",
+  "generated_at": "2026-07-25T00:00:00+00:00",
   "source_info": [
     {
       "country_code": "CH",
