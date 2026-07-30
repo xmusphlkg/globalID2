@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-07-29T22:45:38.043575+00:00",
+  "fetched_at": "2026-07-30T22:45:47.869089+00:00",
   "disease": "COVID-19",
   "year": 2026,
   "month": 6,
   "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
-  "api_url": "https://86715f84e812421e972f2211acc9903a.pbidedicated.windows.net/webapi/capacities/86715F84-E812-421E-972F-2211ACC9903A/workloads/QES/QueryExecutionService/automatic/public/query",
+  "api_url": "https://e4a9df980e8f4abca9475f3dc9763c4e.pbidedicated.windows.net/webapi/capacities/e4a9df98-0e8f-4abc-a947-5f3dc9763c4e/workloads/QES/QueryExecutionService/automatic/public/query",
   "runtime_hints": {
     "location": {
       "fact_alias": "d",
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785365137687)/",
-            "rootActivityId": "4affccc6-9bc9-4169-9349-9bd83d85fc98",
+            "timestamp": "/Date(1785451547573)/",
+            "rootActivityId": "63f6a006-a5e1-4f66-a772-c7d4700b6354",
             "descriptor": {
               "Select": [
                 {

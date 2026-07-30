@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-07-29T22:45:27.903880+00:00",
+  "fetched_at": "2026-07-30T22:45:40.490994+00:00",
   "disease": "Cryptosporidiosis",
   "year": 2026,
   "month": 5,
   "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
-  "api_url": "https://86715f84e812421e972f2211acc9903a.pbidedicated.windows.net/webapi/capacities/86715F84-E812-421E-972F-2211ACC9903A/workloads/QES/QueryExecutionService/automatic/public/query",
+  "api_url": "https://e4a9df980e8f4abca9475f3dc9763c4e.pbidedicated.windows.net/webapi/capacities/e4a9df98-0e8f-4abc-a947-5f3dc9763c4e/workloads/QES/QueryExecutionService/automatic/public/query",
   "runtime_hints": {
     "location": {
       "fact_alias": "d",
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785365127518)/",
-            "rootActivityId": "49c47c02-b138-4a73-b5a2-600d08824cd1",
+            "timestamp": "/Date(1785451540180)/",
+            "rootActivityId": "6027a4fe-4356-4909-b1c0-d76b77f22121",
             "descriptor": {
               "Select": [
                 {

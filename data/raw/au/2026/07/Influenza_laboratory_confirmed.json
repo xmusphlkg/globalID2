@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-07-29T22:45:47.276503+00:00",
+  "fetched_at": "2026-07-30T22:45:56.946872+00:00",
   "disease": "Influenza (laboratory confirmed)",
   "year": 2026,
   "month": 7,
   "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
-  "api_url": "https://86715f84e812421e972f2211acc9903a.pbidedicated.windows.net/webapi/capacities/86715F84-E812-421E-972F-2211ACC9903A/workloads/QES/QueryExecutionService/automatic/public/query",
+  "api_url": "https://e4a9df980e8f4abca9475f3dc9763c4e.pbidedicated.windows.net/webapi/capacities/e4a9df98-0e8f-4abc-a947-5f3dc9763c4e/workloads/QES/QueryExecutionService/automatic/public/query",
   "runtime_hints": {
     "location": {
       "fact_alias": "d",
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785365146933)/",
-            "rootActivityId": "c691ad47-2a07-4c70-a4cc-5726be44850a",
+            "timestamp": "/Date(1785451556642)/",
+            "rootActivityId": "d52c5e48-515c-4505-84d4-2f8c458ce54f",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'17,742'"
+                          "A0": "'18,666'"
                         }
                       ]
                     },
@@ -388,43 +388,43 @@
                         {
                           "C": [
                             "NSW",
-                            "'11,609'"
+                            "'12,139'"
                           ]
                         },
                         {
                           "C": [
                             "NT",
-                            "'28'"
+                            "'31'"
                           ]
                         },
                         {
                           "C": [
                             "QLD",
-                            "'1,754'"
+                            "'1,869'"
                           ]
                         },
                         {
                           "C": [
                             "SA",
-                            "'463'"
+                            "'511'"
                           ]
                         },
                         {
                           "C": [
                             "TAS",
-                            "'64'"
+                            "'72'"
                           ]
                         },
                         {
                           "C": [
                             "VIC",
-                            "'1,699'"
+                            "'1,834'"
                           ]
                         },
                         {
                           "C": [
                             "WA",
-                            "'1,940'"
+                            "'2,025'"
                           ]
                         }
                       ]
@@ -445,12 +445,12 @@
   },
   "parsed_counts": {
     "ACT": 185,
-    "NSW": 11609,
-    "NT": 28,
-    "QLD": 1754,
-    "SA": 463,
-    "TAS": 64,
-    "VIC": 1699,
-    "WA": 1940
+    "NSW": 12139,
+    "NT": 31,
+    "QLD": 1869,
+    "SA": 511,
+    "TAS": 72,
+    "VIC": 1834,
+    "WA": 2025
   }
 }

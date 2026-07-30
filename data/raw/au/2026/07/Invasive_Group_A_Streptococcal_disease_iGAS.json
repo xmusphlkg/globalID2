@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-07-29T22:45:47.941690+00:00",
+  "fetched_at": "2026-07-30T22:45:57.105373+00:00",
   "disease": "Invasive Group A Streptococcal disease (iGAS)",
   "year": 2026,
   "month": 7,
   "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
-  "api_url": "https://86715f84e812421e972f2211acc9903a.pbidedicated.windows.net/webapi/capacities/86715F84-E812-421E-972F-2211ACC9903A/workloads/QES/QueryExecutionService/automatic/public/query",
+  "api_url": "https://e4a9df980e8f4abca9475f3dc9763c4e.pbidedicated.windows.net/webapi/capacities/e4a9df98-0e8f-4abc-a947-5f3dc9763c4e/workloads/QES/QueryExecutionService/automatic/public/query",
   "runtime_hints": {
     "location": {
       "fact_alias": "d",
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785365147196)/",
-            "rootActivityId": "8c958c48-f412-4219-8046-e07d654d618d",
+            "timestamp": "/Date(1785451556812)/",
+            "rootActivityId": "2ffb4a70-4d78-4421-8ad0-ba18dc43acba",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'85'"
+                          "A0": "'88'"
                         }
                       ]
                     },
@@ -388,7 +388,7 @@
                         {
                           "C": [
                             "NSW",
-                            "'20'"
+                            "'21'"
                           ]
                         },
                         {
@@ -418,13 +418,13 @@
                         {
                           "C": [
                             "VIC",
-                            "'18'"
+                            "'19'"
                           ]
                         },
                         {
                           "C": [
                             "WA",
-                            "'10'"
+                            "'11'"
                           ]
                         }
                       ]
@@ -445,12 +445,12 @@
   },
   "parsed_counts": {
     "ACT": 0,
-    "NSW": 20,
+    "NSW": 21,
     "NT": 5,
     "QLD": 30,
     "SA": "'<5'",
     "TAS": 0,
-    "VIC": 18,
-    "WA": 10
+    "VIC": 19,
+    "WA": 11
   }
 }

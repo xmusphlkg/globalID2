@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-07-29T22:45:34.248730+00:00",
+  "fetched_at": "2026-07-30T22:45:44.324888+00:00",
   "disease": "NON TB MYCO",
   "year": 2026,
   "month": 5,
   "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
-  "api_url": "https://86715f84e812421e972f2211acc9903a.pbidedicated.windows.net/webapi/capacities/86715F84-E812-421E-972F-2211ACC9903A/workloads/QES/QueryExecutionService/automatic/public/query",
+  "api_url": "https://e4a9df980e8f4abca9475f3dc9763c4e.pbidedicated.windows.net/webapi/capacities/e4a9df98-0e8f-4abc-a947-5f3dc9763c4e/workloads/QES/QueryExecutionService/automatic/public/query",
   "runtime_hints": {
     "location": {
       "fact_alias": "d",
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785365133966)/",
-            "rootActivityId": "7e231b44-c465-4300-a3c3-6030549ea6ea",
+            "timestamp": "/Date(1785451543887)/",
+            "rootActivityId": "42a92273-f5e3-46b4-87e3-b641cab1119b",
             "descriptor": {
               "Select": [
                 {

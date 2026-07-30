@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-07-29T22:45:52.101238+00:00",
+  "fetched_at": "2026-07-30T22:45:58.800424+00:00",
   "disease": "Q fever",
   "year": 2026,
   "month": 7,
   "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
-  "api_url": "https://86715f84e812421e972f2211acc9903a.pbidedicated.windows.net/webapi/capacities/86715F84-E812-421E-972F-2211ACC9903A/workloads/QES/QueryExecutionService/automatic/public/query",
+  "api_url": "https://e4a9df980e8f4abca9475f3dc9763c4e.pbidedicated.windows.net/webapi/capacities/e4a9df98-0e8f-4abc-a947-5f3dc9763c4e/workloads/QES/QueryExecutionService/automatic/public/query",
   "runtime_hints": {
     "location": {
       "fact_alias": "d",
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785365151730)/",
-            "rootActivityId": "9ed64f98-9ed0-47a6-aae6-4681334bb283",
+            "timestamp": "/Date(1785451558505)/",
+            "rootActivityId": "c302dadc-5c57-417d-b217-2662b55ec32a",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'20'"
+                          "A0": "'24'"
                         }
                       ]
                     },
@@ -388,7 +388,7 @@
                         {
                           "C": [
                             "NSW",
-                            "'7'"
+                            "'9'"
                           ]
                         },
                         {
@@ -400,7 +400,7 @@
                         {
                           "C": [
                             "QLD",
-                            "'13'"
+                            "'15'"
                           ]
                         },
                         {
@@ -445,9 +445,9 @@
   },
   "parsed_counts": {
     "ACT": 0,
-    "NSW": 7,
+    "NSW": 9,
     "NT": 0,
-    "QLD": 13,
+    "QLD": 15,
     "SA": 0,
     "TAS": 0,
     "VIC": 0,

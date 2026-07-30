@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-07-29T22:45:45.517288+00:00",
+  "fetched_at": "2026-07-30T22:45:55.211206+00:00",
   "disease": "Cholera",
   "year": 2026,
   "month": 7,
   "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
-  "api_url": "https://86715f84e812421e972f2211acc9903a.pbidedicated.windows.net/webapi/capacities/86715F84-E812-421E-972F-2211ACC9903A/workloads/QES/QueryExecutionService/automatic/public/query",
+  "api_url": "https://e4a9df980e8f4abca9475f3dc9763c4e.pbidedicated.windows.net/webapi/capacities/e4a9df98-0e8f-4abc-a947-5f3dc9763c4e/workloads/QES/QueryExecutionService/automatic/public/query",
   "runtime_hints": {
     "location": {
       "fact_alias": "d",
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785365145196)/",
-            "rootActivityId": "f01a8818-9cc7-430a-8b6e-8beddee35fa2",
+            "timestamp": "/Date(1785451554929)/",
+            "rootActivityId": "0c65f50b-060b-48e5-b8a1-3ed207e25a13",
             "descriptor": {
               "Select": [
                 {

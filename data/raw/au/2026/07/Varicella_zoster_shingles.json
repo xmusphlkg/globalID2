@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-07-29T22:45:53.815568+00:00",
+  "fetched_at": "2026-07-30T22:46:00.498300+00:00",
   "disease": "Varicella zoster (shingles)",
   "year": 2026,
   "month": 7,
   "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
-  "api_url": "https://86715f84e812421e972f2211acc9903a.pbidedicated.windows.net/webapi/capacities/86715F84-E812-421E-972F-2211ACC9903A/workloads/QES/QueryExecutionService/automatic/public/query",
+  "api_url": "https://e4a9df980e8f4abca9475f3dc9763c4e.pbidedicated.windows.net/webapi/capacities/e4a9df98-0e8f-4abc-a947-5f3dc9763c4e/workloads/QES/QueryExecutionService/automatic/public/query",
   "runtime_hints": {
     "location": {
       "fact_alias": "d",
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785365153466)/",
-            "rootActivityId": "79776281-1fab-497b-8446-e5f51c68ad96",
+            "timestamp": "/Date(1785451560166)/",
+            "rootActivityId": "8e08e31a-8b60-4d81-b3b8-1c50ec328e45",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'652'"
+                          "A0": "'695'"
                         }
                       ]
                     },
@@ -400,31 +400,31 @@
                         {
                           "C": [
                             "QLD",
-                            "'225'"
+                            "'242'"
                           ]
                         },
                         {
                           "C": [
                             "SA",
-                            "'96'"
+                            "'106'"
                           ]
                         },
                         {
                           "C": [
                             "TAS",
-                            "'20'"
+                            "'26'"
                           ]
                         },
                         {
                           "C": [
                             "VIC",
-                            "'134'"
+                            "'141'"
                           ]
                         },
                         {
                           "C": [
                             "WA",
-                            "'122'"
+                            "'125'"
                           ]
                         }
                       ]
@@ -447,10 +447,10 @@
     "ACT": 37,
     "NSW": 0,
     "NT": 18,
-    "QLD": 225,
-    "SA": 96,
-    "TAS": 20,
-    "VIC": 134,
-    "WA": 122
+    "QLD": 242,
+    "SA": 106,
+    "TAS": 26,
+    "VIC": 141,
+    "WA": 125
   }
 }

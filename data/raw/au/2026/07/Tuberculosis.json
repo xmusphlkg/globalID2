@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-07-29T22:45:53.336706+00:00",
+  "fetched_at": "2026-07-30T22:46:00.148473+00:00",
   "disease": "Tuberculosis",
   "year": 2026,
   "month": 7,
   "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
-  "api_url": "https://86715f84e812421e972f2211acc9903a.pbidedicated.windows.net/webapi/capacities/86715F84-E812-421E-972F-2211ACC9903A/workloads/QES/QueryExecutionService/automatic/public/query",
+  "api_url": "https://e4a9df980e8f4abca9475f3dc9763c4e.pbidedicated.windows.net/webapi/capacities/e4a9df98-0e8f-4abc-a947-5f3dc9763c4e/workloads/QES/QueryExecutionService/automatic/public/query",
   "runtime_hints": {
     "location": {
       "fact_alias": "d",
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785365152984)/",
-            "rootActivityId": "e42deacd-c324-4ac1-a261-d6ae792697b3",
+            "timestamp": "/Date(1785451559838)/",
+            "rootActivityId": "995bb932-ee47-47fa-ad7d-6d10b6c42681",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'123'"
+                          "A0": "'129'"
                         }
                       ]
                     },
@@ -388,7 +388,7 @@
                         {
                           "C": [
                             "NSW",
-                            "'50'"
+                            "'54'"
                           ]
                         },
                         {
@@ -400,7 +400,7 @@
                         {
                           "C": [
                             "QLD",
-                            "'17'"
+                            "'18'"
                           ]
                         },
                         {
@@ -418,13 +418,13 @@
                         {
                           "C": [
                             "VIC",
-                            "'23'"
+                            "'22'"
                           ]
                         },
                         {
                           "C": [
                             "WA",
-                            "'17'"
+                            "'19'"
                           ]
                         }
                       ]
@@ -445,12 +445,12 @@
   },
   "parsed_counts": {
     "ACT": "'<5'",
-    "NSW": 50,
+    "NSW": 54,
     "NT": "'<5'",
-    "QLD": 17,
+    "QLD": 18,
     "SA": 7,
     "TAS": "'<5'",
-    "VIC": 23,
-    "WA": 17
+    "VIC": 22,
+    "WA": 19
   }
 }

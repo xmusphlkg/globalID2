@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-07-29T22:45:45.368673+00:00",
+  "fetched_at": "2026-07-30T22:45:54.910186+00:00",
   "disease": "Campylobacteriosis",
   "year": 2026,
   "month": 7,
   "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
-  "api_url": "https://86715f84e812421e972f2211acc9903a.pbidedicated.windows.net/webapi/capacities/86715F84-E812-421E-972F-2211ACC9903A/workloads/QES/QueryExecutionService/automatic/public/query",
+  "api_url": "https://e4a9df980e8f4abca9475f3dc9763c4e.pbidedicated.windows.net/webapi/capacities/e4a9df98-0e8f-4abc-a947-5f3dc9763c4e/workloads/QES/QueryExecutionService/automatic/public/query",
   "runtime_hints": {
     "location": {
       "fact_alias": "d",
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785365144999)/",
-            "rootActivityId": "1a3f152b-5999-427a-823c-4c1be869939a",
+            "timestamp": "/Date(1785451554616)/",
+            "rootActivityId": "656e9057-d5b8-4177-bd68-d95fbea0279b",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'2,771'"
+                          "A0": "'2,899'"
                         }
                       ]
                     },
@@ -388,7 +388,7 @@
                         {
                           "C": [
                             "NSW",
-                            "'822'"
+                            "'870'"
                           ]
                         },
                         {
@@ -400,31 +400,31 @@
                         {
                           "C": [
                             "QLD",
-                            "'659'"
+                            "'680'"
                           ]
                         },
                         {
                           "C": [
                             "SA",
-                            "'241'"
+                            "'254'"
                           ]
                         },
                         {
                           "C": [
                             "TAS",
-                            "'70'"
+                            "'72'"
                           ]
                         },
                         {
                           "C": [
                             "VIC",
-                            "'596'"
+                            "'629'"
                           ]
                         },
                         {
                           "C": [
                             "WA",
-                            "'328'"
+                            "'339'"
                           ]
                         }
                       ]
@@ -445,12 +445,12 @@
   },
   "parsed_counts": {
     "ACT": 43,
-    "NSW": 822,
+    "NSW": 870,
     "NT": 12,
-    "QLD": 659,
-    "SA": 241,
-    "TAS": 70,
-    "VIC": 596,
-    "WA": 328
+    "QLD": 680,
+    "SA": 254,
+    "TAS": 72,
+    "VIC": 629,
+    "WA": 339
   }
 }

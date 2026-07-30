@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-07-29T22:45:34.536249+00:00",
+  "fetched_at": "2026-07-30T22:45:44.701971+00:00",
   "disease": "Pertussis",
   "year": 2026,
   "month": 5,
   "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
-  "api_url": "https://86715f84e812421e972f2211acc9903a.pbidedicated.windows.net/webapi/capacities/86715F84-E812-421E-972F-2211ACC9903A/workloads/QES/QueryExecutionService/automatic/public/query",
+  "api_url": "https://e4a9df980e8f4abca9475f3dc9763c4e.pbidedicated.windows.net/webapi/capacities/e4a9df98-0e8f-4abc-a947-5f3dc9763c4e/workloads/QES/QueryExecutionService/automatic/public/query",
   "runtime_hints": {
     "location": {
       "fact_alias": "d",
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785365134173)/",
-            "rootActivityId": "afa29b57-7527-452d-ad67-95a0da99a0b8",
+            "timestamp": "/Date(1785451544383)/",
+            "rootActivityId": "e314cd9a-8c83-4106-b69f-d7933ccd2079",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'767'"
+                          "A0": "'768'"
                         }
                       ]
                     },
@@ -418,14 +418,14 @@
                         {
                           "C": [
                             "VIC",
-                            "'115'"
+                            "'116'"
                           ]
                         },
                         {
                           "C": [
-                            "WA",
-                            "'116'"
-                          ]
+                            "WA"
+                          ],
+                          "R": 2
                         }
                       ]
                     }
@@ -450,7 +450,7 @@
     "QLD": 95,
     "SA": 114,
     "TAS": 15,
-    "VIC": 115,
-    "WA": 116
+    "VIC": 116,
+    "WA": 0
   }
 }

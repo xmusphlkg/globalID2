@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-07-29T22:45:45.976633+00:00",
+  "fetched_at": "2026-07-30T22:45:55.493557+00:00",
   "disease": "Dengue virus infection",
   "year": 2026,
   "month": 7,
   "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
-  "api_url": "https://86715f84e812421e972f2211acc9903a.pbidedicated.windows.net/webapi/capacities/86715F84-E812-421E-972F-2211ACC9903A/workloads/QES/QueryExecutionService/automatic/public/query",
+  "api_url": "https://e4a9df980e8f4abca9475f3dc9763c4e.pbidedicated.windows.net/webapi/capacities/e4a9df98-0e8f-4abc-a947-5f3dc9763c4e/workloads/QES/QueryExecutionService/automatic/public/query",
   "runtime_hints": {
     "location": {
       "fact_alias": "d",
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785365145607)/",
-            "rootActivityId": "c1132130-5592-42db-a15b-1dee705ddec7",
+            "timestamp": "/Date(1785451555178)/",
+            "rootActivityId": "f0ff4f45-b912-4879-bcc4-856f51410818",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'49'"
+                          "A0": "'56'"
                         }
                       ]
                     },
@@ -388,7 +388,7 @@
                         {
                           "C": [
                             "NSW",
-                            "'15'"
+                            "'16'"
                           ]
                         },
                         {
@@ -418,14 +418,14 @@
                         {
                           "C": [
                             "VIC",
-                            "'12'"
+                            "'15'"
                           ]
                         },
                         {
                           "C": [
-                            "WA"
-                          ],
-                          "R": 2
+                            "WA",
+                            "'14'"
+                          ]
                         }
                       ]
                     }
@@ -445,12 +445,12 @@
   },
   "parsed_counts": {
     "ACT": 0,
-    "NSW": 15,
+    "NSW": 16,
     "NT": "'<5'",
     "QLD": 0,
     "SA": 0,
     "TAS": 0,
-    "VIC": 12,
-    "WA": 0
+    "VIC": 15,
+    "WA": 14
   }
 }

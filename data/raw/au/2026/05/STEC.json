@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-07-29T22:45:35.489774+00:00",
+  "fetched_at": "2026-07-30T22:45:45.478582+00:00",
   "disease": "STEC",
   "year": 2026,
   "month": 5,
   "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
-  "api_url": "https://86715f84e812421e972f2211acc9903a.pbidedicated.windows.net/webapi/capacities/86715F84-E812-421E-972F-2211ACC9903A/workloads/QES/QueryExecutionService/automatic/public/query",
+  "api_url": "https://e4a9df980e8f4abca9475f3dc9763c4e.pbidedicated.windows.net/webapi/capacities/e4a9df98-0e8f-4abc-a947-5f3dc9763c4e/workloads/QES/QueryExecutionService/automatic/public/query",
   "runtime_hints": {
     "location": {
       "fact_alias": "d",
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785365135093)/",
-            "rootActivityId": "5efc80b5-6eec-4456-ab47-b73d1a6223c8",
+            "timestamp": "/Date(1785451545165)/",
+            "rootActivityId": "7f768452-6390-4fc7-9e87-837b8428765b",
             "descriptor": {
               "Select": [
                 {

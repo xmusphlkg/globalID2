@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-07-29T22:45:42.267402+00:00",
+  "fetched_at": "2026-07-30T22:45:52.073386+00:00",
   "disease": "Respiratory syncytial virus (RSV)",
   "year": 2026,
   "month": 6,
   "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
-  "api_url": "https://86715f84e812421e972f2211acc9903a.pbidedicated.windows.net/webapi/capacities/86715F84-E812-421E-972F-2211ACC9903A/workloads/QES/QueryExecutionService/automatic/public/query",
+  "api_url": "https://e4a9df980e8f4abca9475f3dc9763c4e.pbidedicated.windows.net/webapi/capacities/e4a9df98-0e8f-4abc-a947-5f3dc9763c4e/workloads/QES/QueryExecutionService/automatic/public/query",
   "runtime_hints": {
     "location": {
       "fact_alias": "d",
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785365141918)/",
-            "rootActivityId": "fd3a8306-5569-428e-bfaa-04f3e33d2d44",
+            "timestamp": "/Date(1785451551774)/",
+            "rootActivityId": "3c348ac3-26f4-41a0-aa2d-d2d964f7c55c",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'25,540'"
+                          "A0": "'25,541'"
                         }
                       ]
                     },
@@ -388,7 +388,7 @@
                         {
                           "C": [
                             "NSW",
-                            "'11,804'"
+                            "'11,805'"
                           ]
                         },
                         {
@@ -445,7 +445,7 @@
   },
   "parsed_counts": {
     "ACT": 356,
-    "NSW": 11804,
+    "NSW": 11805,
     "NT": 54,
     "QLD": 3494,
     "SA": 1261,

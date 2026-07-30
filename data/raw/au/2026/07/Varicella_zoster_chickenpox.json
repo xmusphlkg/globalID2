@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-07-29T22:45:53.807722+00:00",
+  "fetched_at": "2026-07-30T22:46:00.282722+00:00",
   "disease": "Varicella zoster (chickenpox)",
   "year": 2026,
   "month": 7,
   "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
-  "api_url": "https://86715f84e812421e972f2211acc9903a.pbidedicated.windows.net/webapi/capacities/86715F84-E812-421E-972F-2211ACC9903A/workloads/QES/QueryExecutionService/automatic/public/query",
+  "api_url": "https://e4a9df980e8f4abca9475f3dc9763c4e.pbidedicated.windows.net/webapi/capacities/e4a9df98-0e8f-4abc-a947-5f3dc9763c4e/workloads/QES/QueryExecutionService/automatic/public/query",
   "runtime_hints": {
     "location": {
       "fact_alias": "d",
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785365153472)/",
-            "rootActivityId": "bc31e4e1-94a2-4239-a5b3-a1c28dc04956",
+            "timestamp": "/Date(1785451559989)/",
+            "rootActivityId": "e221a9c7-3cb1-4762-8bd6-94f690f57eb6",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'162'"
+                          "A0": "'166'"
                         }
                       ]
                     },
@@ -400,7 +400,7 @@
                         {
                           "C": [
                             "QLD",
-                            "'54'"
+                            "'56'"
                           ]
                         },
                         {
@@ -418,7 +418,7 @@
                         {
                           "C": [
                             "VIC",
-                            "'48'"
+                            "'50'"
                           ]
                         },
                         {
@@ -447,10 +447,10 @@
     "ACT": 5,
     "NSW": 0,
     "NT": "'<5'",
-    "QLD": 54,
+    "QLD": 56,
     "SA": 6,
     "TAS": "'<5'",
-    "VIC": 48,
+    "VIC": 50,
     "WA": 43
   }
 }

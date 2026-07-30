@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-07-29T22:45:41.553156+00:00",
+  "fetched_at": "2026-07-30T22:45:51.173788+00:00",
   "disease": "Murray Valley encephalitis virus infection",
   "year": 2026,
   "month": 6,
   "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
-  "api_url": "https://86715f84e812421e972f2211acc9903a.pbidedicated.windows.net/webapi/capacities/86715F84-E812-421E-972F-2211ACC9903A/workloads/QES/QueryExecutionService/automatic/public/query",
+  "api_url": "https://e4a9df980e8f4abca9475f3dc9763c4e.pbidedicated.windows.net/webapi/capacities/e4a9df98-0e8f-4abc-a947-5f3dc9763c4e/workloads/QES/QueryExecutionService/automatic/public/query",
   "runtime_hints": {
     "location": {
       "fact_alias": "d",
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785365141254)/",
-            "rootActivityId": "f40b6a2f-28ba-4523-9ffe-29a596b299b6",
+            "timestamp": "/Date(1785451550899)/",
+            "rootActivityId": "0054b4ea-23ec-4953-9de6-9e1415a7b1a6",
             "descriptor": {
               "Select": [
                 {

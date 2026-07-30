@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-07-29T22:45:33.797140+00:00",
+  "fetched_at": "2026-07-30T22:45:44.230743+00:00",
   "disease": "Mpox",
   "year": 2026,
   "month": 5,
   "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
-  "api_url": "https://86715f84e812421e972f2211acc9903a.pbidedicated.windows.net/webapi/capacities/86715F84-E812-421E-972F-2211ACC9903A/workloads/QES/QueryExecutionService/automatic/public/query",
+  "api_url": "https://e4a9df980e8f4abca9475f3dc9763c4e.pbidedicated.windows.net/webapi/capacities/e4a9df98-0e8f-4abc-a947-5f3dc9763c4e/workloads/QES/QueryExecutionService/automatic/public/query",
   "runtime_hints": {
     "location": {
       "fact_alias": "d",
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785365133421)/",
-            "rootActivityId": "2cadc310-0691-474f-a86a-7d11128a6bc4",
+            "timestamp": "/Date(1785451543936)/",
+            "rootActivityId": "8b6f35d8-9b66-4f29-ac97-bfc2f4650837",
             "descriptor": {
               "Select": [
                 {

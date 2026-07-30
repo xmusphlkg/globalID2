@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-07-29T22:45:46.059497+00:00",
+  "fetched_at": "2026-07-30T22:45:55.698477+00:00",
   "disease": "Flavivirus infection (unspecified)",
   "year": 2026,
   "month": 7,
   "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
-  "api_url": "https://86715f84e812421e972f2211acc9903a.pbidedicated.windows.net/webapi/capacities/86715F84-E812-421E-972F-2211ACC9903A/workloads/QES/QueryExecutionService/automatic/public/query",
+  "api_url": "https://e4a9df980e8f4abca9475f3dc9763c4e.pbidedicated.windows.net/webapi/capacities/e4a9df98-0e8f-4abc-a947-5f3dc9763c4e/workloads/QES/QueryExecutionService/automatic/public/query",
   "runtime_hints": {
     "location": {
       "fact_alias": "d",
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785365145765)/",
-            "rootActivityId": "7a94d6ff-2e8f-4077-b6e7-02a701eec998",
+            "timestamp": "/Date(1785451555412)/",
+            "rootActivityId": "a7568658-31a4-4bb2-a66d-6f9fc899eb35",
             "descriptor": {
               "Select": [
                 {

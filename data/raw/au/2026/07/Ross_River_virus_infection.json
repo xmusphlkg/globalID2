@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-07-29T22:45:52.131494+00:00",
+  "fetched_at": "2026-07-30T22:45:58.967211+00:00",
   "disease": "Ross River virus infection",
   "year": 2026,
   "month": 7,
   "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
-  "api_url": "https://86715f84e812421e972f2211acc9903a.pbidedicated.windows.net/webapi/capacities/86715F84-E812-421E-972F-2211ACC9903A/workloads/QES/QueryExecutionService/automatic/public/query",
+  "api_url": "https://e4a9df980e8f4abca9475f3dc9763c4e.pbidedicated.windows.net/webapi/capacities/e4a9df98-0e8f-4abc-a947-5f3dc9763c4e/workloads/QES/QueryExecutionService/automatic/public/query",
   "runtime_hints": {
     "location": {
       "fact_alias": "d",
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785365151767)/",
-            "rootActivityId": "1ce8fea3-9afb-4d19-945b-fb4dc8e8c77c",
+            "timestamp": "/Date(1785451558663)/",
+            "rootActivityId": "9c7f29ef-b81e-4091-9bb1-decf02e50a38",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'69'"
+                          "A0": "'72'"
                         }
                       ]
                     },
@@ -400,7 +400,7 @@
                         {
                           "C": [
                             "QLD",
-                            "'39'"
+                            "'40'"
                           ]
                         },
                         {
@@ -447,7 +447,7 @@
     "ACT": 0,
     "NSW": 20,
     "NT": "'<5'",
-    "QLD": 39,
+    "QLD": 40,
     "SA": "'<5'",
     "TAS": 0,
     "VIC": 0,

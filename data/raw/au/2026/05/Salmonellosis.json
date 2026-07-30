@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-07-29T22:45:35.664973+00:00",
+  "fetched_at": "2026-07-30T22:45:45.477428+00:00",
   "disease": "Salmonellosis",
   "year": 2026,
   "month": 5,
   "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
-  "api_url": "https://86715f84e812421e972f2211acc9903a.pbidedicated.windows.net/webapi/capacities/86715F84-E812-421E-972F-2211ACC9903A/workloads/QES/QueryExecutionService/automatic/public/query",
+  "api_url": "https://e4a9df980e8f4abca9475f3dc9763c4e.pbidedicated.windows.net/webapi/capacities/e4a9df98-0e8f-4abc-a947-5f3dc9763c4e/workloads/QES/QueryExecutionService/automatic/public/query",
   "runtime_hints": {
     "location": {
       "fact_alias": "d",
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785365135334)/",
-            "rootActivityId": "c3d0c818-6408-4746-bb7f-17916f9bf847",
+            "timestamp": "/Date(1785451545176)/",
+            "rootActivityId": "d4b9fb48-2c80-4bcc-a589-8a17091004fb",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'1,083'"
+                          "A0": "'1,084'"
                         }
                       ]
                     },
@@ -388,7 +388,7 @@
                         {
                           "C": [
                             "NSW",
-                            "'246'"
+                            "'247'"
                           ]
                         },
                         {
@@ -445,7 +445,7 @@
   },
   "parsed_counts": {
     "ACT": 13,
-    "NSW": 246,
+    "NSW": 247,
     "NT": 32,
     "QLD": 355,
     "SA": 82,

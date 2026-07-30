@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-07-29T22:45:51.528597+00:00",
+  "fetched_at": "2026-07-30T22:45:58.294398+00:00",
   "disease": "Ornithosis",
   "year": 2026,
   "month": 7,
   "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
-  "api_url": "https://86715f84e812421e972f2211acc9903a.pbidedicated.windows.net/webapi/capacities/86715F84-E812-421E-972F-2211ACC9903A/workloads/QES/QueryExecutionService/automatic/public/query",
+  "api_url": "https://e4a9df980e8f4abca9475f3dc9763c4e.pbidedicated.windows.net/webapi/capacities/e4a9df98-0e8f-4abc-a947-5f3dc9763c4e/workloads/QES/QueryExecutionService/automatic/public/query",
   "runtime_hints": {
     "location": {
       "fact_alias": "d",
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785365148954)/",
-            "rootActivityId": "e7a3fa7c-19d5-4162-b4a2-2b7e66da01a0",
+            "timestamp": "/Date(1785451557982)/",
+            "rootActivityId": "052d479d-73da-4dd4-b52b-a12db24a0bad",
             "descriptor": {
               "Select": [
                 {

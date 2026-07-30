@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-07-29T22:45:34.490159+00:00",
+  "fetched_at": "2026-07-30T22:45:44.596139+00:00",
   "disease": "Paratyphoid",
   "year": 2026,
   "month": 5,
   "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
-  "api_url": "https://86715f84e812421e972f2211acc9903a.pbidedicated.windows.net/webapi/capacities/86715F84-E812-421E-972F-2211ACC9903A/workloads/QES/QueryExecutionService/automatic/public/query",
+  "api_url": "https://e4a9df980e8f4abca9475f3dc9763c4e.pbidedicated.windows.net/webapi/capacities/e4a9df98-0e8f-4abc-a947-5f3dc9763c4e/workloads/QES/QueryExecutionService/automatic/public/query",
   "runtime_hints": {
     "location": {
       "fact_alias": "d",
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785365134152)/",
-            "rootActivityId": "e3283b6f-fe4e-4be3-a5a7-57136f207d5d",
+            "timestamp": "/Date(1785451544309)/",
+            "rootActivityId": "286dd0c8-8829-4a82-91f0-7356d71cd4f4",
             "descriptor": {
               "Select": [
                 {

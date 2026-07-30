@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-07-29T22:45:45.768154+00:00",
+  "fetched_at": "2026-07-30T22:45:55.392156+00:00",
   "disease": "Cryptosporidiosis",
   "year": 2026,
   "month": 7,
   "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
-  "api_url": "https://86715f84e812421e972f2211acc9903a.pbidedicated.windows.net/webapi/capacities/86715F84-E812-421E-972F-2211ACC9903A/workloads/QES/QueryExecutionService/automatic/public/query",
+  "api_url": "https://e4a9df980e8f4abca9475f3dc9763c4e.pbidedicated.windows.net/webapi/capacities/e4a9df98-0e8f-4abc-a947-5f3dc9763c4e/workloads/QES/QueryExecutionService/automatic/public/query",
   "runtime_hints": {
     "location": {
       "fact_alias": "d",
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785365145437)/",
-            "rootActivityId": "39eb012b-bfa9-448e-8c29-4a0d04f3722c",
+            "timestamp": "/Date(1785451555092)/",
+            "rootActivityId": "8c088603-0519-4f65-b4ed-1a81b80eb8fa",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'110'"
+                          "A0": "'119'"
                         }
                       ]
                     },
@@ -388,7 +388,7 @@
                         {
                           "C": [
                             "NSW",
-                            "'33'"
+                            "'39'"
                           ]
                         },
                         {
@@ -406,7 +406,7 @@
                         {
                           "C": [
                             "SA",
-                            "'15'"
+                            "'16'"
                           ]
                         },
                         {
@@ -418,7 +418,7 @@
                         {
                           "C": [
                             "VIC",
-                            "'23'"
+                            "'25'"
                           ]
                         },
                         {
@@ -445,12 +445,12 @@
   },
   "parsed_counts": {
     "ACT": "'<5'",
-    "NSW": 33,
+    "NSW": 39,
     "NT": 0,
     "QLD": 29,
-    "SA": 15,
+    "SA": 16,
     "TAS": "'<5'",
-    "VIC": 23,
+    "VIC": 25,
     "WA": 8
   }
 }

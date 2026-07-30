@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-07-29T22:45:43.641282+00:00",
+  "fetched_at": "2026-07-30T22:45:53.240000+00:00",
   "disease": "Tuberculosis",
   "year": 2026,
   "month": 6,
   "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
-  "api_url": "https://86715f84e812421e972f2211acc9903a.pbidedicated.windows.net/webapi/capacities/86715F84-E812-421E-972F-2211ACC9903A/workloads/QES/QueryExecutionService/automatic/public/query",
+  "api_url": "https://e4a9df980e8f4abca9475f3dc9763c4e.pbidedicated.windows.net/webapi/capacities/e4a9df98-0e8f-4abc-a947-5f3dc9763c4e/workloads/QES/QueryExecutionService/automatic/public/query",
   "runtime_hints": {
     "location": {
       "fact_alias": "d",
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785365143304)/",
-            "rootActivityId": "00d4d0d4-b03f-45b8-a04f-7b7331b07f99",
+            "timestamp": "/Date(1785451552943)/",
+            "rootActivityId": "5fd30c75-c247-401d-b5c5-8bfb66a7892d",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'121'"
+                          "A0": "'120'"
                         }
                       ]
                     },
@@ -388,7 +388,7 @@
                         {
                           "C": [
                             "NSW",
-                            "'38'"
+                            "'37'"
                           ]
                         },
                         {
@@ -445,7 +445,7 @@
   },
   "parsed_counts": {
     "ACT": "'<5'",
-    "NSW": 38,
+    "NSW": 37,
     "NT": "'<5'",
     "QLD": 22,
     "SA": 6,

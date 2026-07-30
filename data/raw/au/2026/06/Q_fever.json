@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-07-29T22:45:42.197406+00:00",
+  "fetched_at": "2026-07-30T22:45:51.980978+00:00",
   "disease": "Q fever",
   "year": 2026,
   "month": 6,
   "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
-  "api_url": "https://86715f84e812421e972f2211acc9903a.pbidedicated.windows.net/webapi/capacities/86715F84-E812-421E-972F-2211ACC9903A/workloads/QES/QueryExecutionService/automatic/public/query",
+  "api_url": "https://e4a9df980e8f4abca9475f3dc9763c4e.pbidedicated.windows.net/webapi/capacities/e4a9df98-0e8f-4abc-a947-5f3dc9763c4e/workloads/QES/QueryExecutionService/automatic/public/query",
   "runtime_hints": {
     "location": {
       "fact_alias": "d",
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785365141834)/",
-            "rootActivityId": "86184532-c101-4661-81a7-a9a05c7a9e61",
+            "timestamp": "/Date(1785451551677)/",
+            "rootActivityId": "b4038e4c-6e0e-4399-82b1-3f1a0c176eb1",
             "descriptor": {
               "Select": [
                 {
@@ -400,7 +400,7 @@
                         {
                           "C": [
                             "QLD",
-                            "'22'"
+                            "'23'"
                           ]
                         },
                         {
@@ -447,7 +447,7 @@
     "ACT": "'<5'",
     "NSW": 20,
     "NT": 0,
-    "QLD": 22,
+    "QLD": 23,
     "SA": "'<5'",
     "TAS": 0,
     "VIC": "'<5'",

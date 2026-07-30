@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-07-29T22:45:46.691272+00:00",
+  "fetched_at": "2026-07-30T22:45:56.370606+00:00",
   "disease": "Hepatitis B (unspecified)",
   "year": 2026,
   "month": 7,
   "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
-  "api_url": "https://86715f84e812421e972f2211acc9903a.pbidedicated.windows.net/webapi/capacities/86715F84-E812-421E-972F-2211ACC9903A/workloads/QES/QueryExecutionService/automatic/public/query",
+  "api_url": "https://e4a9df980e8f4abca9475f3dc9763c4e.pbidedicated.windows.net/webapi/capacities/e4a9df98-0e8f-4abc-a947-5f3dc9763c4e/workloads/QES/QueryExecutionService/automatic/public/query",
   "runtime_hints": {
     "location": {
       "fact_alias": "d",
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785365146339)/",
-            "rootActivityId": "07c77ee1-1347-450e-b819-a69ec7bb3fb0",
+            "timestamp": "/Date(1785451556084)/",
+            "rootActivityId": "76f4d07c-5140-4346-93e2-5a85c54957b6",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'403'"
+                          "A0": "'424'"
                         }
                       ]
                     },
@@ -388,7 +388,7 @@
                         {
                           "C": [
                             "NSW",
-                            "'129'"
+                            "'134'"
                           ]
                         },
                         {
@@ -400,7 +400,7 @@
                         {
                           "C": [
                             "QLD",
-                            "'63'"
+                            "'67'"
                           ]
                         },
                         {
@@ -412,19 +412,19 @@
                         {
                           "C": [
                             "TAS",
-                            "'5'"
+                            "'6'"
                           ]
                         },
                         {
                           "C": [
                             "VIC",
-                            "'118'"
+                            "'127'"
                           ]
                         },
                         {
                           "C": [
                             "WA",
-                            "'53'"
+                            "'55'"
                           ]
                         }
                       ]
@@ -445,12 +445,12 @@
   },
   "parsed_counts": {
     "ACT": 10,
-    "NSW": 129,
+    "NSW": 134,
     "NT": 5,
-    "QLD": 63,
+    "QLD": 67,
     "SA": 20,
-    "TAS": 5,
-    "VIC": 118,
-    "WA": 53
+    "TAS": 6,
+    "VIC": 127,
+    "WA": 55
   }
 }

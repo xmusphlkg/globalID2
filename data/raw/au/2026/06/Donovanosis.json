@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-07-29T22:45:38.924965+00:00",
+  "fetched_at": "2026-07-30T22:45:48.866277+00:00",
   "disease": "Donovanosis",
   "year": 2026,
   "month": 6,
   "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
-  "api_url": "https://86715f84e812421e972f2211acc9903a.pbidedicated.windows.net/webapi/capacities/86715F84-E812-421E-972F-2211ACC9903A/workloads/QES/QueryExecutionService/automatic/public/query",
+  "api_url": "https://e4a9df980e8f4abca9475f3dc9763c4e.pbidedicated.windows.net/webapi/capacities/e4a9df98-0e8f-4abc-a947-5f3dc9763c4e/workloads/QES/QueryExecutionService/automatic/public/query",
   "runtime_hints": {
     "location": {
       "fact_alias": "d",
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785365138631)/",
-            "rootActivityId": "635d5996-e953-412c-9f29-e158378b7c19",
+            "timestamp": "/Date(1785451548586)/",
+            "rootActivityId": "aad7f587-7d01-418a-8513-af8b50924081",
             "descriptor": {
               "Select": [
                 {

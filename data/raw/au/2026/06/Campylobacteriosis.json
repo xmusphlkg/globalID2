@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-07-29T22:45:38.198016+00:00",
+  "fetched_at": "2026-07-30T22:45:47.955998+00:00",
   "disease": "Campylobacteriosis",
   "year": 2026,
   "month": 6,
   "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
-  "api_url": "https://86715f84e812421e972f2211acc9903a.pbidedicated.windows.net/webapi/capacities/86715F84-E812-421E-972F-2211ACC9903A/workloads/QES/QueryExecutionService/automatic/public/query",
+  "api_url": "https://e4a9df980e8f4abca9475f3dc9763c4e.pbidedicated.windows.net/webapi/capacities/e4a9df98-0e8f-4abc-a947-5f3dc9763c4e/workloads/QES/QueryExecutionService/automatic/public/query",
   "runtime_hints": {
     "location": {
       "fact_alias": "d",
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785365137860)/",
-            "rootActivityId": "92fca3a8-f31a-4a35-abd6-28c8fb3ae29f",
+            "timestamp": "/Date(1785451547662)/",
+            "rootActivityId": "7bc82d6a-89c9-4b6b-9222-a4fbb1b26f7b",
             "descriptor": {
               "Select": [
                 {

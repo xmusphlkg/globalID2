@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-07-29T22:45:52.116686+00:00",
+  "fetched_at": "2026-07-30T22:45:58.852878+00:00",
   "disease": "Respiratory syncytial virus (RSV)",
   "year": 2026,
   "month": 7,
   "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
-  "api_url": "https://86715f84e812421e972f2211acc9903a.pbidedicated.windows.net/webapi/capacities/86715F84-E812-421E-972F-2211ACC9903A/workloads/QES/QueryExecutionService/automatic/public/query",
+  "api_url": "https://e4a9df980e8f4abca9475f3dc9763c4e.pbidedicated.windows.net/webapi/capacities/e4a9df98-0e8f-4abc-a947-5f3dc9763c4e/workloads/QES/QueryExecutionService/automatic/public/query",
   "runtime_hints": {
     "location": {
       "fact_alias": "d",
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785365151764)/",
-            "rootActivityId": "01e2961b-b562-4b21-90cd-c38e81fcfd87",
+            "timestamp": "/Date(1785451558565)/",
+            "rootActivityId": "7cf8a055-ab39-46e9-84e6-3563c6aaafd8",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'24,058'"
+                          "A0": "'24,932'"
                         }
                       ]
                     },
@@ -388,7 +388,7 @@
                         {
                           "C": [
                             "NSW",
-                            "'8,426'"
+                            "'8,786'"
                           ]
                         },
                         {
@@ -400,13 +400,13 @@
                         {
                           "C": [
                             "QLD",
-                            "'2,979'"
+                            "'3,082'"
                           ]
                         },
                         {
                           "C": [
                             "SA",
-                            "'2,646'"
+                            "'2,786'"
                           ]
                         },
                         {
@@ -418,13 +418,13 @@
                         {
                           "C": [
                             "VIC",
-                            "'6,497'"
+                            "'6,655'"
                           ]
                         },
                         {
                           "C": [
                             "WA",
-                            "'2,493'"
+                            "'2,606'"
                           ]
                         }
                       ]
@@ -445,12 +445,12 @@
   },
   "parsed_counts": {
     "ACT": 437,
-    "NSW": 8426,
+    "NSW": 8786,
     "NT": 69,
-    "QLD": 2979,
-    "SA": 2646,
+    "QLD": 3082,
+    "SA": 2786,
     "TAS": 511,
-    "VIC": 6497,
-    "WA": 2493
+    "VIC": 6655,
+    "WA": 2606
   }
 }

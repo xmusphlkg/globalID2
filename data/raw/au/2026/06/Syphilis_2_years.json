@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-07-29T22:45:43.315812+00:00",
+  "fetched_at": "2026-07-30T22:45:52.912483+00:00",
   "disease": "Syphilis < 2 years",
   "year": 2026,
   "month": 6,
   "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
-  "api_url": "https://86715f84e812421e972f2211acc9903a.pbidedicated.windows.net/webapi/capacities/86715F84-E812-421E-972F-2211ACC9903A/workloads/QES/QueryExecutionService/automatic/public/query",
+  "api_url": "https://e4a9df980e8f4abca9475f3dc9763c4e.pbidedicated.windows.net/webapi/capacities/e4a9df98-0e8f-4abc-a947-5f3dc9763c4e/workloads/QES/QueryExecutionService/automatic/public/query",
   "runtime_hints": {
     "location": {
       "fact_alias": "d",
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785365142865)/",
-            "rootActivityId": "126e181d-1f1b-4a80-a6d9-61bc6d661a5a",
+            "timestamp": "/Date(1785451552588)/",
+            "rootActivityId": "f63251b3-527b-4593-9993-7f61ef660d3d",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'445'"
+                          "A0": "'444'"
                         }
                       ]
                     },
@@ -418,7 +418,7 @@
                         {
                           "C": [
                             "VIC",
-                            "'73'"
+                            "'72'"
                           ]
                         },
                         {
@@ -450,7 +450,7 @@
     "QLD": 128,
     "SA": 16,
     "TAS": "'<5'",
-    "VIC": 73,
+    "VIC": 72,
     "WA": 50
   }
 }

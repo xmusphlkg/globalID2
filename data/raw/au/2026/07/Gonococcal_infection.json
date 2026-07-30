@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-07-29T22:45:46.109941+00:00",
+  "fetched_at": "2026-07-30T22:45:55.795401+00:00",
   "disease": "Gonococcal infection",
   "year": 2026,
   "month": 7,
   "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
-  "api_url": "https://86715f84e812421e972f2211acc9903a.pbidedicated.windows.net/webapi/capacities/86715F84-E812-421E-972F-2211ACC9903A/workloads/QES/QueryExecutionService/automatic/public/query",
+  "api_url": "https://e4a9df980e8f4abca9475f3dc9763c4e.pbidedicated.windows.net/webapi/capacities/e4a9df98-0e8f-4abc-a947-5f3dc9763c4e/workloads/QES/QueryExecutionService/automatic/public/query",
   "runtime_hints": {
     "location": {
       "fact_alias": "d",
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785365145767)/",
-            "rootActivityId": "4e987e9f-e396-4fb0-b910-2b9d4e0f9bc2",
+            "timestamp": "/Date(1785451555472)/",
+            "rootActivityId": "6f8f8c0c-cef7-438b-899f-9d846ae60cda",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'3,047'"
+                          "A0": "'3,226'"
                         }
                       ]
                     },
@@ -388,43 +388,43 @@
                         {
                           "C": [
                             "NSW",
-                            "'1,044'"
+                            "'1,092'"
                           ]
                         },
                         {
                           "C": [
                             "NT",
-                            "'86'"
+                            "'103'"
                           ]
                         },
                         {
                           "C": [
                             "QLD",
-                            "'582'"
+                            "'614'"
                           ]
                         },
                         {
                           "C": [
                             "SA",
-                            "'154'"
+                            "'164'"
                           ]
                         },
                         {
                           "C": [
                             "TAS",
-                            "'11'"
+                            "'15'"
                           ]
                         },
                         {
                           "C": [
                             "VIC",
-                            "'760'"
+                            "'817'"
                           ]
                         },
                         {
                           "C": [
                             "WA",
-                            "'389'"
+                            "'400'"
                           ]
                         }
                       ]
@@ -445,12 +445,12 @@
   },
   "parsed_counts": {
     "ACT": 21,
-    "NSW": 1044,
-    "NT": 86,
-    "QLD": 582,
-    "SA": 154,
-    "TAS": 11,
-    "VIC": 760,
-    "WA": 389
+    "NSW": 1092,
+    "NT": 103,
+    "QLD": 614,
+    "SA": 164,
+    "TAS": 15,
+    "VIC": 817,
+    "WA": 400
   }
 }

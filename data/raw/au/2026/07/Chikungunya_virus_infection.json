@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-07-29T22:45:45.499912+00:00",
+  "fetched_at": "2026-07-30T22:45:55.001650+00:00",
   "disease": "Chikungunya virus infection",
   "year": 2026,
   "month": 7,
   "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
-  "api_url": "https://86715f84e812421e972f2211acc9903a.pbidedicated.windows.net/webapi/capacities/86715F84-E812-421E-972F-2211ACC9903A/workloads/QES/QueryExecutionService/automatic/public/query",
+  "api_url": "https://e4a9df980e8f4abca9475f3dc9763c4e.pbidedicated.windows.net/webapi/capacities/e4a9df98-0e8f-4abc-a947-5f3dc9763c4e/workloads/QES/QueryExecutionService/automatic/public/query",
   "runtime_hints": {
     "location": {
       "fact_alias": "d",
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785365145137)/",
-            "rootActivityId": "c429e800-dcf7-434c-b394-2069d9983bad",
+            "timestamp": "/Date(1785451554695)/",
+            "rootActivityId": "eb50913d-48f1-4580-97c7-7fa807cfcf98",
             "descriptor": {
               "Select": [
                 {

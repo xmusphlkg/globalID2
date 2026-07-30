@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-07-29T22:45:39.801376+00:00",
+  "fetched_at": "2026-07-30T22:45:49.463354+00:00",
   "disease": "Hepatitis B (unspecified)",
   "year": 2026,
   "month": 6,
   "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
-  "api_url": "https://86715f84e812421e972f2211acc9903a.pbidedicated.windows.net/webapi/capacities/86715F84-E812-421E-972F-2211ACC9903A/workloads/QES/QueryExecutionService/automatic/public/query",
+  "api_url": "https://e4a9df980e8f4abca9475f3dc9763c4e.pbidedicated.windows.net/webapi/capacities/e4a9df98-0e8f-4abc-a947-5f3dc9763c4e/workloads/QES/QueryExecutionService/automatic/public/query",
   "runtime_hints": {
     "location": {
       "fact_alias": "d",
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785365139444)/",
-            "rootActivityId": "1b583eca-15eb-4b62-970f-6c225ca3065f",
+            "timestamp": "/Date(1785451549123)/",
+            "rootActivityId": "f953f69d-69de-4a90-be37-677a05d74dbd",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'411'"
+                          "A0": "'410'"
                         }
                       ]
                     },
@@ -400,7 +400,7 @@
                         {
                           "C": [
                             "QLD",
-                            "'68'"
+                            "'67'"
                           ]
                         },
                         {
@@ -447,7 +447,7 @@
     "ACT": 7,
     "NSW": 142,
     "NT": 16,
-    "QLD": 68,
+    "QLD": 67,
     "SA": 26,
     "TAS": "'<5'",
     "VIC": 107,

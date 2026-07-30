@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-07-29T22:45:41.955987+00:00",
+  "fetched_at": "2026-07-30T22:45:51.763771+00:00",
   "disease": "Pneumococcal disease (invasive)",
   "year": 2026,
   "month": 6,
   "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
-  "api_url": "https://86715f84e812421e972f2211acc9903a.pbidedicated.windows.net/webapi/capacities/86715F84-E812-421E-972F-2211ACC9903A/workloads/QES/QueryExecutionService/automatic/public/query",
+  "api_url": "https://e4a9df980e8f4abca9475f3dc9763c4e.pbidedicated.windows.net/webapi/capacities/e4a9df98-0e8f-4abc-a947-5f3dc9763c4e/workloads/QES/QueryExecutionService/automatic/public/query",
   "runtime_hints": {
     "location": {
       "fact_alias": "d",
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785365141614)/",
-            "rootActivityId": "db2a5ad8-2ad9-4f73-b085-4dd3db016619",
+            "timestamp": "/Date(1785451551451)/",
+            "rootActivityId": "8a2e320c-1e4c-489f-bc61-c051ab4494b7",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'236'"
+                          "A0": "'237'"
                         }
                       ]
                     },
@@ -424,7 +424,7 @@
                         {
                           "C": [
                             "WA",
-                            "'29'"
+                            "'30'"
                           ]
                         }
                       ]
@@ -451,6 +451,6 @@
     "SA": 21,
     "TAS": "'<5'",
     "VIC": 57,
-    "WA": 29
+    "WA": 30
   }
 }

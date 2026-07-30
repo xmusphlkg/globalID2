@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-07-29T22:45:39.088204+00:00",
+  "fetched_at": "2026-07-30T22:45:48.887249+00:00",
   "disease": "Gonococcal infection",
   "year": 2026,
   "month": 6,
   "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
-  "api_url": "https://86715f84e812421e972f2211acc9903a.pbidedicated.windows.net/webapi/capacities/86715F84-E812-421E-972F-2211ACC9903A/workloads/QES/QueryExecutionService/automatic/public/query",
+  "api_url": "https://e4a9df980e8f4abca9475f3dc9763c4e.pbidedicated.windows.net/webapi/capacities/e4a9df98-0e8f-4abc-a947-5f3dc9763c4e/workloads/QES/QueryExecutionService/automatic/public/query",
   "runtime_hints": {
     "location": {
       "fact_alias": "d",
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785365138731)/",
-            "rootActivityId": "1e5754e8-ed62-41e3-bfdf-d785ae920232",
+            "timestamp": "/Date(1785451548567)/",
+            "rootActivityId": "812898d8-4cb5-4783-a2e5-a66c29f7edb1",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'3,623'"
+                          "A0": "'3,622'"
                         }
                       ]
                     },
@@ -418,7 +418,7 @@
                         {
                           "C": [
                             "VIC",
-                            "'922'"
+                            "'921'"
                           ]
                         },
                         {
@@ -450,7 +450,7 @@
     "QLD": 655,
     "SA": 208,
     "TAS": 25,
-    "VIC": 922,
+    "VIC": 921,
     "WA": 474
   }
 }

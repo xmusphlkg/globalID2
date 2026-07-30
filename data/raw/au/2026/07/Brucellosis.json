@@ -1,10 +1,10 @@
 {
-  "fetched_at": "2026-07-29T22:45:44.930019+00:00",
+  "fetched_at": "2026-07-30T22:45:54.551266+00:00",
   "disease": "Brucellosis",
   "year": 2026,
   "month": 7,
   "dashboard_url": "https://nindss.health.gov.au/pbi-dashboard/",
-  "api_url": "https://86715f84e812421e972f2211acc9903a.pbidedicated.windows.net/webapi/capacities/86715F84-E812-421E-972F-2211ACC9903A/workloads/QES/QueryExecutionService/automatic/public/query",
+  "api_url": "https://e4a9df980e8f4abca9475f3dc9763c4e.pbidedicated.windows.net/webapi/capacities/e4a9df98-0e8f-4abc-a947-5f3dc9763c4e/workloads/QES/QueryExecutionService/automatic/public/query",
   "runtime_hints": {
     "location": {
       "fact_alias": "d",
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785365144630)/",
-            "rootActivityId": "fa37b95b-735f-4cf2-b2a2-7b8facbc4292",
+            "timestamp": "/Date(1785451554264)/",
+            "rootActivityId": "3c88a217-ebdc-4324-8469-c6182e1633d9",
             "descriptor": {
               "Select": [
                 {
