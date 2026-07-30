@@ -20,6 +20,9 @@ const {
   initialLanguage = 'en',
 } = Astro.props;
 
+const siteReleaseId = import.meta.env.PUBLIC_GIDS_RELEASE_ID?.trim() || 'development';
+const siteSourceCommit = import.meta.env.PUBLIC_GIDS_SOURCE_COMMIT?.trim() || '';
+const siteDeploymentBranch = import.meta.env.PUBLIC_GIDS_DEPLOY_BRANCH?.trim() || '';
 const canonicalURL = new URL(Astro.url.pathname, Astro.site);
 const siteOrigin = Astro.site ? new URL(Astro.site).origin : canonicalURL.origin;
 const pageTitle = title === 'GIDS' ? title : `${title} | GIDS`;
@@ -62,11 +65,18 @@ const structuredData = {
 ---
 
 <!doctype html>
-<html lang={initialLanguage === 'zh' ? 'zh-CN' : 'en'} data-initial-lang={initialLanguage}>
+<html
+  lang={initialLanguage === 'zh' ? 'zh-CN' : 'en'}
+  data-initial-lang={initialLanguage}
+  data-release-id={siteReleaseId}
+>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="generator" content={Astro.generator} />
+    <meta name="gids-release-id" content={siteReleaseId} />
+    <meta name="gids-source-commit" content={siteSourceCommit} />
+    <meta name="gids-deployment-branch" content={siteDeploymentBranch} />
 
     <!-- SEO -->
     <title>{pageTitle}</title>

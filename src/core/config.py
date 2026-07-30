@@ -295,6 +295,26 @@ class DataReleaseSettings(_BaseEnvSettings):
         default="chore(data-release): publish site data {timestamp}",
         description="默认发布提交消息模板",
     )
+    commit_data_refresh_snapshot: bool = Field(
+        default=False,
+        description="发布流程完成数据刷新后，是否自动提交本仓库中的数据产物快照",
+    )
+    push_data_refresh_snapshot: bool = Field(
+        default=False,
+        description="提交数据产物快照后，是否自动推送本仓库当前 HEAD",
+    )
+    data_refresh_snapshot_remote: str = Field(
+        default="origin",
+        description="数据产物快照自动推送使用的 Git remote",
+    )
+    data_refresh_snapshot_branch: str = Field(
+        default="",
+        description="数据产物快照自动推送目标分支；为空时使用当前分支",
+    )
+    data_refresh_snapshot_message_template: str = Field(
+        default="chore(data): snapshot refresh {timestamp}",
+        description="数据产物快照提交消息模板",
+    )
 
 
 class AppSettingsConfig(BaseSettings):

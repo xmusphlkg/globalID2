@@ -13,6 +13,7 @@ import sys
 import tempfile
 from typing import Any, Optional
 from urllib import error as urlerror
+from urllib import parse as urlparse
 from urllib import request as urlrequest
 from zoneinfo import ZoneInfo
 
@@ -39,8 +40,19 @@ logger = get_logger(__name__)
 ROOT_DIR = Path(__file__).resolve().parents[2]
 ASTRO_DIR = ROOT_DIR / "astro-site"
 ENV_PATH = ROOT_DIR / ".env"
+DATA_REFRESH_COMMIT_SCRIPT = ROOT_DIR / "scripts" / "commit_data_refresh.sh"
 SUBSCRIPTIONS_SCRIPT = ROOT_DIR / "cloudflare" / "subscriptions" / "scripts" / "wrangler-env.sh"
 RELEASE_PATHS = ("astro-site/src/data", "astro-site/dist")
+DATA_REFRESH_PATHS = ("astro-site/src/data", "data/current", "data/raw")
+SITE_RELEASE_MANIFEST = ASTRO_DIR / "dist" / "release.json"
+SITE_VISUAL_MODULE_PREFIXES = (
+    "ChartFrame.",
+    "ComparisonTable.",
+    "DiseaseCountryCurve.",
+    "DiseaseHeatmap.",
+    "DiseaseMonthlyBar.",
+    "EpidemicCurve.",
+)
 AUTO_RELEASE_TASK_TYPES = (
     TaskType.CRAWL_DATA,
     TaskType.PROCESS_DATA,
@@ -570,6 +582,8 @@ class DataReleaseService:
             "timezone": cfg.timezone,
             "poll_interval_seconds": cfg.poll_interval_seconds,
             "auto_failure_cooldown_minutes": cfg.auto_failure_cooldown_minutes,
+            "commit_data_refresh_snapshot": cfg.commit_data_refresh_snapshot,
+            "push_data_refresh_snapshot": cfg.push_data_refresh_snapshot,
             "last_tick_at": _iso(self._last_tick_at),
             "jobs": jobs_payload,
         }
@@ -606,6 +620,14 @@ class DataReleaseService:
             blockers.append(f"Python executable not found: {python_path}")
         if job.include_cloudflare_deploy and wrangler_check["returncode"] != 0:
             blockers.append("Wrangler CLI is unavailable.")
+        if job.include_cloudflare_deploy and not cloudflare["payload"].get("production_branch"):
+            blockers.append("Cloudflare Pages project has no production branch configured.")
+        if self._config().commit_data_refresh_snapshot and not DATA_REFRESH_COMMIT_SCRIPT.exists():
+            blockers.append(f"Data refresh commit script is missing: {DATA_REFRESH_COMMIT_SCRIPT}")
+
+        snapshot_branch = await self._data_refresh_snapshot_branch()
+        if self._config().push_data_refresh_snapshot and not snapshot_branch:
+            blockers.append("Data refresh snapshot push is enabled, but no target branch could be resolved.")
 
         return {
             "checked_at": datetime.utcnow().isoformat(),
@@ -631,6 +653,15 @@ class DataReleaseService:
                 "python_exists": python_path.exists(),
                 "wrangler_available": wrangler_check["returncode"] == 0,
                 "wrangler_version": wrangler_check["stdout"].strip() or None,
+            },
+            "data_refresh_snapshot": {
+                "enabled": self._config().commit_data_refresh_snapshot,
+                "push_enabled": self._config().push_data_refresh_snapshot,
+                "script_path": str(DATA_REFRESH_COMMIT_SCRIPT),
+                "script_exists": DATA_REFRESH_COMMIT_SCRIPT.exists(),
+                "paths": list(DATA_REFRESH_PATHS),
+                "remote": self._config().data_refresh_snapshot_remote.strip() or "origin",
+                "branch": snapshot_branch,
             },
         }
 
@@ -667,6 +698,13 @@ class DataReleaseService:
         download_url_base = self._download_repo_raw_base(job)
         publish_commit_message = self._render_commit_message(job, branch=branch, tz=tz)
         python_path = self._python_executable()
+        cloudflare_check = checks.get("cloudflare") or {}
+        deployment_branch = str(
+            cloudflare_check.get("production_branch")
+            or job.github_branch
+            or await self._current_git_branch()
+        ).strip()
+        release_identity = await self._site_release_identity(deployment_branch)
 
         await task_manager.update_task_progress(task.task_uuid, 5)
         generate_cmd = [
@@ -704,8 +742,22 @@ class DataReleaseService:
             cwd=ASTRO_DIR,
             env={
                 "GLOBALID_SKIP_SITE_DATA_GENERATION": "1",
+                "PUBLIC_GIDS_RELEASE_ID": release_identity["release_id"],
+                "PUBLIC_GIDS_SOURCE_COMMIT": release_identity["source_commit"],
+                "PUBLIC_GIDS_SOURCE_BRANCH": release_identity["source_branch"],
+                "PUBLIC_GIDS_DEPLOY_BRANCH": release_identity["deployment_branch"],
+                "PUBLIC_GIDS_BUILT_AT": release_identity["built_at"],
             },
             metadata={"event": "astro_build", "release_job_id": job.job_id},
+        )
+        release_manifest = self._write_site_release_manifest(release_identity)
+        await task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="info",
+            title="Site Release Identity",
+            content=json.dumps(release_manifest, ensure_ascii=False, indent=2),
+            content_type="json",
+            metadata={"event": "site_release_identity", "release_job_id": job.job_id},
         )
         await task_manager.update_task_progress(task.task_uuid, 60)
 
@@ -715,8 +767,12 @@ class DataReleaseService:
         )
 
         changed_release_paths = await self._git_dirty_release_paths()
+        changed_data_refresh_paths = await self._git_dirty_data_refresh_paths()
+        data_refresh_snapshot_commit = None
+        data_refresh_snapshot_pushed = False
         download_repo_published = bool(job.include_git_push)
         pages_deployed = False
+        cloudflare_deployment = None
 
         if changed_release_paths:
             await task_manager.add_workbook_entry(
@@ -737,6 +793,71 @@ class DataReleaseService:
                 metadata={"event": "release_diff", "release_job_id": job.job_id},
             )
 
+        if changed_data_refresh_paths:
+            await task_manager.add_workbook_entry(
+                task.task_uuid,
+                entry_type="info",
+                title="Data Refresh Snapshot Diff",
+                content="\n".join(changed_data_refresh_paths),
+                content_type="text",
+                metadata={"event": "data_refresh_snapshot_diff", "release_job_id": job.job_id},
+            )
+
+        if self._config().commit_data_refresh_snapshot:
+            before_head = await self._git_head_short()
+            snapshot_commit_message = await self._render_data_refresh_snapshot_message(job, tz=tz)
+            await self._run_logged_command(
+                task.task_uuid,
+                title="Commit Data Refresh Snapshot",
+                cmd=[str(DATA_REFRESH_COMMIT_SCRIPT), "-m", snapshot_commit_message],
+                cwd=ROOT_DIR,
+                env=git_env,
+                metadata={"event": "data_refresh_snapshot_commit", "release_job_id": job.job_id},
+            )
+            after_head = await self._git_head_short()
+            if after_head and after_head != before_head:
+                data_refresh_snapshot_commit = after_head
+                if self._config().push_data_refresh_snapshot:
+                    snapshot_remote = self._config().data_refresh_snapshot_remote.strip() or "origin"
+                    snapshot_branch = await self._data_refresh_snapshot_branch()
+                    if not snapshot_branch:
+                        raise RuntimeError("Data refresh snapshot push is enabled, but no target branch could be resolved.")
+                    await self._run_logged_command(
+                        task.task_uuid,
+                        title="Push Data Refresh Snapshot",
+                        cmd=["git", "push", snapshot_remote, f"HEAD:{snapshot_branch}"],
+                        cwd=ROOT_DIR,
+                        env=git_env,
+                        metadata={
+                            "event": "data_refresh_snapshot_push",
+                            "release_job_id": job.job_id,
+                            "remote": snapshot_remote,
+                            "branch": snapshot_branch,
+                        },
+                    )
+                    data_refresh_snapshot_pushed = True
+            else:
+                await task_manager.add_workbook_entry(
+                    task.task_uuid,
+                    entry_type="info",
+                    title="Data Refresh Snapshot Unchanged",
+                    content="No new local data snapshot commit was created.",
+                    content_type="text",
+                    metadata={"event": "data_refresh_snapshot_noop", "release_job_id": job.job_id},
+                )
+        elif changed_data_refresh_paths:
+            await task_manager.add_workbook_entry(
+                task.task_uuid,
+                entry_type="warning",
+                title="Data Refresh Snapshot Not Committed",
+                content=(
+                    "Generated data changed, but automatic data snapshot commits are disabled. "
+                    "Set DATA_RELEASE__COMMIT_DATA_REFRESH_SNAPSHOT=true to commit these paths during release."
+                ),
+                content_type="text",
+                metadata={"event": "data_refresh_snapshot_disabled", "release_job_id": job.job_id},
+            )
+
         if not job.include_git_push:
             await task_manager.add_workbook_entry(
                 task.task_uuid,
@@ -750,28 +871,47 @@ class DataReleaseService:
         await task_manager.update_task_progress(task.task_uuid, 88)
 
         if job.include_cloudflare_deploy:
+            if not deployment_branch:
+                raise RuntimeError("Cloudflare production branch could not be resolved.")
             await self._run_logged_command(
                 task.task_uuid,
                 title="Deploy Cloudflare Pages",
-                cmd=[
-                    "npm",
-                    "exec",
-                    "--",
-                    "wrangler",
-                    "pages",
-                    "deploy",
-                    "dist",
-                    "--project-name",
-                    project_name,
-                    "--commit-dirty=true",
-                ],
+                cmd=self._cloudflare_deploy_command(
+                    project_name=project_name,
+                    branch=deployment_branch,
+                    source_commit=release_identity["source_commit"],
+                    commit_message=publish_commit_message,
+                    commit_dirty=release_identity["commit_dirty"],
+                ),
                 cwd=ASTRO_DIR,
                 env={
                     "CI": "1",
                     "CLOUDFLARE_API_TOKEN": self._cloudflare_api_token(),
                     "CLOUDFLARE_ACCOUNT_ID": self._cloudflare_account_id(),
                 },
-                metadata={"event": "cloudflare_pages_deploy", "release_job_id": job.job_id},
+                metadata={
+                    "event": "cloudflare_pages_deploy",
+                    "release_job_id": job.job_id,
+                    "release_id": release_identity["release_id"],
+                    "deployment_branch": deployment_branch,
+                },
+            )
+            cloudflare_deployment = await self._verify_cloudflare_production_release(
+                project_name=project_name,
+                subdomain=str(cloudflare_check.get("subdomain") or "").strip(),
+                release_identity=release_identity,
+            )
+            await task_manager.add_workbook_entry(
+                task.task_uuid,
+                entry_type="success",
+                title="Production Release Verified",
+                content=json.dumps(cloudflare_deployment, ensure_ascii=False, indent=2),
+                content_type="json",
+                metadata={
+                    "event": "cloudflare_production_verified",
+                    "release_job_id": job.job_id,
+                    "release_id": release_identity["release_id"],
+                },
             )
             pages_deployed = True
         else:
@@ -793,11 +933,17 @@ class DataReleaseService:
             "github_branch": branch,
             "download_url_base": download_url_base,
             "cloudflare_project_name": project_name,
+            "cloudflare_deployment_branch": deployment_branch,
+            "cloudflare_deployment": cloudflare_deployment,
+            "site_release": release_manifest,
             "commit_message": publish_commit_message,
             "git_pushed": download_repo_published,
             "pages_deployed": pages_deployed,
             "subscription_options_synced": subscription_options_synced,
             "changed_release_paths": changed_release_paths,
+            "changed_data_refresh_paths": changed_data_refresh_paths,
+            "data_refresh_snapshot_commit": data_refresh_snapshot_commit,
+            "data_refresh_snapshot_pushed": data_refresh_snapshot_pushed,
             "preflight": checks,
         }
 
@@ -815,7 +961,11 @@ class DataReleaseService:
                 f"Release job: {job.name}\n"
                 f"Download repo published: {'yes' if download_repo_published else 'no'}\n"
                 f"Cloudflare deployed: {'yes' if pages_deployed else 'no'}\n"
+                f"Production branch: {deployment_branch or '-'}\n"
+                f"Site release: {release_identity['release_id']}\n"
+                f"Production URL: {cloudflare_deployment.get('production_url') if cloudflare_deployment else '-'}\n"
                 f"Subscription options synced: {'yes' if subscription_options_synced else 'no'}\n"
+                f"Data snapshot commit: {data_refresh_snapshot_commit or '-'}\n"
                 f"Download repo: {download_repo_url or '-'}"
             ),
             content_type="text",
@@ -870,6 +1020,21 @@ class DataReleaseService:
         except Exception:
             return self._config().default_commit_message_template.format(**variables)
 
+    async def _render_data_refresh_snapshot_message(self, job: DataReleaseJobConfig, *, tz: ZoneInfo) -> str:
+        now = datetime.now(tz)
+        branch = await self._data_refresh_snapshot_branch()
+        template = self._config().data_refresh_snapshot_message_template or "chore(data): snapshot refresh {timestamp}"
+        variables = {
+            "timestamp": now.strftime("%Y-%m-%d %H:%M:%S %Z"),
+            "date": now.strftime("%Y-%m-%d"),
+            "branch": branch,
+            "job_id": job.job_id,
+        }
+        try:
+            return template.format(**variables)
+        except Exception:
+            return "chore(data): snapshot refresh {timestamp}".format(**variables)
+
     def _download_repo_url(self) -> str:
         return get_data_share_repo_url().strip()
 
@@ -910,6 +1075,87 @@ class DataReleaseService:
 
     def _cloudflare_account_id(self) -> str:
         return system_settings_service.cloudflare_runtime()["cloudflare_account_id"].strip()
+
+    async def _current_git_branch(self) -> str:
+        result = await self._run_capture(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            cwd=ROOT_DIR,
+        )
+        branch = result["stdout"].strip() if result["returncode"] == 0 else ""
+        if branch and branch != "HEAD":
+            return branch
+        return self._current_git_branch_fallback()
+
+    async def _git_head_full(self) -> str:
+        result = await self._run_capture(["git", "rev-parse", "HEAD"], cwd=ROOT_DIR)
+        if result["returncode"] != 0:
+            return ""
+        return result["stdout"].strip()
+
+    async def _site_release_identity(self, deployment_branch: str) -> dict[str, Any]:
+        source_commit = await self._git_head_full()
+        source_branch = await self._current_git_branch()
+        built_at = datetime.now(ZoneInfo("UTC")).isoformat()
+        short_commit = source_commit[:12] if source_commit else "unknown"
+        release_id = f"{datetime.now(ZoneInfo('UTC')).strftime('%Y%m%dT%H%M%SZ')}-{short_commit}"
+        return {
+            "release_id": release_id,
+            "built_at": built_at,
+            "source_branch": source_branch or "detached",
+            "source_commit": source_commit or "unknown",
+            "deployment_branch": deployment_branch,
+            "commit_dirty": bool(await self._git_status_paths()),
+        }
+
+    def _write_site_release_manifest(self, identity: dict[str, Any]) -> dict[str, Any]:
+        dist_dir = ASTRO_DIR / "dist"
+        if not dist_dir.is_dir():
+            raise RuntimeError(f"Astro build output is missing: {dist_dir}")
+
+        assets_dir = dist_dir / "_astro"
+        visual_modules = sorted(
+            path.name
+            for path in assets_dir.glob("*.js")
+            if path.is_file() and path.name.startswith(SITE_VISUAL_MODULE_PREFIXES)
+        )
+        payload = {
+            **identity,
+            "visual_modules": visual_modules,
+        }
+        SITE_RELEASE_MANIFEST.write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        return payload
+
+    def _cloudflare_deploy_command(
+        self,
+        *,
+        project_name: str,
+        branch: str,
+        source_commit: str,
+        commit_message: str,
+        commit_dirty: bool,
+    ) -> list[str]:
+        command = [
+            "npm",
+            "exec",
+            "--",
+            "wrangler",
+            "pages",
+            "deploy",
+            "dist",
+            "--project-name",
+            project_name,
+            "--branch",
+            branch,
+            "--commit-message",
+            commit_message,
+            f"--commit-dirty={'true' if commit_dirty else 'false'}",
+        ]
+        if source_commit and source_commit != "unknown":
+            command.extend(["--commit-hash", source_commit])
+        return command
 
     def _env_file_values(self) -> dict[str, str]:
         if dotenv_values is None or not ENV_PATH.exists():
@@ -1026,9 +1272,16 @@ class DataReleaseService:
         paths: list[str] = []
         for raw_line in result["stdout"].splitlines():
             line = raw_line.rstrip()
-            if len(line) < 4:
+            if len(line) < 3:
                 continue
-            path = line[3:]
+            if len(line) >= 3 and line[2] == " ":
+                path = line[3:]
+            elif len(line) >= 2 and line[1] == " ":
+                # _run_capture strips leading whitespace from the full output, which can
+                # affect the first porcelain status line when X is blank.
+                path = line[2:]
+            else:
+                continue
             if " -> " in path:
                 path = path.split(" -> ", 1)[1]
             path = path.strip().strip('"')
@@ -1039,11 +1292,25 @@ class DataReleaseService:
     async def _git_dirty_release_paths(self) -> list[str]:
         return [path for path in await self._git_status_paths() if self._is_release_path(path)]
 
+    async def _git_dirty_data_refresh_paths(self) -> list[str]:
+        return [path for path in await self._git_status_paths() if self._is_data_refresh_path(path)]
+
     def _is_release_path(self, path: str) -> bool:
-        normalized = path.strip().lstrip("./").replace("\\", "/")
+        normalized = path.strip().replace("\\", "/")
+        if normalized.startswith("./"):
+            normalized = normalized[2:]
         return any(
             normalized == base or normalized.startswith(f"{base}/")
             for base in RELEASE_PATHS
+        )
+
+    def _is_data_refresh_path(self, path: str) -> bool:
+        normalized = path.strip().replace("\\", "/")
+        if normalized.startswith("./"):
+            normalized = normalized[2:]
+        return any(
+            normalized == base or normalized.startswith(f"{base}/")
+            for base in DATA_REFRESH_PATHS
         )
 
     async def _download_repo_check(self, job: DataReleaseJobConfig) -> dict[str, Any]:
@@ -1207,6 +1474,10 @@ class DataReleaseService:
             "token_present": bool(token),
             "account_id_present": bool(account_id),
             "project_access_ok": False,
+            "subdomain": None,
+            "domains": [],
+            "production_branch": None,
+            "latest_production_deployment": None,
             "error": None,
         }
         blockers: list[str] = []
@@ -1221,7 +1492,30 @@ class DataReleaseService:
             return {"payload": payload, "blockers": blockers}
 
         url = f"https://api.cloudflare.com/client/v4/accounts/{account_id}/pages/projects/{project}"
-        req = urlrequest.Request(
+        try:
+            body = await self._cloudflare_api_json(url)
+            payload["project_access_ok"] = bool(body.get("success"))
+            if not payload["project_access_ok"]:
+                messages = body.get("errors") or body.get("messages") or []
+                raise RuntimeError(json.dumps(messages, ensure_ascii=False))
+
+            project_data = body.get("result") or {}
+            payload["subdomain"] = project_data.get("subdomain")
+            payload["domains"] = list(project_data.get("domains") or [])
+            payload["production_branch"] = project_data.get("production_branch")
+            payload["latest_production_deployment"] = await self._cloudflare_latest_deployment(
+                project,
+                environment="production",
+            )
+            return {"payload": payload, "blockers": blockers}
+        except RuntimeError as exc:
+            payload["error"] = str(exc)
+            blockers.append("Cloudflare Pages project check failed.")
+        return {"payload": payload, "blockers": blockers}
+
+    async def _cloudflare_api_json(self, url: str) -> dict[str, Any]:
+        token = self._cloudflare_api_token()
+        request = urlrequest.Request(
             url,
             headers={
                 "Authorization": f"Bearer {token}",
@@ -1230,32 +1524,152 @@ class DataReleaseService:
             method="GET",
         )
         last_exc: Optional[Exception] = None
+
+        def fetch() -> dict[str, Any]:
+            with urlrequest.urlopen(request, timeout=20) as response:
+                return json.loads(response.read().decode("utf-8", errors="replace"))
+
         for attempt in range(1, 4):
             try:
-                with urlrequest.urlopen(req, timeout=20) as response:
-                    body = json.loads(response.read().decode("utf-8", errors="replace"))
-                payload["project_access_ok"] = bool(body.get("success"))
-                if not payload["project_access_ok"]:
-                    messages = body.get("errors") or body.get("messages") or []
-                    payload["error"] = json.dumps(messages, ensure_ascii=False)
-                    blockers.append("Cloudflare Pages project check failed.")
-                return {"payload": payload, "blockers": blockers}
+                return await asyncio.to_thread(fetch)
             except urlerror.HTTPError as exc:
                 last_exc = exc
-                # 4xx (except 429) is usually credential/scope/config mismatch.
                 if 400 <= exc.code < 500 and exc.code != 429:
-                    payload["error"] = str(exc)
-                    blockers.append("Cloudflare Pages project check failed.")
-                    return {"payload": payload, "blockers": blockers}
+                    break
             except (urlerror.URLError, TimeoutError, json.JSONDecodeError) as exc:
                 last_exc = exc
-
             if attempt < 3:
                 await asyncio.sleep(min(5, attempt * 2))
+        raise RuntimeError(str(last_exc) if last_exc else "Cloudflare API request failed")
 
-        payload["error"] = str(last_exc) if last_exc else "Cloudflare check failed without exception details"
-        blockers.append("Cloudflare Pages project is not reachable with current credentials.")
-        return {"payload": payload, "blockers": blockers}
+    def _normalize_cloudflare_deployment(self, deployment: dict[str, Any]) -> dict[str, Any]:
+        trigger = deployment.get("deployment_trigger") or {}
+        metadata = trigger.get("metadata") or {}
+        latest_stage = deployment.get("latest_stage") or {}
+        return {
+            "id": deployment.get("id"),
+            "url": deployment.get("url"),
+            "environment": deployment.get("environment"),
+            "created_on": deployment.get("created_on"),
+            "status": latest_stage.get("status"),
+            "branch": metadata.get("branch"),
+            "commit_hash": metadata.get("commit_hash"),
+            "commit_message": metadata.get("commit_message"),
+            "commit_dirty": bool(metadata.get("commit_dirty")),
+        }
+
+    async def _cloudflare_latest_deployment(
+        self,
+        project_name: str,
+        *,
+        environment: str,
+    ) -> Optional[dict[str, Any]]:
+        query = urlparse.urlencode({"env": environment, "per_page": 1})
+        url = (
+            "https://api.cloudflare.com/client/v4/accounts/"
+            f"{self._cloudflare_account_id()}/pages/projects/{project_name}/deployments?{query}"
+        )
+        body = await self._cloudflare_api_json(url)
+        if not body.get("success"):
+            messages = body.get("errors") or body.get("messages") or []
+            raise RuntimeError(f"Cloudflare deployment lookup failed: {json.dumps(messages, ensure_ascii=False)}")
+        deployments = body.get("result") or []
+        if not deployments:
+            return None
+        return self._normalize_cloudflare_deployment(deployments[0])
+
+    def _cloudflare_deployment_matches(
+        self,
+        deployment: Optional[dict[str, Any]],
+        identity: dict[str, Any],
+    ) -> bool:
+        if not deployment:
+            return False
+        return (
+            deployment.get("environment") == "production"
+            and deployment.get("status") == "success"
+            and deployment.get("branch") == identity.get("deployment_branch")
+            and deployment.get("commit_hash") == identity.get("source_commit")
+        )
+
+    async def _public_json(self, url: str) -> dict[str, Any]:
+        request = urlrequest.Request(
+            url,
+            headers={
+                "Accept": "application/json",
+                "Cache-Control": "no-cache",
+                "User-Agent": (
+                    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                    "(KHTML, like Gecko) Chrome/126.0 Safari/537.36"
+                ),
+            },
+            method="GET",
+        )
+
+        def fetch() -> dict[str, Any]:
+            with urlrequest.urlopen(request, timeout=15) as response:
+                return json.loads(response.read().decode("utf-8", errors="replace"))
+
+        return await asyncio.to_thread(fetch)
+
+    async def _verify_cloudflare_production_release(
+        self,
+        *,
+        project_name: str,
+        subdomain: str,
+        release_identity: dict[str, Any],
+    ) -> dict[str, Any]:
+        if not subdomain:
+            raise RuntimeError("Cloudflare production subdomain is missing; release cannot be verified.")
+
+        production_url = f"https://{subdomain}"
+        manifest_url = (
+            f"{production_url}/release.json?"
+            + urlparse.urlencode({"release": release_identity["release_id"]})
+        )
+        last_deployment: Optional[dict[str, Any]] = None
+        last_manifest: Optional[dict[str, Any]] = None
+        last_error: Optional[Exception] = None
+
+        for attempt in range(1, 9):
+            try:
+                last_deployment = await self._cloudflare_latest_deployment(
+                    project_name,
+                    environment="production",
+                )
+                last_manifest = await self._public_json(manifest_url)
+                deployment_matches = self._cloudflare_deployment_matches(
+                    last_deployment,
+                    release_identity,
+                )
+                manifest_matches = (
+                    last_manifest.get("release_id") == release_identity["release_id"]
+                    and last_manifest.get("deployment_branch") == release_identity["deployment_branch"]
+                    and last_manifest.get("source_commit") == release_identity["source_commit"]
+                )
+                if deployment_matches and manifest_matches:
+                    return {
+                        "verified": True,
+                        "production_url": production_url,
+                        "manifest_url": manifest_url,
+                        "deployment": last_deployment,
+                        "release": last_manifest,
+                    }
+            except (RuntimeError, urlerror.URLError, TimeoutError, json.JSONDecodeError) as exc:
+                last_error = exc
+            if attempt < 8:
+                await asyncio.sleep(min(8, attempt))
+
+        details = {
+            "expected": release_identity,
+            "latest_production_deployment": last_deployment,
+            "production_manifest": last_manifest,
+            "last_error": str(last_error) if last_error else None,
+        }
+        raise RuntimeError(
+            "Cloudflare command completed, but the production release could not be verified: "
+            + json.dumps(details, ensure_ascii=False)
+        )
 
     async def _run_capture(
         self,
@@ -1391,6 +1805,22 @@ class DataReleaseService:
             content_type="text",
             metadata=metadata,
         )
+
+    async def _git_head_short(self) -> Optional[str]:
+        result = await self._run_capture(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT_DIR)
+        if result["returncode"] != 0:
+            return None
+        return result["stdout"].strip() or None
+
+    async def _data_refresh_snapshot_branch(self) -> str:
+        configured = self._config().data_refresh_snapshot_branch.strip()
+        if configured:
+            return configured
+        result = await self._run_capture(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=ROOT_DIR)
+        branch = result["stdout"].strip() if result["returncode"] == 0 else ""
+        if branch and branch != "HEAD":
+            return branch
+        return self._current_git_branch_fallback()
 
     def _current_git_branch_fallback(self) -> str:
         branch = os.getenv("DATA_RELEASE_GIT_BRANCH", "").strip()

@@ -6,6 +6,7 @@ from types import SimpleNamespace
 import pytest
 
 from src.domain import TaskStatus
+from src.services import data_release_service as release_module
 from src.services.data_release_service import DataReleaseService
 
 
@@ -124,3 +125,72 @@ async def test_release_failure_cooldown_clears_after_later_success(monkeypatch):
     monkeypatch.setattr(service, "_latest_terminal_release_task", latest_terminal_release_task)
 
     assert await service._release_failure_cooldown_reason("site-release") is None
+
+
+def test_cloudflare_deploy_command_targets_explicit_production_branch():
+    service = DataReleaseService()
+
+    command = service._cloudflare_deploy_command(
+        project_name="globalidv2",
+        branch="master",
+        source_commit="a" * 40,
+        commit_message="publish verified release",
+        commit_dirty=False,
+    )
+
+    assert command[command.index("--branch") + 1] == "master"
+    assert command[command.index("--commit-hash") + 1] == "a" * 40
+    assert command[command.index("--commit-message") + 1] == "publish verified release"
+    assert "--commit-dirty=false" in command
+
+
+def test_cloudflare_deployment_match_requires_production_branch_and_commit():
+    service = DataReleaseService()
+    identity = {
+        "deployment_branch": "master",
+        "source_commit": "a" * 40,
+    }
+    deployment = {
+        "environment": "production",
+        "status": "success",
+        "branch": "master",
+        "commit_hash": "a" * 40,
+    }
+
+    assert service._cloudflare_deployment_matches(deployment, identity) is True
+    assert service._cloudflare_deployment_matches(
+        {**deployment, "environment": "preview"},
+        identity,
+    ) is False
+    assert service._cloudflare_deployment_matches(
+        {**deployment, "branch": "feature"},
+        identity,
+    ) is False
+
+
+def test_site_release_manifest_records_visual_modules(monkeypatch, tmp_path):
+    astro_dir = tmp_path / "astro-site"
+    assets_dir = astro_dir / "dist" / "_astro"
+    assets_dir.mkdir(parents=True)
+    (assets_dir / "EpidemicCurve.ABC123.js").write_text("export {}", encoding="utf-8")
+    (assets_dir / "DiseaseMonthlyBar.DEF456.js").write_text("export {}", encoding="utf-8")
+    (assets_dir / "unrelated.GHI789.js").write_text("export {}", encoding="utf-8")
+    manifest_path = astro_dir / "dist" / "release.json"
+    monkeypatch.setattr(release_module, "ASTRO_DIR", astro_dir)
+    monkeypatch.setattr(release_module, "SITE_RELEASE_MANIFEST", manifest_path)
+
+    identity = {
+        "release_id": "20260730T120000Z-abcdef123456",
+        "built_at": "2026-07-30T12:00:00+00:00",
+        "source_branch": "feature",
+        "source_commit": "a" * 40,
+        "deployment_branch": "master",
+        "commit_dirty": False,
+    }
+    payload = DataReleaseService()._write_site_release_manifest(identity)
+
+    assert payload["visual_modules"] == [
+        "DiseaseMonthlyBar.DEF456.js",
+        "EpidemicCurve.ABC123.js",
+    ]
+    assert manifest_path.read_text(encoding="utf-8").endswith("\n")
