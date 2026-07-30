@@ -500,6 +500,15 @@ def run_git(args: list[str], cwd: Path, *, repo_url: str, retries: int = 3) -> s
     env_fallback = _build_git_env(repo_url, use_github_ssh_over_443=True) if _is_github_ssh_repo_url(repo_url) else None
     last_error = ""
 
+    def clean_partial_clone() -> None:
+        if args[:1] != ["clone"] or not args:
+            return
+        destination = Path(args[-1])
+        if not destination.is_absolute():
+            destination = cwd / destination
+        if destination.exists():
+            shutil.rmtree(destination)
+
     for attempt in range(1, retries + 1):
         completed = subprocess.run(
             ["git", *args],
@@ -516,6 +525,9 @@ def run_git(args: list[str], cwd: Path, *, repo_url: str, retries: int = 3) -> s
         last_error = stderr_primary
 
         if env_fallback is not None:
+            # The primary transport may have created the destination before it
+            # failed. Git refuses to clone over that partial directory.
+            clean_partial_clone()
             fallback = subprocess.run(
                 ["git", *args],
                 cwd=cwd,
@@ -536,6 +548,7 @@ def run_git(args: list[str], cwd: Path, *, repo_url: str, retries: int = 3) -> s
             ).strip()
 
         if attempt < retries:
+            clean_partial_clone()
             time.sleep(min(5, attempt * 2))
 
     raise RuntimeError(f"git {' '.join(args)} failed after {retries} attempts.\n{last_error}")
@@ -548,48 +561,69 @@ def remote_branch_exists(repo_url: str, branch: str) -> bool:
 
 
 def clone_download_repo(repo_url: str, branch: str, workdir: Path, *, branch_exists: bool) -> None:
-    """Create a fresh checkout for the generated download repository."""
-    if workdir.exists():
-        shutil.rmtree(workdir)
+    """Create a lightweight publishing checkout for the generated data.
+
+    The download repository contains large generated files and its history is not
+    needed to create the next commit. Fetch only the target tip and its trees,
+    then leave the worktree empty; the generated assets copied below will
+    populate the managed paths without downloading their previous blobs.
+    """
     workdir.parent.mkdir(parents=True, exist_ok=True)
-    clone_cmd = ["clone"]
+    clone_cmd = [
+        "clone",
+        "--depth",
+        "1",
+        "--single-branch",
+        "--no-tags",
+        "--filter=blob:none",
+        "--no-checkout",
+    ]
     if branch_exists:
         clone_cmd.extend(["--branch", branch])
     clone_cmd.extend([repo_url, str(workdir)])
-    run_git(clone_cmd, workdir.parent, repo_url=repo_url)
+
+    last_error: RuntimeError | None = None
+    for attempt in range(1, 4):
+        if workdir.exists():
+            shutil.rmtree(workdir)
+        try:
+            # A failed clone leaves a partial destination behind. Retry from a
+            # clean directory so subsequent attempts can actually run.
+            run_git(clone_cmd, workdir.parent, repo_url=repo_url, retries=1)
+            last_error = None
+            break
+        except RuntimeError as exc:
+            last_error = exc
+            if attempt < 3:
+                time.sleep(min(5, attempt * 2))
+
+    if last_error is not None:
+        raise last_error
+
     if branch_exists:
-        run_git(["checkout", "-B", branch, f"origin/{branch}"], workdir, repo_url=repo_url)
-    else:
-        run_git(["checkout", "-B", branch], workdir, repo_url=repo_url)
+        # `--no-checkout` intentionally leaves the index empty. A mixed reset
+        # loads the remote tree into the index without materialising old blobs.
+        # Unmanaged remote files therefore remain preserved in the next commit.
+        run_git(["reset", "--mixed", f"origin/{branch}"], workdir, repo_url=repo_url)
+        return
+
+    # New branches retain the remote default branch as their parent when it
+    # exists, matching the previous checkout-based behaviour without fetching
+    # the large worktree.
+    run_git(["branch", "-f", branch, "HEAD"], workdir, repo_url=repo_url)
+    run_git(["symbolic-ref", "HEAD", f"refs/heads/{branch}"], workdir, repo_url=repo_url)
+    run_git(["reset", "--mixed", "HEAD"], workdir, repo_url=repo_url)
 
 
 def ensure_download_repo(repo_url: str, branch: str, workdir: Path) -> None:
-    """Clone or reset the dedicated download repository.
+    """Create a fresh disposable checkout of the download repository.
 
-    The checkout under /tmp is a disposable publishing cache.  It should not keep
-    local history: if it diverges from the remote branch or contains corrupt git
-    objects, reset or rebuild it from the remote before copying generated files.
+    Reusing a previous publishing directory can retain partial packs after an
+    interrupted clone. The filtered shallow clone is cheap enough to rebuild for
+    every release and makes retries deterministic.
     """
     branch_exists = remote_branch_exists(repo_url, branch)
-    if not (workdir / ".git").exists():
-        clone_download_repo(repo_url, branch, workdir, branch_exists=branch_exists)
-        return
-
-    try:
-        origin_url = run_git(["remote", "get-url", "origin"], workdir, repo_url=repo_url)
-        if origin_url.strip() != repo_url.strip():
-            run_git(["remote", "set-url", "origin", repo_url], workdir, repo_url=repo_url)
-
-        if branch_exists:
-            run_git(["fetch", "--prune", "origin", branch], workdir, repo_url=repo_url)
-            run_git(["checkout", "-B", branch, f"origin/{branch}"], workdir, repo_url=repo_url)
-            run_git(["reset", "--hard", f"origin/{branch}"], workdir, repo_url=repo_url)
-        else:
-            run_git(["fetch", "--prune", "origin"], workdir, repo_url=repo_url)
-            run_git(["checkout", "-B", branch], workdir, repo_url=repo_url)
-    except RuntimeError as exc:
-        print(f"  Download repo cache reset required: {exc}")
-        clone_download_repo(repo_url, branch, workdir, branch_exists=branch_exists)
+    clone_download_repo(repo_url, branch, workdir, branch_exists=branch_exists)
 
 
 def clean_download_repo_paths(workdir: Path) -> None:
