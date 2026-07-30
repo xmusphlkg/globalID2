@@ -345,7 +345,7 @@
       "name_en": "Taiwan, China",
       "name_zh": "中国台湾",
       "generated_at": "2026-07-25T00:00:00+00:00",
-      "record_count": 6340,
+      "record_count": 6341,
       "date_range": {
         "start": "2003-01-01",
         "end": "2026-07-01"
@@ -17118,7 +17118,7 @@
       "name_en": "Typhoid fever",
       "name_zh": "伤寒",
       "generated_at": "2026-07-25T00:00:00+00:00",
-      "record_count": 2495,
+      "record_count": 2496,
       "country_count": 8,
       "countries": [
         {
