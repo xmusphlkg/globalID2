@@ -59,6 +59,7 @@ export default function DiseaseCountryCurve({ dataUrl, topN = 10, height = 380, 
       series={series}
       topN={topN}
       height={height}
+      entityType="country"
       sourceMeta={sourceMeta}
     />
   );

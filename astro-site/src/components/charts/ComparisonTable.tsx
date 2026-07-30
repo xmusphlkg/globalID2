@@ -2,7 +2,9 @@
 // Sortable, filterable disease comparison table with optional deaths/CFR columns.
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { loadCountryDataset, type CountryDatasetSeriesEntry } from './countryDataset';
+import type { CountryDatasetSeriesEntry } from './countryDataset';
+import { useChartLanguage } from './chartPreferences';
+import { useCountryDataset } from './useCountryDataset';
 
 interface DiseaseRow {
   disease_id: string;
@@ -110,17 +112,15 @@ function Sparkline({
 }
 
 export default function ComparisonTable({ rows, countryCode, series: initialSeries, dataUrl }: Props) {
-  const [series, setSeries] = useState<Record<string, CountryDatasetSeriesEntry> | undefined>(initialSeries);
-  const [loadError, setLoadError] = useState(false);
+  const hasInitialSeries = Boolean(initialSeries && Object.keys(initialSeries).length > 0);
+  const remoteDataset = useCountryDataset(dataUrl, !hasInitialSeries);
+  const series = initialSeries ?? remoteDataset.data?.disease_series;
   const [sortKey, setSortKey] = useState<SortKey>('total_cases');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [catFilter, setCatFilter] = useState<string>('All');
   const [search, setSearch] = useState('');
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [lang] = useState<'en' | 'zh'>(() => {
-    if (typeof window !== 'undefined') return (localStorage.getItem('lang') as 'en' | 'zh') || 'en';
-    return 'en';
-  });
+  const lang = useChartLanguage();
   const shellRef = useRef<HTMLDivElement>(null);
 
   const hasDeathsData = useMemo(
@@ -152,31 +152,6 @@ export default function ComparisonTable({ rows, countryCode, series: initialSeri
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
-
-  useEffect(() => {
-    if (initialSeries && Object.keys(initialSeries).length > 0) {
-      setSeries(initialSeries);
-      setLoadError(false);
-      return;
-    }
-    if (!dataUrl) return;
-
-    let cancelled = false;
-    loadCountryDataset(dataUrl)
-      .then((dataset) => {
-        if (cancelled) return;
-        setSeries(dataset.disease_series);
-        setLoadError(false);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setLoadError(true);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [dataUrl, initialSeries]);
 
   function handleSort(key: SortKey) {
     if (sortKey === key) {
@@ -211,14 +186,6 @@ export default function ComparisonTable({ rows, countryCode, series: initialSeri
 
   const categories = ['All', ...CATEGORY_ORDER];
   const columnCount = 5 + (showDeaths ? 1 : 0) + (showCfr ? 1 : 0);
-
-  if (loadError) {
-    return (
-      <div className="chart-shell flex items-center justify-center text-slate-500 text-sm min-h-[160px]">
-        {lang === 'zh' ? '表格趋势数据加载失败' : 'Failed to load table trend data'}
-      </div>
-    );
-  }
 
   const SortIcon = ({ col }: { col: SortKey }) =>
     sortKey === col ? (
@@ -297,6 +264,18 @@ export default function ComparisonTable({ rows, countryCode, series: initialSeri
           {lang === 'zh' ? `${displayed.length} 种疾病` : `${displayed.length} diseases`}
         </span>
       </div>
+      {remoteDataset.loadError && (
+        <div className="chart-data-warning" role="status">
+          <span>
+            {lang === 'zh'
+              ? '趋势数据加载失败，比较数据仍可使用。'
+              : 'Trend data failed to load; comparison data remains available.'}
+          </span>
+          <button type="button" className="chart-link-btn" onClick={remoteDataset.retry}>
+            {lang === 'zh' ? '重试趋势数据' : 'Retry trends'}
+          </button>
+        </div>
+      )}
 
       {/* Table */}
       <div className="comparison-table-wrap">

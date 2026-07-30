@@ -9,8 +9,9 @@ interface Props {
   toolbar?: ReactNode;
   note?: ReactNode;
   chart: RenderablePanel;
-  table: ReactNode;
+  table: RenderablePanel;
   legend?: ReactNode;
+  sidebar?: ReactNode;
   fullscreenSidebar?: ReactNode;
   sourceMeta?: ChartSourceMeta | null;
 }
@@ -22,47 +23,66 @@ export default function ChartFrame({
   chart,
   table,
   legend,
+  sidebar,
   fullscreenSidebar,
   sourceMeta = null,
 }: Props) {
   const [mode, setMode] = useState<'chart' | 'table'>('chart');
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [canFullscreen, setCanFullscreen] = useState(false);
   const shellRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
       setIsFullscreen(document.fullscreenElement === shellRef.current);
     };
+    const handleFullscreenError = () => {
+      setIsFullscreen(false);
+      setCanFullscreen(false);
+    };
 
+    setCanFullscreen(Boolean(document.fullscreenEnabled));
     document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('fullscreenerror', handleFullscreenError);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('fullscreenerror', handleFullscreenError);
+    };
   }, []);
 
   async function toggleFullscreen() {
     const shell = shellRef.current;
-    if (!shell) return;
+    if (!shell || !canFullscreen) return;
 
-    if (document.fullscreenElement === shell) {
-      await document.exitFullscreen();
-      return;
-    }
+    try {
+      if (document.fullscreenElement === shell) {
+        await document.exitFullscreen();
+        return;
+      }
 
-    if (!document.fullscreenElement) {
-      await shell.requestFullscreen();
+      if (!document.fullscreenElement) {
+        await shell.requestFullscreen();
+      }
+    } catch {
+      setCanFullscreen(false);
     }
   }
 
-  const activeAside = isFullscreen && fullscreenSidebar ? fullscreenSidebar : legend;
+  const interactiveAside = isFullscreen
+    ? (fullscreenSidebar ?? sidebar)
+    : sidebar;
+  const activeAside = interactiveAside ?? legend;
   const hasAside = Boolean(activeAside);
+  const hasWideAside = Boolean(interactiveAside);
   const stageClassName = [
     'chart-stage',
     hasAside ? 'chart-stage-with-aside' : '',
-    isFullscreen && fullscreenSidebar ? 'chart-stage-with-wide-aside' : '',
+    hasWideAside ? 'chart-stage-with-wide-aside' : '',
   ].filter(Boolean).join(' ');
-  const asideClassName = `chart-aside ${isFullscreen && fullscreenSidebar ? 'chart-aside-wide' : ''}`;
-  const renderedChart = typeof chart === 'function'
-    ? chart({ isFullscreen })
-    : chart;
+  const asideClassName = `chart-aside ${hasWideAside ? 'chart-aside-wide' : ''}`;
+  const renderPanel = (panel: RenderablePanel) => (
+    typeof panel === 'function' ? panel({ isFullscreen }) : panel
+  );
 
   return (
     <div ref={shellRef} className={`chart-shell panel-fullscreen ${isFullscreen ? 'chart-shell-fullscreen' : ''}`}>
@@ -96,11 +116,13 @@ export default function ChartFrame({
               {lang === 'zh' ? '下载数据' : 'Download data'}
             </a>
           )}
-          <button type="button" onClick={toggleFullscreen} className="chart-link-btn">
-            {isFullscreen
-              ? (lang === 'zh' ? '退出全屏' : 'Exit full-screen')
-              : (lang === 'zh' ? '进入全屏' : 'Enter full-screen')}
-          </button>
+          {canFullscreen && (
+            <button type="button" onClick={toggleFullscreen} className="chart-link-btn">
+              {isFullscreen
+                ? (lang === 'zh' ? '退出全屏' : 'Exit full-screen')
+                : (lang === 'zh' ? '进入全屏' : 'Enter full-screen')}
+            </button>
+          )}
         </div>
       </div>
 
@@ -108,11 +130,11 @@ export default function ChartFrame({
 
       {mode === 'chart' ? (
         <div className={stageClassName}>
-          <div className="chart-canvas">{renderedChart}</div>
+          <div className="chart-canvas">{renderPanel(chart)}</div>
           {activeAside && <aside className={asideClassName}>{activeAside}</aside>}
         </div>
       ) : (
-        <div className="data-preview-wrap">{table}</div>
+        <div className="data-preview-wrap">{renderPanel(table)}</div>
       )}
 
     </div>
