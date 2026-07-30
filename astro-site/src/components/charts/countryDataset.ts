@@ -62,6 +62,7 @@ interface CompactCountryDataset {
 }
 
 const cache = new Map<string, Promise<CountryDataset>>();
+const DEFAULT_REQUEST_TIMEOUT_MS = 15_000;
 
 function isCompactCountryDataset(value: unknown): value is CompactCountryDataset {
   if (!value || typeof value !== 'object') return false;
@@ -126,7 +127,18 @@ function normalizeCountryDataset(raw: CountryDataset | CompactCountryDataset): C
   };
 }
 
-export function loadCountryDataset(dataUrl?: string | null): Promise<CountryDataset> {
+interface LoadCountryDatasetOptions {
+  timeoutMs?: number;
+}
+
+export function invalidateCountryDataset(dataUrl: string) {
+  cache.delete(dataUrl);
+}
+
+export function loadCountryDataset(
+  dataUrl?: string | null,
+  { timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS }: LoadCountryDatasetOptions = {}
+): Promise<CountryDataset> {
   if (!dataUrl) {
     return Promise.resolve({});
   }
@@ -134,7 +146,12 @@ export function loadCountryDataset(dataUrl?: string | null): Promise<CountryData
   const cached = cache.get(dataUrl);
   if (cached) return cached;
 
-  const request = fetch(dataUrl)
+  const controller = new AbortController();
+  const timeoutId = globalThis.setTimeout(() => controller.abort(), timeoutMs);
+  const request = fetch(dataUrl, {
+    signal: controller.signal,
+    credentials: 'same-origin',
+  })
     .then(async (response) => {
       if (!response.ok) {
         throw new Error(`Failed to load country dataset: ${response.status}`);
@@ -145,7 +162,8 @@ export function loadCountryDataset(dataUrl?: string | null): Promise<CountryData
     .catch((error) => {
       cache.delete(dataUrl);
       throw error;
-    });
+    })
+    .finally(() => globalThis.clearTimeout(timeoutId));
 
   cache.set(dataUrl, request);
   return request;
