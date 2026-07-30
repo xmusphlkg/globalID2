@@ -1,10 +1,10 @@
 {
-  "version": "20260722",
+  "version": "20260729",
   "details": {
     "identifier": "zika/cases/value/year",
     "source": "mandatory_reporting_system",
-    "sourceDate": "2026-07-21",
-    "version": "20260722",
+    "sourceDate": "2026-07-28",
+    "version": "20260729",
     "properties": {
       "CHFL": {
         "allValue": "all",
