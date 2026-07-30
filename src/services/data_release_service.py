@@ -8,6 +8,7 @@ from datetime import datetime, time, timedelta
 import json
 import os
 from pathlib import Path
+import signal
 import shlex
 import sys
 import tempfile
@@ -1689,6 +1690,7 @@ class DataReleaseService:
                 env=merged_env,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.STDOUT,
+                start_new_session=os.name == "posix",
             )
         except FileNotFoundError as exc:
             return {
@@ -1698,8 +1700,7 @@ class DataReleaseService:
         try:
             stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=timeout)
         except asyncio.TimeoutError:
-            proc.kill()
-            await proc.wait()
+            await self._terminate_process_tree(proc)
             return {
                 "returncode": 124,
                 "stdout": f"Command timed out after {timeout}s: {' '.join(shlex.quote(part) for part in cmd)}",
@@ -1740,6 +1741,7 @@ class DataReleaseService:
                 env=merged_env,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.STDOUT,
+                start_new_session=os.name == "posix",
             )
         except FileNotFoundError as exc:
             raise RuntimeError(f"{title} failed to start: {exc}") from exc
@@ -1766,13 +1768,7 @@ class DataReleaseService:
 
         while True:
             if await task_manager.is_cancel_requested(task_uuid):
-                if proc.returncode is None:
-                    proc.terminate()
-                    try:
-                        await asyncio.wait_for(proc.wait(), timeout=5)
-                    except asyncio.TimeoutError:
-                        proc.kill()
-                        await proc.wait()
+                await self._terminate_process_tree(proc)
                 raise TaskCancelledError(f"Cancellation requested while running: {title}")
 
             try:
@@ -1805,6 +1801,39 @@ class DataReleaseService:
             content_type="text",
             metadata=metadata,
         )
+
+    @staticmethod
+    async def _terminate_process_tree(
+        proc: asyncio.subprocess.Process,
+        *,
+        grace_seconds: float = 5,
+    ) -> None:
+        """Terminate a release command and every subprocess it started."""
+        if proc.returncode is not None:
+            return
+
+        try:
+            if os.name == "posix":
+                os.killpg(proc.pid, signal.SIGTERM)
+            else:  # pragma: no cover - production release workers run on Linux.
+                proc.terminate()
+        except ProcessLookupError:
+            pass
+
+        try:
+            await asyncio.wait_for(proc.wait(), timeout=grace_seconds)
+            return
+        except asyncio.TimeoutError:
+            pass
+
+        try:
+            if os.name == "posix":
+                os.killpg(proc.pid, signal.SIGKILL)
+            else:  # pragma: no cover - production release workers run on Linux.
+                proc.kill()
+        except ProcessLookupError:
+            pass
+        await proc.wait()
 
     async def _git_head_short(self) -> Optional[str]:
         result = await self._run_capture(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT_DIR)

@@ -39,6 +39,32 @@ async def test_subscription_options_sync_auto_failure_is_non_blocking(monkeypatc
 
 
 @pytest.mark.asyncio
+async def test_terminate_process_tree_signals_entire_process_group(monkeypatch):
+    service = DataReleaseService()
+    signals = []
+
+    class FakeProcess:
+        pid = 4321
+        returncode = None
+
+        async def wait(self):
+            self.returncode = -15
+            return self.returncode
+
+    monkeypatch.setattr(
+        release_module.os,
+        "killpg",
+        lambda process_group, sent_signal: signals.append(
+            (process_group, sent_signal)
+        ),
+    )
+
+    await service._terminate_process_tree(FakeProcess())
+
+    assert signals == [(4321, release_module.signal.SIGTERM)]
+
+
+@pytest.mark.asyncio
 async def test_subscription_options_sync_strict_failure_is_blocking(monkeypatch):
     service = DataReleaseService()
 
