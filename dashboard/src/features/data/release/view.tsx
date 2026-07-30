@@ -363,6 +363,14 @@ export default function DataReleasePage() {
   const schedulerEnabled = Boolean(config?.enabled);
   const workerRunning = Boolean(workerStatus?.worker_process_running);
   const saving = createJob.isPending || updateJob.isPending;
+  const productionDeployment = checks?.cloudflare.latest_production_deployment;
+  const productionBranch = checks?.cloudflare.production_branch;
+  const productionHealthy = Boolean(
+    checks?.cloudflare.project_access_ok
+      && productionDeployment?.environment === "production"
+      && productionDeployment?.status === "success"
+      && productionDeployment?.branch === productionBranch,
+  );
 
   const resetForm = () => {
     setEditingJobId(null);
@@ -747,6 +755,22 @@ export default function DataReleasePage() {
                 <AccessDetail label="Release Changes" value={String(checks?.git.dirty_release_paths.length ?? 0)} />
                 <AccessDetail label="Blocking Changes" value={String(checks?.git.dirty_blocking_paths.length ?? 0)} />
               </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <AccessDetail
+                  label={lang === "zh" ? "数据快照提交" : "Data Snapshot Commit"}
+                  value={!checks ? "-" : checks.data_refresh_snapshot.enabled ? "Enabled" : "Disabled"}
+                />
+                <AccessDetail
+                  label={lang === "zh" ? "快照推送目标" : "Snapshot Push Target"}
+                  value={
+                    !checks
+                      ? "-"
+                      : checks.data_refresh_snapshot.push_enabled
+                        ? `${checks.data_refresh_snapshot.remote}/${checks.data_refresh_snapshot.branch || "-"}`
+                        : "Disabled"
+                  }
+                />
+              </div>
               <CheckOutput label="Read Check" value={checks?.git.read_check_output} />
               <CheckOutput label="Write Check" value={checks?.git.write_check_output} />
             </div>
@@ -758,17 +782,53 @@ export default function DataReleasePage() {
                 <Cloud className="h-4 w-4" />
                 Cloudflare
               </h2>
-              <StatusBadge tone={!checks ? "neutral" : checks.cloudflare.project_access_ok ? "success" : "danger"}>
-                {!checks ? "Pending" : checks.cloudflare.project_access_ok ? "OK" : "Failed"}
+              <StatusBadge tone={!checks ? "neutral" : productionHealthy ? "success" : "danger"}>
+                {!checks ? "Pending" : productionHealthy ? "Production OK" : "Check Required"}
               </StatusBadge>
             </div>
             <div className="mt-3 grid gap-2">
               <AccessDetail label="Project" value={checks?.cloudflare.project_name || settings?.cloudflare.default_cloudflare_project_name || "-"} />
+              <div className="grid gap-2 sm:grid-cols-2">
+                <AccessDetail
+                  label={lang === "zh" ? "生产分支" : "Production Branch"}
+                  value={productionBranch || "-"}
+                  mono
+                />
+                <AccessDetail
+                  label={lang === "zh" ? "线上状态" : "Live Status"}
+                  value={productionDeployment ? `${productionDeployment.environment || "-"} / ${productionDeployment.status || "-"}` : "-"}
+                />
+              </div>
+              <AccessDetail
+                label={lang === "zh" ? "线上版本" : "Live Version"}
+                value={
+                  productionDeployment?.commit_hash
+                    ? `${productionDeployment.commit_hash.slice(0, 12)}${productionDeployment.commit_dirty ? " (dirty)" : ""}`
+                    : "-"
+                }
+                mono
+              />
+              <AccessDetail
+                label={lang === "zh" ? "正式站点" : "Production Site"}
+                value={checks?.cloudflare.subdomain ? `https://${checks.cloudflare.subdomain}` : "-"}
+                mono
+              />
+              <AccessDetail
+                label={lang === "zh" ? "最近生产发布" : "Latest Production Release"}
+                value={formatDateTime(productionDeployment?.created_on)}
+              />
               <AccessDetail label="Wrangler" value={checks?.commands.wrangler_version || "-"} mono />
               <div className="grid gap-2 sm:grid-cols-2">
                 <AccessDetail label="Token" value={checks?.cloudflare.token_present ? "Yes" : settings?.cloudflare.cloudflare_api_token_present ? "Saved" : "No"} />
                 <AccessDetail label="Account ID" value={checks?.cloudflare.account_id_present ? "Yes" : settings?.cloudflare.cloudflare_account_id_present ? "Saved" : "No"} />
               </div>
+              {checks?.cloudflare.project_access_ok && !productionHealthy ? (
+                <AlertPanel tone="danger">
+                  {lang === "zh"
+                    ? "最近记录不是已验证的生产发布。运行发布后，系统会同时校验生产分支、提交版本和线上 release.json。"
+                    : "The latest record is not a verified production release. A release now verifies the production branch, commit, and live release.json."}
+                </AlertPanel>
+              ) : null}
               {checks?.cloudflare.error ? <AlertPanel tone="danger">{checks.cloudflare.error}</AlertPanel> : null}
             </div>
           </section>

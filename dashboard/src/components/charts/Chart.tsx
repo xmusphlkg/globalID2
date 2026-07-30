@@ -44,6 +44,10 @@ echarts.use([
 
 export { echarts };
 
+export interface ChartExportHandle {
+  getDataURL: (options?: Record<string, unknown>) => string;
+}
+
 function useChartTheme(): ChartTheme {
   const [theme, setTheme] = useState<ChartTheme>(() => {
     if (typeof document === "undefined") return "light";
@@ -69,11 +73,12 @@ function useChartTheme(): ChartTheme {
 
 interface ChartProps {
   option: echarts.EChartsCoreOption;
-  height?: number;
+  height?: number | string;
   className?: string;
+  onReady?: (chart: ChartExportHandle) => void;
 }
 
-export function Chart({ option, height = 350, className }: ChartProps) {
+export function Chart({ option, height = 350, className, onReady }: ChartProps) {
   const theme = useChartTheme();
   return (
     <div className={className} style={{ minWidth: 0 }}>
@@ -83,6 +88,7 @@ export function Chart({ option, height = 350, className }: ChartProps) {
         style={{ height, width: "100%", minWidth: 0 }}
         notMerge
         lazyUpdate
+        onChartReady={(chart) => onReady?.(chart as ChartExportHandle)}
       />
     </div>
   );

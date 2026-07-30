@@ -21,6 +21,17 @@ export interface TrendPoint {
   time_period: string;
   cases: number;
   deaths: number;
+  incidence_rate: number | null;
+  mortality_rate: number | null;
+}
+
+export interface MonthlyComparisonPoint {
+  year: number;
+  month: number;
+  cases: number;
+  deaths: number;
+  incidence_rate: number | null;
+  mortality_rate: number | null;
 }
 
 export function useOverviewSummary(countryId: number | null, lang: string) {
@@ -37,14 +48,40 @@ export function useOverviewTrend(
   countryId: number | null,
   diseaseCode?: string | null,
   interval?: number | null,
+  startDate?: string | null,
+  endDate?: string | null,
 ) {
   return useQuery<TrendPoint[]>({
-    queryKey: ["overview", "trend", countryId, diseaseCode, interval],
+    queryKey: ["overview", "trend", countryId, diseaseCode, interval, startDate, endDate],
     queryFn: () => {
       const params = new URLSearchParams({ country_id: String(countryId) });
       if (diseaseCode) params.set("disease_code", diseaseCode);
-      if (interval) params.set("interval", String(interval));
+      if (startDate) params.set("start_date", startDate);
+      if (endDate) params.set("end_date", endDate);
+      if (interval && !startDate && !endDate) params.set("interval", String(interval));
       return apiFetch(`/overview/trend?${params}`);
+    },
+    enabled: !!countryId,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useOverviewMonthlyComparison(
+  countryId: number | null,
+  diseaseCode?: string | null,
+  interval?: number | null,
+  startDate?: string | null,
+  endDate?: string | null,
+) {
+  return useQuery<MonthlyComparisonPoint[]>({
+    queryKey: ["overview", "monthly-comparison", countryId, diseaseCode, interval, startDate, endDate],
+    queryFn: () => {
+      const params = new URLSearchParams({ country_id: String(countryId) });
+      if (diseaseCode) params.set("disease_code", diseaseCode);
+      if (startDate) params.set("start_date", startDate);
+      if (endDate) params.set("end_date", endDate);
+      if (interval && !startDate && !endDate) params.set("interval", String(interval));
+      return apiFetch(`/overview/monthly-comparison?${params}`);
     },
     enabled: !!countryId,
     staleTime: 5 * 60 * 1000,

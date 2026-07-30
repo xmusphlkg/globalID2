@@ -55,3 +55,14 @@ class TrendPoint(BaseModel):
     time_period: str
     cases: int = 0
     deaths: int = 0
+    incidence_rate: Optional[float] = None
+    mortality_rate: Optional[float] = None
+
+
+class MonthlyComparisonPoint(BaseModel):
+    year: int
+    month: int
+    cases: int = 0
+    deaths: int = 0
+    incidence_rate: Optional[float] = None
+    mortality_rate: Optional[float] = None
