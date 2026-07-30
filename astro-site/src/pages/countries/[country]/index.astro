@@ -239,22 +239,12 @@ const countryDataUrl = countryDownload?.site_json_path ?? `/site-data/countries/
       <div class="mt-5">
         {countryData?.disease_series ? (
           <EpidemicCurve
-            client:only="react"
+            client:visible
             dataUrl={countryDataUrl}
             topN={10}
             height={420}
             sourceMeta={chartSourceMeta}
-          >
-            <div slot="fallback" class="chart-loading-shell" aria-hidden="true">
-              <div class="chart-loading-toolbar">
-                <span class="chart-loading-pill w-24"></span>
-                <span class="chart-loading-pill w-32"></span>
-                <span class="chart-loading-pill w-28"></span>
-              </div>
-              <div class="chart-loading-line w-4/5"></div>
-              <div class="chart-loading-panel" style="height: 420px;"></div>
-            </div>
-          </EpidemicCurve>
+          />
         ) : (
           <div class="card p-8 text-center text-[rgb(var(--text-muted))]">No time-series data available</div>
         )}
@@ -268,21 +258,11 @@ const countryDataUrl = countryDownload?.site_json_path ?? `/site-data/countries/
       <div class="mt-5">
         {(countryData?.disease_series || countryData?.heatmap?.z?.length) ? (
           <DiseaseHeatmap
-            client:only="react"
+            client:visible
             dataUrl={countryDataUrl}
             height={600}
             sourceMeta={chartSourceMeta}
-          >
-            <div slot="fallback" class="chart-loading-shell" aria-hidden="true">
-              <div class="chart-loading-toolbar">
-                <span class="chart-loading-pill w-28"></span>
-                <span class="chart-loading-pill w-36"></span>
-                <span class="chart-loading-pill w-24"></span>
-              </div>
-              <div class="chart-loading-line w-3/4"></div>
-              <div class="chart-loading-panel" style="height: 600px;"></div>
-            </div>
-          </DiseaseHeatmap>
+          />
         ) : (
           <div class="card p-8 text-center text-[rgb(var(--text-muted))]">No heatmap data available</div>
         )}
@@ -296,22 +276,11 @@ const countryDataUrl = countryDownload?.site_json_path ?? `/site-data/countries/
       <div class="mt-5">
         {diseaseRows.length > 0 ? (
           <ComparisonTable
-            client:only="react"
+            client:visible
             rows={diseaseRows}
             countryCode={country}
             dataUrl={countryDataUrl}
-          >
-            <div slot="fallback" class="chart-loading-shell" aria-hidden="true">
-              <div class="chart-loading-toolbar">
-                <span class="chart-loading-pill w-48"></span>
-                <span class="chart-loading-pill w-24"></span>
-                <span class="chart-loading-pill w-24"></span>
-              </div>
-              <div class="chart-loading-line w-full"></div>
-              <div class="chart-loading-line w-5/6"></div>
-              <div class="chart-loading-panel" style="height: 420px;"></div>
-            </div>
-          </ComparisonTable>
+          />
         ) : (
           <div class="card p-8 text-center text-[rgb(var(--text-muted))]">No disease data available</div>
         )}

@@ -993,6 +993,7 @@
   }
 
   .chart-stage-with-wide-aside {
+    @apply xl:grid-cols-[minmax(0,1fr)_minmax(280px,320px)];
     @apply gap-5;
   }
 
@@ -1018,7 +1019,7 @@
   }
 
   .chart-aside-wide {
-    max-height: calc(100vh - 220px);
+    max-height: min(54vh, 420px);
   }
 
   .chart-legend {
@@ -1057,6 +1058,10 @@
     @apply flex flex-col gap-3;
   }
 
+  .chart-sidebar-compact {
+    @apply gap-2;
+  }
+
   .chart-sidebar-header {
     @apply flex items-start justify-between gap-3;
   }
@@ -1079,6 +1084,10 @@
     @apply overflow-auto rounded-none;
   }
 
+  .chart-sidebar-list-compact {
+    max-height: min(42vh, 280px);
+  }
+
   .chart-sidebar-item {
     position: relative;
     overflow: hidden;
@@ -1086,6 +1095,23 @@
     color: rgb(var(--text));
     background-color: transparent;
     @apply block cursor-pointer px-3 py-3 transition-colors;
+  }
+
+  .chart-sidebar-item-compact {
+    @apply px-2.5 py-2;
+  }
+
+  .chart-sidebar-item-compact .chart-sidebar-item-inner {
+    @apply gap-2;
+  }
+
+  .chart-sidebar-item-compact .chart-sidebar-name {
+    @apply text-[13px];
+  }
+
+  .chart-sidebar-compact-total {
+    color: rgb(var(--text-muted));
+    @apply text-[11px] font-normal tabular-nums;
   }
 
   .chart-sidebar-item::before {
@@ -1130,6 +1156,11 @@
     accent-color: rgb(var(--color-brand));
   }
 
+  .chart-sidebar-checkbox:disabled {
+    cursor: not-allowed;
+    opacity: 0.48;
+  }
+
   .chart-sidebar-swatch {
     width: 10px;
     height: 10px;
@@ -1157,6 +1188,19 @@
   .chart-sidebar-empty {
     color: rgb(var(--text-muted));
     @apply px-4 py-6 text-sm;
+  }
+
+  .chart-sidebar-warning,
+  .chart-data-warning {
+    border: 1px solid rgb(var(--color-accent) / 0.38);
+    background-color: rgb(var(--color-accent) / 0.08);
+    color: rgb(var(--text-muted));
+    @apply flex flex-wrap items-center justify-between gap-3 px-3 py-2 text-xs leading-5;
+  }
+
+  .chart-data-warning {
+    border-left: none;
+    border-right: none;
   }
 
   .data-preview-wrap {
