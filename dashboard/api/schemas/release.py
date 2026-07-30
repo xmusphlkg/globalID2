@@ -36,6 +36,9 @@ class DataReleaseConfigOut(BaseModel):
     enabled: bool
     timezone: str
     poll_interval_seconds: int
+    auto_failure_cooldown_minutes: int = 0
+    commit_data_refresh_snapshot: bool = False
+    push_data_refresh_snapshot: bool = False
     last_tick_at: Optional[str] = None
     jobs: List[DataReleaseJobOut] = []
 
@@ -98,11 +101,27 @@ class DataReleaseGitCheckOut(BaseModel):
     dirty_blocking_paths: List[str] = []
 
 
+class DataReleaseCloudflareDeploymentOut(BaseModel):
+    id: Optional[str] = None
+    url: Optional[str] = None
+    environment: Optional[str] = None
+    created_on: Optional[str] = None
+    status: Optional[str] = None
+    branch: Optional[str] = None
+    commit_hash: Optional[str] = None
+    commit_message: Optional[str] = None
+    commit_dirty: bool = False
+
+
 class DataReleaseCloudflareCheckOut(BaseModel):
     project_name: Optional[str] = None
     token_present: bool
     account_id_present: bool
     project_access_ok: bool
+    subdomain: Optional[str] = None
+    domains: List[str] = []
+    production_branch: Optional[str] = None
+    latest_production_deployment: Optional[DataReleaseCloudflareDeploymentOut] = None
     error: Optional[str] = None
 
 
@@ -113,6 +132,16 @@ class DataReleaseCommandCheckOut(BaseModel):
     wrangler_version: Optional[str] = None
 
 
+class DataReleaseSnapshotCheckOut(BaseModel):
+    enabled: bool
+    push_enabled: bool
+    script_path: str
+    script_exists: bool
+    paths: List[str] = []
+    remote: str
+    branch: str
+
+
 class DataReleaseChecksOut(BaseModel):
     checked_at: str
     overall_ready: bool
@@ -120,4 +149,5 @@ class DataReleaseChecksOut(BaseModel):
     git: DataReleaseGitCheckOut
     cloudflare: DataReleaseCloudflareCheckOut
     commands: DataReleaseCommandCheckOut
+    data_refresh_snapshot: DataReleaseSnapshotCheckOut
     raw: Optional[dict[str, Any]] = None

@@ -3,7 +3,7 @@
   "country_name": "Switzerland",
   "country_name_en": "Switzerland",
   "country_name_zh": "瑞士",
-  "total_cases": 5277163,
+  "total_cases": 5283261,
   "total_deaths": 0,
   "disease_count": 43,
   "frequency_meta": {
@@ -13,7 +13,7 @@
   },
   "date_range": {
     "start": "2013-01-01",
-    "end": "2026-05-25"
+    "end": "2026-06-01"
   },
   "comparison_basis": {
     "frequency": "WEEKLY_EQUIVALENT_7D",
@@ -24,7 +24,7 @@
     "unit": "per_100k",
     "population_source": "WPP",
     "source_counts": {
-      "missing_population": 3686
+      "missing_population": 3714
     },
     "note_en": "Incidence Rate is computed from WPP population data during site generation; when population is unavailable, original database incidence is shown.",
     "note_zh": "发病率在网页数据生成阶段按 WPP 人口重算（每10万人）；若缺少人口数据则回退显示数据库原始发病率。"
@@ -164,7 +164,8 @@
         "2021-01-01",
         "2022-01-01",
         "2023-01-01",
-        "2024-01-01"
+        "2024-01-01",
+        "2025-01-01"
       ],
       "cases": [
         104,
@@ -178,7 +179,8 @@
         41,
         40,
         40,
-        47
+        47,
+        32
       ],
       "weekly_equiv_cases": [
         1.9945205479452055,
@@ -192,9 +194,11 @@
         0.7841530054644809,
         0.7671232876712328,
         0.7671232876712328,
-        0.9013698630136986
+        0.9013698630136986,
+        0.6120218579234973
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -220,9 +224,11 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
+        "missing_population",
         "missing_population",
         "missing_population",
         "missing_population",
@@ -248,11 +254,12 @@
         null,
         null,
         null,
+        null,
         null
       ],
-      "total_cases": 737,
+      "total_cases": 769,
       "total_deaths": 0,
-      "latest_cases": 47,
+      "latest_cases": 32,
       "latest_deaths": 0
     },
     "D007": {
@@ -422,7 +429,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         3,
@@ -585,6 +593,7 @@
         7,
         8,
         2,
+        6,
         5
       ],
       "weekly_equiv_cases": [
@@ -748,9 +757,11 @@
         1.5806451612903225,
         2.0,
         0.45161290322580644,
-        1.1666666666666665
+        1.4000000000000001,
+        1.129032258064516
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -1074,9 +1085,11 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
+        "missing_population",
         "missing_population",
         "missing_population",
         "missing_population",
@@ -1400,9 +1413,10 @@
         null,
         null,
         null,
+        null,
         null
       ],
-      "total_cases": 891,
+      "total_cases": 897,
       "total_deaths": 0,
       "latest_cases": 5,
       "latest_deaths": 0
@@ -1571,7 +1585,8 @@
         "2025-11-01",
         "2025-12-01",
         "2026-01-01",
-        "2026-02-01"
+        "2026-02-01",
+        "2026-03-01"
       ],
       "cases": [
         82,
@@ -1718,7 +1733,7 @@
         92,
         97,
         89,
-        121,
+        119,
         110,
         102,
         90,
@@ -1730,8 +1745,9 @@
         99,
         87,
         106,
-        121,
-        143
+        113,
+        130,
+        118
       ],
       "weekly_equiv_cases": [
         18.516129032258064,
@@ -1878,7 +1894,7 @@
         21.46666666666667,
         21.903225806451612,
         20.766666666666666,
-        27.322580645161292,
+        26.870967741935484,
         24.838709677419356,
         25.5,
         20.322580645161292,
@@ -1890,10 +1906,12 @@
         23.099999999999998,
         19.645161290322584,
         24.733333333333334,
-        27.322580645161292,
-        32.29032258064517
+        25.516129032258064,
+        29.354838709677416,
+        29.5
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -2211,9 +2229,11 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
+        "missing_population",
         "missing_population",
         "missing_population",
         "missing_population",
@@ -2531,11 +2551,12 @@
         null,
         null,
         null,
+        null,
         null
       ],
-      "total_cases": 15950,
+      "total_cases": 16045,
       "total_deaths": 0,
-      "latest_cases": 143,
+      "latest_cases": 118,
       "latest_deaths": 0
     },
     "D009": {
@@ -2702,7 +2723,8 @@
         "2025-11-01",
         "2025-12-01",
         "2026-01-01",
-        "2026-02-01"
+        "2026-02-01",
+        "2026-03-01"
       ],
       "cases": [
         96,
@@ -2849,7 +2871,7 @@
         89,
         84,
         97,
-        91,
+        89,
         87,
         89,
         70,
@@ -2861,8 +2883,9 @@
         100,
         71,
         72,
-        60,
-        78
+        59,
+        76,
+        67
       ],
       "weekly_equiv_cases": [
         21.677419354838708,
@@ -3009,7 +3032,7 @@
         20.766666666666666,
         18.96774193548387,
         22.633333333333333,
-        20.548387096774192,
+        20.096774193548388,
         19.645161290322584,
         22.25,
         15.806451612903228,
@@ -3021,10 +3044,12 @@
         23.333333333333336,
         16.03225806451613,
         16.8,
-        13.548387096774194,
-        17.612903225806452
+        13.322580645161292,
+        17.161290322580644,
+        16.75
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -3342,9 +3367,11 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
+        "missing_population",
         "missing_population",
         "missing_population",
         "missing_population",
@@ -3662,11 +3689,12 @@
         null,
         null,
         null,
+        null,
         null
       ],
-      "total_cases": 15962,
+      "total_cases": 16024,
       "total_deaths": 0,
-      "latest_cases": 78,
+      "latest_cases": 67,
       "latest_deaths": 0
     },
     "D017": {
@@ -3693,7 +3721,8 @@
         "2026-01-01",
         "2026-02-01",
         "2026-03-01",
-        "2026-04-01"
+        "2026-04-01",
+        "2026-05-01"
       ],
       "cases": [
         175,
@@ -3713,7 +3742,8 @@
         2,
         0,
         2,
-        7
+        7,
+        5
       ],
       "weekly_equiv_cases": [
         3.3561643835616435,
@@ -3733,9 +3763,11 @@
         0.45161290322580644,
         0.0,
         0.5,
-        1.5806451612903225
+        1.5806451612903225,
+        1.1666666666666665
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -3773,9 +3805,11 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
+        "missing_population",
         "missing_population",
         "missing_population",
         "missing_population",
@@ -3813,11 +3847,12 @@
         null,
         null,
         null,
+        null,
         null
       ],
-      "total_cases": 793,
+      "total_cases": 798,
       "total_deaths": 0,
-      "latest_cases": 7,
+      "latest_cases": 5,
       "latest_deaths": 0
     },
     "D021": {
@@ -3843,7 +3878,8 @@
         "2025-12-01",
         "2026-01-01",
         "2026-02-01",
-        "2026-03-01"
+        "2026-03-01",
+        "2026-04-01"
       ],
       "cases": [
         180,
@@ -3860,9 +3896,10 @@
         53,
         17,
         10,
-        13,
-        10,
-        12
+        14,
+        11,
+        12,
+        14
       ],
       "weekly_equiv_cases": [
         3.4520547945205475,
@@ -3879,11 +3916,13 @@
         1.0164383561643835,
         0.32513661202185795,
         0.20958083832335328,
-        2.935483870967742,
-        2.258064516129032,
-        3.0
+        3.161290322580645,
+        2.4838709677419355,
+        3.0,
+        3.161290322580645
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -3919,9 +3958,11 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
+        "missing_population",
         "missing_population",
         "missing_population",
         "missing_population",
@@ -3957,11 +3998,12 @@
         null,
         null,
         null,
+        null,
         null
       ],
-      "total_cases": 1939,
+      "total_cases": 1955,
       "total_deaths": 0,
-      "latest_cases": 12,
+      "latest_cases": 14,
       "latest_deaths": 0
     },
     "D025": {
@@ -3987,7 +4029,8 @@
         "2025-12-01",
         "2026-01-01",
         "2026-02-01",
-        "2026-03-01"
+        "2026-03-01",
+        "2026-04-01"
       ],
       "cases": [
         526,
@@ -4004,9 +4047,10 @@
         28,
         32,
         43,
-        47,
+        46,
         45,
-        42
+        42,
+        26
       ],
       "weekly_equiv_cases": [
         10.087671232876712,
@@ -4023,11 +4067,13 @@
         0.536986301369863,
         0.6120218579234973,
         0.9011976047904191,
-        10.612903225806452,
+        10.387096774193548,
         10.161290322580646,
-        10.5
+        10.5,
+        5.870967741935484
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -4063,9 +4109,11 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
+        "missing_population",
         "missing_population",
         "missing_population",
         "missing_population",
@@ -4101,11 +4149,12 @@
         null,
         null,
         null,
+        null,
         null
       ],
-      "total_cases": 5337,
+      "total_cases": 5362,
       "total_deaths": 0,
-      "latest_cases": 42,
+      "latest_cases": 26,
       "latest_deaths": 0
     },
     "D026": {
@@ -4620,7 +4669,8 @@
         "2025-11-01",
         "2025-12-01",
         "2026-01-01",
-        "2026-02-01"
+        "2026-02-01",
+        "2026-03-01"
       ],
       "cases": [
         171,
@@ -4779,8 +4829,9 @@
         593,
         560,
         588,
-        655,
-        519
+        654,
+        520,
+        542
       ],
       "weekly_equiv_cases": [
         38.612903225806456,
@@ -4939,10 +4990,12 @@
         138.36666666666667,
         126.45161290322582,
         137.20000000000002,
-        147.90322580645162,
-        117.19354838709677
+        147.67741935483872,
+        117.41935483870967,
+        135.5
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -5260,9 +5313,11 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
+        "missing_population",
         "missing_population",
         "missing_population",
         "missing_population",
@@ -5580,11 +5635,12 @@
         null,
         null,
         null,
+        null,
         null
       ],
-      "total_cases": 50851,
+      "total_cases": 51393,
       "total_deaths": 0,
-      "latest_cases": 519,
+      "latest_cases": 542,
       "latest_deaths": 0
     },
     "D037": {
@@ -5611,7 +5667,8 @@
         "2026-01-01",
         "2026-02-01",
         "2026-03-01",
-        "2026-04-01"
+        "2026-04-01",
+        "2026-05-01"
       ],
       "cases": [
         160,
@@ -5631,7 +5688,8 @@
         34,
         24,
         21,
-        16
+        16,
+        17
       ],
       "weekly_equiv_cases": [
         3.0684931506849313,
@@ -5651,9 +5709,11 @@
         7.677419354838709,
         5.419354838709677,
         5.25,
-        3.6129032258064515
+        3.6129032258064515,
+        3.966666666666667
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -5691,9 +5751,11 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
+        "missing_population",
         "missing_population",
         "missing_population",
         "missing_population",
@@ -5731,11 +5793,12 @@
         null,
         null,
         null,
+        null,
         null
       ],
-      "total_cases": 3345,
+      "total_cases": 3362,
       "total_deaths": 0,
-      "latest_cases": 16,
+      "latest_cases": 17,
       "latest_deaths": 0
     },
     "D040": {
@@ -5993,7 +6056,8 @@
         "2025-12-01",
         "2026-01-01",
         "2026-02-01",
-        "2026-03-01"
+        "2026-03-01",
+        "2026-04-01"
       ],
       "cases": [
         4,
@@ -6010,9 +6074,10 @@
         3,
         1,
         7,
-        9,
-        9,
-        10
+        10,
+        10,
+        10,
+        8
       ],
       "weekly_equiv_cases": [
         0.07671232876712329,
@@ -6029,11 +6094,13 @@
         0.05753424657534246,
         0.01912568306010929,
         0.1467065868263473,
-        2.032258064516129,
-        2.032258064516129,
-        2.5
+        2.258064516129032,
+        2.258064516129032,
+        2.5,
+        1.8064516129032258
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -6069,9 +6136,11 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
+        "missing_population",
         "missing_population",
         "missing_population",
         "missing_population",
@@ -6107,11 +6176,12 @@
         null,
         null,
         null,
+        null,
         null
       ],
-      "total_cases": 311,
+      "total_cases": 321,
       "total_deaths": 0,
-      "latest_cases": 10,
+      "latest_cases": 8,
       "latest_deaths": 0
     },
     "D059": {
@@ -6629,7 +6699,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         810,
@@ -6788,11 +6859,12 @@
         815,
         691,
         679,
-        741,
+        740,
         439,
-        509,
-        562,
-        850
+        510,
+        563,
+        851,
+        1095
       ],
       "weekly_equiv_cases": [
         182.90322580645162,
@@ -6951,13 +7023,15 @@
         190.16666666666669,
         156.03225806451613,
         158.43333333333334,
-        167.32258064516128,
+        167.09677419354838,
         99.12903225806453,
-        127.24999999999999,
-        126.90322580645162,
-        198.33333333333331
+        127.5,
+        127.12903225806451,
+        198.56666666666666,
+        247.25806451612902
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -7281,9 +7355,11 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
+        "missing_population",
         "missing_population",
         "missing_population",
         "missing_population",
@@ -7607,11 +7683,12 @@
         null,
         null,
         null,
+        null,
         null
       ],
-      "total_cases": 99722,
+      "total_cases": 100819,
       "total_deaths": 0,
-      "latest_cases": 850,
+      "latest_cases": 1095,
       "latest_deaths": 0
     },
     "D094": {
@@ -7778,7 +7855,8 @@
         "2025-11-01",
         "2025-12-01",
         "2026-01-01",
-        "2026-02-01"
+        "2026-02-01",
+        "2026-03-01"
       ],
       "cases": [
         765,
@@ -7937,8 +8015,9 @@
         1116,
         1053,
         927,
-        1132,
-        1059
+        1131,
+        1061,
+        1220
       ],
       "weekly_equiv_cases": [
         172.74193548387095,
@@ -8097,10 +8176,12 @@
         260.40000000000003,
         237.7741935483871,
         216.29999999999998,
-        255.61290322580646,
-        239.12903225806454
+        255.38709677419354,
+        239.58064516129033,
+        305.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -8418,9 +8499,11 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
+        "missing_population",
         "missing_population",
         "missing_population",
         "missing_population",
@@ -8738,11 +8821,12 @@
         null,
         null,
         null,
+        null,
         null
       ],
-      "total_cases": 151444,
+      "total_cases": 152665,
       "total_deaths": 0,
-      "latest_cases": 1059,
+      "latest_cases": 1220,
       "latest_deaths": 0
     },
     "D100": {
@@ -8769,7 +8853,8 @@
         "2026-01-01",
         "2026-02-01",
         "2026-03-01",
-        "2026-04-01"
+        "2026-04-01",
+        "2026-05-01"
       ],
       "cases": [
         85,
@@ -8789,7 +8874,8 @@
         23,
         13,
         19,
-        14
+        14,
+        17
       ],
       "weekly_equiv_cases": [
         1.6301369863013697,
@@ -8809,9 +8895,11 @@
         5.193548387096774,
         2.935483870967742,
         4.75,
-        3.161290322580645
+        3.161290322580645,
+        3.966666666666667
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -8849,9 +8937,11 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
+        "missing_population",
         "missing_population",
         "missing_population",
         "missing_population",
@@ -8889,11 +8979,12 @@
         null,
         null,
         null,
+        null,
         null
       ],
-      "total_cases": 1343,
+      "total_cases": 1360,
       "total_deaths": 0,
-      "latest_cases": 14,
+      "latest_cases": 17,
       "latest_deaths": 0
     },
     "D102": {
@@ -9179,7 +9270,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         15,
@@ -9342,7 +9434,8 @@
         15,
         19,
         17,
-        17
+        18,
+        22
       ],
       "weekly_equiv_cases": [
         3.3870967741935485,
@@ -9505,9 +9598,11 @@
         3.3870967741935485,
         4.75,
         3.8387096774193545,
-        3.966666666666667
+        4.2,
+        4.967741935483871
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -9831,9 +9926,11 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
+        "missing_population",
         "missing_population",
         "missing_population",
         "missing_population",
@@ -10157,11 +10254,12 @@
         null,
         null,
         null,
+        null,
         null
       ],
-      "total_cases": 2314,
+      "total_cases": 2337,
       "total_deaths": 0,
-      "latest_cases": 17,
+      "latest_cases": 22,
       "latest_deaths": 0
     },
     "D106": {
@@ -10188,7 +10286,8 @@
         "2026-01-01",
         "2026-02-01",
         "2026-03-01",
-        "2026-04-01"
+        "2026-04-01",
+        "2026-05-01"
       ],
       "cases": [
         908,
@@ -10203,12 +10302,13 @@
         822,
         916,
         146,
-        154,
+        155,
         178,
         135,
         126,
         106,
-        103
+        102,
+        67
       ],
       "weekly_equiv_cases": [
         17.413698630136984,
@@ -10223,14 +10323,16 @@
         15.764383561643834,
         17.567123287671233,
         2.8000000000000003,
-        2.945355191256831,
+        2.96448087431694,
         3.7305389221556884,
         30.483870967741932,
         28.451612903225808,
         26.5,
-        23.258064516129032
+        23.03225806451613,
+        15.633333333333333
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -10268,9 +10370,11 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
+        "missing_population",
         "missing_population",
         "missing_population",
         "missing_population",
@@ -10308,11 +10412,12 @@
         null,
         null,
         null,
+        null,
         null
       ],
-      "total_cases": 9915,
+      "total_cases": 9982,
       "total_deaths": 0,
-      "latest_cases": 103,
+      "latest_cases": 67,
       "latest_deaths": 0
     },
     "D107": {
@@ -10338,7 +10443,8 @@
         "2025-12-01",
         "2026-01-01",
         "2026-02-01",
-        "2026-03-01"
+        "2026-03-01",
+        "2026-04-01"
       ],
       "cases": [
         282,
@@ -10357,7 +10463,8 @@
         34,
         37,
         23,
-        29
+        29,
+        21
       ],
       "weekly_equiv_cases": [
         5.408219178082192,
@@ -10376,9 +10483,11 @@
         0.7125748502994012,
         8.35483870967742,
         5.193548387096774,
-        7.250000000000001
+        7.250000000000001,
+        4.741935483870967
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -10414,9 +10523,11 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
+        "missing_population",
         "missing_population",
         "missing_population",
         "missing_population",
@@ -10452,11 +10563,12 @@
         null,
         null,
         null,
+        null,
         null
       ],
-      "total_cases": 5224,
+      "total_cases": 5245,
       "total_deaths": 0,
-      "latest_cases": 29,
+      "latest_cases": 21,
       "latest_deaths": 0
     },
     "D108": {
@@ -10483,7 +10595,8 @@
         "2026-01-01",
         "2026-02-01",
         "2026-03-01",
-        "2026-04-01"
+        "2026-04-01",
+        "2026-05-01"
       ],
       "cases": [
         65,
@@ -10503,7 +10616,8 @@
         5,
         1,
         4,
-        3
+        3,
+        2
       ],
       "weekly_equiv_cases": [
         1.2465753424657533,
@@ -10523,9 +10637,11 @@
         1.129032258064516,
         0.22580645161290322,
         1.0,
-        0.6774193548387096
+        0.6774193548387096,
+        0.4666666666666667
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -10563,9 +10679,11 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
+        "missing_population",
         "missing_population",
         "missing_population",
         "missing_population",
@@ -10603,11 +10721,12 @@
         null,
         null,
         null,
+        null,
         null
       ],
-      "total_cases": 678,
+      "total_cases": 680,
       "total_deaths": 0,
-      "latest_cases": 3,
+      "latest_cases": 2,
       "latest_deaths": 0
     },
     "D109": {
@@ -10777,7 +10896,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         295,
@@ -10936,11 +11056,12 @@
         749,
         515,
         421,
-        84,
-        126,
-        253,
-        380,
-        845
+        86,
+        129,
+        257,
+        387,
+        861,
+        2110
       ],
       "weekly_equiv_cases": [
         66.61290322580645,
@@ -11099,13 +11220,15 @@
         174.76666666666665,
         116.29032258064517,
         98.23333333333333,
-        18.96774193548387,
-        28.451612903225808,
-        63.25000000000001,
-        85.80645161290323,
-        197.16666666666669
+        19.41935483870968,
+        29.129032258064516,
+        64.25,
+        87.38709677419355,
+        200.9,
+        476.4516129032258
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -11429,9 +11552,11 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
+        "missing_population",
         "missing_population",
         "missing_population",
         "missing_population",
@@ -11755,11 +11880,12 @@
         null,
         null,
         null,
+        null,
         null
       ],
-      "total_cases": 138722,
+      "total_cases": 140864,
       "total_deaths": 0,
-      "latest_cases": 845,
+      "latest_cases": 2110,
       "latest_deaths": 0
     },
     "D110": {
@@ -11902,7 +12028,8 @@
         "2026-01-01",
         "2026-02-01",
         "2026-03-01",
-        "2026-04-01"
+        "2026-04-01",
+        "2026-05-01"
       ],
       "cases": [
         26,
@@ -11922,7 +12049,8 @@
         10,
         8,
         3,
-        7
+        6,
+        11
       ],
       "weekly_equiv_cases": [
         0.4986301369863014,
@@ -11942,9 +12070,11 @@
         2.258064516129032,
         1.8064516129032258,
         0.75,
-        1.5806451612903225
+        1.3548387096774193,
+        2.5666666666666664
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -11982,9 +12112,11 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
+        "missing_population",
         "missing_population",
         "missing_population",
         "missing_population",
@@ -12022,11 +12154,12 @@
         null,
         null,
         null,
+        null,
         null
       ],
-      "total_cases": 797,
+      "total_cases": 807,
       "total_deaths": 0,
-      "latest_cases": 7,
+      "latest_cases": 11,
       "latest_deaths": 0
     },
     "D114": {
@@ -12196,7 +12329,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         87,
@@ -12359,7 +12493,8 @@
         89,
         120,
         141,
-        125
+        126,
+        165
       ],
       "weekly_equiv_cases": [
         19.645161290322584,
@@ -12522,9 +12657,11 @@
         20.096774193548388,
         30.0,
         31.83870967741936,
-        29.166666666666668
+        29.400000000000002,
+        37.25806451612903
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -12848,9 +12985,11 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
+        "missing_population",
         "missing_population",
         "missing_population",
         "missing_population",
@@ -13174,11 +13313,12 @@
         null,
         null,
         null,
+        null,
         null
       ],
-      "total_cases": 21782,
+      "total_cases": 21948,
       "total_deaths": 0,
-      "latest_cases": 125,
+      "latest_cases": 165,
       "latest_deaths": 0
     },
     "D115": {
@@ -13348,7 +13488,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         2,
@@ -13508,10 +13649,11 @@
         122,
         97,
         97,
-        84,
-        103,
-        109,
-        128
+        86,
+        107,
+        108,
+        132,
+        154
       ],
       "weekly_equiv_cases": [
         0.45161290322580644,
@@ -13671,12 +13813,14 @@
         27.548387096774192,
         22.633333333333333,
         21.903225806451612,
-        18.96774193548387,
-        25.75,
-        24.612903225806452,
-        29.866666666666667
+        19.41935483870968,
+        26.75,
+        24.387096774193548,
+        30.800000000000004,
+        34.774193548387096
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -14000,9 +14144,11 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
+        "missing_population",
         "missing_population",
         "missing_population",
         "missing_population",
@@ -14326,11 +14472,12 @@
         null,
         null,
         null,
+        null,
         null
       ],
-      "total_cases": 11046,
+      "total_cases": 11209,
       "total_deaths": 0,
-      "latest_cases": 128,
+      "latest_cases": 154,
       "latest_deaths": 0
     },
     "D120": {
@@ -14732,7 +14879,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         0,
@@ -14891,11 +15039,12 @@
         17,
         11,
         6,
-        5,
+        6,
         5,
         6,
-        9,
-        9
+        10,
+        19,
+        15
       ],
       "weekly_equiv_cases": [
         0.0,
@@ -15054,13 +15203,15 @@
         3.966666666666667,
         2.4838709677419355,
         1.4000000000000001,
-        1.129032258064516,
+        1.3548387096774193,
         1.129032258064516,
         1.5,
-        2.032258064516129,
-        2.1
+        2.258064516129032,
+        4.433333333333334,
+        3.3870967741935485
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -15384,9 +15535,11 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
+        "missing_population",
         "missing_population",
         "missing_population",
         "missing_population",
@@ -15710,11 +15863,12 @@
         null,
         null,
         null,
+        null,
         null
       ],
-      "total_cases": 1568,
+      "total_cases": 1595,
       "total_deaths": 0,
-      "latest_cases": 9,
+      "latest_cases": 15,
       "latest_deaths": 0
     },
     "D128": {
@@ -15867,7 +16021,7 @@
         22,
         30,
         14,
-        27
+        26
       ],
       "weekly_equiv_cases": [
         0.3643835616438356,
@@ -15882,7 +16036,7 @@
         0.4219178082191781,
         0.5753424657534246,
         0.2684931506849315,
-        0.5163934426229508
+        0.4972677595628415
       ],
       "deaths": [
         0,
@@ -15944,9 +16098,9 @@
         null,
         null
       ],
-      "total_cases": 271,
+      "total_cases": 270,
       "total_deaths": 0,
-      "latest_cases": 27,
+      "latest_cases": 26,
       "latest_deaths": 0
     },
     "D162": {
@@ -16113,7 +16267,8 @@
         "2025-11-01",
         "2025-12-01",
         "2026-01-01",
-        "2026-02-01"
+        "2026-02-01",
+        "2026-03-01"
       ],
       "cases": [
         40,
@@ -16272,8 +16427,9 @@
         23,
         26,
         29,
-        32,
-        31
+        31,
+        28,
+        32
       ],
       "weekly_equiv_cases": [
         9.032258064516128,
@@ -16432,10 +16588,12 @@
         5.366666666666667,
         5.870967741935484,
         6.766666666666667,
-        7.225806451612903,
-        7.0
+        7.0,
+        6.32258064516129,
+        8.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -16753,9 +16911,11 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
+        "missing_population",
         "missing_population",
         "missing_population",
         "missing_population",
@@ -17073,11 +17233,12 @@
         null,
         null,
         null,
+        null,
         null
       ],
-      "total_cases": 5560,
+      "total_cases": 5588,
       "total_deaths": 0,
-      "latest_cases": 31,
+      "latest_cases": 32,
       "latest_deaths": 0
     },
     "D205": {
@@ -17247,7 +17408,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         0,
@@ -17408,9 +17570,10 @@
         2,
         4,
         3,
-        10,
-        33,
-        60
+        11,
+        32,
+        68,
+        107
       ],
       "weekly_equiv_cases": [
         0.0,
@@ -17571,11 +17734,13 @@
         0.4666666666666667,
         0.9032258064516129,
         0.6774193548387096,
-        2.5,
-        7.451612903225806,
-        14.0
+        2.75,
+        7.225806451612903,
+        15.866666666666667,
+        24.161290322580644
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -17899,9 +18064,11 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
+        "missing_population",
         "missing_population",
         "missing_population",
         "missing_population",
@@ -18225,11 +18392,12 @@
         null,
         null,
         null,
+        null,
         null
       ],
-      "total_cases": 3940,
+      "total_cases": 4055,
       "total_deaths": 0,
-      "latest_cases": 60,
+      "latest_cases": 107,
       "latest_deaths": 0
     },
     "D038": {
@@ -18943,7 +19111,8 @@
         "2026-05-04",
         "2026-05-11",
         "2026-05-18",
-        "2026-05-25"
+        "2026-05-25",
+        "2026-06-01"
       ],
       "cases": [
         106,
@@ -19620,17 +19789,17 @@
         156,
         232,
         511,
-        9999,
+        9998,
         1692,
         2383,
         3196,
         3329,
-        10021,
+        10018,
         2743,
         2287,
         1796,
         1688,
-        2763,
+        2762,
         1232,
         742,
         386,
@@ -19650,7 +19819,8 @@
         11,
         10,
         11,
-        7
+        7,
+        37
       ],
       "weekly_equiv_cases": [
         106.0,
@@ -20327,17 +20497,17 @@
         156.0,
         232.00000000000003,
         511.0,
-        9999.0,
+        9998.0,
         1692.0,
         2383.0,
         3196.0,
         3329.0,
-        23382.333333333336,
+        23375.333333333336,
         4800.25,
         2287.0,
         1796.0,
         1688.0,
-        3223.5,
+        3222.333333333333,
         1232.0,
         742.0,
         386.0,
@@ -20357,9 +20527,11 @@
         25.666666666666664,
         10.0,
         11.0,
-        7.0
+        7.0,
+        37.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -21771,9 +21943,11 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
+        "missing_population",
         "missing_population",
         "missing_population",
         "missing_population",
@@ -23185,11 +23359,12 @@
         null,
         null,
         null,
+        null,
         null
       ],
-      "total_cases": 214839,
+      "total_cases": 214871,
       "total_deaths": 0,
-      "latest_cases": 7,
+      "latest_cases": 37,
       "latest_deaths": 0
     },
     "D011": {
@@ -23299,7 +23474,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         7,
@@ -23402,7 +23578,8 @@
         13,
         15,
         9,
-        7
+        7,
+        12
       ],
       "weekly_equiv_cases": [
         1.5806451612903225,
@@ -23505,9 +23682,11 @@
         2.935483870967742,
         3.75,
         2.032258064516129,
-        1.6333333333333333
+        1.6333333333333333,
+        2.7096774193548385
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -23711,9 +23890,11 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
+        "missing_population",
         "missing_population",
         "missing_population",
         "missing_population",
@@ -23917,11 +24098,12 @@
         null,
         null,
         null,
+        null,
         null
       ],
-      "total_cases": 803,
+      "total_cases": 815,
       "total_deaths": 0,
-      "latest_cases": 7,
+      "latest_cases": 12,
       "latest_deaths": 0
     },
     "D034": {
@@ -24016,7 +24198,8 @@
         "2025-11-01",
         "2025-12-01",
         "2026-01-01",
-        "2026-02-01"
+        "2026-02-01",
+        "2026-03-01"
       ],
       "cases": [
         92,
@@ -24103,8 +24286,9 @@
         101,
         90,
         104,
-        101,
-        101
+        103,
+        103,
+        108
       ],
       "weekly_equiv_cases": [
         20.774193548387096,
@@ -24191,10 +24375,12 @@
         23.566666666666666,
         20.322580645161292,
         24.266666666666666,
-        22.806451612903228,
-        22.806451612903228
+        23.258064516129032,
+        23.258064516129032,
+        27.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -24368,9 +24554,11 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
+        "missing_population",
         "missing_population",
         "missing_population",
         "missing_population",
@@ -24544,11 +24732,12 @@
         null,
         null,
         null,
+        null,
         null
       ],
-      "total_cases": 7525,
+      "total_cases": 7637,
       "total_deaths": 0,
-      "latest_cases": 101,
+      "latest_cases": 108,
       "latest_deaths": 0
     },
     "D004": {
@@ -24890,7 +25079,8 @@
         "2026-05-04",
         "2026-05-11",
         "2026-05-18",
-        "2026-05-25"
+        "2026-05-25",
+        "2026-06-01"
       ],
       "cases": [
         57,
@@ -25195,17 +25385,17 @@
         454,
         528,
         571,
-        2605,
+        2596,
         605,
         633,
         549,
         486,
-        1389,
+        1388,
         405,
         298,
         248,
         240,
-        577,
+        575,
         195,
         170,
         117,
@@ -25225,7 +25415,8 @@
         14,
         12,
         17,
-        7
+        7,
+        46
       ],
       "weekly_equiv_cases": [
         57.0,
@@ -25530,17 +25721,17 @@
         454.0,
         528.0,
         571.0,
-        2605.0,
+        2596.0,
         605.0,
         633.0,
         549.0,
         486.0,
-        3241.0,
+        3238.666666666667,
         708.75,
         298.0,
         248.0,
         240.0,
-        673.1666666666667,
+        670.8333333333333,
         195.0,
         170.0,
         117.0,
@@ -25560,9 +25751,11 @@
         32.66666666666667,
         12.0,
         17.0,
-        7.0
+        7.0,
+        46.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -26230,9 +26423,11 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
+        "missing_population",
         "missing_population",
         "missing_population",
         "missing_population",
@@ -26900,11 +27095,12 @@
         null,
         null,
         null,
+        null,
         null
       ],
-      "total_cases": 4501711,
+      "total_cases": 4501745,
       "total_deaths": 0,
-      "latest_cases": 7,
+      "latest_cases": 46,
       "latest_deaths": 0
     }
   },
@@ -26917,8 +27113,8 @@
       "D092",
       "D033",
       "D114",
-      "D009",
       "D008",
+      "D009",
       "D115",
       "D106",
       "D034",
@@ -26962,8 +27158,8 @@
       "Campylobacteriosis",
       "Gonorrhea",
       "Salmonellosis",
-      "Hepatitis C",
       "Hepatitis B",
+      "Hepatitis C",
       "Shiga toxin-producing Escherichia coli infection",
       "Invasive pneumococcal disease",
       "Syphilis",
@@ -27160,7 +27356,8 @@
       "2026-02",
       "2026-03",
       "2026-04",
-      "2026-05"
+      "2026-05",
+      "2026-06"
     ],
     "z": [
       [
@@ -27319,12 +27516,13 @@
         3.279894980011638,
         3.3602146132953523,
         3.3106933123433606,
-        3.688330818112266,
-        3.411788004543869,
-        3.0519239160461065,
+        3.6875289612146345,
+        3.41161970596323,
+        3.0511525224473814,
         2.69284691927723,
         2.230448921378274,
-        2.0293837776852097
+        2.0293837776852097,
+        1.6720978579357175
       ],
       [
         2.929418925714293,
@@ -27482,12 +27680,13 @@
         1.8864907251724818,
         2.459392487759231,
         3.0025979807199086,
-        4.313867220369153,
-        4.2680160207819196,
-        3.7293268096468606,
+        4.313846137601028,
+        4.267945725740318,
+        3.7292458072253067,
         2.900913067737669,
         2.230448921378274,
-        1.9138138523837167
+        1.9138138523837167,
+        1.5797835966168101
       ],
       [
         2.884228769632604,
@@ -27646,8 +27845,9 @@
         3.048053173115609,
         3.022840610876528,
         2.967547976218862,
-        3.0542299098633974,
-        3.0253058652647704,
+        3.0538464268522527,
+        3.0261245167454502,
+        3.0867156639448825,
         0.0,
         0.0,
         0.0
@@ -27809,11 +28009,12 @@
         2.8750612633917,
         2.7126497016272113,
         2.625312450961674,
-        1.9294189257142929,
-        2.103803720955957,
-        2.404833716619938,
-        2.5809249756756194,
-        2.9273703630390235
+        1.9395192526186185,
+        2.113943352306837,
+        2.41161970596323,
+        2.5888317255942073,
+        2.9355072658247128,
+        3.3244882333076564
       ],
       [
         2.909020854211156,
@@ -27972,11 +28173,12 @@
         2.9116901587538613,
         2.840106094456758,
         2.832508912706236,
-        2.870403905279027,
+        2.869818207979328,
         2.6434526764861874,
-        2.7075701760979363,
-        2.7505083948513462,
-        2.929929560084588
+        2.708420900134713,
+        2.751279103983342,
+        2.9304395947667,
+        3.0398105541483504
       ],
       [
         2.2355284469075487,
@@ -28135,8 +28337,9 @@
         2.7737864449811935,
         2.748962861256161,
         2.7701152947871015,
-        2.8169038393756605,
-        2.716003343634799,
+        2.816241299991783,
+        2.7168377232995247,
+        2.734799829588847,
         0.0,
         0.0,
         0.0
@@ -28302,170 +28505,8 @@
         1.9542425094393248,
         2.08278537031645,
         2.1522883443830563,
-        2.100370545117563
-      ],
-      [
-        1.9867717342662448,
-        2.2430380486862944,
-        2.184691430817599,
-        2.1958996524092336,
-        2.0492180226701815,
-        2.130333768495006,
-        2.342422680822206,
-        2.0211892990699383,
-        2.1818435879447726,
-        2.0791812460476247,
-        2.187520720836463,
-        2.184691430817599,
-        2.041392685158225,
-        2.0969100130080562,
-        2.1367205671564067,
-        2.155336037465062,
-        2.143014800254095,
-        2.230448921378274,
-        2.167317334748176,
-        2.041392685158225,
-        2.0569048513364727,
-        2.230448921378274,
-        2.167317334748176,
-        2.1903316981702914,
-        2.0453229787866576,
-        2.143014800254095,
-        2.167317334748176,
-        2.08278537031645,
-        2.0043213737826426,
-        2.143014800254095,
-        2.05307844348342,
-        1.9777236052888478,
-        2.0253058652647704,
-        1.9912260756924949,
-        2.0791812460476247,
-        2.2068258760318495,
-        2.1398790864012365,
-        2.1789769472931693,
-        2.0863598306747484,
-        2.143014800254095,
-        2.1398790864012365,
-        2.1172712956557644,
-        1.9912260756924949,
-        2.0086001717619175,
-        2.1072099696478683,
-        2.0211892990699383,
-        2.143014800254095,
-        2.0863598306747484,
-        2.0453229787866576,
-        2.08278537031645,
         2.103803720955957,
-        2.012837224705172,
-        2.0086001717619175,
-        2.0791812460476247,
-        2.089905111439398,
-        2.0253058652647704,
-        2.0253058652647704,
-        2.100370545117563,
-        2.12057393120585,
-        2.0293837776852097,
-        2.0453229787866576,
-        2.0718820073061255,
-        2.1367205671564067,
-        1.9493900066449128,
-        2.0681858617461617,
-        2.0681858617461617,
-        2.08278537031645,
-        1.9731278535996986,
-        1.968482948553935,
-        2.0043213737826426,
-        2.0086001717619175,
-        1.919078092376074,
-        1.9444826721501687,
-        1.9242792860618816,
-        1.9912260756924949,
-        1.9344984512435677,
-        1.8864907251724818,
-        1.8692317197309762,
-        2.0453229787866576,
-        1.8260748027008264,
-        1.9242792860618816,
-        1.8692317197309762,
-        1.9637878273455553,
-        1.9294189257142929,
-        1.8750612633917,
-        1.9731278535996986,
-        1.8260748027008264,
-        1.6334684555795866,
-        1.6989700043360187,
-        1.8512583487190752,
-        1.9294189257142929,
-        1.8573324964312685,
-        1.9731278535996986,
-        1.8260748027008264,
-        1.9493900066449128,
-        1.845098040014257,
-        1.8388490907372552,
-        1.9294189257142929,
-        1.9084850188786497,
-        1.9138138523837167,
-        1.806179973983887,
-        1.9444826721501687,
-        1.8864907251724818,
-        1.6812412373755872,
-        1.8808135922807914,
-        1.9030899869919435,
-        1.9084850188786497,
-        1.9138138523837167,
-        1.7781512503836436,
-        1.792391689498254,
-        1.919078092376074,
-        1.9294189257142929,
-        2.037426497940624,
-        1.9344984512435677,
-        1.9242792860618816,
-        1.9590413923210936,
-        2.03342375548695,
-        1.9637878273455553,
-        1.9493900066449128,
-        1.9637878273455553,
-        1.8864907251724818,
-        1.9542425094393248,
-        1.863322860120456,
-        1.9084850188786497,
-        2.0253058652647704,
-        2.0492180226701815,
-        1.9777236052888478,
-        1.8325089127062364,
-        1.9542425094393248,
-        1.9867717342662448,
-        1.8808135922807914,
-        1.9395192526186185,
-        2.0086001717619175,
-        1.8920946026904804,
-        1.9395192526186185,
-        1.9867717342662448,
-        1.9294189257142929,
-        1.8976270912904414,
-        1.8920946026904804,
-        1.9294189257142929,
-        2.0086001717619175,
-        1.9542425094393248,
-        1.9294189257142929,
-        1.9912260756924949,
-        1.9637878273455553,
-        1.9444826721501687,
-        1.9542425094393248,
-        1.8512583487190752,
-        1.9242792860618816,
-        1.9084850188786497,
-        1.919078092376074,
-        1.7634279935629373,
-        1.9395192526186185,
-        2.0043213737826426,
-        1.8573324964312685,
-        1.863322860120456,
-        1.7853298350107671,
-        1.8976270912904414,
-        0.0,
-        0.0,
-        0.0
+        2.220108088040055
       ],
       [
         1.919078092376074,
@@ -28612,7 +28653,7 @@
         1.968482948553935,
         1.9912260756924949,
         1.9542425094393248,
-        2.0863598306747484,
+        2.0791812460476247,
         2.0453229787866576,
         2.012837224705172,
         1.9590413923210936,
@@ -28624,8 +28665,173 @@
         2.0,
         1.9444826721501687,
         2.0293837776852097,
+        2.0569048513364727,
+        2.1172712956557644,
+        2.075546961392531,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        1.9867717342662448,
+        2.2430380486862944,
+        2.184691430817599,
+        2.1958996524092336,
+        2.0492180226701815,
+        2.130333768495006,
+        2.342422680822206,
+        2.0211892990699383,
+        2.1818435879447726,
+        2.0791812460476247,
+        2.187520720836463,
+        2.184691430817599,
+        2.041392685158225,
+        2.0969100130080562,
+        2.1367205671564067,
+        2.155336037465062,
+        2.143014800254095,
+        2.230448921378274,
+        2.167317334748176,
+        2.041392685158225,
+        2.0569048513364727,
+        2.230448921378274,
+        2.167317334748176,
+        2.1903316981702914,
+        2.0453229787866576,
+        2.143014800254095,
+        2.167317334748176,
+        2.08278537031645,
+        2.0043213737826426,
+        2.143014800254095,
+        2.05307844348342,
+        1.9777236052888478,
+        2.0253058652647704,
+        1.9912260756924949,
+        2.0791812460476247,
+        2.2068258760318495,
+        2.1398790864012365,
+        2.1789769472931693,
         2.0863598306747484,
-        2.1583624920952498,
+        2.143014800254095,
+        2.1398790864012365,
+        2.1172712956557644,
+        1.9912260756924949,
+        2.0086001717619175,
+        2.1072099696478683,
+        2.0211892990699383,
+        2.143014800254095,
+        2.0863598306747484,
+        2.0453229787866576,
+        2.08278537031645,
+        2.103803720955957,
+        2.012837224705172,
+        2.0086001717619175,
+        2.0791812460476247,
+        2.089905111439398,
+        2.0253058652647704,
+        2.0253058652647704,
+        2.100370545117563,
+        2.12057393120585,
+        2.0293837776852097,
+        2.0453229787866576,
+        2.0718820073061255,
+        2.1367205671564067,
+        1.9493900066449128,
+        2.0681858617461617,
+        2.0681858617461617,
+        2.08278537031645,
+        1.9731278535996986,
+        1.968482948553935,
+        2.0043213737826426,
+        2.0086001717619175,
+        1.919078092376074,
+        1.9444826721501687,
+        1.9242792860618816,
+        1.9912260756924949,
+        1.9344984512435677,
+        1.8864907251724818,
+        1.8692317197309762,
+        2.0453229787866576,
+        1.8260748027008264,
+        1.9242792860618816,
+        1.8692317197309762,
+        1.9637878273455553,
+        1.9294189257142929,
+        1.8750612633917,
+        1.9731278535996986,
+        1.8260748027008264,
+        1.6334684555795866,
+        1.6989700043360187,
+        1.8512583487190752,
+        1.9294189257142929,
+        1.8573324964312685,
+        1.9731278535996986,
+        1.8260748027008264,
+        1.9493900066449128,
+        1.845098040014257,
+        1.8388490907372552,
+        1.9294189257142929,
+        1.9084850188786497,
+        1.9138138523837167,
+        1.806179973983887,
+        1.9444826721501687,
+        1.8864907251724818,
+        1.6812412373755872,
+        1.8808135922807914,
+        1.9030899869919435,
+        1.9084850188786497,
+        1.9138138523837167,
+        1.7781512503836436,
+        1.792391689498254,
+        1.919078092376074,
+        1.9294189257142929,
+        2.037426497940624,
+        1.9344984512435677,
+        1.9242792860618816,
+        1.9590413923210936,
+        2.03342375548695,
+        1.9637878273455553,
+        1.9493900066449128,
+        1.9637878273455553,
+        1.8864907251724818,
+        1.9542425094393248,
+        1.863322860120456,
+        1.9084850188786497,
+        2.0253058652647704,
+        2.0492180226701815,
+        1.9777236052888478,
+        1.8325089127062364,
+        1.9542425094393248,
+        1.9867717342662448,
+        1.8808135922807914,
+        1.9395192526186185,
+        2.0086001717619175,
+        1.8920946026904804,
+        1.9395192526186185,
+        1.9867717342662448,
+        1.9294189257142929,
+        1.8976270912904414,
+        1.8920946026904804,
+        1.9294189257142929,
+        2.0086001717619175,
+        1.9542425094393248,
+        1.9294189257142929,
+        1.9912260756924949,
+        1.9542425094393248,
+        1.9444826721501687,
+        1.9542425094393248,
+        1.8512583487190752,
+        1.9242792860618816,
+        1.9084850188786497,
+        1.919078092376074,
+        1.7634279935629373,
+        1.9395192526186185,
+        2.0043213737826426,
+        1.8573324964312685,
+        1.863322860120456,
+        1.7781512503836436,
+        1.8864907251724818,
+        1.8325089127062364,
         0.0,
         0.0,
         0.0
@@ -28788,10 +28994,11 @@
         2.089905111439398,
         1.9912260756924949,
         1.9912260756924949,
-        1.9294189257142929,
-        2.0170333392987803,
-        2.041392685158225,
-        2.110589710299249
+        1.9395192526186185,
+        2.03342375548695,
+        2.037426497940624,
+        2.123851640967086,
+        2.1903316981702914
       ],
       [
         2.9585638832219674,
@@ -28938,7 +29145,7 @@
         0.0,
         0.0,
         0.0,
-        2.1903316981702914,
+        2.1931245983544616,
         0.0,
         0.0,
         0.0,
@@ -28953,7 +29160,8 @@
         2.1335389083702174,
         2.103803720955957,
         2.0293837776852097,
-        2.0170333392987803,
+        2.012837224705172,
+        1.8325089127062364,
         0.0
       ],
       [
@@ -29113,8 +29321,9 @@
         2.0086001717619175,
         1.9590413923210936,
         2.0211892990699383,
-        2.0086001717619175,
-        2.0086001717619175,
+        2.0170333392987803,
+        2.0170333392987803,
+        2.037426497940624,
         0.0,
         0.0,
         0.0
@@ -29276,8 +29485,9 @@
         1.380211241711606,
         1.4313637641589874,
         1.4771212547196624,
-        1.5185139398778875,
         1.505149978319906,
+        1.462397997898956,
+        1.5185139398778875,
         0.0,
         0.0,
         0.0
@@ -29439,9 +29649,10 @@
         0.0,
         0.0,
         1.6434526764861874,
-        1.6812412373755872,
+        1.6720978579357175,
         1.662757831681574,
         1.6334684555795866,
+        1.4313637641589874,
         0.0,
         0.0
       ],
@@ -29605,6 +29816,7 @@
         1.5797835966168101,
         1.380211241711606,
         1.4771212547196624,
+        1.3424226808222062,
         0.0,
         0.0
       ],
@@ -29767,9 +29979,10 @@
         0.47712125471966244,
         0.6989700043360189,
         0.6020599913279624,
-        1.041392685158225,
-        1.5314789170422551,
-        1.7853298350107671
+        1.0791812460476249,
+        1.5185139398778875,
+        1.8388490907372552,
+        2.03342375548695
       ],
       [
         2.2068258760318495,
@@ -29932,6 +30145,7 @@
         1.3979400086720377,
         1.3424226808222062,
         1.2304489213782739,
+        1.255272505103306,
         0.0
       ],
       [
@@ -30095,7 +30309,8 @@
         1.2041199826559248,
         1.3010299956639813,
         1.255272505103306,
-        1.255272505103306
+        1.2787536009528289,
+        1.3617278360175928
       ],
       [
         2.2576785748691846,
@@ -30254,9 +30469,10 @@
         0.0,
         0.0,
         1.041392685158225,
-        1.146128035678238,
-        1.041392685158225,
+        1.1760912590556813,
+        1.0791812460476249,
         1.1139433523068367,
+        1.1760912590556813,
         0.0,
         0.0
       ],
@@ -30417,11 +30633,12 @@
         1.255272505103306,
         1.0791812460476249,
         0.8450980400142568,
-        0.7781512503836436,
+        0.8450980400142568,
         0.7781512503836436,
         0.8450980400142568,
-        1.0,
-        1.0
+        1.041392685158225,
+        1.3010299956639813,
+        1.2041199826559248
       ],
       [
         1.9344984512435677,
@@ -30584,6 +30801,7 @@
         1.146128035678238,
         1.3010299956639813,
         1.1760912590556813,
+        1.255272505103306,
         0.0
       ],
       [
@@ -30747,6 +30965,7 @@
         0.9030899869919435,
         0.9542425094393249,
         0.47712125471966244,
+        0.8450980400142568,
         0.7781512503836436
       ],
       [
@@ -30910,7 +31129,8 @@
         1.146128035678238,
         1.2041199826559248,
         1.0,
-        0.9030899869919435
+        0.9030899869919435,
+        1.1139433523068367
       ],
       [
         1.4313637641589874,
@@ -31072,7 +31292,8 @@
         1.041392685158225,
         0.9542425094393249,
         0.6020599913279624,
-        0.9030899869919435,
+        0.8450980400142568,
+        1.0791812460476249,
         0.0
       ],
       [
@@ -31236,6 +31457,7 @@
         0.0,
         0.47712125471966244,
         0.9030899869919435,
+        0.7781512503836436,
         0.0
       ],
       [
@@ -31383,6 +31605,7 @@
         0.0,
         0.0,
         0.0,
+        1.5185139398778875,
         0.0,
         0.0,
         0.0,
@@ -31562,6 +31785,7 @@
         0.3010299956639812,
         0.6989700043360189,
         0.6020599913279624,
+        0.47712125471966244,
         0.0
       ],
       [
@@ -31710,6 +31934,7 @@
         0.0,
         0.0,
         1.8388490907372552,
+        0.0,
         0.0,
         0.0,
         0.0,
@@ -31888,6 +32113,7 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       [
@@ -32047,9 +32273,10 @@
         0.0,
         0.0,
         0.9030899869919435,
-        1.0,
-        1.0,
         1.041392685158225,
+        1.041392685158225,
+        1.041392685158225,
+        0.9542425094393249,
         0.0,
         0.0
       ],
@@ -32198,7 +32425,8 @@
         0.0,
         0.0,
         0.0,
-        1.4471580313422192,
+        1.4313637641589874,
+        0.0,
         0.0,
         0.0,
         0.0,
@@ -32377,6 +32605,7 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       [
@@ -32525,6 +32754,7 @@
         0.0,
         0.0,
         1.3979400086720377,
+        0.0,
         0.0,
         0.0,
         0.0,
@@ -32703,6 +32933,7 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       [
@@ -32866,6 +33097,7 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       [
@@ -33029,6 +33261,7 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       [
@@ -33177,6 +33410,7 @@
         0.0,
         0.0,
         0.3010299956639812,
+        0.0,
         0.0,
         0.0,
         0.0,
@@ -33355,6 +33589,7 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       [
@@ -33518,6 +33753,7 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       [
@@ -33681,6 +33917,7 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       [
@@ -33844,6 +34081,7 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       [
@@ -34007,6 +34245,7 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       [
@@ -34071,6 +34310,7 @@
         0.0,
         0.0,
         0.3010299956639812,
+        0.0,
         0.0,
         0.0,
         0.0,
@@ -34198,8 +34438,8 @@
   "brief_zh": "瑞士页面整合来自瑞士 FOPH/BAG IDD 的传染病监测记录，包含来源信息、时间序列图表和可下载数据。",
   "surveillance_system_en": "The dataset is built from configured official feeds for Switzerland; current primary sources include Switzerland FOPH IDD.",
   "surveillance_system_zh": "该数据集来自瑞士已配置的官方数据源；当前主要来源包括瑞士 FOPH/BAG IDD。",
-  "interpretation_en": "Coverage currently spans 2013-01-01 to 2026-05-25 across 43 tracked diseases.",
-  "interpretation_zh": "当前覆盖区间为 2013-01-01 至 2026-05-25，覆盖 43 种追踪疾病。",
+  "interpretation_en": "Coverage currently spans 2013-01-01 to 2026-06-01 across 43 tracked diseases.",
+  "interpretation_zh": "当前覆盖区间为 2013-01-01 至 2026-06-01，覆盖 43 种追踪疾病。",
   "reporting_cadence_en": "Source reporting frequency is inferred as WEEKLY; charts use weekly-equivalent normalization where applicable.",
   "reporting_cadence_zh": "来源报告频率推断为 WEEKLY；相关图表在适用时使用周等价归一化。",
   "limitations_en": "Counts reflect reported surveillance records and may be affected by case definitions, reporting lag, source cadence, and missing population denominators.",
@@ -34208,5 +34448,5 @@
   "source_summary_zh": "瑞士 FOPH/BAG IDD",
   "country_brief_status": "fallback",
   "country_brief_updated_at": null,
-  "generated_at": "2026-06-20T00:00:00+00:00"
+  "generated_at": "2026-07-25T00:00:00+00:00"
 }

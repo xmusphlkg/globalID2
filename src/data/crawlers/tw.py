@@ -21,6 +21,7 @@ import requests
 
 from src.core import get_logger
 from src.core.country_library import get_country_bootstrap_config
+from src.core.tls import RequestsTLSChainFallback
 
 from .base import BaseCrawler, CrawlerResult
 
@@ -33,6 +34,11 @@ DEFAULT_MONTHLY_CSV_TEMPLATE = (
 )
 DEFAULT_WEEKLY_CSV_TEMPLATE = (
     "https://od.cdc.gov.tw/eic/Weekly_Age_County_Gender_{disease_code}.csv"
+)
+TWCA_SSL_CA_CERT = (
+    Path(__file__).resolve().parents[1]
+    / "certs"
+    / "twca_ssl_certification_authority_2023.pem"
 )
 
 
@@ -171,6 +177,10 @@ class TaiwanNIDSSCrawler(BaseCrawler):
         )
         self.save_raw = save_raw
         self.raw_dir = Path(raw_dir) if raw_dir else Path("data/raw/tw")
+        self._tls_fallback = RequestsTLSChainFallback(
+            extra_ca_certs=[TWCA_SSL_CA_CERT],
+            log_label="[TW-NIDSS]",
+        )
 
     def fetch_disease_index(self) -> List[TWDiseaseSource]:
         """Discover NIDSS disease codes that are exposed in the dashboard selector."""
@@ -219,7 +229,7 @@ class TaiwanNIDSSCrawler(BaseCrawler):
         for attempt in range(1, 4):
             try:
                 time.sleep(self.delay)
-                response = self.session.get(disease.monthly_csv_url, timeout=self.timeout)
+                response = self._get_csv_response(disease.monthly_csv_url)
                 if response.status_code == 404:
                     logger.warning(
                         f"[TW-NIDSS] CSV missing | code={disease.code} name={disease.name}"
@@ -242,8 +252,19 @@ class TaiwanNIDSSCrawler(BaseCrawler):
                 time.sleep(attempt)
 
         if last_error is not None:
-            raise last_error
+            logger.warning(
+                f"[TW-NIDSS] CSV skipped after retries | code={disease.code} "
+                f"name={disease.name} error={last_error}"
+            )
         return None
+
+    def _get_csv_response(self, url: str) -> requests.Response:
+        return self._tls_fallback.request(
+            self.session,
+            "GET",
+            url,
+            timeout=self.timeout,
+        )
 
     def _save_raw_csv(self, disease: TWDiseaseSource, csv_text: str) -> None:
         if not self.save_raw:
@@ -275,12 +296,23 @@ class TaiwanNIDSSCrawler(BaseCrawler):
 
         all_rows: List[Dict[str, str]] = []
         fetched_count = 0
+        failed_count = 0
+        skipped_count = 0
         for disease in diseases:
             if requested_codes and disease.code not in requested_codes:
                 continue
 
-            csv_text = self._download_csv_text(disease)
+            try:
+                csv_text = self._download_csv_text(disease)
+            except Exception as exc:
+                failed_count += 1
+                logger.warning(
+                    f"[TW-NIDSS] CSV skipped after unexpected error | "
+                    f"code={disease.code} name={disease.name} error={exc}"
+                )
+                continue
             if not csv_text:
+                skipped_count += 1
                 continue
 
             self._save_raw_csv(disease, csv_text)
@@ -295,7 +327,16 @@ class TaiwanNIDSSCrawler(BaseCrawler):
             fetched_count += 1
 
         if not all_rows:
-            raise RuntimeError("[TW-NIDSS] No national monthly rows parsed from CSV source")
+            raise RuntimeError(
+                "[TW-NIDSS] No national monthly rows parsed from CSV source "
+                f"(fetched=0, skipped={skipped_count}, failed={failed_count})"
+            )
+
+        if failed_count or skipped_count:
+            logger.warning(
+                f"[TW-NIDSS] Completed with skipped disease CSVs | "
+                f"fetched={fetched_count} skipped={skipped_count} failed={failed_count}"
+            )
 
         all_rows.sort(key=lambda row: (row["Date"], row["RawDiseaseLabel"]))
         output_csv.parent.mkdir(parents=True, exist_ok=True)

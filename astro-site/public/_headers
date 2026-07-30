@@ -5,6 +5,10 @@
 /*.html
   Cache-Control: public, max-age=0, must-revalidate
 
+# Machine-readable production release identity — never serve a stale version
+/release.json
+  Cache-Control: no-store, max-age=0
+
 # Astro build output (hashed filenames) — long TTL
 /_astro/*
   Cache-Control: public, max-age=31536000, immutable

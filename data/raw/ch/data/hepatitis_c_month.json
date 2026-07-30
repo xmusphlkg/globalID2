@@ -9,8 +9,8 @@
   },
   "response": {
     "source": "mandatory_reporting_system",
-    "sourceDate": "2026-06-02",
-    "version": "20260624",
+    "sourceDate": "2026-07-07",
+    "version": "20260729",
     "values": [
       {
         "x": 201301,
@@ -150,7 +150,7 @@
       },
       {
         "x": 201406,
-        "y": 169,
+        "y": 168,
         "properties": {
           "dataComplete": "TRUE",
           "trend": null
@@ -286,7 +286,7 @@
       },
       {
         "x": 201511,
-        "y": 119,
+        "y": 120,
         "properties": {
           "dataComplete": "TRUE",
           "trend": null
@@ -494,7 +494,7 @@
       },
       {
         "x": 201801,
-        "y": 110,
+        "y": 109,
         "properties": {
           "dataComplete": "TRUE",
           "trend": null
@@ -542,7 +542,7 @@
       },
       {
         "x": 201807,
-        "y": 120,
+        "y": 119,
         "properties": {
           "dataComplete": "TRUE",
           "trend": null
@@ -838,7 +838,7 @@
       },
       {
         "x": 202108,
-        "y": 47,
+        "y": 46,
         "properties": {
           "dataComplete": "TRUE",
           "trend": null
@@ -1086,7 +1086,7 @@
       },
       {
         "x": 202403,
-        "y": 86,
+        "y": 85,
         "properties": {
           "dataComplete": "TRUE",
           "trend": null
@@ -1142,7 +1142,7 @@
       },
       {
         "x": 202410,
-        "y": 89,
+        "y": 88,
         "properties": {
           "dataComplete": "TRUE",
           "trend": null
@@ -1166,7 +1166,7 @@
       },
       {
         "x": 202501,
-        "y": 91,
+        "y": 89,
         "properties": {
           "dataComplete": "TRUE",
           "trend": null
@@ -1174,7 +1174,7 @@
       },
       {
         "x": 202502,
-        "y": 86,
+        "y": 85,
         "properties": {
           "dataComplete": "TRUE",
           "trend": null
@@ -1190,7 +1190,7 @@
       },
       {
         "x": 202504,
-        "y": 70,
+        "y": 68,
         "properties": {
           "dataComplete": "TRUE",
           "trend": null
@@ -1198,7 +1198,7 @@
       },
       {
         "x": 202505,
-        "y": 83,
+        "y": 82,
         "properties": {
           "dataComplete": "TRUE",
           "trend": null
@@ -1206,7 +1206,7 @@
       },
       {
         "x": 202506,
-        "y": 80,
+        "y": 79,
         "properties": {
           "dataComplete": "TRUE",
           "trend": null
@@ -1214,7 +1214,7 @@
       },
       {
         "x": 202507,
-        "y": 82,
+        "y": 80,
         "properties": {
           "dataComplete": "TRUE",
           "trend": null
@@ -1230,7 +1230,7 @@
       },
       {
         "x": 202509,
-        "y": 86,
+        "y": 85,
         "properties": {
           "dataComplete": "TRUE",
           "trend": null
@@ -1238,7 +1238,7 @@
       },
       {
         "x": 202510,
-        "y": 100,
+        "y": 98,
         "properties": {
           "dataComplete": "TRUE",
           "trend": null
@@ -1246,7 +1246,7 @@
       },
       {
         "x": 202511,
-        "y": 71,
+        "y": 70,
         "properties": {
           "dataComplete": "TRUE",
           "trend": null
@@ -1254,7 +1254,7 @@
       },
       {
         "x": 202512,
-        "y": 72,
+        "y": 71,
         "properties": {
           "dataComplete": "TRUE",
           "trend": null
@@ -1262,7 +1262,7 @@
       },
       {
         "x": 202601,
-        "y": 60,
+        "y": 59,
         "properties": {
           "dataComplete": "TRUE",
           "trend": null
@@ -1270,7 +1270,15 @@
       },
       {
         "x": 202602,
-        "y": 78,
+        "y": 76,
+        "properties": {
+          "dataComplete": "TRUE",
+          "trend": null
+        }
+      },
+      {
+        "x": 202603,
+        "y": 67,
         "properties": {
           "dataComplete": "TRUE",
           "trend": null

@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-06-29T22:45:43.361074+00:00",
+  "fetched_at": "2026-07-29T22:45:40.044500+00:00",
   "disease": "Hepatitis D",
   "year": 2026,
   "month": 6,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1782773142935)/",
-            "rootActivityId": "e3abd52b-d528-4771-b9b0-bde9b5679559",
+            "timestamp": "/Date(1785365139713)/",
+            "rootActivityId": "6e4cef88-3182-41be-aea9-8fa6430902f4",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'<5'"
+                          "A0": "'8'"
                         }
                       ]
                     },
@@ -417,9 +417,9 @@
                         },
                         {
                           "C": [
-                            "VIC"
-                          ],
-                          "R": 2
+                            "VIC",
+                            "'<5'"
+                          ]
                         },
                         {
                           "C": [
@@ -450,7 +450,7 @@
     "QLD": "'<5'",
     "SA": 0,
     "TAS": 0,
-    "VIC": 0,
+    "VIC": "'<5'",
     "WA": 0
   }
 }

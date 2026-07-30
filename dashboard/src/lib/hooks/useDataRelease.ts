@@ -52,6 +52,9 @@ export interface DataReleaseConfig {
   enabled: boolean;
   timezone: string;
   poll_interval_seconds: number;
+  auto_failure_cooldown_minutes: number;
+  commit_data_refresh_snapshot: boolean;
+  push_data_refresh_snapshot: boolean;
   last_tick_at?: string | null;
   jobs: DataReleaseJob[];
 }
@@ -85,6 +88,20 @@ export interface DataReleaseChecks {
     token_present: boolean;
     account_id_present: boolean;
     project_access_ok: boolean;
+    subdomain?: string | null;
+    domains: string[];
+    production_branch?: string | null;
+    latest_production_deployment?: {
+      id?: string | null;
+      url?: string | null;
+      environment?: string | null;
+      created_on?: string | null;
+      status?: string | null;
+      branch?: string | null;
+      commit_hash?: string | null;
+      commit_message?: string | null;
+      commit_dirty: boolean;
+    } | null;
     error?: string | null;
   };
   commands: {
@@ -92,6 +109,15 @@ export interface DataReleaseChecks {
     python_exists: boolean;
     wrangler_available: boolean;
     wrangler_version?: string | null;
+  };
+  data_refresh_snapshot: {
+    enabled: boolean;
+    push_enabled: boolean;
+    script_path: string;
+    script_exists: boolean;
+    paths: string[];
+    remote: string;
+    branch: string;
   };
   raw?: Record<string, unknown> | null;
 }

@@ -423,7 +423,7 @@
         498,
         201,
         89,
-        15
+        221
       ],
       "weekly_equiv_cases": [
         0.5,
@@ -631,7 +631,7 @@
         116.20000000000002,
         45.387096774193544,
         2.5637860082304527,
-        3.5
+        51.56666666666666
       ],
       "deaths": [
         0,
@@ -1257,7 +1257,7 @@
         "missing_population",
         "missing_population"
       ],
-      "total_cases": 51308,
+      "total_cases": 51514,
       "total_deaths": 0
     }
   },
@@ -1676,7 +1676,7 @@
       498,
       201,
       89,
-      15
+      221
     ],
     "deaths": [
       0,
@@ -1887,9 +1887,9 @@
       0
     ]
   },
-  "total_cases": 51308,
+  "total_cases": 51514,
   "total_deaths": 0,
-  "generated_at": "2026-06-20T00:00:00+00:00",
+  "generated_at": "2026-07-25T00:00:00+00:00",
   "source_info": [
     {
       "country_code": "BR",

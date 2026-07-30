@@ -8,8 +8,8 @@
   },
   "response": {
     "source": "mandatory_reporting_system",
-    "sourceDate": "2026-06-09",
-    "version": "20260624",
+    "sourceDate": "2026-07-07",
+    "version": "20260729",
     "values": [
       {
         "x": 201301,
@@ -1197,7 +1197,7 @@
       },
       {
         "x": 202505,
-        "y": 648,
+        "y": 646,
         "properties": {
           "dataComplete": "TRUE",
           "trend": "rising"
@@ -1221,7 +1221,7 @@
       },
       {
         "x": 202508,
-        "y": 1253,
+        "y": 1252,
         "properties": {
           "dataComplete": "TRUE",
           "trend": "rising"
@@ -1229,7 +1229,7 @@
       },
       {
         "x": 202509,
-        "y": 991,
+        "y": 987,
         "properties": {
           "dataComplete": "TRUE",
           "trend": "stagnant"
@@ -1237,7 +1237,7 @@
       },
       {
         "x": 202510,
-        "y": 815,
+        "y": 814,
         "properties": {
           "dataComplete": "TRUE",
           "trend": "falling"
@@ -1261,7 +1261,7 @@
       },
       {
         "x": 202601,
-        "y": 741,
+        "y": 740,
         "properties": {
           "dataComplete": "TRUE",
           "trend": "stagnant"
@@ -1277,7 +1277,7 @@
       },
       {
         "x": 202603,
-        "y": 509,
+        "y": 510,
         "properties": {
           "dataComplete": "TRUE",
           "trend": "falling"
@@ -1285,7 +1285,7 @@
       },
       {
         "x": 202604,
-        "y": 562,
+        "y": 563,
         "properties": {
           "dataComplete": "TRUE",
           "trend": "stagnant"
@@ -1293,7 +1293,15 @@
       },
       {
         "x": 202605,
-        "y": 850,
+        "y": 851,
+        "properties": {
+          "dataComplete": "TRUE",
+          "trend": "rising"
+        }
+      },
+      {
+        "x": 202606,
+        "y": 1095,
         "properties": {
           "dataComplete": "TRUE",
           "trend": "rising"
