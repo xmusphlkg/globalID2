@@ -7,10 +7,11 @@ import echarts from '../../lib/echarts';
 import ChartFrame from './ChartFrame';
 import type { ChartSourceMeta } from '../../utils/chartMeta';
 import {
-  loadCountryDataset,
   type CountryDatasetHeatmap,
   type CountryDatasetSeriesEntry,
 } from './countryDataset';
+import { useChartLanguage, useChartTheme } from './chartPreferences';
+import { useCountryDataset } from './useCountryDataset';
 
 type HeatmapData = CountryDatasetHeatmap;
 type DiseaseSeriesEntry = CountryDatasetSeriesEntry;
@@ -49,55 +50,18 @@ function isSummaryRow(diseaseId?: string, label?: string) {
 }
 
 export default function DiseaseHeatmap({ data = null, series: initialSeries, dataUrl, height = 600, sourceMeta = null }: Props) {
-  const [loadedData, setLoadedData] = useState<HeatmapData | null>(data);
-  const [series, setSeries] = useState<Record<string, DiseaseSeriesEntry> | undefined>(initialSeries);
-  const [loadError, setLoadError] = useState(false);
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    if (typeof document === 'undefined') return 'light';
-    return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
-  });
-  const [lang] = useState<'en' | 'zh'>(() => {
-    if (typeof window !== 'undefined') return (localStorage.getItem('lang') as 'en' | 'zh') || 'en';
-    return 'en';
-  });
+  const hasInitialData = Boolean(
+    (data?.z?.length ?? 0) > 0
+    || (initialSeries && Object.keys(initialSeries).length > 0)
+  );
+  const remoteDataset = useCountryDataset(dataUrl, !hasInitialData);
+  const loadedData = (data?.z?.length ?? 0) > 0
+    ? data
+    : (remoteDataset.data?.heatmap ?? null);
+  const series = initialSeries ?? remoteDataset.data?.disease_series;
+  const theme = useChartTheme();
+  const lang = useChartLanguage();
   const [zoomWindow, setZoomWindow] = useState<ZoomWindow>({ startValue: 0, endValue: 13 });
-
-  useEffect(() => {
-    if (typeof document === 'undefined') return;
-    const root = document.documentElement;
-    const updateTheme = () => setTheme(root.getAttribute('data-theme') === 'light' ? 'light' : 'dark');
-    updateTheme();
-    const observer = new MutationObserver(updateTheme);
-    observer.observe(root, { attributes: true, attributeFilter: ['data-theme'] });
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    if (data && ((data.z?.length ?? 0) > 0 || initialSeries)) {
-      setLoadedData(data);
-      setSeries(initialSeries);
-      setLoadError(false);
-      return;
-    }
-    if (!dataUrl) return;
-
-    let cancelled = false;
-    loadCountryDataset(dataUrl)
-      .then((dataset) => {
-        if (cancelled) return;
-        setLoadedData(dataset.heatmap ?? null);
-        setSeries(dataset.disease_series);
-        setLoadError(false);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setLoadError(true);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [data, dataUrl, initialSeries]);
 
   const chartColors = useMemo(() => (
     theme === 'light'
@@ -519,7 +483,7 @@ export default function DiseaseHeatmap({ data = null, series: initialSeries, dat
     </div>
   );
 
-  const table = (
+  const renderTable = () => (
     <>
       <div className="data-preview-meta">
         {lang === 'zh'
@@ -549,18 +513,34 @@ export default function DiseaseHeatmap({ data = null, series: initialSeries, dat
     </>
   );
 
-  if (loadError) {
+  if (remoteDataset.loadError && !hasData) {
     return (
-      <div className="chart-shell flex items-center justify-center text-slate-500 text-sm min-h-[160px]">
-        {lang === 'zh' ? '热图数据加载失败' : 'Failed to load heatmap data'}
+      <div className="chart-shell flex min-h-[160px] flex-col items-center justify-center gap-3 text-slate-500 text-sm" role="alert">
+        <span>{lang === 'zh' ? '热图数据加载失败或请求超时。' : 'Heatmap data failed to load or the request timed out.'}</span>
+        <button type="button" className="chart-link-btn" onClick={remoteDataset.retry}>
+          {lang === 'zh' ? '重新加载' : 'Try again'}
+        </button>
       </div>
     );
   }
 
   if (!hasData) {
+    if (remoteDataset.isLoading) {
+      return (
+        <div className="chart-loading-shell" role="status" aria-busy="true" aria-label={lang === 'zh' ? '热图数据加载中' : 'Loading heatmap data'}>
+          <div className="chart-loading-toolbar" aria-hidden="true">
+            <span className="chart-loading-pill w-28" />
+            <span className="chart-loading-pill w-36" />
+            <span className="chart-loading-pill w-24" />
+          </div>
+          <div className="chart-loading-line w-3/4" aria-hidden="true" />
+          <div className="chart-loading-panel" style={{ height }} aria-hidden="true" />
+        </div>
+      );
+    }
     return (
       <div className="chart-shell flex items-center justify-center text-slate-500 text-sm min-h-[160px]">
-        {dataUrl ? (lang === 'zh' ? '热图数据加载中' : 'Loading heatmap data') : (lang === 'zh' ? '暂无数据' : 'No data available')}
+        {lang === 'zh' ? '暂无数据' : 'No data available'}
       </div>
     );
   }
@@ -604,7 +584,7 @@ export default function DiseaseHeatmap({ data = null, series: initialSeries, dat
           </div>
         </div>
       )}
-      table={table}
+      table={renderTable}
       sourceMeta={sourceMeta}
     />
   );
