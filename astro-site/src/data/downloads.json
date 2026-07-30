@@ -54,7 +54,7 @@
       "name_en": "Brazil",
       "name_zh": "巴西",
       "generated_at": "2026-07-25T00:00:00+00:00",
-      "record_count": 8161,
+      "record_count": 8166,
       "date_range": {
         "start": "2000-01-01",
         "end": "2026-07-01"
@@ -5696,7 +5696,7 @@
       "name_en": "Pertussis",
       "name_zh": "百日咳",
       "generated_at": "2026-07-25T00:00:00+00:00",
-      "record_count": 3455,
+      "record_count": 3456,
       "country_count": 9,
       "countries": [
         {
@@ -5995,7 +5995,7 @@
       "name_en": "Diphtheria",
       "name_zh": "白喉",
       "generated_at": "2026-07-25T00:00:00+00:00",
-      "record_count": 2039,
+      "record_count": 2040,
       "country_count": 7,
       "countries": [
         {
@@ -7006,7 +7006,7 @@
       "name_en": "Leptospirosis",
       "name_zh": "钩端螺旋体病",
       "generated_at": "2026-07-25T00:00:00+00:00",
-      "record_count": 2628,
+      "record_count": 2631,
       "country_count": 9,
       "countries": [
         {
