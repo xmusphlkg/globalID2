@@ -1,6 +1,7 @@
 # Makefile for GlobalID V2
 
 .PHONY: help install up down restart logs ps test test-health clean format lint check \
+	dev-data-commit site-data-dev-commit \
 	site-data site-data-external site-download-sync site-install site-dev site-build site-preview site-publish wpp-import \
 	autostart-install autostart-uninstall autostart-status
 
@@ -21,6 +22,8 @@ help:
 	@echo "  make format       格式化代码"
 	@echo "  make lint         代码检查"
 	@echo "  make check        完整检查（格式+类型+测试）"
+	@echo "  make dev-data-commit       将已刷新的数据产物提交为独立 commit"
+	@echo "  make site-data-dev-commit  导出站点数据并自动提交数据产物"
 	@echo ""
 	@echo "静态站点 (Cloudflare Pages):"
 	@echo "  make site-install  安装 Astro/npm 依赖"
@@ -97,6 +100,12 @@ check:
 	venv/bin/mypy src
 	@make test
 	@echo "所有检查完成"
+
+dev-data-commit:
+	@./scripts/commit_data_refresh.sh
+
+site-data-dev-commit:
+	@./scripts/commit_data_refresh.sh -- make site-data
 
 # ========== 清理命令 ==========
 

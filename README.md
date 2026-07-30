@@ -374,6 +374,16 @@ Optional `.env` knobs for autostart behavior:
 
 The site service serves the generated `astro-site/dist/` directory over Python's built-in static HTTP server. If you change site data but do not set `GLOBALID_SITE_REGENERATE_ON_START=1`, the service will continue serving the last built output.
 
+Data Release can also snapshot generated data into the main repository after a production release task finishes generating site data and building Astro:
+
+- `DATA_RELEASE__COMMIT_DATA_REFRESH_SNAPSHOT=true` creates a local commit for `astro-site/src/data`, `data/current`, and `data/raw`
+- `DATA_RELEASE__PUSH_DATA_REFRESH_SNAPSHOT=true` also pushes that commit
+- `DATA_RELEASE__DATA_REFRESH_SNAPSHOT_REMOTE=origin` controls the push remote
+- `DATA_RELEASE__DATA_REFRESH_SNAPSHOT_BRANCH=` controls the push branch; blank means current branch
+- `DATA_RELEASE__DATA_REFRESH_SNAPSHOT_MESSAGE_TEMPLATE=chore(data): snapshot refresh {timestamp}` controls the commit message
+
+This is disabled by default so production does not unexpectedly mutate Git history. Use `scripts/commit_data_refresh.sh --dry-run` to inspect what would be committed.
+
 ## Common Workflows
 
 ### Rebuild the database from curated files

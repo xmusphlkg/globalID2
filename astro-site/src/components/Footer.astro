@@ -11,6 +11,13 @@ interface Props {
 const { initialLanguage = 'en' } = Astro.props;
 const year = new Date().getFullYear();
 const siteVersion = sitePackage?.version ? `v${sitePackage.version}` : 'Unknown';
+const releaseId = import.meta.env.PUBLIC_GIDS_RELEASE_ID?.trim() || 'development';
+const sourceCommit = import.meta.env.PUBLIC_GIDS_SOURCE_COMMIT?.trim() || '';
+const deploymentBranch = import.meta.env.PUBLIC_GIDS_DEPLOY_BRANCH?.trim() || '';
+const releaseTitle = [
+  sourceCommit ? `commit ${sourceCommit.slice(0, 12)}` : '',
+  deploymentBranch ? `branch ${deploymentBranch}` : '',
+].filter(Boolean).join(' · ');
 const dataVersion = metaData?.generated_at
   ? new Date(metaData.generated_at).toLocaleDateString(initialLanguage === 'zh' ? 'zh-CN' : 'en-US', {
       year: 'numeric',
@@ -70,6 +77,11 @@ const links = [
         </h3>
         <ul class="site-footer-meta space-y-1.5 text-sm">
           <li>{initialLanguage === 'zh' ? '站点版本' : 'Site version'}: <span class="site-footer-meta-value">{siteVersion}</span></li>
+          <li>
+            {initialLanguage === 'zh' ? '发布版本' : 'Release'}:
+            {' '}
+            <span class="site-footer-meta-value font-mono" title={releaseTitle}>{releaseId}</span>
+          </li>
           <li>{initialLanguage === 'zh' ? '国家/地区' : 'Countries'}: <span class="site-footer-meta-value">{metaData?.total_countries ?? '—'}</span></li>
           <li>{initialLanguage === 'zh' ? '监测疾病' : 'Diseases tracked'}: <span class="site-footer-meta-value">{metaData?.total_diseases ?? '—'}</span></li>
           <li>{initialLanguage === 'zh' ? '已生成报告' : 'Reports generated'}: <span class="site-footer-meta-value">{metaData?.total_reports ?? '—'}</span></li>
@@ -81,8 +93,8 @@ const links = [
     <div class="site-footer-divider border-t mt-10 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
       <p class="site-footer-legal text-xs">
         {initialLanguage === 'zh'
-          ? `© ${year} GIDS。站点 ${siteVersion}，由 GIDS 流水线自动生成。`
-          : `© ${year} GIDS. Site ${siteVersion}. Generated automatically by the GIDS pipeline.`}
+          ? `© ${year} GIDS。站点 ${siteVersion}，发布 ${releaseId}。`
+          : `© ${year} GIDS. Site ${siteVersion}, release ${releaseId}.`}
       </p>
       <p class="site-footer-legal-note text-xs">
         {initialLanguage === 'zh'
