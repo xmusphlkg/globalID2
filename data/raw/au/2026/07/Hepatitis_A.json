@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-30T22:45:56.109757+00:00",
+  "fetched_at": "2026-07-31T22:45:34.560567+00:00",
   "disease": "Hepatitis A",
   "year": 2026,
   "month": 7,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785451555810)/",
-            "rootActivityId": "ce69eebf-3f0d-4900-95fc-2a0614786708",
+            "timestamp": "/Date(1785537934200)/",
+            "rootActivityId": "5f2ab111-45f4-4814-92fc-8915d69c5fff",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'10'"
+                          "A0": "'11'"
                         }
                       ]
                     },
@@ -423,9 +423,9 @@
                         },
                         {
                           "C": [
-                            "WA",
-                            "0L"
-                          ]
+                            "WA"
+                          ],
+                          "R": 2
                         }
                       ]
                     }

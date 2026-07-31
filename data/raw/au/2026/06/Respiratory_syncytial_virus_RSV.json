@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-30T22:45:52.073386+00:00",
+  "fetched_at": "2026-07-31T22:45:29.781135+00:00",
   "disease": "Respiratory syncytial virus (RSV)",
   "year": 2026,
   "month": 6,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785451551774)/",
-            "rootActivityId": "3c348ac3-26f4-41a0-aa2d-d2d964f7c55c",
+            "timestamp": "/Date(1785537929438)/",
+            "rootActivityId": "3c749a50-300f-4344-a433-8dc8eba86147",
             "descriptor": {
               "Select": [
                 {

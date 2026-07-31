@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-25T00:00:00+00:00",
+  "generated_at": "2026-08-01T00:00:00+00:00",
   "total_countries": 10,
   "total_diseases": 199,
   "total_reports": 1,
@@ -10,12 +10,12 @@
       "name_en": "Australia",
       "name_zh": "澳大利亚",
       "language": "en-AU",
-      "total_cases": 20284542,
+      "total_cases": 20287656,
       "total_deaths": 0,
       "disease_count": 66,
       "date_range": {
         "start": "2000-01-01",
-        "end": "2026-07-01"
+        "end": "2026-08-01"
       },
       "source_info": {
         "country_code": "AU",
@@ -44,7 +44,7 @@
       "name_en": "Brazil",
       "name_zh": "巴西",
       "language": "pt-BR",
-      "total_cases": 60971589,
+      "total_cases": 60971634,
       "total_deaths": 0,
       "disease_count": 45,
       "date_range": {

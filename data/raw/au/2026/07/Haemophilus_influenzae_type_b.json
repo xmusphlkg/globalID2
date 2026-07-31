@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-30T22:45:56.026775+00:00",
+  "fetched_at": "2026-07-31T22:45:34.362979+00:00",
   "disease": "Haemophilus influenzae type b",
   "year": 2026,
   "month": 7,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785451555763)/",
-            "rootActivityId": "0960af92-76a1-4c61-b49e-3e2e14342591",
+            "timestamp": "/Date(1785537934064)/",
+            "rootActivityId": "c95dd094-aa03-4caf-9484-5e6a8d00cfc8",
             "descriptor": {
               "Select": [
                 {
