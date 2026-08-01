@@ -345,7 +345,7 @@
       "name_en": "Taiwan, China",
       "name_zh": "中国台湾",
       "generated_at": "2026-08-01T00:00:00+00:00",
-      "record_count": 6341,
+      "record_count": 6342,
       "date_range": {
         "start": "2003-01-01",
         "end": "2026-07-01"
@@ -7401,7 +7401,7 @@
       "name_en": "Malaria",
       "name_zh": "疟疾",
       "generated_at": "2026-08-01T00:00:00+00:00",
-      "record_count": 3436,
+      "record_count": 3437,
       "country_count": 10,
       "countries": [
         {
