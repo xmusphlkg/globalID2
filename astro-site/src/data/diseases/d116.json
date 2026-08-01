@@ -62,7 +62,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         1,
@@ -117,7 +118,8 @@
         0,
         3,
         1,
-        0
+        0,
+        1
       ],
       "weekly_equiv_cases": [
         0.22580645161290322,
@@ -172,9 +174,11 @@
         0.0,
         0.75,
         0.22580645161290322,
-        0.0
+        0.0,
+        0.22580645161290322
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -282,6 +286,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -337,9 +342,10 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
-      "total_cases": 113,
+      "total_cases": 114,
       "total_deaths": 0
     },
     "JP": {
@@ -9351,7 +9357,7 @@
       9,
       3,
       2,
-      3,
+      4,
       3
     ],
     "deaths": [
@@ -9628,7 +9634,7 @@
       0
     ]
   },
-  "total_cases": 1136,
+  "total_cases": 1137,
   "total_deaths": 0,
   "generated_at": "2026-08-01T00:00:00+00:00",
   "source_info": [

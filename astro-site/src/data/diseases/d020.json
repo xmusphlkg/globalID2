@@ -3418,7 +3418,8 @@
         "2026-02-01",
         "2026-03-01",
         "2026-04-01",
-        "2026-05-01"
+        "2026-05-01",
+        "2026-06-01"
       ],
       "cases": [
         0,
@@ -3681,6 +3682,7 @@
         0,
         0,
         1,
+        0,
         0,
         0,
         0,
@@ -3960,9 +3962,11 @@
         0.0,
         0.0,
         0.0,
+        0.0,
         0.0
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -4502,9 +4506,11 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
+        "missing_population",
         "missing_population",
         "missing_population",
         "missing_population",

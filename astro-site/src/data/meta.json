@@ -164,12 +164,12 @@
       "name_en": "Hong Kong, China",
       "name_zh": "中国香港",
       "language": "zh-HK",
-      "total_cases": 3622462,
+      "total_cases": 3623103,
       "total_deaths": 0,
       "disease_count": 62,
       "date_range": {
         "start": "1997-01-01",
-        "end": "2026-05-01"
+        "end": "2026-06-01"
       },
       "source_info": {
         "country_code": "HK",
