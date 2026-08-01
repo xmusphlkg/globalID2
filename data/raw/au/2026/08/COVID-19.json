@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-31T22:45:40.911006+00:00",
+  "fetched_at": "2026-08-01T22:46:08.505260+00:00",
   "disease": "COVID-19",
   "year": 2026,
   "month": 8,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785537940570)/",
-            "rootActivityId": "0c88e88e-7511-4b92-b061-597365a74f0d",
+            "timestamp": "/Date(1785624368130)/",
+            "rootActivityId": "3eb66e4e-cfa4-439b-8478-7b6052b5d6c4",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "0L"
+                          "A0": "'23'"
                         }
                       ]
                     },
@@ -387,27 +387,27 @@
                         },
                         {
                           "C": [
-                            "NSW"
-                          ],
-                          "R": 2
+                            "NSW",
+                            "'16'"
+                          ]
                         },
                         {
                           "C": [
-                            "NT"
-                          ],
-                          "R": 2
+                            "NT",
+                            "0L"
+                          ]
                         },
                         {
                           "C": [
-                            "QLD"
-                          ],
-                          "R": 2
+                            "QLD",
+                            "'7'"
+                          ]
                         },
                         {
                           "C": [
-                            "SA"
-                          ],
-                          "R": 2
+                            "SA",
+                            "0L"
+                          ]
                         },
                         {
                           "C": [
@@ -445,9 +445,9 @@
   },
   "parsed_counts": {
     "ACT": 0,
-    "NSW": 0,
+    "NSW": 16,
     "NT": 0,
-    "QLD": 0,
+    "QLD": 7,
     "SA": 0,
     "TAS": 0,
     "VIC": 0,

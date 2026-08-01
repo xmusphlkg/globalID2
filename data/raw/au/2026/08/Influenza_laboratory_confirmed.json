@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-31T22:45:43.751295+00:00",
+  "fetched_at": "2026-08-01T22:46:13.785818+00:00",
   "disease": "Influenza (laboratory confirmed)",
   "year": 2026,
   "month": 8,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785537943401)/",
-            "rootActivityId": "b8e2ecda-3630-4113-abba-3b60ea58e6c2",
+            "timestamp": "/Date(1785624372862)/",
+            "rootActivityId": "fe9689db-5dd6-4152-b662-ccdb5e43a1bf",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "0L"
+                          "A0": "'84'"
                         }
                       ]
                     },
@@ -387,33 +387,33 @@
                         },
                         {
                           "C": [
-                            "NSW"
-                          ],
-                          "R": 2
+                            "NSW",
+                            "'59'"
+                          ]
                         },
                         {
                           "C": [
-                            "NT"
-                          ],
-                          "R": 2
+                            "NT",
+                            "0L"
+                          ]
                         },
                         {
                           "C": [
-                            "QLD"
-                          ],
-                          "R": 2
+                            "QLD",
+                            "'23'"
+                          ]
                         },
                         {
                           "C": [
-                            "SA"
-                          ],
-                          "R": 2
+                            "SA",
+                            "'<5'"
+                          ]
                         },
                         {
                           "C": [
-                            "TAS"
-                          ],
-                          "R": 2
+                            "TAS",
+                            "0L"
+                          ]
                         },
                         {
                           "C": [
@@ -445,10 +445,10 @@
   },
   "parsed_counts": {
     "ACT": 0,
-    "NSW": 0,
+    "NSW": 59,
     "NT": 0,
-    "QLD": 0,
-    "SA": 0,
+    "QLD": 23,
+    "SA": "'<5'",
     "TAS": 0,
     "VIC": 0,
     "WA": 0

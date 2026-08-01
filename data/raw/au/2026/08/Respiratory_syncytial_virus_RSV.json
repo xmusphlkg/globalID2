@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-31T22:45:45.482985+00:00",
+  "fetched_at": "2026-08-01T22:46:16.690304+00:00",
   "disease": "Respiratory syncytial virus (RSV)",
   "year": 2026,
   "month": 8,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785537945155)/",
-            "rootActivityId": "aa4f4efe-2ee5-4a94-9240-8726a57774f4",
+            "timestamp": "/Date(1785624376297)/",
+            "rootActivityId": "f7e6129b-3cf0-4145-a90b-ab798a4e9f9b",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "0L"
+                          "A0": "'38'"
                         }
                       ]
                     },
@@ -387,33 +387,33 @@
                         },
                         {
                           "C": [
-                            "NSW"
-                          ],
-                          "R": 2
+                            "NSW",
+                            "'24'"
+                          ]
                         },
                         {
                           "C": [
-                            "NT"
-                          ],
-                          "R": 2
+                            "NT",
+                            "0L"
+                          ]
                         },
                         {
                           "C": [
-                            "QLD"
-                          ],
-                          "R": 2
+                            "QLD",
+                            "'11'"
+                          ]
                         },
                         {
                           "C": [
-                            "SA"
-                          ],
-                          "R": 2
+                            "SA",
+                            "'<5'"
+                          ]
                         },
                         {
                           "C": [
-                            "TAS"
-                          ],
-                          "R": 2
+                            "TAS",
+                            "0L"
+                          ]
                         },
                         {
                           "C": [
@@ -445,10 +445,10 @@
   },
   "parsed_counts": {
     "ACT": 0,
-    "NSW": 0,
+    "NSW": 24,
     "NT": 0,
-    "QLD": 0,
-    "SA": 0,
+    "QLD": 11,
+    "SA": "'<5'",
     "TAS": 0,
     "VIC": 0,
     "WA": 0
