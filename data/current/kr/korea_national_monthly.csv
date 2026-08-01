@@ -1,137 +1,69 @@
 ,Disease,DiseaseCode,DiseaseGroup,Year,Month,Date,Cases,LocalCases,ImportedCases,Source,SourceURL
-1,@엠폭스,,3급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-2,A형간염,,2급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-3,B형간염,,3급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-4,C형간염,,3급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-5,E형간염,,2급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-6,b형헤모필루스인플루엔자,,2급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-7,공수병,,3급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-8,남아메리카출혈열,,1급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-9,뎅기열,,3급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-10,동물인플루엔자 인체감염증,,1급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-11,두창,,1급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-12,디프테리아,,1급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-13,라싸열,,1급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-14,라임병,,3급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-15,레지오넬라증,,3급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-16,렙토스피라증,,3급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-17,리프트밸리열,,1급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-18,마버그열,,1급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-19,말라리아,,3급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-20,매독(1기),,3급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-21,매독(2기),,3급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-22,매독(3기),,3급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-23,매독(선천성),,3급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-24,매독(잠복),,3급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-25,반코마이신내성황색포도알균(VRSA) 감염증,,2급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-26,발진열,,3급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-27,발진티푸스,,3급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-28,백일해,,2급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-29,보툴리눔독소증,,1급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-30,브루셀라증,,3급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-31,비브리오패혈증,,3급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-32,성홍열,,2급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-33,세균성이질,,2급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-34,수두,,2급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-35,수막구균 감염증,,2급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-36,신종인플루엔자,,1급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-37,신증후군출혈열,,3급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-38,야토병,,1급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-39,에볼라바이러스병,,1급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-40,웨스트나일열,,3급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-41,유비저,,3급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-42,유행성이하선염,,2급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-43,일본뇌염,,3급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-44,장출혈성대장균감염증,,2급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-45,장티푸스,,2급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-46,중동호흡기증후군(MERS),,1급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-47,중증급성호흡기증후군(SARS),,1급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-48,중증열성혈소판감소증후군(SFTS),,3급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-49,지카바이러스감염증,,3급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-50,진드기매개뇌염,,3급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-51,쯔쯔가무시증,,3급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-52,치쿤구니야열,,3급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-53,카바페넴내성장내세균목(CRE) 감염증,,2급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-54,콜레라,,2급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-55,큐열,,3급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-56,크로이츠펠트-야콥병(CJD) 및 변종크로이츠펠트-야콥병(vCJD),,3급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-57,크리미안콩고출혈열,,1급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-58,탄저,,1급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-59,파라티푸스,,2급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-60,파상풍,,3급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-61,페스트,,1급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-62,폐렴구균 감염증,,2급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-63,폴리오,,2급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-64,풍진(선천성),,2급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-65,풍진(후천성),,2급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-66,한센병,,2급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-67,홍역,,2급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-68,황열,,3급,2026,5,2026-05-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-69,@엠폭스,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-70,A형간염,,2급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-71,B형간염,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-72,C형간염,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-73,E형간염,,2급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-74,b형헤모필루스인플루엔자,,2급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-75,공수병,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-76,남아메리카출혈열,,1급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-77,뎅기열,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-78,동물인플루엔자 인체감염증,,1급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-79,두창,,1급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-80,디프테리아,,1급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-81,라싸열,,1급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-82,라임병,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-83,레지오넬라증,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-84,렙토스피라증,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-85,리프트밸리열,,1급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-86,마버그열,,1급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-87,말라리아,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-88,매독(1기),,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-89,매독(2기),,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-90,매독(3기),,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-91,매독(선천성),,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-92,매독(잠복),,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-93,반코마이신내성황색포도알균(VRSA) 감염증,,2급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-94,발진열,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-95,발진티푸스,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-96,백일해,,2급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-97,보툴리눔독소증,,1급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-98,브루셀라증,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-99,비브리오패혈증,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-100,성홍열,,2급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-101,세균성이질,,2급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-102,수두,,2급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-103,수막구균 감염증,,2급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-104,신종인플루엔자,,1급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-105,신증후군출혈열,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-106,야토병,,1급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-107,에볼라바이러스병,,1급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-108,웨스트나일열,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-109,유비저,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-110,유행성이하선염,,2급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-111,일본뇌염,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-112,장출혈성대장균감염증,,2급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-113,장티푸스,,2급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-114,중동호흡기증후군(MERS),,1급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-115,중증급성호흡기증후군(SARS),,1급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-116,중증열성혈소판감소증후군(SFTS),,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-117,지카바이러스감염증,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-118,진드기매개뇌염,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-119,쯔쯔가무시증,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-120,치쿤구니야열,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-121,카바페넴내성장내세균목(CRE) 감염증,,2급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-122,콜레라,,2급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-123,큐열,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-124,크로이츠펠트-야콥병(CJD) 및 변종크로이츠펠트-야콥병(vCJD),,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-125,크리미안콩고출혈열,,1급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-126,탄저,,1급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-127,파라티푸스,,2급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-128,파상풍,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-129,페스트,,1급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-130,폐렴구균 감염증,,2급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-131,폴리오,,2급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-132,풍진(선천성),,2급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-133,풍진(후천성),,2급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-134,한센병,,2급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-135,홍역,,2급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
-136,황열,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+1,@엠폭스,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+2,A형간염,,2급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+3,B형간염,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+4,C형간염,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+5,E형간염,,2급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+6,b형헤모필루스인플루엔자,,2급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+7,공수병,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+8,남아메리카출혈열,,1급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+9,뎅기열,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+10,동물인플루엔자 인체감염증,,1급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+11,두창,,1급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+12,디프테리아,,1급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+13,라싸열,,1급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+14,라임병,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+15,레지오넬라증,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+16,렙토스피라증,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+17,리프트밸리열,,1급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+18,마버그열,,1급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+19,말라리아,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+20,매독(1기),,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+21,매독(2기),,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+22,매독(3기),,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+23,매독(선천성),,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+24,매독(잠복),,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+25,반코마이신내성황색포도알균(VRSA) 감염증,,2급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+26,발진열,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+27,발진티푸스,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+28,백일해,,2급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+29,보툴리눔독소증,,1급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+30,브루셀라증,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+31,비브리오패혈증,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+32,성홍열,,2급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+33,세균성이질,,2급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+34,수두,,2급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+35,수막구균 감염증,,2급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+36,신종인플루엔자,,1급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+37,신증후군출혈열,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+38,야토병,,1급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+39,에볼라바이러스병,,1급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+40,웨스트나일열,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+41,유비저,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+42,유행성이하선염,,2급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+43,일본뇌염,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+44,장출혈성대장균감염증,,2급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+45,장티푸스,,2급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+46,중동호흡기증후군(MERS),,1급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+47,중증급성호흡기증후군(SARS),,1급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+48,중증열성혈소판감소증후군(SFTS),,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+49,지카바이러스감염증,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+50,진드기매개뇌염,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+51,쯔쯔가무시증,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+52,치쿤구니야열,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+53,카바페넴내성장내세균목(CRE) 감염증,,2급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+54,콜레라,,2급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+55,큐열,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+56,크로이츠펠트-야콥병(CJD) 및 변종크로이츠펠트-야콥병(vCJD),,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+57,크리미안콩고출혈열,,1급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+58,탄저,,1급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+59,파라티푸스,,2급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+60,파상풍,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+61,페스트,,1급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+62,폐렴구균 감염증,,2급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+63,폴리오,,2급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+64,풍진(선천성),,2급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+65,풍진(후천성),,2급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+66,한센병,,2급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+67,홍역,,2급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
+68,황열,,3급,2026,6,2026-06-01,0,0,0,Korea KDCA EID Portal Download,https://dportal.kdca.go.kr/pot/is/inftnsds.do
