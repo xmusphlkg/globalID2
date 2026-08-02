@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-08-01T22:46:04.240981+00:00",
+  "fetched_at": "2026-08-02T22:45:36.050639+00:00",
   "disease": "Shigellosis",
   "year": 2026,
   "month": 7,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785624363336)/",
-            "rootActivityId": "204dbac1-a927-48e8-be45-25a4aee18c85",
+            "timestamp": "/Date(1785710735685)/",
+            "rootActivityId": "814292a7-ecb9-4653-8284-8b041b29409a",
             "descriptor": {
               "Select": [
                 {

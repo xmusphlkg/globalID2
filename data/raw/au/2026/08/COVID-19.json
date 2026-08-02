@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-08-01T22:46:08.505260+00:00",
+  "fetched_at": "2026-08-02T22:45:38.726902+00:00",
   "disease": "COVID-19",
   "year": 2026,
   "month": 8,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785624368130)/",
-            "rootActivityId": "3eb66e4e-cfa4-439b-8478-7b6052b5d6c4",
+            "timestamp": "/Date(1785710738319)/",
+            "rootActivityId": "095afae1-ebef-4a7b-a6f1-a64ce25ab152",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'23'"
+                          "A0": "'78'"
                         }
                       ]
                     },
@@ -388,7 +388,7 @@
                         {
                           "C": [
                             "NSW",
-                            "'16'"
+                            "'55'"
                           ]
                         },
                         {
@@ -400,20 +400,20 @@
                         {
                           "C": [
                             "QLD",
-                            "'7'"
+                            "'18'"
                           ]
                         },
                         {
                           "C": [
                             "SA",
-                            "0L"
+                            "'5'"
                           ]
                         },
                         {
                           "C": [
-                            "TAS"
-                          ],
-                          "R": 2
+                            "TAS",
+                            "0L"
+                          ]
                         },
                         {
                           "C": [
@@ -445,10 +445,10 @@
   },
   "parsed_counts": {
     "ACT": 0,
-    "NSW": 16,
+    "NSW": 55,
     "NT": 0,
-    "QLD": 7,
-    "SA": 0,
+    "QLD": 18,
+    "SA": 5,
     "TAS": 0,
     "VIC": 0,
     "WA": 0

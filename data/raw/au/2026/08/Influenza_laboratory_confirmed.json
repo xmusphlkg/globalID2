@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-08-01T22:46:13.785818+00:00",
+  "fetched_at": "2026-08-02T22:45:40.936028+00:00",
   "disease": "Influenza (laboratory confirmed)",
   "year": 2026,
   "month": 8,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785624372862)/",
-            "rootActivityId": "fe9689db-5dd6-4152-b662-ccdb5e43a1bf",
+            "timestamp": "/Date(1785710740572)/",
+            "rootActivityId": "838c898b-a23d-45e8-b42e-28d602ac719e",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'84'"
+                          "A0": "'304'"
                         }
                       ]
                     },
@@ -388,7 +388,7 @@
                         {
                           "C": [
                             "NSW",
-                            "'59'"
+                            "'213'"
                           ]
                         },
                         {
@@ -400,13 +400,13 @@
                         {
                           "C": [
                             "QLD",
-                            "'23'"
+                            "'76'"
                           ]
                         },
                         {
                           "C": [
                             "SA",
-                            "'<5'"
+                            "'15'"
                           ]
                         },
                         {
@@ -445,10 +445,10 @@
   },
   "parsed_counts": {
     "ACT": 0,
-    "NSW": 59,
+    "NSW": 213,
     "NT": 0,
-    "QLD": 23,
-    "SA": "'<5'",
+    "QLD": 76,
+    "SA": 15,
     "TAS": 0,
     "VIC": 0,
     "WA": 0

@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-08-01T22:45:58.497189+00:00",
+  "fetched_at": "2026-08-02T22:45:33.227148+00:00",
   "disease": "Influenza (laboratory confirmed)",
   "year": 2026,
   "month": 7,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785624358102)/",
-            "rootActivityId": "6b4b300f-ac80-4663-9775-7a884ab1c33f",
+            "timestamp": "/Date(1785710732845)/",
+            "rootActivityId": "af8b1de2-9c61-492a-badd-e7fc05fb9a5e",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'19,949'"
+                          "A0": "'20,023'"
                         }
                       ]
                     },
@@ -388,25 +388,25 @@
                         {
                           "C": [
                             "NSW",
-                            "'12,897'"
+                            "'12,935'"
                           ]
                         },
                         {
                           "C": [
                             "NT",
-                            "'35'"
+                            "'37'"
                           ]
                         },
                         {
                           "C": [
                             "QLD",
-                            "'2,078'"
+                            "'2,097'"
                           ]
                         },
                         {
                           "C": [
                             "SA",
-                            "'564'"
+                            "'579'"
                           ]
                         },
                         {
@@ -445,10 +445,10 @@
   },
   "parsed_counts": {
     "ACT": 185,
-    "NSW": 12897,
-    "NT": 35,
-    "QLD": 2078,
-    "SA": 564,
+    "NSW": 12935,
+    "NT": 37,
+    "QLD": 2097,
+    "SA": 579,
     "TAS": 87,
     "VIC": 1978,
     "WA": 2125

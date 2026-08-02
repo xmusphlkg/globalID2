@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-08-01T22:46:09.370867+00:00",
+  "fetched_at": "2026-08-02T22:45:38.890777+00:00",
   "disease": "Chlamydial infection",
   "year": 2026,
   "month": 8,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785624369035)/",
-            "rootActivityId": "e71ecf87-6d8d-483e-a397-3cde2be06941",
+            "timestamp": "/Date(1785710738491)/",
+            "rootActivityId": "dc3a75f0-b2e5-4641-bf5d-6c17fdbc9dbb",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "0L"
+                          "A0": "'7'"
                         }
                       ]
                     },
@@ -387,27 +387,27 @@
                         },
                         {
                           "C": [
-                            "NSW"
-                          ],
-                          "R": 2
+                            "NSW",
+                            "'6'"
+                          ]
                         },
                         {
                           "C": [
-                            "NT"
-                          ],
-                          "R": 2
+                            "NT",
+                            "0L"
+                          ]
                         },
                         {
                           "C": [
-                            "QLD"
-                          ],
-                          "R": 2
+                            "QLD",
+                            "'<5'"
+                          ]
                         },
                         {
                           "C": [
-                            "SA"
-                          ],
-                          "R": 2
+                            "SA",
+                            "0L"
+                          ]
                         },
                         {
                           "C": [
@@ -445,9 +445,9 @@
   },
   "parsed_counts": {
     "ACT": 0,
-    "NSW": 0,
+    "NSW": 6,
     "NT": 0,
-    "QLD": 0,
+    "QLD": "'<5'",
     "SA": 0,
     "TAS": 0,
     "VIC": 0,
