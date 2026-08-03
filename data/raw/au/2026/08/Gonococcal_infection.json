@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-08-02T22:45:39.742098+00:00",
+  "fetched_at": "2026-08-03T22:46:05.094530+00:00",
   "disease": "Gonococcal infection",
   "year": 2026,
   "month": 8,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785710739335)/",
-            "rootActivityId": "020ef0a8-0f3d-4eaa-94b0-07bbe37ac7d4",
+            "timestamp": "/Date(1785797164263)/",
+            "rootActivityId": "e75b5422-1bd5-47e3-9ea9-50d14cbbb7c3",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'5'"
+                          "A0": "'32'"
                         }
                       ]
                     },
@@ -388,7 +388,7 @@
                         {
                           "C": [
                             "NSW",
-                            "'5'"
+                            "'15'"
                           ]
                         },
                         {
@@ -399,15 +399,15 @@
                         },
                         {
                           "C": [
-                            "QLD"
-                          ],
-                          "R": 2
+                            "QLD",
+                            "'8'"
+                          ]
                         },
                         {
                           "C": [
-                            "SA"
-                          ],
-                          "R": 2
+                            "SA",
+                            "0L"
+                          ]
                         },
                         {
                           "C": [
@@ -417,15 +417,15 @@
                         },
                         {
                           "C": [
-                            "VIC"
-                          ],
-                          "R": 2
+                            "VIC",
+                            "'9'"
+                          ]
                         },
                         {
                           "C": [
-                            "WA"
-                          ],
-                          "R": 2
+                            "WA",
+                            "0L"
+                          ]
                         }
                       ]
                     }
@@ -445,12 +445,12 @@
   },
   "parsed_counts": {
     "ACT": 0,
-    "NSW": 5,
+    "NSW": 15,
     "NT": 0,
-    "QLD": 0,
+    "QLD": 8,
     "SA": 0,
     "TAS": 0,
-    "VIC": 0,
+    "VIC": 9,
     "WA": 0
   }
 }
