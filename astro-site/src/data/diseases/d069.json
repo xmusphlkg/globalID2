@@ -7,6 +7,49 @@
   "icd_11": "1E50.2",
   "description": "",
   "slug": "other-acute-viral-hepatitis",
+  "ontology": {
+    "status": "active",
+    "rollup_policy": "no_auto_rollup",
+    "facet_tags": {
+      "etiology": [
+        "etiology.other_hepatitis_virus"
+      ],
+      "clinical_course": [
+        "clinical_course.acute_hepatitis"
+      ],
+      "surveillance_scope": [
+        "surveillance_scope.condition_specific"
+      ],
+      "population": [
+        "population.all"
+      ]
+    },
+    "group_ids": [
+      "G_HEPATITIS_BY_COURSE"
+    ],
+    "relations": {
+      "outgoing": [
+        {
+          "id": "R_D069_COURSE_OF_D006",
+          "type": "clinical_course_of",
+          "from_ref": {
+            "kind": "concept",
+            "id": "D069"
+          },
+          "to_ref": {
+            "kind": "concept",
+            "id": "D006"
+          },
+          "hierarchical": true,
+          "rollup": false,
+          "rollup_policy": "no_auto_rollup"
+        }
+      ],
+      "incoming": []
+    },
+    "source_series_count": 0,
+    "availability": []
+  },
   "country_series": {},
   "global_monthly": {
     "months": [],
@@ -15,6 +58,15 @@
   },
   "total_cases": 0,
   "total_deaths": 0,
+  "data_layer_summary": {
+    "series_registry_country_count": 0,
+    "mixed_country_count": 0,
+    "legacy_fallback_country_count": 0,
+    "series_registry_country_codes": [],
+    "mixed_country_codes": [],
+    "legacy_fallback_country_codes": [],
+    "loss_risk_country_codes": []
+  },
   "generated_at": "2026-08-01T00:00:00+00:00",
   "source_info": []
 }

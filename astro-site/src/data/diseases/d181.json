@@ -7,6 +7,59 @@
   "icd_11": "RA01",
   "description": "Severe complicated COVID-19 surveillance concept",
   "slug": "severe-complicated-covid-19",
+  "ontology": {
+    "status": "active",
+    "rollup_policy": "no_auto_rollup",
+    "facet_tags": {
+      "etiology": [
+        "etiology.viral"
+      ],
+      "clinical_course": [
+        "clinical_course.advanced_disease"
+      ],
+      "surveillance_scope": [
+        "surveillance_scope.condition_specific"
+      ],
+      "population": [
+        "population.all"
+      ]
+    },
+    "group_ids": [],
+    "relations": {
+      "outgoing": [
+        {
+          "id": "R_D181_SEVERE_COMPLICATION_OF_D004",
+          "type": "severe_complication_of",
+          "from_ref": {
+            "kind": "concept",
+            "id": "D181"
+          },
+          "to_ref": {
+            "kind": "concept",
+            "id": "D004"
+          },
+          "hierarchical": true,
+          "rollup": false,
+          "rollup_policy": "no_auto_rollup"
+        }
+      ],
+      "incoming": []
+    },
+    "source_series_count": 1,
+    "availability": [
+      {
+        "id": "AV_TW_SEVERE_COMPLICATED_COVID19_19SC",
+        "source_id": "SRC_TW_NIDSS",
+        "target_ref": {
+          "kind": "concept",
+          "id": "D181"
+        },
+        "series_id": "SER_TW_SEVERE_COMPLICATED_COVID19_19SC",
+        "status": "available",
+        "reason_code": "series_facts_backfilled"
+      }
+    ]
+  },
   "country_series": {
     "TW": {
       "dates": [
@@ -33,7 +86,8 @@
         "2026-04-01",
         "2026-05-01",
         "2026-06-01",
-        "2026-07-01"
+        "2026-07-01",
+        "2026-08-01"
       ],
       "cases": [
         22,
@@ -59,7 +113,8 @@
         3,
         6,
         38,
-        152
+        166,
+        6
       ],
       "weekly_equiv_cases": [
         4.967741935483871,
@@ -85,9 +140,11 @@
         0.6774193548387096,
         1.4000000000000001,
         8.580645161290322,
-        35.46666666666667
+        38.733333333333334,
+        1.3548387096774193
       ],
       "deaths": [
+        0,
         0,
         0,
         0,
@@ -137,6 +194,7 @@
         null,
         null,
         null,
+        null,
         null
       ],
       "incidence_sources": [
@@ -163,10 +221,248 @@
         "missing_population",
         "missing_population",
         "missing_population",
+        "missing_population",
         "missing_population"
       ],
-      "total_cases": 2512,
-      "total_deaths": 0
+      "total_cases": 2532,
+      "total_deaths": 0,
+      "data_layer": "series_registry",
+      "projection_policy": "single_series",
+      "loss_risk": null,
+      "selected_series_codes": [
+        "SER_TW_SEVERE_COMPLICATED_COVID19_19SC"
+      ],
+      "available_series_count": 1,
+      "source_series": [
+        {
+          "series_code": "SER_TW_SEVERE_COMPLICATED_COVID19_19SC",
+          "source_system": "SRC_TW_NIDSS",
+          "source_series_code": "SER_TW_SEVERE_COMPLICATED_COVID19_19SC",
+          "source_label": "新冠併發重症",
+          "definition_version": "globalid-disease-ontology:2026.08.2",
+          "case_definition": "Taiwan NIDSS severe complicated COVID-19 series; a severe outcome category distinct from general COVID-19 notifications.",
+          "case_definition_uri": null,
+          "metric_type": "case_notifications",
+          "reporting_basis": "notification",
+          "temporal_granularity": "monthly",
+          "mapping_relation": "exact",
+          "comparability": "unknown",
+          "aggregation_policy": "non_additive",
+          "availability_status": "active",
+          "missing_value_policy": "missing_is_unknown",
+          "valid_from": null,
+          "valid_to": null,
+          "unit": "count",
+          "geography_key": "country:TW:national",
+          "dimension_key": "all",
+          "dates": [
+            "2024-08-01",
+            "2024-09-01",
+            "2024-10-01",
+            "2024-11-01",
+            "2024-12-01",
+            "2025-01-01",
+            "2025-02-01",
+            "2025-03-01",
+            "2025-04-01",
+            "2025-05-01",
+            "2025-06-01",
+            "2025-07-01",
+            "2025-08-01",
+            "2025-09-01",
+            "2025-10-01",
+            "2025-11-01",
+            "2025-12-01",
+            "2026-01-01",
+            "2026-02-01",
+            "2026-03-01",
+            "2026-04-01",
+            "2026-05-01",
+            "2026-06-01",
+            "2026-07-01",
+            "2026-08-01"
+          ],
+          "values": [
+            22,
+            192,
+            121,
+            71,
+            52,
+            39,
+            40,
+            34,
+            89,
+            421,
+            637,
+            348,
+            108,
+            52,
+            30,
+            14,
+            10,
+            15,
+            5,
+            13,
+            3,
+            6,
+            38,
+            166,
+            6
+          ],
+          "total_value": 2532,
+          "observation_count": 25,
+          "quality_statuses": [
+            "raw"
+          ]
+        }
+      ],
+      "coverage_status": "parity",
+      "coverage_policy": "period_key_overlay",
+      "legacy_gap_fill_count": 0,
+      "coverage_ratio_against_legacy": 1.0,
+      "data_provenance": {
+        "data_layer": "series_registry",
+        "projection_policy": "single_series",
+        "loss_risk": null,
+        "selected_series_codes": [
+          "SER_TW_SEVERE_COMPLICATED_COVID19_19SC"
+        ],
+        "available_series_count": 1,
+        "note_en": "The public curve is read directly from one registered source series.",
+        "note_zh": "公开曲线直接读取自一个已注册的来源序列。",
+        "supplemental_legacy_metrics": {
+          "dates": [
+            "2024-08-01",
+            "2024-09-01",
+            "2024-10-01",
+            "2024-11-01",
+            "2024-12-01",
+            "2025-01-01",
+            "2025-02-01",
+            "2025-03-01",
+            "2025-04-01",
+            "2025-05-01",
+            "2025-06-01",
+            "2025-07-01",
+            "2025-08-01",
+            "2025-09-01",
+            "2025-10-01",
+            "2025-11-01",
+            "2025-12-01",
+            "2026-01-01",
+            "2026-02-01",
+            "2026-03-01",
+            "2026-04-01",
+            "2026-05-01",
+            "2026-06-01",
+            "2026-07-01",
+            "2026-08-01"
+          ],
+          "deaths": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "recoveries": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mortality_rates": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ]
+        },
+        "metric_layers": {
+          "cases": "series_registry",
+          "deaths": "legacy_fallback",
+          "recoveries": "legacy_fallback"
+        },
+        "coverage_policy": "period_key_overlay",
+        "coverage_status": "parity",
+        "legacy_period_count": 25,
+        "registry_period_count": 25,
+        "overlap_period_count": 25,
+        "legacy_gap_fill_count": 0,
+        "registry_only_period_count": 0,
+        "coverage_ratio_against_legacy": 1.0,
+        "cutover": {
+          "release_version": "2026.08.2",
+          "read_mode": "series_with_fallback",
+          "shadow_compare": true,
+          "target_override": false,
+          "required_series": [],
+          "allowed_projection_policy": null,
+          "blocked_reasons": []
+        }
+      }
     }
   },
   "global_monthly": {
@@ -194,7 +490,8 @@
       "2026-04",
       "2026-05",
       "2026-06",
-      "2026-07"
+      "2026-07",
+      "2026-08"
     ],
     "cases": [
       22,
@@ -220,9 +517,11 @@
       3,
       6,
       38,
-      152
+      166,
+      6
     ],
     "deaths": [
+      0,
       0,
       0,
       0,
@@ -249,8 +548,19 @@
       0
     ]
   },
-  "total_cases": 2512,
+  "total_cases": 2532,
   "total_deaths": 0,
+  "data_layer_summary": {
+    "series_registry_country_count": 1,
+    "mixed_country_count": 0,
+    "legacy_fallback_country_count": 0,
+    "series_registry_country_codes": [
+      "TW"
+    ],
+    "mixed_country_codes": [],
+    "legacy_fallback_country_codes": [],
+    "loss_risk_country_codes": []
+  },
   "generated_at": "2026-08-01T00:00:00+00:00",
   "source_info": [
     {

@@ -37,17 +37,221 @@
     "icd_10": "U07.1",
     "icd_11": "RA01",
     "description": "Coronavirus Disease 2019",
-    "slug": "covid-19"
+    "slug": "covid-19",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "etiology": [
+          "etiology.viral"
+        ],
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [],
+      "relations": {
+        "outgoing": [],
+        "incoming": [
+          {
+            "id": "R_D181_SEVERE_COMPLICATION_OF_D004",
+            "type": "severe_complication_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D181"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D004"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ]
+      },
+      "source_series_count": 2,
+      "availability": [
+        {
+          "id": "AV_TW_COVID19_OLD_DEFINITION_19COV",
+          "source_id": "SRC_TW_NIDSS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D004"
+          },
+          "series_id": "SER_TW_COVID19_OLD_DEFINITION_19COV",
+          "status": "available",
+          "reason_code": "historical_series_facts_backfilled",
+          "valid_from": "2020-01-01",
+          "valid_to": "2023-12-01"
+        },
+        {
+          "id": "AV_TW_COVID19_REVISED_DEFINITION_19CVS",
+          "source_id": "SRC_TW_NIDSS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D004"
+          },
+          "series_id": "SER_TW_COVID19_REVISED_DEFINITION_19CVS",
+          "status": "available",
+          "reason_code": "historical_series_facts_backfilled",
+          "valid_from": "2023-01-01",
+          "valid_to": "2024-08-01"
+        }
+      ]
+    }
   },
   {
     "disease_id": "D005",
-    "name_en": "HIV/AIDS",
+    "name_en": "AIDS",
     "name_zh": "艾滋病",
     "category": "Viral",
     "icd_10": "B20-B24",
     "icd_11": "1C62",
-    "description": "Human Immunodeficiency Virus/Acquired Immune Deficiency Syndrome",
-    "slug": "hiv-aids"
+    "description": "Advanced HIV disease classified as HIV stage 3 (AIDS); do not combine with all-stage HIV diagnoses without an explicit roll-up rule",
+    "slug": "aids",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "etiology": [
+          "etiology.hiv"
+        ],
+        "clinical_course": [
+          "clinical_course.aids"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_HIV_SPECTRUM",
+        "G_HIV_RELATED_SURVEILLANCE"
+      ],
+      "relations": {
+        "outgoing": [
+          {
+            "id": "R_D005_STAGE_OF_D162",
+            "type": "clinical_stage_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D005"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D162"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ],
+        "incoming": []
+      },
+      "source_series_count": 7,
+      "availability": [
+        {
+          "id": "AV_CH_AIDS",
+          "source_id": "SRC_CH_FOPH_IDD",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D005"
+          },
+          "series_id": "SER_CH_AIDS_ANNUAL",
+          "status": "available",
+          "reason_code": "source_reports_series"
+        },
+        {
+          "id": "AV_CN_AIDS",
+          "source_id": "SRC_CN_CDC",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D005"
+          },
+          "series_id": "SER_CN_AIDS",
+          "status": "available",
+          "reason_code": "source_reports_series"
+        },
+        {
+          "id": "AV_JP_AIDS",
+          "source_id": "SRC_JP_NIID",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D005"
+          },
+          "series_id": "SER_JP_AIDS_WEEKLY",
+          "status": "available",
+          "reason_code": "source_reports_series"
+        },
+        {
+          "id": "AV_TW_AIDS",
+          "source_id": "SRC_TW_NIDSS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D005"
+          },
+          "series_id": "SER_TW_AIDS_042",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        },
+        {
+          "id": "AV_BR_AIDS_ADULT",
+          "source_id": "SRC_BR_SINAN",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D005"
+          },
+          "series_id": "SER_BR_AIDS_ADULT_AIDA",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        },
+        {
+          "id": "AV_BR_AIDS_CHILD",
+          "source_id": "SRC_BR_SINAN",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D005"
+          },
+          "series_id": "SER_BR_AIDS_CHILD_AIDC",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        },
+        {
+          "id": "AV_US_AIDS",
+          "source_id": "SRC_US_NNDSS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D005"
+          },
+          "status": "not_reported_by_source",
+          "reason_code": "separate_hiv_surveillance_system_required",
+          "notes": "The local NNDSS weekly feed does not contain an AIDS series."
+        },
+        {
+          "id": "AV_US_NHSS_AIDS",
+          "source_id": "SRC_US_NHSS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D005"
+          },
+          "series_id": "SER_US_NHSS_AIDS_ANNUAL",
+          "status": "available",
+          "reason_code": "historical_extract_reports_series",
+          "valid_from": "2014-01-01",
+          "valid_to": "2022-12-31",
+          "notes": "Historical AtlasPlus extract only; the current NHSS workbook does not refresh this AIDS classifications series."
+        }
+      ]
+    }
   },
   {
     "disease_id": "D006",
@@ -57,7 +261,167 @@
     "icd_10": "B15-B19",
     "icd_11": "1E50",
     "description": "Viral hepatitis (aggregate category)",
-    "slug": "viral-hepatitis"
+    "slug": "viral-hepatitis",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "etiology": [
+          "etiology.viral_hepatitis"
+        ],
+        "clinical_course": [
+          "clinical_course.hepatitis"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.viral_hepatitis_aggregate"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_VIRAL_HEPATITIS"
+      ],
+      "relations": {
+        "outgoing": [],
+        "incoming": [
+          {
+            "id": "R_D007_TYPE_OF_D006",
+            "type": "etiologic_subtype_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D007"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D006"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          },
+          {
+            "id": "R_D008_TYPE_OF_D006",
+            "type": "etiologic_subtype_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D008"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D006"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          },
+          {
+            "id": "R_D009_TYPE_OF_D006",
+            "type": "etiologic_subtype_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D009"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D006"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          },
+          {
+            "id": "R_D010_TYPE_OF_D006",
+            "type": "etiologic_subtype_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D010"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D006"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          },
+          {
+            "id": "R_D011_TYPE_OF_D006",
+            "type": "etiologic_subtype_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D011"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D006"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          },
+          {
+            "id": "R_D069_COURSE_OF_D006",
+            "type": "clinical_course_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D069"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D006"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          },
+          {
+            "id": "R_D070_COURSE_OF_D006",
+            "type": "clinical_course_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D070"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D006"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          },
+          {
+            "id": "R_D071_FORM_OF_D006",
+            "type": "unspecified_form_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D071"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D006"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ]
+      },
+      "source_series_count": 1,
+      "availability": [
+        {
+          "id": "AV_CN_VIRAL_HEPATITIS",
+          "source_id": "SRC_CN_CDC",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D006"
+          },
+          "series_id": "SER_CN_VIRAL_HEPATITIS",
+          "status": "available",
+          "reason_code": "source_reports_series"
+        }
+      ]
+    }
   },
   {
     "disease_id": "D007",
@@ -67,27 +431,346 @@
     "icd_10": "B15",
     "icd_11": "1E50.0",
     "description": "Hepatitis A virus infection",
-    "slug": "hepatitis-a"
+    "slug": "hepatitis-a",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "etiology": [
+          "etiology.hav"
+        ],
+        "clinical_course": [
+          "clinical_course.acute_hepatitis"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_HEPATITIS_BY_VIRUS"
+      ],
+      "relations": {
+        "outgoing": [
+          {
+            "id": "R_D007_TYPE_OF_D006",
+            "type": "etiologic_subtype_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D007"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D006"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ],
+        "incoming": [
+          {
+            "id": "R_D067_REPLACED_BY_D007",
+            "type": "replaced_by",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D067"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D007"
+            },
+            "hierarchical": false,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ]
+      },
+      "source_series_count": 3,
+      "availability": [
+        {
+          "id": "AV_CN_HEPATITIS_A",
+          "source_id": "SRC_CN_CDC",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D007"
+          },
+          "series_id": "SER_CN_HEPATITIS_A",
+          "status": "available",
+          "reason_code": "source_reports_series"
+        },
+        {
+          "id": "AV_TW_HEPATITIS_A",
+          "source_id": "SRC_TW_NIDSS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D007"
+          },
+          "series_id": "SER_TW_HEPATITIS_A_0701",
+          "status": "available",
+          "reason_code": "source_reports_series"
+        },
+        {
+          "id": "AV_US_HEPATITIS_A_CONFIRMED",
+          "source_id": "SRC_US_NNDSS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D007"
+          },
+          "series_id": "SER_US_HEPATITIS_A_CONFIRMED",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
   },
   {
     "disease_id": "D008",
     "name_en": "Hepatitis B",
     "name_zh": "乙型肝炎",
     "category": "Viral",
-    "icd_10": "B16",
-    "icd_11": "1E50.1",
-    "description": "Hepatitis B virus infection",
-    "slug": "hepatitis-b"
+    "icd_10": "B16-B18",
+    "icd_11": "1E50.1-1E51.0",
+    "description": "Hepatitis B infection with clinical course unspecified; use D068/D208/D209 when acute/chronic/perinatal status is reported",
+    "slug": "hepatitis-b",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "etiology": [
+          "etiology.hbv"
+        ],
+        "clinical_course": [
+          "clinical_course.unspecified_hepatitis"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_HEPATITIS_BY_VIRUS",
+        "G_HBV_SPECTRUM"
+      ],
+      "relations": {
+        "outgoing": [
+          {
+            "id": "R_D008_TYPE_OF_D006",
+            "type": "etiologic_subtype_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D008"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D006"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ],
+        "incoming": [
+          {
+            "id": "R_D068_COURSE_OF_D008",
+            "type": "clinical_course_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D068"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D008"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          },
+          {
+            "id": "R_D208_COURSE_OF_D008",
+            "type": "clinical_course_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D208"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D008"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          },
+          {
+            "id": "R_D209_COURSE_OF_D008",
+            "type": "clinical_course_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D209"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D008"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ]
+      },
+      "source_series_count": 2,
+      "availability": [
+        {
+          "id": "AV_CN_HEPATITIS_B",
+          "source_id": "SRC_CN_CDC",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D008"
+          },
+          "series_id": "SER_CN_HEPATITIS_B_UNSPECIFIED_COURSE",
+          "status": "available",
+          "reason_code": "source_reports_unspecified_course_series"
+        },
+        {
+          "id": "AV_AU_HEPATITIS_B_UNSPECIFIED",
+          "source_id": "SRC_AU_NINDSS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D008"
+          },
+          "series_id": "SER_AU_HEPATITIS_B_UNSPECIFIED",
+          "status": "available",
+          "reason_code": "source_reports_series"
+        }
+      ]
+    }
   },
   {
     "disease_id": "D009",
     "name_en": "Hepatitis C",
     "name_zh": "丙型肝炎",
     "category": "Viral",
-    "icd_10": "B17.1",
-    "icd_11": "1E50.2",
-    "description": "Hepatitis C virus infection",
-    "slug": "hepatitis-c"
+    "icd_10": "B17.1-B18.2",
+    "icd_11": "1E50.2-1E51.1",
+    "description": "Hepatitis C infection with clinical course unspecified; use D210/D211/D212 when acute/chronic/perinatal status is reported",
+    "slug": "hepatitis-c",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "etiology": [
+          "etiology.hcv"
+        ],
+        "clinical_course": [
+          "clinical_course.unspecified_hepatitis"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_HEPATITIS_BY_VIRUS",
+        "G_HCV_SPECTRUM"
+      ],
+      "relations": {
+        "outgoing": [
+          {
+            "id": "R_D009_TYPE_OF_D006",
+            "type": "etiologic_subtype_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D009"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D006"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ],
+        "incoming": [
+          {
+            "id": "R_D210_COURSE_OF_D009",
+            "type": "clinical_course_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D210"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D009"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          },
+          {
+            "id": "R_D211_COURSE_OF_D009",
+            "type": "clinical_course_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D211"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D009"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          },
+          {
+            "id": "R_D212_COURSE_OF_D009",
+            "type": "clinical_course_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D212"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D009"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ]
+      },
+      "source_series_count": 2,
+      "availability": [
+        {
+          "id": "AV_CN_HEPATITIS_C",
+          "source_id": "SRC_CN_CDC",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D009"
+          },
+          "series_id": "SER_CN_HEPATITIS_C_UNSPECIFIED_COURSE",
+          "status": "available",
+          "reason_code": "source_reports_unspecified_course_series"
+        },
+        {
+          "id": "AV_AU_HEPATITIS_C_UNSPECIFIED",
+          "source_id": "SRC_AU_NINDSS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D009"
+          },
+          "series_id": "SER_AU_HEPATITIS_C_UNSPECIFIED",
+          "status": "available",
+          "reason_code": "source_reports_series"
+        }
+      ]
+    }
   },
   {
     "disease_id": "D010",
@@ -97,7 +780,62 @@
     "icd_10": "B17.0",
     "icd_11": "1E50.3",
     "description": "Hepatitis D virus infection",
-    "slug": "hepatitis-d"
+    "slug": "hepatitis-d",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "etiology": [
+          "etiology.hdv"
+        ],
+        "clinical_course": [
+          "clinical_course.hepatitis"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_HEPATITIS_BY_VIRUS"
+      ],
+      "relations": {
+        "outgoing": [
+          {
+            "id": "R_D010_TYPE_OF_D006",
+            "type": "etiologic_subtype_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D010"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D006"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ],
+        "incoming": []
+      },
+      "source_series_count": 1,
+      "availability": [
+        {
+          "id": "AV_CN_HEPATITIS_D",
+          "source_id": "SRC_CN_CDC",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D010"
+          },
+          "series_id": "SER_CN_HEPATITIS_D",
+          "status": "available",
+          "reason_code": "source_reports_series"
+        }
+      ]
+    }
   },
   {
     "disease_id": "D011",
@@ -107,17 +845,62 @@
     "icd_10": "B17.2",
     "icd_11": "1E50.4",
     "description": "Hepatitis E virus infection",
-    "slug": "hepatitis-e"
-  },
-  {
-    "disease_id": "D012",
-    "name_en": "Other Hepatitis",
-    "name_zh": "未分型肝炎",
-    "category": "Viral",
-    "icd_10": "B19",
-    "icd_11": "1E50.Y",
-    "description": "Unspecified viral hepatitis",
-    "slug": "other-hepatitis"
+    "slug": "hepatitis-e",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "etiology": [
+          "etiology.hev"
+        ],
+        "clinical_course": [
+          "clinical_course.acute_hepatitis"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_HEPATITIS_BY_VIRUS"
+      ],
+      "relations": {
+        "outgoing": [
+          {
+            "id": "R_D011_TYPE_OF_D006",
+            "type": "etiologic_subtype_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D011"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D006"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ],
+        "incoming": []
+      },
+      "source_series_count": 1,
+      "availability": [
+        {
+          "id": "AV_CN_HEPATITIS_E",
+          "source_id": "SRC_CN_CDC",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D011"
+          },
+          "series_id": "SER_CN_HEPATITIS_E",
+          "status": "available",
+          "reason_code": "source_reports_series"
+        }
+      ]
+    }
   },
   {
     "disease_id": "D013",
@@ -127,7 +910,62 @@
     "icd_10": "A80",
     "icd_11": "1C81",
     "description": "Polio caused by poliovirus",
-    "slug": "poliomyelitis"
+    "slug": "poliomyelitis",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "etiology": [
+          "etiology.viral"
+        ],
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_POLIO_AFP_SURVEILLANCE"
+      ],
+      "relations": {
+        "outgoing": [],
+        "incoming": [
+          {
+            "id": "R_D178_SURVEILLANCE_FOR_D013",
+            "type": "surveillance_syndrome_for",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D178"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D013"
+            },
+            "hierarchical": false,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ]
+      },
+      "source_series_count": 1,
+      "availability": [
+        {
+          "id": "AV_JP_POLIOMYELITIS_WEEKLY",
+          "source_id": "SRC_JP_NIID",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D013"
+          },
+          "series_id": "SER_JP_POLIOMYELITIS_WEEKLY",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
   },
   {
     "disease_id": "D014",
@@ -157,7 +995,166 @@
     "icd_10": "J09",
     "icd_11": "1E30.0",
     "description": "Canonical cross-country ID for novel influenza A virus infections",
-    "slug": "novel-influenza-a"
+    "slug": "novel-influenza-a",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "etiology": [
+          "etiology.novel_influenza"
+        ],
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [],
+      "relations": {
+        "outgoing": [],
+        "incoming": []
+      },
+      "source_series_count": 11,
+      "availability": [
+        {
+          "id": "AV_HK_NOVEL_INFLUENZA_COMBINED_H2_H5_H7_H9",
+          "source_id": "SRC_HK_CHP",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D016"
+          },
+          "series_id": "SER_HK_NOVEL_INFLUENZA_COMBINED_H2_H5_H7_H9",
+          "status": "available",
+          "reason_code": "historical_series_facts_backfilled",
+          "valid_from": "2008-01-01",
+          "valid_to": "2008-12-01"
+        },
+        {
+          "id": "AV_HK_NOVEL_INFLUENZA_COMBINED_H5_H7_H9",
+          "source_id": "SRC_HK_CHP",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D016"
+          },
+          "series_id": "SER_HK_NOVEL_INFLUENZA_COMBINED_H5_H7_H9",
+          "status": "available",
+          "reason_code": "historical_series_facts_backfilled",
+          "valid_from": "2004-01-01",
+          "valid_to": "2007-12-01"
+        },
+        {
+          "id": "AV_HK_NOVEL_INFLUENZA_H2",
+          "source_id": "SRC_HK_CHP",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D016"
+          },
+          "series_id": "SER_HK_NOVEL_INFLUENZA_H2",
+          "status": "available",
+          "reason_code": "historical_series_facts_backfilled",
+          "valid_from": "2009-01-01",
+          "valid_to": "2013-12-01"
+        },
+        {
+          "id": "AV_HK_NOVEL_INFLUENZA_H5",
+          "source_id": "SRC_HK_CHP",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D016"
+          },
+          "series_id": "SER_HK_NOVEL_INFLUENZA_H5",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        },
+        {
+          "id": "AV_HK_NOVEL_INFLUENZA_H7",
+          "source_id": "SRC_HK_CHP",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D016"
+          },
+          "series_id": "SER_HK_NOVEL_INFLUENZA_H7",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        },
+        {
+          "id": "AV_HK_NOVEL_INFLUENZA_H9",
+          "source_id": "SRC_HK_CHP",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D016"
+          },
+          "series_id": "SER_HK_NOVEL_INFLUENZA_H9",
+          "status": "available",
+          "reason_code": "historical_series_facts_backfilled",
+          "valid_from": "2009-01-01",
+          "valid_to": "2013-12-01"
+        },
+        {
+          "id": "AV_HK_NOVEL_INFLUENZA_SWINE",
+          "source_id": "SRC_HK_CHP",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D016"
+          },
+          "series_id": "SER_HK_NOVEL_INFLUENZA_SWINE",
+          "status": "available",
+          "reason_code": "historical_series_facts_backfilled",
+          "valid_from": "2009-04-01",
+          "valid_to": "2010-10-01"
+        },
+        {
+          "id": "AV_HK_NOVEL_INFLUENZA_VARIANT_H3N2",
+          "source_id": "SRC_HK_CHP",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D016"
+          },
+          "series_id": "SER_HK_NOVEL_INFLUENZA_VARIANT_H3N2",
+          "status": "available",
+          "reason_code": "historical_series_facts_backfilled",
+          "valid_from": "2012-08-01",
+          "valid_to": "2014-12-01"
+        },
+        {
+          "id": "AV_HK_NOVEL_INFLUENZA_OTHERS",
+          "source_id": "SRC_HK_CHP",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D016"
+          },
+          "series_id": "SER_HK_NOVEL_INFLUENZA_OTHERS",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        },
+        {
+          "id": "AV_KR_ANIMAL_INFLUENZA_HUMAN_INFECTION",
+          "source_id": "SRC_KR_KDCA",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D016"
+          },
+          "series_id": "SER_KR_ANIMAL_INFLUENZA_HUMAN_INFECTION",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        },
+        {
+          "id": "AV_KR_NOVEL_INFLUENZA",
+          "source_id": "SRC_KR_KDCA",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D016"
+          },
+          "series_id": "SER_KR_NOVEL_INFLUENZA",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
   },
   {
     "disease_id": "D017",
@@ -187,7 +1184,62 @@
     "icd_10": "A82",
     "icd_11": "1C82",
     "description": "Fatal viral disease transmitted by animal bites",
-    "slug": "rabies"
+    "slug": "rabies",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "etiology": [
+          "etiology.viral"
+        ],
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_LYSSAVIRUS_SPECTRUM"
+      ],
+      "relations": {
+        "outgoing": [],
+        "incoming": [
+          {
+            "id": "R_D214_RELATED_TO_D019",
+            "type": "related_lyssavirus_category",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D214"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D019"
+            },
+            "hierarchical": false,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ]
+      },
+      "source_series_count": 1,
+      "availability": [
+        {
+          "id": "AV_JP_RABIES_WEEKLY",
+          "source_id": "SRC_JP_NIID",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D019"
+          },
+          "series_id": "SER_JP_RABIES_WEEKLY",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
   },
   {
     "disease_id": "D020",
@@ -247,7 +1299,89 @@
     "icd_10": "A01",
     "icd_11": "1B13",
     "description": "Enteric fever",
-    "slug": "typhoid-and-paratyphoid-fever"
+    "slug": "typhoid-and-paratyphoid-fever",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.aggregate"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_ENTERIC_FEVER_SPECTRUM"
+      ],
+      "relations": {
+        "outgoing": [],
+        "incoming": [
+          {
+            "id": "R_D124_COMPONENT_OF_D026",
+            "type": "reported_component_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D124"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D026"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          },
+          {
+            "id": "R_D234_COMPONENT_OF_D026",
+            "type": "reported_component_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D234"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D026"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ]
+      },
+      "source_series_count": 2,
+      "availability": [
+        {
+          "id": "AV_CH_TYPHOID_PARATYPHOID_COMBINED_ANNUAL",
+          "source_id": "SRC_CH_FOPH_IDD",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D026"
+          },
+          "series_id": "SER_CH_TYPHOID_PARATYPHOID_COMBINED_ANNUAL",
+          "status": "upstream_available_ingestion_pending",
+          "reason_code": "semantic_mapping_corrected_backfill_pending",
+          "notes": "Combined source series registered; exact-series historical backfill remains pending.",
+          "missing_value_policy": "missing_is_unknown"
+        },
+        {
+          "id": "AV_CN_TYPHOID_PARATYPHOID_COMBINED_MONTHLY",
+          "source_id": "SRC_CN_CDC",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D026"
+          },
+          "series_id": "SER_CN_TYPHOID_PARATYPHOID_COMBINED_MONTHLY",
+          "status": "upstream_available_ingestion_pending",
+          "reason_code": "semantic_mapping_corrected_backfill_pending",
+          "notes": "Combined source series registered; exact-series historical backfill remains pending.",
+          "missing_value_policy": "missing_is_unknown"
+        }
+      ]
+    }
   },
   {
     "disease_id": "D028",
@@ -317,7 +1451,133 @@
     "icd_10": "A50-A53",
     "icd_11": "1A70",
     "description": "Sexually transmitted bacterial infection",
-    "slug": "syphilis"
+    "slug": "syphilis",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_SYPHILIS_SURVEILLANCE_SPECTRUM"
+      ],
+      "relations": {
+        "outgoing": [],
+        "incoming": [
+          {
+            "id": "R_D167_CONGENITAL_FORM_OF_D034",
+            "type": "congenital_form_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D167"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D034"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          },
+          {
+            "id": "R_D232_DURATION_FORM_OF_D034",
+            "type": "duration_category_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D232"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D034"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          },
+          {
+            "id": "R_D233_DURATION_FORM_OF_D034",
+            "type": "duration_category_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D233"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D034"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ]
+      },
+      "source_series_count": 5,
+      "availability": [
+        {
+          "id": "AV_AU_SYPHILIS_UNQUALIFIED",
+          "source_id": "SRC_AU_NINDSS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D034"
+          },
+          "series_id": "SER_AU_SYPHILIS_UNQUALIFIED",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        },
+        {
+          "id": "AV_KR_SYPHILIS_PRIMARY",
+          "source_id": "SRC_KR_KDCA",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D034"
+          },
+          "series_id": "SER_KR_SYPHILIS_PRIMARY",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        },
+        {
+          "id": "AV_KR_SYPHILIS_SECONDARY",
+          "source_id": "SRC_KR_KDCA",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D034"
+          },
+          "series_id": "SER_KR_SYPHILIS_SECONDARY",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        },
+        {
+          "id": "AV_KR_SYPHILIS_TERTIARY",
+          "source_id": "SRC_KR_KDCA",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D034"
+          },
+          "series_id": "SER_KR_SYPHILIS_TERTIARY",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        },
+        {
+          "id": "AV_KR_SYPHILIS_LATENT",
+          "source_id": "SRC_KR_KDCA",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D034"
+          },
+          "series_id": "SER_KR_SYPHILIS_LATENT",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
   },
   {
     "disease_id": "D035",
@@ -377,7 +1637,73 @@
     "icd_10": "B06",
     "icd_11": "KA63",
     "description": "German measles",
-    "slug": "rubella"
+    "slug": "rubella",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "etiology": [
+          "etiology.viral"
+        ],
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_RUBELLA_SPECTRUM"
+      ],
+      "relations": {
+        "outgoing": [],
+        "incoming": [
+          {
+            "id": "R_D168_CONGENITAL_FORM_OF_D040",
+            "type": "congenital_form_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D168"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D040"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ]
+      },
+      "source_series_count": 2,
+      "availability": [
+        {
+          "id": "AV_AU_RUBELLA",
+          "source_id": "SRC_AU_NINDSS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D040"
+          },
+          "series_id": "SER_AU_RUBELLA",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        },
+        {
+          "id": "AV_JP_RUBELLA_WEEKLY",
+          "source_id": "SRC_JP_NIID",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D040"
+          },
+          "series_id": "SER_JP_RUBELLA_WEEKLY",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
   },
   {
     "disease_id": "D041",
@@ -447,7 +1773,54 @@
     "icd_10": "A09",
     "icd_11": "1A11",
     "description": "Other infectious diarrhea",
-    "slug": "infectious-diarrhea"
+    "slug": "infectious-diarrhea",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [],
+      "relations": {
+        "outgoing": [],
+        "incoming": [
+          {
+            "id": "R_D199_ETIOLOGIC_FORM_OF_D047",
+            "type": "etiologic_form_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D199"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D047"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ]
+      },
+      "source_series_count": 1,
+      "availability": [
+        {
+          "id": "AV_JP_INFECTIOUS_GASTROENTERITIS_SENTINEL_WEEKLY",
+          "source_id": "SRC_JP_NIID",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D047"
+          },
+          "series_id": "SER_JP_INFECTIOUS_GASTROENTERITIS_SENTINEL_WEEKLY",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
   },
   {
     "disease_id": "D048",
@@ -517,7 +1890,68 @@
     "icd_10": "B01",
     "icd_11": "KA62.0",
     "description": "Chickenpox",
-    "slug": "varicella"
+    "slug": "varicella",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "etiology": [
+          "etiology.viral"
+        ],
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_VZV_SPECTRUM"
+      ],
+      "relations": {
+        "outgoing": [],
+        "incoming": []
+      },
+      "source_series_count": 3,
+      "availability": [
+        {
+          "id": "AV_AU_VARICELLA_CHICKENPOX",
+          "source_id": "SRC_AU_NINDSS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D054"
+          },
+          "series_id": "SER_AU_VARICELLA_CHICKENPOX",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        },
+        {
+          "id": "AV_JP_VARICELLA_SENTINEL_WEEKLY",
+          "source_id": "SRC_JP_NIID",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D054"
+          },
+          "series_id": "SER_JP_VARICELLA_SENTINEL_WEEKLY",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        },
+        {
+          "id": "AV_JP_VARICELLA_HOSPITALIZED_WEEKLY",
+          "source_id": "SRC_JP_NIID",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D054"
+          },
+          "series_id": "SER_JP_VARICELLA_HOSPITALIZED_WEEKLY",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
   },
   {
     "disease_id": "D055",
@@ -607,7 +2041,46 @@
     "icd_10": "B02",
     "icd_11": "1E91",
     "description": "",
-    "slug": "zoster"
+    "slug": "zoster",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "etiology": [
+          "etiology.viral"
+        ],
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_VZV_SPECTRUM"
+      ],
+      "relations": {
+        "outgoing": [],
+        "incoming": []
+      },
+      "source_series_count": 1,
+      "availability": [
+        {
+          "id": "AV_AU_VARICELLA_ZOSTER",
+          "source_id": "SRC_AU_NINDSS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D063"
+          },
+          "series_id": "SER_AU_VARICELLA_ZOSTER",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
   },
   {
     "disease_id": "D064",
@@ -640,16 +2113,6 @@
     "slug": "other-viral-infections-characterized-by-skin-lesions"
   },
   {
-    "disease_id": "D067",
-    "name_en": "Acute hepatitis A",
-    "name_zh": "急性甲型肝炎",
-    "category": "Viral",
-    "icd_10": "B15",
-    "icd_11": "1E50.0",
-    "description": "",
-    "slug": "acute-hepatitis-a"
-  },
-  {
     "disease_id": "D068",
     "name_en": "Acute hepatitis B",
     "name_zh": "急性乙型肝炎",
@@ -657,7 +2120,96 @@
     "icd_10": "B16",
     "icd_11": "1E50.1",
     "description": "",
-    "slug": "acute-hepatitis-b"
+    "slug": "acute-hepatitis-b",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "etiology": [
+          "etiology.hbv"
+        ],
+        "clinical_course": [
+          "clinical_course.acute_hepatitis"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_HEPATITIS_BY_COURSE",
+        "G_HBV_SPECTRUM"
+      ],
+      "relations": {
+        "outgoing": [
+          {
+            "id": "R_D068_COURSE_OF_D008",
+            "type": "clinical_course_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D068"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D008"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ],
+        "incoming": []
+      },
+      "source_series_count": 4,
+      "availability": [
+        {
+          "id": "AV_TW_ACUTE_HEPATITIS_B",
+          "source_id": "SRC_TW_NIDSS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D068"
+          },
+          "series_id": "SER_TW_ACUTE_HEPATITIS_B_0703",
+          "status": "available",
+          "reason_code": "source_reports_series"
+        },
+        {
+          "id": "AV_AU_HEPATITIS_B_NEW",
+          "source_id": "SRC_AU_NINDSS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D068"
+          },
+          "series_id": "SER_AU_HEPATITIS_B_NEW",
+          "status": "available",
+          "reason_code": "source_reports_series"
+        },
+        {
+          "id": "AV_US_ACUTE_HEPATITIS_B_CONFIRMED",
+          "source_id": "SRC_US_NNDSS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D068"
+          },
+          "series_id": "SER_US_ACUTE_HEPATITIS_B_CONFIRMED",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        },
+        {
+          "id": "AV_US_ACUTE_HEPATITIS_B_PROBABLE",
+          "source_id": "SRC_US_NNDSS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D068"
+          },
+          "series_id": "SER_US_ACUTE_HEPATITIS_B_PROBABLE",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
   },
   {
     "disease_id": "D069",
@@ -667,7 +2219,50 @@
     "icd_10": "B17",
     "icd_11": "1E50.2",
     "description": "",
-    "slug": "other-acute-viral-hepatitis"
+    "slug": "other-acute-viral-hepatitis",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "etiology": [
+          "etiology.other_hepatitis_virus"
+        ],
+        "clinical_course": [
+          "clinical_course.acute_hepatitis"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_HEPATITIS_BY_COURSE"
+      ],
+      "relations": {
+        "outgoing": [
+          {
+            "id": "R_D069_COURSE_OF_D006",
+            "type": "clinical_course_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D069"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D006"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ],
+        "incoming": []
+      },
+      "source_series_count": 0,
+      "availability": []
+    }
   },
   {
     "disease_id": "D070",
@@ -677,7 +2272,50 @@
     "icd_10": "B18",
     "icd_11": "1E50",
     "description": "",
-    "slug": "chronic-viral-hepatitis"
+    "slug": "chronic-viral-hepatitis",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "etiology": [
+          "etiology.viral_hepatitis"
+        ],
+        "clinical_course": [
+          "clinical_course.chronic_hepatitis"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_HEPATITIS_BY_COURSE"
+      ],
+      "relations": {
+        "outgoing": [
+          {
+            "id": "R_D070_COURSE_OF_D006",
+            "type": "clinical_course_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D070"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D006"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ],
+        "incoming": []
+      },
+      "source_series_count": 0,
+      "availability": []
+    }
   },
   {
     "disease_id": "D071",
@@ -687,7 +2325,89 @@
     "icd_10": "B19",
     "icd_11": "1E50.Y",
     "description": "",
-    "slug": "unspecified-viral-hepatitis"
+    "slug": "unspecified-viral-hepatitis",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "etiology": [
+          "etiology.unspecified_hepatitis_virus"
+        ],
+        "clinical_course": [
+          "clinical_course.unspecified_hepatitis"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.unspecified"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_HEPATITIS_BY_COURSE"
+      ],
+      "relations": {
+        "outgoing": [
+          {
+            "id": "R_D071_FORM_OF_D006",
+            "type": "unspecified_form_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D071"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D006"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ],
+        "incoming": [
+          {
+            "id": "R_D012_REPLACED_BY_D071",
+            "type": "replaced_by",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D012"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D071"
+            },
+            "hierarchical": false,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ]
+      },
+      "source_series_count": 2,
+      "availability": [
+        {
+          "id": "AV_CN_UNSPECIFIED_VIRAL_HEPATITIS",
+          "source_id": "SRC_CN_CDC",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D071"
+          },
+          "series_id": "SER_CN_UNSPECIFIED_VIRAL_HEPATITIS",
+          "status": "available",
+          "reason_code": "canonical_fact_migrated"
+        },
+        {
+          "id": "AV_TW_UNSPECIFIED_HEPATITIS",
+          "source_id": "SRC_TW_NIDSS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D071"
+          },
+          "series_id": "SER_TW_UNSPECIFIED_ACUTE_HEPATITIS_070X",
+          "status": "available",
+          "reason_code": "source_reports_series"
+        }
+      ]
+    }
   },
   {
     "disease_id": "D073",
@@ -857,7 +2577,75 @@
     "icd_10": "",
     "icd_11": "",
     "description": "",
-    "slug": "arboviral-diseases"
+    "slug": "arboviral-diseases",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "etiology": [
+          "etiology.viral"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.aggregate"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [],
+      "relations": {
+        "outgoing": [],
+        "incoming": [
+          {
+            "id": "R_D218_TYPE_OF_D089",
+            "type": "etiologic_subtype_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D218"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D089"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          },
+          {
+            "id": "R_D219_TYPE_OF_D089",
+            "type": "etiologic_subtype_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D219"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D089"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          },
+          {
+            "id": "R_D220_TYPE_OF_D089",
+            "type": "etiologic_subtype_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D220"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D089"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ]
+      },
+      "source_series_count": 0,
+      "availability": []
+    }
   },
   {
     "disease_id": "D090",
@@ -1017,7 +2805,54 @@
     "icd_10": "",
     "icd_11": "",
     "description": "Shigella infection used in CDC enteric disease surveillance",
-    "slug": "shigellosis"
+    "slug": "shigellosis",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [],
+      "relations": {
+        "outgoing": [],
+        "incoming": []
+      },
+      "source_series_count": 2,
+      "availability": [
+        {
+          "id": "AV_JP_SHIGELLOSIS_WEEKLY",
+          "source_id": "SRC_JP_NIID",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D105"
+          },
+          "series_id": "SER_JP_SHIGELLOSIS_WEEKLY",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        },
+        {
+          "id": "AV_TW_SHIGELLOSIS_004",
+          "source_id": "SRC_TW_NIDSS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D105"
+          },
+          "series_id": "SER_TW_SHIGELLOSIS_004",
+          "status": "upstream_available_ingestion_pending",
+          "reason_code": "semantic_mapping_corrected_backfill_pending",
+          "notes": "Legacy bacillary-dysentery facts require explicit reassignment from the broad dysentery category.",
+          "missing_value_policy": "missing_is_unknown"
+        }
+      ]
+    }
   },
   {
     "disease_id": "D106",
@@ -1067,7 +2902,47 @@
     "icd_10": "",
     "icd_11": "",
     "description": "Canonical cross-country ID covering meningococcal surveillance mappings",
-    "slug": "meningococcal-disease"
+    "slug": "meningococcal-disease",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_MENINGITIS_SURVEILLANCE_SPECTRUM"
+      ],
+      "relations": {
+        "outgoing": [
+          {
+            "id": "R_D110_RELATED_TO_D235",
+            "type": "related_meningitis_category",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D110"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D235"
+            },
+            "hierarchical": false,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ],
+        "incoming": []
+      },
+      "source_series_count": 0,
+      "availability": []
+    }
   },
   {
     "disease_id": "D112",
@@ -1117,7 +2992,59 @@
     "icd_10": "",
     "icd_11": "",
     "description": "Burkholderia pseudomallei infection used in CDC surveillance",
-    "slug": "melioidosis"
+    "slug": "melioidosis",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_BURKHOLDERIA_INFECTIONS"
+      ],
+      "relations": {
+        "outgoing": [],
+        "incoming": [
+          {
+            "id": "R_D221_DISTINCT_FROM_D116",
+            "type": "distinct_from",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D221"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D116"
+            },
+            "hierarchical": false,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ]
+      },
+      "source_series_count": 1,
+      "availability": [
+        {
+          "id": "AV_JP_MELIOIDOSIS_WEEKLY",
+          "source_id": "SRC_JP_NIID",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D116"
+          },
+          "series_id": "SER_JP_MELIOIDOSIS_WEEKLY",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
   },
   {
     "disease_id": "D117",
@@ -1137,7 +3064,59 @@
     "icd_10": "",
     "icd_11": "",
     "description": "",
-    "slug": "spotted-fever-rickettsiosis"
+    "slug": "spotted-fever-rickettsiosis",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "surveillance_scope": [
+          "surveillance_scope.aggregate"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_SPOTTED_FEVER_SPECTRUM"
+      ],
+      "relations": {
+        "outgoing": [],
+        "incoming": [
+          {
+            "id": "R_D222_TYPE_OF_D118",
+            "type": "etiologic_subtype_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D222"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D118"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          },
+          {
+            "id": "R_D223_TYPE_OF_D118",
+            "type": "etiologic_subtype_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D223"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D118"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ]
+      },
+      "source_series_count": 0,
+      "availability": []
+    }
   },
   {
     "disease_id": "D119",
@@ -1147,7 +3126,59 @@
     "icd_10": "",
     "icd_11": "",
     "description": "",
-    "slug": "streptococcal-disease"
+    "slug": "streptococcal-disease",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "surveillance_scope": [
+          "surveillance_scope.aggregate"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_STREPTOCOCCAL_DISEASE_SPECTRUM"
+      ],
+      "relations": {
+        "outgoing": [],
+        "incoming": [
+          {
+            "id": "R_D224_FORM_OF_D119",
+            "type": "clinical_form_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D224"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D119"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          },
+          {
+            "id": "R_D225_FORM_OF_D119",
+            "type": "clinical_form_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D225"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D119"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ]
+      },
+      "source_series_count": 0,
+      "availability": []
+    }
   },
   {
     "disease_id": "D120",
@@ -1197,7 +3228,47 @@
     "icd_10": "",
     "icd_11": "",
     "description": "",
-    "slug": "typhoid-fever"
+    "slug": "typhoid-fever",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_ENTERIC_FEVER_SPECTRUM"
+      ],
+      "relations": {
+        "outgoing": [
+          {
+            "id": "R_D124_COMPONENT_OF_D026",
+            "type": "reported_component_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D124"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D026"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ],
+        "incoming": []
+      },
+      "source_series_count": 0,
+      "availability": []
+    }
   },
   {
     "disease_id": "D125",
@@ -1227,7 +3298,76 @@
     "icd_10": "",
     "icd_11": "",
     "description": "",
-    "slug": "viral-hemorrhagic-fevers"
+    "slug": "viral-hemorrhagic-fevers",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "etiology": [
+          "etiology.viral"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.aggregate"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_VIRAL_HEMORRHAGIC_FEVER_SPECTRUM"
+      ],
+      "relations": {
+        "outgoing": [],
+        "incoming": [
+          {
+            "id": "R_D217_TYPE_OF_D127",
+            "type": "etiologic_subtype_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D217"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D127"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          },
+          {
+            "id": "R_D226_TYPE_OF_D127",
+            "type": "etiologic_subtype_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D226"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D127"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ]
+      },
+      "source_series_count": 1,
+      "availability": [
+        {
+          "id": "AV_NZ_VHF_MONTHLY",
+          "source_id": "SRC_NZ_PHS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D127"
+          },
+          "series_id": "SER_NZ_VHF_MONTHLY",
+          "status": "upstream_available_ingestion_pending",
+          "reason_code": "semantic_mapping_corrected_backfill_pending",
+          "notes": "Legacy facts require explicit reassignment from HFRS to the broad VHF source concept.",
+          "missing_value_policy": "missing_is_unknown"
+        }
+      ]
+    }
   },
   {
     "disease_id": "D128",
@@ -1271,13 +3411,94 @@
   },
   {
     "disease_id": "D133",
-    "name_en": "Carbapenemase-producing organism infection",
-    "name_zh": "产碳青霉烯酶微生物感染",
+    "name_en": "Carbapenemase-producing organisms surveillance",
+    "name_zh": "产碳青霉烯酶微生物监测",
     "category": "Bacterial",
     "icd_10": "",
     "icd_11": "",
-    "description": "Carbapenemase-producing organism surveillance concept used by CDC",
-    "slug": "carbapenemase-producing-organism-infection"
+    "description": "Source-reported CPO detections; the label does not assert infection rather than colonization",
+    "slug": "carbapenemase-producing-organisms-surveillance",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "surveillance_scope": [
+          "surveillance_scope.aggregate"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_ANTIMICROBIAL_RESISTANCE_SURVEILLANCE"
+      ],
+      "relations": {
+        "outgoing": [],
+        "incoming": [
+          {
+            "id": "R_D227_RELATED_TO_D133",
+            "type": "related_resistance_category",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D227"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D133"
+            },
+            "hierarchical": false,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          },
+          {
+            "id": "R_D228_RELATED_TO_D133",
+            "type": "related_resistance_category",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D228"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D133"
+            },
+            "hierarchical": false,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          },
+          {
+            "id": "R_D229_RELATED_TO_D133",
+            "type": "related_resistance_category",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D229"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D133"
+            },
+            "hierarchical": false,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ]
+      },
+      "source_series_count": 1,
+      "availability": [
+        {
+          "id": "AV_US_CPO_WEEKLY",
+          "source_id": "SRC_US_NNDSS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D133"
+          },
+          "series_id": "SER_US_CPO_WEEKLY",
+          "status": "available",
+          "reason_code": "series_facts_backfilled",
+          "notes": "Exact U.S.-resident CPO detection facts are backfilled with neutral detection semantics; missing source cells remain unknown.",
+          "missing_value_policy": "missing_is_unknown"
+        }
+      ]
+    }
   },
   {
     "disease_id": "D134",
@@ -1287,7 +3508,47 @@
     "icd_10": "",
     "icd_11": "",
     "description": "JP weekly sentinel surveillance concept",
-    "slug": "aseptic-meningitis"
+    "slug": "aseptic-meningitis",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_MENINGITIS_SURVEILLANCE_SPECTRUM"
+      ],
+      "relations": {
+        "outgoing": [
+          {
+            "id": "R_D134_FORM_OF_D235",
+            "type": "etiology_qualified_form_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D134"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D235"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ],
+        "incoming": []
+      },
+      "source_series_count": 0,
+      "availability": []
+    }
   },
   {
     "disease_id": "D135",
@@ -1297,7 +3558,47 @@
     "icd_10": "",
     "icd_11": "",
     "description": "JP weekly sentinel surveillance concept",
-    "slug": "bacterial-meningitis"
+    "slug": "bacterial-meningitis",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_MENINGITIS_SURVEILLANCE_SPECTRUM"
+      ],
+      "relations": {
+        "outgoing": [
+          {
+            "id": "R_D135_FORM_OF_D235",
+            "type": "etiology_qualified_form_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D135"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D235"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ],
+        "incoming": []
+      },
+      "source_series_count": 0,
+      "availability": []
+    }
   },
   {
     "disease_id": "D136",
@@ -1557,7 +3858,149 @@
     "icd_10": "B20-B24",
     "icd_11": "1C62",
     "description": "Human immunodeficiency virus infection surveillance concept",
-    "slug": "hiv-infection"
+    "slug": "hiv-infection",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "etiology": [
+          "etiology.hiv"
+        ],
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_HIV_SPECTRUM",
+        "G_HIV_RELATED_SURVEILLANCE"
+      ],
+      "relations": {
+        "outgoing": [],
+        "incoming": [
+          {
+            "id": "R_D005_STAGE_OF_D162",
+            "type": "clinical_stage_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D005"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D162"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          },
+          {
+            "id": "R_D230_RELATED_TO_D162",
+            "type": "exposure_event_related_to",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D230"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D162"
+            },
+            "hierarchical": false,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          },
+          {
+            "id": "R_D231_RELATED_TO_D162",
+            "type": "pregnancy_event_related_to",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D231"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D162"
+            },
+            "hierarchical": false,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ]
+      },
+      "source_series_count": 5,
+      "availability": [
+        {
+          "id": "AV_CH_HIV",
+          "source_id": "SRC_CH_FOPH_IDD",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D162"
+          },
+          "series_id": "SER_CH_HIV_MONTHLY",
+          "status": "available",
+          "reason_code": "source_reports_series"
+        },
+        {
+          "id": "AV_TW_HIV",
+          "source_id": "SRC_TW_NIDSS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D162"
+          },
+          "series_id": "SER_TW_HIV_044",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        },
+        {
+          "id": "AV_BR_HIV_ADULT",
+          "source_id": "SRC_BR_SINAN",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D162"
+          },
+          "series_id": "SER_BR_HIV_ADULT_HIVA",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        },
+        {
+          "id": "AV_BR_HIV_CHILD",
+          "source_id": "SRC_BR_SINAN",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D162"
+          },
+          "series_id": "SER_BR_HIV_CHILD_HIVC",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        },
+        {
+          "id": "AV_US_HIV",
+          "source_id": "SRC_US_NNDSS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D162"
+          },
+          "status": "not_reported_by_source",
+          "reason_code": "separate_hiv_surveillance_system_required",
+          "notes": "US HIV coverage requires a separate NHSS source."
+        },
+        {
+          "id": "AV_US_NHSS_HIV",
+          "source_id": "SRC_US_NHSS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D162"
+          },
+          "series_id": "SER_US_NHSS_HIV_ANNUAL",
+          "status": "available",
+          "reason_code": "source_reports_series",
+          "valid_from": "2014-01-01"
+        }
+      ]
+    }
   },
   {
     "disease_id": "D163",
@@ -1587,7 +4030,41 @@
     "icd_10": "A06",
     "icd_11": "1A36",
     "description": "Entamoeba histolytica infection surveillance concept",
-    "slug": "amebiasis"
+    "slug": "amebiasis",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [],
+      "relations": {
+        "outgoing": [],
+        "incoming": []
+      },
+      "source_series_count": 1,
+      "availability": [
+        {
+          "id": "AV_JP_AMEBIASIS_WEEKLY",
+          "source_id": "SRC_JP_NIID",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D165"
+          },
+          "series_id": "SER_JP_AMEBIASIS_WEEKLY",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
   },
   {
     "disease_id": "D166",
@@ -1607,7 +4084,59 @@
     "icd_10": "A50",
     "icd_11": "1A70.1",
     "description": "Congenital syphilis surveillance concept",
-    "slug": "congenital-syphilis"
+    "slug": "congenital-syphilis",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "clinical_course": [
+          "clinical_course.congenital"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.perinatal"
+        ]
+      },
+      "group_ids": [
+        "G_SYPHILIS_SURVEILLANCE_SPECTRUM"
+      ],
+      "relations": {
+        "outgoing": [
+          {
+            "id": "R_D167_CONGENITAL_FORM_OF_D034",
+            "type": "congenital_form_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D167"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D034"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ],
+        "incoming": []
+      },
+      "source_series_count": 1,
+      "availability": [
+        {
+          "id": "AV_AU_CONGENITAL_SYPHILIS",
+          "source_id": "SRC_AU_NINDSS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D167"
+          },
+          "series_id": "SER_AU_CONGENITAL_SYPHILIS",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
   },
   {
     "disease_id": "D168",
@@ -1617,7 +4146,73 @@
     "icd_10": "P35.0",
     "icd_11": "KA63.0",
     "description": "Congenital rubella syndrome surveillance concept",
-    "slug": "congenital-rubella-syndrome"
+    "slug": "congenital-rubella-syndrome",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "etiology": [
+          "etiology.viral"
+        ],
+        "clinical_course": [
+          "clinical_course.congenital"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.perinatal"
+        ]
+      },
+      "group_ids": [
+        "G_RUBELLA_SPECTRUM"
+      ],
+      "relations": {
+        "outgoing": [
+          {
+            "id": "R_D168_CONGENITAL_FORM_OF_D040",
+            "type": "congenital_form_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D168"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D040"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ],
+        "incoming": []
+      },
+      "source_series_count": 2,
+      "availability": [
+        {
+          "id": "AV_AU_CONGENITAL_RUBELLA",
+          "source_id": "SRC_AU_NINDSS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D168"
+          },
+          "series_id": "SER_AU_CONGENITAL_RUBELLA",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        },
+        {
+          "id": "AV_JP_CONGENITAL_RUBELLA_SYNDROME_WEEKLY",
+          "source_id": "SRC_JP_NIID",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D168"
+          },
+          "series_id": "SER_JP_CONGENITAL_RUBELLA_SYNDROME_WEEKLY",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
   },
   {
     "disease_id": "D169",
@@ -1667,7 +4262,46 @@
     "icd_10": "A92.4",
     "icd_11": "1D47",
     "description": "Rift Valley fever surveillance concept",
-    "slug": "rift-valley-fever"
+    "slug": "rift-valley-fever",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "etiology": [
+          "etiology.viral"
+        ],
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_VIRAL_HEMORRHAGIC_FEVER_SPECTRUM"
+      ],
+      "relations": {
+        "outgoing": [],
+        "incoming": []
+      },
+      "source_series_count": 1,
+      "availability": [
+        {
+          "id": "AV_JP_RIFT_VALLEY_FEVER_WEEKLY",
+          "source_id": "SRC_JP_NIID",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D173"
+          },
+          "series_id": "SER_JP_RIFT_VALLEY_FEVER_WEEKLY",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
   },
   {
     "disease_id": "D174",
@@ -1677,7 +4311,46 @@
     "icd_10": "A98.3",
     "icd_11": "1D60.1",
     "description": "Marburg virus disease surveillance concept",
-    "slug": "marburg-virus-disease"
+    "slug": "marburg-virus-disease",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "etiology": [
+          "etiology.viral"
+        ],
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_VIRAL_HEMORRHAGIC_FEVER_SPECTRUM"
+      ],
+      "relations": {
+        "outgoing": [],
+        "incoming": []
+      },
+      "source_series_count": 1,
+      "availability": [
+        {
+          "id": "AV_JP_MARBURG_WEEKLY",
+          "source_id": "SRC_JP_NIID",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D174"
+          },
+          "series_id": "SER_JP_MARBURG_WEEKLY",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
   },
   {
     "disease_id": "D175",
@@ -1687,7 +4360,62 @@
     "icd_10": "B33.8",
     "icd_11": "1D64",
     "description": "Nipah virus infection surveillance concept",
-    "slug": "nipah-virus-infection"
+    "slug": "nipah-virus-infection",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "etiology": [
+          "etiology.viral"
+        ],
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_HENIPAVIRUS_SPECTRUM"
+      ],
+      "relations": {
+        "outgoing": [],
+        "incoming": [
+          {
+            "id": "R_D215_RELATED_TO_D175",
+            "type": "related_henipavirus_category",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D215"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D175"
+            },
+            "hierarchical": false,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ]
+      },
+      "source_series_count": 1,
+      "availability": [
+        {
+          "id": "AV_JP_NIPAH_WEEKLY",
+          "source_id": "SRC_JP_NIID",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D175"
+          },
+          "series_id": "SER_JP_NIPAH_WEEKLY",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
   },
   {
     "disease_id": "D177",
@@ -1707,7 +4435,56 @@
     "icd_10": "",
     "icd_11": "",
     "description": "Acute flaccid paralysis surveillance concept",
-    "slug": "acute-flaccid-paralysis"
+    "slug": "acute-flaccid-paralysis",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "surveillance_scope": [
+          "surveillance_scope.syndrome_with_exclusions"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_POLIO_AFP_SURVEILLANCE"
+      ],
+      "relations": {
+        "outgoing": [
+          {
+            "id": "R_D178_SURVEILLANCE_FOR_D013",
+            "type": "surveillance_syndrome_for",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D178"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D013"
+            },
+            "hierarchical": false,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ],
+        "incoming": []
+      },
+      "source_series_count": 1,
+      "availability": [
+        {
+          "id": "AV_JP_AFP_EXCLUDING_POLIO_WEEKLY",
+          "source_id": "SRC_JP_NIID",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D178"
+          },
+          "series_id": "SER_JP_AFP_EXCLUDING_POLIO_WEEKLY",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
   },
   {
     "disease_id": "D180",
@@ -1727,7 +4504,60 @@
     "icd_10": "U07.1",
     "icd_11": "RA01",
     "description": "Severe complicated COVID-19 surveillance concept",
-    "slug": "severe-complicated-covid-19"
+    "slug": "severe-complicated-covid-19",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "etiology": [
+          "etiology.viral"
+        ],
+        "clinical_course": [
+          "clinical_course.advanced_disease"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [],
+      "relations": {
+        "outgoing": [
+          {
+            "id": "R_D181_SEVERE_COMPLICATION_OF_D004",
+            "type": "severe_complication_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D181"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D004"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ],
+        "incoming": []
+      },
+      "source_series_count": 1,
+      "availability": [
+        {
+          "id": "AV_TW_SEVERE_COMPLICATED_COVID19_19SC",
+          "source_id": "SRC_TW_NIDSS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D181"
+          },
+          "series_id": "SER_TW_SEVERE_COMPLICATED_COVID19_19SC",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
   },
   {
     "disease_id": "D182",
@@ -1747,7 +4577,29 @@
     "icd_10": "A75.0",
     "icd_11": "1C30",
     "description": "Epidemic typhus fever surveillance concept",
-    "slug": "epidemic-typhus-fever"
+    "slug": "epidemic-typhus-fever",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [],
+      "relations": {
+        "outgoing": [],
+        "incoming": []
+      },
+      "source_series_count": 0,
+      "availability": []
+    }
   },
   {
     "disease_id": "D184",
@@ -1837,7 +4689,38 @@
     "icd_10": "M70-M79",
     "icd_11": "",
     "description": "SINAN occupational health concept for RSI/WMSD",
-    "slug": "work-related-repetitive-strain-injury"
+    "slug": "work-related-repetitive-strain-injury",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [],
+      "relations": {
+        "outgoing": [],
+        "incoming": []
+      },
+      "source_series_count": 1,
+      "availability": [
+        {
+          "id": "AV_BR_LERD",
+          "source_id": "SRC_BR_SINAN",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D192"
+          },
+          "series_id": "SER_BR_LERD",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
   },
   {
     "disease_id": "D193",
@@ -1847,7 +4730,38 @@
     "icd_10": "F00-F99",
     "icd_11": "",
     "description": "SINAN occupational health concept for work-related mental disorders",
-    "slug": "work-related-mental-disorder"
+    "slug": "work-related-mental-disorder",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [],
+      "relations": {
+        "outgoing": [],
+        "incoming": []
+      },
+      "source_series_count": 1,
+      "availability": [
+        {
+          "id": "AV_BR_WORK_MENTAL_MENT",
+          "source_id": "SRC_BR_SINAN",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D193"
+          },
+          "series_id": "SER_BR_WORK_MENTAL_MENT",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
   },
   {
     "disease_id": "D194",
@@ -1907,7 +4821,71 @@
     "icd_10": "A08.0",
     "icd_11": "",
     "description": "Rotavirus infection surveillance concept",
-    "slug": "rotavirus-infection"
+    "slug": "rotavirus-infection",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "etiology": [
+          "etiology.viral"
+        ],
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [],
+      "relations": {
+        "outgoing": [
+          {
+            "id": "R_D199_ETIOLOGIC_FORM_OF_D047",
+            "type": "etiologic_form_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D199"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D047"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ],
+        "incoming": []
+      },
+      "source_series_count": 2,
+      "availability": [
+        {
+          "id": "AV_AU_ROTAVIRUS",
+          "source_id": "SRC_AU_NINDSS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D199"
+          },
+          "series_id": "SER_AU_ROTAVIRUS",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        },
+        {
+          "id": "AV_JP_ROTAVIRUS_GASTROENTERITIS_SENTINEL_WEEKLY",
+          "source_id": "SRC_JP_NIID",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D199"
+          },
+          "series_id": "SER_JP_ROTAVIRUS_GASTROENTERITIS_SENTINEL_WEEKLY",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
   },
   {
     "disease_id": "D200",
@@ -1917,7 +4895,52 @@
     "icd_10": "A71",
     "icd_11": "",
     "description": "Chlamydia trachomatis eye infection surveillance concept",
-    "slug": "trachoma"
+    "slug": "trachoma",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [],
+      "relations": {
+        "outgoing": [],
+        "incoming": []
+      },
+      "source_series_count": 2,
+      "availability": [
+        {
+          "id": "AV_BR_TRACHOMA_SURVEY_POSITIVE_NTRA",
+          "source_id": "SRC_BR_SINAN",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D200"
+          },
+          "series_id": "SER_BR_TRACHOMA_SURVEY_POSITIVE_NTRA",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        },
+        {
+          "id": "AV_BR_TRACHOMA_CASE_TRAC",
+          "source_id": "SRC_BR_SINAN",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D200"
+          },
+          "series_id": "SER_BR_TRACHOMA_CASE_TRAC",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
   },
   {
     "disease_id": "D201",
@@ -1947,7 +4970,46 @@
     "icd_10": "A98.0",
     "icd_11": "1D60.0",
     "description": "Crimean-Congo hemorrhagic fever surveillance concept",
-    "slug": "crimean-congo-hemorrhagic-fever"
+    "slug": "crimean-congo-hemorrhagic-fever",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "etiology": [
+          "etiology.viral"
+        ],
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_VIRAL_HEMORRHAGIC_FEVER_SPECTRUM"
+      ],
+      "relations": {
+        "outgoing": [],
+        "incoming": []
+      },
+      "source_series_count": 1,
+      "availability": [
+        {
+          "id": "AV_JP_CCHF_WEEKLY",
+          "source_id": "SRC_JP_NIID",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D203"
+          },
+          "series_id": "SER_JP_CCHF_WEEKLY",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
   },
   {
     "disease_id": "D204",
@@ -1957,7 +5019,46 @@
     "icd_10": "A96.0-A96.1",
     "icd_11": "1D61",
     "description": "South American arenaviral hemorrhagic fever surveillance concept",
-    "slug": "south-american-hemorrhagic-fever"
+    "slug": "south-american-hemorrhagic-fever",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "etiology": [
+          "etiology.viral"
+        ],
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_VIRAL_HEMORRHAGIC_FEVER_SPECTRUM"
+      ],
+      "relations": {
+        "outgoing": [],
+        "incoming": []
+      },
+      "source_series_count": 1,
+      "availability": [
+        {
+          "id": "AV_JP_SOUTH_AMERICAN_HEMORRHAGIC_FEVER_WEEKLY",
+          "source_id": "SRC_JP_NIID",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D204"
+          },
+          "series_id": "SER_JP_SOUTH_AMERICAN_HEMORRHAGIC_FEVER_WEEKLY",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
   },
   {
     "disease_id": "D205",
@@ -1967,7 +5068,46 @@
     "icd_10": "A84",
     "icd_11": "1D49",
     "description": "Tick-borne encephalitis surveillance concept",
-    "slug": "tick-borne-encephalitis"
+    "slug": "tick-borne-encephalitis",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "etiology": [
+          "etiology.viral"
+        ],
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_ENCEPHALITIS_SURVEILLANCE"
+      ],
+      "relations": {
+        "outgoing": [],
+        "incoming": []
+      },
+      "source_series_count": 1,
+      "availability": [
+        {
+          "id": "AV_JP_TICK_BORNE_ENCEPHALITIS_WEEKLY",
+          "source_id": "SRC_JP_NIID",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D205"
+          },
+          "series_id": "SER_JP_TICK_BORNE_ENCEPHALITIS_WEEKLY",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
   },
   {
     "disease_id": "D206",
@@ -1988,5 +5128,1984 @@
     "icd_11": "1F01",
     "description": "Enterovirus 71 infection surveillance concept",
     "slug": "enterovirus-71-infection"
+  },
+  {
+    "disease_id": "D208",
+    "name_en": "Chronic hepatitis B",
+    "name_zh": "慢性乙型肝炎",
+    "category": "Viral",
+    "icd_10": "B18.0-B18.1",
+    "icd_11": "1E51.0",
+    "description": "Chronic hepatitis B surveillance concept",
+    "slug": "chronic-hepatitis-b",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "etiology": [
+          "etiology.hbv"
+        ],
+        "clinical_course": [
+          "clinical_course.chronic_hepatitis"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_HEPATITIS_BY_COURSE",
+        "G_HBV_SPECTRUM"
+      ],
+      "relations": {
+        "outgoing": [
+          {
+            "id": "R_D208_COURSE_OF_D008",
+            "type": "clinical_course_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D208"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D008"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ],
+        "incoming": []
+      },
+      "source_series_count": 2,
+      "availability": [
+        {
+          "id": "AV_US_CHRONIC_HEPATITIS_B_CONFIRMED",
+          "source_id": "SRC_US_NNDSS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D208"
+          },
+          "series_id": "SER_US_CHRONIC_HEPATITIS_B_CONFIRMED",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        },
+        {
+          "id": "AV_US_CHRONIC_HEPATITIS_B_PROBABLE",
+          "source_id": "SRC_US_NNDSS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D208"
+          },
+          "series_id": "SER_US_CHRONIC_HEPATITIS_B_PROBABLE",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
+  },
+  {
+    "disease_id": "D209",
+    "name_en": "Perinatal hepatitis B",
+    "name_zh": "围产期乙型肝炎",
+    "category": "Viral",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "Perinatal hepatitis B surveillance concept",
+    "slug": "perinatal-hepatitis-b",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "etiology": [
+          "etiology.hbv"
+        ],
+        "clinical_course": [
+          "clinical_course.perinatal_hepatitis"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.perinatal"
+        ]
+      },
+      "group_ids": [
+        "G_HEPATITIS_BY_COURSE",
+        "G_HBV_SPECTRUM"
+      ],
+      "relations": {
+        "outgoing": [
+          {
+            "id": "R_D209_COURSE_OF_D008",
+            "type": "clinical_course_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D209"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D008"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ],
+        "incoming": []
+      },
+      "source_series_count": 1,
+      "availability": [
+        {
+          "id": "AV_US_PERINATAL_HEPATITIS_B",
+          "source_id": "SRC_US_NNDSS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D209"
+          },
+          "series_id": "SER_US_PERINATAL_HEPATITIS_B",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
+  },
+  {
+    "disease_id": "D210",
+    "name_en": "Acute hepatitis C",
+    "name_zh": "急性丙型肝炎",
+    "category": "Viral",
+    "icd_10": "B17.1",
+    "icd_11": "1E50.2",
+    "description": "Acute hepatitis C surveillance concept",
+    "slug": "acute-hepatitis-c",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "etiology": [
+          "etiology.hcv"
+        ],
+        "clinical_course": [
+          "clinical_course.acute_hepatitis"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_HEPATITIS_BY_COURSE",
+        "G_HCV_SPECTRUM"
+      ],
+      "relations": {
+        "outgoing": [
+          {
+            "id": "R_D210_COURSE_OF_D009",
+            "type": "clinical_course_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D210"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D009"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ],
+        "incoming": []
+      },
+      "source_series_count": 4,
+      "availability": [
+        {
+          "id": "AV_TW_ACUTE_HEPATITIS_C",
+          "source_id": "SRC_TW_NIDSS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D210"
+          },
+          "series_id": "SER_TW_ACUTE_HEPATITIS_C_0705",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        },
+        {
+          "id": "AV_AU_HEPATITIS_C_NEW",
+          "source_id": "SRC_AU_NINDSS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D210"
+          },
+          "series_id": "SER_AU_HEPATITIS_C_NEW",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        },
+        {
+          "id": "AV_US_ACUTE_HEPATITIS_C_CONFIRMED",
+          "source_id": "SRC_US_NNDSS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D210"
+          },
+          "series_id": "SER_US_ACUTE_HEPATITIS_C_CONFIRMED",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        },
+        {
+          "id": "AV_US_ACUTE_HEPATITIS_C_PROBABLE",
+          "source_id": "SRC_US_NNDSS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D210"
+          },
+          "series_id": "SER_US_ACUTE_HEPATITIS_C_PROBABLE",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
+  },
+  {
+    "disease_id": "D211",
+    "name_en": "Chronic hepatitis C",
+    "name_zh": "慢性丙型肝炎",
+    "category": "Viral",
+    "icd_10": "B18.2",
+    "icd_11": "1E51.1",
+    "description": "Chronic hepatitis C surveillance concept",
+    "slug": "chronic-hepatitis-c",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "etiology": [
+          "etiology.hcv"
+        ],
+        "clinical_course": [
+          "clinical_course.chronic_hepatitis"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_HEPATITIS_BY_COURSE",
+        "G_HCV_SPECTRUM"
+      ],
+      "relations": {
+        "outgoing": [
+          {
+            "id": "R_D211_COURSE_OF_D009",
+            "type": "clinical_course_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D211"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D009"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ],
+        "incoming": []
+      },
+      "source_series_count": 2,
+      "availability": [
+        {
+          "id": "AV_US_CHRONIC_HEPATITIS_C_CONFIRMED",
+          "source_id": "SRC_US_NNDSS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D211"
+          },
+          "series_id": "SER_US_CHRONIC_HEPATITIS_C_CONFIRMED",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        },
+        {
+          "id": "AV_US_CHRONIC_HEPATITIS_C_PROBABLE",
+          "source_id": "SRC_US_NNDSS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D211"
+          },
+          "series_id": "SER_US_CHRONIC_HEPATITIS_C_PROBABLE",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
+  },
+  {
+    "disease_id": "D212",
+    "name_en": "Perinatal hepatitis C",
+    "name_zh": "围产期丙型肝炎",
+    "category": "Viral",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "Perinatal hepatitis C surveillance concept",
+    "slug": "perinatal-hepatitis-c",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "etiology": [
+          "etiology.hcv"
+        ],
+        "clinical_course": [
+          "clinical_course.perinatal_hepatitis"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.perinatal"
+        ]
+      },
+      "group_ids": [
+        "G_HEPATITIS_BY_COURSE",
+        "G_HCV_SPECTRUM"
+      ],
+      "relations": {
+        "outgoing": [
+          {
+            "id": "R_D212_COURSE_OF_D009",
+            "type": "clinical_course_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D212"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D009"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ],
+        "incoming": []
+      },
+      "source_series_count": 1,
+      "availability": [
+        {
+          "id": "AV_US_PERINATAL_HEPATITIS_C",
+          "source_id": "SRC_US_NNDSS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D212"
+          },
+          "series_id": "SER_US_PERINATAL_HEPATITIS_C",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
+  },
+  {
+    "disease_id": "D213",
+    "name_en": "Varicella-zoster virus infection unspecified",
+    "name_zh": "水痘-带状疱疹病毒感染未分型",
+    "category": "Viral",
+    "icd_10": "B01-B02",
+    "icd_11": "1E90-1E91",
+    "description": "Source-confirmed varicella-zoster virus infection without enough clinical information to classify chickenpox or zoster",
+    "slug": "varicella-zoster-virus-infection-unspecified",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "etiology": [
+          "etiology.viral"
+        ],
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.unspecified"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_VZV_SPECTRUM"
+      ],
+      "relations": {
+        "outgoing": [],
+        "incoming": []
+      },
+      "source_series_count": 1,
+      "availability": [
+        {
+          "id": "AV_AU_VZV_UNSPECIFIED",
+          "source_id": "SRC_AU_NINDSS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D213"
+          },
+          "series_id": "SER_AU_VZV_UNSPECIFIED",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
+  },
+  {
+    "disease_id": "D214",
+    "name_en": "Lyssavirus infection excluding rabies",
+    "name_zh": "非狂犬病狂犬病毒属感染",
+    "category": "Viral",
+    "icd_10": "A82.8",
+    "icd_11": "1C82.Y",
+    "description": "Human lyssavirus infection explicitly excluding rabies virus infection",
+    "slug": "lyssavirus-infection-excluding-rabies",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "etiology": [
+          "etiology.viral"
+        ],
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.exclusion_defined"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_LYSSAVIRUS_SPECTRUM"
+      ],
+      "relations": {
+        "outgoing": [
+          {
+            "id": "R_D214_RELATED_TO_D019",
+            "type": "related_lyssavirus_category",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D214"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D019"
+            },
+            "hierarchical": false,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ],
+        "incoming": []
+      },
+      "source_series_count": 2,
+      "availability": [
+        {
+          "id": "AV_JP_LYSSAVIRUS_EXCLUDING_RABIES_WEEKLY",
+          "source_id": "SRC_JP_NIID",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D214"
+          },
+          "series_id": "SER_JP_LYSSAVIRUS_EXCLUDING_RABIES_WEEKLY",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        },
+        {
+          "id": "AV_AU_ABLV_MONTHLY",
+          "source_id": "SRC_AU_NINDSS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D214"
+          },
+          "series_id": "SER_AU_ABLV_MONTHLY",
+          "status": "upstream_available_ingestion_pending",
+          "reason_code": "semantic_mapping_corrected_backfill_pending",
+          "notes": "Legacy facts require explicit reassignment from rabies to the non-rabies lyssavirus series.",
+          "missing_value_policy": "missing_is_unknown"
+        }
+      ]
+    }
+  },
+  {
+    "disease_id": "D215",
+    "name_en": "Hendra virus infection",
+    "name_zh": "亨德拉病毒感染",
+    "category": "Viral",
+    "icd_10": "B33.8",
+    "icd_11": "1D64.Y",
+    "description": "Hendra virus disease caused by Hendra henipavirus",
+    "slug": "hendra-virus-infection",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "etiology": [
+          "etiology.viral"
+        ],
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_HENIPAVIRUS_SPECTRUM"
+      ],
+      "relations": {
+        "outgoing": [
+          {
+            "id": "R_D215_RELATED_TO_D175",
+            "type": "related_henipavirus_category",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D215"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D175"
+            },
+            "hierarchical": false,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ],
+        "incoming": []
+      },
+      "source_series_count": 1,
+      "availability": [
+        {
+          "id": "AV_JP_HENDRA_WEEKLY",
+          "source_id": "SRC_JP_NIID",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D215"
+          },
+          "series_id": "SER_JP_HENDRA_WEEKLY",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
+  },
+  {
+    "disease_id": "D216",
+    "name_en": "Acute encephalitis excluding Japanese and West Nile encephalitis",
+    "name_zh": "急性脑炎（不含日本脑炎和西尼罗河脑炎）",
+    "category": "Other",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "Japan source-defined acute encephalitis surveillance syndrome with named exclusions",
+    "slug": "acute-encephalitis-excluding-japanese-and-west-nile-encephalitis",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "surveillance_scope": [
+          "surveillance_scope.syndrome_with_exclusions"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_ENCEPHALITIS_SURVEILLANCE"
+      ],
+      "relations": {
+        "outgoing": [],
+        "incoming": []
+      },
+      "source_series_count": 1,
+      "availability": [
+        {
+          "id": "AV_JP_ACUTE_ENCEPHALITIS_EXCLUDING_JE_WNE_WEEKLY",
+          "source_id": "SRC_JP_NIID",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D216"
+          },
+          "series_id": "SER_JP_ACUTE_ENCEPHALITIS_EXCLUDING_JE_WNE_WEEKLY",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
+  },
+  {
+    "disease_id": "D217",
+    "name_en": "Kyasanur Forest disease",
+    "name_zh": "基亚萨努尔森林病",
+    "category": "Viral",
+    "icd_10": "A98.2",
+    "icd_11": "1D47.Y",
+    "description": "Tick-borne viral hemorrhagic fever caused by Kyasanur Forest disease virus",
+    "slug": "kyasanur-forest-disease",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "etiology": [
+          "etiology.viral"
+        ],
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_VIRAL_HEMORRHAGIC_FEVER_SPECTRUM"
+      ],
+      "relations": {
+        "outgoing": [
+          {
+            "id": "R_D217_TYPE_OF_D127",
+            "type": "etiologic_subtype_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D217"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D127"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ],
+        "incoming": []
+      },
+      "source_series_count": 1,
+      "availability": [
+        {
+          "id": "AV_JP_KYASANUR_FOREST_DISEASE_WEEKLY",
+          "source_id": "SRC_JP_NIID",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D217"
+          },
+          "series_id": "SER_JP_KYASANUR_FOREST_DISEASE_WEEKLY",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
+  },
+  {
+    "disease_id": "D218",
+    "name_en": "Eastern equine encephalitis",
+    "name_zh": "东部马脑炎",
+    "category": "Viral",
+    "icd_10": "A83.2",
+    "icd_11": "1D45",
+    "description": "Eastern equine encephalitis virus disease",
+    "slug": "eastern-equine-encephalitis",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "etiology": [
+          "etiology.viral"
+        ],
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_ENCEPHALITIS_SURVEILLANCE"
+      ],
+      "relations": {
+        "outgoing": [
+          {
+            "id": "R_D218_TYPE_OF_D089",
+            "type": "etiologic_subtype_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D218"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D089"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ],
+        "incoming": []
+      },
+      "source_series_count": 1,
+      "availability": [
+        {
+          "id": "AV_JP_EASTERN_EQUINE_ENCEPHALITIS_WEEKLY",
+          "source_id": "SRC_JP_NIID",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D218"
+          },
+          "series_id": "SER_JP_EASTERN_EQUINE_ENCEPHALITIS_WEEKLY",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
+  },
+  {
+    "disease_id": "D219",
+    "name_en": "Western equine encephalitis",
+    "name_zh": "西部马脑炎",
+    "category": "Viral",
+    "icd_10": "A83.1",
+    "icd_11": "1D46",
+    "description": "Western equine encephalitis virus disease",
+    "slug": "western-equine-encephalitis",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "etiology": [
+          "etiology.viral"
+        ],
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_ENCEPHALITIS_SURVEILLANCE"
+      ],
+      "relations": {
+        "outgoing": [
+          {
+            "id": "R_D219_TYPE_OF_D089",
+            "type": "etiologic_subtype_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D219"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D089"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ],
+        "incoming": []
+      },
+      "source_series_count": 1,
+      "availability": [
+        {
+          "id": "AV_JP_WESTERN_EQUINE_ENCEPHALITIS_WEEKLY",
+          "source_id": "SRC_JP_NIID",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D219"
+          },
+          "series_id": "SER_JP_WESTERN_EQUINE_ENCEPHALITIS_WEEKLY",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
+  },
+  {
+    "disease_id": "D220",
+    "name_en": "Venezuelan equine encephalitis",
+    "name_zh": "委内瑞拉马脑炎",
+    "category": "Viral",
+    "icd_10": "A92.2",
+    "icd_11": "1D47",
+    "description": "Venezuelan equine encephalitis virus disease",
+    "slug": "venezuelan-equine-encephalitis",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "etiology": [
+          "etiology.viral"
+        ],
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_ENCEPHALITIS_SURVEILLANCE"
+      ],
+      "relations": {
+        "outgoing": [
+          {
+            "id": "R_D220_TYPE_OF_D089",
+            "type": "etiologic_subtype_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D220"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D089"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ],
+        "incoming": []
+      },
+      "source_series_count": 1,
+      "availability": [
+        {
+          "id": "AV_JP_VENEZUELAN_EQUINE_ENCEPHALITIS_WEEKLY",
+          "source_id": "SRC_JP_NIID",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D220"
+          },
+          "series_id": "SER_JP_VENEZUELAN_EQUINE_ENCEPHALITIS_WEEKLY",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
+  },
+  {
+    "disease_id": "D221",
+    "name_en": "Glanders",
+    "name_zh": "鼻疽",
+    "category": "Bacterial",
+    "icd_10": "A24.0-A24.4",
+    "icd_11": "1B92",
+    "description": "Glanders caused by Burkholderia mallei; distinct from melioidosis",
+    "slug": "glanders",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_BURKHOLDERIA_INFECTIONS"
+      ],
+      "relations": {
+        "outgoing": [
+          {
+            "id": "R_D221_DISTINCT_FROM_D116",
+            "type": "distinct_from",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D221"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D116"
+            },
+            "hierarchical": false,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ],
+        "incoming": []
+      },
+      "source_series_count": 1,
+      "availability": [
+        {
+          "id": "AV_JP_GLANDERS_WEEKLY",
+          "source_id": "SRC_JP_NIID",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D221"
+          },
+          "series_id": "SER_JP_GLANDERS_WEEKLY",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
+  },
+  {
+    "disease_id": "D222",
+    "name_en": "Japanese spotted fever",
+    "name_zh": "日本斑点热",
+    "category": "Bacterial",
+    "icd_10": "A77.0",
+    "icd_11": "1C30.0",
+    "description": "Spotted fever rickettsiosis caused by Rickettsia japonica",
+    "slug": "japanese-spotted-fever",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_SPOTTED_FEVER_SPECTRUM"
+      ],
+      "relations": {
+        "outgoing": [
+          {
+            "id": "R_D222_TYPE_OF_D118",
+            "type": "etiologic_subtype_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D222"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D118"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ],
+        "incoming": []
+      },
+      "source_series_count": 1,
+      "availability": [
+        {
+          "id": "AV_JP_JAPANESE_SPOTTED_FEVER_WEEKLY",
+          "source_id": "SRC_JP_NIID",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D222"
+          },
+          "series_id": "SER_JP_JAPANESE_SPOTTED_FEVER_WEEKLY",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
+  },
+  {
+    "disease_id": "D223",
+    "name_en": "Rocky Mountain spotted fever",
+    "name_zh": "落基山斑点热",
+    "category": "Bacterial",
+    "icd_10": "A77.0",
+    "icd_11": "1C30.1",
+    "description": "Spotted fever rickettsiosis caused by Rickettsia rickettsii",
+    "slug": "rocky-mountain-spotted-fever",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_SPOTTED_FEVER_SPECTRUM"
+      ],
+      "relations": {
+        "outgoing": [
+          {
+            "id": "R_D223_TYPE_OF_D118",
+            "type": "etiologic_subtype_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D223"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D118"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ],
+        "incoming": []
+      },
+      "source_series_count": 1,
+      "availability": [
+        {
+          "id": "AV_JP_ROCKY_MOUNTAIN_SPOTTED_FEVER_WEEKLY",
+          "source_id": "SRC_JP_NIID",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D223"
+          },
+          "series_id": "SER_JP_ROCKY_MOUNTAIN_SPOTTED_FEVER_WEEKLY",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
+  },
+  {
+    "disease_id": "D224",
+    "name_en": "Group A streptococcal pharyngitis",
+    "name_zh": "A族链球菌性咽炎",
+    "category": "Bacterial",
+    "icd_10": "J02.0",
+    "icd_11": "1B51",
+    "description": "Sentinel pharyngitis caused by group A Streptococcus",
+    "slug": "group-a-streptococcal-pharyngitis",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_STREPTOCOCCAL_DISEASE_SPECTRUM"
+      ],
+      "relations": {
+        "outgoing": [
+          {
+            "id": "R_D224_FORM_OF_D119",
+            "type": "clinical_form_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D224"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D119"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ],
+        "incoming": []
+      },
+      "source_series_count": 1,
+      "availability": [
+        {
+          "id": "AV_JP_GAS_PHARYNGITIS_SENTINEL_WEEKLY",
+          "source_id": "SRC_JP_NIID",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D224"
+          },
+          "series_id": "SER_JP_GAS_PHARYNGITIS_SENTINEL_WEEKLY",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
+  },
+  {
+    "disease_id": "D225",
+    "name_en": "Severe invasive streptococcal infection",
+    "name_zh": "严重侵袭性链球菌感染",
+    "category": "Bacterial",
+    "icd_10": "A40",
+    "icd_11": "1B50",
+    "description": "Japan source-defined severe invasive streptococcal infection including toxic shock-like presentations",
+    "slug": "severe-invasive-streptococcal-infection",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "clinical_course": [
+          "clinical_course.advanced_disease"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_STREPTOCOCCAL_DISEASE_SPECTRUM"
+      ],
+      "relations": {
+        "outgoing": [
+          {
+            "id": "R_D225_FORM_OF_D119",
+            "type": "clinical_form_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D225"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D119"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ],
+        "incoming": []
+      },
+      "source_series_count": 1,
+      "availability": [
+        {
+          "id": "AV_JP_SEVERE_INVASIVE_STREPTOCOCCAL_WEEKLY",
+          "source_id": "SRC_JP_NIID",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D225"
+          },
+          "series_id": "SER_JP_SEVERE_INVASIVE_STREPTOCOCCAL_WEEKLY",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
+  },
+  {
+    "disease_id": "D226",
+    "name_en": "Omsk hemorrhagic fever",
+    "name_zh": "鄂木斯克出血热",
+    "category": "Viral",
+    "icd_10": "A98.1",
+    "icd_11": "1D48",
+    "description": "Omsk hemorrhagic fever virus disease",
+    "slug": "omsk-hemorrhagic-fever",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "etiology": [
+          "etiology.viral"
+        ],
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_VIRAL_HEMORRHAGIC_FEVER_SPECTRUM"
+      ],
+      "relations": {
+        "outgoing": [
+          {
+            "id": "R_D226_TYPE_OF_D127",
+            "type": "etiologic_subtype_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D226"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D127"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ],
+        "incoming": []
+      },
+      "source_series_count": 1,
+      "availability": [
+        {
+          "id": "AV_JP_OMSK_HEMORRHAGIC_FEVER_WEEKLY",
+          "source_id": "SRC_JP_NIID",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D226"
+          },
+          "series_id": "SER_JP_OMSK_HEMORRHAGIC_FEVER_WEEKLY",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
+  },
+  {
+    "disease_id": "D227",
+    "name_en": "Carbapenem-resistant Enterobacterales infection",
+    "name_zh": "碳青霉烯耐药肠杆菌目细菌感染",
+    "category": "Bacterial",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "Infection or colonization reported under a carbapenem-resistant Enterobacterales surveillance definition",
+    "slug": "carbapenem-resistant-enterobacterales-infection",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_ANTIMICROBIAL_RESISTANCE_SURVEILLANCE"
+      ],
+      "relations": {
+        "outgoing": [
+          {
+            "id": "R_D227_RELATED_TO_D133",
+            "type": "related_resistance_category",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D227"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D133"
+            },
+            "hierarchical": false,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ],
+        "incoming": []
+      },
+      "source_series_count": 2,
+      "availability": [
+        {
+          "id": "AV_JP_CRE_WEEKLY",
+          "source_id": "SRC_JP_NIID",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D227"
+          },
+          "series_id": "SER_JP_CRE_WEEKLY",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        },
+        {
+          "id": "AV_KR_CRE",
+          "source_id": "SRC_KR_KDCA",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D227"
+          },
+          "series_id": "SER_KR_CRE",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
+  },
+  {
+    "disease_id": "D228",
+    "name_en": "Multidrug-resistant Acinetobacter infection",
+    "name_zh": "多重耐药鲍曼不动杆菌感染",
+    "category": "Bacterial",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "Infection reported under a multidrug-resistant Acinetobacter surveillance definition",
+    "slug": "multidrug-resistant-acinetobacter-infection",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_ANTIMICROBIAL_RESISTANCE_SURVEILLANCE"
+      ],
+      "relations": {
+        "outgoing": [
+          {
+            "id": "R_D228_RELATED_TO_D133",
+            "type": "related_resistance_category",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D228"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D133"
+            },
+            "hierarchical": false,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ],
+        "incoming": []
+      },
+      "source_series_count": 1,
+      "availability": [
+        {
+          "id": "AV_JP_MDR_ACINETOBACTER_WEEKLY",
+          "source_id": "SRC_JP_NIID",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D228"
+          },
+          "series_id": "SER_JP_MDR_ACINETOBACTER_WEEKLY",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
+  },
+  {
+    "disease_id": "D229",
+    "name_en": "Multidrug-resistant Pseudomonas aeruginosa infection",
+    "name_zh": "多重耐药铜绿假单胞菌感染",
+    "category": "Bacterial",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "Infection reported under a multidrug-resistant Pseudomonas aeruginosa surveillance definition",
+    "slug": "multidrug-resistant-pseudomonas-aeruginosa-infection",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_ANTIMICROBIAL_RESISTANCE_SURVEILLANCE"
+      ],
+      "relations": {
+        "outgoing": [
+          {
+            "id": "R_D229_RELATED_TO_D133",
+            "type": "related_resistance_category",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D229"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D133"
+            },
+            "hierarchical": false,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ],
+        "incoming": []
+      },
+      "source_series_count": 1,
+      "availability": [
+        {
+          "id": "AV_JP_MDR_PSEUDOMONAS_AERUGINOSA_WEEKLY",
+          "source_id": "SRC_JP_NIID",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D229"
+          },
+          "series_id": "SER_JP_MDR_PSEUDOMONAS_AERUGINOSA_WEEKLY",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
+  },
+  {
+    "disease_id": "D230",
+    "name_en": "Child exposed to HIV",
+    "name_zh": "儿童HIV暴露",
+    "category": "Other",
+    "icd_10": "Z20.6",
+    "icd_11": "QC60.0",
+    "description": "Perinatal or pediatric HIV exposure notification; exposure is not an HIV infection diagnosis",
+    "slug": "child-exposed-to-hiv",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "etiology": [
+          "etiology.hiv"
+        ],
+        "clinical_course": [
+          "clinical_course.exposure"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.perinatal",
+          "population.child"
+        ],
+        "event_basis": [
+          "event_basis.exposure_notification"
+        ]
+      },
+      "group_ids": [
+        "G_HIV_RELATED_SURVEILLANCE"
+      ],
+      "relations": {
+        "outgoing": [
+          {
+            "id": "R_D230_RELATED_TO_D162",
+            "type": "exposure_event_related_to",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D230"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D162"
+            },
+            "hierarchical": false,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ],
+        "incoming": []
+      },
+      "source_series_count": 2,
+      "availability": [
+        {
+          "id": "AV_BR_HIV_PREGNANT",
+          "source_id": "SRC_BR_SINAN",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D230"
+          },
+          "series_id": "SER_BR_HIV_PREGNANT_HIVE",
+          "status": "not_assessed",
+          "reason_code": "deprecated_incorrect_registry_identity",
+          "notes": "Deprecated misleading series ID retained only for registry compatibility; use SER_BR_HIV_EXPOSED_CHILD_HIVE."
+        },
+        {
+          "id": "AV_BR_HIV_EXPOSED_CHILD_HIVE",
+          "source_id": "SRC_BR_SINAN",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D230"
+          },
+          "series_id": "SER_BR_HIV_EXPOSED_CHILD_HIVE",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
+  },
+  {
+    "disease_id": "D231",
+    "name_en": "HIV infection in pregnancy surveillance event",
+    "name_zh": "孕产期HIV感染监测事件",
+    "category": "Viral",
+    "icd_10": "Z21",
+    "icd_11": "1C62.3",
+    "description": "HIV notification during pregnancy childbirth or puerperium; an event-based maternal surveillance concept",
+    "slug": "hiv-infection-in-pregnancy-surveillance-event",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "etiology": [
+          "etiology.hiv"
+        ],
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.pregnant"
+        ],
+        "event_basis": [
+          "event_basis.pregnancy_notification"
+        ]
+      },
+      "group_ids": [
+        "G_HIV_RELATED_SURVEILLANCE"
+      ],
+      "relations": {
+        "outgoing": [
+          {
+            "id": "R_D231_RELATED_TO_D162",
+            "type": "pregnancy_event_related_to",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D231"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D162"
+            },
+            "hierarchical": false,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ],
+        "incoming": []
+      },
+      "source_series_count": 2,
+      "availability": [
+        {
+          "id": "AV_BR_HIV_GENERAL",
+          "source_id": "SRC_BR_SINAN",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D231"
+          },
+          "series_id": "SER_BR_HIV_GENERAL_HIVG",
+          "status": "not_assessed",
+          "reason_code": "deprecated_incorrect_registry_identity",
+          "notes": "Deprecated misleading series ID retained only for registry compatibility; use SER_BR_HIV_PREGNANCY_HIVG."
+        },
+        {
+          "id": "AV_BR_HIV_PREGNANCY_HIVG",
+          "source_id": "SRC_BR_SINAN",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D231"
+          },
+          "series_id": "SER_BR_HIV_PREGNANCY_HIVG",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
+  },
+  {
+    "disease_id": "D232",
+    "name_en": "Infectious syphilis under two years duration",
+    "name_zh": "病程不足两年的感染性梅毒",
+    "category": "Bacterial",
+    "icd_10": "A51",
+    "icd_11": "1A70",
+    "description": "Australia source-defined infectious syphilis category with duration under two years",
+    "slug": "infectious-syphilis-under-two-years-duration",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ],
+        "duration": [
+          "duration.lt_2_years"
+        ]
+      },
+      "group_ids": [
+        "G_SYPHILIS_SURVEILLANCE_SPECTRUM"
+      ],
+      "relations": {
+        "outgoing": [
+          {
+            "id": "R_D232_DURATION_FORM_OF_D034",
+            "type": "duration_category_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D232"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D034"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ],
+        "incoming": []
+      },
+      "source_series_count": 1,
+      "availability": [
+        {
+          "id": "AV_AU_SYPHILIS_INFECTIOUS_LT2Y",
+          "source_id": "SRC_AU_NINDSS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D232"
+          },
+          "series_id": "SER_AU_SYPHILIS_INFECTIOUS_LT2Y",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
+  },
+  {
+    "disease_id": "D233",
+    "name_en": "Syphilis over two years or unspecified duration",
+    "name_zh": "病程超过两年或病程未明的梅毒",
+    "category": "Bacterial",
+    "icd_10": "A52-A53",
+    "icd_11": "1A70",
+    "description": "Australia source-defined syphilis category combining duration over two years with unspecified duration",
+    "slug": "syphilis-over-two-years-or-unspecified-duration",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ],
+        "duration": [
+          "duration.gt_2_years_or_unspecified"
+        ]
+      },
+      "group_ids": [
+        "G_SYPHILIS_SURVEILLANCE_SPECTRUM"
+      ],
+      "relations": {
+        "outgoing": [
+          {
+            "id": "R_D233_DURATION_FORM_OF_D034",
+            "type": "duration_category_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D233"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D034"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ],
+        "incoming": []
+      },
+      "source_series_count": 1,
+      "availability": [
+        {
+          "id": "AV_AU_SYPHILIS_GT2Y_OR_UNSPECIFIED",
+          "source_id": "SRC_AU_NINDSS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D233"
+          },
+          "series_id": "SER_AU_SYPHILIS_GT2Y_OR_UNSPECIFIED",
+          "status": "available",
+          "reason_code": "series_facts_backfilled"
+        }
+      ]
+    }
+  },
+  {
+    "disease_id": "D234",
+    "name_en": "Paratyphoid fever",
+    "name_zh": "副伤寒",
+    "category": "Bacterial",
+    "icd_10": "A01.1-A01.4",
+    "icd_11": "",
+    "description": "Paratyphoid-only surveillance concept; excludes typhoid fever",
+    "slug": "paratyphoid-fever",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_ENTERIC_FEVER_SPECTRUM"
+      ],
+      "relations": {
+        "outgoing": [
+          {
+            "id": "R_D234_COMPONENT_OF_D026",
+            "type": "reported_component_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D234"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D026"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ],
+        "incoming": []
+      },
+      "source_series_count": 7,
+      "availability": [
+        {
+          "id": "AV_AU_PARATYPHOID_MONTHLY",
+          "source_id": "SRC_AU_NINDSS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D234"
+          },
+          "series_id": "SER_AU_PARATYPHOID_MONTHLY",
+          "status": "upstream_available_ingestion_pending",
+          "reason_code": "semantic_mapping_corrected_backfill_pending",
+          "notes": "Paratyphoid-only exact-series historical backfill remains pending.",
+          "missing_value_policy": "missing_is_unknown"
+        },
+        {
+          "id": "AV_HK_PARATYPHOID_MONTHLY",
+          "source_id": "SRC_HK_CHP",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D234"
+          },
+          "series_id": "SER_HK_PARATYPHOID_MONTHLY",
+          "status": "upstream_available_ingestion_pending",
+          "reason_code": "semantic_mapping_corrected_backfill_pending",
+          "notes": "Paratyphoid-only exact-series historical backfill remains pending.",
+          "missing_value_policy": "missing_is_unknown"
+        },
+        {
+          "id": "AV_JP_PARATYPHOID_WEEKLY",
+          "source_id": "SRC_JP_NIID",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D234"
+          },
+          "series_id": "SER_JP_PARATYPHOID_WEEKLY",
+          "status": "upstream_available_ingestion_pending",
+          "reason_code": "semantic_mapping_corrected_backfill_pending",
+          "notes": "Paratyphoid-only exact-series historical backfill remains pending.",
+          "missing_value_policy": "missing_is_unknown"
+        },
+        {
+          "id": "AV_KR_PARATYPHOID_MONTHLY",
+          "source_id": "SRC_KR_KDCA",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D234"
+          },
+          "series_id": "SER_KR_PARATYPHOID_MONTHLY",
+          "status": "upstream_available_ingestion_pending",
+          "reason_code": "semantic_mapping_corrected_backfill_pending",
+          "notes": "Paratyphoid-only exact-series historical backfill remains pending.",
+          "missing_value_policy": "missing_is_unknown"
+        },
+        {
+          "id": "AV_NZ_PARATYPHOID_MONTHLY",
+          "source_id": "SRC_NZ_PHS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D234"
+          },
+          "series_id": "SER_NZ_PARATYPHOID_MONTHLY",
+          "status": "upstream_available_ingestion_pending",
+          "reason_code": "semantic_mapping_corrected_backfill_pending",
+          "notes": "Paratyphoid-only exact-series historical backfill remains pending.",
+          "missing_value_policy": "missing_is_unknown"
+        },
+        {
+          "id": "AV_TW_PARATYPHOID_002A",
+          "source_id": "SRC_TW_NIDSS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D234"
+          },
+          "series_id": "SER_TW_PARATYPHOID_002A",
+          "status": "upstream_available_ingestion_pending",
+          "reason_code": "semantic_mapping_corrected_backfill_pending",
+          "notes": "Paratyphoid-only exact-series historical backfill remains pending.",
+          "missing_value_policy": "missing_is_unknown"
+        },
+        {
+          "id": "AV_US_PARATYPHI_WEEKLY",
+          "source_id": "SRC_US_NNDSS",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D234"
+          },
+          "series_id": "SER_US_PARATYPHI_WEEKLY",
+          "status": "available",
+          "reason_code": "series_facts_backfilled",
+          "notes": "Exact U.S.-resident Paratyphi-only weekly facts are backfilled; missing source cells remain unknown.",
+          "missing_value_policy": "missing_is_unknown"
+        }
+      ]
+    }
+  },
+  {
+    "disease_id": "D235",
+    "name_en": "Meningitis (all reported etiologies)",
+    "name_zh": "脑膜炎（全部报告病因）",
+    "category": "Other",
+    "icd_10": "",
+    "icd_11": "",
+    "description": "Source-reported meningitis category spanning reported etiologies; not equivalent to bacterial meningitis",
+    "slug": "meningitis-(all-reported-etiologies)",
+    "ontology": {
+      "status": "active",
+      "rollup_policy": "no_auto_rollup",
+      "facet_tags": {
+        "clinical_course": [
+          "clinical_course.infection"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.aggregate"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "group_ids": [
+        "G_MENINGITIS_SURVEILLANCE_SPECTRUM"
+      ],
+      "relations": {
+        "outgoing": [],
+        "incoming": [
+          {
+            "id": "R_D134_FORM_OF_D235",
+            "type": "etiology_qualified_form_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D134"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D235"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          },
+          {
+            "id": "R_D135_FORM_OF_D235",
+            "type": "etiology_qualified_form_of",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D135"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D235"
+            },
+            "hierarchical": true,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          },
+          {
+            "id": "R_D110_RELATED_TO_D235",
+            "type": "related_meningitis_category",
+            "from_ref": {
+              "kind": "concept",
+              "id": "D110"
+            },
+            "to_ref": {
+              "kind": "concept",
+              "id": "D235"
+            },
+            "hierarchical": false,
+            "rollup": false,
+            "rollup_policy": "no_auto_rollup"
+          }
+        ]
+      },
+      "source_series_count": 1,
+      "availability": [
+        {
+          "id": "AV_BR_MENINGITIS_ALL_ETIOLOGIES_MENI",
+          "source_id": "SRC_BR_SINAN",
+          "target_ref": {
+            "kind": "concept",
+            "id": "D235"
+          },
+          "series_id": "SER_BR_MENINGITIS_ALL_ETIOLOGIES_MENI",
+          "status": "upstream_available_ingestion_pending",
+          "reason_code": "semantic_mapping_corrected_backfill_pending",
+          "notes": "Legacy MENI facts require explicit reassignment from bacterial meningitis to the all-etiology source concept.",
+          "missing_value_policy": "missing_is_unknown"
+        }
+      ]
+    }
   }
 ]

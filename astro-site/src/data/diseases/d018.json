@@ -1210,7 +1210,41 @@
         "wpp_computed"
       ],
       "total_cases": 154973,
-      "total_deaths": 1249
+      "total_deaths": 1249,
+      "data_layer": "legacy_fallback",
+      "projection_policy": "legacy_fallback",
+      "loss_risk": "legacy_identity_may_be_lossy",
+      "selected_series_codes": [],
+      "available_series_count": 0,
+      "source_series": [],
+      "coverage_status": null,
+      "coverage_policy": null,
+      "legacy_gap_fill_count": 0,
+      "coverage_ratio_against_legacy": null,
+      "data_provenance": {
+        "data_layer": "legacy_fallback",
+        "projection_policy": "legacy_fallback",
+        "loss_risk": "legacy_identity_may_be_lossy",
+        "selected_series_codes": [],
+        "available_series_count": 0,
+        "fallback_reason": "no_eligible_registered_series_facts",
+        "metric_layers": {
+          "cases": "legacy_fallback",
+          "deaths": "legacy_fallback",
+          "recoveries": "legacy_fallback"
+        },
+        "note_en": "No eligible registered case-count series facts are available for this disease and country; the public curve uses the legacy flat table.",
+        "note_zh": "该疾病与国家尚无可用的注册病例计数序列事实；公开曲线受控回退到旧扁平事实表。",
+        "cutover": {
+          "release_version": "2026.08.2",
+          "read_mode": "series_with_fallback",
+          "shadow_compare": true,
+          "target_override": false,
+          "required_series": [],
+          "allowed_projection_policy": null,
+          "blocked_reasons": []
+        }
+      }
     },
     "JP": {
       "dates": [
@@ -5558,7 +5592,41 @@
         "wpp_computed"
       ],
       "total_cases": 0,
-      "total_deaths": 0
+      "total_deaths": 0,
+      "data_layer": "legacy_fallback",
+      "projection_policy": "legacy_fallback",
+      "loss_risk": "legacy_identity_may_be_lossy",
+      "selected_series_codes": [],
+      "available_series_count": 0,
+      "source_series": [],
+      "coverage_status": null,
+      "coverage_policy": null,
+      "legacy_gap_fill_count": 0,
+      "coverage_ratio_against_legacy": null,
+      "data_provenance": {
+        "data_layer": "legacy_fallback",
+        "projection_policy": "legacy_fallback",
+        "loss_risk": "legacy_identity_may_be_lossy",
+        "selected_series_codes": [],
+        "available_series_count": 0,
+        "fallback_reason": "no_eligible_registered_series_facts",
+        "metric_layers": {
+          "cases": "legacy_fallback",
+          "deaths": "legacy_fallback",
+          "recoveries": "legacy_fallback"
+        },
+        "note_en": "No eligible registered case-count series facts are available for this disease and country; the public curve uses the legacy flat table.",
+        "note_zh": "该疾病与国家尚无可用的注册病例计数序列事实；公开曲线受控回退到旧扁平事实表。",
+        "cutover": {
+          "release_version": "2026.08.2",
+          "read_mode": "series_with_fallback",
+          "shadow_compare": true,
+          "target_override": false,
+          "required_series": [],
+          "allowed_projection_policy": null,
+          "blocked_reasons": []
+        }
+      }
     },
     "KR": {
       "dates": [
@@ -7122,101 +7190,41 @@
         "missing_population"
       ],
       "total_cases": 14685,
-      "total_deaths": 0
-    },
-    "NZ": {
-      "dates": [
-        "2016-01-01",
-        "2016-02-01",
-        "2016-03-01",
-        "2016-04-01",
-        "2016-05-01",
-        "2016-06-01",
-        "2016-07-01",
-        "2016-08-01",
-        "2016-09-01",
-        "2016-10-01",
-        "2016-11-01",
-        "2016-12-01",
-        "2017-01-01"
-      ],
-      "cases": [
-        1,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0
-      ],
-      "weekly_equiv_cases": [
-        0.22580645161290322,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0
-      ],
-      "deaths": [
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0
-      ],
-      "incidence_rates": [
-        0.02120994237258657,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0
-      ],
-      "incidence_sources": [
-        "wpp_computed",
-        "wpp_computed",
-        "wpp_computed",
-        "wpp_computed",
-        "wpp_computed",
-        "wpp_computed",
-        "wpp_computed",
-        "wpp_computed",
-        "wpp_computed",
-        "wpp_computed",
-        "wpp_computed",
-        "wpp_computed",
-        "wpp_computed"
-      ],
-      "total_cases": 1,
-      "total_deaths": 0
+      "total_deaths": 0,
+      "data_layer": "legacy_fallback",
+      "projection_policy": "legacy_fallback",
+      "loss_risk": "legacy_identity_may_be_lossy",
+      "selected_series_codes": [],
+      "available_series_count": 0,
+      "source_series": [],
+      "coverage_status": null,
+      "coverage_policy": null,
+      "legacy_gap_fill_count": 0,
+      "coverage_ratio_against_legacy": null,
+      "data_provenance": {
+        "data_layer": "legacy_fallback",
+        "projection_policy": "legacy_fallback",
+        "loss_risk": "legacy_identity_may_be_lossy",
+        "selected_series_codes": [],
+        "available_series_count": 0,
+        "fallback_reason": "no_eligible_registered_series_facts",
+        "metric_layers": {
+          "cases": "legacy_fallback",
+          "deaths": "legacy_fallback",
+          "recoveries": "legacy_fallback"
+        },
+        "note_en": "No eligible registered case-count series facts are available for this disease and country; the public curve uses the legacy flat table.",
+        "note_zh": "该疾病与国家尚无可用的注册病例计数序列事实；公开曲线受控回退到旧扁平事实表。",
+        "cutover": {
+          "release_version": "2026.08.2",
+          "read_mode": "series_with_fallback",
+          "shadow_compare": true,
+          "target_override": false,
+          "required_series": [],
+          "allowed_projection_policy": null,
+          "blocked_reasons": []
+        }
+      }
     }
   },
   "global_monthly": {
@@ -7614,7 +7622,7 @@
       796,
       1690,
       1454,
-      1525,
+      1524,
       676,
       762,
       711,
@@ -8004,8 +8012,25 @@
       0
     ]
   },
-  "total_cases": 169659,
+  "total_cases": 169658,
   "total_deaths": 1249,
+  "data_layer_summary": {
+    "series_registry_country_count": 0,
+    "mixed_country_count": 0,
+    "legacy_fallback_country_count": 3,
+    "series_registry_country_codes": [],
+    "mixed_country_codes": [],
+    "legacy_fallback_country_codes": [
+      "CN",
+      "JP",
+      "KR"
+    ],
+    "loss_risk_country_codes": [
+      "CN",
+      "JP",
+      "KR"
+    ]
+  },
   "generated_at": "2026-08-01T00:00:00+00:00",
   "source_info": [
     {
@@ -8094,29 +8119,6 @@
       "country_name": "South Korea",
       "country_name_en": "South Korea",
       "country_name_zh": "韩国"
-    },
-    {
-      "country_code": "NZ",
-      "primary_scope": "phf_monthly",
-      "primary_label": "phf_monthly",
-      "primary_url": "https://www.phfscience.nz/digital-library/",
-      "primary_type": "web",
-      "parser_primary": "nz_phf_internal_crawler",
-      "notes": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler",
-      "sources": [
-        {
-          "scope": "phf_monthly",
-          "label": "phf_monthly",
-          "url": "https://www.phfscience.nz/digital-library/",
-          "machine_url": null,
-          "type": "web",
-          "cadence": "monthly",
-          "description": "PHF Science (formerly ESR) monthly notifiable disease surveillance data via internal globalID2 crawler"
-        }
-      ],
-      "country_name": "New Zealand",
-      "country_name_en": "New Zealand",
-      "country_name_zh": "新西兰"
     }
   ]
 }
