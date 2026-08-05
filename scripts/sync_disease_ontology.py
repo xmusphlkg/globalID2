@@ -47,6 +47,20 @@ from src.domain import (  # noqa: E402
     StandardDisease,
 )
 from src.ontology import load_disease_ontology  # noqa: E402
+from src.ontology.sync_migrations.br_2026_08_ntra import (  # noqa: E402
+    BR_NTRA_REPAIR_REASON,
+    apply as apply_br_ntra,
+    json_object as _json_object,
+    legacy_case_count as _legacy_case_count,
+    legacy_raw_rows as _legacy_raw_rows,
+    partition_rows as partition_br_ntra_rows,
+    preflight as preflight_br_ntra,
+    repaired_metadata as br_repaired_metadata,
+)
+from src.ontology.sync_validation import (  # noqa: E402
+    assert_conserved_totals,
+    expected_legacy_totals,
+)
 from src.data.processors.mapping_lookup import (  # noqa: E402
     build_mapping_lookup,
     normalize_mapping_key,
@@ -59,10 +73,6 @@ STANDARD_CSV = ROOT / "configs" / "standard_diseases.csv"
 MAPPING_DIR = ROOT / "configs" / "mapping"
 TRANSITION_CSV = ROOT / "configs" / "disease_mapping_transitions.csv"
 LEGACY_INACTIVE_IDS = frozenset({"D012", "D067", "D160", "D176", "D179"})
-BR_NTRA_REPAIR_REASON = (
-    "remove legacy NTRA row-count projection from work-related mental disorder; "
-    "NTRA is a trachoma survey whose positive-case metric requires source reingestion"
-)
 
 
 @dataclass(frozen=True)
@@ -1796,407 +1806,24 @@ async def _apply_series_geography_remap(
     }
 
 
-def _json_object(value: object) -> dict[str, Any]:
-    if isinstance(value, dict):
-        return dict(value)
-    if isinstance(value, str):
-        try:
-            parsed = json.loads(value)
-        except json.JSONDecodeError:
-            return {}
-        return dict(parsed) if isinstance(parsed, dict) else {}
-    return {}
+def _partition_br_ntra_rows(raw_data: object):
+    return partition_br_ntra_rows(raw_data)
 
 
-def _legacy_raw_rows(value: object) -> list[dict[str, Any]]:
-    if isinstance(value, str):
-        try:
-            value = json.loads(value)
-        except json.JSONDecodeError:
-            return []
-    if isinstance(value, dict):
-        nested_rows = value.get("rows")
-        value = nested_rows if isinstance(nested_rows, list) else [value]
-    if not isinstance(value, list):
-        return []
-    return [dict(item) for item in value if isinstance(item, dict)]
+def _br_repaired_metadata(existing: object, kept_rows: list[dict[str, Any]]):
+    return br_repaired_metadata(existing, kept_rows)
 
 
-def _legacy_case_count(value: object) -> int:
-    try:
-        parsed = int(float(str(value).replace(",", "").strip()))
-    except (TypeError, ValueError):
-        return 0
-    return max(parsed, 0)
+async def _preflight_br_ntra_legacy_projection(db):
+    return await preflight_br_ntra(db, _source_evidence_values)
 
 
-def _partition_br_ntra_rows(
-    raw_data: object,
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]], int, int]:
-    """Split invalid legacy NTRA rows from a BR flat fact.
-
-    Historic NTRA ``Cases`` values were DBF row counts, not the source's
-    ``NU_CASOPOS`` positive-case metric.  They are therefore removed rather
-    than reclassified as trachoma facts.
-    """
-
-    kept: list[dict[str, Any]] = []
-    removed: list[dict[str, Any]] = []
-    for row in _legacy_raw_rows(raw_data):
-        code = str(row.get("DiseaseCode") or row.get("local_code") or "")
-        target = removed if code.strip().upper() == "NTRA" else kept
-        target.append(row)
-    kept_cases = sum(_legacy_case_count(row.get("Cases")) for row in kept)
-    removed_cases = sum(_legacy_case_count(row.get("Cases")) for row in removed)
-    return kept, removed, kept_cases, removed_cases
-
-
-def _br_repaired_metadata(
-    existing: object, kept_rows: list[dict[str, Any]]
-) -> dict[str, Any]:
-    metadata = _json_object(existing)
-
-    def unique(field: str) -> list[str]:
-        values: list[str] = []
-        for row in kept_rows:
-            for item in str(row.get(field) or "").split("|"):
-                normalized = item.strip()
-                if normalized and normalized not in values:
-                    values.append(normalized)
-        return values
-
-    metadata.update(
-        {
-            "raw_disease_labels": unique("RawDiseaseLabel"),
-            "disease_codes": unique("DiseaseCode"),
-            "dataset_statuses": unique("DatasetStatus"),
-            "source_files": unique("SourceFiles"),
-            "source_urls": unique("SourceURLs"),
-            "ontology_semantic_repair": "BR_D193_REMOVE_NTRA",
-            "ontology_migration_reason": BR_NTRA_REPAIR_REASON,
-        }
+async def _repair_br_ntra_legacy_projection(db, *, migration_run_id: str):
+    return await apply_br_ntra(
+        db,
+        migration_run_id=migration_run_id,
+        source_evidence_values=_source_evidence_values,
     )
-    return metadata
-
-
-async def _preflight_br_ntra_legacy_projection(db) -> dict[str, Any]:
-    result = await db.execute(
-        text("""
-            SELECT record.time, record.disease_id, record.country_id,
-                   record.cases, record.raw_data, record.metadata
-            FROM disease_records record
-            JOIN diseases disease ON disease.id = record.disease_id
-            JOIN countries country ON country.id = record.country_id
-            WHERE country.code = 'BR'
-              AND disease.name = 'D193'
-              AND lower(btrim(COALESCE(record.data_source, ''))) =
-                  ANY(:source_values)
-              AND EXISTS (
-                  SELECT 1
-                  FROM jsonb_array_elements(
-                      CASE jsonb_typeof(COALESCE(record.raw_data::jsonb,
-                                                'null'::jsonb))
-                      WHEN 'array' THEN record.raw_data::jsonb
-                      WHEN 'object' THEN jsonb_build_array(record.raw_data::jsonb)
-                      ELSE '[]'::jsonb END
-                  ) AS source_row(value)
-                  WHERE upper(btrim(source_row.value ->> 'DiseaseCode')) = 'NTRA'
-              )
-            ORDER BY record.time
-            """),
-        {"source_values": list(_source_evidence_values("SRC_BR_SINAN"))},
-    )
-    rows = result.mappings().all()
-    source_mismatches = (
-        (
-            await db.execute(
-                text("""
-                SELECT record.data_source, COUNT(*) AS observations
-                FROM disease_records record
-                JOIN diseases disease ON disease.id = record.disease_id
-                JOIN countries country ON country.id = record.country_id
-                WHERE country.code = 'BR'
-                  AND disease.name = 'D193'
-                  AND NOT (
-                      lower(btrim(COALESCE(record.data_source, ''))) =
-                      ANY(:source_values)
-                  )
-                  AND EXISTS (
-                      SELECT 1
-                      FROM jsonb_array_elements(
-                          CASE jsonb_typeof(COALESCE(record.raw_data::jsonb,
-                                                    'null'::jsonb))
-                          WHEN 'array' THEN record.raw_data::jsonb
-                          WHEN 'object' THEN jsonb_build_array(record.raw_data::jsonb)
-                          ELSE '[]'::jsonb END
-                      ) AS source_row(value)
-                      WHERE upper(btrim(source_row.value ->> 'DiseaseCode')) = 'NTRA'
-                  )
-                GROUP BY record.data_source
-                ORDER BY observations DESC, record.data_source
-                """),
-                {"source_values": list(_source_evidence_values("SRC_BR_SINAN"))},
-            )
-        )
-        .mappings()
-        .all()
-    )
-    updated = 0
-    deleted = 0
-    removed_source_rows = 0
-    removed_legacy_value = 0
-    errors: list[str] = []
-    examples: list[dict[str, Any]] = []
-    if source_mismatches:
-        errors.append(
-            "source_evidence_mismatches="
-            f"{sum(int(row['observations']) for row in source_mismatches)}"
-        )
-    for record in rows:
-        kept, removed, kept_cases, removed_cases = _partition_br_ntra_rows(
-            record["raw_data"]
-        )
-        if not removed:
-            errors.append(f"{record['time']}: exact NTRA evidence was not partitioned")
-            continue
-        expected_stored = kept_cases + removed_cases
-        if int(record["cases"] or 0) != expected_stored:
-            message = (
-                f"{record['time']}: stored_cases={int(record['cases'] or 0)} "
-                f"raw_component_sum={expected_stored}"
-            )
-            errors.append(message)
-            if len(examples) < 5:
-                examples.append({"time": str(record["time"]), "error": message})
-        removed_source_rows += len(removed)
-        removed_legacy_value += removed_cases
-        if kept:
-            updated += 1
-        else:
-            deleted += 1
-    return {
-        "country_code": "BR",
-        "old_disease_id": "D193",
-        "source_code": "NTRA",
-        "action": "remove_invalid_legacy_projection_with_audit",
-        "selected_facts": len(rows),
-        "would_update_facts": updated,
-        "would_delete_facts": deleted,
-        "removed_source_rows": removed_source_rows,
-        "removed_legacy_value": removed_legacy_value,
-        "requires_source_reingestion": True,
-        "reason": BR_NTRA_REPAIR_REASON,
-        "errors": errors,
-        "error_examples": examples,
-        "source_evidence_values": list(_source_evidence_values("SRC_BR_SINAN")),
-        "source_mismatch_examples": [dict(row) for row in source_mismatches[:20]],
-        "status": "blocked" if errors else "ready",
-    }
-
-
-async def _snapshot_br_ntra_record(
-    db,
-    *,
-    record: dict[str, Any],
-    migration_run_id: str,
-) -> int | None:
-    result = await db.execute(
-        text("""
-            INSERT INTO disease_migration_audit (
-                migration_run_id, migration_key, entity_table, operation,
-                identity_key, identity, before_data, after_data, reason
-            ) VALUES (
-                :migration_run_id, :migration_key, 'disease_records',
-                'legacy_projection_repair', :identity_key,
-                CAST(:identity AS jsonb), CAST(:before_data AS jsonb),
-                NULL, :reason
-            )
-            ON CONFLICT (migration_run_id, migration_key, identity_key)
-            DO NOTHING
-            RETURNING id
-            """),
-        {
-            "migration_run_id": migration_run_id,
-            "migration_key": "semantic_repair:BR:D193:NTRA_INVALID_ROW_COUNT",
-            "identity_key": f"BR|D193|{record['time']}",
-            "identity": json.dumps(
-                {
-                    "time": str(record["time"]),
-                    "country_id": record["country_id"],
-                    "disease_id": record["disease_id"],
-                    "country_code": "BR",
-                    "disease_code": "D193",
-                },
-                ensure_ascii=False,
-            ),
-            "before_data": json.dumps(
-                record["before_data"], ensure_ascii=False, default=str
-            ),
-            "reason": BR_NTRA_REPAIR_REASON,
-        },
-    )
-    audit_id = result.scalar_one_or_none()
-    return int(audit_id) if audit_id is not None else None
-
-
-async def _capture_br_ntra_after_image(db, *, audit_id: int) -> int:
-    result = await db.execute(
-        text("""
-            UPDATE disease_migration_audit audit
-            SET after_data = to_jsonb(current_record)
-            FROM disease_records current_record
-            WHERE audit.id = :audit_id
-              AND current_record.time =
-                  CAST(audit.identity ->> 'time' AS timestamptz)
-              AND current_record.country_id =
-                  CAST(audit.identity ->> 'country_id' AS integer)
-              AND current_record.disease_id =
-                  CAST(audit.identity ->> 'disease_id' AS integer)
-            """),
-        {"audit_id": audit_id},
-    )
-    return int(result.rowcount or 0)
-
-
-async def _repair_br_ntra_legacy_projection(
-    db, *, migration_run_id: str
-) -> dict[str, Any]:
-    """Remove known-invalid NTRA row counts from legacy BR D193 facts."""
-
-    result = await db.execute(
-        text("""
-            SELECT record.time, record.disease_id, record.country_id,
-                   record.cases, record.raw_data, record.metadata,
-                   to_jsonb(record) AS before_data
-            FROM disease_records record
-            JOIN diseases disease ON disease.id = record.disease_id
-            JOIN countries country ON country.id = record.country_id
-            WHERE country.code = 'BR'
-              AND disease.name = 'D193'
-              AND lower(btrim(COALESCE(record.data_source, ''))) =
-                  ANY(:source_values)
-              AND EXISTS (
-                  SELECT 1
-                  FROM jsonb_array_elements(
-                      CASE jsonb_typeof(COALESCE(record.raw_data::jsonb,
-                                                'null'::jsonb))
-                      WHEN 'array' THEN record.raw_data::jsonb
-                      WHEN 'object' THEN jsonb_build_array(record.raw_data::jsonb)
-                      ELSE '[]'::jsonb END
-                  ) AS source_row(value)
-                  WHERE upper(btrim(source_row.value ->> 'DiseaseCode')) = 'NTRA'
-              )
-            FOR UPDATE OF record
-            """),
-        {"source_values": list(_source_evidence_values("SRC_BR_SINAN"))},
-    )
-    rows = result.mappings().all()
-    updated = 0
-    deleted = 0
-    removed_source_rows = 0
-    removed_legacy_value = 0
-    audit_snapshots = 0
-    audit_after_images = 0
-    for record in rows:
-        kept, removed, kept_cases, removed_cases = _partition_br_ntra_rows(
-            record["raw_data"]
-        )
-        if not removed:
-            continue
-        removed_source_rows += len(removed)
-        removed_legacy_value += removed_cases
-        identity = {
-            "time": record["time"],
-            "disease_id": record["disease_id"],
-            "country_id": record["country_id"],
-        }
-        audit_id = await _snapshot_br_ntra_record(
-            db,
-            record=dict(record),
-            migration_run_id=migration_run_id,
-        )
-        if audit_id is None:
-            raise RuntimeError(
-                "Refusing BR NTRA repair without a fresh audit before-image: "
-                f"{record['time']}"
-            )
-        audit_snapshots += 1
-        if not kept:
-            delete_result = await db.execute(
-                text("""
-                    DELETE FROM disease_records
-                    WHERE time = :time
-                      AND disease_id = :disease_id
-                      AND country_id = :country_id
-                    """),
-                identity,
-            )
-            delete_count = int(delete_result.rowcount or 0)
-            if delete_count != 1:
-                raise RuntimeError(
-                    f"BR NTRA delete count changed for {record['time']}: "
-                    f"expected=1, deleted={delete_count}"
-                )
-            deleted += delete_count
-            continue
-        metadata = _br_repaired_metadata(record["metadata"], kept)
-        update_result = await db.execute(
-            text("""
-                UPDATE disease_records
-                SET cases = :cases,
-                    raw_data = CAST(:raw_data AS json),
-                    metadata = CAST(:metadata AS json)
-                WHERE time = :time
-                  AND disease_id = :disease_id
-                  AND country_id = :country_id
-                """),
-            {
-                **identity,
-                "cases": kept_cases,
-                "raw_data": json.dumps(kept, ensure_ascii=False),
-                "metadata": json.dumps(metadata, ensure_ascii=False),
-            },
-        )
-        update_count = int(update_result.rowcount or 0)
-        if update_count != 1:
-            raise RuntimeError(
-                f"BR NTRA update count changed for {record['time']}: "
-                f"expected=1, updated={update_count}"
-            )
-        updated += update_count
-        captured = await _capture_br_ntra_after_image(db, audit_id=audit_id)
-        if captured != 1:
-            raise RuntimeError(
-                f"BR NTRA after-image capture failed for {record['time']}: "
-                f"captured={captured}"
-            )
-        audit_after_images += captured
-
-    if audit_snapshots != updated + deleted:
-        raise RuntimeError(
-            "BR NTRA audit snapshot count does not match mutations: "
-            f"snapshots={audit_snapshots}, updated={updated}, deleted={deleted}"
-        )
-    if audit_after_images != updated:
-        raise RuntimeError(
-            "BR NTRA audit after-image count does not match updates: "
-            f"after_images={audit_after_images}, updated={updated}"
-        )
-
-    return {
-        "country_code": "BR",
-        "old_disease_id": "D193",
-        "source_code": "NTRA",
-        "selected_facts": len(rows),
-        "updated_facts": updated,
-        "deleted_facts": deleted,
-        "removed_source_rows": removed_source_rows,
-        "removed_legacy_value": removed_legacy_value,
-        "audit_snapshots_created": audit_snapshots,
-        "audit_after_images_captured": audit_after_images,
-        "requires_source_reingestion": True,
-        "reason": BR_NTRA_REPAIR_REASON,
-    }
 
 
 async def _verify_applied_state(
@@ -2208,25 +1835,12 @@ async def _verify_applied_state(
                 SELECT COUNT(*) AS observations, COALESCE(SUM(cases), 0) AS cases
                 FROM disease_records
                 """))).mappings().one()
-    removed_observations = sum(
-        int(item.get("would_delete_facts") or 0)
-        for item in preflight["semantic_repairs"]
+    expected_observations, expected_cases = expected_legacy_totals(
+        preflight["database_snapshot"], preflight["semantic_repairs"]
     )
-    removed_cases = sum(
-        int(item.get("removed_legacy_value") or 0)
-        for item in preflight["semantic_repairs"]
-    )
-    expected_observations = (
-        int(preflight["database_snapshot"]["legacy_observations"])
-        - removed_observations
-    )
-    expected_cases = int(preflight["database_snapshot"]["legacy_cases"]) - removed_cases
     actual_observations = int(totals["observations"] or 0)
     actual_cases = int(totals["cases"] or 0)
-    if (actual_observations, actual_cases) != (
-        expected_observations,
-        expected_cases,
-    ):
+    if (actual_observations, actual_cases) != (expected_observations, expected_cases):
         raise RuntimeError(
             "Post-migration legacy conservation failed: "
             f"expected observations/cases={expected_observations}/{expected_cases}, "
@@ -2285,12 +1899,12 @@ async def _verify_applied_state(
         int(series_totals["suppressed"] or 0),
         float(series_totals["value_sum"] or 0),
     )
-    if actual_series_totals != expected_series_totals:
-        raise RuntimeError(
-            "Post-migration series conservation failed: "
-            f"expected observations/suppressed/value={expected_series_totals}, "
-            f"actual={actual_series_totals}"
-        )
+    assert_conserved_totals(
+        label="series",
+        expected=expected_series_totals,
+        actual=actual_series_totals,
+        dimensions="observations/suppressed/value",
+    )
 
     mapping_rows = (await db.execute(text("""
                 SELECT dm.id, dm.country_code, dm.source_id, dm.local_name,

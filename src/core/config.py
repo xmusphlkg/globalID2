@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -298,25 +298,15 @@ class DataReleaseSettings(_BaseEnvSettings):
 
 
 class RawArchiveSettings(_BaseEnvSettings):
-    """爬取原始数据的增量 Git 归档配置。"""
+    """爬取原始数据的可读 Git 镜像配置。"""
 
     enabled: bool = Field(default=False, description="是否在数据更新任务后自动归档 data/raw")
     repo_url: str = Field(default="", description="原始数据专用 GitHub 仓库 URL")
     repository_dir: Path = Field(
         default=Path("exports/raw-git-archive"),
-        description="原始数据归档分支的持久本地克隆目录",
+        description="原始数据仓库 main 分支的持久本地克隆目录",
     )
-    chunk_mib: int = Field(default=48, ge=1, le=95, description="GitHub 安全分片大小 MiB")
-    commit_batch_mib: int = Field(default=96, ge=48, le=2048, description="每次增量推送的最大压缩字节 MiB")
-    zstd_level: int = Field(default=6, ge=1, le=19, description="zstd 压缩级别")
     git_timeout_seconds: int = Field(default=1800, ge=60, le=7200, description="单次 Git 网络操作超时秒数")
-
-    @model_validator(mode="after")
-    def validate_commit_batch_size(self) -> "RawArchiveSettings":
-        if self.commit_batch_mib < self.chunk_mib:
-            raise ValueError("commit_batch_mib must be greater than or equal to chunk_mib")
-        return self
-
 
 class AppSettingsConfig(BaseSettings):
     """应用基础配置"""

@@ -1,0 +1,167 @@
+import ast
+import inspect
+from types import SimpleNamespace
+
+import pytest
+
+from scripts import generate_site_data as legacy_api
+from src.generation import site_data_catalogue, site_data_export, site_data_knowledge
+
+
+def _called_names(function: object) -> list[str]:
+    tree = ast.parse(inspect.getsource(function))
+    calls: list[str] = []
+
+    class CallCollector(ast.NodeVisitor):
+        def visit_Call(self, node: ast.Call) -> None:
+            if isinstance(node.func, ast.Name):
+                calls.append(node.func.id)
+            self.generic_visit(node)
+
+    CallCollector().visit(tree)
+    return calls
+
+
+def test_moved_site_data_symbols_are_direct_legacy_reexports() -> None:
+    assert legacy_api.build_disease_knowledge_fields is (
+        site_data_knowledge.build_disease_knowledge_fields
+    )
+    assert legacy_api.apply_disease_knowledge_fields is (
+        site_data_knowledge.apply_disease_knowledge_fields
+    )
+    assert legacy_api.apply_country_brief_fields is (
+        site_data_knowledge.apply_country_brief_fields
+    )
+    assert legacy_api.load_standard_diseases is site_data_catalogue.load_standard_diseases
+    assert legacy_api.enrich_diseases_with_ontology is (
+        site_data_catalogue.enrich_diseases_with_ontology
+    )
+    assert legacy_api.validate_record_catalogue_coverage is (
+        site_data_catalogue.validate_record_catalogue_coverage
+    )
+    assert legacy_api.export is site_data_export.export
+
+
+def test_export_public_signature_remains_stable() -> None:
+    assert list(inspect.signature(site_data_export.export).parameters) == [
+        "output_dir",
+        "manifest_output",
+        "allow_empty_export",
+        "public_site_data_dir",
+        "sharded_download_output_dir",
+        "shard_max_uncompressed_bytes",
+        "github_snapshot_output_dir",
+        "github_snapshot_retain_releases",
+        "github_snapshot_url_base",
+    ]
+
+
+def test_export_side_effect_sequence_is_explicit_and_stable() -> None:
+    """Guard packaging and file-write order while the orchestrator is refactored."""
+    calls = _called_names(site_data_export.export)
+    expected = [
+        "collect_site_export_context",
+        "build_export_download_artifacts",
+        "write_site_export_artifacts",
+        "build_frontend_download_manifest",
+        "write_pretty_json",  # frontend download manifest
+    ]
+    position = 0
+    for name in calls:
+        if position < len(expected) and name == expected[position]:
+            position += 1
+    assert position == len(expected), calls
+
+
+def test_context_phase_performs_no_filesystem_writes() -> None:
+    calls = set(_called_names(site_data_export.collect_site_export_context))
+    assert calls.isdisjoint(
+        {"prepare_site_output_dirs", "write_pretty_json", "write_compact_json"}
+    )
+
+
+def test_site_artifact_write_order_remains_stable() -> None:
+    calls = _called_names(site_data_export.write_site_export_artifacts)
+    expected = [
+        "prepare_site_output_dirs",
+        "write_pretty_json",  # disease index
+        "write_pretty_json",  # ontology build data
+        "write_pretty_json",  # ontology public data
+        "write_pretty_json",  # country build data
+        "write_compact_json",  # country public data
+        "write_pretty_json",  # disease build data
+        "write_pretty_json",  # disease knowledge data
+        "write_compact_json",  # disease public data
+        "write_pretty_json",  # reports index
+        "write_pretty_json",  # report detail
+        "write_pretty_json",  # meta
+        "write_pretty_json",  # about
+    ]
+    position = 0
+    for name in calls:
+        if position < len(expected) and name == expected[position]:
+            position += 1
+    assert position == len(expected), calls
+
+
+def test_download_artifact_phase_rejects_projection_count_mismatch(tmp_path) -> None:
+    with pytest.raises(RuntimeError, match="views disagree"):
+        site_data_export.build_export_download_artifacts(
+            country_exports=[{"canonical_facts": [{"id": "fact"}]}],
+            disease_download_entries=[{"record_count": 0}],
+            country_download_entries=[],
+            country_sources_by_code={},
+            generated_at="2026-08-05T00:00:00Z",
+            sharded_download_output_dir=tmp_path / "downloads",
+            shard_max_uncompressed_bytes=1024,
+            github_snapshot_output_dir=tmp_path / "snapshot",
+            github_snapshot_retain_releases=2,
+        )
+
+
+def test_site_artifact_writer_reads_download_index_counts_from_context(
+    monkeypatch, tmp_path
+) -> None:
+    writes: list[object] = []
+    monkeypatch.setattr(site_data_export, "prepare_site_output_dirs", lambda *_: None)
+    monkeypatch.setattr(
+        site_data_export, "write_pretty_json", lambda path, value: writes.append(path)
+    )
+    monkeypatch.setattr(
+        site_data_export, "write_compact_json", lambda path, value: writes.append(path)
+    )
+    monkeypatch.setattr(
+        site_data_export,
+        "build_disease_knowledge_fields",
+        lambda *_: {"knowledge_display_mode": "blocked", "knowledge_completeness": 0},
+    )
+    monkeypatch.setattr(site_data_export, "build_about_snapshot", lambda **_: {})
+
+    site_data_export.write_site_export_artifacts(
+        {
+            "all_records_by_country": {},
+            "countries_simple": [],
+            "country_download_entries": [{"country_code": "CN"}],
+            "country_exports": [],
+            "disease_download_entries": [{"disease_id": "D001"}],
+            "disease_exports": [
+                {"disease_id": "D001", "disease_data": {}, "site_data": {}}
+            ],
+            "disease_knowledge_briefs": {},
+            "diseases": [{"disease_id": "D001"}],
+            "diseases_by_id": {"D001": {"disease_id": "D001"}},
+            "generated_at": "2026-08-05T00:00:00Z",
+            "ontology": SimpleNamespace(concept_ids=["D001"], series_ids=[]),
+            "ontology_document": {
+                "registry_id": "registry",
+                "schema_version": 1,
+                "default_rollup_policy": "sum",
+            },
+            "report_details": {},
+            "reports": [],
+        },
+        tmp_path / "build",
+        tmp_path / "public",
+    )
+
+    assert tmp_path / "build" / "about.json" in writes

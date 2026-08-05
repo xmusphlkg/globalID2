@@ -142,6 +142,133 @@ async def test_run_logged_command_timeout_terminates_process_group_and_records_e
 
 
 @pytest.mark.asyncio
+async def test_run_capture_timeout_terminates_process_and_returns_timeout(monkeypatch, tmp_path):
+    service = DataReleaseService()
+    terminated = []
+
+    class FakeProcess:
+        pid = 2468
+        returncode = None
+
+        async def communicate(self):
+            await asyncio.Event().wait()
+
+    process = FakeProcess()
+
+    async def create_subprocess(*_args, **_kwargs):
+        return process
+
+    async def terminate_process_tree(target):
+        terminated.append(target)
+        target.returncode = -release_module.signal.SIGTERM
+
+    monkeypatch.setattr(release_module.asyncio, "create_subprocess_exec", create_subprocess)
+    monkeypatch.setattr(service, "_terminate_process_tree", terminate_process_tree)
+
+    result = await service._run_capture(
+        ["slow command", "--flag"],
+        cwd=tmp_path,
+        timeout=0.01,
+    )
+
+    assert terminated == [process]
+    assert result == {
+        "returncode": 124,
+        "stdout": "Command timed out after 0.01s: 'slow command' --flag",
+    }
+
+
+@pytest.mark.asyncio
+async def test_run_logged_command_cancellation_terminates_process(monkeypatch, tmp_path):
+    service = DataReleaseService()
+    terminated = []
+
+    class FakeStream:
+        async def readline(self):
+            return b""
+
+    class FakeProcess:
+        pid = 1357
+        returncode = None
+        stdout = FakeStream()
+
+    process = FakeProcess()
+
+    async def create_subprocess(*_args, **_kwargs):
+        return process
+
+    async def add_workbook_entry(*_args, **_kwargs):
+        return None
+
+    async def is_cancel_requested(_task_uuid):
+        return True
+
+    async def terminate_process_tree(target):
+        terminated.append(target)
+        target.returncode = -release_module.signal.SIGTERM
+
+    monkeypatch.setattr(release_module.asyncio, "create_subprocess_exec", create_subprocess)
+    monkeypatch.setattr(release_module.task_manager, "add_workbook_entry", add_workbook_entry)
+    monkeypatch.setattr(release_module.task_manager, "is_cancel_requested", is_cancel_requested)
+    monkeypatch.setattr(service, "_terminate_process_tree", terminate_process_tree)
+
+    with pytest.raises(release_module.TaskCancelledError, match="Cancellation requested"):
+        await service._run_logged_command(
+            "task-cancel",
+            title="Cancelled Command",
+            cmd=["command"],
+            cwd=tmp_path,
+        )
+
+    assert terminated == [process]
+
+
+@pytest.mark.asyncio
+async def test_run_logged_command_failure_includes_output_tail(monkeypatch, tmp_path):
+    service = DataReleaseService()
+    entries = []
+
+    class FakeStream:
+        def __init__(self):
+            self.lines = iter((b"first line\n", b"failure detail\n", b""))
+
+        async def readline(self):
+            return next(self.lines)
+
+    class FakeProcess:
+        pid = 9753
+        returncode = 3
+        stdout = FakeStream()
+
+    async def create_subprocess(*_args, **_kwargs):
+        return FakeProcess()
+
+    async def add_workbook_entry(_task_uuid, **kwargs):
+        entries.append(kwargs)
+
+    async def is_cancel_requested(_task_uuid):
+        return False
+
+    monkeypatch.setattr(release_module.asyncio, "create_subprocess_exec", create_subprocess)
+    monkeypatch.setattr(release_module.task_manager, "add_workbook_entry", add_workbook_entry)
+    monkeypatch.setattr(release_module.task_manager, "is_cancel_requested", is_cancel_requested)
+
+    with pytest.raises(
+        RuntimeError,
+        match=r"failed with exit code 3[\s\S]*failure detail",
+    ):
+        await service._run_logged_command(
+            "task-failed",
+            title="Failed Command",
+            cmd=["command"],
+            cwd=tmp_path,
+        )
+
+    output_entries = [entry for entry in entries if "Output" in entry["title"]]
+    assert output_entries[0]["content"] == "first line\nfailure detail"
+
+
+@pytest.mark.asyncio
 async def test_subscription_options_sync_strict_failure_is_blocking(monkeypatch):
     service = DataReleaseService()
 
@@ -367,9 +494,6 @@ def test_raw_archive_publish_command_uses_dedicated_incremental_publisher(
         raw_archive=SimpleNamespace(
             repo_url="git@example/raw-archive.git",
             repository_dir=tmp_path / "raw-git-archive",
-            chunk_mib=48,
-            commit_batch_mib=96,
-            zstd_level=6,
             git_timeout_seconds=1800,
         ),
     )
@@ -380,8 +504,9 @@ def test_raw_archive_publish_command_uses_dedicated_incremental_publisher(
     assert command[1] == "scripts/publish_raw_git_archive.py"
     assert command[command.index("--source-dir") + 1] == str(config.raw_data_dir)
     assert command[command.index("--repo-url") + 1] == config.raw_archive.repo_url
-    assert command[command.index("--chunk-mib") + 1] == "48"
-    assert command[command.index("--commit-batch-mib") + 1] == "96"
+    assert "--chunk-mib" not in command
+    assert "--commit-batch-mib" not in command
+    assert "--zstd-level" not in command
     assert "--push" in command
     assert all("release" not in part.casefold() for part in command[2:])
 
@@ -395,7 +520,6 @@ async def test_raw_archive_preflight_is_noop_when_disabled(monkeypatch, tmp_path
             enabled=False,
             repo_url="",
             repository_dir=tmp_path / "archive",
-            chunk_mib=48,
         ),
     )
     monkeypatch.setattr(release_module, "get_config", lambda: config)
