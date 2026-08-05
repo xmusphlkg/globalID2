@@ -273,7 +273,7 @@ function reportTypeLabel(value: string | undefined, lang: 'zh' | 'en') {
 
         {countryDownload && (
           <DownloadPanel
-            entry={countryDownload}
+            entry={{ ...countryDownload, source_info: countryData?.source_info }}
             title="Download Underlying Dataset"
             initialLanguage="zh"
             descriptionEn="Download the country dataset used to generate this report, including source metadata."
