@@ -368,7 +368,7 @@ def test_raw_archive_publish_command_uses_dedicated_incremental_publisher(
             repo_url="git@example/raw-archive.git",
             repository_dir=tmp_path / "raw-git-archive",
             chunk_mib=48,
-            commit_batch_mib=384,
+            commit_batch_mib=96,
             zstd_level=6,
             git_timeout_seconds=1800,
         ),
@@ -381,6 +381,7 @@ def test_raw_archive_publish_command_uses_dedicated_incremental_publisher(
     assert command[command.index("--source-dir") + 1] == str(config.raw_data_dir)
     assert command[command.index("--repo-url") + 1] == config.raw_archive.repo_url
     assert command[command.index("--chunk-mib") + 1] == "48"
+    assert command[command.index("--commit-batch-mib") + 1] == "96"
     assert "--push" in command
     assert all("release" not in part.casefold() for part in command[2:])
 

@@ -100,3 +100,45 @@ def test_changed_file_adds_one_object_and_preserves_old_manifest(tmp_path: Path)
     assert second.manifest_path != first.manifest_path
     latest = json.loads((repository / "latest.json").read_text(encoding="utf-8"))
     assert latest["manifest"] == second.manifest_path
+
+
+def test_interrupted_untracked_object_is_reused_and_committed(tmp_path: Path) -> None:
+    source = tmp_path / "raw"
+    repository = tmp_path / "archive"
+    source.mkdir()
+    (source / "first.bin").write_bytes(b"first")
+    archive.publish_raw_archive(
+        source,
+        repository,
+        chunk_bytes=1024,
+        commit_batch_bytes=1024,
+    )
+
+    duplicate_payload = b"compressed before an interrupted commit"
+    (source / "second.bin").write_bytes(duplicate_payload)
+    (source / "second-copy.bin").write_bytes(duplicate_payload)
+    digest = archive._sha256_file(source / "second.bin")
+    archive._compress_object(
+        source / "second.bin",
+        repository,
+        digest,
+        chunk_bytes=1024,
+        zstd_level=1,
+    )
+
+    result = archive.publish_raw_archive(
+        source,
+        repository,
+        chunk_bytes=1024,
+        commit_batch_bytes=1024,
+    )
+
+    assert result.new_object_count == 1
+    metadata = archive._object_metadata_path(repository, digest).relative_to(repository)
+    tracked = subprocess.run(
+        ["git", "ls-files", "--error-unmatch", metadata.as_posix()],
+        cwd=repository,
+        capture_output=True,
+        check=False,
+    )
+    assert tracked.returncode == 0
