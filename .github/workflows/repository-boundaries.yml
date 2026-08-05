@@ -23,6 +23,13 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+      - name: Fetch previous push commit when history was rewritten
+        if: github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000'
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+        run: >-
+          git cat-file -e "${BEFORE_SHA}^{commit}" 2>/dev/null ||
+          git fetch --no-tags --depth=1 origin "${BEFORE_SHA}"
       - name: Verify repository boundaries
         run: ./scripts/check_repository_boundaries.sh
       - name: Check every object introduced by the pull request
