@@ -17,8 +17,7 @@ interface SourceInfoGroup {
 }
 
 interface DownloadEntry {
-  json_path?: string;
-  csv_path?: string;
+  dataset_index_path?: string;
   generated_at?: string;
   record_count?: number;
   date_range?: { start?: string; end?: string };
@@ -36,8 +35,8 @@ interface Props {
 const {
   entry = null,
   title = 'Download Data',
-  descriptionEn = 'Export the dataset behind this view in JSON or CSV, including source metadata.',
-  descriptionZh = '下载当前视图对应的数据集，支持 JSON 与 CSV，并附带数据源元信息。',
+  descriptionEn = 'Open the sharded dataset index for this view, including source metadata and immutable fact shard references.',
+  descriptionZh = '打开当前视图的分片数据索引，其中包含数据源元信息和不可变事实分片引用。',
   initialLanguage = 'en',
 } = Astro.props;
 
@@ -128,28 +127,16 @@ const coverageLabel = (entry?.date_range?.start || entry?.date_range?.end)
       </div>
 
       <div class="flex flex-wrap gap-3">
-        {entry.json_path && (
+        {entry.dataset_index_path && (
           <a
-            href={entry.json_path}
+            href={entry.dataset_index_path}
             download
             class="site-action-secondary inline-flex items-center gap-2 rounded-none border px-4 py-2 text-sm font-semibold transition-all"
           >
             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16V4m0 12-4-4m4 4 4-4M4 20h16" />
             </svg>
-            <span data-lang-en="JSON export" data-lang-zh="JSON 导出">{pick('JSON export', 'JSON 导出')}</span>
-          </a>
-        )}
-        {entry.csv_path && (
-          <a
-            href={entry.csv_path}
-            download
-            class="site-action-secondary inline-flex items-center gap-2 rounded-none border px-4 py-2 text-sm font-semibold transition-all"
-          >
-            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 16V4m0 12-4-4m4 4 4-4M4 20h16" />
-            </svg>
-            <span data-lang-en="CSV export" data-lang-zh="CSV 导出">{pick('CSV export', 'CSV 导出')}</span>
+            <span data-lang-en="Dataset index" data-lang-zh="数据集索引">{pick('Dataset index', '数据集索引')}</span>
           </a>
         )}
       </div>

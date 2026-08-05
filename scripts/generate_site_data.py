@@ -4,8 +4,7 @@ Generate static JSON data files for the Astro-based report site.
 
 Usage:
     python scripts/generate_site_data.py
-    python scripts/generate_site_data.py --publish-downloads
-    python scripts/generate_site_data.py --download-output astro-site/public/downloads --download-url-base /downloads
+    python scripts/generate_site_data.py --sharded-download-output exports/site-downloads-v2
 
 Reads from the PostgreSQL database and writes structured JSON files that
 the Astro build process consumes at build time.
@@ -16,12 +15,9 @@ import asyncio
 import csv
 import json
 import math
-import os
 import shutil
 import statistics
-import subprocess
 import sys
-import time
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -33,9 +29,9 @@ ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT))
 
 from src.core.database import get_db, init_database  # noqa: E402
+from src.core.disease_cutover import get_disease_cutover_config  # noqa: E402
 from src.core.data_share import (  # noqa: E402
-    get_data_share_raw_base_url,
-    get_data_share_repo_branch,
+    derive_github_raw_base_url,
     get_data_share_repo_url,
 )
 from src.core.country_library import (  # noqa: E402
@@ -44,35 +40,59 @@ from src.core.country_library import (  # noqa: E402
     get_country_profile,
     get_standard_country_codes,
 )
-from src.core.db_schema import ensure_country_scope, ensure_country_scope_schema  # noqa: E402
+from src.core.db_schema import (  # noqa: E402
+    ensure_country_scope,
+    ensure_country_scope_schema,
+)
 from src.core.source_scopes import scope_display_label  # noqa: E402
+from src.generation.download_package_v2 import (  # noqa: E402
+    build_frontend_download_manifest,
+    build_globalid_canonical_download_package,
+    source_reference,
+)
+from src.generation.github_data_snapshot import (  # noqa: E402
+    DEFAULT_RETAIN_RELEASES,
+    build_github_snapshot,
+)
 from src.knowledge.catalogue import (  # noqa: E402
-    knowledge_brief_fallback_reason,
+    knowledge_brief_block_reason,
     knowledge_brief_publication_tier,
     resolve_disease_knowledge_status,
     should_generate_public_disease_page,
 )
 from src.knowledge.citations import normalize_knowledge_citation_group  # noqa: E402
-
+from src.knowledge.quality import (  # noqa: E402
+    KNOWLEDGE_TEXT_FIELDS,
+    assess_knowledge_brief,
+    strip_unavailable_knowledge_sentences,
+)
+from src.knowledge.profile_schema import resolve_knowledge_profile_schema  # noqa: E402
+from src.ontology import DiseaseOntology, load_disease_ontology  # noqa: E402
+from src.generation.sharded_data_package import (  # noqa: E402
+    DEFAULT_MAX_UNCOMPRESSED_BYTES,
+)
+from src.services.disease_series_policy import (  # noqa: E402
+    is_case_count_series,
+    select_series_projection,
+)
 
 # ─────────────────────────────────────────────────────────────
 # Config defaults
 # ─────────────────────────────────────────────────────────────
 DEFAULT_OUTPUT = ROOT / "astro-site" / "src" / "data"
 DEFAULT_PUBLIC_SITE_DATA_OUTPUT = ROOT / "astro-site" / "public" / "site-data"
-DEFAULT_DOWNLOAD_OUTPUT = ROOT / "exports" / "site-downloads"
-DEFAULT_PUBLIC_DOWNLOAD_OUTPUT = ROOT / "astro-site" / "public" / "downloads"
+DEFAULT_SHARDED_DOWNLOAD_OUTPUT = ROOT / "exports" / "site-downloads-v2"
+DEFAULT_GITHUB_SNAPSHOT_OUTPUT = ROOT / "exports" / "github-data-snapshot-v2"
 DEFAULT_DOWNLOAD_MANIFEST = ROOT / "astro-site" / "src" / "data" / "downloads.json"
 DEFAULT_DOWNLOAD_REPO_URL = get_data_share_repo_url()
-DEFAULT_DOWNLOAD_REPO_BRANCH = get_data_share_repo_branch()
-DEFAULT_DOWNLOAD_REPO_WORKDIR = Path("/tmp/globalid2-data-download-publish")
-DEFAULT_DOWNLOAD_COMMIT_MESSAGE = "chore: update generated data downloads"
-DOWNLOAD_REPO_MANAGED_PATHS = ("countries", "diseases", "manifest.json")
-DEFAULT_DOWNLOAD_URL_BASE = get_data_share_raw_base_url(
-    DEFAULT_DOWNLOAD_REPO_URL,
-    DEFAULT_DOWNLOAD_REPO_BRANCH,
+DEFAULT_GITHUB_SNAPSHOT_BRANCH = "snapshot-v2"
+DEFAULT_GITHUB_SNAPSHOT_URL_BASE = (
+    derive_github_raw_base_url(
+        DEFAULT_DOWNLOAD_REPO_URL,
+        DEFAULT_GITHUB_SNAPSHOT_BRANCH,
+    )
+    or "/downloads-v2"
 )
-GITHUB_SSH_PREFIXES = ("git@github.com:", "ssh://git@github.com/")
 AUTHORITATIVE_KNOWLEDGE_SOURCE_TYPES = frozenset({"who", "who_don"})
 AUTHORITATIVE_KNOWLEDGE_URL_MARKERS = ("who.int",)
 
@@ -149,37 +169,10 @@ SOURCE_DETAILS_BY_SCOPE: dict[tuple[str, str], dict[str, str]] = {
     },
 }
 
-DOWNLOAD_CSV_FIELDS = [
-    "dataset_kind",
-    "dataset_id",
-    "dataset_slug",
-    "dataset_name",
-    "country_code",
-    "country_name",
-    "disease_id",
-    "disease_name_en",
-    "disease_name_zh",
-    "category",
-    "date",
-    "year_month",
-    "cases",
-    "weekly_equiv_cases",
-    "deaths",
-    "incidence_rate_per_100k",
-    "incidence_rate_source",
-    "mortality_rate",
-    "coverage_start",
-    "coverage_end",
-    "generated_at",
-    "primary_source_scope",
-    "primary_source_label",
-    "primary_source_url",
-    "primary_source_type",
-    "source_scopes",
-    "source_labels",
-    "source_urls",
-    "source_types",
-]
+SERIES_DATA_LAYER = "series_registry"
+LEGACY_DATA_LAYER = "legacy_fallback"
+MIXED_DATA_LAYER = "mixed"
+LEGACY_GAP_FILL_DATA_LAYER = "legacy_gap_fill"
 
 ABOUT_COUNTRY_NAMES_ZH: dict[str, str] = {
     "AU": "澳大利亚",
@@ -211,14 +204,23 @@ ABOUT_SOURCE_LABELS_ZH: dict[tuple[str, str], str] = {
 
 ABOUT_SOURCE_DESCRIPTIONS_ZH: dict[tuple[str, str], str] = {
     ("AU", "all"): "澳大利亚国家法定传染病监测系统仪表板。",
-    ("BR", "sinan_datasus"): "巴西卫生部 DATASUS/SINAN 的 SUS 开放 DBC 微数据，按通报月份聚合为全国月度病例数。",
+    (
+        "BR",
+        "sinan_datasus",
+    ): "巴西卫生部 DATASUS/SINAN 的 SUS 开放 DBC 微数据，按通报月份聚合为全国月度病例数。",
     ("CH", "foph_idd"): "瑞士 FOPH/BAG IDD 法定传染病报告 API，标准化为全国病例记录。",
     ("CN", "cdc_weekly"): "中国疾控中心发布的月度法定传染病报告。",
     ("CN", "nhc"): "中国官方公共卫生公报与查询门户。",
     ("CN", "pubmed"): "作为补充上下文使用的生物医学文献发现源。",
-    ("HK", "chp_notifiable"): "中国香港 CHP 年度法定传染病 CSV，标准化为全国月度病例数。",
+    (
+        "HK",
+        "chp_notifiable",
+    ): "中国香港 CHP 年度法定传染病 CSV，标准化为全国月度病例数。",
     ("JP", "jp_weekly"): "日本 NIID/JIHS 的周度传染病监测数据。",
-    ("KR", "kdca_open_api"): "韩国 KDCA 法定传染病 OpenAPI 或门户/KOSIS 导出，按月聚合为全国通报病例数。",
+    (
+        "KR",
+        "kdca_open_api",
+    ): "韩国 KDCA 法定传染病 OpenAPI 或门户/KOSIS 导出，按月聚合为全国通报病例数。",
     ("NZ", "phf_monthly"): "新西兰 PHF Science 法定传染病月度监测数据。",
     ("TW", "nidss_open_data"): "中国台湾月度法定传染病开放数据 CSV。",
     ("US", "nndss_api"): "美国 CDC 国家法定传染病监测系统的临时数据。",
@@ -234,7 +236,9 @@ CADENCE_LABELS_ZH: dict[str, str] = {
 }
 
 
-def resolve_country_display_names(code: str, row: dict | None = None) -> tuple[str, str]:
+def resolve_country_display_names(
+    code: str, row: dict | None = None
+) -> tuple[str, str]:
     """Resolve stable English and Chinese country names for public exports."""
     normalized = (code or "").strip().upper()
     row = row or {}
@@ -275,7 +279,9 @@ def iso_or_none(value) -> str | None:
     return value.isoformat() if hasattr(value, "isoformat") else value
 
 
-def compact_report_metadata(metadata: dict | None, *, include_figures: bool = False) -> dict:
+def compact_report_metadata(
+    metadata: dict | None, *, include_figures: bool = False
+) -> dict:
     """Return site-facing report metadata without heavyweight agent internals."""
     if not isinstance(metadata, dict):
         return {}
@@ -284,12 +290,16 @@ def compact_report_metadata(metadata: dict | None, *, include_figures: bool = Fa
     if isinstance(document, dict):
         compact = {
             "report_layout": "report_v4",
-            "schema_version": metadata.get("schema_version") or document.get("schema_version"),
-            "method_version": metadata.get("method_version") or document.get("schema_version"),
+            "schema_version": metadata.get("schema_version")
+            or document.get("schema_version"),
+            "method_version": metadata.get("method_version")
+            or document.get("schema_version"),
             "default_locale": document.get("default_locale"),
             "locales": document.get("locales") or ["zh", "en"],
             "quality_gate": metadata.get("quality_gate") or {},
-            "data_quality": document.get("data_quality") or metadata.get("data_quality") or {},
+            "data_quality": document.get("data_quality")
+            or metadata.get("data_quality")
+            or {},
             "summary_metrics": {
                 **(document.get("metrics") or {}),
                 "death_reporting": document.get("death_reporting") or {},
@@ -315,7 +325,9 @@ def source_metadata_field(source: dict, key: str):
     return None
 
 
-def enrich_source_attribution(attribution: list, sources_by_id: dict[int, dict]) -> list[dict]:
+def enrich_source_attribution(
+    attribution: list, sources_by_id: dict[int, dict]
+) -> list[dict]:
     enriched: list[dict] = []
     metadata_keys = (
         "pmid",
@@ -347,8 +359,12 @@ def enrich_source_attribution(attribution: list, sources_by_id: dict[int, dict])
         if not source:
             enriched.append(dict(item))
             continue
-        source_metadata = source.get("metadata") if isinstance(source.get("metadata"), dict) else {}
-        item_metadata = item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
+        source_metadata = (
+            source.get("metadata") if isinstance(source.get("metadata"), dict) else {}
+        )
+        item_metadata = (
+            item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
+        )
         merged = {
             **item,
             "id": item.get("id") or source.get("id"),
@@ -430,10 +446,64 @@ def load_standard_diseases(csv_path: Path) -> list[dict]:
                     "icd_10": row["icd_10"],
                     "icd_11": row["icd_11"],
                     "description": row.get("description", ""),
-                    "slug": row["standard_name_en"].lower().replace(" ", "-").replace("/", "-"),
+                    "slug": row["standard_name_en"]
+                    .lower()
+                    .replace(" ", "-")
+                    .replace("/", "-"),
                 }
             )
     return diseases
+
+
+def enrich_diseases_with_ontology(
+    diseases: list[dict], ontology: DiseaseOntology
+) -> list[dict]:
+    """Attach compact faceted metadata without duplicating the full registry."""
+
+    concept_ids = set(ontology.concept_ids)
+    for disease in diseases:
+        disease_id = disease["disease_id"]
+        if disease_id not in concept_ids:
+            continue
+        detail = ontology.concept_detail(disease_id)
+        disease["ontology"] = {
+            "status": detail["status"],
+            "rollup_policy": detail["rollup_policy"],
+            "facet_tags": detail.get("facet_tags", {}),
+            "group_ids": detail.get("group_ids", []),
+            "relations": detail.get("relations", {}),
+            "source_series_count": len(detail.get("source_series", [])),
+            "availability": detail.get("availability", []),
+        }
+    return diseases
+
+
+def validate_record_catalogue_coverage(
+    records: list[dict],
+    catalogue_ids: set[str],
+    public_ids: set[str],
+) -> None:
+    """Fail visibly when facts would otherwise disappear from site exports."""
+
+    observed_ids = {
+        str(record.get("disease_id") or "").strip()
+        for record in records
+        if str(record.get("disease_id") or "").strip()
+    }
+    unknown_ids = sorted(observed_ids - catalogue_ids)
+    if unknown_ids:
+        raise RuntimeError(
+            "Disease records reference IDs missing from standard_diseases.csv: "
+            + ", ".join(unknown_ids)
+        )
+
+    unsupported_non_public = sorted(observed_ids - public_ids - {"D999"})
+    if unsupported_non_public:
+        raise RuntimeError(
+            "Disease records still reference deprecated/non-public concepts; "
+            "run the disease ontology migration before export: "
+            + ", ".join(unsupported_non_public)
+        )
 
 
 def clean_generated_dir(dir_path: Path) -> None:
@@ -451,278 +521,6 @@ def reset_public_data_dir(dir_path: Path) -> None:
     if dir_path.exists():
         shutil.rmtree(dir_path)
     dir_path.mkdir(parents=True, exist_ok=True)
-
-
-def build_download_url(base_url: str, relative_path: str) -> str:
-    """Build a public URL for a generated download file."""
-    clean_relative = relative_path.lstrip("/")
-    clean_base = (base_url or DEFAULT_DOWNLOAD_URL_BASE).rstrip("/")
-    return f"{clean_base}/{clean_relative}"
-
-
-def remove_stale_public_downloads(active_download_output: Path) -> None:
-    """Prevent Astro from copying large legacy downloads into dist/."""
-    public_dir = DEFAULT_PUBLIC_DOWNLOAD_OUTPUT.resolve()
-    active_dir = active_download_output.resolve()
-    if active_dir == public_dir or not public_dir.exists():
-        return
-    shutil.rmtree(public_dir)
-    print(f"  ✓ removed stale public downloads: {public_dir}")
-
-
-def _is_github_ssh_repo_url(repo_url: str) -> bool:
-    normalized = (repo_url or "").strip().lower()
-    return any(normalized.startswith(prefix) for prefix in GITHUB_SSH_PREFIXES)
-
-
-def _build_git_env(repo_url: str, *, use_github_ssh_over_443: bool = False) -> dict[str, str]:
-    env = os.environ.copy()
-    env["GIT_TERMINAL_PROMPT"] = "0"
-
-    if _is_github_ssh_repo_url(repo_url):
-        ssh_parts = [
-            "ssh",
-            "-o",
-            "BatchMode=yes",
-            "-o",
-            "StrictHostKeyChecking=accept-new",
-        ]
-        if use_github_ssh_over_443:
-            ssh_parts.extend(["-o", "Hostname=ssh.github.com", "-p", "443"])
-        env["GIT_SSH_COMMAND"] = " ".join(ssh_parts)
-
-    return env
-
-
-def run_git(args: list[str], cwd: Path, *, repo_url: str, retries: int = 3) -> str:
-    """Run a git command with retries and GitHub SSH-over-443 fallback."""
-    env_default = _build_git_env(repo_url)
-    env_fallback = _build_git_env(repo_url, use_github_ssh_over_443=True) if _is_github_ssh_repo_url(repo_url) else None
-    last_error = ""
-
-    def clean_partial_clone() -> None:
-        if args[:1] != ["clone"] or not args:
-            return
-        destination = Path(args[-1])
-        if not destination.is_absolute():
-            destination = cwd / destination
-        if destination.exists():
-            shutil.rmtree(destination)
-
-    for attempt in range(1, retries + 1):
-        completed = subprocess.run(
-            ["git", *args],
-            cwd=cwd,
-            check=False,
-            text=True,
-            capture_output=True,
-            env=env_default,
-        )
-        if completed.returncode == 0:
-            return completed.stdout.strip()
-
-        stderr_primary = (completed.stderr or completed.stdout or "").strip()
-        last_error = stderr_primary
-
-        if env_fallback is not None:
-            # The primary transport may have created the destination before it
-            # failed. Git refuses to clone over that partial directory.
-            clean_partial_clone()
-            fallback = subprocess.run(
-                ["git", *args],
-                cwd=cwd,
-                check=False,
-                text=True,
-                capture_output=True,
-                env=env_fallback,
-            )
-            if fallback.returncode == 0:
-                return fallback.stdout.strip()
-
-            stderr_fallback = (fallback.stderr or fallback.stdout or "").strip()
-            last_error = (
-                "Primary SSH (port 22) failed:\n"
-                + stderr_primary
-                + "\n\nSSH-over-443 fallback failed:\n"
-                + stderr_fallback
-            ).strip()
-
-        if attempt < retries:
-            clean_partial_clone()
-            time.sleep(min(5, attempt * 2))
-
-    raise RuntimeError(f"git {' '.join(args)} failed after {retries} attempts.\n{last_error}")
-
-
-def remote_branch_exists(repo_url: str, branch: str) -> bool:
-    """Return True when the remote branch already exists."""
-    output = run_git(["ls-remote", "--heads", repo_url, branch], ROOT, repo_url=repo_url)
-    return bool(output)
-
-
-def clone_download_repo(repo_url: str, branch: str, workdir: Path, *, branch_exists: bool) -> None:
-    """Create a lightweight publishing checkout for the generated data.
-
-    The download repository contains large generated files and its history is not
-    needed to create the next commit. Fetch only the target tip and its trees,
-    then leave the worktree empty; the generated assets copied below will
-    populate the managed paths without downloading their previous blobs.
-    """
-    workdir.parent.mkdir(parents=True, exist_ok=True)
-    clone_cmd = [
-        "clone",
-        "--depth",
-        "1",
-        "--single-branch",
-        "--no-tags",
-        "--filter=blob:none",
-        "--no-checkout",
-    ]
-    if branch_exists:
-        clone_cmd.extend(["--branch", branch])
-    clone_cmd.extend([repo_url, str(workdir)])
-
-    last_error: RuntimeError | None = None
-    for attempt in range(1, 4):
-        if workdir.exists():
-            shutil.rmtree(workdir)
-        try:
-            # A failed clone leaves a partial destination behind. Retry from a
-            # clean directory so subsequent attempts can actually run.
-            run_git(clone_cmd, workdir.parent, repo_url=repo_url, retries=1)
-            last_error = None
-            break
-        except RuntimeError as exc:
-            last_error = exc
-            if attempt < 3:
-                time.sleep(min(5, attempt * 2))
-
-    if last_error is not None:
-        raise last_error
-
-    if branch_exists:
-        # `--no-checkout` intentionally leaves the index empty. A mixed reset
-        # loads the remote tree into the index without materialising old blobs.
-        # Unmanaged remote files therefore remain preserved in the next commit.
-        run_git(["reset", "--mixed", f"origin/{branch}"], workdir, repo_url=repo_url)
-        return
-
-    # New branches retain the remote default branch as their parent when it
-    # exists, matching the previous checkout-based behaviour without fetching
-    # the large worktree.
-    run_git(["branch", "-f", branch, "HEAD"], workdir, repo_url=repo_url)
-    run_git(["symbolic-ref", "HEAD", f"refs/heads/{branch}"], workdir, repo_url=repo_url)
-    run_git(["reset", "--mixed", "HEAD"], workdir, repo_url=repo_url)
-
-
-def ensure_download_repo(repo_url: str, branch: str, workdir: Path) -> None:
-    """Create a fresh disposable checkout of the download repository.
-
-    Reusing a previous publishing directory can retain partial packs after an
-    interrupted clone. The filtered shallow clone is cheap enough to rebuild for
-    every release and makes retries deterministic.
-    """
-    branch_exists = remote_branch_exists(repo_url, branch)
-    clone_download_repo(repo_url, branch, workdir, branch_exists=branch_exists)
-
-
-def clean_download_repo_paths(workdir: Path) -> None:
-    """Remove previously published managed files."""
-    for relative in DOWNLOAD_REPO_MANAGED_PATHS:
-        target = workdir / relative
-        if target.is_dir():
-            shutil.rmtree(target)
-        elif target.exists():
-            target.unlink()
-
-
-def copy_download_repo_assets(source_dir: Path, workdir: Path) -> None:
-    """Copy generated download assets into the target repo."""
-    for relative in DOWNLOAD_REPO_MANAGED_PATHS:
-        source = source_dir / relative
-        target = workdir / relative
-        if source.is_dir():
-            shutil.copytree(source, target)
-        elif source.exists():
-            shutil.copy2(source, target)
-        else:
-            raise FileNotFoundError(f"Expected generated asset missing: {source}")
-
-
-def write_download_repo_readme(workdir: Path, manifest: dict) -> None:
-    """Write a simple README for humans browsing the data repo."""
-    generated_at = manifest.get("generated_at") or datetime.now(timezone.utc).isoformat()
-    countries = len(manifest.get("countries") or [])
-    diseases = len(manifest.get("diseases") or [])
-    base = manifest.get("download_url_base") or ""
-    readme = f"""# GlobalID Data Downloads
-
-This repository stores the generated download artifacts for the GlobalID public site.
-
-- Data version: `{generated_at}`
-- Country datasets: `{countries}`
-- Disease datasets: `{diseases}`
-- Manifest: [`manifest.json`](./manifest.json)
-
-The publishing pipeline copies:
-
-- `countries/*.json`
-- `countries/*.csv`
-- `diseases/*.json`
-- `diseases/*.csv`
-- `manifest.json`
-
-Primary public base configured during generation:
-
-`{base}`
-"""
-    (workdir / "README.md").write_text(readme, encoding="utf-8")
-
-
-def publish_download_assets(
-    source_dir: Path,
-    repo_url: str,
-    branch: str,
-    workdir: Path,
-    commit_message: str,
-) -> bool:
-    """Publish generated downloads to a dedicated git repository."""
-    if not repo_url.strip():
-        raise RuntimeError(
-            "Missing download repo URL. Set GITHUB_DATA_SHARE_REPO_URL or pass --download-repo-url."
-        )
-    manifest_path = source_dir / "manifest.json"
-    if not manifest_path.exists():
-        raise FileNotFoundError(
-            f"Missing generated manifest: {manifest_path}. Export downloads before publishing."
-        )
-
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    ensure_download_repo(repo_url, branch, workdir)
-    clean_download_repo_paths(workdir)
-    copy_download_repo_assets(source_dir, workdir)
-    write_download_repo_readme(workdir, manifest)
-
-    status = run_git(["status", "--short"], workdir, repo_url=repo_url)
-    if not status:
-        print("  No download repo changes to publish.")
-        return False
-
-    run_git(["add", "countries", "diseases", "manifest.json", "README.md"], workdir, repo_url=repo_url)
-    run_git(["commit", "-m", commit_message], workdir, repo_url=repo_url)
-    run_git(["push", "origin", branch], workdir, repo_url=repo_url)
-    print(f"  ✓ published download assets to {repo_url} ({branch})")
-    return True
-
-
-def export_contains_download_records(source_dir: Path) -> bool:
-    """Return True when the generated download manifest contains at least one record."""
-    manifest_path = source_dir / "manifest.json"
-    if not manifest_path.exists():
-        return False
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    entries = list(manifest.get("countries") or []) + list(manifest.get("diseases") or [])
-    return any(int(entry.get("record_count") or 0) > 0 for entry in entries)
 
 
 def existing_site_export_has_content(output_dir: Path) -> bool:
@@ -747,7 +545,9 @@ def existing_site_export_has_content(output_dir: Path) -> bool:
     return False
 
 
-def build_country_source_info(country_code: str, frequency_meta: dict | None = None) -> dict:
+def build_country_source_info(
+    country_code: str, frequency_meta: dict | None = None
+) -> dict:
     """Build structured source metadata for downloads and UI badges."""
     cfg = get_country_bootstrap_config(country_code)
     crawler_cfg = cfg.get("crawler_config", {})
@@ -773,7 +573,8 @@ def build_country_source_info(country_code: str, frequency_meta: dict | None = N
         sources.append(
             {
                 "scope": scope,
-                "label": details.get("label") or scope_display_label(scope, country_code=country_code),
+                "label": details.get("label")
+                or scope_display_label(scope, country_code=country_code),
                 "url": url,
                 "machine_url": machine_url,
                 "type": source_type,
@@ -792,21 +593,6 @@ def build_country_source_info(country_code: str, frequency_meta: dict | None = N
         "parser_primary": cfg.get("parser_config", {}).get("primary"),
         "notes": cfg.get("notes"),
         "sources": sources,
-    }
-
-
-def build_source_columns(source_info: dict) -> dict:
-    """Flatten source metadata for CSV rows."""
-    sources = source_info.get("sources") or []
-    return {
-        "primary_source_scope": source_info.get("primary_scope"),
-        "primary_source_label": source_info.get("primary_label"),
-        "primary_source_url": source_info.get("primary_url"),
-        "primary_source_type": source_info.get("primary_type"),
-        "source_scopes": "; ".join(src.get("scope") or "" for src in sources if src.get("scope")),
-        "source_labels": "; ".join(src.get("label") or "" for src in sources if src.get("label")),
-        "source_urls": "; ".join(src.get("url") or "" for src in sources if src.get("url")),
-        "source_types": "; ".join(src.get("type") or "" for src in sources if src.get("type")),
     }
 
 
@@ -881,8 +667,12 @@ def build_about_snapshot(
     generated_at: str,
 ) -> dict:
     """Build database-backed About page content for the Astro site."""
-    total_cases = sum(int(country.get("total_cases") or 0) for country in countries_simple)
-    total_deaths = sum(int(country.get("total_deaths") or 0) for country in countries_simple)
+    total_cases = sum(
+        int(country.get("total_cases") or 0) for country in countries_simple
+    )
+    total_deaths = sum(
+        int(country.get("total_deaths") or 0) for country in countries_simple
+    )
     coverage_starts = sorted(
         date_range["start"]
         for country in countries_simple
@@ -908,7 +698,9 @@ def build_about_snapshot(
         source_info = country.get("source_info") or {}
         sources = source_info.get("sources") or []
         primary_source = sources[0] if sources else {}
-        primary_scope = primary_source.get("scope") or source_info.get("primary_scope") or "all"
+        primary_scope = (
+            primary_source.get("scope") or source_info.get("primary_scope") or "all"
+        )
         primary_cadence_raw = primary_source.get("cadence")
 
         for source in sources:
@@ -927,7 +719,9 @@ def build_about_snapshot(
                     "label_en": label_en,
                     "label_zh": ABOUT_SOURCE_LABELS_ZH.get((code, scope), label_en),
                     "description_en": description_en,
-                    "description_zh": ABOUT_SOURCE_DESCRIPTIONS_ZH.get((code, scope), description_en),
+                    "description_zh": ABOUT_SOURCE_DESCRIPTIONS_ZH.get(
+                        (code, scope), description_en
+                    ),
                     "url": source.get("url"),
                     "machine_url": source.get("machine_url"),
                     "type": source.get("type") or "web",
@@ -946,10 +740,13 @@ def build_about_snapshot(
                 "total_deaths": int(country.get("total_deaths") or 0),
                 "coverage_start": (country.get("date_range") or {}).get("start"),
                 "coverage_end": (country.get("date_range") or {}).get("end"),
-                "primary_source_label_en": primary_source.get("label") or source_info.get("primary_label"),
+                "primary_source_label_en": primary_source.get("label")
+                or source_info.get("primary_label"),
                 "primary_source_label_zh": ABOUT_SOURCE_LABELS_ZH.get(
                     (code, primary_scope),
-                    primary_source.get("label") or source_info.get("primary_label") or "",
+                    primary_source.get("label")
+                    or source_info.get("primary_label")
+                    or "",
                 ),
                 "cadence_en": normalize_cadence_label(primary_cadence_raw),
                 "cadence_zh": normalize_cadence_label_zh(primary_cadence_raw),
@@ -967,7 +764,10 @@ def build_about_snapshot(
         if unique_cadence_keys
         else CADENCE_LABELS_ZH["unknown"]
     )
-    source_type_summary = " / ".join(type_name.upper() for type_name in dict.fromkeys(source_types)) or "WEB"
+    source_type_summary = (
+        " / ".join(type_name.upper() for type_name in dict.fromkeys(source_types))
+        or "WEB"
+    )
     country_count = len(countries_simple)
     disease_count = len(diseases)
     report_count = len(reports)
@@ -1143,8 +943,8 @@ def build_about_snapshot(
                 "icon": "M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 2.625c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125m16.5 5.625c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125",
                 "title_en": "Open data exports",
                 "title_zh": "开放数据导出",
-                "description_en": "Country and disease datasets are regenerated as JSON and CSV from the latest database state.",
-                "description_zh": "国家与疾病数据集会依据最新数据库状态重新生成 JSON 和 CSV 导出文件。",
+                "description_en": "Country and disease indexes reference the same immutable gzip NDJSON fact shards generated from the latest database state.",
+                "description_zh": "国家与疾病索引共同引用依据最新数据库状态生成的不可变 gzip NDJSON 事实分片。",
                 "accent": "teal",
             },
             {
@@ -1161,12 +961,28 @@ def build_about_snapshot(
     }
 
 
-def build_country_download_rows(country_data: dict, generated_at: str, source_info: dict) -> list[dict]:
-    """Flatten a country dataset into release-friendly CSV/JSON rows."""
-    rows: list[dict] = []
-    base_source_columns = build_source_columns(source_info)
-    coverage = country_data.get("date_range") or {}
-    dataset_id = (country_data.get("country_code") or "").lower()
+def build_country_canonical_facts(
+    country_data: dict,
+    source_info: dict,
+) -> list[dict]:
+    """Build the compact v2 fact shape directly from one country view."""
+
+    facts: list[dict] = []
+    country_code = str(country_data.get("country_code") or "").strip().upper()
+    primary_scope = str(source_info.get("primary_scope") or "").strip()
+    source_scopes = {
+        str(source.get("scope") or "").strip()
+        for source in (source_info.get("sources") or [])
+        if str(source.get("scope") or "").strip()
+    }
+    if primary_scope:
+        source_scopes.add(primary_scope)
+    primary_source_ref = (
+        source_reference(country_code, primary_scope) if primary_scope else None
+    )
+    source_refs = sorted(
+        source_reference(country_code, scope) for scope in source_scopes
+    )
 
     for series in (country_data.get("disease_series") or {}).values():
         dates = series.get("dates") or []
@@ -1176,100 +992,50 @@ def build_country_download_rows(country_data: dict, generated_at: str, source_in
         incidence_rates = series.get("incidence_rates") or []
         incidence_sources = series.get("incidence_sources") or []
         mortality_rates = series.get("mortality_rates") or []
+        series_codes = sorted(
+            {
+                str(code).strip()
+                for code in (series.get("selected_series_codes") or [])
+                if str(code).strip()
+            }
+        )
 
         for idx, date in enumerate(dates):
-            rows.append(
+            facts.append(
                 {
-                    "dataset_kind": "country",
-                    "dataset_id": dataset_id,
-                    "dataset_slug": dataset_id,
-                    "dataset_name": country_data.get("country_name"),
-                    "country_code": country_data.get("country_code"),
-                    "country_name": country_data.get("country_name"),
-                    "disease_id": series.get("disease_id"),
-                    "disease_name_en": series.get("name_en"),
-                    "disease_name_zh": series.get("name_zh"),
-                    "category": series.get("category"),
-                    "date": date,
-                    "year_month": date[:7] if date else None,
-                    "cases": cases[idx] if idx < len(cases) else 0,
-                    "weekly_equiv_cases": weekly_equiv[idx] if idx < len(weekly_equiv) else None,
-                    "deaths": deaths[idx] if idx < len(deaths) else 0,
-                    "incidence_rate_per_100k": incidence_rates[idx] if idx < len(incidence_rates) else None,
-                    "incidence_rate_source": incidence_sources[idx] if idx < len(incidence_sources) else None,
-                    "mortality_rate": mortality_rates[idx] if idx < len(mortality_rates) else None,
-                    "coverage_start": coverage.get("start"),
-                    "coverage_end": coverage.get("end"),
-                    "generated_at": generated_at,
-                    **base_source_columns,
-                }
-            )
-
-    return rows
-
-
-def build_disease_download_rows(
-    disease_data: dict,
-    generated_at: str,
-    source_info_by_country: dict[str, dict],
-    country_name_by_code: dict[str, str],
-) -> list[dict]:
-    """Flatten a disease dataset into release-friendly CSV/JSON rows."""
-    rows: list[dict] = []
-    dataset_id = disease_data.get("disease_id")
-    dataset_slug = disease_data.get("slug")
-    dataset_name = disease_data.get("name_en")
-
-    all_dates: list[str] = []
-    for country_code, series in (disease_data.get("country_series") or {}).items():
-        dates = series.get("dates") or []
-        cases = series.get("cases") or []
-        weekly_equiv = series.get("weekly_equiv_cases") or []
-        deaths = series.get("deaths") or []
-        incidence_rates = series.get("incidence_rates") or []
-        incidence_sources = series.get("incidence_sources") or []
-        source_columns = build_source_columns(source_info_by_country.get(country_code, {"sources": []}))
-        all_dates.extend(dates)
-
-        for idx, date in enumerate(dates):
-            rows.append(
-                {
-                    "dataset_kind": "disease",
-                    "dataset_id": dataset_id,
-                    "dataset_slug": dataset_slug,
-                    "dataset_name": dataset_name,
                     "country_code": country_code,
-                    "country_name": country_name_by_code.get(country_code),
-                    "disease_id": dataset_id,
-                    "disease_name_en": disease_data.get("name_en"),
-                    "disease_name_zh": disease_data.get("name_zh"),
-                    "category": disease_data.get("category"),
+                    "disease_id": str(series.get("disease_id") or "").upper(),
                     "date": date,
-                    "year_month": date[:7] if date else None,
                     "cases": cases[idx] if idx < len(cases) else 0,
-                    "weekly_equiv_cases": weekly_equiv[idx] if idx < len(weekly_equiv) else None,
+                    "weekly_equiv_cases": (
+                        weekly_equiv[idx] if idx < len(weekly_equiv) else None
+                    ),
                     "deaths": deaths[idx] if idx < len(deaths) else 0,
-                    "incidence_rate_per_100k": incidence_rates[idx] if idx < len(incidence_rates) else None,
-                    "incidence_rate_source": incidence_sources[idx] if idx < len(incidence_sources) else None,
-                    "mortality_rate": None,
-                    "coverage_start": min(dates) if dates else None,
-                    "coverage_end": max(dates) if dates else None,
-                    "generated_at": generated_at,
-                    **source_columns,
+                    "incidence_rate_per_100k": (
+                        incidence_rates[idx] if idx < len(incidence_rates) else None
+                    ),
+                    "incidence_rate_source": (
+                        incidence_sources[idx] if idx < len(incidence_sources) else None
+                    ),
+                    "mortality_rate": (
+                        mortality_rates[idx] if idx < len(mortality_rates) else None
+                    ),
+                    "data_layer": series.get("data_layer") or LEGACY_DATA_LAYER,
+                    "projection_policy": series.get("projection_policy")
+                    or "legacy_fallback",
+                    "series_codes": series_codes,
+                    "loss_risk": series.get("loss_risk"),
+                    "coverage_status": series.get("coverage_status"),
+                    "legacy_gap_fill_count": series.get("legacy_gap_fill_count", 0),
+                    "coverage_ratio_against_legacy": series.get(
+                        "coverage_ratio_against_legacy"
+                    ),
+                    "primary_source_ref": primary_source_ref,
+                    "source_refs": source_refs,
                 }
             )
 
-    return rows
-
-
-def write_csv(path: Path, rows: list[dict]) -> None:
-    """Write rows to CSV with a stable schema."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w", newline="", encoding="utf-8") as csv_file:
-        writer = csv.DictWriter(csv_file, fieldnames=DOWNLOAD_CSV_FIELDS)
-        writer.writeheader()
-        for row in rows:
-            writer.writerow({field: row.get(field) for field in DOWNLOAD_CSV_FIELDS})
+    return facts
 
 
 async def ensure_standard_country_rows(session) -> None:
@@ -1278,8 +1044,7 @@ async def ensure_standard_country_rows(session) -> None:
         profile = get_country_profile(code)
         bootstrap = get_country_bootstrap_config(code)
         await session.execute(
-            text(
-                """
+            text("""
                 INSERT INTO countries (
                     code, name, name_en, name_local, language, timezone,
                     data_source_url, data_source_type,
@@ -1323,8 +1088,7 @@ async def ensure_standard_country_rows(session) -> None:
                     notes = COALESCE(NULLIF(countries.notes, ''), EXCLUDED.notes),
                     is_active = true,
                     updated_at = CURRENT_TIMESTAMP
-                """
-            ),
+                """),
             {
                 "code": profile.code,
                 "name": profile.name,
@@ -1336,7 +1100,9 @@ async def ensure_standard_country_rows(session) -> None:
                 "data_source_type": bootstrap.get("data_source_type"),
                 "crawler_config": json.dumps(bootstrap.get("crawler_config", {})),
                 "parser_config": json.dumps(bootstrap.get("parser_config", {})),
-                "disease_mapping_rules": json.dumps(bootstrap.get("disease_mapping_rules", {})),
+                "disease_mapping_rules": json.dumps(
+                    bootstrap.get("disease_mapping_rules", {})
+                ),
                 "report_config": json.dumps(bootstrap.get("report_config", {})),
                 "metadata": json.dumps(
                     {
@@ -1379,15 +1145,11 @@ async def ensure_site_export_database_ready() -> None:
 # Database queries
 # ─────────────────────────────────────────────────────────────
 async def fetch_countries(session) -> list[dict]:
-    rows = await session.execute(
-        text(
-            """
+    rows = await session.execute(text("""
             SELECT code, name, name_en, name_local, language, timezone
             FROM countries
             ORDER BY code
-            """
-        )
-    )
+            """))
     return [dict(row._mapping) for row in rows]
 
 
@@ -1397,115 +1159,71 @@ async def has_population_table(session) -> bool:
 
 async def has_table(session, table_name: str) -> bool:
     row = await session.execute(
-        text(
-            """
+        text("""
             SELECT EXISTS (
                 SELECT 1
                 FROM information_schema.tables
                 WHERE table_schema = 'public'
                   AND table_name = :table_name
             ) AS has_table
-            """
-        ),
+            """),
         {"table_name": table_name},
     )
     result = row.fetchone()
     return bool(result[0]) if result else False
 
 
-async def fetch_disease_records(session, country_code: str, use_population_table: bool) -> list[dict]:
-    incidence_expr = "dr.incidence_rate"
-    incidence_source_expr = (
-        "CASE WHEN dr.incidence_rate IS NOT NULL THEN 'original_db' ELSE 'missing_population' END"
+async def fetch_disease_records(
+    session, country_code: str, use_population_table: bool
+) -> list[dict]:
+    """Return a loss-aware Series-first projection for one country.
+
+    The flat ``disease_records`` table remains a controlled fallback while the
+    registry migration is incomplete.  Eligible source-series facts replace
+    legacy facts only at the same national period key.  Legacy-only periods are
+    retained as explicit gap fills, so a partial registry backfill cannot erase
+    earlier history, reporting gaps, or a newer legacy tail.
+    """
+
+    legacy_records = await fetch_disease_records_direct(
+        session, country_code, use_population_table
     )
-    population_join = ""
-    if use_population_table:
-        incidence_expr = (
-            """
-            CASE
-                WHEN pr.population IS NOT NULL AND pr.population > 0 AND dr.cases IS NOT NULL
-                    THEN (dr.cases::double precision / pr.population) * 100000.0
-                ELSE dr.incidence_rate
-            END
-            """
-        )
-        incidence_source_expr = (
-            """
-            CASE
-                WHEN pr.population IS NOT NULL AND pr.population > 0 AND dr.cases IS NOT NULL
-                    THEN 'wpp_computed'
-                WHEN dr.incidence_rate IS NOT NULL
-                    THEN 'original_db'
-                ELSE 'missing_population'
-            END
-            """
-        )
-        population_join = (
-            "LEFT JOIN population_records pr ON pr.country_id = dr.country_id "
-            "AND pr.year = EXTRACT(YEAR FROM dr.time)::int"
+    registry_tables_exist = await has_table(
+        session, "disease_surveillance_series"
+    ) and await has_table(session, "disease_series_observations")
+    if not registry_tables_exist:
+        return apply_disease_cutover_projection(
+            legacy_records, [], country_code=country_code
         )
 
-    rows = await session.execute(
-        text(
-            f"""
-            SELECT
-                timezone('UTC', dr.time)::date AS "date",
-                to_char(timezone('UTC', dr.time), 'YYYY-MM') AS year_month,
-                dm.disease_id,
-                COALESCE(dr.cases, 0)::bigint AS cases,
-                COALESCE(dr.deaths, 0)::bigint AS deaths,
-                COALESCE(dr.recoveries, 0)::bigint AS recoveries,
-                {incidence_expr} AS incidence_rate,
-                {incidence_source_expr} AS incidence_rate_source,
-                dr.mortality_rate AS mortality_rate,
-                dr.data_quality AS data_quality
-            FROM disease_records dr
-            JOIN countries c ON c.id = dr.country_id
-            JOIN disease_mappings dm ON dm.local_name = dr.disease_id
-                AND dm.country_code = c.code
-            {population_join}
-            WHERE c.code = :code
-            ORDER BY timezone('UTC', dr.time)::date ASC, dm.disease_id
-            """
-        ),
-        {"code": country_code},
+    series_records = await fetch_disease_series_records(
+        session, country_code, use_population_table
     )
-    result = []
-    for row in rows:
-        r = dict(row._mapping)
-        r["date"] = r["date"].isoformat() if r["date"] else None
-        r["cases"] = r["cases"] or 0
-        r["deaths"] = r["deaths"] or 0
-        r["incidence_rate"] = safe_float(r["incidence_rate"])
-        r["incidence_rate_source"] = r.get("incidence_rate_source") or "missing_population"
-        r["mortality_rate"] = safe_float(r["mortality_rate"])
-        result.append(r)
-    return result
+    return apply_disease_cutover_projection(
+        legacy_records, series_records, country_code=country_code
+    )
 
 
-async def fetch_disease_records_direct(session, country_code: str, use_population_table: bool) -> list[dict]:
+async def fetch_disease_records_direct(
+    session, country_code: str, use_population_table: bool
+) -> list[dict]:
     """
     Query disease_records joining diseases table to get the standard D-code.
     disease_records.disease_id is an integer FK to diseases.id;
     diseases.name holds the "D001" style code.
     """
     incidence_expr = "dr.incidence_rate"
-    incidence_source_expr = (
-        "CASE WHEN dr.incidence_rate IS NOT NULL THEN 'original_db' ELSE 'missing_population' END"
-    )
+    incidence_source_expr = "CASE WHEN dr.incidence_rate IS NOT NULL THEN 'original_db' ELSE 'missing_population' END"
     population_join = ""
     if use_population_table:
-        incidence_expr = (
-            """
+        incidence_expr = """
             CASE
                 WHEN pr.population IS NOT NULL AND pr.population > 0 AND dr.cases IS NOT NULL
                     THEN (dr.cases::double precision / pr.population) * 100000.0
                 ELSE dr.incidence_rate
             END
             """
-        )
-        incidence_source_expr = (
-            """
+        incidence_source_expr = """
             CASE
                 WHEN pr.population IS NOT NULL AND pr.population > 0 AND dr.cases IS NOT NULL
                     THEN 'wpp_computed'
@@ -1514,15 +1232,13 @@ async def fetch_disease_records_direct(session, country_code: str, use_populatio
                 ELSE 'missing_population'
             END
             """
-        )
         population_join = (
             "LEFT JOIN population_records pr ON pr.country_id = dr.country_id "
             "AND pr.year = EXTRACT(YEAR FROM dr.time)::int"
         )
 
     rows = await session.execute(
-        text(
-            f"""
+        text(f"""
             SELECT
                 timezone('UTC', dr.time)::date AS "date",
                 to_char(timezone('UTC', dr.time), 'YYYY-MM') AS year_month,
@@ -1540,8 +1256,7 @@ async def fetch_disease_records_direct(session, country_code: str, use_populatio
             {population_join}
             WHERE c.code = :code
             ORDER BY timezone('UTC', dr.time)::date ASC, d.name
-            """
-        ),
+            """),
         {"code": country_code},
     )
     result = []
@@ -1551,27 +1266,755 @@ async def fetch_disease_records_direct(session, country_code: str, use_populatio
         r["cases"] = r["cases"] or 0
         r["deaths"] = r["deaths"] or 0
         r["incidence_rate"] = safe_float(r["incidence_rate"])
-        r["incidence_rate_source"] = r.get("incidence_rate_source") or "missing_population"
+        r["incidence_rate_source"] = (
+            r.get("incidence_rate_source") or "missing_population"
+        )
         r["mortality_rate"] = safe_float(r["mortality_rate"])
         result.append(r)
     return result
 
 
+async def fetch_disease_series_records(
+    session,
+    country_code: str,
+    use_population_table: bool,
+) -> list[dict]:
+    """Read national, unstratified registry facts suitable for site export.
+
+    Dimensioned or subnational observations are intentionally not flattened
+    into national totals.  Suppressed/rejected observations are also retained
+    in the registry only; treating them as zero here would be misleading.
+    """
+
+    incidence_expr = "NULL::double precision"
+    incidence_source_expr = "'missing_population'"
+    population_join = ""
+    if use_population_table:
+        incidence_expr = (
+            "CASE WHEN pr.population IS NOT NULL AND pr.population > 0 "
+            "THEN (dso.value::double precision / pr.population) * 100000.0 "
+            "ELSE NULL END"
+        )
+        incidence_source_expr = (
+            "CASE WHEN pr.population IS NOT NULL AND pr.population > 0 "
+            "THEN 'wpp_computed' ELSE 'missing_population' END"
+        )
+        population_join = (
+            "LEFT JOIN countries registry_country "
+            "ON registry_country.code = dss.country_code "
+            "LEFT JOIN population_records pr "
+            "ON pr.country_id = registry_country.id "
+            "AND pr.year = EXTRACT(YEAR FROM dso.time)::int"
+        )
+
+    rows = await session.execute(
+        text(f"""
+            SELECT
+                timezone('UTC', dso.time)::date AS "date",
+                to_char(timezone('UTC', dso.time), 'YYYY-MM') AS year_month,
+                dss.disease_id,
+                dso.value::double precision AS cases,
+                0::bigint AS deaths,
+                0::bigint AS recoveries,
+                {incidence_expr} AS incidence_rate,
+                {incidence_source_expr} AS incidence_rate_source,
+                NULL::double precision AS mortality_rate,
+                dso.quality_status AS data_quality,
+                dso.series_code,
+                dss.source_system,
+                dss.source_series_code,
+                dss.source_label,
+                dss.definition_version,
+                dss.case_definition,
+                dss.case_definition_uri,
+                dss.metric_type,
+                dss.reporting_basis,
+                dss.temporal_granularity,
+                dss.unit AS series_unit,
+                dso.unit AS observation_unit,
+                dss.mapping_relation,
+                dss.comparability,
+                dss.aggregation_policy,
+                dss.availability_status,
+                dss.missing_value_policy,
+                dss.valid_from,
+                dss.valid_to,
+                dso.quality_status,
+                dso.geography_key,
+                dso.dimension_key
+            FROM disease_series_observations dso
+            JOIN disease_surveillance_series dss
+              ON dss.series_code = dso.series_code
+            {population_join}
+            WHERE dss.country_code = :code
+              AND dss.disease_id IS NOT NULL
+              AND dso.geography_key = :geography_key
+              AND dso.dimension_key = 'all'
+              AND dso.suppressed IS FALSE
+              AND dso.value IS NOT NULL
+              AND dso.unit = dss.unit
+              AND dso.quality_status <> 'rejected'
+            ORDER BY dss.disease_id, dso.series_code,
+                     timezone('UTC', dso.time)::date ASC
+            """),
+        {
+            "code": country_code,
+            "geography_key": f"country:{country_code}:national",
+        },
+    )
+
+    result: list[dict] = []
+    for row in rows:
+        record = dict(row._mapping)
+        record["date"] = record["date"].isoformat() if record.get("date") else None
+        record["cases"] = _normalise_count(record.get("cases"))
+        record["deaths"] = record.get("deaths") or 0
+        record["incidence_rate"] = safe_float(record.get("incidence_rate"))
+        record["incidence_rate_source"] = (
+            record.get("incidence_rate_source") or "missing_population"
+        )
+        record["mortality_rate"] = safe_float(record.get("mortality_rate"))
+        for field in ("valid_from", "valid_to"):
+            value = record.get(field)
+            record[field] = value.isoformat() if value else None
+        result.append(record)
+    return result
+
+
+def _normalise_count(value) -> int | float:
+    """Keep integer counts compact without discarding valid fractional values."""
+
+    numeric = safe_float(value)
+    if numeric is None:
+        return 0
+    return int(numeric) if numeric.is_integer() else numeric
+
+
+def _series_is_case_count(record: dict) -> bool:
+    return is_case_count_series(record)
+
+
+def _source_series_details(records: list[dict]) -> list[dict]:
+    """Build lossless, JSON-ready source-series payloads for one concept."""
+
+    by_series: dict[str, list[dict]] = defaultdict(list)
+    for record in records:
+        series_code = str(record.get("series_code") or "").strip()
+        if series_code:
+            by_series[series_code].append(record)
+
+    details: list[dict] = []
+    metadata_fields = (
+        "source_system",
+        "source_series_code",
+        "source_label",
+        "definition_version",
+        "case_definition",
+        "case_definition_uri",
+        "metric_type",
+        "reporting_basis",
+        "temporal_granularity",
+        "mapping_relation",
+        "comparability",
+        "aggregation_policy",
+        "availability_status",
+        "missing_value_policy",
+        "valid_from",
+        "valid_to",
+    )
+    for series_code in sorted(by_series):
+        series_records = sorted(
+            by_series[series_code], key=lambda item: str(item.get("date") or "")
+        )
+        first = series_records[0]
+        dates = [item.get("date") for item in series_records if item.get("date")]
+        values = [item.get("cases") or 0 for item in series_records if item.get("date")]
+        quality_statuses = sorted(
+            {
+                str(item.get("quality_status") or item.get("data_quality") or "")
+                for item in series_records
+                if item.get("quality_status") or item.get("data_quality")
+            }
+        )
+        detail = {
+            "series_code": series_code,
+            **{field: first.get(field) for field in metadata_fields},
+            "unit": first.get("series_unit") or first.get("unit"),
+            "geography_key": first.get("geography_key"),
+            "dimension_key": first.get("dimension_key"),
+            "dates": dates,
+            "values": values,
+            "total_value": sum(values),
+            "observation_count": len(values),
+            "quality_statuses": quality_statuses,
+        }
+        details.append(detail)
+    return details
+
+
+def _representative_series_code(source_series: list[dict]) -> str:
+    """Choose one deterministic conservative view when rollup is unsafe.
+
+    An explicit reported aggregate is preferred.  Otherwise the series with
+    the broadest fact coverage is selected; ties prefer the most recent fact
+    and finally the stable series code.  The unselected series remain present
+    in ``source_series`` and the projection is flagged as lossy.
+    """
+
+    selection = select_series_projection(source_series)
+    if len(selection.selected_codes) != 1:
+        raise ValueError("representative series selection must choose one series")
+    return next(iter(selection.selected_codes))
+
+
+def _projection_context(series_records: list[dict]) -> tuple[set[str], dict]:
+    source_series = _source_series_details(series_records)
+    selection = select_series_projection(source_series)
+    selected_codes = set(selection.selected_codes)
+    projection_policy = selection.projection_policy
+    loss_risk = selection.loss_risk
+
+    if projection_policy == "single_series":
+        note_en = "The public curve is read directly from one registered source series."
+        note_zh = "公开曲线直接读取自一个已注册的来源序列。"
+    elif projection_policy == "sum_disjoint":
+        note_en = "Registered source series are summed under an explicit disjoint-series policy."
+        note_zh = "多个来源序列依据明确的互斥可加策略进行汇总。"
+    else:
+        note_en = (
+            "Multiple registered series are not declared safely additive. "
+            "The compatibility curve uses one representative series; inspect "
+            "source_series for every retained definition."
+        )
+        note_zh = (
+            "多个已注册序列未声明为可安全相加。兼容曲线仅采用一个代表序列；"
+            "所有独立口径均保留在 source_series 中。"
+        )
+
+    context = {
+        "data_layer": SERIES_DATA_LAYER,
+        "projection_policy": projection_policy,
+        "loss_risk": loss_risk,
+        "selected_series_codes": sorted(selected_codes),
+        "available_series_count": len(source_series),
+        "source_series": source_series,
+        "note_en": note_en,
+        "note_zh": note_zh,
+    }
+    return selected_codes, context
+
+
+def _collapse_selected_series_records(
+    records: list[dict],
+    context: dict,
+) -> list[dict]:
+    """Collapse only the explicitly selected series to the legacy chart grain."""
+
+    selected_codes = set(context.get("selected_series_codes") or [])
+    selected = [
+        record for record in records if record.get("series_code") in selected_codes
+    ]
+    seen_source_identities: set[tuple[str, str]] = set()
+    for record in selected:
+        source_identity = (
+            str(record.get("series_code") or ""),
+            str(record.get("date") or ""),
+        )
+        if source_identity in seen_source_identities:
+            raise RuntimeError(
+                "Source series has multiple observations at the public date grain: "
+                f"{source_identity[0]} {source_identity[1]}"
+            )
+        seen_source_identities.add(source_identity)
+    by_date: dict[str, list[dict]] = defaultdict(list)
+    for record in selected:
+        if record.get("date"):
+            by_date[str(record["date"])].append(record)
+
+    projected: list[dict] = []
+    for report_date in sorted(by_date):
+        date_records = by_date[report_date]
+        # ``sum_disjoint`` describes how complete sibling series may be rolled
+        # up; it does not make an absent sibling equivalent to zero.  Project a
+        # multi-series period only when every selected series is present.
+        if (
+            len(selected_codes) > 1
+            and {str(record.get("series_code") or "") for record in date_records}
+            != selected_codes
+        ):
+            continue
+        first = date_records[0]
+        incidence_values = [
+            safe_float(record.get("incidence_rate")) for record in date_records
+        ]
+        incidence_values = [value for value in incidence_values if value is not None]
+        projected.append(
+            {
+                "date": report_date,
+                "year_month": first.get("year_month") or report_date[:7],
+                "disease_id": first.get("disease_id"),
+                "cases": _normalise_count(
+                    sum(safe_float(record.get("cases")) or 0 for record in date_records)
+                ),
+                "deaths": 0,
+                "recoveries": 0,
+                # Summing disjoint counts over the same population also sums
+                # their per-capita rates.  Single/representative projections
+                # contain only one value at each date.
+                "incidence_rate": (sum(incidence_values) if incidence_values else None),
+                "incidence_rate_source": dominant_value(
+                    [record.get("incidence_rate_source") for record in date_records]
+                )
+                or "missing_population",
+                "mortality_rate": None,
+                "data_quality": dominant_value(
+                    [
+                        record.get("quality_status") or record.get("data_quality")
+                        for record in date_records
+                    ]
+                ),
+                "data_layer": SERIES_DATA_LAYER,
+                "series_code": (
+                    first.get("series_code") if len(selected_codes) == 1 else None
+                ),
+                "_series_context": context,
+            }
+        )
+    return projected
+
+
+def _attach_legacy_supplemental_metrics(
+    projected: list[dict],
+    context: dict,
+    legacy_records: list[dict],
+) -> dict:
+    """Retain non-case legacy metrics without reintroducing case duplication."""
+
+    legacy_by_date: dict[str, list[dict]] = defaultdict(list)
+    for record in legacy_records:
+        if record.get("date"):
+            legacy_by_date[str(record["date"])].append(record)
+
+    supplemental = {
+        "dates": sorted(legacy_by_date),
+        "deaths": [
+            sum(item.get("deaths") or 0 for item in legacy_by_date[date])
+            for date in sorted(legacy_by_date)
+        ],
+        "recoveries": [
+            sum(item.get("recoveries") or 0 for item in legacy_by_date[date])
+            for date in sorted(legacy_by_date)
+        ],
+        "mortality_rates": [
+            avg_or_none([item.get("mortality_rate") for item in legacy_by_date[date]])
+            for date in sorted(legacy_by_date)
+        ],
+    }
+    context["supplemental_legacy_metrics"] = supplemental
+    safe_metric_alignment = context.get("projection_policy") in {
+        "single_series",
+        "sum_disjoint",
+    }
+    context["metric_layers"] = {
+        "cases": SERIES_DATA_LAYER,
+        "deaths": (
+            LEGACY_DATA_LAYER
+            if safe_metric_alignment and legacy_records
+            else "supplemental_legacy_only" if legacy_records else "not_available"
+        ),
+        "recoveries": (
+            LEGACY_DATA_LAYER
+            if safe_metric_alignment and legacy_records
+            else "supplemental_legacy_only" if legacy_records else "not_available"
+        ),
+    }
+
+    if safe_metric_alignment:
+        for projected_record in projected:
+            legacy_at_date = legacy_by_date.get(str(projected_record.get("date"))) or []
+            projected_record["deaths"] = sum(
+                item.get("deaths") or 0 for item in legacy_at_date
+            )
+            projected_record["recoveries"] = sum(
+                item.get("recoveries") or 0 for item in legacy_at_date
+            )
+            projected_record["mortality_rate"] = avg_or_none(
+                [item.get("mortality_rate") for item in legacy_at_date]
+            )
+    return context
+
+
+def _overlay_legacy_coverage_gaps(
+    projected: list[dict],
+    context: dict,
+    legacy_records: list[dict],
+) -> list[dict]:
+    """Overlay registry facts by period without sacrificing legacy coverage.
+
+    The country export has already constrained both layers to the same national
+    geography and unstratified dimension.  Therefore ``date`` is the remaining
+    public identity key.  Registry wins at an identical date; a legacy-only
+    date is retained and marked ``legacy_gap_fill``.  This is deliberately a
+    parity gate rather than a wholesale disease-level switch.
+    """
+
+    registry_dates = {
+        str(record.get("date") or "") for record in projected if record.get("date")
+    }
+    legacy_by_date: dict[str, list[dict]] = defaultdict(list)
+    for record in legacy_records:
+        if record.get("date"):
+            legacy_by_date[str(record["date"])].append(record)
+
+    legacy_dates = set(legacy_by_date)
+    gap_dates = sorted(legacy_dates - registry_dates)
+    overlap_dates = legacy_dates & registry_dates
+    coverage_ratio = len(overlap_dates) / len(legacy_dates) if legacy_dates else 1.0
+
+    context.update(
+        {
+            "coverage_policy": "period_key_overlay",
+            "coverage_status": "legacy_gap_fill" if gap_dates else "parity",
+            "legacy_period_count": len(legacy_dates),
+            "registry_period_count": len(registry_dates),
+            "overlap_period_count": len(overlap_dates),
+            "legacy_gap_fill_count": len(gap_dates),
+            "registry_only_period_count": len(registry_dates - legacy_dates),
+            "coverage_ratio_against_legacy": round(coverage_ratio, 6),
+        }
+    )
+    if not gap_dates:
+        return projected
+
+    if not registry_dates:
+        # No date has a complete safe registry projection (for example, every
+        # ``sum_disjoint`` period is missing a sibling).  Keep the public curve
+        # wholly legacy and expose why the candidate registry facts were gated.
+        context["registry_projection_policy"] = context.get("projection_policy")
+        context["data_layer"] = LEGACY_DATA_LAYER
+        context["projection_policy"] = "legacy_fallback"
+        context["coverage_status"] = "registry_no_complete_periods"
+        context["fallback_reason"] = "incomplete_registered_rollup_periods"
+        context["coverage_risk"] = "registry_history_incomplete"
+        context["metric_layers"]["cases"] = LEGACY_DATA_LAYER
+        result: list[dict] = []
+        for report_date in gap_dates:
+            date_records = legacy_by_date[report_date]
+            if len(date_records) != 1:
+                raise RuntimeError(
+                    "Legacy layer has multiple observations at the public date grain: "
+                    f"{date_records[0].get('disease_id')} {report_date}"
+                )
+            legacy_record = dict(date_records[0])
+            legacy_record["data_layer"] = LEGACY_DATA_LAYER
+            legacy_record["_series_context"] = context
+            result.append(legacy_record)
+        return result
+
+    context["data_layer"] = MIXED_DATA_LAYER
+    context["coverage_risk"] = "registry_history_incomplete"
+    context["metric_layers"]["cases"] = MIXED_DATA_LAYER
+    context["note_en"] = (
+        f"{context.get('note_en') or ''} Registry facts replace matching periods; "
+        "legacy-only periods are retained as explicit coverage gap fills."
+    ).strip()
+    context["note_zh"] = (
+        f"{context.get('note_zh') or ''} 注册序列替换同一期旧事实；仅旧表存在的期间"
+        "作为明确的覆盖缺口补全予以保留。"
+    ).strip()
+
+    result = list(projected)
+    for report_date in gap_dates:
+        date_records = legacy_by_date[report_date]
+        if len(date_records) != 1:
+            raise RuntimeError(
+                "Legacy layer has multiple observations at the public date grain: "
+                f"{date_records[0].get('disease_id')} {report_date}"
+            )
+        gap_record = dict(date_records[0])
+        gap_record["data_layer"] = LEGACY_GAP_FILL_DATA_LAYER
+        gap_record["_series_context"] = context
+        gap_record["gap_fill_reason"] = "registry_period_missing"
+        result.append(gap_record)
+    return result
+
+
+def _legacy_projection_context(
+    *,
+    registry_series_fact_count: int = 0,
+    reason: str = "no_eligible_registered_series_facts",
+) -> dict:
+    return {
+        "data_layer": LEGACY_DATA_LAYER,
+        "projection_policy": "legacy_fallback",
+        "loss_risk": "legacy_identity_may_be_lossy",
+        "selected_series_codes": [],
+        "available_series_count": registry_series_fact_count,
+        "source_series": [],
+        "fallback_reason": reason,
+        "metric_layers": {
+            "cases": LEGACY_DATA_LAYER,
+            "deaths": LEGACY_DATA_LAYER,
+            "recoveries": LEGACY_DATA_LAYER,
+        },
+        "note_en": (
+            "No eligible registered case-count series facts are available for "
+            "this disease and country; the public curve uses the legacy flat table."
+        ),
+        "note_zh": (
+            "该疾病与国家尚无可用的注册病例计数序列事实；公开曲线受控回退到旧扁平事实表。"
+        ),
+    }
+
+
+def apply_series_first_projection(
+    legacy_records: list[dict],
+    series_records: list[dict],
+) -> list[dict]:
+    """Overlay eligible registry facts without mixing or double counting layers."""
+
+    legacy_by_disease: dict[str, list[dict]] = defaultdict(list)
+    for record in legacy_records:
+        disease_id = str(record.get("disease_id") or "").strip()
+        if disease_id:
+            legacy_by_disease[disease_id].append(record)
+
+    all_series_by_disease: dict[str, list[dict]] = defaultdict(list)
+    eligible_series_by_disease: dict[str, list[dict]] = defaultdict(list)
+    for record in series_records:
+        disease_id = str(record.get("disease_id") or "").strip()
+        if not disease_id:
+            continue
+        all_series_by_disease[disease_id].append(record)
+        if _series_is_case_count(record):
+            eligible_series_by_disease[disease_id].append(record)
+
+    result: list[dict] = []
+    all_disease_ids = sorted(set(legacy_by_disease) | set(eligible_series_by_disease))
+    for disease_id in all_disease_ids:
+        eligible = eligible_series_by_disease.get(disease_id) or []
+        if eligible:
+            _selected_codes, context = _projection_context(eligible)
+            projected = _collapse_selected_series_records(eligible, context)
+            _attach_legacy_supplemental_metrics(
+                projected,
+                context,
+                legacy_by_disease.get(disease_id) or [],
+            )
+            projected = _overlay_legacy_coverage_gaps(
+                projected,
+                context,
+                legacy_by_disease.get(disease_id) or [],
+            )
+            result.extend(projected)
+            continue
+
+        raw_registry_count = len(all_series_by_disease.get(disease_id) or [])
+        reason = (
+            "registered_facts_not_case_count_compatible"
+            if raw_registry_count
+            else "no_eligible_registered_series_facts"
+        )
+        context = _legacy_projection_context(
+            registry_series_fact_count=raw_registry_count,
+            reason=reason,
+        )
+        for legacy_record in legacy_by_disease.get(disease_id) or []:
+            projected = dict(legacy_record)
+            projected["data_layer"] = LEGACY_DATA_LAYER
+            projected["_series_context"] = context
+            result.append(projected)
+
+    projected_records = sorted(
+        result,
+        key=lambda item: (
+            str(item.get("date") or ""),
+            str(item.get("disease_id") or ""),
+        ),
+    )
+    validate_series_first_projection(projected_records)
+    return projected_records
+
+
+def apply_disease_cutover_projection(
+    legacy_records: list[dict],
+    series_records: list[dict],
+    *,
+    country_code: str,
+) -> list[dict]:
+    """Apply the versioned per-concept cutover policy to a country export.
+
+    This adapter keeps the existing static payload intact while enforcing the
+    same strict rule as the API: a ``series_only`` target receives no legacy
+    rows, so missing Registry facts stay missing instead of becoming a silent
+    compatibility fallback.
+    """
+
+    config = get_disease_cutover_config()
+    normalized_country = str(country_code or "").strip().upper()
+    disease_ids = {
+        str(record.get("disease_id") or "").strip().upper()
+        for record in [*legacy_records, *series_records]
+        if record.get("disease_id")
+    }
+    legacy_modes = {
+        disease_id: config.resolve_read_policy(normalized_country, disease_id)
+        for disease_id in disease_ids
+    }
+
+    filtered_legacy = [
+        record
+        for record in legacy_records
+        if legacy_modes[str(record.get("disease_id") or "").strip().upper()].read_mode
+        != "series_only"
+    ]
+    filtered_series = [
+        record
+        for record in series_records
+        if legacy_modes[str(record.get("disease_id") or "").strip().upper()].read_mode
+        != "legacy"
+    ]
+    projected = apply_series_first_projection(filtered_legacy, filtered_series)
+
+    accepted: list[dict] = []
+    for record in projected:
+        disease_id = str(record.get("disease_id") or "").strip().upper()
+        policy = legacy_modes[disease_id]
+        context = record.get("_series_context") or {}
+        selected_codes = set(context.get("selected_series_codes") or [])
+        blocked_reasons: list[str] = []
+        missing_required = sorted(set(policy.required_series) - selected_codes)
+        if missing_required:
+            blocked_reasons.append(
+                "missing_required_series:" + ",".join(missing_required)
+            )
+        if (
+            policy.allowed_projection_policy
+            and context.get("projection_policy") != policy.allowed_projection_policy
+        ):
+            blocked_reasons.append(
+                "projection_policy_mismatch:"
+                f"expected={policy.allowed_projection_policy},"
+                f"actual={context.get('projection_policy')}"
+            )
+        context["cutover"] = {
+            "release_version": config.release_version,
+            "read_mode": policy.read_mode,
+            "shadow_compare": policy.shadow_compare,
+            "target_override": policy.target_override,
+            "required_series": list(policy.required_series),
+            "allowed_projection_policy": policy.allowed_projection_policy,
+            "blocked_reasons": blocked_reasons,
+        }
+        if policy.read_mode == "series_only" and blocked_reasons:
+            continue
+        accepted.append(record)
+
+    validate_series_first_projection(accepted)
+    return accepted
+
+
+def validate_series_first_projection(records: list[dict]) -> None:
+    """Enforce public-export invariants before any chart can silently sum rows."""
+
+    seen_identities: set[tuple[str, str]] = set()
+    layers_by_disease: dict[str, set[str]] = defaultdict(set)
+    record_layers_by_disease: dict[str, set[str]] = defaultdict(set)
+    for record in records:
+        disease_id = str(record.get("disease_id") or "").strip()
+        report_date = str(record.get("date") or "").strip()
+        if not disease_id or not report_date:
+            continue
+        identity = (disease_id, report_date)
+        if identity in seen_identities:
+            raise RuntimeError(
+                "Series-first site projection produced duplicate disease/date "
+                f"identity: {disease_id} {report_date}"
+            )
+        seen_identities.add(identity)
+
+        context = record.get("_series_context")
+        if not isinstance(context, dict):
+            raise RuntimeError(
+                f"Site projection lacks data-layer provenance for {disease_id}"
+            )
+        layer = str(context.get("data_layer") or "").strip()
+        layers_by_disease[disease_id].add(layer)
+        record_layers_by_disease[disease_id].add(
+            str(record.get("data_layer") or layer).strip()
+        )
+        policy = str(context.get("projection_policy") or "")
+        selected_codes = context.get("selected_series_codes") or []
+        if layer in {SERIES_DATA_LAYER, MIXED_DATA_LAYER}:
+            if not selected_codes:
+                raise RuntimeError(
+                    f"Registry projection has no selected series for {disease_id}"
+                )
+            if len(selected_codes) > 1 and policy != "sum_disjoint":
+                raise RuntimeError(
+                    "Multiple source series reached the flat public curve without "
+                    f"an explicit sum_disjoint policy for {disease_id}"
+                )
+            if policy in {
+                "representative_series",
+                "reported_aggregate_preferred",
+            } and not context.get("loss_risk"):
+                raise RuntimeError(
+                    f"Conservative series selection is not risk-labelled for {disease_id}"
+                )
+        if layer == MIXED_DATA_LAYER:
+            if context.get("coverage_status") != "legacy_gap_fill":
+                raise RuntimeError(
+                    f"Mixed projection lacks a gap-fill coverage status for {disease_id}"
+                )
+            if int(context.get("legacy_gap_fill_count") or 0) < 1:
+                raise RuntimeError(
+                    f"Mixed projection lacks an explicit legacy gap count for {disease_id}"
+                )
+
+    # Mixed coverage is valid only when declared by the shared disease-level
+    # context.  A hidden mixture of independent contexts remains an error.
+    invalid_mixed = sorted(
+        disease_id
+        for disease_id, layers in layers_by_disease.items()
+        if len(layers) > 1 and MIXED_DATA_LAYER not in layers
+    )
+    if invalid_mixed:
+        raise RuntimeError(
+            "Site projection mixed independent provenance contexts: "
+            + ", ".join(invalid_mixed)
+        )
+    malformed_mixed = sorted(
+        disease_id
+        for disease_id, layers in layers_by_disease.items()
+        if MIXED_DATA_LAYER in layers
+        and record_layers_by_disease[disease_id]
+        != {SERIES_DATA_LAYER, LEGACY_GAP_FILL_DATA_LAYER}
+    )
+    if malformed_mixed:
+        raise RuntimeError(
+            "Mixed projection does not contain both registry and explicit gap-fill rows: "
+            + ", ".join(malformed_mixed)
+        )
+
+
 async def fetch_country_frequency_meta(session, country_code: str) -> dict:
     """Infer source reporting frequency from raw (non-truncated) timestamps."""
     rows = await session.execute(
-        text(
-            """
+        text("""
             SELECT DISTINCT timezone('UTC', dr.time)::date AS report_date
             FROM disease_records dr
             JOIN countries c ON c.id = dr.country_id
             WHERE c.code = :code
             ORDER BY report_date ASC
-            """
-        ),
+            """),
         {"code": country_code},
     )
-    report_dates = [dict(row._mapping)["report_date"] for row in rows if dict(row._mapping).get("report_date")]
+    report_dates = [
+        dict(row._mapping)["report_date"]
+        for row in rows
+        if dict(row._mapping).get("report_date")
+    ]
     if len(report_dates) < 2:
         return {
             "source_frequency": "UNKNOWN",
@@ -1605,9 +2048,7 @@ async def fetch_country_frequency_meta(session, country_code: str) -> dict:
 
 
 async def fetch_reports(session) -> list[dict]:
-    rows = await session.execute(
-        text(
-            """
+    rows = await session.execute(text("""
             SELECT
                 r.id, r.title, r.report_type, r.status,
                 r.period_start::date  AS period_start,
@@ -1625,9 +2066,7 @@ async def fetch_reports(session) -> list[dict]:
             JOIN countries c ON c.id = r.country_id
             WHERE r.status IN ('COMPLETED', 'APPROVED', 'PUBLISHED')
             ORDER BY r.created_at DESC
-            """
-        )
-    )
+            """))
     result = []
     for row in rows:
         r = dict(row._mapping)
@@ -1657,8 +2096,7 @@ async def fetch_reports(session) -> list[dict]:
 
 async def fetch_report_detail(session, report_id: int) -> dict | None:
     row = await session.execute(
-        text(
-            """
+        text("""
             SELECT
                 r.id, r.title, r.report_type,
                 r.period_start::date AS period_start,
@@ -1674,25 +2112,34 @@ async def fetch_report_detail(session, report_id: int) -> dict | None:
             FROM reports r
             JOIN countries c ON c.id = r.country_id
             WHERE r.id = :id
-            """
-        ),
+            """),
         {"id": report_id},
     )
     rrow = row.fetchone()
     if not rrow:
         return None
     report = dict(rrow._mapping)
-    report["period_start"] = report["period_start"].isoformat() if report["period_start"] else None
-    report["period_end"] = report["period_end"].isoformat() if report["period_end"] else None
-    report["created_at"] = report["created_at"].isoformat() if report["created_at"] else None
+    report["period_start"] = (
+        report["period_start"].isoformat() if report["period_start"] else None
+    )
+    report["period_end"] = (
+        report["period_end"].isoformat() if report["period_end"] else None
+    )
+    report["created_at"] = (
+        report["created_at"].isoformat() if report["created_at"] else None
+    )
     report["quality_score"] = safe_float(report["quality_score"])
-    metadata = report.get("metadata") if isinstance(report.get("metadata"), dict) else {}
+    metadata = (
+        report.get("metadata") if isinstance(report.get("metadata"), dict) else {}
+    )
     document = metadata.get("report_document_v4")
     if not isinstance(document, dict):
         return None
     report_language = "zh"
     report["title"] = (document.get("title") or {}).get("zh") or report.get("title")
-    report["summary"] = (document.get("summary") or {}).get("zh") or report.get("summary")
+    report["summary"] = (document.get("summary") or {}).get("zh") or report.get(
+        "summary"
+    )
     report["key_findings"] = (document.get("key_findings") or {}).get("zh") or []
     report["report_document_v4"] = document
     report["metadata"] = compact_report_metadata(metadata, include_figures=True)
@@ -1736,15 +2183,11 @@ async def fetch_disease_knowledge_briefs(session) -> dict[str, dict[str, dict]]:
         return {}
     sources_by_disease_id: dict[str, dict[int, dict]] = defaultdict(dict)
     if await has_table(session, "disease_knowledge_sources"):
-        source_rows = await session.execute(
-            text(
-                """
+        source_rows = await session.execute(text("""
                 SELECT id, disease_id, source_type, source_name, url, resolved_url,
                        title, license, status, review_status, fetched_at, metadata
                 FROM disease_knowledge_sources
-                """
-            )
-        )
+                """))
         for row in source_rows:
             source = dict(row._mapping)
             source_id = safe_int(source.get("id"))
@@ -1753,21 +2196,23 @@ async def fetch_disease_knowledge_briefs(session) -> dict[str, dict[str, dict]]:
                 continue
             source["fetched_at"] = iso_or_none(source.get("fetched_at"))
             if not source.get("resolved_url"):
-                metadata = source.get("metadata") if isinstance(source.get("metadata"), dict) else {}
-                source["resolved_url"] = metadata.get("resolved_url") or source.get("url")
+                metadata = (
+                    source.get("metadata")
+                    if isinstance(source.get("metadata"), dict)
+                    else {}
+                )
+                source["resolved_url"] = metadata.get("resolved_url") or source.get(
+                    "url"
+                )
             sources_by_disease_id[str(disease_id)][source_id] = source
 
-    rows = await session.execute(
-        text(
-            """
+    rows = await session.execute(text("""
             SELECT disease_id, language, brief, definition, clinical_features, epidemiology,
                    clinical_summary, transmission, prevention, surveillance_note, risk_groups,
                    source_attribution, disclaimer, status, source_confidence, updated_at, metadata
             FROM disease_knowledge_briefs
             WHERE status IN ('published', 'requires_review')
-            """
-        )
-    )
+            """))
     result: dict[str, dict[str, dict]] = defaultdict(dict)
     for row in rows:
         item = dict(row._mapping)
@@ -1785,17 +2230,13 @@ async def fetch_country_briefs(session) -> dict[str, dict[str, dict]]:
     """Load published country briefs keyed by country code and language."""
     if not await has_table(session, "country_briefs"):
         return {}
-    rows = await session.execute(
-        text(
-            """
+    rows = await session.execute(text("""
             SELECT country_code, language, brief, surveillance_system,
                    coverage_interpretation, reporting_cadence, data_limitations,
                    source_summary, status, updated_at
             FROM country_briefs
             WHERE status = 'published'
-            """
-        )
-    )
+            """))
     result: dict[str, dict[str, dict]] = defaultdict(dict)
     for row in rows:
         item = dict(row._mapping)
@@ -1805,39 +2246,168 @@ async def fetch_country_briefs(session) -> dict[str, dict[str, dict]]:
     return result
 
 
-def build_disease_knowledge_fields(disease: dict, brief_by_language: dict[str, dict] | None) -> dict:
-    """Build the site-facing knowledge payload for one disease."""
+def build_disease_knowledge_fields(
+    disease: dict, brief_by_language: dict[str, dict] | None
+) -> dict:
+    """Build a field-aware, gracefully degradable public knowledge payload."""
     brief_by_language = brief_by_language or {}
-    en, zh = normalize_knowledge_citation_group([
-        brief_by_language.get("en") or {},
-        brief_by_language.get("zh") or {},
-    ])
+    profile_schema = resolve_knowledge_profile_schema(disease)
 
-    knowledge_sources = en.get("source_attribution") or zh.get("source_attribution") or []
-    knowledge_status = resolve_disease_knowledge_status((brief_by_language or {}).values())
-    primary_brief = brief_by_language.get("en") or brief_by_language.get("zh") or {}
-    knowledge_tier = knowledge_brief_publication_tier(primary_brief) if primary_brief else "fallback"
-    fallback_reason = knowledge_brief_fallback_reason(primary_brief) if primary_brief else None
-    knowledge_updated_at = en.get("updated_at") or zh.get("updated_at")
-    has_authoritative_sources = any(
-        _is_authoritative_knowledge_source(source) for source in knowledge_sources
-    ) or any(
-        str(brief.get("source_confidence") or "") == "high"
-        for brief in brief_by_language.values()
-        if isinstance(brief, dict)
+    def localized_brief(language: str) -> dict:
+        raw = {**(brief_by_language.get(language) or {}), "language": language}
+        raw["metadata"] = {
+            **(raw.get("metadata") or {}),
+            "profile_schema": profile_schema.to_dict(),
+        }
+        return raw
+
+    raw_en = localized_brief("en")
+    raw_zh = localized_brief("zh")
+
+    # A refresh can produce a different source set for each language. Preserve
+    # the union and normalize both briefs against one stable citation order.
+    merged_sources: list[dict] = []
+    seen_source_keys: set[str] = set()
+    for brief in (raw_en, raw_zh):
+        for source in brief.get("source_attribution") or []:
+            if not isinstance(source, dict):
+                continue
+            key = str(
+                source.get("source_id")
+                or source.get("id")
+                or source.get("resolved_url")
+                or source.get("url")
+                or source.get("title")
+                or ""
+            ).strip()
+            if not key or key in seen_source_keys:
+                continue
+            seen_source_keys.add(key)
+            merged_sources.append(source)
+    if merged_sources:
+        raw_en["source_attribution"] = merged_sources
+        raw_zh["source_attribution"] = merged_sources
+
+    en, zh = normalize_knowledge_citation_group([raw_en, raw_zh])
+    localized_briefs = {"en": en, "zh": zh}
+    assessments = {
+        language: assess_knowledge_brief(brief, language)
+        for language, brief in localized_briefs.items()
+    }
+    language_tiers = {
+        language: knowledge_brief_publication_tier(
+            brief_by_language.get(language) or {}
+        )
+        for language in ("en", "zh")
+    }
+    language_is_public = {
+        language: language_tiers[language] == "published" for language in ("en", "zh")
+    }
+
+    raw_knowledge_sources = (
+        en.get("source_attribution") or zh.get("source_attribution") or []
     )
-    knowledge_profile_available = knowledge_status == "published" and knowledge_tier == "published"
+    original_status = resolve_disease_knowledge_status(brief_by_language.values())
+    profile_languages = [
+        language
+        for language in ("en", "zh")
+        if language_is_public[language] and assessments[language].profile_available
+    ]
+    available_languages = [
+        language
+        for language in ("en", "zh")
+        if language_is_public[language] and assessments[language].available_fields
+    ]
+    knowledge_profile_available = bool(profile_languages)
+    knowledge_status = "published" if knowledge_profile_available else "blocked"
+    knowledge_tier = "published" if knowledge_profile_available else "blocked"
+    block_reason = next(
+        (
+            knowledge_brief_block_reason(brief)
+            for brief in brief_by_language.values()
+            if knowledge_brief_block_reason(brief)
+        ),
+        None,
+    )
+    updated_values = [
+        str(brief.get("updated_at"))
+        for brief in localized_briefs.values()
+        if brief.get("updated_at")
+    ]
+    knowledge_updated_at = max(updated_values) if updated_values else None
+    knowledge_sources = raw_knowledge_sources if knowledge_profile_available else []
+    has_authoritative_sources = knowledge_profile_available and (
+        any(_is_authoritative_knowledge_source(source) for source in knowledge_sources)
+        or any(
+            str(brief.get("source_confidence") or "") == "high"
+            for brief in brief_by_language.values()
+            if isinstance(brief, dict)
+        )
+    )
     if knowledge_profile_available:
-        profile_reason = None
+        profile_reason = (
+            "partial_profile"
+            if any(
+                assessments[language].display_mode == "partial"
+                for language in profile_languages
+            )
+            or len(profile_languages) < 2
+            else None
+        )
     elif not brief_by_language:
         profile_reason = "no_published_brief"
-    elif knowledge_tier != "published":
-        profile_reason = fallback_reason or "fallback_only"
+    elif original_status == "published":
+        profile_reason = "insufficient_evidence"
+    elif block_reason:
+        profile_reason = block_reason
     else:
-        profile_reason = "profile_unavailable"
+        profile_reason = "requires_review"
 
-    def keep_profile_text(value: str | None) -> str | None:
-        return value if knowledge_profile_available else None
+    def public_text(language: str, field: str, *aliases: str) -> str | None:
+        if not language_is_public[language]:
+            return None
+        brief = localized_briefs[language]
+        for candidate in (field, *aliases):
+            result = assessments[language].fields.get(candidate)
+            value = strip_unavailable_knowledge_sentences(
+                brief.get(candidate), language
+            )
+            if result and result.available and value:
+                return value
+        return None
+
+    completeness_values = [
+        assessments[language].completeness for language in profile_languages
+    ]
+    knowledge_completeness = (
+        round(sum(completeness_values) / len(completeness_values), 3)
+        if completeness_values
+        else 0.0
+    )
+    if not knowledge_profile_available:
+        display_mode = "blocked"
+    elif len(profile_languages) == 2 and all(
+        assessments[language].display_mode == "full" for language in profile_languages
+    ):
+        display_mode = "full"
+    else:
+        display_mode = "partial"
+
+    field_status = {
+        field: {
+            language: assessments[language].fields[field].status
+            for language in ("en", "zh")
+        }
+        for field in KNOWLEDGE_TEXT_FIELDS
+    }
+    repair_sections = [
+        field
+        for field in ("brief", *profile_schema.required_fields)
+        if any(
+            not assessments[language].fields[field].available
+            for language in ("en", "zh")
+        )
+    ]
 
     payload = {
         "disease_id": disease["disease_id"],
@@ -1845,35 +2415,49 @@ def build_disease_knowledge_fields(disease: dict, brief_by_language: dict[str, d
         "name_zh": disease.get("name_zh"),
         "category": disease.get("category"),
         "description": disease.get("description"),
-        "official_intro_en": keep_profile_text(en.get("brief") or en.get("definition")),
-        "official_intro_zh": keep_profile_text(zh.get("brief") or zh.get("definition")),
-        "official_summary_en": keep_profile_text(en.get("brief") or en.get("definition")),
-        "official_summary_zh": keep_profile_text(zh.get("brief") or zh.get("definition")),
-        "official_definition_en": keep_profile_text(en.get("definition")),
-        "official_definition_zh": keep_profile_text(zh.get("definition")),
-        "clinical_features_en": keep_profile_text(en.get("clinical_features") or en.get("clinical_summary")),
-        "clinical_features_zh": keep_profile_text(zh.get("clinical_features") or zh.get("clinical_summary")),
-        "epidemiology_en": keep_profile_text(en.get("epidemiology")),
-        "epidemiology_zh": keep_profile_text(zh.get("epidemiology")),
-        "clinical_summary_en": keep_profile_text(en.get("clinical_features") or en.get("clinical_summary")),
-        "clinical_summary_zh": keep_profile_text(zh.get("clinical_features") or zh.get("clinical_summary")),
-        "transmission_en": keep_profile_text(en.get("transmission")),
-        "transmission_zh": keep_profile_text(zh.get("transmission")),
-        "prevention_en": keep_profile_text(en.get("prevention")),
-        "prevention_zh": keep_profile_text(zh.get("prevention")),
-        "surveillance_note_en": keep_profile_text(en.get("surveillance_note")),
-        "surveillance_note_zh": keep_profile_text(zh.get("surveillance_note")),
-        "risk_groups_en": keep_profile_text(en.get("risk_groups")),
-        "risk_groups_zh": keep_profile_text(zh.get("risk_groups")),
+        "official_intro_en": public_text("en", "brief", "definition"),
+        "official_intro_zh": public_text("zh", "brief", "definition"),
+        "official_summary_en": public_text("en", "brief", "definition"),
+        "official_summary_zh": public_text("zh", "brief", "definition"),
+        "official_definition_en": public_text("en", "definition"),
+        "official_definition_zh": public_text("zh", "definition"),
+        "clinical_features_en": public_text("en", "clinical_features"),
+        "clinical_features_zh": public_text("zh", "clinical_features"),
+        "epidemiology_en": public_text("en", "epidemiology"),
+        "epidemiology_zh": public_text("zh", "epidemiology"),
+        "clinical_summary_en": public_text("en", "clinical_features"),
+        "clinical_summary_zh": public_text("zh", "clinical_features"),
+        "transmission_en": public_text("en", "transmission"),
+        "transmission_zh": public_text("zh", "transmission"),
+        "prevention_en": public_text("en", "prevention"),
+        "prevention_zh": public_text("zh", "prevention"),
+        "surveillance_note_en": public_text("en", "surveillance_note"),
+        "surveillance_note_zh": public_text("zh", "surveillance_note"),
+        "risk_groups_en": public_text("en", "risk_groups"),
+        "risk_groups_zh": public_text("zh", "risk_groups"),
         "knowledge_sources": knowledge_sources,
         "knowledge_source_count": len(knowledge_sources),
         "knowledge_updated_at": knowledge_updated_at,
         "knowledge_status": knowledge_status,
         "knowledge_tier": knowledge_tier,
-        "knowledge_fallback_reason": fallback_reason,
+        "knowledge_block_reason": block_reason
+        or (profile_reason if not knowledge_profile_available else None),
         "knowledge_profile_available": knowledge_profile_available,
         "knowledge_profile_reason": profile_reason,
         "knowledge_has_authoritative_sources": has_authoritative_sources,
+        "knowledge_display_mode": display_mode,
+        "knowledge_completeness": knowledge_completeness,
+        "knowledge_available_languages": available_languages,
+        "knowledge_profile_languages": profile_languages,
+        "knowledge_profile_type": profile_schema.profile_type,
+        "knowledge_profile_schema": profile_schema.to_dict(),
+        "knowledge_section_labels": profile_schema.labels,
+        "knowledge_applicable_section_count": len(profile_schema.applicable_fields),
+        "knowledge_repair_sections": repair_sections,
+        "knowledge_field_status": field_status,
+        "knowledge_language_quality": {
+            language: assessments[language].to_dict() for language in ("en", "zh")
+        },
     }
     return payload
 
@@ -1893,30 +2477,40 @@ def _is_authoritative_knowledge_source(source: object) -> bool:
         if str(source.get(field) or "").strip()
     }
     if any(
-        name == "who"
-        or name.startswith("who ")
-        or "world health organization" in name
+        name == "who" or name.startswith("who ") or "world health organization" in name
         for name in source_names
     ):
         return True
 
-    source_url = str(source.get("url") or source.get("source_url") or "").strip().lower()
+    source_url = (
+        str(source.get("url") or source.get("source_url") or "").strip().lower()
+    )
     return any(marker in source_url for marker in AUTHORITATIVE_KNOWLEDGE_URL_MARKERS)
 
 
-def apply_disease_knowledge_fields(disease: dict, brief_by_language: dict[str, dict] | None) -> dict:
+def apply_disease_knowledge_fields(
+    disease: dict, brief_by_language: dict[str, dict] | None
+) -> dict:
     """Backward-compatible alias for the knowledge payload builder."""
     return build_disease_knowledge_fields(disease, brief_by_language)
 
 
-def apply_country_brief_fields(country_data: dict, brief_by_language: dict[str, dict] | None) -> dict:
+def apply_country_brief_fields(
+    country_data: dict, brief_by_language: dict[str, dict] | None
+) -> dict:
     """Attach country page interpretive text, falling back to generated source context."""
     brief_by_language = brief_by_language or {}
     en = brief_by_language.get("en") or {}
     zh = brief_by_language.get("zh") or {}
     source_info = country_data.get("source_info") or {}
-    source_labels = [src.get("label") for src in source_info.get("sources") or [] if src.get("label")]
-    source_label_en = ", ".join(source_labels) or source_info.get("primary_label") or "official surveillance sources"
+    source_labels = [
+        src.get("label") for src in source_info.get("sources") or [] if src.get("label")
+    ]
+    source_label_en = (
+        ", ".join(source_labels)
+        or source_info.get("primary_label")
+        or "official surveillance sources"
+    )
     country_code = str(country_data.get("country_code") or "").upper()
     country_name_zh = (
         country_data.get("country_name_zh")
@@ -1930,10 +2524,18 @@ def apply_country_brief_fields(country_data: dict, brief_by_language: dict[str, 
         for src in source_info.get("sources") or []
         if src.get("label")
     ]
-    source_label_zh = ", ".join(label for label in source_labels_zh if label) or source_label_en
-    country_name = country_data.get("country_name_en") or country_data.get("country_name") or country_data.get("country_code")
+    source_label_zh = (
+        ", ".join(label for label in source_labels_zh if label) or source_label_en
+    )
+    country_name = (
+        country_data.get("country_name_en")
+        or country_data.get("country_name")
+        or country_data.get("country_code")
+    )
     date_range = country_data.get("date_range") or {}
-    frequency = (country_data.get("frequency_meta") or {}).get("source_frequency") or "UNKNOWN"
+    frequency = (country_data.get("frequency_meta") or {}).get(
+        "source_frequency"
+    ) or "UNKNOWN"
 
     country_data["brief_en"] = en.get("brief") or (
         f"{country_name} page consolidates infectious disease surveillance records from {source_label_en}. "
@@ -1971,13 +2573,109 @@ def apply_country_brief_fields(country_data: dict, brief_by_language: dict[str, 
     country_data["source_summary_en"] = en.get("source_summary") or source_label_en
     country_data["source_summary_zh"] = zh.get("source_summary") or source_label_zh
     country_data["country_brief_status"] = "published" if en or zh else "fallback"
-    country_data["country_brief_updated_at"] = en.get("updated_at") or zh.get("updated_at")
+    country_data["country_brief_updated_at"] = en.get("updated_at") or zh.get(
+        "updated_at"
+    )
     return country_data
 
 
 # ─────────────────────────────────────────────────────────────
 # Data processors
 # ─────────────────────────────────────────────────────────────
+def _series_context_for_records(records: list[dict]) -> dict:
+    for record in records:
+        context = record.get("_series_context")
+        if isinstance(context, dict):
+            return context
+    # Direct callers of the pure builders may still provide historical record
+    # dictionaries.  Treat those explicitly as legacy rather than leaving the
+    # output provenance ambiguous.
+    return _legacy_projection_context(reason="builder_received_unmarked_legacy_rows")
+
+
+def _series_provenance_fields(records: list[dict]) -> dict:
+    context = _series_context_for_records(records)
+    return {
+        "data_layer": context.get("data_layer") or LEGACY_DATA_LAYER,
+        "projection_policy": context.get("projection_policy") or "legacy_fallback",
+        "loss_risk": context.get("loss_risk"),
+        "selected_series_codes": context.get("selected_series_codes") or [],
+        "available_series_count": context.get("available_series_count") or 0,
+        "source_series": context.get("source_series") or [],
+        "coverage_status": context.get("coverage_status"),
+        "coverage_policy": context.get("coverage_policy"),
+        "legacy_gap_fill_count": context.get("legacy_gap_fill_count") or 0,
+        "coverage_ratio_against_legacy": context.get("coverage_ratio_against_legacy"),
+        "data_provenance": {
+            key: value for key, value in context.items() if key != "source_series"
+        },
+    }
+
+
+def _data_layer_summary(disease_series: dict[str, dict]) -> dict:
+    counts: dict[str, int] = defaultdict(int)
+    risky_diseases: list[str] = []
+    non_additive_diseases: list[str] = []
+    for disease_id, series in disease_series.items():
+        layer = str(series.get("data_layer") or LEGACY_DATA_LAYER)
+        counts[layer] += 1
+        if series.get("loss_risk") or series.get("data_provenance", {}).get(
+            "coverage_risk"
+        ):
+            risky_diseases.append(disease_id)
+        if series.get("loss_risk") == "non_additive_series_not_rolled_up":
+            non_additive_diseases.append(disease_id)
+    return {
+        "series_registry_disease_count": counts.get(SERIES_DATA_LAYER, 0),
+        "mixed_disease_count": counts.get(MIXED_DATA_LAYER, 0),
+        "legacy_fallback_disease_count": counts.get(LEGACY_DATA_LAYER, 0),
+        "loss_risk_disease_count": len(risky_diseases),
+        "loss_risk_disease_ids": sorted(risky_diseases),
+        "non_additive_series_disease_ids": sorted(non_additive_diseases),
+    }
+
+
+def _compact_source_series_metadata(source_series: list[dict]) -> list[dict]:
+    """Keep definition/projection semantics in chart payloads without facts duplication."""
+
+    omitted = {"dates", "values", "quality_statuses"}
+    return [
+        {key: value for key, value in item.items() if key not in omitted}
+        for item in source_series
+        if isinstance(item, dict)
+    ]
+
+
+def _country_series_data_layer_summary(country_series: dict[str, dict]) -> dict:
+    registry_countries = sorted(
+        code
+        for code, series in country_series.items()
+        if series.get("data_layer") == SERIES_DATA_LAYER
+    )
+    legacy_countries = sorted(
+        code
+        for code, series in country_series.items()
+        if series.get("data_layer") == LEGACY_DATA_LAYER
+    )
+    mixed_countries = sorted(
+        code
+        for code, series in country_series.items()
+        if series.get("data_layer") == MIXED_DATA_LAYER
+    )
+    risky_countries = sorted(
+        code for code, series in country_series.items() if series.get("loss_risk")
+    )
+    return {
+        "series_registry_country_count": len(registry_countries),
+        "mixed_country_count": len(mixed_countries),
+        "legacy_fallback_country_count": len(legacy_countries),
+        "series_registry_country_codes": registry_countries,
+        "mixed_country_codes": mixed_countries,
+        "legacy_fallback_country_codes": legacy_countries,
+        "loss_risk_country_codes": risky_countries,
+    }
+
+
 def build_country_data(
     country_code: str,
     country_name: str,
@@ -2021,9 +2719,15 @@ def build_country_data(
         series_dates = sorted(points.keys())
         series_cases = [points[d]["cases"] for d in series_dates]
         series_deaths = [points[d]["deaths"] for d in series_dates]
-        series_incidence = [avg_or_none(points[d]["incidence_rates"]) for d in series_dates]
-        series_incidence_sources = [dominant_value(points[d]["incidence_sources"]) for d in series_dates]
-        series_mortality = [avg_or_none(points[d]["mortality_rates"]) for d in series_dates]
+        series_incidence = [
+            avg_or_none(points[d]["incidence_rates"]) for d in series_dates
+        ]
+        series_incidence_sources = [
+            dominant_value(points[d]["incidence_sources"]) for d in series_dates
+        ]
+        series_mortality = [
+            avg_or_none(points[d]["mortality_rates"]) for d in series_dates
+        ]
         weekly_equiv_cases = calculate_weekly_equivalent(series_dates, series_cases)
 
         disease_info = diseases_by_id.get(disease_id, {})
@@ -2044,6 +2748,7 @@ def build_country_data(
             "total_deaths": sum(series_deaths),
             "latest_cases": series_cases[-1] if series_cases else 0,
             "latest_deaths": series_deaths[-1] if series_deaths else 0,
+            **_series_provenance_fields(recs),
         }
 
     incidence_source_counts: dict[str, int] = defaultdict(int)
@@ -2057,7 +2762,9 @@ def build_country_data(
         disease_series.keys(),
         key=lambda d: disease_series[d]["total_cases"],
         reverse=True,
-    )[:50]  # Cap at top 50 diseases for readability
+    )[
+        :50
+    ]  # Cap at top 50 diseases for readability
 
     heatmap_z = []
     for did in heatmap_diseases:
@@ -2072,9 +2779,7 @@ def build_country_data(
             row_z.append(math.log10(cases + 1))  # log scale
         heatmap_z.append(row_z)
 
-    heatmap_labels = [
-        disease_series[d]["name_en"] for d in heatmap_diseases
-    ]
+    heatmap_labels = [disease_series[d]["name_en"] for d in heatmap_diseases]
 
     country_name_en, country_name_zh = resolve_country_display_names(
         country_code,
@@ -2089,12 +2794,16 @@ def build_country_data(
         "total_cases": total_cases,
         "total_deaths": total_deaths,
         "disease_count": len(by_disease),
-        "frequency_meta": frequency_meta or {
+        "frequency_meta": frequency_meta
+        or {
             "source_frequency": "UNKNOWN",
             "canonical_frequency": "WEEKLY_EQUIVALENT_7D",
             "aggregation_rule": "normalize_counts_to_7_day_equivalent",
         },
-        "date_range": {"start": dates[0] if dates else None, "end": dates[-1] if dates else None},
+        "date_range": {
+            "start": dates[0] if dates else None,
+            "end": dates[-1] if dates else None,
+        },
         "comparison_basis": {
             "frequency": "WEEKLY_EQUIVALENT_7D",
             "metric": "weekly_equiv_cases",
@@ -2108,6 +2817,7 @@ def build_country_data(
             "note_zh": "发病率在网页数据生成阶段按 WPP 人口重算（每10万人）；若缺少人口数据则回退显示数据库原始发病率。",
         },
         "disease_series": disease_series,
+        "data_layer_summary": _data_layer_summary(disease_series),
         "heatmap": {
             "diseases": heatmap_diseases,
             "disease_labels": heatmap_labels,
@@ -2176,8 +2886,20 @@ def build_country_site_data(country_data: dict) -> dict:
             "ld": entry.get("latest_deaths", 0),
             "x": [date_index[date] for date in dates if date in date_index],
             "c": entry.get("cases") or [],
-            "w": [round(float(value), 2) for value in (entry.get("weekly_equiv_cases") or [])],
+            "w": [
+                round(float(value), 2)
+                for value in (entry.get("weekly_equiv_cases") or [])
+            ],
             "d": entry.get("deaths") or [],
+            "data_layer": entry.get("data_layer") or LEGACY_DATA_LAYER,
+            "projection_policy": entry.get("projection_policy") or "legacy_fallback",
+            "loss_risk": entry.get("loss_risk"),
+            "selected_series_codes": entry.get("selected_series_codes") or [],
+            "metric_layers": (entry.get("data_provenance") or {}).get("metric_layers")
+            or {},
+            "source_series": _compact_source_series_metadata(
+                entry.get("source_series") or []
+            ),
         }
         if ri:
             compact_entry["ri"] = ri
@@ -2197,6 +2919,7 @@ def build_country_site_data(country_data: dict) -> dict:
             "td": country_data.get("total_deaths"),
             "dc": country_data.get("disease_count"),
             "dr": country_data.get("date_range"),
+            "data_layer_summary": country_data.get("data_layer_summary") or {},
         },
         "dates": shared_dates,
         "sources": source_labels,
@@ -2244,21 +2967,33 @@ def build_disease_data(
         series_dates = sorted(points.keys())
         series_cases = [points[d]["cases"] for d in series_dates]
         series_deaths = [points[d]["deaths"] for d in series_dates]
-        series_incidence = [avg_or_none(points[d]["incidence_rates"]) for d in series_dates]
-        series_incidence_sources = [dominant_value(points[d]["incidence_sources"]) for d in series_dates]
+        series_incidence = [
+            avg_or_none(points[d]["incidence_rates"]) for d in series_dates
+        ]
+        series_incidence_sources = [
+            dominant_value(points[d]["incidence_sources"]) for d in series_dates
+        ]
 
         country_series[country_code] = {
             "dates": series_dates,
             "cases": series_cases,
-            "weekly_equiv_cases": calculate_weekly_equivalent(series_dates, series_cases),
+            "weekly_equiv_cases": calculate_weekly_equivalent(
+                series_dates, series_cases
+            ),
             "deaths": series_deaths,
             "incidence_rates": series_incidence,
             "incidence_sources": series_incidence_sources,
             "total_cases": sum(series_cases),
             "total_deaths": sum(series_deaths),
+            **_series_provenance_fields(disease_records),
         }
 
-    all_disease_records = [r for recs in all_records_by_country.values() for r in recs if r["disease_id"] == disease_id]
+    all_disease_records = [
+        r
+        for recs in all_records_by_country.values()
+        for r in recs
+        if r["disease_id"] == disease_id
+    ]
     monthly: dict[str, dict] = defaultdict(lambda: {"cases": 0, "deaths": 0})
     for r in all_disease_records:
         if r["year_month"]:
@@ -2276,6 +3011,7 @@ def build_disease_data(
         },
         "total_cases": sum(cs["total_cases"] for cs in country_series.values()),
         "total_deaths": sum(cs["total_deaths"] for cs in country_series.values()),
+        "data_layer_summary": _country_series_data_layer_summary(country_series),
     }
 
 
@@ -2343,6 +3079,15 @@ def build_disease_site_data(
                 for value in (entry.get("weekly_equiv_cases") or [])
             ],
             "d": entry.get("deaths") or [],
+            "data_layer": entry.get("data_layer") or LEGACY_DATA_LAYER,
+            "projection_policy": entry.get("projection_policy") or "legacy_fallback",
+            "loss_risk": entry.get("loss_risk"),
+            "selected_series_codes": entry.get("selected_series_codes") or [],
+            "metric_layers": (entry.get("data_provenance") or {}).get("metric_layers")
+            or {},
+            "source_series": _compact_source_series_metadata(
+                entry.get("source_series") or []
+            ),
         }
         if ri:
             compact_entry["ri"] = ri
@@ -2362,6 +3107,7 @@ def build_disease_site_data(
             "tc": disease_data.get("total_cases"),
             "td": disease_data.get("total_deaths"),
             "cc": len(country_series),
+            "data_layer_summary": disease_data.get("data_layer_summary") or {},
         },
         "dates": shared_dates,
         "sources": source_labels,
@@ -2379,21 +3125,31 @@ def build_disease_site_data(
 # ─────────────────────────────────────────────────────────────
 async def export(
     output_dir: Path,
-    download_output_dir: Path,
     manifest_output: Path,
-    download_url_base: str,
     allow_empty_export: bool = False,
+    *,
+    public_site_data_dir: Path = DEFAULT_PUBLIC_SITE_DATA_OUTPUT,
+    sharded_download_output_dir: Path = DEFAULT_SHARDED_DOWNLOAD_OUTPUT,
+    shard_max_uncompressed_bytes: int = DEFAULT_MAX_UNCOMPRESSED_BYTES,
+    github_snapshot_output_dir: Path = DEFAULT_GITHUB_SNAPSHOT_OUTPUT,
+    github_snapshot_retain_releases: int = DEFAULT_RETAIN_RELEASES,
+    github_snapshot_url_base: str = DEFAULT_GITHUB_SNAPSHOT_URL_BASE,
 ) -> None:
     await ensure_site_export_database_ready()
     generated_at = ""
 
-    # Load static disease list from CSV (no DB needed)
+    # Load the stable catalogue and the independently versioned ontology.
     csv_path = ROOT / "configs" / "standard_diseases.csv"
+    catalogue_diseases = load_standard_diseases(csv_path)
+    catalogue_ids = {disease["disease_id"] for disease in catalogue_diseases}
+    ontology = load_disease_ontology()
+    ontology_document = ontology.to_dict()
     diseases = [
         disease
-        for disease in load_standard_diseases(csv_path)
+        for disease in catalogue_diseases
         if should_generate_public_disease_page(disease)
     ]
+    enrich_diseases_with_ontology(diseases, ontology)
     diseases_by_id = {d["disease_id"]: d for d in diseases}
     disease_knowledge_briefs: dict[str, dict[str, dict]] = {}
     country_briefs: dict[str, dict[str, dict]] = {}
@@ -2406,20 +3162,28 @@ async def export(
     async with get_db() as session:
         population_enabled = await has_population_table(session)
         if population_enabled:
-            print("  Population table detected: incidence will use WPP-based computation")
+            print(
+                "  Population table detected: incidence will use WPP-based computation"
+            )
         else:
-            print("  Population table not found: incidence falls back to database values")
+            print(
+                "  Population table not found: incidence falls back to database values"
+            )
 
         disease_knowledge_briefs = await fetch_disease_knowledge_briefs(session)
         country_briefs = await fetch_country_briefs(session)
         if disease_knowledge_briefs:
-            print(f"  Knowledge briefs detected: {len(disease_knowledge_briefs)} diseases")
+            print(
+                f"  Knowledge briefs detected: {len(disease_knowledge_briefs)} diseases"
+            )
         else:
-            print("  Knowledge briefs not found: using local catalogue fallback")
+            print("  Knowledge briefs not found: disease profiles will remain blocked")
         if country_briefs:
             print(f"  Country briefs detected: {len(country_briefs)} countries")
         else:
-            print("  Country briefs not found: using generated country context fallback")
+            print(
+                "  Country briefs not found: using generated country context fallback"
+            )
 
         # ── Countries ──
         countries = await fetch_countries(session)
@@ -2448,22 +3212,35 @@ async def export(
             print(f"  Fetching records for {code}…")
             frequency_meta = await fetch_country_frequency_meta(session, code)
             country_source_info = build_country_source_info(code, frequency_meta)
-            try:
-                records = await fetch_disease_records(session, code, population_enabled)
-                if not records:
-                    await session.rollback()
-                    records = await fetch_disease_records_direct(session, code, population_enabled)
-            except Exception:
-                await session.rollback()
-                records = await fetch_disease_records_direct(session, code, population_enabled)
+            records = await fetch_disease_records(session, code, population_enabled)
+            validate_record_catalogue_coverage(
+                records,
+                catalogue_ids,
+                set(diseases_by_id),
+            )
 
             all_records_by_country[code] = records
             country_sources_by_code[code] = country_source_info
             country_data = build_country_data(
                 code, country_name_en, records, diseases_by_id, frequency_meta
             )
+            layer_summary = country_data["data_layer_summary"]
+            print(
+                "    Series-first: "
+                f"registry={layer_summary['series_registry_disease_count']}, "
+                f"mixed_gap_fill={layer_summary['mixed_disease_count']}, "
+                f"legacy_fallback={layer_summary['legacy_fallback_disease_count']}, "
+                f"risk_labelled={layer_summary['loss_risk_disease_count']}"
+            )
+            if layer_summary["non_additive_series_disease_ids"]:
+                print(
+                    "    Non-additive series kept separate: "
+                    + ", ".join(layer_summary["non_additive_series_disease_ids"])
+                )
             country_data["source_info"] = country_source_info
-            country_data = apply_country_brief_fields(country_data, country_briefs.get(code.upper()))
+            country_data = apply_country_brief_fields(
+                country_data, country_briefs.get(code.upper())
+            )
             # Augment countries_simple with stats
             for c in countries_simple:
                 if c["code"] == code:
@@ -2472,6 +3249,7 @@ async def export(
                     c["disease_count"] = country_data["disease_count"]
                     c["date_range"] = country_data["date_range"]
                     c["source_info"] = country_source_info
+                    c["data_layer_summary"] = country_data["data_layer_summary"]
 
             country_exports.append(
                 {
@@ -2484,7 +3262,9 @@ async def export(
             )
 
         reports = await fetch_reports(session)
-        total_record_count = sum(len(records) for records in all_records_by_country.values())
+        total_record_count = sum(
+            len(records) for records in all_records_by_country.values()
+        )
         if total_record_count == 0 and not allow_empty_export:
             message = (
                 "Refusing to overwrite site data with an empty export because no disease "
@@ -2500,43 +3280,19 @@ async def export(
         for country_export in country_exports:
             code = country_export["code"]
             country_name = country_export["country_name"]
-            country_name_zh = country_export.get("country_name_zh") or country_name_zh_by_code.get(code)
+            country_name_zh = country_export.get(
+                "country_name_zh"
+            ) or country_name_zh_by_code.get(code)
             country_data = country_export["country_data"]
             country_source_info = country_export["source_info"]
             country_data["generated_at"] = generated_at
             country_site_data = build_country_site_data(country_data)
-            country_download_rows = build_country_download_rows(
-                country_data, generated_at, country_source_info
+            country_canonical_facts = build_country_canonical_facts(
+                country_data,
+                country_source_info,
             )
-            country_download_payload = {
-                "metadata": {
-                    "dataset_kind": "country",
-                    "dataset_id": code.lower(),
-                    "dataset_slug": code.lower(),
-                    "dataset_name": country_name,
-                    "dataset_name_zh": country_name_zh,
-                    "generated_at": generated_at,
-                    "record_count": len(country_download_rows),
-                    "date_range": country_data.get("date_range"),
-                    "frequency_meta": country_data.get("frequency_meta"),
-                    "source_info": country_source_info,
-                    "comparison_basis": country_data.get("comparison_basis"),
-                    "incidence_rate_basis": country_data.get("incidence_rate_basis"),
-                },
-                "summary": {
-                    "country_code": code,
-                    "country_name": country_name,
-                    "country_name_en": country_name,
-                    "country_name_zh": country_name_zh,
-                    "total_cases": country_data.get("total_cases"),
-                    "total_deaths": country_data.get("total_deaths"),
-                    "disease_count": country_data.get("disease_count"),
-                },
-                "records": country_download_rows,
-            }
             country_export["site_data"] = country_site_data
-            country_export["download_rows"] = country_download_rows
-            country_export["download_payload"] = country_download_payload
+            country_export["canonical_facts"] = country_canonical_facts
             country_download_entries.append(
                 {
                     "kind": "country",
@@ -2546,18 +3302,9 @@ async def export(
                     "name_en": country_name,
                     "name_zh": country_name_zh,
                     "generated_at": generated_at,
-                    "record_count": len(country_download_rows),
+                    "record_count": len(country_canonical_facts),
                     "date_range": country_data.get("date_range"),
-                    "json_path": build_download_url(
-                        download_url_base, f"countries/{code.lower()}.json"
-                    ),
-                    "csv_path": build_download_url(
-                        download_url_base, f"countries/{code.lower()}.csv"
-                    ),
-                    "relative_json_path": f"countries/{code.lower()}.json",
-                    "relative_csv_path": f"countries/{code.lower()}.csv",
                     "site_json_path": f"/site-data/countries/{code.lower()}.json",
-                    "source_info": country_source_info,
                 }
             )
 
@@ -2570,52 +3317,31 @@ async def export(
                 country_name_by_code,
                 country_name_zh_by_code,
             )
-            disease_countries = sorted((disease_data.get("country_series") or {}).keys())
+            disease_countries = sorted(
+                (disease_data.get("country_series") or {}).keys()
+            )
             disease_source_info = []
             for country_code in disease_countries:
                 country_source = dict(country_sources_by_code.get(country_code, {}))
                 country_source["country_name"] = country_name_by_code.get(country_code)
-                country_source["country_name_en"] = country_name_by_code.get(country_code)
-                country_source["country_name_zh"] = country_name_zh_by_code.get(country_code)
+                country_source["country_name_en"] = country_name_by_code.get(
+                    country_code
+                )
+                country_source["country_name_zh"] = country_name_zh_by_code.get(
+                    country_code
+                )
                 disease_source_info.append(country_source)
             disease_data["generated_at"] = generated_at
             disease_data["source_info"] = disease_source_info
-            disease_download_rows = build_disease_download_rows(
-                disease_data,
-                generated_at,
-                country_sources_by_code,
-                country_name_by_code,
+            disease_record_count = sum(
+                len(series.get("dates") or [])
+                for series in (disease_data.get("country_series") or {}).values()
             )
-            disease_download_payload = {
-                "metadata": {
-                    "dataset_kind": "disease",
-                    "dataset_id": did,
-                    "dataset_slug": disease.get("slug"),
-                    "dataset_name": disease.get("name_en"),
-                    "generated_at": generated_at,
-                    "record_count": len(disease_download_rows),
-                    "country_count": len(disease_countries),
-                    "countries": disease_countries,
-                    "source_info": disease_source_info,
-                },
-                "summary": {
-                    "disease_id": did,
-                    "name_en": disease.get("name_en"),
-                    "name_zh": disease.get("name_zh"),
-                    "category": disease.get("category"),
-                    "total_cases": disease_data.get("total_cases"),
-                    "total_deaths": disease_data.get("total_deaths"),
-                    "global_monthly": disease_data.get("global_monthly"),
-                },
-                "records": disease_download_rows,
-            }
             disease_exports.append(
                 {
                     "disease_id": did,
                     "disease_data": disease_data,
                     "site_data": disease_site_data,
-                    "download_rows": disease_download_rows,
-                    "download_payload": disease_download_payload,
                 }
             )
             disease_download_entries.append(
@@ -2627,27 +3353,9 @@ async def export(
                     "name_en": disease.get("name_en"),
                     "name_zh": disease.get("name_zh"),
                     "generated_at": generated_at,
-                    "record_count": len(disease_download_rows),
+                    "record_count": disease_record_count,
                     "country_count": len(disease_countries),
-                    "countries": [
-                        {
-                            "code": country_code,
-                            "name": country_name_by_code.get(country_code),
-                            "name_en": country_name_by_code.get(country_code),
-                            "name_zh": country_name_zh_by_code.get(country_code),
-                        }
-                        for country_code in disease_countries
-                    ],
-                    "json_path": build_download_url(
-                        download_url_base, f"diseases/{did.lower()}.json"
-                    ),
-                    "csv_path": build_download_url(
-                        download_url_base, f"diseases/{did.lower()}.csv"
-                    ),
-                    "relative_json_path": f"diseases/{did.lower()}.json",
-                    "relative_csv_path": f"diseases/{did.lower()}.csv",
                     "site_json_path": f"/site-data/diseases/{did.lower()}.json",
-                    "source_info": disease_source_info,
                 }
             )
 
@@ -2656,8 +3364,61 @@ async def export(
             if detail:
                 report_details[rep["id"]] = detail
 
-    remove_stale_public_downloads(download_output_dir)
-    public_site_data_dir = DEFAULT_PUBLIC_SITE_DATA_OUTPUT
+    country_fact_count = sum(
+        len(country_export["canonical_facts"])
+        for country_export in country_exports
+    )
+    disease_view_count = sum(
+        int(entry["record_count"]) for entry in disease_download_entries
+    )
+    if disease_view_count != country_fact_count:
+        raise RuntimeError(
+            "Cannot build canonical v2 downloads because country and disease "
+            "views disagree: "
+            f"countries={country_fact_count}, diseases={disease_view_count}"
+        )
+
+    print(
+        "  Building canonical v2 download package "
+        f"({country_fact_count:,} unique facts)…"
+    )
+    sharded_manifest = build_globalid_canonical_download_package(
+        (
+            fact
+            for country_export in country_exports
+            for fact in country_export["canonical_facts"]
+        ),
+        sharded_download_output_dir,
+        generated_at=generated_at,
+        country_entries=country_download_entries,
+        disease_entries=disease_download_entries,
+        source_info_by_country=country_sources_by_code,
+        max_uncompressed_bytes=shard_max_uncompressed_bytes,
+    )
+    sharded_totals = sharded_manifest["totals"]
+    if sharded_totals["record_count"] != country_fact_count:
+        raise RuntimeError(
+            "Canonical v2 record total changed during packaging: "
+            f"expected={country_fact_count}, "
+            f"actual={sharded_totals['record_count']}"
+        )
+    print(
+        "  ✓ canonical v2 package: "
+        f"{sharded_totals['shard_count']:,} shards, "
+        f"{sharded_totals['compressed_bytes']:,} compressed bytes"
+    )
+    snapshot_result = build_github_snapshot(
+        sharded_download_output_dir,
+        github_snapshot_output_dir,
+        retain_releases=github_snapshot_retain_releases,
+    )
+    print(
+        "  ✓ GitHub-ready snapshot tree: "
+        f"{snapshot_result.release_count} releases, "
+        f"{snapshot_result.file_count:,} files, "
+        f"{snapshot_result.total_bytes:,} bytes"
+    )
+
     output_dir.mkdir(parents=True, exist_ok=True)
     (output_dir / "countries").mkdir(exist_ok=True)
     (output_dir / "diseases").mkdir(exist_ok=True)
@@ -2665,13 +3426,8 @@ async def export(
     (output_dir / "reports").mkdir(exist_ok=True)
     reset_public_data_dir(public_site_data_dir / "countries")
     reset_public_data_dir(public_site_data_dir / "diseases")
-    download_output_dir.mkdir(parents=True, exist_ok=True)
-    (download_output_dir / "countries").mkdir(exist_ok=True)
-    (download_output_dir / "diseases").mkdir(exist_ok=True)
     clean_generated_dir(output_dir / "countries")
     clean_generated_dir(output_dir / "diseases")
-    clean_generated_dir(download_output_dir / "countries")
-    clean_generated_dir(download_output_dir / "diseases")
     clean_generated_dir(output_dir / "disease-knowledge")
     clean_generated_dir(output_dir / "reports")
 
@@ -2681,12 +3437,20 @@ async def export(
     )
     print(f"  ✓ diseases/index.json ({len(diseases)} diseases)")
 
+    ontology_json = json.dumps(ontology_document, ensure_ascii=False, indent=2)
+    (output_dir / "disease-ontology.json").write_text(ontology_json, encoding="utf-8")
+    (public_site_data_dir / "disease-ontology.json").write_text(
+        ontology_json, encoding="utf-8"
+    )
+    print(
+        "  ✓ disease-ontology.json "
+        f"({len(ontology.concept_ids)} concepts, {len(ontology.series_ids)} series)"
+    )
+
     for country_export in country_exports:
         code = country_export["code"]
         country_data = country_export["country_data"]
         site_data = country_export["site_data"]
-        country_download_rows = country_export["download_rows"]
-        country_download_payload = country_export["download_payload"]
         country_json = json.dumps(country_data, ensure_ascii=False, indent=2)
         (output_dir / "countries" / f"{code.lower()}.json").write_text(
             country_json, encoding="utf-8"
@@ -2695,24 +3459,25 @@ async def export(
             json.dumps(site_data, ensure_ascii=False, separators=(",", ":")),
             encoding="utf-8",
         )
-        country_json_path = download_output_dir / "countries" / f"{code.lower()}.json"
-        country_csv_path = download_output_dir / "countries" / f"{code.lower()}.csv"
-        country_json_path.write_text(
-            json.dumps(country_download_payload, ensure_ascii=False, indent=2),
-            encoding="utf-8",
+        print(
+            f"  ✓ countries/{code.lower()}.json ({len(all_records_by_country[code])} records)"
         )
-        write_csv(country_csv_path, country_download_rows)
-        print(f"  ✓ countries/{code.lower()}.json ({len(all_records_by_country[code])} records)")
 
+    knowledge_mode_counts: dict[str, int] = defaultdict(int)
+    knowledge_completeness_values: list[float] = []
     for disease_export in disease_exports:
         did = disease_export["disease_id"]
         disease_data = disease_export["disease_data"]
         disease_site_data = disease_export["site_data"]
-        disease_download_rows = disease_export["download_rows"]
-        disease_download_payload = disease_export["download_payload"]
         disease_knowledge_payload = build_disease_knowledge_fields(
             diseases_by_id[did],
             disease_knowledge_briefs.get(did),
+        )
+        knowledge_mode_counts[
+            str(disease_knowledge_payload.get("knowledge_display_mode") or "blocked")
+        ] += 1
+        knowledge_completeness_values.append(
+            float(disease_knowledge_payload.get("knowledge_completeness") or 0.0)
         )
         (output_dir / "diseases" / f"{did.lower()}.json").write_text(
             json.dumps(disease_data, ensure_ascii=False, indent=2), encoding="utf-8"
@@ -2725,22 +3490,23 @@ async def export(
             json.dumps(disease_site_data, ensure_ascii=False, separators=(",", ":")),
             encoding="utf-8",
         )
-        disease_json_path = download_output_dir / "diseases" / f"{did.lower()}.json"
-        disease_csv_path = download_output_dir / "diseases" / f"{did.lower()}.csv"
-        disease_json_path.write_text(
-            json.dumps(disease_download_payload, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
-        write_csv(disease_csv_path, disease_download_rows)
-    print(f"  ✓ diseases/{diseases[0]['disease_id'].lower()}.json … ({len(diseases)} files)")
-    print(f"  ✓ disease-knowledge/{diseases[0]['disease_id'].lower()}.json … ({len(diseases)} files)")
     print(
-        "  ✓ downloads/countries/*.json,csv "
-        f"({len(country_download_entries)} countries)"
+        f"  ✓ diseases/{diseases[0]['disease_id'].lower()}.json … ({len(diseases)} files)"
     )
     print(
-        "  ✓ downloads/diseases/*.json,csv "
-        f"({len(disease_download_entries)} diseases)"
+        f"  ✓ disease-knowledge/{diseases[0]['disease_id'].lower()}.json … ({len(diseases)} files)"
+    )
+    print(
+        "  Knowledge quality: "
+        + ", ".join(
+            f"{mode}={knowledge_mode_counts.get(mode, 0)}"
+            for mode in ("full", "partial", "blocked")
+        )
+    )
+    print(
+        "  ✓ v2 dataset indexes "
+        f"({len(country_download_entries)} countries, "
+        f"{len(disease_download_entries)} diseases)"
     )
 
     (output_dir / "reports" / "index.json").write_text(
@@ -2761,6 +3527,26 @@ async def export(
         "total_diseases": len(diseases),
         "total_reports": len(reports),
         "countries": countries_simple,
+        "knowledge_quality": {
+            "display_modes": dict(sorted(knowledge_mode_counts.items())),
+            "average_completeness": (
+                round(
+                    sum(knowledge_completeness_values)
+                    / len(knowledge_completeness_values),
+                    3,
+                )
+                if knowledge_completeness_values
+                else 0.0
+            ),
+            "schema_version": 3,
+        },
+        "disease_ontology": {
+            "registry_id": ontology_document["registry_id"],
+            "schema_version": ontology_document["schema_version"],
+            "default_rollup_policy": ontology_document["default_rollup_policy"],
+            "concept_count": len(ontology.concept_ids),
+            "source_series_count": len(ontology.series_ids),
+        },
     }
     (output_dir / "meta.json").write_text(
         json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8"
@@ -2778,24 +3564,18 @@ async def export(
     )
     print("  ✓ about.json")
 
-    downloads_manifest = {
-        "generated_at": generated_at,
-        "includes_source_info": True,
-        "formats": ["json", "csv"],
-        "download_url_base": download_url_base,
-        "countries": country_download_entries,
-        "diseases": disease_download_entries,
-    }
+    downloads_manifest = build_frontend_download_manifest(
+        sharded_manifest,
+        snapshot_url_base=github_snapshot_url_base,
+        country_entries=country_download_entries,
+        disease_entries=disease_download_entries,
+    )
     manifest_output.parent.mkdir(parents=True, exist_ok=True)
     manifest_output.write_text(
         json.dumps(downloads_manifest, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
-    (download_output_dir / "manifest.json").write_text(
-        json.dumps(downloads_manifest, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-    print("  ✓ downloads manifest")
+    print("  ✓ v2 frontend downloads manifest")
     print(f"\nDone. Data written to: {output_dir}")
 
 
@@ -2808,10 +3588,49 @@ def main() -> None:
         help=f"Output directory (default: {DEFAULT_OUTPUT})",
     )
     parser.add_argument(
-        "--download-output",
+        "--public-site-data-output",
         type=Path,
-        default=DEFAULT_DOWNLOAD_OUTPUT,
-        help=f"Download assets output directory (default: {DEFAULT_DOWNLOAD_OUTPUT})",
+        default=DEFAULT_PUBLIC_SITE_DATA_OUTPUT,
+        help=(
+            "Compact browser data output directory "
+            f"(default: {DEFAULT_PUBLIC_SITE_DATA_OUTPUT})"
+        ),
+    )
+    parser.add_argument(
+        "--sharded-download-output",
+        type=Path,
+        default=DEFAULT_SHARDED_DOWNLOAD_OUTPUT,
+        help=(
+            "Canonical v2 sharded package output directory "
+            f"(default: {DEFAULT_SHARDED_DOWNLOAD_OUTPUT})"
+        ),
+    )
+    parser.add_argument(
+        "--shard-max-uncompressed-bytes",
+        type=int,
+        default=DEFAULT_MAX_UNCOMPRESSED_BYTES,
+        help=(
+            "Maximum uncompressed NDJSON bytes per v2 shard "
+            f"(default: {DEFAULT_MAX_UNCOMPRESSED_BYTES})"
+        ),
+    )
+    parser.add_argument(
+        "--github-snapshot-output",
+        type=Path,
+        default=DEFAULT_GITHUB_SNAPSHOT_OUTPUT,
+        help=(
+            "Local GitHub-ready bounded snapshot tree "
+            f"(default: {DEFAULT_GITHUB_SNAPSHOT_OUTPUT})"
+        ),
+    )
+    parser.add_argument(
+        "--github-snapshot-retain-releases",
+        type=int,
+        default=DEFAULT_RETAIN_RELEASES,
+        help=(
+            "Number of complete v2 releases retained in the GitHub snapshot "
+            f"tree (default: {DEFAULT_RETAIN_RELEASES})"
+        ),
     )
     parser.add_argument(
         "--manifest-output",
@@ -2820,49 +3639,12 @@ def main() -> None:
         help=f"Frontend manifest output path (default: {DEFAULT_DOWNLOAD_MANIFEST})",
     )
     parser.add_argument(
-        "--download-url-base",
-        default=DEFAULT_DOWNLOAD_URL_BASE,
+        "--github-snapshot-url-base",
+        default=DEFAULT_GITHUB_SNAPSHOT_URL_BASE,
         help=(
-            "Public base URL used in the generated download manifest "
-            f"(default: {DEFAULT_DOWNLOAD_URL_BASE})"
+            "Public raw URL of the v2 snapshot branch used by the frontend "
+            f"(default: {DEFAULT_GITHUB_SNAPSHOT_URL_BASE})"
         ),
-    )
-    parser.add_argument(
-        "--publish-downloads",
-        action="store_true",
-        help="Publish generated download assets to the dedicated git repository after export",
-    )
-    parser.add_argument(
-        "--download-repo-url",
-        default=DEFAULT_DOWNLOAD_REPO_URL,
-        help=f"Target git repository URL for download assets (default: {DEFAULT_DOWNLOAD_REPO_URL})",
-    )
-    parser.add_argument(
-        "--download-repo-branch",
-        default=DEFAULT_DOWNLOAD_REPO_BRANCH,
-        help=f"Target git branch for download assets (default: {DEFAULT_DOWNLOAD_REPO_BRANCH})",
-    )
-    parser.add_argument(
-        "--download-repo-workdir",
-        type=Path,
-        default=DEFAULT_DOWNLOAD_REPO_WORKDIR,
-        help=(
-            "Temporary local checkout path for the download repo "
-            f"(default: {DEFAULT_DOWNLOAD_REPO_WORKDIR})"
-        ),
-    )
-    parser.add_argument(
-        "--download-commit-message",
-        default=DEFAULT_DOWNLOAD_COMMIT_MESSAGE,
-        help=(
-            "Git commit message used when publishing download assets "
-            f"(default: {DEFAULT_DOWNLOAD_COMMIT_MESSAGE})"
-        ),
-    )
-    parser.add_argument(
-        "--allow-empty-download-publish",
-        action="store_true",
-        help="Allow publishing download assets even when the generated export has zero records",
     )
     parser.add_argument(
         "--allow-empty-export",
@@ -2871,34 +3653,22 @@ def main() -> None:
     )
     args = parser.parse_args()
     print(f"Exporting site data to {args.output} …")
-    print(f"Writing download assets to {args.download_output} …")
+    print(f"Writing canonical v2 package to {args.sharded_download_output} …")
+    print(f"Preparing GitHub snapshot tree at {args.github_snapshot_output} …")
     print(f"Writing download manifest to {args.manifest_output} …\n")
     asyncio.run(
         export(
             args.output,
-            args.download_output,
             args.manifest_output,
-            args.download_url_base,
             args.allow_empty_export,
+            public_site_data_dir=args.public_site_data_output,
+            sharded_download_output_dir=args.sharded_download_output,
+            shard_max_uncompressed_bytes=args.shard_max_uncompressed_bytes,
+            github_snapshot_output_dir=args.github_snapshot_output,
+            github_snapshot_retain_releases=args.github_snapshot_retain_releases,
+            github_snapshot_url_base=args.github_snapshot_url_base,
         )
     )
-    if args.publish_downloads:
-        if not export_contains_download_records(args.download_output) and not args.allow_empty_download_publish:
-            raise RuntimeError(
-                "Refusing to publish empty download assets because the current export has zero records. "
-                "Import data first, or pass --allow-empty-download-publish if this is intentional."
-            )
-        print(
-            "\nPublishing generated download assets to "
-            f"{args.download_repo_url} ({args.download_repo_branch}) …"
-        )
-        publish_download_assets(
-            args.download_output,
-            args.download_repo_url,
-            args.download_repo_branch,
-            args.download_repo_workdir,
-            args.download_commit_message,
-        )
 
 
 if __name__ == "__main__":

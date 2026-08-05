@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
@@ -61,7 +62,83 @@ async def test_terminate_process_tree_signals_entire_process_group(monkeypatch):
 
     await service._terminate_process_tree(FakeProcess())
 
-    assert signals == [(4321, release_module.signal.SIGTERM)]
+    assert signals == [
+        (4321, release_module.signal.SIGTERM),
+        (4321, release_module.signal.SIGKILL),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_run_logged_command_timeout_terminates_process_group_and_records_error(
+    monkeypatch,
+    tmp_path,
+):
+    service = DataReleaseService()
+    entries = []
+    created_with = {}
+    terminated = []
+
+    class BlockingStream:
+        async def readline(self):
+            await asyncio.Event().wait()
+
+    class FakeProcess:
+        pid = 9876
+        returncode = None
+        stdout = BlockingStream()
+
+        async def wait(self):
+            await asyncio.Event().wait()
+
+    process = FakeProcess()
+
+    async def create_subprocess(*_args, **kwargs):
+        created_with.update(kwargs)
+        return process
+
+    async def add_workbook_entry(_task_uuid, **kwargs):
+        entries.append(kwargs)
+
+    async def is_cancel_requested(_task_uuid):
+        return False
+
+    async def terminate_process_tree(target):
+        terminated.append(target)
+        target.returncode = -release_module.signal.SIGTERM
+
+    monkeypatch.setattr(
+        release_module.asyncio,
+        "create_subprocess_exec",
+        create_subprocess,
+    )
+    monkeypatch.setattr(
+        release_module.task_manager,
+        "add_workbook_entry",
+        add_workbook_entry,
+    )
+    monkeypatch.setattr(
+        release_module.task_manager,
+        "is_cancel_requested",
+        is_cancel_requested,
+    )
+    monkeypatch.setattr(service, "_terminate_process_tree", terminate_process_tree)
+
+    with pytest.raises(RuntimeError, match=r"Test Command timed out after 0\.02 seconds"):
+        await service._run_logged_command(
+            "task-timeout",
+            title="Test Command",
+            cmd=["long-running-command", "--flag"],
+            cwd=tmp_path,
+            timeout_seconds=0.02,
+        )
+
+    assert created_with["start_new_session"] is (release_module.os.name == "posix")
+    assert terminated == [process]
+    assert entries[0]["metadata"]["timeout_seconds"] == 0.02
+    assert entries[-1]["entry_type"] == "error"
+    assert entries[-1]["title"] == "Test Command Timed Out"
+    assert "terminated process group 9876" in entries[-1]["content"]
+    assert entries[-1]["metadata"]["event"] == "command_timeout"
 
 
 @pytest.mark.asyncio
@@ -168,6 +245,129 @@ def test_cloudflare_deploy_command_targets_explicit_production_branch():
     assert command[command.index("--commit-hash") + 1] == "a" * 40
     assert command[command.index("--commit-message") + 1] == "publish verified release"
     assert "--commit-dirty=false" in command
+
+
+def test_generate_site_data_command_builds_v2_without_legacy_git_publisher(tmp_path):
+    service = DataReleaseService()
+    python_path = tmp_path / "python"
+
+    command = service._generate_site_data_command(
+        python_path=python_path,
+        snapshot_url_base="https://data.example/snapshot-v2",
+    )
+
+    assert command == [
+        str(python_path),
+        "scripts/generate_site_data.py",
+        "--github-snapshot-url-base",
+        "https://data.example/snapshot-v2",
+    ]
+    assert {
+        "--download-mode",
+        "--publish-downloads",
+        "--download-repo-url",
+        "--download-repo-branch",
+        "--download-commit-message",
+        "--download-url-base",
+    }.isdisjoint(command)
+
+
+@pytest.mark.asyncio
+async def test_release_preflight_checks_v2_snapshot_repo_when_enabled(
+    monkeypatch, tmp_path
+):
+    service = DataReleaseService()
+    python_path = tmp_path / "python"
+    python_path.touch()
+    job = release_module.DataReleaseJobConfig(
+        job_id="site-release",
+        name="Site Release",
+        include_git_push=True,
+        include_cloudflare_deploy=False,
+    )
+
+    async def no_op():
+        return None
+
+    async def load_jobs():
+        return [job]
+
+    async def no_paths():
+        return []
+
+    async def command_available(*_args, **_kwargs):
+        return {"returncode": 0, "stdout": "4.0.0"}
+
+    async def cloudflare_disabled(*_args, **_kwargs):
+        return {"payload": {}, "blockers": []}
+
+    async def snapshot_branch():
+        return "main"
+
+    check_calls = 0
+
+    async def v2_repo_check(*_args, **_kwargs):
+        nonlocal check_calls
+        check_calls += 1
+        return {
+            "payload": {
+                "repo_url": "git@example/data.git",
+                "branch": "snapshot-v2",
+                "raw_base_url": "https://data.example/snapshot-v2",
+                "read_access_ok": True,
+                "write_access_ok": True,
+                "read_check_output": "ok",
+                "write_check_output": "ok",
+                "ssh_transport": "default",
+            },
+            "blockers": [],
+        }
+
+    monkeypatch.setattr(service, "ensure_storage", no_op)
+    monkeypatch.setattr(service, "load_jobs", load_jobs)
+    monkeypatch.setattr(service, "_git_status_paths", no_paths)
+    monkeypatch.setattr(service, "_run_capture", command_available)
+    monkeypatch.setattr(service, "_cloudflare_check", cloudflare_disabled)
+    monkeypatch.setattr(service, "_data_refresh_snapshot_branch", snapshot_branch)
+    monkeypatch.setattr(service, "_download_repo_check", v2_repo_check)
+    monkeypatch.setattr(service, "_download_repo_url", lambda: "git@example/data.git")
+    monkeypatch.setattr(
+        service,
+        "_download_repo_raw_base",
+        lambda _job: "https://data.example/releases/test-release",
+    )
+    monkeypatch.setattr(service, "_python_executable", lambda: python_path)
+    monkeypatch.setattr(
+        service,
+        "_config",
+        lambda: SimpleNamespace(
+            commit_data_refresh_snapshot=False,
+            push_data_refresh_snapshot=False,
+            data_refresh_snapshot_remote="origin",
+        ),
+    )
+
+    checks = await service.integration_checks("site-release")
+
+    assert checks["overall_ready"] is True
+    assert check_calls == 1
+    assert checks["git"]["branch"] == "snapshot-v2"
+    assert checks["git"]["read_access_ok"] is True
+    assert checks["git"]["write_access_ok"] is True
+
+
+def test_snapshot_publish_command_uses_only_v2_publisher(tmp_path):
+    service = DataReleaseService()
+    command = service._publish_github_snapshot_command(
+        python_path=tmp_path / "python",
+        repo_url="git@example/data.git",
+        commit_message="publish v2",
+    )
+
+    assert command[1] == "scripts/publish_github_snapshot_v2.py"
+    assert "--push" in command
+    assert "--snapshot-dir" in command
+    assert "publish_download_repo.py" not in command
 
 
 def test_cloudflare_deployment_match_requires_production_branch_and_commit():

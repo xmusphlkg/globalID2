@@ -307,7 +307,7 @@ const pageTitle = diseaseMeta
 
       {diseaseDownload && (
         <DownloadPanel
-          entry={diseaseDownload}
+          entry={{ ...diseaseDownload, source_info: countryData?.source_info }}
           title="下载疾病数据集"
           initialLanguage="zh"
           descriptionEn="Download the full disease dataset referenced by this report section, including source metadata."
