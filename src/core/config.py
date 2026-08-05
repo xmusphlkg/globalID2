@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -310,6 +310,12 @@ class RawArchiveSettings(_BaseEnvSettings):
     commit_batch_mib: int = Field(default=96, ge=48, le=2048, description="每次增量推送的最大压缩字节 MiB")
     zstd_level: int = Field(default=6, ge=1, le=19, description="zstd 压缩级别")
     git_timeout_seconds: int = Field(default=1800, ge=60, le=7200, description="单次 Git 网络操作超时秒数")
+
+    @model_validator(mode="after")
+    def validate_commit_batch_size(self) -> "RawArchiveSettings":
+        if self.commit_batch_mib < self.chunk_mib:
+            raise ValueError("commit_batch_mib must be greater than or equal to chunk_mib")
+        return self
 
 
 class AppSettingsConfig(BaseSettings):
