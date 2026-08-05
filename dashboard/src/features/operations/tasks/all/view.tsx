@@ -24,7 +24,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { CHART_TOKENS } from "@/lib/chart-theme";
 import { type TaskItem, useTaskDetail, useTasks, useTaskWebSocket } from "@/features/operations/tasks/api";
 import { t } from "@/lib/i18n";
-import { formatDate } from "@/lib/utils";
+import { formatDateTime } from "@/lib/utils";
 import { useAppStore } from "@/stores/app-store";
 
 const statusOptions = ["pending", "queued", "running", "retrying", "completed", "failed", "cancelled"];
@@ -49,13 +49,6 @@ const statusColors: Record<string, string> = {
   cancelled: CHART_TOKENS.neutral,
   retrying: "#f97316",
 };
-
-function formatDateTime(value?: string | null): string {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString();
-}
 
 function formatDuration(seconds?: number | null): string {
   if (!seconds && seconds !== 0) return "-";
@@ -219,7 +212,7 @@ export default function TasksPage() {
         header: lang === "zh" ? "创建时间" : "Created",
         render: (task) => (
           <span className="whitespace-nowrap text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
-            {formatDate(task.created_at)}
+            {formatDateTime(task.created_at)}
           </span>
         ),
       },

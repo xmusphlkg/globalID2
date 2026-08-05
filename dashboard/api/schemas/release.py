@@ -2,7 +2,7 @@
 
 from typing import Any, List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class DataReleaseJobOut(BaseModel):
@@ -37,6 +37,11 @@ class DataReleaseConfigOut(BaseModel):
     timezone: str
     poll_interval_seconds: int
     auto_failure_cooldown_minutes: int = 0
+    # Rolling-upgrade compatibility for dashboard builds older than dc85d33c.
+    # Keep these response-only flags for one transition cycle. The retired
+    # snapshot workflow must never be re-enabled through these aliases.
+    commit_data_refresh_snapshot: bool = False
+    push_data_refresh_snapshot: bool = False
     last_tick_at: Optional[str] = None
     jobs: List[DataReleaseJobOut] = []
 
@@ -95,6 +100,8 @@ class DataReleaseGitCheckOut(BaseModel):
     read_check_output: Optional[str] = None
     write_check_output: Optional[str] = None
     require_clean_worktree: bool
+    # Deprecated response alias used by older dashboard bundles.
+    dirty_release_paths: List[str] = []
     dirty_blocking_paths: List[str] = []
 
 
@@ -135,6 +142,18 @@ class DataReleaseRepositoryBoundaryOut(BaseModel):
     enforced: bool
 
 
+class DataReleaseLegacySnapshotOut(BaseModel):
+    """Safe, disabled placeholder for pre-dc85d33c dashboard bundles."""
+
+    enabled: bool = False
+    push_enabled: bool = False
+    script_path: str = ""
+    script_exists: bool = False
+    paths: List[str] = []
+    remote: str = "origin"
+    branch: str = ""
+
+
 class DataReleaseChecksOut(BaseModel):
     checked_at: str
     overall_ready: bool
@@ -143,4 +162,9 @@ class DataReleaseChecksOut(BaseModel):
     cloudflare: DataReleaseCloudflareCheckOut
     commands: DataReleaseCommandCheckOut
     repository_boundary: DataReleaseRepositoryBoundaryOut
+    # Deprecated response alias. Remove only after old frontend bundles can no
+    # longer be served from browser/CDN caches.
+    data_refresh_snapshot: DataReleaseLegacySnapshotOut = Field(
+        default_factory=DataReleaseLegacySnapshotOut
+    )
     raw: Optional[dict[str, Any]] = None

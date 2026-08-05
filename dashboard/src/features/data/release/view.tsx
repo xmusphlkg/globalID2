@@ -51,7 +51,7 @@ import {
   useWorkerStatus,
 } from "@/features/operations/tasks/api";
 import { t } from "@/lib/i18n";
-import { cn } from "@/lib/utils";
+import { cn, formatDateTime, formatRelativeTime } from "@/lib/utils";
 import { useAppStore } from "@/stores/app-store";
 
 const defaultForm: DataReleaseJobInput = {
@@ -83,29 +83,6 @@ type JobFilter = "all" | "enabled" | "disabled" | "failed" | "auto";
 
 const inputClass =
   "h-10 w-full rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm text-tremor-content-strong outline-none transition focus:border-tremor-brand-subtle focus:ring-2 focus:ring-tremor-brand-muted disabled:bg-tremor-background-subtle disabled:text-tremor-content-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong";
-
-function formatDateTime(value?: string | null): string {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString();
-}
-
-function relativeTime(value?: string | null): string {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffSec = Math.max(0, Math.round(diffMs / 1000));
-  const diffMin = Math.round(diffSec / 60);
-  const diffHr = Math.round(diffMin / 60);
-  const diffDay = Math.round(diffHr / 24);
-  if (diffSec < 60) return `${diffSec}s ago`;
-  if (diffMin < 60) return `${diffMin}m ago`;
-  if (diffHr < 24) return `${diffHr}h ago`;
-  return `${diffDay}d ago`;
-}
 
 function scheduleLabel(job: { interval_minutes?: number | null; daily_time?: string | null; timezone?: string | null }): string {
   if (job.interval_minutes) return `Every ${job.interval_minutes} min`;
@@ -591,7 +568,7 @@ export default function DataReleasePage() {
         header: lang === "zh" ? "创建时间" : "Created",
         render: (task) => (
           <div className="whitespace-nowrap text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle" title={formatDateTime(task.created_at)}>
-            {relativeTime(task.created_at)}
+            {formatRelativeTime(task.created_at, lang === "zh" ? "zh-CN" : "en")}
           </div>
         ),
       },
@@ -755,7 +732,13 @@ export default function DataReleasePage() {
                 <AccessDetail label="Blocking Changes" value={String(checks?.git.dirty_blocking_paths.length ?? 0)} />
                 <AccessDetail
                   label={lang === "zh" ? "代码仓库边界" : "Code Repository Boundary"}
-                  value={!checks ? "-" : checks.repository_boundary.enforced ? "Enforced" : "Violated"}
+                  value={
+                    checks?.repository_boundary
+                      ? checks.repository_boundary.enforced
+                        ? "Enforced"
+                        : "Violated"
+                      : "-"
+                  }
                 />
               </div>
               <CheckOutput label="Read Check" value={checks?.git.read_check_output} />

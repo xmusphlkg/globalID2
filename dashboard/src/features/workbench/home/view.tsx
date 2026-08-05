@@ -23,7 +23,7 @@ import { useOverviewSummary, useQualityStats } from "@/features/data/api";
 import { type TaskItem, useTasks, useTaskWebSocket, useWorkerStatus } from "@/features/operations/tasks/api";
 import { useReports } from "@/features/reports/api";
 import { t } from "@/lib/i18n";
-import { formatDate, formatNumber } from "@/lib/utils";
+import { formatDate, formatDateTime, formatNumber } from "@/lib/utils";
 import { getCountryDisplayName, useCountries } from "@/shared/config/countries";
 import { allRoutes, visibleNavigationSections } from "@/shared/navigation/route-registry";
 import { useAppStore } from "@/stores/app-store";
@@ -49,9 +49,9 @@ function statusTone(status?: string | null): "neutral" | "info" | "success" | "w
 }
 
 function taskAge(task: TaskItem, lang: "en" | "zh") {
-  if (task.completed_at) return formatDate(task.completed_at);
-  if (task.started_at) return lang === "zh" ? `启动 ${formatDate(task.started_at)}` : `Started ${formatDate(task.started_at)}`;
-  return formatDate(task.created_at);
+  if (task.completed_at) return formatDateTime(task.completed_at);
+  if (task.started_at) return lang === "zh" ? `启动 ${formatDateTime(task.started_at)}` : `Started ${formatDateTime(task.started_at)}`;
+  return formatDateTime(task.created_at);
 }
 
 export default function HomePage() {

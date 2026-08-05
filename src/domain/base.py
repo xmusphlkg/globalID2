@@ -3,7 +3,7 @@ GlobalID V2 Domain Models Base
 
 SQLAlchemy 模型基类和通用混入类
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict
 
 from sqlalchemy import Column, DateTime, Integer
@@ -15,10 +15,15 @@ class Base(DeclarativeBase):
     pass
 
 
+def utc_now() -> datetime:
+    """Return an aware UTC timestamp for timezone-aware database columns."""
+    return datetime.now(timezone.utc)
+
+
 class TimestampMixin:
     """时间戳混入类"""
     
-    created_at = Column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
     updated_at = Column(
         DateTime,
         default=datetime.utcnow,
