@@ -107,12 +107,82 @@ export interface DataReleaseChecks {
     wrangler_available: boolean;
     wrangler_version?: string | null;
   };
-  repository_boundary: {
+  repository_boundary?: {
     generated_paths: string[];
     tracked_paths: string[];
     enforced: boolean;
   };
   raw?: Record<string, unknown> | null;
+}
+
+type DataReleaseChecksResponse = Partial<
+  Omit<DataReleaseChecks, "git" | "cloudflare" | "commands" | "repository_boundary">
+> & {
+  git?: Partial<DataReleaseChecks["git"]> & { dirty_release_paths?: unknown };
+  cloudflare?: Partial<DataReleaseChecks["cloudflare"]>;
+  commands?: Partial<DataReleaseChecks["commands"]>;
+  repository_boundary?: Partial<NonNullable<DataReleaseChecks["repository_boundary"]>>;
+  data_refresh_snapshot?: unknown;
+};
+
+function stringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}
+
+/**
+ * Normalize release-check responses at the API boundary. During a rolling
+ * upgrade the browser can temporarily talk to either the old or new API, so
+ * rendering code must receive stable nested objects and arrays.
+ */
+export function normalizeDataReleaseChecks(payload: DataReleaseChecksResponse): DataReleaseChecks {
+  const git = payload.git ?? {};
+  const cloudflare = payload.cloudflare ?? {};
+  const commands = payload.commands ?? {};
+  const boundary = payload.repository_boundary;
+  const repositoryBoundary = typeof boundary?.enforced === "boolean"
+    ? {
+        generated_paths: stringArray(boundary.generated_paths),
+        tracked_paths: stringArray(boundary.tracked_paths),
+        enforced: boundary.enforced,
+      }
+    : undefined;
+
+  return {
+    checked_at: typeof payload.checked_at === "string" ? payload.checked_at : "",
+    overall_ready: payload.overall_ready === true,
+    blockers: stringArray(payload.blockers),
+    git: {
+      env_var: typeof git.env_var === "string" ? git.env_var : "",
+      repo_url: git.repo_url,
+      branch: typeof git.branch === "string" ? git.branch : "",
+      raw_base_url: git.raw_base_url,
+      read_access_ok: git.read_access_ok === true,
+      write_access_ok: git.write_access_ok === true,
+      read_check_output: git.read_check_output,
+      write_check_output: git.write_check_output,
+      require_clean_worktree: git.require_clean_worktree === true,
+      dirty_blocking_paths: stringArray(git.dirty_blocking_paths),
+    },
+    cloudflare: {
+      project_name: cloudflare.project_name,
+      token_present: cloudflare.token_present === true,
+      account_id_present: cloudflare.account_id_present === true,
+      project_access_ok: cloudflare.project_access_ok === true,
+      subdomain: cloudflare.subdomain,
+      domains: stringArray(cloudflare.domains),
+      production_branch: cloudflare.production_branch,
+      latest_production_deployment: cloudflare.latest_production_deployment,
+      error: cloudflare.error,
+    },
+    commands: {
+      python_path: typeof commands.python_path === "string" ? commands.python_path : "",
+      python_exists: commands.python_exists === true,
+      wrangler_available: commands.wrangler_available === true,
+      wrangler_version: commands.wrangler_version,
+    },
+    repository_boundary: repositoryBoundary,
+    raw: payload.raw,
+  };
 }
 
 export function useDataReleaseConfig() {
@@ -134,10 +204,12 @@ export function useDataReleaseJobs() {
 export function useDataReleaseChecks(jobId: string | null) {
   return useQuery<DataReleaseChecks>({
     queryKey: ["data-release-checks", jobId],
-    queryFn: () =>
-      apiFetch(`/release/jobs/${jobId}/checks`, {
+    queryFn: async () => {
+      const payload = await apiFetch<DataReleaseChecksResponse>(`/release/jobs/${jobId}/checks`, {
         timeoutMs: 60_000,
-      }),
+      });
+      return normalizeDataReleaseChecks(payload);
+    },
     enabled: !!jobId,
     staleTime: 10 * 1000,
   });

@@ -6,6 +6,7 @@ import type { Color } from "@/components/ui/tremor";
 import type { TaskDetail } from "@/lib/hooks/useTasks";
 import { useReportRuns } from "@/lib/hooks/useReports";
 import { getSourceDisplayLabel } from "@/lib/source-labels";
+import { formatDateTime } from "@/lib/utils";
 
 interface TaskDetailPanelProps {
   taskDetail?: TaskDetail;
@@ -21,13 +22,6 @@ const entryBadge: Record<string, Color> = {
   warning: "amber",
   error: "rose",
 };
-
-function formatDateTime(value: string | null): string {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString();
-}
 
 function asDisplayString(value: unknown): string | null {
   if (typeof value === "string") {

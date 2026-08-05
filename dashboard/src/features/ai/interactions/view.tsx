@@ -16,6 +16,7 @@ import { StatusBadge as UiStatusBadge } from "@/components/ui/StatusBadge";
 import { CHART_TOKENS } from "@/lib/chart-theme";
 import { ApiError } from "@/lib/api";
 import { t } from "@/lib/i18n";
+import { formatDateTime } from "@/lib/utils";
 import { usePaginatedTasks, useTaskDetail, useTaskWebSocket } from "@/features/operations/tasks/api";
 import {
   useAIInteractions,
@@ -143,13 +144,6 @@ function uiText(lang: "en" | "zh") {
     recentKnowledgeTasksSubtitle: "Open a recent knowledge-building task to inspect its topology and the model used for each step.",
     openWorkflow: "Open Workflow",
   } as const;
-}
-
-function formatDateTime(value: string | null): string {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString();
 }
 
 function jsonString(value: unknown): string {

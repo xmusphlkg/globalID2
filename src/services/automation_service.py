@@ -275,7 +275,12 @@ class AutomationService:
                         await self.trigger_job(job.job_id, manual=False)
             except Exception as exc:
                 logger.exception("Automation scheduler tick failed: %s", exc)
-            await asyncio.sleep(cfg.poll_interval_seconds)
+            try:
+                await asyncio.wait_for(
+                    self._stop_event.wait(), timeout=cfg.poll_interval_seconds
+                )
+            except asyncio.TimeoutError:
+                pass
 
     async def trigger_job(self, job_id: str, *, manual: bool) -> dict[str, Any]:
         async with self._lock:

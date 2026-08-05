@@ -32,7 +32,7 @@ import {
   useWorkerStatus,
 } from "@/features/operations/tasks/api";
 import { t } from "@/lib/i18n";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatDateTime } from "@/lib/utils";
 import { useAppStore } from "@/stores/app-store";
 
 const statusOptions = ["pending", "queued", "running", "completed", "failed", "cancelled", "retrying"];
@@ -50,13 +50,6 @@ function taskTypeLabel(taskType: string, lang: "en" | "zh"): string {
   if (taskType === "process_data") return lang === "zh" ? "处理" : "Processing";
   if (taskType === "export_data") return lang === "zh" ? "导出" : "Export";
   return taskType;
-}
-
-function formatDateTime(value?: string | null): string {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString();
 }
 
 function ProgressCell({ value, status }: { value: number; status: string }) {
@@ -201,7 +194,7 @@ function CrawlTasksPageContent() {
         header: lang === "zh" ? "创建时间" : "Created",
         render: (task) => (
           <span className="whitespace-nowrap text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
-            {formatDate(task.created_at)}
+            {formatDateTime(task.created_at)}
           </span>
         ),
       },
