@@ -4,7 +4,11 @@ import ReportLayout from '../../layouts/ReportLayout.astro';
 import CountryCard from '../../components/CountryCard.astro';
 import CountryFlag from '../../components/CountryFlag.astro';
 import CountriesMapView from '../../components/charts/CountriesMapView';
-import { COUNTRY_COVERAGE, resolveCoverageStatus } from '../../lib/country-coverage';
+import {
+  COUNTRY_COVERAGE,
+  resolveCoverageStatus,
+  type CountryCoverageItem,
+} from '../../lib/country-coverage';
 import metaRaw from '../../data/meta.json';
 
 const meta = metaRaw as any;
@@ -22,7 +26,7 @@ const coverageByCode = Object.fromEntries(
   COUNTRY_COVERAGE.map(c => [c.code.toUpperCase(), c])
 );
 
-const CARD_COUNTRIES = [
+const CARD_COUNTRIES: CountryCoverageItem[] = [
   ...COUNTRY_COVERAGE,
   ...supportedCountries
     .filter(c => !coverageByCode[c.code.toUpperCase()])
@@ -43,6 +47,28 @@ const ORDERED_COUNTRIES = [...CARD_COUNTRIES].sort((a, b) => {
   if (aSupported === bSupported) return 0;
   return aSupported ? -1 : 1;
 });
+
+const scheduledCount = ORDERED_COUNTRIES.filter(
+  c => resolveCoverageStatus(c, Boolean(metaByCode[c.code])) === 'Scheduled'
+).length;
+
+const CADENCE_ZH: Record<string, string> = {
+  Weekly: '每周',
+  Monthly: '每月',
+  Daily: '每日',
+  Weekdays: '工作日',
+  Periodic: '定期',
+  Annual: '每年',
+  'Current aggregate': '当前汇总',
+  Mixed: '混合频率',
+  'To be confirmed': '待确认',
+};
+
+const TRACK_ZH: Record<string, string> = {
+  'National source': '国家级来源',
+  'Regional baseline': 'ECDC 基线',
+  'Source research': '来源调研',
+};
 
 ---
 
@@ -82,6 +108,13 @@ const ORDERED_COUNTRIES = [...CARD_COUNTRIES].sort((a, b) => {
           height={520}
         />
       </div>
+      <p
+        class="coverage-map-note"
+        data-lang-en="Active countries retain map labels. Scheduled countries appear as grey points; hover for their names and use the cards below for official source details."
+        data-lang-zh="已支持国家保留地图标签；规划中国家以灰色点显示，可悬停查看名称，并在下方卡片查看官方数据源。"
+      >
+        Active countries retain map labels. Scheduled countries appear as grey points; hover for their names and use the cards below for official source details.
+      </p>
     </section>
 
     <section class="card coverage-surface p-6 sm:p-8">
@@ -92,8 +125,11 @@ const ORDERED_COUNTRIES = [...CARD_COUNTRIES].sort((a, b) => {
               data-lang-zh="国家数据">Countries</h2>
         </div>
         <span class="coverage-summary-pill">
-          <span data-lang-en={`${supportedCountries.length} active`} data-lang-zh={`${supportedCountries.length} 个活跃`}>
-            {supportedCountries.length} active
+          <span
+            data-lang-en={`${supportedCountries.length} active · ${scheduledCount} scheduled`}
+            data-lang-zh={`${supportedCountries.length} 个已支持 · ${scheduledCount} 个规划中`}
+          >
+            {supportedCountries.length} active · {scheduledCount} scheduled
           </span>
         </span>
       </div>
@@ -102,6 +138,8 @@ const ORDERED_COUNTRIES = [...CARD_COUNTRIES].sort((a, b) => {
         {ORDERED_COUNTRIES.map((c) => {
           const m = metaByCode[c.code];
           const status = resolveCoverageStatus(c, Boolean(m));
+          const cadenceZh = c.cadence ? CADENCE_ZH[c.cadence] ?? c.cadence : '';
+          const trackZh = c.onboarding_track ? TRACK_ZH[c.onboarding_track] ?? c.onboarding_track : '';
           if (m) {
             return (
               <CountryCard
@@ -130,7 +168,7 @@ const ORDERED_COUNTRIES = [...CARD_COUNTRIES].sort((a, b) => {
           }
 
           return (
-            <div class="coverage-scheduled-card rounded-none border p-5 select-none transition-all">
+            <div class="coverage-scheduled-card rounded-none border p-5 transition-all">
               <div class="flex items-start justify-between mb-4">
                 <div class="flex items-center gap-3">
                   <CountryFlag code={c.code} name={c.name_en} sizeClass="w-9 h-7" />
@@ -148,11 +186,50 @@ const ORDERED_COUNTRIES = [...CARD_COUNTRIES].sort((a, b) => {
                 <span class="coverage-scheduled-pill" data-lang-en="Planned" data-lang-zh="规划中">Planned</span>
               </div>
 
-              <p class="text-sm leading-6 text-[rgb(var(--text-muted))]"
-                 data-lang-en="Coming soon"
-                 data-lang-zh="即将上线">
-                Coming soon
-              </p>
+              <div class="coverage-source-meta">
+                {c.onboarding_track && (
+                  <span
+                    class="coverage-source-track"
+                    data-lang-en={c.onboarding_track}
+                    data-lang-zh={trackZh}
+                  >
+                    {c.onboarding_track}
+                  </span>
+                )}
+                {c.cadence && (
+                  <span
+                    class="coverage-source-cadence"
+                    data-lang-en={`Update: ${c.cadence}`}
+                    data-lang-zh={`更新：${cadenceZh}`}
+                  >
+                    Update: {c.cadence}
+                  </span>
+                )}
+              </div>
+
+              {c.source_url ? (
+                <a
+                  class="coverage-source-link"
+                  href={c.source_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={`${c.name_en} official surveillance source`}
+                >
+                  <span class="coverage-source-link-label" data-lang-en="Official source" data-lang-zh="官方数据源">
+                    Official source
+                  </span>
+                  <span class="coverage-source-name">{c.source_name}</span>
+                  <span aria-hidden="true">↗</span>
+                </a>
+              ) : (
+                <p
+                  class="coverage-source-pending"
+                  data-lang-en="Official source selection is in research."
+                  data-lang-zh="官方数据源仍在调研中。"
+                >
+                  Official source selection is in research.
+                </p>
+              )}
             </div>
           );
         })}
@@ -275,6 +352,13 @@ const ORDERED_COUNTRIES = [...CARD_COUNTRIES].sort((a, b) => {
   padding: 1rem;
 }
 
+.coverage-map-note {
+  margin-top: 0.8rem;
+  color: rgb(var(--text-faint));
+  font-size: 0.78rem;
+  line-height: 1.6;
+}
+
 .coverage-summary-pill {
   display: inline-flex;
   align-items: center;
@@ -306,6 +390,69 @@ const ORDERED_COUNTRIES = [...CARD_COUNTRIES].sort((a, b) => {
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+}
+
+.coverage-source-meta {
+  display: flex;
+  min-height: 1.55rem;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.85rem;
+}
+
+.coverage-source-track,
+.coverage-source-cadence {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgb(var(--border-soft) / 0.72);
+  background: rgb(var(--surface) / 0.7);
+  padding: 0.2rem 0.42rem;
+  color: rgb(var(--text-faint));
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.coverage-source-link {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.25rem 0.5rem;
+  border-top: 1px solid rgb(var(--border) / 0.6);
+  padding-top: 0.8rem;
+  color: rgb(var(--text));
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.coverage-source-link:hover {
+  color: rgb(var(--color-brand));
+}
+
+.coverage-source-link-label {
+  grid-column: 1 / -1;
+  color: rgb(var(--text-faint));
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.coverage-source-name {
+  overflow: hidden;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+}
+
+.coverage-source-pending {
+  border-top: 1px solid rgb(var(--border) / 0.6);
+  padding-top: 0.8rem;
+  color: rgb(var(--text-faint));
+  font-size: 0.78rem;
+  line-height: 1.5;
 }
 
 @media (max-width: 640px) {

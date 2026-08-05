@@ -30,6 +30,7 @@ const links = [
   { href: '/', label: 'Home', labelZh: '首页' },
   { href: '/countries/', label: 'Countries', labelZh: '国家/地区' },
   { href: '/diseases/', label: 'Disease Directory', labelZh: '疾病目录' },
+  { href: '/changelog/', label: 'Changelog', labelZh: '版本更新' },
   { href: '/about/', label: 'About', labelZh: '关于' },
   { href: '/subscribe/', label: 'Subscribe', labelZh: '订阅' },
   { href: '/terms/', label: 'Service Terms', labelZh: '服务条款' },
@@ -76,7 +77,11 @@ const links = [
           {initialLanguage === 'zh' ? '数据' : 'Data'}
         </h3>
         <ul class="site-footer-meta space-y-1.5 text-sm">
-          <li>{initialLanguage === 'zh' ? '站点版本' : 'Site version'}: <span class="site-footer-meta-value">{siteVersion}</span></li>
+          <li>
+            {initialLanguage === 'zh' ? '站点版本' : 'Site version'}:
+            {' '}
+            <a class="site-footer-link site-footer-meta-value" href="/changelog/">{siteVersion}</a>
+          </li>
           <li>
             {initialLanguage === 'zh' ? '发布版本' : 'Release'}:
             {' '}
