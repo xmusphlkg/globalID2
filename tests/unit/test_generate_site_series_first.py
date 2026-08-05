@@ -2,6 +2,11 @@ from __future__ import annotations
 
 import pytest
 
+from src.generation.site_series_projection import (
+    apply_disease_cutover_projection as extracted_cutover_projection,
+    apply_series_first_projection as extracted_series_first_projection,
+    validate_series_first_projection as extracted_projection_validator,
+)
 from scripts.generate_site_data import (
     LEGACY_GAP_FILL_DATA_LAYER,
     LEGACY_DATA_LAYER,
@@ -15,6 +20,14 @@ from scripts.generate_site_data import (
     build_disease_site_data,
     validate_series_first_projection,
 )
+
+
+def test_generate_script_reexports_extracted_projection_api() -> None:
+    """Keep historical script imports stable after extracting pure logic."""
+
+    assert apply_series_first_projection is extracted_series_first_projection
+    assert apply_disease_cutover_projection is extracted_cutover_projection
+    assert validate_series_first_projection is extracted_projection_validator
 
 
 def _legacy(

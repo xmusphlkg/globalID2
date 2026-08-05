@@ -41,50 +41,30 @@ from src.core.db_schema import (  # noqa: E402
 )
 from src.core.logging import get_logger  # noqa: E402
 from src.core.missing_values import normalize_rate_value  # noqa: E402
+from src.services.database_rebuild_plan import (  # noqa: E402
+    RebuildPlan,
+    build_rebuild_plan,
+    validate_us_nndss_history_scope,
+)
+from src.services.database_rebuild_import import (  # noqa: E402
+    insert_with_savepoint_fallback,
+)
+from src.services.database_rebuild_run import (  # noqa: E402
+    RebuildRunTracker,
+    RebuildStage,
+    execute_rebuild_stages,
+)
 
 logger = get_logger(__name__)
 REPORT_TIME_UTC = time(hour=12)
-US_NNDSS_SOURCE_NAME = "US CDC NNDSS"
-US_NNDSS_RESIDENT_ALIASES = {
-    "us residents",
-    "u.s. residents",
-    "united states residents",
-}
-
-
-def validate_us_nndss_history_scope(df: pd.DataFrame) -> None:
-    """Refuse a legacy US rebuild containing broader NNDSS Total rows."""
-
-    if "Source" not in df.columns:
-        return
-    source_mask = (
-        df["Source"].fillna("").astype(str).str.strip().str.casefold()
-        == US_NNDSS_SOURCE_NAME.casefold()
-    )
-    if not source_mask.any():
-        return
-    if "ReportingArea" not in df.columns:
-        raise ValueError(
-            "US NNDSS history requires ReportingArea evidence for the legacy "
-            "national projection"
-        )
-    areas = (
-        df.loc[source_mask, "ReportingArea"]
-        .fillna("")
-        .astype(str)
-        .str.strip()
-        .str.casefold()
-    )
-    invalid = sorted(set(areas) - US_NNDSS_RESIDENT_ALIASES)
-    if invalid:
-        raise ValueError(
-            "US NNDSS legacy history contains non-resident reporting scopes: "
-            + ", ".join(repr(value) for value in invalid[:20])
-        )
-
-
 class DatabaseRebuilder:
-    def __init__(self, country_code='cn', auto_confirm=False, rebuild_mode=None):
+    def __init__(
+        self,
+        country_code='cn',
+        auto_confirm=False,
+        rebuild_mode=None,
+        checkpoint_file=None,
+    ):
         """Initialize DatabaseRebuilder with country-specific configuration
         
         Args:
@@ -96,6 +76,9 @@ class DatabaseRebuilder:
         self.country_code_lower = country_code.lower()
         self.auto_confirm = auto_confirm
         self.rebuild_mode = rebuild_mode
+        self.rebuild_plan: RebuildPlan | None = None
+        self.checkpoint_file = Path(checkpoint_file) if checkpoint_file else None
+        self._run_tracker: RebuildRunTracker | None = None
         
         # 重建选项配置
         self.rebuild_options = {
@@ -169,57 +152,99 @@ class DatabaseRebuilder:
             logger.info(f"Starting database rebuild... (Mode: {self.rebuild_mode})")
             logger.info("=" * 80)
             
-            # 根据配置执行步骤
-            step_num = 1
-            total_steps = sum(self.rebuild_options.values()) + 2  # +1 for verify, +1 for ensure_country
-            
-            # Step: Clear existing data
-            if self.rebuild_options['clear_data']:
-                logger.info(f"\n📦 Step {step_num}/{total_steps}: Clearing existing data...")
-                await self.clear_data(db)
-                step_num += 1
-            
-            # Step: Ensure country exists
-            logger.info(f"\n🌍 Step {step_num}/{total_steps}: Ensuring country data exists...")
-            await self.ensure_country_exists(db)
-            step_num += 1
-            
-            # Step: Import standard diseases
-            if self.rebuild_options['import_standard']:
-                logger.info(f"\n📚 Step {step_num}/{total_steps}: Importing standard diseases...")
-                await self.import_standard_diseases(db)
-                step_num += 1
-            
-            # Step: Sync diseases table (must be before disease_mappings due to foreign key)
-            if self.rebuild_options['sync_diseases']:
-                logger.info(f"\n🔄 Step {step_num}/{total_steps}: Synchronizing diseases table...")
-                await self.sync_diseases_table(db)
-                step_num += 1
-            
-            # Step: Import disease mappings
-            if self.rebuild_options['import_mappings']:
-                logger.info(f"\n🗺️  Step {step_num}/{total_steps}: Importing disease mappings ({self.country_code})...")
-                await self.import_disease_mappings(db)
-                step_num += 1
-            
-            # Step: Import historical data
-            if self.rebuild_options['import_history']:
-                logger.info(f"\n📊 Step {step_num}/{total_steps}: Importing historical data...")
-                await self.import_history_data(db)
-                step_num += 1
-
-            # Step: Cleanup suggestions
-            logger.info(f"\n🧹 Step {step_num}/{total_steps}: Cleaning up invalid suggestions...")
-            await self.cleanup_suggestions(db)
-            step_num += 1
-
-            # Step: Verify results
-            logger.info(f"\n✅ Step {step_num}/{total_steps}: Verifying data...")
-            await self.verify_results(db)
+            stages = self._build_rebuild_stages(db)
+            checkpoint_file = self.checkpoint_file or (
+                ROOT
+                / "logs/database-rebuild"
+                / f"{self.country_code_lower}-{self.rebuild_mode}-latest.json"
+            )
+            tracker = RebuildRunTracker(
+                checkpoint_file,
+                country_code=self.country_code,
+                mode=self.rebuild_mode,
+                stage_names=(stage.name for stage in stages),
+            )
+            self._run_tracker = tracker
+            report = await execute_rebuild_stages(
+                db,
+                stages,
+                tracker,
+                on_stage_start=self._log_stage_start,
+            )
+            logger.info(f"Rebuild checkpoint: {report['checkpoint_file']}")
             
         logger.info("\n" + "=" * 80)
         logger.info("✅ Database rebuild completed successfully!")
         logger.info("=" * 80)
+
+    def _build_rebuild_stages(self, db):
+        """Build the ordered, independently committed execution stages."""
+        stages = []
+        if self.rebuild_options['clear_data']:
+            stages.append(
+                RebuildStage(
+                    "clear_data", "Clearing existing data", lambda: self.clear_data(db)
+                )
+            )
+        stages.append(
+            RebuildStage(
+                "ensure_country",
+                "Ensuring country data exists",
+                lambda: self.ensure_country_exists(db),
+            )
+        )
+        if self.rebuild_options['import_standard']:
+            stages.append(
+                RebuildStage(
+                    "import_standard",
+                    "Importing standard diseases",
+                    lambda: self.import_standard_diseases(db),
+                )
+            )
+        if self.rebuild_options['sync_diseases']:
+            stages.append(
+                RebuildStage(
+                    "sync_diseases",
+                    "Synchronizing diseases table",
+                    lambda: self.sync_diseases_table(db),
+                )
+            )
+        if self.rebuild_options['import_mappings']:
+            stages.append(
+                RebuildStage(
+                    "import_mappings",
+                    f"Importing disease mappings ({self.country_code})",
+                    lambda: self.import_disease_mappings(db),
+                )
+            )
+        if self.rebuild_options['import_history']:
+            stages.append(
+                RebuildStage(
+                    "import_history",
+                    "Importing historical data",
+                    lambda: self.import_history_data(db),
+                )
+            )
+        stages.append(
+            RebuildStage(
+                "cleanup_suggestions",
+                "Cleaning up invalid suggestions",
+                lambda: self.cleanup_suggestions(db),
+            )
+        )
+        stages.append(
+            RebuildStage(
+                "verify",
+                "Verifying data",
+                lambda: self.verify_results(db),
+                commits_changes=False,
+            )
+        )
+        return stages
+
+    @staticmethod
+    def _log_stage_start(index, total, stage):
+        logger.info(f"\nStep {index}/{total}: {stage.label}...")
     
     def _select_rebuild_mode(self):
         """交互式选择重建模式"""
@@ -259,39 +284,16 @@ class DatabaseRebuilder:
     
     def _configure_rebuild_options(self):
         """根据重建模式配置选项"""
-        if self.rebuild_mode == 'full':
-            # 完整重建：所有步骤
-            self.rebuild_options = {
-                'clear_data': True,
-                'import_standard': True,
-                'import_mappings': True,
-                'sync_diseases': True,
-                'import_history': True,
-            }
-        
-        elif self.rebuild_mode == 'mappings':
-            # 仅更新映射：不导入历史数据
-            self.rebuild_options = {
-                'clear_data': True,
-                'import_standard': True,
-                'import_mappings': True,
-                'sync_diseases': True,
-                'import_history': False,
-            }
-        
-        elif self.rebuild_mode == 'history':
-            # 仅导入历史：只清空和导入 disease_records
-            self.rebuild_options = {
-                'clear_data': True,  # 会清空 disease_records 表
-                'import_standard': False,
-                'import_mappings': False,
-                'sync_diseases': False,
-                'import_history': True,
-            }
-        
-        elif self.rebuild_mode == 'custom':
-            # 自定义：交互式选择
+        custom_options = None
+        if self.rebuild_mode == 'custom':
             self._select_custom_options()
+            custom_options = self.rebuild_options
+
+        self.rebuild_plan = build_rebuild_plan(
+            self.rebuild_mode,
+            custom_options=custom_options,
+        )
+        self.rebuild_options = self.rebuild_plan.options()
     
     def _select_custom_options(self):
         """交互式选择自定义步骤"""
@@ -321,16 +323,10 @@ class DatabaseRebuilder:
     
     async def _show_warning_and_stats(self, db):
         """Display warning message and current data statistics"""
-        # 根据 rebuild_mode 显示将要清空的表
-        if self.rebuild_mode == 'history':
-            tables_to_clear = ["disease_records"]
-            preserved_tables = ["diseases", "disease_mappings", "standard_diseases", "crawl_runs", "crawl_raw_pages"]
-        elif self.rebuild_mode == 'mappings':
-            tables_to_clear = ["disease_mappings", "standard_diseases"]
-            preserved_tables = ["disease_records (历史数据)", "crawl_runs", "crawl_raw_pages"]
-        else:  # full or custom
-            tables_to_clear = ["disease_records", "diseases", "disease_mappings", "standard_diseases"]
-            preserved_tables = ["crawl_runs", "crawl_raw_pages"]
+        if self.rebuild_plan is None:
+            raise RuntimeError("Rebuild plan must be configured before showing statistics")
+        tables_to_clear = self.rebuild_plan.tables_to_clear
+        preserved_tables = self.rebuild_plan.preserved_tables
         
         logger.warning("\n⚠️  WARNING: This operation will clear the following tables:")
         for table in tables_to_clear:
@@ -468,17 +464,10 @@ class DatabaseRebuilder:
     
     async def clear_data(self, db):
         """Clear all disease-related data"""
+        if self.rebuild_plan is None:
+            raise RuntimeError("Rebuild plan must be configured before clearing data")
         # In a multi-country database, clearing must stay scoped to the target country.
-        if self.rebuild_mode == 'history':
-            tables = ["disease_records"]
-        elif self.rebuild_mode == 'mappings':
-            tables = ["disease_mappings"]
-        else:
-            tables = [
-                "disease_records",
-                "disease_mappings",
-                "disease_learning_suggestions",
-            ]
+        tables = self.rebuild_plan.deletion_tables
         
         for table in tables:
             count = await self._count_country_records(db, table)
@@ -614,7 +603,6 @@ class DatabaseRebuilder:
             }),
             "notes": bootstrap.get("notes"),
         })
-        await db.commit()
         logger.info(f"  ✓ Created country {profile.code} ({profile.name_en}) from {profile.source}")
         return profile
     
@@ -732,7 +720,6 @@ class DatabaseRebuilder:
                 },
             )
 
-        await db.commit()
         logger.info(f"  ✓ Ensured mapping scope: {scope_code}")
     
     async def _import_single_mapping_file(self, db, df, country_code):
@@ -852,8 +839,7 @@ class DatabaseRebuilder:
         logger.info("\n📊 Step 5/6: Importing historical data...")
         
         if not self.history_file.exists():
-            logger.warning(f"Historical data file not found: {self.history_file}")
-            return
+            raise FileNotFoundError(f"Historical data file not found: {self.history_file}")
         
         # Read historical data
         df = pd.read_csv(self.history_file)
@@ -865,8 +851,7 @@ class DatabaseRebuilder:
         result = await db.execute(text("SELECT id FROM countries WHERE code = :code"), {"code": self.country_code})
         country_row = result.fetchone()
         if not country_row:
-            logger.error(f"Country not found in database: {self.country_code}")
-            return
+            raise RuntimeError(f"Country not found in database: {self.country_code}")
         country_id = country_row[0]
         
         # Build mapping dictionary (with normalization for tolerance)
@@ -902,8 +887,17 @@ class DatabaseRebuilder:
         deaths_col = self._find_column(df, ['Deaths', 'deaths', 'death', 'DeathCount'])
         
         if not all([date_col, disease_cn_col, cases_col, deaths_col]):
-            logger.error("CSV missing required columns")
-            return
+            missing = [
+                label
+                for label, column in (
+                    ("date", date_col),
+                    ("disease", disease_cn_col),
+                    ("cases", cases_col),
+                    ("deaths", deaths_col),
+                )
+                if column is None
+            ]
+            raise ValueError("Historical CSV missing required columns: " + ", ".join(missing))
         
         # Batch import data with complete fields
         inserted = 0
@@ -1025,20 +1019,25 @@ class DatabaseRebuilder:
                     'raw_data': json.dumps(raw_obj) if raw_obj else None
                 })
                 
-                # Batch insert
-                if len(batch_data) >= batch_size:
-                    inserted += await self._batch_insert_enhanced(db, batch_data)
-                    batch_data = []
-                    
-                    # Progress update every 1000 records
-                    if inserted % 1000 == 0:
-                        await db.commit()
-                        logger.info(f"  Progress: {idx + 1:,}/{len(df):,} rows processed, {inserted:,} records imported, {skipped:,} skipped")
-                        logger.info(f"  Imported {inserted:,} records...")
-                        
             except Exception:
                 skipped += 1
                 continue
+
+            # Database writes, commits and checkpoint persistence must stay
+            # outside the row-normalization catch above.  A failure here is a
+            # stage failure, not a malformed CSV row to silently skip.
+            if len(batch_data) >= batch_size:
+                inserted += await self._batch_insert_enhanced(db, batch_data)
+                batch_data = []
+
+                if inserted % 1000 == 0:
+                    await self._commit_history_progress(
+                        db,
+                        rows_processed=idx + 1,
+                        total_rows=len(df),
+                        inserted=inserted,
+                        skipped=skipped,
+                    )
         
         # Insert remaining data
         if batch_data:
@@ -1053,11 +1052,47 @@ class DatabaseRebuilder:
                 logger.warning(f"    ... and {len(error_diseases) - 20} more")
         
         await db.commit()
+        if self._run_tracker is not None:
+            self._run_tracker.record_partial_commit(
+                "import_history",
+                {
+                    "rows_processed": len(df),
+                    "records_imported": inserted,
+                    "records_skipped": skipped,
+                    "import_committed": True,
+                },
+            )
         cleaned = await self._cleanup_adjacent_duplicate_snapshots(db, country_id)
         if cleaned > 0:
             await db.commit()
             logger.info(f"✓ Removed {cleaned:,} adjacent duplicate snapshot record(s)")
         logger.info(f"✓ Imported {inserted:,} historical records (skipped {skipped:,})")
+
+    async def _commit_history_progress(
+        self,
+        db,
+        *,
+        rows_processed: int,
+        total_rows: int,
+        inserted: int,
+        skipped: int,
+    ) -> None:
+        """Commit an import chunk and durably expose its partial completion."""
+        await db.commit()
+        if self._run_tracker is not None:
+            self._run_tracker.record_partial_commit(
+                "import_history",
+                {
+                    "rows_processed": rows_processed,
+                    "records_imported": inserted,
+                    "records_skipped": skipped,
+                },
+            )
+        logger.info(
+            f"  Progress: {rows_processed:,}/{total_rows:,} rows processed, "
+            f"{inserted:,} records imported, {skipped:,} skipped"
+        )
+        logger.info(f"  Imported {inserted:,} records...")
 
     async def _cleanup_adjacent_duplicate_snapshots(self, db, country_id: int) -> int:
         """Remove adjacent-day duplicate snapshots with identical counts for same disease/country."""
@@ -1095,10 +1130,8 @@ class DatabaseRebuilder:
         """Batch insert data"""
         if not batch_data:
             return 0
-        
-        try:
-            # Use executemany for batch insert
-            await db.execute(text("""
+
+        statement = text("""
                 INSERT INTO disease_records 
                 (time, disease_id, country_id, cases, deaths, new_cases, new_deaths,
                  recoveries, active_cases, new_recoveries, metadata)
@@ -1107,39 +1140,26 @@ class DatabaseRebuilder:
                 ON CONFLICT (time, disease_id, country_id) DO UPDATE SET
                     cases = EXCLUDED.cases, 
                     deaths = EXCLUDED.deaths
-            """), batch_data)
-            return len(batch_data)
-        except Exception as e:
-            logger.warning(f"Batch insert failed, trying individual inserts: {str(e)[:200]}")
-            # Rollback current transaction
-            await db.rollback()
-            # Fallback to single inserts
-            success = 0
-            for data in batch_data:
-                try:
-                    await db.execute(text("""
-                        INSERT INTO disease_records 
-                        (time, disease_id, country_id, cases, deaths, new_cases, new_deaths,
-                         recoveries, active_cases, new_recoveries, metadata)
-                        VALUES 
-                        (:time, :disease_id, :country_id, :cases, :deaths, 0, 0, 0, 0, 0, :metadata)
-                        ON CONFLICT (time, disease_id, country_id) DO UPDATE SET
-                            cases = EXCLUDED.cases, deaths = EXCLUDED.deaths
-                    """), data)
-                    success += 1
-                except Exception:
-                    await db.rollback()
-                    continue
-            return success
+            """)
+        outcome = await insert_with_savepoint_fallback(db, statement, batch_data)
+        if outcome.batch_error:
+            logger.warning(
+                "Batch insert failed; savepoint fallback imported "
+                f"{outcome.inserted}/{outcome.attempted} rows: {outcome.batch_error}"
+            )
+        if outcome.failed:
+            raise RuntimeError(
+                f"Disease record batch remained incomplete after savepoint fallback: "
+                f"{outcome.failed}/{outcome.attempted} rows failed"
+            )
+        return outcome.inserted
     
     async def _batch_insert_enhanced(self, db, batch_data):
         """Batch insert data with complete fields"""
         if not batch_data:
             return 0
         
-        try:
-            # Use executemany for batch insert with all fields
-            await db.execute(text("""
+        statement = text("""
                 INSERT INTO disease_records 
                 (time, disease_id, country_id, cases, deaths, 
                  incidence_rate, mortality_rate, region, data_source,
@@ -1158,41 +1178,19 @@ class DatabaseRebuilder:
                     data_source = EXCLUDED.data_source,
                     metadata = EXCLUDED.metadata,
                     raw_data = EXCLUDED.raw_data
-            """), batch_data)
-            return len(batch_data)
-        except Exception as e:
-            logger.warning(f"Batch insert failed, trying individual inserts: {str(e)[:200]}")
-            # Rollback current transaction
-            await db.rollback()
-            # Fallback to single inserts
-            success = 0
-            for data in batch_data:
-                try:
-                    await db.execute(text("""
-                        INSERT INTO disease_records 
-                        (time, disease_id, country_id, cases, deaths, 
-                         incidence_rate, mortality_rate, region, data_source,
-                         new_cases, new_deaths, recoveries, active_cases, new_recoveries, 
-                         metadata, raw_data)
-                        VALUES 
-                        (:time, :disease_id, :country_id, :cases, :deaths, 
-                         :incidence_rate, :mortality_rate, :region, :data_source,
-                         0, 0, 0, 0, 0, :metadata, :raw_data)
-                        ON CONFLICT (time, disease_id, country_id) DO UPDATE SET
-                            cases = EXCLUDED.cases, 
-                            deaths = EXCLUDED.deaths,
-                            incidence_rate = EXCLUDED.incidence_rate,
-                            mortality_rate = EXCLUDED.mortality_rate,
-                            region = EXCLUDED.region,
-                            data_source = EXCLUDED.data_source,
-                            metadata = EXCLUDED.metadata,
-                            raw_data = EXCLUDED.raw_data
-                    """), data)
-                    success += 1
-                except Exception:
-                    await db.rollback()
-                    continue
-            return success
+            """)
+        outcome = await insert_with_savepoint_fallback(db, statement, batch_data)
+        if outcome.batch_error:
+            logger.warning(
+                "Enhanced batch insert failed; savepoint fallback imported "
+                f"{outcome.inserted}/{outcome.attempted} rows: {outcome.batch_error}"
+            )
+        if outcome.failed:
+            raise RuntimeError(
+                f"Enhanced disease record batch remained incomplete after savepoint fallback: "
+                f"{outcome.failed}/{outcome.attempted} rows failed"
+            )
+        return outcome.inserted
     
     def _find_column(self, df, candidates):
         """Find column name from candidates"""
@@ -1312,6 +1310,14 @@ Examples:
         choices=['full', 'mappings', 'history', 'custom'],
         help='Rebuild mode: full (all), mappings (only mappings), history (only history), custom (interactive)'
     )
+    parser.add_argument(
+        '--checkpoint-file',
+        type=Path,
+        help=(
+            'Persistent JSON run report path '
+            '(default: logs/database-rebuild/<country>-<mode>-latest.json)'
+        ),
+    )
     
     args = parser.parse_args()
     
@@ -1319,7 +1325,8 @@ Examples:
         rebuilder = DatabaseRebuilder(
             country_code=args.country,
             auto_confirm=args.yes,
-            rebuild_mode=args.mode
+            rebuild_mode=args.mode,
+            checkpoint_file=args.checkpoint_file,
         )
         await rebuilder.run()
     except Exception as e:

@@ -1,0 +1,592 @@
+"""Database-to-filesystem orchestration for the static site data export."""
+
+from collections import defaultdict
+from pathlib import Path
+
+from src.core.data_share import derive_github_raw_base_url, get_data_share_repo_url
+from src.core.database import get_db
+from src.generation.download_package_v2 import (
+    build_frontend_download_manifest,
+    build_globalid_canonical_download_package,
+)
+from src.generation.github_data_snapshot import (
+    DEFAULT_RETAIN_RELEASES,
+    build_github_snapshot,
+)
+from src.generation.sharded_data_package import DEFAULT_MAX_UNCOMPRESSED_BYTES
+from src.generation.site_data_about import (
+    build_about_snapshot,
+    build_country_source_info,
+    resolve_snapshot_version,
+)
+from src.generation.site_data_canonical import build_country_canonical_facts
+from src.generation.site_data_catalogue import (
+    enrich_diseases_with_ontology,
+    load_standard_diseases,
+    validate_record_catalogue_coverage,
+)
+from src.generation.site_data_database import (
+    ensure_site_export_database_ready as _ensure_site_export_database_ready,
+)
+from src.generation.site_data_knowledge import (
+    apply_country_brief_fields,
+    build_disease_knowledge_fields,
+)
+from src.generation.site_data_queries import (
+    fetch_countries,
+    fetch_country_briefs,
+    fetch_country_frequency_meta,
+    fetch_disease_knowledge_briefs,
+    fetch_disease_records,
+    fetch_report_detail,
+    fetch_reports,
+    has_population_table,
+)
+from src.generation.site_data_views import (
+    build_country_data,
+    build_country_site_data,
+    build_disease_data,
+    build_disease_site_data,
+    resolve_country_display_names,
+)
+from src.generation.site_data_writer import (
+    existing_site_export_has_content,
+    prepare_site_output_dirs,
+    write_compact_json,
+    write_pretty_json,
+)
+from src.knowledge.catalogue import should_generate_public_disease_page
+from src.ontology import load_disease_ontology
+
+ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_OUTPUT = ROOT / "astro-site" / "src" / "data"
+DEFAULT_PUBLIC_SITE_DATA_OUTPUT = ROOT / "astro-site" / "public" / "site-data"
+DEFAULT_SHARDED_DOWNLOAD_OUTPUT = ROOT / "exports" / "site-downloads-v2"
+DEFAULT_GITHUB_SNAPSHOT_OUTPUT = ROOT / "exports" / "github-data-snapshot-v2"
+DEFAULT_DOWNLOAD_MANIFEST = ROOT / "astro-site" / "src" / "data" / "downloads.json"
+DEFAULT_DOWNLOAD_REPO_URL = get_data_share_repo_url()
+DEFAULT_GITHUB_SNAPSHOT_BRANCH = "snapshot-v2"
+DEFAULT_GITHUB_SNAPSHOT_URL_BASE = (
+    derive_github_raw_base_url(DEFAULT_DOWNLOAD_REPO_URL, DEFAULT_GITHUB_SNAPSHOT_BRANCH)
+    or "/downloads-v2"
+)
+
+
+async def ensure_site_export_database_ready() -> None:
+    """Create missing tables and seed standard countries for export."""
+    country_count = await _ensure_site_export_database_ready()
+    print(f"  ✓ database schema ready ({country_count} countries)")
+
+
+async def collect_site_export_context(
+    output_dir: Path,
+    allow_empty_export: bool = False,
+) -> dict:
+    """Read and project all database-backed data without writing artifacts."""
+    await ensure_site_export_database_ready()
+    generated_at = ""
+
+    # Load the stable catalogue and the independently versioned ontology.
+    csv_path = ROOT / "configs" / "standard_diseases.csv"
+    catalogue_diseases = load_standard_diseases(csv_path)
+    catalogue_ids = {disease["disease_id"] for disease in catalogue_diseases}
+    ontology = load_disease_ontology()
+    ontology_document = ontology.to_dict()
+    diseases = [
+        disease
+        for disease in catalogue_diseases
+        if should_generate_public_disease_page(disease)
+    ]
+    enrich_diseases_with_ontology(diseases, ontology)
+    diseases_by_id = {d["disease_id"]: d for d in diseases}
+    disease_knowledge_briefs: dict[str, dict[str, dict]] = {}
+    country_briefs: dict[str, dict[str, dict]] = {}
+    countries_simple: list[dict] = []
+    country_exports: list[dict] = []
+    disease_exports: list[dict] = []
+    reports: list[dict] = []
+    report_details: dict[int, dict] = {}
+
+    async with get_db() as session:
+        population_enabled = await has_population_table(session)
+        if population_enabled:
+            print(
+                "  Population table detected: incidence will use WPP-based computation"
+            )
+        else:
+            print(
+                "  Population table not found: incidence falls back to database values"
+            )
+
+        disease_knowledge_briefs = await fetch_disease_knowledge_briefs(session)
+        country_briefs = await fetch_country_briefs(session)
+        if disease_knowledge_briefs:
+            print(
+                f"  Knowledge briefs detected: {len(disease_knowledge_briefs)} diseases"
+            )
+        else:
+            print("  Knowledge briefs not found: disease profiles will remain blocked")
+        if country_briefs:
+            print(f"  Country briefs detected: {len(country_briefs)} countries")
+        else:
+            print(
+                "  Country briefs not found: using generated country context fallback"
+            )
+
+        # ── Countries ──
+        countries = await fetch_countries(session)
+        countries_simple = []
+        for country in countries:
+            name_en, name_zh = resolve_country_display_names(country["code"], country)
+            countries_simple.append(
+                {
+                    "code": country["code"],
+                    "name": name_en,
+                    "name_en": name_en,
+                    "name_zh": name_zh,
+                    "language": country["language"],
+                }
+            )
+
+        all_records_by_country: dict[str, list] = {}
+        country_sources_by_code: dict[str, dict] = {}
+        country_name_by_code = {c["code"]: c["name"] for c in countries_simple}
+        country_name_zh_by_code = {c["code"]: c["name_zh"] for c in countries_simple}
+        country_download_entries: list[dict] = []
+        disease_download_entries: list[dict] = []
+        for country in countries:
+            code = country["code"]
+            country_name_en = country_name_by_code.get(code) or country["name"]
+            print(f"  Fetching records for {code}…")
+            frequency_meta = await fetch_country_frequency_meta(session, code)
+            country_source_info = build_country_source_info(code, frequency_meta)
+            records = await fetch_disease_records(session, code, population_enabled)
+            validate_record_catalogue_coverage(
+                records,
+                catalogue_ids,
+                set(diseases_by_id),
+            )
+
+            all_records_by_country[code] = records
+            country_sources_by_code[code] = country_source_info
+            country_data = build_country_data(
+                code, country_name_en, records, diseases_by_id, frequency_meta
+            )
+            layer_summary = country_data["data_layer_summary"]
+            print(
+                "    Series-first: "
+                f"registry={layer_summary['series_registry_disease_count']}, "
+                f"mixed_gap_fill={layer_summary['mixed_disease_count']}, "
+                f"legacy_fallback={layer_summary['legacy_fallback_disease_count']}, "
+                f"risk_labelled={layer_summary['loss_risk_disease_count']}"
+            )
+            if layer_summary["non_additive_series_disease_ids"]:
+                print(
+                    "    Non-additive series kept separate: "
+                    + ", ".join(layer_summary["non_additive_series_disease_ids"])
+                )
+            country_data["source_info"] = country_source_info
+            country_data = apply_country_brief_fields(
+                country_data, country_briefs.get(code.upper())
+            )
+            # Augment countries_simple with stats
+            for c in countries_simple:
+                if c["code"] == code:
+                    c["total_cases"] = country_data["total_cases"]
+                    c["total_deaths"] = country_data["total_deaths"]
+                    c["disease_count"] = country_data["disease_count"]
+                    c["date_range"] = country_data["date_range"]
+                    c["source_info"] = country_source_info
+                    c["data_layer_summary"] = country_data["data_layer_summary"]
+
+            country_exports.append(
+                {
+                    "code": code,
+                    "country_name": country_name_en,
+                    "country_name_zh": country_name_zh_by_code.get(code),
+                    "country_data": country_data,
+                    "source_info": country_source_info,
+                }
+            )
+
+        reports = await fetch_reports(session)
+        total_record_count = sum(
+            len(records) for records in all_records_by_country.values()
+        )
+        if total_record_count == 0 and not allow_empty_export:
+            message = (
+                "Refusing to overwrite site data with an empty export because no disease "
+                f"records were found in the database across {len(countries)} countries."
+            )
+            if existing_site_export_has_content(output_dir):
+                message += f" Existing files in {output_dir} were left untouched."
+            message += " Import data first, or pass --allow-empty-export if this is intentional."
+            raise RuntimeError(message)
+
+        generated_at = resolve_snapshot_version(countries_simple, reports)
+
+        for country_export in country_exports:
+            code = country_export["code"]
+            country_name = country_export["country_name"]
+            country_name_zh = country_export.get(
+                "country_name_zh"
+            ) or country_name_zh_by_code.get(code)
+            country_data = country_export["country_data"]
+            country_source_info = country_export["source_info"]
+            country_data["generated_at"] = generated_at
+            country_site_data = build_country_site_data(country_data)
+            country_canonical_facts = build_country_canonical_facts(
+                country_data,
+                country_source_info,
+            )
+            country_export["site_data"] = country_site_data
+            country_export["canonical_facts"] = country_canonical_facts
+            country_download_entries.append(
+                {
+                    "kind": "country",
+                    "id": code.lower(),
+                    "code": code,
+                    "name": country_name,
+                    "name_en": country_name,
+                    "name_zh": country_name_zh,
+                    "generated_at": generated_at,
+                    "record_count": len(country_canonical_facts),
+                    "date_range": country_data.get("date_range"),
+                    "site_json_path": f"/site-data/countries/{code.lower()}.json",
+                }
+            )
+
+        # ── Per-disease files ──
+        for disease in diseases:
+            did = disease["disease_id"]
+            disease_data = build_disease_data(did, disease, all_records_by_country)
+            disease_site_data = build_disease_site_data(
+                disease_data,
+                country_name_by_code,
+                country_name_zh_by_code,
+            )
+            disease_countries = sorted(
+                (disease_data.get("country_series") or {}).keys()
+            )
+            disease_source_info = []
+            for country_code in disease_countries:
+                country_source = dict(country_sources_by_code.get(country_code, {}))
+                country_source["country_name"] = country_name_by_code.get(country_code)
+                country_source["country_name_en"] = country_name_by_code.get(
+                    country_code
+                )
+                country_source["country_name_zh"] = country_name_zh_by_code.get(
+                    country_code
+                )
+                disease_source_info.append(country_source)
+            disease_data["generated_at"] = generated_at
+            disease_data["source_info"] = disease_source_info
+            disease_record_count = sum(
+                len(series.get("dates") or [])
+                for series in (disease_data.get("country_series") or {}).values()
+            )
+            disease_exports.append(
+                {
+                    "disease_id": did,
+                    "disease_data": disease_data,
+                    "site_data": disease_site_data,
+                }
+            )
+            disease_download_entries.append(
+                {
+                    "kind": "disease",
+                    "id": did.lower(),
+                    "disease_id": did,
+                    "slug": disease.get("slug"),
+                    "name_en": disease.get("name_en"),
+                    "name_zh": disease.get("name_zh"),
+                    "generated_at": generated_at,
+                    "record_count": disease_record_count,
+                    "country_count": len(disease_countries),
+                    "site_json_path": f"/site-data/diseases/{did.lower()}.json",
+                }
+            )
+
+        for rep in reports:
+            detail = await fetch_report_detail(session, rep["id"])
+            if detail:
+                report_details[rep["id"]] = detail
+
+    return {
+        "all_records_by_country": all_records_by_country,
+        "countries_simple": countries_simple,
+        "country_download_entries": country_download_entries,
+        "country_exports": country_exports,
+        "country_sources_by_code": country_sources_by_code,
+        "disease_download_entries": disease_download_entries,
+        "disease_exports": disease_exports,
+        "disease_knowledge_briefs": disease_knowledge_briefs,
+        "diseases": diseases,
+        "diseases_by_id": diseases_by_id,
+        "generated_at": generated_at,
+        "ontology": ontology,
+        "ontology_document": ontology_document,
+        "report_details": report_details,
+        "reports": reports,
+    }
+
+
+def build_export_download_artifacts(
+    *,
+    country_exports: list[dict],
+    disease_download_entries: list[dict],
+    country_download_entries: list[dict],
+    country_sources_by_code: dict[str, dict],
+    generated_at: str,
+    sharded_download_output_dir: Path,
+    shard_max_uncompressed_bytes: int,
+    github_snapshot_output_dir: Path,
+    github_snapshot_retain_releases: int,
+) -> dict:
+    """Validate the projections and create canonical download artifacts."""
+    country_fact_count = sum(
+        len(country_export["canonical_facts"])
+        for country_export in country_exports
+    )
+    disease_view_count = sum(
+        int(entry["record_count"]) for entry in disease_download_entries
+    )
+    if disease_view_count != country_fact_count:
+        raise RuntimeError(
+            "Cannot build canonical v2 downloads because country and disease "
+            "views disagree: "
+            f"countries={country_fact_count}, diseases={disease_view_count}"
+        )
+
+    print(
+        "  Building canonical v2 download package "
+        f"({country_fact_count:,} unique facts)…"
+    )
+    sharded_manifest = build_globalid_canonical_download_package(
+        (
+            fact
+            for country_export in country_exports
+            for fact in country_export["canonical_facts"]
+        ),
+        sharded_download_output_dir,
+        generated_at=generated_at,
+        country_entries=country_download_entries,
+        disease_entries=disease_download_entries,
+        source_info_by_country=country_sources_by_code,
+        max_uncompressed_bytes=shard_max_uncompressed_bytes,
+    )
+    sharded_totals = sharded_manifest["totals"]
+    if sharded_totals["record_count"] != country_fact_count:
+        raise RuntimeError(
+            "Canonical v2 record total changed during packaging: "
+            f"expected={country_fact_count}, "
+            f"actual={sharded_totals['record_count']}"
+        )
+    print(
+        "  ✓ canonical v2 package: "
+        f"{sharded_totals['shard_count']:,} shards, "
+        f"{sharded_totals['compressed_bytes']:,} compressed bytes"
+    )
+    snapshot_result = build_github_snapshot(
+        sharded_download_output_dir,
+        github_snapshot_output_dir,
+        retain_releases=github_snapshot_retain_releases,
+    )
+    print(
+        "  ✓ GitHub-ready snapshot tree: "
+        f"{snapshot_result.release_count} releases, "
+        f"{snapshot_result.file_count:,} files, "
+        f"{snapshot_result.total_bytes:,} bytes"
+    )
+    return sharded_manifest
+
+
+def write_site_export_artifacts(
+    context: dict,
+    output_dir: Path,
+    public_site_data_dir: Path,
+) -> None:
+    """Write build and public artifacts in their established order."""
+    all_records_by_country = context["all_records_by_country"]
+    countries_simple = context["countries_simple"]
+    country_download_entries = context["country_download_entries"]
+    country_exports = context["country_exports"]
+    disease_download_entries = context["disease_download_entries"]
+    disease_exports = context["disease_exports"]
+    disease_knowledge_briefs = context["disease_knowledge_briefs"]
+    diseases = context["diseases"]
+    diseases_by_id = context["diseases_by_id"]
+    generated_at = context["generated_at"]
+    ontology = context["ontology"]
+    ontology_document = context["ontology_document"]
+    report_details = context["report_details"]
+    reports = context["reports"]
+
+    prepare_site_output_dirs(output_dir, public_site_data_dir)
+
+    # Write disease index
+    write_pretty_json(output_dir / "diseases" / "index.json", diseases)
+    print(f"  ✓ diseases/index.json ({len(diseases)} diseases)")
+
+    write_pretty_json(output_dir / "disease-ontology.json", ontology_document)
+    write_pretty_json(
+        public_site_data_dir / "disease-ontology.json", ontology_document
+    )
+    print(
+        "  ✓ disease-ontology.json "
+        f"({len(ontology.concept_ids)} concepts, {len(ontology.series_ids)} series)"
+    )
+
+    for country_export in country_exports:
+        code = country_export["code"]
+        country_data = country_export["country_data"]
+        site_data = country_export["site_data"]
+        write_pretty_json(
+            output_dir / "countries" / f"{code.lower()}.json", country_data
+        )
+        write_compact_json(
+            public_site_data_dir / "countries" / f"{code.lower()}.json",
+            site_data,
+        )
+        print(
+            f"  ✓ countries/{code.lower()}.json ({len(all_records_by_country[code])} records)"
+        )
+
+    knowledge_mode_counts: dict[str, int] = defaultdict(int)
+    knowledge_completeness_values: list[float] = []
+    for disease_export in disease_exports:
+        did = disease_export["disease_id"]
+        disease_data = disease_export["disease_data"]
+        disease_site_data = disease_export["site_data"]
+        disease_knowledge_payload = build_disease_knowledge_fields(
+            diseases_by_id[did],
+            disease_knowledge_briefs.get(did),
+        )
+        knowledge_mode_counts[
+            str(disease_knowledge_payload.get("knowledge_display_mode") or "blocked")
+        ] += 1
+        knowledge_completeness_values.append(
+            float(disease_knowledge_payload.get("knowledge_completeness") or 0.0)
+        )
+        write_pretty_json(
+            output_dir / "diseases" / f"{did.lower()}.json", disease_data
+        )
+        write_pretty_json(
+            output_dir / "disease-knowledge" / f"{did.lower()}.json",
+            disease_knowledge_payload,
+        )
+        write_compact_json(
+            public_site_data_dir / "diseases" / f"{did.lower()}.json",
+            disease_site_data,
+        )
+    print(
+        f"  ✓ diseases/{diseases[0]['disease_id'].lower()}.json … ({len(diseases)} files)"
+    )
+    print(
+        f"  ✓ disease-knowledge/{diseases[0]['disease_id'].lower()}.json … ({len(diseases)} files)"
+    )
+    print(
+        "  Knowledge quality: "
+        + ", ".join(
+            f"{mode}={knowledge_mode_counts.get(mode, 0)}"
+            for mode in ("full", "partial", "blocked")
+        )
+    )
+    print(
+        "  ✓ v2 dataset indexes "
+        f"({len(country_download_entries)} countries, "
+        f"{len(disease_download_entries)} diseases)"
+    )
+
+    write_pretty_json(output_dir / "reports" / "index.json", reports)
+    print(f"  ✓ reports/index.json ({len(reports)} reports)")
+
+    for report_id, detail in report_details.items():
+        write_pretty_json(output_dir / "reports" / f"{report_id}.json", detail)
+    print(f"  ✓ reports/<id>.json ({len(report_details)} files)")
+
+    # ── Meta ──
+    meta = {
+        "generated_at": generated_at,
+        "total_countries": len(countries_simple),
+        "total_diseases": len(diseases),
+        "total_reports": len(reports),
+        "countries": countries_simple,
+        "knowledge_quality": {
+            "display_modes": dict(sorted(knowledge_mode_counts.items())),
+            "average_completeness": (
+                round(
+                    sum(knowledge_completeness_values)
+                    / len(knowledge_completeness_values),
+                    3,
+                )
+                if knowledge_completeness_values
+                else 0.0
+            ),
+            "schema_version": 3,
+        },
+        "disease_ontology": {
+            "registry_id": ontology_document["registry_id"],
+            "schema_version": ontology_document["schema_version"],
+            "default_rollup_policy": ontology_document["default_rollup_policy"],
+            "concept_count": len(ontology.concept_ids),
+            "source_series_count": len(ontology.series_ids),
+        },
+    }
+    write_pretty_json(output_dir / "meta.json", meta)
+    print("  ✓ meta.json")
+
+    about_snapshot = build_about_snapshot(
+        countries_simple=countries_simple,
+        diseases=diseases,
+        reports=reports,
+        generated_at=generated_at,
+    )
+    write_pretty_json(output_dir / "about.json", about_snapshot)
+    print("  ✓ about.json")
+
+
+async def export(
+    output_dir: Path,
+    manifest_output: Path,
+    allow_empty_export: bool = False,
+    *,
+    public_site_data_dir: Path = DEFAULT_PUBLIC_SITE_DATA_OUTPUT,
+    sharded_download_output_dir: Path = DEFAULT_SHARDED_DOWNLOAD_OUTPUT,
+    shard_max_uncompressed_bytes: int = DEFAULT_MAX_UNCOMPRESSED_BYTES,
+    github_snapshot_output_dir: Path = DEFAULT_GITHUB_SNAPSHOT_OUTPUT,
+    github_snapshot_retain_releases: int = DEFAULT_RETAIN_RELEASES,
+    github_snapshot_url_base: str = DEFAULT_GITHUB_SNAPSHOT_URL_BASE,
+) -> None:
+    """Package and write one complete export from a collected context."""
+    context = await collect_site_export_context(output_dir, allow_empty_export)
+    country_download_entries = context["country_download_entries"]
+    country_exports = context["country_exports"]
+    country_sources_by_code = context["country_sources_by_code"]
+    disease_download_entries = context["disease_download_entries"]
+    generated_at = context["generated_at"]
+
+    sharded_manifest = build_export_download_artifacts(
+        country_exports=country_exports,
+        disease_download_entries=disease_download_entries,
+        country_download_entries=country_download_entries,
+        country_sources_by_code=country_sources_by_code,
+        generated_at=generated_at,
+        sharded_download_output_dir=sharded_download_output_dir,
+        shard_max_uncompressed_bytes=shard_max_uncompressed_bytes,
+        github_snapshot_output_dir=github_snapshot_output_dir,
+        github_snapshot_retain_releases=github_snapshot_retain_releases,
+    )
+
+    write_site_export_artifacts(context, output_dir, public_site_data_dir)
+
+    downloads_manifest = build_frontend_download_manifest(
+        sharded_manifest,
+        snapshot_url_base=github_snapshot_url_base,
+        country_entries=country_download_entries,
+        disease_entries=disease_download_entries,
+    )
+    manifest_output.parent.mkdir(parents=True, exist_ok=True)
+    write_pretty_json(manifest_output, downloads_manifest)
+    print("  ✓ v2 frontend downloads manifest")
+    print(f"\nDone. Data written to: {output_dir}")

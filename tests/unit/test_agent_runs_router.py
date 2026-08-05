@@ -6,6 +6,7 @@ import pytest
 
 from dashboard.api.routers import agent_runs
 from src.domain.task import TaskStatus, TaskType
+from src.services import agent_workflow_service as workflow_module
 
 
 class _FakeResult:
@@ -126,3 +127,42 @@ async def test_list_agent_runs_delegates_to_service(monkeypatch):
     result = await agent_runs.list_agent_runs(limit=10, offset=2, status="running", search="flu", country_id=7)
 
     assert result == payload
+
+
+@pytest.mark.asyncio
+async def test_service_list_runs_applies_non_search_filters_to_items_and_count(
+    monkeypatch,
+):
+    statements = []
+
+    class Result:
+        def scalar_one(self):
+            return 0
+
+        def all(self):
+            return []
+
+    class DB:
+        async def execute(self, statement):
+            statements.append(statement)
+            return Result()
+
+    class Context:
+        async def __aenter__(self):
+            return DB()
+
+        async def __aexit__(self, *_args):
+            return None
+
+    monkeypatch.setattr(workflow_module, "get_database", lambda: Context())
+
+    result = await workflow_module.agent_workflow_service.list_runs(
+        status="running", country_id=7
+    )
+
+    assert result["items"] == []
+    assert len(statements) == 2
+    compiled = [str(statement) for statement in statements]
+    for sql in compiled:
+        assert "agent_runs.status" in sql
+        assert "agent_runs.country_id" in sql
