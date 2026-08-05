@@ -53,8 +53,6 @@ export interface DataReleaseConfig {
   timezone: string;
   poll_interval_seconds: number;
   auto_failure_cooldown_minutes: number;
-  commit_data_refresh_snapshot: boolean;
-  push_data_refresh_snapshot: boolean;
   last_tick_at?: string | null;
   jobs: DataReleaseJob[];
 }
@@ -80,7 +78,6 @@ export interface DataReleaseChecks {
     read_check_output?: string | null;
     write_check_output?: string | null;
     require_clean_worktree: boolean;
-    dirty_release_paths: string[];
     dirty_blocking_paths: string[];
   };
   cloudflare: {
@@ -110,14 +107,10 @@ export interface DataReleaseChecks {
     wrangler_available: boolean;
     wrangler_version?: string | null;
   };
-  data_refresh_snapshot: {
-    enabled: boolean;
-    push_enabled: boolean;
-    script_path: string;
-    script_exists: boolean;
-    paths: string[];
-    remote: string;
-    branch: string;
+  repository_boundary: {
+    generated_paths: string[];
+    tracked_paths: string[];
+    enforced: boolean;
   };
   raw?: Record<string, unknown> | null;
 }

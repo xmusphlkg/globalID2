@@ -37,8 +37,6 @@ class DataReleaseConfigOut(BaseModel):
     timezone: str
     poll_interval_seconds: int
     auto_failure_cooldown_minutes: int = 0
-    commit_data_refresh_snapshot: bool = False
-    push_data_refresh_snapshot: bool = False
     last_tick_at: Optional[str] = None
     jobs: List[DataReleaseJobOut] = []
 
@@ -97,7 +95,6 @@ class DataReleaseGitCheckOut(BaseModel):
     read_check_output: Optional[str] = None
     write_check_output: Optional[str] = None
     require_clean_worktree: bool
-    dirty_release_paths: List[str] = []
     dirty_blocking_paths: List[str] = []
 
 
@@ -132,14 +129,10 @@ class DataReleaseCommandCheckOut(BaseModel):
     wrangler_version: Optional[str] = None
 
 
-class DataReleaseSnapshotCheckOut(BaseModel):
-    enabled: bool
-    push_enabled: bool
-    script_path: str
-    script_exists: bool
-    paths: List[str] = []
-    remote: str
-    branch: str
+class DataReleaseRepositoryBoundaryOut(BaseModel):
+    generated_paths: List[str] = []
+    tracked_paths: List[str] = []
+    enforced: bool
 
 
 class DataReleaseChecksOut(BaseModel):
@@ -149,5 +142,5 @@ class DataReleaseChecksOut(BaseModel):
     git: DataReleaseGitCheckOut
     cloudflare: DataReleaseCloudflareCheckOut
     commands: DataReleaseCommandCheckOut
-    data_refresh_snapshot: DataReleaseSnapshotCheckOut
+    repository_boundary: DataReleaseRepositoryBoundaryOut
     raw: Optional[dict[str, Any]] = None

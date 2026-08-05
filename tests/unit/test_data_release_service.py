@@ -301,9 +301,6 @@ async def test_release_preflight_checks_v2_snapshot_repo_when_enabled(
     async def cloudflare_disabled(*_args, **_kwargs):
         return {"payload": {}, "blockers": []}
 
-    async def snapshot_branch():
-        return "main"
-
     check_calls = 0
 
     async def v2_repo_check(*_args, **_kwargs):
@@ -328,7 +325,7 @@ async def test_release_preflight_checks_v2_snapshot_repo_when_enabled(
     monkeypatch.setattr(service, "_git_status_paths", no_paths)
     monkeypatch.setattr(service, "_run_capture", command_available)
     monkeypatch.setattr(service, "_cloudflare_check", cloudflare_disabled)
-    monkeypatch.setattr(service, "_data_refresh_snapshot_branch", snapshot_branch)
+    monkeypatch.setattr(service, "_tracked_generated_paths", no_paths)
     monkeypatch.setattr(service, "_download_repo_check", v2_repo_check)
     monkeypatch.setattr(service, "_download_repo_url", lambda: "git@example/data.git")
     monkeypatch.setattr(
@@ -337,16 +334,6 @@ async def test_release_preflight_checks_v2_snapshot_repo_when_enabled(
         lambda _job: "https://data.example/releases/test-release",
     )
     monkeypatch.setattr(service, "_python_executable", lambda: python_path)
-    monkeypatch.setattr(
-        service,
-        "_config",
-        lambda: SimpleNamespace(
-            commit_data_refresh_snapshot=False,
-            push_data_refresh_snapshot=False,
-            data_refresh_snapshot_remote="origin",
-        ),
-    )
-
     checks = await service.integration_checks("site-release")
 
     assert checks["overall_ready"] is True
@@ -354,6 +341,7 @@ async def test_release_preflight_checks_v2_snapshot_repo_when_enabled(
     assert checks["git"]["branch"] == "snapshot-v2"
     assert checks["git"]["read_access_ok"] is True
     assert checks["git"]["write_access_ok"] is True
+    assert checks["repository_boundary"]["enforced"] is True
 
 
 def test_snapshot_publish_command_uses_only_v2_publisher(tmp_path):
