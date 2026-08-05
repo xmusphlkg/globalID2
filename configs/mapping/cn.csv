@@ -3,14 +3,14 @@ D001,鼠疫,Plague,甲类,,,China CDC
 D002,霍乱,Cholera,甲类,,,China CDC
 D003,传染性非典型肺炎,SARS-CoV,乙类,非典|SARS,,China CDC
 D004,新型冠状病毒感染,COVID-19,乙类,新冠|新型冠状病毒肺炎|新冠肺炎|新型冠状病毒,,China CDC
-D005,艾滋病,AIDS,乙类,HIV|获得性免疫缺陷综合征,,China CDC
+D005,艾滋病,AIDS,乙类,获得性免疫缺陷综合征,,China CDC
 D006,病毒性肝炎,Hepatitis,乙类,病毒性肝炎*|病毒性肝炎|肝炎,Viral Hepatitis,
 D007,甲型肝炎,Hepatitis A,乙类,甲肝,,China CDC
 D008,乙型肝炎,Hepatitis B,乙类,乙肝,,China CDC
 D009,丙型肝炎,Hepatitis C,乙类,丙肝|丙型肝炎,,China CDC
 D010,丁型肝炎,Hepatitis D,乙类,丁肝,,China CDC
 D011,戊型肝炎,Hepatitis E,乙类,戊肝,,China CDC
-D012,未分型肝炎,Other Hepatitis,乙类,肝炎未分型|肝炎（未分型）|成型肝炎,Unspecified Hepatitis,
+D071,未分型肝炎,Unspecified Hepatitis,乙类,肝炎未分型|肝炎（未分型）|成型肝炎,Unspecified viral hepatitis,China CDC
 D013,脊髓灰质炎,Poliomyelitis,乙类,小儿麻痹症|灰质炎,,China CDC
 D014,人感染高致病性禽流感,H5N1,乙类,禽流感H5N1|人感染H5N1病毒,,China CDC
 D015,人感染H7N9禽流感,H7N9,乙类,禽流感H7N9|人感染H7N9病毒,,China CDC
@@ -57,4 +57,4 @@ D055,肝吸虫病,Clonorchiasis,监测,华支睾吸虫病,,China CDC
 D056,人感染猪链球菌病,Streptococcus suis,监测,猪链球菌,,China CDC
 D057,发热伴血小板减少综合征,SFTS,监测,蜱虫病|新型布尼亚病毒,,China CDC
 D058,恙虫病,Scrub Typhus,乙类,恙虫病,,China CDC
-D999,甲乙丙类传染病总计,Total,汇总,合计|总计|甲乙类传染病合计|甲乙丙类传染病总计|甲乙丙类总计,,China CDC Summary
+D999,甲乙丙类传染病总计,Total,汇总,合计|总计|甲乙类传染病合计|甲乙丙类传染病总计|甲乙丙类总计,Legacy flat-target compatibility only; ontology targets the source-reported aggregate group G_CN_NOTIFIABLE_DISEASE_REPORTED_TOTAL,China CDC Summary

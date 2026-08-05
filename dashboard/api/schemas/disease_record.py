@@ -1,8 +1,8 @@
 """Disease record schemas."""
 
 from datetime import datetime
-from typing import Optional
-from pydantic import BaseModel, field_validator
+from typing import Any, Optional
+from pydantic import BaseModel, Field, field_validator
 
 from src.core.missing_values import normalize_rate_value
 
@@ -11,7 +11,7 @@ class DiseaseRecordOut(BaseModel):
     time: datetime
     disease_id: int
     country_id: int
-    cases: Optional[int] = None
+    cases: Optional[int | float] = None
     deaths: Optional[int] = None
     recoveries: Optional[int] = None
     active_cases: Optional[int] = None
@@ -26,6 +26,16 @@ class DiseaseRecordOut(BaseModel):
     data_source: Optional[str] = None
     data_quality: Optional[str] = None
     confidence_score: Optional[float] = None
+    # Additive metadata: existing dashboard clients can ignore these fields,
+    # while semantic-aware clients can explain exactly which layer and source
+    # definitions produced the compatibility curve.
+    data_layer: Optional[str] = None
+    projection_policy: Optional[str] = None
+    series_codes: list[str] = Field(default_factory=list)
+    loss_risk: Optional[str] = None
+    gap_fill_reason: Optional[str] = None
+    coverage: dict[str, Any] = Field(default_factory=dict)
+    provenance: dict[str, Any] = Field(default_factory=dict)
 
     @field_validator("incidence_rate", "mortality_rate", mode="before")
     @classmethod

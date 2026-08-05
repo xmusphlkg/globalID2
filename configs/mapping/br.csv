@@ -1,8 +1,8 @@
-disease_id,local_name,local_code,category,aliases,notes,data_source
+disease_id,local_name,local_code,category,aliases,notes,data_source,source_id,series_id
 D185,Work accident with biological material,ACBI,Other,ACBI|Acidente de trabalho com material biologico,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
 D186,Serious work accident,ACGR,Other,ACGR|Acidente de trabalho grave,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
-D005,AIDS in adults,AIDA,Viral,AIDA|Aids adulto|AIDS adulto,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
-D005,AIDS in children,AIDC,Viral,AIDC|Aids crianca|AIDS crianca,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D005,AIDS in adults,AIDA,Viral,AIDA|Aids adulto|AIDS adulto,Brazil SINAN prefix mapping,Brazil DATASUS SINAN,SRC_BR_SINAN,SER_BR_AIDS_ADULT_AIDA
+D005,AIDS in children,AIDC,Viral,AIDC|Aids crianca|AIDS crianca,Brazil SINAN prefix mapping,Brazil DATASUS SINAN,SRC_BR_SINAN,SER_BR_AIDS_CHILD_AIDC
 D184,Accident caused by venomous animals,ANIM,Other,ANIM|Acidente por animais peconhentos,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
 D187,Rabies post-exposure prophylaxis,ANTR,Other,ANTR|Atendimento antirrabico,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
 D091,Botulism,BOTU,Bacterial,BOTU|Botulismo,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
@@ -23,20 +23,19 @@ D124,Typhoid fever,FTIF,Bacterial,FTIF|Febre tifoide,Brazil SINAN prefix mapping
 D042,Leprosy,HANS,Bacterial,HANS|Hanseniase,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
 D102,Hantavirus disease,HANT,Viral,HANT|Hantavirose|Hantavirus infection,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
 D006,Viral hepatitis,HEPA,Viral,HEPA|Hepatites virais|Hepatite,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
-D162,HIV infection in adults,HIVA,Viral,HIVA|HIV adulto,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
-D162,HIV infection in children,HIVC,Viral,HIVC|HIV crianca,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
-D162,HIV infection in pregnant women,HIVE,Viral,HIVE|HIV gestante,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
-D162,HIV infection,HIVG,Viral,HIVG|HIV,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D162,HIV infection in adults,HIVA,Viral,HIVA|HIV adulto,Brazil SINAN prefix mapping,Brazil DATASUS SINAN,SRC_BR_SINAN,SER_BR_HIV_ADULT_HIVA
+D162,HIV infection in children,HIVC,Viral,HIVC|HIV crianca,Brazil SINAN prefix mapping,Brazil DATASUS SINAN,SRC_BR_SINAN,SER_BR_HIV_CHILD_HIVC
+D230,Child exposed to HIV,HIVE,Other,HIVE|Crianca exposta ao HIV,HIV exposure is not an HIV diagnosis,Brazil DATASUS SINAN,SRC_BR_SINAN,SER_BR_HIV_EXPOSED_CHILD_HIVE
+D231,HIV infection in pregnancy,HIVG,Viral,HIVG|HIV em gestante,HIV notification in pregnancy childbirth or puerperium,Brazil DATASUS SINAN,SRC_BR_SINAN,SER_BR_HIV_PREGNANCY_HIVG
 D191,Exogenous poisoning,IEXO,Other,IEXO|Intoxicacao exogena,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
 D044,Visceral leishmaniasis,LEIV,Parasitic,LEIV|Leishmaniose visceral|Kala-azar,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
 D035,Leptospirosis,LEPT,Bacterial,LEPT|Leptospirose,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
-D192,Work-related repetitive strain injury,LER,Other,LER|LER DORT,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
-D192,Work-related repetitive strain injury,LERD,Other,LERD|LER DORT,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D192,Work-related repetitive strain injury,LERD,Other,LERD|LER|LER DORT,LER is a duplicate file alias of LERD,Brazil DATASUS SINAN,SRC_BR_SINAN,SER_BR_LERD
 D082,American tegumentary leishmaniasis,LTAN,Parasitic,LTAN|Leishmaniose tegumentar americana|Tegumentary leishmaniasis,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
 D037,Malaria,MALA,Parasitic,MALA|Malaria,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
-D135,Meningitis,MENI,Bacterial,MENI|Meningite,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
-D193,Work-related mental disorder,MENT,Other,MENT|Transtorno mental relacionado ao trabalho,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
-D193,Work-related disorder,NTRA,Other,NTRA|Notificacao de transtorno relacionado ao trabalho,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D235,Meningitis,MENI,Other,MENI|Meningite,Brazil SINAN prefix mapping; source family contains meningitis across reported etiologies and must not be narrowed to bacterial meningitis,Brazil DATASUS SINAN,SRC_BR_SINAN,SER_BR_MENINGITIS_ALL_ETIOLOGIES_MENI
+D193,Work-related mental disorder,MENT,Other,MENT|Transtorno mental relacionado ao trabalho,Brazil SINAN prefix mapping,Brazil DATASUS SINAN,SRC_BR_SINAN,SER_BR_WORK_MENTAL_MENT
+D200,Trachoma survey positive cases,NTRA,Bacterial,NTRA|Inquerito de tracoma|Trachoma survey positives,Use sum of NU_CASOPOS not DBC row count,Brazil DATASUS SINAN,SRC_BR_SINAN,SER_BR_TRACHOMA_SURVEY_POSITIVE_NTRA
 D194,Noise-induced hearing loss,PAIR,Other,PAIR|Perda auditiva induzida por ruido,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
 D001,Plague,PEST,Bacterial,PEST|Peste,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
 D178,Acute flaccid paralysis,PFAN,Other,PFAN|Paralisia flacida aguda,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
@@ -52,7 +51,7 @@ D120,Tetanus,TETA,Bacterial,TETA|Tetano acidental|Tetano,Brazil SINAN prefix map
 D030,Neonatal tetanus,TETN,Bacterial,TETN|Tetano neonatal,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
 D085,Congenital toxoplasmosis,TOXC,Parasitic,TOXC|Toxoplasmose congenita|Toxoplasmosis|Toxoplasma gondii infection,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
 D198,Toxoplasmosis in pregnancy,TOXG,Parasitic,TOXG|Toxoplasmose gestacional|Toxoplasmose em gestante,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
-D200,Trachoma,TRAC,Bacterial,TRAC|Tracoma,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
+D200,Trachoma,TRAC,Bacterial,TRAC|Tracoma,Brazil SINAN prefix mapping,Brazil DATASUS SINAN,SRC_BR_SINAN,SER_BR_TRACHOMA_CASE_TRAC
 D025,Tuberculosis,TUBE,Bacterial,TUBE|Tuberculose,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
 D054,Varicella,VARC,Viral,VARC|Varicela|Catapora,Brazil SINAN prefix mapping,Brazil DATASUS SINAN
 D202,Domestic sexual and other violence,VIOL,Other,VIOL|Violencia domestica sexual e outras violencias,Brazil SINAN prefix mapping,Brazil DATASUS SINAN

@@ -26,6 +26,13 @@ export interface DiseaseRecord {
   data_source: string | null;
   data_quality: string | null;
   confidence_score: number | null;
+  data_layer?: "series_registry" | "legacy_gap_fill" | "legacy_fallback";
+  projection_policy?: string | null;
+  series_codes?: string[];
+  loss_risk?: string | null;
+  gap_fill_reason?: string | null;
+  coverage?: Record<string, unknown>;
+  provenance?: Record<string, unknown>;
 }
 
 export interface CompareResult {
@@ -33,6 +40,11 @@ export interface CompareResult {
     disease_code: string;
     disease_name: string;
     data: { time_period: string; cases: number; deaths: number }[];
+    data_layer?: string | null;
+    projection_policy?: string | null;
+    loss_risk?: string | null;
+    coverage?: Record<string, unknown>;
+    provenance?: Record<string, unknown>;
   }[];
 }
 

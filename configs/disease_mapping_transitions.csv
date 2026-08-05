@@ -1,0 +1,65 @@
+country_code,source_id,local_name,old_disease_id,new_disease_id,action,evidence_field,evidence_value,reason
+AU,SRC_AU_NINDSS,Australian bat lyssavirus infection,D019,D214,remap_legacy,RawDiseaseLabel,Australian bat lyssavirus infection,source definition excludes classical rabies
+AU,SRC_AU_NINDSS,Hepatitis C (newly acquired),D009,D210,remap_legacy,RawDiseaseLabel,Hepatitis C (newly acquired),source reports newly acquired hepatitis C
+AU,SRC_AU_NINDSS,Paratyphoid,D026,D234,remap_legacy,RawDiseaseLabel,Paratyphoid,source reports paratyphoid alone
+AU,SRC_AU_NINDSS,Rotavirus,D047,D199,remap_legacy,RawDiseaseLabel,Rotavirus,source reports an exact rotavirus series
+AU,SRC_AU_NINDSS,Rubella congenital,D040,D168,source_reingest,,,legacy projection only retains broad rubella and cannot be safely split
+AU,SRC_AU_NINDSS,Syphilis < 2 years,D034,D232,source_reingest,,,legacy projection only retains aggregate syphilis and cannot be safely split
+AU,SRC_AU_NINDSS,Syphilis > 2 years or unspecified duration,D034,D233,source_reingest,,,legacy projection only retains aggregate syphilis and cannot be safely split
+AU,SRC_AU_NINDSS,Syphilis congenital,D034,D167,source_reingest,,,legacy projection only retains aggregate syphilis and cannot be safely split
+AU,SRC_AU_NINDSS,Varicella zoster (unspecified),D054,D213,remap_and_reingest,RawDiseaseLabel,Varicella zoster (unspecified),surviving exact component can move but all VZV components require reingestion
+BR,SRC_BR_SINAN,Meningitis,D135,D235,remap_legacy,DiseaseCode,MENI,SINAN MENI is all-aetiology meningitis
+BR,SRC_BR_SINAN,Child exposed to HIV,D162,D230,source_reingest,,,HIVE exposure events must be rebuilt separately from HIV diagnoses
+BR,SRC_BR_SINAN,HIV infection in pregnancy,D162,D231,source_reingest,,,HIVG pregnancy events must be rebuilt separately from all-stage HIV diagnoses
+BR,SRC_BR_SINAN,Trachoma survey positive cases,D193,D200,source_reingest,,,NTRA must be rebuilt from NU_CASOPOS and not legacy DBF row counts
+CN,SRC_CN_CDC,未分型肝炎,D012,D071,remap_legacy,RawDiseaseLabel,未分型肝炎,source reports unspecified hepatitis
+HK,SRC_HK_CHP,Paratyphoid fever,D026,D234,remap_legacy,RawDiseaseLabel,Paratyphoid Fever,source reports paratyphoid alone
+JP,SRC_JP_NIID,Amoebic dysentery,D024,D165,remap_and_reingest,RawDiseaseLabel|Disease,Amoebic dysentery,surviving exact component can move but lost dysentery components require reingestion
+JP,SRC_JP_NIID,Bacterial dysentery,D024,D105,remap_and_reingest,RawDiseaseLabel|Disease,Bacterial dysentery,surviving exact component can move but lost dysentery components require reingestion
+JP,SRC_JP_NIID,Carbapenem-resistant Enterobacterales infection,D133,D227,remap_and_reingest,RawDiseaseLabel,Carbapenem-resistant Enterobacterales infection,surviving exact component can move but resistance siblings require reingestion
+JP,SRC_JP_NIID,Congenital rubella syndrome,D040,D168,remap_and_reingest,RawDiseaseLabel,Congenital rubella syndrome,surviving exact component can move but rubella siblings require reingestion
+JP,SRC_JP_NIID,Crimean-Congo hemorrhagic fever,D127,D203,remap_and_reingest,RawDiseaseLabel,Crimean-Congo hemorrhagic fever,surviving exact component can move but haemorrhagic fever siblings require reingestion
+JP,SRC_JP_NIID,Eastern equine encephalitis,D089,D218,remap_and_reingest,Disease,Eastern equine encephalitis,surviving exact component can move but encephalitis siblings require reingestion
+JP,SRC_JP_NIID,Group A streptococcal pharyngitis,D119,D224,remap_and_reingest,RawDiseaseLabel|Disease,Group A streptococcal pharyngitis,surviving exact component can move but streptococcal siblings require reingestion
+JP,SRC_JP_NIID,Hantavirus pulmonary syndrome,D102,D164,remap_legacy,RawDiseaseLabel|Disease,Hantavirus pulmonary syndrome,source reports HPS separately
+JP,SRC_JP_NIID,Hendra virus infection,D075,D215,remap_and_reingest,RawDiseaseLabel,Hendra virus infection,surviving exact component can move but henipavirus siblings require reingestion
+JP,SRC_JP_NIID,Herpes B (Macacine herpesvirus 1) infection,D062,D171,remap_legacy,RawDiseaseLabel|Disease,Herpes B (Macacine herpesvirus 1) infection,source reports an exact Herpes B series
+JP,SRC_JP_NIID,Infectious gastroenteritis (Rotavirus),D047,D199,remap_and_reingest,RawDiseaseLabel,Infectious gastroenteritis (Rotavirus),surviving exact component can move but gastroenteritis siblings require reingestion
+JP,SRC_JP_NIID,Japanese spotted fever,D118,D222,remap_and_reingest,RawDiseaseLabel,Japanese spotted fever,surviving exact component can move but spotted fever siblings require reingestion
+JP,SRC_JP_NIID,Marburg hemorrhagic fever,D127,D174,remap_and_reingest,Disease,Marburg hemorrhagic fever,surviving exact component can move but haemorrhagic fever siblings require reingestion
+JP,SRC_JP_NIID,Nipah virus infection,D075,D175,remap_and_reingest,Disease,Nipah virus infection,surviving exact component can move but henipavirus siblings require reingestion
+JP,SRC_JP_NIID,Omsk hemorrhagic fever,D127,D226,remap_and_reingest,Disease,Omsk hemorrhagic fever,surviving exact component can move but haemorrhagic fever siblings require reingestion
+JP,SRC_JP_NIID,Paratyphoid fever,D026,D234,remap_legacy,RawDiseaseLabel|Disease,Paratyphoid fever,source reports paratyphoid alone
+JP,SRC_JP_NIID,Rift Valley fever,D127,D173,remap_and_reingest,Disease,Rift Valley fever,surviving exact component can move but haemorrhagic fever siblings require reingestion
+JP,SRC_JP_NIID,Rocky Mountain spotted fever,D118,D223,remap_and_reingest,Disease,Rocky Mountain spotted fever,surviving exact component can move but spotted fever siblings require reingestion
+JP,SRC_JP_NIID,Severe invasive group A streptococcal infection,D119,D225,remap_and_reingest,RawDiseaseLabel,Severe invasive group A streptococcal infection,surviving exact component can move but streptococcal siblings require reingestion
+JP,SRC_JP_NIID,South American hemorrhagic fever,D127,D204,remap_and_reingest,Disease,South American hemorrhagic fever,surviving exact component can move but haemorrhagic fever siblings require reingestion
+JP,SRC_JP_NIID,Typhus (Rickettsial),D043,D183,remap_legacy,RawDiseaseLabel|Disease,Typhus (Rickettsial),source reports an exact typhus series
+JP,SRC_JP_NIID,Venezuelan equine encephalitis,D089,D220,remap_and_reingest,Disease,Venezuelan equine encephalitis,surviving exact component can move but encephalitis siblings require reingestion
+JP,SRC_JP_NIID,Western equine encephalitis,D089,D219,remap_and_reingest,Disease,Western equine encephalitis,surviving exact component can move but encephalitis siblings require reingestion
+JP,SRC_JP_NIID,Acute flaccid paralysis (excluding acute poliomyelitis),D013,D178,remap_legacy,RawDiseaseLabel,Acute flaccid paralysis,source reports AFP separately from poliomyelitis
+JP,SRC_JP_NIID,Glanders,D116,D221,remap_and_reingest,Disease,Pseudoglanders,legacy Pseudoglanders rewrite denotes glanders while other components require reingestion
+JP,SRC_JP_NIID,Multidrug-resistant Acinetobacter infection,D133,D228,remap_and_reingest,Disease,Drug-resistant Acinetobacter infection,surviving exact component can move but lost sibling components require reingestion
+JP,SRC_JP_NIID,Tick-borne encephalitis,D089,D205,remap_and_reingest,Disease,Tick-borne encephalitis,surviving exact component can move but lost sibling components require reingestion
+JP,SRC_JP_NIID,Kyasanur Forest disease,D089,D217,remap_and_reingest,Disease,Casanul forest disease,legacy spelling is an alias and lost sibling components require reingestion
+JP,SRC_JP_NIID,Lyssavirus infection (excluding rabies),D019,D214,remap_and_reingest,RawDiseaseLabel,Lissavirus infection,source explicitly excludes rabies and historical components require reingestion
+JP,SRC_JP_NIID,Acute encephalitis (excluding Japanese and West Nile encephalitis),D089,D216,remap_and_reingest,RawDiseaseLabel,Acute encephalitis,source definition has named exclusions and sibling components require reingestion
+KR,SRC_KR_KDCA,카바페넴내성장내세균목(CRE) 감염증,D133,D227,remap_legacy,RawDiseaseLabel,카바페넴내성장내세균목(CRE) 감염증,source reports CRE separately
+KR,SRC_KR_KDCA,파라티푸스,D026,D234,remap_legacy,RawDiseaseLabel,파라티푸스,source reports paratyphoid alone
+NZ,SRC_NZ_PHS,Paratyphoid fever,D026,D234,remap_legacy,RawDiseaseLabel,Paratyphoid fever,source reports paratyphoid alone
+NZ,SRC_NZ_PHS,Viral Haemorrhagic Fever,D018,D127,remap_legacy,RawDiseaseLabel,Viral Haemorrhagic Fever,source reports broad viral haemorrhagic fever rather than HFRS
+TW,SRC_TW_NIDSS,副傷寒,D026,D234,remap_legacy,RawDiseaseLabel,副傷寒,source code 002a reports paratyphoid alone
+TW,SRC_TW_NIDSS,急性病毒性Ｃ型肝炎,D009,D210,remap_legacy,RawDiseaseLabel,急性病毒性Ｃ型肝炎,source code 0705 reports acute hepatitis C
+TW,SRC_TW_NIDSS,桿菌性痢疾,D024,D105,remap_legacy,RawDiseaseLabel,桿菌性痢疾,source code 004 reports shigellosis
+US,SRC_US_NNDSS,"Hepatitis B, acute, Confirmed",D008,D068,source_reingest,,,confirmed and probable components must be rebuilt as distinct source series
+US,SRC_US_NNDSS,"Hepatitis B, acute, Probable",D008,D068,source_reingest,,,confirmed and probable components must be rebuilt as distinct source series
+US,SRC_US_NNDSS,"Hepatitis B, chronic, Confirmed",D008,D208,source_reingest,,,acute chronic and perinatal courses must be rebuilt as distinct source series
+US,SRC_US_NNDSS,"Hepatitis B, chronic, Probable",D008,D208,source_reingest,,,acute chronic and perinatal courses must be rebuilt as distinct source series
+US,SRC_US_NNDSS,"Hepatitis B, perinatal, Confirmed",D008,D209,source_reingest,,,acute chronic and perinatal courses must be rebuilt as distinct source series
+US,SRC_US_NNDSS,"Hepatitis C, acute, Confirmed",D009,D210,source_reingest,,,confirmed and probable components must be rebuilt as distinct source series
+US,SRC_US_NNDSS,"Hepatitis C, acute, Probable",D009,D210,source_reingest,,,confirmed and probable components must be rebuilt as distinct source series
+US,SRC_US_NNDSS,"Hepatitis C, chronic, Confirmed",D009,D211,source_reingest,,,acute chronic and perinatal courses must be rebuilt as distinct source series
+US,SRC_US_NNDSS,"Hepatitis C, chronic, Probable",D009,D211,source_reingest,,,acute chronic and perinatal courses must be rebuilt as distinct source series
+US,SRC_US_NNDSS,"Hepatitis C, perinatal, Confirmed",D009,D212,source_reingest,,,acute chronic and perinatal courses must be rebuilt as distinct source series
+US,SRC_US_NNDSS,Salmonella Paratyphi infection,D026,D234,source_reingest,,,legacy null source values were flattened to zero and must not be remapped as reported observations
+US,*,Arboviral diseases,D128,D089,source_reingest,,,aggregate arboviral mapping is not a West Nile fact remap

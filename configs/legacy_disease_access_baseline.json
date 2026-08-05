@@ -1,0 +1,279 @@
+{
+  "version": 1,
+  "description": "Reviewed upper bounds for direct production access to the legacy disease_records projection. Counts may decrease but must never increase without an explicit architecture review.",
+  "scan_targets": [
+    "src",
+    "dashboard/api",
+    "main.py",
+    "scripts"
+  ],
+  "classifications": {
+    "admin_explorer": {
+      "description": "Administrative, read-only table inspection retained during the migration window. It must not become a public analytical source."
+    },
+    "compatibility_projection": {
+      "description": "Controlled series-first projection that temporarily reads legacy rows only for explicitly labelled fallback or coverage-gap filling."
+    },
+    "deprecated_tool": {
+      "description": "Already deprecated legacy utility retained only until its replacement and recovery documentation are complete."
+    },
+    "developer_diagnostic": {
+      "description": "Local developer diagnostic that is not part of a deployed data or API path."
+    },
+    "historical_import": {
+      "description": "Historical import or rebuild path that still targets the flat compatibility table and must be replaced by the source-series ingestion service."
+    },
+    "migration": {
+      "description": "Audited migration, backfill, canonicalization, or restore code allowed to inspect or mutate legacy rows while the table remains recoverable."
+    },
+    "quality_audit": {
+      "description": "Legacy-specific parity or data-quality audit retained for migration verification, not as the authoritative quality layer."
+    },
+    "runtime_read": {
+      "description": "Deployed API, report, crawler checkpoint, export, or agent read that must be migrated to the shared series-first query service."
+    },
+    "runtime_write": {
+      "description": "Temporary live compatibility projection writer or legacy checkpoint reader; writes must remain transactionally paired with source-series facts until disabled."
+    },
+    "schema_contract": {
+      "description": "ORM, relationship, schema-generation, or cleanup contract retained until the final read-only archive and table removal phase."
+    }
+  },
+  "files": {
+    "dashboard/api/frequency.py": {
+      "classification": "runtime_read",
+      "reason": "Country cadence inference still reads legacy timestamps and is scheduled to move to selected source-series cadence.",
+      "max_references": {"DiseaseRecord": 4, "disease_records": 0}
+    },
+    "dashboard/api/routers/diseases.py": {
+      "classification": "compatibility_projection",
+      "reason": "Disease discovery temporarily unions Registry-backed and legacy-only concepts during coverage migration.",
+      "max_references": {"DiseaseRecord": 4, "disease_records": 0}
+    },
+    "dashboard/api/routers/explorer.py": {
+      "classification": "admin_explorer",
+      "reason": "The administrative explorer exposes the legacy table for migration inspection only.",
+      "max_references": {"DiseaseRecord": 0, "disease_records": 1}
+    },
+    "dashboard/api/routers/overview.py": {
+      "classification": "runtime_read",
+      "reason": "Overview KPIs and trends still aggregate the legacy projection and are a first-wave migration target.",
+      "max_references": {"DiseaseRecord": 41, "disease_records": 0}
+    },
+    "dashboard/api/routers/quality.py": {
+      "classification": "runtime_read",
+      "reason": "Dashboard quality endpoints still calculate coverage and zero counts from the flat table.",
+      "max_references": {"DiseaseRecord": 19, "disease_records": 0}
+    },
+    "dashboard/api/routers/sources.py": {
+      "classification": "runtime_read",
+      "reason": "Source-flow statistics still infer source identity from legacy data_source text.",
+      "max_references": {"DiseaseRecord": 10, "disease_records": 0}
+    },
+    "dashboard/api/services/disease_series_projection.py": {
+      "classification": "compatibility_projection",
+      "reason": "This is the existing controlled series-first reader; legacy rows only provide explicit fallback and period gap fill.",
+      "max_references": {"DiseaseRecord": 5, "disease_records": 0}
+    },
+    "main.py": {
+      "classification": "runtime_read",
+      "reason": "The full-pipeline CLI still derives its report window from legacy CN rows.",
+      "max_references": {"DiseaseRecord": 0, "disease_records": 1}
+    },
+    "scripts/backfill_disease_series_from_legacy.py": {
+      "classification": "migration",
+      "reason": "One-way recovery tool reads legacy raw_data to bootstrap registered source-series facts under an explicit migration command.",
+      "max_references": {"DiseaseRecord": 0, "disease_records": 2}
+    },
+    "scripts/canonicalize_duplicate_disease_ids.py": {
+      "classification": "migration",
+      "reason": "Canonicalization must update existing legacy foreign keys while the compatibility table remains present.",
+      "max_references": {"DiseaseRecord": 0, "disease_records": 6}
+    },
+    "scripts/cn_data_quality_check.py": {
+      "classification": "quality_audit",
+      "reason": "CN legacy checks are retained only for parity evidence during series migration.",
+      "max_references": {"DiseaseRecord": 0, "disease_records": 17}
+    },
+    "scripts/cn_missing_data_get.py": {
+      "classification": "historical_import",
+      "reason": "Legacy CN gap repair reads, deletes, and inserts flat rows and must be replaced by a source-series repair workflow.",
+      "max_references": {"DiseaseRecord": 0, "disease_records": 8}
+    },
+    "scripts/deprecated/reimport_history_data.py": {
+      "classification": "deprecated_tool",
+      "reason": "Deprecated direct legacy reimport is retained only for recovery reference and must not receive new dependencies.",
+      "max_references": {"DiseaseRecord": 0, "disease_records": 5}
+    },
+    "scripts/dev/test_query.py": {
+      "classification": "developer_diagnostic",
+      "reason": "Local database smoke query is not deployed and will disappear with the legacy ORM model.",
+      "max_references": {"DiseaseRecord": 3, "disease_records": 0}
+    },
+    "scripts/full_rebuild_database.py": {
+      "classification": "historical_import",
+      "reason": "Legacy full/history rebuild modes remain for migration recovery but must be superseded by a series-first rebuild orchestrator.",
+      "max_references": {"DiseaseRecord": 0, "disease_records": 19}
+    },
+    "scripts/generate_schema.py": {
+      "classification": "schema_contract",
+      "reason": "Schema generation still emits the compatibility table until archival removal.",
+      "max_references": {"DiseaseRecord": 0, "disease_records": 2}
+    },
+    "scripts/generate_site_data.py": {
+      "classification": "compatibility_projection",
+      "reason": "Static export uses a controlled series-first overlay with legacy-only coverage gap filling.",
+      "max_references": {"DiseaseRecord": 0, "disease_records": 2}
+    },
+    "scripts/import_au_national_history.py": {
+      "classification": "historical_import",
+      "reason": "AU historical loader writes the flat table directly and is pending replacement by Registry ingestion.",
+      "max_references": {"DiseaseRecord": 0, "disease_records": 6}
+    },
+    "scripts/import_ch_history.py": {
+      "classification": "historical_import",
+      "reason": "CH history command calls the updater's legacy-only import method outside CrawlService dual write.",
+      "max_references": {"DiseaseRecord": 0, "disease_records": 1}
+    },
+    "scripts/import_hk_history.py": {
+      "classification": "historical_import",
+      "reason": "HK history command calls the updater's legacy-only import method outside CrawlService dual write.",
+      "max_references": {"DiseaseRecord": 0, "disease_records": 1}
+    },
+    "scripts/import_jp_weekly_history.py": {
+      "classification": "historical_import",
+      "reason": "JP weekly history loader directly inserts and prunes legacy rows.",
+      "max_references": {"DiseaseRecord": 0, "disease_records": 9}
+    },
+    "scripts/import_kr_history.py": {
+      "classification": "historical_import",
+      "reason": "KR history command calls the updater's legacy-only import method outside CrawlService dual write.",
+      "max_references": {"DiseaseRecord": 0, "disease_records": 1}
+    },
+    "scripts/import_tw_history.py": {
+      "classification": "historical_import",
+      "reason": "TW history command calls the updater's legacy-only import method outside CrawlService dual write.",
+      "max_references": {"DiseaseRecord": 0, "disease_records": 1}
+    },
+    "scripts/import_us_strict_history.py": {
+      "classification": "historical_import",
+      "reason": "US strict history loader directly writes the legacy national projection and is superseded by source-series backfill.",
+      "max_references": {"DiseaseRecord": 0, "disease_records": 2}
+    },
+    "scripts/restore_disease_migration.py": {
+      "classification": "migration",
+      "reason": "Run-scoped audited restore must reconstruct legacy before-images until all corresponding migrations expire.",
+      "max_references": {"DiseaseRecord": 0, "disease_records": 7}
+    },
+    "scripts/sync_disease_ontology.py": {
+      "classification": "migration",
+      "reason": "Ontology synchronization still audits and remaps legacy projections alongside Registry entities.",
+      "max_references": {"DiseaseRecord": 0, "disease_records": 17}
+    },
+    "scripts/us_history_data_quality_check.py": {
+      "classification": "quality_audit",
+      "reason": "US strict-history validation is retained only to compare the old projection with its source extract.",
+      "max_references": {"DiseaseRecord": 0, "disease_records": 2}
+    },
+    "src/core/db_schema.py": {
+      "classification": "schema_contract",
+      "reason": "Country-row cleanup must preserve countries still referenced by compatibility rows.",
+      "max_references": {"DiseaseRecord": 0, "disease_records": 1}
+    },
+    "src/data/crawlers/cn.py": {
+      "classification": "runtime_read",
+      "reason": "CN incremental discovery still reads legacy maximum dates and missing months; it is a first-wave checkpoint migration target.",
+      "max_references": {"DiseaseRecord": 8, "disease_records": 0}
+    },
+    "src/data/processors/au.py": {
+      "classification": "runtime_write",
+      "reason": "AU updater temporarily reads legacy checkpoints and writes an atomic compatibility projection before Registry cutover.",
+      "max_references": {"DiseaseRecord": 0, "disease_records": 3}
+    },
+    "src/data/processors/br.py": {
+      "classification": "runtime_write",
+      "reason": "BR updater temporarily reads legacy checkpoints and writes a lossy compatibility aggregate alongside source-series facts.",
+      "max_references": {"DiseaseRecord": 0, "disease_records": 3}
+    },
+    "src/data/processors/ch.py": {
+      "classification": "runtime_write",
+      "reason": "CH updater temporarily reads legacy checkpoints and writes an atomic compatibility projection before Registry cutover.",
+      "max_references": {"DiseaseRecord": 0, "disease_records": 3}
+    },
+    "src/data/processors/hk.py": {
+      "classification": "runtime_write",
+      "reason": "HK updater temporarily reads legacy checkpoints and writes an atomic compatibility projection before Registry cutover.",
+      "max_references": {"DiseaseRecord": 0, "disease_records": 3}
+    },
+    "src/data/processors/jp.py": {
+      "classification": "runtime_write",
+      "reason": "JP updater temporarily reads a legacy checkpoint and writes an atomic compatibility projection before Registry cutover.",
+      "max_references": {"DiseaseRecord": 0, "disease_records": 2}
+    },
+    "src/data/processors/kr.py": {
+      "classification": "runtime_write",
+      "reason": "KR updater temporarily reads legacy checkpoints and writes an atomic compatibility projection before Registry cutover.",
+      "max_references": {"DiseaseRecord": 0, "disease_records": 3}
+    },
+    "src/data/processors/nz.py": {
+      "classification": "runtime_write",
+      "reason": "NZ updater temporarily reads legacy checkpoints and writes an atomic compatibility projection before Registry cutover.",
+      "max_references": {"DiseaseRecord": 0, "disease_records": 3}
+    },
+    "src/data/processors/tw.py": {
+      "classification": "runtime_write",
+      "reason": "TW updater temporarily reads legacy checkpoints and writes an atomic compatibility projection before Registry cutover.",
+      "max_references": {"DiseaseRecord": 0, "disease_records": 3}
+    },
+    "src/data/processors/us.py": {
+      "classification": "runtime_write",
+      "reason": "US updater temporarily reads source-specific legacy checkpoints and writes the residents-only compatibility projection.",
+      "max_references": {"DiseaseRecord": 0, "disease_records": 4}
+    },
+    "src/data/storage/record_store.py": {
+      "classification": "runtime_write",
+      "reason": "Shared CN compatibility writer remains transactionally paired with SeriesObservationStore until per-country legacy writes are disabled.",
+      "max_references": {"DiseaseRecord": 3, "disease_records": 3}
+    },
+    "src/domain/__init__.py": {
+      "classification": "schema_contract",
+      "reason": "Public domain export keeps the legacy ORM model importable during the compatibility window.",
+      "max_references": {"DiseaseRecord": 2, "disease_records": 0}
+    },
+    "src/domain/country.py": {
+      "classification": "schema_contract",
+      "reason": "Country ORM relationship still names the legacy record model.",
+      "max_references": {"DiseaseRecord": 1, "disease_records": 0}
+    },
+    "src/domain/disease.py": {
+      "classification": "schema_contract",
+      "reason": "Disease ORM type and relationship retain legacy records until model archival.",
+      "max_references": {"DiseaseRecord": 3, "disease_records": 0}
+    },
+    "src/domain/disease_record.py": {
+      "classification": "schema_contract",
+      "reason": "Canonical ORM definition for the compatibility table remains required by grandfathered readers and migration tooling.",
+      "max_references": {"DiseaseRecord": 2, "disease_records": 1}
+    },
+    "src/generation/data_exporter.py": {
+      "classification": "runtime_read",
+      "reason": "Download exports still query legacy records and are scheduled to consume the shared series-first projection.",
+      "max_references": {"DiseaseRecord": 7, "disease_records": 0}
+    },
+    "src/generation/generator.py": {
+      "classification": "runtime_read",
+      "reason": "Report evidence extraction still reads the legacy projection and is a first-wave migration target.",
+      "max_references": {"DiseaseRecord": 7, "disease_records": 0}
+    },
+    "src/services/agent_workflow_service.py": {
+      "classification": "runtime_read",
+      "reason": "Agent database evidence search still exposes legacy rows and must move to explicit source-series evidence.",
+      "max_references": {"DiseaseRecord": 13, "disease_records": 3}
+    },
+    "src/services/report_service.py": {
+      "classification": "runtime_read",
+      "reason": "Report availability and reuse signatures still depend on the legacy table instead of Registry observation revisions.",
+      "max_references": {"DiseaseRecord": 18, "disease_records": 0}
+    }
+  }
+}

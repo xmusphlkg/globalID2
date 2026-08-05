@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "release_version": "2026.08.2",
+  "defaults": {
+    "read_mode": "series_with_fallback",
+    "shadow_compare": true,
+    "legacy_write_mode": "dual"
+  },
+  "targets": [
+    {
+      "country_code": "US",
+      "concept_id": "D162",
+      "read_mode": "series_only",
+      "shadow_compare": false,
+      "required_series": [
+        "SER_US_NHSS_HIV_ANNUAL"
+      ],
+      "allowed_projection_policy": "single_series",
+      "approval": {
+        "approved_by": "repository-owner-authorized-migration",
+        "approved_at": "2026-08-04",
+        "reason": "US HIV Registry series has 11/11 period parity, zero shadow differences, explicit availability, and no suppressed, rejected, or unit-mismatched facts. Legacy dual write remains enabled for rollback."
+      },
+      "notes": "First strict-read canary. Keep SRC_US_NHSS legacy writes in dual mode until the source-partition checkpoint migration and observation window are complete."
+    }
+  ],
+  "sources": []
+}
