@@ -1,0 +1,25 @@
+name: Repository Boundaries
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: read
+
+concurrency:
+  group: repository-boundaries-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  repository-boundaries:
+    name: Generated data is untracked
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+      - name: Verify repository boundaries
+        run: ./scripts/check_repository_boundaries.sh

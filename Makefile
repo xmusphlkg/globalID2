@@ -94,18 +94,15 @@ lint:
 
 check:
 	@echo "完整检查..."
+	@make check-repository-boundaries
 	@make format
 	@make lint
 	@echo "类型检查..."
 	venv/bin/mypy src
 	@make test
 	@echo "所有检查完成"
-
-dev-data-commit:
-	@./scripts/commit_data_refresh.sh
-
-site-data-dev-commit:
-	@./scripts/commit_data_refresh.sh -- make site-data
+check-repository-boundaries:
+	@./scripts/check_repository_boundaries.sh
 
 # ========== 清理命令 ==========
 

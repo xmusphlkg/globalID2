@@ -42,10 +42,19 @@ logger = get_logger(__name__)
 ROOT_DIR = Path(__file__).resolve().parents[2]
 ASTRO_DIR = ROOT_DIR / "astro-site"
 ENV_PATH = ROOT_DIR / ".env"
-DATA_REFRESH_COMMIT_SCRIPT = ROOT_DIR / "scripts" / "commit_data_refresh.sh"
 SUBSCRIPTIONS_SCRIPT = ROOT_DIR / "cloudflare" / "subscriptions" / "scripts" / "wrangler-env.sh"
-RELEASE_PATHS = ("astro-site/src/data", "astro-site/dist")
-DATA_REFRESH_PATHS = ("astro-site/src/data", "data/current", "data/raw")
+GENERATED_DATA_PATHS = (
+    "astro-site/src/data/about.json",
+    "astro-site/src/data/countries",
+    "astro-site/src/data/disease-knowledge",
+    "astro-site/src/data/disease-ontology.json",
+    "astro-site/src/data/diseases",
+    "astro-site/src/data/downloads.json",
+    "astro-site/src/data/meta.json",
+    "astro-site/src/data/reports",
+    "data/current",
+    "data/raw",
+)
 SITE_RELEASE_MANIFEST = ASTRO_DIR / "dist" / "release.json"
 SITE_VISUAL_MODULE_PREFIXES = (
     "ChartFrame.",
@@ -67,7 +76,6 @@ LOGGED_COMMAND_CANCEL_POLL_SECONDS = 1.0
 DEFAULT_LOGGED_COMMAND_TIMEOUT_SECONDS = 15 * 60
 GENERATE_SITE_DATA_TIMEOUT_SECONDS = 30 * 60
 ASTRO_BUILD_TIMEOUT_SECONDS = 15 * 60
-DATA_REFRESH_SNAPSHOT_TIMEOUT_SECONDS = 10 * 60
 CLOUDFLARE_DEPLOY_TIMEOUT_SECONDS = 15 * 60
 SUBSCRIPTION_SYNC_TIMEOUT_SECONDS = 10 * 60
 GITHUB_SNAPSHOT_PUBLISH_TIMEOUT_SECONDS = 15 * 60
@@ -531,7 +539,7 @@ class DataReleaseService:
             "trigger": trigger,
             "manual_trigger": manual,
             "trigger_task_uuid": trigger_task_uuid,
-            "release_paths": list(RELEASE_PATHS),
+            "generated_paths": list(GENERATED_DATA_PATHS),
         }
         task = await task_manager.create_task(
             task_type=TaskType.EXPORT_DATA,
@@ -596,8 +604,6 @@ class DataReleaseService:
             "timezone": cfg.timezone,
             "poll_interval_seconds": cfg.poll_interval_seconds,
             "auto_failure_cooldown_minutes": cfg.auto_failure_cooldown_minutes,
-            "commit_data_refresh_snapshot": cfg.commit_data_refresh_snapshot,
-            "push_data_refresh_snapshot": cfg.push_data_refresh_snapshot,
             "last_tick_at": _iso(self._last_tick_at),
             "jobs": jobs_payload,
         }
@@ -624,11 +630,7 @@ class DataReleaseService:
             "blockers": [],
         }
         worktree = await self._git_status_paths()
-        blocking_dirty = [
-            path for path in worktree
-            if not self._is_release_path(path)
-        ]
-        release_dirty = [path for path in worktree if self._is_release_path(path)]
+        tracked_generated_paths = await self._tracked_generated_paths()
 
         python_path = self._python_executable()
         wrangler_check = await self._run_capture(
@@ -654,12 +656,11 @@ class DataReleaseService:
             blockers.append("Wrangler CLI is unavailable.")
         if job.include_cloudflare_deploy and not cloudflare["payload"].get("production_branch"):
             blockers.append("Cloudflare Pages project has no production branch configured.")
-        if self._config().commit_data_refresh_snapshot and not DATA_REFRESH_COMMIT_SCRIPT.exists():
-            blockers.append(f"Data refresh commit script is missing: {DATA_REFRESH_COMMIT_SCRIPT}")
-
-        snapshot_branch = await self._data_refresh_snapshot_branch()
-        if self._config().push_data_refresh_snapshot and not snapshot_branch:
-            blockers.append("Data refresh snapshot push is enabled, but no target branch could be resolved.")
+        if tracked_generated_paths:
+            blockers.append(
+                "Generated data is still tracked by the code repository: "
+                + ", ".join(tracked_generated_paths)
+            )
 
         return {
             "checked_at": datetime.now(ZoneInfo("UTC")).isoformat(),
@@ -676,8 +677,7 @@ class DataReleaseService:
                 "write_check_output": download_repo["payload"]["write_check_output"],
                 "ssh_transport": download_repo["payload"].get("ssh_transport"),
                 "require_clean_worktree": job.require_clean_worktree,
-                "dirty_release_paths": release_dirty,
-                "dirty_blocking_paths": blocking_dirty,
+                "dirty_blocking_paths": worktree,
             },
             "cloudflare": cloudflare["payload"],
             "commands": {
@@ -686,14 +686,10 @@ class DataReleaseService:
                 "wrangler_available": wrangler_check["returncode"] == 0,
                 "wrangler_version": wrangler_check["stdout"].strip() or None,
             },
-            "data_refresh_snapshot": {
-                "enabled": self._config().commit_data_refresh_snapshot,
-                "push_enabled": self._config().push_data_refresh_snapshot,
-                "script_path": str(DATA_REFRESH_COMMIT_SCRIPT),
-                "script_exists": DATA_REFRESH_COMMIT_SCRIPT.exists(),
-                "paths": list(DATA_REFRESH_PATHS),
-                "remote": self._config().data_refresh_snapshot_remote.strip() or "origin",
-                "branch": snapshot_branch,
+            "repository_boundary": {
+                "generated_paths": list(GENERATED_DATA_PATHS),
+                "tracked_paths": tracked_generated_paths,
+                "enforced": not tracked_generated_paths,
             },
         }
 
@@ -786,99 +782,9 @@ class DataReleaseService:
             job_id=job.job_id,
         )
 
-        changed_release_paths = await self._git_dirty_release_paths()
-        changed_data_refresh_paths = await self._git_dirty_data_refresh_paths()
-        data_refresh_snapshot_commit = None
-        data_refresh_snapshot_pushed = False
         github_snapshot_published = False
         pages_deployed = False
         cloudflare_deployment = None
-
-        if changed_release_paths:
-            await task_manager.add_workbook_entry(
-                task.task_uuid,
-                entry_type="info",
-                title="Release Diff Summary",
-                content="\n".join(changed_release_paths),
-                content_type="text",
-                metadata={"event": "release_diff", "release_job_id": job.job_id},
-            )
-        else:
-            await task_manager.add_workbook_entry(
-                task.task_uuid,
-                entry_type="warning",
-                title="No Release Artifacts Changed",
-                content="generate_site_data and Astro build completed, but no tracked release files changed under astro-site/src/data or astro-site/dist.",
-                content_type="text",
-                metadata={"event": "release_diff", "release_job_id": job.job_id},
-            )
-
-        if changed_data_refresh_paths:
-            await task_manager.add_workbook_entry(
-                task.task_uuid,
-                entry_type="info",
-                title="Data Refresh Snapshot Diff",
-                content="\n".join(changed_data_refresh_paths),
-                content_type="text",
-                metadata={"event": "data_refresh_snapshot_diff", "release_job_id": job.job_id},
-            )
-
-        if self._config().commit_data_refresh_snapshot:
-            before_head = await self._git_head_short()
-            snapshot_commit_message = await self._render_data_refresh_snapshot_message(job, tz=tz)
-            await self._run_logged_command(
-                task.task_uuid,
-                title="Commit Data Refresh Snapshot",
-                cmd=[str(DATA_REFRESH_COMMIT_SCRIPT), "-m", snapshot_commit_message],
-                cwd=ROOT_DIR,
-                env=git_env,
-                metadata={"event": "data_refresh_snapshot_commit", "release_job_id": job.job_id},
-                timeout_seconds=DATA_REFRESH_SNAPSHOT_TIMEOUT_SECONDS,
-            )
-            after_head = await self._git_head_short()
-            if after_head and after_head != before_head:
-                data_refresh_snapshot_commit = after_head
-                if self._config().push_data_refresh_snapshot:
-                    snapshot_remote = self._config().data_refresh_snapshot_remote.strip() or "origin"
-                    snapshot_branch = await self._data_refresh_snapshot_branch()
-                    if not snapshot_branch:
-                        raise RuntimeError("Data refresh snapshot push is enabled, but no target branch could be resolved.")
-                    await self._run_logged_command(
-                        task.task_uuid,
-                        title="Push Data Refresh Snapshot",
-                        cmd=["git", "push", snapshot_remote, f"HEAD:{snapshot_branch}"],
-                        cwd=ROOT_DIR,
-                        env=git_env,
-                        metadata={
-                            "event": "data_refresh_snapshot_push",
-                            "release_job_id": job.job_id,
-                            "remote": snapshot_remote,
-                            "branch": snapshot_branch,
-                        },
-                        timeout_seconds=DATA_REFRESH_SNAPSHOT_TIMEOUT_SECONDS,
-                    )
-                    data_refresh_snapshot_pushed = True
-            else:
-                await task_manager.add_workbook_entry(
-                    task.task_uuid,
-                    entry_type="info",
-                    title="Data Refresh Snapshot Unchanged",
-                    content="No new local data snapshot commit was created.",
-                    content_type="text",
-                    metadata={"event": "data_refresh_snapshot_noop", "release_job_id": job.job_id},
-                )
-        elif changed_data_refresh_paths:
-            await task_manager.add_workbook_entry(
-                task.task_uuid,
-                entry_type="warning",
-                title="Data Refresh Snapshot Not Committed",
-                content=(
-                    "Generated data changed, but automatic data snapshot commits are disabled. "
-                    "Set DATA_RELEASE__COMMIT_DATA_REFRESH_SNAPSHOT=true to commit these paths during release."
-                ),
-                content_type="text",
-                metadata={"event": "data_refresh_snapshot_disabled", "release_job_id": job.job_id},
-            )
 
         if job.include_git_push:
             await self._run_logged_command(
@@ -986,10 +892,6 @@ class DataReleaseService:
             "github_snapshot_published": github_snapshot_published,
             "pages_deployed": pages_deployed,
             "subscription_options_synced": subscription_options_synced,
-            "changed_release_paths": changed_release_paths,
-            "changed_data_refresh_paths": changed_data_refresh_paths,
-            "data_refresh_snapshot_commit": data_refresh_snapshot_commit,
-            "data_refresh_snapshot_pushed": data_refresh_snapshot_pushed,
             "preflight": checks,
         }
 
@@ -1011,7 +913,6 @@ class DataReleaseService:
                 f"Site release: {release_identity['release_id']}\n"
                 f"Production URL: {cloudflare_deployment.get('production_url') if cloudflare_deployment else '-'}\n"
                 f"Subscription options synced: {'yes' if subscription_options_synced else 'no'}\n"
-                f"Data snapshot commit: {data_refresh_snapshot_commit or '-'}\n"
                 f"Download repo: {download_repo_url or '-'}"
             ),
             content_type="text",
@@ -1065,21 +966,6 @@ class DataReleaseService:
             return template.format(**variables)
         except Exception:
             return self._config().default_commit_message_template.format(**variables)
-
-    async def _render_data_refresh_snapshot_message(self, job: DataReleaseJobConfig, *, tz: ZoneInfo) -> str:
-        now = datetime.now(tz)
-        branch = await self._data_refresh_snapshot_branch()
-        template = self._config().data_refresh_snapshot_message_template or "chore(data): snapshot refresh {timestamp}"
-        variables = {
-            "timestamp": now.strftime("%Y-%m-%d %H:%M:%S %Z"),
-            "date": now.strftime("%Y-%m-%d"),
-            "branch": branch,
-            "job_id": job.job_id,
-        }
-        try:
-            return template.format(**variables)
-        except Exception:
-            return "chore(data): snapshot refresh {timestamp}".format(**variables)
 
     def _download_repo_url(self) -> str:
         return get_data_share_repo_url().strip()
@@ -1379,29 +1265,14 @@ class DataReleaseService:
                 paths.append(path.replace("\\", "/"))
         return paths
 
-    async def _git_dirty_release_paths(self) -> list[str]:
-        return [path for path in await self._git_status_paths() if self._is_release_path(path)]
-
-    async def _git_dirty_data_refresh_paths(self) -> list[str]:
-        return [path for path in await self._git_status_paths() if self._is_data_refresh_path(path)]
-
-    def _is_release_path(self, path: str) -> bool:
-        normalized = path.strip().replace("\\", "/")
-        if normalized.startswith("./"):
-            normalized = normalized[2:]
-        return any(
-            normalized == base or normalized.startswith(f"{base}/")
-            for base in RELEASE_PATHS
+    async def _tracked_generated_paths(self) -> list[str]:
+        result = await self._run_capture(
+            ["git", "ls-files", "--", *GENERATED_DATA_PATHS],
+            cwd=ROOT_DIR,
         )
-
-    def _is_data_refresh_path(self, path: str) -> bool:
-        normalized = path.strip().replace("\\", "/")
-        if normalized.startswith("./"):
-            normalized = normalized[2:]
-        return any(
-            normalized == base or normalized.startswith(f"{base}/")
-            for base in DATA_REFRESH_PATHS
-        )
+        if result["returncode"] != 0:
+            return ["<unable to verify repository boundary>"]
+        return [line for line in result["stdout"].splitlines() if line.strip()]
 
     async def _download_repo_check(self, _job: DataReleaseJobConfig) -> dict[str, Any]:
         repo_url = self._download_repo_url()
@@ -1974,22 +1845,6 @@ class DataReleaseService:
             pass
         if proc.returncode is None:
             await proc.wait()
-
-    async def _git_head_short(self) -> Optional[str]:
-        result = await self._run_capture(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT_DIR)
-        if result["returncode"] != 0:
-            return None
-        return result["stdout"].strip() or None
-
-    async def _data_refresh_snapshot_branch(self) -> str:
-        configured = self._config().data_refresh_snapshot_branch.strip()
-        if configured:
-            return configured
-        result = await self._run_capture(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=ROOT_DIR)
-        branch = result["stdout"].strip() if result["returncode"] == 0 else ""
-        if branch and branch != "HEAD":
-            return branch
-        return self._current_git_branch_fallback()
 
     def _current_git_branch_fallback(self) -> str:
         branch = os.getenv("DATA_RELEASE_GIT_BRANCH", "").strip()
