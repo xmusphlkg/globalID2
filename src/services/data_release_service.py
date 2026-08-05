@@ -81,6 +81,7 @@ SUBSCRIPTION_SYNC_TIMEOUT_SECONDS = 10 * 60
 GITHUB_SNAPSHOT_PUBLISH_TIMEOUT_SECONDS = 15 * 60
 GITHUB_SNAPSHOT_BRANCH = "snapshot-v2"
 GITHUB_SNAPSHOT_DIR = ROOT_DIR / "exports" / "github-data-snapshot-v2"
+RAW_ARCHIVE_BRANCH = "raw-v1"
 
 
 def _iso(value: Optional[datetime]) -> Optional[str]:
@@ -514,6 +515,11 @@ class DataReleaseService:
         description_parts = [
             f"Generate site data and build Astro site for release job {job.job_id}.",
             (
+                f"Incrementally archive raw crawler data to {RAW_ARCHIVE_BRANCH}."
+                if get_config().raw_archive.enabled
+                else "Raw crawler archive publication disabled for this run."
+            ),
+            (
                 f"Publish canonical data snapshot to {GITHUB_SNAPSHOT_BRANCH}."
                 if job.include_git_push
                 else "GitHub snapshot publication disabled for this run."
@@ -540,6 +546,9 @@ class DataReleaseService:
             "manual_trigger": manual,
             "trigger_task_uuid": trigger_task_uuid,
             "generated_paths": list(GENERATED_DATA_PATHS),
+            "raw_archive_enabled": get_config().raw_archive.enabled,
+            "raw_archive_repo_url": get_config().raw_archive.repo_url,
+            "raw_archive_branch": RAW_ARCHIVE_BRANCH,
         }
         task = await task_manager.create_task(
             task_type=TaskType.EXPORT_DATA,
@@ -639,6 +648,7 @@ class DataReleaseService:
             timeout=60,
         )
         cloudflare = await self._cloudflare_check(job.cloudflare_project_name)
+        raw_archive = await self._raw_archive_check()
 
         blockers: list[str] = []
         if job.include_git_push:
@@ -650,6 +660,7 @@ class DataReleaseService:
             )
         if job.include_cloudflare_deploy:
             blockers.extend(cloudflare["blockers"])
+        blockers.extend(raw_archive["blockers"])
         if not python_path.exists():
             blockers.append(f"Python executable not found: {python_path}")
         if job.include_cloudflare_deploy and wrangler_check["returncode"] != 0:
@@ -680,6 +691,7 @@ class DataReleaseService:
                 "dirty_blocking_paths": worktree,
             },
             "cloudflare": cloudflare["payload"],
+            "raw_archive": raw_archive["payload"],
             "commands": {
                 "python_path": str(python_path),
                 "python_exists": python_path.exists(),
@@ -735,6 +747,44 @@ class DataReleaseService:
         release_identity = await self._site_release_identity(deployment_branch)
 
         await task_manager.update_task_progress(task.task_uuid, 5)
+        raw_archive_cfg = get_config().raw_archive
+        raw_archive_published = False
+        if raw_archive_cfg.enabled:
+            raw_git_transport = str(
+                (checks.get("raw_archive") or {}).get("ssh_transport") or "default"
+            )
+            raw_git_env = self._build_git_env(
+                raw_archive_cfg.repo_url,
+                use_github_ssh_over_443=(raw_git_transport == "github-ssh-over-443"),
+            )
+            await self._run_logged_command(
+                task.task_uuid,
+                title="Archive Raw Crawler Data",
+                cmd=self._publish_raw_archive_command(python_path=python_path),
+                cwd=ROOT_DIR,
+                env=raw_git_env,
+                metadata={
+                    "event": "raw_git_archive_publish",
+                    "release_job_id": job.job_id,
+                    "branch": RAW_ARCHIVE_BRANCH,
+                },
+                timeout_seconds=float(raw_archive_cfg.git_timeout_seconds) + 60 * 60,
+            )
+            raw_archive_published = True
+        else:
+            await task_manager.add_workbook_entry(
+                task.task_uuid,
+                entry_type="info",
+                title="Raw Crawler Archive Skipped",
+                content="RAW_ARCHIVE__ENABLED is disabled for this run.",
+                content_type="text",
+                metadata={
+                    "event": "raw_git_archive_skipped",
+                    "release_job_id": job.job_id,
+                },
+            )
+        await task_manager.update_task_progress(task.task_uuid, 15)
+
         generate_cmd = self._generate_site_data_command(
             python_path=python_path,
             snapshot_url_base=snapshot_url_base,
@@ -890,6 +940,9 @@ class DataReleaseService:
             "commit_message": publish_commit_message,
             "git_pushed": github_snapshot_published,
             "github_snapshot_published": github_snapshot_published,
+            "raw_archive_published": raw_archive_published,
+            "raw_archive_repo_url": raw_archive_cfg.repo_url or None,
+            "raw_archive_branch": RAW_ARCHIVE_BRANCH if raw_archive_cfg.enabled else None,
             "pages_deployed": pages_deployed,
             "subscription_options_synced": subscription_options_synced,
             "preflight": checks,
@@ -908,6 +961,7 @@ class DataReleaseService:
             content=(
                 f"Release job: {job.name}\n"
                 f"GitHub snapshot-v2 published: {'yes' if github_snapshot_published else 'no'}\n"
+                f"Raw crawler archive updated: {'yes' if raw_archive_published else 'no'}\n"
                 f"Cloudflare deployed: {'yes' if pages_deployed else 'no'}\n"
                 f"Production branch: {deployment_branch or '-'}\n"
                 f"Site release: {release_identity['release_id']}\n"
@@ -1132,6 +1186,28 @@ class DataReleaseService:
             "--push",
         ]
 
+    def _publish_raw_archive_command(self, *, python_path: Path) -> list[str]:
+        cfg = get_config().raw_archive
+        return [
+            str(python_path),
+            "scripts/publish_raw_git_archive.py",
+            "--source-dir",
+            str(get_config().raw_data_dir),
+            "--repository-dir",
+            str(cfg.repository_dir),
+            "--repo-url",
+            cfg.repo_url,
+            "--chunk-mib",
+            str(cfg.chunk_mib),
+            "--commit-batch-mib",
+            str(cfg.commit_batch_mib),
+            "--zstd-level",
+            str(cfg.zstd_level),
+            "--git-timeout-seconds",
+            str(cfg.git_timeout_seconds),
+            "--push",
+        ]
+
     def _env_file_values(self) -> dict[str, str]:
         if dotenv_values is None or not ENV_PATH.exists():
             return {}
@@ -1237,6 +1313,80 @@ class DataReleaseService:
             "GIT_TERMINAL_PROMPT": "0",
             "GIT_SSH_COMMAND": " ".join(ssh_parts),
         }
+
+    async def _raw_archive_check(self) -> dict[str, Any]:
+        cfg = get_config().raw_archive
+        payload = {
+            "enabled": bool(cfg.enabled),
+            "repo_url": cfg.repo_url or None,
+            "branch": RAW_ARCHIVE_BRANCH,
+            "source_dir": str(get_config().raw_data_dir),
+            "repository_dir": str(cfg.repository_dir),
+            "chunk_mib": cfg.chunk_mib,
+            "read_access_ok": False,
+            "write_access_ok": False,
+            "zstd_available": False,
+            "ssh_transport": "disabled" if not cfg.enabled else "default",
+            "read_check_output": None,
+            "write_check_output": None,
+        }
+        blockers: list[str] = []
+        if not cfg.enabled:
+            return {"payload": payload, "blockers": blockers}
+        if not cfg.repo_url.strip():
+            blockers.append("Missing RAW_ARCHIVE__REPO_URL.")
+        if not get_config().raw_data_dir.is_dir():
+            blockers.append(f"Raw archive source directory is missing: {get_config().raw_data_dir}")
+
+        zstd = await self._run_capture(["zstd", "--version"], cwd=ROOT_DIR, timeout=20)
+        payload["zstd_available"] = zstd["returncode"] == 0
+        if zstd["returncode"] != 0:
+            blockers.append("zstd executable is unavailable.")
+        if blockers:
+            return {"payload": payload, "blockers": blockers}
+
+        git_env = self._build_git_env(cfg.repo_url)
+        read = await self._run_capture(
+            ["git", "ls-remote", cfg.repo_url, "HEAD"],
+            cwd=ROOT_DIR,
+            env=git_env,
+            timeout=40,
+        )
+        if read["returncode"] != 0 and self._is_github_ssh_repo_url(cfg.repo_url):
+            fallback_env = self._build_git_env(cfg.repo_url, use_github_ssh_over_443=True)
+            fallback = await self._run_capture(
+                ["git", "ls-remote", cfg.repo_url, "HEAD"],
+                cwd=ROOT_DIR,
+                env=fallback_env,
+                timeout=40,
+            )
+            if fallback["returncode"] == 0:
+                read = fallback
+                git_env = fallback_env
+                payload["ssh_transport"] = "github-ssh-over-443"
+            else:
+                read["stdout"] = (
+                    f"Primary SSH failed:\n{read.get('stdout') or ''}\n\n"
+                    f"SSH-over-443 failed:\n{fallback.get('stdout') or ''}"
+                ).strip()
+        payload["read_check_output"] = read["stdout"]
+        payload["read_access_ok"] = read["returncode"] == 0
+        if read["returncode"] != 0:
+            blockers.append("Raw archive repository read check failed.")
+            return {"payload": payload, "blockers": blockers}
+
+        probe_branch = f"__globalid_write_probe__/{RAW_ARCHIVE_BRANCH}"
+        write = await self._run_capture(
+            ["git", "push", "--dry-run", cfg.repo_url, f"HEAD:refs/heads/{probe_branch}"],
+            cwd=ROOT_DIR,
+            env=git_env,
+            timeout=40,
+        )
+        payload["write_check_output"] = write["stdout"]
+        payload["write_access_ok"] = write["returncode"] == 0
+        if write["returncode"] != 0:
+            blockers.append("Raw archive repository write check failed.")
+        return {"payload": payload, "blockers": blockers}
 
     async def _git_status_paths(self) -> list[str]:
         result = await self._run_capture(
