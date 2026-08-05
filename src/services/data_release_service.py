@@ -843,9 +843,27 @@ class DataReleaseService:
             return ""
         return result["stdout"].strip()
 
+    async def _git_branch_commit(self, branch: str) -> str:
+        """Resolve a local or origin branch without changing the working tree."""
+
+        normalized = branch.strip()
+        if not normalized:
+            return ""
+        for ref in (f"refs/remotes/origin/{normalized}", f"refs/heads/{normalized}"):
+            result = await self._run_capture(
+                ["git", "rev-parse", "--verify", ref],
+                cwd=ROOT_DIR,
+            )
+            if result["returncode"] == 0 and result["stdout"].strip():
+                return result["stdout"].strip()
+        return ""
+
     async def _site_release_identity(self, deployment_branch: str) -> dict[str, Any]:
         source_commit = await self._git_head_full()
         source_branch = await self._current_git_branch()
+        deployment_commit = await self._git_branch_commit(deployment_branch)
+        if source_commit and deployment_commit == source_commit:
+            source_branch = deployment_branch
         built_at = datetime.now(ZoneInfo("UTC")).isoformat()
         short_commit = source_commit[:12] if source_commit else "unknown"
         release_id = f"{datetime.now(ZoneInfo('UTC')).strftime('%Y%m%dT%H%M%SZ')}-{short_commit}"

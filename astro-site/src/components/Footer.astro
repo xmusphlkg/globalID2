@@ -14,8 +14,9 @@ const siteVersion = sitePackage?.version ? `v${sitePackage.version}` : 'Unknown'
 const releaseId = import.meta.env.PUBLIC_GIDS_RELEASE_ID?.trim() || 'development';
 const sourceCommit = import.meta.env.PUBLIC_GIDS_SOURCE_COMMIT?.trim() || '';
 const deploymentBranch = import.meta.env.PUBLIC_GIDS_DEPLOY_BRANCH?.trim() || '';
-const releaseTitle = [
-  sourceCommit ? `commit ${sourceCommit.slice(0, 12)}` : '',
+const buildId = sourceCommit ? sourceCommit.slice(0, 12) : releaseId;
+const buildTitle = [
+  releaseId !== 'development' ? `release ${releaseId}` : '',
   deploymentBranch ? `branch ${deploymentBranch}` : '',
 ].filter(Boolean).join(' · ');
 const dataVersion = metaData?.generated_at
@@ -83,14 +84,14 @@ const links = [
             <a class="site-footer-link site-footer-meta-value" href="/changelog/">{siteVersion}</a>
           </li>
           <li>
-            {initialLanguage === 'zh' ? '发布版本' : 'Release'}:
+            {initialLanguage === 'zh' ? '构建版本' : 'Build'}:
             {' '}
-            <span class="site-footer-meta-value font-mono" title={releaseTitle}>{releaseId}</span>
+            <span class="site-footer-meta-value font-mono" title={buildTitle}>{buildId}</span>
           </li>
           <li>{initialLanguage === 'zh' ? '国家/地区' : 'Countries'}: <span class="site-footer-meta-value">{metaData?.total_countries ?? '—'}</span></li>
           <li>{initialLanguage === 'zh' ? '监测疾病' : 'Diseases tracked'}: <span class="site-footer-meta-value">{metaData?.total_diseases ?? '—'}</span></li>
           <li>{initialLanguage === 'zh' ? '已生成报告' : 'Reports generated'}: <span class="site-footer-meta-value">{metaData?.total_reports ?? '—'}</span></li>
-          <li>{initialLanguage === 'zh' ? '数据版本' : 'Data version'}: <span class="site-footer-meta-value">{dataVersion}</span></li>
+          <li>{initialLanguage === 'zh' ? '数据更新' : 'Data updated'}: <span class="site-footer-meta-value">{dataVersion}</span></li>
         </ul>
       </div>
     </div>
@@ -98,8 +99,8 @@ const links = [
     <div class="site-footer-divider border-t mt-10 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
       <p class="site-footer-legal text-xs">
         {initialLanguage === 'zh'
-          ? `© ${year} GIDS。站点 ${siteVersion}，发布 ${releaseId}。`
-          : `© ${year} GIDS. Site ${siteVersion}, release ${releaseId}.`}
+          ? `© ${year} GIDS。站点 ${siteVersion}，数据更新于 ${dataVersion}。`
+          : `© ${year} GIDS. Site ${siteVersion}, data updated ${dataVersion}.`}
       </p>
       <p class="site-footer-legal-note text-xs">
         {initialLanguage === 'zh'
