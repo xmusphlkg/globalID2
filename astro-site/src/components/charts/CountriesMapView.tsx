@@ -344,6 +344,11 @@ export default function CountriesMapView({ metaCountries = [], height = 450 }: P
 
   const scaledBoxW = BOX_W;
   const scaledBoxH = BOX_H;
+  // Keep persistent labels for active pipelines only. Scheduled coverage stays
+  // visible as map dots with hover tooltips; its source details live in the
+  // country cards below the map. This avoids label collisions as the roadmap
+  // expands beyond a small handful of countries.
+  const labeledPositions = dotPositions.filter(d => d.status === 'Supported');
 
   return (
     <div
@@ -366,7 +371,7 @@ export default function CountriesMapView({ metaCountries = [], height = 450 }: P
       />
 
       {/* ── SVG overlay: L-shaped leader lines ── */}
-      {dotPositions.length > 0 && (
+      {labeledPositions.length > 0 && (
         <svg
           style={{
             position: 'absolute', inset: 0,
@@ -374,7 +379,7 @@ export default function CountriesMapView({ metaCountries = [], height = 450 }: P
             pointerEvents: 'none', overflow: 'visible',
           }}
         >
-          {dotPositions.map(d => {
+          {labeledPositions.map(d => {
             const [bdx] = getCoverageLabelOffset(d.iso2);
             const isRight = bdx > 0;
 
@@ -414,7 +419,7 @@ export default function CountriesMapView({ metaCountries = [], height = 450 }: P
       )}
 
       {/* ── Country info boxes ── */}
-      {dotPositions.map(d => {
+      {labeledPositions.map(d => {
         const isSupported = d.status === 'Supported';
         const accentColor = isSupported ? palette.supported : palette.scheduled;
         const borderColor = isSupported ? palette.boxSupportedBorder : palette.boxScheduledBorder;

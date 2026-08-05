@@ -95,6 +95,7 @@ function buildEntries(): SiteEntry[] {
   const entries: SiteEntry[] = [
     { path: '/', lastmod: siteLastmod },
     { path: '/about/', lastmod: siteLastmod },
+    { path: '/changelog/', lastmod: siteLastmod },
     { path: '/subscribe/', lastmod: siteLastmod },
     { path: '/countries/', lastmod: siteLastmod },
     { path: '/diseases/', lastmod: siteLastmod },
