@@ -358,6 +358,54 @@ def test_snapshot_publish_command_uses_only_v2_publisher(tmp_path):
     assert "publish_download_repo.py" not in command
 
 
+def test_raw_archive_publish_command_uses_dedicated_incremental_publisher(
+    monkeypatch, tmp_path
+):
+    service = DataReleaseService()
+    config = SimpleNamespace(
+        raw_data_dir=tmp_path / "raw",
+        raw_archive=SimpleNamespace(
+            repo_url="git@example/raw-archive.git",
+            repository_dir=tmp_path / "raw-git-archive",
+            chunk_mib=48,
+            commit_batch_mib=384,
+            zstd_level=6,
+            git_timeout_seconds=1800,
+        ),
+    )
+    monkeypatch.setattr(release_module, "get_config", lambda: config)
+
+    command = service._publish_raw_archive_command(python_path=tmp_path / "python")
+
+    assert command[1] == "scripts/publish_raw_git_archive.py"
+    assert command[command.index("--source-dir") + 1] == str(config.raw_data_dir)
+    assert command[command.index("--repo-url") + 1] == config.raw_archive.repo_url
+    assert command[command.index("--chunk-mib") + 1] == "48"
+    assert "--push" in command
+    assert all("release" not in part.casefold() for part in command[2:])
+
+
+@pytest.mark.asyncio
+async def test_raw_archive_preflight_is_noop_when_disabled(monkeypatch, tmp_path):
+    service = DataReleaseService()
+    config = SimpleNamespace(
+        raw_data_dir=tmp_path / "raw",
+        raw_archive=SimpleNamespace(
+            enabled=False,
+            repo_url="",
+            repository_dir=tmp_path / "archive",
+            chunk_mib=48,
+        ),
+    )
+    monkeypatch.setattr(release_module, "get_config", lambda: config)
+
+    result = await service._raw_archive_check()
+
+    assert result["blockers"] == []
+    assert result["payload"]["enabled"] is False
+    assert result["payload"]["ssh_transport"] == "disabled"
+
+
 def test_cloudflare_deployment_match_requires_production_branch_and_commit():
     service = DataReleaseService()
     identity = {
