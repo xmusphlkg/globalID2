@@ -76,6 +76,13 @@ def _mmwr_week_end_date(year: int, week: int) -> date:
 class JPWeeklyUpdater:
     """Read JP current weekly rows from crawler output and import."""
 
+    # Japan's legacy disease mapping is intentionally broader than the new
+    # series registry during the migration period.  Preserve every mapped row
+    # in the legacy table, but only dual-write rows whose series is registered.
+    # This mirrors the US/KR migration strategy and prevents partial registry
+    # coverage from rejecting an otherwise valid source refresh.
+    series_registered_rows_only = True
+
     def __init__(
         self,
         *,
@@ -88,10 +95,19 @@ class JPWeeklyUpdater:
         self.reporting_area = reporting_area
         self.source_name = source_name
         self.output_csv = output_csv
-    def refresh_source(self, *, source: str = "jp_weekly", run_external: bool = False, force: bool = False) -> JPUpdateFetchResult:
+    def refresh_source(
+        self,
+        *,
+        source: str = "jp_weekly",
+        run_external: bool = False,
+        force: bool = False,
+        fill_missing: bool = False,
+        save_raw: bool = False,
+        raw_dir: Optional[Path] = None,
+    ) -> JPUpdateFetchResult:
         logs: List[str] = []
         source_key = (source or "jp_weekly").strip().lower()
-        crawler = JapanIDWRCrawler()
+        crawler = JapanIDWRCrawler(save_raw=save_raw, raw_dir=raw_dir)
 
         if source_key == "local":
             logs.append(f"[local] using existing standardized CSV: {self.output_csv}")
@@ -101,6 +117,7 @@ class JPWeeklyUpdater:
                     self.output_csv,
                     reporting_area=self.reporting_area,
                     force=force,
+                    fill_missing=fill_missing,
                 )
                 logs.append(
                     f"[crawler] fetched {fetch_summary.row_count} rows from {fetch_summary.csv_url}; latest={fetch_summary.latest_date}"

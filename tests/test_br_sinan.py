@@ -415,6 +415,91 @@ def test_aggregate_file_uses_full_scope_cache_without_reparse(tmp_path, monkeypa
     }]
 
 
+def test_aggregate_file_builds_full_cache_before_filtering_months(
+    tmp_path, monkeypatch
+) -> None:
+    crawler = BrazilSINANCrawler(
+        save_raw=False,
+        raw_dir=tmp_path / "raw",
+        cache_dir=tmp_path / "cache",
+    )
+    item = SINANFile(
+        prefix="DENG",
+        disease_name="Dengue",
+        year=2026,
+        filename="DENGBR26.dbc",
+        url="ftp://example/DENGBR26.dbc",
+        dataset_status="preliminary",
+        size_bytes=4,
+        modified_at=datetime(2026, 5, 1, tzinfo=timezone.utc),
+    )
+    fake_dbc = tmp_path / "DENGBR26.dbc"
+    fake_dbc.write_bytes(b"fake")
+    fake_dbf = tmp_path / "DENGBR26.dbf"
+    _write_test_dbf(
+        fake_dbf,
+        [
+            {"ID_AGRAVO": "A90", "DT_NOTIFIC": "20260101", "NU_ANO": "2026"},
+            {"ID_AGRAVO": "A90", "DT_NOTIFIC": "20260201", "NU_ANO": "2026"},
+            {"ID_AGRAVO": "A90", "DT_NOTIFIC": "20260202", "NU_ANO": "2026"},
+        ],
+    )
+    download_calls = []
+
+    def fake_download(_item, _target_dir):
+        download_calls.append(1)
+        return fake_dbc
+
+    monkeypatch.setattr(crawler, "_download_file", fake_download)
+    monkeypatch.setattr(
+        BrazilSINANCrawler,
+        "_decompress_to_dbf",
+        staticmethod(lambda _dbc, dbf: shutil.copyfile(fake_dbf, dbf)),
+    )
+
+    january = crawler.aggregate_file(item, months={(2026, 1)}, working_dir=tmp_path / "work")
+    february = crawler.aggregate_file(item, months={(2026, 2)}, working_dir=tmp_path / "work")
+
+    assert [(row["Date"], row["Cases"]) for row in january] == [("2026-01-01", "1")]
+    assert [(row["Date"], row["Cases"]) for row in february] == [("2026-02-01", "2")]
+    assert download_calls == [1]
+
+
+def test_download_file_reuses_only_matching_remote_signature(tmp_path, monkeypatch) -> None:
+    crawler = BrazilSINANCrawler(cache_dir=tmp_path / "cache")
+    target_dir = tmp_path / "downloads"
+    first = SINANFile(
+        prefix="DENG",
+        disease_name="Dengue",
+        year=2026,
+        filename="DENGBR26.dbc",
+        url="ftp://example/DENGBR26.dbc",
+        dataset_status="preliminary",
+        size_bytes=4,
+        modified_at=datetime(2026, 5, 1, tzinfo=timezone.utc),
+    )
+    second = SINANFile(
+        **{
+            **first.__dict__,
+            "modified_at": datetime(2026, 5, 2, tzinfo=timezone.utc),
+        }
+    )
+    payloads = iter((b"old!", b"new!"))
+    calls = []
+
+    def fetch(_url):
+        calls.append(1)
+        return next(payloads)
+
+    monkeypatch.setattr(crawler, "_request_with_retries", fetch)
+
+    path = crawler._download_file(first, target_dir)
+    assert crawler._download_file(first, target_dir) == path
+    assert crawler._download_file(second, target_dir) == path
+    assert path.read_bytes() == b"new!"
+    assert calls == [1, 1]
+
+
 def test_fetch_file_index_uses_stale_cache_when_live_listing_fails(tmp_path, monkeypatch) -> None:
     crawler = BrazilSINANCrawler(save_raw=True, raw_dir=tmp_path / "raw", cache_dir=tmp_path / "cache")
     cached_file = SINANFile(

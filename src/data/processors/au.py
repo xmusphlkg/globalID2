@@ -88,6 +88,10 @@ def _parse_date(row: Dict[str, str]) -> Optional[date]:
 class AUMonthlyUpdater:
     """Read AU national monthly rows from local crawler output and import."""
 
+    # The legacy disease mapping is complete, while lossless source-series
+    # registrations are intentionally introduced a subset at a time.
+    series_registered_rows_only = True
+
     def __init__(
         self,
         *,

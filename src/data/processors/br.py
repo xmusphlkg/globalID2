@@ -92,6 +92,8 @@ def _parse_date(row: Dict[str, str]) -> Optional[date]:
 class BRMonthlyUpdater:
     """Read Brazil SINAN national monthly rows and import them."""
 
+    series_registered_rows_only = True
+
     def __init__(
         self,
         *,

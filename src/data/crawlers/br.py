@@ -12,7 +12,6 @@ import csv
 import json
 import hashlib
 import re
-import shutil
 import tempfile
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -689,8 +688,31 @@ class BrazilSINANCrawler(BaseCrawler):
     def _download_file(self, sinan_file: SINANFile, target_dir: Path) -> Path:
         target_dir.mkdir(parents=True, exist_ok=True)
         target_path = target_dir / sinan_file.filename
+        metadata_path = target_path.with_suffix(target_path.suffix + ".metadata.json")
+        expected_signature = self._file_cache_signature(sinan_file)
         if target_path.exists() and target_path.stat().st_size == sinan_file.size_bytes:
-            return target_path
+            cached_signature = None
+            if metadata_path.exists():
+                try:
+                    cached_signature = json.loads(metadata_path.read_text(encoding="utf-8")).get(
+                        "signature"
+                    )
+                except Exception:
+                    cached_signature = None
+            if cached_signature in {None, expected_signature}:
+                if cached_signature is None:
+                    metadata_path.write_text(
+                        json.dumps(
+                            {
+                                "signature": expected_signature,
+                                "source_url": sinan_file.url,
+                                "verified_at": datetime.now(timezone.utc).isoformat(),
+                            },
+                            ensure_ascii=False,
+                        ),
+                        encoding="utf-8",
+                    )
+                return target_path
 
         tmp_path = target_path.with_suffix(target_path.suffix + ".tmp")
         if tmp_path.exists():
@@ -699,7 +721,25 @@ class BrazilSINANCrawler(BaseCrawler):
         payload = self._request_with_retries(sinan_file.url)
         with tmp_path.open("wb") as handle:
             handle.write(payload)
+        if sinan_file.size_bytes > 0 and tmp_path.stat().st_size != sinan_file.size_bytes:
+            actual_size = tmp_path.stat().st_size
+            tmp_path.unlink(missing_ok=True)
+            raise RuntimeError(
+                f"[BR-SINAN] Download size mismatch for {sinan_file.filename}: "
+                f"expected={sinan_file.size_bytes} actual={actual_size}"
+            )
         tmp_path.replace(target_path)
+        metadata_path.write_text(
+            json.dumps(
+                {
+                    "signature": expected_signature,
+                    "source_url": sinan_file.url,
+                    "verified_at": datetime.now(timezone.utc).isoformat(),
+                },
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
         return target_path
 
     @staticmethod
@@ -730,8 +770,13 @@ class BrazilSINANCrawler(BaseCrawler):
             if self.save_raw:
                 dbc_path = self._download_file(sinan_file, local_raw_dir)
             else:
-                scratch = Path(tempfile.mkdtemp(prefix="globalid_br_sinan_"))
-                dbc_path = self._download_file(sinan_file, scratch)
+                download_cache_dir = (
+                    self.cache_dir
+                    / "downloads"
+                    / sinan_file.dataset_status
+                    / str(sinan_file.year)
+                )
+                dbc_path = self._download_file(sinan_file, download_cache_dir)
 
             dbf_parent = Path(working_dir) if working_dir is not None else dbc_path.parent
             dbf_parent.mkdir(parents=True, exist_ok=True)
@@ -745,8 +790,6 @@ class BrazilSINANCrawler(BaseCrawler):
                 for record in _load_dbf_records(dbf_path):
                     bucket_date = _select_record_date(record, sinan_file.year)
                     bucket = (bucket_date.year, bucket_date.month)
-                    if months is not None and bucket not in months:
-                        continue
                     if sinan_file.prefix == "NTRA":
                         monthly_counts[bucket] += _nonnegative_whole_number(
                             record.get("NU_CASOPOS")
@@ -759,8 +802,6 @@ class BrazilSINANCrawler(BaseCrawler):
             finally:
                 if dbf_path.exists():
                     dbf_path.unlink()
-                if not self.save_raw:
-                    shutil.rmtree(dbc_path.parent, ignore_errors=True)
 
             self._write_cached_counts(
                 sinan_file,
@@ -771,6 +812,8 @@ class BrazilSINANCrawler(BaseCrawler):
 
         rows: List[Dict[str, str]] = []
         for year, month in sorted(monthly_counts):
+            if months is not None and (year, month) not in months:
+                continue
             row = {
                 "Date": date(year, month, 1).isoformat(),
                 "RawDiseaseLabel": sinan_file.disease_name,

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import csv
 from dataclasses import dataclass
+from datetime import datetime
 
 import pytest
 
@@ -140,6 +142,92 @@ def test_download_csv_table_decodes_japanese_csv(
 
     assert crawler._download_csv_table(csv_url) == [["疾病", "報告"], ["総数", "5"]]
     assert (tmp_path / "2025" / "12" / "zensu202512.csv").read_bytes() == payload
+
+
+def test_incremental_discovery_limits_work_to_recent_weeks(
+    crawler: JapanIDWRCrawler,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    crawler.max_candidate_csvs = 2
+    current_year = datetime.now().year
+    current_index = (
+        f"https://id-info.jihs.go.jp/en/surveillance/idwr/rapid/{current_year}/index.html"
+    )
+    old_index = "https://id-info.jihs.go.jp/en/surveillance/idwr/rapid/2020/index.html"
+    week_pages = [
+        current_index.replace("index.html", f"{week}/index.html")
+        for week in (30, 29, 28)
+    ]
+    monkeypatch.setattr(
+        crawler,
+        "_discover_year_index_urls",
+        lambda: [current_index, old_index],
+    )
+
+    def discover_weeks(url: str):
+        assert url == current_index
+        return week_pages
+
+    monkeypatch.setattr(crawler, "_discover_week_index_urls", discover_weeks)
+    monkeypatch.setattr(
+        crawler,
+        "get",
+        lambda url: _FakeResponse(
+            text='<a href="./zensu.csv">zensu</a>',
+            url=url,
+        ),
+    )
+
+    csv_urls, _raw_urls, _logs = crawler._discover_weekly_csv_urls(
+        existing_weeks={(current_year, 29)}
+    )
+
+    assert len(csv_urls) == 2
+    assert f"/{current_year}/30/" in csv_urls[0]
+    assert f"/{current_year}/29/" in csv_urls[1]
+
+
+def test_incremental_refresh_merges_existing_standardized_rows(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    output = tmp_path / "weekly.csv"
+    output.write_text(
+        'Reporting Area,Current MMWR Year,MMWR WEEK,Disease,Current week,"Current week, flag"\n'
+        "総数,2026,29,AIDS,1,\n",
+        encoding="utf-8",
+    )
+    crawler = JapanIDWRCrawler(save_raw=False)
+    monkeypatch.setattr(
+        crawler,
+        "_discover_weekly_csv_urls",
+        lambda **_kwargs: (["https://example/zensu.csv"], [], []),
+    )
+    monkeypatch.setattr(crawler, "_download_csv_table", lambda _url: [])
+    monkeypatch.setattr(
+        crawler,
+        "_normalize_rows",
+        lambda *_args, **_kwargs: [
+            {
+                "Reporting Area": "総数",
+                "Current MMWR Year": "2026",
+                "MMWR WEEK": "30",
+                "Disease": "AIDS",
+                "Current week": "2",
+                "Current week, flag": "",
+            }
+        ],
+    )
+
+    summary = crawler.crawl_standardized_csv(output)
+
+    with output.open(encoding="utf-8") as handle:
+        rows = list(csv.DictReader(handle))
+    assert {(row["MMWR WEEK"], row["Current week"]) for row in rows} == {
+        ("29", "1"),
+        ("30", "2"),
+    }
+    assert summary.row_count == 2
 
 
 def test_parse_legacy_standardized_rows_clamps_negative_and_filters_area(crawler: JapanIDWRCrawler) -> None:
