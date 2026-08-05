@@ -4,8 +4,11 @@ import json
 from pathlib import Path
 import subprocess
 
+import pytest
+
 from scripts import publish_raw_git_archive as archive
-from scripts.verify_raw_git_archive import verify_raw_archive
+from scripts.verify_raw_git_archive import RawArchiveValidationError, verify_raw_archive
+from src.core.config import RawArchiveSettings
 
 
 def _git_log(repository: Path) -> list[str]:
@@ -172,3 +175,37 @@ def test_unborn_persistent_clone_resumes_without_recompression(tmp_path: Path) -
     assert result.changed is True
     assert result.new_object_count == 1
     assert _git_log(repository)
+
+
+def test_raw_archive_settings_reject_batch_smaller_than_chunk() -> None:
+    with pytest.raises(ValueError, match="greater than or equal to chunk_mib"):
+        RawArchiveSettings(
+            chunk_mib=64,
+            commit_batch_mib=48,
+            _env_file=None,
+        )
+
+
+def test_restore_rejects_symlinked_parent_directory(tmp_path: Path) -> None:
+    source = tmp_path / "raw"
+    repository = tmp_path / "archive"
+    source_file = source / "us" / "cases.json"
+    source_file.parent.mkdir(parents=True)
+    source_file.write_text('{"cases": 7}\n', encoding="utf-8")
+    archive.publish_raw_archive(
+        source,
+        repository,
+        chunk_bytes=1024,
+        commit_batch_bytes=1024,
+    )
+
+    restore = tmp_path / "restore"
+    outside = tmp_path / "outside"
+    restore.mkdir()
+    outside.mkdir()
+    (restore / "us").symlink_to(outside, target_is_directory=True)
+
+    with pytest.raises(RawArchiveValidationError, match="restore through symlink"):
+        verify_raw_archive(repository, restore_dir=restore)
+
+    assert not (outside / "cases.json").exists()

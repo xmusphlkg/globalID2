@@ -62,6 +62,24 @@ def _read_json(path: Path) -> dict[str, object]:
     return payload
 
 
+def _restore_parent_without_symlinks(
+    restore_root: Path,
+    relative: PurePosixPath,
+) -> Path:
+    """Create a restore parent without following directory symlinks."""
+    current = restore_root
+    for part in relative.parent.parts:
+        current = current / part
+        if current.is_symlink():
+            raise RawArchiveValidationError(f"Refusing to restore through symlink: {current}")
+        if current.exists():
+            if not current.is_dir():
+                raise RawArchiveValidationError(f"Restore parent is not a directory: {current}")
+            continue
+        current.mkdir()
+    return current
+
+
 def _resolve_manifest(
     repository: Path,
     manifest: Path | None,
@@ -153,9 +171,17 @@ def verify_raw_archive(
         raise RawArchiveValidationError("Manifest file count mismatch")
 
     source_root = source_dir.resolve() if source_dir is not None else None
-    restore_root = restore_dir.resolve() if restore_dir is not None else None
+    restore_root = (
+        Path(os.path.abspath(os.fspath(restore_dir)))
+        if restore_dir is not None
+        else None
+    )
     if restore_root is not None:
+        if restore_root.is_symlink():
+            raise RawArchiveValidationError(f"Restore directory must not be a symlink: {restore_root}")
         restore_root.mkdir(parents=True, exist_ok=True)
+        if not restore_root.is_dir():
+            raise RawArchiveValidationError(f"Restore path is not a directory: {restore_root}")
 
     seen_paths: set[str] = set()
     verified_objects: dict[str, Path] = {}
@@ -210,9 +236,15 @@ def verify_raw_archive(
                 ):
                     raise RawArchiveValidationError(f"Live source does not match archive: {relative}")
             if restore_root is not None:
-                destination = restore_root.joinpath(*relative.parts)
-                destination.parent.mkdir(parents=True, exist_ok=True)
+                destination_parent = _restore_parent_without_symlinks(restore_root, relative)
+                destination = destination_parent / relative.name
+                if destination.is_symlink():
+                    raise RawArchiveValidationError(f"Restore destination must not be a symlink: {destination}")
                 temporary_destination = destination.with_suffix(destination.suffix + ".tmp")
+                if temporary_destination.is_symlink():
+                    raise RawArchiveValidationError(
+                        f"Restore temporary path must not be a symlink: {temporary_destination}"
+                    )
                 shutil.copy2(verified_objects[digest], temporary_destination)
                 temporary_destination.replace(destination)
     finally:
