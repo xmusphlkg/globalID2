@@ -7,11 +7,52 @@ REPO_ROOT="$(cd "$SUBSCRIPTIONS_DIR/../.." && pwd)"
 WRANGLER_BIN="$REPO_ROOT/astro-site/node_modules/.bin/wrangler"
 GENERATED_CONFIG="$SUBSCRIPTIONS_DIR/wrangler.generated.toml"
 
+load_repo_env() {
+  local env_path="$1"
+  local python_bin="$REPO_ROOT/venv/bin/python3"
+  local env_dump
+
+  if [ ! -x "$python_bin" ]; then
+    python_bin="$(command -v python3 || true)"
+  fi
+  if [ -z "$python_bin" ]; then
+    echo "python3 is required to parse $env_path safely." >&2
+    return 1
+  fi
+
+  env_dump="$(mktemp "${TMPDIR:-/tmp}/globalid-subscriptions-env.XXXXXX")"
+  if ! "$python_bin" - "$env_path" > "$env_dump" <<'PY'
+import re
+import sys
+
+from dotenv import dotenv_values
+
+env_path = sys.argv[1]
+for key, value in dotenv_values(env_path).items():
+    if value is None or re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", key) is None:
+        continue
+    sys.stdout.buffer.write(key.encode("utf-8") + b"\0")
+    sys.stdout.buffer.write(value.encode("utf-8") + b"\0")
+PY
+  then
+    rm -f "$env_dump"
+    echo "Failed to parse $env_path with python-dotenv." >&2
+    return 1
+  fi
+
+  local name value
+  while IFS= read -r -d '' name && IFS= read -r -d '' value; do
+    # Explicit process/service environment always wins over the repository file.
+    if [ -z "${!name+x}" ]; then
+      printf -v "$name" '%s' "$value"
+      export "$name"
+    fi
+  done < "$env_dump"
+  rm -f "$env_dump"
+}
+
 if [ -f "$REPO_ROOT/.env" ]; then
-  set -a
-  # shellcheck disable=SC1091
-  source "$REPO_ROOT/.env"
-  set +a
+  load_repo_env "$REPO_ROOT/.env"
 fi
 
 if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
