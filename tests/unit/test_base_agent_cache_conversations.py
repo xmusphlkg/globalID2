@@ -87,6 +87,33 @@ class ProbeFallbackAgent(BaseAgent):
         return "glm-ok", {"prompt": 1, "completion": 1, "total": 2}
 
 
+def test_runtime_candidates_include_configured_model_failover(monkeypatch):
+    monkeypatch.setattr(BaseAgent, "_init_clients", lambda self: None)
+    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_CHAIN", ["configured-model"], raising=False)
+    monkeypatch.setattr(BaseAgent, "MODEL_COOLDOWNS", {}, raising=False)
+    monkeypatch.setattr(BaseAgent, "ROUTE_COOLDOWNS", {}, raising=False)
+    agent = DummyAgent()
+
+    candidates, chain = agent._build_candidates(
+        [
+            {
+                "model_key": "runtime:unavailable-model",
+                "model_name": "unavailable-model",
+                "provider_key": "runtime",
+                "available_for_routing": True,
+                "last_check_status": "available",
+            }
+        ]
+    )
+
+    assert [candidate["model_name"] for candidate in candidates] == [
+        "unavailable-model",
+        "configured-model",
+    ]
+    assert candidates[1]["route"] is None
+    assert chain == ["configured-model"]
+
+
 @pytest.mark.asyncio
 async def test_cache_hit_records_conversation_history(monkeypatch):
     monkeypatch.setattr(BaseAgent, "_init_clients", lambda self: None)

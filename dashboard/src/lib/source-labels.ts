@@ -30,7 +30,10 @@ export function getSourceDisplayLabel(
 ): string {
   const s = (source || "all").trim().toLowerCase();
   const cc = (countryCode || "").trim().toUpperCase();
-  if (s === "nndss_api" || (s === "all" && cc === "US")) return "US CDC NNDSS";
+  if (s === "nndss_api") return "US CDC NNDSS";
+  if (s === "nhss_hiv" || s === "nhss" || s === "hiv_nhss") {
+    return lang === "zh" ? "美国 CDC NHSS HIV 监测" : "US CDC NHSS HIV";
+  }
   if (s === "jp_idwr" || s === "jp_weekly" || (s === "all" && cc === "JP")) return "JP NIID Weekly";
   if (s === "nidss_open_data" || s === "nidss" || ((s === "all" || s === "tw") && cc === "TW")) {
     return lang === "zh" ? "中国台湾 CDC NIDSS" : "Taiwan, China CDC NIDSS";
@@ -82,7 +85,11 @@ export function getSourceOptionsForCountry(
 ) {
   const code = countryCode.trim().toUpperCase();
   if (code === "US") {
-    return [{ value: "nndss_api", label: "US CDC NNDSS" }];
+    return [
+      { value: "all", label: lang === "zh" ? "全部来源" : "All Sources" },
+      { value: "nndss_api", label: "US CDC NNDSS" },
+      { value: "nhss_hiv", label: lang === "zh" ? "美国 CDC NHSS HIV 监测" : "US CDC NHSS HIV" },
+    ];
   }
   if (code === "CN") {
     return [

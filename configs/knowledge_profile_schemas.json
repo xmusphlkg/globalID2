@@ -1,0 +1,165 @@
+{
+  "schema_version": 1,
+  "default_profile_type": "infectious_disease",
+  "schemas": {
+    "infectious_disease": {
+      "required_fields": ["definition", "clinical_features", "epidemiology", "transmission", "prevention", "surveillance_note", "risk_groups"],
+      "optional_fields": [],
+      "not_applicable_fields": [],
+      "labels": {
+        "definition": {"en": "Definition", "zh": "定义"},
+        "clinical_features": {"en": "Clinical features", "zh": "临床特征"},
+        "epidemiology": {"en": "Epidemiology", "zh": "流行病学"},
+        "transmission": {"en": "Transmission", "zh": "传播/暴露"},
+        "prevention": {"en": "Prevention", "zh": "预防"},
+        "surveillance_note": {"en": "Surveillance note", "zh": "监测说明"},
+        "risk_groups": {"en": "Risk groups", "zh": "高风险人群"}
+      }
+    },
+    "classification_scope": {
+      "required_fields": ["definition", "clinical_features", "epidemiology", "surveillance_note"],
+      "optional_fields": ["transmission"],
+      "not_applicable_fields": ["prevention", "risk_groups"],
+      "labels": {
+        "definition": {"en": "Classification definition", "zh": "分类定义"},
+        "clinical_features": {"en": "Included conditions", "zh": "包含范围"},
+        "epidemiology": {"en": "Classification context", "zh": "分类背景"},
+        "transmission": {"en": "Boundary and exclusions", "zh": "边界与排除项"},
+        "prevention": {"en": "Not applicable", "zh": "不适用"},
+        "surveillance_note": {"en": "Monitoring interpretation", "zh": "监测口径说明"},
+        "risk_groups": {"en": "Not applicable", "zh": "不适用"}
+      }
+    },
+    "occupational_condition": {
+      "required_fields": ["definition", "clinical_features", "epidemiology", "transmission", "prevention", "surveillance_note", "risk_groups"],
+      "optional_fields": [],
+      "not_applicable_fields": [],
+      "labels": {
+        "definition": {"en": "Condition definition", "zh": "职业健康定义"},
+        "clinical_features": {"en": "Health effects", "zh": "健康影响"},
+        "epidemiology": {"en": "Occurrence and burden", "zh": "发生与负担"},
+        "transmission": {"en": "Occupational exposure", "zh": "职业暴露"},
+        "prevention": {"en": "Prevention and control", "zh": "预防与控制"},
+        "surveillance_note": {"en": "Occupational surveillance", "zh": "职业监测说明"},
+        "risk_groups": {"en": "Exposed occupations", "zh": "重点职业人群"}
+      }
+    },
+    "injury_poisoning_event": {
+      "required_fields": ["definition", "clinical_features", "epidemiology", "transmission", "prevention", "surveillance_note", "risk_groups"],
+      "optional_fields": [],
+      "not_applicable_fields": [],
+      "labels": {
+        "definition": {"en": "Event definition", "zh": "事件定义"},
+        "clinical_features": {"en": "Health consequences", "zh": "健康后果"},
+        "epidemiology": {"en": "Occurrence and burden", "zh": "发生与负担"},
+        "transmission": {"en": "Exposure mechanism", "zh": "暴露机制"},
+        "prevention": {"en": "Prevention and control", "zh": "预防与控制"},
+        "surveillance_note": {"en": "Event surveillance", "zh": "事件监测说明"},
+        "risk_groups": {"en": "Affected populations", "zh": "重点人群"}
+      }
+    },
+    "violence_event": {
+      "required_fields": ["definition", "clinical_features", "epidemiology", "prevention", "surveillance_note", "risk_groups"],
+      "optional_fields": [],
+      "not_applicable_fields": ["transmission"],
+      "labels": {
+        "definition": {"en": "Event definition", "zh": "事件定义"},
+        "clinical_features": {"en": "Health consequences", "zh": "健康后果"},
+        "epidemiology": {"en": "Occurrence and burden", "zh": "发生与负担"},
+        "transmission": {"en": "Not applicable", "zh": "不适用"},
+        "prevention": {"en": "Prevention and support", "zh": "预防与支持"},
+        "surveillance_note": {"en": "Event surveillance", "zh": "事件监测说明"},
+        "risk_groups": {"en": "Affected populations", "zh": "受影响人群"}
+      }
+    },
+    "clinical_syndrome_outcome": {
+      "required_fields": ["definition", "clinical_features", "epidemiology", "surveillance_note", "risk_groups"],
+      "optional_fields": ["transmission", "prevention"],
+      "not_applicable_fields": [],
+      "labels": {
+        "definition": {"en": "Syndrome or outcome definition", "zh": "综合征或结局定义"},
+        "clinical_features": {"en": "Clinical criteria and consequences", "zh": "临床标准与健康后果"},
+        "epidemiology": {"en": "Occurrence and burden", "zh": "发生与负担"},
+        "transmission": {"en": "Underlying causes or exposures", "zh": "相关病因或暴露"},
+        "prevention": {"en": "Prevention context", "zh": "预防背景"},
+        "surveillance_note": {"en": "Outcome surveillance", "zh": "结局监测说明"},
+        "risk_groups": {"en": "Populations at elevated risk", "zh": "高风险人群"}
+      }
+    },
+    "public_health_intervention": {
+      "required_fields": ["definition", "clinical_features", "epidemiology", "transmission", "prevention", "surveillance_note", "risk_groups"],
+      "optional_fields": [],
+      "not_applicable_fields": [],
+      "labels": {
+        "definition": {"en": "Intervention definition", "zh": "干预定义"},
+        "clinical_features": {"en": "Indications and eligibility", "zh": "适用指征与对象"},
+        "epidemiology": {"en": "Exposure context and demand", "zh": "暴露背景与需求"},
+        "transmission": {"en": "Exposure pathway", "zh": "暴露途径"},
+        "prevention": {"en": "Intervention and follow-up", "zh": "干预与随访"},
+        "surveillance_note": {"en": "Programme surveillance", "zh": "项目监测说明"},
+        "risk_groups": {"en": "Target populations", "zh": "目标人群"}
+      }
+    },
+    "outbreak_event": {
+      "required_fields": ["definition", "clinical_features", "epidemiology", "transmission", "prevention", "surveillance_note", "risk_groups"],
+      "optional_fields": [],
+      "not_applicable_fields": [],
+      "labels": {
+        "definition": {"en": "Event definition", "zh": "事件定义"},
+        "clinical_features": {"en": "Associated illnesses and event features", "zh": "相关疾病与事件特征"},
+        "epidemiology": {"en": "Occurrence and burden", "zh": "发生与负担"},
+        "transmission": {"en": "Source and exposure pathway", "zh": "来源与暴露途径"},
+        "prevention": {"en": "Control measures", "zh": "控制措施"},
+        "surveillance_note": {"en": "Outbreak surveillance", "zh": "暴发监测说明"},
+        "risk_groups": {"en": "Affected populations", "zh": "受影响人群"}
+      }
+    }
+  },
+  "rules": [
+    {
+      "profile_type": "classification_scope",
+      "fields": ["name_en", "standard_name_en", "name_zh", "standard_name_zh"],
+      "patterns": ["^other\\b", "\\bunspecified\\b", "not otherwise specified", "not elsewhere classified", "^其他", "未指定", "未明示"]
+    },
+    {
+      "profile_type": "classification_scope",
+      "fields": ["description"],
+      "patterns": ["\\baggregate\\b.{0,80}\\bsurveillance concept\\b", "汇总.{0,30}监测", "合计.{0,30}监测"]
+    },
+    {
+      "profile_type": "clinical_syndrome_outcome",
+      "fields": ["name_en", "standard_name_en", "name_zh", "standard_name_zh"],
+      "patterns": ["\\bsyndrome\\b", "\\bmortality\\b", "\\bparalysis\\b", "综合征", "相关死亡", "麻痹"]
+    },
+    {
+      "profile_type": "public_health_intervention",
+      "fields": ["name_en", "standard_name_en", "name_zh", "standard_name_zh"],
+      "patterns": ["post-exposure prophylaxis", "post exposure prophylaxis", "\\bprophylaxis programme\\b", "暴露后处置", "暴露后预防"]
+    },
+    {
+      "profile_type": "outbreak_event",
+      "fields": ["name_en", "standard_name_en", "name_zh", "standard_name_zh"],
+      "patterns": ["\\boutbreak\\b", "暴发", "爆发"]
+    },
+    {
+      "profile_type": "infectious_disease",
+      "fields": ["category"],
+      "patterns": ["^(bacterial|viral|parasitic|fungal|prion)$"]
+    },
+    {
+      "profile_type": "violence_event",
+      "fields": ["name_en", "standard_name_en", "name_zh", "standard_name_zh", "description"],
+      "patterns": ["violence", "暴力"]
+    },
+    {
+      "profile_type": "occupational_condition",
+      "fields": ["name_en", "standard_name_en", "name_zh", "standard_name_zh", "description"],
+      "patterns": ["work-related", "work accident", "occupational", "职业", "工伤"]
+    },
+    {
+      "profile_type": "injury_poisoning_event",
+      "fields": ["name_en", "standard_name_en", "name_zh", "standard_name_zh", "description"],
+      "patterns": ["poisoning", "venomous", "toxic exposure", "injury", "decompression", "中毒", "毒性动物", "伤害", "减压"]
+    }
+  ]
+}

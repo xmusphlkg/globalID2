@@ -14,6 +14,7 @@ import {
   referenceUrl,
   renderCitations,
 } from '../../utils/citations';
+import { resolveKnowledgeText } from '../../utils/knowledge';
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
 
@@ -69,98 +70,87 @@ type BriefSection = {
   labelZh: string;
   en: string;
   zh: string;
+  availableEn: boolean;
+  availableZh: boolean;
 };
 
 const badgeClass = categoryStyles[diseaseData?.category] ?? 'badge-other';
 const knowledgeStatus = knowledgeData?.knowledge_status ?? diseaseData?.knowledge_status ?? null;
-const knowledgeProfileAvailable = Boolean(
-  knowledgeData?.knowledge_profile_available ?? diseaseData?.knowledge_profile_available ?? false
+const knowledgePayloads = [knowledgeData, diseaseData].filter((payload) => (
+  payload && (!payload.knowledge_status || payload.knowledge_status === 'published')
+));
+const missingSectionEn = 'Evidence-backed detail for this section is not available yet.';
+const missingSectionZh = '本章节暂无经来源支持的信息。';
+const officialSummaryEn = resolveKnowledgeText(knowledgePayloads, 'official_summary', 'en', ['official_intro']);
+const officialSummaryZh = resolveKnowledgeText(knowledgePayloads, 'official_summary', 'zh', ['official_intro']);
+const officialDefinitionEn = resolveKnowledgeText(knowledgePayloads, 'official_definition', 'en');
+const officialDefinitionZh = resolveKnowledgeText(knowledgePayloads, 'official_definition', 'zh');
+const clinicalFeaturesEn = resolveKnowledgeText(knowledgePayloads, 'clinical_features', 'en', ['clinical_summary']);
+const clinicalFeaturesZh = resolveKnowledgeText(knowledgePayloads, 'clinical_features', 'zh', ['clinical_summary']);
+const epidemiologyEn = resolveKnowledgeText(knowledgePayloads, 'epidemiology', 'en');
+const epidemiologyZh = resolveKnowledgeText(knowledgePayloads, 'epidemiology', 'zh');
+const transmissionEn = resolveKnowledgeText(knowledgePayloads, 'transmission', 'en');
+const transmissionZh = resolveKnowledgeText(knowledgePayloads, 'transmission', 'zh');
+const riskGroupsEn = resolveKnowledgeText(knowledgePayloads, 'risk_groups', 'en');
+const riskGroupsZh = resolveKnowledgeText(knowledgePayloads, 'risk_groups', 'zh');
+const preventionEn = resolveKnowledgeText(knowledgePayloads, 'prevention', 'en');
+const preventionZh = resolveKnowledgeText(knowledgePayloads, 'prevention', 'zh');
+const surveillanceNoteEn = resolveKnowledgeText(knowledgePayloads, 'surveillance_note', 'en');
+const surveillanceNoteZh = resolveKnowledgeText(knowledgePayloads, 'surveillance_note', 'zh');
+const knowledgeSectionLabels = knowledgeData?.knowledge_section_labels ?? diseaseData?.knowledge_section_labels ?? {};
+const sectionLabel = (field: string, language: 'en' | 'zh', fallback: string) => (
+  knowledgeSectionLabels?.[field]?.[language] ?? fallback
 );
-const officialIntroEn = knowledgeProfileAvailable
-  ? (knowledgeData?.official_intro_en ?? diseaseData?.official_intro_en ?? diseaseData?.official_summary_en ?? null)
-  : null;
-const officialIntroZh = knowledgeProfileAvailable
-  ? (knowledgeData?.official_intro_zh ?? diseaseData?.official_intro_zh ?? diseaseData?.official_summary_zh ?? null)
-  : null;
-const officialSummaryEn = knowledgeProfileAvailable
-  ? (knowledgeData?.official_summary_en ?? diseaseData?.official_summary_en ?? officialIntroEn ?? null)
-  : null;
-const officialSummaryZh = knowledgeProfileAvailable
-  ? (knowledgeData?.official_summary_zh ?? diseaseData?.official_summary_zh ?? officialIntroZh ?? officialSummaryEn)
-  : null;
-const officialDefinitionEn = knowledgeProfileAvailable ? (knowledgeData?.official_definition_en ?? diseaseData?.official_definition_en ?? null) : null;
-const officialDefinitionZh = knowledgeProfileAvailable ? (knowledgeData?.official_definition_zh ?? diseaseData?.official_definition_zh ?? null) : null;
-const clinicalFeaturesEn = knowledgeProfileAvailable ? (knowledgeData?.clinical_features_en ?? diseaseData?.clinical_features_en ?? diseaseData?.clinical_summary_en ?? null) : null;
-const clinicalFeaturesZh = knowledgeProfileAvailable ? (knowledgeData?.clinical_features_zh ?? diseaseData?.clinical_features_zh ?? diseaseData?.clinical_summary_zh ?? null) : null;
-const epidemiologyEn = knowledgeProfileAvailable ? (knowledgeData?.epidemiology_en ?? diseaseData?.epidemiology_en ?? null) : null;
-const epidemiologyZh = knowledgeProfileAvailable ? (knowledgeData?.epidemiology_zh ?? diseaseData?.epidemiology_zh ?? null) : null;
-const transmissionEn = knowledgeProfileAvailable ? (knowledgeData?.transmission_en ?? diseaseData?.transmission_en ?? null) : null;
-const transmissionZh = knowledgeProfileAvailable ? (knowledgeData?.transmission_zh ?? diseaseData?.transmission_zh ?? null) : null;
-const riskGroupsEn = knowledgeProfileAvailable ? (knowledgeData?.risk_groups_en ?? diseaseData?.risk_groups_en ?? null) : null;
-const riskGroupsZh = knowledgeProfileAvailable ? (knowledgeData?.risk_groups_zh ?? diseaseData?.risk_groups_zh ?? null) : null;
-const preventionEn = knowledgeProfileAvailable ? (knowledgeData?.prevention_en ?? diseaseData?.prevention_en ?? null) : null;
-const preventionZh = knowledgeProfileAvailable ? (knowledgeData?.prevention_zh ?? diseaseData?.prevention_zh ?? null) : null;
-const surveillanceNoteEn = knowledgeProfileAvailable ? (knowledgeData?.surveillance_note_en ?? diseaseData?.surveillance_note_en ?? null) : null;
-const surveillanceNoteZh = knowledgeProfileAvailable ? (knowledgeData?.surveillance_note_zh ?? diseaseData?.surveillance_note_zh ?? null) : null;
 const knowledgeSources = Array.isArray(knowledgeData?.knowledge_sources)
   ? knowledgeData.knowledge_sources
   : Array.isArray(diseaseData?.knowledge_sources)
     ? diseaseData.knowledge_sources
     : [];
+const makeSection = (
+  key: string,
+  labelEn: string,
+  labelZh: string,
+  en: string | null,
+  zh: string | null,
+): BriefSection | null => en || zh ? ({
+  key,
+  labelEn,
+  labelZh,
+  en: en ?? missingSectionEn,
+  zh: zh ?? missingSectionZh,
+  availableEn: Boolean(en),
+  availableZh: Boolean(zh),
+}) : null;
+const briefSections = [
+  makeSection(
+    'definition',
+    sectionLabel('definition', 'en', 'Definition'), sectionLabel('definition', 'zh', '定义'), officialDefinitionEn, officialDefinitionZh,
+  ),
+  makeSection('clinical-features', sectionLabel('clinical_features', 'en', 'Clinical features'), sectionLabel('clinical_features', 'zh', '临床特征'), clinicalFeaturesEn, clinicalFeaturesZh),
+  makeSection('epidemiology', sectionLabel('epidemiology', 'en', 'Epidemiology'), sectionLabel('epidemiology', 'zh', '流行病学'), epidemiologyEn, epidemiologyZh),
+  makeSection('transmission', sectionLabel('transmission', 'en', 'Transmission'), sectionLabel('transmission', 'zh', '传播/暴露'), transmissionEn, transmissionZh),
+  makeSection('risk-groups', sectionLabel('risk_groups', 'en', 'Risk groups'), sectionLabel('risk_groups', 'zh', '高风险人群'), riskGroupsEn, riskGroupsZh),
+  makeSection('prevention', sectionLabel('prevention', 'en', 'Prevention'), sectionLabel('prevention', 'zh', '预防'), preventionEn, preventionZh),
+  makeSection('surveillance-note', sectionLabel('surveillance_note', 'en', 'Surveillance note'), sectionLabel('surveillance_note', 'zh', '监测说明'), surveillanceNoteEn, surveillanceNoteZh),
+].filter(Boolean) as BriefSection[];
+const knowledgeProfileAvailable = Boolean(
+  briefSections.length > 0
+  && (officialSummaryEn || officialSummaryZh || officialDefinitionEn || officialDefinitionZh)
+);
+const enAvailableSectionCount = briefSections.filter((section) => section.availableEn).length;
+const zhAvailableSectionCount = briefSections.filter((section) => section.availableZh).length;
+const declaredKnowledgeDisplayMode = knowledgeData?.knowledge_display_mode ?? diseaseData?.knowledge_display_mode;
+const knowledgeDisplayMode = knowledgeProfileAvailable
+  ? declaredKnowledgeDisplayMode === 'full' ? 'full' : 'partial'
+  : 'blocked';
+const applicableSectionCount = knowledgeData?.knowledge_applicable_section_count
+  ?? diseaseData?.knowledge_applicable_section_count
+  ?? 7;
+const displaySummaryEn = officialSummaryEn ?? missingSectionEn;
+const displaySummaryZh = officialSummaryZh ?? missingSectionZh;
 const rawKnowledgeSourceEntries = knowledgeProfileAvailable
   ? knowledgeSources.filter((source: any) => source?.url)
   : [];
-const briefSections = [
-  officialDefinitionEn && {
-    key: 'definition',
-    labelEn: 'Definition',
-    labelZh: '定义',
-    en: officialDefinitionEn,
-    zh: officialDefinitionZh ?? officialDefinitionEn,
-  },
-  clinicalFeaturesEn && {
-    key: 'clinical-features',
-    labelEn: 'Clinical features',
-    labelZh: '临床特征',
-    en: clinicalFeaturesEn,
-    zh: clinicalFeaturesZh ?? clinicalFeaturesEn,
-  },
-  epidemiologyEn && {
-    key: 'epidemiology',
-    labelEn: 'Epidemiology',
-    labelZh: '流行病学',
-    en: epidemiologyEn,
-    zh: epidemiologyZh ?? epidemiologyEn,
-  },
-  transmissionEn && {
-    key: 'transmission',
-    labelEn: 'Transmission',
-    labelZh: '传播/暴露',
-    en: transmissionEn,
-    zh: transmissionZh ?? transmissionEn,
-  },
-  riskGroupsEn && {
-    key: 'risk-groups',
-    labelEn: 'Risk groups',
-    labelZh: '高风险人群',
-    en: riskGroupsEn,
-    zh: riskGroupsZh ?? riskGroupsEn,
-  },
-  preventionEn && {
-    key: 'prevention',
-    labelEn: 'Prevention',
-    labelZh: '预防',
-    en: preventionEn,
-    zh: preventionZh ?? preventionEn,
-  },
-  surveillanceNoteEn && {
-    key: 'surveillance-note',
-    labelEn: 'Surveillance note',
-    labelZh: '监测说明',
-    en: surveillanceNoteEn,
-    zh: surveillanceNoteZh ?? surveillanceNoteEn,
-  },
-].filter(Boolean) as BriefSection[];
 const citationTextCorpus = [
   officialSummaryEn,
   officialSummaryZh,
@@ -175,11 +165,11 @@ const knowledgeUpdatedZh = knowledgeUpdatedAt
   ? new Date(knowledgeUpdatedAt).toLocaleDateString('zh-CN', { year: 'numeric', month: 'short', day: 'numeric' })
   : null;
 const profileUnavailableMessageEn = knowledgeStatus === 'requires_review'
-  ? 'This disease profile is still under review and will be generated by the multi-expert pipeline when ready. Surveillance charts and downloadable datasets remain available below.'
-  : 'A public disease profile is not shown for this disease at the moment. Surveillance charts and downloadable datasets remain available below.';
+  ? 'The available material does not yet pass the evidence-quality threshold for a public disease profile. Verified surveillance data, coding information, and downloads remain available.'
+  : 'Source-backed disease background is not available yet. Verified surveillance data, coding information, and downloads remain available.';
 const profileUnavailableMessageZh = knowledgeStatus === 'requires_review'
-  ? '该疾病的 Disease Profile 目前仍在复核中，后续会由多专家流程生成。下方仍保留监测图表与可下载数据。'
-  : '该疾病当前暂不展示公开 Disease Profile。下方仍保留监测图表与可下载数据。';
+  ? '现有材料尚未达到公开疾病画像的证据质量门槛。已核验的监测数据、疾病编码和下载功能仍可正常使用。'
+  : '当前暂无基于可追溯来源的疾病背景信息。已核验的监测数据、疾病编码和下载功能仍可正常使用。';
 
 function fmtNum(n: number | null | undefined) {
   if (!n) return '0';
@@ -208,7 +198,7 @@ const hasDeathsData = diseaseData?.total_deaths > 0
     Array.isArray(series?.deaths) && series.deaths.some((value: number) => value > 0)
   );
 const chartSourceMeta = buildChartSourceMeta(
-  diseaseDownload,
+  diseaseDownload ? { ...diseaseDownload, source_info: diseaseData?.source_info } : null,
   `${diseaseData?.name_en ?? disease} surveillance dataset`
 );
 const diseaseDataUrl = diseaseDownload?.site_json_path ?? `/site-data/diseases/${diseaseId.toLowerCase()}.json`;
@@ -231,8 +221,8 @@ const diseaseDataUrl = diseaseDownload?.site_json_path ?? `/site-data/diseases/$
       <>
         <section class="academic-hero">
           <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[rgb(var(--border))/0.68] pb-3">
-            <p class="academic-kicker" data-lang-en={knowledgeProfileAvailable ? 'Disease Profile' : 'Disease Data Overview'} data-lang-zh={knowledgeProfileAvailable ? '疾病画像' : '疾病数据概览'}>
-              {knowledgeProfileAvailable ? 'Disease Profile' : 'Disease Data Overview'}
+            <p class="academic-kicker" data-lang-en={knowledgeProfileAvailable ? 'Disease Profile' : 'Knowledge Profile Pending'} data-lang-zh={knowledgeProfileAvailable ? '疾病画像' : '知识画像待补全'}>
+              {knowledgeProfileAvailable ? 'Disease Profile' : 'Knowledge Profile Pending'}
             </p>
             <span class={`inline-flex items-center rounded-none px-2.5 py-0.5 text-xs font-semibold ${badgeClass}`}>
               <span data-lang-en={diseaseData.category} data-lang-zh={categoryZh[diseaseData.category] ?? diseaseData.category}>
@@ -258,16 +248,44 @@ const diseaseDataUrl = diseaseDownload?.site_json_path ?? `/site-data/diseases/$
 
               {knowledgeProfileAvailable ? (
                 <div class="space-y-5">
-                  {officialSummaryEn && (
-                    hasCitations(officialSummaryEn) ? (
+                  <div class="flex flex-wrap items-center gap-x-4 gap-y-2 border-y border-[rgb(var(--border))/0.5] py-2 text-xs text-[rgb(var(--text-faint))]">
+                    <span
+                      class="font-semibold uppercase tracking-[0.1em]"
+                      data-lang-en={knowledgeDisplayMode === 'full' ? 'Complete profile' : 'Partial profile'}
+                      data-lang-zh={knowledgeDisplayMode === 'full' ? '完整画像' : '部分画像'}
+                    >
+                      {knowledgeDisplayMode === 'full' ? 'Complete profile' : 'Partial profile'}
+                    </span>
+                    <span data-lang-en={`EN ${enAvailableSectionCount}/${applicableSectionCount} applicable sections · ZH ${zhAvailableSectionCount}/${applicableSectionCount} applicable sections`} data-lang-zh={`英文 ${enAvailableSectionCount}/${applicableSectionCount} 个适用章节 · 中文 ${zhAvailableSectionCount}/${applicableSectionCount} 个适用章节`}>
+                      EN {enAvailableSectionCount}/{applicableSectionCount} applicable sections · ZH {zhAvailableSectionCount}/{applicableSectionCount} applicable sections
+                    </span>
+                    {knowledgeUpdatedAt && (
+                      <span data-lang-en={`Updated ${knowledgeUpdatedEn}`} data-lang-zh={`更新于 ${knowledgeUpdatedZh}`}>
+                        Updated {knowledgeUpdatedEn}
+                      </span>
+                    )}
+                  </div>
+
+                  {knowledgeDisplayMode === 'partial' && (
+                    <p
+                      class="academic-note"
+                      data-lang-en="Only sections supported by usable evidence are shown. Missing translations stay clearly marked instead of being replaced with another language."
+                      data-lang-zh="当前仅展示具有可用证据支持的章节；缺失译文会被明确标注，不再使用另一语种内容替代。"
+                    >
+                      Only sections supported by usable evidence are shown. Missing translations stay clearly marked instead of being replaced with another language.
+                    </p>
+                  )}
+
+                  {(officialSummaryEn || officialSummaryZh) && (
+                    hasCitations(displaySummaryEn) || hasCitations(displaySummaryZh) ? (
                       <p class="max-w-4xl text-sm leading-6 text-[rgb(var(--text))] citation-text"
-                        data-lang-en-html={renderCitations(officialSummaryEn, knowledgeSourceEntries)}
-                        data-lang-zh-html={renderCitations(officialSummaryZh ?? officialSummaryEn, knowledgeSourceEntries)}
-                        set:html={renderCitations(officialSummaryEn, knowledgeSourceEntries)}
+                        data-lang-en-html={renderCitations(displaySummaryEn, knowledgeSourceEntries)}
+                        data-lang-zh-html={renderCitations(displaySummaryZh, knowledgeSourceEntries)}
+                        set:html={renderCitations(displaySummaryEn, knowledgeSourceEntries)}
                       />
                     ) : (
-                      <p class="max-w-4xl text-sm leading-6 text-[rgb(var(--text))]" data-lang-en={officialSummaryEn} data-lang-zh={officialSummaryZh ?? officialSummaryEn}>
-                        {officialSummaryEn}
+                      <p class="max-w-4xl text-sm leading-6 text-[rgb(var(--text))]" data-lang-en={displaySummaryEn} data-lang-zh={displaySummaryZh}>
+                        {displaySummaryEn}
                       </p>
                     )
                   )}
@@ -278,7 +296,16 @@ const diseaseDataUrl = diseaseDownload?.site_json_path ?? `/site-data/diseases/$
                         <div class="academic-meta-label" data-lang-en={section.labelEn} data-lang-zh={section.labelZh}>
                           {section.labelEn}
                         </div>
-                        {hasCitations(section.en) ? (
+                        {section.availableEn !== section.availableZh && (
+                          <div
+                            class="mt-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-amber-500"
+                            data-lang-en={section.availableEn ? 'English source text only' : 'Chinese source text only'}
+                            data-lang-zh={section.availableZh ? '仅有中文来源内容' : '仅有英文来源内容'}
+                          >
+                            {section.availableEn ? 'English source text only' : 'Chinese source text only'}
+                          </div>
+                        )}
+                        {hasCitations(section.en) || hasCitations(section.zh) ? (
                           <p class="mt-1 text-sm leading-6 text-[rgb(var(--text-muted))] citation-text"
                             data-lang-en-html={renderCitations(section.en, knowledgeSourceEntries)}
                             data-lang-zh-html={renderCitations(section.zh, knowledgeSourceEntries)}
@@ -292,10 +319,11 @@ const diseaseDataUrl = diseaseDownload?.site_json_path ?? `/site-data/diseases/$
                       </article>
                     ))}
 
+                    {knowledgeSourceEntries.length > 0 && (
                     <article class="profile-flow-item">
                       <div class="academic-meta-label" data-lang-en="References" data-lang-zh="参考文献">References</div>
                       <ol class="mt-3 space-y-2">
-                        {knowledgeSourceEntries.length > 0 ? knowledgeSourceEntries.map((source: any, index: number) => {
+                        {knowledgeSourceEntries.map((source: any, index: number) => {
                           const citationIndex = Number(source.citation_index ?? index + 1);
                           const sourceUrl = referenceUrl(source);
                           return (
@@ -328,61 +356,10 @@ const diseaseDataUrl = diseaseDownload?.site_json_path ?? `/site-data/diseases/$
                             </div>
                           </li>
                           );
-                        }) : (
-                          <li class="academic-note border-0 bg-transparent px-0" data-lang-en="No references recorded yet." data-lang-zh="尚未记录参考文献。">
-                            No references recorded yet.
-                          </li>
-                        )}
+                        })}
                       </ol>
                     </article>
-
-                    <article class="profile-flow-item">
-                      <div class="academic-meta-label" data-lang-en="Coding Register" data-lang-zh="编码登记">Coding Register</div>
-                      <dl class="mt-3 grid gap-4 sm:grid-cols-2">
-                        <div>
-                          <dt class="academic-meta-label">ICD-10</dt>
-                          <dd class="mt-1 font-mono text-sm text-[rgb(var(--text-strong))]">
-                            {diseaseData.icd_10 ?? '—'}
-                          </dd>
-                        </div>
-                        <div>
-                          <dt class="academic-meta-label">ICD-11</dt>
-                          <dd class="mt-1 font-mono text-sm text-[rgb(var(--text-strong))]">
-                            {diseaseData.icd_11 ?? '—'}
-                          </dd>
-                        </div>
-                      </dl>
-                    </article>
-
-                    <article class="profile-flow-item">
-                      <div class="academic-meta-label" data-lang-en="Key Statistics" data-lang-zh="核心统计">Key Statistics</div>
-                      <dl class="mt-3 grid gap-4 sm:grid-cols-2">
-                        <div>
-                          <dt class="academic-meta-label" data-lang-en="Total cases" data-lang-zh="累计病例">Total cases</dt>
-                          <dd class="academic-meta-value font-serif">{fmtNum(diseaseData.total_cases)}</dd>
-                        </div>
-                        {hasDeathsData && (
-                          <div>
-                            <dt class="academic-meta-label" data-lang-en="Total deaths" data-lang-zh="累计死亡">Total deaths</dt>
-                            <dd class="academic-meta-value font-serif text-red-400">{fmtNum(diseaseData.total_deaths)}</dd>
-                          </div>
-                        )}
-                        <div>
-                          <dt class="academic-meta-label" data-lang-en="Peak month" data-lang-zh="峰值月份">Peak month</dt>
-                          <dd class="academic-meta-value font-serif text-amber-400">{peakMonth}</dd>
-                        </div>
-                        <div>
-                          <dt class="academic-meta-label" data-lang-en="Coverage" data-lang-zh="覆盖区间">Coverage</dt>
-                          <dd
-                            class="academic-meta-value text-sm font-medium"
-                            data-lang-en={`${countryCount} reporting countries · ${coverageLabel}`}
-                            data-lang-zh={`${countryCount} 个报告国家 · ${coverageLabel}`}
-                          >
-                            {countryCount} reporting countries · {coverageLabel}
-                          </dd>
-                        </div>
-                      </dl>
-                    </article>
+                    )}
                   </div>
                 </div>
               ) : (
@@ -395,6 +372,52 @@ const diseaseDataUrl = diseaseDownload?.site_json_path ?? `/site-data/diseases/$
                   </p>
                 </div>
               )}
+
+              <div class="grid gap-5 border-t border-[rgb(var(--border))/0.58] pt-5 lg:grid-cols-2">
+                <article class="academic-note bg-transparent">
+                  <div class="academic-meta-label" data-lang-en="Coding Register" data-lang-zh="编码登记">Coding Register</div>
+                  <dl class="mt-3 grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <dt class="academic-meta-label">ICD-10</dt>
+                      <dd class="mt-1 font-mono text-sm text-[rgb(var(--text-strong))]">{diseaseData.icd_10 ?? '—'}</dd>
+                    </div>
+                    <div>
+                      <dt class="academic-meta-label">ICD-11</dt>
+                      <dd class="mt-1 font-mono text-sm text-[rgb(var(--text-strong))]">{diseaseData.icd_11 ?? '—'}</dd>
+                    </div>
+                  </dl>
+                </article>
+
+                <article class="academic-note bg-transparent">
+                  <div class="academic-meta-label" data-lang-en="Key Statistics" data-lang-zh="核心统计">Key Statistics</div>
+                  <dl class="mt-3 grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <dt class="academic-meta-label" data-lang-en="Total cases" data-lang-zh="累计病例">Total cases</dt>
+                      <dd class="academic-meta-value font-serif">{fmtNum(diseaseData.total_cases)}</dd>
+                    </div>
+                    {hasDeathsData && (
+                      <div>
+                        <dt class="academic-meta-label" data-lang-en="Total deaths" data-lang-zh="累计死亡">Total deaths</dt>
+                        <dd class="academic-meta-value font-serif text-red-400">{fmtNum(diseaseData.total_deaths)}</dd>
+                      </div>
+                    )}
+                    <div>
+                      <dt class="academic-meta-label" data-lang-en="Peak month" data-lang-zh="峰值月份">Peak month</dt>
+                      <dd class="academic-meta-value font-serif text-amber-400">{peakMonth}</dd>
+                    </div>
+                    <div>
+                      <dt class="academic-meta-label" data-lang-en="Coverage" data-lang-zh="覆盖区间">Coverage</dt>
+                      <dd
+                        class="academic-meta-value text-sm font-medium"
+                        data-lang-en={`${countryCount} reporting countries · ${coverageLabel}`}
+                        data-lang-zh={`${countryCount} 个报告国家 · ${coverageLabel}`}
+                      >
+                        {countryCount} reporting countries · {coverageLabel}
+                      </dd>
+                    </div>
+                  </dl>
+                </article>
+              </div>
             </div>
           </div>
         </section>
@@ -434,10 +457,10 @@ const diseaseDataUrl = diseaseDownload?.site_json_path ?? `/site-data/diseases/$
 
         {diseaseDownload && (
           <DownloadPanel
-            entry={diseaseDownload}
+            entry={{ ...diseaseDownload, source_info: diseaseData?.source_info }}
             title="Supplementary Data | Multi-country disease dataset"
-            descriptionEn="Machine-readable multi-country disease dataset (JSON/CSV) with source metadata."
-            descriptionZh="可下载机器可读多国家疾病数据集（JSON/CSV），含数据源元信息。"
+            descriptionEn="Immutable multi-country dataset index with source metadata and gzip NDJSON shard references."
+            descriptionZh="不可变多国家疾病数据集索引，含数据源元信息与 gzip NDJSON 分片引用。"
           />
         )}
 

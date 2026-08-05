@@ -53,8 +53,17 @@ export interface DiseaseKnowledgeCatalogueItem {
   knowledge_status: string;
   knowledge_updated_at: string | null;
   published_languages: string[];
+  blocked_languages: string[];
+  knowledge_display_mode: "full" | "partial" | "blocked";
+  knowledge_completeness: number;
+  knowledge_profile_type: string;
+  knowledge_profile_schema: Record<string, unknown>;
+  repair_sections: string[];
+  repair_priority: "none" | "high" | "urgent";
+  language_quality: Record<string, KnowledgeBriefQuality>;
   source_count: number;
   brief_statuses: Record<string, string>;
+  brief_tiers: Record<string, string>;
 }
 
 export interface DiseaseKnowledgeDetailSource {
@@ -98,6 +107,32 @@ export interface DiseaseKnowledgeDetailBrief {
   source_ids: number[];
   source_attribution: Record<string, unknown>[];
   metadata: Record<string, unknown>;
+  quality: KnowledgeBriefQuality;
+}
+
+export interface KnowledgeBriefQuality {
+  language: string;
+  fields: Record<string, {
+    status: "available" | "missing" | "insufficient_evidence" | "language_mismatch" | "not_applicable";
+    available: boolean;
+    reason: string | null;
+    sentence_count: number;
+    unavailable_sentence_count: number;
+  }>;
+  available_fields: string[];
+  missing_fields: string[];
+  insufficient_fields: string[];
+  language_mismatch_fields: string[];
+  profile_type: string;
+  required_fields: string[];
+  optional_fields: string[];
+  not_applicable_fields: string[];
+  missing_required_fields: string[];
+  completeness: number;
+  display_mode: "full" | "partial" | "blocked";
+  profile_available: boolean;
+  publishable: boolean;
+  issues: string[];
 }
 
 export interface DiseaseKnowledgeDetail {
@@ -112,8 +147,25 @@ export interface DiseaseKnowledgeDetail {
   knowledge_status: string;
   knowledge_updated_at: string | null;
   published_languages: string[];
+  blocked_languages: string[];
+  knowledge_display_mode: "full" | "partial" | "blocked";
+  knowledge_completeness: number;
+  knowledge_profile_type: string;
+  knowledge_profile_schema: Record<string, unknown>;
+  repair_sections: string[];
+  repair_priority: "none" | "high" | "urgent";
+  language_quality: Record<string, KnowledgeBriefQuality>;
+  evidence_quality: {
+    sufficient: boolean;
+    grounded_source_count: number;
+    authoritative_source_count: number;
+    scholarly_source_count: number;
+    content_characters: number;
+    issues: string[];
+  };
   source_count: number;
   brief_statuses: Record<string, string>;
+  brief_tiers: Record<string, string>;
   summary: Record<string, unknown>;
   briefs: DiseaseKnowledgeDetailBrief[];
   sources: DiseaseKnowledgeDetailSource[];
@@ -130,7 +182,7 @@ export interface StartDiseaseKnowledgeTaskPayload {
   disease_ids: string[];
   source?: string[];
   force?: boolean;
-  generator?: "ai" | "auto" | "template";
+  generator?: "ai" | "auto";
   priority?: "low" | "normal" | "high" | "urgent";
   task_name?: string;
   description?: string;

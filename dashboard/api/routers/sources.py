@@ -165,6 +165,8 @@ def _scope_from_task(task: Task) -> str:
         return "jp_weekly"
     if "nndss" in name:
         return "nndss_api"
+    if "nhss" in name or ("hiv" in name and country_code == "US"):
+        return "nhss_hiv"
     if "sinan" in name or "datasus" in name or "brazil" in name:
         return "sinan_datasus"
     if "kdca" in name or "korea" in name:

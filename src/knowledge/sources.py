@@ -22,6 +22,7 @@ from requests import Request
 from bs4 import BeautifulSoup
 
 from src.core import get_logger
+from src.knowledge.quality import assess_knowledge_evidence
 
 logger = get_logger(__name__)
 
@@ -130,6 +131,11 @@ class DiseaseKnowledgeFetcher:
         ("cdc.gov", "CDC", True),
         ("nih.gov", "NIH/NCBI", True),
         ("ncbi.nlm.nih.gov", "NIH/NCBI", True),
+        ("ecdc.europa.eu", "ECDC", True),
+        ("chp.gov.hk", "Hong Kong Centre for Health Protection", True),
+        ("health.gov.au", "Australian Department of Health", True),
+        ("canada.ca", "Government of Canada", True),
+        ("gov.uk", "UK Government", True),
         ("bmj.com", "BMJ", False),
         ("msdmanuals.com", "MSD Manual", False),
         ("wikipedia.org", "Wikipedia", True),
@@ -164,8 +170,11 @@ class DiseaseKnowledgeFetcher:
         disease: dict[str, Any],
         *,
         enabled_sources: Iterable[str] | None = None,
+        target_sections: Iterable[str] | None = None,
     ) -> list[SourceCandidate]:
         enabled = list(enabled_sources or SOURCE_FETCH_ORDER)
+        target_sections = self._unique_strings(target_sections or ())
+        disease = {**disease, "target_sections": target_sections}
         candidates: list[SourceCandidate] = []
 
         adapters = {
@@ -177,14 +186,53 @@ class DiseaseKnowledgeFetcher:
             "pubmed": self._fetch_pubmed,
             "msd": self._build_msd_metadata,
         }
-        for key in enabled:
-            adapter = adapters.get(key)
-            if not adapter:
-                continue
-            try:
-                candidates.extend(adapter(disease))
-            except Exception as exc:
-                logger.warning("Knowledge source adapter failed for %s/%s: %s", disease.get("disease_id"), key, exc)
+
+        def run_adapters(
+            keys: Iterable[str],
+            *,
+            discovery_round: str,
+            disease_payload: dict[str, Any],
+        ) -> None:
+            for key in keys:
+                adapter = adapters.get(key)
+                if not adapter:
+                    continue
+                try:
+                    discovered = adapter(disease_payload)
+                    for candidate in discovered:
+                        candidate.metadata = {
+                            **(candidate.metadata or {}),
+                            "discovery_round": discovery_round,
+                            "target_sections": target_sections,
+                        }
+                    candidates.extend(discovered)
+                except Exception as exc:
+                    logger.warning(
+                        "Knowledge source adapter failed for %s/%s: %s",
+                        disease.get("disease_id"),
+                        key,
+                        exc,
+                    )
+
+        run_adapters(enabled, discovery_round="primary", disease_payload=disease)
+
+        # A restricted or weak first pass must not silently fall back to a
+        # catalogue template. Automatically broaden discovery to substantive
+        # public-health sources before declaring the knowledge task blocked.
+        if not assess_knowledge_evidence(candidates).sufficient:
+            discovered_aliases = self._discovered_query_aliases(disease, candidates)
+            enriched_disease = {
+                **disease,
+                "query_aliases": discovered_aliases,
+            }
+            enrichment_sources = ["who", "web_search", "wikipedia", "pubmed"]
+            if not discovered_aliases:
+                enrichment_sources = [key for key in enrichment_sources if key not in enabled]
+            run_adapters(
+                enrichment_sources,
+                discovery_round="enrichment",
+                disease_payload=enriched_disease,
+            )
 
         return self._rank_candidates(self._dedupe(candidates))
 
@@ -552,7 +600,10 @@ class DiseaseKnowledgeFetcher:
         query_candidates = self._query_candidates(disease)
         id_list: list[str] = []
         search_term_used = ""
-        for search_term in self._pubmed_search_terms(query_candidates):
+        for search_term in self._pubmed_search_terms(
+            query_candidates,
+            disease.get("target_sections") or (),
+        ):
             search_response = self._get(
                 "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
                 params={
@@ -643,10 +694,24 @@ class DiseaseKnowledgeFetcher:
 
             pubmed_url = f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/"
             abstract = abstracts_by_pmid.get(str(pmid), "")
+            relevance_score = self._relevance_score(
+                query_candidates,
+                pubmed_url,
+                title,
+                abstract,
+            )
+            if relevance_score < 0.5:
+                logger.debug(
+                    "Skipping weak PubMed match for %s: %s (%.2f)",
+                    disease_id,
+                    title,
+                    relevance_score,
+                )
+                continue
 
             # Build content text from abstract
-            content_text = abstract if abstract else f"Review article: {title}"
-            if len(content_text) > 2000:
+            content_text = abstract or None
+            if content_text and len(content_text) > 2000:
                 content_text = content_text[:2000].rstrip() + "..."
 
             # Build citation-style excerpt
@@ -667,7 +732,7 @@ class DiseaseKnowledgeFetcher:
                     content_sections=[
                         {"heading": "Abstract", "text": self._clip(abstract) or ""}
                     ] if abstract else [],
-                    review_status="approved",
+                    review_status="approved" if abstract else "requires_review",
                     metadata={
                         "pmid": str(pmid),
                         "doi": doi,
@@ -677,8 +742,8 @@ class DiseaseKnowledgeFetcher:
                         "matched_name": query_candidates[0] if query_candidates else disease_id,
                         "query_candidates": query_candidates[:8],
                         "search_term": search_term_used,
-                        "content_kind": "abstract",
-                        "relevance_score": self._relevance_score(query_candidates, pubmed_url, title, abstract),
+                        "content_kind": "abstract" if abstract else "scholarly_metadata",
+                        "relevance_score": relevance_score,
                     },
                 )
             )
@@ -689,14 +754,15 @@ class DiseaseKnowledgeFetcher:
         """Search trusted public-health domains when direct source adapters miss a disease concept."""
         disease_id = str(disease["disease_id"])
         query_terms = self._query_candidates(disease)
-        candidates: list[SourceCandidate] = self._fetch_crossref_metadata(disease_id=disease_id, query_terms=query_terms)
-        if len(candidates) >= 4:
-            return candidates[:6]
+        candidates = self._fetch_crossref_metadata(disease_id=disease_id, query_terms=query_terms)
 
         seen_urls: set[str] = set()
         for candidate in candidates:
             seen_urls.add(candidate.url)
-        for query in self._web_search_queries(query_terms):
+        for query in self._web_search_queries(
+            query_terms,
+            disease.get("target_sections") or (),
+        ):
             for item in self._duckduckgo_search(query, max_results=5):
                 url = item["url"]
                 if url in seen_urls:
@@ -941,33 +1007,72 @@ class DiseaseKnowledgeFetcher:
         return " ".join(BeautifulSoup(text, "html.parser").get_text(" ", strip=True).split())
 
     @staticmethod
-    def _web_search_queries(query_terms: list[str]) -> list[str]:
-        terms = query_terms[:5]
+    def _web_search_queries(
+        query_terms: list[str],
+        target_sections: Iterable[str] = (),
+    ) -> list[str]:
+        terms = query_terms[:8]
         if not terms:
             return []
         queries = [f'"{term}" disease' for term in terms[:3]]
         primary = terms[0]
         queries.extend(
             [
-                f'"{primary}" CDC NIH WHO',
-                f'"{primary}" BMJ MSD Manual',
+                f'"{primary}" site:who.int',
+                f'"{primary}" site:cdc.gov',
+                f'"{primary}" site:nih.gov OR site:ncbi.nlm.nih.gov',
+                f'"{primary}" site:ecdc.europa.eu OR site:gov.uk OR site:canada.ca',
             ]
         )
-        return DiseaseKnowledgeFetcher._unique_strings(queries)[:5]
+        hints = DiseaseKnowledgeFetcher._section_query_hints(target_sections)
+        queries.extend(
+            f'"{primary}" {hint} site:who.int OR site:cdc.gov OR site:gov.uk OR site:canada.ca'
+            for hint in hints[:4]
+        )
+        return DiseaseKnowledgeFetcher._unique_strings(queries)[:11]
 
     @staticmethod
-    def _pubmed_search_terms(query_terms: list[str]) -> list[str]:
-        terms = [term for term in query_terms[:7] if term]
+    def _pubmed_search_terms(
+        query_terms: list[str],
+        target_sections: Iterable[str] = (),
+    ) -> list[str]:
+        # Non-Latin disease names can be translated by PubMed into a very broad
+        # numeric token (for example, 肠病毒71型感染 became just "71"), producing
+        # unrelated abstracts. Keep PubMed discovery to Latin aliases while
+        # retaining localized names for the other adapters.
+        terms = [term for term in query_terms[:10] if term and re.search(r"[A-Za-z]", term)]
         if not terms:
             return []
         title_abstract = " OR ".join(f'"{term}"[Title/Abstract]' for term in terms)
         all_fields = " OR ".join(f'"{term}"[All Fields]' for term in terms[:5])
-        return [
+        terms_out = [
             f"({title_abstract}) AND (review[pt] OR systematic review[pt] OR guideline[pt])",
             f"({title_abstract})",
             f"({all_fields}) AND (review[pt] OR systematic review[pt])",
             f"({all_fields})",
         ]
+        hints = DiseaseKnowledgeFetcher._section_query_hints(target_sections)
+        if hints:
+            section_clause = " OR ".join(f'"{hint}"[Title/Abstract]' for hint in hints[:4])
+            terms_out.insert(0, f"({title_abstract}) AND ({section_clause})")
+        return terms_out
+
+    @staticmethod
+    def _section_query_hints(target_sections: Iterable[str]) -> list[str]:
+        mapping = {
+            "brief": ["public health overview"],
+            "definition": ["definition etiology"],
+            "clinical_features": ["clinical features symptoms complications"],
+            "epidemiology": ["epidemiology burden outbreak"],
+            "transmission": ["transmission route exposure mechanism"],
+            "prevention": ["prevention control vaccination"],
+            "surveillance_note": ["surveillance case definition reporting"],
+            "risk_groups": ["risk groups vulnerable populations"],
+        }
+        hints: list[str] = []
+        for field in target_sections:
+            hints.extend(mapping.get(str(field), ()))
+        return DiseaseKnowledgeFetcher._unique_strings(hints)
 
     def _get(self, url: str, params: dict[str, str] | None = None) -> requests.Response | None:
         cache_key = Request("GET", url, params=params).prepare().url or url
@@ -1125,10 +1230,46 @@ class DiseaseKnowledgeFetcher:
             disease.get("standard_name_zh"),
         ]
         result = []
+        query_aliases = disease.get("query_aliases")
+        if isinstance(query_aliases, (list, tuple, set)):
+            names.extend(query_aliases)
         for name in names:
             if name and str(name).strip() and str(name).strip() not in result:
                 result.append(str(name).strip())
         return result
+
+    @classmethod
+    def _discovered_query_aliases(
+        cls,
+        disease: dict[str, Any],
+        candidates: list[SourceCandidate],
+    ) -> list[str]:
+        """Harvest canonical labels/acronyms from grounded entity sources for round two."""
+        existing = cls._query_candidates(disease)
+        existing_keys = {value.lower() for value in existing}
+        aliases: list[str] = []
+        for candidate in candidates:
+            if candidate.review_status != "approved" or not candidate.content_text:
+                continue
+            if candidate.source_type in {"wikipedia", "wikidata"}:
+                title = re.sub(r"\s*[-–—]\s*Wikipedia\s*$", "", candidate.title or "", flags=re.I).strip()
+                if 3 <= len(title) <= 100 and title.lower() not in existing_keys:
+                    aliases.append(title)
+                metadata_title = str((candidate.metadata or {}).get("candidate_title") or "").strip()
+                if 3 <= len(metadata_title) <= 100 and metadata_title.lower() not in existing_keys:
+                    aliases.append(metadata_title)
+
+            excerpt = " ".join(
+                part for part in (candidate.raw_excerpt, candidate.content_text) if part
+            )[:1800]
+            for match in re.finditer(
+                r"\b([A-Za-z][A-Za-z0-9 -]{3,70}?)\s*\(([A-Z][A-Z0-9-]{1,14})\)",
+                excerpt,
+            ):
+                long_name, acronym = match.group(1).strip(), match.group(2).strip()
+                if cls._relevance_score(existing, "", long_name, acronym) >= 0.25:
+                    aliases.extend([long_name, acronym])
+        return cls._unique_strings(aliases)[:8]
 
     @staticmethod
     def _primary_name(disease: dict[str, Any]) -> str:
@@ -1171,6 +1312,12 @@ class DiseaseKnowledgeFetcher:
             return []
         variants = [text]
         lower = text.lower()
+        without_parenthetical = re.sub(r"\s*\([^)]{2,80}\)\s*", " ", text).strip()
+        if without_parenthetical and without_parenthetical != text:
+            variants.append(without_parenthetical)
+        for suffix in (" infection", " disease", " syndrome", " virus"):
+            if lower.endswith(suffix) and len(text) > len(suffix) + 2:
+                variants.append(text[: -len(suffix)].strip())
         if lower.endswith(" fever"):
             variants.append(f"{text}s")
         if lower.endswith(" fevers"):
@@ -1179,6 +1326,25 @@ class DiseaseKnowledgeFetcher:
             variants.append(re.sub("hemorrhagic", "haemorrhagic", text, flags=re.I))
         if "haemorrhagic" in lower:
             variants.append(re.sub("haemorrhagic", "hemorrhagic", text, flags=re.I))
+
+        # Numbered enteroviruses are indexed inconsistently across surveillance
+        # catalogues and literature (for example a full name, a compact EV form,
+        # or a hyphenated EV form). Genus letters are deliberately not guessed;
+        # canonical labels discovered from entity sources are harvested later.
+        enterovirus_match = re.search(
+            r"\benterovirus\s+(?:type\s+)?(?:[a-z]\s*)?(\d{1,3})\b",
+            text,
+            flags=re.I,
+        )
+        if enterovirus_match:
+            number = enterovirus_match.group(1)
+            variants.extend(
+                [
+                    f"Enterovirus {number}",
+                    f"EV{number}",
+                    f"EV-{number}",
+                ]
+            )
         return cls._unique_strings(variants)
 
     @classmethod

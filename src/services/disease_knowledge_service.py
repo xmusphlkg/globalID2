@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import csv
+import re
 from pathlib import Path
 from typing import Any, Optional
 
@@ -14,14 +15,18 @@ from src.core.task_manager import task_manager
 from src.domain import DiseaseKnowledgeBrief, DiseaseKnowledgeSource, Task, TaskStatus
 from src.knowledge import (
     AIDiseaseBriefGenerator,
+    apply_knowledge_quality_gate,
+    assess_knowledge_evidence,
+    assess_knowledge_brief,
+    attach_profile_schema,
     DiseaseKnowledgeFetcher,
-    SourceGroundedBriefGenerator,
-    build_catalogue_disease_brief_payload,
-    knowledge_brief_fallback_reason,
+    has_grounding_content,
+    knowledge_brief_block_reason,
     knowledge_brief_publication_tier,
     resolve_disease_knowledge_status,
 )
 from src.knowledge.citations import normalize_knowledge_citations
+from src.ontology import load_disease_ontology
 from src.services.exceptions import TaskCancelledError
 
 logger = get_logger(__name__)
@@ -40,6 +45,10 @@ SOURCE_GROUPS = {
     "pubmed": ["pubmed"],
     "msd": ["msd"],
 }
+
+
+class KnowledgeEvidenceInsufficientError(RuntimeError):
+    """Raised when automatic source enrichment cannot produce publishable knowledge."""
 
 
 def load_standard_diseases(path: Path = DEFAULT_DISEASE_CSV) -> list[dict[str, Any]]:
@@ -85,6 +94,34 @@ async def _existing_sources(db, disease_id: str) -> list[DiseaseKnowledgeSource]
     return list(result.scalars().all())
 
 
+async def _related_parent_sources(db, disease: dict[str, Any]) -> list[dict[str, Any]]:
+    """Reuse only explicitly scoped parent evidence from the ontology graph."""
+    context = disease.get("ontology_context") if isinstance(disease.get("ontology_context"), dict) else {}
+    related = context.get("related_entities") if isinstance(context.get("related_entities"), list) else []
+    inherited: list[dict[str, Any]] = []
+    for relation in related:
+        if not isinstance(relation, dict) or not relation.get("disease_id"):
+            continue
+        rows = await _existing_sources(db, str(relation["disease_id"]))
+        for row in rows:
+            source = source_to_dict(row)
+            if str(source.get("status") or "") != "active":
+                continue
+            if str(source.get("review_status") or "") != "approved":
+                continue
+            if not has_grounding_content(source):
+                continue
+            source["metadata"] = {
+                **(source.get("metadata") or {}),
+                "inherited_evidence": True,
+                "inherited_from_disease_id": relation["disease_id"],
+                "ontology_relation_type": relation.get("relation_type"),
+                "allowed_sections": relation.get("allowed_shared_sections") or [],
+            }
+            inherited.append(source)
+    return inherited[:6]
+
+
 async def _upsert_source(db, candidate) -> DiseaseKnowledgeSource:
     result = await db.execute(
         select(DiseaseKnowledgeSource).where(
@@ -124,6 +161,10 @@ async def _upsert_source(db, candidate) -> DiseaseKnowledgeSource:
 
 async def _mark_stale_sources(db, disease_id: str, candidates: list, enabled_sources: list[str]) -> None:
     """Reject old rows from refreshed source adapters that no longer match."""
+    # An empty result can also mean that every remote adapter failed. Preserve
+    # the last known sources instead of turning a transient outage into a
+    # destructive refresh; semantic grounding checks still prevent weak rows
+    # from being published.
     if not candidates:
         return
     fresh_keys = {(c.disease_id, c.source_type, c.url) for c in candidates}
@@ -269,79 +310,271 @@ def _enrich_source_attribution(
 
 
 def _has_approved_public_sources(sources: list[dict[str, Any]]) -> bool:
-    return any(
-        str(src.get("source_type") or "") in SourceGroundedBriefGenerator.PUBLIC_SOURCE_TYPES
-        and str(src.get("review_status") or "pending") != "rejected"
-        for src in sources
-    )
+    public_sources = [
+        source
+        for source in sources
+        if str(source.get("source_type") or "") in AIDiseaseBriefGenerator.PUBLIC_SOURCE_TYPES
+    ]
+    return assess_knowledge_evidence(public_sources).sufficient
 
 
-def _catalogue_fallback_reason(sources: list[dict[str, Any]]) -> str:
+def _evidence_block_reason(sources: list[dict[str, Any]]) -> str:
     if not sources:
         return "no_sources_fetched"
-    if all(str(src.get("source_type") or "") == "msd" for src in sources):
+    assessment = assess_knowledge_evidence(sources)
+    if assessment.issues:
+        return ",".join(assessment.issues)
+    if not any(has_grounding_content(src) for src in sources):
         return "metadata_only_sources"
-    return "no_public_sources"
+    return "insufficient_source_evidence"
 
 
-async def _generate_brief(
-    generator: AIDiseaseBriefGenerator | SourceGroundedBriefGenerator,
-    *,
+def _generated_profile_failures(results: list[dict[str, Any]]) -> list[str]:
+    """Return reasons that generated profiles must not be persisted as complete work."""
+    failures: list[str] = []
+    languages_seen: set[str] = set()
+    for result in results:
+        payload = result.get("payload") if isinstance(result.get("payload"), dict) else result
+        trace = result.get("trace") if isinstance(result.get("trace"), dict) else {}
+        language = str(payload.get("language") or "unknown").strip().lower()
+        languages_seen.add(language)
+        if trace.get("error"):
+            failures.append(f"{language}: generator error: {trace['error']}")
+        assessment = assess_knowledge_brief(payload, language)
+        if str(payload.get("status") or "").strip().lower() != "published":
+            failures.append(f"{language}: status is not published")
+        if not assessment.profile_available:
+            failures.append(
+                f"{language}: no substantive profile ({'; '.join(assessment.issues) or 'quality gate failed'})"
+            )
+        if assessment.missing_required_fields:
+            failures.append(
+                f"{language}: required sections incomplete ({', '.join(assessment.missing_required_fields)})"
+            )
+    for language in ("en", "zh"):
+        if language not in languages_seen:
+            failures.append(f"{language}: profile was not generated")
+    return failures
+
+
+def _bilingual_alignment_failures(results: list[dict[str, Any]]) -> list[str]:
+    """Ensure both localized profiles were rendered from one evidence boundary."""
+    payloads = {
+        str((result.get("payload") or {}).get("language") or ""): result.get("payload") or {}
+        for result in results
+    }
+    if not all(language in payloads for language in ("en", "zh")):
+        return []
+    failures: list[str] = []
+    metadata = {
+        language: payloads[language].get("metadata")
+        if isinstance(payloads[language].get("metadata"), dict)
+        else {}
+        for language in ("en", "zh")
+    }
+    newly_generated_languages = {
+        str((result.get("payload") or {}).get("language") or "")
+        for result in results
+        if (result.get("trace") or {}).get("generator") == "ai"
+    }
+    manifest_ids = {
+        language: (metadata[language].get("evidence_manifest") or {}).get("manifest_id")
+        for language in newly_generated_languages
+        if isinstance(metadata[language].get("evidence_manifest"), dict)
+    }
+    if len(manifest_ids) > 1 and len(set(manifest_ids.values())) != 1:
+        failures.append("bilingual profiles used different evidence manifests")
+    profile_types = {
+        language: (metadata[language].get("profile_schema") or {}).get("profile_type")
+        for language in ("en", "zh")
+    }
+    if profile_types["en"] != profile_types["zh"]:
+        failures.append("bilingual profiles used different profile schemas")
+    return failures
+
+
+def _profile_repair_sections(
+    briefs: list[Any],
     disease: dict[str, Any],
-    sources: list[dict[str, Any]],
-    language: str,
-) -> dict[str, Any]:
-    result = generator.generate(disease=disease, sources=sources, language=language)
-    if hasattr(result, "__await__"):
-        return await result
+) -> list[str]:
+    """Return only fields that need evidence repair in either language."""
+    schema = disease["profile_schema"]
+    ordered_fields = ["brief", *schema["required_fields"], *schema["optional_fields"]]
+    by_language = _profile_repair_sections_by_language(briefs, disease)
+    targets = {field for fields in by_language.values() for field in fields}
+    return [field for field in ordered_fields if field in targets]
+
+
+def _profile_repair_sections_by_language(
+    briefs: list[Any],
+    disease: dict[str, Any],
+) -> dict[str, list[str]]:
+    """Plan localized repairs so a complete translation is never regenerated."""
+    schema = disease["profile_schema"]
+    ordered_fields = ["brief", *schema["required_fields"], *schema["optional_fields"]]
+    by_language = {
+        str(getattr(brief, "language", None) or (brief.get("language") if isinstance(brief, dict) else "")): brief
+        for brief in briefs
+    }
+    result: dict[str, list[str]] = {}
+    for language in ("en", "zh"):
+        brief = by_language.get(language)
+        if brief is None:
+            targets = {"brief", *schema["required_fields"]}
+            result[language] = [field for field in ordered_fields if field in targets]
+            continue
+        assessment = assess_knowledge_brief(brief, language, disease=disease)
+        targets = set(assessment.missing_required_fields)
+        if not assessment.fields["brief"].available:
+            targets.add("brief")
+        result[language] = [field for field in ordered_fields if field in targets]
     return result
 
 
-async def _generate_brief_result(
-    generator: AIDiseaseBriefGenerator | SourceGroundedBriefGenerator,
-    *,
-    disease: dict[str, Any],
-    sources: list[dict[str, Any]],
-    language: str,
-) -> dict[str, Any]:
-    if hasattr(generator, "generate_with_trace"):
-        result = generator.generate_with_trace(disease=disease, sources=sources, language=language)
-        if hasattr(result, "__await__"):
-            return await result
-        return result
-
-    payload = await _generate_brief(generator, disease=disease, sources=sources, language=language)
+def _locked_existing_brief_result(brief: Any, disease: dict[str, Any]) -> dict[str, Any]:
+    """Wrap a complete localized brief without invoking the model."""
+    metadata = getattr(brief, "metadata_", None) or getattr(brief, "metadata", None) or {}
+    payload = {
+        "disease_id": getattr(brief, "disease_id", None) or disease.get("disease_id"),
+        "language": getattr(brief, "language", None),
+        "brief": getattr(brief, "brief", None),
+        "definition": getattr(brief, "definition", None),
+        "clinical_features": getattr(brief, "clinical_features", None),
+        "clinical_summary": getattr(brief, "clinical_summary", None),
+        "epidemiology": getattr(brief, "epidemiology", None),
+        "transmission": getattr(brief, "transmission", None),
+        "prevention": getattr(brief, "prevention", None),
+        "surveillance_note": getattr(brief, "surveillance_note", None),
+        "risk_groups": getattr(brief, "risk_groups", None),
+        "source_ids": getattr(brief, "source_ids", None) or [],
+        "source_attribution": getattr(brief, "source_attribution", None) or [],
+        "disclaimer": getattr(brief, "disclaimer", None),
+        "model": getattr(brief, "model", None),
+        "status": getattr(brief, "status", None),
+        "source_confidence": getattr(brief, "source_confidence", None),
+        "quality_score": getattr(brief, "quality_score", None),
+        "review_notes": getattr(brief, "review_notes", None),
+        "metadata": dict(metadata) if isinstance(metadata, dict) else {},
+    }
     return {
         "payload": payload,
         "trace": {
-            "generator": "template",
-            "language": language,
-            "preferred_models": [],
-            "shard_index": 0,
-            "shard_key": f"{str(disease.get('disease_id') or '').strip().upper()}:{language}",
+            "generator": "locked_existing",
+            "language": payload["language"],
             "model": None,
             "provider": None,
             "token_usage": {},
             "duration": 0.0,
-            "prompt": None,
-            "system_prompt": None,
-            "response": None,
             "error": None,
             "cache_hit": False,
         },
     }
 
 
+def _merge_repair_payload(
+    payload: dict[str, Any],
+    existing: Any | None,
+    target_sections: list[str],
+    disease: dict[str, Any],
+) -> dict[str, Any]:
+    """Lock already-published fields while replacing only requested gaps."""
+    merged = _use_source_id_citation_markers(dict(payload))
+    if existing is not None:
+        existing_payload = _use_source_id_citation_markers(
+            {
+                "brief": getattr(existing, "brief", None),
+                "definition": getattr(existing, "definition", None),
+                "clinical_features": getattr(existing, "clinical_features", None),
+                "epidemiology": getattr(existing, "epidemiology", None),
+                "transmission": getattr(existing, "transmission", None),
+                "prevention": getattr(existing, "prevention", None),
+                "surveillance_note": getattr(existing, "surveillance_note", None),
+                "risk_groups": getattr(existing, "risk_groups", None),
+                "source_attribution": getattr(existing, "source_attribution", None) or [],
+            }
+        )
+        for field in ("brief", "definition", "clinical_features", "epidemiology", "transmission", "prevention", "surveillance_note", "risk_groups"):
+            if field not in target_sections:
+                merged[field] = existing_payload.get(field)
+        source_attribution: list[dict[str, Any]] = []
+        seen_sources: set[str] = set()
+        for source in [
+            *(merged.get("source_attribution") or []),
+            *(existing_payload.get("source_attribution") or []),
+        ]:
+            if not isinstance(source, dict):
+                continue
+            key = str(source.get("source_id") or source.get("id") or source.get("url") or "")
+            if not key or key in seen_sources:
+                continue
+            seen_sources.add(key)
+            source_attribution.append(source)
+        merged["source_attribution"] = source_attribution
+        merged["clinical_summary"] = merged.get("clinical_features")
+    merged["status"] = "published"
+    merged["metadata"] = {
+        **(merged.get("metadata") or {}),
+        "profile_schema": disease["profile_schema"],
+        "target_sections": target_sections,
+        "repair_mode": existing is not None,
+    }
+    merged = normalize_knowledge_citations(merged, marker_mode="source_id")
+    merged, _ = apply_knowledge_quality_gate(merged)
+    return merged
+
+
+def _use_source_id_citation_markers(payload: dict[str, Any]) -> dict[str, Any]:
+    """Convert sequential citations to stable source IDs before section merging."""
+    result = dict(payload)
+    sources = result.get("source_attribution") if isinstance(result.get("source_attribution"), list) else []
+    marker_to_source_id: dict[int, int] = {}
+    for position, source in enumerate(sources, start=1):
+        if not isinstance(source, dict):
+            continue
+        source_id = source.get("source_id") or source.get("id")
+        try:
+            source_id = int(source_id)
+        except (TypeError, ValueError):
+            continue
+        marker = source.get("citation_index") or position
+        try:
+            marker_to_source_id[int(marker)] = source_id
+        except (TypeError, ValueError):
+            continue
+
+    def replace(match: re.Match[str]) -> str:
+        marker = int(match.group(1))
+        return f"[{marker_to_source_id.get(marker, marker)}]"
+
+    for field in ("brief", "definition", "clinical_features", "epidemiology", "transmission", "prevention", "surveillance_note", "risk_groups"):
+        value = result.get(field)
+        if isinstance(value, str):
+            result[field] = re.sub(r"\[(\d+)\]", replace, value)
+    return result
+
+
+async def _generate_brief_result(
+    generator: AIDiseaseBriefGenerator,
+    *,
+    disease: dict[str, Any],
+    sources: list[dict[str, Any]],
+    language: str,
+) -> dict[str, Any]:
+    return await generator.generate_with_trace(
+        disease=disease,
+        sources=sources,
+        language=language,
+    )
+
+
 def _normalize_generator_mode(mode: str | None) -> str:
     value = (mode or "ai").strip().lower()
-    if value not in {"ai", "auto", "template"}:
+    if value not in {"ai", "auto"}:
         return "ai"
     return value
 
 
-def _generator_for_mode(mode: str) -> AIDiseaseBriefGenerator | SourceGroundedBriefGenerator:
-    if mode == "template":
-        return SourceGroundedBriefGenerator()
+def _generator_for_mode(mode: str) -> AIDiseaseBriefGenerator:
     return AIDiseaseBriefGenerator()
 
 
@@ -404,9 +637,8 @@ class DiseaseKnowledgeUpdateService:
     ) -> None:
         self.disease_csv_path = disease_csv_path
         self.fetcher = fetcher or DiseaseKnowledgeFetcher()
-        self.ai_generator = AIDiseaseBriefGenerator()
-        self.template_generator = SourceGroundedBriefGenerator()
         self._disease_cache: list[dict[str, Any]] | None = None
+        self._ontology = load_disease_ontology()
 
     def load_standard_diseases(self) -> list[dict[str, Any]]:
         if self._disease_cache is not None:
@@ -418,7 +650,40 @@ class DiseaseKnowledgeUpdateService:
         wanted = (disease_id or "").strip().upper()
         for row in self.load_standard_diseases():
             if str(row.get("disease_id") or "").upper() == wanted:
-                return row
+                disease = attach_profile_schema(row)
+                try:
+                    detail = self._ontology.concept_detail(wanted)
+                except KeyError:
+                    return disease
+                catalogue = {
+                    str(item.get("disease_id") or "").upper(): item
+                    for item in self.load_standard_diseases()
+                }
+                related_entities: list[dict[str, Any]] = []
+                relations = detail.get("relations") if isinstance(detail.get("relations"), dict) else {}
+                for relation in relations.get("outgoing") or []:
+                    target = relation.get("to_ref") if isinstance(relation.get("to_ref"), dict) else {}
+                    if target.get("kind") != "concept" or not relation.get("hierarchical"):
+                        continue
+                    parent_id = str(target.get("id") or "").upper()
+                    parent = catalogue.get(parent_id) or {}
+                    related_entities.append(
+                        {
+                            "disease_id": parent_id,
+                            "relation_type": relation.get("type"),
+                            "name_en": parent.get("name_en"),
+                            "name_zh": parent.get("name_zh"),
+                            "allowed_shared_sections": ["definition", "transmission", "prevention"],
+                        }
+                    )
+                return {
+                    **disease,
+                    "ontology_context": {
+                        "definition": detail.get("definition"),
+                        "facet_tags": detail.get("facet_tags") or {},
+                        "related_entities": related_entities,
+                    },
+                }
         raise ValueError(f"Disease not found in standard catalogue: {disease_id}")
 
     async def list_catalogue(self, db, *, search: str | None = None) -> list[dict[str, Any]]:
@@ -449,7 +714,10 @@ class DiseaseKnowledgeUpdateService:
                     DiseaseKnowledgeSource.disease_id,
                     func.count(DiseaseKnowledgeSource.id).label("source_count"),
                 )
-                .where(DiseaseKnowledgeSource.review_status != "rejected")
+                .where(
+                    DiseaseKnowledgeSource.review_status != "rejected",
+                    DiseaseKnowledgeSource.status == "active",
+                )
                 .group_by(DiseaseKnowledgeSource.disease_id)
             )
         ).all()
@@ -461,24 +729,56 @@ class DiseaseKnowledgeUpdateService:
         source_counts = {row.disease_id: int(row.source_count or 0) for row in source_counts_rows}
 
         items: list[dict[str, Any]] = []
-        for disease in diseases:
+        for raw_disease in diseases:
+            disease = attach_profile_schema(raw_disease)
             disease_id = str(disease.get("disease_id") or "")
             language_briefs = briefs_by_disease.get(disease_id, {})
+            language_quality = {
+                lang: assess_knowledge_brief(brief, lang, disease=disease)
+                for lang, brief in language_briefs.items()
+            }
+            repair_sections = _profile_repair_sections(
+                list(language_briefs.values()), disease
+            )
             published_languages = sorted(
                 [
                     lang
                     for lang, brief in language_briefs.items()
                     if knowledge_brief_publication_tier(brief) == "published"
+                    and language_quality[lang].profile_available
                 ]
             )
-            fallback_languages = sorted(
+            blocked_languages = sorted(
                 [
                     lang
                     for lang, brief in language_briefs.items()
-                    if knowledge_brief_publication_tier(brief) == "fallback"
+                    if knowledge_brief_publication_tier(brief) == "blocked"
                 ]
             )
-            knowledge_status = resolve_disease_knowledge_status(language_briefs.values())
+            stored_knowledge_status = resolve_disease_knowledge_status(language_briefs.values())
+            knowledge_status = (
+                "published"
+                if published_languages
+                else "requires_review"
+                if language_briefs and stored_knowledge_status in {"published", "requires_review"}
+                else stored_knowledge_status
+            )
+            completeness_values = [
+                language_quality[lang].completeness for lang in published_languages
+            ]
+            knowledge_completeness = (
+                round(sum(completeness_values) / len(completeness_values), 3)
+                if completeness_values
+                else 0.0
+            )
+            knowledge_display_mode = (
+                "full"
+                if len(published_languages) == 2
+                and all(language_quality[lang].display_mode == "full" for lang in published_languages)
+                else "partial"
+                if published_languages
+                else "blocked"
+            )
 
             latest_updated_at = None
             for brief in language_briefs.values():
@@ -498,7 +798,18 @@ class DiseaseKnowledgeUpdateService:
                     "knowledge_status": knowledge_status,
                     "knowledge_updated_at": latest_updated_at.isoformat() if latest_updated_at else None,
                     "published_languages": published_languages,
-                    "fallback_languages": fallback_languages,
+                    "knowledge_display_mode": knowledge_display_mode,
+                    "knowledge_completeness": knowledge_completeness,
+                    "knowledge_profile_type": disease["knowledge_profile_type"],
+                    "knowledge_profile_schema": disease["profile_schema"],
+                    "repair_sections": repair_sections,
+                    "repair_priority": (
+                        "urgent" if not language_briefs else "high" if repair_sections else "none"
+                    ),
+                    "language_quality": {
+                        lang: quality.to_dict() for lang, quality in language_quality.items()
+                    },
+                    "blocked_languages": blocked_languages,
                     "source_count": source_counts.get(disease_id, 0),
                     "brief_statuses": {
                         lang: brief.status for lang, brief in sorted(language_briefs.items())
@@ -531,19 +842,35 @@ class DiseaseKnowledgeUpdateService:
             )
         ).scalars().all()
         source_dicts = [source_to_dict(source) for source in source_rows]
+        evidence_quality = assess_knowledge_evidence(source_dicts)
         sources_by_id = {
             int(source["id"]): source
             for source in source_dicts
             if source.get("id") is not None
         }
 
-        published_languages = sorted(
-            [brief.language for brief in brief_rows if knowledge_brief_publication_tier(brief) == "published"]
+        quality_by_language = {
+            brief.language: assess_knowledge_brief(brief, brief.language, disease=disease)
+            for brief in brief_rows
+        }
+        repair_sections = _profile_repair_sections(list(brief_rows), disease)
+        published_languages = sorted([
+            brief.language
+            for brief in brief_rows
+            if knowledge_brief_publication_tier(brief) == "published"
+            and quality_by_language[brief.language].profile_available
+        ])
+        blocked_languages = sorted(
+            [brief.language for brief in brief_rows if knowledge_brief_publication_tier(brief) == "blocked"]
         )
-        fallback_languages = sorted(
-            [brief.language for brief in brief_rows if knowledge_brief_publication_tier(brief) == "fallback"]
+        stored_knowledge_status = resolve_disease_knowledge_status(brief_rows)
+        knowledge_status = (
+            "published"
+            if published_languages
+            else "requires_review"
+            if brief_rows and stored_knowledge_status in {"published", "requires_review"}
+            else stored_knowledge_status
         )
-        knowledge_status = resolve_disease_knowledge_status(brief_rows)
 
         latest_updated_at = None
         for brief in brief_rows:
@@ -558,6 +885,52 @@ class DiseaseKnowledgeUpdateService:
             review_status_counts[source.review_status] = review_status_counts.get(source.review_status, 0) + 1
             source_type_counts[source.source_type] = source_type_counts.get(source.source_type, 0) + 1
 
+        brief_payloads: list[dict[str, Any]] = []
+        for brief in brief_rows:
+            payload = normalize_knowledge_citations(
+                {
+                    "language": brief.language,
+                    "status": brief.status,
+                    "brief_tier": knowledge_brief_publication_tier(brief),
+                    "block_reason": knowledge_brief_block_reason(brief),
+                    "source_confidence": brief.source_confidence,
+                    "updated_at": brief.updated_at.isoformat() if brief.updated_at else None,
+                    "brief": brief.brief,
+                    "definition": brief.definition,
+                    "clinical_features": brief.clinical_features,
+                    "clinical_summary": brief.clinical_summary,
+                    "epidemiology": brief.epidemiology,
+                    "transmission": brief.transmission,
+                    "prevention": brief.prevention,
+                    "surveillance_note": brief.surveillance_note,
+                    "risk_groups": brief.risk_groups,
+                    "disclaimer": brief.disclaimer,
+                    "model": brief.model,
+                    "quality_score": brief.quality_score,
+                    "review_notes": brief.review_notes,
+                    "source_ids": brief.source_ids or [],
+                    "source_attribution": _enrich_source_attribution(
+                        brief.source_attribution or [],
+                        sources_by_id,
+                    ),
+                    "metadata": brief.metadata_ or {},
+                }
+            )
+            payload["quality"] = quality_by_language[brief.language].to_dict()
+            brief_payloads.append(payload)
+
+        knowledge_display_mode = (
+            "full"
+            if len(published_languages) == 2
+            and all(quality_by_language[lang].display_mode == "full" for lang in published_languages)
+            else "partial"
+            if published_languages
+            else "blocked"
+        )
+        completeness_values = [
+            quality_by_language[lang].completeness for lang in published_languages
+        ]
+
         return {
             "disease_id": disease_code,
             "name_en": disease.get("name_en"),
@@ -570,7 +943,23 @@ class DiseaseKnowledgeUpdateService:
             "knowledge_status": knowledge_status,
             "knowledge_updated_at": latest_updated_at.isoformat() if latest_updated_at else None,
             "published_languages": published_languages,
-            "fallback_languages": fallback_languages,
+            "knowledge_display_mode": knowledge_display_mode,
+            "knowledge_completeness": (
+                round(sum(completeness_values) / len(completeness_values), 3)
+                if completeness_values
+                else 0.0
+            ),
+            "knowledge_profile_type": disease["knowledge_profile_type"],
+            "knowledge_profile_schema": disease["profile_schema"],
+            "repair_sections": repair_sections,
+            "repair_priority": (
+                "urgent" if not brief_rows else "high" if repair_sections else "none"
+            ),
+            "language_quality": {
+                lang: quality.to_dict() for lang, quality in quality_by_language.items()
+            },
+            "evidence_quality": evidence_quality.to_dict(),
+            "blocked_languages": blocked_languages,
             "source_count": len(source_rows),
             "brief_statuses": brief_statuses,
             "brief_tiers": brief_tiers,
@@ -578,44 +967,14 @@ class DiseaseKnowledgeUpdateService:
                 "brief_count": len(brief_rows),
                 "source_count": len(source_rows),
                 "published_briefs": sum(1 for brief in brief_rows if knowledge_brief_publication_tier(brief) == "published"),
-                "fallback_briefs": sum(1 for brief in brief_rows if knowledge_brief_publication_tier(brief) == "fallback"),
+                "public_profile_briefs": len(published_languages),
+                "blocked_briefs": sum(1 for brief in brief_rows if knowledge_brief_publication_tier(brief) == "blocked"),
                 "draft_briefs": sum(1 for brief in brief_rows if brief.status == "draft"),
                 "review_briefs": sum(1 for brief in brief_rows if brief.status == "requires_review"),
                 "source_review_counts": review_status_counts,
                 "source_type_counts": source_type_counts,
             },
-            "briefs": [
-                normalize_knowledge_citations(
-                    {
-                        "language": brief.language,
-                        "status": brief.status,
-                        "brief_tier": knowledge_brief_publication_tier(brief),
-                        "fallback_reason": knowledge_brief_fallback_reason(brief),
-                        "source_confidence": brief.source_confidence,
-                        "updated_at": brief.updated_at.isoformat() if brief.updated_at else None,
-                        "brief": brief.brief,
-                        "definition": brief.definition,
-                        "clinical_features": brief.clinical_features,
-                        "clinical_summary": brief.clinical_summary,
-                        "epidemiology": brief.epidemiology,
-                        "transmission": brief.transmission,
-                        "prevention": brief.prevention,
-                        "surveillance_note": brief.surveillance_note,
-                        "risk_groups": brief.risk_groups,
-                        "disclaimer": brief.disclaimer,
-                        "model": brief.model,
-                        "quality_score": brief.quality_score,
-                        "review_notes": brief.review_notes,
-                        "source_ids": brief.source_ids or [],
-                        "source_attribution": _enrich_source_attribution(
-                            brief.source_attribution or [],
-                            sources_by_id,
-                        ),
-                        "metadata": brief.metadata_ or {},
-                    }
-                )
-                for brief in brief_rows
-            ],
+            "briefs": brief_payloads,
             "sources": source_dicts,
         }
 
@@ -660,7 +1019,14 @@ class DiseaseKnowledgeUpdateService:
             await task_manager.update_task_progress(task_uuid, 5)
 
         if dry_run:
-            candidates = await asyncio.to_thread(self.fetcher.fetch, disease, enabled_sources=enabled_sources)
+            target_sections = ["brief", *disease["profile_schema"]["required_fields"]]
+            disease_payload = {**disease, "target_sections": target_sections}
+            candidates = await asyncio.to_thread(
+                self.fetcher.fetch,
+                disease_payload,
+                enabled_sources=enabled_sources,
+                target_sections=target_sections,
+            )
             source_dicts = [
                 {
                     "id": idx + 1,
@@ -671,27 +1037,51 @@ class DiseaseKnowledgeUpdateService:
                     "resolved_url": getattr(c, "resolved_url", None) or c.url,
                     "title": c.title,
                     "license": c.license,
+                    "status": c.status,
                     "review_status": c.review_status,
                     "raw_excerpt": c.raw_excerpt,
                     "content_text": getattr(c, "content_text", None),
                     "content_sections": getattr(c, "content_sections", None) or [],
+                    "metadata": c.metadata or {},
                 }
                 for idx, c in enumerate(candidates)
             ]
-            if _has_approved_public_sources(source_dicts):
-                briefs = await asyncio.gather(
-                    _generate_brief(generator, disease=disease, sources=source_dicts, language="en"),
-                    _generate_brief(generator, disease=disease, sources=source_dicts, language="zh"),
+            evidence_quality = assess_knowledge_evidence(source_dicts)
+            if not _has_approved_public_sources(source_dicts):
+                reason = _evidence_block_reason(source_dicts)
+                raise KnowledgeEvidenceInsufficientError(
+                    f"{disease['disease_id']} source enrichment exhausted: {reason}. "
+                    "No disease brief was generated."
                 )
-            else:
-                fallback_reason = _catalogue_fallback_reason(source_dicts)
-                briefs = [
-                    build_catalogue_disease_brief_payload(disease, "en", fallback_reason=fallback_reason),
-                    build_catalogue_disease_brief_payload(disease, "zh", fallback_reason=fallback_reason),
-                ]
+            generated_results = await asyncio.gather(
+                _generate_brief_result(generator, disease=disease_payload, sources=source_dicts, language="en"),
+                _generate_brief_result(generator, disease=disease_payload, sources=source_dicts, language="zh"),
+            )
+            for result in generated_results:
+                result["payload"] = _merge_repair_payload(
+                    result["payload"], None, target_sections, disease_payload
+                )
+            generation_failures = [
+                *_generated_profile_failures(generated_results),
+                *_bilingual_alignment_failures(generated_results),
+            ]
+            if generation_failures:
+                raise KnowledgeEvidenceInsufficientError(
+                    f"{disease['disease_id']} generation did not pass the publication gate: "
+                    + " | ".join(generation_failures)
+                )
+            briefs = [result["payload"] for result in generated_results]
+            for brief in briefs:
+                brief["metadata"] = {
+                    **(brief.get("metadata") or {}),
+                    "evidence_quality": evidence_quality.to_dict(),
+                }
             return {
                 "disease_id": disease["disease_id"],
+                "knowledge_profile_type": disease["knowledge_profile_type"],
+                "target_sections": target_sections,
                 "fetched_sources": len(candidates),
+                "evidence_quality": evidence_quality.to_dict(),
                 "brief_statuses": {brief["language"]: brief["status"] for brief in briefs},
                 "brief_previews": {
                     brief["language"]: {
@@ -712,9 +1102,51 @@ class DiseaseKnowledgeUpdateService:
 
         async with get_database() as db:
             existing = await _existing_sources(db, disease["disease_id"])
+            existing_source_dicts = [source_to_dict(row) for row in existing]
+            existing_has_public_sources = _has_approved_public_sources(existing_source_dicts)
+            existing_brief_rows = list(
+                (
+                    await db.execute(
+                        select(DiseaseKnowledgeBrief)
+                        .where(DiseaseKnowledgeBrief.disease_id == disease["disease_id"])
+                        .order_by(DiseaseKnowledgeBrief.language.asc())
+                    )
+                ).scalars().all()
+            )
+            existing_briefs_by_language = {
+                brief.language: brief for brief in existing_brief_rows
+            }
+            target_sections_by_language = _profile_repair_sections_by_language(
+                existing_brief_rows, disease
+            )
+            ordered_sections = [
+                "brief",
+                *disease["profile_schema"]["required_fields"],
+                *disease["profile_schema"]["optional_fields"],
+            ]
+            if force:
+                target_sections_by_language = {
+                    language: list(ordered_sections) for language in ("en", "zh")
+                }
+            target_set = {
+                field
+                for fields in target_sections_by_language.values()
+                for field in fields
+            }
+            target_sections = [field for field in ordered_sections if field in target_set]
+            disease_payload = {
+                **disease,
+                "target_sections": target_sections,
+                "evidence_target_sections": target_sections,
+            }
             candidates = []
-            if force or not existing:
-                candidates = await asyncio.to_thread(self.fetcher.fetch, disease, enabled_sources=enabled_sources)
+            if force or not existing or not existing_has_public_sources or target_sections:
+                candidates = await asyncio.to_thread(
+                    self.fetcher.fetch,
+                    disease_payload,
+                    enabled_sources=enabled_sources,
+                    target_sections=target_sections,
+                )
                 for candidate in candidates:
                     await _upsert_source(db, candidate)
                 if force:
@@ -732,6 +1164,7 @@ class DiseaseKnowledgeUpdateService:
                         "disease_id": disease["disease_id"],
                         "fetched_sources": len(candidates),
                         "source_groups": enabled_sources,
+                        "target_sections": target_sections,
                         "workflow_stage": "source_fetch_completed",
                     },
                 )
@@ -757,65 +1190,132 @@ class DiseaseKnowledgeUpdateService:
 
             source_rows = await _existing_sources(db, disease["disease_id"])
             source_dicts = [source_to_dict(row) for row in source_rows]
+            evidence_quality = assess_knowledge_evidence(source_dicts)
             brief_rows = []
-            fallback_reason = _catalogue_fallback_reason(source_dicts)
             has_public_sources = _has_approved_public_sources(source_dicts)
+
+            if not has_public_sources:
+                reason = _evidence_block_reason(source_dicts)
+                await _log_task(
+                    task_uuid,
+                    entry_type="error",
+                    title="Knowledge Evidence Blocked",
+                    content=(
+                        f"Automatic source enrichment for {disease['disease_id']} did not produce "
+                        f"usable evidence ({reason}). No disease brief was generated or persisted."
+                    ),
+                    metadata={
+                        "disease_id": disease["disease_id"],
+                        "source_count": len(source_dicts),
+                        "reason": reason,
+                        "workflow_stage": "knowledge_evidence_blocked",
+                    },
+                    success=False,
+                )
+                raise KnowledgeEvidenceInsufficientError(
+                    f"{disease['disease_id']} source enrichment exhausted: {reason}. "
+                    "No disease brief was generated or persisted."
+                )
 
             if task_uuid:
                 await task_manager.update_task_progress(task_uuid, 55)
 
+            inherited_sources = await _related_parent_sources(db, disease_payload)
+            generation_sources = [*source_dicts, *inherited_sources]
+
             brief_languages = ("en", "zh")
             for language in brief_languages:
+                language_targets = target_sections_by_language[language]
                 await _log_task(
                     task_uuid,
                     entry_type="info",
-                    title=f"Generating {language.upper()} Brief",
+                    title=(
+                        f"Generating {language.upper()} Brief"
+                        if language_targets
+                        else f"Keeping {language.upper()} Brief Locked"
+                    ),
                     content=(
-                        f"Generating {language.upper()} disease brief for {disease['disease_id']} "
-                        f"using {len(source_dicts)} grounded source row(s)."
+                        f"Target sections for {language.upper()}: "
+                        f"{', '.join(language_targets) if language_targets else 'none; existing profile is retained'}. "
+                        f"Evidence includes {len(source_dicts)} direct and {len(inherited_sources)} scoped parent source row(s)."
                     ),
                     metadata={
                         "disease_id": disease["disease_id"],
                         "language": language,
                         "source_count": len(source_dicts),
+                        "inherited_source_count": len(inherited_sources),
+                        "target_sections": language_targets,
                         "workflow_stage": f"brief_generation_{language}",
                     },
                 )
 
-            if has_public_sources:
-                generated_results = await asyncio.gather(
-                    *[
-                        _generate_brief_result(generator, disease=disease, sources=source_dicts, language=language)
-                        for language in brief_languages
-                    ]
-                )
-            else:
-                generated_results = [
-                    {
-                        "payload": build_catalogue_disease_brief_payload(
-                            disease,
-                            language,
-                            fallback_reason=fallback_reason,
-                        ),
-                        "trace": {
-                            "generator": "catalogue_fallback",
-                            "language": language,
-                            "preferred_models": [],
-                            "shard_index": 0,
-                            "shard_key": f"{str(disease.get('disease_id') or '').strip().upper()}:{language}",
-                            "model": None,
-                            "provider": None,
-                            "token_usage": {},
-                            "duration": 0.0,
-                            "prompt": None,
-                            "system_prompt": None,
-                            "response": None,
-                            "error": None,
-                            "cache_hit": False,
+            generation_languages = [
+                language for language in brief_languages if target_sections_by_language[language]
+            ]
+            ai_results = await asyncio.gather(
+                *[
+                    _generate_brief_result(
+                        generator,
+                        disease={
+                            **disease_payload,
+                            "target_sections": target_sections_by_language[language],
                         },
-                    }
-                    for language in brief_languages
+                        sources=generation_sources,
+                        language=language,
+                    )
+                    for language in generation_languages
                 ]
+            )
+            results_by_language = {
+                language: result for language, result in zip(generation_languages, ai_results)
+            }
+            for language in brief_languages:
+                if language not in results_by_language:
+                    existing_brief = existing_briefs_by_language.get(language)
+                    if existing_brief is not None:
+                        results_by_language[language] = _locked_existing_brief_result(
+                            existing_brief, disease_payload
+                        )
+            generated_results = [
+                results_by_language[language]
+                for language in brief_languages
+                if language in results_by_language
+            ]
+
+            for result in generated_results:
+                language = str(result.get("payload", {}).get("language") or "")
+                result["payload"] = _merge_repair_payload(
+                    result["payload"],
+                    existing_briefs_by_language.get(language),
+                    target_sections_by_language[language],
+                    disease_payload,
+                )
+
+            generation_failures = [
+                *_generated_profile_failures(generated_results),
+                *_bilingual_alignment_failures(generated_results),
+            ]
+            if generation_failures:
+                await _log_task(
+                    task_uuid,
+                    entry_type="error",
+                    title="Knowledge Generation Blocked",
+                    content=(
+                        "Generated profiles did not pass the publication gate. "
+                        "No disease brief was generated or persisted.\n"
+                        + "\n".join(generation_failures)
+                    ),
+                    metadata={
+                        "disease_id": disease["disease_id"],
+                        "failures": generation_failures,
+                        "workflow_stage": "knowledge_generation_blocked",
+                    },
+                    success=False,
+                )
+                raise KnowledgeEvidenceInsufficientError(
+                    f"{disease['disease_id']} generation did not pass the publication gate: "
+                    + " | ".join(generation_failures)
+                )
 
             if task_uuid:
                 await task_manager.update_task_progress(task_uuid, 80)
@@ -823,6 +1323,10 @@ class DiseaseKnowledgeUpdateService:
             for result in generated_results:
                 await _raise_if_cancelled(task_uuid)
                 payload = result["payload"]
+                payload["metadata"] = {
+                    **(payload.get("metadata") or {}),
+                    "evidence_quality": evidence_quality.to_dict(),
+                }
                 trace = result.get("trace") or {}
                 language = str(payload.get("language") or trace.get("language") or "unknown").strip().lower()
                 model_used = trace.get("model") if isinstance(trace.get("model"), str) else None
@@ -888,8 +1392,8 @@ class DiseaseKnowledgeUpdateService:
         published_languages = [
             brief.language for brief in brief_rows if knowledge_brief_publication_tier(brief) == "published"
         ]
-        fallback_languages = [
-            brief.language for brief in brief_rows if knowledge_brief_publication_tier(brief) == "fallback"
+        blocked_languages = [
+            brief.language for brief in brief_rows if knowledge_brief_publication_tier(brief) == "blocked"
         ]
         await _log_task(
             task_uuid,
@@ -911,11 +1415,15 @@ class DiseaseKnowledgeUpdateService:
 
         return {
             "disease_id": disease["disease_id"],
+            "knowledge_profile_type": disease["knowledge_profile_type"],
+            "target_sections": target_sections,
             "fetched_sources": len(candidates),
             "total_sources": len(source_dicts),
+            "inherited_source_count": len(inherited_sources),
+            "evidence_quality": evidence_quality.to_dict(),
             "brief_statuses": brief_statuses,
             "published_languages": published_languages,
-            "fallback_languages": fallback_languages,
+            "blocked_languages": blocked_languages,
         }
 
     async def execute_task(self, task: Task) -> dict[str, Any]:
