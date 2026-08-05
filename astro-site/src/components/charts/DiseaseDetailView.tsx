@@ -4,11 +4,9 @@
 // Charts: Epidemic Curve (cases+deaths dual axis) + Monthly Distribution (cases & deaths)
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import EChartsReactModule from 'echarts-for-react/lib/core';
+import EChartsReact from '../../lib/echartsReact';
 import { marked } from 'marked';
 import echarts from '../../lib/echarts';
-
-const EChartsReact = ((EChartsReactModule as any).default ?? EChartsReactModule) as any;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

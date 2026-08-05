@@ -21,6 +21,7 @@ export async function getStaticPaths() {
 }
 
 const { country } = Astro.params;
+const fallbackCountryCode = String(country ?? '').toUpperCase();
 const dataPath = resolve(`./src/data/countries/${country}.json`);
 const reportsIndexPath = resolve('./src/data/reports/index.json');
 const downloadsPath = resolve('./src/data/downloads.json');
@@ -82,7 +83,7 @@ const diseaseRows = countryData
 const coverageLabel = countryData?.date_range
   ? `${countryData.date_range.start} → ${countryData.date_range.end ?? 'present'}`
   : '—';
-const countryName = countryData?.country_name_en ?? countryData?.country_name ?? country.toUpperCase();
+const countryName = countryData?.country_name_en ?? countryData?.country_name ?? fallbackCountryCode;
 const countryNameZh = countryData?.country_name_zh ?? countryDownload?.name_zh ?? countryName;
 const countryBriefEn = countryData?.brief_en
   ?? `${countryName} surveillance page consolidates infectious disease records, charts, and source metadata for exploratory review.`;
@@ -134,11 +135,11 @@ const countryDataUrl = countryDownload?.site_json_path ?? `/site-data/countries/
           </p>
           <div class="flex items-center gap-3">
             <CountryFlag
-              code={countryData?.country_code ?? country.toUpperCase()}
+              code={countryData?.country_code ?? fallbackCountryCode}
               name={countryName}
               sizeClass="w-10 h-8"
             />
-            <span class="text-sm uppercase tracking-[0.18em] text-[rgb(var(--text-muted))]">{countryData?.country_code ?? country.toUpperCase()}</span>
+            <span class="text-sm uppercase tracking-[0.18em] text-[rgb(var(--text-muted))]">{countryData?.country_code ?? fallbackCountryCode}</span>
           </div>
           <div>
             <h1 class="academic-title" data-lang-en={countryName} data-lang-zh={countryNameZh}>

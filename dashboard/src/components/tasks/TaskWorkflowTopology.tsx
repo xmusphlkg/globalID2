@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Card, Text, Title } from "@tremor/react";
+import { Card, Text, Title } from "@/components/ui/tremor";
 import { Chart, echarts } from "@/components/charts/Chart";
 import { CHART_TOKENS } from "@/lib/chart-theme";
 import type { TaskDetail, WorkbookEntry } from "@/lib/hooks/useTasks";

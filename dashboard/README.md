@@ -114,7 +114,7 @@ The default `dashboard/.env.local` is:
 
 ```env
 NEXT_PUBLIC_API_URL=/api/v1
-NEXT_PUBLIC_WS_URL=ws://localhost:8000/api/v1
+NEXT_PUBLIC_WS_URL=/api/v1
 API_PROXY_TARGET=http://localhost:8000
 DASHBOARD_API_KEY=
 ```
@@ -123,10 +123,11 @@ Meaning:
 
 - `NEXT_PUBLIC_API_URL=/api/v1`: the browser calls the frontend on the same origin, and Next.js proxies the request
 - `API_PROXY_TARGET=http://localhost:8000`: the actual backend target used by the Next.js proxy
-- `NEXT_PUBLIC_WS_URL=ws://localhost:8000/api/v1`: the WebSocket base URL used for task streams and notifications
+- `NEXT_PUBLIC_WS_URL=/api/v1`: the same-origin WebSocket base URL used for task streams and notifications
 - `DASHBOARD_API_KEY`: optional shared secret. When set on the FastAPI backend, `/api/v1/*` HTTP endpoints require it; the Next.js server-side proxy injects it without exposing it to browser code.
 
-If the API runs on another port, update both `API_PROXY_TARGET` and `NEXT_PUBLIC_WS_URL`.
+If the API runs on another port, update `API_PROXY_TARGET`. The default relative
+`NEXT_PUBLIC_WS_URL` continues to use the dashboard's same-origin proxy.
 
 For manual startup with API protection enabled, set the same `DASHBOARD_API_KEY` in the API process and the dashboard web process. The root `./scripts/dashboard.sh` helper reads it from the root `.env` for the web process when the shell has not already exported it.
 

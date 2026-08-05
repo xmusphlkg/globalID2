@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { cn, formatNumber } from "@/lib/utils";
-import { Card } from "@tremor/react";
+import { Card } from "@/components/ui/tremor";
 
 interface KPICardProps {
   title: string;

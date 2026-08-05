@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
-import { Badge, Card, Grid, Text } from "@tremor/react";
-import type { Color } from "@tremor/react";
+import { Badge, Card, Grid, Text } from "@/components/ui/tremor";
+import type { Color } from "@/components/ui/tremor";
 import type { TaskDetail } from "@/lib/hooks/useTasks";
 import { useReportRuns } from "@/lib/hooks/useReports";
 import { getSourceDisplayLabel } from "@/lib/source-labels";

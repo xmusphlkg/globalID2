@@ -19,8 +19,8 @@ import {
   Text,
   Title,
   ProgressBar,
-} from "@tremor/react";
-import type { Color } from "@tremor/react";
+} from "@/components/ui/tremor";
+import type { Color } from "@/components/ui/tremor";
 import { FilterToolbar } from "@/components/ui/FilterToolbar";
 import { MetricTile } from "@/components/ui/MetricTile";
 import { PageHeader } from "@/components/ui/PageHeader";
