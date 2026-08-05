@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-08-05",
+  "retention_status": "local_files_and_pre_rewrite_bundle_only",
+  "external_storage_verified": false,
+  "files": [
+    {"path": "backups/database/globalid_20260423_104551.dump", "size": 9979891, "sha256": "77504b8115de28dc49054693e89cdba4a9a1c4b2f112537bb80d8b0c45b3d000"},
+    {"path": "backups/database/globalid_20260517_225136.dump", "size": 12651773, "sha256": "892f21a39080d7f0934cffc749212d3f2d9db13dd3c7bf55e702336c5c552bc7"},
+    {"path": "backups/globalid_pre_restore_20260327_165220.dump", "size": 154963, "sha256": "28c2e284ae797ebf29f6998f75a12666d78af2822a26f68966b2f341c7687ec3"},
+    {"path": "backups/globalid_pre_us_strict_import_20260319_135950.dump", "size": 8981552, "sha256": "09449e146a08d812b75747be758e5f9cb81ff02e0ab0f161b7400435161b6c58"},
+    {"path": "data/backups/db/globalid_20260216_154303.dump", "size": 445274, "sha256": "17910cecc8e83c88469f0901cea39a0e6f1732cda5ddd8ce351cb90d45bfe570"},
+    {"path": "data/backups/db/globalid_backup_20260214_225502.dump", "size": 428980, "sha256": "51c7ae7e00f4d9d7e70ca213e0de8428b8d6ef70c0104f982eaa2d8481d56440"},
+    {"path": "data/backups/disease_mappings_CN_backup_20260214_175917.csv", "size": 16243, "sha256": "c5831d0aa341b311aab674334cf79e421bc9397824d68c14c7f75c98628fee37"},
+    {"path": "data/backups/disease_mappings_CN_backup_20260214_180138.csv", "size": 17593, "sha256": "ca97fa04042f78b2ec498951bd4f7767baf17344af70fa3098b28e9c49002324"},
+    {"path": "data/backups/disease_mappings_CN_backup_20260214_180320.csv", "size": 17874, "sha256": "472a46697cf2736c2327132af66b96f390b726dee7063c268da8af650f718db6"},
+    {"path": "data/backups/disease_mappings_CN_backup_20260214_180837.csv", "size": 17732, "sha256": "625970347071c5bcb44c6c4c3236893e72d34e75791f786dc5318a6dbc1fcade"},
+    {"path": "data/backups/disease_mappings_CN_backup_20260214_230850.csv", "size": 17013, "sha256": "77d6886b5b55b7b4af67e51e3a3fe9c487b26bbe4c85402f26dacd6842a3ad0c"},
+    {"path": "data/backups/disease_mappings_CN_backup_20260214_231358.csv", "size": 17472, "sha256": "267c9d7bbea04cc516073954487ce7819ba0009fcf03a6e017d6b365c7146bd5"},
+    {"path": "data/backups/standard_diseases_backup_20260214_175917.csv", "size": 19467, "sha256": "c3a22f06c119d8490160cdb11efe9886cb56baa9b27948da87013a326fa16bcb"},
+    {"path": "data/backups/standard_diseases_backup_20260214_180138.csv", "size": 19704, "sha256": "bcd917bf4d7bd6782cbc317a6f5d30884f8f160f17fe6520d641a276cac4fe1b"},
+    {"path": "data/backups/standard_diseases_backup_20260214_180320.csv", "size": 19704, "sha256": "2943af03b3e6a444272c145268abf845cb798f64ba5887070969d0ce50e08963"},
+    {"path": "data/backups/standard_diseases_backup_20260214_180837.csv", "size": 19704, "sha256": "83e75399de0184c98c86047f3b0eec6cd8a1ef19f580676c40e65fed86eb2088"},
+    {"path": "data/backups/standard_diseases_backup_20260214_230850.csv", "size": 19924, "sha256": "f0cf81c5021efbcaec9d6d7ddb5d3af442836d334b689d75599bcc783ce2b2c0"},
+    {"path": "data/backups/standard_diseases_backup_20260214_231358.csv", "size": 19924, "sha256": "03b2393a046072b5bd6672d8ce294c1799329726f6099a7ba8938b70b20862db"}
+  ]
+}

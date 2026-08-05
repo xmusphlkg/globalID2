@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "description": "Exact legacy objects awaiting an authorized history rewrite. Never add new entries.",
+  "allowlist": [
+    {"path": "backups/database/globalid_20260423_104551.dump", "oid": "e99badf45a66980af2b76b148d532f07916164a7", "size": 9979891},
+    {"path": "backups/database/globalid_20260517_225136.dump", "oid": "8fe230aa026489537b6d8a0c8f03e139a4635ebe", "size": 12651773},
+    {"path": "backups/globalid_pre_restore_20260327_165220.dump", "oid": "3e2e6a9a87db04de1170340849772b7deff877ea", "size": 154963},
+    {"path": "backups/globalid_pre_us_strict_import_20260319_135950.dump", "oid": "2d6caa9c04b7a5e40dbf1cd331bde0ca6ff67685", "size": 8981552},
+    {"path": "data/backups/db/globalid_20260216_154303.dump", "oid": "1eaae67e6035671316077dcbd293966b9c2d6439", "size": 445274},
+    {"path": "data/backups/db/globalid_backup_20260214_225502.dump", "oid": "2363e1635b924c527f34b9ec955915bffcd6979b", "size": 428980},
+    {"path": "data/backups/disease_mappings_CN_backup_20260214_175917.csv", "oid": "aab83f5925ac1d66da790c1fc8e0c2620d8fe413", "size": 16243},
+    {"path": "data/backups/disease_mappings_CN_backup_20260214_180138.csv", "oid": "e968e1e6cc61a5ca00c1ae9e2b8ce47ddc7822c6", "size": 17593},
+    {"path": "data/backups/disease_mappings_CN_backup_20260214_180320.csv", "oid": "ced45e47b79350eb212490f595edabefa9a16768", "size": 17874},
+    {"path": "data/backups/disease_mappings_CN_backup_20260214_180837.csv", "oid": "35a0f6d36e0b75c1e3317d00e6d9e5a15e02eb76", "size": 17732},
+    {"path": "data/backups/disease_mappings_CN_backup_20260214_230850.csv", "oid": "060c2f35b933b7d3a946cd1c70b2a6fac1bbdc4f", "size": 17013},
+    {"path": "data/backups/disease_mappings_CN_backup_20260214_231358.csv", "oid": "9fe3a0c3fe3ea7f05887769022d0c606cc0a7645", "size": 17472},
+    {"path": "data/backups/standard_diseases_backup_20260214_175917.csv", "oid": "9a2c151b980f614c890d117a6fff5ae34357bdb3", "size": 19467},
+    {"path": "data/backups/standard_diseases_backup_20260214_180138.csv", "oid": "3268c15af3abf1cb2f8bd136fa9bee473931c453", "size": 19704},
+    {"path": "data/backups/standard_diseases_backup_20260214_180320.csv", "oid": "722d53ac17c63b163003a628e4aad15fcfc5d627", "size": 19704},
+    {"path": "data/backups/standard_diseases_backup_20260214_180837.csv", "oid": "9c95c43ef8f5be7d2877af9b2dc64a9d7b756890", "size": 19704},
+    {"path": "data/backups/standard_diseases_backup_20260214_230850.csv", "oid": "849f7292f096294b524f42619e4089dfc40e103d", "size": 19924},
+    {"path": "data/backups/standard_diseases_backup_20260214_231358.csv", "oid": "b6ffa807461dbba54a9fb47efdc6aa361a29a171", "size": 19924}
+  ]
+}
