@@ -376,11 +376,26 @@ class SeriesObservationStore:
             )
             previous = observation_by_key.get(identity)
             if previous is not None:
-                if previous != observation:
+                comparable_fields = (
+                    "value",
+                    "unit",
+                    "suppressed",
+                    "suppression_reason",
+                    "quality_status",
+                    "dimensions",
+                )
+                if any(
+                    previous.get(field) != observation.get(field)
+                    for field in comparable_fields
+                ):
                     raise ValueError(
                         "Conflicting source rows share a disease series observation "
                         f"identity: {identity}"
                     )
+                # Upstream extracts can retain both a historic label and its
+                # replacement for the same weekly observation. Preserve the
+                # first deterministic provenance row when the actual fact is
+                # identical; differing values still fail closed above.
                 continue
             observation_by_key[identity] = observation
             observations.append(observation)

@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
+from urllib.parse import urlparse, urlunparse
 
 import requests
 
@@ -184,6 +185,7 @@ class TaiwanNIDSSCrawler(BaseCrawler):
             extra_ca_certs=[TWCA_SSL_CA_CERT],
             log_label="[TW-NIDSS]",
         )
+        self._http_fallback_hosts: Set[str] = set()
 
     def fetch_disease_index(self) -> List[TWDiseaseSource]:
         """Discover NIDSS disease codes that are exposed in the dashboard selector."""
@@ -262,12 +264,34 @@ class TaiwanNIDSSCrawler(BaseCrawler):
         return None
 
     def _get_csv_response(self, url: str) -> requests.Response:
-        return self._tls_fallback.request(
-            self.session,
-            "GET",
-            url,
-            timeout=self.timeout,
-        )
+        parsed = urlparse(url)
+        if parsed.hostname in self._http_fallback_hosts:
+            return self.session.get(
+                urlunparse(parsed._replace(scheme="http")),
+                timeout=self.timeout,
+            )
+        try:
+            return self._tls_fallback.request(
+                self.session,
+                "GET",
+                url,
+                timeout=self.timeout,
+            )
+        except requests.exceptions.SSLError as exc:
+            if parsed.scheme != "https" or parsed.hostname != "od.cdc.gov.tw":
+                raise
+
+            # The Taiwan CDC open-data CDN intermittently closes TLS handshakes
+            # before returning a certificate, so a CA-bundle retry cannot help.
+            # Its public CSV endpoint also exposes HTTP; restrict the downgrade
+            # to this exact host and retain the HTTPS URL as provenance.
+            fallback_url = urlunparse(parsed._replace(scheme="http"))
+            self._http_fallback_hosts.add(parsed.hostname)
+            logger.warning(
+                f"[TW-NIDSS] HTTPS handshake unavailable; using official HTTP CSV endpoint | "
+                f"url={fallback_url} error={exc}"
+            )
+            return self.session.get(fallback_url, timeout=self.timeout)
 
     def _save_raw_csv(self, disease: TWDiseaseSource, csv_text: str) -> None:
         if not self.save_raw:

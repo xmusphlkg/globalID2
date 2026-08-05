@@ -86,6 +86,8 @@ def _parse_date(row: Dict[str, str]) -> Optional[date]:
 class CHMonthlyUpdater:
     """Read Switzerland FOPH IDD national rows and import them."""
 
+    series_registered_rows_only = True
+
     def __init__(
         self,
         *,

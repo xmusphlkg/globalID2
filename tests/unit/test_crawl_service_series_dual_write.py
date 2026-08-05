@@ -272,6 +272,28 @@ def test_legacy_only_updater_can_explicitly_disable_registry_requirement() -> No
     assert policy.registry_coverage == "legacy_only"
 
 
+def test_partially_registered_country_updaters_select_registry_rows() -> None:
+    from src.data.processors.au import AUMonthlyUpdater
+    from src.data.processors.br import BRMonthlyUpdater
+    from src.data.processors.ch import CHMonthlyUpdater
+    from src.data.processors.hk import HKMonthlyUpdater
+    from src.data.processors.jp import JPWeeklyUpdater
+    from src.data.processors.nz import NZMonthlyUpdater
+    from src.data.processors.tw import TWMonthlyUpdater
+
+    updater_types = (
+        AUMonthlyUpdater,
+        BRMonthlyUpdater,
+        CHMonthlyUpdater,
+        HKMonthlyUpdater,
+        JPWeeklyUpdater,
+        NZMonthlyUpdater,
+        TWMonthlyUpdater,
+    )
+
+    assert all(cls.series_registered_rows_only for cls in updater_types)
+
+
 @pytest.mark.asyncio
 async def test_series_write_failure_is_not_silently_ignored(monkeypatch) -> None:
     class Updater:

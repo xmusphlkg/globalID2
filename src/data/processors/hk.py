@@ -84,6 +84,8 @@ def _parse_date(row: Dict[str, str]) -> Optional[date]:
 class HKMonthlyUpdater:
     """Read Hong Kong, China CHP national monthly rows and import them."""
 
+    series_registered_rows_only = True
+
     def __init__(
         self,
         *,
