@@ -35,7 +35,7 @@ POINTER_PROTOCOL = "globalid.raw-git-archive.pointer.v1"
 MARKER_FILE = ".globalid-raw-git-archive-v1"
 MARKER_CONTENT = "globalid-raw-git-archive-v1\n"
 DEFAULT_CHUNK_BYTES = 48 * 1024 * 1024
-DEFAULT_COMMIT_BATCH_BYTES = 384 * 1024 * 1024
+DEFAULT_COMMIT_BATCH_BYTES = 96 * 1024 * 1024
 DEFAULT_GIT_TIMEOUT_SECONDS = 30 * 60
 DEFAULT_ZSTD_LEVEL = 6
 SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
@@ -343,6 +343,18 @@ def run_git(
     return result
 
 
+def _configure_archive_git(repository_dir: Path, timeout_seconds: float) -> None:
+    run_git(["config", "user.name", "GlobalID Raw Archive"], repository_dir, timeout_seconds=timeout_seconds)
+    run_git(["config", "user.email", "raw-archive@globalid.invalid"], repository_dir, timeout_seconds=timeout_seconds)
+    # zstd payload chunks are already compressed and do not benefit from Git's
+    # expensive delta search or high deflate levels. These settings make large
+    # incremental pushes substantially faster without changing archive bytes.
+    run_git(["config", "core.compression", "1"], repository_dir, timeout_seconds=timeout_seconds)
+    run_git(["config", "pack.compression", "1"], repository_dir, timeout_seconds=timeout_seconds)
+    run_git(["config", "pack.window", "0"], repository_dir, timeout_seconds=timeout_seconds)
+    run_git(["config", "pack.depth", "0"], repository_dir, timeout_seconds=timeout_seconds)
+
+
 def _ensure_repository(
     repository_dir: Path,
     *,
@@ -422,6 +434,7 @@ def _ensure_repository(
                         raise RawArchiveError(
                             "Local and remote raw-v1 histories diverged; refusing to overwrite either side"
                         )
+        _configure_archive_git(repository_dir, timeout_seconds)
         return
 
     if repository_dir.exists() and any(repository_dir.iterdir()):
@@ -460,16 +473,7 @@ def _ensure_repository(
                 timeout_seconds=timeout_seconds,
             )
 
-    run_git(
-        ["config", "user.name", "GlobalID Raw Archive"],
-        repository_dir,
-        timeout_seconds=timeout_seconds,
-    )
-    run_git(
-        ["config", "user.email", "raw-archive@globalid.invalid"],
-        repository_dir,
-        timeout_seconds=timeout_seconds,
-    )
+    _configure_archive_git(repository_dir, timeout_seconds)
 
 
 def _commit_paths(
@@ -620,9 +624,19 @@ def publish_raw_archive(
         )
         _write_archive_metadata(repository_root)
         previous = _load_latest_manifest(repository_root)
+        tracked_object_metadata = {
+            line.strip()
+            for line in run_git(
+                ["ls-files", "--", "objects"],
+                repository_root,
+                timeout_seconds=git_timeout_seconds,
+            ).stdout.splitlines()
+            if line.strip().endswith("/object.json")
+        }
 
         files: list[SourceRecord] = []
         new_objects: list[tuple[str, int]] = []
+        queued_objects: set[str] = set()
         reused = 0
         source_bytes = 0
         for index, (relative, source_path) in enumerate(iter_source_files(source_root), start=1):
@@ -645,11 +659,22 @@ def publish_raw_archive(
                     zstd_level=zstd_level,
                 )
                 object_relative = _object_dir(repository_root, digest).relative_to(repository_root).as_posix()
-                new_objects.append((object_relative, object_record.compressed_size))
+                if object_relative not in queued_objects:
+                    new_objects.append((object_relative, object_record.compressed_size))
+                    queued_objects.add(object_relative)
             else:
                 if object_record.source_size != size:
                     raise RawArchiveError(f"Source size conflicts with stored object: {relative}")
-                reused += 1
+                object_relative = _object_dir(repository_root, digest).relative_to(repository_root).as_posix()
+                metadata_relative = f"{object_relative}/object.json"
+                if (
+                    metadata_relative not in tracked_object_metadata
+                    and object_relative not in queued_objects
+                ):
+                    new_objects.append((object_relative, object_record.compressed_size))
+                    queued_objects.add(object_relative)
+                else:
+                    reused += 1
             files.append(
                 SourceRecord(
                     path=relative.as_posix(),
