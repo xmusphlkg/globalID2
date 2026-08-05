@@ -96,7 +96,11 @@ tests/fixtures/ai_test_data/
 
 # Local databases and temp files
 *.db
+*.dump
+*.sqlite
 *.sqlite3
+*backup*.sql
+*Backup*.sql
 *.tmp
 *.bak
 
