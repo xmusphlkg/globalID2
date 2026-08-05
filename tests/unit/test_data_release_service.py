@@ -581,3 +581,62 @@ def test_site_release_manifest_records_visual_modules(monkeypatch, tmp_path):
         "EpidemicCurve.ABC123.js",
     ]
     assert manifest_path.read_text(encoding="utf-8").endswith("\n")
+
+
+@pytest.mark.asyncio
+async def test_site_release_identity_prefers_matching_deployment_branch(monkeypatch):
+    service = DataReleaseService()
+    commit = "a" * 40
+
+    async def git_head_full():
+        return commit
+
+    async def current_git_branch():
+        return "development"
+
+    async def git_branch_commit(branch):
+        assert branch == "master"
+        return commit
+
+    async def git_status_paths():
+        return []
+
+    monkeypatch.setattr(service, "_git_head_full", git_head_full)
+    monkeypatch.setattr(service, "_current_git_branch", current_git_branch)
+    monkeypatch.setattr(service, "_git_branch_commit", git_branch_commit)
+    monkeypatch.setattr(service, "_git_status_paths", git_status_paths)
+
+    identity = await service._site_release_identity("master")
+
+    assert identity["source_branch"] == "master"
+    assert identity["deployment_branch"] == "master"
+    assert identity["source_commit"] == commit
+    assert identity["commit_dirty"] is False
+
+
+@pytest.mark.asyncio
+async def test_site_release_identity_keeps_checkout_branch_when_deployment_differs(monkeypatch):
+    service = DataReleaseService()
+
+    async def git_status_paths():
+        return []
+
+    monkeypatch.setattr(service, "_git_status_paths", git_status_paths)
+
+    async def git_head_full():
+        return "a" * 40
+
+    async def current_git_branch():
+        return "feature/release-preview"
+
+    async def git_branch_commit(_branch):
+        return "b" * 40
+
+    monkeypatch.setattr(service, "_git_head_full", git_head_full)
+    monkeypatch.setattr(service, "_current_git_branch", current_git_branch)
+    monkeypatch.setattr(service, "_git_branch_commit", git_branch_commit)
+
+    identity = await service._site_release_identity("master")
+
+    assert identity["source_branch"] == "feature/release-preview"
+    assert identity["deployment_branch"] == "master"
