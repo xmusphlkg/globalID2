@@ -87,11 +87,20 @@ class DiseaseKnowledgeCatalogueItem(BaseModel):
     icd_11: Optional[str] = None
     description: Optional[str] = None
     slug: Optional[str] = None
-    knowledge_status: str = "fallback"
+    knowledge_status: str = "blocked"
     knowledge_updated_at: Optional[str] = None
     published_languages: List[str] = Field(default_factory=list)
+    blocked_languages: List[str] = Field(default_factory=list)
+    knowledge_display_mode: str = "blocked"
+    knowledge_completeness: float = 0.0
+    knowledge_profile_type: str = "infectious_disease"
+    knowledge_profile_schema: Dict[str, Any] = Field(default_factory=dict)
+    repair_sections: List[str] = Field(default_factory=list)
+    repair_priority: str = "none"
+    language_quality: Dict[str, Any] = Field(default_factory=dict)
     source_count: int = 0
     brief_statuses: Dict[str, str] = Field(default_factory=dict)
+    brief_tiers: Dict[str, str] = Field(default_factory=dict)
 
 
 class DiseaseKnowledgeTaskSkipped(BaseModel):
@@ -105,7 +114,7 @@ class DiseaseKnowledgeStartRequest(BaseModel):
     disease_ids: List[str] = Field(..., min_length=1)
     source: List[str] = Field(default_factory=list, description="Source groups: who / search / wikidata / wikipedia / pubmed / msd")
     force: bool = False
-    generator: str = Field("ai", description="ai / auto / template")
+    generator: str = Field("ai", description="ai / auto; content fallback is not supported")
     priority: str = Field("normal")
     task_name: Optional[str] = Field(None, description="Optional batch task name prefix")
     description: Optional[str] = Field(None, description="Optional task description")
@@ -171,6 +180,7 @@ class DiseaseKnowledgeBriefDetail(BaseModel):
     source_ids: List[int] = Field(default_factory=list)
     source_attribution: List[Dict[str, Any]] = Field(default_factory=list)
     metadata: Dict[str, Any] = Field(default_factory=dict)
+    quality: Dict[str, Any] = Field(default_factory=dict)
 
 
 class DiseaseKnowledgeDetail(BaseModel):
@@ -182,11 +192,21 @@ class DiseaseKnowledgeDetail(BaseModel):
     icd_11: Optional[str] = None
     description: Optional[str] = None
     slug: Optional[str] = None
-    knowledge_status: str = "fallback"
+    knowledge_status: str = "blocked"
     knowledge_updated_at: Optional[str] = None
     published_languages: List[str] = Field(default_factory=list)
+    blocked_languages: List[str] = Field(default_factory=list)
+    knowledge_display_mode: str = "blocked"
+    knowledge_completeness: float = 0.0
+    knowledge_profile_type: str = "infectious_disease"
+    knowledge_profile_schema: Dict[str, Any] = Field(default_factory=dict)
+    repair_sections: List[str] = Field(default_factory=list)
+    repair_priority: str = "none"
+    language_quality: Dict[str, Any] = Field(default_factory=dict)
+    evidence_quality: Dict[str, Any] = Field(default_factory=dict)
     source_count: int = 0
     brief_statuses: Dict[str, str] = Field(default_factory=dict)
+    brief_tiers: Dict[str, str] = Field(default_factory=dict)
     summary: Dict[str, Any] = Field(default_factory=dict)
     briefs: List[DiseaseKnowledgeBriefDetail] = Field(default_factory=list)
     sources: List[DiseaseKnowledgeSourceDetail] = Field(default_factory=list)

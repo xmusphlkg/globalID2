@@ -36,9 +36,10 @@ import {
 } from "lucide-react";
 import { Badge, Color } from "@tremor/react";
 
-type KnowledgeStatusFilter = "all" | "published" | "requires_review" | "fallback";
+type KnowledgeStatusFilter = "all" | "published" | "requires_review" | "blocked";
+type KnowledgeDisplayFilter = "all" | "full" | "partial" | "blocked";
 type RefreshPriority = "low" | "normal" | "high" | "urgent";
-type RefreshGenerator = "ai" | "auto" | "template";
+type RefreshGenerator = "ai" | "auto";
 type SourceGroup = "who" | "search" | "wikidata" | "wikipedia" | "pubmed" | "msd";
 type DetailTab = "briefs" | "sources" | "meta";
 
@@ -180,7 +181,7 @@ function statusColor(status: string): Color {
       return "amber";
     case "draft":
       return "blue";
-    case "fallback":
+    case "blocked":
       return "slate";
     default:
       return "slate";
@@ -700,6 +701,9 @@ function BriefCard({
 }) {
   const attribution = Array.isArray(brief.source_attribution) ? brief.source_attribution : [];
   const citationReferences = citationReferencesFromAttribution(attribution);
+  const quality = brief.quality;
+  const fieldAvailable = (field: string, value: string | null | undefined) =>
+    quality?.fields?.[field]?.available ?? Boolean(value?.trim());
 
   const definition = brief.definition ?? brief.brief;
   const clinical = brief.clinical_features ?? brief.clinical_summary;
@@ -708,19 +712,19 @@ function BriefCard({
   const primaryFields = [
     {
       label: lang === "zh" ? "定义" : "Definition",
-      value: definitionText && definitionText !== briefText ? definitionText : null,
+      value: fieldAvailable("definition", definitionText) && definitionText !== briefText ? definitionText : null,
     },
     {
       label: lang === "zh" ? "临床特征" : "Clinical features",
-      value: clinical,
+      value: fieldAvailable("clinical_features", clinical) ? clinical : null,
     },
   ].filter((item) => item.value);
   const expandableFields = [
-    { label: lang === "zh" ? "流行病学" : "Epidemiology", value: brief.epidemiology },
-    { label: lang === "zh" ? "传播途径" : "Transmission", value: brief.transmission },
-    { label: lang === "zh" ? "预防" : "Prevention", value: brief.prevention },
-    { label: lang === "zh" ? "监测备注" : "Surveillance note", value: brief.surveillance_note },
-    { label: lang === "zh" ? "重点人群" : "Risk groups", value: brief.risk_groups },
+    { label: lang === "zh" ? "流行病学" : "Epidemiology", value: fieldAvailable("epidemiology", brief.epidemiology) ? brief.epidemiology : null },
+    { label: lang === "zh" ? "传播途径" : "Transmission", value: fieldAvailable("transmission", brief.transmission) ? brief.transmission : null },
+    { label: lang === "zh" ? "预防" : "Prevention", value: fieldAvailable("prevention", brief.prevention) ? brief.prevention : null },
+    { label: lang === "zh" ? "监测备注" : "Surveillance note", value: fieldAvailable("surveillance_note", brief.surveillance_note) ? brief.surveillance_note : null },
+    { label: lang === "zh" ? "重点人群" : "Risk groups", value: fieldAvailable("risk_groups", brief.risk_groups) ? brief.risk_groups : null },
     { label: lang === "zh" ? "免责声明" : "Disclaimer", value: brief.disclaimer },
   ].filter((item) => item.value);
 
@@ -736,6 +740,11 @@ function BriefCard({
             <Badge color={brief.source_confidence === "high" ? "emerald" : brief.source_confidence === "medium" ? "amber" : "slate"}>
               {brief.source_confidence}
             </Badge>
+            {quality ? (
+              <Badge color={quality.display_mode === "full" ? "emerald" : quality.display_mode === "partial" ? "amber" : "slate"}>
+                {quality.display_mode} · {Math.round(quality.completeness * 100)}%
+              </Badge>
+            ) : null}
           </div>
           <p className="mt-1 text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
             {brief.model ? `${brief.model} · ` : ""}
@@ -750,6 +759,7 @@ function BriefCard({
       </div>
 
       <div className="mt-3 space-y-3">
+        {fieldAvailable("brief", brief.brief) ? (
         <div className="rounded-tremor-default border border-tremor-border bg-tremor-background px-3 py-3 dark:border-dark-tremor-border dark:bg-dark-tremor-background">
           <p className="text-[10px] font-semibold uppercase text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
             {lang === "zh" ? "Brief" : "Brief"}
@@ -758,6 +768,33 @@ function BriefCard({
             <CitationText text={brief.brief} references={citationReferences} />
           </p>
         </div>
+        ) : (
+          <div className="rounded-tremor-default border border-amber-300 bg-amber-50 px-3 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+            <p className="font-semibold">
+              {lang === "zh" ? "摘要未通过公开质量门禁" : "Brief did not pass the public quality gate"}
+            </p>
+            <p className="mt-1 text-xs leading-5">
+              {lang === "zh" ? "缺失说明不会再作为疾病知识展示；可在下方展开检查原始候选文本。" : "Absence explanations are no longer displayed as disease knowledge. Expand below to inspect the raw candidate text."}
+            </p>
+            <details className="mt-2">
+              <summary className="cursor-pointer text-xs font-semibold uppercase">
+                {lang === "zh" ? "查看原始候选" : "Inspect raw candidate"}
+              </summary>
+              <p className="mt-2 whitespace-pre-line text-xs leading-5">{brief.brief}</p>
+            </details>
+          </div>
+        )}
+
+        {quality?.issues?.length > 0 ? (
+          <div className="rounded-tremor-default border border-dashed border-amber-300 px-3 py-2 dark:border-amber-800">
+            <p className="text-[10px] font-semibold uppercase text-amber-700 dark:text-amber-300">
+              {lang === "zh" ? "质量门禁结果" : "Quality gate findings"}
+            </p>
+            <ul className="mt-1.5 list-disc space-y-1 pl-4 text-xs text-tremor-content dark:text-dark-tremor-content">
+              {quality.issues.map((issue) => <li key={issue}>{issue}</li>)}
+            </ul>
+          </div>
+        ) : null}
 
         {primaryFields.length > 0 ? (
           <div className="space-y-3 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 py-3 dark:border-dark-tremor-border dark:bg-dark-tremor-background">
@@ -845,12 +882,13 @@ export default function KnowledgePage() {
   const detailPanelRef = useRef<HTMLDivElement | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<KnowledgeStatusFilter>("all");
+  const [displayFilter, setDisplayFilter] = useState<KnowledgeDisplayFilter>("all");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [selectedDiseaseId, setSelectedDiseaseId] = useState<string | null>(null);
   const [detailTab, setDetailTab] = useState<DetailTab>("briefs");
   const [briefLanguage, setBriefLanguage] = useState<string>(lang);
   const [refreshSources, setRefreshSources] = useState<SourceGroup[]>(["who", "search", "wikidata", "wikipedia", "pubmed"]);
-  const [forceRefresh, setForceRefresh] = useState(true);
+  const [forceRefresh, setForceRefresh] = useState(false);
   const [generator, setGenerator] = useState<RefreshGenerator>("ai");
   const [priority, setPriority] = useState<RefreshPriority>("normal");
   const [refreshError, setRefreshError] = useState<string | null>(null);
@@ -870,8 +908,12 @@ export default function KnowledgePage() {
     const needle = search.trim().toLowerCase();
     const rows = catalogue ?? [];
 
+    const modeRank: Record<string, number> = { blocked: 0, partial: 1, full: 2 };
     return rows.filter((item) => {
       if (statusFilter !== "all" && item.knowledge_status !== statusFilter) {
+        return false;
+      }
+      if (displayFilter !== "all" && item.knowledge_display_mode !== displayFilter) {
         return false;
       }
 
@@ -889,8 +931,12 @@ export default function KnowledgePage() {
       ]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(needle));
+    }).sort((a, b) => {
+      const modeDifference = (modeRank[a.knowledge_display_mode] ?? 3) - (modeRank[b.knowledge_display_mode] ?? 3);
+      if (modeDifference !== 0) return modeDifference;
+      return a.disease_id.localeCompare(b.disease_id);
     });
-  }, [catalogue, search, statusFilter]);
+  }, [catalogue, displayFilter, search, statusFilter]);
 
   useEffect(() => {
     if (selectedDiseaseId && visibleEntries.length > 0 && !visibleEntries.some((item) => item.disease_id === selectedDiseaseId)) {
@@ -924,9 +970,9 @@ export default function KnowledgePage() {
   const selectedBrief = detailBriefs.find((brief) => brief.language === briefLanguage) ?? detailBriefs[0] ?? null;
 
   const totalDiseases = catalogue?.length ?? 0;
-  const publishedBriefs = catalogue?.filter((item) => item.knowledge_status === "published").length ?? 0;
-  const reviewQueue = catalogue?.filter((item) => item.knowledge_status === "requires_review").length ?? 0;
-  const totalSourceRows = catalogue?.reduce((sum, item) => sum + (item.source_count || 0), 0) ?? 0;
+  const fullProfiles = catalogue?.filter((item) => item.knowledge_display_mode === "full").length ?? 0;
+  const partialProfiles = catalogue?.filter((item) => item.knowledge_display_mode === "partial").length ?? 0;
+  const blockedProfiles = catalogue?.filter((item) => item.knowledge_display_mode === "blocked").length ?? 0;
 
   const taskLogsHref = selectedDiseaseId
     ? `/ai/tasks?task_type=update_disease_knowledge&search=${encodeURIComponent(selectedDiseaseId)}`
@@ -1018,8 +1064,11 @@ export default function KnowledgePage() {
             <UiStatusBadge tone="primary">
               {lang === "zh" ? `已选 ${selectedCount}` : `${selectedCount} selected`}
             </UiStatusBadge>
-            <UiStatusBadge tone={reviewQueue > 0 ? "warning" : "success"}>
-              {lang === "zh" ? `待审核 ${reviewQueue}` : `${reviewQueue} in review`}
+            <UiStatusBadge tone={partialProfiles > 0 ? "warning" : "success"}>
+              {lang === "zh" ? `部分画像 ${partialProfiles}` : `${partialProfiles} partial`}
+            </UiStatusBadge>
+            <UiStatusBadge tone={blockedProfiles > 0 ? "danger" : "success"}>
+              {lang === "zh" ? `阻断 ${blockedProfiles}` : `${blockedProfiles} blocked`}
             </UiStatusBadge>
             <UiStatusBadge>{lang === "zh" ? `可见 ${visibleEntries.length}` : `${visibleEntries.length} visible`}</UiStatusBadge>
           </>
@@ -1034,22 +1083,22 @@ export default function KnowledgePage() {
           tone="primary"
         />
         <MetricTile
-          label={lang === "zh" ? "已发布简介" : "Published briefs"}
-          value={publishedBriefs}
+          label={lang === "zh" ? "完整画像" : "Full profiles"}
+          value={fullProfiles}
           icon={<ShieldCheck className="h-4 w-4" />}
           tone="success"
         />
         <MetricTile
-          label={lang === "zh" ? "待审核队列" : "Review queue"}
-          value={reviewQueue}
+          label={lang === "zh" ? "部分画像" : "Partial profiles"}
+          value={partialProfiles}
           icon={<AlertTriangle className="h-4 w-4" />}
           tone="warning"
         />
         <MetricTile
-          label={lang === "zh" ? "来源记录" : "Source rows"}
-          value={totalSourceRows}
+          label={lang === "zh" ? "证据阻断" : "Blocked profiles"}
+          value={blockedProfiles}
           icon={<FlaskConical className="h-4 w-4" />}
-          tone="info"
+          tone="danger"
         />
       </div>
 
@@ -1077,7 +1126,18 @@ export default function KnowledgePage() {
                   <option value="all">{lang === "zh" ? "全部状态" : "All statuses"}</option>
                   <option value="published">{lang === "zh" ? "已发布" : "Published"}</option>
                   <option value="requires_review">{lang === "zh" ? "待审核" : "Needs review"}</option>
-                  <option value="fallback">{lang === "zh" ? "回退简介" : "Fallback"}</option>
+                  <option value="blocked">{lang === "zh" ? "证据阻断" : "Blocked"}</option>
+                </select>
+                <select
+                  value={displayFilter}
+                  onChange={(event) => setDisplayFilter(event.target.value as KnowledgeDisplayFilter)}
+                  className="h-10 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm text-tremor-content-strong outline-none transition focus:border-tremor-brand-subtle focus:ring-2 focus:ring-tremor-brand-muted dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong"
+                  aria-label={lang === "zh" ? "画像完整度筛选" : "Profile completeness filter"}
+                >
+                  <option value="all">{lang === "zh" ? "全部画像" : "All profiles"}</option>
+                  <option value="full">{lang === "zh" ? "完整" : "Full"}</option>
+                  <option value="partial">{lang === "zh" ? "部分" : "Partial"}</option>
+                  <option value="blocked">{lang === "zh" ? "阻断" : "Blocked"}</option>
                 </select>
                 <select
                   value={generator}
@@ -1087,7 +1147,6 @@ export default function KnowledgePage() {
                 >
                   <option value="ai">AI</option>
                   <option value="auto">Auto</option>
-                  <option value="template">Template</option>
                 </select>
                 <select
                   value={priority}
@@ -1366,6 +1425,14 @@ export default function KnowledgePage() {
                               <Badge color={statusColor(item.knowledge_status)}>
                                 {item.knowledge_status}
                               </Badge>
+                              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                                <Badge color={item.knowledge_display_mode === "full" ? "emerald" : item.knowledge_display_mode === "partial" ? "amber" : "slate"} size="xs">
+                                  {item.knowledge_display_mode}
+                                </Badge>
+                                <span className="text-[11px] text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+                                  {lang === "zh" ? "字段完整度" : "Field coverage"} {Math.round(item.knowledge_completeness * 100)}%
+                                </span>
+                              </div>
                               <div className="mt-2 text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
                                 {item.brief_statuses && Object.keys(item.brief_statuses).length > 0 ? (
                                   <div className="space-y-1">
@@ -1470,6 +1537,9 @@ export default function KnowledgePage() {
                           {selectedDisease.knowledge_status}
                         </Badge>
                         <Badge color="slate">{selectedDisease.disease_id}</Badge>
+                        <Badge color="violet" size="xs">
+                          {selectedDisease.knowledge_profile_type}
+                        </Badge>
                         <Badge color="blue" size="xs">
                           {selectedDisease.source_count} {lang === "zh" ? "条来源" : "sources"}
                         </Badge>
@@ -1517,6 +1587,37 @@ export default function KnowledgePage() {
                       <DetailSkeleton />
                     ) : detail ? (
                       <div className="space-y-4">
+                        <div className={cn(
+                          "rounded-tremor-default border px-3 py-3",
+                          detail.evidence_quality?.sufficient
+                            ? "border-emerald-300 bg-emerald-50/70 dark:border-emerald-900 dark:bg-emerald-950/20"
+                            : "border-amber-300 bg-amber-50/70 dark:border-amber-900 dark:bg-amber-950/20",
+                        )}>
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <p className="text-xs font-semibold uppercase text-tremor-content-strong dark:text-dark-tremor-content-strong">
+                              {lang === "zh" ? "生成前证据门禁" : "Pre-generation evidence gate"}
+                            </p>
+                            <Badge color={detail.evidence_quality?.sufficient ? "emerald" : "amber"} size="xs">
+                              {detail.evidence_quality?.sufficient ? (lang === "zh" ? "可生成" : "ready") : (lang === "zh" ? "阻断" : "blocked")}
+                            </Badge>
+                          </div>
+                          <p className="mt-2 text-xs leading-5 text-tremor-content dark:text-dark-tremor-content">
+                            {lang === "zh" ? "正文来源" : "Grounded"} {detail.evidence_quality?.grounded_source_count ?? 0}
+                            {" · "}{lang === "zh" ? "权威来源" : "Authorities"} {detail.evidence_quality?.authoritative_source_count ?? 0}
+                            {" · "}{lang === "zh" ? "学术摘要" : "Scholarly"} {detail.evidence_quality?.scholarly_source_count ?? 0}
+                          </p>
+                          {detail.evidence_quality?.issues?.length ? (
+                            <p className="mt-1 text-xs text-amber-800 dark:text-amber-200">
+                              {detail.evidence_quality.issues.join(" · ")}
+                            </p>
+                          ) : null}
+                          {detail.repair_sections?.length ? (
+                            <p className="mt-1 text-xs text-tremor-content dark:text-dark-tremor-content">
+                              {lang === "zh" ? "定向补全" : "Targeted repair"}: {detail.repair_sections.join(" · ")}
+                            </p>
+                          ) : null}
+                        </div>
+
                         {detailTab === "briefs" ? (
                           <div className="space-y-3">
                             <div className="rounded-tremor-default border border-dashed border-tremor-border px-3 py-3 dark:border-dark-tremor-border">
