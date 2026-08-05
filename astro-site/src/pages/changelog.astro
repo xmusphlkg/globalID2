@@ -1,0 +1,696 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { changelogReleases, type ChangeKind } from '../data/changelog';
+
+const latestRelease = changelogReleases[0];
+const changeCount = changelogReleases.reduce(
+  (total, release) => total + release.sections.reduce((sectionTotal, section) => sectionTotal + section.items.length, 0),
+  0,
+);
+
+const kindMeta: Record<ChangeKind, { marker: string; className: string }> = {
+  new: { marker: '+', className: 'changelog-kind-new' },
+  improved: { marker: '↑', className: 'changelog-kind-improved' },
+  fixed: { marker: '✓', className: 'changelog-kind-fixed' },
+};
+
+function formatDate(date: string, locale: 'en-US' | 'zh-CN') {
+  return new Date(`${date}T00:00:00Z`).toLocaleDateString(locale, {
+    year: 'numeric',
+    month: locale === 'zh-CN' ? 'long' : 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  });
+}
+---
+
+<BaseLayout
+  title="Changelog"
+  description="Follow every GIDS release, including new capabilities, improvements, fixes, and release dates."
+>
+  <div class="changelog-page">
+    <section class="changelog-hero">
+      <div class="changelog-hero-glow" aria-hidden="true"></div>
+      <div class="changelog-shell changelog-hero-inner">
+        <div class="changelog-eyebrow">
+          <span class="changelog-eyebrow-dot" aria-hidden="true"></span>
+          <span data-lang-en="Product updates" data-lang-zh="产品更新">Product updates</span>
+        </div>
+        <h1 data-lang-en="What’s new in GIDS" data-lang-zh="GIDS 版本更新">What’s new in GIDS</h1>
+        <p
+          class="changelog-hero-copy"
+          data-lang-en="A complete record of new capabilities, refinements, and fixes across every public release."
+          data-lang-zh="完整记录每个公开版本中的新增能力、体验优化与问题修复。"
+        >
+          A complete record of new capabilities, refinements, and fixes across every public release.
+        </p>
+        <div class="changelog-summary" aria-label="Changelog summary">
+          <div>
+            <strong>{changelogReleases.length}</strong>
+            <span data-lang-en="releases" data-lang-zh="个版本">releases</span>
+          </div>
+          <span class="changelog-summary-divider" aria-hidden="true"></span>
+          <div>
+            <strong>{changeCount}</strong>
+            <span data-lang-en="documented changes" data-lang-zh="项更新记录">documented changes</span>
+          </div>
+          <span class="changelog-summary-divider" aria-hidden="true"></span>
+          <div>
+            <strong>2026</strong>
+            <span data-lang-en="first published" data-lang-zh="首次发布">first published</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="changelog-shell changelog-layout">
+      <aside class="changelog-sidebar" aria-label="Release navigation">
+        <div class="changelog-latest-card">
+          <span class="changelog-card-kicker" data-lang-en="Current release" data-lang-zh="当前版本">Current release</span>
+          <strong>v{latestRelease.version}</strong>
+          <time datetime={latestRelease.date}>
+            <span data-lang-en={formatDate(latestRelease.date, 'en-US')} data-lang-zh={formatDate(latestRelease.date, 'zh-CN')}>
+              {formatDate(latestRelease.date, 'en-US')}
+            </span>
+          </time>
+        </div>
+
+        <nav class="changelog-jump" aria-labelledby="changelog-jump-title">
+          <p id="changelog-jump-title" data-lang-en="Jump to a version" data-lang-zh="跳转至版本">Jump to a version</p>
+          <div class="changelog-jump-list">
+            {changelogReleases.map((release, index) => (
+              <a href={`#v${release.version}`}>
+                <span>v{release.version}</span>
+                {index === 0 && <small data-lang-en="Latest" data-lang-zh="最新">Latest</small>}
+              </a>
+            ))}
+          </div>
+        </nav>
+
+        <a class="changelog-subscribe-link" href="/subscribe/">
+          <span>
+            <strong data-lang-en="Get future updates" data-lang-zh="订阅后续更新">Get future updates</strong>
+            <small data-lang-en="Choose the topics you care about." data-lang-zh="只接收你关注的主题。">Choose the topics you care about.</small>
+          </span>
+          <span aria-hidden="true">→</span>
+        </a>
+      </aside>
+
+      <section class="changelog-timeline" aria-label="Release history">
+        {changelogReleases.map((release, index) => (
+          <article class="changelog-release" id={`v${release.version}`}>
+            <div class="changelog-rail" aria-hidden="true">
+              <span class:list={['changelog-node', index === 0 && 'changelog-node-latest']}></span>
+            </div>
+
+            <div class="changelog-release-body">
+              <header class="changelog-release-header">
+                <div class="changelog-release-version-row">
+                  <span class="changelog-version">v{release.version}</span>
+                  {index === 0 && <span class="changelog-latest-pill" data-lang-en="Latest" data-lang-zh="最新版本">Latest</span>}
+                </div>
+                <time datetime={release.date}>
+                  <span data-lang-en={formatDate(release.date, 'en-US')} data-lang-zh={formatDate(release.date, 'zh-CN')}>
+                    {formatDate(release.date, 'en-US')}
+                  </span>
+                </time>
+              </header>
+
+              <h2 data-lang-en={release.titleEn} data-lang-zh={release.titleZh}>{release.titleEn}</h2>
+              <p class="changelog-release-summary" data-lang-en={release.summaryEn} data-lang-zh={release.summaryZh}>
+                {release.summaryEn}
+              </p>
+
+              <div class="changelog-change-groups">
+                {release.sections.map((section) => {
+                  const meta = kindMeta[section.kind];
+                  return (
+                    <section class="changelog-change-group">
+                      <div class:list={['changelog-kind', meta.className]}>
+                        <span class="changelog-kind-marker" aria-hidden="true">{meta.marker}</span>
+                        <h3 data-lang-en={section.labelEn} data-lang-zh={section.labelZh}>{section.labelEn}</h3>
+                      </div>
+                      <ul>
+                        {section.items.map((item) => (
+                          <li data-lang-en={item.en} data-lang-zh={item.zh}>{item.en}</li>
+                        ))}
+                      </ul>
+                    </section>
+                  );
+                })}
+              </div>
+
+              <a class="changelog-release-anchor" href={`#v${release.version}`} aria-label={`Link to version ${release.version}`}>
+                <span aria-hidden="true">#</span>
+                <span data-lang-en="Link to this release" data-lang-zh="链接到此版本">Link to this release</span>
+              </a>
+            </div>
+          </article>
+        ))}
+      </section>
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .changelog-page {
+    --changelog-accent: 25 128 121;
+    --changelog-warm: 224 110 78;
+    padding-bottom: 4rem;
+  }
+
+  :global(html[data-theme='dark']) .changelog-page {
+    --changelog-accent: 45 190 177;
+    --changelog-warm: 242 136 102;
+  }
+
+  .changelog-shell {
+    width: min(72rem, calc(100% - 2rem));
+    margin-inline: auto;
+  }
+
+  .changelog-hero {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border-bottom: 1px solid rgb(var(--border) / 0.8);
+  }
+
+  .changelog-hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    background:
+      linear-gradient(110deg, rgb(var(--surface) / 0.84), transparent 62%),
+      radial-gradient(circle at 78% 12%, rgb(var(--changelog-accent) / 0.15), transparent 28%);
+  }
+
+  .changelog-hero-glow {
+    position: absolute;
+    top: -9rem;
+    left: 54%;
+    z-index: -1;
+    width: 32rem;
+    height: 32rem;
+    border: 1px solid rgb(var(--changelog-accent) / 0.16);
+    border-radius: 999px;
+    box-shadow:
+      0 0 0 4rem rgb(var(--changelog-accent) / 0.025),
+      0 0 0 9rem rgb(var(--changelog-accent) / 0.018);
+  }
+
+  .changelog-hero-inner {
+    padding-block: clamp(4.75rem, 10vw, 7.5rem) clamp(3.75rem, 8vw, 6rem);
+  }
+
+  .changelog-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-bottom: 1.25rem;
+    color: rgb(var(--text-muted));
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .changelog-eyebrow-dot {
+    width: 0.55rem;
+    height: 0.55rem;
+    background: rgb(var(--changelog-accent));
+    box-shadow: 0 0 0 0.3rem rgb(var(--changelog-accent) / 0.12);
+  }
+
+  .changelog-hero h1 {
+    max-width: 54rem;
+    color: rgb(var(--text-strong));
+    font-family: 'Source Serif 4', serif;
+    font-size: clamp(2.65rem, 7vw, 5.35rem);
+    font-weight: 600;
+    letter-spacing: -0.045em;
+    line-height: 0.98;
+    text-wrap: balance;
+  }
+
+  .changelog-hero-copy {
+    max-width: 42rem;
+    margin-top: 1.5rem;
+    color: rgb(var(--text-muted));
+    font-size: clamp(1rem, 2vw, 1.2rem);
+    line-height: 1.75;
+  }
+
+  .changelog-summary {
+    display: flex;
+    align-items: stretch;
+    gap: 1.5rem;
+    width: fit-content;
+    margin-top: 2.5rem;
+    padding: 1rem 1.2rem;
+    border: 1px solid rgb(var(--border) / 0.76);
+    background: rgb(var(--surface) / 0.7);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12);
+    backdrop-filter: blur(12px);
+  }
+
+  .changelog-summary > div {
+    display: flex;
+    align-items: baseline;
+    gap: 0.45rem;
+  }
+
+  .changelog-summary strong {
+    color: rgb(var(--text-strong));
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1rem;
+  }
+
+  .changelog-summary span {
+    color: rgb(var(--text-faint));
+    font-size: 0.78rem;
+  }
+
+  .changelog-summary-divider {
+    width: 1px;
+    background: rgb(var(--border));
+  }
+
+  .changelog-layout {
+    display: grid;
+    grid-template-columns: 14rem minmax(0, 1fr);
+    gap: clamp(2.5rem, 6vw, 5.5rem);
+    align-items: start;
+    padding-top: clamp(3.5rem, 7vw, 6rem);
+  }
+
+  .changelog-sidebar {
+    position: sticky;
+    top: 6rem;
+    display: grid;
+    gap: 1.4rem;
+  }
+
+  .changelog-latest-card {
+    display: grid;
+    gap: 0.35rem;
+    padding: 1.2rem;
+    border: 1px solid rgb(var(--border));
+    border-top: 3px solid rgb(var(--changelog-accent));
+    background: linear-gradient(145deg, rgb(var(--surface)), rgb(var(--surface-raised) / 0.72));
+    box-shadow: var(--paper-shadow);
+  }
+
+  .changelog-card-kicker,
+  .changelog-jump > p {
+    color: rgb(var(--text-faint));
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .changelog-latest-card strong {
+    color: rgb(var(--text-strong));
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.65rem;
+  }
+
+  .changelog-latest-card time {
+    color: rgb(var(--text-muted));
+    font-size: 0.78rem;
+  }
+
+  .changelog-jump > p {
+    margin-bottom: 0.6rem;
+    padding-inline: 0.2rem;
+  }
+
+  .changelog-jump-list {
+    display: grid;
+    max-height: 16rem;
+    overflow-y: auto;
+    border-block: 1px solid rgb(var(--border) / 0.7);
+    scrollbar-width: thin;
+  }
+
+  .changelog-jump-list a {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.6rem 0.2rem;
+    border-bottom: 1px solid rgb(var(--border) / 0.45);
+    color: rgb(var(--text-muted));
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    transition: color 150ms ease, padding 150ms ease;
+  }
+
+  .changelog-jump-list a:last-child {
+    border-bottom: 0;
+  }
+
+  .changelog-jump-list a:hover,
+  .changelog-jump-list a:focus-visible {
+    padding-left: 0.45rem;
+    color: rgb(var(--text-strong));
+  }
+
+  .changelog-jump-list small {
+    color: rgb(var(--changelog-accent));
+    font-family: 'Source Sans 3', sans-serif;
+    font-size: 0.66rem;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .changelog-subscribe-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+    padding: 1rem;
+    border: 1px solid rgb(var(--border) / 0.8);
+    color: rgb(var(--text));
+    background: rgb(var(--surface-raised) / 0.42);
+    transition: border-color 150ms ease, background 150ms ease;
+  }
+
+  .changelog-subscribe-link:hover {
+    border-color: rgb(var(--border-soft));
+    background: rgb(var(--surface-raised) / 0.8);
+  }
+
+  .changelog-subscribe-link > span:first-child {
+    display: grid;
+    gap: 0.15rem;
+  }
+
+  .changelog-subscribe-link strong {
+    color: rgb(var(--text-strong));
+    font-size: 0.8rem;
+  }
+
+  .changelog-subscribe-link small {
+    color: rgb(var(--text-faint));
+    font-size: 0.7rem;
+    line-height: 1.35;
+  }
+
+  .changelog-timeline {
+    min-width: 0;
+  }
+
+  .changelog-release {
+    display: grid;
+    grid-template-columns: 1.5rem minmax(0, 1fr);
+    gap: 1.4rem;
+    scroll-margin-top: 6rem;
+  }
+
+  .changelog-rail {
+    position: relative;
+    display: flex;
+    justify-content: center;
+  }
+
+  .changelog-rail::after {
+    content: '';
+    position: absolute;
+    top: 1rem;
+    bottom: -0.1rem;
+    width: 1px;
+    background: linear-gradient(rgb(var(--border-soft)), rgb(var(--border) / 0.58));
+  }
+
+  .changelog-release:last-child .changelog-rail::after {
+    bottom: calc(100% - 1rem);
+  }
+
+  .changelog-node {
+    position: relative;
+    z-index: 1;
+    width: 0.65rem;
+    height: 0.65rem;
+    margin-top: 0.4rem;
+    border: 2px solid rgb(var(--border-soft));
+    background: rgb(var(--bg));
+  }
+
+  .changelog-node-latest {
+    border-color: rgb(var(--changelog-accent));
+    background: rgb(var(--changelog-accent));
+    box-shadow: 0 0 0 0.35rem rgb(var(--changelog-accent) / 0.12);
+  }
+
+  .changelog-release-body {
+    min-width: 0;
+    padding-bottom: clamp(3.75rem, 8vw, 6rem);
+  }
+
+  .changelog-release-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .changelog-release-version-row {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+  }
+
+  .changelog-version {
+    color: rgb(var(--text-strong));
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+
+  .changelog-latest-pill {
+    padding: 0.2rem 0.45rem;
+    color: rgb(var(--changelog-accent));
+    background: rgb(var(--changelog-accent) / 0.1);
+    box-shadow: inset 0 0 0 1px rgb(var(--changelog-accent) / 0.22);
+    font-size: 0.64rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .changelog-release-header time {
+    color: rgb(var(--text-faint));
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+  }
+
+  .changelog-release h2 {
+    max-width: 44rem;
+    margin-top: 1.2rem;
+    color: rgb(var(--text-strong));
+    font-family: 'Source Serif 4', serif;
+    font-size: clamp(1.8rem, 4vw, 2.8rem);
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    line-height: 1.12;
+    text-wrap: balance;
+  }
+
+  .changelog-release-summary {
+    max-width: 44rem;
+    margin-top: 0.8rem;
+    color: rgb(var(--text-muted));
+    font-size: 1rem;
+    line-height: 1.75;
+  }
+
+  .changelog-change-groups {
+    display: grid;
+    gap: 1.3rem;
+    max-width: 48rem;
+    margin-top: 2rem;
+  }
+
+  .changelog-change-group {
+    display: grid;
+    grid-template-columns: 7.5rem minmax(0, 1fr);
+    gap: 1.2rem;
+    padding: 1.2rem;
+    border: 1px solid rgb(var(--border) / 0.75);
+    background: linear-gradient(135deg, rgb(var(--surface) / 0.72), rgb(var(--surface-raised) / 0.38));
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.13);
+  }
+
+  .changelog-kind {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .changelog-kind-marker {
+    display: inline-grid;
+    place-items: center;
+    width: 1.45rem;
+    height: 1.45rem;
+    flex: 0 0 auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.76rem;
+    font-weight: 700;
+  }
+
+  .changelog-kind h3 {
+    padding-top: 0.12rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .changelog-kind-new {
+    color: rgb(var(--changelog-accent));
+  }
+
+  .changelog-kind-new .changelog-kind-marker {
+    background: rgb(var(--changelog-accent) / 0.12);
+    box-shadow: inset 0 0 0 1px rgb(var(--changelog-accent) / 0.2);
+  }
+
+  .changelog-kind-improved {
+    color: rgb(52 120 196);
+  }
+
+  .changelog-kind-improved .changelog-kind-marker {
+    background: rgb(52 120 196 / 0.12);
+    box-shadow: inset 0 0 0 1px rgb(52 120 196 / 0.2);
+  }
+
+  :global(html[data-theme='dark']) .changelog-kind-improved {
+    color: rgb(96 165 250);
+  }
+
+  .changelog-kind-fixed {
+    color: rgb(var(--changelog-warm));
+  }
+
+  .changelog-kind-fixed .changelog-kind-marker {
+    background: rgb(var(--changelog-warm) / 0.12);
+    box-shadow: inset 0 0 0 1px rgb(var(--changelog-warm) / 0.2);
+  }
+
+  .changelog-change-group ul {
+    display: grid;
+    gap: 0.7rem;
+  }
+
+  .changelog-change-group li {
+    position: relative;
+    padding-left: 1rem;
+    color: rgb(var(--text));
+    font-size: 0.9rem;
+    line-height: 1.6;
+  }
+
+  .changelog-change-group li::before {
+    content: '';
+    position: absolute;
+    top: 0.65rem;
+    left: 0;
+    width: 0.28rem;
+    height: 0.28rem;
+    background: rgb(var(--text-faint));
+  }
+
+  .changelog-release-anchor {
+    display: inline-flex;
+    gap: 0.4rem;
+    margin-top: 1.15rem;
+    color: rgb(var(--text-faint));
+    font-size: 0.73rem;
+    transition: color 150ms ease;
+  }
+
+  .changelog-release-anchor:hover {
+    color: rgb(var(--text-strong));
+  }
+
+  @media (max-width: 800px) {
+    .changelog-layout {
+      grid-template-columns: 1fr;
+      gap: 3rem;
+    }
+
+    .changelog-sidebar {
+      position: static;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+    }
+
+    .changelog-jump {
+      display: none;
+    }
+
+    .changelog-release {
+      gap: 0.8rem;
+    }
+  }
+
+  @media (max-width: 560px) {
+    .changelog-shell {
+      width: min(100% - 1.25rem, 72rem);
+    }
+
+    .changelog-hero-inner {
+      padding-block: 4rem 3.5rem;
+    }
+
+    .changelog-summary {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.8rem;
+      width: 100%;
+      padding: 0.9rem;
+    }
+
+    .changelog-summary > div {
+      display: grid;
+      align-content: start;
+      gap: 0.15rem;
+    }
+
+    .changelog-summary-divider {
+      display: none;
+    }
+
+    .changelog-sidebar {
+      grid-template-columns: 1fr;
+    }
+
+    .changelog-release {
+      grid-template-columns: 0.75rem minmax(0, 1fr);
+    }
+
+    .changelog-release-header {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: 0.45rem;
+    }
+
+    .changelog-change-group {
+      grid-template-columns: 1fr;
+      gap: 0.8rem;
+      padding: 1rem;
+    }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .changelog-release:target .changelog-release-body {
+      animation: changelog-target 600ms ease both;
+    }
+
+    @keyframes changelog-target {
+      0% { transform: translateY(0.4rem); opacity: 0.7; }
+      100% { transform: translateY(0); opacity: 1; }
+    }
+  }
+</style>
