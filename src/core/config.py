@@ -307,7 +307,7 @@ class RawArchiveSettings(_BaseEnvSettings):
         description="原始数据归档分支的持久本地克隆目录",
     )
     chunk_mib: int = Field(default=48, ge=1, le=95, description="GitHub 安全分片大小 MiB")
-    commit_batch_mib: int = Field(default=384, ge=48, le=2048, description="每次增量推送的最大压缩字节 MiB")
+    commit_batch_mib: int = Field(default=96, ge=48, le=2048, description="每次增量推送的最大压缩字节 MiB")
     zstd_level: int = Field(default=6, ge=1, le=19, description="zstd 压缩级别")
     git_timeout_seconds: int = Field(default=1800, ge=60, le=7200, description="单次 Git 网络操作超时秒数")
 
