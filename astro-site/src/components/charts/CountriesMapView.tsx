@@ -5,7 +5,7 @@
 import React, {
   useRef, useState, useEffect, useCallback, useMemo,
 } from 'react';
-import ReactEChartsCore from 'echarts-for-react/lib/core';
+import ReactEChartsCore from '../../lib/echartsReact';
 import echarts from '../../lib/echarts';
 import {
   COUNTRY_COVERAGE,

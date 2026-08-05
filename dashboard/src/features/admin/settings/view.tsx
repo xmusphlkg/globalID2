@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { Badge, Button, Card, Text, Title } from "@tremor/react";
+import { Badge, Button, Card, Text, Title } from "@/components/ui/tremor";
 import {
   Cloud,
   ExternalLink,

@@ -14,6 +14,7 @@ export async function getStaticPaths() {
 }
 
 const { country } = Astro.params;
+const fallbackCountryCode = String(country ?? '').toUpperCase();
 
 const reportsPath = resolve('./src/data/reports/index.json');
 let reports: any[] = [];
@@ -25,7 +26,7 @@ if (existsSync(reportsPath)) {
   ));
 }
 
-const countryName = reports[0]?.country_name ?? country.toUpperCase();
+const countryName = reports[0]?.country_name ?? fallbackCountryCode;
 
 // Group by report type
 const byType: Record<string, any[]> = {};

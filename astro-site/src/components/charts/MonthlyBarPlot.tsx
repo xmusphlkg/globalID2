@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import EChartsReact from 'echarts-for-react/lib/core';
+import EChartsReact from '../../lib/echartsReact';
 import echarts from '../../lib/echarts';
 import type { YearSummary } from './monthlyBarModel';
 import {

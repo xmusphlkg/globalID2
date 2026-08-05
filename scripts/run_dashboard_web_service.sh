@@ -14,13 +14,12 @@ NPM_BIN="$(resolve_npm)"
 NODE_BIN="$(resolve_node)"
 API_PORT="${GLOBALID_API_PORT:-8000}"
 API_PROXY_HOST="${GLOBALID_API_PROXY_HOST:-127.0.0.1}"
-WS_HOST="${GLOBALID_WS_HOST:-localhost}"
 DASHBOARD_HOST="${GLOBALID_DASHBOARD_HOST:-0.0.0.0}"
 DASHBOARD_PORT="${GLOBALID_DASHBOARD_PORT:-3000}"
 
 export NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL:-/api/v1}"
 export API_PROXY_TARGET="${API_PROXY_TARGET:-http://${API_PROXY_HOST}:${API_PORT}}"
-export NEXT_PUBLIC_WS_URL="${NEXT_PUBLIC_WS_URL:-ws://${WS_HOST}:${API_PORT}/api/v1}"
+export NEXT_PUBLIC_WS_URL="${NEXT_PUBLIC_WS_URL:-/api/v1}"
 
 cd "$DASHBOARD_DIR"
 
@@ -56,18 +55,32 @@ if [[ "$needs_build" == "1" ]]; then
 fi
 
 if [[ -f ".next/standalone/server.js" ]]; then
-  mkdir -p ".next/standalone/.next"
-  rm -rf ".next/standalone/.next/static"
-  cp -a ".next/static" ".next/standalone/.next/static"
+  build_id="$(<.next/BUILD_ID)"
+  release_root="$LOG_DIR/dashboard-web-releases"
+  release_dir="$release_root/$build_id"
 
-  if [[ -d "public" ]]; then
-    rm -rf ".next/standalone/public"
-    cp -a "public" ".next/standalone/public"
+  mkdir -p "$release_root"
+
+  if [[ ! -f "$release_dir/server.js" ]]; then
+    staged_release="$(mktemp -d "$release_root/.staging.XXXXXX")"
+    trap 'rm -rf "${staged_release:-}"' EXIT
+
+    cp -a ".next/standalone/." "$staged_release/"
+    mkdir -p "$staged_release/.next"
+    cp -a ".next/static" "$staged_release/.next/static"
+
+    if [[ -d "public" ]]; then
+      cp -a "public" "$staged_release/public"
+    fi
+
+    mv "$staged_release" "$release_dir"
+    staged_release=""
+    trap - EXIT
   fi
 
   export HOSTNAME="$DASHBOARD_HOST"
   export PORT="$DASHBOARD_PORT"
-  exec "$NODE_BIN" ".next/standalone/server.js"
+  exec "$NODE_BIN" "$release_dir/server.js"
 fi
 
 exec "$NPM_BIN" run start -- --hostname "$DASHBOARD_HOST" --port "$DASHBOARD_PORT"

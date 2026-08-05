@@ -22,6 +22,136 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.4.3',
+    date: '2026-08-05',
+    titleEn: 'Resilient archives and React 19 readiness',
+    titleZh: '更可靠的数据归档与 React 19 兼容',
+    summaryEn:
+      'This release adds recoverable raw-data archives, completes the public site’s modern frontend migration, and separates core pipelines into smaller, testable modules.',
+    summaryZh:
+      '本次更新新增可恢复的原始数据归档，完成公开站点的现代前端迁移，并将核心流程拆分为更小、可测试的模块。',
+    sections: [
+      {
+        kind: 'new',
+        labelEn: 'New',
+        labelZh: '新增',
+        items: [
+          {
+            en: 'Added automated raw-data archiving with content-addressed compressed objects, immutable snapshot manifests, and point-in-time restoration.',
+            zh: '新增原始数据自动归档，支持内容寻址压缩对象、不可变快照清单与按时点恢复。',
+          },
+          {
+            en: 'Added dedicated validation and tests for archive integrity, interrupted uploads, and first-time publishing.',
+            zh: '新增归档完整性、上传中断续传与首次发布的专项验证和测试。',
+          },
+          {
+            en: 'Added focused test suites for site-data generation, country crawl pipelines, agent workflows, and database rebuild planning.',
+            zh: '新增站点数据生成、国家采集流程、Agent 工作流与数据库重建计划的专项测试。',
+          },
+        ],
+      },
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        items: [
+          {
+            en: 'Completed the public site migration to React 19, Tailwind CSS 4, and Marked 18 while retaining Astro 7 and ECharts 6.1.',
+            zh: '完成公开站点向 React 19、Tailwind CSS 4 与 Marked 18 的迁移，并继续使用 Astro 7 和 ECharts 6.1。',
+          },
+          {
+            en: 'Separated static site exports into query, view-building, file-writing, and series-projection layers for safer maintenance.',
+            zh: '将静态站点导出拆分为查询、视图构建、文件写入和时间序列投影层，降低维护风险。',
+          },
+          {
+            en: 'Modularized country crawling, agent workflow helpers, subscription email handling, and database rebuild planning.',
+            zh: '对国家数据采集、Agent 工作流辅助逻辑、订阅邮件处理与数据库重建计划进行模块化。',
+          },
+        ],
+      },
+      {
+        kind: 'fixed',
+        labelEn: 'Fixed',
+        labelZh: '修复',
+        items: [
+          {
+            en: 'Normalized the ECharts React module export to prevent invalid component errors under React 19 and different Vite bundling paths.',
+            zh: '统一 ECharts React 模块导出形式，避免在 React 19 及不同 Vite 打包路径下出现无效组件错误。',
+          },
+          {
+            en: 'Hardened archive resume behavior, chunk verification, and restore paths against incomplete uploads and unsafe symbolic links.',
+            zh: '加强归档断点续传、分块校验与恢复路径安全，防止不完整上传和不安全符号链接。',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    version: '0.4.2',
+    date: '2026-08-05',
+    titleEn: 'A modernized and reproducible platform',
+    titleZh: '现代化且更易复现的平台基础',
+    summaryEn:
+      'This release modernizes the public site and management dashboard, while making application dependencies more predictable, secure, and easier to maintain.',
+    summaryZh:
+      '本次更新对公开站点与管理后台进行技术栈升级，同时让应用依赖更可预期、更安全且更易维护。',
+    sections: [
+      {
+        kind: 'new',
+        labelEn: 'New',
+        labelZh: '新增',
+        items: [
+          {
+            en: 'Added an automated Astro type-checking command to catch page and component issues before release.',
+            zh: '新增 Astro 类型检查命令，在发布前发现页面与组件问题。',
+          },
+          {
+            en: 'Introduced a direct Python dependency manifest and a fully pinned generated lock file for reproducible environments.',
+            zh: '新增 Python 直接依赖清单与完整锁定的生成文件，便于稳定复现运行环境。',
+          },
+        ],
+      },
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        items: [
+          {
+            en: 'Upgraded the public site to Astro 7, the latest React integration, ECharts 6.1, and modern Tailwind/PostCSS configuration.',
+            zh: '公开站点升级至 Astro 7、新版 React 集成、ECharts 6.1 与现代化 Tailwind/PostCSS 配置。',
+          },
+          {
+            en: 'Upgraded the management dashboard to Next.js 16.3 and React 19.2.8.',
+            zh: '管理后台升级至 Next.js 16.3 与 React 19.2.8。',
+          },
+          {
+            en: 'Replaced the external Tremor dependency with lightweight local UI primitives while preserving cards, badges, grids, buttons, progress indicators, and dark mode.',
+            zh: '使用轻量本地 UI 组件替代外部 Tremor 依赖，并保留卡片、标签、网格、按钮、进度显示和深色模式。',
+          },
+          {
+            en: 'Updated and pinned the Python service stack, including current web, data-processing, AI, crawling, and testing libraries.',
+            zh: '更新并锁定 Python 服务依赖，覆盖 Web、数据处理、AI、数据采集与测试工具。',
+          },
+        ],
+      },
+      {
+        kind: 'fixed',
+        labelEn: 'Fixed',
+        labelZh: '修复',
+        items: [
+          {
+            en: 'Hardened country and report routes when a country code is missing during static generation.',
+            zh: '加强静态生成时国家代码缺失情况下的国家与报告路由处理。',
+          },
+          {
+            en: 'Aligned download metadata types with the generated data format and hardened transitive HTTP dependency resolution.',
+            zh: '将下载元数据类型与生成数据格式对齐，并加强间接 HTTP 依赖的版本约束。',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '0.4.1',
     date: '2026-08-04',
     titleEn: 'Corrected Korea surveillance timelines',

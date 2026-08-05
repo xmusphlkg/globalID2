@@ -2,7 +2,7 @@
 // OWID-style heatmap with ECharts rendering, adaptive width, and scrollable disease axis.
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import EChartsReact from 'echarts-for-react/lib/core';
+import EChartsReact from '../../lib/echartsReact';
 import echarts from '../../lib/echarts';
 import ChartFrame from './ChartFrame';
 import type { ChartSourceMeta } from '../../utils/chartMeta';
