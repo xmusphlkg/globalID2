@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-08-03T22:46:09.003832+00:00",
+  "fetched_at": "2026-08-04T22:46:03.051374+00:00",
   "disease": "Syphilis",
   "year": 2026,
   "month": 8,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785797168687)/",
-            "rootActivityId": "8d84796e-28c9-474b-b698-876e0bff6a75",
+            "timestamp": "/Date(1785883562694)/",
+            "rootActivityId": "7d475093-5a50-414b-9092-139247055f6f",
             "descriptor": {
               "Select": [
                 {

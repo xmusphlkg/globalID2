@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-08-03T22:46:02.264306+00:00",
+  "fetched_at": "2026-08-04T22:45:57.216290+00:00",
   "disease": "Varicella zoster (unspecified)",
   "year": 2026,
   "month": 7,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785797161895)/",
-            "rootActivityId": "cc5af7b9-23e9-428f-8a58-6a456b3224b2",
+            "timestamp": "/Date(1785883556860)/",
+            "rootActivityId": "2bf2759c-1f09-4c05-9fdf-d2aa42002bc0",
             "descriptor": {
               "Select": [
                 {
@@ -382,7 +382,7 @@
                           ],
                           "C": [
                             "ACT",
-                            "'34'"
+                            "'35'"
                           ]
                         },
                         {
@@ -400,19 +400,19 @@
                         {
                           "C": [
                             "QLD",
-                            "'666'"
+                            "'667'"
                           ]
                         },
                         {
                           "C": [
                             "SA",
-                            "'132'"
+                            "'146'"
                           ]
                         },
                         {
                           "C": [
                             "TAS",
-                            "'47'"
+                            "'51'"
                           ]
                         },
                         {
@@ -424,7 +424,7 @@
                         {
                           "C": [
                             "WA",
-                            "'283'"
+                            "'263'"
                           ]
                         }
                       ]
@@ -444,13 +444,13 @@
     ]
   },
   "parsed_counts": {
-    "ACT": 34,
+    "ACT": 35,
     "NSW": 0,
     "NT": 5,
-    "QLD": 666,
-    "SA": 132,
-    "TAS": 47,
+    "QLD": 667,
+    "SA": 146,
+    "TAS": 51,
     "VIC": 842,
-    "WA": 283
+    "WA": 263
   }
 }

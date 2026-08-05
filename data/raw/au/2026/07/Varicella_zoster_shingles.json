@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-08-03T22:46:02.248844+00:00",
+  "fetched_at": "2026-08-04T22:45:57.112327+00:00",
   "disease": "Varicella zoster (shingles)",
   "year": 2026,
   "month": 7,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785797161876)/",
-            "rootActivityId": "51d33cef-b29d-4e67-a8be-cf95eae8d97e",
+            "timestamp": "/Date(1785883556747)/",
+            "rootActivityId": "16bac6d8-fbde-43c3-9cae-a1e6c3c5024d",
             "descriptor": {
               "Select": [
                 {
@@ -363,7 +363,7 @@
                               "T": 13
                             }
                           ],
-                          "A0": "'756'"
+                          "A0": "'784'"
                         }
                       ]
                     },
@@ -382,7 +382,7 @@
                           ],
                           "C": [
                             "ACT",
-                            "'47'"
+                            "'48'"
                           ]
                         },
                         {
@@ -400,7 +400,7 @@
                         {
                           "C": [
                             "QLD",
-                            "'257'"
+                            "'260'"
                           ]
                         },
                         {
@@ -418,13 +418,13 @@
                         {
                           "C": [
                             "VIC",
-                            "'150'"
+                            "'156'"
                           ]
                         },
                         {
                           "C": [
                             "WA",
-                            "'135'"
+                            "'153'"
                           ]
                         }
                       ]
@@ -444,13 +444,13 @@
     ]
   },
   "parsed_counts": {
-    "ACT": 47,
+    "ACT": 48,
     "NSW": 0,
     "NT": 21,
-    "QLD": 257,
+    "QLD": 260,
     "SA": 119,
     "TAS": 27,
-    "VIC": 150,
-    "WA": 135
+    "VIC": 156,
+    "WA": 153
   }
 }

@@ -6459,6 +6459,58 @@
       "rollup_policy": "no_auto_rollup"
     },
     {
+      "id": "SER_KR_NIPAH",
+      "source_id": "SRC_KR_KDCA",
+      "concept_id": "D175",
+      "local_codes": [],
+      "local_labels": [
+        "@니파바이러스감염증",
+        "니파바이러스감염증",
+        "Nipah virus infection"
+      ],
+      "frequency": "monthly",
+      "measure": "case_notifications",
+      "case_definition": "Korea KDCA Nipah virus infection notifications.",
+      "facet_tags": {
+        "etiology": [
+          "etiology.viral"
+        ],
+        "surveillance_scope": [
+          "surveillance_scope.condition_specific"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "status": "active",
+      "valid_from": "2025-01-01",
+      "rollup_policy": "no_auto_rollup"
+    },
+    {
+      "id": "SER_KR_SYPHILIS_TOTAL",
+      "source_id": "SRC_KR_KDCA",
+      "concept_id": "D034",
+      "local_codes": [],
+      "local_labels": [
+        "매독",
+        "Syphilis"
+      ],
+      "frequency": "monthly",
+      "measure": "case_notifications",
+      "case_definition": "Korea KDCA aggregate acquired syphilis notifications; congenital syphilis is reported separately.",
+      "facet_tags": {
+        "surveillance_scope": [
+          "surveillance_scope.aggregate"
+        ],
+        "population": [
+          "population.all"
+        ]
+      },
+      "status": "active",
+      "valid_from": "2024-01-01",
+      "rollup_policy": "no_auto_rollup"
+    },
+    {
       "id": "SER_KR_SYPHILIS_PRIMARY",
       "source_id": "SRC_KR_KDCA",
       "concept_id": "D034",
@@ -6470,7 +6522,7 @@
       ],
       "frequency": "monthly",
       "measure": "case_notifications",
-      "case_definition": "Korea KDCA primary-stage syphilis notifications.",
+      "case_definition": "Historical Korea KDCA primary-stage syphilis notifications.",
       "facet_tags": {
         "clinical_course": [
           "clinical_course.primary_stage"
@@ -6479,7 +6531,8 @@
           "population.all"
         ]
       },
-      "status": "active",
+      "status": "historical",
+      "valid_to": "2023-12-01",
       "rollup_policy": "no_auto_rollup"
     },
     {
@@ -6494,7 +6547,7 @@
       ],
       "frequency": "monthly",
       "measure": "case_notifications",
-      "case_definition": "Korea KDCA secondary-stage syphilis notifications.",
+      "case_definition": "Historical Korea KDCA secondary-stage syphilis notifications.",
       "facet_tags": {
         "clinical_course": [
           "clinical_course.secondary_stage"
@@ -6503,7 +6556,8 @@
           "population.all"
         ]
       },
-      "status": "active",
+      "status": "historical",
+      "valid_to": "2023-12-01",
       "rollup_policy": "no_auto_rollup"
     },
     {
@@ -6518,7 +6572,7 @@
       ],
       "frequency": "monthly",
       "measure": "case_notifications",
-      "case_definition": "Korea KDCA tertiary-stage syphilis notifications.",
+      "case_definition": "Historical Korea KDCA tertiary-stage syphilis notifications.",
       "facet_tags": {
         "clinical_course": [
           "clinical_course.tertiary_stage"
@@ -6527,7 +6581,8 @@
           "population.all"
         ]
       },
-      "status": "active",
+      "status": "historical",
+      "valid_to": "2023-12-01",
       "rollup_policy": "no_auto_rollup"
     },
     {
@@ -6541,7 +6596,7 @@
       ],
       "frequency": "monthly",
       "measure": "case_notifications",
-      "case_definition": "Korea KDCA latent-stage syphilis notifications.",
+      "case_definition": "Historical Korea KDCA latent-stage syphilis notifications.",
       "facet_tags": {
         "clinical_course": [
           "clinical_course.latent_stage"
@@ -6550,7 +6605,8 @@
           "population.all"
         ]
       },
-      "status": "active",
+      "status": "historical",
+      "valid_to": "2023-12-01",
       "rollup_policy": "no_auto_rollup"
     },
     {
@@ -8315,6 +8371,30 @@
       "reason_code": "series_facts_backfilled"
     },
     {
+      "id": "AV_KR_NIPAH",
+      "source_id": "SRC_KR_KDCA",
+      "target_ref": {
+        "kind": "concept",
+        "id": "D175"
+      },
+      "series_id": "SER_KR_NIPAH",
+      "status": "available",
+      "reason_code": "current_source_series_ingested",
+      "valid_from": "2025-01-01"
+    },
+    {
+      "id": "AV_KR_SYPHILIS_TOTAL",
+      "source_id": "SRC_KR_KDCA",
+      "target_ref": {
+        "kind": "concept",
+        "id": "D034"
+      },
+      "series_id": "SER_KR_SYPHILIS_TOTAL",
+      "status": "available",
+      "reason_code": "current_source_series_ingested",
+      "valid_from": "2024-01-01"
+    },
+    {
       "id": "AV_KR_SYPHILIS_PRIMARY",
       "source_id": "SRC_KR_KDCA",
       "target_ref": {
@@ -8323,7 +8403,8 @@
       },
       "series_id": "SER_KR_SYPHILIS_PRIMARY",
       "status": "available",
-      "reason_code": "series_facts_backfilled"
+      "reason_code": "historical_source_series",
+      "valid_to": "2023-12-01"
     },
     {
       "id": "AV_KR_SYPHILIS_SECONDARY",
@@ -8334,7 +8415,8 @@
       },
       "series_id": "SER_KR_SYPHILIS_SECONDARY",
       "status": "available",
-      "reason_code": "series_facts_backfilled"
+      "reason_code": "historical_source_series",
+      "valid_to": "2023-12-01"
     },
     {
       "id": "AV_KR_SYPHILIS_TERTIARY",
@@ -8345,7 +8427,8 @@
       },
       "series_id": "SER_KR_SYPHILIS_TERTIARY",
       "status": "available",
-      "reason_code": "series_facts_backfilled"
+      "reason_code": "historical_source_series",
+      "valid_to": "2023-12-01"
     },
     {
       "id": "AV_KR_SYPHILIS_LATENT",
@@ -8356,7 +8439,8 @@
       },
       "series_id": "SER_KR_SYPHILIS_LATENT",
       "status": "available",
-      "reason_code": "series_facts_backfilled"
+      "reason_code": "historical_source_series",
+      "valid_to": "2023-12-01"
     },
     {
       "id": "AV_TW_COVID19_OLD_DEFINITION_19COV",

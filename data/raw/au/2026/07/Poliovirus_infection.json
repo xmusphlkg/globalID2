@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-08-03T22:45:59.917863+00:00",
+  "fetched_at": "2026-08-04T22:45:55.197975+00:00",
   "disease": "Poliovirus infection",
   "year": 2026,
   "month": 7,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785797159602)/",
-            "rootActivityId": "73a5fa13-9102-4cdf-8c41-f592f9043d17",
+            "timestamp": "/Date(1785883554858)/",
+            "rootActivityId": "8ef5f45f-fa6f-4a21-92c9-d4b0532dd026",
             "descriptor": {
               "Select": [
                 {

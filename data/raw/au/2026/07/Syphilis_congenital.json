@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-08-03T22:46:01.358282+00:00",
+  "fetched_at": "2026-08-04T22:45:56.548844+00:00",
   "disease": "Syphilis congenital",
   "year": 2026,
   "month": 7,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785797161035)/",
-            "rootActivityId": "c46add09-7991-44f4-81c3-80b842031880",
+            "timestamp": "/Date(1785883556216)/",
+            "rootActivityId": "63c4aefb-f087-47fb-8d0c-bcf97196b33a",
             "descriptor": {
               "Select": [
                 {

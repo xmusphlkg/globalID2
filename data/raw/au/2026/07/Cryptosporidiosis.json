@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-08-03T22:45:55.944108+00:00",
+  "fetched_at": "2026-08-04T22:45:51.720491+00:00",
   "disease": "Cryptosporidiosis",
   "year": 2026,
   "month": 7,
@@ -297,8 +297,8 @@
         "fromCache": false,
         "result": {
           "data": {
-            "timestamp": "/Date(1785797155601)/",
-            "rootActivityId": "8adaf4f3-281b-4331-9788-d5886f8f53ec",
+            "timestamp": "/Date(1785883551343)/",
+            "rootActivityId": "a75fc40a-5b8a-4747-9822-f720b8f388cd",
             "descriptor": {
               "Select": [
                 {

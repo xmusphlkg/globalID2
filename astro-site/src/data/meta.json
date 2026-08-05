@@ -663,12 +663,12 @@
       "name_en": "South Korea",
       "name_zh": "韩国",
       "language": "ko-KR",
-      "total_cases": 2848582,
+      "total_cases": 1857626,
       "total_deaths": 0,
-      "disease_count": 64,
+      "disease_count": 65,
       "date_range": {
-        "start": "2005-01-01",
-        "end": "2026-06-01"
+        "start": "2001-01-01",
+        "end": "2026-08-01"
       },
       "source_info": {
         "country_code": "KR",
@@ -691,10 +691,10 @@
         ]
       },
       "data_layer_summary": {
-        "series_registry_disease_count": 3,
+        "series_registry_disease_count": 5,
         "mixed_disease_count": 0,
-        "legacy_fallback_disease_count": 61,
-        "loss_risk_disease_count": 63,
+        "legacy_fallback_disease_count": 60,
+        "loss_risk_disease_count": 61,
         "loss_risk_disease_ids": [
           "D001",
           "D002",
@@ -715,7 +715,6 @@
           "D029",
           "D031",
           "D032",
-          "D034",
           "D035",
           "D037",
           "D039",
@@ -757,12 +756,10 @@
           "D183",
           "D203",
           "D204",
-          "D205",
-          "D234"
+          "D205"
         ],
         "non_additive_series_disease_ids": [
-          "D016",
-          "D034"
+          "D016"
         ]
       }
     },
@@ -1070,6 +1067,6 @@
     "schema_version": 1,
     "default_rollup_policy": "no_auto_rollup",
     "concept_count": 79,
-    "source_series_count": 126
+    "source_series_count": 128
   }
 }
