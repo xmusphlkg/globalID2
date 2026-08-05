@@ -72,6 +72,13 @@ pnpm-debug.log*
 /logs/*.pid
 /exports/
 /reports/
+/astro-site/src/data/*.json
+/astro-site/src/data/countries/
+/astro-site/src/data/disease-knowledge/
+/astro-site/src/data/diseases/
+/astro-site/src/data/reports/
+/data/current/
+/data/raw/
 /data/history/
 /data/processed/
 /data/cache/
@@ -81,9 +88,7 @@ pnpm-debug.log*
 /data/backups/
 /backups/
 /data/system-settings.json
-/data/raw/br/final/2024/DENGBR24.dbc
 !/data/.gitkeep
-astro-site/src/data/disease-knowledge/
 
 # Documentation build artifacts / large fixtures
 site/

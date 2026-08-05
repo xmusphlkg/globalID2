@@ -752,23 +752,10 @@ export default function DataReleasePage() {
               <AccessDetail label="Branch" value={checks?.git.branch || settings?.github.github_data_share_repo_branch || "-"} />
               <AccessDetail label="Repo" value={checks?.git.repo_url || settings?.github.github_data_share_repo_url || "-"} mono />
               <div className="grid gap-2 sm:grid-cols-2">
-                <AccessDetail label="Release Changes" value={String(checks?.git.dirty_release_paths.length ?? 0)} />
                 <AccessDetail label="Blocking Changes" value={String(checks?.git.dirty_blocking_paths.length ?? 0)} />
-              </div>
-              <div className="grid gap-2 sm:grid-cols-2">
                 <AccessDetail
-                  label={lang === "zh" ? "数据快照提交" : "Data Snapshot Commit"}
-                  value={!checks ? "-" : checks.data_refresh_snapshot.enabled ? "Enabled" : "Disabled"}
-                />
-                <AccessDetail
-                  label={lang === "zh" ? "快照推送目标" : "Snapshot Push Target"}
-                  value={
-                    !checks
-                      ? "-"
-                      : checks.data_refresh_snapshot.push_enabled
-                        ? `${checks.data_refresh_snapshot.remote}/${checks.data_refresh_snapshot.branch || "-"}`
-                        : "Disabled"
-                  }
+                  label={lang === "zh" ? "代码仓库边界" : "Code Repository Boundary"}
+                  value={!checks ? "-" : checks.repository_boundary.enforced ? "Enforced" : "Violated"}
                 />
               </div>
               <CheckOutput label="Read Check" value={checks?.git.read_check_output} />
