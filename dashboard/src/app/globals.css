@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@source "../../node_modules/@tremor/react/dist/**/*.{js,cjs,mjs}";
 
 @theme {
   --font-sans: "IBM Plex Sans", sans-serif;

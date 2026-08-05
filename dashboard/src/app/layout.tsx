@@ -4,11 +4,13 @@ import { Providers } from "@/components/Providers";
 import { AppShell } from "@/shared/layout/AppShell";
 
 export const metadata: Metadata = {
+  applicationName: "GIDS Dashboard",
   title: {
     default: "GIDS Dashboard",
     template: "%s | GIDS Dashboard",
   },
   description: "GIDS disease surveillance dashboard",
+  manifest: "/manifest.webmanifest",
 };
 
 export const viewport: Viewport = {

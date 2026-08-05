@@ -1,5 +1,5 @@
 const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "/api/v1").replace(/\/$/, "");
-const WS_BASE = (process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000/api/v1").replace(/\/$/, "");
+const WS_BASE = (process.env.NEXT_PUBLIC_WS_URL || "/api/v1").replace(/\/$/, "");
 const API_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_API_TIMEOUT_MS || 10000);
 type ApiFetchInit = RequestInit & {
   timeoutMs?: number;
@@ -66,5 +66,12 @@ export async function apiFetchWithHeaders<T>(
 }
 
 export function wsUrl(path: string): string {
-  return joinPath(WS_BASE, path);
+  const url = joinPath(WS_BASE, path);
+  if (/^wss?:\/\//i.test(url)) {
+    return url;
+  }
+
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  const normalizedUrl = url.startsWith("/") ? url : `/${url}`;
+  return `${protocol}//${window.location.host}${normalizedUrl}`;
 }

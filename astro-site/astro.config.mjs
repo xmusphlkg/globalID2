@@ -1,6 +1,5 @@
 import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
-import tailwind from '@astrojs/tailwind';
 
 const siteUrl = process.env.GLOBALID_SITE_URL || process.env.SITE_URL || 'https://globalinfectiousdisease.com';
 
@@ -9,7 +8,6 @@ export default defineConfig({
   output: 'static',
   integrations: [
     react(),
-    tailwind({ applyBaseStyles: false }),
   ],
   build: {
     inlineStylesheets: 'auto',
@@ -25,15 +23,15 @@ export default defineConfig({
         'react/jsx-dev-runtime',
         'echarts',
         'echarts-for-react',
-        'echarts-for-react/lib/core',
+        'echarts-for-react/lib/core.js',
         'tslib',
       ],
     },
     build: {
       rollupOptions: {
         output: {
-          manualChunks: {
-            echarts: ['echarts/core', 'echarts/charts', 'echarts/components', 'echarts/renderers'],
+          manualChunks(id) {
+            if (id.includes('/node_modules/echarts/')) return 'echarts';
           },
         },
       },

@@ -5,7 +5,7 @@
 //   https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json
 
 import React, { useEffect, useState, useMemo } from 'react';
-import EChartsReact from 'echarts-for-react/lib/core';
+import EChartsReact from '../../lib/echartsReact';
 import echarts from '../../lib/echarts';
 
 interface WorldMapProps {

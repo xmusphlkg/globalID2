@@ -4,7 +4,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAppStore } from "@/stores/app-store";
-import { Badge, Card, Grid, Text, Title } from "@tremor/react";
+import { Badge, Card, Grid, Text, Title } from "@/components/ui/tremor";
 import { MessageSquare, MessageSquareText, Search, ChevronDown, ListTodo, Settings2 } from "lucide-react";
 import { Chart } from "@/components/charts/Chart";
 import { TaskDetailPanel } from "@/components/tasks/TaskDetailPanel";

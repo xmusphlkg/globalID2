@@ -1,7 +1,7 @@
 {
   "name": "globalid-report-site",
   "type": "module",
-  "version": "0.4.1",
+  "version": "0.4.3",
   "scripts": {
     "dev": "astro dev",
     "site:data": "sh -c 'PYTHON_BIN=../venv/bin/python3; if [ ! -x \"$PYTHON_BIN\" ]; then PYTHON_BIN=python3; fi; \"$PYTHON_BIN\" ../scripts/generate_site_data.py'",
@@ -9,34 +9,37 @@
     "build": "sh -c 'PYTHON_BIN=../venv/bin/python3; if [ ! -x \"$PYTHON_BIN\" ]; then PYTHON_BIN=python3; fi; if [ \"${GLOBALID_SKIP_SITE_DATA_GENERATION:-0}\" != \"1\" ]; then \"$PYTHON_BIN\" ../scripts/generate_site_data.py; else echo \"Skipping site data generation; using existing snapshot\"; fi && astro build'",
     "test:curve": "node --experimental-strip-types --test src/components/charts/epidemicCurveModel.test.ts",
     "test:monthly": "node --experimental-strip-types --test src/components/charts/monthlyBarModel.test.ts src/components/charts/monthlyBarOption.integration.test.ts",
-    "test:charts": "node --experimental-strip-types --test src/components/charts/epidemicCurveModel.test.ts src/components/charts/monthlyBarModel.test.ts src/components/charts/monthlyBarOption.integration.test.ts",
+    "test:charts": "node --experimental-strip-types --test src/lib/echartsReact.test.ts src/components/charts/epidemicCurveModel.test.ts src/components/charts/monthlyBarModel.test.ts src/components/charts/monthlyBarOption.integration.test.ts",
     "test:knowledge": "node --experimental-strip-types --test src/utils/knowledge.test.ts",
+    "check": "astro check",
     "preview": "astro preview",
     "astro": "astro"
   },
   "dependencies": {
-    "@astrojs/react": "^3.6.0",
-    "@astrojs/sitemap": "^3.2.0",
-    "@astrojs/tailwind": "^5.1.2",
-    "@fontsource/inter": "^5.2.8",
-    "@fontsource/jetbrains-mono": "^5.2.8",
-    "@fontsource/source-sans-3": "^5.2.9",
-    "@fontsource/source-serif-4": "^5.2.9",
-    "astro": "^4.16.0",
-    "echarts": "^6.0.0",
+    "@astrojs/react": "^6.0.2",
+    "@fontsource/jetbrains-mono": "^5.3.0",
+    "@fontsource/source-sans-3": "^5.3.0",
+    "@fontsource/source-serif-4": "^5.3.0",
+    "astro": "^7.1.6",
+    "echarts": "^6.1.0",
     "echarts-for-react": "^3.0.6",
-    "marked": "^9.1.6",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "marked": "^18.0.9",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
     "tslib": "^2.8.1"
   },
   "devDependencies": {
-    "@tailwindcss/typography": "^0.5.15",
-    "@types/react": "^18.3.12",
-    "@types/react-dom": "^18.3.1",
-    "autoprefixer": "^10.4.20",
-    "tailwindcss": "^3.4.16",
-    "typescript": "^5.7.2",
-    "wrangler": "^4.82.0"
+    "@astrojs/check": "^0.9.10",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@tailwindcss/typography": "^0.5.20",
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5.9.3",
+    "wrangler": "^4.118.0"
+  },
+  "overrides": {
+    "undici": "7.29.0"
   }
 }
