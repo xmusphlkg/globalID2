@@ -15,6 +15,7 @@ from src.data.crawlers.kr import (
     KoreaKDCAOpenAPICrawler,
     normalize_kdca_download_rows,
     parse_kdca_period_month,
+    validate_kdca_national_rows,
 )
 from src.data.processors.kr import KRMonthlyUpdater
 from src.services.crawl_service import CrawlService
@@ -56,7 +57,9 @@ def test_kdca_period_region_aggregation_keeps_domestic_and_imported_counts():
         },
     ]
 
-    aggregated = aggregate_period_region_rows(rows, months={(2026, 1)}, source_url="https://example.test")
+    aggregated = aggregate_period_region_rows(
+        rows, months={(2026, 1)}, source_url="https://example.test"
+    )
 
     assert aggregated == [
         {
@@ -73,6 +76,34 @@ def test_kdca_period_region_aggregation_keeps_domestic_and_imported_counts():
             "SourceURL": "https://example.test",
         }
     ]
+
+
+def test_kdca_period_region_does_not_turn_missing_counts_into_zero():
+    missing = aggregate_period_region_rows(
+        [
+            {
+                "period": "2026-01",
+                "icdGroupNm": "제2급",
+                "icdNm": "뎅기열",
+                "resultVal": None,
+                "dmstcVal": "-",
+                "outnatnVal": "",
+            }
+        ]
+    )
+    explicit_zero = aggregate_period_region_rows(
+        [
+            {
+                "period": "2026-01",
+                "icdGroupNm": "제2급",
+                "icdNm": "뎅기열",
+                "resultVal": "0",
+            }
+        ]
+    )
+
+    assert missing == []
+    assert explicit_zero[0]["Cases"] == "0"
 
 
 def test_kr_monthly_updater_loads_crawler_csv_shape(tmp_path):
@@ -134,11 +165,11 @@ def test_kdca_portal_download_wide_rows_normalize_to_monthly_rows():
             "DiseaseGroup": "제3급",
             "Year": "2025",
             "Month": "1",
-            "Cases": "6",
+            "Cases": "0",
             "LocalCases": "0",
             "ImportedCases": "0",
             "Source": DEFAULT_PORTAL_SOURCE_NAME,
-            "SourceURL": "https://dportal.kdca.go.kr/pot/is/inftnsds.do",
+            "SourceURL": "https://dportal.kdca.go.kr/pot/is/inftnsdsEDW.do",
         },
         {
             "Date": "2025-01-01",
@@ -151,32 +182,65 @@ def test_kdca_portal_download_wide_rows_normalize_to_monthly_rows():
             "LocalCases": "0",
             "ImportedCases": "0",
             "Source": DEFAULT_PORTAL_SOURCE_NAME,
-            "SourceURL": "https://dportal.kdca.go.kr/pot/is/inftnsds.do",
+            "SourceURL": "https://dportal.kdca.go.kr/pot/is/inftnsdsEDW.do",
         },
         {
-            "Date": "2025-02-01",
+            "Date": "2025-12-01",
             "RawDiseaseLabel": "뎅기열",
             "DiseaseCode": "",
             "DiseaseGroup": "제3급",
             "Year": "2025",
-            "Month": "2",
-            "Cases": "0",
+            "Month": "12",
+            "Cases": "6",
             "LocalCases": "0",
             "ImportedCases": "0",
             "Source": DEFAULT_PORTAL_SOURCE_NAME,
-            "SourceURL": "https://dportal.kdca.go.kr/pot/is/inftnsds.do",
+            "SourceURL": "https://dportal.kdca.go.kr/pot/is/inftnsdsEDW.do",
         },
     ]
 
 
-def test_kdca_portal_download_source_file_refresh_without_api_key(tmp_path, monkeypatch):
+def test_kdca_portal_packed_values_fill_partial_total_first_rows():
+    normalized = normalize_kdca_download_rows(
+        [
+            {
+                "TITLE": "제2급",
+                "SUBTITLE": "수두",
+                "DATAARRTXT": "30`10`20",
+                "COLUMN1": "30",
+            }
+        ],
+        fallback_year=2025,
+    )
+
+    assert [(row["Month"], row["Cases"]) for row in normalized] == [
+        ("1", "10"),
+        ("2", "20"),
+    ]
+
+
+def test_kdca_generic_column_download_keeps_one_based_months():
+    normalized = normalize_kdca_download_rows(
+        [{"Disease": "홍역", "COLUMN1": "2", "COLUMN2": "3"}],
+        fallback_year=2025,
+    )
+
+    assert [(row["Month"], row["Cases"]) for row in normalized] == [
+        ("1", "2"),
+        ("2", "3"),
+    ]
+
+
+def test_kdca_portal_download_source_file_refresh_without_api_key(
+    tmp_path, monkeypatch
+):
     monkeypatch.delenv("DATA_GO_KR_SERVICE_KEY", raising=False)
     source_file = tmp_path / "kdca_2025.json"
     source_file.write_text(
         """
         {
           "value": [
-            {"TITLE": "제3급", "SUBTITLE": "뎅기열", "COLUMN1": "6", "COLUMN2": "0"}
+            {"TITLE": "제3급", "SUBTITLE": "뎅기열", "COLUMN1": "6", "COLUMN2": "2", "COLUMN3": "4"}
           ]
         }
         """,
@@ -190,7 +254,7 @@ def test_kdca_portal_download_source_file_refresh_without_api_key(tmp_path, monk
     )
 
     assert [row["Date"] for row in result.rows] == ["2025-01-01", "2025-02-01"]
-    assert [row["Cases"] for row in result.rows] == ["6", "0"]
+    assert [row["Cases"] for row in result.rows] == ["2", "4"]
     assert any("kind=download" in line for line in result.script_logs)
 
 
@@ -231,6 +295,51 @@ def test_kr_crawl_monthly_uses_dportal_ajax_without_api_key(tmp_path, monkeypatc
     assert output_csv.exists()
 
 
+def test_kr_crawler_defaults_to_current_edw_portal_endpoint():
+    crawler = KoreaKDCAOpenAPICrawler(service_key="")
+
+    assert crawler.portal_stats_url == DEFAULT_DPORTAL_STATS_AJAX_URL
+    assert "EDWAjax" in crawler.portal_stats_url
+
+
+def test_kdca_quality_guard_rejects_broad_completed_all_zero_batch():
+    rows = [
+        {
+            "Date": "2025-01-01",
+            "RawDiseaseLabel": f"disease-{index}",
+            "Cases": "0",
+        }
+        for index in range(10)
+    ]
+
+    try:
+        validate_kdca_national_rows(rows, today=date(2025, 3, 1))
+    except ValueError as exc:
+        assert "every count is zero" in str(exc)
+    else:
+        raise AssertionError("broad all-zero completed month should be rejected")
+
+
+def test_kdca_quality_guard_rejects_annual_total_january_signature():
+    rows = []
+    for disease_index in range(10):
+        for month in range(1, 13):
+            rows.append(
+                {
+                    "Date": f"2024-{month:02d}-01",
+                    "RawDiseaseLabel": f"disease-{disease_index}",
+                    "Cases": "11" if month == 1 else "1",
+                }
+            )
+
+    try:
+        validate_kdca_national_rows(rows, today=date(2025, 1, 1))
+    except ValueError as exc:
+        assert "annual-total signature" in str(exc)
+    else:
+        raise AssertionError("annual-total January signature should be rejected")
+
+
 def test_kr_history_months_uses_configured_start_year(tmp_path):
     updater = KRMonthlyUpdater(output_csv=tmp_path / "korea_national_monthly.csv")
 
@@ -266,17 +375,48 @@ def test_kr_download_source_from_parent_directory_year_is_respected(tmp_path):
     year_dir.mkdir(parents=True)
     source_file = year_dir / "kdca_export.csv"
     source_file.write_text(
-        "TITLE,SUBTITLE,COLUMN1,COLUMN2\n제3급,뎅기열,6,0\n",
+        "TITLE,SUBTITLE,COLUMN1,COLUMN2,COLUMN3\n제3급,뎅기열,6,2,4\n",
         encoding="utf-8",
     )
 
-    result = KRMonthlyUpdater(output_csv=tmp_path / "korea_national_monthly.csv").refresh_source(
+    result = KRMonthlyUpdater(
+        output_csv=tmp_path / "korea_national_monthly.csv"
+    ).refresh_source(
         months=[(2026, 1), (2026, 2)],
         source_file=source_file,
     )
 
     assert [row["Date"] for row in result.rows] == ["2026-01-01", "2026-02-01"]
     assert result.rows[0]["RawDiseaseLabel"] == "뎅기열"
+
+
+def test_kr_explicit_source_file_isolated_from_default_manual_cache(tmp_path):
+    raw_dir = tmp_path / "raw"
+    cached_dir = raw_dir / "manual" / "2026"
+    cached_dir.mkdir(parents=True)
+    (cached_dir / "cached.csv").write_text(
+        "TITLE,SUBTITLE,COLUMN1,COLUMN2\n제3급,홍역,99,99\n",
+        encoding="utf-8",
+    )
+    explicit_dir = tmp_path / "explicit" / "2026"
+    explicit_dir.mkdir(parents=True)
+    explicit_file = explicit_dir / "target.csv"
+    explicit_file.write_text(
+        "TITLE,SUBTITLE,COLUMN1,COLUMN2\n제3급,뎅기열,6,6\n",
+        encoding="utf-8",
+    )
+    output_csv = tmp_path / "korea_national_monthly.csv"
+
+    crawler = KoreaKDCAOpenAPICrawler(raw_dir=raw_dir)
+    summary = crawler.crawl_monthly_national(
+        output_csv,
+        months=[(2026, 1)],
+        source_file=explicit_file,
+    )
+    rows = KRMonthlyUpdater(output_csv=output_csv)._load_rows(output_csv)
+
+    assert summary.row_count == 1
+    assert [row["RawDiseaseLabel"] for row in rows] == ["뎅기열"]
 
 
 def test_kdca_source_scope_aliases():

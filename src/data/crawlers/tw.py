@@ -106,8 +106,11 @@ def aggregate_monthly_csv_rows(
     aggregate: Dict[Tuple[int, int], Dict[str, int]] = {}
 
     for row in rows:
-        year = _parse_int(row.get("發病年份"))
-        month = _parse_int(row.get("發病月份"))
+        # Most NIDSS extracts use onset year/month, while a small set of
+        # surveillance datasets (including AIDS/HIV codes 042/044) expose the
+        # same grain under diagnosis year/month instead.
+        year = _parse_int(row.get("發病年份") or row.get("診斷年份"))
+        month = _parse_int(row.get("發病月份") or row.get("診斷月份"))
         cases = _parse_int(row.get("確定病例數"))
         if year is None or month is None or cases is None:
             continue

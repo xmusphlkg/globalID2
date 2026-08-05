@@ -18,15 +18,22 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core import get_logger
+from src.data.processors.mapping_lookup import (
+    load_country_mapping_dict,
+    normalize_mapping_key,
+)
 from src.core.country_library import get_country_bootstrap_config
 from src.data.crawlers.kr import (
     DEFAULT_HISTORY_START_YEAR,
     DEFAULT_SOURCE_NAME,
     KRFetchSummary,
     KoreaKDCAOpenAPICrawler,
+    validate_kdca_national_rows,
 )
 
 logger = get_logger(__name__)
+
+MAPPING_SOURCE_ID = "SRC_KR_KDCA"
 
 ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_OUTPUT_CSV = ROOT / "data/current/kr/korea_national_monthly.csv"
@@ -83,6 +90,13 @@ def _parse_date(row: Dict[str, str]) -> Optional[date]:
 
 class KRMonthlyUpdater:
     """Read Korea KDCA national monthly rows and import them."""
+
+    # The KDCA table covers dozens of conditions, while the lossless Registry
+    # currently models only an explicitly reviewed subset. Legacy projections
+    # still receive every mapped condition; source-series dual writes must
+    # select only those declared Registry rows before enforcing full coverage.
+    ontology_source_id = MAPPING_SOURCE_ID
+    series_registered_rows_only = True
 
     def __init__(
         self,
@@ -229,6 +243,16 @@ class KRMonthlyUpdater:
             else []
         )
 
+        if prior_candidate:
+            try:
+                validate_kdca_national_rows(
+                    prior_candidate,
+                    target_months=set(requested_months),
+                )
+            except ValueError as exc:
+                logs.append(f"[cache] rejected previous CSV snapshot: {exc}")
+                prior_candidate = []
+
         candidates: List[Tuple[str, List[Dict[str, str]], int]] = []
         if live_rows:
             candidates.append(("live fetch", live_rows, 1))
@@ -344,24 +368,9 @@ class KRMonthlyUpdater:
         return int(row[0])
 
     async def _load_mapping_dict(self, db: AsyncSession) -> Dict[str, int]:
-        result = await db.execute(
-            text(
-                """
-                SELECT dm.local_name, d.id
-                FROM disease_mappings dm
-                JOIN diseases d ON dm.disease_id = d.name
-                WHERE dm.country_code = :code AND dm.is_active = true
-                """
-            ),
-            {"code": self.country_code},
+        return await load_country_mapping_dict(
+            db, self.country_code, source_id=MAPPING_SOURCE_ID
         )
-
-        mapping: Dict[str, int] = {}
-        for local_name, disease_db_id in result:
-            key = _norm_text(local_name).lower()
-            if key:
-                mapping[key] = int(disease_db_id)
-        return mapping
 
     async def import_rows(
         self,
@@ -375,6 +384,8 @@ class KRMonthlyUpdater:
         """Upsert Korea national monthly rows into ``disease_records``."""
         if not rows:
             return KRUpdateImportResult(0, 0, db_latest_date, source_latest_date, False)
+
+        validate_kdca_national_rows(rows)
 
         country_id = await self._get_country_id(db)
         mapping_dict = await self._load_mapping_dict(db)
@@ -390,7 +401,9 @@ class KRMonthlyUpdater:
 
             label = _norm_text(row.get("RawDiseaseLabel", ""))
             code = _norm_text(row.get("DiseaseCode", ""))
-            disease_id = mapping_dict.get(label.lower()) or mapping_dict.get(code.lower())
+            disease_id = mapping_dict.get(
+                normalize_mapping_key(label)
+            ) or mapping_dict.get(normalize_mapping_key(code))
             if disease_id is None:
                 skipped_unmapped += 1
                 continue
