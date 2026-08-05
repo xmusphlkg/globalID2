@@ -16,8 +16,7 @@ export interface SourceInfoGroup {
 }
 
 export interface DownloadEntry {
-  json_path?: string;
-  csv_path?: string;
+  dataset_index_path?: string;
   generated_at?: string;
   record_count?: number;
   date_range?: { start?: string; end?: string };
@@ -105,7 +104,7 @@ export function buildChartSourceMeta(entry?: DownloadEntry | null, fallbackLabel
     href: primary?.url,
     sources: sourceLinks,
     note: noteParts.join(' · ') || undefined,
-    downloadHref: entry.csv_path ?? entry.json_path,
+    downloadHref: entry.dataset_index_path,
     coverage,
     updatedAt,
     rowCount: entry.record_count,

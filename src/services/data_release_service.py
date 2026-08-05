@@ -22,6 +22,7 @@ from sqlalchemy import select
 
 from src.core import get_config, get_database, get_logger
 from src.core.data_share import (
+    derive_github_raw_base_url,
     get_data_share_raw_base_url,
     get_data_share_repo_branch,
     get_data_share_repo_url,
@@ -62,6 +63,16 @@ AUTO_RELEASE_TASK_TYPES = (
 GITHUB_SSH_PREFIXES = ("git@github.com:", "ssh://git@github.com/")
 SUBSCRIPTION_SYNC_FALSE_VALUES = {"0", "false", "no", "off", "disabled"}
 SUBSCRIPTION_SYNC_STRICT_VALUES = {"1", "true", "yes", "on", "required", "strict", "force"}
+LOGGED_COMMAND_CANCEL_POLL_SECONDS = 1.0
+DEFAULT_LOGGED_COMMAND_TIMEOUT_SECONDS = 15 * 60
+GENERATE_SITE_DATA_TIMEOUT_SECONDS = 30 * 60
+ASTRO_BUILD_TIMEOUT_SECONDS = 15 * 60
+DATA_REFRESH_SNAPSHOT_TIMEOUT_SECONDS = 10 * 60
+CLOUDFLARE_DEPLOY_TIMEOUT_SECONDS = 15 * 60
+SUBSCRIPTION_SYNC_TIMEOUT_SECONDS = 10 * 60
+GITHUB_SNAPSHOT_PUBLISH_TIMEOUT_SECONDS = 15 * 60
+GITHUB_SNAPSHOT_BRANCH = "snapshot-v2"
+GITHUB_SNAPSHOT_DIR = ROOT_DIR / "exports" / "github-data-snapshot-v2"
 
 
 def _iso(value: Optional[datetime]) -> Optional[str]:
@@ -91,6 +102,7 @@ class DataReleaseJobConfig:
     enabled: bool = True
     priority: str = "high"
     auto_after_crawls: bool = True
+    # When enabled, publish the validated v2 snapshot after local generation.
     include_git_push: bool = True
     include_cloudflare_deploy: bool = True
     require_clean_worktree: bool = True
@@ -487,16 +499,16 @@ class DataReleaseService:
                         "reason": "already_running",
                     }
 
-        branch = self._download_repo_branch(job)
+        branch = GITHUB_SNAPSHOT_BRANCH
         project_name = self._cloudflare_project_name(job.cloudflare_project_name)
         download_repo_url = self._download_repo_url()
-        download_url_base = self._download_repo_raw_base(job)
+        snapshot_url_base = self._github_snapshot_raw_base()
         description_parts = [
             f"Generate site data and build Astro site for release job {job.job_id}.",
             (
-                f"Download repo: {download_repo_url} ({branch})"
-                if job.include_git_push and download_repo_url
-                else "Download repo publish disabled."
+                f"Publish canonical data snapshot to {GITHUB_SNAPSHOT_BRANCH}."
+                if job.include_git_push
+                else "GitHub snapshot publication disabled for this run."
             ),
             f"Pages: {project_name}" if job.include_cloudflare_deploy else "Cloudflare deploy disabled.",
         ]
@@ -506,12 +518,13 @@ class DataReleaseService:
             "release_job_name": job.name,
             "priority": job.priority,
             "auto_after_crawls": job.auto_after_crawls,
-            "include_git_push": job.include_git_push,
+            "include_git_push": bool(job.include_git_push),
             "include_cloudflare_deploy": job.include_cloudflare_deploy,
             "require_clean_worktree": job.require_clean_worktree,
-            "github_branch": branch,
+            "github_snapshot_branch": branch,
+            "deployment_branch": job.github_branch,
             "github_repo_url": download_repo_url,
-            "download_url_base": download_url_base,
+            "snapshot_url_base": snapshot_url_base,
             "cloudflare_project_name": project_name,
             "commit_message_template": job.commit_message_template,
             "timezone": job.timezone or self._config().timezone,
@@ -595,8 +608,21 @@ class DataReleaseService:
         if job is None:
             raise ValueError(f"Data release job not found: {job_id}")
 
-        branch = self._download_repo_branch(job)
-        download_repo = await self._download_repo_check(job)
+        branch = GITHUB_SNAPSHOT_BRANCH
+        download_repo = await self._download_repo_check(job) if job.include_git_push else {
+            "payload": {
+                "repo_url": self._download_repo_url() or None,
+                "branch": branch,
+                "raw_base_url": self._github_snapshot_raw_base() or None,
+                "read_access_ok": False,
+                "write_access_ok": False,
+                "read_check_output": "Skipped: v2 snapshot publication is disabled.",
+                "write_check_output": "Skipped: v2 snapshot publication is disabled.",
+                "ssh_transport": "disabled",
+                "publisher_enabled": False,
+            },
+            "blockers": [],
+        }
         worktree = await self._git_status_paths()
         blocking_dirty = [
             path for path in worktree
@@ -615,6 +641,11 @@ class DataReleaseService:
         blockers: list[str] = []
         if job.include_git_push:
             blockers.extend(download_repo["blockers"])
+        if job.include_cloudflare_deploy and not job.include_git_push:
+            blockers.append(
+                "Cloudflare deployment requires snapshot-v2 publication so the "
+                "new site never references an unpublished release."
+            )
         if job.include_cloudflare_deploy:
             blockers.extend(cloudflare["blockers"])
         if not python_path.exists():
@@ -631,7 +662,7 @@ class DataReleaseService:
             blockers.append("Data refresh snapshot push is enabled, but no target branch could be resolved.")
 
         return {
-            "checked_at": datetime.utcnow().isoformat(),
+            "checked_at": datetime.now(ZoneInfo("UTC")).isoformat(),
             "overall_ready": not blockers,
             "blockers": blockers,
             "git": {
@@ -688,7 +719,7 @@ class DataReleaseService:
             raise RuntimeError("Release preflight failed: " + "; ".join(checks["blockers"]))
 
         tz = ZoneInfo(job.timezone or self._config().timezone)
-        branch = self._download_repo_branch(job)
+        branch = GITHUB_SNAPSHOT_BRANCH
         project_name = self._cloudflare_project_name(job.cloudflare_project_name)
         download_repo_url = self._download_repo_url()
         git_transport = str((checks.get("git") or {}).get("ssh_transport") or "default")
@@ -696,7 +727,7 @@ class DataReleaseService:
             download_repo_url,
             use_github_ssh_over_443=(git_transport == "github-ssh-over-443"),
         )
-        download_url_base = self._download_repo_raw_base(job)
+        snapshot_url_base = self._github_snapshot_raw_base()
         publish_commit_message = self._render_commit_message(job, branch=branch, tz=tz)
         python_path = self._python_executable()
         cloudflare_check = checks.get("cloudflare") or {}
@@ -708,24 +739,10 @@ class DataReleaseService:
         release_identity = await self._site_release_identity(deployment_branch)
 
         await task_manager.update_task_progress(task.task_uuid, 5)
-        generate_cmd = [
-            str(python_path),
-            "scripts/generate_site_data.py",
-            "--download-url-base",
-            download_url_base,
-        ]
-        if job.include_git_push:
-            generate_cmd.extend(
-                [
-                    "--publish-downloads",
-                    "--download-repo-url",
-                    download_repo_url,
-                    "--download-repo-branch",
-                    branch,
-                    "--download-commit-message",
-                    publish_commit_message,
-                ]
-            )
+        generate_cmd = self._generate_site_data_command(
+            python_path=python_path,
+            snapshot_url_base=snapshot_url_base,
+        )
         await self._run_logged_command(
             task.task_uuid,
             title="Generate Site Data",
@@ -733,6 +750,7 @@ class DataReleaseService:
             cwd=ROOT_DIR,
             env=git_env,
             metadata={"event": "generate_site_data", "release_job_id": job.job_id},
+            timeout_seconds=GENERATE_SITE_DATA_TIMEOUT_SECONDS,
         )
         await task_manager.update_task_progress(task.task_uuid, 35)
 
@@ -750,6 +768,7 @@ class DataReleaseService:
                 "PUBLIC_GIDS_BUILT_AT": release_identity["built_at"],
             },
             metadata={"event": "astro_build", "release_job_id": job.job_id},
+            timeout_seconds=ASTRO_BUILD_TIMEOUT_SECONDS,
         )
         release_manifest = self._write_site_release_manifest(release_identity)
         await task_manager.add_workbook_entry(
@@ -771,7 +790,7 @@ class DataReleaseService:
         changed_data_refresh_paths = await self._git_dirty_data_refresh_paths()
         data_refresh_snapshot_commit = None
         data_refresh_snapshot_pushed = False
-        download_repo_published = bool(job.include_git_push)
+        github_snapshot_published = False
         pages_deployed = False
         cloudflare_deployment = None
 
@@ -814,6 +833,7 @@ class DataReleaseService:
                 cwd=ROOT_DIR,
                 env=git_env,
                 metadata={"event": "data_refresh_snapshot_commit", "release_job_id": job.job_id},
+                timeout_seconds=DATA_REFRESH_SNAPSHOT_TIMEOUT_SECONDS,
             )
             after_head = await self._git_head_short()
             if after_head and after_head != before_head:
@@ -835,6 +855,7 @@ class DataReleaseService:
                             "remote": snapshot_remote,
                             "branch": snapshot_branch,
                         },
+                        timeout_seconds=DATA_REFRESH_SNAPSHOT_TIMEOUT_SECONDS,
                     )
                     data_refresh_snapshot_pushed = True
             else:
@@ -859,14 +880,36 @@ class DataReleaseService:
                 metadata={"event": "data_refresh_snapshot_disabled", "release_job_id": job.job_id},
             )
 
-        if not job.include_git_push:
+        if job.include_git_push:
+            await self._run_logged_command(
+                task.task_uuid,
+                title="Publish GitHub Snapshot v2",
+                cmd=self._publish_github_snapshot_command(
+                    python_path=python_path,
+                    repo_url=download_repo_url,
+                    commit_message=publish_commit_message,
+                ),
+                cwd=ROOT_DIR,
+                env=git_env,
+                metadata={
+                    "event": "github_snapshot_v2_publish",
+                    "release_job_id": job.job_id,
+                    "branch": GITHUB_SNAPSHOT_BRANCH,
+                },
+                timeout_seconds=GITHUB_SNAPSHOT_PUBLISH_TIMEOUT_SECONDS,
+            )
+            github_snapshot_published = True
+        else:
             await task_manager.add_workbook_entry(
                 task.task_uuid,
                 entry_type="info",
-                title="Download Repo Publish Skipped",
-                content="Download-data repo publishing is disabled for this release job.",
+                title="GitHub Snapshot Publish Skipped",
+                content="The validated snapshot-v2 tree remains local for this run.",
                 content_type="text",
-                metadata={"event": "git_push_skip", "release_job_id": job.job_id},
+                metadata={
+                    "event": "github_snapshot_v2_publish_skipped",
+                    "release_job_id": job.job_id,
+                },
             )
 
         await task_manager.update_task_progress(task.task_uuid, 88)
@@ -896,6 +939,7 @@ class DataReleaseService:
                     "release_id": release_identity["release_id"],
                     "deployment_branch": deployment_branch,
                 },
+                timeout_seconds=CLOUDFLARE_DEPLOY_TIMEOUT_SECONDS,
             )
             cloudflare_deployment = await self._verify_cloudflare_production_release(
                 project_name=project_name,
@@ -931,14 +975,15 @@ class DataReleaseService:
             "release_job_id": job.job_id,
             "release_job_name": job.name,
             "github_repo_url": download_repo_url,
-            "github_branch": branch,
-            "download_url_base": download_url_base,
+            "github_snapshot_branch": branch,
+            "snapshot_url_base": snapshot_url_base,
             "cloudflare_project_name": project_name,
             "cloudflare_deployment_branch": deployment_branch,
             "cloudflare_deployment": cloudflare_deployment,
             "site_release": release_manifest,
             "commit_message": publish_commit_message,
-            "git_pushed": download_repo_published,
+            "git_pushed": github_snapshot_published,
+            "github_snapshot_published": github_snapshot_published,
             "pages_deployed": pages_deployed,
             "subscription_options_synced": subscription_options_synced,
             "changed_release_paths": changed_release_paths,
@@ -960,7 +1005,7 @@ class DataReleaseService:
             title="Data Release Completed",
             content=(
                 f"Release job: {job.name}\n"
-                f"Download repo published: {'yes' if download_repo_published else 'no'}\n"
+                f"GitHub snapshot-v2 published: {'yes' if github_snapshot_published else 'no'}\n"
                 f"Cloudflare deployed: {'yes' if pages_deployed else 'no'}\n"
                 f"Production branch: {deployment_branch or '-'}\n"
                 f"Site release: {release_identity['release_id']}\n"
@@ -1056,6 +1101,15 @@ class DataReleaseService:
         return get_data_share_raw_base_url(
             repo_url=self._download_repo_url(),
             branch=self._download_repo_branch(job),
+        )
+
+    def _github_snapshot_raw_base(self) -> str:
+        repo_url = self._download_repo_url()
+        return derive_github_raw_base_url(repo_url, GITHUB_SNAPSHOT_BRANCH) or (
+            get_data_share_raw_base_url(
+                repo_url=repo_url,
+                branch=GITHUB_SNAPSHOT_BRANCH,
+            )
         )
 
     def _cloudflare_project_name(self, project_name: Optional[str]) -> str:
@@ -1158,6 +1212,40 @@ class DataReleaseService:
             command.extend(["--commit-hash", source_commit])
         return command
 
+    def _generate_site_data_command(
+        self,
+        *,
+        python_path: Path,
+        snapshot_url_base: str,
+    ) -> list[str]:
+        """Build the canonical v2 package and bounded GitHub snapshot locally."""
+
+        return [
+            str(python_path),
+            "scripts/generate_site_data.py",
+            "--github-snapshot-url-base",
+            snapshot_url_base,
+        ]
+
+    def _publish_github_snapshot_command(
+        self,
+        *,
+        python_path: Path,
+        repo_url: str,
+        commit_message: str,
+    ) -> list[str]:
+        return [
+            str(python_path),
+            "scripts/publish_github_snapshot_v2.py",
+            "--snapshot-dir",
+            str(GITHUB_SNAPSHOT_DIR),
+            "--repo-url",
+            repo_url,
+            "--commit-message",
+            commit_message,
+            "--push",
+        ]
+
     def _env_file_values(self) -> dict[str, str]:
         if dotenv_values is None or not ENV_PATH.exists():
             return {}
@@ -1216,6 +1304,7 @@ class DataReleaseService:
                     "CLOUDFLARE_ACCOUNT_ID": self._cloudflare_account_id(),
                 },
                 metadata=metadata,
+                timeout_seconds=SUBSCRIPTION_SYNC_TIMEOUT_SECONDS,
             )
             return True
         except RuntimeError as exc:
@@ -1314,10 +1403,10 @@ class DataReleaseService:
             for base in DATA_REFRESH_PATHS
         )
 
-    async def _download_repo_check(self, job: DataReleaseJobConfig) -> dict[str, Any]:
+    async def _download_repo_check(self, _job: DataReleaseJobConfig) -> dict[str, Any]:
         repo_url = self._download_repo_url()
-        branch = self._download_repo_branch(job)
-        raw_base_url = self._download_repo_raw_base(job)
+        branch = GITHUB_SNAPSHOT_BRANCH
+        raw_base_url = self._github_snapshot_raw_base()
         git_env = self._build_git_env(repo_url)
         ssh_transport = "default"
         payload = {
@@ -1719,9 +1808,14 @@ class DataReleaseService:
         cwd: Path,
         env: Optional[dict[str, str]] = None,
         metadata: Optional[dict[str, Any]] = None,
+        timeout_seconds: float = DEFAULT_LOGGED_COMMAND_TIMEOUT_SECONDS,
     ) -> None:
+        if timeout_seconds <= 0:
+            raise ValueError("Logged command timeout_seconds must be greater than zero")
+
         metadata = dict(metadata or {})
         metadata["command"] = " ".join(shlex.quote(part) for part in cmd)
+        metadata["timeout_seconds"] = timeout_seconds
         await task_manager.add_workbook_entry(
             task_uuid,
             entry_type="info",
@@ -1746,6 +1840,8 @@ class DataReleaseService:
         except FileNotFoundError as exc:
             raise RuntimeError(f"{title} failed to start: {exc}") from exc
 
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + timeout_seconds
         chunk_lines: list[str] = []
         chunk_index = 1
         output_tail: list[str] = []
@@ -1766,14 +1862,47 @@ class DataReleaseService:
                 chunk_lines = []
                 chunk_index += 1
 
+        async def fail_on_timeout() -> None:
+            await self._terminate_process_tree(proc)
+            await flush_chunk(force=True)
+            timeout_text = f"{timeout_seconds:g} seconds"
+            message = (
+                f"{title} timed out after {timeout_text}; terminated process group "
+                f"{proc.pid}. Command: {metadata['command']}"
+            )
+            try:
+                await task_manager.add_workbook_entry(
+                    task_uuid,
+                    entry_type="error",
+                    title=f"{title} Timed Out",
+                    content=message,
+                    content_type="text",
+                    metadata={**metadata, "event": "command_timeout"},
+                )
+            except Exception as exc:  # pragma: no cover - task lifecycle still records the error.
+                logger.warning("Failed to write command timeout workbook entry: %s", exc)
+            raise RuntimeError(message)
+
         while True:
             if await task_manager.is_cancel_requested(task_uuid):
                 await self._terminate_process_tree(proc)
                 raise TaskCancelledError(f"Cancellation requested while running: {title}")
 
+            remaining_seconds = deadline - loop.time()
+            if remaining_seconds <= 0:
+                await fail_on_timeout()
+
             try:
-                line = await asyncio.wait_for(proc.stdout.readline(), timeout=1)
+                line = await asyncio.wait_for(
+                    proc.stdout.readline(),
+                    timeout=min(
+                        LOGGED_COMMAND_CANCEL_POLL_SECONDS,
+                        remaining_seconds,
+                    ),
+                )
             except asyncio.TimeoutError:
+                if loop.time() >= deadline:
+                    await fail_on_timeout()
                 continue
             if not line:
                 break
@@ -1785,7 +1914,16 @@ class DataReleaseService:
             if len(chunk_lines) >= 40 or sum(len(item) for item in chunk_lines) >= 4000:
                 await flush_chunk()
 
-        returncode = await proc.wait()
+        if proc.returncode is None:
+            remaining_seconds = deadline - loop.time()
+            if remaining_seconds <= 0:
+                await fail_on_timeout()
+            try:
+                await asyncio.wait_for(proc.wait(), timeout=remaining_seconds)
+            except asyncio.TimeoutError:
+                await fail_on_timeout()
+
+        returncode = proc.returncode
         await flush_chunk(force=True)
 
         if returncode != 0:
@@ -1822,18 +1960,20 @@ class DataReleaseService:
 
         try:
             await asyncio.wait_for(proc.wait(), timeout=grace_seconds)
-            return
         except asyncio.TimeoutError:
             pass
 
         try:
             if os.name == "posix":
+                # The direct child can exit before one of its descendants. Kill
+                # the process group even when ``proc.wait()`` already returned.
                 os.killpg(proc.pid, signal.SIGKILL)
-            else:  # pragma: no cover - production release workers run on Linux.
+            elif proc.returncode is None:  # pragma: no cover - production runs on Linux.
                 proc.kill()
         except ProcessLookupError:
             pass
-        await proc.wait()
+        if proc.returncode is None:
+            await proc.wait()
 
     async def _git_head_short(self) -> Optional[str]:
         result = await self._run_capture(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT_DIR)

@@ -1,7 +1,7 @@
 {
   "name": "globalid-report-site",
   "type": "module",
-  "version": "0.3.2",
+  "version": "0.4.1",
   "scripts": {
     "dev": "astro dev",
     "site:data": "sh -c 'PYTHON_BIN=../venv/bin/python3; if [ ! -x \"$PYTHON_BIN\" ]; then PYTHON_BIN=python3; fi; \"$PYTHON_BIN\" ../scripts/generate_site_data.py'",
@@ -10,6 +10,7 @@
     "test:curve": "node --experimental-strip-types --test src/components/charts/epidemicCurveModel.test.ts",
     "test:monthly": "node --experimental-strip-types --test src/components/charts/monthlyBarModel.test.ts src/components/charts/monthlyBarOption.integration.test.ts",
     "test:charts": "node --experimental-strip-types --test src/components/charts/epidemicCurveModel.test.ts src/components/charts/monthlyBarModel.test.ts src/components/charts/monthlyBarOption.integration.test.ts",
+    "test:knowledge": "node --experimental-strip-types --test src/utils/knowledge.test.ts",
     "preview": "astro preview",
     "astro": "astro"
   },
