@@ -26,7 +26,7 @@ def test_wrangler_env_loads_shell_sensitive_dotenv_without_eval(tmp_path: Path) 
                 "SUBSCRIPTIONS__D1_DATABASE_NAME=test-db",
                 "SUBSCRIPTIONS__D1_DATABASE_ID=test-id",
                 "SUBSCRIPTIONS__WORKER_NAME=from-dotenv (production)",
-                "DATA_RELEASE__DATA_REFRESH_SNAPSHOT_MESSAGE_TEMPLATE=chore(data): {timestamp}",
+                "UNRELATED_MESSAGE_TEMPLATE=chore(data): {timestamp}",
             ]
         )
         + "\n",
