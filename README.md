@@ -8,6 +8,30 @@ GlobalID V2 is an infectious disease surveillance platform built around three co
 
 The current repository is centered on China disease surveillance data, but the data model, country bootstrap configuration, and mapping system are structured for multi-country expansion.
 
+## Branches and data repositories
+
+This source-code repository has two persistent branches:
+
+- `development`: the integration branch for day-to-day changes
+- `master`: the stable branch used for releases and production deployments
+
+Merge tested changes into `development`, then promote `development` to
+`master`. Delete temporary topic or recovery branches after their commits have
+been integrated or confirmed obsolete. Automated data jobs must not create
+branches or commits in this source-code repository.
+
+Data publishing uses separate Git repositories and therefore has its own fixed
+branches. The public download repository uses the bounded orphan branch
+`snapshot-v2`; each publication replaces that branch's history so generated
+data does not make the repository grow forever. The raw source archive uses the
+`main` branch of the dedicated `globalID-data-archive` repository. Local paths
+such as `data/cache`, `data/current`, `data/raw`, `exports`, and the nested
+`exports/raw-git-archive` working clone are ignored by this repository.
+
+In other words, `snapshot-v2` and the archive repository's `main` are data
+distribution channels, not extra development branches of GlobalID V2. See
+`docs/DATA_VERSIONING.md` for the complete boundary and release flow.
+
 ## What This Repository Contains
 
 - intelligent crawling with incremental updates and optional missing-month backfill

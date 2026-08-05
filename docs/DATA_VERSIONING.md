@@ -4,17 +4,41 @@ GlobalID separates source-code history from mutable surveillance data. A data
 refresh must never create a commit on the code repository's development or
 release branches.
 
+## Repository and branch policy
+
+| Repository / workspace | Persistent branch | Purpose |
+| --- | --- | --- |
+| `globalID2` source code | `development` | Tested integration work |
+| `globalID2` source code | `master` | Stable releases and production |
+| Public download-data repository | `snapshot-v2` | Bounded generated snapshot; force-updated with lease |
+| `globalID-data-archive` | `main` | Append-only raw source archive |
+| Local cache and generated workspaces | None | Ignored runtime files; never a Git repository unless a publisher creates an isolated ignored working clone |
+
+Only `development` and `master` are persistent branches in the source-code
+repository. Temporary pull-request branches, when unavoidable, must be deleted
+after merge. Recovery branches are local, short-lived safety tools and must not
+be left on the remote.
+
+The fixed data branches are intentional and do not belong to the source-code
+branch model. Git requires a branch ref to publish a versioned tree. The public
+snapshot uses an orphan commit and a lease-protected force update so its history
+stays bounded; the raw archive keeps `main` history because traceability is its
+purpose. `exports/raw-git-archive/.git` may therefore exist locally after a raw
+archive publication, but the whole `exports/` directory is ignored by
+`globalID2` and cannot add branches to the parent repository.
+
 ## Ownership boundaries
 
 | Asset | System of record | Code repository |
 | --- | --- | --- |
 | Application code, schemas, migrations, mappings | Code repository | Tracked |
 | Small deterministic test fixtures | Code repository | Tracked |
-| Raw source responses (`data/raw`) | Versioned object storage | Ignored |
+| Raw source responses (`data/raw`) | Dedicated raw archive / approved versioned object storage | Ignored |
 | Current normalized exports (`data/current`) | PostgreSQL / local cache | Ignored |
 | Generated Astro JSON (`astro-site/src/data/**/*.json`) | Release workspace | Ignored |
 | Hand-authored Astro data modules (`*.ts`) | Code repository | Tracked |
 | Public canonical snapshots | Dedicated data repository, `snapshot-v2` | Not tracked |
+| Raw archive working clone (`exports/raw-git-archive`) | Dedicated archive repository, `main` | Ignored |
 | Astro build output | Deployment artifact / Cloudflare Pages | Ignored |
 
 The generated working files remain available locally. Removing them from the
@@ -30,13 +54,16 @@ when the crawler or `scripts/generate_site_data.py` runs.
    working directory.
 3. The package is validated and published to the dedicated data repository's
    bounded `snapshot-v2` orphan branch.
-4. Astro builds from the generated JSON and Cloudflare receives only the build
+4. Raw source payloads are independently synchronized to the dedicated raw
+   archive repository's `main` branch when raw archiving is enabled.
+5. Astro builds from the generated JSON and Cloudflare receives only the build
    artifact.
-5. The code repository HEAD is unchanged throughout the release.
+6. The code repository HEAD is unchanged throughout the release.
 
 Every canonical release contains a manifest and content hashes. The
 `snapshot-v2` tree is a bounded distribution channel, not the permanent raw
-archive; long-term source retention belongs in versioned object storage.
+archive; long-term source retention belongs in the dedicated raw archive or
+other approved versioned object storage.
 
 ## Enforcement
 
