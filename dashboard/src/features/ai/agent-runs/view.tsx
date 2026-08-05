@@ -31,7 +31,7 @@ import {
   useCancelAgentRun,
   useResumeAgentRun,
 } from "@/features/ai/api";
-import { cn } from "@/lib/utils";
+import { cn, formatDateTime } from "@/lib/utils";
 import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
 import { DetailDrawer } from "@/components/ui/DetailDrawer";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -44,13 +44,6 @@ const STATUS_FILTERS = ["pending", "queued", "running", "completed", "failed", "
 const LIST_LIMIT = 50;
 const inputClass =
   "h-10 w-full rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm text-tremor-content-strong outline-none transition focus:border-tremor-brand-subtle focus:ring-2 focus:ring-tremor-brand-muted dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong";
-
-function formatDateTime(value?: string | null): string {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString();
-}
 
 function shortUuid(value?: string | null): string {
   if (!value) return "-";

@@ -5,6 +5,7 @@ import { Card, Text, Title } from "@/components/ui/tremor";
 import { Chart, echarts } from "@/components/charts/Chart";
 import { CHART_TOKENS } from "@/lib/chart-theme";
 import type { TaskDetail, WorkbookEntry } from "@/lib/hooks/useTasks";
+import { formatDateTime } from "@/lib/utils";
 
 type TopologyLabels = {
   title: string;
@@ -16,13 +17,6 @@ function metadataString(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   return trimmed || null;
-}
-
-function formatDateTime(value: string | null): string {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString();
 }
 
 function entryColor(entry: WorkbookEntry): string {

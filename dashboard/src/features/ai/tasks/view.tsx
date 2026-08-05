@@ -14,7 +14,7 @@ import {
   useWorkerStatus,
 } from "@/features/operations/tasks/api";
 import { useReports } from "@/features/reports/api";
-import { formatDate } from "@/lib/utils";
+import { formatDateTime } from "@/lib/utils";
 import { CHART_TOKENS } from "@/lib/chart-theme";
 import { Chart } from "@/components/charts/Chart";
 import { TaskDetailPanel } from "@/components/tasks/TaskDetailPanel";
@@ -485,7 +485,7 @@ function AIPageContent() {
                 <span className="w-9 text-right text-[11px] font-medium"
                   style={{ color: "var(--color-tremor-content-subtle)" }}>{task.progress}%</span>
                 <span className="hidden lg:block w-24 text-right text-[11px]"
-                  style={{ color: "var(--color-tremor-content-subtle)" }}>{formatDate(task.created_at)}</span>
+                  style={{ color: "var(--color-tremor-content-subtle)" }}>{formatDateTime(task.created_at)}</span>
                 <ChevronDown
                   className={`h-3.5 w-3.5 transition-transform ${expandedUuid === task.task_uuid ? "rotate-180" : ""}`}
                   style={{ color: "var(--color-tremor-content-subtle)" }}
