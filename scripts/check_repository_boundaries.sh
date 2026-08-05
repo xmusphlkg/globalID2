@@ -50,4 +50,6 @@ for probe in "${ignore_probes[@]}"; do
   fi
 done
 
-echo "Repository boundaries OK: generated data is ignored and untracked."
+python3 scripts/check_repository_size.py
+
+echo "Repository boundaries OK: generated data is ignored and new large artifacts are blocked."

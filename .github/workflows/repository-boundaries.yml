@@ -21,5 +21,17 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
       - name: Verify repository boundaries
         run: ./scripts/check_repository_boundaries.sh
+      - name: Check every object introduced by the pull request
+        if: github.event_name == 'pull_request'
+        run: >-
+          python3 scripts/check_repository_size.py
+          --revision-range '${{ github.event.pull_request.base.sha }}..HEAD'
+      - name: Check every object introduced by the push
+        if: github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000'
+        run: >-
+          python3 scripts/check_repository_size.py
+          --revision-range '${{ github.event.before }}..${{ github.sha }}'
