@@ -142,3 +142,33 @@ def test_interrupted_untracked_object_is_reused_and_committed(tmp_path: Path) ->
         check=False,
     )
     assert tracked.returncode == 0
+
+
+def test_unborn_persistent_clone_resumes_without_recompression(tmp_path: Path) -> None:
+    source = tmp_path / "raw"
+    repository = tmp_path / "archive"
+    source.mkdir()
+    source_file = source / "payload.bin"
+    source_file.write_bytes(b"already compressed before the first commit")
+    repository.mkdir()
+    subprocess.run(["git", "init", "--quiet"], cwd=repository, check=True)
+    subprocess.run(["git", "checkout", "--orphan", archive.TARGET_BRANCH], cwd=repository, check=True)
+    digest = archive._sha256_file(source_file)
+    archive._compress_object(
+        source_file,
+        repository,
+        digest,
+        chunk_bytes=1024,
+        zstd_level=1,
+    )
+
+    result = archive.publish_raw_archive(
+        source,
+        repository,
+        chunk_bytes=1024,
+        commit_batch_bytes=1024,
+    )
+
+    assert result.changed is True
+    assert result.new_object_count == 1
+    assert _git_log(repository)
