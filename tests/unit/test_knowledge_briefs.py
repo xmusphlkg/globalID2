@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import json
 import sys
@@ -13,81 +14,40 @@ if str(ROOT) not in sys.path:
 
 from src.core.config import AISettings
 from src.generation.report_v4.composer import compose_report_document
-from src.knowledge.brief_generator import DISCLAIMER_EN, SourceGroundedBriefGenerator
+from src.knowledge.evidence import build_evidence_manifest
 from src.knowledge.catalogue import (
-    CATALOGUE_FALLBACK_BRIEF_TIER,
-    build_catalogue_disease_brief,
-    build_catalogue_disease_brief_payload,
+    LEGACY_CATALOGUE_BRIEF_TIER,
     public_disease_page_exclusion_reason,
     resolve_disease_knowledge_status,
     should_generate_public_disease_page,
 )
 from src.knowledge.llm_brief_generator import AIDiseaseBriefGenerator
+from src.knowledge.profile_schema import (
+    attach_profile_schema,
+    resolve_knowledge_profile_schema,
+)
+from src.knowledge.quality import (
+    apply_knowledge_quality_gate,
+    assess_knowledge_brief,
+    assess_knowledge_evidence,
+    assess_knowledge_field,
+    has_grounding_content,
+    strip_unavailable_knowledge_sentences,
+)
 from src.knowledge.sources import DiseaseKnowledgeFetcher, SourceCandidate
+from src.services.disease_knowledge_service import (
+    DiseaseKnowledgeUpdateService,
+    _generated_profile_failures,
+    _merge_repair_payload,
+    _profile_repair_sections,
+    _profile_repair_sections_by_language,
+)
 
 from scripts.generate_site_data import (
     apply_country_brief_fields,
     apply_disease_knowledge_fields,
     build_country_data,
 )
-
-
-def test_source_grounded_brief_publishes_with_authoritative_source() -> None:
-    generator = SourceGroundedBriefGenerator()
-    payload = generator.generate(
-        disease={
-            "disease_id": "influenza",
-            "name_en": "Influenza",
-            "name_zh": "流感",
-            "category": "Viral",
-            "description": "An acute respiratory infection.",
-        },
-        sources=[
-            {
-                "id": 11,
-                "source_type": "who",
-                "source_name": "WHO Fact Sheet",
-                "title": "Influenza",
-                "url": "https://www.who.int/news-room/fact-sheets/detail/influenza-(seasonal)",
-                "license": "WHO website terms",
-                "review_status": "approved",
-                "raw_excerpt": "Influenza is an acute respiratory infection caused by influenza viruses that circulate in all parts of the world.",
-            }
-        ],
-        language="en",
-    )
-
-    assert payload["status"] == "published"
-    assert payload["source_ids"] == [11]
-    assert payload["source_confidence"] == "high"
-    assert payload["source_attribution"][0]["source_name"] == "WHO Fact Sheet"
-    assert payload["disclaimer"] == DISCLAIMER_EN
-    assert "acute respiratory infection" in payload["definition"]
-    assert "clinical" in payload["clinical_features"].lower()
-    assert "surveillance" in payload["surveillance_note"].lower()
-
-
-def test_source_grounded_brief_requires_review_for_msd_only() -> None:
-    generator = SourceGroundedBriefGenerator()
-    payload = generator.generate(
-        disease={"disease_id": "example", "name_en": "Example disease", "category": "Bacterial"},
-        sources=[
-            {
-                "id": 22,
-                "source_type": "msd",
-                "source_name": "MSD Manual Professional Edition",
-                "title": "MSD Manual search metadata for Example disease",
-                "url": "https://www.msdmanuals.com/professional/SearchResults?query=Example%20disease",
-                "review_status": "requires_review",
-            }
-        ],
-        language="en",
-    )
-
-    assert payload["status"] == "requires_review"
-    assert payload["source_ids"] == [22]
-    assert payload["source_confidence"] == "low"
-    assert "MSD-only" in payload["review_notes"]
 
 
 def test_fetcher_deduplicates_by_disease_source_and_url() -> None:
@@ -216,7 +176,7 @@ def test_fetcher_skips_wikipedia_disambiguation_and_uses_disease_page() -> None:
     assert candidates[0].resolved_url == "https://en.wikipedia.org/wiki/Plague_(disease)"
 
 
-def test_ai_brief_user_prompt_uses_content_text_and_sections() -> None:
+def test_ai_brief_user_prompt_uses_shared_manifest_as_only_content_boundary() -> None:
     prompt = AIDiseaseBriefGenerator._user_prompt(
         disease={
             "disease_id": "D001",
@@ -246,8 +206,380 @@ def test_ai_brief_user_prompt_uses_content_text_and_sections() -> None:
     )
 
     assert "Plague is a severe infection caused by Yersinia pestis" in prompt
-    assert '"content_sections"' in prompt
+    assert '"evidence_manifest"' in prompt
+    assert '"supported_sections"' in prompt
+    assert '"content_sections"' not in prompt
     assert '"resolved_url"' in prompt
+
+
+def test_ai_brief_prompt_requires_null_for_unsupported_fields() -> None:
+    system_prompt = AIDiseaseBriefGenerator._system_prompt("en")
+    user_prompt = AIDiseaseBriefGenerator._user_prompt(
+        disease={"disease_id": "D207", "name_en": "Enterovirus 71 infection"},
+        sources=[],
+        language="en",
+    )
+
+    assert "return null for that field" in system_prompt
+    assert "set it to null" in user_prompt
+    assert "absence explanation" in user_prompt
+    assert AIDiseaseBriefGenerator._field({"prevention": None}, "prevention") is None
+
+
+def test_ai_generator_does_not_create_content_fallback_without_evidence() -> None:
+    result = asyncio.run(
+        AIDiseaseBriefGenerator().generate_with_trace(
+            disease={"disease_id": "ANY", "name_en": "Example infection"},
+            sources=[],
+            language="en",
+        )
+    )
+
+    assert result["trace"]["generator"] == "ai"
+    assert result["trace"]["error"]
+    assert result["payload"]["status"] == "requires_review"
+    for field in (
+        "brief",
+        "definition",
+        "clinical_features",
+        "epidemiology",
+        "transmission",
+        "prevention",
+        "surveillance_note",
+        "risk_groups",
+    ):
+        assert result["payload"][field] is None
+
+
+def test_quality_gate_rejects_metadata_and_absence_prose() -> None:
+    payload = {
+        "language": "en",
+        "status": "published",
+        "source_confidence": "medium",
+        "brief": (
+            "The evidence boundary consists mainly of scholarly metadata and article titles. "
+            "The snippets do not describe clinical features, transmission, prevention, or burden."
+        ),
+        "definition": "The available records mainly point to review literature on this topic.",
+        "clinical_features": "Source-backed clinical detail is not yet available.",
+        "epidemiology": "No epidemiologic detail can be stated from the supplied evidence.",
+        "transmission": "The source snippets do not describe transmission.",
+        "prevention": "A publication title discusses vaccines, but details are not yet available.",
+        "surveillance_note": "This record should be read as a placeholder.",
+        "risk_groups": "Risk group assignment would be speculative.",
+        "source_ids": [1],
+        "source_attribution": [{"source_id": 1, "url": "https://example.org/article"}],
+    }
+
+    cleaned, assessment = apply_knowledge_quality_gate(payload)
+
+    assert assessment.display_mode == "blocked"
+    assert assessment.profile_available is False
+    assert cleaned["status"] == "requires_review"
+    assert cleaned["definition"] is None
+    assert cleaned["clinical_features"] is None
+    assert cleaned["metadata"]["knowledge_schema_version"] == 3
+
+
+def test_quality_cleanup_keeps_supported_sentence_and_removes_dominant_limitations() -> None:
+    text = (
+        "The supplied snippets do not identify a formal risk-group list. "
+        "People exposed to infected fleas or mammals in established foci have source-backed ecological exposure [1]. "
+        "More detailed age or comorbidity information is not yet available [1]."
+    )
+
+    cleaned = strip_unavailable_knowledge_sentences(text, "en")
+
+    assert cleaned == "People exposed to infected fleas or mammals in established foci have source-backed ecological exposure [1]."
+
+
+def test_semantic_quality_rejects_bilingual_missing_field_variants() -> None:
+    english = (
+        "No geographic distribution or surveillance burden is described in the supplied sources. "
+        "The available records are scholarly citations rather than epidemiologic studies. "
+        "Source-backed epidemiologic detail is not yet available."
+    )
+    chinese = (
+        "所给来源未包含地理分布、暴发背景或监测负担等流行病学数据。"
+        "目前也没有可直接引用的证据说明该类目具有特定季节性模式。"
+        "具体监测规模和流行特征尚缺乏源支持。"
+    )
+
+    assert assess_knowledge_field(english, "en").available is False
+    assert assess_knowledge_field(chinese, "zh").available is False
+
+
+def test_quality_gate_detects_cross_language_fallback() -> None:
+    result = assess_knowledge_field(
+        "This English paragraph must not silently appear in the Chinese disease profile.",
+        "zh",
+    )
+
+    assert result.status == "language_mismatch"
+    assert result.available is False
+
+
+def test_grounding_content_excludes_title_only_metadata() -> None:
+    assert not has_grounding_content({"raw_excerpt": "Update on enterovirus 71 infection."})
+    assert not has_grounding_content(
+        {
+            "source_type": "web_search",
+            "content_text": "Scholarly metadata: a long article title with publisher, journal, year, and DOI fields.",
+            "metadata": {"content_kind": "scholarly_metadata"},
+        }
+    )
+    assert not has_grounding_content(
+        {
+            "source_type": "pubmed",
+            "content_text": "Review article: Update on enterovirus 71 infection",
+            "raw_excerpt": "Author et al. Update on enterovirus 71 infection. Journal. 2014.",
+        }
+    )
+    assert has_grounding_content(
+        {
+            "content_text": (
+                "Enterovirus surveillance reports describe the disease entity, its observed clinical pattern, "
+                "and the public-health context needed for a grounded summary."
+            )
+        }
+    )
+
+
+def test_evidence_gate_requires_substantive_source_diversity() -> None:
+    wikipedia = {
+        "source_type": "wikipedia",
+        "status": "active",
+        "review_status": "approved",
+        "url": "https://en.wikipedia.org/wiki/Example_disease",
+        "content_text": "A grounded entity summary with epidemiologic and clinical context. " * 12,
+    }
+    pubmed = {
+        "source_type": "pubmed",
+        "status": "active",
+        "review_status": "approved",
+        "url": "https://pubmed.ncbi.nlm.nih.gov/12345/",
+        "content_text": "This abstract describes transmission, manifestations, prevention, and surveillance. " * 10,
+        "metadata": {"content_kind": "abstract"},
+    }
+
+    assert assess_knowledge_evidence([wikipedia]).sufficient is False
+    assessment = assess_knowledge_evidence([wikipedia, pubmed])
+    assert assessment.sufficient is True
+    assert assessment.grounded_source_count == 2
+    assert assessment.scholarly_source_count == 1
+
+
+def test_evidence_gate_rejects_low_relevance_historical_sources() -> None:
+    low_relevance = {
+        "source_type": "pubmed",
+        "status": "active",
+        "review_status": "approved",
+        "url": "https://pubmed.ncbi.nlm.nih.gov/1/",
+        "content_text": "A long but unrelated abstract. " * 60,
+        "metadata": {"content_kind": "abstract", "relevance_score": 0.45},
+    }
+
+    assessment = assess_knowledge_evidence([low_relevance, low_relevance])
+
+    assert assessment.sufficient is False
+    assert assessment.grounded_source_count == 0
+
+
+def test_profile_schema_resolution_is_entity_semantic_not_disease_id_specific() -> None:
+    assert resolve_knowledge_profile_schema(
+        {"disease_id": "ANY", "name_en": "Unspecified viral condition"}
+    ).profile_type == "classification_scope"
+    assert resolve_knowledge_profile_schema(
+        {"disease_id": "ANY", "name_en": "Work-related respiratory condition"}
+    ).profile_type == "occupational_condition"
+    assert resolve_knowledge_profile_schema(
+        {"disease_id": "ANY", "name_en": "Domestic violence event"}
+    ).profile_type == "violence_event"
+    assert resolve_knowledge_profile_schema(
+        {"disease_id": "ANY", "name_en": "Exogenous poisoning"}
+    ).profile_type == "injury_poisoning_event"
+    assert resolve_knowledge_profile_schema(
+        {
+            "disease_id": "ANY",
+            "name_en": "Hepatitis B",
+            "category": "Viral",
+            "description": "Clinical course unspecified by the reporting source",
+        }
+    ).profile_type == "infectious_disease"
+    assert resolve_knowledge_profile_schema(
+        {"disease_id": "ANY", "name_en": "Botulism", "name_zh": "肉毒杆菌中毒", "category": "Bacterial"}
+    ).profile_type == "infectious_disease"
+    assert resolve_knowledge_profile_schema(
+        {"disease_id": "ANY", "name_en": "Example clinical syndrome", "category": "Bacterial"}
+    ).profile_type == "clinical_syndrome_outcome"
+    assert resolve_knowledge_profile_schema(
+        {"disease_id": "ANY", "name_en": "Example post-exposure prophylaxis"}
+    ).profile_type == "public_health_intervention"
+    assert resolve_knowledge_profile_schema(
+        {"disease_id": "ANY", "name_en": "Foodborne disease outbreak", "category": "Bacterial"}
+    ).profile_type == "outbreak_event"
+    assert resolve_knowledge_profile_schema(
+        {"disease_id": "ANY", "name_en": "Exanthematous diseases", "description": "Aggregate national surveillance concept"}
+    ).profile_type == "classification_scope"
+
+
+def test_classification_profile_excludes_not_applicable_fields_from_completeness() -> None:
+    disease = attach_profile_schema(
+        {"disease_id": "ANY", "name_en": "Other classified infections"}
+    )
+    payload = {
+        "language": "en",
+        "status": "published",
+        "brief": "This category groups source-defined surveillance conditions [1].",
+        "definition": "The cited classification defines a residual surveillance category [1].",
+        "clinical_features": "The category includes conditions assigned by the source classification boundary [1].",
+        "epidemiology": "Reported burden reflects the composition of included conditions and coding practice [1].",
+        "surveillance_note": "Trend interpretation must retain the source classification and reporting scope [1].",
+        "source_ids": [1],
+        "source_attribution": [{"source_id": 1, "url": "https://example.org/classification"}],
+        "metadata": {"profile_schema": disease["profile_schema"]},
+    }
+
+    assessment = assess_knowledge_brief(payload, "en", disease=disease)
+
+    assert assessment.display_mode == "full"
+    assert assessment.not_applicable_fields == ("prevention", "risk_groups")
+    assert assessment.fields["prevention"].status == "not_applicable"
+    assert assessment.missing_required_fields == ()
+
+
+def test_targeted_queries_and_inherited_evidence_are_section_scoped() -> None:
+    queries = DiseaseKnowledgeFetcher._web_search_queries(
+        ["Example condition"], ["prevention"]
+    )
+    assert any("prevention control vaccination" in query for query in queries)
+
+    schema = resolve_knowledge_profile_schema({"name_en": "Example infection"})
+    manifest = build_evidence_manifest(
+        [
+            {
+                "id": 9,
+                "content_sections": [
+                    {
+                        "heading": "Symptoms and transmission",
+                        "text": "Clinical symptoms occur, and transmission follows close exposure.",
+                    }
+                ],
+                "metadata": {
+                    "inherited_from_disease_id": "PARENT",
+                    "allowed_sections": ["transmission"],
+                },
+            }
+        ],
+        schema,
+        target_sections=["clinical_features", "transmission"],
+    )
+
+    assert manifest.fragments[0].supported_sections == ("transmission",)
+    assert manifest.fragments[0].inherited_from_disease_id == "PARENT"
+
+
+def test_repair_planner_targets_required_gaps_and_preserves_citation_identity() -> None:
+    disease = attach_profile_schema({"disease_id": "ANY", "name_en": "Example infection"})
+    existing = SimpleNamespace(
+        language="en",
+        brief="Existing overview [1].",
+        definition="Existing definition remains source grounded [1].",
+        clinical_features="Existing clinical features remain source grounded [1].",
+        epidemiology="Existing epidemiology remains source grounded [1].",
+        transmission="Existing transmission remains source grounded [1].",
+        prevention=None,
+        surveillance_note="Existing surveillance interpretation remains source grounded [1].",
+        risk_groups="Existing risk groups remain source grounded [1].",
+        source_ids=[101],
+        source_attribution=[{"source_id": 101, "citation_index": 1, "url": "https://example.org/old"}],
+        metadata_={},
+    )
+    zh_existing = SimpleNamespace(
+        **{
+            **vars(existing),
+            "language": "zh",
+            "brief": "现有疾病概述具有来源支持[1]。",
+            "definition": "现有疾病定义具有来源支持并保持不变[1]。",
+            "clinical_features": "现有临床特征具有来源支持并保持不变[1]。",
+            "epidemiology": "现有流行病学信息具有来源支持并保持不变[1]。",
+            "transmission": "现有传播信息具有来源支持并保持不变[1]。",
+            "prevention": "现有预防信息具有来源支持并保持不变[1]。",
+            "surveillance_note": "现有监测说明具有来源支持并保持不变[1]。",
+            "risk_groups": "现有风险人群信息具有来源支持并保持不变[1]。",
+        }
+    )
+    targets = _profile_repair_sections([existing, zh_existing], disease)
+    assert targets == ["prevention"]
+    assert _profile_repair_sections_by_language([existing, zh_existing], disease) == {
+        "en": ["prevention"],
+        "zh": [],
+    }
+
+    merged = _merge_repair_payload(
+        {
+            "disease_id": "ANY",
+            "language": "en",
+            "brief": None,
+            "prevention": "New prevention evidence is supported by the refreshed source [1].",
+            "source_ids": [202],
+            "source_attribution": [{"source_id": 202, "citation_index": 1, "url": "https://example.org/new"}],
+            "metadata": {"profile_schema": disease["profile_schema"]},
+        },
+        existing,
+        targets,
+        disease,
+    )
+
+    assert merged["definition"] == "Existing definition remains source grounded [1]."
+    assert merged["prevention"] == "New prevention evidence is supported by the refreshed source [2]."
+    assert merged["source_ids"] == [101, 202]
+    assert merged["status"] == "published"
+
+
+def test_ontology_context_exposes_scoped_parent_for_course_variant() -> None:
+    disease = DiseaseKnowledgeUpdateService()._find_disease("D208")
+    related = disease["ontology_context"]["related_entities"]
+
+    assert related[0]["disease_id"] == "D008"
+    assert related[0]["relation_type"] == "clinical_course_of"
+    assert "clinical_features" not in related[0]["allowed_shared_sections"]
+
+
+def test_numbered_pathogen_aliases_are_generic_and_pubmed_excludes_non_latin_terms() -> None:
+    fetcher = DiseaseKnowledgeFetcher(min_interval_seconds=0)
+    disease = {
+        "disease_id": "DTEST",
+        "name_en": "Enterovirus 68 infection",
+        "name_zh": "肠道病毒68型感染",
+    }
+
+    candidates = fetcher._query_candidates(disease)
+    assert "Enterovirus 68" in candidates
+    assert "EV68" in candidates
+    assert "EV-68" in candidates
+    assert "Enterovirus A68" not in candidates
+    search_terms = fetcher._pubmed_search_terms(candidates)
+    assert search_terms
+    assert all("肠道病毒" not in term for term in search_terms)
+
+
+def test_generation_completion_gate_rejects_failed_or_missing_language() -> None:
+    result = {
+        "payload": {
+            "language": "en",
+            "status": "requires_review",
+            "brief": None,
+            "source_ids": [],
+            "source_attribution": [],
+        },
+        "trace": {"error": "model unavailable"},
+    }
+
+    failures = _generated_profile_failures([result])
+    assert any("generator error" in failure for failure in failures)
+    assert any("status is not published" in failure for failure in failures)
+    assert any("zh: profile was not generated" == failure for failure in failures)
 
 
 def test_site_disease_knowledge_fields_inject_bilingual_brief_and_sources() -> None:
@@ -290,7 +622,7 @@ def test_site_disease_knowledge_fields_inject_bilingual_brief_and_sources() -> N
     assert enriched["knowledge_has_authoritative_sources"] is True
 
 
-def test_site_disease_knowledge_fields_mark_catalogue_fallback_for_review() -> None:
+def test_site_disease_knowledge_fields_block_legacy_catalogue_content() -> None:
     disease = {
         "disease_id": "D081",
         "name_en": "Unspecified malaria",
@@ -313,16 +645,16 @@ def test_site_disease_knowledge_fields_mark_catalogue_fallback_for_review() -> N
                 "updated_at": "2026-04-23T00:00:00",
                 "status": "requires_review",
                 "metadata": {
-                    "brief_tier": CATALOGUE_FALLBACK_BRIEF_TIER,
+                    "brief_tier": LEGACY_CATALOGUE_BRIEF_TIER,
                     "fallback_reason": "metadata_only_sources",
                 },
             }
         },
     )
 
-    assert enriched["knowledge_status"] == "requires_review"
-    assert enriched["knowledge_tier"] == "requires_review"
-    assert enriched["knowledge_fallback_reason"] == "metadata_only_sources"
+    assert enriched["knowledge_status"] == "blocked"
+    assert enriched["knowledge_tier"] == "blocked"
+    assert enriched["knowledge_block_reason"] == "metadata_only_sources"
     assert enriched["knowledge_profile_available"] is False
     assert enriched["knowledge_profile_reason"] == "metadata_only_sources"
     assert enriched["official_intro_en"] is None
@@ -356,9 +688,45 @@ def test_site_disease_knowledge_fields_show_profile_for_public_non_authoritative
     assert enriched["knowledge_status"] == "published"
     assert enriched["knowledge_tier"] == "published"
     assert enriched["knowledge_profile_available"] is True
-    assert enriched["knowledge_profile_reason"] is None
+    assert enriched["knowledge_profile_reason"] == "partial_profile"
+    assert enriched["knowledge_display_mode"] == "partial"
     assert enriched["knowledge_has_authoritative_sources"] is False
     assert enriched["official_intro_en"] == "Public-source SARS brief."
+
+
+def test_site_disease_knowledge_fields_publish_partial_content_without_placeholders() -> None:
+    disease = {"disease_id": "D207", "name_en": "Example infection", "name_zh": "示例感染"}
+    enriched = apply_disease_knowledge_fields(
+        disease,
+        {
+            "en": {
+                "language": "en",
+                "status": "published",
+                "brief": "Example infection is a source-documented viral disease [1].",
+                "definition": "The cited public-health source defines Example infection as a viral disease [1].",
+                "clinical_features": "Source-backed clinical detail is not yet available [1].",
+                "transmission": "The supplied snippets do not describe routes of transmission [1].",
+                "source_ids": [1],
+                "source_attribution": [{"source_id": 1, "source_name": "Public source", "url": "https://example.org"}],
+            },
+            "zh": {
+                "language": "zh",
+                "status": "published",
+                "brief": "示例感染是具有公开来源支持的病毒性疾病条目[1]。",
+                "definition": "公开来源将示例感染定义为一种病毒性疾病[1]。",
+                "source_ids": [1],
+                "source_attribution": [{"source_id": 1, "source_name": "Public source", "url": "https://example.org"}],
+            },
+        },
+    )
+
+    assert enriched["knowledge_profile_available"] is True
+    assert enriched["knowledge_display_mode"] == "partial"
+    assert enriched["clinical_features_en"] is None
+    assert enriched["transmission_en"] is None
+    assert enriched["clinical_features_zh"] is None
+    assert enriched["knowledge_field_status"]["clinical_features"]["en"] == "insufficient_evidence"
+    assert enriched["knowledge_language_quality"]["en"]["display_mode"] == "partial"
 
 
 def test_site_country_brief_fields_fallback_from_source_context() -> None:
@@ -424,7 +792,7 @@ def test_build_country_data_skips_non_public_summary_records() -> None:
     assert "D999" not in payload["disease_series"]
 
 
-def test_site_disease_knowledge_fields_without_briefs_keep_metadata_only() -> None:
+def test_site_disease_knowledge_fields_without_briefs_remain_blocked() -> None:
     disease = {
         "disease_id": "D066",
         "name_en": "Other viral infections characterized by skin lesions",
@@ -434,62 +802,23 @@ def test_site_disease_knowledge_fields_without_briefs_keep_metadata_only() -> No
 
     enriched = apply_disease_knowledge_fields(disease, None)
 
-    assert enriched["knowledge_status"] == "fallback"
+    assert enriched["knowledge_status"] == "blocked"
     assert enriched["knowledge_profile_available"] is False
     assert enriched["knowledge_profile_reason"] == "no_published_brief"
     assert enriched["official_intro_en"] is None
 
 
-def test_catalogue_fallback_provides_interpretive_fields() -> None:
-    payload = build_catalogue_disease_brief(
-        {
-            "disease_id": "D017",
-            "name_en": "Measles",
-            "name_zh": "麻疹",
-            "category": "Viral",
-            "description": "Highly contagious viral disease",
-        },
-        "en",
-    )
-
-    assert "surveillance catalogue" in payload["brief"].lower()
-    assert "clinical" in payload["clinical_features"].lower()
-    assert "surveillance" in payload["surveillance_note"].lower()
-    assert "respiratory" in payload["transmission"].lower()
-    assert "Risk groups are not asserted" in payload["risk_groups"]
-
-
-def test_catalogue_payload_marks_fallback_for_review() -> None:
-    payload = build_catalogue_disease_brief_payload(
-        {
-            "disease_id": "D081",
-            "name_en": "Unspecified malaria",
-            "name_zh": "未明示的疟疾",
-            "category": "Parasitic",
-            "description": "",
-        },
-        "en",
-        fallback_reason="metadata_only_sources",
-    )
-
-    assert payload["status"] == "requires_review"
-    assert payload["source_confidence"] == "low"
-    assert payload["source_ids"] == []
-    assert payload["metadata"]["brief_tier"] == CATALOGUE_FALLBACK_BRIEF_TIER
-    assert payload["metadata"]["fallback_reason"] == "metadata_only_sources"
-
-
-def test_resolve_knowledge_status_treats_catalogue_fallback_as_review() -> None:
+def test_resolve_knowledge_status_blocks_legacy_catalogue_content() -> None:
     status = resolve_disease_knowledge_status(
         [
             {
                 "status": "requires_review",
-                "metadata": {"brief_tier": CATALOGUE_FALLBACK_BRIEF_TIER},
+                "metadata": {"brief_tier": LEGACY_CATALOGUE_BRIEF_TIER},
             }
         ]
     )
 
-    assert status == "requires_review"
+    assert status == "blocked"
 
 
 def test_should_generate_public_disease_page_skips_summary_rows() -> None:

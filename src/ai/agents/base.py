@@ -189,6 +189,7 @@ class BaseAgent(ABC):
     ) -> Tuple[List[Dict[str, Any]], List[str]]:
         candidates: List[Dict[str, Any]] = []
         chain_used: List[str] = []
+        runtime_model_names: set[str] = set()
 
         if runtime_routes:
             for route in runtime_routes:
@@ -210,6 +211,29 @@ class BaseAgent(ABC):
                         "route_key": route_key,
                         "model_name": model_name,
                         "route": route,
+                    }
+                )
+                runtime_model_names.add(model_name)
+
+            # Runtime routes are preferred, but a stale model-center health
+            # snapshot must not make generation impossible when the configured
+            # provider chain is still usable. Append direct configuration
+            # routes as model failover candidates; content quality gates remain
+            # unchanged and no generated-text fallback is introduced.
+            chain = BaseAgent.AVAILABLE_MODEL_CHAIN
+            if chain is None:
+                chain = getattr(self.config.ai, "model_chain", None) or []
+            chain_used = list(chain)
+            for model_name in chain:
+                if model_name in runtime_model_names:
+                    continue
+                if not ignore_local_cooldowns and BaseAgent._is_model_cooling_down(model_name):
+                    continue
+                candidates.append(
+                    {
+                        "route_key": model_name,
+                        "model_name": model_name,
+                        "route": None,
                     }
                 )
             return candidates, chain_used
@@ -539,6 +563,7 @@ class BaseAgent(ABC):
         # Internal retry guard for a one-shot quota recovery pass.
         quota_recovery_attempted = bool(kwargs.pop("_quota_recovery_attempted", False))
         quota_recovery_round = int(kwargs.pop("_quota_recovery_round", 0) or 0)
+        recovery_round_override = kwargs.pop("max_quota_recovery_rounds", None)
         preferred_models_raw = kwargs.pop("preferred_models", None)
         preferred_models = (
             [item for item in preferred_models_raw if isinstance(item, str)]
@@ -805,7 +830,11 @@ class BaseAgent(ABC):
         # 所有模型都失败
         self.model = original_model
 
-        max_recovery_rounds = int(getattr(self.config.ai, "rate_limit_recovery_max_rounds", 1) or 1)
+        max_recovery_rounds = (
+            max(0, int(recovery_round_override))
+            if recovery_round_override is not None
+            else int(getattr(self.config.ai, "rate_limit_recovery_max_rounds", 1) or 1)
+        )
         if saw_quota_failure and quota_recovery_round < max_recovery_rounds:
             wait_cap_seconds = max(
                 3,
@@ -832,6 +861,7 @@ class BaseAgent(ABC):
                 system=system,
                 use_cache=use_cache,
                 preferred_models=preferred_models,
+                max_quota_recovery_rounds=max_recovery_rounds,
                 _quota_recovery_attempted=True,
                 _quota_recovery_round=quota_recovery_round + 1,
                 **kwargs,

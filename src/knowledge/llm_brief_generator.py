@@ -9,8 +9,11 @@ from typing import Any
 
 from src.ai.agents.base import BaseAgent
 from src.core import get_config, get_logger
-from src.knowledge.brief_generator import DISCLAIMER_EN, DISCLAIMER_ZH, SourceGroundedBriefGenerator
+from src.knowledge.brief_generator import DISCLAIMER_EN, DISCLAIMER_ZH
 from src.knowledge.citations import normalize_knowledge_citations
+from src.knowledge.evidence import build_evidence_manifest
+from src.knowledge.profile_schema import resolve_knowledge_profile_schema
+from src.knowledge.quality import apply_knowledge_quality_gate
 
 logger = get_logger(__name__)
 
@@ -37,9 +40,11 @@ class KnowledgeBriefAgent(BaseAgent):
 class AIDiseaseBriefGenerator:
     """Generate source-grounded disease briefs with model-center routing."""
 
+    PUBLIC_SOURCE_TYPES = {"who", "who_don", "web_search", "wikidata", "wikipedia", "pubmed"}
+    AUTHORITATIVE_SOURCE_TYPES = {"who", "who_don"}
+
     def __init__(self, agent: KnowledgeBriefAgent | None = None) -> None:
         self.agent = agent
-        self.template_generator = SourceGroundedBriefGenerator()
 
     async def generate(
         self,
@@ -59,18 +64,32 @@ class AIDiseaseBriefGenerator:
         language: str,
     ) -> dict[str, Any]:
         language = "zh" if language == "zh" else "en"
-        baseline = self.template_generator.generate(disease=disease, sources=sources, language=language)
-        usable_sources = self.template_generator._usable_sources(sources)
-        public_sources = [src for src in usable_sources if str(src.get("source_type") or "") != "msd"]
+        profile_schema = resolve_knowledge_profile_schema(disease)
+        target_sections = (
+            list(disease.get("target_sections") or [])
+            if "target_sections" in disease
+            else list(profile_schema.required_fields)
+        )
+        evidence_target_sections = list(
+            disease.get("evidence_target_sections") or target_sections or profile_schema.required_fields
+        )
+        public_sources = self._usable_public_sources(sources)
+        scaffold = self._empty_scaffold(
+            disease=disease,
+            sources=public_sources,
+            language=language,
+            profile_schema=profile_schema,
+            target_sections=target_sections,
+        )
         preferred_models, shard_index, shard_key = self._preferred_models_for(
             disease_id=str(disease.get("disease_id") or ""),
             language=language,
         )
         if not public_sources:
             return {
-                "payload": baseline,
+                "payload": scaffold,
                 "trace": {
-                    "generator": "template",
+                    "generator": "ai",
                     "language": language,
                     "preferred_models": preferred_models,
                     "shard_index": shard_index,
@@ -82,12 +101,17 @@ class AIDiseaseBriefGenerator:
                     "prompt": None,
                     "system_prompt": None,
                     "response": None,
-                    "error": None,
+                    "error": "No approved public evidence with substantive content",
                     "cache_hit": False,
                 },
             }
 
         source_ids = [src.get("id") for src in public_sources if src.get("id") is not None]
+        evidence_manifest = build_evidence_manifest(
+            public_sources,
+            profile_schema,
+            target_sections=evidence_target_sections,
+        )
         system = self._system_prompt(language)
         prompt = self._user_prompt(disease=disease, sources=public_sources, language=language)
         agent = self._spawn_agent()
@@ -99,22 +123,23 @@ class AIDiseaseBriefGenerator:
                 system=system,
                 use_cache=True,
                 preferred_models=preferred_models,
+                max_quota_recovery_rounds=0,
             )
             duration = time.time() - started_at
             latest_conversation = agent.get_latest_conversation() or {}
             parsed = self._parse_json(response)
         except Exception as exc:
             logger.warning("AI disease brief generation failed for %s/%s: %s", disease.get("disease_id"), language, exc)
-            baseline["review_notes"] = f"{baseline.get('review_notes') or ''}; AI generation failed: {exc}".strip("; ")
-            baseline["metadata"] = {
-                **(baseline.get("metadata") or {}),
+            scaffold["review_notes"] = f"AI generation failed: {exc}"
+            scaffold["metadata"] = {
+                **(scaffold.get("metadata") or {}),
                 "ai_generation_failed": str(exc),
                 "preferred_models": preferred_models,
                 "shard_index": shard_index,
                 "shard_key": shard_key,
             }
             return {
-                "payload": baseline,
+                "payload": scaffold,
                 "trace": {
                     "generator": "ai",
                     "language": language,
@@ -139,23 +164,24 @@ class AIDiseaseBriefGenerator:
         actual_duration = float(latest_conversation.get("duration") or duration or 0.0)
         cache_hit = bool((latest_conversation.get("metadata") or {}).get("cache_hit")) if isinstance(latest_conversation.get("metadata"), dict) else False
 
+        clinical_features = self._field(parsed, "clinical_features")
         merged = {
-            **baseline,
-            "brief": self._field(parsed, "brief", baseline["brief"]),
-            "definition": self._field(parsed, "definition", baseline["definition"]),
-            "clinical_features": self._field(parsed, "clinical_features", baseline["clinical_features"]),
-            "epidemiology": self._field(parsed, "epidemiology", baseline["epidemiology"]),
-            "transmission": self._field(parsed, "transmission", baseline["transmission"]),
-            "prevention": self._field(parsed, "prevention", baseline["prevention"]),
-            "surveillance_note": self._field(parsed, "surveillance_note", baseline["surveillance_note"]),
-            "clinical_summary": self._field(parsed, "clinical_summary", baseline["clinical_summary"] or baseline["clinical_features"]),
-            "risk_groups": self._field(parsed, "risk_groups", baseline["risk_groups"]),
+            **scaffold,
+            "brief": self._field(parsed, "brief"),
+            "definition": self._field(parsed, "definition"),
+            "clinical_features": clinical_features,
+            "epidemiology": self._field(parsed, "epidemiology"),
+            "transmission": self._field(parsed, "transmission"),
+            "prevention": self._field(parsed, "prevention"),
+            "surveillance_note": self._field(parsed, "surveillance_note"),
+            "clinical_summary": clinical_features,
+            "risk_groups": self._field(parsed, "risk_groups"),
             "source_ids": source_ids,
-            "source_attribution": baseline["source_attribution"],
+            "source_attribution": scaffold["source_attribution"],
             "disclaimer": DISCLAIMER_ZH if language == "zh" else DISCLAIMER_EN,
             "model": model_used or "ai-model-center",
             "metadata": {
-                **(baseline.get("metadata") or {}),
+                **(scaffold.get("metadata") or {}),
                 "generator": "AIDiseaseBriefGenerator",
                 "ai_model": model_used,
                 "ai_provider": provider_used,
@@ -165,17 +191,20 @@ class AIDiseaseBriefGenerator:
                 "token_usage": token_usage,
                 "cache_hit": cache_hit,
                 "version": 1,
+                "profile_schema": profile_schema.to_dict(),
+                "evidence_manifest": evidence_manifest.to_dict(),
+                "target_sections": target_sections,
+                "evidence_target_sections": evidence_target_sections,
             },
         }
         merged = normalize_knowledge_citations(merged, marker_mode="position")
-        validation = self.template_generator.validate(merged)
-        if not validation.ok:
-            merged["status"] = "requires_review"
-            merged["quality_score"] = min(float(merged.get("quality_score") or 0.5), 0.5)
-            merged["review_notes"] = "; ".join(validation.issues)
-        elif merged.get("status") == "published":
-            merged["quality_score"] = max(float(merged.get("quality_score") or 0.0), 0.9)
-            merged["review_notes"] = "AI-generated, source-grounded brief; ready for human spot review."
+        merged, assessment = apply_knowledge_quality_gate(merged)
+        if assessment.publishable:
+            merged["review_notes"] = (
+                "AI-generated, source-grounded brief; ready for human spot review."
+                if assessment.display_mode == "full"
+                else "AI-generated partial brief; unsupported fields were omitted and remain queued for enrichment."
+            )
         return {
             "payload": merged,
             "trace": {
@@ -193,6 +222,104 @@ class AIDiseaseBriefGenerator:
                 "response": response,
                 "error": None,
                 "cache_hit": cache_hit,
+            },
+        }
+
+    @classmethod
+    def _usable_public_sources(cls, sources: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        usable: list[dict[str, Any]] = []
+        for source in sources:
+            if str(source.get("source_type") or "") not in cls.PUBLIC_SOURCE_TYPES:
+                continue
+            if str(source.get("status") or "active") != "active":
+                continue
+            if str(source.get("review_status") or "pending") != "approved":
+                continue
+            metadata = source.get("metadata") if isinstance(source.get("metadata"), dict) else {}
+            try:
+                if metadata.get("relevance_score") is not None and float(metadata["relevance_score"]) < 0.5:
+                    continue
+            except (TypeError, ValueError):
+                continue
+            if not any(
+                source.get(field)
+                for field in ("content_text", "content_sections", "raw_excerpt")
+            ):
+                continue
+            usable.append(source)
+        return usable[:8]
+
+    @classmethod
+    def _empty_scaffold(
+        cls,
+        *,
+        disease: dict[str, Any],
+        sources: list[dict[str, Any]],
+        language: str,
+        profile_schema: Any,
+        target_sections: list[str],
+    ) -> dict[str, Any]:
+        source_types = {str(source.get("source_type") or "") for source in sources}
+        confidence = (
+            "high"
+            if source_types & cls.AUTHORITATIVE_SOURCE_TYPES
+            else "medium"
+            if source_types & {"wikidata", "wikipedia", "pubmed"}
+            else "low"
+        )
+        attribution = []
+        for source in sources:
+            metadata = source.get("metadata") if isinstance(source.get("metadata"), dict) else {}
+            attribution.append(
+                {
+                    "id": source.get("id"),
+                    "source_id": source.get("source_id") or source.get("id"),
+                    "source_name": source.get("source_name"),
+                    "source_type": source.get("source_type"),
+                    "title": source.get("title"),
+                    "url": source.get("url"),
+                    "resolved_url": source.get("resolved_url") or source.get("url"),
+                    "license": source.get("license"),
+                    "fetched_at": source.get("fetched_at"),
+                    "pmid": metadata.get("pmid") or source.get("pmid"),
+                    "doi": metadata.get("doi") or source.get("doi"),
+                    "first_author": metadata.get("first_author") or source.get("first_author"),
+                    "journal": metadata.get("journal") or source.get("journal"),
+                    "pub_date": metadata.get("pub_date") or source.get("pub_date"),
+                    "container_title": metadata.get("container_title") or source.get("container_title"),
+                    "publisher": metadata.get("publisher") or source.get("publisher"),
+                    "year": metadata.get("year") or source.get("year"),
+                    "provider": metadata.get("provider") or source.get("provider"),
+                    "content_kind": metadata.get("content_kind") or source.get("content_kind"),
+                    "metadata": metadata,
+                }
+            )
+        return {
+            "disease_id": disease.get("disease_id"),
+            "language": language,
+            "brief": None,
+            "definition": None,
+            "clinical_features": None,
+            "epidemiology": None,
+            "clinical_summary": None,
+            "transmission": None,
+            "prevention": None,
+            "surveillance_note": None,
+            "risk_groups": None,
+            "source_ids": [source.get("id") for source in sources if source.get("id") is not None],
+            "source_attribution": attribution,
+            "disclaimer": DISCLAIMER_ZH if language == "zh" else DISCLAIMER_EN,
+            "model": "ai-model-center",
+            "status": "requires_review",
+            "source_confidence": confidence,
+            "quality_score": 0.0,
+            "review_notes": "Awaiting evidence-grounded AI generation.",
+            "metadata": {
+                "source_types": sorted(source_types),
+                "generator": "AIDiseaseBriefGenerator",
+                "version": 1,
+                "profile_schema": profile_schema.to_dict(),
+                "target_sections": target_sections,
             },
         }
 
@@ -225,15 +352,20 @@ class AIDiseaseBriefGenerator:
     def _system_prompt(language: str) -> str:
         output_language = "Chinese" if language == "zh" else "English"
         return (
-            "You generate detailed infectious-disease knowledge briefs for a surveillance website. "
-            "Knowledge brief schema version 2. "
+            "You generate evidence-grounded public-health knowledge profiles for a surveillance website. "
+            "The entity may be an infectious disease, classification scope, clinical syndrome/outcome, public-health intervention, outbreak, occupational condition, injury/poisoning event, or violence event. "
+            "Knowledge brief schema version 4. "
             "Write in a scholarly public-health register, closer to an encyclopedia abstract or WHO fact note than to marketing copy or a chat response. "
             "Use ONLY the provided catalogue fields and source snippets/metadata. Do not add facts that are not supported. "
             "Every concrete detail must be directly supported by the snippets, parsed page text, or structured metadata; do not use outside medical knowledge. "
-            "If the snippets do not state a detail such as timing, vaccine schedule, transmission persistence, severity pattern, or specific high-risk groups, omit it or say source-backed detail is not yet available. "
+            "If the snippets do not support a field, return null for that field. Never fill a field with prose explaining that information is unavailable. "
             "Do not reuse boilerplate or placeholder phrases when the source material provides usable detail. "
-            "Each field should be a substantive paragraph, not a label, and the combined result should read like a serious academic disease profile. "
-            "Treat the fields as follows: definition = disease identity and etiologic characterization; clinical_features = syndrome, severity, course, and complications; epidemiology = geographic distribution, outbreak context, reservoir or exposure ecology, and surveillance burden; transmission = route or exposure mechanism; prevention = public-health or exposure-control measures; surveillance_note = how to read the disease in monitoring context. "
+            "Each non-null field should be a substantive paragraph, not a label, and the combined result should read like a serious academic disease profile. "
+            "Use the profile_schema labels and applicability rules from the payload to interpret each stable storage field. "
+            "Never generate content for not_applicable_fields. For classification scopes, describe inclusion boundaries instead of inventing clinical facts. "
+            "For occupational, injury, poisoning, or violence entities, use exposure mechanism and health consequences rather than infectious-disease transmission language. "
+            "Every evidence fragment may be used only for its supported_sections. Fragments with an empty supported_sections list are not evidence for any output field. "
+            "Inherited evidence fragments are additionally restricted to their explicit allowed sections; they cannot support subtype-specific course, burden, or population claims. "
             "Do not provide diagnosis, treatment, dosing, or personal medical advice. "
             "Summarize in your own words and avoid copying long source passages. "
             "\n\n"
@@ -248,7 +380,7 @@ class AIDiseaseBriefGenerator:
             "\n\n"
             f"Write in {output_language}. Return one valid JSON object only with keys: "
             "brief, definition, clinical_features, epidemiology, transmission, prevention, surveillance_note, risk_groups. "
-            "Each value must be a plain string suitable for public-health surveillance interpretation. "
+            "Each value must be either a plain string suitable for public-health surveillance interpretation or null when evidence is insufficient. "
             "Target length: brief 2-5 sentences; definition 2-4 sentences; clinical_features 3-5 sentences; epidemiology 3-5 sentences; transmission/prevention/surveillance_note 2-4 sentences each. "
             "Prefer a readable public-health profile over a terse dictionary entry. "
             "If headings or page structure are available in the source payload, use them to organize the prose without quoting them verbatim. "
@@ -257,10 +389,23 @@ class AIDiseaseBriefGenerator:
 
     @staticmethod
     def _user_prompt(*, disease: dict[str, Any], sources: list[dict[str, Any]], language: str) -> str:
+        profile_schema = resolve_knowledge_profile_schema(disease)
+        target_sections = (
+            list(disease.get("target_sections") or [])
+            if "target_sections" in disease
+            else list(profile_schema.required_fields)
+        )
+        evidence_target_sections = list(
+            disease.get("evidence_target_sections") or target_sections or profile_schema.required_fields
+        )
+        evidence_manifest = build_evidence_manifest(
+            sources[:8],
+            profile_schema,
+            target_sections=evidence_target_sections,
+        )
         source_payload = []
         for index, src in enumerate(sources[:8], start=1):
-            content_text = src.get("content_text") or src.get("raw_excerpt") or src.get("snippet") or src.get("description") or ""
-            sections = src.get("content_sections") or []
+            source_metadata = src.get("metadata") if isinstance(src.get("metadata"), dict) else {}
             source_payload.append(
                 {
                     "citation_ref": index,
@@ -271,10 +416,9 @@ class AIDiseaseBriefGenerator:
                     "url": src.get("url"),
                     "resolved_url": src.get("resolved_url"),
                     "license": src.get("license"),
-                    "content_text": _clip(content_text, 1500),
-                    "content_sections": sections[:6],
-                    "snippet": _clip(src.get("raw_excerpt") or src.get("snippet") or src.get("description") or "", 500),
                     "review_status": src.get("review_status"),
+                    "inherited_from_disease_id": source_metadata.get("inherited_from_disease_id"),
+                    "allowed_sections": source_metadata.get("allowed_sections"),
                 }
             )
         payload = {
@@ -287,13 +431,20 @@ class AIDiseaseBriefGenerator:
                 "description": disease.get("description"),
                 "icd_10": disease.get("icd_10"),
                 "icd_11": disease.get("icd_11"),
+                "ontology_context": disease.get("ontology_context") or {},
             },
+            "profile_schema": profile_schema.to_dict(),
+            "target_sections": target_sections,
+            "evidence_manifest": evidence_manifest.to_dict(include_text=True),
             "sources": source_payload,
         }
         return (
-            "Create a high-value but conservative disease profile from this JSON payload. "
+            "Create a high-value but conservative public-health profile from this JSON payload. "
             "Keep the tone formal, clinical, and academically useful. "
-            "Use the source snippets as the evidence boundary. If a field is not supported by the snippets, say that source-backed detail is not yet available instead of guessing. "
+            "The evidence_manifest is the only factual evidence boundary; the sources array is attribution metadata only. "
+            "Use a fragment only for the fields listed in its supported_sections. If a field has no supporting fragment, set it to null instead of guessing or writing an absence explanation. "
+            "Generate only target_sections (plus brief when it is targeted); return null for other fields so already-published sections can remain locked. "
+            "Use the same evidence_manifest fragments and citation references for both language runs. "
             "Do not add facts from general memory. "
             "Write in fluent, readable prose that gives the page enough substance to be useful at a glance.\n\n"
             f"{json.dumps(payload, ensure_ascii=False, indent=2)}"
@@ -317,15 +468,10 @@ class AIDiseaseBriefGenerator:
         return parsed
 
     @staticmethod
-    def _field(payload: dict[str, Any], key: str, fallback: str) -> str:
+    def _field(payload: dict[str, Any], key: str) -> str | None:
+        if key in payload and payload.get(key) is None:
+            return None
         value = payload.get(key)
         if not isinstance(value, str) or not value.strip():
-            return fallback
+            return None
         return " ".join(value.split())
-
-
-def _clip(value: Any, limit: int) -> str:
-    text = " ".join(str(value or "").split())
-    if len(text) <= limit:
-        return text
-    return text[:limit].rstrip() + "..."

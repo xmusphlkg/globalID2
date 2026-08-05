@@ -362,8 +362,8 @@ function CreateDiseaseKnowledgeTaskModal({
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [selectedSources, setSelectedSources] = useState<string[]>(["who", "wikidata", "wikipedia"]);
-  const [forceRefresh, setForceRefresh] = useState(true);
-  const [generator, setGenerator] = useState<"ai" | "auto" | "template">("ai");
+  const [forceRefresh, setForceRefresh] = useState(false);
+  const [generator, setGenerator] = useState<"ai" | "auto">("ai");
   const [priority, setPriority] = useState<"low" | "normal" | "high" | "urgent">("normal");
   const [taskName, setTaskName] = useState("");
   const [description, setDescription] = useState("");
@@ -680,7 +680,6 @@ function CreateDiseaseKnowledgeTaskModal({
                   <select value={generator} onChange={(e) => setGenerator(e.target.value as typeof generator)} className={inputCls}>
                     <option value="ai">ai</option>
                     <option value="auto">auto</option>
-                    <option value="template">template</option>
                   </select>
                 </div>
 
