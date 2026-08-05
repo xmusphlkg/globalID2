@@ -43,6 +43,7 @@ async def lifespan(app: FastAPI):
     from .routers.tasks import task_hub
     from src.services.automation_service import automation_service
     from src.services.data_release_service import data_release_service
+
     task_manager.set_broadcast_hook(task_hub.broadcast)
     logger.info("Task broadcast hook registered")
 
@@ -88,7 +89,9 @@ def create_app() -> FastAPI:
         try:
             require_dashboard_api_key(request)
         except HTTPException as exc:
-            return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+            return JSONResponse(
+                status_code=exc.status_code, content={"detail": exc.detail}
+            )
 
         return await call_next(request)
 
@@ -114,6 +117,8 @@ def create_app() -> FastAPI:
     async def health():
         from sqlalchemy import text
         from src.core import get_database
+        from src.core.disease_cutover import get_disease_cutover_config
+
         db_ok = False
         try:
             async with get_database() as db:
@@ -122,7 +127,11 @@ def create_app() -> FastAPI:
         except Exception:
             pass
         status = "ok" if db_ok else "degraded"
-        return {"status": status, "db": "ok" if db_ok else "error"}
+        return {
+            "status": status,
+            "db": "ok" if db_ok else "error",
+            "disease_cutover": get_disease_cutover_config().operational_summary(),
+        }
 
     return app
 

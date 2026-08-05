@@ -6,7 +6,7 @@ from typing import Optional
 
 EXPECTED_SCOPES_BY_COUNTRY = {
     "CN": ["cdc_weekly", "nhc", "pubmed"],
-    "US": ["nndss_api"],
+    "US": ["nndss_api", "nhss_hiv"],
     "JP": ["jp_weekly"],
     "AU": ["all"],
     "TW": ["nidss_open_data"],
@@ -36,6 +36,10 @@ SOURCE_SCOPE_LABELS: dict[str, dict[str, str]] = {
     "nndss_api": {
         "en": "US CDC NNDSS",
         "zh": "美国 CDC NNDSS",
+    },
+    "nhss_hiv": {
+        "en": "US CDC NHSS HIV",
+        "zh": "美国 CDC NHSS HIV 监测",
     },
     "jp_weekly": {
         "en": "JP NIID Weekly",
@@ -75,6 +79,8 @@ _EXACT_SCOPE_BY_DATA_SOURCE = {
     "china cdc weekly: notifiable infectious diseases reports": "cdc_weekly",
     "us cdc nndss": "nndss_api",
     "us cdc nndss weekly": "nndss_api",
+    "us cdc nhss": "nhss_hiv",
+    "us cdc nhss hiv": "nhss_hiv",
     "japan niid weekly sentinel": "jp_weekly",
     "jp niid weekly sentinel": "jp_weekly",
     "taiwan, china cdc nidss open data": "nidss_open_data",
@@ -107,6 +113,10 @@ _EXACT_SCOPE_BY_DATA_SOURCE = {
 
 _TASK_SOURCE_ALIASES = {
     "gov": "nhc",
+    "nndss": "nndss_api",
+    "nhss": "nhss_hiv",
+    "nhss_hiv": "nhss_hiv",
+    "hiv_nhss": "nhss_hiv",
     "jp_idwr": "jp_weekly",
     "pubmed_rss": "pubmed",
     "au": "all",
@@ -292,6 +302,8 @@ def scope_from_data_source(data_source: Optional[str]) -> str:
         return "jp_weekly"
     if "nndss" in text:
         return "nndss_api"
+    if "nhss" in text:
+        return "nhss_hiv"
     if "nidss" in text or "taiwan cdc" in text or "taiwan, china cdc" in text:
         return "nidss_open_data"
     if "hong kong, china chp" in text or "hong kong chp" in text or "chp notifiable" in text:

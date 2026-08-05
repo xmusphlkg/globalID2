@@ -12,10 +12,7 @@ Key improvements over the original DataProcessor._save_to_database:
 
 from __future__ import annotations
 
-import asyncio
-import hashlib
 from datetime import datetime, time, timezone
-from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
@@ -60,6 +57,7 @@ class RecordStore:
         country_code: str,
         *,
         cleanup_adjacent_duplicates: bool = True,
+        db: AsyncSession | None = None,
     ) -> Tuple[int, int, int]:
         """
         Batch-upsert a standardised DataFrame into the database.
@@ -72,6 +70,8 @@ class RecordStore:
             country_code:               Uppercase country code (e.g. "CN").
             cleanup_adjacent_duplicates: Whether to clean up adjacent duplicate snapshots
                                          before committing.
+            db:                         Optional caller-owned session.  Supplying it lets
+                                        legacy and source-series writes share one transaction.
 
         Returns:
             Tuple of ``(upserted_count, skipped_count, dedup_deleted_count)``.
@@ -81,44 +81,67 @@ class RecordStore:
             return 0, 0, 0
 
         try:
-            async with get_db() as db:
-                country = await self._get_country(db, country_code)
-                if country is None:
-                    logger.warning(f"[RecordStore] Country not found | code={country_code}")
-                    return 0, len(df), 0
-
-                # 1️⃣  Batch-load disease_code → diseases.id mappings (eliminates N+1)
-                disease_map = await self._batch_load_diseases(db, df)
-
-                # 2️⃣  Build record list
-                records, skipped = self._build_records(df, country.id, disease_map)
-
-                if not records:
-                    logger.warning(f"[RecordStore][{country_code}] No valid records to write (all skipped)")
-                    return 0, skipped, 0
-
-                # 3️⃣  PostgreSQL batch upsert (single SQL statement)
-                upserted = await self._upsert_records(db, records)
-
-                # 4️⃣  Optional: clean up adjacent duplicate snapshots
-                dedup_deleted = 0
-                if cleanup_adjacent_duplicates:
-                    dedup_deleted = await self._cleanup_adjacent_duplicate_snapshots(
-                        db, country.id
-                    )
-
-                await db.commit()
-
-            if upserted > 0:
-                logger.info(
-                    f"[RecordStore][{country_code}] Upsert done"
-                    f" | upserted={upserted} skipped={skipped} dedup_deleted={dedup_deleted}"
+            if db is not None:
+                return await self._save_dataframe_in_session(
+                    db,
+                    df,
+                    country_code,
+                    cleanup_adjacent_duplicates=cleanup_adjacent_duplicates,
                 )
-            return upserted, skipped, dedup_deleted
 
+            async with get_db() as owned_db:
+                return await self._save_dataframe_in_session(
+                    owned_db,
+                    df,
+                    country_code,
+                    cleanup_adjacent_duplicates=cleanup_adjacent_duplicates,
+                )
         except Exception:
             logger.exception(f"[RecordStore][{country_code}] DB write failed")
             raise
+
+    async def _save_dataframe_in_session(
+        self,
+        db: AsyncSession,
+        df: pd.DataFrame,
+        country_code: str,
+        *,
+        cleanup_adjacent_duplicates: bool,
+    ) -> Tuple[int, int, int]:
+        """Write using ``db`` without committing the caller-owned transaction."""
+        country = await self._get_country(db, country_code)
+        if country is None:
+            logger.warning(f"[RecordStore] Country not found | code={country_code}")
+            return 0, len(df), 0
+
+        # 1️⃣  Batch-load disease_code → diseases.id mappings (eliminates N+1)
+        disease_map = await self._batch_load_diseases(db, df)
+
+        # 2️⃣  Build record list
+        records, skipped = self._build_records(df, country.id, disease_map)
+
+        if not records:
+            logger.warning(
+                f"[RecordStore][{country_code}] No valid records to write (all skipped)"
+            )
+            return 0, skipped, 0
+
+        # 3️⃣  PostgreSQL batch upsert (single SQL statement)
+        upserted = await self._upsert_records(db, records)
+
+        # 4️⃣  Optional: clean up adjacent duplicate snapshots
+        dedup_deleted = 0
+        if cleanup_adjacent_duplicates:
+            dedup_deleted = await self._cleanup_adjacent_duplicate_snapshots(
+                db, country.id
+            )
+
+        if upserted > 0:
+            logger.info(
+                f"[RecordStore][{country_code}] Upsert done"
+                f" | upserted={upserted} skipped={skipped} dedup_deleted={dedup_deleted}"
+            )
+        return upserted, skipped, dedup_deleted
 
     # ─────────────────────────────────────────────────────────────────────────
     # Internal helpers

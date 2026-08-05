@@ -38,7 +38,7 @@ D205,Tick-borne encephalitis (TBE),tick-borne_encephalitis,Notifiable,TBE|Tick-b
 D122,Trichinellosis,trichinellosis,Notifiable,,Switzerland FOPH IDD,IDD annual case series
 D025,Tuberculosis,tuberculosis,Notifiable,TB,Switzerland FOPH IDD,IDD annual case series
 D123,Tularaemia,tularemia,Notifiable,Tularemia,Switzerland FOPH IDD,IDD monthly case series
-D026,Typhoid and paratyphoid fever,typhoidParatyphoidFever,Notifiable,Typhoid fever|Paratyphoid fever,Switzerland FOPH IDD,IDD annual aggregate case series
+D026,Typhoid and paratyphoid fever,typhoidParatyphoidFever,Notifiable,Enteric fever|Typhoid and paratyphoid fever combined,Switzerland FOPH IDD,IDD annual aggregate case series
 D128,West Nile fever,westnileFever,Notifiable,West Nile virus,Switzerland FOPH IDD,IDD annual case series
 D059,Yellow fever,yellowFever,Notifiable,,Switzerland FOPH IDD,IDD annual case series
 D051,Zika virus infection,zika,Notifiable,Zika virus disease|Zika,Switzerland FOPH IDD,IDD annual case series

@@ -1,19 +1,27 @@
-disease_id,local_name,local_code,category,aliases,data_source,notes
+disease_id,local_name,local_code,category,aliases,data_source,notes,source_id,series_id
 D001,Plague,Plague,Notifiable,,US CDC,
 D002,Cholera,Cholera,Notifiable,"Cholera (toxigenic Vibrio cholerae O1 or O139)",US CDC,
 D003,SARS,SARS,Notifiable,"Severe acute respiratory syndrome-associated coronavirus disease|Severe Acute Respiratory Syndrome",US CDC,Historical weekly label uses the SARS-associated coronavirus phrasing and should be reviewed separately from COVID-19
 D004,COVID-19,COVID-19,Notifiable,Coronavirus Disease 2019|SARS-CoV-2|2019-nCoV,US CDC,No authoritative national weekly case-total label in current feed
-D005,AIDS,AIDS,Notifiable,HIV|Human Immunodeficiency Virus|Acquired Immunodeficiency Syndrome,US CDC,No direct TOTAL match in current weekly feed
-D006,Hepatitis,Hepatitis,Notifiable,Viral Hepatitis,US CDC,Aggregate fallback only
-D007,Hepatitis A,Hepatitis A,Notifiable,"Hep A|Hepatitis A, acute|Hepatitis, A, acute",US CDC,Keep acute primary label only
-D008,Hepatitis B,Hepatitis B,Notifiable,"Hep B|Hepatitis B, acute",US CDC,Keep acute primary label only
-D009,Hepatitis C,Hepatitis C,Notifiable,"Hep C|HCV|Hepatitis C, acute, Confirmed|Hepatitis C, acute, confirmed",US CDC,Keep acute primary label only
+D005,AIDS classifications,AIDS,Notifiable,AIDS|Acquired Immunodeficiency Syndrome|HIV stage 3|Stage 3 (AIDS) classifications,US CDC NHSS,Annual national AIDS classifications from the AtlasPlus historical extract; do not add to all-stage HIV diagnoses,SRC_US_NHSS,SER_US_NHSS_AIDS_ANNUAL
+D162,HIV diagnoses among persons aged 13 years and older,HIV diagnoses,Notifiable,HIV diagnoses|Human Immunodeficiency Virus diagnoses,US CDC NHSS,Annual national NHSS diagnoses by year of diagnosis for persons aged 13 years and older,SRC_US_NHSS,SER_US_NHSS_HIV_ANNUAL
+D007,"Hepatitis A, Confirmed",10110,Notifiable,"Hep A|Hepatitis A, acute|Hepatitis, A, acute",US CDC NNDSS,Hepatitis A is an acute surveillance condition,SRC_US_NNDSS,SER_US_HEPATITIS_A_CONFIRMED
+D068,"Hepatitis B, acute, Confirmed",10100,Notifiable,"Hepatitis B, acute|Hepatitis, B, acute",US CDC NNDSS,Confirmed component of the acute hepatitis B series,SRC_US_NNDSS,SER_US_ACUTE_HEPATITIS_B_CONFIRMED
+D068,"Hepatitis B, acute, Probable",10100,Notifiable,,US CDC NNDSS,Probable component; retain as a separate source series and sum only under an explicit disjoint-components rule,SRC_US_NNDSS,SER_US_ACUTE_HEPATITIS_B_PROBABLE
+D208,"Hepatitis B, chronic, Confirmed",10105,Notifiable,,US CDC NNDSS,Confirmed component of the chronic hepatitis B series,SRC_US_NNDSS,SER_US_CHRONIC_HEPATITIS_B_CONFIRMED
+D208,"Hepatitis B, chronic, Probable",10105,Notifiable,,US CDC NNDSS,Probable component; retain as a separate source series and sum only under an explicit disjoint-components rule,SRC_US_NNDSS,SER_US_CHRONIC_HEPATITIS_B_PROBABLE
+D209,"Hepatitis B, perinatal, Confirmed",10104,Notifiable,"Hepatitis B perinatal infection|Hepatitis B, perinatal infection",US CDC NNDSS,Perinatal hepatitis B series
+D210,"Hepatitis C, acute, Confirmed",10101,Notifiable,"Hep C|HCV|Hepatitis C, acute, confirmed",US CDC NNDSS,Confirmed component of the acute hepatitis C series,SRC_US_NNDSS,SER_US_ACUTE_HEPATITIS_C_CONFIRMED
+D210,"Hepatitis C, acute, Probable",10101,Notifiable,,US CDC NNDSS,Probable component; retain as a separate source series and sum only under an explicit disjoint-components rule,SRC_US_NNDSS,SER_US_ACUTE_HEPATITIS_C_PROBABLE
+D211,"Hepatitis C, chronic, Confirmed",10106,Notifiable,,US CDC NNDSS,Confirmed component of the chronic hepatitis C series,SRC_US_NNDSS,SER_US_CHRONIC_HEPATITIS_C_CONFIRMED
+D211,"Hepatitis C, chronic, Probable",10106,Notifiable,,US CDC NNDSS,Probable component; retain as a separate source series and sum only under an explicit disjoint-components rule,SRC_US_NNDSS,SER_US_CHRONIC_HEPATITIS_C_PROBABLE
+D212,"Hepatitis C, perinatal, Confirmed",50248,Notifiable,"Hepatitis C perinatal infection|Hepatitis C, perinatal infection",US CDC NNDSS,Perinatal hepatitis C series
 D013,Poliomyelitis,Poliomyelitis,Notifiable,"Poliomyelitis, paralytic",US CDC,Keep paralytic primary label only
 D017,Measles,Measles,Notifiable,Rubeola,US CDC,Removed imported/indigenous subtype split
 D019,Rabies,Rabies,Notifiable,"Hydrophobia|Rabies, Human|Rabies, human",US CDC,Keep human rabies only
 D021,Dengue,Dengue,Notifiable,"Dengue Fever|Breakbone Fever|Dengue",US CDC,Keep plain dengue label only
 D023,Anthrax,Anthrax,Notifiable,,US CDC,
-D026,Typhoid and Paratyphoid fever,Typhoid and Paratyphoid fever,Notifiable,Salmonella Paratyphi infection,US CDC,Keep paratyphi surveillance label only
+D234,Salmonella Paratyphi infection,Salmonella Paratyphi infection,Notifiable,Paratyphoid fever,US CDC NNDSS,Paratyphi-only surveillance category; do not bind the combined typhoid-and-paratyphoid label,SRC_US_NNDSS,SER_US_PARATYPHI_WEEKLY
 D025,Tuberculosis,Tuberculosis,Notifiable,TB|Mycobacterium tuberculosis,US CDC,
 D028,Pertussis,Pertussis,Notifiable,Whooping cough,US CDC,
 D032,Brucellosis,Brucellosis,Notifiable,,US CDC,
@@ -75,4 +83,4 @@ D128,West Nile virus,West Nile virus,Notifiable,"Arboviral diseases, West Nile v
 D129,"Oropouche, non-congenital",Oropouche,Notifiable,Oropouche virus disease|Oropouche,US CDC,Keep non-congenital disease label as the authoritative US weekly series
 D131,Vancomycin-intermediate Staphylococcus aureus infection,VISA,Notifiable,"Vancomycin-intermediate Staphylococcus aureus|Vancomycin-intermediate Staphylococcus aureus (VISA)|VISA",US CDC,
 D132,Vancomycin-resistant Staphylococcus aureus infection,VRSA,Notifiable,"Vancomycin-resistant Staphylococcus aureus|Vancomycin-resistant Staphylococcus aureus (VRSA)|VRSA",US CDC,
-D133,Carbapenemase-producing organism infection,CPO,Notifiable,"Carbapenemase-Producing Organisms (CPO)|Carbapenemase-Producing Organisms (CPO), Total|Carbapenemase-Producing Organisms (CPO),Total|Carbapenemase-producing carbapenem-resistant Enterobacteriaceae",US CDC,Aggregate CDC resistance surveillance label
+D133,"Carbapenemase-Producing Organisms (CPO), Total",CPO,Notifiable,"Carbapenemase-Producing Organisms (CPO)|Carbapenemase-Producing Organisms (CPO),Total|Carbapenemase-producing carbapenem-resistant Enterobacteriaceae",US CDC NNDSS,Neutral organism-detection surveillance label; does not imply infection rather than colonization,SRC_US_NNDSS,SER_US_CPO_WEEKLY

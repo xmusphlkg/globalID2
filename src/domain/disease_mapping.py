@@ -3,7 +3,7 @@ GlobalID V2 Disease Mapping Model
 """
 from typing import Optional
 
-from sqlalchemy import JSON, Column, ForeignKey, Index, Integer, String, Boolean
+from sqlalchemy import JSON, Column, ForeignKey, Index, Integer, String, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .base import BaseModel
@@ -29,6 +29,20 @@ class DiseaseMapping(BaseModel):
         comment="映射作用域代码 (例如: CN, CN_EN)",
     )
     local_name: Mapped[str] = mapped_column(String(500), nullable=False, comment="本地名称/别名")
+    # ``*`` is the compatibility scope for mappings that pre-date the source
+    # registry.  A concrete source wins over it at lookup time.
+    source_id: Mapped[str] = mapped_column(
+        String(120),
+        nullable=False,
+        default="*",
+        server_default=text("'*'"),
+        comment="来源注册表 ID；* 表示该国家内的通配映射",
+    )
+    # Deliberately not a database FK: mappings are synchronized before the
+    # surveillance-series registry in the same transaction.
+    series_id: Mapped[Optional[str]] = mapped_column(
+        String(160), nullable=True, comment="精确来源序列 ID（若已知）"
+    )
     
     # 映射属性
     is_primary: Mapped[bool] = mapped_column(default=False, comment="是否为主要名称")
@@ -47,12 +61,25 @@ class DiseaseMapping(BaseModel):
     
     # 索引
     __table_args__ = (
-        Index("idx_mapping_lookup", "country_code", "local_name"),
+        Index("idx_mapping_lookup", "country_code", "source_id", "local_name"),
+        Index("idx_mapping_source", "source_id"),
+        Index("idx_mapping_series", "series_id"),
         Index("idx_mapping_target", "disease_id"),
         Index("idx_mapping_active", "is_active"),
-        # 复合唯一索引，确保同一个国家同一个本地名称只映射一次（或者需要允许一对多？通常是一对一映射到标准名）
-        Index("idx_mapping_unique", "disease_id", "country_code", "local_name", unique=True),
+        # Preserve the historical target-inclusive identity while allowing the
+        # same label to carry different semantics in different source systems.
+        Index(
+            "idx_mapping_unique",
+            "disease_id",
+            "country_code",
+            "source_id",
+            "local_name",
+            unique=True,
+        ),
     )
     
     def __repr__(self) -> str:
-        return f"<DiseaseMapping(country='{self.country_code}', local='{self.local_name}' -> '{self.disease_id}')>"
+        return (
+            f"<DiseaseMapping(country='{self.country_code}', source='{self.source_id}', "
+            f"local='{self.local_name}' -> '{self.disease_id}')>"
+        )
