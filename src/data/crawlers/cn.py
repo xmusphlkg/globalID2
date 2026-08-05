@@ -38,6 +38,7 @@ class ChinaCDCCrawler(BaseCrawler):
     
     # Source config
     CDC_WEEKLY_URL = "https://weekly.chinacdc.cn"
+    CDC_WEEKLY_VOLUME_API = "/data/article/volumeArticles"
     GOV_API_URL = "https://www.ndcpa.gov.cn/queryList"
     PUBMED_RSS_URL = "https://pubmed.ncbi.nlm.nih.gov/rss/search/1tQjT4yH2iuqFpDL7Y1nShJmC4kDC5_BJYgw4R1O0BCs-_Nemt/?limit=100&utm_campaign=pubmed-2&fc=20230905093742"
     _RETRIEVAL_CHANNEL_PRIORITY = {
@@ -371,8 +372,93 @@ class ChinaCDCCrawler(BaseCrawler):
     
     def crawl_cdc_weekly(self) -> List[CrawlerResult]:
         """Fetch China CDC Weekly index."""
+        publication_year = datetime.now().year
+        results: List[CrawlerResult] = []
+        api_errors: List[Exception] = []
+
+        # The journal homepage only contains the current issue. Its official
+        # volume endpoint contains every article in the year, including the
+        # monthly notifiable-disease reports needed by incremental updates.
+        for year in (publication_year, publication_year - 1):
+            volume = year - 2018
+            try:
+                response = self.post(
+                    urljoin(self.CDC_WEEKLY_URL, self.CDC_WEEKLY_VOLUME_API),
+                    data={"year": str(year), "volume": str(volume)},
+                )
+                results.extend(self.parse_cdc_weekly_volume(response.json()))
+            except Exception as exc:
+                api_errors.append(exc)
+                logger.warning(
+                    f"[CN-CDC] Volume index failed | year={year} volume={volume} error={exc}"
+                )
+
+        if results:
+            deduplicated = {result.url: result for result in results if result.url}
+            return sorted(
+                deduplicated.values(),
+                key=lambda result: result.date or datetime.min,
+                reverse=True,
+            )
+
+        # Compatibility fallback for older deployments of the journal site.
         response = self.get(self.CDC_WEEKLY_URL)
-        return self.parse_cdc_weekly(response)
+        fallback = self.parse_cdc_weekly(response)
+        if not fallback and api_errors:
+            raise RuntimeError(
+                "China CDC Weekly volume index and homepage fallback returned no reports"
+            ) from api_errors[-1]
+        return fallback
+
+    def parse_cdc_weekly_volume(self, payload: object) -> List[CrawlerResult]:
+        """Parse the journal's official volume JSON into report candidates."""
+        articles: List[dict] = []
+
+        def collect(value: object) -> None:
+            if isinstance(value, dict):
+                title = str(value.get("titleEn") or value.get("title") or "").strip()
+                if "National Notifiable Infectious Diseases" in title:
+                    articles.append(value)
+                for child in value.values():
+                    collect(child)
+            elif isinstance(value, list):
+                for child in value:
+                    collect(child)
+
+        collect(payload)
+        results: List[CrawlerResult] = []
+        for article in articles:
+            title = str(article.get("titleEn") or article.get("title") or "").strip()
+            year_month = self.extract_date_en(title)
+            doi = str(article.get("doi") or "").strip()
+            if not year_month or not doi:
+                continue
+            try:
+                date_obj = datetime.strptime(year_month, "%Y %B")
+            except ValueError:
+                continue
+            url = urljoin(self.CDC_WEEKLY_URL, f"/en/article/doi/{doi}")
+            results.append(
+                CrawlerResult(
+                    title=title,
+                    url=url,
+                    date=date_obj,
+                    year_month=year_month,
+                    metadata={
+                        "source": "China CDC Weekly",
+                        "ontology_source_id": "SRC_CN_CDC",
+                        "origin": "CN",
+                        "doi": doi,
+                        "language": "en",
+                    },
+                    raw_data={
+                        "article_id": article.get("id"),
+                        "article_no": article.get("articleNo"),
+                        "issue": article.get("issue"),
+                    },
+                )
+            )
+        return results
 
     def crawl_gov(self) -> List[CrawlerResult]:
         """Fetch NHC Gov API index."""

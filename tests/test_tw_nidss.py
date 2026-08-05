@@ -142,6 +142,44 @@ def test_tw_nidss_csv_download_failure_is_skipped(monkeypatch):
     assert crawler._download_csv_text(disease) is None
 
 
+def test_tw_nidss_csv_download_falls_back_to_official_http_on_ssl_eof(
+    monkeypatch,
+):
+    from src.data.crawlers.tw import TaiwanNIDSSCrawler
+
+    crawler = TaiwanNIDSSCrawler()
+    calls = []
+
+    class FakeResponse:
+        status_code = 200
+        headers = {"content-type": "text/csv"}
+        content = "發病年份,發病月份,確定病例數\n2026,6,1\n".encode()
+
+        def raise_for_status(self):
+            return None
+
+    def fake_request(method, url, **kwargs):
+        calls.append((method, url, kwargs))
+        if url.startswith("https://"):
+            raise requests.exceptions.SSLError("unexpected eof while reading")
+        return FakeResponse()
+
+    monkeypatch.setattr(crawler.session, "request", fake_request)
+
+    response = crawler._get_csv_response(
+        "https://od.cdc.gov.tw/eic/Age_County_Gender_061.csv"
+    )
+
+    assert response.status_code == 200
+    assert calls[0][1].startswith("https://od.cdc.gov.tw/")
+    assert calls[1][1].startswith("http://od.cdc.gov.tw/")
+
+    crawler._get_csv_response(
+        "https://od.cdc.gov.tw/eic/Age_County_Gender_042.csv"
+    )
+    assert calls[2][1].startswith("http://od.cdc.gov.tw/")
+
+
 def test_tw_nidss_csv_download_uses_twca_bundle_on_ssl_chain_error(
     tmp_path, monkeypatch
 ):

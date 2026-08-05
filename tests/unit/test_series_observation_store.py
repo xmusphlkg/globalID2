@@ -703,6 +703,33 @@ def test_conflicting_duplicate_natural_key_fails_closed() -> None:
         )
 
 
+def test_same_value_series_aliases_share_one_observation() -> None:
+    result = SeriesObservationStore().build_observations(
+        [
+            {
+                "Date": "2023-11-11",
+                "RawDiseaseLabel": "Hepatitis A, Confirmed",
+                "ReportingArea": "US RESIDENTS",
+                "Cases": "15",
+                "SortOrder": "20234503081",
+            },
+            {
+                "Date": "2023-11-11",
+                "RawDiseaseLabel": "Hepatitis, A, acute",
+                "ReportingArea": "US RESIDENTS",
+                "Cases": "15",
+                "SortOrder": "20234503710",
+            },
+        ],
+        "US",
+        source_id="SRC_US_NNDSS",
+    )
+
+    assert len(result.observations) == 1
+    assert result.observations[0]["value"] == 15
+    assert result.observations[0]["geography_key"] == "country:US:national"
+
+
 def test_non_finite_values_are_not_written_to_numeric_or_json_fields() -> None:
     store = SeriesObservationStore()
     invalid_value = store.build_observations(

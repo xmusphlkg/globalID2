@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import csv
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 import re
 from typing import Dict, List, Optional, Set, Tuple
@@ -100,7 +100,12 @@ class JPFetchSummary:
 class JapanIDWRCrawler(BaseCrawler):
     """Crawler for JP weekly standardized rows."""
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        *,
+        save_raw: bool = True,
+        raw_dir: Optional[Path] = None,
+    ) -> None:
         super().__init__(
             user_agent="Mozilla/5.0 (compatible; GlobalID/2.0)",
             timeout=60,
@@ -114,7 +119,8 @@ class JapanIDWRCrawler(BaseCrawler):
         self.explicit_csv_url = _norm_text(crawler_cfg.get("weekly_csv_url"))
         self.max_candidate_csvs = int(crawler_cfg.get("max_candidate_csvs") or 5)
         self.refresh_recent_years = int(crawler_cfg.get("refresh_recent_years") or 2)
-        self.raw_dir = ROOT / "data/raw/jp"
+        self.save_raw = save_raw
+        self.raw_dir = Path(raw_dir) if raw_dir is not None else ROOT / "data/raw/jp"
 
     async def crawl(self, **kwargs):  # pragma: no cover - not used via base crawl path
         raise NotImplementedError("Use crawl_standardized_csv()")
@@ -122,7 +128,13 @@ class JapanIDWRCrawler(BaseCrawler):
     def parse(self, response):  # pragma: no cover - not used via base parse path
         return []
 
-    def crawl_standardized_csv(self, output_csv: Path, reporting_area: str = "総数", force: bool = False) -> JPFetchSummary:
+    def crawl_standardized_csv(
+        self,
+        output_csv: Path,
+        reporting_area: str = "総数",
+        force: bool = False,
+        fill_missing: bool = False,
+    ) -> JPFetchSummary:
         debug_logs: List[str] = []
         existing_weeks = self._load_existing_year_weeks(output_csv)
         if self.explicit_csv_url:
@@ -131,14 +143,22 @@ class JapanIDWRCrawler(BaseCrawler):
             debug_logs.append(f"[discover] using explicit CSV URL: {self.explicit_csv_url}")
         else:
             debug_logs.append(f"[discover] existing weeks in output CSV: {len(existing_weeks)}")
-            debug_logs.append(f"[discover] mode: {'force-all-weeks' if force else 'missing-weeks-only'}")
+            mode = (
+                "force-all-weeks"
+                if force
+                else "fill-missing-weeks"
+                if fill_missing
+                else "incremental-recent-weeks"
+            )
+            debug_logs.append(f"[discover] mode: {mode}")
             csv_urls, raw_csv_urls, discover_logs = self._discover_weekly_csv_urls(
                 existing_weeks=existing_weeks,
                 force=force,
+                fill_missing=fill_missing,
             )
             debug_logs.extend(discover_logs)
 
-            for raw_csv_url in raw_csv_urls:
+            for raw_csv_url in raw_csv_urls if self.save_raw else []:
                 try:
                     self._download_csv_table(raw_csv_url)
                     debug_logs.append(f"[raw] saved {raw_csv_url}")
@@ -169,6 +189,17 @@ class JapanIDWRCrawler(BaseCrawler):
             )
 
         merged: Dict[tuple[str, str, str, str], Tuple[int, Dict[str, str]]] = {}
+        if output_csv.exists() and not force:
+            with output_csv.open("r", encoding="utf-8-sig", newline="") as handle:
+                for row in csv.DictReader(handle):
+                    key = (
+                        row.get("Reporting Area", ""),
+                        row.get("Current MMWR Year", ""),
+                        row.get("MMWR WEEK", ""),
+                        row.get("Disease", ""),
+                    )
+                    if all(key):
+                        merged[key] = (2, dict(row))
         for csv_url in csv_urls:
             try:
                 table = self._download_csv_table(csv_url)
@@ -325,22 +356,56 @@ class JapanIDWRCrawler(BaseCrawler):
         *,
         existing_weeks: Set[Tuple[int, int]],
         force: bool = False,
+        fill_missing: bool = False,
     ) -> Tuple[List[str], List[str], List[str]]:
         logs: List[str] = []
         year_index_urls = self._discover_year_index_urls()
         logs.append(f"[discover] year pages: {len(year_index_urls)}")
 
         selected_week_pages: List[str] = []
+        latest_existing = max(existing_weeks) if existing_weeks else None
+        current_year = datetime.now().year
+        if not force and not fill_missing:
+            earliest_year = current_year - max(1, self.refresh_recent_years) + 1
+            year_index_urls = [
+                url
+                for url in year_index_urls
+                if (match := re.search(r"/(20\d{2})/index\.html", url.lower()))
+                and int(match.group(1)) >= earliest_year
+            ]
+        discovered_week_pages: List[str] = []
         for year_url in year_index_urls:
             week_urls = self._discover_week_index_urls(year_url)
+            discovered_week_pages.extend(week_urls)
             logs.append(f"[discover] {year_url} -> {len(week_urls)} week pages")
             for week_url in week_urls:
                 y, w = self._parse_year_week_from_url(week_url)
                 if y is None or w is None:
                     continue
-                if force or (y, w) not in existing_weeks:
+                should_select = force or (
+                    fill_missing and (y, w) not in existing_weeks
+                )
+                if not force and not fill_missing:
+                    should_select = (
+                        latest_existing is None or (y, w) > latest_existing
+                    )
+                if should_select:
                     selected_week_pages.append(week_url)
                     logs.append(f"[select] week {y}-W{w:02d}: {week_url}")
+
+        if not force and not fill_missing:
+            selected_week_pages.extend(
+                sorted(
+                    discovered_week_pages,
+                    key=lambda url: self._parse_year_week_from_url(url),
+                    reverse=True,
+                )[: self.max_candidate_csvs]
+            )
+            selected_week_pages = sorted(
+                set(selected_week_pages),
+                key=lambda url: self._parse_year_week_from_url(url),
+                reverse=True,
+            )[: self.max_candidate_csvs]
 
         logs.append(f"[discover] missing week pages selected: {len(selected_week_pages)}")
 
@@ -431,9 +496,10 @@ class JapanIDWRCrawler(BaseCrawler):
         if len(parts) >= 4:
             year, week = parts[-3], parts[-2]
             filename = parts[-1]
-            raw_path = self.raw_dir / year / week / filename
-            raw_path.parent.mkdir(parents=True, exist_ok=True)
-            raw_path.write_bytes(content)
+            if self.save_raw:
+                raw_path = self.raw_dir / year / week / filename
+                raw_path.parent.mkdir(parents=True, exist_ok=True)
+                raw_path.write_bytes(content)
 
         text = None
         for enc in ("utf-8-sig", "cp932", "shift_jis", "euc_jp"):

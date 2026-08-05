@@ -88,6 +88,8 @@ def _parse_date(row: Dict[str, str]) -> Optional[date]:
 class NZMonthlyUpdater:
     """Read NZ national monthly rows from PHF Science crawler output and import."""
 
+    series_registered_rows_only = True
+
     def __init__(
         self,
         *,
