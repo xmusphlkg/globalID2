@@ -79,6 +79,7 @@ pnpm-debug.log*
 /data/test_output/
 /data/recovered/
 /data/backups/
+/backups/
 /data/system-settings.json
 /data/raw/br/final/2024/DENGBR24.dbc
 !/data/.gitkeep
@@ -98,3 +99,4 @@ tests/fixtures/ai_test_data/
 .DS_Store
 Thumbs.db
 astro-site/public/site-data/
+astro-site/logs/
