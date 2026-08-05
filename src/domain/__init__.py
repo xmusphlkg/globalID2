@@ -3,6 +3,7 @@ GlobalID V2 Domain Models
 
 领域模型导出
 """
+
 from .base import Base, BaseModel, IDMixin, TimestampMixin
 from .country import Country
 from .disease import Disease
@@ -34,6 +35,15 @@ from .ai_model_center import AIProviderConfig, AIModelConfig
 from .automation_job import AutomationJob
 from .data_release_job import DataReleaseJob
 from .knowledge import CountryBrief, DiseaseKnowledgeBrief, DiseaseKnowledgeSource
+from .disease_ontology import (
+    DiseaseConceptAssignment,
+    DiseaseConceptRelation,
+    DiseaseSeriesObservation,
+    DiseaseSourceAvailability,
+    DiseaseSurveillanceSeries,
+    DiseaseTaxonomyEdge,
+    DiseaseTaxonomyNode,
+)
 
 __all__ = [
     # Base classes
@@ -78,4 +88,11 @@ __all__ = [
     "CountryBrief",
     "DiseaseKnowledgeBrief",
     "DiseaseKnowledgeSource",
+    "DiseaseTaxonomyNode",
+    "DiseaseTaxonomyEdge",
+    "DiseaseConceptAssignment",
+    "DiseaseConceptRelation",
+    "DiseaseSeriesObservation",
+    "DiseaseSourceAvailability",
+    "DiseaseSurveillanceSeries",
 ]

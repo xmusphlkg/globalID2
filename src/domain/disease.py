@@ -3,10 +3,16 @@ GlobalID V2 Disease Model
 
 疾病模型：存储疾病信息和语义向量
 """
-from typing import List, Optional
+from __future__ import annotations
 
-from sqlalchemy import JSON, Column, Index, Integer, String, Text
+from typing import TYPE_CHECKING, List, Optional
+
+from sqlalchemy import JSON, Column, Index, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+if TYPE_CHECKING:
+    from .disease_record import DiseaseRecord
+
 try:
     from pgvector.sqlalchemy import Vector  # optional, may not be available in DB image
 except Exception:
@@ -29,7 +35,8 @@ class Disease(BaseModel):
     category: Mapped[str] = mapped_column(String(100), nullable=False, comment="疾病类别")
     
     # 疾病编码
-    icd_10: Mapped[Optional[str]] = mapped_column(String(10), comment="ICD-10编码")
+    # Ranges such as ``B17.1-B18.2`` exceed the original VARCHAR(10).
+    icd_10: Mapped[Optional[str]] = mapped_column(String(40), comment="ICD-10编码或范围")
     icd_11: Mapped[Optional[str]] = mapped_column(String(20), comment="ICD-11编码")
     
     # 别名和关键词

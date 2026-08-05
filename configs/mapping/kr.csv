@@ -1,4 +1,4 @@
-disease_id,local_name,local_code,category,aliases,notes,data_source
+disease_id,local_name,local_code,category,aliases,notes,data_source,source_id,series_id
 D050,에볼라바이러스병,,Class 1,Ebola virus disease|Ebola,KDCA EID mapping,Korea KDCA EID
 D174,마버그열,,Class 1,Marburg virus disease|Marburg hemorrhagic fever,KDCA EID mapping,Korea KDCA EID
 D053,라싸열,,Class 1,Lassa fever,KDCA EID mapping,Korea KDCA EID
@@ -12,14 +12,15 @@ D091,보툴리눔독소증,,Class 1,Botulism|Botulinum toxin disease,KDCA EID ma
 D123,야토병,,Class 1,Tularemia,KDCA EID mapping,Korea KDCA EID
 D003,중증급성호흡기증후군(SARS),,Class 1,SARS|Severe Acute Respiratory Syndrome|중증급성호흡기증후군,KDCA EID mapping,Korea KDCA EID
 D049,중동호흡기증후군(MERS),,Class 1,MERS|Middle East respiratory syndrome|중동호흡기증후군,KDCA EID mapping,Korea KDCA EID
-D016,동물인플루엔자 인체감염증,,Class 1,Zoonotic influenza infection|Avian influenza in humans|동물인플루엔자인체감염증,KDCA EID mapping,Korea KDCA EID
-D016,신종인플루엔자,,Class 1,Novel influenza A|Novel influenza,KDCA EID mapping,Korea KDCA EID
+D016,동물인플루엔자 인체감염증,,Class 1,Zoonotic influenza infection|Avian influenza in humans|동물인플루엔자인체감염증,KDCA EID mapping,Korea KDCA EID,SRC_KR_KDCA,SER_KR_ANIMAL_INFLUENZA_HUMAN_INFECTION
+D016,신종인플루엔자,,Class 1,Novel influenza A|Novel influenza,KDCA EID mapping,Korea KDCA EID,SRC_KR_KDCA,SER_KR_NOVEL_INFLUENZA
 D029,디프테리아,,Class 1,Diphtheria,KDCA EID mapping,Korea KDCA EID
+D175,@니파바이러스감염증,,Class 1,Nipah virus infection|니파바이러스감염증,KDCA EID current category,Korea KDCA EID,SRC_KR_KDCA,SER_KR_NIPAH
 D054,수두,,Class 2,Varicella|Chickenpox,KDCA EID mapping,Korea KDCA EID
 D017,홍역,,Class 2,Measles,KDCA EID mapping,Korea KDCA EID
 D002,콜레라,,Class 2,Cholera,KDCA EID mapping,Korea KDCA EID
 D124,장티푸스,,Class 2,Typhoid fever,KDCA EID mapping,Korea KDCA EID
-D026,파라티푸스,,Class 2,Paratyphoid fever,KDCA EID mapping,Korea KDCA EID
+D234,파라티푸스,,Class 2,Paratyphoid fever,KDCA EID mapping; paratyphoid-only source category,Korea KDCA EID,SRC_KR_KDCA,SER_KR_PARATYPHOID_MONTHLY
 D105,세균성이질,,Class 2,Shigellosis|Bacterial dysentery,KDCA EID mapping,Korea KDCA EID
 D115,장출혈성대장균감염증,,Class 2,Enterohemorrhagic Escherichia coli infection|EHEC|STEC|장출혈성대장균 감염증,KDCA EID mapping,Korea KDCA EID
 D007,A형간염,,Class 2,Hepatitis A|A형 간염,KDCA EID mapping,Korea KDCA EID
@@ -34,7 +35,7 @@ D106,폐렴구균 감염증,,Class 2,Invasive pneumococcal disease|Pneumococcal 
 D042,한센병,,Class 2,Leprosy|Hansen's disease,KDCA EID mapping,Korea KDCA EID
 D031,성홍열,,Class 2,Scarlet fever,KDCA EID mapping,Korea KDCA EID
 D132,반코마이신내성황색포도알균(VRSA) 감염증,,Class 2,Vancomycin-resistant Staphylococcus aureus infection|VRSA|반코마이신내성황색포도알균 감염증,KDCA EID mapping,Korea KDCA EID
-D133,카바페넴내성장내세균목(CRE) 감염증,,Class 2,Carbapenem-resistant Enterobacterales infection|CRE|Carbapenem-resistant Enterobacteriaceae infection|카바페넴내성장내세균목 감염증,KDCA EID mapping,Korea KDCA EID
+D227,카바페넴내성장내세균목(CRE) 감염증,,Class 2,Carbapenem-resistant Enterobacterales infection|CRE|Carbapenem-resistant Enterobacteriaceae infection|카바페넴내성장내세균목 감염증,KDCA EID mapping,Korea KDCA EID,SRC_KR_KDCA,SER_KR_CRE
 D011,E형간염,,Class 2,Hepatitis E|E형 간염,KDCA EID mapping,Korea KDCA EID
 D120,파상풍,,Class 3,Tetanus,KDCA EID mapping,Korea KDCA EID
 D008,B형간염,,Class 3,Hepatitis B|B형 간염,KDCA EID mapping,Korea KDCA EID
@@ -61,10 +62,11 @@ D116,유비저,,Class 3,Melioidosis,KDCA EID mapping,Korea KDCA EID
 D052,치쿤구니야열,,Class 3,Chikungunya fever|Chikungunya,KDCA EID mapping,Korea KDCA EID
 D057,중증열성혈소판감소증후군(SFTS),,Class 3,Severe fever with thrombocytopenia syndrome|SFTS|중증열성혈소판감소증후군,KDCA EID mapping,Korea KDCA EID
 D051,지카바이러스감염증,,Class 3,Zika virus disease|Zika virus infection|Zika,KDCA EID mapping,Korea KDCA EID
-D034,매독(1기),,Class 3,Primary syphilis|Syphilis stage 1,KDCA EID mapping,Korea KDCA EID
-D034,매독(2기),,Class 3,Secondary syphilis|Syphilis stage 2,KDCA EID mapping,Korea KDCA EID
-D034,매독(3기),,Class 3,Tertiary syphilis|Syphilis stage 3,KDCA EID mapping,Korea KDCA EID
+D034,매독,,Class 3,Syphilis,KDCA aggregate syphilis category reported from 2024,Korea KDCA EID,SRC_KR_KDCA,SER_KR_SYPHILIS_TOTAL
+D034,매독(1기),,Class 3,Primary syphilis|Syphilis stage 1,KDCA EID mapping,Korea KDCA EID,SRC_KR_KDCA,SER_KR_SYPHILIS_PRIMARY
+D034,매독(2기),,Class 3,Secondary syphilis|Syphilis stage 2,KDCA EID mapping,Korea KDCA EID,SRC_KR_KDCA,SER_KR_SYPHILIS_SECONDARY
+D034,매독(3기),,Class 3,Tertiary syphilis|Syphilis stage 3,KDCA EID mapping,Korea KDCA EID,SRC_KR_KDCA,SER_KR_SYPHILIS_TERTIARY
 D167,매독(선천성),,Class 3,Congenital syphilis,KDCA EID mapping,Korea KDCA EID
-D034,매독(잠복),,Class 3,Latent syphilis,KDCA EID mapping,Korea KDCA EID
+D034,매독(잠복),,Class 3,Latent syphilis,KDCA EID mapping,Korea KDCA EID,SRC_KR_KDCA,SER_KR_SYPHILIS_LATENT
 D065,@엠폭스,,Class 3,Mpox|Monkeypox|엠폭스,KDCA EID mapping,Korea KDCA EID
 D065,엠폭스,,Class 3,Mpox|Monkeypox|@엠폭스,KDCA EID mapping,Korea KDCA EID

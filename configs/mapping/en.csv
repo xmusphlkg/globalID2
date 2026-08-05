@@ -3,14 +3,13 @@ D001,Plague,A20,Bacterial,,From standard_diseases: 鼠疫,Standard Database + CN
 D002,Cholera,A00,Bacterial,,From standard_diseases: 霍乱,Standard Database + CN Mapping
 D003,SARS,U04,Viral,SARS|SARS-CoV,From standard_diseases: 传染性非典型肺炎,Standard Database + CN Mapping
 D004,COVID-19,U07.1,Viral,,From standard_diseases: 新型冠状病毒感染,Standard Database + CN Mapping
-D005,HIV/AIDS,B20-B24,Viral,AIDS|HIV,From standard_diseases: 艾滋病,Standard Database + CN Mapping
+D005,AIDS,B20-B24,Viral,Acquired immunodeficiency syndrome|HIV stage 3,From standard_diseases: 艾滋病,Standard Database + Ontology
 D006,Viral Hepatitis,B15-B19,Viral,Hepatitis,From standard_diseases: 病毒性肝炎,Standard Database + CN Mapping
 D007,Hepatitis A,B15,Viral,,From standard_diseases: 甲型肝炎,Standard Database + CN Mapping
-D008,Hepatitis B,B16,Viral,,From standard_diseases: 乙型肝炎,Standard Database + CN Mapping
-D009,Hepatitis C,B17.1,Viral,,From standard_diseases: 丙型肝炎,Standard Database + CN Mapping
+D008,Hepatitis B,B16-B18,Viral,Hepatitis B course unspecified,From standard_diseases: 乙型肝炎,Standard Database + Ontology
+D009,Hepatitis C,B17.1-B18.2,Viral,Hepatitis C course unspecified,From standard_diseases: 丙型肝炎,Standard Database + Ontology
 D010,Hepatitis D,B17.0,Viral,,From standard_diseases: 丁型肝炎,Standard Database + CN Mapping
 D011,Hepatitis E,B17.2,Viral,,From standard_diseases: 戊型肝炎,Standard Database + CN Mapping
-D012,Other Hepatitis,B19,Viral,,From standard_diseases: 未分型肝炎,Standard Database + CN Mapping
 D013,Poliomyelitis,A80,Viral,,From standard_diseases: 脊髓灰质炎,Standard Database + CN Mapping
 D014,H5N1,J09,Viral,,From standard_diseases: 人感染高致病性禽流感,Standard Database + CN Mapping
 D015,H7N9,J09,Viral,,From standard_diseases: 人感染H7N9禽流感,Standard Database + CN Mapping
@@ -23,7 +22,7 @@ D021,Dengue,A90,Viral,,From standard_diseases: 登革热,Standard Database + CN 
 D023,Anthrax,A22,Bacterial,,From standard_diseases: 炭疽,Standard Database + CN Mapping
 D024,Dysentery,A03-A06,Bacterial,,From standard_diseases: 细菌性和阿米巴性痢疾,Standard Database + CN Mapping
 D025,Tuberculosis,A15-A19,Bacterial,TB,From standard_diseases: 肺结核,Standard Database + CN Mapping
-D026,Typhoid and Paratyphoid fever,A01,Bacterial,Typhoid,From standard_diseases: 伤寒和副伤寒,Standard Database + CN Mapping
+D026,Typhoid and Paratyphoid fever,A01,Bacterial,Enteric fever|Typhoid and paratyphoid fever combined,From standard_diseases: 伤寒和副伤寒,Standard Database + CN Mapping
 D028,Pertussis,A37,Bacterial,,From standard_diseases: 百日咳,Standard Database + CN Mapping
 D029,Diphtheria,A36,Bacterial,,From standard_diseases: 白喉,Standard Database + CN Mapping
 D030,Neonatal Tetanus,A33,Bacterial,,From standard_diseases: 新生儿破伤风,Standard Database + CN Mapping
@@ -63,11 +62,10 @@ D063,Zoster,B02,,,From standard_diseases: 带状疱疹,Standard Database + CN Ma
 D064,Smallpox,B03,,,From standard_diseases: 天花,Standard Database + CN Mapping
 D065,Monkeypox,B04,Viral,Monkeypox|Mpox,From standard_diseases: 猴痘,Standard Database + CN Mapping
 D066,Other viral infections characterized by skin lesions,B08,,,From standard_diseases: 其他以皮损为特征的病毒感染,Standard Database + CN Mapping
-D067,Acute hepatitis A,B15,Viral,,From standard_diseases: 急性甲型肝炎,Standard Database + CN Mapping
 D068,Acute hepatitis B,B16,Viral,,From standard_diseases: 急性乙型肝炎,Standard Database + CN Mapping
 D069,Other acute viral hepatitis,B17,Viral,,From standard_diseases: 其他急性病毒性肝炎,Standard Database + CN Mapping
 D070,Chronic viral hepatitis,B18,Viral,,From standard_diseases: 慢性病毒性肝炎,Standard Database + CN Mapping
-D071,Unspecified viral hepatitis,B19,Viral,,From standard_diseases: 未明示的病毒性肝炎,Standard Database + CN Mapping
+D071,Unspecified viral hepatitis,B19,Viral,Other Hepatitis|Unspecified Hepatitis,Canonical target for legacy unclassified/unspecified viral hepatitis,Standard Database + Ontology
 D073,Infectious mononucleosis,B27,,,From standard_diseases: 传染性单核细胞增多症,Standard Database + CN Mapping
 D074,Viral conjunctivitis,B30,,,From standard_diseases: 病毒性结膜炎,Standard Database + CN Mapping
 D075,Other viral diseases,B33,,,From standard_diseases: 其他病毒性疾病,Standard Database + CN Mapping
@@ -126,7 +124,7 @@ D128,West Nile virus,,Viral,,From standard_diseases: 西尼罗病毒,Standard Da
 D129,Oropouche virus disease,,Viral,"Oropouche|Oropouche, non-congenital",From standard_diseases: 奥罗普切病毒病,Standard Database + US Mapping
 D131,Vancomycin-intermediate Staphylococcus aureus infection,,Bacterial,Vancomycin-intermediate Staphylococcus aureus|Vancomycin-intermediate Staphylococcus aureus (VISA)|VISA,From standard_diseases: 万古霉素中介金黄色葡萄球菌感染,Standard Database + US Mapping
 D132,Vancomycin-resistant Staphylococcus aureus infection,,Bacterial,Vancomycin-resistant Staphylococcus aureus|Vancomycin-resistant Staphylococcus aureus (VRSA)|VRSA,From standard_diseases: 万古霉素耐药金黄色葡萄球菌感染,Standard Database + US Mapping
-D133,Carbapenemase-producing organism infection,,Bacterial,"Carbapenemase-Producing Organisms (CPO)|Carbapenemase-Producing Organisms (CPO), Total|Carbapenemase-Producing Organisms (CPO),Total|Carbapenemase-producing carbapenem-resistant Enterobacteriaceae",From standard_diseases: 产碳青霉烯酶微生物感染,Standard Database + US Mapping
+D133,Carbapenemase-producing organisms surveillance,,Bacterial,"Carbapenemase-Producing Organisms (CPO)|Carbapenemase-Producing Organisms (CPO), Total|Carbapenemase-Producing Organisms (CPO),Total|Carbapenemase-producing carbapenem-resistant Enterobacteriaceae",From standard_diseases: 产碳青霉烯酶微生物监测,Standard Database + US Mapping
 D134,Aseptic meningitis,,Viral,,From standard_diseases: 无菌性脑膜炎,Standard Database + JP Mapping
 D135,Bacterial meningitis,,Bacterial,,From standard_diseases: 细菌性脑膜炎,Standard Database + JP Mapping
 D136,Chlamydial pneumonia,,Bacterial,,From standard_diseases: 衣原体肺炎,Standard Database + JP Mapping
@@ -137,4 +135,12 @@ D140,Mycoplasma pneumonia,,Bacterial,,From standard_diseases: 支原体肺炎,St
 D141,Pharyngoconjunctival fever,,Viral,,From standard_diseases: 咽结膜热,Standard Database + JP Mapping
 D142,Respiratory syncytial virus infection (RSV),,Viral,RSV infection|Respiratory syncytial virus infection,From standard_diseases: 呼吸道合胞病毒感染,Standard Database + JP Mapping
 D143,Roseola (Exanthem subitum),,Viral,Roseola|Exanthem subitum,From standard_diseases: 幼儿急疹（突发性发疹）,Standard Database + JP Mapping
-D999,Total,,Summary,,From standard_diseases: 甲乙丙类传染病总计,Standard Database + CN Mapping
+D162,HIV infection,B20-B24,Viral,Human immunodeficiency virus infection|HIV,From standard_diseases: 人类免疫缺乏病毒感染,Standard Database + Ontology
+D208,Chronic hepatitis B,B18.0-B18.1,Viral,,From standard_diseases: 慢性乙型肝炎,Standard Database + Ontology
+D209,Perinatal hepatitis B,,Viral,,From standard_diseases: 围产期乙型肝炎,Standard Database + Ontology
+D210,Acute hepatitis C,B17.1,Viral,,From standard_diseases: 急性丙型肝炎,Standard Database + Ontology
+D211,Chronic hepatitis C,B18.2,Viral,,From standard_diseases: 慢性丙型肝炎,Standard Database + Ontology
+D212,Perinatal hepatitis C,,Viral,,From standard_diseases: 围产期丙型肝炎,Standard Database + Ontology
+D234,Paratyphoid fever,A01.1-A01.4,Bacterial,Salmonella Paratyphi infection,From standard_diseases: 副伤寒,Standard Database + Ontology
+D235,Meningitis (all reported etiologies),,Other,Meningitis|Meningite,From standard_diseases: 脑膜炎（全部报告病因）,Standard Database + Ontology
+D999,Total,,Summary,,Legacy flat-target compatibility only; ontology represents this as G_CN_NOTIFIABLE_DISEASE_REPORTED_TOTAL,Standard Database + CN Mapping

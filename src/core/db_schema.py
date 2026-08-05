@@ -99,6 +99,70 @@ async def ensure_country_scope_for_code(db: AsyncSession, scope_code: str) -> No
     )
 
 
+async def ensure_disease_mapping_source_schema(db: AsyncSession) -> None:
+    """Add source/series mapping identity without rewriting existing rows.
+
+    Existing mappings become wildcard rows.  The old unique index must be
+    recreated because PostgreSQL cannot alter an index's key columns in place.
+    This helper is intentionally independent from ontology table evolution so
+    preflight and ingestion entry points can call it first when appropriate.
+    """
+
+    await db.execute(
+        text(
+            """
+            ALTER TABLE disease_mappings
+                ADD COLUMN IF NOT EXISTS source_id VARCHAR(120)
+                    NOT NULL DEFAULT '*'
+            """
+        )
+    )
+    await db.execute(
+        text(
+            """
+            ALTER TABLE disease_mappings
+                ADD COLUMN IF NOT EXISTS series_id VARCHAR(160)
+            """
+        )
+    )
+    await db.execute(text("DROP INDEX IF EXISTS idx_mapping_unique"))
+    await db.execute(
+        text(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_mapping_unique
+            ON disease_mappings (
+                disease_id, country_code, source_id, local_name
+            )
+            """
+        )
+    )
+    await db.execute(text("DROP INDEX IF EXISTS idx_mapping_lookup"))
+    await db.execute(
+        text(
+            """
+            CREATE INDEX IF NOT EXISTS idx_mapping_lookup
+            ON disease_mappings (country_code, source_id, local_name)
+            """
+        )
+    )
+    await db.execute(
+        text(
+            """
+            CREATE INDEX IF NOT EXISTS idx_mapping_source
+            ON disease_mappings (source_id)
+            """
+        )
+    )
+    await db.execute(
+        text(
+            """
+            CREATE INDEX IF NOT EXISTS idx_mapping_series
+            ON disease_mappings (series_id)
+            """
+        )
+    )
+
+
 async def ensure_country_scope_schema(db: AsyncSession) -> None:
     """Ensure country_scopes exists and migrate disease_mappings.country_code to scope FK."""
     await db.execute(text("""

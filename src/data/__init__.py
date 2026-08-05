@@ -14,7 +14,7 @@ from .crawlers.base import BaseCrawler, CrawlerResult
 from .crawlers.cn import ChinaCDCCrawler
 from .crawlers.jp import JapanIDWRCrawler
 from .crawlers.au import AustraliaNINDSSCrawler
-from .crawlers.us import USNNDSSCrawler
+from .crawlers.us import USNHSSHIVCrawler, USNNDSSCrawler
 from .crawlers.br import BrazilSINANCrawler
 from .crawlers.kr import KoreaKDCAOpenAPICrawler
 from .parsers.html_parser import HTMLTableParser
@@ -34,6 +34,8 @@ __all__ = [
     "JapanIDWRCrawler",
     "JPIDWRCrawler",
     "AustraliaNINDSSCrawler",
+    "USNNDSSCrawler",
+    "USNHSSHIVCrawler",
     "BrazilSINANCrawler",
     "KoreaKDCAOpenAPICrawler",
     # Parsers

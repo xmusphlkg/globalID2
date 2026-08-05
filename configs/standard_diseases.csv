@@ -3,14 +3,14 @@ D001,Plague,鼠疫,Bacterial,A20,1B90,Bacterial infection caused by Yersinia pes
 D002,Cholera,霍乱,Bacterial,A00,1A00,Acute diarrheal disease caused by Vibrio cholerae,ICD-10
 D003,SARS,传染性非典型肺炎,Viral,U04,1D65,Severe Acute Respiratory Syndrome,ICD-10
 D004,COVID-19,新型冠状病毒感染,Viral,U07.1,RA01,Coronavirus Disease 2019,China CDC
-D005,HIV/AIDS,艾滋病,Viral,B20-B24,1C62,Human Immunodeficiency Virus/Acquired Immune Deficiency Syndrome,China
+D005,AIDS,艾滋病,Viral,B20-B24,1C62,Advanced HIV disease classified as HIV stage 3 (AIDS); do not combine with all-stage HIV diagnoses without an explicit roll-up rule,"CDC, WHO"
 D006,Viral Hepatitis,病毒性肝炎,Viral,B15-B19,1E50,Viral hepatitis (aggregate category),China CDC
 D007,Hepatitis A,甲型肝炎,Viral,B15,1E50.0,Hepatitis A virus infection,CDC
-D008,Hepatitis B,乙型肝炎,Viral,B16,1E50.1,Hepatitis B virus infection,CDC
-D009,Hepatitis C,丙型肝炎,Viral,B17.1,1E50.2,Hepatitis C virus infection,CDC
+D008,Hepatitis B,乙型肝炎,Viral,B16-B18,1E50.1-1E51.0,Hepatitis B infection with clinical course unspecified; use D068/D208/D209 when acute/chronic/perinatal status is reported,CDC
+D009,Hepatitis C,丙型肝炎,Viral,B17.1-B18.2,1E50.2-1E51.1,Hepatitis C infection with clinical course unspecified; use D210/D211/D212 when acute/chronic/perinatal status is reported,CDC
 D010,Hepatitis D,丁型肝炎,Viral,B17.0,1E50.3,Hepatitis D virus infection,China CDC
 D011,Hepatitis E,戊型肝炎,Viral,B17.2,1E50.4,Hepatitis E virus infection,China CDC
-D012,Other Hepatitis,未分型肝炎,Viral,B19,1E50.Y,Unspecified viral hepatitis,China CDC
+D012,Other Hepatitis (deprecated),其他肝炎（已弃用）,Viral,B19,1E50.Y,Deprecated duplicate of D071 caused by conflating other and unspecified hepatitis; use D071 for legacy unspecified records,China CDC
 D013,Poliomyelitis,脊髓灰质炎,Viral,A80,1C81,Polio caused by poliovirus,CDC
 D014,H5N1,人感染高致病性禽流感,Viral,J09,1E30.0,Highly pathogenic avian influenza A(H5N1),China CDC
 D015,H7N9,人感染H7N9禽流感,Viral,J09,1E30.0,Avian influenza A(H7N9),China CDC
@@ -65,7 +65,7 @@ D063,Zoster,带状疱疹,,B02,1E91,,ICD-10
 D064,Smallpox,天花,,B03,,,ICD-10
 D065,Monkeypox,猴痘,Viral,B04,1E71,,ICD-10
 D066,Other viral infections characterized by skin lesions,其他以皮损为特征的病毒感染,,B08,,,ICD-10
-D067,Acute hepatitis A,急性甲型肝炎,Viral,B15,1E50.0,,ICD-10
+D067,Acute hepatitis A (deprecated),急性甲型肝炎（已弃用）,Viral,B15,1E50.0,Deprecated duplicate of D007 because hepatitis A surveillance is acute; use D007 Hepatitis A,ICD-10
 D068,Acute hepatitis B,急性乙型肝炎,Viral,B16,1E50.1,,ICD-10
 D069,Other acute viral hepatitis,其他急性病毒性肝炎,Viral,B17,1E50.2,,ICD-10
 D070,Chronic viral hepatitis,慢性病毒性肝炎,Viral,B18,1E50,,ICD-10
@@ -130,7 +130,7 @@ D129,Oropouche virus disease,奥罗普切病毒病,Viral,,,Oropouche virus disea
 D130,Zika virus,寨卡病毒,Viral,,,Deprecated duplicate of D051; do not use for new mappings,CDC
 D131,Vancomycin-intermediate Staphylococcus aureus infection,万古霉素中介金黄色葡萄球菌感染,Bacterial,,,Vancomycin-intermediate Staphylococcus aureus infection (VISA),CDC
 D132,Vancomycin-resistant Staphylococcus aureus infection,万古霉素耐药金黄色葡萄球菌感染,Bacterial,,,Vancomycin-resistant Staphylococcus aureus infection (VRSA),CDC
-D133,Carbapenemase-producing organism infection,产碳青霉烯酶微生物感染,Bacterial,,,Carbapenemase-producing organism surveillance concept used by CDC,CDC
+D133,Carbapenemase-producing organisms surveillance,产碳青霉烯酶微生物监测,Bacterial,,,Source-reported CPO detections; the label does not assert infection rather than colonization,CDC NNDSS
 D134,Aseptic meningitis,无菌性脑膜炎,Viral,,,JP weekly sentinel surveillance concept,JP NIID
 D135,Bacterial meningitis,细菌性脑膜炎,Bacterial,,,JP weekly sentinel surveillance concept,JP NIID
 D136,Chlamydial pneumonia,衣原体肺炎,Bacterial,,,JP weekly sentinel surveillance concept,JP NIID
@@ -153,7 +153,7 @@ D152,Murray Valley encephalitis virus infection,墨累谷脑炎病毒感染,Vira
 D153,Non-tuberculous mycobacterial infection,非结核分枝杆菌感染,Bacterial,,,AU NINDSS surveillance concept,AU NINDSS
 D154,Ross River virus infection,罗斯河病毒感染,Viral,,,AU NINDSS surveillance concept,AU NINDSS
 D155,Yersiniosis,耶尔森菌病,Bacterial,,,AU NINDSS surveillance concept,AU NINDSS
-D999,Total,甲乙丙类传染病总计,Summary,,,Aggregate total for reporting,China CDC
+D999,Total,甲乙丙类传染病总计,Summary,,,Legacy compatibility ID only; ontology uses source-reported aggregate group G_CN_NOTIFIABLE_DISEASE_REPORTED_TOTAL,China CDC
 D156,Gastroenteritis,胃肠炎,Bacterial,A09,1A40,Gastroenteritis from common source or foodborne intoxication,NZ PHF Science
 D157,Invasive group A streptococcal infection,侵袭性A族链球菌感染,Bacterial,A49.1,1B50,Invasive infection caused by Group A Streptococcus,NZ PHF Science
 D158,Rheumatic fever,风湿热,Bacterial,I00,BA40,Inflammatory disease following Group A Streptococcal infection,NZ PHF Science
@@ -173,6 +173,7 @@ D172,Severe complicated influenza,流感并发重症,Viral,J09-J11,1E30,Severe c
 D173,Rift Valley fever,裂谷热,Viral,A92.4,1D47,Rift Valley fever surveillance concept,"Taiwan, China CDC NIDSS"
 D174,Marburg virus disease,马堡病毒病,Viral,A98.3,1D60.1,Marburg virus disease surveillance concept,"Taiwan, China CDC NIDSS"
 D175,Nipah virus infection,立百病毒感染,Viral,B33.8,1D64,Nipah virus infection surveillance concept,"Taiwan, China CDC NIDSS"
+D176,Relapsing fever (deprecated duplicate),回归热（已弃用重复ID）,Bacterial,A68,,Deprecated duplicate of D145; use D145 Relapsing fever,"Taiwan, China CDC NIDSS"
 D177,Cat-scratch disease,猫抓病,Bacterial,A28.1,1B9Y,Cat-scratch disease surveillance concept,"Taiwan, China CDC NIDSS"
 D178,Acute flaccid paralysis,急性无力肢体麻痹,Other,,,Acute flaccid paralysis surveillance concept,"Taiwan, China CDC NIDSS"
 D180,Enterovirus infection with severe complications,肠病毒感染并发重症,Viral,B34.1,1F01,Severe enterovirus infection surveillance concept,"Taiwan, China CDC NIDSS"
@@ -201,5 +202,33 @@ D202,Domestic sexual and other violence,家庭/性及其他暴力,Other,,,SINAN 
 D203,Crimean-Congo hemorrhagic fever,克里米亚-刚果出血热,Viral,A98.0,1D60.0,Crimean-Congo hemorrhagic fever surveillance concept,Korea KDCA EID
 D204,South American hemorrhagic fever,南美出血热,Viral,A96.0-A96.1,1D61,South American arenaviral hemorrhagic fever surveillance concept,Korea KDCA EID
 D205,Tick-borne encephalitis,蜱传脑炎,Viral,A84,1D49,Tick-borne encephalitis surveillance concept,Korea KDCA EID
-D206,Community-associated methicillin-resistant Staphylococcus aureus infection,社区相关耐甲氧西林金黄色葡萄球菌感染,Bacterial,B95.6,,Community-associated MRSA infection surveillance concept,Hong Kong, China CHP
-D207,Enterovirus 71 infection,肠病毒71型感染,Viral,B34.1,1F01,Enterovirus 71 infection surveillance concept,Hong Kong, China CHP
+D206,Community-associated methicillin-resistant Staphylococcus aureus infection,社区相关耐甲氧西林金黄色葡萄球菌感染,Bacterial,B95.6,,Community-associated MRSA infection surveillance concept,"Hong Kong, China CHP"
+D207,Enterovirus 71 infection,肠病毒71型感染,Viral,B34.1,1F01,Enterovirus 71 infection surveillance concept,"Hong Kong, China CHP"
+D208,Chronic hepatitis B,慢性乙型肝炎,Viral,B18.0-B18.1,1E51.0,Chronic hepatitis B surveillance concept,CDC NNDSS
+D209,Perinatal hepatitis B,围产期乙型肝炎,Viral,,,Perinatal hepatitis B surveillance concept,CDC NNDSS
+D210,Acute hepatitis C,急性丙型肝炎,Viral,B17.1,1E50.2,Acute hepatitis C surveillance concept,CDC NNDSS
+D211,Chronic hepatitis C,慢性丙型肝炎,Viral,B18.2,1E51.1,Chronic hepatitis C surveillance concept,CDC NNDSS
+D212,Perinatal hepatitis C,围产期丙型肝炎,Viral,,,Perinatal hepatitis C surveillance concept,CDC NNDSS
+D213,Varicella-zoster virus infection unspecified,水痘-带状疱疹病毒感染未分型,Viral,B01-B02,1E90-1E91,Source-confirmed varicella-zoster virus infection without enough clinical information to classify chickenpox or zoster,Australia NINDSS
+D214,Lyssavirus infection excluding rabies,非狂犬病狂犬病毒属感染,Viral,A82.8,1C82.Y,Human lyssavirus infection explicitly excluding rabies virus infection,Japan NIID
+D215,Hendra virus infection,亨德拉病毒感染,Viral,B33.8,1D64.Y,Hendra virus disease caused by Hendra henipavirus,Japan NIID
+D216,Acute encephalitis excluding Japanese and West Nile encephalitis,急性脑炎（不含日本脑炎和西尼罗河脑炎）,Other,,,Japan source-defined acute encephalitis surveillance syndrome with named exclusions,Japan NIID
+D217,Kyasanur Forest disease,基亚萨努尔森林病,Viral,A98.2,1D47.Y,Tick-borne viral hemorrhagic fever caused by Kyasanur Forest disease virus,Japan NIID
+D218,Eastern equine encephalitis,东部马脑炎,Viral,A83.2,1D45,Eastern equine encephalitis virus disease,Japan NIID
+D219,Western equine encephalitis,西部马脑炎,Viral,A83.1,1D46,Western equine encephalitis virus disease,Japan NIID
+D220,Venezuelan equine encephalitis,委内瑞拉马脑炎,Viral,A92.2,1D47,Venezuelan equine encephalitis virus disease,Japan NIID
+D221,Glanders,鼻疽,Bacterial,A24.0-A24.4,1B92,Glanders caused by Burkholderia mallei; distinct from melioidosis,Japan NIID
+D222,Japanese spotted fever,日本斑点热,Bacterial,A77.0,1C30.0,Spotted fever rickettsiosis caused by Rickettsia japonica,Japan NIID
+D223,Rocky Mountain spotted fever,落基山斑点热,Bacterial,A77.0,1C30.1,Spotted fever rickettsiosis caused by Rickettsia rickettsii,Japan NIID
+D224,Group A streptococcal pharyngitis,A族链球菌性咽炎,Bacterial,J02.0,1B51,Sentinel pharyngitis caused by group A Streptococcus,Japan NIID
+D225,Severe invasive streptococcal infection,严重侵袭性链球菌感染,Bacterial,A40,1B50,Japan source-defined severe invasive streptococcal infection including toxic shock-like presentations,Japan NIID
+D226,Omsk hemorrhagic fever,鄂木斯克出血热,Viral,A98.1,1D48,Omsk hemorrhagic fever virus disease,Japan NIID
+D227,Carbapenem-resistant Enterobacterales infection,碳青霉烯耐药肠杆菌目细菌感染,Bacterial,,,Infection or colonization reported under a carbapenem-resistant Enterobacterales surveillance definition,Japan NIID + Korea KDCA
+D228,Multidrug-resistant Acinetobacter infection,多重耐药鲍曼不动杆菌感染,Bacterial,,,Infection reported under a multidrug-resistant Acinetobacter surveillance definition,Japan NIID
+D229,Multidrug-resistant Pseudomonas aeruginosa infection,多重耐药铜绿假单胞菌感染,Bacterial,,,Infection reported under a multidrug-resistant Pseudomonas aeruginosa surveillance definition,Japan NIID
+D230,Child exposed to HIV,儿童HIV暴露,Other,Z20.6,QC60.0,Perinatal or pediatric HIV exposure notification; exposure is not an HIV infection diagnosis,Brazil DATASUS SINAN
+D231,HIV infection in pregnancy surveillance event,孕产期HIV感染监测事件,Viral,Z21,1C62.3,HIV notification during pregnancy childbirth or puerperium; an event-based maternal surveillance concept,Brazil DATASUS SINAN
+D232,Infectious syphilis under two years duration,病程不足两年的感染性梅毒,Bacterial,A51,1A70,Australia source-defined infectious syphilis category with duration under two years,Australia NINDSS
+D233,Syphilis over two years or unspecified duration,病程超过两年或病程未明的梅毒,Bacterial,A52-A53,1A70,Australia source-defined syphilis category combining duration over two years with unspecified duration,Australia NINDSS
+D234,Paratyphoid fever,副伤寒,Bacterial,A01.1-A01.4,,Paratyphoid-only surveillance concept; excludes typhoid fever,Global surveillance sources
+D235,Meningitis (all reported etiologies),脑膜炎（全部报告病因）,Other,,,Source-reported meningitis category spanning reported etiologies; not equivalent to bacterial meningitis,Brazil DATASUS SINAN
