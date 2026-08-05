@@ -113,16 +113,11 @@
     "scripts/full_rebuild_database.py": {
       "classification": "historical_import",
       "reason": "Legacy full/history rebuild modes remain for migration recovery but must be superseded by a series-first rebuild orchestrator.",
-      "max_references": {"DiseaseRecord": 0, "disease_records": 19}
+      "max_references": {"DiseaseRecord": 0, "disease_records": 14}
     },
     "scripts/generate_schema.py": {
       "classification": "schema_contract",
       "reason": "Schema generation still emits the compatibility table until archival removal.",
-      "max_references": {"DiseaseRecord": 0, "disease_records": 2}
-    },
-    "scripts/generate_site_data.py": {
-      "classification": "compatibility_projection",
-      "reason": "Static export uses a controlled series-first overlay with legacy-only coverage gap filling.",
       "max_references": {"DiseaseRecord": 0, "disease_records": 2}
     },
     "scripts/import_au_national_history.py": {
@@ -168,7 +163,12 @@
     "scripts/sync_disease_ontology.py": {
       "classification": "migration",
       "reason": "Ontology synchronization still audits and remaps legacy projections alongside Registry entities.",
-      "max_references": {"DiseaseRecord": 0, "disease_records": 17}
+      "max_references": {"DiseaseRecord": 0, "disease_records": 10}
+    },
+    "src/ontology/sync_migrations/br_2026_08_ntra.py": {
+      "classification": "migration",
+      "reason": "Versioned BR NTRA repair preserves the audited legacy projection migration until its rollback window expires.",
+      "max_references": {"DiseaseRecord": 0, "disease_records": 7}
     },
     "scripts/us_history_data_quality_check.py": {
       "classification": "quality_audit",
@@ -265,10 +265,20 @@
       "reason": "Report evidence extraction still reads the legacy projection and is a first-wave migration target.",
       "max_references": {"DiseaseRecord": 7, "disease_records": 0}
     },
+    "src/generation/site_data_queries.py": {
+      "classification": "compatibility_projection",
+      "reason": "Static export query boundary uses a controlled series-first overlay with legacy-only coverage gap filling.",
+      "max_references": {"DiseaseRecord": 0, "disease_records": 2}
+    },
     "src/services/agent_workflow_service.py": {
       "classification": "runtime_read",
       "reason": "Agent database evidence search still exposes legacy rows and must move to explicit source-series evidence.",
       "max_references": {"DiseaseRecord": 13, "disease_records": 3}
+    },
+    "src/services/database_rebuild_plan.py": {
+      "classification": "historical_import",
+      "reason": "The extracted rebuild plan explicitly names the legacy compatibility table while preserving the reviewed full/history rebuild scope.",
+      "max_references": {"DiseaseRecord": 0, "disease_records": 5}
     },
     "src/services/report_service.py": {
       "classification": "runtime_read",

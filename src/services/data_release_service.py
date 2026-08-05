@@ -8,14 +8,9 @@ from datetime import datetime, time, timedelta
 import json
 import os
 from pathlib import Path
-import signal
-import shlex
+import signal  # Re-exported for compatibility with existing diagnostics/tests.
 import sys
-import tempfile
 from typing import Any, Optional
-from urllib import error as urlerror
-from urllib import parse as urlparse
-from urllib import request as urlrequest
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
@@ -29,6 +24,19 @@ from src.core.data_share import (
 )
 from src.core.task_manager import task_manager
 from src.domain import DataReleaseJob, Task, TaskPriority, TaskStatus, TaskType
+from src.services.data_release import checks as release_checks
+from src.services.data_release import pipeline as release_pipeline
+from src.services.data_release.commands import (
+    build_cloudflare_deploy_command,
+    build_generate_site_data_command,
+    build_publish_github_snapshot_command,
+    build_publish_raw_archive_command,
+)
+from src.services.data_release.process_runner import (
+    run_capture,
+    run_logged_command,
+    terminate_process_tree,
+)
 from src.services.exceptions import TaskCancelledError
 from src.services.settings_service import system_settings_service
 
@@ -81,7 +89,7 @@ SUBSCRIPTION_SYNC_TIMEOUT_SECONDS = 10 * 60
 GITHUB_SNAPSHOT_PUBLISH_TIMEOUT_SECONDS = 15 * 60
 GITHUB_SNAPSHOT_BRANCH = "snapshot-v2"
 GITHUB_SNAPSHOT_DIR = ROOT_DIR / "exports" / "github-data-snapshot-v2"
-RAW_ARCHIVE_BRANCH = "raw-v1"
+RAW_ARCHIVE_BRANCH = "main"
 
 
 def _iso(value: Optional[datetime]) -> Optional[str]:
@@ -706,273 +714,21 @@ class DataReleaseService:
         }
 
     async def execute_release_task(self, task: Task) -> dict[str, Any]:
-        input_data = dict(task.input_data or {})
-        job_id = str(input_data.get("release_job_id") or "").strip()
-        if not job_id:
-            raise RuntimeError("Release task is missing release_job_id")
-        job = next((item for item in await self.load_jobs() if item.job_id == job_id), None)
-        if job is None:
-            raise RuntimeError(f"Release job not found: {job_id}")
-
-        checks = await self.integration_checks(job.job_id)
-        await task_manager.add_workbook_entry(
-            task.task_uuid,
-            entry_type="info",
-            title="Release Preflight",
-            content=json.dumps(checks, ensure_ascii=False, indent=2),
-            content_type="json",
-            metadata={"event": "release_preflight", "release_job_id": job.job_id},
+        runtime = release_pipeline.ReleasePipelineRuntime(
+            task_manager=task_manager,
+            get_config=get_config,
+            get_database=get_database,
+            task_model=Task,
+            root_dir=ROOT_DIR,
+            astro_dir=ASTRO_DIR,
+            github_snapshot_branch=GITHUB_SNAPSHOT_BRANCH,
+            raw_archive_branch=RAW_ARCHIVE_BRANCH,
+            generate_timeout_seconds=GENERATE_SITE_DATA_TIMEOUT_SECONDS,
+            astro_build_timeout_seconds=ASTRO_BUILD_TIMEOUT_SECONDS,
+            github_publish_timeout_seconds=GITHUB_SNAPSHOT_PUBLISH_TIMEOUT_SECONDS,
+            cloudflare_deploy_timeout_seconds=CLOUDFLARE_DEPLOY_TIMEOUT_SECONDS,
         )
-        if not checks["overall_ready"]:
-            raise RuntimeError("Release preflight failed: " + "; ".join(checks["blockers"]))
-
-        tz = ZoneInfo(job.timezone or self._config().timezone)
-        branch = GITHUB_SNAPSHOT_BRANCH
-        project_name = self._cloudflare_project_name(job.cloudflare_project_name)
-        download_repo_url = self._download_repo_url()
-        git_transport = str((checks.get("git") or {}).get("ssh_transport") or "default")
-        git_env = self._build_git_env(
-            download_repo_url,
-            use_github_ssh_over_443=(git_transport == "github-ssh-over-443"),
-        )
-        snapshot_url_base = self._github_snapshot_raw_base()
-        publish_commit_message = self._render_commit_message(job, branch=branch, tz=tz)
-        python_path = self._python_executable()
-        cloudflare_check = checks.get("cloudflare") or {}
-        deployment_branch = str(
-            cloudflare_check.get("production_branch")
-            or job.github_branch
-            or await self._current_git_branch()
-        ).strip()
-        release_identity = await self._site_release_identity(deployment_branch)
-
-        await task_manager.update_task_progress(task.task_uuid, 5)
-        raw_archive_cfg = get_config().raw_archive
-        raw_archive_published = False
-        if raw_archive_cfg.enabled:
-            raw_git_transport = str(
-                (checks.get("raw_archive") or {}).get("ssh_transport") or "default"
-            )
-            raw_git_env = self._build_git_env(
-                raw_archive_cfg.repo_url,
-                use_github_ssh_over_443=(raw_git_transport == "github-ssh-over-443"),
-            )
-            await self._run_logged_command(
-                task.task_uuid,
-                title="Archive Raw Crawler Data",
-                cmd=self._publish_raw_archive_command(python_path=python_path),
-                cwd=ROOT_DIR,
-                env=raw_git_env,
-                metadata={
-                    "event": "raw_git_archive_publish",
-                    "release_job_id": job.job_id,
-                    "branch": RAW_ARCHIVE_BRANCH,
-                },
-                timeout_seconds=float(raw_archive_cfg.git_timeout_seconds) + 60 * 60,
-            )
-            raw_archive_published = True
-        else:
-            await task_manager.add_workbook_entry(
-                task.task_uuid,
-                entry_type="info",
-                title="Raw Crawler Archive Skipped",
-                content="RAW_ARCHIVE__ENABLED is disabled for this run.",
-                content_type="text",
-                metadata={
-                    "event": "raw_git_archive_skipped",
-                    "release_job_id": job.job_id,
-                },
-            )
-        await task_manager.update_task_progress(task.task_uuid, 15)
-
-        generate_cmd = self._generate_site_data_command(
-            python_path=python_path,
-            snapshot_url_base=snapshot_url_base,
-        )
-        await self._run_logged_command(
-            task.task_uuid,
-            title="Generate Site Data",
-            cmd=generate_cmd,
-            cwd=ROOT_DIR,
-            env=git_env,
-            metadata={"event": "generate_site_data", "release_job_id": job.job_id},
-            timeout_seconds=GENERATE_SITE_DATA_TIMEOUT_SECONDS,
-        )
-        await task_manager.update_task_progress(task.task_uuid, 35)
-
-        await self._run_logged_command(
-            task.task_uuid,
-            title="Build Astro Site",
-            cmd=["npm", "run", "build"],
-            cwd=ASTRO_DIR,
-            env={
-                "GLOBALID_SKIP_SITE_DATA_GENERATION": "1",
-                "PUBLIC_GIDS_RELEASE_ID": release_identity["release_id"],
-                "PUBLIC_GIDS_SOURCE_COMMIT": release_identity["source_commit"],
-                "PUBLIC_GIDS_SOURCE_BRANCH": release_identity["source_branch"],
-                "PUBLIC_GIDS_DEPLOY_BRANCH": release_identity["deployment_branch"],
-                "PUBLIC_GIDS_BUILT_AT": release_identity["built_at"],
-            },
-            metadata={"event": "astro_build", "release_job_id": job.job_id},
-            timeout_seconds=ASTRO_BUILD_TIMEOUT_SECONDS,
-        )
-        release_manifest = self._write_site_release_manifest(release_identity)
-        await task_manager.add_workbook_entry(
-            task.task_uuid,
-            entry_type="info",
-            title="Site Release Identity",
-            content=json.dumps(release_manifest, ensure_ascii=False, indent=2),
-            content_type="json",
-            metadata={"event": "site_release_identity", "release_job_id": job.job_id},
-        )
-        await task_manager.update_task_progress(task.task_uuid, 60)
-
-        subscription_options_synced = await self._sync_subscription_options_if_needed(
-            task.task_uuid,
-            job_id=job.job_id,
-        )
-
-        github_snapshot_published = False
-        pages_deployed = False
-        cloudflare_deployment = None
-
-        if job.include_git_push:
-            await self._run_logged_command(
-                task.task_uuid,
-                title="Publish GitHub Snapshot v2",
-                cmd=self._publish_github_snapshot_command(
-                    python_path=python_path,
-                    repo_url=download_repo_url,
-                    commit_message=publish_commit_message,
-                ),
-                cwd=ROOT_DIR,
-                env=git_env,
-                metadata={
-                    "event": "github_snapshot_v2_publish",
-                    "release_job_id": job.job_id,
-                    "branch": GITHUB_SNAPSHOT_BRANCH,
-                },
-                timeout_seconds=GITHUB_SNAPSHOT_PUBLISH_TIMEOUT_SECONDS,
-            )
-            github_snapshot_published = True
-        else:
-            await task_manager.add_workbook_entry(
-                task.task_uuid,
-                entry_type="info",
-                title="GitHub Snapshot Publish Skipped",
-                content="The validated snapshot-v2 tree remains local for this run.",
-                content_type="text",
-                metadata={
-                    "event": "github_snapshot_v2_publish_skipped",
-                    "release_job_id": job.job_id,
-                },
-            )
-
-        await task_manager.update_task_progress(task.task_uuid, 88)
-
-        if job.include_cloudflare_deploy:
-            if not deployment_branch:
-                raise RuntimeError("Cloudflare production branch could not be resolved.")
-            await self._run_logged_command(
-                task.task_uuid,
-                title="Deploy Cloudflare Pages",
-                cmd=self._cloudflare_deploy_command(
-                    project_name=project_name,
-                    branch=deployment_branch,
-                    source_commit=release_identity["source_commit"],
-                    commit_message=publish_commit_message,
-                    commit_dirty=release_identity["commit_dirty"],
-                ),
-                cwd=ASTRO_DIR,
-                env={
-                    "CI": "1",
-                    "CLOUDFLARE_API_TOKEN": self._cloudflare_api_token(),
-                    "CLOUDFLARE_ACCOUNT_ID": self._cloudflare_account_id(),
-                },
-                metadata={
-                    "event": "cloudflare_pages_deploy",
-                    "release_job_id": job.job_id,
-                    "release_id": release_identity["release_id"],
-                    "deployment_branch": deployment_branch,
-                },
-                timeout_seconds=CLOUDFLARE_DEPLOY_TIMEOUT_SECONDS,
-            )
-            cloudflare_deployment = await self._verify_cloudflare_production_release(
-                project_name=project_name,
-                subdomain=str(cloudflare_check.get("subdomain") or "").strip(),
-                release_identity=release_identity,
-            )
-            await task_manager.add_workbook_entry(
-                task.task_uuid,
-                entry_type="success",
-                title="Production Release Verified",
-                content=json.dumps(cloudflare_deployment, ensure_ascii=False, indent=2),
-                content_type="json",
-                metadata={
-                    "event": "cloudflare_production_verified",
-                    "release_job_id": job.job_id,
-                    "release_id": release_identity["release_id"],
-                },
-            )
-            pages_deployed = True
-        else:
-            await task_manager.add_workbook_entry(
-                task.task_uuid,
-                entry_type="info",
-                title="Cloudflare Deploy Skipped",
-                content="Cloudflare Pages deployment is disabled for this release job.",
-                content_type="text",
-                metadata={"event": "cloudflare_skip", "release_job_id": job.job_id},
-            )
-
-        await task_manager.update_task_progress(task.task_uuid, 100)
-
-        output = {
-            "release_job_id": job.job_id,
-            "release_job_name": job.name,
-            "github_repo_url": download_repo_url,
-            "github_snapshot_branch": branch,
-            "snapshot_url_base": snapshot_url_base,
-            "cloudflare_project_name": project_name,
-            "cloudflare_deployment_branch": deployment_branch,
-            "cloudflare_deployment": cloudflare_deployment,
-            "site_release": release_manifest,
-            "commit_message": publish_commit_message,
-            "git_pushed": github_snapshot_published,
-            "github_snapshot_published": github_snapshot_published,
-            "raw_archive_published": raw_archive_published,
-            "raw_archive_repo_url": raw_archive_cfg.repo_url or None,
-            "raw_archive_branch": RAW_ARCHIVE_BRANCH if raw_archive_cfg.enabled else None,
-            "pages_deployed": pages_deployed,
-            "subscription_options_synced": subscription_options_synced,
-            "preflight": checks,
-        }
-
-        async with get_database() as db:
-            task_obj = await db.get(Task, task.id)
-            if task_obj:
-                task_obj.output_data = output
-                await db.commit()
-
-        await task_manager.add_workbook_entry(
-            task.task_uuid,
-            entry_type="success",
-            title="Data Release Completed",
-            content=(
-                f"Release job: {job.name}\n"
-                f"GitHub snapshot-v2 published: {'yes' if github_snapshot_published else 'no'}\n"
-                f"Raw crawler archive updated: {'yes' if raw_archive_published else 'no'}\n"
-                f"Cloudflare deployed: {'yes' if pages_deployed else 'no'}\n"
-                f"Production branch: {deployment_branch or '-'}\n"
-                f"Site release: {release_identity['release_id']}\n"
-                f"Production URL: {cloudflare_deployment.get('production_url') if cloudflare_deployment else '-'}\n"
-                f"Subscription options synced: {'yes' if subscription_options_synced else 'no'}\n"
-                f"Download repo: {download_repo_url or '-'}"
-            ),
-            content_type="text",
-            metadata={"event": "release_completed", "release_job_id": job.job_id},
-        )
-        return output
+        return await release_pipeline.execute_release_task(self, task, runtime=runtime)
 
     def _compute_next_run(
         self,
@@ -1132,25 +888,13 @@ class DataReleaseService:
         commit_message: str,
         commit_dirty: bool,
     ) -> list[str]:
-        command = [
-            "npm",
-            "exec",
-            "--",
-            "wrangler",
-            "pages",
-            "deploy",
-            "dist",
-            "--project-name",
-            project_name,
-            "--branch",
-            branch,
-            "--commit-message",
-            commit_message,
-            f"--commit-dirty={'true' if commit_dirty else 'false'}",
-        ]
-        if source_commit and source_commit != "unknown":
-            command.extend(["--commit-hash", source_commit])
-        return command
+        return build_cloudflare_deploy_command(
+            project_name=project_name,
+            branch=branch,
+            source_commit=source_commit,
+            commit_message=commit_message,
+            commit_dirty=commit_dirty,
+        )
 
     def _generate_site_data_command(
         self,
@@ -1158,14 +902,10 @@ class DataReleaseService:
         python_path: Path,
         snapshot_url_base: str,
     ) -> list[str]:
-        """Build the canonical v2 package and bounded GitHub snapshot locally."""
-
-        return [
-            str(python_path),
-            "scripts/generate_site_data.py",
-            "--github-snapshot-url-base",
-            snapshot_url_base,
-        ]
+        return build_generate_site_data_command(
+            python_path=python_path,
+            snapshot_url_base=snapshot_url_base,
+        )
 
     def _publish_github_snapshot_command(
         self,
@@ -1174,39 +914,22 @@ class DataReleaseService:
         repo_url: str,
         commit_message: str,
     ) -> list[str]:
-        return [
-            str(python_path),
-            "scripts/publish_github_snapshot_v2.py",
-            "--snapshot-dir",
-            str(GITHUB_SNAPSHOT_DIR),
-            "--repo-url",
-            repo_url,
-            "--commit-message",
-            commit_message,
-            "--push",
-        ]
+        return build_publish_github_snapshot_command(
+            python_path=python_path,
+            snapshot_dir=GITHUB_SNAPSHOT_DIR,
+            repo_url=repo_url,
+            commit_message=commit_message,
+        )
 
     def _publish_raw_archive_command(self, *, python_path: Path) -> list[str]:
         cfg = get_config().raw_archive
-        return [
-            str(python_path),
-            "scripts/publish_raw_git_archive.py",
-            "--source-dir",
-            str(get_config().raw_data_dir),
-            "--repository-dir",
-            str(cfg.repository_dir),
-            "--repo-url",
-            cfg.repo_url,
-            "--chunk-mib",
-            str(cfg.chunk_mib),
-            "--commit-batch-mib",
-            str(cfg.commit_batch_mib),
-            "--zstd-level",
-            str(cfg.zstd_level),
-            "--git-timeout-seconds",
-            str(cfg.git_timeout_seconds),
-            "--push",
-        ]
+        return build_publish_raw_archive_command(
+            python_path=python_path,
+            source_dir=get_config().raw_data_dir,
+            repository_dir=cfg.repository_dir,
+            repo_url=cfg.repo_url,
+            git_timeout_seconds=cfg.git_timeout_seconds,
+        )
 
     def _env_file_values(self) -> dict[str, str]:
         if dotenv_values is None or not ENV_PATH.exists():
@@ -1290,8 +1013,7 @@ class DataReleaseService:
             return False
 
     def _is_github_ssh_repo_url(self, repo_url: str) -> bool:
-        normalized = (repo_url or "").strip().lower()
-        return any(normalized.startswith(prefix) for prefix in GITHUB_SSH_PREFIXES)
+        return release_checks.is_github_ssh_repo_url(repo_url, GITHUB_SSH_PREFIXES)
 
     def _build_git_env(
         self,
@@ -1299,375 +1021,63 @@ class DataReleaseService:
         *,
         use_github_ssh_over_443: bool = False,
     ) -> dict[str, str]:
-        ssh_parts = [
-            "ssh",
-            "-o",
-            "BatchMode=yes",
-            "-o",
-            "StrictHostKeyChecking=accept-new",
-        ]
-        if use_github_ssh_over_443 and self._is_github_ssh_repo_url(repo_url):
-            # GitHub supports SSH over 443 via ssh.github.com, which helps in restricted networks.
-            ssh_parts.extend(["-o", "Hostname=ssh.github.com", "-p", "443"])
-        return {
-            "GIT_TERMINAL_PROMPT": "0",
-            "GIT_SSH_COMMAND": " ".join(ssh_parts),
-        }
+        return release_checks.build_git_env(
+            repo_url,
+            github_ssh_prefixes=GITHUB_SSH_PREFIXES,
+            use_github_ssh_over_443=use_github_ssh_over_443,
+        )
 
     async def _raw_archive_check(self) -> dict[str, Any]:
-        cfg = get_config().raw_archive
-        payload = {
-            "enabled": bool(cfg.enabled),
-            "repo_url": cfg.repo_url or None,
-            "branch": RAW_ARCHIVE_BRANCH,
-            "source_dir": str(get_config().raw_data_dir),
-            "repository_dir": str(cfg.repository_dir),
-            "chunk_mib": cfg.chunk_mib,
-            "read_access_ok": False,
-            "write_access_ok": False,
-            "zstd_available": False,
-            "ssh_transport": "disabled" if not cfg.enabled else "default",
-            "read_check_output": None,
-            "write_check_output": None,
-        }
-        blockers: list[str] = []
-        if not cfg.enabled:
-            return {"payload": payload, "blockers": blockers}
-        if not cfg.repo_url.strip():
-            blockers.append("Missing RAW_ARCHIVE__REPO_URL.")
-        if not get_config().raw_data_dir.is_dir():
-            blockers.append(f"Raw archive source directory is missing: {get_config().raw_data_dir}")
-
-        zstd = await self._run_capture(["zstd", "--version"], cwd=ROOT_DIR, timeout=20)
-        payload["zstd_available"] = zstd["returncode"] == 0
-        if zstd["returncode"] != 0:
-            blockers.append("zstd executable is unavailable.")
-        if blockers:
-            return {"payload": payload, "blockers": blockers}
-
-        git_env = self._build_git_env(cfg.repo_url)
-        read = await self._run_capture(
-            ["git", "ls-remote", cfg.repo_url, "HEAD"],
-            cwd=ROOT_DIR,
-            env=git_env,
-            timeout=40,
+        config = get_config()
+        archive = config.raw_archive
+        return await release_checks.raw_archive_check(
+            enabled=archive.enabled,
+            repo_url=archive.repo_url,
+            source_dir=config.raw_data_dir,
+            repository_dir=archive.repository_dir,
+            branch=RAW_ARCHIVE_BRANCH,
+            root_dir=ROOT_DIR,
+            github_ssh_prefixes=GITHUB_SSH_PREFIXES,
+            run_capture=self._run_capture,
         )
-        if read["returncode"] != 0 and self._is_github_ssh_repo_url(cfg.repo_url):
-            fallback_env = self._build_git_env(cfg.repo_url, use_github_ssh_over_443=True)
-            fallback = await self._run_capture(
-                ["git", "ls-remote", cfg.repo_url, "HEAD"],
-                cwd=ROOT_DIR,
-                env=fallback_env,
-                timeout=40,
-            )
-            if fallback["returncode"] == 0:
-                read = fallback
-                git_env = fallback_env
-                payload["ssh_transport"] = "github-ssh-over-443"
-            else:
-                read["stdout"] = (
-                    f"Primary SSH failed:\n{read.get('stdout') or ''}\n\n"
-                    f"SSH-over-443 failed:\n{fallback.get('stdout') or ''}"
-                ).strip()
-        payload["read_check_output"] = read["stdout"]
-        payload["read_access_ok"] = read["returncode"] == 0
-        if read["returncode"] != 0:
-            blockers.append("Raw archive repository read check failed.")
-            return {"payload": payload, "blockers": blockers}
-
-        probe_branch = f"__globalid_write_probe__/{RAW_ARCHIVE_BRANCH}"
-        write = await self._run_capture(
-            ["git", "push", "--dry-run", cfg.repo_url, f"HEAD:refs/heads/{probe_branch}"],
-            cwd=ROOT_DIR,
-            env=git_env,
-            timeout=40,
-        )
-        payload["write_check_output"] = write["stdout"]
-        payload["write_access_ok"] = write["returncode"] == 0
-        if write["returncode"] != 0:
-            blockers.append("Raw archive repository write check failed.")
-        return {"payload": payload, "blockers": blockers}
 
     async def _git_status_paths(self) -> list[str]:
-        result = await self._run_capture(
-            ["git", "status", "--porcelain=v1", "-uall"],
-            cwd=ROOT_DIR,
+        return await release_checks.git_status_paths(
+            run_capture=self._run_capture,
+            root_dir=ROOT_DIR,
         )
-        if result["returncode"] != 0:
-            return []
-        paths: list[str] = []
-        for raw_line in result["stdout"].splitlines():
-            line = raw_line.rstrip()
-            if len(line) < 3:
-                continue
-            if len(line) >= 3 and line[2] == " ":
-                path = line[3:]
-            elif len(line) >= 2 and line[1] == " ":
-                # _run_capture strips leading whitespace from the full output, which can
-                # affect the first porcelain status line when X is blank.
-                path = line[2:]
-            else:
-                continue
-            if " -> " in path:
-                path = path.split(" -> ", 1)[1]
-            path = path.strip().strip('"')
-            if path:
-                paths.append(path.replace("\\", "/"))
-        return paths
 
     async def _tracked_generated_paths(self) -> list[str]:
-        result = await self._run_capture(
-            ["git", "ls-files", "--", *GENERATED_DATA_PATHS],
-            cwd=ROOT_DIR,
+        return await release_checks.tracked_generated_paths(
+            run_capture=self._run_capture,
+            root_dir=ROOT_DIR,
+            generated_data_paths=GENERATED_DATA_PATHS,
         )
-        if result["returncode"] != 0:
-            return ["<unable to verify repository boundary>"]
-        return [line for line in result["stdout"].splitlines() if line.strip()]
 
     async def _download_repo_check(self, _job: DataReleaseJobConfig) -> dict[str, Any]:
-        repo_url = self._download_repo_url()
-        branch = GITHUB_SNAPSHOT_BRANCH
-        raw_base_url = self._github_snapshot_raw_base()
-        git_env = self._build_git_env(repo_url)
-        ssh_transport = "default"
-        payload = {
-            "repo_url": repo_url or None,
-            "branch": branch,
-            "raw_base_url": raw_base_url or None,
-            "read_access_ok": False,
-            "write_access_ok": False,
-            "read_check_output": None,
-            "write_check_output": None,
-            "ssh_transport": ssh_transport,
-        }
-        blockers: list[str] = []
-
-        if not repo_url:
-            blockers.append("Missing GITHUB_DATA_SHARE_REPO_URL.")
-            return {"payload": payload, "blockers": blockers}
-
-        read_check: dict[str, Any] = {"returncode": 127, "stdout": "read check did not run"}
-        fallback_read_output: Optional[str] = None
-        for attempt in range(1, 4):
-            read_check = await self._run_capture(
-                ["git", "ls-remote", repo_url, "HEAD"],
-                cwd=ROOT_DIR,
-                env=git_env,
-                timeout=40,
-            )
-
-            if read_check["returncode"] != 0 and self._is_github_ssh_repo_url(repo_url):
-                fallback_env = self._build_git_env(repo_url, use_github_ssh_over_443=True)
-                fallback_read = await self._run_capture(
-                    ["git", "ls-remote", repo_url, "HEAD"],
-                    cwd=ROOT_DIR,
-                    env=fallback_env,
-                    timeout=40,
-                )
-                if fallback_read["returncode"] == 0:
-                    read_check = fallback_read
-                    git_env = fallback_env
-                    ssh_transport = "github-ssh-over-443"
-                    fallback_read_output = None
-                else:
-                    fallback_read_output = fallback_read.get("stdout") or ""
-
-            if read_check["returncode"] == 0:
-                break
-
-            if attempt < 3:
-                await asyncio.sleep(min(5, attempt * 2))
-
-        if read_check["returncode"] != 0 and self._is_github_ssh_repo_url(repo_url) and fallback_read_output is not None:
-            read_check["stdout"] = (
-                "Primary SSH (port 22) failed:\n"
-                + (read_check.get("stdout") or "")
-                + "\n\nSSH-over-443 fallback failed:\n"
-                + fallback_read_output
-            ).strip()
-
-        payload["read_check_output"] = read_check["stdout"]
-        payload["read_access_ok"] = read_check["returncode"] == 0
-        payload["ssh_transport"] = ssh_transport
-        if read_check["returncode"] != 0:
-            blockers.append("Download-data repo read check failed.")
-            return {"payload": payload, "blockers": blockers}
-
-        with tempfile.TemporaryDirectory(prefix="globalid-data-release-check-") as temp_dir:
-            temp_path = Path(temp_dir)
-            init_check = await self._run_capture(["git", "init"], cwd=temp_path, env=git_env, timeout=40)
-            if init_check["returncode"] != 0:
-                payload["write_check_output"] = init_check["stdout"]
-                blockers.append("Download-data repo write check failed.")
-                return {"payload": payload, "blockers": blockers}
-
-            remote_add_check = await self._run_capture(
-                ["git", "remote", "add", "origin", repo_url],
-                cwd=temp_path,
-                env=git_env,
-                timeout=40,
-            )
-            if remote_add_check["returncode"] != 0:
-                payload["write_check_output"] = remote_add_check["stdout"]
-                blockers.append("Download-data repo write check failed.")
-                return {"payload": payload, "blockers": blockers}
-
-            commit_check = await self._run_capture(
-                [
-                    "git",
-                    "-c",
-                    "user.name=GlobalID Data Release",
-                    "-c",
-                    "user.email=noreply@globalid.local",
-                    "commit",
-                    "--allow-empty",
-                    "-m",
-                    "chore: permission check",
-                ],
-                cwd=temp_path,
-                env=git_env,
-                timeout=40,
-            )
-            if commit_check["returncode"] != 0:
-                payload["write_check_output"] = commit_check["stdout"]
-                blockers.append("Download-data repo write check failed.")
-                return {"payload": payload, "blockers": blockers}
-
-            probe_branch = f"__globalid_write_probe__/{branch or 'main'}"
-            write_check: dict[str, Any] = {"returncode": 127, "stdout": "write check did not run"}
-            for attempt in range(1, 3):
-                write_check = await self._run_capture(
-                    ["git", "push", "--dry-run", "origin", f"HEAD:refs/heads/{probe_branch}"],
-                    cwd=temp_path,
-                    env=git_env,
-                    timeout=40,
-                )
-                if write_check["returncode"] == 0:
-                    break
-
-                if self._is_github_ssh_repo_url(repo_url) and ssh_transport == "default":
-                    fallback_env = self._build_git_env(repo_url, use_github_ssh_over_443=True)
-                    fallback_write = await self._run_capture(
-                        ["git", "push", "--dry-run", "origin", f"HEAD:refs/heads/{probe_branch}"],
-                        cwd=temp_path,
-                        env=fallback_env,
-                        timeout=40,
-                    )
-                    if fallback_write["returncode"] == 0:
-                        write_check = fallback_write
-                        git_env = fallback_env
-                        ssh_transport = "github-ssh-over-443"
-                        break
-                    write_check["stdout"] = (
-                        "Primary SSH (port 22) failed:\n"
-                        + (write_check.get("stdout") or "")
-                        + "\n\nSSH-over-443 fallback failed:\n"
-                        + (fallback_write.get("stdout") or "")
-                    ).strip()
-
-                if attempt < 2:
-                    await asyncio.sleep(min(5, attempt * 2))
-
-            payload["write_check_output"] = write_check["stdout"]
-            payload["write_access_ok"] = write_check["returncode"] == 0
-            payload["ssh_transport"] = ssh_transport
-            if write_check["returncode"] != 0:
-                blockers.append("Download-data repo write check failed.")
-
-        return {"payload": payload, "blockers": blockers}
+        return await release_checks.download_repo_check(
+            repo_url=self._download_repo_url(),
+            branch=GITHUB_SNAPSHOT_BRANCH,
+            raw_base_url=self._github_snapshot_raw_base(),
+            root_dir=ROOT_DIR,
+            github_ssh_prefixes=GITHUB_SSH_PREFIXES,
+            run_capture=self._run_capture,
+        )
 
     async def _cloudflare_check(self, project_name: Optional[str]) -> dict[str, Any]:
-        project = self._cloudflare_project_name(project_name)
-        token = self._cloudflare_api_token()
-        account_id = self._cloudflare_account_id()
-        payload = {
-            "project_name": project,
-            "token_present": bool(token),
-            "account_id_present": bool(account_id),
-            "project_access_ok": False,
-            "subdomain": None,
-            "domains": [],
-            "production_branch": None,
-            "latest_production_deployment": None,
-            "error": None,
-        }
-        blockers: list[str] = []
-        if not token:
-            blockers.append("Missing CLOUDFLARE_API_TOKEN.")
-        if not account_id:
-            blockers.append("Missing CLOUDFLARE_ACCOUNT_ID.")
-        if not project:
-            blockers.append("Missing Cloudflare Pages project name.")
-        if blockers:
-            payload["error"] = "; ".join(blockers)
-            return {"payload": payload, "blockers": blockers}
-
-        url = f"https://api.cloudflare.com/client/v4/accounts/{account_id}/pages/projects/{project}"
-        try:
-            body = await self._cloudflare_api_json(url)
-            payload["project_access_ok"] = bool(body.get("success"))
-            if not payload["project_access_ok"]:
-                messages = body.get("errors") or body.get("messages") or []
-                raise RuntimeError(json.dumps(messages, ensure_ascii=False))
-
-            project_data = body.get("result") or {}
-            payload["subdomain"] = project_data.get("subdomain")
-            payload["domains"] = list(project_data.get("domains") or [])
-            payload["production_branch"] = project_data.get("production_branch")
-            payload["latest_production_deployment"] = await self._cloudflare_latest_deployment(
-                project,
-                environment="production",
-            )
-            return {"payload": payload, "blockers": blockers}
-        except RuntimeError as exc:
-            payload["error"] = str(exc)
-            blockers.append("Cloudflare Pages project check failed.")
-        return {"payload": payload, "blockers": blockers}
+        return await release_checks.cloudflare_check(
+            project=self._cloudflare_project_name(project_name),
+            token=self._cloudflare_api_token(),
+            account_id=self._cloudflare_account_id(),
+            api_json=self._cloudflare_api_json,
+            latest_deployment=self._cloudflare_latest_deployment,
+        )
 
     async def _cloudflare_api_json(self, url: str) -> dict[str, Any]:
-        token = self._cloudflare_api_token()
-        request = urlrequest.Request(
-            url,
-            headers={
-                "Authorization": f"Bearer {token}",
-                "Content-Type": "application/json",
-            },
-            method="GET",
-        )
-        last_exc: Optional[Exception] = None
-
-        def fetch() -> dict[str, Any]:
-            with urlrequest.urlopen(request, timeout=20) as response:
-                return json.loads(response.read().decode("utf-8", errors="replace"))
-
-        for attempt in range(1, 4):
-            try:
-                return await asyncio.to_thread(fetch)
-            except urlerror.HTTPError as exc:
-                last_exc = exc
-                if 400 <= exc.code < 500 and exc.code != 429:
-                    break
-            except (urlerror.URLError, TimeoutError, json.JSONDecodeError) as exc:
-                last_exc = exc
-            if attempt < 3:
-                await asyncio.sleep(min(5, attempt * 2))
-        raise RuntimeError(str(last_exc) if last_exc else "Cloudflare API request failed")
+        return await release_checks.cloudflare_api_json(url, token=self._cloudflare_api_token())
 
     def _normalize_cloudflare_deployment(self, deployment: dict[str, Any]) -> dict[str, Any]:
-        trigger = deployment.get("deployment_trigger") or {}
-        metadata = trigger.get("metadata") or {}
-        latest_stage = deployment.get("latest_stage") or {}
-        return {
-            "id": deployment.get("id"),
-            "url": deployment.get("url"),
-            "environment": deployment.get("environment"),
-            "created_on": deployment.get("created_on"),
-            "status": latest_stage.get("status"),
-            "branch": metadata.get("branch"),
-            "commit_hash": metadata.get("commit_hash"),
-            "commit_message": metadata.get("commit_message"),
-            "commit_dirty": bool(metadata.get("commit_dirty")),
-        }
+        return release_checks.normalize_cloudflare_deployment(deployment)
 
     async def _cloudflare_latest_deployment(
         self,
@@ -1675,53 +1085,22 @@ class DataReleaseService:
         *,
         environment: str,
     ) -> Optional[dict[str, Any]]:
-        query = urlparse.urlencode({"env": environment, "per_page": 1})
-        url = (
-            "https://api.cloudflare.com/client/v4/accounts/"
-            f"{self._cloudflare_account_id()}/pages/projects/{project_name}/deployments?{query}"
+        return await release_checks.cloudflare_latest_deployment(
+            project_name,
+            environment=environment,
+            account_id=self._cloudflare_account_id(),
+            api_json=self._cloudflare_api_json,
         )
-        body = await self._cloudflare_api_json(url)
-        if not body.get("success"):
-            messages = body.get("errors") or body.get("messages") or []
-            raise RuntimeError(f"Cloudflare deployment lookup failed: {json.dumps(messages, ensure_ascii=False)}")
-        deployments = body.get("result") or []
-        if not deployments:
-            return None
-        return self._normalize_cloudflare_deployment(deployments[0])
 
     def _cloudflare_deployment_matches(
         self,
         deployment: Optional[dict[str, Any]],
         identity: dict[str, Any],
     ) -> bool:
-        if not deployment:
-            return False
-        return (
-            deployment.get("environment") == "production"
-            and deployment.get("status") == "success"
-            and deployment.get("branch") == identity.get("deployment_branch")
-            and deployment.get("commit_hash") == identity.get("source_commit")
-        )
+        return release_checks.cloudflare_deployment_matches(deployment, identity)
 
     async def _public_json(self, url: str) -> dict[str, Any]:
-        request = urlrequest.Request(
-            url,
-            headers={
-                "Accept": "application/json",
-                "Cache-Control": "no-cache",
-                "User-Agent": (
-                    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-                    "(KHTML, like Gecko) Chrome/126.0 Safari/537.36"
-                ),
-            },
-            method="GET",
-        )
-
-        def fetch() -> dict[str, Any]:
-            with urlrequest.urlopen(request, timeout=15) as response:
-                return json.loads(response.read().decode("utf-8", errors="replace"))
-
-        return await asyncio.to_thread(fetch)
+        return await release_checks.public_json(url)
 
     async def _verify_cloudflare_production_release(
         self,
@@ -1730,56 +1109,12 @@ class DataReleaseService:
         subdomain: str,
         release_identity: dict[str, Any],
     ) -> dict[str, Any]:
-        if not subdomain:
-            raise RuntimeError("Cloudflare production subdomain is missing; release cannot be verified.")
-
-        production_url = f"https://{subdomain}"
-        manifest_url = (
-            f"{production_url}/release.json?"
-            + urlparse.urlencode({"release": release_identity["release_id"]})
-        )
-        last_deployment: Optional[dict[str, Any]] = None
-        last_manifest: Optional[dict[str, Any]] = None
-        last_error: Optional[Exception] = None
-
-        for attempt in range(1, 9):
-            try:
-                last_deployment = await self._cloudflare_latest_deployment(
-                    project_name,
-                    environment="production",
-                )
-                last_manifest = await self._public_json(manifest_url)
-                deployment_matches = self._cloudflare_deployment_matches(
-                    last_deployment,
-                    release_identity,
-                )
-                manifest_matches = (
-                    last_manifest.get("release_id") == release_identity["release_id"]
-                    and last_manifest.get("deployment_branch") == release_identity["deployment_branch"]
-                    and last_manifest.get("source_commit") == release_identity["source_commit"]
-                )
-                if deployment_matches and manifest_matches:
-                    return {
-                        "verified": True,
-                        "production_url": production_url,
-                        "manifest_url": manifest_url,
-                        "deployment": last_deployment,
-                        "release": last_manifest,
-                    }
-            except (RuntimeError, urlerror.URLError, TimeoutError, json.JSONDecodeError) as exc:
-                last_error = exc
-            if attempt < 8:
-                await asyncio.sleep(min(8, attempt))
-
-        details = {
-            "expected": release_identity,
-            "latest_production_deployment": last_deployment,
-            "production_manifest": last_manifest,
-            "last_error": str(last_error) if last_error else None,
-        }
-        raise RuntimeError(
-            "Cloudflare command completed, but the production release could not be verified: "
-            + json.dumps(details, ensure_ascii=False)
+        return await release_checks.verify_cloudflare_production_release(
+            project_name=project_name,
+            subdomain=subdomain,
+            release_identity=release_identity,
+            latest_deployment=self._cloudflare_latest_deployment,
+            fetch_public_json=self._public_json,
         )
 
     async def _run_capture(
@@ -1790,35 +1125,13 @@ class DataReleaseService:
         env: Optional[dict[str, str]] = None,
         timeout: int = 30,
     ) -> dict[str, Any]:
-        merged_env = os.environ.copy()
-        if env:
-            merged_env.update(env)
-        try:
-            proc = await asyncio.create_subprocess_exec(
-                *cmd,
-                cwd=str(cwd),
-                env=merged_env,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.STDOUT,
-                start_new_session=os.name == "posix",
-            )
-        except FileNotFoundError as exc:
-            return {
-                "returncode": 127,
-                "stdout": str(exc),
-            }
-        try:
-            stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=timeout)
-        except asyncio.TimeoutError:
-            await self._terminate_process_tree(proc)
-            return {
-                "returncode": 124,
-                "stdout": f"Command timed out after {timeout}s: {' '.join(shlex.quote(part) for part in cmd)}",
-            }
-        return {
-            "returncode": proc.returncode,
-            "stdout": stdout.decode("utf-8", errors="replace").strip(),
-        }
+        return await run_capture(
+            cmd,
+            cwd=cwd,
+            env=env,
+            timeout=timeout,
+            terminate=self._terminate_process_tree,
+        )
 
     async def _run_logged_command(
         self,
@@ -1831,134 +1144,18 @@ class DataReleaseService:
         metadata: Optional[dict[str, Any]] = None,
         timeout_seconds: float = DEFAULT_LOGGED_COMMAND_TIMEOUT_SECONDS,
     ) -> None:
-        if timeout_seconds <= 0:
-            raise ValueError("Logged command timeout_seconds must be greater than zero")
-
-        metadata = dict(metadata or {})
-        metadata["command"] = " ".join(shlex.quote(part) for part in cmd)
-        metadata["timeout_seconds"] = timeout_seconds
-        await task_manager.add_workbook_entry(
+        await run_logged_command(
             task_uuid,
-            entry_type="info",
-            title=f"{title} Started",
-            content=f"$ {' '.join(shlex.quote(part) for part in cmd)}\nCWD: {cwd}",
-            content_type="text",
+            title=title,
+            cmd=cmd,
+            cwd=cwd,
+            task_manager=task_manager,
+            logger=logger,
+            terminate=self._terminate_process_tree,
+            env=env,
             metadata=metadata,
-        )
-
-        merged_env = os.environ.copy()
-        if env:
-            merged_env.update(env)
-        try:
-            proc = await asyncio.create_subprocess_exec(
-                *cmd,
-                cwd=str(cwd),
-                env=merged_env,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.STDOUT,
-                start_new_session=os.name == "posix",
-            )
-        except FileNotFoundError as exc:
-            raise RuntimeError(f"{title} failed to start: {exc}") from exc
-
-        loop = asyncio.get_running_loop()
-        deadline = loop.time() + timeout_seconds
-        chunk_lines: list[str] = []
-        chunk_index = 1
-        output_tail: list[str] = []
-
-        async def flush_chunk(force: bool = False) -> None:
-            nonlocal chunk_lines, chunk_index
-            if not chunk_lines and not force:
-                return
-            if chunk_lines:
-                await task_manager.add_workbook_entry(
-                    task_uuid,
-                    entry_type="info",
-                    title=f"{title} Output #{chunk_index}",
-                    content="\n".join(chunk_lines),
-                    content_type="text",
-                    metadata={**metadata, "chunk": chunk_index, "event": metadata.get("event", "command_output")},
-                )
-                chunk_lines = []
-                chunk_index += 1
-
-        async def fail_on_timeout() -> None:
-            await self._terminate_process_tree(proc)
-            await flush_chunk(force=True)
-            timeout_text = f"{timeout_seconds:g} seconds"
-            message = (
-                f"{title} timed out after {timeout_text}; terminated process group "
-                f"{proc.pid}. Command: {metadata['command']}"
-            )
-            try:
-                await task_manager.add_workbook_entry(
-                    task_uuid,
-                    entry_type="error",
-                    title=f"{title} Timed Out",
-                    content=message,
-                    content_type="text",
-                    metadata={**metadata, "event": "command_timeout"},
-                )
-            except Exception as exc:  # pragma: no cover - task lifecycle still records the error.
-                logger.warning("Failed to write command timeout workbook entry: %s", exc)
-            raise RuntimeError(message)
-
-        while True:
-            if await task_manager.is_cancel_requested(task_uuid):
-                await self._terminate_process_tree(proc)
-                raise TaskCancelledError(f"Cancellation requested while running: {title}")
-
-            remaining_seconds = deadline - loop.time()
-            if remaining_seconds <= 0:
-                await fail_on_timeout()
-
-            try:
-                line = await asyncio.wait_for(
-                    proc.stdout.readline(),
-                    timeout=min(
-                        LOGGED_COMMAND_CANCEL_POLL_SECONDS,
-                        remaining_seconds,
-                    ),
-                )
-            except asyncio.TimeoutError:
-                if loop.time() >= deadline:
-                    await fail_on_timeout()
-                continue
-            if not line:
-                break
-            text = line.decode("utf-8", errors="replace").rstrip()
-            chunk_lines.append(text)
-            output_tail.append(text)
-            if len(output_tail) > 120:
-                output_tail = output_tail[-120:]
-            if len(chunk_lines) >= 40 or sum(len(item) for item in chunk_lines) >= 4000:
-                await flush_chunk()
-
-        if proc.returncode is None:
-            remaining_seconds = deadline - loop.time()
-            if remaining_seconds <= 0:
-                await fail_on_timeout()
-            try:
-                await asyncio.wait_for(proc.wait(), timeout=remaining_seconds)
-            except asyncio.TimeoutError:
-                await fail_on_timeout()
-
-        returncode = proc.returncode
-        await flush_chunk(force=True)
-
-        if returncode != 0:
-            raise RuntimeError(
-                f"{title} failed with exit code {returncode}.\n" + "\n".join(output_tail[-40:])
-            )
-
-        await task_manager.add_workbook_entry(
-            task_uuid,
-            entry_type="success",
-            title=f"{title} Completed",
-            content="\n".join(output_tail[-20:]) if output_tail else "Command completed successfully.",
-            content_type="text",
-            metadata=metadata,
+            timeout_seconds=timeout_seconds,
+            cancel_poll_seconds=LOGGED_COMMAND_CANCEL_POLL_SECONDS,
         )
 
     @staticmethod
@@ -1967,34 +1164,7 @@ class DataReleaseService:
         *,
         grace_seconds: float = 5,
     ) -> None:
-        """Terminate a release command and every subprocess it started."""
-        if proc.returncode is not None:
-            return
-
-        try:
-            if os.name == "posix":
-                os.killpg(proc.pid, signal.SIGTERM)
-            else:  # pragma: no cover - production release workers run on Linux.
-                proc.terminate()
-        except ProcessLookupError:
-            pass
-
-        try:
-            await asyncio.wait_for(proc.wait(), timeout=grace_seconds)
-        except asyncio.TimeoutError:
-            pass
-
-        try:
-            if os.name == "posix":
-                # The direct child can exit before one of its descendants. Kill
-                # the process group even when ``proc.wait()`` already returned.
-                os.killpg(proc.pid, signal.SIGKILL)
-            elif proc.returncode is None:  # pragma: no cover - production runs on Linux.
-                proc.kill()
-        except ProcessLookupError:
-            pass
-        if proc.returncode is None:
-            await proc.wait()
+        await terminate_process_tree(proc, grace_seconds=grace_seconds)
 
     def _current_git_branch_fallback(self) -> str:
         branch = os.getenv("DATA_RELEASE_GIT_BRANCH", "").strip()

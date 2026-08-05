@@ -2,18 +2,15 @@
 from __future__ import annotations
 
 import asyncio
-import hashlib
 import json
-import re
 import time
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
-from urllib.parse import quote_plus, urlparse
+from urllib.parse import quote_plus
 
 import requests
-from bs4 import BeautifulSoup
 from sqlalchemy import or_, select
 
 from src.ai.agents import WorkflowAgent
@@ -34,104 +31,44 @@ from src.domain import (
     ReportSection,
     StandardDisease,
     Task,
-    TaskPriority,
     TaskStatus,
     TaskType,
     TaskWorkbook,
 )
 from src.generation import DataExporter
-from src.services.agent_workflow_types import ActionRequest, ActionResult, AgentFinalResult, EvidenceRef, PlanNode
+from src.services.agent_workflow_types import AgentFinalResult, EvidenceRef, PlanNode
+from src.services.agent_workflow import prompts as workflow_prompts
+from src.services.agent_workflow import actions as workflow_actions
+from src.services.agent_workflow import memory as workflow_memory
+from src.services.agent_workflow import repository as workflow_repository
+from src.services.agent_workflow import runner as workflow_runner
+from src.services.agent_workflow import search as workflow_search
+from src.services.agent_workflow import serializers as workflow_serializers
+from src.services.agent_workflow import helpers as workflow_helpers
+from src.services.agent_workflow.helpers import (
+    QUERY_STOPWORDS,
+    chunked as _chunked,
+    compact_text as _compact_text,
+    ensure_list as _ensure_list,
+    extract_keywords as _extract_keywords,
+    safe_json as _safe_json,
+    stable_hash as _stable_hash,
+)
 from src.services.crawl_service import CrawlService
 from src.services.data_release_service import data_release_service
 from src.services.disease_knowledge_service import DiseaseKnowledgeUpdateService
-from src.services.exceptions import TaskCancelledError
 from src.services.report_service import ReportService
 
 logger = get_logger(__name__)
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_ALLOWED_ACTIONS = {"crawl_data", "generate_report", "update_disease_knowledge", "export_data"}
-WEB_SEARCH_ENDPOINT = "https://html.duckduckgo.com/html/"
-WEB_USER_AGENT = "GlobalID-AgentWorkflow/1.0 (+https://globalid.local)"
-QUERY_STOPWORDS = {
-    "a",
-    "an",
-    "and",
-    "are",
-    "about",
-    "for",
-    "from",
-    "how",
-    "is",
-    "in",
-    "of",
-    "on",
-    "or",
-    "the",
-    "to",
-    "what",
-    "when",
-    "where",
-    "which",
-    "who",
-    "why",
-    "with",
-    "please",
-    "need",
-    "use",
-    "task",
-    "prompt",
-    "data",
-    "search",
-    "analyze",
-    "analysis",
-}
+WEB_SEARCH_ENDPOINT = workflow_search.WEB_SEARCH_ENDPOINT
+WEB_USER_AGENT = workflow_search.WEB_USER_AGENT
 
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
-
-
-def _compact_text(value: Any, limit: int = 500) -> str:
-    text = " ".join(str(value or "").split())
-    if len(text) <= limit:
-        return text
-    return text[:limit].rstrip() + "..."
-
-
-def _stable_hash(text: str) -> str:
-    return hashlib.sha256((text or "").encode("utf-8")).hexdigest()
-
-
-def _safe_json(value: Any, fallback: Any) -> Any:
-    if value is None:
-        return fallback
-    return value
-
-
-def _ensure_list(value: Any) -> list[Any]:
-    if isinstance(value, list):
-        return value
-    if value is None:
-        return []
-    return [value]
-
-
-def _extract_keywords(prompt: str, limit: int = 8) -> list[str]:
-    tokens = re.findall(r"[A-Za-z0-9\u4e00-\u9fff]{2,}", prompt.lower())
-    keywords: list[str] = []
-    for token in tokens:
-        if token in QUERY_STOPWORDS:
-            continue
-        if token not in keywords:
-            keywords.append(token)
-        if len(keywords) >= limit:
-            break
-    return keywords
-
-
-def _chunked(items: list[Any], size: int) -> list[list[Any]]:
-    return [items[i : i + size] for i in range(0, len(items), size)]
 
 
 class AgentWorkflowService:
@@ -152,209 +89,16 @@ class AgentWorkflowService:
 
     async def execute(self, task: Task) -> dict[str, Any]:
         """Execute a top-level AGENT_WORKFLOW task."""
-        payload = dict(task.input_data or {})
-        prompt = str(payload.get("prompt") or task.description or task.task_name or "").strip()
-        if not prompt:
-            raise ValueError("AGENT_WORKFLOW tasks require a prompt")
-
-        allowed_actions = self._normalize_actions(payload.get("allowed_actions"))
-        search_scope = str(payload.get("search_scope") or "web+db+memory")
-        memory_scope = str(payload.get("memory_scope") or "project")
-        output_format = str(payload.get("output_format") or "evidence_report")
-        country_id = self._coerce_int(payload.get("country_id") or task.country_id)
-        mode = str(payload.get("mode") or "research")
-
-        async with get_database() as db:
-            run: Optional[AgentWorkflowRun] = None
-            final_output: Optional[AgentFinalResult] = None
-            try:
-                run = await self._get_or_create_run(
-                    db,
-                    task,
-                    prompt=prompt,
-                    mode=mode,
-                    output_format=output_format,
-                    country_id=country_id,
-                    search_scope=search_scope,
-                    memory_scope=memory_scope,
-                    allowed_actions=allowed_actions,
-                    payload=payload,
-                )
-                if run.status == "completed" and isinstance(run.result_json, dict) and run.result_json:
-                    return dict(run.result_json)
-
-                try:
-                    await task_manager.add_workbook_entry(
-                        task.task_uuid,
-                        entry_type="info",
-                        title="Agent Workflow Started",
-                        content=(
-                            f"Prompt: {_compact_text(prompt, 800)}\n"
-                            f"Scope: {search_scope}\n"
-                            f"Allowed actions: {', '.join(sorted(allowed_actions)) or 'none'}"
-                        ),
-                        content_type="text",
-                        metadata={
-                            "task_uuid": task.task_uuid,
-                            "mode": mode,
-                            "search_scope": search_scope,
-                            "memory_scope": memory_scope,
-                            "allowed_actions": sorted(allowed_actions),
-                        },
-                    )
-                except Exception as log_exc:
-                    logger.warning("Failed to add workflow start log for %s: %s", task.task_uuid, log_exc)
-
-                plan_nodes = await self._ensure_plan(db, run, task, prompt, payload, search_scope, allowed_actions)
-                completed_steps = await self._load_completed_steps(db, run.id)
-                context = self._build_initial_context(
-                    prompt=prompt,
-                    payload=payload,
-                    search_scope=search_scope,
-                    memory_scope=memory_scope,
-                )
-                context["plan"] = [node.to_dict() for node in plan_nodes]
-                await db.commit()
-
-                i = 0
-                while i < len(plan_nodes):
-                    if await task_manager.is_cancel_requested(task.task_uuid):
-                        raise TaskCancelledError("Cancellation requested by user")
-
-                    node = plan_nodes[i]
-                    step = completed_steps.get(node.step_key)
-                    if step and str(step.status) == "completed":
-                        context = self._merge_step_context(context, step.output_payload or {}, step.step_type)
-                        i += 1
-                        continue
-
-                    step = await self._start_step(db, run, node)
-                    try:
-                        result = await self._execute_node(
-                            db=db,
-                            task=task,
-                            run=run,
-                            node=node,
-                            context=context,
-                            allowed_actions=allowed_actions,
-                            prompt=prompt,
-                        )
-                        await self._finish_step(db, run, step, result)
-                        await db.commit()
-                        completed_steps[node.step_key] = step
-                        context = self._merge_step_context(context, result["output_payload"], node.step_type)
-                        await self._refresh_run_progress(db, run, task, completed_steps_count=len(completed_steps))
-                        await db.commit()
-
-                        if node.step_type == "review" and not result["output_payload"].get("approved", False):
-                            follow_up_nodes = self._maybe_schedule_replan_nodes(
-                                run=run,
-                                node=node,
-                                result=result["output_payload"],
-                                context=context,
-                            )
-                            if follow_up_nodes:
-                                plan_nodes.extend(follow_up_nodes)
-                                context["plan"] = [item.to_dict() for item in plan_nodes]
-                                await self._persist_plan(db, run, plan_nodes)
-                                await db.commit()
-
-                        if node.step_type == "finalize":
-                            break
-                    except Exception as exc:
-                        await self._fail_step(db, run, step, exc)
-                        await db.commit()
-                        raise
-
-                    i += 1
-
-                final_output = await self._build_final_output(db, run, task, prompt, context, plan_nodes)
-                run.status = "completed"
-                run.summary = final_output.summary
-                run.findings = final_output.findings
-                run.citations = final_output.citations
-                run.actions_taken = final_output.actions_taken
-                run.artifacts = final_output.artifacts
-                run.open_questions = final_output.open_questions
-                run.result_json = final_output.to_dict()
-                run.step_count = len([step for step in completed_steps.values() if str(step.status) == "completed"])
-                run.budget_tokens_total = self.total_token_budget
-                run.budget_tokens_used = self._aggregate_tokens([step.tokens for step in completed_steps.values()])
-                run.ended_at = _now()
-                run.metadata_ = {
-                    **(run.metadata_ or {}),
-                    "task_uuid": task.task_uuid,
-                    "prompt_hash": _stable_hash(prompt),
-                    "search_scope": search_scope,
-                    "memory_scope": memory_scope,
-                    "allowed_actions": sorted(allowed_actions),
-                    "plan_steps": len(plan_nodes),
-                    "step_count": run.step_count,
-                }
-                await db.commit()
-
-                try:
-                    await self._store_workflow_memory(db, run, task, prompt, final_output)
-                    await db.commit()
-                except Exception as memory_exc:
-                    logger.warning("Workflow memory persistence skipped for %s: %s", task.task_uuid, memory_exc)
-            except TaskCancelledError as exc:
-                if run is not None:
-                    run.status = "cancelled"
-                    run.error_message = str(exc)
-                    run.ended_at = _now()
-                    run.metadata_ = {**(run.metadata_ or {}), "cancelled": True, "cancel_reason": str(exc)}
-                    await db.commit()
-                try:
-                    await task_manager.add_workbook_entry(
-                        task.task_uuid,
-                        entry_type="warning",
-                        title="Agent Workflow Cancelled",
-                        content=str(exc),
-                        content_type="text",
-                        metadata={"task_uuid": task.task_uuid, "cancelled": True},
-                    )
-                except Exception as log_exc:
-                    logger.warning("Failed to add workflow cancellation log for %s: %s", task.task_uuid, log_exc)
-                raise
-            except Exception as exc:
-                if run is not None:
-                    run.status = "failed"
-                    run.error_message = str(exc)
-                    run.ended_at = _now()
-                    run.metadata_ = {**(run.metadata_ or {}), "failed": True, "error": str(exc)}
-                    await db.commit()
-                try:
-                    await task_manager.add_workbook_entry(
-                        task.task_uuid,
-                        entry_type="error",
-                        title="Agent Workflow Failed",
-                        content=str(exc),
-                        content_type="text",
-                        metadata={"task_uuid": task.task_uuid, "failed": True},
-                    )
-                except Exception as log_exc:
-                    logger.warning("Failed to add workflow failure log for %s: %s", task.task_uuid, log_exc)
-                raise
-
-        try:
-            await task_manager.add_workbook_entry(
-                task.task_uuid,
-                entry_type="success",
-                title="Agent Workflow Completed",
-                content=_compact_text(json.dumps(final_output.to_dict() if final_output else {}, ensure_ascii=False), 1500),
-                content_type="json",
-                metadata={
-                    "task_uuid": task.task_uuid,
-                    "evidence_count": final_output.evidence_count if final_output else 0,
-                    "step_count": final_output.step_count if final_output else 0,
-                    "risk_level": final_output.risk_level if final_output else "medium",
-                },
-            )
-        except Exception as log_exc:
-            logger.warning("Failed to add workflow completion log for %s: %s", task.task_uuid, log_exc)
-
-        return final_output.to_dict() if final_output else {}
+        return await workflow_runner.execute_workflow(
+            self,
+            task,
+            database_factory=get_database,
+            task_manager=task_manager,
+            now=_now,
+            compact_text=_compact_text,
+            stable_hash=_stable_hash,
+            logger=logger,
+        )
 
     async def list_runs(
         self,
@@ -387,8 +131,8 @@ class AgentWorkflowService:
                         AgentWorkflowRun.summary.ilike(like),
                     )
                 )
-                if filters:
-                    query = query.where(*filters)
+            if filters:
+                query = query.where(*filters)
 
             from sqlalchemy import func
 
@@ -501,55 +245,20 @@ class AgentWorkflowService:
         allowed_actions: set[str],
         payload: dict[str, Any],
     ) -> AgentWorkflowRun:
-        existing = (
-            await db.execute(select(AgentWorkflowRun).where(AgentWorkflowRun.task_id == task.id))
-        ).scalar_one_or_none()
-        if existing is not None:
-            existing.prompt = prompt
-            existing.mode = mode
-            existing.output_format = output_format
-            existing.country_id = country_id
-            existing.search_scope = search_scope
-            existing.memory_scope = memory_scope
-            existing.allowed_actions = sorted(allowed_actions)
-            existing.metadata_ = {**(existing.metadata_ or {}), **payload}
-            if existing.status not in {"completed", "failed", "cancelled"}:
-                existing.status = "running"
-                if existing.started_at is None:
-                    existing.started_at = _now()
-            await db.flush()
-            return existing
-
-        run = AgentWorkflowRun(
-            task_id=task.id,
+        return await workflow_repository.get_or_create_run(
+            db,
+            task,
+            prompt=prompt,
             mode=mode,
             output_format=output_format,
-            prompt=prompt,
-            status="running",
-            risk_level="medium",
             country_id=country_id,
             search_scope=search_scope,
             memory_scope=memory_scope,
-            allowed_actions=sorted(allowed_actions),
-            plan_json=[],
-            findings=[],
-            citations=[],
-            artifacts=[],
-            open_questions=[],
-            actions_taken=[],
-            result_json={},
-            budget_tokens_total=self.total_token_budget,
-            budget_tokens_used=0,
-            replan_count=0,
-            search_round_count=0,
-            review_round_count=0,
-            step_count=0,
-            metadata_=payload,
-            started_at=_now(),
+            allowed_actions=allowed_actions,
+            payload=payload,
+            total_token_budget=self.total_token_budget,
+            now=_now,
         )
-        db.add(run)
-        await db.flush()
-        return run
 
     async def _ensure_plan(
         self,
@@ -606,98 +315,24 @@ class AgentWorkflowService:
         await db.flush()
 
     async def _load_completed_steps(self, db, run_id: int) -> dict[str, AgentWorkflowStep]:
-        rows = (
-            await db.execute(
-                select(AgentWorkflowStep).where(AgentWorkflowStep.run_id == run_id).order_by(AgentWorkflowStep.step_order.asc())
-            )
-        ).scalars().all()
-        return {row.step_key: row for row in rows if str(row.status) == "completed"}
+        return await workflow_repository.load_completed_steps(db, run_id)
 
     async def _start_step(self, db, run: AgentWorkflowRun, node: PlanNode) -> AgentWorkflowStep:
-        step = (
-            await db.execute(
-                select(AgentWorkflowStep).where(
-                    AgentWorkflowStep.run_id == run.id,
-                    AgentWorkflowStep.step_key == node.step_key,
-                )
-            )
-        ).scalar_one_or_none()
-        if step is None:
-            step = AgentWorkflowStep(
-                run_id=run.id,
-                step_key=node.step_key,
-                step_order=len(run.steps) + 1,
-                step_type=node.step_type,
-                step_name=node.title,
-                status="running",
-                attempt=1,
-                input_payload=node.to_dict(),
-                metadata_={"step_type": node.step_type},
-                started_at=_now(),
-            )
-            db.add(step)
-            await db.flush()
-            return step
-
-        step.status = "running"
-        step.attempt = int(step.attempt or 0) + 1
-        step.input_payload = node.to_dict()
-        step.started_at = _now()
-        step.ended_at = None
-        step.error_message = None
-        await db.flush()
-        return step
+        return await workflow_repository.start_step(db, run, node, now=_now)
 
     async def _finish_step(self, db, run: AgentWorkflowRun, step: AgentWorkflowStep, result: dict[str, Any]) -> None:
-        step.status = "completed"
-        step.output_payload = result.get("output_payload") or {}
-        step.output_summary = result.get("output_summary")
-        step.prompt = result.get("prompt")
-        step.system_prompt = result.get("system_prompt")
-        step.response = result.get("response")
-        step.model = result.get("model")
-        step.provider = result.get("provider")
-        step.tokens = result.get("tokens") or {}
-        step.duration = result.get("duration")
-        step.ended_at = _now()
-        step.metadata_ = {
-            **(step.metadata_ or {}),
-            "evidence_count": len(result.get("evidence", [])),
-        }
-        await db.flush()
-
-        for evidence in result.get("evidence", []):
-            await self._upsert_evidence(db, run, step, evidence)
-
-        for conversation in result.get("conversations", []):
-            db.add(
-                AgentWorkflowConversation(
-                    run_id=run.id,
-                    step_id=step.id,
-                    agent_role=str(conversation.get("agent_role") or step.step_type),
-                    phase=str(conversation.get("phase") or step.step_type),
-                    timestamp=self._parse_datetime(conversation.get("timestamp")) or _now(),
-                    prompt=conversation.get("prompt"),
-                    system_prompt=conversation.get("system_prompt"),
-                    response=conversation.get("response"),
-                    model=conversation.get("model"),
-                    provider=conversation.get("provider"),
-                    tokens=conversation.get("tokens") or {},
-                    duration=conversation.get("duration"),
-                    temperature=conversation.get("temperature"),
-                    metadata_=conversation.get("metadata") or {},
-                )
-            )
-        await db.flush()
+        await workflow_repository.finish_step(
+            db,
+            run,
+            step,
+            result,
+            now=_now,
+            parse_datetime=self._parse_datetime,
+            upsert_evidence=self._upsert_evidence,
+        )
 
     async def _fail_step(self, db, run: AgentWorkflowRun, step: AgentWorkflowStep, exc: Exception) -> None:
-        step.status = "failed"
-        step.error_message = str(exc)
-        step.ended_at = _now()
-        run.status = "failed"
-        run.error_message = str(exc)
-        run.ended_at = _now()
-        await db.flush()
+        await workflow_repository.fail_step(db, run, step, exc, now=_now)
 
     async def _execute_node(
         self,
@@ -876,129 +511,29 @@ class AgentWorkflowService:
         prompt: str,
         allowed_actions: set[str],
     ) -> dict[str, Any]:
-        action_name = node.action or str(node.parameters.get("action") or "").strip()
-        if not action_name:
-            raise ValueError("internal_action nodes require an action name")
-        if action_name not in allowed_actions:
-            raise ValueError(f"Action '{action_name}' is not in the allow-list")
-
-        action_request = ActionRequest(
-            action=action_name,
-            parameters=dict(node.parameters or {}),
-            rationale=node.instruction or "",
-            metadata={"step_key": node.step_key, "task_uuid": task.task_uuid},
+        return await workflow_actions.run_internal_action(
+            task=task,
+            run=run,
+            node=node,
+            allowed_actions=allowed_actions,
+            execute_action=self._execute_action,
+            extract_artifacts=self._extract_artifacts,
+            now=_now,
+            logger=logger,
         )
 
-        child_task_type = self._map_action_to_task_type(action_name)
-        child_task_name = f"Agent action: {action_name}"
-        child_task = await task_manager.create_task(
-            task_type=child_task_type,
-            task_name=child_task_name,
-            country_id=run.country_id,
-            parent_task_id=task.id,
-            priority=TaskPriority.HIGH,
-            input_data=dict(action_request.parameters),
-            description=action_request.rationale or f"Executed by agent workflow step {node.step_key}",
-        )
-
-        await task_manager.update_task_status(child_task.task_uuid, TaskStatus.RUNNING)
-        try:
-            await task_manager.add_workbook_entry(
-                child_task.task_uuid,
-                entry_type="info",
-                title="Inline Agent Action Started",
-                content=(
-                    f"Action: {action_name}\n"
-                    f"Parent task: {task.task_uuid}\n"
-                    f"Step: {node.step_key}"
-                ),
-                content_type="text",
-                metadata={"parent_task_uuid": task.task_uuid, "action": action_name, "step_key": node.step_key},
-            )
-        except Exception as log_exc:
-            logger.warning("Failed to add inline action start log for %s: %s", child_task.task_uuid, log_exc)
-
-        try:
-            if action_name == "crawl_data":
-                result = await self._execute_crawl(child_task, action_request.parameters)
-            elif action_name == "generate_report":
-                result = await self._execute_report(child_task, action_request.parameters)
-            elif action_name == "update_disease_knowledge":
-                result = await self._execute_knowledge(child_task, action_request.parameters)
-            elif action_name == "export_data":
-                result = await self._execute_export(child_task, action_request.parameters)
-            else:
-                raise ValueError(f"Unsupported action: {action_name}")
-        except Exception as exc:
-            await task_manager.update_task_status(child_task.task_uuid, TaskStatus.FAILED, error_message=str(exc))
-            try:
-                await task_manager.add_workbook_entry(
-                    child_task.task_uuid,
-                    entry_type="error",
-                    title="Inline Agent Action Failed",
-                    content=str(exc),
-                    content_type="text",
-                    metadata={"parent_task_uuid": task.task_uuid, "action": action_name, "step_key": node.step_key},
-                )
-            except Exception as log_exc:
-                logger.warning("Failed to add inline action failure log for %s: %s", child_task.task_uuid, log_exc)
-            raise
-
-        action_result = ActionResult(
-            action=action_name,
-            success=True,
-            summary=_compact_text(json.dumps(result, ensure_ascii=False), 800),
-            output=result,
-            artifacts=self._extract_artifacts(result),
-            evidence=[
-                EvidenceRef(
-                    evidence_type="action",
-                    source_type=action_name,
-                    source_name=child_task.task_name,
-                    title=child_task.task_name,
-                    content_snippet=_compact_text(json.dumps(result, ensure_ascii=False), 800),
-                    content_hash=_stable_hash(json.dumps(result, sort_keys=True, ensure_ascii=False)),
-                    confidence=0.9,
-                    metadata={"child_task_uuid": child_task.task_uuid, "action": action_name},
-                )
-            ],
-            metadata={"child_task_uuid": child_task.task_uuid, "action": action_name},
-        )
-
-        async with get_database() as child_db:
-            child_db_task = await child_db.get(Task, child_task.id)
-            if child_db_task is not None:
-                child_db_task.output_data = result
-                child_db_task.status = TaskStatus.COMPLETED
-                child_db_task.completed_at = _now()
-                await child_db.commit()
-
-        await task_manager.update_task_status(child_task.task_uuid, TaskStatus.COMPLETED)
-        try:
-            await task_manager.add_workbook_entry(
-                child_task.task_uuid,
-                entry_type="success",
-                title="Inline Agent Action Completed",
-                content=_compact_text(json.dumps(result, ensure_ascii=False), 1200),
-                content_type="json",
-                metadata={"parent_task_uuid": task.task_uuid, "action": action_name, "step_key": node.step_key},
-            )
-        except Exception as log_exc:
-            logger.warning("Failed to add inline action completion log for %s: %s", child_task.task_uuid, log_exc)
-
-        return {
-            "output_payload": action_result.to_dict(),
-            "output_summary": action_result.summary,
-            "evidence": action_result.evidence,
-            "conversations": [],
-            "tokens": {},
-            "duration": 0.0,
-            "model": None,
-            "provider": None,
-            "response": None,
-            "prompt": None,
-            "system_prompt": None,
-        }
+    async def _execute_action(
+        self, action_name: str, task: Task, payload: dict[str, Any]
+    ) -> dict[str, Any]:
+        if action_name == "crawl_data":
+            return await self._execute_crawl(task, payload)
+        if action_name == "generate_report":
+            return await self._execute_report(task, payload)
+        if action_name == "update_disease_knowledge":
+            return await self._execute_knowledge(task, payload)
+        if action_name == "export_data":
+            return await self._execute_export(task, payload)
+        raise ValueError(f"Unsupported action: {action_name}")
 
     async def _run_review(
         self,
@@ -1323,13 +858,7 @@ class AgentWorkflowService:
         return merged
 
     def _normalize_actions(self, value: Any) -> set[str]:
-        actions = set()
-        for item in _ensure_list(value):
-            if isinstance(item, str) and item.strip():
-                actions.add(item.strip())
-        if not actions:
-            return set(DEFAULT_ALLOWED_ACTIONS)
-        return actions
+        return workflow_actions.normalize_actions(value, DEFAULT_ALLOWED_ACTIONS)
 
     def _normalize_analysis_result(self, result: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
         summary = _compact_text(result.get("summary") or result.get("assessment") or "", 1200)
@@ -1485,111 +1014,27 @@ class AgentWorkflowService:
         return round(min(0.95, base), 3)
 
     def _build_search_queries(self, queries: list[str], *, prompt: str, max_rounds: int) -> list[str]:
-        base = self._unique_items([_compact_text(q, 120) for q in queries if q])
-        if not base:
-            base = [" ".join(_extract_keywords(prompt, 6)) or prompt[:120]]
-        expanded = list(base)
-        keywords = _extract_keywords(prompt, 6)
-        if keywords:
-            expanded.append(" ".join(keywords))
-            expanded.append(f"{' '.join(keywords)} site:who.int")
-            expanded.append(f"{' '.join(keywords)} site:cdc.gov")
-            expanded.append(f"{' '.join(keywords)} site:nih.gov")
-        if max_rounds <= 1:
-            return self._unique_items(expanded)[:2]
-        return self._unique_items(expanded)[: max(2, max_rounds * 2)]
+        return workflow_search.build_search_queries(queries, prompt=prompt, max_rounds=max_rounds)
 
     def _duckduckgo_search(self, query: str, max_results: int) -> list[EvidenceRef]:
-        params = {"q": query}
-        results: list[EvidenceRef] = []
-        try:
-            response = self.web_session.get(WEB_SEARCH_ENDPOINT, params=params, timeout=20)
-            response.raise_for_status()
-        except Exception as exc:
-            logger.warning("Web search failed for %s: %s", query, exc)
-            return results
-
-        soup = BeautifulSoup(response.text, "html.parser")
-        anchors = soup.select("a.result__a")[: max_results * 2]
-        for anchor in anchors:
-            title = _compact_text(anchor.get_text(" ", strip=True), 200)
-            url = anchor.get("href") or ""
-            if not url:
-                continue
-            snippet = ""
-            parent = anchor.find_parent("div", class_="result")
-            if parent:
-                snippet_node = parent.select_one(".result__snippet")
-                if snippet_node:
-                    snippet = _compact_text(snippet_node.get_text(" ", strip=True), 500)
-            resolved = url
-            page_title = title
-            page_snippet = snippet
-            if url and len(results) < max_results:
-                fetched_title, fetched_snippet, resolved = self._fetch_web_page(url)
-                if fetched_title:
-                    page_title = fetched_title
-                if fetched_snippet:
-                    page_snippet = fetched_snippet
-            content = page_snippet or title
-            results.append(
-                EvidenceRef(
-                    evidence_type="web",
-                    source_type=self._guess_source_type(url),
-                    source_name=self._guess_source_name(url),
-                    title=page_title or title or url,
-                    url=url,
-                    resolved_url=resolved,
-                    content_snippet=content,
-                    content_hash=_stable_hash(f"{url}|{content}"),
-                    confidence=0.7 if page_snippet else 0.5,
-                    metadata={"query": query},
-                )
-            )
-            if len(results) >= max_results:
-                break
-        return self._unique_evidence(results)
+        return workflow_search.duckduckgo_search(
+            self.web_session,
+            query,
+            max_results,
+            page_fetcher=self._fetch_web_page,
+            source_type_resolver=self._guess_source_type,
+            source_name_resolver=self._guess_source_name,
+            evidence_deduplicator=self._unique_evidence,
+        )
 
     def _fetch_web_page(self, url: str) -> tuple[str, str, str]:
-        try:
-            response = self.web_session.get(url, timeout=20, allow_redirects=True)
-            response.raise_for_status()
-        except Exception:
-            return "", "", url
-        try:
-            soup = BeautifulSoup(response.text, "html.parser")
-            title = ""
-            if soup.title and soup.title.string:
-                title = _compact_text(soup.title.string, 220)
-            text_blocks: list[str] = []
-            for tag in soup.select("article, main, p, li, h1, h2, h3"):
-                text = _compact_text(tag.get_text(" ", strip=True), 220)
-                if text:
-                    text_blocks.append(text)
-                if len(" ".join(text_blocks)) > 1200:
-                    break
-            snippet = _compact_text(" ".join(text_blocks), 900)
-            return title, snippet, response.url or url
-        except Exception:
-            return "", "", response.url or url
+        return workflow_search.fetch_web_page(self.web_session, url)
 
     def _guess_source_type(self, url: str) -> str:
-        host = urlparse(url).netloc.lower()
-        if "who.int" in host:
-            return "who"
-        if "cdc.gov" in host:
-            return "cdc"
-        if "nih.gov" in host or "ncbi.nlm.nih.gov" in host:
-            return "nih"
-        if "wikipedia.org" in host:
-            return "wikipedia"
-        return "web"
+        return workflow_search.guess_source_type(url)
 
     def _guess_source_name(self, url: str) -> str:
-        host = urlparse(url).netloc.lower()
-        if not host:
-            return "web"
-        return host
+        return workflow_search.guess_source_name(url)
 
     def _db_search_registry(self) -> dict[str, tuple[Any, list[Any]]]:
         return {
@@ -1705,184 +1150,60 @@ class AgentWorkflowService:
         return self._unique_evidence(results)
 
     def _row_title(self, row: Any, table_name: str) -> str:
-        for attr in ("title", "name", "name_en", "standard_name_en", "disease_id", "local_name", "code", "country_code"):
-            value = getattr(row, attr, None)
-            if value:
-                return _compact_text(value, 120)
-        return table_name
+        return workflow_search.row_title(row, table_name)
 
     def _row_to_snippet(self, row: Any) -> str:
-        if hasattr(row, "to_dict"):
-            payload = row.to_dict()
-        else:
-            payload = {column.name: getattr(row, column.name, None) for column in row.__table__.columns} if hasattr(row, "__table__") else {}
-        pieces = []
-        for key in sorted(payload.keys()):
-            value = payload.get(key)
-            if value is None:
-                continue
-            if isinstance(value, (dict, list)):
-                value = json.dumps(value, ensure_ascii=False)
-            pieces.append(f"{key}={value}")
-            if len(" | ".join(pieces)) > 1000:
-                break
-        return " | ".join(pieces)
+        return workflow_search.row_to_snippet(row)
 
     async def _search_memory(self, db, run: AgentWorkflowRun, *, prompt: str, terms: list[str], limit: int = 5) -> list[EvidenceRef]:
-        unique_terms = [term for term in self._unique_items([_compact_text(t, 80) for t in terms]) if term]
-        if not unique_terms:
-            unique_terms = _extract_keywords(prompt, 5)
-
-        if self._qdrant_enabled():
-            qdrant_results = await asyncio.to_thread(self._search_qdrant_memory, prompt, limit)
-            if qdrant_results:
-                return qdrant_results
-
-        query = select(AgentWorkflowMemory).where(AgentWorkflowMemory.status == "active")
-        conditions = []
-        for term in unique_terms:
-            like = f"%{term}%"
-            conditions.append(
-                or_(
-                    AgentWorkflowMemory.summary.ilike(like),
-                    AgentWorkflowMemory.content.ilike(like),
-                    AgentWorkflowMemory.source_ref.ilike(like),
-                )
-            )
-        if conditions:
-            query = query.where(or_(*conditions))
-        rows = (await db.execute(query.order_by(AgentWorkflowMemory.created_at.desc()).limit(limit))).scalars().all()
-        results: list[EvidenceRef] = []
-        for row in rows:
-            snippet = row.summary or row.content or row.source_ref or ""
-            results.append(
-                EvidenceRef(
-                    evidence_type="memory",
-                    source_type=row.source_type or "memory",
-                    source_name=row.memory_type,
-                    title=row.summary or row.memory_type,
-                    content_snippet=_compact_text(snippet, 800),
-                    content_hash=row.content_hash,
-                    confidence=0.7,
-                    metadata={
-                        "memory_uuid": row.memory_uuid,
-                        "scope": row.scope,
-                        "collection_name": row.collection_name,
-                    },
-                )
-            )
-        return self._unique_evidence(results)
+        return await workflow_memory.search_memory(
+            db,
+            prompt=prompt,
+            terms=terms,
+            limit=limit,
+            qdrant_is_enabled=self._qdrant_enabled,
+            qdrant_search=self._search_qdrant_memory,
+            unique_items=self._unique_items,
+            unique_evidence=self._unique_evidence,
+        )
 
     def _qdrant_enabled(self) -> bool:
-        try:
-            return bool(self.config.qdrant.url)
-        except Exception:
-            return False
+        return workflow_memory.qdrant_enabled(self.config)
 
     def _qdrant_client(self):
         if self._memory_client_checked:
             return self._memory_client
         self._memory_client_checked = True
-        try:
-            from qdrant_client import QdrantClient
-
-            self._memory_client = QdrantClient(url=self.config.qdrant.url, api_key=self.config.qdrant.api_key)
-        except Exception as exc:
-            logger.info("Qdrant client unavailable, falling back to Postgres memory: %s", exc)
-            self._memory_client = None
+        self._memory_client = workflow_memory.create_qdrant_client(self.config, logger)
         return self._memory_client
 
     def _search_qdrant_memory(self, prompt: str, limit: int) -> list[EvidenceRef]:
-        client = self._qdrant_client()
-        if client is None:
-            return []
-        try:
-            from qdrant_client.http import models as qm
-
-            self._ensure_qdrant_collection(client)
-            vector = self._embed_text(prompt)
-            hits = client.search(
-                collection_name=self.config.qdrant.collection_name,
-                query_vector=vector,
-                limit=limit,
-                with_payload=True,
-            )
-        except Exception as exc:
-            logger.debug("Qdrant memory search failed: %s", exc)
-            return []
-        results: list[EvidenceRef] = []
-        for hit in hits:
-            payload = hit.payload or {}
-            results.append(
-                EvidenceRef(
-                    evidence_type="memory",
-                    source_type=str(payload.get("source_type") or "memory"),
-                    source_name=str(payload.get("source_name") or "memory"),
-                    title=str(payload.get("summary") or payload.get("content") or "memory"),
-                    content_snippet=_compact_text(payload.get("summary") or payload.get("content") or "", 800),
-                    content_hash=str(payload.get("content_hash") or ""),
-                    confidence=0.7,
-                    metadata={"qdrant_score": getattr(hit, "score", None), "qdrant_id": str(hit.id)},
-                )
-            )
-        return self._unique_evidence(results)
+        return workflow_memory.search_qdrant_memory(
+            self._qdrant_client(),
+            self.config,
+            prompt,
+            limit,
+            embed=self._embed_text,
+            ensure_collection=self._ensure_qdrant_collection,
+            unique_evidence=self._unique_evidence,
+            logger=logger,
+        )
 
     def _ensure_qdrant_collection(self, client) -> None:
-        try:
-            from qdrant_client.http import models as qm
-
-            collections = client.get_collections().collections
-            names = {item.name for item in collections}
-            if self.config.qdrant.collection_name in names:
-                return
-            client.create_collection(
-                collection_name=self.config.qdrant.collection_name,
-                vectors_config=qm.VectorParams(size=int(self.config.qdrant.vector_size), distance=qm.Distance.COSINE),
-            )
-        except Exception as exc:
-            logger.debug("Qdrant collection ensure failed: %s", exc)
+        workflow_memory.ensure_qdrant_collection(client, self.config, logger)
 
     async def _upsert_qdrant_memory(self, memory: AgentWorkflowMemory) -> None:
-        client = self._qdrant_client()
-        if client is None:
-            return
-        try:
-            from qdrant_client.http import models as qm
-
-            self._ensure_qdrant_collection(client)
-            client.upsert(
-                collection_name=self.config.qdrant.collection_name,
-                points=[
-                    qm.PointStruct(
-                        id=memory.memory_uuid,
-                        vector=self._embed_text(memory.summary or memory.content or ""),
-                        payload={
-                            "memory_uuid": memory.memory_uuid,
-                            "scope": memory.scope,
-                            "memory_type": memory.memory_type,
-                            "content": memory.content,
-                            "summary": memory.summary,
-                            "source_type": memory.source_type,
-                            "source_ref": memory.source_ref,
-                            "content_hash": memory.content_hash,
-                        },
-                    )
-                ],
-            )
-        except Exception as exc:
-            logger.debug("Qdrant upsert failed: %s", exc)
+        workflow_memory.upsert_qdrant_memory(
+            self._qdrant_client(),
+            self.config,
+            memory,
+            embed=self._embed_text,
+            ensure_collection=self._ensure_qdrant_collection,
+            logger=logger,
+        )
 
     def _embed_text(self, text: str) -> list[float]:
-        dims = int(self.config.qdrant.vector_size)
-        vector = [0.0] * dims
-        for token in re.findall(r"[A-Za-z0-9\u4e00-\u9fff]{2,}", (text or "").lower()):
-            digest = hashlib.md5(token.encode("utf-8")).hexdigest()
-            bucket = int(digest[:8], 16) % dims
-            vector[bucket] += 1.0
-        norm = sum(value * value for value in vector) ** 0.5
-        if norm:
-            vector = [value / norm for value in vector]
-        return vector
+        return workflow_memory.embed_text(text, int(self.config.qdrant.vector_size))
 
     async def _store_memory_from_evidence(self, db, run: AgentWorkflowRun, task: Task, evidence: EvidenceRef, memory_type: str = "evidence") -> None:
         row = AgentWorkflowMemory(
@@ -1982,42 +1303,16 @@ class AgentWorkflowService:
         return list(self.config.ai.model_chain)
 
     def _planner_system_prompt(self) -> str:
-        return (
-            "You are the planner for a generic multi-expert research workflow. "
-            "Return valid JSON only. "
-            "Choose the smallest useful plan. "
-            "Use step_type values only from: web_search, db_lookup, memory_lookup, analysis, internal_action, review, finalize. "
-            "Each node must include step_key, step_type, title, instruction, search_queries, target_tables, action, parameters, depends_on, max_results, confidence, metadata. "
-            "Prefer evidence gathering before analysis. "
-            "If the prompt implies an internal action and it is allowed, include one internal_action step. "
-            "Do not create unnecessary loops. "
-            "The JSON object should contain risk_level, summary, and plan."
-        )
+        return workflow_prompts.planner_system_prompt()
 
     def _analysis_system_prompt(self) -> str:
-        return (
-            "You are the analyst in a generic multi-expert research workflow. "
-            "Return valid JSON only. "
-            "Derive findings only from the provided evidence and context. "
-            "Every finding must reference supporting evidence hashes or URLs when possible. "
-            "If evidence is insufficient, state an open question instead of guessing."
-        )
+        return workflow_prompts.analysis_system_prompt()
 
     def _review_system_prompt(self) -> str:
-        return (
-            "You are the reviewer in a generic multi-expert research workflow. "
-            "Return valid JSON only. "
-            "Check whether the findings are supported by the evidence, whether actions are consistent, and whether there are unsupported claims. "
-            "Report issues clearly and provide follow-up search queries when gaps remain."
-        )
+        return workflow_prompts.review_system_prompt()
 
     def _synthesizer_system_prompt(self) -> str:
-        return (
-            "You are the synthesizer in a generic multi-expert research workflow. "
-            "Return valid JSON only. "
-            "Produce a concise evidence report with summary, findings, citations, actions_taken, artifacts, open_questions, run_log_digest, risk_level, status, and confidence. "
-            "Do not add unsupported claims."
-        )
+        return workflow_prompts.synthesizer_system_prompt()
 
     def _planner_prompt(
         self,
@@ -2028,48 +1323,23 @@ class AgentWorkflowService:
         search_scope: str,
         allowed_actions: set[str],
     ) -> str:
-        request = {
-            "task_uuid": task.task_uuid,
-            "task_name": task.task_name,
-            "prompt": prompt,
-            "mode": payload.get("mode") or "research",
-            "output_format": payload.get("output_format") or "evidence_report",
-            "search_scope": search_scope,
-            "allowed_actions": sorted(allowed_actions),
-            "memory_scope": payload.get("memory_scope") or "project",
-            "country_id": payload.get("country_id"),
-            "hints": payload.get("hints") or {},
-        }
-        return (
-            "Create a compact research plan for this task. "
-            "Keep the number of steps as small as possible. "
-            "If the task only needs evidence gathering, use web_search / db_lookup / memory_lookup / analysis / review / finalize. "
-            "If an internal action is required, insert exactly one internal_action node and set its action and parameters. "
-            "Output JSON with keys: risk_level, summary, plan. "
-            "The plan must be an array of nodes, each with: step_key, step_type, title, instruction, search_queries, target_tables, action, parameters, depends_on, max_results, confidence, metadata.\n\n"
-            + json.dumps(request, ensure_ascii=False, indent=2)
+        return workflow_prompts.planner_prompt(
+            prompt=prompt,
+            task_uuid=task.task_uuid,
+            task_name=task.task_name,
+            payload=payload,
+            search_scope=search_scope,
+            allowed_actions=allowed_actions,
         )
 
     def _analysis_prompt(self, payload: dict[str, Any]) -> str:
-        return (
-            "Analyze the evidence and produce structured findings. "
-            "Output JSON with keys: summary, findings, open_questions, confidence, evidence_map, notes.\n\n"
-            + json.dumps(payload, ensure_ascii=False, indent=2)
-        )
+        return workflow_prompts.analysis_prompt(payload)
 
     def _review_prompt(self, payload: dict[str, Any]) -> str:
-        return (
-            "Review the analysis against the evidence. "
-            "Output JSON with keys: approved, score, issues, missing_evidence, rewrite_instruction, follow_up_search_queries, assessment, confidence.\n\n"
-            + json.dumps(payload, ensure_ascii=False, indent=2)
-        )
+        return workflow_prompts.review_prompt(payload)
 
     def _synthesizer_prompt(self, payload: dict[str, Any]) -> str:
-        return (
-            "Synthesize the final evidence report. "
-            "Output JSON with keys: summary, findings, citations, actions_taken, artifacts, open_questions, run_log_digest, risk_level, status, confidence.\n\n"
-            + json.dumps(payload, ensure_ascii=False, indent=2)
-        )
+        return workflow_prompts.synthesizer_prompt(payload)
 
     def _parse_plan_nodes(self, result: dict[str, Any]) -> list[PlanNode]:
         raw_plan = result.get("plan") or result.get("nodes") or []
@@ -2170,55 +1440,16 @@ class AgentWorkflowService:
         return nodes
 
     def _looks_like_action_task(self, prompt: str, allowed_actions: set[str]) -> bool:
-        text = prompt.lower()
-        if "report" in text and "generate_report" in allowed_actions:
-            return True
-        if any(keyword in text for keyword in ["crawl", "fetch", "download"]) and "crawl_data" in allowed_actions:
-            return True
-        if any(keyword in text for keyword in ["knowledge", "update disease"]) and "update_disease_knowledge" in allowed_actions:
-            return True
-        if any(keyword in text for keyword in ["export", "download"]) and "export_data" in allowed_actions:
-            return True
-        return False
+        return workflow_actions.looks_like_action_task(prompt, allowed_actions)
 
     def _infer_action_name(self, prompt: str, allowed_actions: set[str]) -> Optional[str]:
-        text = prompt.lower()
-        candidates = []
-        if "report" in text:
-            candidates.append("generate_report")
-        if "crawl" in text or "fetch" in text:
-            candidates.append("crawl_data")
-        if "knowledge" in text:
-            candidates.append("update_disease_knowledge")
-        if "export" in text or "download" in text:
-            candidates.append("export_data")
-        for candidate in candidates:
-            if candidate in allowed_actions:
-                return candidate
-        return None
+        return workflow_actions.infer_action_name(prompt, allowed_actions)
 
     def _infer_action_parameters(self, prompt: str, action: str) -> dict[str, Any]:
-        if action == "generate_report":
-            return {"report_type": "monthly", "language": "en", "days": 365, "enable_review": True}
-        if action == "crawl_data":
-            return {"country_code": "CN", "source": "all", "force": False, "process": True, "save_raw": True, "fill_missing": True}
-        if action == "update_disease_knowledge":
-            keywords = _extract_keywords(prompt, 3)
-            return {"disease_ids": [keyword.upper() for keyword in keywords[:2]] or ["INFLUENZA"], "source": ["who", "wikidata", "wikipedia"], "force": False, "generator": "ai"}
-        if action == "export_data":
-            return {"country_code": "CN", "formats": ["csv", "json"], "mode": "latest"}
-        return {}
+        return workflow_actions.infer_action_parameters(prompt, action)
 
     def _map_action_to_task_type(self, action: str) -> TaskType:
-        if action == "crawl_data":
-            return TaskType.CRAWL_DATA
-        if action == "generate_report":
-            return TaskType.GENERATE_REPORT
-        if action == "update_disease_knowledge":
-            return TaskType.UPDATE_DISEASE_KNOWLEDGE
-        if action == "export_data":
-            return TaskType.EXPORT_DATA
-        raise ValueError(f"Unsupported action: {action}")
+        return workflow_actions.map_action_to_task_type(action)
 
     async def _execute_crawl(self, task: Task, payload: dict[str, Any]) -> dict[str, Any]:
         service = CrawlService()
@@ -2321,44 +1552,10 @@ class AgentWorkflowService:
         return str(prompt) if isinstance(prompt, str) and prompt.strip() else None
 
     def _serialize_task(self, task: Task) -> dict[str, Any]:
-        return {
-            "id": task.id,
-            "task_uuid": task.task_uuid,
-            "task_name": task.task_name,
-            "task_type": str(task.task_type),
-            "status": str(task.status),
-            "priority": str(task.priority),
-            "country_id": task.country_id,
-            "report_id": task.report_id,
-            "progress": task.progress or 0,
-            "created_at": task.created_at.isoformat() if task.created_at else None,
-            "started_at": task.started_at.isoformat() if task.started_at else None,
-            "completed_at": task.completed_at.isoformat() if task.completed_at else None,
-            "description": task.description,
-            "input_data": task.input_data,
-            "output_data": task.output_data,
-            "metadata": task.metadata_ or {},
-        }
+        return workflow_serializers.serialize_task(task)
 
     def _serialize_task_workbook_entry(self, entry: TaskWorkbook) -> dict[str, Any]:
-        return {
-            "id": entry.id,
-            "entry_uuid": entry.entry_uuid,
-            "entry_type": entry.entry_type,
-            "title": entry.title,
-            "content": entry.content,
-            "content_type": entry.content_type,
-            "prompt": entry.prompt,
-            "response": entry.response,
-            "model_used": entry.model_used,
-            "tokens_used": entry.tokens_used,
-            "cost": entry.cost,
-            "duration": entry.duration,
-            "success": entry.success,
-            "error_message": entry.error_message,
-            "metadata": entry.metadata_ or {},
-            "created_at": entry.created_at.isoformat() if entry.created_at else None,
-        }
+        return workflow_serializers.serialize_task_workbook_entry(entry)
 
     def _serialize_run_row(self, row: Any) -> dict[str, Any]:
         return {
@@ -2369,236 +1566,31 @@ class AgentWorkflowService:
         }
 
     def _serialize_run(self, run: AgentWorkflowRun) -> dict[str, Any]:
-        return {
-            "id": run.id,
-            "task_id": run.task_id,
-            "mode": run.mode,
-            "output_format": run.output_format,
-            "prompt": run.prompt,
-            "status": run.status,
-            "risk_level": run.risk_level,
-            "country_id": run.country_id,
-            "search_scope": run.search_scope,
-            "memory_scope": run.memory_scope,
-            "allowed_actions": run.allowed_actions or [],
-            "plan_json": run.plan_json or [],
-            "summary": run.summary,
-            "findings": run.findings or [],
-            "citations": run.citations or [],
-            "artifacts": run.artifacts or [],
-            "open_questions": run.open_questions or [],
-            "actions_taken": run.actions_taken or [],
-            "result_json": run.result_json or {},
-            "budget_tokens_total": run.budget_tokens_total,
-            "budget_tokens_used": run.budget_tokens_used,
-            "replan_count": run.replan_count,
-            "search_round_count": run.search_round_count,
-            "review_round_count": run.review_round_count,
-            "step_count": run.step_count,
-            "error_message": run.error_message,
-            "metadata": run.metadata_ or {},
-            "created_at": run.created_at.isoformat() if run.created_at else None,
-            "updated_at": run.updated_at.isoformat() if run.updated_at else None,
-            "started_at": run.started_at.isoformat() if run.started_at else None,
-            "ended_at": run.ended_at.isoformat() if run.ended_at else None,
-        }
+        return workflow_serializers.serialize_run(run)
 
     def _serialize_step(self, step: AgentWorkflowStep) -> dict[str, Any]:
-        return {
-            "id": step.id,
-            "step_uuid": step.step_uuid,
-            "run_id": step.run_id,
-            "step_key": step.step_key,
-            "step_order": step.step_order,
-            "step_type": step.step_type,
-            "step_name": step.step_name,
-            "status": step.status,
-            "attempt": step.attempt,
-            "input_summary": step.input_summary,
-            "output_summary": step.output_summary,
-            "input_payload": step.input_payload or {},
-            "output_payload": step.output_payload or {},
-            "prompt": step.prompt,
-            "system_prompt": step.system_prompt,
-            "response": step.response,
-            "model": step.model,
-            "provider": step.provider,
-            "tokens": step.tokens or {},
-            "duration": step.duration,
-            "error_message": step.error_message,
-            "metadata": step.metadata_ or {},
-            "created_at": step.created_at.isoformat() if step.created_at else None,
-            "updated_at": step.updated_at.isoformat() if step.updated_at else None,
-            "started_at": step.started_at.isoformat() if step.started_at else None,
-            "ended_at": step.ended_at.isoformat() if step.ended_at else None,
-        }
+        return workflow_serializers.serialize_step(step)
 
     def _serialize_evidence(self, evidence: AgentWorkflowEvidence) -> dict[str, Any]:
-        return {
-            "id": evidence.id,
-            "evidence_uuid": evidence.evidence_uuid,
-            "run_id": evidence.run_id,
-            "step_id": evidence.step_id,
-            "evidence_type": evidence.evidence_type,
-            "source_type": evidence.source_type,
-            "source_name": evidence.source_name,
-            "title": evidence.title,
-            "url": evidence.url,
-            "resolved_url": evidence.resolved_url,
-            "content_snippet": evidence.content_snippet,
-            "content_hash": evidence.content_hash,
-            "confidence": evidence.confidence,
-            "weight": evidence.weight,
-            "metadata": evidence.metadata_ or {},
-            "created_at": evidence.created_at.isoformat() if evidence.created_at else None,
-            "updated_at": evidence.updated_at.isoformat() if evidence.updated_at else None,
-        }
+        return workflow_serializers.serialize_evidence(evidence)
 
     def _serialize_conversation(self, conversation: AgentWorkflowConversation) -> dict[str, Any]:
-        return {
-            "id": conversation.id,
-            "conversation_uuid": conversation.conversation_uuid,
-            "run_id": conversation.run_id,
-            "step_id": conversation.step_id,
-            "agent_role": conversation.agent_role,
-            "phase": conversation.phase,
-            "timestamp": conversation.timestamp.isoformat() if conversation.timestamp else None,
-            "prompt": conversation.prompt,
-            "system_prompt": conversation.system_prompt,
-            "response": conversation.response,
-            "model": conversation.model,
-            "provider": conversation.provider,
-            "tokens": conversation.tokens or {},
-            "duration": conversation.duration,
-            "temperature": conversation.temperature,
-            "metadata": conversation.metadata_ or {},
-            "created_at": conversation.created_at.isoformat() if conversation.created_at else None,
-            "updated_at": conversation.updated_at.isoformat() if conversation.updated_at else None,
-        }
+        return workflow_serializers.serialize_conversation(conversation)
 
     def _serialize_memory(self, memory: AgentWorkflowMemory) -> dict[str, Any]:
-        return {
-            "id": memory.id,
-            "memory_uuid": memory.memory_uuid,
-            "run_id": memory.run_id,
-            "task_id": memory.task_id,
-            "scope": memory.scope,
-            "memory_type": memory.memory_type,
-            "content": memory.content,
-            "summary": memory.summary,
-            "source_type": memory.source_type,
-            "source_ref": memory.source_ref,
-            "content_hash": memory.content_hash,
-            "embedding": memory.embedding or [],
-            "collection_name": memory.collection_name,
-            "qdrant_point_id": memory.qdrant_point_id,
-            "status": memory.status,
-            "metadata": memory.metadata_ or {},
-            "created_at": memory.created_at.isoformat() if memory.created_at else None,
-            "updated_at": memory.updated_at.isoformat() if memory.updated_at else None,
-        }
+        return workflow_serializers.serialize_memory(memory)
 
     async def _load_run_row(self, db, task_uuid: str):
-        query = (
-            select(AgentWorkflowRun, Task, Country.code.label("country_code"), Country.name_en.label("country_name"))
-            .join(Task, Task.id == AgentWorkflowRun.task_id)
-            .outerjoin(Country, Country.id == AgentWorkflowRun.country_id)
-            .where(Task.task_uuid == task_uuid)
-        )
-        return (await db.execute(query)).one_or_none()
-
-    async def _load_or_create_run(
-        self,
-        db,
-        task: Task,
-        *,
-        prompt: str,
-        mode: str,
-        output_format: str,
-        country_id: Optional[int],
-        search_scope: str,
-        memory_scope: str,
-        allowed_actions: set[str],
-        payload: dict[str, Any],
-    ) -> AgentWorkflowRun:
-        existing = (
-            await db.execute(select(AgentWorkflowRun).where(AgentWorkflowRun.task_id == task.id))
-        ).scalar_one_or_none()
-        if existing is not None:
-            existing.prompt = prompt
-            existing.mode = mode
-            existing.output_format = output_format
-            existing.country_id = country_id
-            existing.search_scope = search_scope
-            existing.memory_scope = memory_scope
-            existing.allowed_actions = sorted(allowed_actions)
-            existing.metadata_ = {**(existing.metadata_ or {}), **payload}
-            if existing.status not in {"completed", "failed", "cancelled"}:
-                existing.status = "running"
-                if existing.started_at is None:
-                    existing.started_at = _now()
-            await db.flush()
-            return existing
-
-        run = AgentWorkflowRun(
-            task_id=task.id,
-            mode=mode,
-            output_format=output_format,
-            prompt=prompt,
-            status="running",
-            risk_level="medium",
-            country_id=country_id,
-            search_scope=search_scope,
-            memory_scope=memory_scope,
-            allowed_actions=sorted(allowed_actions),
-            plan_json=[],
-            findings=[],
-            citations=[],
-            artifacts=[],
-            open_questions=[],
-            actions_taken=[],
-            result_json={},
-            budget_tokens_total=self.total_token_budget,
-            budget_tokens_used=0,
-            replan_count=0,
-            search_round_count=0,
-            review_round_count=0,
-            step_count=0,
-            metadata_=payload,
-            started_at=_now(),
-        )
-        db.add(run)
-        await db.flush()
-        return run
+        return await workflow_repository.load_run_row(db, task_uuid)
 
     def _coerce_int(self, value: Any, default: Optional[int] = None) -> Optional[int]:
-        if value is None:
-            return default
-        try:
-            return int(value)
-        except (TypeError, ValueError):
-            return default
+        return workflow_helpers.coerce_int(value, default)
 
     def _coerce_float(self, value: Any, default: float = 0.0) -> float:
-        if value is None:
-            return default
-        try:
-            return float(value)
-        except (TypeError, ValueError):
-            return default
+        return workflow_helpers.coerce_float(value, default)
 
     def _unique_items(self, values: list[Any]) -> list[Any]:
-        seen = set()
-        unique = []
-        for item in values:
-            if item is None:
-                continue
-            marker = json.dumps(item, sort_keys=True, ensure_ascii=False) if isinstance(item, (dict, list)) else str(item)
-            if marker in seen:
-                continue
-            seen.add(marker)
-            unique.append(item)
-        return unique
+        return workflow_helpers.unique_items(values)
 
     def _unique_evidence(self, items: list[EvidenceRef]) -> list[EvidenceRef]:
         seen = set()
@@ -2661,21 +1653,6 @@ class AgentWorkflowService:
         }
 
     def _parse_datetime(self, value: Any) -> Optional[datetime]:
-        if not value:
-            return None
-        if isinstance(value, datetime):
-            return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
-        if not isinstance(value, str):
-            return None
-        text = value.strip()
-        if not text:
-            return None
-        if text.endswith("Z"):
-            text = text[:-1] + "+00:00"
-        try:
-            parsed = datetime.fromisoformat(text)
-        except ValueError:
-            return None
-        return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+        return workflow_helpers.parse_datetime(value)
 
 agent_workflow_service = AgentWorkflowService()
