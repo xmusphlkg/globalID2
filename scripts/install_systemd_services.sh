@@ -21,6 +21,7 @@ UNIT_NAMES=(
   globalid-dashboard-worker.service
   globalid-dashboard-web.service
   globalid-site.service
+  globalid-notify-failure@.service
 )
 
 usage() {
