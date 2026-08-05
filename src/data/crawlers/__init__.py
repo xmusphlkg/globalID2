@@ -7,7 +7,7 @@ from .base import BaseCrawler, CrawlerResult
 from .cn import ChinaCDCCrawler
 from .jp import JapanIDWRCrawler
 from .au import AustraliaNINDSSCrawler
-from .us import USNNDSSCrawler
+from .us import USNHSSHIVCrawler, USNNDSSCrawler
 from .nz import NewZealandPHFCrawler
 from .tw import TaiwanNIDSSCrawler
 from .br import BrazilSINANCrawler
@@ -26,6 +26,7 @@ __all__ = [
     "JPIDWRCrawler",
     "AustraliaNINDSSCrawler",
     "USNNDSSCrawler",
+    "USNHSSHIVCrawler",
     "NewZealandPHFCrawler",
     "TaiwanNIDSSCrawler",
     "BrazilSINANCrawler",

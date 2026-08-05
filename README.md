@@ -425,24 +425,38 @@ python scripts/import_jp_weekly_history.py --replace-existing
 - import historical data from `data/history/<country>/history_merged.csv`
 - verify final counts
 
-For the US NNDSS weekly dataset, prepare the normalized historical file first:
+For US history, prepare both the NNDSS weekly series and the separate NHSS
+annual HIV/AIDS series before rebuilding:
 
 ```bash
 python3 scripts/us_prepare_nndss_history.py --input-csv data/history/us/NNDSS_Weekly_Data_20260317.csv
+python3 scripts/us_prepare_hiv_history.py
+python3 scripts/us_hiv_data_quality_check.py
 python3 scripts/full_rebuild_database.py --country us --yes
 ```
+
+For a non-destructive HIV-only database backfill, use
+`python3 scripts/us_prepare_hiv_history.py --import-db` instead of rebuilding
+all US history.
 
 To refresh US national weekly data from the CDC API and merge it into the history file under `data/history/us/`:
 
 ```bash
 python3 scripts/us_prepare_nndss_history.py
+python3 scripts/us_prepare_hiv_history.py
+python3 scripts/us_hiv_data_quality_check.py
 python3 scripts/full_rebuild_database.py --country us --mode history --yes
 ```
 
 US-specific notes:
 
-- the current US integration uses CDC NNDSS `TOTAL` rows only, which fit the existing `(time, disease_id, country_id)` primary key
-- CDC NNDSS weekly numbers are provisional and can be revised after first publication, so scheduled updates should upsert and overwrite existing recent weeks rather than append-only
+- `US RESIDENTS` / `U.S. Residents` is the only NNDSS scope projected into the legacy US national key; missing resident rows fail closed and are never replaced by `TOTAL`
+- NNDSS `TOTAL` is retained only in the lossless series table under `source:SRC_US_NNDSS:reporting-area:total`, because it also includes territories and non-U.S. residents
+- HIV is not present in the NNDSS weekly feed; `nhss_hiv` discovers the current CDC NHSS release workbook and imports national annual diagnoses among persons aged 13 years and older
+- the HIV history backfill combines the official AtlasPlus historical extract with revised values from the current NHSS workbook; overlap is resolved in favor of the current release
+- all-stage HIV diagnoses (`D162`) and AIDS classifications (`D005`) are separate, non-additive series
+- CDC NNDSS weekly numbers are provisional, so the incremental importer refreshes an 8-week revision window; NHSS annual rows are re-upserted so revised releases replace earlier values
+- diagnosis-only rows retain deaths as missing (`NULL`), not zero
 - state-level US ingestion would require a schema extension because multiple states can produce the same `(week, disease, country)` key
 
 ### Crawl data incrementally
@@ -460,7 +474,9 @@ python main.py crawl --country CN --source cdc_weekly
 python main.py crawl --country CN --source nhc
 python main.py crawl --country CN --source pubmed
 python main.py crawl --country CN --force
+python main.py crawl --country US --source all
 python main.py crawl --country US --source nndss_api
+python main.py crawl --country US --source nhss_hiv
 python main.py crawl --country BR --source sinan_datasus
 python main.py crawl --country BR --source DENG,CHIK,ZIKA
 python main.py crawl --country BR --fill-missing --start-year 2000 --source sinan_datasus
@@ -476,8 +492,9 @@ Behavior summary:
 US incremental notes:
 
 - US now follows the same task and crawl workflow as CN (`TaskManager` -> `CrawlService` -> workbook/progress updates)
-- the US update gate compares source latest week date with database latest US date
-- data is imported only when source has a newer week (unless `--force` is used)
+- source checks are independent: a newer NNDSS date no longer blocks an older-dated annual NHSS release
+- NNDSS refreshes its latest 8 weeks to capture provisional revisions; the small NHSS annual trend is upserted on every source refresh
+- `--source all` runs both publication channels, while `nndss_api` and `nhss_hiv` can be scheduled independently
 
 BR incremental notes:
 

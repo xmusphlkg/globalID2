@@ -40,6 +40,11 @@ class ChinaCDCCrawler(BaseCrawler):
     CDC_WEEKLY_URL = "https://weekly.chinacdc.cn"
     GOV_API_URL = "https://www.ndcpa.gov.cn/queryList"
     PUBMED_RSS_URL = "https://pubmed.ncbi.nlm.nih.gov/rss/search/1tQjT4yH2iuqFpDL7Y1nShJmC4kDC5_BJYgw4R1O0BCs-_Nemt/?limit=100&utm_campaign=pubmed-2&fc=20230905093742"
+    _RETRIEVAL_CHANNEL_PRIORITY = {
+        "China CDC Weekly": 30,
+        "Gov Data": 20,
+        "PubMed": 10,
+    }
     
     def __init__(self):
         super().__init__(
@@ -139,11 +144,54 @@ class ChinaCDCCrawler(BaseCrawler):
             except Exception as e:
                 logger.error(f"[CN-CDC] PubMed RSS fetch failed | error={e}")
 
+        # These retrieval channels can surface the same national monthly
+        # bulletin. Select one deterministically before concurrent processing
+        # so conflict handling is never a last-finisher-wins policy.
+        results = self._select_preferred_period_results(results)
+
         # Sort descending by date
         results.sort(key=lambda x: x.date if x.date else datetime.min, reverse=True)
 
         logger.info(f"[CN-CDC] Phase 1/3 Done | total_candidates={len(results)}")
         return results
+
+    @classmethod
+    def _select_preferred_period_results(
+        cls, results: List[CrawlerResult]
+    ) -> List[CrawlerResult]:
+        """Keep one deterministic retrieval artifact per national period."""
+        selected: Dict[str, CrawlerResult] = {}
+        for position, result in enumerate(results):
+            if result.year_month:
+                period_key = result.year_month
+            elif result.date:
+                period_key = result.date.strftime("%Y %B")
+            else:
+                # Unknown-period artifacts must not collapse into one another.
+                period_key = f"unknown:{position}:{result.url or result.title}"
+
+            current = selected.get(period_key)
+            if current is None or cls._retrieval_preference(result) > (
+                cls._retrieval_preference(current)
+            ):
+                selected[period_key] = result
+
+        removed = len(results) - len(selected)
+        if removed:
+            logger.info(
+                "[CN-CDC] Duplicate retrieval artifacts removed"
+                f" | removed={removed} periods={len(selected)}"
+            )
+        return list(selected.values())
+
+    @classmethod
+    def _retrieval_preference(cls, result: CrawlerResult) -> tuple[int, str, str]:
+        source = str(result.metadata.get("source") or "")
+        return (
+            cls._RETRIEVAL_CHANNEL_PRIORITY.get(source, 0),
+            str(result.url or ""),
+            str(result.title or ""),
+        )
     
     async def check_new_data(
         self,
@@ -388,6 +436,7 @@ class ChinaCDCCrawler(BaseCrawler):
                     year_month=year_month,
                     metadata={
                         "source": "China CDC Weekly",
+                        "ontology_source_id": "SRC_CN_CDC",
                         "origin": "CN",
                         "doi": doi,
                         "language": "en",
@@ -436,6 +485,7 @@ class ChinaCDCCrawler(BaseCrawler):
                     year_month=year_month,
                     metadata={
                         "source": "Gov Data",
+                        "ontology_source_id": "SRC_CN_CDC",
                         "origin": "CN",
                         "language": "zh",
                     },
@@ -493,6 +543,7 @@ class ChinaCDCCrawler(BaseCrawler):
                     year_month=year_month,
                     metadata={
                         "source": "PubMed",
+                        "ontology_source_id": "SRC_CN_CDC",
                         "origin": "CN",
                         "doi": item.get("dc:identifier"),
                         "pub_date": item.get("pubDate"),

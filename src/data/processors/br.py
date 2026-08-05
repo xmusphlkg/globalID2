@@ -25,11 +25,19 @@ from src.data.crawlers.br import (
     BRFetchSummary,
     BrazilSINANCrawler,
 )
+from src.data.processors.mapping_lookup import (
+    load_country_mapping_dict,
+    normalize_mapping_key,
+)
 
 logger = get_logger(__name__)
 
+MAPPING_SOURCE_ID = "SRC_BR_SINAN"
+
 ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_OUTPUT_CSV = ROOT / "data/current/br/brazil_national_monthly.csv"
+NTRA_PREFIX = "NTRA"
+NTRA_STANDARD_DISEASE_ID = "D200"
 
 
 @dataclass
@@ -442,24 +450,21 @@ class BRMonthlyUpdater:
         return int(row[0])
 
     async def _load_mapping_dict(self, db: AsyncSession) -> Dict[str, int]:
-        result = await db.execute(
-            text(
-                """
-                SELECT dm.local_name, d.id
-                FROM disease_mappings dm
-                JOIN diseases d ON dm.disease_id = d.name
-                WHERE dm.country_code = :code AND dm.is_active = true
-                """
-            ),
-            {"code": self.country_code},
+        return await load_country_mapping_dict(
+            db, self.country_code, source_id=MAPPING_SOURCE_ID
         )
 
-        mapping: Dict[str, int] = {}
-        for local_name, disease_db_id in result:
-            key = _norm_text(local_name).lower()
-            if key:
-                mapping[key] = int(disease_db_id)
-        return mapping
+    async def _get_standard_disease_db_id(
+        self,
+        db: AsyncSession,
+        standard_disease_id: str,
+    ) -> Optional[int]:
+        result = await db.execute(
+            text("SELECT id FROM diseases WHERE name = :disease_name"),
+            {"disease_name": standard_disease_id},
+        )
+        row = result.fetchone()
+        return int(row[0]) if row is not None else None
 
     async def import_rows(
         self,
@@ -476,6 +481,15 @@ class BRMonthlyUpdater:
 
         country_id = await self._get_country_id(db)
         mapping_dict = await self._load_mapping_dict(db)
+        has_ntra_rows = any(
+            _norm_text(row.get("DiseaseCode")).upper() == NTRA_PREFIX
+            for row in rows
+        )
+        ntra_disease_id = (
+            await self._get_standard_disease_db_id(db, NTRA_STANDARD_DISEASE_ID)
+            if has_ntra_rows
+            else None
+        )
 
         grouped: Dict[Tuple[datetime, int, int], Dict[str, object]] = {}
         skipped_unmapped = 0
@@ -488,7 +502,18 @@ class BRMonthlyUpdater:
 
             label = _norm_text(row.get("RawDiseaseLabel"))
             code = _norm_text(row.get("DiseaseCode"))
-            disease_id = mapping_dict.get(label.lower()) or mapping_dict.get(code.lower())
+            if code.upper() == NTRA_PREFIX:
+                # Older BR mappings classified NTRA as a work-related disorder
+                # (D193). It is actually the trachoma survey aggregate and must
+                # resolve to the trachoma concept, or fail closed if that concept
+                # has not been seeded yet.
+                disease_id = ntra_disease_id
+            else:
+                disease_id = mapping_dict.get(
+                    normalize_mapping_key(label)
+                ) or mapping_dict.get(
+                    normalize_mapping_key(code)
+                )
             if disease_id is None:
                 skipped_unmapped += 1
                 continue

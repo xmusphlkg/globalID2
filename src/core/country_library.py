@@ -120,15 +120,15 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
         "notes": "Auto bootstrapped by country library",
     },
     "US": {
-        "data_source_url": "https://data.cdc.gov/browse?category=NNDSS",
+        "data_source_url": "https://www.cdc.gov/hiv-data/nhss/",
         "data_source_type": "api",
         "crawler_config": {
-            "sources": ["nndss_api"],
-            "cadence": "weekly",
+            "sources": ["nndss_api", "nhss_hiv"],
+            "cadence": "mixed_weekly_annual",
             "reporting_area": "TOTAL",
         },
         "parser_config": {
-            "primary": "us_nndss_weekly",
+            "primary": "us_cdc_multi_source",
         },
         "disease_mapping_rules": {
             "strategy": "db_first",
@@ -138,7 +138,7 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
             "default_type": "WEEKLY",
             "lang": "en-US",
         },
-        "notes": "CDC NNDSS weekly provisional data, bootstrapped for national TOTAL ingestion",
+        "notes": "CDC NNDSS weekly data plus NHSS annual national HIV diagnoses",
     },
     "JP": {
         "data_source_url": "https://www.niid.go.jp/niid/ja/data.html",
@@ -256,8 +256,9 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
             "sources": ["kdca_open_api"],
             "cadence": "monthly",
             "base_url": "https://apis.data.go.kr/1790387/EIDAPIService",
-            "portal_url": "https://dportal.kdca.go.kr/pot/is/inftnsds.do",
-            "regional_portal_url": "https://dportal.kdca.go.kr/pot/is/summaryRgin.do",
+            "portal_url": "https://dportal.kdca.go.kr/pot/is/inftnsdsEDW.do",
+            "portal_stats_url": "https://dportal.kdca.go.kr/pot/is/selectBassDissStatsListEDWAjax.do",
+            "regional_portal_url": "https://dportal.kdca.go.kr/pot/is/summaryRginEDW.do",
             "primary_operation": "PeriodRegion",
             "service_key_env": "DATA_GO_KR_SERVICE_KEY",
             "dportal_file_env": "KR_DPORTAL_FILE",

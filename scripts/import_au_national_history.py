@@ -31,7 +31,11 @@ sys.path.insert(0, str(ROOT))
 
 from src.core.country_library import get_country_bootstrap_config, get_country_profile
 from src.core.database import get_db
-from src.core.db_schema import ensure_country_scope, ensure_country_scope_schema
+from src.core.db_schema import (
+    ensure_country_scope,
+    ensure_country_scope_schema,
+    ensure_disease_mapping_source_schema,
+)
 from src.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -162,6 +166,7 @@ def load_rows(input_file: Path) -> list[AURow]:
 
 async def ensure_country_au(db) -> int:
     await ensure_country_scope_schema(db)
+    await ensure_disease_mapping_source_schema(db)
 
     profile = get_country_profile("AU")
     bootstrap = get_country_bootstrap_config("AU")
@@ -274,19 +279,19 @@ async def ensure_disease_assets(db, rows: list[AURow]) -> dict[str, int]:
                 text(
                     """
                     INSERT INTO disease_mappings (
-                        disease_id, country_code, local_name,
+                        disease_id, country_code, local_name, source_id,
                         is_primary, is_alias, priority,
                         usage_count, confidence_score,
                         category, source, metadata, is_active,
                         created_at, updated_at
                     ) VALUES (
-                        :disease_id, 'AU', :local_name,
+                        :disease_id, 'AU', :local_name, 'SRC_AU_NINDSS',
                         :is_primary, :is_alias, :priority,
                         0, 1.0,
                         :category, :source, CAST(:metadata AS json), true,
                         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
                     )
-                    ON CONFLICT (disease_id, country_code, local_name) DO UPDATE SET
+                    ON CONFLICT (disease_id, country_code, source_id, local_name) DO UPDATE SET
                         source = EXCLUDED.source,
                         metadata = EXCLUDED.metadata,
                         updated_at = CURRENT_TIMESTAMP

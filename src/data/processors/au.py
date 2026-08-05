@@ -22,12 +22,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core import get_logger
 from src.data.crawlers import AustraliaNINDSSCrawler
 from src.data.crawlers.au import AUFetchSummary
+from src.data.processors.mapping_lookup import (
+    load_country_mapping_dict,
+    normalize_mapping_key,
+)
 
 logger = get_logger(__name__)
 
 ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_OUTPUT_CSV = ROOT / "data/current/au/australia_national_data.csv"
 DEFAULT_SOURCE_NAME = "Australia NINDSS (location aggregated)"
+MAPPING_SOURCE_ID = "SRC_AU_NINDSS"
 _ARCHIVE_SKIP_STATES = {"AUS", "UNKNOWN", "TOTAL", "ALL"}
 
 
@@ -413,24 +418,9 @@ class AUMonthlyUpdater:
         return int(row[0])
 
     async def _load_mapping_dict(self, db: AsyncSession) -> Dict[str, int]:
-        result = await db.execute(
-            text(
-                """
-                SELECT dm.local_name, d.id
-                FROM disease_mappings dm
-                JOIN diseases d ON dm.disease_id = d.name
-                WHERE dm.country_code = :code AND dm.is_active = true
-                """
-            ),
-            {"code": self.country_code},
+        return await load_country_mapping_dict(
+            db, self.country_code, source_id=MAPPING_SOURCE_ID
         )
-
-        mapping: Dict[str, int] = {}
-        for local_name, disease_db_id in result:
-            key = _norm_text(local_name).lower()
-            if key:
-                mapping[key] = int(disease_db_id)
-        return mapping
 
     async def import_rows(
         self,
@@ -469,7 +459,7 @@ class AUMonthlyUpdater:
             # AU data is dynamically revised — always upsert, never skip by date.
 
             label = _norm_text(row.get("RawDiseaseLabel", ""))
-            disease_id = mapping_dict.get(label.lower())
+            disease_id = mapping_dict.get(normalize_mapping_key(label))
             if disease_id is None:
                 skipped_unmapped += 1
                 continue

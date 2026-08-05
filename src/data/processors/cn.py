@@ -23,6 +23,10 @@ from src.data.crawlers.base import CrawlerResult
 from src.data.parsers.html_parser import HTMLTableParser
 from src.data.normalizers.english_mapper import create_disease_mapper
 from src.data.storage.record_store import RecordStore
+from src.data.storage.series_observation_store import (
+    SeriesObservationQualityPolicy,
+    SeriesObservationStore,
+)
 
 logger = get_logger(__name__)
 
@@ -61,6 +65,7 @@ class DataProcessor:
         # Parser is stateless; mapper is created on demand inside async methods
         self.parser = HTMLTableParser()
         self._record_store = RecordStore()
+        self._series_observation_store = SeriesObservationStore()
 
         # Limit concurrency to avoid event-loop contention
         self.max_concurrent = int(os.getenv('MAX_CRAWLER_CONCURRENT', '2'))
@@ -198,8 +203,53 @@ class DataProcessor:
                 if save_to_file and result.year_month:
                     self._save_to_file(df, result.year_month)
                 
-                # Save to database via RecordStore (batch upsert, no N+1)
-                await self._record_store.save_dataframe(df, self.country_code)
+                # Keep the compatibility projection and the lossless source-series
+                # facts in one transaction. A crawler result carrying an ontology
+                # source ID declares Registry coverage, so any unresolved row aborts
+                # both writes instead of creating a legacy-only shadow fact.
+                async with get_db() as db:
+                    await self._record_store.save_dataframe(
+                        df,
+                        self.country_code,
+                        db=db,
+                    )
+                    ontology_source_id = result.metadata.get("ontology_source_id")
+                    series_result = await self._series_observation_store.save_rows(
+                        db,
+                        df.to_dict(orient="records"),
+                        self.country_code,
+                        source_id=ontology_source_id,
+                        geography_key=(
+                            f"country:{self.country_code}:national"
+                            if self.country_code == "CN"
+                            else None
+                        ),
+                        quality_policy=SeriesObservationQualityPolicy(
+                            registry_coverage=(
+                                "required" if ontology_source_id else "legacy_only"
+                            )
+                        ),
+                    )
+                    if series_result.skipped_registry_not_synced:
+                        raise RuntimeError(
+                            "Disease source-series registry is not synchronized: "
+                            f"{series_result.skipped_registry_not_synced} matched rows "
+                            "could not be written"
+                        )
+                    if series_result.skipped_ambiguous:
+                        raise RuntimeError(
+                            "Ambiguous disease source-series identities: "
+                            f"{series_result.skipped_ambiguous} rows"
+                        )
+                logger.info(
+                    f"[DataProcessor][{self.country_code}] Source-series dual write"
+                    f" | upserted={series_result.upserted}"
+                    f" unmatched={series_result.skipped_unmatched}"
+                    f" ambiguous={series_result.skipped_ambiguous}"
+                    f" invalid={series_result.skipped_invalid}"
+                    " registry_not_synced="
+                    f"{series_result.skipped_registry_not_synced}"
+                )
                 
                 return df
                 
@@ -275,6 +325,13 @@ class DataProcessor:
 
         # Apply mapper: local name → standard English name + disease_id
         source_col = "DiseasesCN" if language == "zh" else "Diseases"
+
+        # Preserve the source's exact disease wording before replacing the
+        # display columns with canonical names.  Source-series resolution must
+        # use this value so distinctions such as “肝炎（未分型）” are not lost.
+        if "RawDiseaseLabel" not in df.columns:
+            df = df.copy()
+            df["RawDiseaseLabel"] = df[source_col]
         
         df = await disease_mapper.map_dataframe(
             df,
