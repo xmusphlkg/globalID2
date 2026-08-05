@@ -365,7 +365,7 @@ def _ensure_repository(
     repository_dir = repository_dir.resolve()
     if (repository_dir / ".git").is_dir():
         branch = run_git(
-            ["rev-parse", "--abbrev-ref", "HEAD"],
+            ["symbolic-ref", "--short", "HEAD"],
             repository_dir,
             timeout_seconds=timeout_seconds,
         ).stdout.strip()
