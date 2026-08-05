@@ -8,9 +8,7 @@ Design principles:
   - parse(html_content)  accepts HTML strings only (single responsibility).
   - fetch_and_parse(url) is the explicit method that owns network I/O.
 """
-import re
-from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional
 
 import pandas as pd
 import requests
@@ -231,6 +229,10 @@ class HTMLTableParser(BaseParser):
             self.logger.warning(f"Insufficient columns: {len(data.columns)}")
             return pd.DataFrame()
         
+        # Keep the publisher's exact label for source-series identity and
+        # provenance before producing the legacy cleaned display value.
+        data["RawDiseaseLabel"] = data["Diseases"].astype(str).str.strip()
+
         # 清洗疾病名称（移除特殊字符）
         data["Diseases"] = data["Diseases"].str.replace(r"[^\w\s]", "", regex=True)
         data["Diseases"] = data["Diseases"].str.strip()
@@ -262,7 +264,7 @@ class HTMLTableParser(BaseParser):
         # 重新排序列
         column_order = [
             "Date", "YearMonthDay", "YearMonth",
-            "Diseases", "DiseasesCN",
+            "Diseases", "DiseasesCN", "RawDiseaseLabel",
             "Cases", "Deaths",
             "Incidence", "Mortality",
             "ProvinceCN", "Province", "ADCode",
@@ -301,6 +303,10 @@ class HTMLTableParser(BaseParser):
         # Remove summary rows ("合计" = total)
         data = data[~data["DiseasesCN"].str.contains("合计", na=False)]
 
+        # Preserve punctuation and qualifiers exactly as published.  The
+        # compatibility columns below may still be cleaned for legacy mapping.
+        data["RawDiseaseLabel"] = data["DiseasesCN"].astype(str).str.strip()
+
         # Keep only CJK characters, ASCII alphanumerics, and spaces
         # Unicode CJK range: \u4e00-\u9fff
         data["DiseasesCN"] = data["DiseasesCN"].apply(
@@ -330,7 +336,7 @@ class HTMLTableParser(BaseParser):
         # 重新排序列
         column_order = [
             "Date", "YearMonthDay", "YearMonth",
-            "Diseases", "DiseasesCN",
+            "Diseases", "DiseasesCN", "RawDiseaseLabel",
             "Cases", "Deaths",
             "Incidence", "Mortality",
             "ProvinceCN", "Province", "ADCode",

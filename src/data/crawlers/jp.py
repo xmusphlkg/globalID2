@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import csv
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from pathlib import Path
 import re
 from typing import Dict, List, Optional, Set, Tuple
@@ -28,7 +28,7 @@ JP_ENGLISH_DISEASE_ALIASES: Dict[str, str] = {
     "Acute Flaccid Paralysis (excluding Acute poliomyelitis)": "Acute flaccid paralysis",
     "Acute encephalitis(excluding JE and WNE)": "Acute encephalitis",
     "Amebiasis": "Amoebic dysentery",
-    "Avian influenza (exclud. Avian influenza both H5N1 and H7N9)": "Avian influenza (excluding H5N1)",
+    "Avian influenza (exclud. Avian influenza both H5N1 and H7N9)": "Avian influenza (excluding H5N1 and H7N9)",
     "Avian influenza H5N1": "Avian influenza (H5N1)",
     "Avian influenza H7N9": "Avian influenza (H7N9)",
     "Chlamydial pneumonia(excluding psittacosis)": "Chlamydial pneumonia",
@@ -37,7 +37,7 @@ JP_ENGLISH_DISEASE_ALIASES: Dict[str, str] = {
     "Epidemic typhus": "Typhus (Rickettsial)",
     "Erythema infection": "Erythema infectiosum (Fifth disease)",
     "Exanthem subitum": "Roseola (Exanthem subitum)",
-    "Glanders": "Pseudoglanders",
+    "Glanders": "Glanders",
     "Hand, foot and mouth disease": "Hand-foot-and-mouth disease",
     "Herpes B virus infection": "Herpes B (Macacine herpesvirus 1) infection",
     "Infectious gastroenteritis (only by Rotavirus)": "Infectious gastroenteritis (Rotavirus)",
@@ -45,8 +45,8 @@ JP_ENGLISH_DISEASE_ALIASES: Dict[str, str] = {
     "Invasive haemophilus influenzae infection": "Invasive Haemophilus influenzae infection",
     "Invasive meningococcal infection": "Invasive meningococcal disease",
     "Invasive streptococcal pneumoniae infection": "Invasive pneumococcal disease",
-    "Kyasanur forest disease": "Casanul forest disease",
-    "Lyssavirus infection(excluding rabies)": "Lissavirus infection",
+    "Kyasanur forest disease": "Kyasanur Forest disease",
+    "Lyssavirus infection(excluding rabies)": "Lyssavirus infection (excluding rabies)",
     "Marburg disease": "Marburg hemorrhagic fever",
     "Middle East Respiratory Syndrome Coronavirus": "MERS (Middle East respiratory syndrome)",
     "Multiple drug-resistant Acinetobacter infection": "Drug-resistant Acinetobacter infection",
@@ -60,10 +60,10 @@ JP_ENGLISH_DISEASE_ALIASES: Dict[str, str] = {
     "Severe Fever with Thrombocytopenia Syndrome(SFTS)": "Severe fever with thrombocytopenia syndrome (SFTS)",
     "Severe invasive streptococcal infections(TSLS)": "Severe invasive group A streptococcal infection",
     "Shigellosis": "Bacterial dysentery",
-    "Tick-borne encephalitis": "Ticks-borne encephalitis",
+    "Tick-borne encephalitis": "Tick-borne encephalitis",
     "Vancomycin-resistant S. aureus infection": "Vancomycin-resistant Staphylococcus aureus infection",
     "Varicella (limited to hospiltalized case)": "Chickenpox (hospitalized cases)",
-    "Viral hepatitis(excluding hepatitis A and E)": "Viral hepatitis",
+    "Viral hepatitis(excluding hepatitis A and E)": "Viral hepatitis (excluding hepatitis A and E)",
 }
 
 

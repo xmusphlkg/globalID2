@@ -19,6 +19,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 from urllib.parse import urljoin
@@ -36,6 +37,7 @@ DEFAULT_SOURCE_NAME = "Brazil DATASUS SINAN Open Data"
 DEFAULT_FINAL_URL = "ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/FINAIS/"
 DEFAULT_PRELIM_URL = "ftp://ftp.datasus.gov.br/dissemin/publicos/SINAN/DADOS/PRELIM/"
 DEFAULT_HISTORY_START_YEAR = 2000
+NTRA_AGGREGATION_VERSION = "ntra-field-sums-v1"
 ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_CACHE_DIR = ROOT / "data" / "cache" / "br" / "sinan_monthly_aggregates"
 
@@ -67,8 +69,8 @@ SINAN_DISEASE_PREFIXES: Dict[str, str] = {
     "HEPA": "Viral hepatitis",
     "HIVA": "HIV infection in adults",
     "HIVC": "HIV infection in children",
-    "HIVE": "HIV infection in pregnant women",
-    "HIVG": "HIV infection",
+    "HIVE": "Child exposed to HIV",
+    "HIVG": "HIV infection in pregnancy",
     "IEXO": "Exogenous poisoning",
     "LEIV": "Visceral leishmaniasis",
     "LEPT": "Leptospirosis",
@@ -78,7 +80,7 @@ SINAN_DISEASE_PREFIXES: Dict[str, str] = {
     "MALA": "Malaria",
     "MENI": "Meningitis",
     "MENT": "Work-related mental disorder",
-    "NTRA": "Work-related disorder",
+    "NTRA": "Trachoma survey positive cases",
     "PAIR": "Noise-induced hearing loss",
     "PEST": "Plague",
     "PFAN": "Acute flaccid paralysis",
@@ -205,6 +207,22 @@ def parse_ftp_listing(
     return files
 
 
+def _deduplicate_sinan_file_aliases(files: Iterable[SINANFile]) -> List[SINANFile]:
+    """Prefer the current ``LERD`` filename when its legacy ``LER`` alias exists.
+
+    DATASUS can expose both names for the same annual work-related repetitive
+    strain injury extract.  Keeping both would download and count that file
+    twice.  Years that only publish the legacy name are left untouched.
+    """
+    materialized = list(files)
+    lerd_years = {item.year for item in materialized if item.prefix == "LERD"}
+    return [
+        item
+        for item in materialized
+        if not (item.prefix == "LER" and item.year in lerd_years)
+    ]
+
+
 def _parse_record_date(value: object) -> Optional[date]:
     if value is None:
         return None
@@ -226,8 +244,8 @@ def _parse_record_date(value: object) -> Optional[date]:
 
 def _select_record_date(record: Dict[str, object], fallback_year: int) -> date:
     """Choose the monthly bucket date for one SINAN microdata record."""
-    for field in ("DT_NOTIFIC", "DT_SIN_PRI", "DT_DIAG", "DT_ACID"):
-        parsed = _parse_record_date(record.get(field))
+    for field_name in ("DT_NOTIFIC", "DT_SIN_PRI", "DT_DIAG", "DT_ACID"):
+        parsed = _parse_record_date(record.get(field_name))
         if parsed is not None:
             return date(parsed.year, parsed.month, 1)
 
@@ -239,10 +257,58 @@ def _select_record_date(record: Dict[str, object], fallback_year: int) -> date:
     return date(year, 1, 1)
 
 
-def _load_dbf_records(dbf_path: Path) -> Iterable[Dict[str, object]]:
-    from dbfread import DBF
+def _nonnegative_whole_number(value: object) -> int:
+    """Return a valid non-negative SINAN count, or zero for unsafe input."""
+    if value is None or isinstance(value, bool):
+        return 0
+    text = str(value).strip()
+    if not text:
+        return 0
+    try:
+        number = Decimal(text)
+    except (InvalidOperation, ValueError):
+        return 0
+    if not number.is_finite() or number < 0 or number != number.to_integral_value():
+        return 0
+    return int(number)
 
-    table = DBF(str(dbf_path), encoding="latin1", char_decode_errors="ignore", load=False)
+
+def _load_dbf_records(dbf_path: Path) -> Iterable[Dict[str, object]]:
+    from dbfread import DBF, FieldParser
+
+    class SINANFieldParser(FieldParser):
+        """Treat malformed SINAN date sentinels as missing values.
+
+        Some DATASUS extracts store unknown dates as ``********``.  dbfread's
+        default parser raises for those values, which otherwise discards the
+        entire annual disease file before the crawler can try another date
+        field or the record-year fallback.
+        """
+
+        def parseD(self, field, data):  # noqa: N802 - dbfread dispatch API
+            try:
+                return super().parseD(field, data)
+            except ValueError:
+                if data.strip() == b"********":
+                    return None
+                raise
+
+        def parseN(self, field, data):  # noqa: N802 - dbfread dispatch API
+            try:
+                return super().parseN(field, data)
+            except (TypeError, ValueError):
+                # A malformed aggregate cell must not turn a complete annual
+                # NTRA extract into a failed crawl. It is treated as zero by the
+                # field-level safe-count parser below.
+                return None
+
+    table = DBF(
+        str(dbf_path),
+        encoding="latin1",
+        char_decode_errors="ignore",
+        parserclass=SINANFieldParser,
+        load=False,
+    )
     for record in table:
         yield dict(record)
 
@@ -310,19 +376,27 @@ class BrazilSINANCrawler(BaseCrawler):
         return self.cache_dir / item.dataset_status / safe_filename
 
     def _file_cache_signature(self, item: SINANFile) -> str:
-        sig = "|".join([
+        signature_parts = [
             item.filename,
             item.dataset_status,
             str(item.size_bytes),
             item.modified_at.isoformat() if item.modified_at else "none",
-        ])
+        ]
+        if item.prefix == "NTRA":
+            # NTRA is an aggregate survey extract, not one case per DBF row.
+            # Versioning only this prefix preserves valid caches for all ordinary
+            # microdata while making old row-count NTRA caches unreachable.
+            signature_parts.append(NTRA_AGGREGATION_VERSION)
+        sig = "|".join(signature_parts)
         return hashlib.sha1(sig.encode("utf-8")).hexdigest()
 
-    def _load_cached_counts(
+    def _load_cached_metrics(
         self,
         item: SINANFile,
         months: Optional[Set[Tuple[int, int]]] = None,
-    ) -> Optional[Dict[Tuple[int, int], int]]:
+    ) -> Optional[
+        Tuple[Dict[Tuple[int, int], int], Dict[Tuple[int, int], int]]
+    ]:
         cache_path = self._file_cache_path(item)
         if not cache_path.exists():
             return None
@@ -339,23 +413,46 @@ class BrazilSINANCrawler(BaseCrawler):
             return None
 
         counts: Dict[Tuple[int, int], int] = {}
+        persons_examined: Dict[Tuple[int, int], int] = {}
         for row in rows:
+            if not isinstance(row, dict):
+                continue
             try:
                 date_text = str(row.get("Date"))
                 row_months = datetime.strptime(date_text, "%Y-%m-%d").date()
             except Exception:
                 continue
-            try:
-                counts[(row_months.year, row_months.month)] = int(row.get("Cases", 0))
-            except (TypeError, ValueError):
-                continue
+            key = (row_months.year, row_months.month)
+            counts[key] = _nonnegative_whole_number(row.get("Cases"))
+            if item.prefix == "NTRA":
+                # A NTRA cache without this measure is incomplete and could be
+                # an unsafe hand-authored/legacy row-count cache. Reparse it.
+                if "PersonsExamined" not in row:
+                    return None
+                persons_examined[key] = _nonnegative_whole_number(
+                    row.get("PersonsExamined")
+                )
+
+        def selected_metrics(
+            selected_months: Optional[Set[Tuple[int, int]]],
+        ) -> Tuple[Dict[Tuple[int, int], int], Dict[Tuple[int, int], int]]:
+            if selected_months is None:
+                return counts, persons_examined
+            return (
+                {key: value for key, value in counts.items() if key in selected_months},
+                {
+                    key: value
+                    for key, value in persons_examined.items()
+                    if key in selected_months
+                },
+            )
 
         cached_scope = payload.get("scope")
         if months is None:
-            return counts if cached_scope == "full" else None
+            return selected_metrics(None) if cached_scope == "full" else None
 
         if cached_scope == "full":
-            return {key: counts[key] for key in counts.keys() if key in months}
+            return selected_metrics(months)
 
         cached_months: Optional[Set[Tuple[int, int]]] = None
         if isinstance(cached_scope, list):
@@ -372,14 +469,24 @@ class BrazilSINANCrawler(BaseCrawler):
             cached_months = set(counts.keys())
 
         if cached_months is not None and months.issubset(cached_months):
-            return {key: counts[key] for key in counts.keys() if key in months}
+            return selected_metrics(months)
         return None
+
+    def _load_cached_counts(
+        self,
+        item: SINANFile,
+        months: Optional[Set[Tuple[int, int]]] = None,
+    ) -> Optional[Dict[Tuple[int, int], int]]:
+        """Compatibility wrapper for callers that only need case counts."""
+        cached = self._load_cached_metrics(item, months=months)
+        return cached[0] if cached is not None else None
 
     def _write_cached_counts(
         self,
         item: SINANFile,
         counts: Dict[Tuple[int, int], int],
         months: Optional[Set[Tuple[int, int]]] = None,
+        persons_examined: Optional[Dict[Tuple[int, int], int]] = None,
     ) -> None:
         cache_path = self._file_cache_path(item)
         cache_path.parent.mkdir(parents=True, exist_ok=True)
@@ -388,18 +495,27 @@ class BrazilSINANCrawler(BaseCrawler):
         # so a full cache avoids reparsing this file on subsequent incremental fetches
         # as long as the underlying file signature stays unchanged.
         cache_scope = "full"
+        rows = []
+        for (year, month), count in sorted(counts.items()):
+            row = {"Date": date(year, month, 1).isoformat(), "Cases": count}
+            if item.prefix == "NTRA":
+                row["PersonsExamined"] = (persons_examined or {}).get(
+                    (year, month), 0
+                )
+            rows.append(row)
+
         payload = {
             "signature": self._file_cache_signature(item),
             "file": item.filename,
             "prefix": item.prefix,
             "year": item.year,
             "dataset_status": item.dataset_status,
+            "aggregation_version": (
+                NTRA_AGGREGATION_VERSION if item.prefix == "NTRA" else "row-count-v1"
+            ),
             "scope": cache_scope,
             "generated_at": datetime.now(timezone.utc).isoformat(),
-            "rows": [
-                {"Date": date(year, month, 1).isoformat(), "Cases": count}
-                for (year, month), count in sorted(counts.items())
-            ],
+            "rows": rows,
         }
         with cache_path.open("w", encoding="utf-8") as handle:
             json.dump(payload, handle, ensure_ascii=False)
@@ -507,12 +623,12 @@ class BrazilSINANCrawler(BaseCrawler):
     def fetch_file_index(self) -> List[SINANFile]:
         """Fetch final and preliminary SINAN directory listings."""
         if self._file_index is not None:
-            return list(self._file_index)
+            return _deduplicate_sinan_file_aliases(self._file_index)
 
         cached_index = self._read_cached_file_index()
         if cached_index is not None:
             self._file_index = sorted(
-                cached_index,
+                _deduplicate_sinan_file_aliases(cached_index),
                 key=lambda item: (item.prefix, item.year),
             )
             logger.info(
@@ -561,7 +677,10 @@ class BrazilSINANCrawler(BaseCrawler):
             ):
                 best[key] = item
 
-        files = sorted(best.values(), key=lambda item: (item.prefix, item.year))
+        files = sorted(
+            _deduplicate_sinan_file_aliases(best.values()),
+            key=lambda item: (item.prefix, item.year),
+        )
         logger.info(f"[BR-SINAN] Index complete | files={len(files)}")
         self._file_index = files
         self._write_cached_file_index(files)
@@ -597,13 +716,15 @@ class BrazilSINANCrawler(BaseCrawler):
         working_dir: Optional[Path] = None,
     ) -> List[Dict[str, str]]:
         """Download, decompress, and aggregate one SINAN file to monthly rows."""
-        cached = self._load_cached_counts(sinan_file, months=months)
-        if cached is not None:
+        cached_metrics = self._load_cached_metrics(sinan_file, months=months)
+        if cached_metrics is not None:
+            cached_counts, cached_persons_examined = cached_metrics
             logger.info(
                 f"[BR-SINAN] cache hit | file={sinan_file.filename} "
-                f"months={len(cached)}"
+                f"months={len(cached_counts)}"
             )
-            monthly_counts = defaultdict(int, cached)
+            monthly_counts = defaultdict(int, cached_counts)
+            monthly_persons_examined = defaultdict(int, cached_persons_examined)
         else:
             local_raw_dir = self.raw_dir / sinan_file.dataset_status / str(sinan_file.year)
             if self.save_raw:
@@ -618,37 +739,56 @@ class BrazilSINANCrawler(BaseCrawler):
             try:
                 self._decompress_to_dbf(dbc_path, dbf_path)
                 monthly_counts: Dict[Tuple[int, int], int] = defaultdict(int)
+                monthly_persons_examined: Dict[Tuple[int, int], int] = defaultdict(
+                    int
+                )
                 for record in _load_dbf_records(dbf_path):
                     bucket_date = _select_record_date(record, sinan_file.year)
                     bucket = (bucket_date.year, bucket_date.month)
                     if months is not None and bucket not in months:
                         continue
-                    monthly_counts[bucket] += 1
+                    if sinan_file.prefix == "NTRA":
+                        monthly_counts[bucket] += _nonnegative_whole_number(
+                            record.get("NU_CASOPOS")
+                        )
+                        monthly_persons_examined[
+                            bucket
+                        ] += _nonnegative_whole_number(record.get("NU_CASOEXA"))
+                    else:
+                        monthly_counts[bucket] += 1
             finally:
                 if dbf_path.exists():
                     dbf_path.unlink()
                 if not self.save_raw:
                     shutil.rmtree(dbc_path.parent, ignore_errors=True)
 
-            self._write_cached_counts(sinan_file, monthly_counts, months=months)
+            self._write_cached_counts(
+                sinan_file,
+                monthly_counts,
+                months=months,
+                persons_examined=monthly_persons_examined,
+            )
 
         rows: List[Dict[str, str]] = []
         for year, month in sorted(monthly_counts):
-            rows.append(
-                {
-                    "Date": date(year, month, 1).isoformat(),
-                    "RawDiseaseLabel": sinan_file.disease_name,
-                    "DiseaseCode": sinan_file.prefix,
-                    "Year": str(year),
-                    "Month": str(month),
-                    "Cases": str(monthly_counts[(year, month)]),
-                    "DatasetYear": str(sinan_file.year),
-                    "DatasetStatus": sinan_file.dataset_status,
-                    "SourceFile": sinan_file.filename,
-                    "Source": DEFAULT_SOURCE_NAME,
-                    "SourceURL": sinan_file.url,
-                }
-            )
+            row = {
+                "Date": date(year, month, 1).isoformat(),
+                "RawDiseaseLabel": sinan_file.disease_name,
+                "DiseaseCode": sinan_file.prefix,
+                "Year": str(year),
+                "Month": str(month),
+                "Cases": str(monthly_counts[(year, month)]),
+                "DatasetYear": str(sinan_file.year),
+                "DatasetStatus": sinan_file.dataset_status,
+                "SourceFile": sinan_file.filename,
+                "Source": DEFAULT_SOURCE_NAME,
+                "SourceURL": sinan_file.url,
+            }
+            if sinan_file.prefix == "NTRA":
+                row["PersonsExamined"] = str(
+                    monthly_persons_examined[(year, month)]
+                )
+            rows.append(row)
         return rows
 
     def crawl_monthly_national(
@@ -669,8 +809,12 @@ class BrazilSINANCrawler(BaseCrawler):
             for prefix in (prefixes if prefixes is not None else self.default_prefixes)
             if str(prefix).strip()
         }
+        if "LER" in requested_prefixes:
+            requested_prefixes.add("LERD")
 
-        index = list(file_index) if file_index is not None else self.fetch_file_index()
+        index = _deduplicate_sinan_file_aliases(
+            file_index if file_index is not None else self.fetch_file_index()
+        )
         candidate_files = [
             item
             for item in index
@@ -734,26 +878,31 @@ class BrazilSINANCrawler(BaseCrawler):
                 },
             )
             bucket["Cases"] = int(bucket["Cases"]) + int(row["Cases"])
+            if "PersonsExamined" in row:
+                bucket["PersonsExamined"] = int(
+                    bucket.get("PersonsExamined", 0)
+                ) + _nonnegative_whole_number(row.get("PersonsExamined"))
             bucket["DatasetStatuses"].add(row["DatasetStatus"])
             bucket["SourceFiles"].append(row["SourceFile"])
             bucket["SourceURLs"].append(row["SourceURL"])
 
         output_rows: List[Dict[str, str]] = []
         for bucket in grouped.values():
-            output_rows.append(
-                {
-                    "Date": str(bucket["Date"]),
-                    "RawDiseaseLabel": str(bucket["RawDiseaseLabel"]),
-                    "DiseaseCode": str(bucket["DiseaseCode"]),
-                    "Year": str(bucket["Year"]),
-                    "Month": str(bucket["Month"]),
-                    "Cases": str(bucket["Cases"]),
-                    "DatasetStatus": "|".join(sorted(bucket["DatasetStatuses"])),
-                    "SourceFiles": "|".join(bucket["SourceFiles"]),
-                    "SourceURLs": "|".join(bucket["SourceURLs"]),
-                    "Source": DEFAULT_SOURCE_NAME,
-                }
-            )
+            output_row = {
+                "Date": str(bucket["Date"]),
+                "RawDiseaseLabel": str(bucket["RawDiseaseLabel"]),
+                "DiseaseCode": str(bucket["DiseaseCode"]),
+                "Year": str(bucket["Year"]),
+                "Month": str(bucket["Month"]),
+                "Cases": str(bucket["Cases"]),
+                "DatasetStatus": "|".join(sorted(bucket["DatasetStatuses"])),
+                "SourceFiles": "|".join(bucket["SourceFiles"]),
+                "SourceURLs": "|".join(bucket["SourceURLs"]),
+                "Source": DEFAULT_SOURCE_NAME,
+            }
+            if "PersonsExamined" in bucket:
+                output_row["PersonsExamined"] = str(bucket["PersonsExamined"])
+            output_rows.append(output_row)
 
         output_rows.sort(key=lambda row: (row["Date"], row["RawDiseaseLabel"]))
         if write_csv:
@@ -766,6 +915,7 @@ class BrazilSINANCrawler(BaseCrawler):
                 "Month",
                 "Date",
                 "Cases",
+                "PersonsExamined",
                 "DatasetStatus",
                 "SourceFiles",
                 "SourceURLs",
@@ -784,6 +934,7 @@ class BrazilSINANCrawler(BaseCrawler):
                             "Month": row["Month"],
                             "Date": row["Date"],
                             "Cases": row["Cases"],
+                            "PersonsExamined": row.get("PersonsExamined", ""),
                             "DatasetStatus": row["DatasetStatus"],
                             "SourceFiles": row["SourceFiles"],
                             "SourceURLs": row["SourceURLs"],

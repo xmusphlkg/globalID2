@@ -61,6 +61,46 @@ def test_tw_nidss_monthly_aggregation_keeps_local_and_imported_counts():
     ]
 
 
+def test_tw_nidss_monthly_aggregation_accepts_diagnosis_year_month_columns():
+    disease = TWDiseaseSource(
+        code="042",
+        name="後天免疫缺乏症候群",
+        monthly_csv_url="https://od.cdc.gov.tw/eic/Age_County_Gender_042.csv",
+        weekly_csv_url="https://od.cdc.gov.tw/eic/Weekly_Age_County_Gender_042.csv",
+    )
+    rows = [
+        {
+            "診斷年份": "2025",
+            "診斷月份": "12",
+            "非本國籍": "0",
+            "確定病例數": "2",
+        },
+        {
+            "診斷年份": "2026",
+            "診斷月份": "01",
+            "非本國籍": "1",
+            "確定病例數": "3",
+        },
+    ]
+
+    aggregated = aggregate_monthly_csv_rows(disease, rows, months={(2026, 1)})
+
+    assert aggregated == [
+        {
+            "Date": "2026-01-01",
+            "RawDiseaseLabel": "後天免疫缺乏症候群",
+            "DiseaseCode": "042",
+            "Year": "2026",
+            "Month": "1",
+            "Cases": "3",
+            "LocalCases": "3",
+            "ImportedCases": "0",
+            "Source": DEFAULT_SOURCE_NAME,
+            "SourceURL": "https://od.cdc.gov.tw/eic/Age_County_Gender_042.csv",
+        }
+    ]
+
+
 def test_tw_nidss_source_scope_aliases():
     assert canonicalize_task_source("nidss", country_code="TW") == "nidss_open_data"
     assert canonicalize_task_source("tw", country_code="TW") == "nidss_open_data"

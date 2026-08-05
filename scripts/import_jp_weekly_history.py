@@ -17,7 +17,7 @@ import csv
 import json
 import sys
 from dataclasses import dataclass
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, time
 from pathlib import Path
 
 from sqlalchemy import text
@@ -25,10 +25,16 @@ from sqlalchemy import text
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from src.core.country_library import get_country_bootstrap_config, get_country_profile
-from src.core.database import get_db
-from src.core.db_schema import ensure_country_scope, ensure_country_scope_schema
-from src.core.logging import get_logger
+from src.core.country_library import (  # noqa: E402
+    get_country_bootstrap_config,
+    get_country_profile,
+)
+from src.core.database import get_db  # noqa: E402
+from src.core.db_schema import (  # noqa: E402
+    ensure_country_scope,
+    ensure_country_scope_schema,
+)
+from src.core.logging import get_logger  # noqa: E402
 
 
 logger = get_logger(__name__)
@@ -98,9 +104,9 @@ def parse_int(value: str) -> int | None:
 
 
 def mmwr_week_end_date(year: int, week: int) -> date:
-    jan_4 = date(year, 1, 4)
-    week_1_start = jan_4 - timedelta(days=(jan_4.weekday() + 1) % 7)
-    return week_1_start + timedelta(weeks=week - 1, days=6)
+    """Return the Sunday ending the Japanese IDWR ISO epidemiological week."""
+
+    return date.fromisocalendar(year, week, 7)
 
 
 def load_rows(input_file: Path, reporting_areas: set[str]) -> list[WeeklyRow]:
@@ -317,10 +323,10 @@ async def prune_overlapping_history_rows(
 
     The duplicate pattern in JP history is:
     - legacy history row on Friday
-    - standardized weekly row for the same disease on Saturday
+    - standardized weekly row for the same disease on Sunday
 
     We keep the standardized weekly row from the current updater because it extends
-    later into 2026 and avoids mixing Friday/Saturday variants on the public site.
+    later into 2026 and avoids mixing Friday/Sunday variants on the public site.
     """
     result = await db.execute(
         text(
@@ -332,7 +338,7 @@ async def prune_overlapping_history_rows(
               AND preferred.disease_id = legacy.disease_id
               AND legacy.metadata->>'source_csv' = :legacy_source_csv
               AND preferred.metadata->>'source_file' = :preferred_source_file
-              AND timezone('UTC', preferred.time)::date = timezone('UTC', legacy.time)::date + 1
+              AND timezone('UTC', preferred.time)::date = timezone('UTC', legacy.time)::date + 2
             """
         ),
         {

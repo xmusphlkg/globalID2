@@ -18,29 +18,69 @@ import argparse
 from pathlib import Path
 from datetime import datetime, time, timezone
 import pandas as pd
-from typing import Dict, Set
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from sqlalchemy import text
-from src.core.database import get_db
-from src.core.country_library import get_country_bootstrap_config, get_country_profile
-from src.core.mapping_paths import (
+from sqlalchemy import text  # noqa: E402
+from src.core.database import get_db  # noqa: E402
+from src.core.country_library import (  # noqa: E402
+    get_country_bootstrap_config,
+    get_country_profile,
+)
+from src.core.mapping_paths import (  # noqa: E402
     available_mapping_codes,
     expected_mapping_file,
     resolve_mapping_file,
 )
-from src.core.db_schema import (
+from src.core.db_schema import (  # noqa: E402
     ensure_country_scope,
     ensure_country_scope_schema,
+    ensure_disease_mapping_source_schema,
     ensure_disease_learning_suggestions_schema,
 )
-from src.core.logging import get_logger
-from src.core.missing_values import normalize_rate_value
+from src.core.logging import get_logger  # noqa: E402
+from src.core.missing_values import normalize_rate_value  # noqa: E402
 
 logger = get_logger(__name__)
 REPORT_TIME_UTC = time(hour=12)
+US_NNDSS_SOURCE_NAME = "US CDC NNDSS"
+US_NNDSS_RESIDENT_ALIASES = {
+    "us residents",
+    "u.s. residents",
+    "united states residents",
+}
+
+
+def validate_us_nndss_history_scope(df: pd.DataFrame) -> None:
+    """Refuse a legacy US rebuild containing broader NNDSS Total rows."""
+
+    if "Source" not in df.columns:
+        return
+    source_mask = (
+        df["Source"].fillna("").astype(str).str.strip().str.casefold()
+        == US_NNDSS_SOURCE_NAME.casefold()
+    )
+    if not source_mask.any():
+        return
+    if "ReportingArea" not in df.columns:
+        raise ValueError(
+            "US NNDSS history requires ReportingArea evidence for the legacy "
+            "national projection"
+        )
+    areas = (
+        df.loc[source_mask, "ReportingArea"]
+        .fillna("")
+        .astype(str)
+        .str.strip()
+        .str.casefold()
+    )
+    invalid = sorted(set(areas) - US_NNDSS_RESIDENT_ALIASES)
+    if invalid:
+        raise ValueError(
+            "US NNDSS legacy history contains non-resident reporting scopes: "
+            + ", ".join(repr(value) for value in invalid[:20])
+        )
 
 
 class DatabaseRebuilder:
@@ -624,6 +664,7 @@ class DatabaseRebuilder:
     async def import_disease_mappings(self, db):
         """Import disease mapping relationships (支持多语言映射)"""
         total_inserted = 0
+        await ensure_disease_mapping_source_schema(db)
         
         # 首先确保所有需要的country_code都存在（包括语言变体如CN_EN）
         for mapping_file, country_code in self.mapping_files:
@@ -710,16 +751,18 @@ class DatabaseRebuilder:
         for _, row in df.iterrows():
             disease_id = row['disease_id']
             local_name = row['local_name']
+            source_id = str(row.get('source_id') or '').strip().upper() or '*'
+            series_id = str(row.get('series_id') or '').strip() or None
             
             # Primary mapping
             await db.execute(text("""
                 INSERT INTO disease_mappings 
-                (disease_id, country_code, local_name, is_primary, is_alias, priority, 
+                (disease_id, country_code, local_name, source_id, series_id, is_primary, is_alias, priority,
                  usage_count, confidence_score, category, source, metadata, is_active, created_at, updated_at)
                 VALUES 
-                (:disease_id, :country, :local_name, true, false, 100, 
+                (:disease_id, :country, :local_name, :source_id, :series_id, true, false, 100,
                  0, 1.0, :category, :source, '{}'::json, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-                ON CONFLICT (disease_id, country_code, local_name) DO UPDATE SET
+                ON CONFLICT (disease_id, country_code, source_id, local_name) DO UPDATE SET
                     is_primary = true,
                     category = EXCLUDED.category,
                     source = EXCLUDED.source,
@@ -728,6 +771,8 @@ class DatabaseRebuilder:
                 'disease_id': disease_id,
                 'country': country_code,
                 'local_name': local_name,
+                'source_id': source_id,
+                'series_id': series_id,
                 'category': row['category'] if row['category'] else None,
                 'source': row.get('data_source', row.get('source', 'Manual'))
             })
@@ -747,18 +792,20 @@ class DatabaseRebuilder:
                 for alias in aliases:
                     await db.execute(text("""
                         INSERT INTO disease_mappings 
-                        (disease_id, country_code, local_name, is_primary, is_alias, priority,
+                        (disease_id, country_code, local_name, source_id, series_id, is_primary, is_alias, priority,
                          usage_count, confidence_score, category, source, metadata, is_active, created_at, updated_at)
                         VALUES 
-                        (:disease_id, :country, :alias, false, true, 50,
+                        (:disease_id, :country, :alias, :source_id, :series_id, false, true, 50,
                          0, 1.0, :category, :source, '{}'::json, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-                        ON CONFLICT (disease_id, country_code, local_name) DO UPDATE SET
+                        ON CONFLICT (disease_id, country_code, source_id, local_name) DO UPDATE SET
                             is_alias = true,
                             updated_at = CURRENT_TIMESTAMP
                     """), {
                         'disease_id': disease_id,
                         'country': country_code,
                         'alias': alias,
+                        'source_id': source_id,
+                        'series_id': series_id,
                         'category': row['category'] if row['category'] else None,
                         'source': row.get('source', 'Manual')
                     })
@@ -811,9 +858,11 @@ class DatabaseRebuilder:
         # Read historical data
         df = pd.read_csv(self.history_file)
         logger.info(f"  Read {len(df):,} historical records")
+        if self.country_code == "US":
+            validate_us_nndss_history_scope(df)
         
         # Get country_id for the configured country
-        result = await db.execute(text(f"SELECT id FROM countries WHERE code = :code"), {"code": self.country_code})
+        result = await db.execute(text("SELECT id FROM countries WHERE code = :code"), {"code": self.country_code})
         country_row = result.fetchone()
         if not country_row:
             logger.error(f"Country not found in database: {self.country_code}")
@@ -894,9 +943,22 @@ class DatabaseRebuilder:
                     skipped += 1
                     continue
                 
-                # Extract numeric values
-                cases = int(row[cases_col]) if pd.notna(row[cases_col]) and str(row[cases_col]) not in ['', '-10', 'nan'] else 0
-                deaths = int(row[deaths_col]) if pd.notna(row[deaths_col]) and str(row[deaths_col]) not in ['', '-10', 'nan'] else 0
+                # Real data source from CSV. Resolve it before parsing counts so
+                # source-specific missing-value contracts can fail closed.
+                data_source = 'Historical Data Import'
+                if 'Source' in df.columns and pd.notna(row['Source']):
+                    data_source = str(row['Source'])
+
+                # A blank NNDSS cell is missing/unknown, never a reported zero.
+                cases_missing = not pd.notna(row[cases_col]) or str(row[cases_col]) in ['', '-10', 'nan']
+                if cases_missing and self.country_code == "US" and data_source == US_NNDSS_SOURCE_NAME:
+                    skipped += 1
+                    continue
+                cases = int(row[cases_col]) if not cases_missing else 0
+                # A blank death field means the source does not report deaths;
+                # preserving NULL prevents diagnosis-only feeds such as NNDSS
+                # and NHSS from being misrepresented as zero mortality.
+                deaths = int(row[deaths_col]) if pd.notna(row[deaths_col]) and str(row[deaths_col]) not in ['', '-10', 'nan'] else None
                 
                 # Extract additional fields
                 incidence = None
@@ -915,16 +977,23 @@ class DatabaseRebuilder:
                 elif 'Province' in df.columns and pd.notna(row['Province']) and str(row['Province']) not in ['China', 'National', 'Nationwide']:
                     region = str(row['Province'])
                 
-                # Real data source from CSV
-                data_source = 'Historical Data Import'
-                if 'Source' in df.columns and pd.notna(row['Source']):
-                    data_source = str(row['Source'])
-                
                 # Build metadata object
                 metadata_obj = {
                     'source_csv': self.history_file.name,
                     'row_index': int(idx)
                 }
+                if data_source == 'US CDC NHSS':
+                    metadata_obj.update({
+                        'frequency': 'annual',
+                        'measure': 'hiv_diagnoses_or_aids_classifications',
+                        'death_reporting': 'not_provided_by_source',
+                    })
+                elif data_source == US_NNDSS_SOURCE_NAME:
+                    metadata_obj.update({
+                        'reporting_area': str(row.get('ReportingArea', '')),
+                        'population_scope': 'us_residents_excluding_territories',
+                        'death_reporting': 'not_provided_by_source',
+                    })
                 
                 if '__source_file' in df.columns and pd.notna(row.get('__source_file')):
                     metadata_obj['source_file'] = str(row['__source_file'])
@@ -947,7 +1016,7 @@ class DatabaseRebuilder:
                     'disease_id': db_disease_id,
                     'country_id': country_id,
                     'cases': max(0, cases),
-                    'deaths': max(0, deaths),
+                    'deaths': max(0, deaths) if deaths is not None else None,
                     'incidence_rate': normalize_rate_value(incidence),
                     'mortality_rate': normalize_rate_value(mortality),
                     'region': region,
@@ -967,7 +1036,7 @@ class DatabaseRebuilder:
                         logger.info(f"  Progress: {idx + 1:,}/{len(df):,} rows processed, {inserted:,} records imported, {skipped:,} skipped")
                         logger.info(f"  Imported {inserted:,} records...")
                         
-            except Exception as e:
+            except Exception:
                 skipped += 1
                 continue
         
@@ -1058,7 +1127,7 @@ class DatabaseRebuilder:
                             cases = EXCLUDED.cases, deaths = EXCLUDED.deaths
                     """), data)
                     success += 1
-                except Exception as inner_e:
+                except Exception:
                     await db.rollback()
                     continue
             return success
@@ -1120,7 +1189,7 @@ class DatabaseRebuilder:
                             raw_data = EXCLUDED.raw_data
                     """), data)
                     success += 1
-                except Exception as inner_e:
+                except Exception:
                     await db.rollback()
                     continue
             return success

@@ -6,14 +6,23 @@ decoupling it from the CLI layer in main.py.
 """
 from __future__ import annotations
 
+import json
+import os
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 from time import perf_counter
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from src.core import get_database, get_logger
+from src.core.country_library import get_country_bootstrap_config
+from src.core.disease_mutation_lock import acquire_disease_data_mutation_lock
 from src.core.task_manager import task_manager
+from src.data.storage import (
+    SeriesObservationQualityError,
+    SeriesObservationQualityPolicy,
+    SeriesObservationStore,
+)
 from src.domain import CrawlRun, Task
 
 logger = get_logger(__name__)
@@ -47,6 +56,20 @@ class CrawlService:
         "BR": _PipelineSpec("_execute_br_monthly", "BRMonthlyUpdater"),
         "KR": _PipelineSpec("_execute_kr_monthly", "KRMonthlyUpdater"),
         "CH": _PipelineSpec("_execute_ch_monthly", "CHMonthlyUpdater"),
+    }
+    _SERIES_SOURCE_IDS: Dict[str, str | Dict[str, str]] = {
+        "US": {
+            "US CDC NNDSS": "SRC_US_NNDSS",
+            "US CDC NHSS": "SRC_US_NHSS",
+        },
+        "JP": "SRC_JP_NIID",
+        "AU": "SRC_AU_NINDSS",
+        "NZ": "SRC_NZ_PHS",
+        "TW": "SRC_TW_NIDSS",
+        "HK": "SRC_HK_CHP",
+        "KR": "SRC_KR_KDCA",
+        "BR": "SRC_BR_SINAN",
+        "CH": "SRC_CH_FOPH_IDD",
     }
 
     @classmethod
@@ -85,6 +108,174 @@ class CrawlService:
             "USWeeklyUpdater": USWeeklyUpdater,
         }
         return updaters[updater_name]()
+
+    @staticmethod
+    async def _import_rows_with_series(
+        db,
+        updater,
+        rows,
+        *,
+        series_rows=None,
+        db_latest_date,
+        source_latest_date,
+        force: bool,
+    ):
+        """Persist legacy projections and lossless source-series facts atomically."""
+
+        quality_policy = CrawlService._series_quality_policy(updater)
+        country_code = str(getattr(updater, "country_code", "") or "").upper()
+        source_id = getattr(updater, "ontology_source_id", None)
+        if source_id is None:
+            source_id = CrawlService._SERIES_SOURCE_IDS.get(country_code)
+        geography_key = getattr(updater, "series_geography_key", None)
+        geography_from_rows = bool(
+            getattr(updater, "series_geography_from_rows", False)
+        )
+        if (
+            geography_key is None
+            and not geography_from_rows
+            and country_code in CrawlService._SERIES_SOURCE_IDS
+        ):
+            # Updaters without an explicit row-grain contract emit a national
+            # aggregate.  Scope-aware updaters opt out and derive the key from
+            # each source row.
+            geography_key = f"country:{country_code}:national"
+        # Take the shared mutex before staging the legacy side of the dual
+        # write. SeriesObservationStore takes the same transaction lock again;
+        # doing it here preserves one global lock order and avoids a migration
+        # waiting on legacy rows while this transaction waits on the mutex.
+        await acquire_disease_data_mutation_lock(db)
+        import_result = await updater.import_rows(
+            db,
+            rows,
+            db_latest_date=db_latest_date,
+            source_latest_date=source_latest_date,
+            force=force,
+        )
+        series_store = SeriesObservationStore()
+        source_series_rows = rows if series_rows is None else series_rows
+        if bool(getattr(updater, "series_registered_rows_only", False)):
+            selection = series_store.select_registry_rows(
+                source_series_rows,
+                updater.country_code,
+                source_id=source_id,
+            )
+            if source_series_rows and not selection.rows:
+                raise ValueError(
+                    "Registry-scoped dual write selected no non-missing source rows"
+                )
+            source_series_rows = selection.rows
+            logger.info(
+                "Disease source-series Registry selection | country={} "
+                "selected={} omitted_unregistered={} omitted_missing={}",
+                updater.country_code,
+                len(selection.rows),
+                selection.skipped_unregistered,
+                selection.skipped_missing,
+            )
+
+            if country_code == "US" and any(
+                str(row.get("Source") or "").strip().casefold()
+                == "us cdc nndss"
+                for row in series_rows or rows
+            ):
+                nndss_areas = {
+                    str(row.get("ReportingArea") or "").strip().casefold()
+                    for row in source_series_rows
+                    if str(row.get("Source") or "").strip().casefold()
+                    == "us cdc nndss"
+                }
+                resident_aliases = {
+                    "us residents",
+                    "u.s. residents",
+                    "united states residents",
+                }
+                missing_scopes = []
+                if not nndss_areas.intersection(resident_aliases):
+                    missing_scopes.append("US_RESIDENTS")
+                if "total" not in nndss_areas:
+                    missing_scopes.append("TOTAL")
+                if missing_scopes:
+                    raise ValueError(
+                        "NNDSS Registry dual write is missing required reporting "
+                        "scope(s): " + ", ".join(missing_scopes)
+                    )
+        try:
+            series_result = await series_store.save_rows(
+                db,
+                source_series_rows,
+                updater.country_code,
+                source_id=source_id,
+                geography_key=geography_key,
+                quality_policy=quality_policy,
+            )
+        except SeriesObservationQualityError as exc:
+            logger.error(
+                "Disease source-series batch rejected before transaction commit | "
+                "country={} mode={} report={}",
+                updater.country_code,
+                quality_policy.mode,
+                json.dumps(exc.report.to_dict(), ensure_ascii=False, sort_keys=True),
+            )
+            raise
+        quality_report = series_result.quality_report
+        logger.info(
+            "Disease source-series dual write complete | country={} upserted={} "
+            "unmatched={} ambiguous={} invalid={} registry_not_synced={} "
+            "quality_mode={} quality_issues={} quality_highest={}",
+            updater.country_code,
+            series_result.upserted,
+            series_result.skipped_unmatched,
+            series_result.skipped_ambiguous,
+            series_result.skipped_invalid,
+            series_result.skipped_registry_not_synced,
+            quality_policy.mode,
+            len(quality_report.issues),
+            quality_report.highest_severity or "none",
+        )
+        if quality_report.issues:
+            logger.warning(
+                "Disease source-series quality anomalies | country={} report={}",
+                updater.country_code,
+                json.dumps(
+                    quality_report.to_dict(), ensure_ascii=False, sort_keys=True
+                ),
+            )
+        return import_result
+
+    @staticmethod
+    def _series_quality_policy(updater) -> SeriesObservationQualityPolicy:
+        """Resolve per-country guard settings with an operational env override."""
+
+        country_code = str(getattr(updater, "country_code", "") or "").upper()
+        config = get_country_bootstrap_config(country_code) if country_code else {}
+        crawler_config = (
+            config.get("crawler_config", {}) if isinstance(config, dict) else {}
+        )
+        raw_policy = crawler_config.get("series_quality_guard", {})
+        if not isinstance(raw_policy, dict):
+            raw_policy = {}
+        raw_policy = dict(raw_policy)
+
+        updater_policy = getattr(updater, "series_quality_guard", None)
+        if isinstance(updater_policy, dict):
+            raw_policy.update(updater_policy)
+
+        registry_coverage = getattr(updater, "series_registry_coverage", None)
+        if registry_coverage:
+            raw_policy["registry_coverage"] = registry_coverage
+        elif country_code in CrawlService._SERIES_SOURCE_IDS:
+            raw_policy.setdefault("registry_coverage", "required")
+
+        country_env = (
+            os.getenv(f"GLOBALID_{country_code}_SERIES_QUALITY_MODE")
+            if country_code
+            else None
+        )
+        global_env = os.getenv("GLOBALID_SERIES_QUALITY_MODE")
+        if country_env or global_env:
+            raw_policy["mode"] = country_env or global_env
+        return SeriesObservationQualityPolicy.from_mapping(raw_policy)
 
     async def execute(
         self,
@@ -427,15 +618,22 @@ class CrawlService:
             task.task_uuid,
             entry_type="info",
             title="Phase 1/3: Fetching Data List",
-            content="Fetching latest US NNDSS TOTAL rows from CDC API...",
+            content=(
+                f"Fetching US CDC source '{source}' "
+                "(NNDSS weekly and/or NHSS annual HIV data)..."
+            ),
             content_type="text",
         )
         await task_manager.update_task_progress(task.task_uuid, 10)
 
         phase1_started = perf_counter()
-        fetched = updater.fetch_latest()
+        fetched = updater.fetch_latest(source=source)
         phase1_elapsed = perf_counter() - phase1_started
         source_latest = fetched.latest_date.isoformat() if fetched.latest_date else "none"
+        source_latest_detail = ", ".join(
+            f"{name}: {latest.isoformat() if latest else 'none'}"
+            for name, latest in fetched.latest_by_source.items()
+        ) or "none"
         source_rows = len(fetched.rows)
 
         await task_manager.update_task_progress(task.task_uuid, 30)
@@ -445,7 +643,8 @@ class CrawlService:
             title="Phase 1/3 Complete",
             content=(
                 f"Source rows fetched: {source_rows}\n"
-                f"Source latest week date: {source_latest}\n"
+                f"Source latest date: {source_latest}\n"
+                f"Latest by source: {source_latest_detail}\n"
                 f"Source endpoint: {fetched.source_ref}\n"
                 f"Duration: {phase1_elapsed:.1f}s"
             ),
@@ -456,7 +655,10 @@ class CrawlService:
             task.task_uuid,
             entry_type="info",
             title="Phase 2/3: Checking Incremental Updates",
-            content="Comparing source latest week with US latest date in database...",
+            content=(
+                "Checking each source independently; NNDSS recent weeks and all "
+                "NHSS annual revisions remain eligible for upsert..."
+            ),
             content_type="text",
         )
         await task_manager.update_task_progress(task.task_uuid, 50)
@@ -474,9 +676,11 @@ class CrawlService:
                 imported_new_data = False
                 imported = 0
             else:
-                import_result = await updater.import_rows(
+                import_result = await self._import_rows_with_series(
                     db,
+                    updater,
                     fetched.rows,
+                    series_rows=fetched.series_rows,
                     db_latest_date=db_latest,
                     source_latest_date=fetched.latest_date,
                     force=force,
@@ -503,18 +707,18 @@ class CrawlService:
             task.task_uuid,
             entry_type="info",
             title="Phase 3/3: Finalizing",
-            content="Finalizing US weekly update and crawl run summary...",
+            content="Finalizing US surveillance update and crawl run summary...",
             content_type="text",
         )
 
         if not process:
             summary_message = "Process disabled, fetched source rows only."
         elif imported_new_data:
-            summary_message = "New US weekly data imported successfully."
+            summary_message = "US surveillance data imported or revised successfully."
         elif force:
-            summary_message = "Force mode completed; no rows were upserted after filtering/mapping."
+            summary_message = "Force mode completed; no rows were upserted after mapping."
         else:
-            summary_message = "No newer US weekly data detected, import skipped."
+            summary_message = "No eligible US source rows were detected, import skipped."
 
         await self._finish_crawl_run(
             run_id,
@@ -646,8 +850,9 @@ class CrawlService:
                 imported_new_data = False
                 imported = 0
             else:
-                import_result = await updater.import_rows(
+                import_result = await self._import_rows_with_series(
                     db,
+                    updater,
                     fetched.rows,
                     db_latest_date=db_latest,
                     source_latest_date=fetched.source_latest_date,
@@ -777,7 +982,6 @@ class CrawlService:
         # that are completely absent from the database.
         months_to_fetch = None  # None → crawler will default to last 3 months
         if fill_missing or force:
-            from datetime import date as _date
             now_dt = datetime.now()
             # Always include last 3 months
             recent: list = []
@@ -866,8 +1070,9 @@ class CrawlService:
                 imported_new_data = False
                 imported = 0
             else:
-                import_result = await updater.import_rows(
+                import_result = await self._import_rows_with_series(
                     db,
+                    updater,
                     fetched.rows,
                     db_latest_date=db_latest,
                     source_latest_date=fetched.source_latest_date,
@@ -1089,8 +1294,9 @@ class CrawlService:
                 imported_new_data = False
                 imported = 0
             else:
-                import_result = await updater.import_rows(
+                import_result = await self._import_rows_with_series(
                     db,
+                    updater,
                     fetched.rows,
                     db_latest_date=db_latest,
                     source_latest_date=fetched.source_latest_date,
@@ -1304,8 +1510,9 @@ class CrawlService:
                 imported_new_data = False
                 imported = 0
             else:
-                import_result = await updater.import_rows(
+                import_result = await self._import_rows_with_series(
                     db,
+                    updater,
                     fetched.rows,
                     db_latest_date=db_latest,
                     source_latest_date=fetched.source_latest_date,
@@ -1524,8 +1731,9 @@ class CrawlService:
                 imported_new_data = False
                 imported = 0
             else:
-                import_result = await updater.import_rows(
+                import_result = await self._import_rows_with_series(
                     db,
+                    updater,
                     fetched.rows,
                     db_latest_date=db_latest,
                     source_latest_date=fetched.source_latest_date,
@@ -1836,8 +2044,9 @@ class CrawlService:
                 imported_new_data = False
                 imported = 0
             else:
-                import_result = await updater.import_rows(
+                import_result = await self._import_rows_with_series(
                     db,
+                    updater,
                     merged_rows,
                     db_latest_date=db_latest,
                     source_latest_date=source_latest_date,
@@ -2111,8 +2320,9 @@ class CrawlService:
                 imported_new_data = False
                 imported = 0
             else:
-                import_result = await updater.import_rows(
+                import_result = await self._import_rows_with_series(
                     db,
+                    updater,
                     fetched.rows,
                     db_latest_date=db_latest,
                     source_latest_date=fetched.source_latest_date,
@@ -2351,8 +2561,9 @@ class CrawlService:
                 imported_new_data = False
                 imported = 0
             else:
-                import_result = await updater.import_rows(
+                import_result = await self._import_rows_with_series(
                     db,
+                    updater,
                     fetched.rows,
                     db_latest_date=db_latest,
                     source_latest_date=fetched.source_latest_date,

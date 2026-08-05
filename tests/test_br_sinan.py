@@ -5,11 +5,16 @@ import os
 import shutil
 from datetime import date, datetime, timezone
 from pathlib import Path
+from unittest.mock import AsyncMock
+
+import pytest
 
 from src.data.crawlers.br import (
+    BRFetchSummary,
+    SINAN_DISEASE_PREFIXES,
     BrazilSINANCrawler,
     SINANFile,
-    BRFetchSummary,
+    _deduplicate_sinan_file_aliases,
     parse_ftp_listing,
 )
 from src.data.processors.br import BRMonthlyUpdater
@@ -20,6 +25,8 @@ def _write_test_dbf(path: Path, records: list[dict[str, str]]) -> None:
         ("ID_AGRAVO", "C", 5),
         ("DT_NOTIFIC", "D", 8),
         ("NU_ANO", "C", 4),
+        ("NU_CASOPOS", "N", 10),
+        ("NU_CASOEXA", "N", 10),
     ]
     header_len = 32 + 32 * len(fields) + 1
     record_len = 1 + sum(length for _name, _typ, length in fields)
@@ -77,6 +84,43 @@ def test_parse_sinan_ftp_listing_prefers_file_metadata() -> None:
     assert files[0].url.endswith("/DENGBR26.dbc")
 
 
+def test_sinan_hiv_and_trachoma_survey_prefix_labels_are_exact() -> None:
+    assert SINAN_DISEASE_PREFIXES["HIVE"] == "Child exposed to HIV"
+    assert SINAN_DISEASE_PREFIXES["HIVG"] == "HIV infection in pregnancy"
+    assert SINAN_DISEASE_PREFIXES["NTRA"] == "Trachoma survey positive cases"
+
+
+def test_ler_lerd_alias_deduplication_keeps_only_lerd_for_2019(tmp_path) -> None:
+    def sinan_file(prefix: str, year: int) -> SINANFile:
+        return SINANFile(
+            prefix=prefix,
+            disease_name="Work-related repetitive strain injury",
+            year=year,
+            filename=f"{prefix}BR{year % 100:02d}.dbc",
+            url=f"ftp://example/{prefix}BR{year % 100:02d}.dbc",
+            dataset_status="final",
+            size_bytes=123,
+            modified_at=datetime(2020, 5, 1, tzinfo=timezone.utc),
+        )
+
+    indexed_files = [
+        sinan_file("LER", 2018),
+        sinan_file("LER", 2019),
+        sinan_file("LERD", 2019),
+    ]
+    assert [
+        (item.prefix, item.year)
+        for item in _deduplicate_sinan_file_aliases(indexed_files)
+    ] == [("LER", 2018), ("LERD", 2019)]
+
+    crawler = BrazilSINANCrawler(cache_dir=tmp_path / "cache")
+    crawler._write_cached_file_index(indexed_files)
+    assert [(item.prefix, item.year) for item in crawler.fetch_file_index()] == [
+        ("LER", 2018),
+        ("LERD", 2019),
+    ]
+
+
 def test_aggregate_file_counts_notification_months(tmp_path, monkeypatch) -> None:
     fake_dbf = tmp_path / "BOTUBR26.dbf"
     fake_dbc = tmp_path / "BOTUBR26.dbc"
@@ -119,6 +163,137 @@ def test_aggregate_file_counts_notification_months(tmp_path, monkeypatch) -> Non
         ("2026-02-01", "1"),
     ]
     assert all(row["DiseaseCode"] == "BOTU" for row in rows)
+
+
+def test_ntra_aggregates_positive_cases_and_persons_examined(
+    tmp_path, monkeypatch
+) -> None:
+    fake_dbf = tmp_path / "NTRABR19.dbf"
+    fake_dbc = tmp_path / "NTRABR19.dbc"
+    fake_dbc.write_bytes(b"fake")
+    _write_test_dbf(
+        fake_dbf,
+        [
+            {
+                "DT_NOTIFIC": "20190105",
+                "NU_ANO": "2019",
+                "NU_CASOPOS": "2",
+                "NU_CASOEXA": "100",
+            },
+            {
+                "DT_NOTIFIC": "20190120",
+                "NU_ANO": "2019",
+                "NU_CASOPOS": "3",
+                "NU_CASOEXA": "50",
+            },
+            {
+                "DT_NOTIFIC": "20190121",
+                "NU_ANO": "2019",
+                "NU_CASOPOS": "-7",
+                "NU_CASOEXA": "invalid",
+            },
+            {
+                "DT_NOTIFIC": "20190122",
+                "NU_ANO": "2019",
+                "NU_CASOPOS": "",
+                "NU_CASOEXA": "-1",
+            },
+            {
+                "DT_NOTIFIC": "20190201",
+                "NU_ANO": "2019",
+                "NU_CASOPOS": "9",
+                "NU_CASOEXA": "20",
+            },
+        ],
+    )
+
+    item = SINANFile(
+        prefix="NTRA",
+        disease_name=SINAN_DISEASE_PREFIXES["NTRA"],
+        year=2019,
+        filename="NTRABR19.dbc",
+        url="ftp://example/NTRABR19.dbc",
+        dataset_status="final",
+        size_bytes=123,
+        modified_at=datetime(2020, 5, 1, tzinfo=timezone.utc),
+    )
+    crawler = BrazilSINANCrawler(
+        save_raw=True,
+        raw_dir=tmp_path / "raw",
+        cache_dir=tmp_path / "cache",
+    )
+    monkeypatch.setattr(crawler, "_download_file", lambda _item, _dir: fake_dbc)
+    monkeypatch.setattr(
+        BrazilSINANCrawler,
+        "_decompress_to_dbf",
+        staticmethod(lambda _dbc, dbf: shutil.copyfile(fake_dbf, dbf)),
+    )
+
+    rows = crawler.aggregate_file(
+        item,
+        months={(2019, 1)},
+        working_dir=tmp_path / "work",
+    )
+    assert [(row["Cases"], row["PersonsExamined"]) for row in rows] == [
+        ("5", "150")
+    ]
+    assert rows[0]["RawDiseaseLabel"] == "Trachoma survey positive cases"
+
+    monkeypatch.setattr(
+        crawler,
+        "_download_file",
+        lambda _item, _dir: (_ for _ in ()).throw(
+            AssertionError("unexpected download on NTRA cache hit")
+        ),
+    )
+    assert crawler.aggregate_file(item, months={(2019, 1)})[0][
+        "PersonsExamined"
+    ] == "150"
+
+
+def test_aggregate_file_tolerates_invalid_dbf_date_sentinel(tmp_path, monkeypatch) -> None:
+    fake_dbf = tmp_path / "AIDABR24.dbf"
+    fake_dbc = tmp_path / "AIDABR24.dbc"
+    fake_dbc.write_bytes(b"fake")
+    _write_test_dbf(
+        fake_dbf,
+        [
+            {"ID_AGRAVO": "B24", "DT_NOTIFIC": "********", "NU_ANO": "2024"},
+            {"ID_AGRAVO": "B24", "DT_NOTIFIC": "20240210", "NU_ANO": "2024"},
+        ],
+    )
+
+    crawler = BrazilSINANCrawler(
+        save_raw=True,
+        raw_dir=tmp_path / "raw",
+        cache_dir=tmp_path / "cache",
+    )
+    monkeypatch.setattr(crawler, "_download_file", lambda _item, _target_dir: fake_dbc)
+    monkeypatch.setattr(
+        BrazilSINANCrawler,
+        "_decompress_to_dbf",
+        staticmethod(lambda _dbc, dbf: shutil.copyfile(fake_dbf, dbf)),
+    )
+
+    rows = crawler.aggregate_file(
+        SINANFile(
+            prefix="AIDA",
+            disease_name="AIDS in adults",
+            year=2024,
+            filename="AIDABR24.dbc",
+            url="ftp://example/AIDABR24.dbc",
+            dataset_status="preliminary",
+            size_bytes=123,
+            modified_at=datetime(2026, 5, 1, tzinfo=timezone.utc),
+        ),
+        months={(2024, 1), (2024, 2)},
+        working_dir=tmp_path / "work",
+    )
+
+    assert [(row["Date"], row["Cases"]) for row in rows] == [
+        ("2024-01-01", "1"),
+        ("2024-02-01", "1"),
+    ]
 
 
 def test_aggregate_file_reloads_cache_only_when_months_covered(tmp_path, monkeypatch) -> None:
@@ -286,6 +461,95 @@ def test_br_monthly_updater_history_months_respects_year_window(tmp_path) -> Non
         (2026, 1),
         (2026, 2),
     ]
+
+
+@pytest.mark.asyncio
+async def test_br_import_ntra_bypasses_stale_work_disorder_mapping(
+    tmp_path, monkeypatch
+) -> None:
+    updater = BRMonthlyUpdater(output_csv=tmp_path / "brazil_national_monthly.csv")
+    monkeypatch.setattr(updater, "_get_country_id", AsyncMock(return_value=76))
+    monkeypatch.setattr(
+        updater,
+        "_load_mapping_dict",
+        AsyncMock(
+            return_value={
+                "ntra": 193,
+                "trachoma survey positive cases": 193,
+            }
+        ),
+    )
+    monkeypatch.setattr(
+        updater,
+        "_get_standard_disease_db_id",
+        AsyncMock(return_value=200),
+    )
+
+    class CapturingSession:
+        def __init__(self) -> None:
+            self.upsert_rows = None
+
+        async def execute(self, _statement, params=None):
+            self.upsert_rows = params
+
+    db = CapturingSession()
+    result = await updater.import_rows(
+        db,
+        [
+            {
+                "Date": "2019-01-01",
+                "RawDiseaseLabel": "Trachoma survey positive cases",
+                "DiseaseCode": "NTRA",
+                "Cases": "17",
+                "Source": "Brazil DATASUS SINAN Open Data",
+            }
+        ],
+        db_latest_date=None,
+        source_latest_date=date(2019, 1, 1),
+    )
+
+    assert result.inserted_or_updated == 1
+    assert db.upsert_rows[0]["disease_id"] == 200
+    assert db.upsert_rows[0]["disease_id"] != 193
+
+
+@pytest.mark.asyncio
+async def test_br_import_ntra_fails_closed_when_trachoma_concept_is_missing(
+    tmp_path, monkeypatch
+) -> None:
+    updater = BRMonthlyUpdater(output_csv=tmp_path / "brazil_national_monthly.csv")
+    monkeypatch.setattr(updater, "_get_country_id", AsyncMock(return_value=76))
+    monkeypatch.setattr(
+        updater,
+        "_load_mapping_dict",
+        AsyncMock(return_value={"ntra": 193}),
+    )
+    monkeypatch.setattr(
+        updater,
+        "_get_standard_disease_db_id",
+        AsyncMock(return_value=None),
+    )
+
+    class NoUpsertSession:
+        async def execute(self, _statement, _params=None):
+            raise AssertionError("NTRA must not be upserted through stale D193 mapping")
+
+    result = await updater.import_rows(
+        NoUpsertSession(),
+        [
+            {
+                "Date": "2019-01-01",
+                "RawDiseaseLabel": "Trachoma survey positive cases",
+                "DiseaseCode": "NTRA",
+                "Cases": "17",
+            }
+        ],
+        db_latest_date=None,
+        source_latest_date=date(2019, 1, 1),
+    )
+
+    assert result.inserted_or_updated == 0
+    assert result.skipped_unmapped == 1
 
 
 def test_br_refresh_source_can_skip_csv_fallback_and_live_write(tmp_path) -> None:

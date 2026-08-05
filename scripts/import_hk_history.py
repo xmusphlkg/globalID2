@@ -24,7 +24,11 @@ from sqlalchemy import text
 
 from src.core.country_library import get_country_bootstrap_config, get_country_profile
 from src.core.database import get_db
-from src.core.db_schema import ensure_country_scope, ensure_country_scope_schema
+from src.core.db_schema import (
+    ensure_country_scope,
+    ensure_country_scope_schema,
+    ensure_disease_mapping_source_schema,
+)
 from src.core.logging import get_logger
 from src.data.processors.hk import DEFAULT_OUTPUT_CSV, HKMonthlyUpdater
 
@@ -120,6 +124,7 @@ async def _ensure_hk_country_and_scope(db) -> None:
     )
 
     await ensure_country_scope_schema(db)
+    await ensure_disease_mapping_source_schema(db)
     await ensure_country_scope(
         db,
         scope_code="HK",
@@ -280,15 +285,15 @@ async def _upsert_one_mapping(
         text(
             """
             INSERT INTO disease_mappings (
-                disease_id, country_code, local_name, is_primary, is_alias,
+                disease_id, country_code, local_name, source_id, is_primary, is_alias,
                 priority, usage_count, confidence_score, category, source,
                 metadata, is_active, created_at, updated_at
             ) VALUES (
-                :disease_id, 'HK', :local_name, :is_primary, :is_alias,
+                :disease_id, 'HK', :local_name, 'SRC_HK_CHP', :is_primary, :is_alias,
                 :priority, 0, 1.0, :category, :source,
                 CAST(:metadata AS json), true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
             )
-            ON CONFLICT (disease_id, country_code, local_name) DO UPDATE SET
+            ON CONFLICT (disease_id, country_code, source_id, local_name) DO UPDATE SET
                 is_primary = EXCLUDED.is_primary,
                 is_alias = EXCLUDED.is_alias,
                 priority = GREATEST(disease_mappings.priority, EXCLUDED.priority),

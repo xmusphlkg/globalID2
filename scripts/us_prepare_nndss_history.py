@@ -3,16 +3,14 @@
 
 This script supports two ingestion paths:
 1. Local historical CSV export, such as data/history/us/NNDSS_Weekly_Data_20260317.csv
-2. API-based refresh for national TOTAL rows using public CDC Socrata endpoints
+2. API-based refresh for U.S.-resident rows using public CDC Socrata endpoints
 
 Output is written to data/history/us/history_merged.csv so the existing
 full_rebuild_database.py --country us flow can reuse the standard history import.
 
-Notes:
-- The current project schema can safely ingest national TOTAL rows because there is
-  only one record per disease/week/country.
-- State-level rows are intentionally excluded here; they would collide on the current
-  disease_records primary key and require a schema extension.
+Only ``US RESIDENTS`` / ``U.S. Residents`` is eligible for the legacy US
+national projection. CDC's broader ``Total`` also includes territories and
+non-U.S. residents and must remain a separate source-aggregate series.
 """
 
 from __future__ import annotations
@@ -27,12 +25,15 @@ from pathlib import Path
 from typing import Iterable
 from urllib import request
 
-
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_INPUT_CSV = ROOT / "data/history/us/NNDSS_Weekly_Data_20260317.csv"
 DEFAULT_OUTPUT_CSV = ROOT / "data/history/us/history_merged.csv"
-DEFAULT_REPORTING_AREA = "TOTAL"
+DEFAULT_REPORTING_AREA = "US RESIDENTS"
 DEFAULT_SOURCE_NAME = "US CDC NNDSS"
+NNDSS_RESIDENT_REPORTING_AREA = "US RESIDENTS"
+NNDSS_RESIDENT_ALIASES = frozenset(
+    {"us residents", "u.s. residents", "united states residents"}
+)
 DEFAULT_JSON_API_URL = (
     "https://data.cdc.gov/api/v3/views/x9gk-5huc/query.json?query="
     "SELECT%0A"
@@ -52,13 +53,14 @@ DEFAULT_JSON_API_URL = (
     "%20%20%60location2%60%2C%0A"
     "%20%20%60sort_order%60%2C%0A"
     "%20%20%60geocode%60%0A"
-    "WHERE%20caseless_one_of(%60states%60%2C%20%22TOTAL%22)%0A"
+    "WHERE%20caseless_one_of(%60states%60%2C%20%22US%20RESIDENTS%22%2C%20"
+    "%22U.S.%20RESIDENTS%22)%0A"
     "ORDER%20BY%20%60sort_order%60%20ASC%20NULL%20LAST"
 )
 DEFAULT_CSV_API_URL = (
     "https://data.cdc.gov/resource/x9gk-5huc.csv"
     "?$select=states,year,week,label,m1,m1_flag,m2,m2_flag,m3,m3_flag,m4,m4_flag,location1,location2,sort_order,geocode"
-    "&$where=upper(states)='TOTAL'"
+    "&$where=upper(states) in ('US RESIDENTS','U.S. RESIDENTS')"
     "&$order=sort_order"
 )
 USER_AGENT = "Mozilla/5.0 (GlobalID NNDSS sync)"
@@ -88,6 +90,10 @@ OUTPUT_COLUMNS = [
     "RawDiseaseLabel",
     "IsProvisional",
     "UpdateMode",
+    "Frequency",
+    "Measure",
+    "PopulationScope",
+    "SurveillanceYear",
     "__source_file",
 ]
 
@@ -117,7 +123,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--reporting-area",
         default=DEFAULT_REPORTING_AREA,
-        help="Reporting area to ingest. Use TOTAL to stay compatible with the current schema.",
+        help=(
+            "Resident reporting-area alias to ingest. Only US RESIDENTS / "
+            "U.S. Residents is accepted for the legacy national projection."
+        ),
     )
     parser.add_argument(
         "--replace",
@@ -136,6 +145,24 @@ def normalize_text(value: object) -> str:
     if value is None:
         return ""
     return " ".join(str(value).replace("\ufeff", "").split())
+
+
+def canonical_resident_reporting_area(value: object) -> str | None:
+    normalized = normalize_text(value).casefold()
+    if normalized in NNDSS_RESIDENT_ALIASES:
+        return NNDSS_RESIDENT_REPORTING_AREA
+    return None
+
+
+def resident_reporting_area_priority(value: object) -> int:
+    """Prefer CDC's current dotted label when historical exports overlap."""
+
+    normalized = normalize_text(value).casefold()
+    if normalized == "u.s. residents":
+        return 2
+    if normalized in {"us residents", "united states residents"}:
+        return 1
+    return 0
 
 
 def first_value(row: dict[str, object], *keys: str) -> str:
@@ -175,7 +202,13 @@ def build_normalized_record(
     source_file: str,
 ) -> dict[str, str] | None:
     reporting_area = first_value(row, "Reporting Area", "states")
-    if reporting_area.upper() != reporting_area_filter.upper():
+    expected_area = canonical_resident_reporting_area(reporting_area_filter)
+    if expected_area is None:
+        raise ValueError(
+            "Legacy US national history accepts only US-resident NNDSS rows; "
+            f"got reporting_area={reporting_area_filter!r}"
+        )
+    if canonical_resident_reporting_area(reporting_area) != expected_area:
         return None
 
     year_text = first_value(row, "Current MMWR Year", "year")
@@ -199,16 +232,28 @@ def build_normalized_record(
         "Deaths": "",
         "Source": source_name,
         "CountryCode": "US",
-        "ReportingArea": reporting_area,
+        "ReportingArea": expected_area,
         "MMWRYear": str(year),
         "MMWRWeek": str(week),
         "CurrentWeekFlag": first_value(row, "Current week, flag", "m1_flag"),
-        "Previous52WeekMax": parse_numeric(first_value(row, "Previous 52 week Max", "m2")),
-        "Previous52WeekMaxFlag": first_value(row, "Previous 52 weeks Max, flag", "m2_flag"),
-        "CumulativeYTDCurrentYear": parse_numeric(first_value(row, "Cumulative YTD Current MMWR Year", "m3")),
-        "CumulativeYTDCurrentYearFlag": first_value(row, "Cumulative YTD Current MMWR Year, flag", "m3_flag"),
-        "CumulativeYTDPreviousYear": parse_numeric(first_value(row, "Cumulative YTD Previous MMWR Year", "m4")),
-        "CumulativeYTDPreviousYearFlag": first_value(row, "Cumulative YTD Previous MMWR Year, flag", "m4_flag"),
+        "Previous52WeekMax": parse_numeric(
+            first_value(row, "Previous 52 week Max", "m2")
+        ),
+        "Previous52WeekMaxFlag": first_value(
+            row, "Previous 52 weeks Max, flag", "m2_flag"
+        ),
+        "CumulativeYTDCurrentYear": parse_numeric(
+            first_value(row, "Cumulative YTD Current MMWR Year", "m3")
+        ),
+        "CumulativeYTDCurrentYearFlag": first_value(
+            row, "Cumulative YTD Current MMWR Year, flag", "m3_flag"
+        ),
+        "CumulativeYTDPreviousYear": parse_numeric(
+            first_value(row, "Cumulative YTD Previous MMWR Year", "m4")
+        ),
+        "CumulativeYTDPreviousYearFlag": first_value(
+            row, "Cumulative YTD Previous MMWR Year, flag", "m4_flag"
+        ),
         "Location1": first_value(row, "LOCATION1", "location1"),
         "Location2": first_value(row, "LOCATION2", "location2"),
         "SortOrder": first_value(row, "sort_order"),
@@ -216,6 +261,10 @@ def build_normalized_record(
         "RawDiseaseLabel": label,
         "IsProvisional": "true",
         "UpdateMode": update_mode,
+        "Frequency": "weekly",
+        "Measure": "case_notifications",
+        "PopulationScope": "us_residents_excluding_territories",
+        "SurveillanceYear": str(year),
         "__source_file": source_file,
     }
 
@@ -250,7 +299,9 @@ def read_api_rows() -> tuple[list[dict[str, object]], str]:
         except Exception as exc:
             last_error = exc
 
-    raise RuntimeError(f"Unable to fetch CDC NNDSS rows from configured endpoints: {last_error}")
+    raise RuntimeError(
+        f"Unable to fetch CDC NNDSS rows from configured endpoints: {last_error}"
+    )
 
 
 def extract_rows_from_json(payload: object) -> list[dict[str, object]]:
@@ -272,7 +323,7 @@ def normalize_rows(
     update_mode: str,
     source_file: str,
 ) -> list[dict[str, str]]:
-    normalized: list[dict[str, str]] = []
+    selected: dict[tuple[str, str], tuple[int, dict[str, str]]] = {}
     for row in rows:
         record = build_normalized_record(
             row,
@@ -281,21 +332,72 @@ def normalize_rows(
             update_mode=update_mode,
             source_file=source_file,
         )
-        if record is not None:
-            normalized.append(record)
+        if record is None or record["Cases"] == "":
+            # CDC blank/"-" cells are missing observations, not reported zero.
+            continue
+        key = (record["Date"], record["RawDiseaseLabel"])
+        priority = resident_reporting_area_priority(
+            first_value(row, "Reporting Area", "states")
+        )
+        previous = selected.get(key)
+        if previous is not None:
+            previous_priority, previous_record = previous
+            if priority == previous_priority and (
+                record["Cases"] != previous_record["Cases"]
+                or record["CurrentWeekFlag"]
+                != previous_record["CurrentWeekFlag"]
+            ):
+                raise ValueError(
+                    "Conflicting US-resident NNDSS rows share a history key: "
+                    f"{key}"
+                )
+            if priority < previous_priority:
+                continue
+        selected[key] = (priority, record)
 
-    normalized.sort(key=lambda item: (item["Date"], item["Diseases"], item["SortOrder"]))
+    normalized = [record for _, record in selected.values()]
+    normalized.sort(
+        key=lambda item: (item["Date"], item["Diseases"], item["SortOrder"])
+    )
     return normalized
 
 
-def merge_existing_rows(output: Path, new_rows: list[dict[str, str]], replace: bool) -> list[dict[str, str]]:
+def merge_existing_rows(
+    output: Path,
+    new_rows: list[dict[str, str]],
+    replace: bool,
+    *,
+    source_name: str = DEFAULT_SOURCE_NAME,
+) -> list[dict[str, str]]:
     merged: dict[tuple[str, str, str], dict[str, str]] = {}
 
     if not replace and output.exists():
         with output.open("r", encoding="utf-8", newline="") as handle:
             for row in csv.DictReader(handle):
-                key = (row.get("Date", ""), row.get("ReportingArea", ""), row.get("RawDiseaseLabel", ""))
-                merged[key] = {column: row.get(column, "") for column in OUTPUT_COLUMNS}
+                normalized = {
+                    column: row.get(column, "") for column in OUTPUT_COLUMNS
+                }
+                if normalize_text(row.get("Source")).casefold() == normalize_text(
+                    source_name
+                ).casefold():
+                    canonical_area = canonical_resident_reporting_area(
+                        row.get("ReportingArea")
+                    )
+                    if canonical_area is None:
+                        # The legacy US table has only a country-level key.
+                        # Remove old NNDSS Total projections while retaining
+                        # other sources such as genuinely national NHSS rows.
+                        continue
+                    normalized["ReportingArea"] = canonical_area
+                    normalized["PopulationScope"] = (
+                        "us_residents_excluding_territories"
+                    )
+                key = (
+                    normalized["Date"],
+                    normalized["ReportingArea"],
+                    normalized["RawDiseaseLabel"],
+                )
+                merged[key] = normalized
 
     for row in new_rows:
         key = (row["Date"], row["ReportingArea"], row["RawDiseaseLabel"])
@@ -316,6 +418,13 @@ def write_output(path: Path, rows: list[dict[str, str]]) -> None:
 
 def main() -> None:
     args = parse_args()
+    canonical_area = canonical_resident_reporting_area(args.reporting_area)
+    if canonical_area is None:
+        raise ValueError(
+            "--reporting-area must identify US RESIDENTS; NNDSS TOTAL cannot "
+            "be projected into country:US:national"
+        )
+    args.reporting_area = canonical_area
 
     if args.input_csv is not None:
         input_csv = args.input_csv
@@ -340,7 +449,17 @@ def main() -> None:
         update_mode=update_mode,
         source_file=source_file,
     )
-    merged_rows = merge_existing_rows(args.output, normalized_rows, args.replace)
+    if not normalized_rows:
+        raise RuntimeError(
+            "No US-resident NNDSS rows were normalized; refusing to rewrite "
+            "the US history projection"
+        )
+    merged_rows = merge_existing_rows(
+        args.output,
+        normalized_rows,
+        args.replace,
+        source_name=args.source_name,
+    )
     write_output(args.output, merged_rows)
 
     unique_labels = {row["RawDiseaseLabel"] for row in merged_rows}

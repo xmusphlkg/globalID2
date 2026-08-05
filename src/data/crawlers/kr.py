@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
-from urllib.parse import unquote, urljoin
+from urllib.parse import unquote
 
 import requests
 
@@ -34,10 +34,10 @@ DEFAULT_SOURCE_NAME = "Korea KDCA EID Open API"
 DEFAULT_PORTAL_SOURCE_NAME = "Korea KDCA EID Portal Download"
 DEFAULT_KOSIS_SOURCE_NAME = "Korea KOSIS Download"
 DEFAULT_DOC_URL = "https://www.data.go.kr/data/15139178/openapi.do"
-DEFAULT_DPORTAL_DISEASE_URL = "https://dportal.kdca.go.kr/pot/is/inftnsds.do"
-DEFAULT_DPORTAL_REGION_URL = "https://dportal.kdca.go.kr/pot/is/summaryRgin.do"
+DEFAULT_DPORTAL_DISEASE_URL = "https://dportal.kdca.go.kr/pot/is/inftnsdsEDW.do"
+DEFAULT_DPORTAL_REGION_URL = "https://dportal.kdca.go.kr/pot/is/summaryRginEDW.do"
 DEFAULT_DPORTAL_STATS_AJAX_URL = (
-    "https://dportal.kdca.go.kr/pot/is/selectBassDissStatsListAjax.do"
+    "https://dportal.kdca.go.kr/pot/is/selectBassDissStatsListEDWAjax.do"
 )
 DEFAULT_KOSIS_URL = "https://kosis.kr/index/index.do"
 DEFAULT_BASE_URL = "https://apis.data.go.kr/1790387/EIDAPIService"
@@ -48,6 +48,7 @@ DEFAULT_DPORTAL_DIR_ENV = "KR_DPORTAL_DIR"
 DEFAULT_KOSIS_FILE_ENV = "KR_KOSIS_FILE"
 DEFAULT_PAGE_SIZE = 1000
 DEFAULT_HISTORY_START_YEAR = 2001
+MIN_ZERO_BATCH_DISEASES = 10
 DOWNLOAD_FILE_EXTENSIONS = {".csv", ".tsv", ".txt", ".json", ".xlsx", ".xls", ".html", ".htm"}
 DEFAULT_DOWNLOAD_FIELDNAMES = [
     "",
@@ -154,15 +155,29 @@ def _is_total_label(value: object) -> bool:
     return text in {"", "계", "합계", "총계", "누계", "소계", "total", "subtotal"}
 
 
+def _numbered_column_index(value: object) -> Optional[int]:
+    """Return the numeric suffix from a generic ``COLUMN1``..``COLUMN13`` key."""
+    compact = re.sub(r"\s+", "", _norm_text(value)).lower()
+    match = re.fullmatch(r"column0?([1-9]|1[0-3])", compact)
+    return int(match.group(1)) if match else None
+
+
 def _month_from_column(value: object) -> Optional[int]:
+    """Parse explicit month headers and generic one-based month columns.
+
+    KDCA's internal portal JSON is deliberately handled at row level by
+    :func:`_wide_month_values`: in that format ``COLUMN1`` is the annual total,
+    not January.  Keeping this helper generic preserves support for ordinary
+    downloads whose ``COLUMN1`` really is their first month column.
+    """
     text = _norm_text(value)
     if not text:
         return None
 
     compact = re.sub(r"\s+", "", text).lower()
-    match = re.fullmatch(r"column0?([1-9]|1[0-2])", compact)
-    if match:
-        return int(match.group(1))
+    numbered = _numbered_column_index(compact)
+    if numbered is not None and numbered <= 12:
+        return numbered
 
     match = re.fullmatch(r"0?([1-9]|1[0-2])월", compact)
     if match:
@@ -199,6 +214,64 @@ def _month_from_column(value: object) -> Optional[int]:
         "december": 12,
     }
     return english_months.get(compact)
+
+
+def _portal_total_first_columns(row: Dict[str, Any]) -> bool:
+    """Detect KDCA's internal ``total, Jan, ..., Dec`` portal row shape."""
+    indexes = {
+        index
+        for key in row
+        if (index := _numbered_column_index(key)) is not None
+    }
+    if not indexes:
+        return False
+
+    normalized_keys = {_norm_key(key) for key in row}
+    return (
+        13 in indexes
+        or "dataarrtxt" in normalized_keys
+        or {"title", "subtitle"}.issubset(normalized_keys)
+    )
+
+
+def _wide_month_values(row: Dict[str, Any]) -> Tuple[Dict[int, object], Optional[object]]:
+    """Extract month cells and the optional annual total from one wide row.
+
+    Current and historical KDCA portal responses expose ``COLUMN1`` as ``계``
+    (annual/YTD total), followed by January through December in
+    ``COLUMN2``..``COLUMN13``.  ``DATAARRTXT`` is used as a fallback when the
+    endpoint omits individual keys, which it sometimes does for partial years.
+    Generic files without KDCA portal markers retain the conventional
+    ``COLUMN1``..``COLUMN12`` = January..December interpretation.
+    """
+    numbered = {
+        index: value
+        for key, value in row.items()
+        if (index := _numbered_column_index(key)) is not None
+    }
+    packed = _norm_text(_lookup(row, ["DATAARRTXT"]))
+    if packed:
+        for index, value in enumerate(packed.split("`"), start=1):
+            if index <= 13:
+                numbered.setdefault(index, value)
+
+    total_first = _portal_total_first_columns(row)
+    annual_total = numbered.get(1) if total_first else None
+    months: Dict[int, object] = {}
+    for index, value in numbered.items():
+        month = index - 1 if total_first else index
+        if 1 <= month <= 12:
+            months[month] = value
+
+    # Named headers such as 1월/January are unambiguous and may coexist with
+    # numbered columns in spreadsheet exports. Prefer those explicit labels.
+    for key, value in row.items():
+        if _numbered_column_index(key) is not None:
+            continue
+        month = _month_from_column(key)
+        if month is not None:
+            months[month] = value
+    return months, annual_total
 
 
 def _year_from_text(value: object) -> Optional[int]:
@@ -299,9 +372,11 @@ def normalize_kdca_download_rows(
 ) -> List[Dict[str, str]]:
     """Normalize KDCA portal/KOSIS tabular exports to national monthly rows.
 
-    The portal can export either a wide monthly table (``COLUMN1``..``COLUMN12``
-    or ``1월``..``12월``) or rows with explicit date/value columns.  This parser
-    accepts both shapes plus the already-normalized CSV written by this crawler.
+    The portal can export either its internal wide table
+    (``COLUMN1`` = annual/YTD total, ``COLUMN2``..``COLUMN13`` = Jan..Dec), a
+    generic wide table (``1월``..``12월`` or genuine ``COLUMN1``..``COLUMN12``
+    month columns), or rows with explicit date/value columns.  This parser
+    accepts all shapes plus the already-normalized CSV written by this crawler.
     """
     normalized_rows: List[Dict[str, str]] = []
 
@@ -312,7 +387,12 @@ def normalize_kdca_download_rows(
         existing_date = parse_kdca_period_month(_lookup(row, ["Date"]))
         existing_label = _first_text(row, ["RawDiseaseLabel", "Disease"])
         existing_cases = _parse_int(_lookup(row, ["Cases"]))
-        if existing_date is not None and existing_label and existing_cases is not None:
+        if (
+            existing_date is not None
+            and existing_label
+            and existing_cases is not None
+            and existing_cases >= 0
+        ):
             _append_normalized_row(
                 normalized_rows,
                 report_date=existing_date,
@@ -359,7 +439,7 @@ def normalize_kdca_download_rows(
         long_cases = _parse_int(
             _lookup(row, ["Cases", "resultVal", "발생수", "환자수", "값", "DATA_VALUE", "value"])
         )
-        if long_date is not None and long_cases is not None:
+        if long_date is not None and long_cases is not None and long_cases >= 0:
             _append_normalized_row(
                 normalized_rows,
                 report_date=long_date,
@@ -380,13 +460,15 @@ def normalize_kdca_download_rows(
         if year is None:
             continue
 
-        for key, value in row.items():
-            month = _month_from_column(key)
-            if month is None:
-                continue
+        month_values, annual_total = _wide_month_values(row)
+        parsed_months: Dict[int, int] = {}
+        for month, value in month_values.items():
             cases = _parse_int(value)
-            if cases is None:
+            # KDCA uses negative sentinels for not-applicable/unreported cells.
+            # Those are missing observations, not reported zeroes.
+            if cases is None or cases < 0:
                 continue
+            parsed_months[month] = cases
             _append_normalized_row(
                 normalized_rows,
                 report_date=date(year, month, 1),
@@ -398,9 +480,104 @@ def normalize_kdca_download_rows(
                 source_url=source_url,
             )
 
+        parsed_total = _parse_int(annual_total)
+        if (
+            parsed_total is not None
+            and parsed_total >= 0
+            and len(parsed_months) == 12
+            and parsed_total != sum(parsed_months.values())
+        ):
+            logger.warning(
+                "[KR-KDCA] Portal annual total differs from monthly cells | "
+                f"year={year} disease={disease_name!r} "
+                f"total={parsed_total} monthly_sum={sum(parsed_months.values())}"
+            )
+
     normalized_rows = _dedupe_rows(normalized_rows)
     normalized_rows.sort(key=lambda row: (row["Date"], row["RawDiseaseLabel"]))
     return normalized_rows
+
+
+def validate_kdca_national_rows(
+    rows: Sequence[Dict[str, str]],
+    *,
+    target_months: Optional[Set[Tuple[int, int]]] = None,
+    today: Optional[date] = None,
+) -> None:
+    """Fail closed on batch shapes known to create plausible but false KR data.
+
+    The guard catches two high-impact failures: a completed month containing a
+    broad all-zero disease batch (usually a stale endpoint), and the historical
+    signature produced when an annual total is accidentally stored as January.
+    Small/manual extracts are allowed because an all-zero observation can be
+    legitimate for an individual disease.
+    """
+    if not rows:
+        raise ValueError("KR KDCA batch contains no normalized monthly rows")
+
+    current = today or datetime.now().date()
+    current_month = (current.year, current.month)
+    by_month: Dict[Tuple[int, int], List[int]] = {}
+    by_disease_year: Dict[Tuple[str, int], Dict[int, int]] = {}
+
+    for row in rows:
+        parsed = parse_kdca_period_month(row.get("Date"))
+        cases = _parse_int(row.get("Cases"))
+        label = _norm_text(row.get("RawDiseaseLabel") or row.get("Disease"))
+        if parsed is None or cases is None or cases < 0 or not label:
+            continue
+        month_key = (parsed.year, parsed.month)
+        by_month.setdefault(month_key, []).append(cases)
+        by_disease_year.setdefault((label, parsed.year), {})[parsed.month] = cases
+
+    for month_key, values in sorted(by_month.items()):
+        if (
+            month_key < current_month
+            and len(values) >= MIN_ZERO_BATCH_DISEASES
+            and not any(value > 0 for value in values)
+        ):
+            raise ValueError(
+                "KR KDCA batch rejected: completed month "
+                f"{month_key[0]:04d}-{month_key[1]:02d} contains "
+                f"{len(values)} disease rows but every count is zero"
+            )
+
+    if target_months:
+        missing_completed = sorted(
+            month
+            for month in target_months
+            if month < current_month and month not in by_month
+        )
+        # A narrow manual extract may intentionally omit months, while a broad
+        # portal batch should never silently claim success with historical gaps.
+        if len(rows) >= MIN_ZERO_BATCH_DISEASES and missing_completed:
+            preview = ", ".join(
+                f"{year:04d}-{month:02d}" for year, month in missing_completed[:6]
+            )
+            raise ValueError(
+                "KR KDCA batch rejected: completed requested month(s) missing: "
+                f"{preview}"
+            )
+
+    complete_nonzero: List[Tuple[str, int, Dict[int, int]]] = []
+    suspicious: List[Tuple[str, int]] = []
+    for (label, year), months in by_disease_year.items():
+        if len(months) != 12 or not any(months.values()):
+            continue
+        complete_nonzero.append((label, year, months))
+        january = months.get(1, 0)
+        if january > 0 and january >= sum(months.get(month, 0) for month in range(2, 13)):
+            suspicious.append((label, year))
+
+    if (
+        len(complete_nonzero) >= MIN_ZERO_BATCH_DISEASES
+        and len(suspicious) / len(complete_nonzero) >= 0.8
+    ):
+        raise ValueError(
+            "KR KDCA batch rejected: January values have an annual-total signature "
+            f"in {len(suspicious)}/{len(complete_nonzero)} complete nonzero "
+            "disease-years"
+        )
 
 
 def _extract_body(payload: Any) -> Dict[str, Any]:
@@ -463,10 +640,19 @@ def aggregate_period_region_rows(
             continue
         disease_group = _norm_text(row.get("icdGroupNm"))
 
-        local_cases = _parse_count(row.get("dmstcVal"))
-        imported_cases = _parse_count(row.get("outnatnVal"))
-        total_cases = _parse_count(row.get("resultVal"))
-        if total_cases == 0 and (local_cases or imported_cases):
+        parsed_local = _parse_int(row.get("dmstcVal"))
+        parsed_imported = _parse_int(row.get("outnatnVal"))
+        parsed_total = _parse_int(row.get("resultVal"))
+        # Absence of every count field is not a reported zero. Dropping this
+        # row here preserves the missing-is-unknown contract and lets the batch
+        # completeness guard report the missing observation upstream.
+        if parsed_total is None and parsed_local is None and parsed_imported is None:
+            continue
+
+        local_cases = max(0, parsed_local or 0)
+        imported_cases = max(0, parsed_imported or 0)
+        total_cases = max(0, parsed_total or 0)
+        if parsed_total is None or (total_cases == 0 and (local_cases or imported_cases)):
             total_cases = local_cases + imported_cases
 
         key = (month_date, disease_name, disease_group)
@@ -524,9 +710,7 @@ class KoreaKDCAOpenAPICrawler(BaseCrawler):
         self.page_size = int(crawler_cfg.get("page_size") or DEFAULT_PAGE_SIZE)
         self.portal_url = str(crawler_cfg.get("portal_url") or DEFAULT_DPORTAL_DISEASE_URL)
         self.portal_stats_url = str(
-            crawler_cfg.get("portal_stats_url")
-            or urljoin(self.portal_url, "selectBassDissStatsListAjax.do")
-            or DEFAULT_DPORTAL_STATS_AJAX_URL
+            crawler_cfg.get("portal_stats_url") or DEFAULT_DPORTAL_STATS_AJAX_URL
         )
         self.service_key_env = str(
             crawler_cfg.get("service_key_env") or DEFAULT_SERVICE_KEY_ENV
@@ -582,13 +766,20 @@ class KoreaKDCAOpenAPICrawler(BaseCrawler):
                     if child.is_file() and child.suffix.lower() in DOWNLOAD_FILE_EXTENSIONS:
                         paths.append(child)
 
+        explicit_source = source_file is not None or source_dir is not None
         add_file(source_file)
         add_dir(source_dir)
-        add_file(os.getenv(self.dportal_file_env))
-        add_file(os.getenv(self.kosis_file_env))
-        add_dir(os.getenv(self.dportal_dir_env))
-        add_dir(self.raw_dir / "portal")
-        add_dir(self.raw_dir / "manual")
+
+        # An explicit path is an isolation boundary, not merely another search
+        # hint. Mixing it with environment/default raw files made targeted test
+        # and repair imports silently ingest unrelated cached downloads.
+        if not explicit_source:
+            add_file(os.getenv(self.dportal_file_env))
+            add_file(os.getenv(self.kosis_file_env))
+            add_dir(os.getenv(self.dportal_dir_env))
+            # Raw request archives are evidence, not import inputs. Replaying
+            # them implicitly can resurrect stale or known-bad endpoint data.
+            add_dir(self.raw_dir / "manual")
 
         unique: List[Path] = []
         seen: Set[Path] = set()
@@ -668,6 +859,7 @@ class KoreaKDCAOpenAPICrawler(BaseCrawler):
             return False
         return any(
             _month_from_column(cell) is not None
+            or _numbered_column_index(cell) is not None
             or _norm_key(cell)
             in {
                 "rawdiseaselabel",
@@ -786,6 +978,7 @@ class KoreaKDCAOpenAPICrawler(BaseCrawler):
         form = {
             "frmNm": "dissMonthFrm",
             "icdgrpCdArr": disease_groups,
+            "icdCdArr": "",
             "startDt": str(year),
             "searchType": search_type,
             "patntType": patient_type,
@@ -1034,6 +1227,10 @@ class KoreaKDCAOpenAPICrawler(BaseCrawler):
         if manual_paths and (explicit_manual or not self.service_key):
             national_rows = self.load_download_rows(manual_paths, months=target_months)
             if national_rows:
+                validate_kdca_national_rows(
+                    national_rows,
+                    target_months=target_months,
+                )
                 self._write_national_csv(output_csv, national_rows)
                 latest_date = max(
                     (
@@ -1068,6 +1265,10 @@ class KoreaKDCAOpenAPICrawler(BaseCrawler):
                 target_months=target_months,
             )
             if portal_rows:
+                validate_kdca_national_rows(
+                    portal_rows,
+                    target_months=target_months,
+                )
                 self._write_national_csv(output_csv, portal_rows)
                 latest_date = max(
                     (
@@ -1113,6 +1314,10 @@ class KoreaKDCAOpenAPICrawler(BaseCrawler):
             raise RuntimeError("[KR-KDCA] No national monthly rows parsed from OpenAPI source")
 
         national_rows.sort(key=lambda row: (row["Date"], row["RawDiseaseLabel"]))
+        validate_kdca_national_rows(
+            national_rows,
+            target_months=target_months,
+        )
         self._write_national_csv(output_csv, national_rows)
 
         latest_date = max(

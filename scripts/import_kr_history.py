@@ -27,13 +27,19 @@ from sqlalchemy import text
 
 from src.core.country_library import get_country_bootstrap_config, get_country_profile
 from src.core.database import get_db
-from src.core.db_schema import ensure_country_scope, ensure_country_scope_schema
+from src.core.db_schema import (
+    ensure_country_scope,
+    ensure_country_scope_schema,
+    ensure_disease_mapping_source_schema,
+)
+from src.core.disease_mutation_lock import acquire_disease_data_mutation_lock
 from src.core.logging import get_logger
 from src.data.processors.kr import (
     DEFAULT_OUTPUT_CSV,
     DEFAULT_HISTORY_START_YEAR,
     KRMonthlyUpdater,
 )
+from src.services.crawl_service import CrawlService
 
 logger = get_logger(__name__)
 
@@ -118,6 +124,7 @@ async def _ensure_kr_country_and_scope(db) -> None:
     )
 
     await ensure_country_scope_schema(db)
+    await ensure_disease_mapping_source_schema(db)
     await ensure_country_scope(
         db,
         scope_code="KR",
@@ -278,15 +285,15 @@ async def _upsert_one_mapping(
         text(
             """
             INSERT INTO disease_mappings (
-                disease_id, country_code, local_name, is_primary, is_alias,
+                disease_id, country_code, local_name, source_id, is_primary, is_alias,
                 priority, usage_count, confidence_score, category, source,
                 metadata, is_active, created_at, updated_at
             ) VALUES (
-                :disease_id, 'KR', :local_name, :is_primary, :is_alias,
+                :disease_id, 'KR', :local_name, 'SRC_KR_KDCA', :is_primary, :is_alias,
                 :priority, 0, 1.0, :category, :source,
                 CAST(:metadata AS json), true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
             )
-            ON CONFLICT (disease_id, country_code, local_name) DO UPDATE SET
+            ON CONFLICT (disease_id, country_code, source_id, local_name) DO UPDATE SET
                 is_primary = EXCLUDED.is_primary,
                 is_alias = EXCLUDED.is_alias,
                 priority = GREATEST(disease_mappings.priority, EXCLUDED.priority),
@@ -383,8 +390,29 @@ async def run(args: argparse.Namespace) -> None:
     async with get_db() as db:
         before = await _db_kr_summary(db)
         db_latest = await updater.get_db_latest_date(db)
-        result = await updater.import_rows(
+        deleted_series = 0
+        if args.replace_existing:
+            await acquire_disease_data_mutation_lock(db)
+            series_delete = await db.execute(
+                text(
+                    """
+                    DELETE FROM disease_series_observations observation
+                    USING disease_surveillance_series series
+                    WHERE observation.series_code = series.series_code
+                      AND series.country_code = 'KR'
+                    """
+                )
+            )
+            deleted_series = series_delete.rowcount or 0
+            logger.info(
+                "Replacing authoritative KR source-series observations in one "
+                "transaction | series_deleted={}",
+                deleted_series,
+            )
+
+        result = await CrawlService._import_rows_with_series(
             db,
+            updater,
             fetched.rows,
             db_latest_date=db_latest,
             source_latest_date=fetched.source_latest_date,
@@ -399,6 +427,8 @@ async def run(args: argparse.Namespace) -> None:
     print(f"Source CSV: {fetched.source_csv}")
     print(f"Raw archive: {'disabled' if args.no_save_raw else raw_dir}")
     print(f"Fetched source rows: {len(fetched.rows)}")
+    if args.replace_existing:
+        print(f"Deleted KR source-series observations: {deleted_series}")
     print(f"Upserted DB rows: {result.inserted_or_updated}")
     print(f"Skipped unmapped rows: {result.skipped_unmapped}")
     print(f"Before DB summary: {before}")
@@ -419,6 +449,14 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
         help="Optional directory containing KDCA dportal/KOSIS exports to import without an API key.",
     )
     parser.add_argument("--no-save-raw", action="store_true")
+    parser.add_argument(
+        "--replace-existing",
+        action="store_true",
+        help=(
+            "Transactionally replace authoritative KR source-series observations "
+            "after the complete source batch has been fetched and validated."
+        ),
+    )
     parser.add_argument(
         "--prepare-only",
         action="store_true",

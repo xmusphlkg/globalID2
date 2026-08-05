@@ -18,6 +18,10 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core import get_logger
+from src.data.processors.mapping_lookup import (
+    load_country_mapping_dict,
+    normalize_mapping_key,
+)
 from src.core.country_library import get_country_bootstrap_config
 from src.data.crawlers.ch import (
     DEFAULT_HISTORY_START_YEAR,
@@ -28,6 +32,8 @@ from src.data.crawlers.ch import (
 )
 
 logger = get_logger(__name__)
+
+MAPPING_SOURCE_ID = "SRC_CH_FOPH_IDD"
 
 ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_OUTPUT_CSV = ROOT / "data/current/ch/switzerland_idd_cases.csv"
@@ -305,24 +311,9 @@ class CHMonthlyUpdater:
         return int(row[0])
 
     async def _load_mapping_dict(self, db: AsyncSession) -> Dict[str, int]:
-        result = await db.execute(
-            text(
-                """
-                SELECT dm.local_name, d.id
-                FROM disease_mappings dm
-                JOIN diseases d ON dm.disease_id = d.name
-                WHERE dm.country_code = :code AND dm.is_active = true
-                """
-            ),
-            {"code": self.country_code},
+        return await load_country_mapping_dict(
+            db, self.country_code, source_id=MAPPING_SOURCE_ID
         )
-
-        mapping: Dict[str, int] = {}
-        for local_name, disease_db_id in result:
-            key = _norm_text(local_name).lower()
-            if key:
-                mapping[key] = int(disease_db_id)
-        return mapping
 
     async def import_rows(
         self,
@@ -351,7 +342,9 @@ class CHMonthlyUpdater:
 
             label = _norm_text(row.get("RawDiseaseLabel", ""))
             code = _norm_text(row.get("DiseaseCode", ""))
-            disease_id = mapping_dict.get(label.lower()) or mapping_dict.get(code.lower())
+            disease_id = mapping_dict.get(
+                normalize_mapping_key(label)
+            ) or mapping_dict.get(normalize_mapping_key(code))
             if disease_id is None:
                 skipped_unmapped += 1
                 continue
