@@ -25,7 +25,27 @@ load_repo_env() {
 import re
 import sys
 
-from dotenv import dotenv_values
+try:
+    from dotenv import dotenv_values
+except ModuleNotFoundError:
+    def dotenv_values(path):
+        """Minimal non-evaluating fallback for environments without python-dotenv."""
+        values = {}
+        for raw_line in open(path, encoding="utf-8"):
+            line = raw_line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if line.startswith("export "):
+                line = line[7:].lstrip()
+            if "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            key = key.strip()
+            value = value.strip()
+            if len(value) >= 2 and value[:1] == value[-1:] and value[:1] in {"'", '"'}:
+                value = value[1:-1]
+            values[key] = value
+        return values
 
 env_path = sys.argv[1]
 for key, value in dotenv_values(env_path).items():
