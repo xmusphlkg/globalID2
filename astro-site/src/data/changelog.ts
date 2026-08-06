@@ -48,6 +48,14 @@ export const changelogReleases: ChangelogRelease[] = [
             en: 'Added regression tests for reporting-period alignment, population imports, site projections, and disease knowledge source hints.',
             zh: '新增报告周期对齐、人口数据导入、站点投影和疾病知识来源提示的回归测试。',
           },
+          {
+            en: 'Added public CSV, JSON, and XLSX downloads partitioned into stable time windows for every country and disease dataset.',
+            zh: '为每个国家和疾病数据集新增按稳定时间窗口分块的 CSV、JSON 和 XLSX 公开下载。',
+          },
+          {
+            en: 'Added a versioned download manifest containing record ranges, file sizes, SHA-256 checksums, and direct public URLs.',
+            zh: '新增带版本的下载清单，记录数据范围、文件大小、SHA-256 校验值与直接公开链接。',
+          },
         ],
       },
       {
@@ -67,6 +75,22 @@ export const changelogReleases: ChangelogRelease[] = [
             en: 'Disease knowledge discovery now uses ontology labels, local source labels and codes, configured aliases, and reviewed official entry pages.',
             zh: '疾病知识来源发现现会结合本体标签、本地来源名称与编码、配置别名及经审核官方入口页。',
           },
+          {
+            en: 'Redesigned the download interface around time-range cards, format choices, file sizes, source details, and a centered bilingual modal.',
+            zh: '重新设计下载界面，通过时间范围卡片展示格式选择、文件大小和来源详情，并提供居中的双语弹窗。',
+          },
+          {
+            en: 'Moved public data publishing to a dedicated repository with incremental synchronization and validation before the site is deployed.',
+            zh: '将公开数据发布迁移到独立数据仓库，支持增量同步，并在站点部署前完成验证。',
+          },
+          {
+            en: 'Separated normal Astro builds from data regeneration so interface-only builds no longer rewrite generated datasets.',
+            zh: '将普通 Astro 构建与数据重新生成分离，纯界面构建不再重写已生成数据。',
+          },
+          {
+            en: 'Simplified public-facing version and data copy, made the maintenance notice opt-in, and improved translated form placeholders.',
+            zh: '简化面向公众的版本与数据文案，将维护提示改为按需显示，并改进表单占位文字的双语切换。',
+          },
         ],
       },
       {
@@ -85,6 +109,14 @@ export const changelogReleases: ChangelogRelease[] = [
           {
             en: 'Prevented incidence calculations from losing population denominators when country identifiers are recreated during rebuilds.',
             zh: '修复重建过程中国家标识重新生成后，发病率计算可能丢失人口分母的问题。',
+          },
+          {
+            en: 'Ensured CSV and JSON actions trigger browser downloads instead of unexpectedly opening raw files in a new tab, with a direct-link fallback.',
+            zh: '确保 CSV 和 JSON 操作触发浏览器下载，而不是意外在新标签页打开原始文件，并保留直接链接回退。',
+          },
+          {
+            en: 'Prevented a site deployment from publishing links to data files that failed repository synchronization or integrity checks.',
+            zh: '防止站点在数据文件仓库同步失败或完整性校验未通过时发布无效下载链接。',
           },
         ],
       },

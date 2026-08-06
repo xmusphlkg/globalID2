@@ -70,7 +70,7 @@ const coverageEnd = summary.coverage_end ?? 'N/A';
 
 <BaseLayout
   title="About"
-  description="Learn how GIDS monitors infectious diseases worldwide using automated data collection and AI-powered analysis."
+  description="Learn about GIDS data sources, update practices, and limitations."
 >
   <div class="about-page">
     <section class="relative overflow-hidden py-16 sm:py-24">
@@ -79,22 +79,22 @@ const coverageEnd = summary.coverage_end ?? 'N/A';
       </div>
       <div class="mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
         <div class="mb-6 inline-flex items-center gap-2 rounded-none border border-teal-500/20 bg-teal-500/10 px-3 py-1.5 text-xs font-medium text-teal-400">
-          <span data-lang-en="How it works" data-lang-zh="项目介绍">How it works</span>
+          <span data-lang-en="Methods and sources" data-lang-zh="方法与数据来源">Methods and sources</span>
         </div>
         <h1 class="mb-6 text-4xl font-bold tracking-tight text-[rgb(var(--text-strong))] sm:text-5xl">
           <span data-lang-en="About GIDS" data-lang-zh="关于 GIDS">About GIDS</span>
         </h1>
         <p class="mx-auto max-w-2xl text-lg leading-relaxed text-[rgb(var(--text-muted))]">
-          <span data-lang-en="GIDS (Global Infectious Disease Surveillance) is an automated infectious disease surveillance platform that collects, processes, and visualises data from official public health authorities around the world." data-lang-zh="GIDS（Global Infectious Disease Surveillance）是一套自动化传染病监测平台，负责从全球各官方公共卫生机构收集、处理和可视化数据。">
-            GIDS (Global Infectious Disease Surveillance) is an automated infectious disease surveillance platform that collects, processes, and visualises data from official public health authorities around the world.
+          <span data-lang-en="GIDS helps people explore infectious disease data published by official public health authorities, with source links, charts, and bilingual summaries." data-lang-zh="GIDS 汇集官方公共卫生机构发布的传染病数据，提供来源链接、趋势图与双语摘要，帮助用户开展查询与解读。">
+            GIDS helps people explore infectious disease data published by official public health authorities, with source links, charts, and bilingual summaries.
           </span>
         </p>
         <p
           class="mx-auto mt-4 max-w-3xl text-sm leading-relaxed text-[rgb(var(--text-faint))]"
-          data-lang-en={`This page is rebuilt from the latest PostgreSQL snapshot. The current data version is ${generatedAtEn}, covering ${coverageStart} to ${coverageEnd}.`}
-          data-lang-zh={`本页会在构建前从最新 PostgreSQL 快照重建，当前数据版本日期为 ${generatedAtZh}，覆盖范围为 ${coverageStart} 至 ${coverageEnd}。`}
+          data-lang-en={`Data updated ${generatedAtEn}; current coverage spans ${coverageStart} to ${coverageEnd}. Source schedules and reporting definitions vary.`}
+          data-lang-zh={`数据更新于 ${generatedAtZh}，当前覆盖 ${coverageStart} 至 ${coverageEnd}；不同来源的更新频率和报告口径可能不同。`}
         >
-          This page is rebuilt from the latest PostgreSQL snapshot. The current data version is {generatedAtEn}, covering {coverageStart} to {coverageEnd}.
+          Data updated {generatedAtEn}; current coverage spans {coverageStart} to {coverageEnd}. Source schedules and reporting definitions vary.
         </p>
       </div>
     </section>
@@ -102,8 +102,8 @@ const coverageEnd = summary.coverage_end ?? 'N/A';
     <div class="mx-auto max-w-7xl px-4 pb-20 sm:px-6 lg:px-8">
       <section class="about-section">
         <div class="about-section-header">
-          <h2 class="about-section-title" data-lang-en="Live Database Snapshot" data-lang-zh="数据库实时快照">
-            Live Database Snapshot
+          <h2 class="about-section-title" data-lang-en="Current data coverage" data-lang-zh="当前数据覆盖">
+            Current data coverage
           </h2>
         </div>
         <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -131,8 +131,8 @@ const coverageEnd = summary.coverage_end ?? 'N/A';
 
       <section class="about-section">
         <div class="about-section-header">
-          <h2 class="about-section-title" data-lang-en="How the Pipeline Works" data-lang-zh="数据处理流程">
-            How the Pipeline Works
+          <h2 class="about-section-title" data-lang-en="How data is prepared" data-lang-zh="数据处理方式">
+            How data is prepared
           </h2>
         </div>
 
@@ -158,8 +158,8 @@ const coverageEnd = summary.coverage_end ?? 'N/A';
 
       <section class="about-section">
         <div class="about-section-header">
-          <h2 class="about-section-title" data-lang-en="System Architecture" data-lang-zh="系统架构">
-            System Architecture
+          <h2 class="about-section-title" data-lang-en="From source to site" data-lang-zh="从来源到网站">
+            From source to site
           </h2>
         </div>
         <div class="about-surface-panel rounded-none p-8">
@@ -255,8 +255,8 @@ const coverageEnd = summary.coverage_end ?? 'N/A';
 
     <section class="about-section">
       <div class="about-section-header">
-        <h2 class="about-section-title" data-lang-en="Key Features" data-lang-zh="主要功能">
-          Key Features
+          <h2 class="about-section-title" data-lang-en="Data practices" data-lang-zh="数据说明">
+            Data practices
         </h2>
       </div>
       <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">

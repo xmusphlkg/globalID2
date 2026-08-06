@@ -38,6 +38,7 @@ const pageTitle = title === 'GIDS' ? title : `${title} | GIDS`;
 const robotsContent = noindex
   ? 'noindex,nofollow'
   : 'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1';
+const maintenanceMessage = import.meta.env.PUBLIC_GIDS_MAINTENANCE_MESSAGE?.trim();
 const structuredData = {
   '@context': 'https://schema.org',
   '@graph': [
@@ -133,18 +134,18 @@ const structuredData = {
   </head>
   <body class="min-h-screen flex flex-col">
     <Header initialLanguage={initialLanguage} />
-    <div class="site-update-banner border-b" role="status" aria-live="polite">
+    {maintenanceMessage && <div class="site-update-banner border-b" role="status" aria-live="polite">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2.5 text-sm font-medium text-center">
         <span
-          data-lang-en="Data is currently being updated. Some features may be temporarily unstable."
-          data-lang-zh="网站正在更新数据，部分功能可能暂时不稳定。"
+          data-lang-en={maintenanceMessage}
+          data-lang-zh="网站正在维护，部分功能可能暂时不可用。"
         >
           {initialLanguage === 'zh'
-            ? '网站正在更新数据，部分功能可能暂时不稳定。'
-            : 'Data is currently being updated. Some features may be temporarily unstable.'}
+            ? '网站正在维护，部分功能可能暂时不可用。'
+            : maintenanceMessage}
         </span>
       </div>
-    </div>
+    </div>}
     <main class="flex-1 academic-shell">
       <slot />
     </main>

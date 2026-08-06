@@ -73,8 +73,8 @@ const TRACK_ZH: Record<string, string> = {
 ---
 
 <ReportLayout
-  title="Countries"
-  description="Global disease surveillance coverage by country."
+  title="Countries and Regions"
+  description="Browse countries and regions with available infectious disease surveillance data."
   breadcrumbs={[{ label: 'Countries', labelZh: '国家' }]}
 >
   <div class="coverage-page max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
@@ -82,9 +82,9 @@ const TRACK_ZH: Record<string, string> = {
       <div class="coverage-section-header flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h2 class="coverage-section-title"
-              data-lang-en="Monitoring Network"
-              data-lang-zh="监测网络">
-            Monitoring Network
+              data-lang-en="Data Coverage"
+              data-lang-zh="数据覆盖国家/地区">
+            Data Coverage
           </h2>
 
         </div>
@@ -110,10 +110,10 @@ const TRACK_ZH: Record<string, string> = {
       </div>
       <p
         class="coverage-map-note"
-        data-lang-en="Active countries retain map labels. Scheduled countries appear as grey points; hover for their names and use the cards below for official source details."
-        data-lang-zh="已支持国家保留地图标签；规划中国家以灰色点显示，可悬停查看名称，并在下方卡片查看官方数据源。"
+        data-lang-en="Countries and regions with available data are shown on the map. Select a card below to view sources and coverage."
+        data-lang-zh="地图展示当前可用数据的国家和地区；选择下方卡片可查看来源与覆盖范围。"
       >
-        Active countries retain map labels. Scheduled countries appear as grey points; hover for their names and use the cards below for official source details.
+        Countries and regions with available data are shown on the map. Select a card below to view sources and coverage.
       </p>
     </section>
 
@@ -122,7 +122,7 @@ const TRACK_ZH: Record<string, string> = {
         <div>
           <h2 class="coverage-section-title"
               data-lang-en="Countries"
-              data-lang-zh="国家数据">Countries</h2>
+              data-lang-zh="国家/地区">Countries and regions</h2>
         </div>
         <span class="coverage-summary-pill">
           <span
@@ -224,10 +224,10 @@ const TRACK_ZH: Record<string, string> = {
               ) : (
                 <p
                   class="coverage-source-pending"
-                  data-lang-en="Official source selection is in research."
-                  data-lang-zh="官方数据源仍在调研中。"
+                  data-lang-en="Source assessment in progress."
+                  data-lang-zh="数据源评估中。"
                 >
-                  Official source selection is in research.
+                  Source assessment in progress.
                 </p>
               )}
             </div>

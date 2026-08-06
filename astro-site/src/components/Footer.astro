@@ -2,7 +2,6 @@
 // src/components/Footer.astro
 import BrandLogo from './BrandLogo.astro';
 import metaData from '../data/meta.json';
-import sitePackage from '../../package.json';
 
 interface Props {
   initialLanguage?: 'en' | 'zh';
@@ -10,15 +9,6 @@ interface Props {
 
 const { initialLanguage = 'en' } = Astro.props;
 const year = new Date().getFullYear();
-const siteVersion = sitePackage?.version ? `v${sitePackage.version}` : 'Unknown';
-const releaseId = import.meta.env.PUBLIC_GIDS_RELEASE_ID?.trim() || 'development';
-const sourceCommit = import.meta.env.PUBLIC_GIDS_SOURCE_COMMIT?.trim() || '';
-const deploymentBranch = import.meta.env.PUBLIC_GIDS_DEPLOY_BRANCH?.trim() || '';
-const buildId = sourceCommit ? sourceCommit.slice(0, 12) : releaseId;
-const buildTitle = [
-  releaseId !== 'development' ? `release ${releaseId}` : '',
-  deploymentBranch ? `branch ${deploymentBranch}` : '',
-].filter(Boolean).join(' · ');
 const dataVersion = metaData?.generated_at
   ? new Date(metaData.generated_at).toLocaleDateString(initialLanguage === 'zh' ? 'zh-CN' : 'en-US', {
       year: 'numeric',
@@ -51,8 +41,8 @@ const links = [
         />
         <p class="site-footer-copy text-sm leading-relaxed">
           {initialLanguage === 'zh'
-            ? '全球传染病监测。数据来自官方公共卫生机构。'
-            : 'Global Infectious Disease Surveillance. Data sourced from official public health authorities.'}
+            ? '全球传染病监测数据，附官方来源链接与数据使用提示。'
+            : 'Global infectious disease data with official source links and guidance for interpretation.'}
         </p>
       </div>
 
@@ -78,20 +68,9 @@ const links = [
           {initialLanguage === 'zh' ? '数据' : 'Data'}
         </h3>
         <ul class="site-footer-meta space-y-1.5 text-sm">
-          <li>
-            {initialLanguage === 'zh' ? '站点版本' : 'Site version'}:
-            {' '}
-            <a class="site-footer-link site-footer-meta-value" href="/changelog/">{siteVersion}</a>
-          </li>
-          <li>
-            {initialLanguage === 'zh' ? '构建版本' : 'Build'}:
-            {' '}
-            <span class="site-footer-meta-value font-mono" title={buildTitle}>{buildId}</span>
-          </li>
-          <li>{initialLanguage === 'zh' ? '国家/地区' : 'Countries'}: <span class="site-footer-meta-value">{metaData?.total_countries ?? '—'}</span></li>
-          <li>{initialLanguage === 'zh' ? '监测疾病' : 'Diseases tracked'}: <span class="site-footer-meta-value">{metaData?.total_diseases ?? '—'}</span></li>
-          <li>{initialLanguage === 'zh' ? '已生成报告' : 'Reports generated'}: <span class="site-footer-meta-value">{metaData?.total_reports ?? '—'}</span></li>
           <li>{initialLanguage === 'zh' ? '数据更新' : 'Data updated'}: <span class="site-footer-meta-value">{dataVersion}</span></li>
+          <li><a class="site-footer-link" href="/about/">{initialLanguage === 'zh' ? '数据来源与方法' : 'Sources and methods'}</a></li>
+          <li><a class="site-footer-link" href="/terms/">{initialLanguage === 'zh' ? '数据使用提示' : 'Data-use guidance'}</a></li>
         </ul>
       </div>
     </div>
@@ -99,8 +78,8 @@ const links = [
     <div class="site-footer-divider border-t mt-10 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
       <p class="site-footer-legal text-xs">
         {initialLanguage === 'zh'
-          ? `© ${year} GIDS。站点 ${siteVersion}，数据更新于 ${dataVersion}。`
-          : `© ${year} GIDS. Site ${siteVersion}, data updated ${dataVersion}.`}
+          ? `© ${year} GIDS。数据更新于 ${dataVersion}。`
+          : `© ${year} GIDS. Data updated ${dataVersion}.`}
       </p>
       <p class="site-footer-legal-note text-xs">
         {initialLanguage === 'zh'
