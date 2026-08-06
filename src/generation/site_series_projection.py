@@ -11,6 +11,7 @@ import math
 from collections import defaultdict
 
 from src.core.disease_cutover import get_disease_cutover_config
+from src.core.reporting_period import report_period_key, selected_series_granularity
 from src.services.disease_series_policy import (
     is_case_count_series,
     select_series_projection,
@@ -119,6 +120,7 @@ def _projection_context(series_records: list[dict]) -> tuple[set[str], dict]:
     source_series = _source_series_details(series_records)
     selection = select_series_projection(source_series)
     selected_codes = set(selection.selected_codes)
+    period_granularity = selected_series_granularity(source_series, selected_codes)
     projection_policy = selection.projection_policy
     if projection_policy == "single_series":
         note_en = "The public curve is read directly from one registered source series."
@@ -143,6 +145,7 @@ def _projection_context(series_records: list[dict]) -> tuple[set[str], dict]:
         "selected_series_codes": sorted(selected_codes),
         "available_series_count": len(source_series),
         "source_series": source_series,
+        "period_granularity": period_granularity,
         "note_en": note_en,
         "note_zh": note_zh,
     }
@@ -152,10 +155,14 @@ def _collapse_selected_series_records(records: list[dict], context: dict) -> lis
     """Collapse only the explicitly selected series to the legacy chart grain."""
 
     selected_codes = set(context.get("selected_series_codes") or [])
+    period_granularity = context.get("period_granularity")
     selected = [r for r in records if r.get("series_code") in selected_codes]
     seen: set[tuple[str, str]] = set()
     for record in selected:
-        identity = (str(record.get("series_code") or ""), str(record.get("date") or ""))
+        identity = (
+            str(record.get("series_code") or ""),
+            report_period_key(record.get("date"), period_granularity),
+        )
         if identity in seen:
             raise RuntimeError(
                 "Source series has multiple observations at the public date grain: "
@@ -163,18 +170,21 @@ def _collapse_selected_series_records(records: list[dict], context: dict) -> lis
             )
         seen.add(identity)
 
-    by_date: dict[str, list[dict]] = defaultdict(list)
+    by_period: dict[str, list[dict]] = defaultdict(list)
     for record in selected:
         if record.get("date"):
-            by_date[str(record["date"])].append(record)
+            by_period[
+                report_period_key(record["date"], period_granularity)
+            ].append(record)
 
     projected: list[dict] = []
-    for report_date in sorted(by_date):
-        date_records = by_date[report_date]
+    for period in sorted(by_period):
+        date_records = by_period[period]
         present_codes = {str(r.get("series_code") or "") for r in date_records}
         if len(selected_codes) > 1 and present_codes != selected_codes:
             continue
         first = date_records[0]
+        report_date = max(str(record.get("date")) for record in date_records)
         incidence_values = [_safe_float(r.get("incidence_rate")) for r in date_records]
         incidence_values = [value for value in incidence_values if value is not None]
         projected.append(
@@ -208,17 +218,30 @@ def _attach_legacy_supplemental_metrics(
 ) -> dict:
     """Retain non-case legacy metrics without reintroducing case duplication."""
 
-    legacy_by_date: dict[str, list[dict]] = defaultdict(list)
+    period_granularity = context.get("period_granularity")
+    legacy_by_period: dict[str, list[dict]] = defaultdict(list)
     for record in legacy_records:
         if record.get("date"):
-            legacy_by_date[str(record["date"])].append(record)
-    dates = sorted(legacy_by_date)
+            legacy_by_period[
+                report_period_key(record["date"], period_granularity)
+            ].append(record)
+    dates = sorted(str(record.get("date")) for record in legacy_records if record.get("date"))
     context["supplemental_legacy_metrics"] = {
         "dates": dates,
-        "deaths": [sum(r.get("deaths") or 0 for r in legacy_by_date[d]) for d in dates],
-        "recoveries": [sum(r.get("recoveries") or 0 for r in legacy_by_date[d]) for d in dates],
+        "deaths": [
+            record.get("deaths") or 0
+            for record in sorted(legacy_records, key=lambda item: str(item.get("date") or ""))
+            if record.get("date")
+        ],
+        "recoveries": [
+            record.get("recoveries") or 0
+            for record in sorted(legacy_records, key=lambda item: str(item.get("date") or ""))
+            if record.get("date")
+        ],
         "mortality_rates": [
-            _avg_or_none([r.get("mortality_rate") for r in legacy_by_date[d]]) for d in dates
+            record.get("mortality_rate")
+            for record in sorted(legacy_records, key=lambda item: str(item.get("date") or ""))
+            if record.get("date")
         ],
     }
     safe_alignment = context.get("projection_policy") in {"single_series", "sum_disjoint"}
@@ -233,7 +256,15 @@ def _attach_legacy_supplemental_metrics(
     }
     if safe_alignment:
         for record in projected:
-            legacy = legacy_by_date.get(str(record.get("date"))) or []
+            period = report_period_key(record.get("date"), period_granularity)
+            candidates = legacy_by_period.get(period) or []
+            exact = str(record.get("date") or "")
+            legacy = [
+                next(
+                    (item for item in candidates if str(item.get("date") or "") == exact),
+                    max(candidates, key=lambda item: str(item.get("date") or "")),
+                )
+            ] if candidates else []
             record["deaths"] = sum(item.get("deaths") or 0 for item in legacy)
             record["recoveries"] = sum(item.get("recoveries") or 0 for item in legacy)
             record["mortality_rate"] = _avg_or_none([item.get("mortality_rate") for item in legacy])
@@ -245,31 +276,38 @@ def _overlay_legacy_coverage_gaps(
 ) -> list[dict]:
     """Overlay registry facts by period without sacrificing legacy coverage."""
 
-    registry_dates = {str(r.get("date") or "") for r in projected if r.get("date")}
-    legacy_by_date: dict[str, list[dict]] = defaultdict(list)
+    period_granularity = context.get("period_granularity")
+    registry_periods = {
+        report_period_key(r.get("date"), period_granularity)
+        for r in projected
+        if r.get("date")
+    }
+    legacy_by_period: dict[str, list[dict]] = defaultdict(list)
     for record in legacy_records:
         if record.get("date"):
-            legacy_by_date[str(record["date"])].append(record)
-    legacy_dates = set(legacy_by_date)
-    gap_dates = sorted(legacy_dates - registry_dates)
-    overlap_dates = legacy_dates & registry_dates
+            legacy_by_period[
+                report_period_key(record["date"], period_granularity)
+            ].append(record)
+    legacy_periods = set(legacy_by_period)
+    gap_periods = sorted(legacy_periods - registry_periods)
+    overlap_periods = legacy_periods & registry_periods
     context.update(
         {
-            "coverage_policy": "period_key_overlay",
-            "coverage_status": "legacy_gap_fill" if gap_dates else "parity",
-            "legacy_period_count": len(legacy_dates),
-            "registry_period_count": len(registry_dates),
-            "overlap_period_count": len(overlap_dates),
-            "legacy_gap_fill_count": len(gap_dates),
-            "registry_only_period_count": len(registry_dates - legacy_dates),
+            "coverage_policy": "source_period_overlay",
+            "coverage_status": "legacy_gap_fill" if gap_periods else "parity",
+            "legacy_period_count": len(legacy_periods),
+            "registry_period_count": len(registry_periods),
+            "overlap_period_count": len(overlap_periods),
+            "legacy_gap_fill_count": len(gap_periods),
+            "registry_only_period_count": len(registry_periods - legacy_periods),
             "coverage_ratio_against_legacy": round(
-                len(overlap_dates) / len(legacy_dates) if legacy_dates else 1.0, 6
+                len(overlap_periods) / len(legacy_periods) if legacy_periods else 1.0, 6
             ),
         }
     )
-    if not gap_dates:
+    if not gap_periods:
         return projected
-    if not registry_dates:
+    if not registry_periods:
         context["registry_projection_policy"] = context.get("projection_policy")
         context["data_layer"] = LEGACY_DATA_LAYER
         context["projection_policy"] = "legacy_fallback"
@@ -278,17 +316,12 @@ def _overlay_legacy_coverage_gaps(
         context["coverage_risk"] = "registry_history_incomplete"
         context["metric_layers"]["cases"] = LEGACY_DATA_LAYER
         result: list[dict] = []
-        for report_date in gap_dates:
-            records = legacy_by_date[report_date]
-            if len(records) != 1:
-                raise RuntimeError(
-                    "Legacy layer has multiple observations at the public date grain: "
-                    f"{records[0].get('disease_id')} {report_date}"
-                )
-            record = dict(records[0])
-            record["data_layer"] = LEGACY_DATA_LAYER
-            record["_series_context"] = context
-            result.append(record)
+        for period in gap_periods:
+            for source_record in legacy_by_period[period]:
+                record = dict(source_record)
+                record["data_layer"] = LEGACY_DATA_LAYER
+                record["_series_context"] = context
+                result.append(record)
         return result
 
     context["data_layer"] = MIXED_DATA_LAYER
@@ -303,18 +336,13 @@ def _overlay_legacy_coverage_gaps(
         "作为明确的覆盖缺口补全予以保留。"
     ).strip()
     result = list(projected)
-    for report_date in gap_dates:
-        records = legacy_by_date[report_date]
-        if len(records) != 1:
-            raise RuntimeError(
-                "Legacy layer has multiple observations at the public date grain: "
-                f"{records[0].get('disease_id')} {report_date}"
-            )
-        record = dict(records[0])
-        record["data_layer"] = LEGACY_GAP_FILL_DATA_LAYER
-        record["_series_context"] = context
-        record["gap_fill_reason"] = "registry_period_missing"
-        result.append(record)
+    for period in gap_periods:
+        for source_record in legacy_by_period[period]:
+            record = dict(source_record)
+            record["data_layer"] = LEGACY_GAP_FILL_DATA_LAYER
+            record["_series_context"] = context
+            record["gap_fill_reason"] = "registry_period_missing"
+            result.append(record)
     return result
 
 

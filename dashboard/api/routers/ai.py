@@ -114,7 +114,7 @@ class DiseaseKnowledgeStartRequest(BaseModel):
     disease_ids: List[str] = Field(..., min_length=1)
     source: List[str] = Field(default_factory=list, description="Source groups: who / search / wikidata / wikipedia / pubmed / msd")
     force: bool = False
-    generator: str = Field("ai", description="ai / auto; content fallback is not supported")
+    generator: str = Field("auto", description="auto prefers reviewed profiles; ai always uses the model center")
     priority: str = Field("normal")
     task_name: Optional[str] = Field(None, description="Optional batch task name prefix")
     description: Optional[str] = Field(None, description="Optional task description")

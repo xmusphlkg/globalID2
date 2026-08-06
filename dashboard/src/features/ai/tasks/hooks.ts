@@ -99,7 +99,7 @@ export function useDiseaseKnowledgeTaskForm({
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [selectedSources, setSelectedSources] = useState<string[]>(["who", "wikidata", "wikipedia"]);
   const [forceRefresh, setForceRefresh] = useState(false);
-  const [generator, setGenerator] = useState<"ai" | "auto">("ai");
+  const [generator, setGenerator] = useState<"ai" | "auto">("auto");
   const [priority, setPriority] = useState<Priority>("normal");
   const [taskName, setTaskName] = useState("");
   const [description, setDescription] = useState("");

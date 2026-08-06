@@ -22,6 +22,7 @@ from src.knowledge.catalogue import (
     should_generate_public_disease_page,
 )
 from src.knowledge.llm_brief_generator import AIDiseaseBriefGenerator
+from src.knowledge.reviewed_brief_generator import ReviewedDiseaseBriefGenerator
 from src.knowledge.profile_schema import (
     attach_profile_schema,
     resolve_knowledge_profile_schema,
@@ -85,6 +86,85 @@ def test_fetcher_caches_repeated_get_requests() -> None:
     assert fetcher._get("https://example.org/source", params={"q": "flu"}) is response
     assert fetcher._get("https://example.org/source", params={"q": "flu"}) is response
     assert calls == ["https://example.org/source"]
+
+
+def test_cre_knowledge_uses_ontology_aliases_and_reviewed_source_hints() -> None:
+    service = DiseaseKnowledgeUpdateService()
+    disease = service._find_disease("D227")
+
+    assert "CRE" in disease["query_aliases"]
+    assert "carbapenem-resistant enterobacteriaceae infection" in {
+        alias.casefold() for alias in disease["query_aliases"]
+    }
+
+    fetcher = DiseaseKnowledgeFetcher(min_interval_seconds=0)
+    hints = fetcher._source_hints(disease)
+    assert "CRE infection" in hints["aliases"]
+    assert {source["source_name"] for source in hints["sources"]} == {
+        "US CDC",
+        "World Health Organization",
+    }
+
+
+def test_cre_reviewed_source_summaries_survive_remote_fetch_failure() -> None:
+    service = DiseaseKnowledgeUpdateService()
+    disease = service._find_disease("D227")
+    fetcher = DiseaseKnowledgeFetcher(min_interval_seconds=0)
+    hints = fetcher._source_hints(disease)
+    fetcher._crawl_html_page = lambda **_kwargs: None  # type: ignore[method-assign]
+
+    candidates = fetcher._fetch_configured_sources(
+        disease,
+        hints["sources"],
+        enabled_sources=["who", "web_search"],
+    )
+
+    assert len(candidates) == 2
+    assert all(candidate.metadata["offline_reviewed_summary"] for candidate in candidates)
+    assert assess_knowledge_evidence(candidates).sufficient
+
+
+def test_cre_reviewed_profile_is_full_bilingual_and_source_cited() -> None:
+    service = DiseaseKnowledgeUpdateService()
+    disease = service._find_disease("D227")
+    fetcher = DiseaseKnowledgeFetcher(min_interval_seconds=0)
+    hints = fetcher._source_hints(disease)
+    fetcher._crawl_html_page = lambda **_kwargs: None  # type: ignore[method-assign]
+    candidates = fetcher._fetch_configured_sources(
+        disease,
+        hints["sources"],
+        enabled_sources=["who", "web_search"],
+    )
+    sources = [
+        {
+            **candidate.__dict__,
+            "id": index,
+            "metadata": candidate.metadata,
+        }
+        for index, candidate in enumerate(candidates, start=1)
+    ]
+    generator = ReviewedDiseaseBriefGenerator()
+
+    results = [
+        asyncio.run(
+            generator.generate_with_trace(
+                disease=disease,
+                sources=sources,
+                language=language,
+            )
+        )
+        for language in ("en", "zh")
+    ]
+
+    assert generator.has_profile("D227")
+    assert {result["payload"]["status"] for result in results} == {"published"}
+    assert all(result["trace"]["generator"] == "reviewed" for result in results)
+    assert all(not result["trace"]["error"] for result in results)
+    assert all(
+        assess_knowledge_brief(result["payload"], disease=disease).display_mode == "full"
+        for result in results
+    )
+    assert all(result["payload"]["source_ids"] == [1, 2] for result in results)
 
 
 def test_fetcher_extracts_who_pages_for_plague_when_english_name_matches() -> None:

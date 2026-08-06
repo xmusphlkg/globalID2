@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "diseases": {
+    "D227": {
+      "version": 1,
+      "source_urls": [
+        "https://www.cdc.gov/cre/about/index.html",
+        "https://www.who.int/publications/i/item/9789241550178"
+      ],
+      "profiles": {
+        "en": {
+          "brief": "Carbapenem-resistant Enterobacterales (CRE) are bacteria in the order Enterobacterales that have become resistant to one or more carbapenem antibiotics. They can cause serious, difficult-to-treat infections and are particularly important in healthcare settings [1][2].",
+          "definition": "Enterobacterales include bacteria that normally inhabit the human and animal gut but may also cause infection. CRE can include carbapenem-resistant Escherichia coli and Klebsiella pneumoniae; the term describes an antimicrobial-resistance phenotype rather than one bacterial species [1].",
+          "clinical_features": "CRE can cause pneumonia, bloodstream infection, urinary tract infection, wound infection, and meningitis. Infection must be distinguished from colonization, in which a person carries the organism without symptoms [1].",
+          "epidemiology": "CRE are an important cause of healthcare-associated infection and a significant public-health threat because high antimicrobial resistance makes infections difficult to treat. Resistance determinants may also spread between bacteria through mobile genetic elements [2].",
+          "transmission": "CRE can spread through person-to-person contact involving contaminated hands, wounds, or stool, and through contaminated medical equipment or devices. Colonized people can carry the organism without active infection and may still be relevant to infection-control assessment [1].",
+          "prevention": "Prevention includes hand hygiene, appropriate healthcare safety practices, careful use of antibiotics, early recognition, and facility-level infection-prevention and control measures. WHO places infection prevention and control at the center of efforts to limit occurrence and spread in healthcare facilities [1][2].",
+          "surveillance_note": "Laboratory testing and public-health surveillance are used to identify resistant isolates, measure resistance, and track transmission in healthcare settings [1]. The time series on this site reports notifications under each country's surveillance definition and cadence; infection counts should not be interpreted as estimates of all colonized people or compared across countries without considering those reporting differences.",
+          "risk_groups": "Risk is highest among patients in healthcare settings, especially people who require ventilators, urinary catheters, or intravenous catheters, receive long courses of certain antibiotics, or have weakened immune systems. Healthy people usually do not develop CRE infection [1]."
+        },
+        "zh": {
+          "brief": "碳青霉烯类耐药肠杆菌目细菌（CRE）是指对一种或多种碳青霉烯类抗菌药物产生耐药性的肠杆菌目细菌。此类细菌可引起严重且治疗困难的感染，在医疗机构中尤其具有公共卫生意义[1][2]。",
+          "definition": "肠杆菌目包括正常存在于人和动物肠道、但也可能引起感染的一组细菌。CRE 可包括对碳青霉烯类耐药的大肠埃希菌和肺炎克雷伯菌；这一名称描述的是耐药表型，并非单一菌种[1]。",
+          "clinical_features": "CRE 可引起肺炎、血流感染、尿路感染、伤口感染和脑膜炎。监测和临床解释时应区分感染与定植：定植者携带该细菌，但没有相应感染症状[1]。",
+          "epidemiology": "CRE 是重要的医疗相关感染病原体，也是显著的公共卫生威胁；较高水平的抗菌药物耐药性会增加治疗难度。相关耐药决定因素还可能通过可移动遗传元件在细菌之间传播[2]。",
+          "transmission": "CRE 可通过受污染的手、伤口或粪便所造成的人际接触传播，也可通过受污染的医疗设备和器械传播。无活动性感染的定植者仍可能与感染防控评估有关[1]。",
+          "prevention": "预防措施包括手卫生、医疗安全操作、合理使用抗菌药物、早期识别以及医疗机构层面的感染预防与控制。世界卫生组织将感染预防与控制视为减少此类耐药菌发生和传播的核心措施[1][2]。",
+          "surveillance_note": "实验室检测和公共卫生监测可用于识别耐药菌株、评估耐药情况并追踪其在医疗机构中的传播[1]。本站时间序列展示各国按本国监测定义和报告周期上报的病例数；该数字不是全部定植人数的估计，在未考虑报告口径差异时也不宜直接进行国家间比较。",
+          "risk_groups": "医疗机构内的患者风险最高，尤其是使用呼吸机、导尿管或静脉导管者，长期使用某些抗菌药物者，以及免疫功能较弱者。健康人通常不会发生 CRE 感染[1]。"
+        }
+      }
+    }
+  }
+}

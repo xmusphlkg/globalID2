@@ -12,6 +12,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from hashlib import sha256
+import json
+from pathlib import Path
 import re
 import time
 from typing import Any, Iterable
@@ -95,6 +97,8 @@ TRUSTED_SOURCE_REGISTRY = (
 )
 TRUSTED_SOURCE_TYPES = tuple(item["source_type"] for item in TRUSTED_SOURCE_REGISTRY)
 SOURCE_FETCH_ORDER = tuple(item["source_type"] for item in TRUSTED_SOURCE_REGISTRY)
+ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_SOURCE_HINTS_PATH = ROOT / "configs" / "knowledge_source_hints.json"
 
 
 @dataclass
@@ -149,11 +153,13 @@ class DiseaseKnowledgeFetcher:
         max_excerpt_chars: int = 700,
         min_interval_seconds: float = 0.5,
         max_retries: int = 2,
+        source_hints_path: Path | None = DEFAULT_SOURCE_HINTS_PATH,
     ) -> None:
         self.timeout = timeout
         self.max_excerpt_chars = max_excerpt_chars
         self.min_interval_seconds = max(0.0, min_interval_seconds)
         self.max_retries = max(0, max_retries)
+        self.source_hints_path = source_hints_path
         self._last_request_at = 0.0
         self._response_cache: dict[str, requests.Response] = {}
         self.session = requests.Session()
@@ -174,8 +180,26 @@ class DiseaseKnowledgeFetcher:
     ) -> list[SourceCandidate]:
         enabled = list(enabled_sources or SOURCE_FETCH_ORDER)
         target_sections = self._unique_strings(target_sections or ())
-        disease = {**disease, "target_sections": target_sections}
+        source_hints = self._source_hints(disease)
+        disease = {
+            **disease,
+            "target_sections": target_sections,
+            "query_aliases": self._unique_strings(
+                [
+                    *(disease.get("query_aliases") or []),
+                    *(source_hints.get("aliases") or []),
+                ]
+            ),
+        }
         candidates: list[SourceCandidate] = []
+
+        candidates.extend(
+            self._fetch_configured_sources(
+                disease,
+                source_hints.get("sources") or [],
+                enabled_sources=enabled,
+            )
+        )
 
         adapters = {
             "who": self._fetch_who_pages,
@@ -235,6 +259,93 @@ class DiseaseKnowledgeFetcher:
             )
 
         return self._rank_candidates(self._dedupe(candidates))
+
+    def _source_hints(self, disease: dict[str, Any]) -> dict[str, Any]:
+        """Load optional, reviewed aliases and official entry URLs."""
+
+        if self.source_hints_path is None or not self.source_hints_path.exists():
+            return {}
+        try:
+            payload = json.loads(self.source_hints_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            logger.warning("Unable to load knowledge source hints: %s", exc)
+            return {}
+        diseases = payload.get("diseases") if isinstance(payload, dict) else None
+        if not isinstance(diseases, dict):
+            return {}
+        entry = diseases.get(str(disease.get("disease_id") or "").upper())
+        return entry if isinstance(entry, dict) else {}
+
+    def _fetch_configured_sources(
+        self,
+        disease: dict[str, Any],
+        hints: Iterable[dict[str, Any]],
+        *,
+        enabled_sources: Iterable[str],
+    ) -> list[SourceCandidate]:
+        """Crawl reviewed official URLs before relying on search discovery."""
+
+        enabled = set(enabled_sources)
+        disease_id = str(disease["disease_id"])
+        candidates: list[SourceCandidate] = []
+        for hint in hints:
+            if not isinstance(hint, dict):
+                continue
+            source_type = str(hint.get("source_type") or "web_search").strip()
+            url = str(hint.get("url") or "").strip()
+            if source_type not in enabled or not url:
+                continue
+            source_name = str(hint.get("source_name") or "Official source").strip()
+            candidate = self._crawl_html_page(
+                disease_id=disease_id,
+                source_type=source_type,
+                source_name=source_name,
+                url=url,
+                license=SOURCE_LICENSES.get(source_type, SOURCE_LICENSES["web_search"]),
+                review_status="approved",
+                metadata={
+                    "configured_source_hint": True,
+                    "authority_level": hint.get("authority_level") or "high",
+                    "configured_title": hint.get("title"),
+                    "matched_aliases": disease.get("query_aliases") or [],
+                    "relevance_score": 1.0,
+                },
+            )
+            if candidate is None:
+                content_text = self._clip(hint.get("content_text"), limit=12_000)
+                content_sections = hint.get("content_sections")
+                if content_text:
+                    candidate = SourceCandidate(
+                        disease_id=disease_id,
+                        source_type=source_type,
+                        source_name=source_name,
+                        url=url,
+                        resolved_url=url,
+                        title=str(hint.get("title") or source_name).strip(),
+                        license=SOURCE_LICENSES.get(
+                            source_type, SOURCE_LICENSES["web_search"]
+                        ),
+                        raw_excerpt=self._clip(hint.get("raw_excerpt") or content_text),
+                        content_text=content_text,
+                        content_sections=(
+                            [dict(section) for section in content_sections if isinstance(section, dict)]
+                            if isinstance(content_sections, list)
+                            else []
+                        ),
+                        review_status="approved",
+                        metadata={
+                            "configured_source_hint": True,
+                            "offline_reviewed_summary": True,
+                            "authority_level": hint.get("authority_level") or "high",
+                            "configured_title": hint.get("title"),
+                            "matched_aliases": disease.get("query_aliases") or [],
+                            "relevance_score": 1.0,
+                            "content_kind": "reviewed_source_summary",
+                        },
+                    )
+            if candidate is not None:
+                candidates.append(candidate)
+        return candidates
 
     def _crawl_html_page(
         self,

@@ -60,6 +60,7 @@ def _series(
     aggregation_policy: str = "non_additive",
     metric_type: str = "case_notifications",
     incidence_rate: float | None = None,
+    temporal_granularity: str = "monthly",
 ) -> dict:
     return {
         "disease_id": disease_id,
@@ -84,7 +85,7 @@ def _series(
         "case_definition_uri": None,
         "metric_type": metric_type,
         "reporting_basis": "notification",
-        "temporal_granularity": "monthly",
+        "temporal_granularity": temporal_granularity,
         "series_unit": "count",
         "mapping_relation": "exact",
         "comparability": "direct",
@@ -149,8 +150,8 @@ def test_registry_tail_lag_preserves_newer_legacy_period() -> None:
         _legacy("D068", "2024-01-14", 12),
     ]
     series = [
-        _series("D068", "SER_US_D068", "2023-12-31", 100),
-        _series("D068", "SER_US_D068", "2024-01-07", 101),
+        _series("D068", "SER_US_D068", "2023-12-31", 100, temporal_granularity="weekly"),
+        _series("D068", "SER_US_D068", "2024-01-07", 101, temporal_granularity="weekly"),
     ]
 
     projected = apply_series_first_projection(legacy, series)
@@ -170,8 +171,8 @@ def test_us_d068_registry_late_start_preserves_earlier_history() -> None:
         _legacy("D068", "2023-01-08", 10),
     ]
     series = [
-        _series("D068", "SER_US_D068", "2023-01-01", 90),
-        _series("D068", "SER_US_D068", "2023-01-08", 100),
+        _series("D068", "SER_US_D068", "2023-01-01", 90, temporal_granularity="weekly"),
+        _series("D068", "SER_US_D068", "2023-01-08", 100, temporal_granularity="weekly"),
     ]
 
     projected = apply_series_first_projection(legacy, series)
@@ -193,8 +194,8 @@ def test_weekly_registry_hole_keeps_same_jp_legacy_week() -> None:
         _legacy("D105", "2026-01-19", 3),
     ]
     series = [
-        _series("D105", "SER_JP_D105", "2026-01-05", 10),
-        _series("D105", "SER_JP_D105", "2026-01-19", 30),
+        _series("D105", "SER_JP_D105", "2026-01-05", 10, temporal_granularity="weekly"),
+        _series("D105", "SER_JP_D105", "2026-01-19", 30, temporal_granularity="weekly"),
     ]
 
     projected = apply_series_first_projection(legacy, series)
@@ -202,6 +203,30 @@ def test_weekly_registry_hole_keeps_same_jp_legacy_week() -> None:
     assert [row["cases"] for row in projected] == [10, 2, 30]
     assert projected[1]["gap_fill_reason"] == "registry_period_missing"
     assert projected[1]["data_layer"] == LEGACY_GAP_FILL_DATA_LAYER
+
+
+def test_weekly_overlay_aligns_shifted_jp_report_dates_without_double_counting() -> None:
+    legacy = [_legacy("D227", "2026-01-10", 9, deaths=2)]
+    series = [
+        _series(
+            "D227",
+            "SER_JP_CRE_WEEKLY",
+            "2026-01-11",
+            9,
+            temporal_granularity="weekly",
+        )
+    ]
+
+    projected = apply_series_first_projection(legacy, series)
+
+    assert [(row["date"], row["cases"]) for row in projected] == [
+        ("2026-01-11", 9)
+    ]
+    assert projected[0]["deaths"] == 2
+    context = projected[0]["_series_context"]
+    assert context["period_granularity"] == "weekly"
+    assert context["coverage_status"] == "parity"
+    assert context["legacy_gap_fill_count"] == 0
 
 
 def test_sum_disjoint_does_not_treat_missing_component_as_zero() -> None:
