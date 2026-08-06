@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "diseases": {
+    "D227": {
+      "aliases": [
+        "CRE",
+        "CRE infection",
+        "Carbapenem-resistant Enterobacterales",
+        "Carbapenem-resistant Enterobacteriaceae infection"
+      ],
+      "sources": [
+        {
+          "source_type": "web_search",
+          "source_name": "US CDC",
+          "title": "About Carbapenem-resistant Enterobacterales (CRE)",
+          "url": "https://www.cdc.gov/cre/about/index.html",
+          "authority_level": "high",
+          "raw_excerpt": "CDC defines CRE as Enterobacterales resistant to one or more carbapenem antibiotics and describes infection, colonization, transmission, risk groups, prevention, and surveillance.",
+          "content_text": "The reviewed CDC source summary defines Enterobacterales as bacteria normally found in the human and animal gut that can also cause infections. Carbapenem-resistant Enterobacterales are resistant to one or more carbapenem antibiotics and can include resistant Escherichia coli and Klebsiella pneumoniae. Reported clinical syndromes include pneumonia, bloodstream infection, urinary tract infection, wound infection, and meningitis. CRE infection is difficult to treat because of resistance to important antibiotics. People may also carry CRE without symptoms, which is colonization rather than infection. The main described routes of spread are person-to-person contact involving contaminated hands, wounds, or stool and contaminated medical equipment or devices. Patients in healthcare settings have the greatest risk, especially those using ventilators, urinary catheters, or intravenous catheters, those receiving long courses of some antibiotics, and people with weakened immune systems. Risk reduction includes hand hygiene, healthcare patient-safety practices, and using antibiotics exactly as directed. CDC identifies CRE and tracks resistance and healthcare transmission through the Antimicrobial Resistance Laboratory Network, Emerging Infections Program, and National Healthcare Safety Network.",
+          "content_sections": [
+            {
+              "heading": "Definition and clinical features",
+              "text": "CRE are Enterobacterales resistant to one or more carbapenems. They can cause pneumonia, bloodstream, urinary tract, wound, and meningeal infections; colonization without infection also occurs."
+            },
+            {
+              "heading": "Transmission and risk groups",
+              "text": "CRE can spread through contaminated hands, wounds, stool, and medical equipment. Healthcare patients using invasive devices, receiving prolonged antibiotic courses, or living with weakened immunity are at increased risk."
+            },
+            {
+              "heading": "Prevention and surveillance",
+              "text": "Hand hygiene, healthcare safety practices, appropriate antibiotic use, laboratory testing, and public-health tracking support prevention and control."
+            }
+          ]
+        },
+        {
+          "source_type": "who",
+          "source_name": "World Health Organization",
+          "title": "Guidelines for the prevention and control of carbapenem-resistant Enterobacteriaceae, Acinetobacter baumannii and Pseudomonas aeruginosa in health care facilities",
+          "url": "https://www.who.int/publications/i/item/9789241550178",
+          "authority_level": "high",
+          "raw_excerpt": "WHO describes carbapenem-resistant gram-negative bacteria as an emerging cause of healthcare-associated infection and provides evidence-based infection-prevention and control recommendations.",
+          "content_text": "The reviewed WHO source summary describes carbapenem-resistant Enterobacteriaceae, the name used in the 2017 guideline, as an emerging cause of healthcare-associated infection and a significant public-health threat. These organisms are difficult to treat because of high levels of antimicrobial resistance, are associated with high mortality, and can disseminate resistance through mobile genetic elements. WHO identifies infection prevention and control as a cornerstone of the response to antimicrobial resistance. Its guideline provides evidence-based recommendations for early recognition and for infection-prevention and control practices intended to prevent occurrence and control spread in acute healthcare facilities. The recommendations are designed to support improvement at both healthcare-facility and national levels. This source uses the older taxonomic term Enterobacteriaceae; the surveillance concept in this project uses the current term Enterobacterales while retaining the older label as a search alias.",
+          "content_sections": [
+            {
+              "heading": "Public-health importance",
+              "text": "Carbapenem-resistant gram-negative bacteria are emerging healthcare-associated pathogens that are difficult to treat and can spread resistance through mobile genetic elements."
+            },
+            {
+              "heading": "Prevention and control",
+              "text": "WHO recommends early recognition and evidence-based infection-prevention and control practices in acute healthcare facilities, supported at facility and national levels."
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

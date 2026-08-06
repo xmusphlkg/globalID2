@@ -41,7 +41,7 @@ export function useKnowledgePage(lang: "en" | "zh") {
   const [briefLanguage, setBriefLanguage] = useState<string>(lang);
   const [refreshSources, setRefreshSources] = useState<SourceGroup[]>(["who", "search", "wikidata", "wikipedia", "pubmed"]);
   const [forceRefresh, setForceRefresh] = useState(false);
-  const [generator, setGenerator] = useState<RefreshGenerator>("ai");
+  const [generator, setGenerator] = useState<RefreshGenerator>("auto");
   const [priority, setPriority] = useState<RefreshPriority>("normal");
   const [refreshError, setRefreshError] = useState<string | null>(null);
   const [refreshResult, setRefreshResult] = useState<StartDiseaseKnowledgeTaskResult | null>(null);

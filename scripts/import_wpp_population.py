@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Import WPP population CSV into population_records.
 
-Default input:
-  data/processed/wpp/unpopulation_dataportal_20260317220803.csv
+Default input is resolved from the repository's history or processed WPP
+directory so the import continues to work across rebuild layouts.
 
 Filter rule (as requested):
 - Sex = Both sexes
@@ -15,9 +15,11 @@ from __future__ import annotations
 import argparse
 import asyncio
 import csv
+import json
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from sqlalchemy import text
 
@@ -26,12 +28,40 @@ sys.path.insert(0, str(ROOT))
 
 from src.core.database import get_db
 
-DEFAULT_INPUT = ROOT / "data/processed/wpp/unpopulation_dataportal_20260317220803.csv"
+DEFAULT_INPUT_CANDIDATES = (
+    ROOT / "data/history/wpp/unpopulation_dataportal_20260317220803.csv",
+    ROOT / "data/processed/wpp/unpopulation_dataportal_20260317220803.csv",
+)
+
+
+def resolve_default_input() -> Path:
+    return next(
+        (path for path in DEFAULT_INPUT_CANDIDATES if path.exists()),
+        DEFAULT_INPUT_CANDIDATES[0],
+    )
+
+
+DEFAULT_INPUT = resolve_default_input()
+
+# Keep project country codes ISO Alpha-2. These aliases cover common legacy
+# spellings while retaining the project code in public output.
+COUNTRY_CODE_TO_WPP_ISO2 = {
+    "UK": "GB",
+}
 
 
 @dataclass(frozen=True)
 class PopulationRow:
     iso2: str
+    year: int
+    population: float
+
+
+@dataclass(frozen=True)
+class PlannedPopulationRow:
+    country_id: int
+    country_code: str
+    wpp_iso2: str
     year: int
     population: float
 
@@ -108,6 +138,78 @@ def load_rows(csv_path: Path) -> list[PopulationRow]:
     return sorted(merged.values(), key=lambda r: (r.iso2, r.year))
 
 
+def build_population_import_plan(
+    rows: list[PopulationRow],
+    country_by_code: dict[str, int],
+) -> dict[str, Any]:
+    """Match every enabled database country to its complete WPP time series."""
+
+    rows_by_iso2: dict[str, list[PopulationRow]] = {}
+    for row in rows:
+        rows_by_iso2.setdefault(row.iso2, []).append(row)
+
+    expected_years = sorted({row.year for row in rows})
+    expected_year_set = set(expected_years)
+    planned_rows: list[PlannedPopulationRow] = []
+    mapped_country_codes: list[str] = []
+    missing_country_codes: list[str] = []
+    incomplete_country_years: dict[str, list[int]] = {}
+
+    for raw_code, country_id in sorted(country_by_code.items()):
+        country_code = norm_text(raw_code).upper()
+        wpp_iso2 = COUNTRY_CODE_TO_WPP_ISO2.get(country_code, country_code)
+        source_rows = rows_by_iso2.get(wpp_iso2) or []
+        if not source_rows:
+            missing_country_codes.append(country_code)
+            continue
+
+        available_years = {row.year for row in source_rows}
+        missing_years = sorted(expected_year_set - available_years)
+        if missing_years:
+            incomplete_country_years[country_code] = missing_years
+            continue
+
+        mapped_country_codes.append(country_code)
+        planned_rows.extend(
+            PlannedPopulationRow(
+                country_id=int(country_id),
+                country_code=country_code,
+                wpp_iso2=wpp_iso2,
+                year=row.year,
+                population=row.population,
+            )
+            for row in source_rows
+        )
+
+    return {
+        "rows": planned_rows,
+        "expected_years": expected_years,
+        "available_wpp_codes": sorted(rows_by_iso2),
+        "target_country_codes": sorted(country_by_code),
+        "mapped_country_codes": mapped_country_codes,
+        "missing_country_codes": missing_country_codes,
+        "incomplete_country_years": incomplete_country_years,
+    }
+
+
+def validate_population_import_plan(plan: dict[str, Any]) -> None:
+    """Fail loudly when an enabled country cannot receive complete WPP data."""
+
+    issues: list[str] = []
+    missing = plan.get("missing_country_codes") or []
+    if missing:
+        issues.append(f"no WPP ISO2 match: {', '.join(missing)}")
+    incomplete = plan.get("incomplete_country_years") or {}
+    if incomplete:
+        details = "; ".join(
+            f"{code} missing {len(years)} year(s)"
+            for code, years in sorted(incomplete.items())
+        )
+        issues.append(f"incomplete WPP coverage: {details}")
+    if issues:
+        raise ValueError("Population onboarding failed: " + " | ".join(issues))
+
+
 async def ensure_table(db) -> None:
     await db.execute(
         text(
@@ -175,6 +277,81 @@ async def import_rows(rows: list[PopulationRow], dry_run: bool) -> None:
     print(f"Skipped rows (unknown country code): {skipped}")
     if dry_run:
         print("Dry-run mode: no data written")
+
+
+async def ensure_wpp_population(
+    input_path: Path | None = None,
+    *,
+    strict: bool = True,
+) -> dict[str, Any]:
+    """Idempotently provision complete WPP denominators for enabled countries.
+
+    This intentionally reparses the full WPP snapshot on every readiness run.
+    A country added after an earlier import is therefore discovered and
+    backfilled automatically without maintaining a separate country list.
+    """
+
+    csv_path = input_path or resolve_default_input()
+    if not csv_path.exists():
+        raise FileNotFoundError(f"WPP population CSV not found: {csv_path}")
+    rows = load_rows(csv_path)
+    if not rows:
+        raise ValueError("No rows matched WPP filter rules")
+
+    async with get_db() as db:
+        await ensure_table(db)
+        countries_result = await db.execute(
+            text("SELECT id, code FROM countries WHERE is_active = TRUE")
+        )
+        country_by_code = {
+            str(code).upper(): int(country_id)
+            for country_id, code in countries_result.fetchall()
+        }
+        plan = build_population_import_plan(rows, country_by_code)
+        if strict:
+            validate_population_import_plan(plan)
+        planned_rows: list[PlannedPopulationRow] = plan["rows"]
+        for row in planned_rows:
+            await db.execute(
+                text(
+                    """
+                    INSERT INTO population_records (country_id, year, population, source, metadata, created_at, updated_at)
+                    VALUES (:country_id, :year, :population, :source, CAST(:metadata AS json), CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                    ON CONFLICT (country_id, year) DO UPDATE SET
+                        population = EXCLUDED.population,
+                        source = EXCLUDED.source,
+                        metadata = EXCLUDED.metadata,
+                        updated_at = CURRENT_TIMESTAMP
+                    """
+                ),
+                {
+                    "country_id": row.country_id,
+                    "year": row.year,
+                    "population": row.population,
+                    "source": "WPP",
+                    "metadata": json.dumps(
+                        {
+                            "country_code": row.country_code,
+                            "wpp_iso2": row.wpp_iso2,
+                            "wpp_snapshot": csv_path.name,
+                            "auto_provisioned": True,
+                        }
+                    ),
+                },
+            )
+    expected_years = plan["expected_years"]
+    return {
+        "parsed_rows": len(rows),
+        "available_wpp_codes": len(plan["available_wpp_codes"]),
+        "target_countries": len(plan["target_country_codes"]),
+        "mapped_rows": len(planned_rows),
+        "mapped_countries": len(plan["mapped_country_codes"]),
+        "missing_country_codes": plan["missing_country_codes"],
+        "incomplete_country_codes": sorted(plan["incomplete_country_years"]),
+        "year_min": min(expected_years) if expected_years else None,
+        "year_max": max(expected_years) if expected_years else None,
+        "source_path": str(csv_path),
+    }
 
 
 def main() -> None:

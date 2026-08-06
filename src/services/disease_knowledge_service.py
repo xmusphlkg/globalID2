@@ -15,6 +15,7 @@ from src.core.task_manager import task_manager
 from src.domain import DiseaseKnowledgeBrief, DiseaseKnowledgeSource, Task, TaskStatus
 from src.knowledge import (
     AIDiseaseBriefGenerator,
+    ReviewedDiseaseBriefGenerator,
     apply_knowledge_quality_gate,
     assess_knowledge_evidence,
     assess_knowledge_brief,
@@ -554,7 +555,7 @@ def _use_source_id_citation_markers(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 async def _generate_brief_result(
-    generator: AIDiseaseBriefGenerator,
+    generator: AIDiseaseBriefGenerator | ReviewedDiseaseBriefGenerator,
     *,
     disease: dict[str, Any],
     sources: list[dict[str, Any]],
@@ -574,7 +575,13 @@ def _normalize_generator_mode(mode: str | None) -> str:
     return value
 
 
-def _generator_for_mode(mode: str) -> AIDiseaseBriefGenerator:
+def _generator_for_mode(
+    mode: str, disease_id: str
+) -> AIDiseaseBriefGenerator | ReviewedDiseaseBriefGenerator:
+    if mode == "auto":
+        reviewed = ReviewedDiseaseBriefGenerator()
+        if reviewed.has_profile(disease_id):
+            return reviewed
     return AIDiseaseBriefGenerator()
 
 
@@ -660,6 +667,26 @@ class DiseaseKnowledgeUpdateService:
                     for item in self.load_standard_diseases()
                 }
                 related_entities: list[dict[str, Any]] = []
+                query_aliases: list[str] = []
+                seen_aliases: set[str] = set()
+
+                def add_alias(value: Any) -> None:
+                    alias = " ".join(str(value or "").split()).strip()
+                    key = alias.casefold()
+                    if alias and key not in seen_aliases:
+                        seen_aliases.add(key)
+                        query_aliases.append(alias)
+
+                labels = detail.get("labels") if isinstance(detail.get("labels"), dict) else {}
+                for label in labels.values():
+                    add_alias(label)
+                for series in detail.get("source_series") or []:
+                    if not isinstance(series, dict):
+                        continue
+                    for label in series.get("local_labels") or []:
+                        add_alias(label)
+                    for code in series.get("local_codes") or []:
+                        add_alias(code)
                 relations = detail.get("relations") if isinstance(detail.get("relations"), dict) else {}
                 for relation in relations.get("outgoing") or []:
                     target = relation.get("to_ref") if isinstance(relation.get("to_ref"), dict) else {}
@@ -678,6 +705,7 @@ class DiseaseKnowledgeUpdateService:
                     )
                 return {
                     **disease,
+                    "query_aliases": query_aliases[:20],
                     "ontology_context": {
                         "definition": detail.get("definition"),
                         "facet_tags": detail.get("facet_tags") or {},
@@ -984,14 +1012,14 @@ class DiseaseKnowledgeUpdateService:
         *,
         enabled_sources: list[str] | None = None,
         force: bool = False,
-        generator_mode: str = "ai",
+        generator_mode: str = "auto",
         dry_run: bool = False,
         task_uuid: str | None = None,
     ) -> dict[str, Any]:
         disease = self._find_disease(disease_id)
         generator_mode = _normalize_generator_mode(generator_mode)
         enabled_sources = expand_sources(enabled_sources)
-        generator = _generator_for_mode(generator_mode)
+        generator = _generator_for_mode(generator_mode, disease["disease_id"])
 
         await _log_task(
             task_uuid,
@@ -1441,7 +1469,7 @@ class DiseaseKnowledgeUpdateService:
         if isinstance(source_groups, str):
             source_groups = [source_groups]
         force = bool(inp.get("force", False))
-        generator_mode = str(inp.get("generator", "ai"))
+        generator_mode = str(inp.get("generator", "auto"))
 
         return await self.update_disease(
             disease_id,
@@ -1457,7 +1485,7 @@ async def render_knowledge_preview(
     disease_id: str,
     *,
     enabled_sources: list[str] | None = None,
-    generator_mode: str = "ai",
+    generator_mode: str = "auto",
 ) -> dict[str, Any]:
     """Convenience wrapper used by the CLI dry-run mode."""
     service = DiseaseKnowledgeUpdateService()

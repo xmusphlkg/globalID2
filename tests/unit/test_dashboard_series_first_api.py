@@ -44,6 +44,7 @@ def _series(
     *,
     aggregation_policy: str = "non_additive",
     metric_type: str = "case_notifications",
+    temporal_granularity: str = "monthly",
 ) -> dict:
     return {
         "time": _time(month),
@@ -60,7 +61,7 @@ def _series(
         "case_definition_uri": None,
         "metric_type": metric_type,
         "reporting_basis": "notification",
-        "temporal_granularity": "monthly",
+        "temporal_granularity": temporal_granularity,
         "mapping_relation": "exact",
         "comparability": "direct",
         "aggregation_policy": aggregation_policy,
@@ -92,6 +93,36 @@ def test_partial_registry_history_overlays_matching_period_only() -> None:
         "registry_only_period_count": 0,
         "coverage_ratio_against_legacy": 0.5,
     }
+
+
+def test_weekly_projection_aligns_saturday_legacy_with_sunday_registry() -> None:
+    legacy = [{**_legacy(1, 9, deaths=2), "time": _time(1, 10)}]
+    series = [
+        {
+            **_series(
+                "SER_JP_CRE_WEEKLY",
+                1,
+                9,
+                temporal_granularity="weekly",
+            ),
+            "time": _time(1, 11),
+        }
+    ]
+
+    records, metadata = project_series_first_records(
+        legacy,
+        series,
+        disease_numeric_id=7,
+        country_id=11,
+    )
+
+    assert [(row["time"].date().isoformat(), row["cases"]) for row in records] == [
+        ("2024-01-11", 9)
+    ]
+    assert records[0]["deaths"] == 2
+    assert metadata["period_granularity"] == "weekly"
+    assert metadata["coverage"]["status"] == "parity"
+    assert metadata["coverage"]["legacy_gap_fill_count"] == 0
 
 
 def test_non_additive_series_are_never_summed_and_remain_in_provenance() -> None:

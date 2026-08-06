@@ -73,9 +73,22 @@ DEFAULT_GITHUB_SNAPSHOT_URL_BASE = (
 
 
 async def ensure_site_export_database_ready() -> None:
-    """Create missing tables and seed standard countries for export."""
+    """Create missing tables, seed countries, and restore WPP denominators."""
     country_count = await _ensure_site_export_database_ready()
     print(f"  ✓ database schema ready ({country_count} countries)")
+    # Country rebuilds can recreate country IDs after population was imported,
+    # leaving a valid table with no denominator rows for some countries.  Site
+    # generation is already a schema-preparation boundary, so repair the
+    # idempotent WPP reference data here before calculating crude incidence.
+    from scripts.import_wpp_population import ensure_wpp_population
+
+    population_result = await ensure_wpp_population()
+    print(
+        "  ✓ WPP population ready "
+        f"({population_result['mapped_countries']} countries, "
+        f"{population_result['mapped_rows']} country-years, "
+        f"{population_result['year_min']}-{population_result['year_max']})"
+    )
 
 
 async def collect_site_export_context(

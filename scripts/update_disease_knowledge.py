@@ -97,8 +97,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--generator",
         choices=["ai", "auto"],
-        default="ai",
-        help="Brief generator. ai/auto use the AI model center; content fallback is not supported.",
+        default="auto",
+        help="Brief generator. auto prefers a reviewed profile when available, then uses the AI model center.",
     )
     parser.add_argument("--dry-run", action="store_true", help="Fetch and render without writing database rows")
     parser.add_argument("--limit", type=int, default=0, help="Limit number of diseases")

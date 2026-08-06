@@ -146,7 +146,7 @@ export function CreateDiseaseKnowledgeTaskModal({
                 </div>
                 <div>
                   <label className={labelCls}>{lang === "zh" ? "生成器" : "Generator"}</label>
-                  <select value={form.generator} onChange={(e) => form.setGenerator(e.target.value as typeof form.generator)} className={inputCls}><option value="ai">ai</option><option value="auto">auto</option></select>
+                  <select value={form.generator} onChange={(e) => form.setGenerator(e.target.value as typeof form.generator)} className={inputCls}><option value="auto">auto</option><option value="ai">ai</option></select>
                 </div>
                 <div>
                   <label className={labelCls}>{t(lang, "priority")}</label>

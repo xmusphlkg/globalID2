@@ -80,7 +80,7 @@ def infer_action_parameters(prompt: str, action: str) -> dict[str, Any]:
             "disease_ids": [keyword.upper() for keyword in keywords[:2]] or ["INFLUENZA"],
             "source": ["who", "wikidata", "wikipedia"],
             "force": False,
-            "generator": "ai",
+            "generator": "auto",
         }
     if action == "export_data":
         return {"country_code": "CN", "formats": ["csv", "json"], "mode": "latest"}
