@@ -2,8 +2,6 @@ import ast
 import inspect
 from types import SimpleNamespace
 
-import pytest
-
 from scripts import generate_site_data as legacy_api
 from src.generation import site_data_catalogue, site_data_export, site_data_knowledge
 
@@ -48,11 +46,9 @@ def test_export_public_signature_remains_stable() -> None:
         "manifest_output",
         "allow_empty_export",
         "public_site_data_dir",
-        "sharded_download_output_dir",
-        "shard_max_uncompressed_bytes",
-        "github_snapshot_output_dir",
-        "github_snapshot_retain_releases",
-        "github_snapshot_url_base",
+        "direct_download_output_dir",
+        "direct_download_url_base",
+        "direct_download_max_file_bytes",
     ]
 
 
@@ -61,9 +57,8 @@ def test_export_side_effect_sequence_is_explicit_and_stable() -> None:
     calls = _called_names(site_data_export.export)
     expected = [
         "collect_site_export_context",
-        "build_export_download_artifacts",
         "write_site_export_artifacts",
-        "build_frontend_download_manifest",
+        "build_direct_download_files",
         "write_pretty_json",  # frontend download manifest
     ]
     position = 0
@@ -102,21 +97,6 @@ def test_site_artifact_write_order_remains_stable() -> None:
         if position < len(expected) and name == expected[position]:
             position += 1
     assert position == len(expected), calls
-
-
-def test_download_artifact_phase_rejects_projection_count_mismatch(tmp_path) -> None:
-    with pytest.raises(RuntimeError, match="views disagree"):
-        site_data_export.build_export_download_artifacts(
-            country_exports=[{"canonical_facts": [{"id": "fact"}]}],
-            disease_download_entries=[{"record_count": 0}],
-            country_download_entries=[],
-            country_sources_by_code={},
-            generated_at="2026-08-05T00:00:00Z",
-            sharded_download_output_dir=tmp_path / "downloads",
-            shard_max_uncompressed_bytes=1024,
-            github_snapshot_output_dir=tmp_path / "snapshot",
-            github_snapshot_retain_releases=2,
-        )
 
 
 def test_site_artifact_writer_reads_download_index_counts_from_context(

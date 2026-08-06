@@ -17,7 +17,6 @@ from sqlalchemy import select
 
 from src.core import get_config, get_database, get_logger
 from src.core.data_share import (
-    derive_github_raw_base_url,
     get_data_share_raw_base_url,
     get_data_share_repo_branch,
     get_data_share_repo_url,
@@ -29,7 +28,7 @@ from src.services.data_release import pipeline as release_pipeline
 from src.services.data_release.commands import (
     build_cloudflare_deploy_command,
     build_generate_site_data_command,
-    build_publish_github_snapshot_command,
+    build_publish_download_repo_command,
     build_publish_raw_archive_command,
 )
 from src.services.data_release.process_runner import (
@@ -86,9 +85,9 @@ GENERATE_SITE_DATA_TIMEOUT_SECONDS = 30 * 60
 ASTRO_BUILD_TIMEOUT_SECONDS = 15 * 60
 CLOUDFLARE_DEPLOY_TIMEOUT_SECONDS = 15 * 60
 SUBSCRIPTION_SYNC_TIMEOUT_SECONDS = 10 * 60
-GITHUB_SNAPSHOT_PUBLISH_TIMEOUT_SECONDS = 15 * 60
-GITHUB_SNAPSHOT_BRANCH = "snapshot-v2"
-GITHUB_SNAPSHOT_DIR = ROOT_DIR / "exports" / "github-data-snapshot-v2"
+DOWNLOAD_PUBLISH_TIMEOUT_SECONDS = 15 * 60
+DOWNLOAD_REPO_BRANCH = get_data_share_repo_branch()
+DIRECT_DOWNLOAD_DIR = ROOT_DIR / "exports" / "site-downloads"
 RAW_ARCHIVE_BRANCH = "main"
 
 
@@ -521,10 +520,10 @@ class DataReleaseService:
                         "reason": "already_running",
                     }
 
-        branch = GITHUB_SNAPSHOT_BRANCH
+        branch = self._download_repo_branch(job)
         project_name = self._cloudflare_project_name(job.cloudflare_project_name)
         download_repo_url = self._download_repo_url()
-        snapshot_url_base = self._github_snapshot_raw_base()
+        download_url_base = self._download_repo_raw_base(job)
         description_parts = [
             f"Generate site data and build Astro site for release job {job.job_id}.",
             (
@@ -533,9 +532,9 @@ class DataReleaseService:
                 else "Raw crawler archive publication disabled for this run."
             ),
             (
-                f"Publish canonical data snapshot to {GITHUB_SNAPSHOT_BRANCH}."
+                f"Publish partitioned CSV/JSON/XLSX downloads to {branch}."
                 if job.include_git_push
-                else "GitHub snapshot publication disabled for this run."
+                else "GitHub download publication disabled for this run."
             ),
             f"Pages: {project_name}" if job.include_cloudflare_deploy else "Cloudflare deploy disabled.",
         ]
@@ -548,10 +547,10 @@ class DataReleaseService:
             "include_git_push": bool(job.include_git_push),
             "include_cloudflare_deploy": job.include_cloudflare_deploy,
             "require_clean_worktree": job.require_clean_worktree,
-            "github_snapshot_branch": branch,
+            "download_repo_branch": branch,
             "deployment_branch": job.github_branch,
             "github_repo_url": download_repo_url,
-            "snapshot_url_base": snapshot_url_base,
+            "download_url_base": download_url_base,
             "cloudflare_project_name": project_name,
             "commit_message_template": job.commit_message_template,
             "timezone": job.timezone or self._config().timezone,
@@ -636,16 +635,16 @@ class DataReleaseService:
         if job is None:
             raise ValueError(f"Data release job not found: {job_id}")
 
-        branch = GITHUB_SNAPSHOT_BRANCH
+        branch = self._download_repo_branch(job)
         download_repo = await self._download_repo_check(job) if job.include_git_push else {
             "payload": {
                 "repo_url": self._download_repo_url() or None,
                 "branch": branch,
-                "raw_base_url": self._github_snapshot_raw_base() or None,
+                "raw_base_url": self._download_repo_raw_base(job) or None,
                 "read_access_ok": False,
                 "write_access_ok": False,
-                "read_check_output": "Skipped: v2 snapshot publication is disabled.",
-                "write_check_output": "Skipped: v2 snapshot publication is disabled.",
+                "read_check_output": "Skipped: direct download publication is disabled.",
+                "write_check_output": "Skipped: direct download publication is disabled.",
                 "ssh_transport": "disabled",
                 "publisher_enabled": False,
             },
@@ -668,8 +667,8 @@ class DataReleaseService:
             blockers.extend(download_repo["blockers"])
         if job.include_cloudflare_deploy and not job.include_git_push:
             blockers.append(
-                "Cloudflare deployment requires snapshot-v2 publication so the "
-                "new site never references an unpublished release."
+                "Cloudflare deployment requires direct-download publication so the "
+                "new site never references unpublished CSV/JSON/XLSX partitions."
             )
         if job.include_cloudflare_deploy:
             blockers.extend(cloudflare["blockers"])
@@ -726,11 +725,11 @@ class DataReleaseService:
             task_model=Task,
             root_dir=ROOT_DIR,
             astro_dir=ASTRO_DIR,
-            github_snapshot_branch=GITHUB_SNAPSHOT_BRANCH,
+            download_repo_branch=DOWNLOAD_REPO_BRANCH,
             raw_archive_branch=RAW_ARCHIVE_BRANCH,
             generate_timeout_seconds=GENERATE_SITE_DATA_TIMEOUT_SECONDS,
             astro_build_timeout_seconds=ASTRO_BUILD_TIMEOUT_SECONDS,
-            github_publish_timeout_seconds=GITHUB_SNAPSHOT_PUBLISH_TIMEOUT_SECONDS,
+            download_publish_timeout_seconds=DOWNLOAD_PUBLISH_TIMEOUT_SECONDS,
             cloudflare_deploy_timeout_seconds=CLOUDFLARE_DEPLOY_TIMEOUT_SECONDS,
         )
         return await release_pipeline.execute_release_task(self, task, runtime=runtime)
@@ -802,15 +801,6 @@ class DataReleaseService:
         return get_data_share_raw_base_url(
             repo_url=self._download_repo_url(),
             branch=self._download_repo_branch(job),
-        )
-
-    def _github_snapshot_raw_base(self) -> str:
-        repo_url = self._download_repo_url()
-        return derive_github_raw_base_url(repo_url, GITHUB_SNAPSHOT_BRANCH) or (
-            get_data_share_raw_base_url(
-                repo_url=repo_url,
-                branch=GITHUB_SNAPSHOT_BRANCH,
-            )
         )
 
     def _cloudflare_project_name(self, project_name: Optional[str]) -> str:
@@ -923,25 +913,26 @@ class DataReleaseService:
         self,
         *,
         python_path: Path,
-        snapshot_url_base: str,
+        download_url_base: str,
     ) -> list[str]:
         return build_generate_site_data_command(
             python_path=python_path,
-            snapshot_url_base=snapshot_url_base,
+            download_url_base=download_url_base,
         )
 
-    def _publish_github_snapshot_command(
+    def _publish_download_repo_command(
         self,
         *,
         python_path: Path,
         repo_url: str,
         commit_message: str,
     ) -> list[str]:
-        return build_publish_github_snapshot_command(
+        return build_publish_download_repo_command(
             python_path=python_path,
-            snapshot_dir=GITHUB_SNAPSHOT_DIR,
+            source_dir=DIRECT_DOWNLOAD_DIR,
             repo_url=repo_url,
             commit_message=commit_message,
+            branch=DOWNLOAD_REPO_BRANCH,
         )
 
     def _publish_raw_archive_command(self, *, python_path: Path) -> list[str]:
@@ -1077,11 +1068,11 @@ class DataReleaseService:
             generated_data_paths=GENERATED_DATA_PATHS,
         )
 
-    async def _download_repo_check(self, _job: DataReleaseJobConfig) -> dict[str, Any]:
+    async def _download_repo_check(self, job: DataReleaseJobConfig) -> dict[str, Any]:
         return await release_checks.download_repo_check(
             repo_url=self._download_repo_url(),
-            branch=GITHUB_SNAPSHOT_BRANCH,
-            raw_base_url=self._github_snapshot_raw_base(),
+            branch=self._download_repo_branch(job),
+            raw_base_url=self._download_repo_raw_base(job),
             root_dir=ROOT_DIR,
             github_ssh_prefixes=GITHUB_SSH_PREFIXES,
             run_capture=self._run_capture,

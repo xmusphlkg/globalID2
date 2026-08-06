@@ -75,7 +75,7 @@ async def test_download_repo_check_missing_url_does_not_run_commands(tmp_path):
 
     result = await checks.download_repo_check(
         repo_url="",
-        branch="snapshot-v2",
+        branch="main",
         raw_base_url="",
         root_dir=tmp_path,
         github_ssh_prefixes=("git@github.com:",),

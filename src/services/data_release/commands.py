@@ -37,31 +37,36 @@ def build_cloudflare_deploy_command(
 def build_generate_site_data_command(
     *,
     python_path: Path,
-    snapshot_url_base: str,
+    download_url_base: str,
 ) -> list[str]:
-    """Build the canonical v2 package and bounded GitHub snapshot locally."""
+    """Generate site assets and partitioned CSV/JSON/XLSX downloads locally."""
 
     return [
         str(python_path),
         "scripts/generate_site_data.py",
-        "--github-snapshot-url-base",
-        snapshot_url_base,
+        "--direct-download-url-base",
+        download_url_base,
     ]
 
-def build_publish_github_snapshot_command(
+def build_publish_download_repo_command(
     *,
     python_path: Path,
-    snapshot_dir: Path,
+    source_dir: Path,
     repo_url: str,
     commit_message: str,
+    branch: str = "main",
 ) -> list[str]:
+    """Build the incremental, validated download publisher command."""
+
     return [
         str(python_path),
-        "scripts/publish_github_snapshot_v2.py",
-        "--snapshot-dir",
-        str(snapshot_dir),
+        "scripts/publish_download_repo.py",
+        "--source-dir",
+        str(source_dir),
         "--repo-url",
         repo_url,
+        "--branch",
+        branch,
         "--commit-message",
         commit_message,
         "--push",
