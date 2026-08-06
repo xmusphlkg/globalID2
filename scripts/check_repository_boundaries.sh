@@ -21,6 +21,7 @@ generated_paths=(
   "astro-site/src/data/reports"
   "data/current"
   "data/raw"
+  "external-data/globalID2_data_download"
 )
 
 ignore_probes=(
@@ -34,6 +35,7 @@ ignore_probes=(
   "astro-site/src/data/reports/.globalid-repository-boundary-probe.json"
   "data/current/.globalid-repository-boundary-probe"
   "data/raw/.globalid-repository-boundary-probe"
+  "external-data/globalID2_data_download/.globalid-repository-boundary-probe"
 )
 
 tracked="$(git ls-files -- "${generated_paths[@]}")"

@@ -4,7 +4,7 @@ Generate static JSON data files for the Astro-based report site.
 
 Usage:
     python scripts/generate_site_data.py
-    python scripts/generate_site_data.py --sharded-download-output exports/site-downloads-v2
+    python scripts/generate_site_data.py --direct-download-output exports/site-downloads
 
 Reads from the PostgreSQL database and writes structured JSON files that
 the Astro build process consumes at build time.
@@ -32,16 +32,8 @@ from src.generation.site_data_about import (  # noqa: E402
     parse_iso_timestamp,
     resolve_snapshot_version,
 )
-from src.generation.site_data_canonical import build_country_canonical_facts  # noqa: E402
 from src.generation.site_data_database import ensure_standard_country_rows  # noqa: E402
-from src.generation.download_package_v2 import (  # noqa: E402
-    build_frontend_download_manifest,
-    build_globalid_canonical_download_package,
-)
-from src.generation.github_data_snapshot import (  # noqa: E402
-    DEFAULT_RETAIN_RELEASES,
-    build_github_snapshot,
-)
+from src.generation.direct_download_files import DEFAULT_TARGET_FILE_BYTES  # noqa: E402
 from src.generation.site_data_queries import (  # noqa: E402
     compact_report_metadata,
     enrich_source_attribution,
@@ -103,10 +95,6 @@ from src.generation.site_series_projection import (  # noqa: E402
     validate_series_first_projection,
 )
 from src.ontology import DiseaseOntology, load_disease_ontology  # noqa: E402
-from src.generation.sharded_data_package import (  # noqa: E402
-    DEFAULT_MAX_UNCOMPRESSED_BYTES,
-)
-
 from src.generation.site_data_catalogue import (  # noqa: E402
     enrich_diseases_with_ontology,
     load_standard_diseases,
@@ -129,14 +117,12 @@ from src.generation.site_data_knowledge import (  # noqa: E402
 # Main export
 # ─────────────────────────────────────────────────────────────
 from src.generation.site_data_export import (  # noqa: E402
+    DEFAULT_DIRECT_DOWNLOAD_OUTPUT,
+    DEFAULT_DIRECT_DOWNLOAD_URL_BASE,
     DEFAULT_DOWNLOAD_MANIFEST,
     DEFAULT_DOWNLOAD_REPO_URL,
-    DEFAULT_GITHUB_SNAPSHOT_BRANCH,
-    DEFAULT_GITHUB_SNAPSHOT_OUTPUT,
-    DEFAULT_GITHUB_SNAPSHOT_URL_BASE,
     DEFAULT_OUTPUT,
     DEFAULT_PUBLIC_SITE_DATA_OUTPUT,
-    DEFAULT_SHARDED_DOWNLOAD_OUTPUT,
     ensure_site_export_database_ready,
     export,
 )
@@ -160,39 +146,29 @@ def main() -> None:
         ),
     )
     parser.add_argument(
-        "--sharded-download-output",
+        "--direct-download-output",
         type=Path,
-        default=DEFAULT_SHARDED_DOWNLOAD_OUTPUT,
+        default=DEFAULT_DIRECT_DOWNLOAD_OUTPUT,
         help=(
-            "Canonical v2 sharded package output directory "
-            f"(default: {DEFAULT_SHARDED_DOWNLOAD_OUTPUT})"
+            "Partitioned CSV/JSON/XLSX output directory "
+            f"(default: {DEFAULT_DIRECT_DOWNLOAD_OUTPUT})"
         ),
     )
     parser.add_argument(
-        "--shard-max-uncompressed-bytes",
+        "--direct-download-url-base",
+        default=DEFAULT_DIRECT_DOWNLOAD_URL_BASE,
+        help=(
+            "Public GitHub Raw base for partitioned downloads "
+            f"(default: {DEFAULT_DIRECT_DOWNLOAD_URL_BASE})"
+        ),
+    )
+    parser.add_argument(
+        "--direct-download-max-file-bytes",
         type=int,
-        default=DEFAULT_MAX_UNCOMPRESSED_BYTES,
+        default=DEFAULT_TARGET_FILE_BYTES,
         help=(
-            "Maximum uncompressed NDJSON bytes per v2 shard "
-            f"(default: {DEFAULT_MAX_UNCOMPRESSED_BYTES})"
-        ),
-    )
-    parser.add_argument(
-        "--github-snapshot-output",
-        type=Path,
-        default=DEFAULT_GITHUB_SNAPSHOT_OUTPUT,
-        help=(
-            "Local GitHub-ready bounded snapshot tree "
-            f"(default: {DEFAULT_GITHUB_SNAPSHOT_OUTPUT})"
-        ),
-    )
-    parser.add_argument(
-        "--github-snapshot-retain-releases",
-        type=int,
-        default=DEFAULT_RETAIN_RELEASES,
-        help=(
-            "Number of complete v2 releases retained in the GitHub snapshot "
-            f"tree (default: {DEFAULT_RETAIN_RELEASES})"
+            "Target maximum bytes per generated file; oversized calendar windows "
+            f"are split automatically (default: {DEFAULT_TARGET_FILE_BYTES})"
         ),
     )
     parser.add_argument(
@@ -202,22 +178,13 @@ def main() -> None:
         help=f"Frontend manifest output path (default: {DEFAULT_DOWNLOAD_MANIFEST})",
     )
     parser.add_argument(
-        "--github-snapshot-url-base",
-        default=DEFAULT_GITHUB_SNAPSHOT_URL_BASE,
-        help=(
-            "Public raw URL of the v2 snapshot branch used by the frontend "
-            f"(default: {DEFAULT_GITHUB_SNAPSHOT_URL_BASE})"
-        ),
-    )
-    parser.add_argument(
         "--allow-empty-export",
         action="store_true",
         help="Allow overwriting site data even when the database currently exports zero disease records",
     )
     args = parser.parse_args()
     print(f"Exporting site data to {args.output} …")
-    print(f"Writing canonical v2 package to {args.sharded_download_output} …")
-    print(f"Preparing GitHub snapshot tree at {args.github_snapshot_output} …")
+    print(f"Writing partitioned CSV/JSON/XLSX files to {args.direct_download_output} …")
     print(f"Writing download manifest to {args.manifest_output} …\n")
     asyncio.run(
         export(
@@ -225,11 +192,9 @@ def main() -> None:
             args.manifest_output,
             args.allow_empty_export,
             public_site_data_dir=args.public_site_data_output,
-            sharded_download_output_dir=args.sharded_download_output,
-            shard_max_uncompressed_bytes=args.shard_max_uncompressed_bytes,
-            github_snapshot_output_dir=args.github_snapshot_output,
-            github_snapshot_retain_releases=args.github_snapshot_retain_releases,
-            github_snapshot_url_base=args.github_snapshot_url_base,
+            direct_download_output_dir=args.direct_download_output,
+            direct_download_url_base=args.direct_download_url_base,
+            direct_download_max_file_bytes=args.direct_download_max_file_bytes,
         )
     )
 

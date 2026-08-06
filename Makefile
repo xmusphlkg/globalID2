@@ -29,7 +29,7 @@ help:
 	@echo "  make site-install  安装 Astro/npm 依赖"
 	@echo "  make site-data     导出数据库数据到 JSON 文件"
 	@echo "  make site-data-external  导出数据并将下载链接指向外部数据仓库"
-	@echo "  make site-download-sync  发布已验证的 snapshot-v2 分片到数据仓库"
+	@echo "  make site-download-sync  增量发布时间分块 CSV/JSON/XLSX"
 	@echo "  make site-dev      启动本地开发预览"
 	@echo "  make site-build    生产构建"
 	@echo "  make site-preview  预览生产构建"
@@ -119,9 +119,9 @@ site-data-external:
 	@echo "外部下载链接导出完成"
 
 site-download-sync:
-	@echo "发布已验证的 snapshot-v2 数据 ..."
-	venv/bin/python3 scripts/publish_github_snapshot_v2.py --push
-	@echo "snapshot-v2 发布完成"
+	@echo "增量发布分块 CSV/JSON/XLSX 数据 ..."
+	venv/bin/python3 scripts/publish_download_repo.py --push
+	@echo "公开下载数据发布完成"
 
 site-install:
 	@echo "安装 Astro 依赖..."

@@ -21,14 +21,13 @@ been integrated or confirmed obsolete. Automated data jobs must not create
 branches or commits in this source-code repository.
 
 Data publishing uses separate Git repositories and therefore has its own fixed
-branches. The public download repository uses the bounded orphan branch
-`snapshot-v2`; each publication replaces that branch's history so generated
-data does not make the repository grow forever. The raw source archive uses the
+branches. The public download repository exposes time-partitioned CSV/JSON/XLSX files from its
+`main` branch. The raw source archive uses the
 `main` branch of the dedicated `globalID-data-archive` repository. Local paths
 such as `data/cache`, `data/current`, `data/raw`, `exports`, and the nested
 `exports/raw-git-archive` working clone are ignored by this repository.
 
-In other words, `snapshot-v2` and the archive repository's `main` are data
+In other words, the download and archive repositories' `main` branches are data
 distribution channels, not extra development branches of GlobalID V2. See
 `docs/DATA_VERSIONING.md` for the complete boundary and release flow.
 
@@ -399,8 +398,8 @@ Optional `.env` knobs for autostart behavior:
 The site service serves the generated `astro-site/dist/` directory over Python's built-in static HTTP server. If you change site data but do not set `GLOBALID_SITE_REGENERATE_ON_START=1`, the service will continue serving the last built output.
 
 Generated data is deliberately excluded from the code repository. Data Release regenerates
-site JSON from PostgreSQL, publishes the validated bounded snapshot to the dedicated data
-repository's `snapshot-v2` branch, builds Astro, and deploys the build without committing any
+site JSON from PostgreSQL, publishes validated time-partitioned CSV/JSON/XLSX files to the dedicated data
+repository's `main` branch, builds Astro, and deploys the build without committing any
 generated files back to the code branch. See `docs/DATA_VERSIONING.md` for the repository and
 retention boundaries.
 

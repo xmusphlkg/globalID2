@@ -458,9 +458,9 @@ const diseaseDataUrl = diseaseDownload?.site_json_path ?? `/site-data/diseases/$
         {diseaseDownload && (
           <DownloadPanel
             entry={{ ...diseaseDownload, source_info: diseaseData?.source_info }}
-            title="Supplementary Data | Multi-country disease dataset"
-            descriptionEn="Immutable multi-country dataset index with source metadata and gzip NDJSON shard references."
-            descriptionZh="不可变多国家疾病数据集索引，含数据源元信息与 gzip NDJSON 分片引用。"
+            title="Download data"
+            descriptionEn="Download the data index used for this page, including source links and update information."
+            descriptionZh="下载本页面使用的数据索引，包含来源链接和更新时间。"
           />
         )}
 

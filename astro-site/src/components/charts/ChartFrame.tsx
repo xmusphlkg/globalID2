@@ -111,11 +111,6 @@ export default function ChartFrame({
           {toolbar && <div className="chart-frame-toolbar-main">{toolbar}</div>}
         </div>
         <div className="chart-frame-actions">
-          {sourceMeta?.downloadHref && (
-            <a href={sourceMeta.downloadHref} target="_blank" rel="noreferrer" className="chart-link-btn">
-              {lang === 'zh' ? '下载数据' : 'Download data'}
-            </a>
-          )}
           {canFullscreen && (
             <button type="button" onClick={toggleFullscreen} className="chart-link-btn">
               {isFullscreen
