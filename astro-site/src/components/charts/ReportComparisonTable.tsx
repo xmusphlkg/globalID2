@@ -115,7 +115,9 @@ export default function ReportComparisonTable({ rows, currentMonth, prevMonth, p
         <input
           type="text"
           className="site-control-input border text-sm rounded-lg px-3 py-1.5 w-56 focus:outline-none focus:ring-1 focus:ring-brand-500"
-          placeholder="Search disease..."
+          placeholder="Search diseases"
+          data-lang-en-placeholder="Search diseases"
+          data-lang-zh-placeholder="搜索疾病"
           value={search}
           onChange={e => setSearch(e.target.value)}
         />
@@ -126,7 +128,7 @@ export default function ReportComparisonTable({ rows, currentMonth, prevMonth, p
           </span>
         </label>
         <span className="text-xs text-slate-600 ml-auto">
-          {filtered.length} disease{filtered.length !== 1 ? 's' : ''}
+          {filtered.length} <span data-lang-en="matching results" data-lang-zh="条匹配结果">matching results</span>
         </span>
       </div>
 
@@ -159,7 +161,7 @@ export default function ReportComparisonTable({ rows, currentMonth, prevMonth, p
             {filtered.length === 0 ? (
               <tr>
                 <td colSpan={8} className="px-3 py-8 text-center text-slate-500">
-                  No diseases match your filter.
+                  <span data-lang-en="No diseases match the current filter." data-lang-zh="没有匹配当前筛选条件的疾病。">No diseases match the current filter.</span>
                 </td>
               </tr>
             ) : (

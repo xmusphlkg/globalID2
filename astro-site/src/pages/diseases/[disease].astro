@@ -221,8 +221,8 @@ const diseaseDataUrl = diseaseDownload?.site_json_path ?? `/site-data/diseases/$
       <>
         <section class="academic-hero">
           <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[rgb(var(--border))/0.68] pb-3">
-            <p class="academic-kicker" data-lang-en={knowledgeProfileAvailable ? 'Disease Profile' : 'Knowledge Profile Pending'} data-lang-zh={knowledgeProfileAvailable ? '疾病画像' : '知识画像待补全'}>
-              {knowledgeProfileAvailable ? 'Disease Profile' : 'Knowledge Profile Pending'}
+            <p class="academic-kicker" data-lang-en="Disease overview" data-lang-zh="疾病概览">
+              Disease overview
             </p>
             <span class={`inline-flex items-center rounded-none px-2.5 py-0.5 text-xs font-semibold ${badgeClass}`}>
               <span data-lang-en={diseaseData.category} data-lang-zh={categoryZh[diseaseData.category] ?? diseaseData.category}>
@@ -251,10 +251,10 @@ const diseaseDataUrl = diseaseDownload?.site_json_path ?? `/site-data/diseases/$
                   <div class="flex flex-wrap items-center gap-x-4 gap-y-2 border-y border-[rgb(var(--border))/0.5] py-2 text-xs text-[rgb(var(--text-faint))]">
                     <span
                       class="font-semibold uppercase tracking-[0.1em]"
-                      data-lang-en={knowledgeDisplayMode === 'full' ? 'Complete profile' : 'Partial profile'}
-                      data-lang-zh={knowledgeDisplayMode === 'full' ? '完整画像' : '部分画像'}
+                      data-lang-en="Evidence-backed information"
+                      data-lang-zh="有证据支持的资料"
                     >
-                      {knowledgeDisplayMode === 'full' ? 'Complete profile' : 'Partial profile'}
+                      Evidence-backed information
                     </span>
                     <span data-lang-en={`EN ${enAvailableSectionCount}/${applicableSectionCount} applicable sections · ZH ${zhAvailableSectionCount}/${applicableSectionCount} applicable sections`} data-lang-zh={`英文 ${enAvailableSectionCount}/${applicableSectionCount} 个适用章节 · 中文 ${zhAvailableSectionCount}/${applicableSectionCount} 个适用章节`}>
                       EN {enAvailableSectionCount}/{applicableSectionCount} applicable sections · ZH {zhAvailableSectionCount}/{applicableSectionCount} applicable sections
@@ -269,10 +269,10 @@ const diseaseDataUrl = diseaseDownload?.site_json_path ?? `/site-data/diseases/$
                   {knowledgeDisplayMode === 'partial' && (
                     <p
                       class="academic-note"
-                      data-lang-en="Only sections supported by usable evidence are shown. Missing translations stay clearly marked instead of being replaced with another language."
-                      data-lang-zh="当前仅展示具有可用证据支持的章节；缺失译文会被明确标注，不再使用另一语种内容替代。"
+                      data-lang-en="Only information supported by available sources is shown."
+                      data-lang-zh="仅展示有可用来源支持的信息。"
                     >
-                      Only sections supported by usable evidence are shown. Missing translations stay clearly marked instead of being replaced with another language.
+                      Only information supported by available sources is shown.
                     </p>
                   )}
 
@@ -364,8 +364,8 @@ const diseaseDataUrl = diseaseDownload?.site_json_path ?? `/site-data/diseases/$
                 </div>
               ) : (
                 <div class="space-y-3">
-                  <p class="academic-kicker" data-lang-en="Profile Availability" data-lang-zh="画像可用性">
-                    Profile Availability
+                  <p class="academic-kicker" data-lang-en="Background information" data-lang-zh="背景资料">
+                    Background information
                   </p>
                   <p class="max-w-none text-sm leading-6 text-[rgb(var(--text-muted))]" data-lang-en={profileUnavailableMessageEn} data-lang-zh={profileUnavailableMessageZh}>
                     {profileUnavailableMessageEn}
@@ -424,8 +424,8 @@ const diseaseDataUrl = diseaseDownload?.site_json_path ?? `/site-data/diseases/$
 
         {countryCount > 0 && (
           <section class="figure-panel">
-              <h2 class="figure-title" data-lang-en="Figure 1 | Full historical trajectories across all reporting countries." data-lang-zh="图 1 | 全部报告国家的完整历史轨迹。">
-                Figure 1 | Full historical trajectories across all reporting countries.
+              <h2 class="figure-title" data-lang-en="Trends by reporting country" data-lang-zh="各报告国家的趋势">
+                Trends by reporting country
               </h2>
               <div class="mt-5">
               <DiseaseCountryCurve
@@ -441,8 +441,8 @@ const diseaseDataUrl = diseaseDownload?.site_json_path ?? `/site-data/diseases/$
 
         {diseaseData.global_monthly?.months?.length > 0 && (
           <section class="figure-panel">
-              <h2 class="figure-title" data-lang-en="Figure 2 | Year-over-year monthly comparison for seasonality and structural shifts." data-lang-zh="图 2 | 逐年月度对比，用于识别季节性与结构性变化。">
-                Figure 2 | Year-over-year monthly comparison for seasonality and structural shifts.
+              <h2 class="figure-title" data-lang-en="Monthly patterns over time" data-lang-zh="月度变化趋势">
+                Monthly patterns over time
               </h2>
               <div class="mt-5">
               <DiseaseMonthlyBar
