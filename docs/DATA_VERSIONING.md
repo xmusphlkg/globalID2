@@ -10,7 +10,7 @@ release branches.
 | --- | --- | --- |
 | `globalID2` source code | `development` | Tested integration work |
 | `globalID2` source code | `master` | Stable releases and production |
-| Public download-data repository | `snapshot-v2` | Bounded generated snapshot; force-updated with lease |
+| Public download-data repository | `main` | Stable time-partitioned CSV/JSON/XLSX files |
 | `globalID-data-archive` | `main` | Append-only raw source archive |
 | Local cache and generated workspaces | None | Ignored runtime files; never a Git repository unless a publisher creates an isolated ignored working clone |
 
@@ -20,12 +20,12 @@ after merge. Recovery branches are local, short-lived safety tools and must not
 be left on the remote.
 
 The fixed data branches are intentional and do not belong to the source-code
-branch model. Git requires a branch ref to publish a versioned tree. The public
-snapshot uses an orphan commit and a lease-protected force update so its history
-stays bounded; the raw archive keeps `main` history because traceability is its
-purpose. `exports/raw-git-archive/.git` may therefore exist locally after a raw
-archive publication, but the whole `exports/` directory is ignored by
-`globalID2` and cannot add branches to the parent repository.
+branch model. The public download repository keeps generated time partitions
+on `main`; the raw archive also keeps `main` history because traceability is its
+purpose. `external-data/globalID2_data_download/.git` and
+`exports/raw-git-archive/.git` may exist locally after publication, but both
+working trees are ignored by `globalID2` and cannot add branches to the parent
+repository.
 
 ## Ownership boundaries
 
@@ -37,7 +37,8 @@ archive publication, but the whole `exports/` directory is ignored by
 | Current normalized exports (`data/current`) | PostgreSQL / local cache | Ignored |
 | Generated Astro JSON (`astro-site/src/data/**/*.json`) | Release workspace | Ignored |
 | Hand-authored Astro data modules (`*.ts`) | Code repository | Tracked |
-| Public canonical snapshots | Dedicated data repository, `snapshot-v2` | Not tracked |
+| Public CSV/JSON/XLSX partitions | Dedicated data repository, `main` | Not tracked |
+| Public download working clone (`external-data/globalID2_data_download`) | Dedicated data repository, `main` | Ignored |
 | Raw archive working clone (`exports/raw-git-archive`) | Dedicated archive repository, `main` | Ignored |
 | Astro build output | Deployment artifact / Cloudflare Pages | Ignored |
 
@@ -50,20 +51,22 @@ when the crawler or `scripts/generate_site_data.py` runs.
 
 1. Crawlers store source payloads outside Git and upsert normalized facts into
    PostgreSQL.
-2. Data Release generates the site JSON and canonical sharded package in its
-   working directory.
-3. The package is validated and published to the dedicated data repository's
-   bounded `snapshot-v2` orphan branch.
+2. Data Release generates site JSON and partitioned CSV/JSON/XLSX files under
+   `exports/site-downloads`.
+3. Paths, hashes, record counts, and GitHub file-size limits are validated. The
+   persistent local data checkout copies only changed partitions, then commits
+   and pushes them to `main`.
 4. Raw source payloads are independently synchronized to the dedicated raw
    archive repository's `main` branch when raw archiving is enabled.
 5. Astro builds from the generated JSON and Cloudflare receives only the build
    artifact.
 6. The code repository HEAD is unchanged throughout the release.
 
-Every canonical release contains a manifest and content hashes. The
-`snapshot-v2` tree is a bounded distribution channel, not the permanent raw
-archive; long-term source retention belongs in the dedicated raw archive or
-other approved versioned object storage.
+Every public export contains a manifest with explicit partition and format paths. The
+download repository is a distribution channel, not the permanent raw archive;
+it has no `releases/` directory or GitHub Release dependency.
+Long-term source retention belongs in the dedicated raw archive or other
+approved versioned object storage.
 
 ## Enforcement
 

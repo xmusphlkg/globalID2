@@ -3,23 +3,21 @@
 from collections import defaultdict
 from pathlib import Path
 
-from src.core.data_share import derive_github_raw_base_url, get_data_share_repo_url
+from src.core.data_share import (
+    derive_github_raw_base_url,
+    get_data_share_repo_branch,
+    get_data_share_repo_url,
+)
 from src.core.database import get_db
-from src.generation.download_package_v2 import (
-    build_frontend_download_manifest,
-    build_globalid_canonical_download_package,
+from src.generation.direct_download_files import (
+    DEFAULT_TARGET_FILE_BYTES,
+    build_direct_download_files,
 )
-from src.generation.github_data_snapshot import (
-    DEFAULT_RETAIN_RELEASES,
-    build_github_snapshot,
-)
-from src.generation.sharded_data_package import DEFAULT_MAX_UNCOMPRESSED_BYTES
 from src.generation.site_data_about import (
     build_about_snapshot,
     build_country_source_info,
     resolve_snapshot_version,
 )
-from src.generation.site_data_canonical import build_country_canonical_facts
 from src.generation.site_data_catalogue import (
     enrich_diseases_with_ontology,
     load_standard_diseases,
@@ -61,14 +59,13 @@ from src.ontology import load_disease_ontology
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUTPUT = ROOT / "astro-site" / "src" / "data"
 DEFAULT_PUBLIC_SITE_DATA_OUTPUT = ROOT / "astro-site" / "public" / "site-data"
-DEFAULT_SHARDED_DOWNLOAD_OUTPUT = ROOT / "exports" / "site-downloads-v2"
-DEFAULT_GITHUB_SNAPSHOT_OUTPUT = ROOT / "exports" / "github-data-snapshot-v2"
+DEFAULT_DIRECT_DOWNLOAD_OUTPUT = ROOT / "exports" / "site-downloads"
 DEFAULT_DOWNLOAD_MANIFEST = ROOT / "astro-site" / "src" / "data" / "downloads.json"
 DEFAULT_DOWNLOAD_REPO_URL = get_data_share_repo_url()
-DEFAULT_GITHUB_SNAPSHOT_BRANCH = "snapshot-v2"
-DEFAULT_GITHUB_SNAPSHOT_URL_BASE = (
-    derive_github_raw_base_url(DEFAULT_DOWNLOAD_REPO_URL, DEFAULT_GITHUB_SNAPSHOT_BRANCH)
-    or "/downloads-v2"
+DEFAULT_DIRECT_DOWNLOAD_BRANCH = get_data_share_repo_branch()
+DEFAULT_DIRECT_DOWNLOAD_URL_BASE = derive_github_raw_base_url(
+    DEFAULT_DOWNLOAD_REPO_URL,
+    DEFAULT_DIRECT_DOWNLOAD_BRANCH,
 )
 
 
@@ -248,12 +245,11 @@ async def collect_site_export_context(
             country_source_info = country_export["source_info"]
             country_data["generated_at"] = generated_at
             country_site_data = build_country_site_data(country_data)
-            country_canonical_facts = build_country_canonical_facts(
-                country_data,
-                country_source_info,
+            country_record_count = sum(
+                len(series.get("dates") or [])
+                for series in (country_data.get("disease_series") or {}).values()
             )
             country_export["site_data"] = country_site_data
-            country_export["canonical_facts"] = country_canonical_facts
             country_download_entries.append(
                 {
                     "kind": "country",
@@ -263,7 +259,7 @@ async def collect_site_export_context(
                     "name_en": country_name,
                     "name_zh": country_name_zh,
                     "generated_at": generated_at,
-                    "record_count": len(country_canonical_facts),
+                    "record_count": country_record_count,
                     "date_range": country_data.get("date_range"),
                     "site_json_path": f"/site-data/countries/{code.lower()}.json",
                 }
@@ -342,76 +338,6 @@ async def collect_site_export_context(
         "report_details": report_details,
         "reports": reports,
     }
-
-
-def build_export_download_artifacts(
-    *,
-    country_exports: list[dict],
-    disease_download_entries: list[dict],
-    country_download_entries: list[dict],
-    country_sources_by_code: dict[str, dict],
-    generated_at: str,
-    sharded_download_output_dir: Path,
-    shard_max_uncompressed_bytes: int,
-    github_snapshot_output_dir: Path,
-    github_snapshot_retain_releases: int,
-) -> dict:
-    """Validate the projections and create canonical download artifacts."""
-    country_fact_count = sum(
-        len(country_export["canonical_facts"])
-        for country_export in country_exports
-    )
-    disease_view_count = sum(
-        int(entry["record_count"]) for entry in disease_download_entries
-    )
-    if disease_view_count != country_fact_count:
-        raise RuntimeError(
-            "Cannot build canonical v2 downloads because country and disease "
-            "views disagree: "
-            f"countries={country_fact_count}, diseases={disease_view_count}"
-        )
-
-    print(
-        "  Building canonical v2 download package "
-        f"({country_fact_count:,} unique facts)…"
-    )
-    sharded_manifest = build_globalid_canonical_download_package(
-        (
-            fact
-            for country_export in country_exports
-            for fact in country_export["canonical_facts"]
-        ),
-        sharded_download_output_dir,
-        generated_at=generated_at,
-        country_entries=country_download_entries,
-        disease_entries=disease_download_entries,
-        source_info_by_country=country_sources_by_code,
-        max_uncompressed_bytes=shard_max_uncompressed_bytes,
-    )
-    sharded_totals = sharded_manifest["totals"]
-    if sharded_totals["record_count"] != country_fact_count:
-        raise RuntimeError(
-            "Canonical v2 record total changed during packaging: "
-            f"expected={country_fact_count}, "
-            f"actual={sharded_totals['record_count']}"
-        )
-    print(
-        "  ✓ canonical v2 package: "
-        f"{sharded_totals['shard_count']:,} shards, "
-        f"{sharded_totals['compressed_bytes']:,} compressed bytes"
-    )
-    snapshot_result = build_github_snapshot(
-        sharded_download_output_dir,
-        github_snapshot_output_dir,
-        retain_releases=github_snapshot_retain_releases,
-    )
-    print(
-        "  ✓ GitHub-ready snapshot tree: "
-        f"{snapshot_result.release_count} releases, "
-        f"{snapshot_result.file_count:,} files, "
-        f"{snapshot_result.total_bytes:,} bytes"
-    )
-    return sharded_manifest
 
 
 def write_site_export_artifacts(
@@ -506,7 +432,7 @@ def write_site_export_artifacts(
         )
     )
     print(
-        "  ✓ v2 dataset indexes "
+        "  ✓ download catalogue entries "
         f"({len(country_download_entries)} countries, "
         f"{len(disease_download_entries)} diseases)"
     )
@@ -565,41 +491,29 @@ async def export(
     allow_empty_export: bool = False,
     *,
     public_site_data_dir: Path = DEFAULT_PUBLIC_SITE_DATA_OUTPUT,
-    sharded_download_output_dir: Path = DEFAULT_SHARDED_DOWNLOAD_OUTPUT,
-    shard_max_uncompressed_bytes: int = DEFAULT_MAX_UNCOMPRESSED_BYTES,
-    github_snapshot_output_dir: Path = DEFAULT_GITHUB_SNAPSHOT_OUTPUT,
-    github_snapshot_retain_releases: int = DEFAULT_RETAIN_RELEASES,
-    github_snapshot_url_base: str = DEFAULT_GITHUB_SNAPSHOT_URL_BASE,
+    direct_download_output_dir: Path = DEFAULT_DIRECT_DOWNLOAD_OUTPUT,
+    direct_download_url_base: str = DEFAULT_DIRECT_DOWNLOAD_URL_BASE,
+    direct_download_max_file_bytes: int = DEFAULT_TARGET_FILE_BYTES,
 ) -> None:
     """Package and write one complete export from a collected context."""
     context = await collect_site_export_context(output_dir, allow_empty_export)
     country_download_entries = context["country_download_entries"]
-    country_exports = context["country_exports"]
-    country_sources_by_code = context["country_sources_by_code"]
     disease_download_entries = context["disease_download_entries"]
-    generated_at = context["generated_at"]
-
-    sharded_manifest = build_export_download_artifacts(
-        country_exports=country_exports,
-        disease_download_entries=disease_download_entries,
-        country_download_entries=country_download_entries,
-        country_sources_by_code=country_sources_by_code,
-        generated_at=generated_at,
-        sharded_download_output_dir=sharded_download_output_dir,
-        shard_max_uncompressed_bytes=shard_max_uncompressed_bytes,
-        github_snapshot_output_dir=github_snapshot_output_dir,
-        github_snapshot_retain_releases=github_snapshot_retain_releases,
-    )
 
     write_site_export_artifacts(context, output_dir, public_site_data_dir)
 
-    downloads_manifest = build_frontend_download_manifest(
-        sharded_manifest,
-        snapshot_url_base=github_snapshot_url_base,
-        country_entries=country_download_entries,
-        disease_entries=disease_download_entries,
+    downloads_manifest = build_direct_download_files(
+        context,
+        direct_download_output_dir,
+        download_url_base=direct_download_url_base,
+        max_file_bytes=direct_download_max_file_bytes,
     )
     manifest_output.parent.mkdir(parents=True, exist_ok=True)
     write_pretty_json(manifest_output, downloads_manifest)
-    print("  ✓ v2 frontend downloads manifest")
+    print(
+        "  ✓ partitioned CSV/JSON/XLSX downloads "
+        f"({len(country_download_entries)} countries, "
+        f"{len(disease_download_entries)} diseases)"
+    )
+    print("  ✓ frontend download manifest uses GitHub Raw main-branch files")
     print(f"\nDone. Data written to: {output_dir}")

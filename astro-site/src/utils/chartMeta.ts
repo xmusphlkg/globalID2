@@ -16,7 +16,6 @@ export interface SourceInfoGroup {
 }
 
 export interface DownloadEntry {
-  dataset_index_path?: string;
   generated_at?: string;
   record_count?: number;
   date_range?: { start?: string; end?: string };
@@ -33,7 +32,6 @@ export interface ChartSourceMeta {
     href?: string;
   }>;
   note?: string;
-  downloadHref?: string;
   coverage?: string;
   updatedAt?: string;
   rowCount?: number;
@@ -104,7 +102,6 @@ export function buildChartSourceMeta(entry?: DownloadEntry | null, fallbackLabel
     href: primary?.url,
     sources: sourceLinks,
     note: noteParts.join(' · ') || undefined,
-    downloadHref: entry.dataset_index_path,
     coverage,
     updatedAt,
     rowCount: entry.record_count,

@@ -19,11 +19,11 @@ class ReleasePipelineRuntime:
     task_model: Any
     root_dir: Path
     astro_dir: Path
-    github_snapshot_branch: str
+    download_repo_branch: str
     raw_archive_branch: str
     generate_timeout_seconds: float
     astro_build_timeout_seconds: float
-    github_publish_timeout_seconds: float
+    download_publish_timeout_seconds: float
     cloudflare_deploy_timeout_seconds: float
 
 
@@ -49,7 +49,7 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
         raise RuntimeError("Release preflight failed: " + "; ".join(checks["blockers"]))
 
     tz = ZoneInfo(job.timezone or service._config().timezone)
-    branch = runtime.github_snapshot_branch
+    branch = runtime.download_repo_branch
     project_name = service._cloudflare_project_name(job.cloudflare_project_name)
     download_repo_url = service._download_repo_url()
     git_transport = str((checks.get("git") or {}).get("ssh_transport") or "default")
@@ -57,7 +57,7 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
         download_repo_url,
         use_github_ssh_over_443=(git_transport == "github-ssh-over-443"),
     )
-    snapshot_url_base = service._github_snapshot_raw_base()
+    download_url_base = service._download_repo_raw_base(job)
     publish_commit_message = service._render_commit_message(job, branch=branch, tz=tz)
     python_path = service._python_executable()
     cloudflare_check = checks.get("cloudflare") or {}
@@ -109,7 +109,7 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
 
     generate_cmd = service._generate_site_data_command(
         python_path=python_path,
-        snapshot_url_base=snapshot_url_base,
+        download_url_base=download_url_base,
     )
     await service._run_logged_command(
         task.task_uuid,
@@ -122,6 +122,46 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
     )
     await runtime.task_manager.update_task_progress(task.task_uuid, 35)
 
+    downloads_published = False
+    pages_deployed = False
+    cloudflare_deployment = None
+
+    if job.include_git_push:
+        await service._run_logged_command(
+            task.task_uuid,
+            title="Publish Partitioned Data Downloads",
+            cmd=service._publish_download_repo_command(
+                python_path=python_path,
+                repo_url=download_repo_url,
+                commit_message=publish_commit_message,
+            ),
+            cwd=runtime.root_dir,
+            env=git_env,
+            metadata={
+                "event": "github_direct_download_publish",
+                "release_job_id": job.job_id,
+                "branch": runtime.download_repo_branch,
+            },
+            timeout_seconds=runtime.download_publish_timeout_seconds,
+        )
+        downloads_published = True
+    else:
+        await runtime.task_manager.add_workbook_entry(
+            task.task_uuid,
+            entry_type="info",
+            title="Direct Download Publish Skipped",
+            content="The validated CSV/JSON/XLSX partitions remain local for this run.",
+            content_type="text",
+            metadata={
+                "event": "github_direct_download_publish_skipped",
+                "release_job_id": job.job_id,
+            },
+        )
+
+    # The site only goes live after its direct public file links exist.  This
+    # prevents a newly deployed page from pointing at a package that failed to
+    # publish, and the generated URLs carry the package cache key.
+    await runtime.task_manager.update_task_progress(task.task_uuid, 60)
     await service._run_logged_command(
         task.task_uuid,
         title="Build Astro Site",
@@ -147,49 +187,10 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
         content_type="json",
         metadata={"event": "site_release_identity", "release_job_id": job.job_id},
     )
-    await runtime.task_manager.update_task_progress(task.task_uuid, 60)
-
     subscription_options_synced = await service._sync_subscription_options_if_needed(
         task.task_uuid,
         job_id=job.job_id,
     )
-
-    github_snapshot_published = False
-    pages_deployed = False
-    cloudflare_deployment = None
-
-    if job.include_git_push:
-        await service._run_logged_command(
-            task.task_uuid,
-            title="Publish GitHub Snapshot v2",
-            cmd=service._publish_github_snapshot_command(
-                python_path=python_path,
-                repo_url=download_repo_url,
-                commit_message=publish_commit_message,
-            ),
-            cwd=runtime.root_dir,
-            env=git_env,
-            metadata={
-                "event": "github_snapshot_v2_publish",
-                "release_job_id": job.job_id,
-                "branch": runtime.github_snapshot_branch,
-            },
-            timeout_seconds=runtime.github_publish_timeout_seconds,
-        )
-        github_snapshot_published = True
-    else:
-        await runtime.task_manager.add_workbook_entry(
-            task.task_uuid,
-            entry_type="info",
-            title="GitHub Snapshot Publish Skipped",
-            content="The validated snapshot-v2 tree remains local for this run.",
-            content_type="text",
-            metadata={
-                "event": "github_snapshot_v2_publish_skipped",
-                "release_job_id": job.job_id,
-            },
-        )
-
     await runtime.task_manager.update_task_progress(task.task_uuid, 88)
 
     if job.include_cloudflare_deploy:
@@ -253,15 +254,15 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
         "release_job_id": job.job_id,
         "release_job_name": job.name,
         "github_repo_url": download_repo_url,
-        "github_snapshot_branch": branch,
-        "snapshot_url_base": snapshot_url_base,
+        "download_repo_branch": branch,
+        "download_url_base": download_url_base,
+        "direct_downloads_published": downloads_published,
         "cloudflare_project_name": project_name,
         "cloudflare_deployment_branch": deployment_branch,
         "cloudflare_deployment": cloudflare_deployment,
         "site_release": release_manifest,
         "commit_message": publish_commit_message,
-        "git_pushed": github_snapshot_published,
-        "github_snapshot_published": github_snapshot_published,
+        "git_pushed": downloads_published,
         "raw_archive_published": raw_archive_published,
         "raw_archive_repo_url": raw_archive_cfg.repo_url or None,
         "raw_archive_branch": runtime.raw_archive_branch if raw_archive_cfg.enabled else None,
@@ -282,7 +283,7 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
         title="Data Release Completed",
         content=(
             f"Release job: {job.name}\n"
-            f"GitHub snapshot-v2 published: {'yes' if github_snapshot_published else 'no'}\n"
+            f"GitHub direct downloads published: {'yes' if downloads_published else 'no'}\n"
             f"Raw crawler archive updated: {'yes' if raw_archive_published else 'no'}\n"
             f"Cloudflare deployed: {'yes' if pages_deployed else 'no'}\n"
             f"Production branch: {deployment_branch or '-'}\n"

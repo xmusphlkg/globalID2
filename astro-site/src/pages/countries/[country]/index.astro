@@ -322,9 +322,9 @@ const countryDataUrl = countryDownload?.site_json_path ?? `/site-data/countries/
     {countryDownload && (
       <DownloadPanel
         entry={{ ...countryDownload, source_info: countryData?.source_info }}
-        title="Supplementary Data | Country surveillance dataset"
-        descriptionEn="Immutable country dataset index with source metadata and gzip NDJSON shard references."
-        descriptionZh="不可变国家数据集索引，含数据源元信息与 gzip NDJSON 分片引用。"
+        title="Download data"
+        descriptionEn="Download the data index used for this page, including source links and update information."
+        descriptionZh="下载本页面使用的数据索引，包含来源链接和更新时间。"
       />
     )}
   </div>

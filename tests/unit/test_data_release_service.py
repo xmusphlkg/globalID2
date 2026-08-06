@@ -374,20 +374,20 @@ def test_cloudflare_deploy_command_targets_explicit_production_branch():
     assert "--commit-dirty=false" in command
 
 
-def test_generate_site_data_command_builds_v2_without_legacy_git_publisher(tmp_path):
+def test_generate_site_data_command_builds_direct_downloads_without_publishing(tmp_path):
     service = DataReleaseService()
     python_path = tmp_path / "python"
 
     command = service._generate_site_data_command(
         python_path=python_path,
-        snapshot_url_base="https://data.example/snapshot-v2",
+        download_url_base="https://raw.example/data/main",
     )
 
     assert command == [
         str(python_path),
         "scripts/generate_site_data.py",
-        "--github-snapshot-url-base",
-        "https://data.example/snapshot-v2",
+        "--direct-download-url-base",
+        "https://raw.example/data/main",
     ]
     assert {
         "--download-mode",
@@ -400,7 +400,7 @@ def test_generate_site_data_command_builds_v2_without_legacy_git_publisher(tmp_p
 
 
 @pytest.mark.asyncio
-async def test_release_preflight_checks_v2_snapshot_repo_when_enabled(
+async def test_release_preflight_checks_direct_download_repo_when_enabled(
     monkeypatch, tmp_path
 ):
     service = DataReleaseService()
@@ -430,14 +430,14 @@ async def test_release_preflight_checks_v2_snapshot_repo_when_enabled(
 
     check_calls = 0
 
-    async def v2_repo_check(*_args, **_kwargs):
+    async def direct_repo_check(*_args, **_kwargs):
         nonlocal check_calls
         check_calls += 1
         return {
             "payload": {
                 "repo_url": "git@example/data.git",
-                "branch": "snapshot-v2",
-                "raw_base_url": "https://data.example/snapshot-v2",
+                "branch": "main",
+                "raw_base_url": "https://raw.example/data/main",
                 "read_access_ok": True,
                 "write_access_ok": True,
                 "read_check_output": "ok",
@@ -453,7 +453,7 @@ async def test_release_preflight_checks_v2_snapshot_repo_when_enabled(
     monkeypatch.setattr(service, "_run_capture", command_available)
     monkeypatch.setattr(service, "_cloudflare_check", cloudflare_disabled)
     monkeypatch.setattr(service, "_tracked_generated_paths", no_paths)
-    monkeypatch.setattr(service, "_download_repo_check", v2_repo_check)
+    monkeypatch.setattr(service, "_download_repo_check", direct_repo_check)
     monkeypatch.setattr(service, "_download_repo_url", lambda: "git@example/data.git")
     monkeypatch.setattr(
         service,
@@ -465,24 +465,25 @@ async def test_release_preflight_checks_v2_snapshot_repo_when_enabled(
 
     assert checks["overall_ready"] is True
     assert check_calls == 1
-    assert checks["git"]["branch"] == "snapshot-v2"
+    assert checks["git"]["branch"] == "main"
     assert checks["git"]["read_access_ok"] is True
     assert checks["git"]["write_access_ok"] is True
     assert checks["repository_boundary"]["enforced"] is True
 
 
-def test_snapshot_publish_command_uses_only_v2_publisher(tmp_path):
+def test_download_publish_command_uses_incremental_partition_publisher(tmp_path):
     service = DataReleaseService()
-    command = service._publish_github_snapshot_command(
+    command = service._publish_download_repo_command(
         python_path=tmp_path / "python",
         repo_url="git@example/data.git",
-        commit_message="publish v2",
+        commit_message="publish direct downloads",
     )
 
-    assert command[1] == "scripts/publish_github_snapshot_v2.py"
+    assert command[1] == "scripts/publish_download_repo.py"
     assert "--push" in command
-    assert "--snapshot-dir" in command
-    assert "publish_download_repo.py" not in command
+    assert "--source-dir" in command
+    assert command[command.index("--branch") + 1] == "main"
+    assert "--raw-base-url" not in command
 
 
 def test_raw_archive_publish_command_uses_dedicated_incremental_publisher(

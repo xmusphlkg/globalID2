@@ -18,11 +18,11 @@ def _runtime(manager) -> pipeline.ReleasePipelineRuntime:
         task_model=object,
         root_dir=Path("/repo"),
         astro_dir=Path("/repo/astro-site"),
-        github_snapshot_branch="snapshot-v2",
+        download_repo_branch="main",
         raw_archive_branch="main",
         generate_timeout_seconds=1800,
         astro_build_timeout_seconds=900,
-        github_publish_timeout_seconds=900,
+        download_publish_timeout_seconds=900,
         cloudflare_deploy_timeout_seconds=900,
     )
 
@@ -90,8 +90,8 @@ async def test_pipeline_local_only_success_preserves_stage_order():
         def _build_git_env(self, *_args, **_kwargs):
             return {"GIT_TERMINAL_PROMPT": "0"}
 
-        def _github_snapshot_raw_base(self):
-            return "https://data.example/snapshot-v2"
+        def _download_repo_raw_base(self, _job):
+            return "https://raw.example/data/main"
 
         def _render_commit_message(self, *_args, **_kwargs):
             return "publish main"
@@ -145,7 +145,7 @@ async def test_pipeline_local_only_success_preserves_stage_order():
 
     assert commands == ["Generate Site Data", "Build Astro Site"]
     assert progress == [5, 15, 35, 60, 88, 100]
-    assert output["github_snapshot_published"] is False
+    assert output["direct_downloads_published"] is False
     assert output["raw_archive_published"] is False
     assert output["pages_deployed"] is False
     assert stored_task.output_data == output
@@ -197,5 +197,5 @@ async def test_service_execute_release_task_is_compatibility_facade(monkeypatch)
     assert await service.execute_release_task(task) == {"ok": True}
     assert captured["service"] is service
     assert captured["task"] is task
-    assert captured["runtime"].github_snapshot_branch == "snapshot-v2"
+    assert captured["runtime"].download_repo_branch == "main"
     assert captured["runtime"].raw_archive_branch == "main"
