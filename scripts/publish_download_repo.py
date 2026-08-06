@@ -7,7 +7,6 @@ import argparse
 from datetime import datetime, timezone
 import hashlib
 import json
-import filecmp
 import shutil
 import subprocess
 from pathlib import Path
@@ -28,6 +27,18 @@ DEFAULT_REPO_URL = get_data_share_repo_url()
 DEFAULT_REPO_BRANCH = get_data_share_repo_branch()
 MANAGED_PATHS = ("countries", "diseases", "manifest.json")
 GITHUB_MAX_FILE_BYTES = 100 * 1024 * 1024
+
+
+def files_match(source_path: Path, target_path: Path) -> bool:
+    """Compare file contents without relying on filecmp's stat-based cache."""
+
+    if source_path.stat().st_size != target_path.stat().st_size:
+        return False
+    with source_path.open("rb") as source_file, target_path.open("rb") as target_file:
+        while source_chunk := source_file.read(1024 * 1024):
+            if source_chunk != target_file.read(len(source_chunk)):
+                return False
+        return not target_file.read(1)
 
 
 def run_git(args: list[str], cwd: Path) -> str:
@@ -151,7 +162,7 @@ def sync_managed_assets(source_dir: Path, workdir: Path) -> dict[str, int]:
             relative = source_path.relative_to(source_dir)
             target_path = workdir / relative
             expected.add(target_path)
-            if target_path.exists() and filecmp.cmp(source_path, target_path, shallow=False):
+            if target_path.exists() and files_match(source_path, target_path):
                 continue
             target_path.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source_path, target_path)
@@ -166,9 +177,7 @@ def sync_managed_assets(source_dir: Path, workdir: Path) -> dict[str, int]:
 
     source_manifest = source_dir / "manifest.json"
     target_manifest = workdir / "manifest.json"
-    if not target_manifest.exists() or not filecmp.cmp(
-        source_manifest, target_manifest, shallow=False
-    ):
+    if not target_manifest.exists() or not files_match(source_manifest, target_manifest):
         shutil.copy2(source_manifest, target_manifest)
         copied += 1
     return {"copied": copied, "removed": removed}
