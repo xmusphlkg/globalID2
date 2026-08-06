@@ -1,7 +1,8 @@
 """Shared public-information disclaimers for disease knowledge profiles.
 
-Content generation intentionally lives only in the evidence-grounded AI
-pipeline.  There is no deterministic prose or catalogue-content fallback.
+Content comes from either the evidence-grounded AI pipeline or an explicitly
+reviewed, source-cited profile bundle. There is no heuristic prose or
+catalogue-content fallback.
 """
 
 DISCLAIMER_EN = (

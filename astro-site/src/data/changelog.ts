@@ -22,6 +22,75 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.4.4',
+    date: '2026-08-06',
+    titleEn: 'Accurate reporting periods and stronger source coverage',
+    titleZh: '更准确的报告周期与更完善的知识来源',
+    summaryEn:
+      'This release aligns surveillance records by their real weekly, monthly, or annual reporting period, restores population denominators automatically, and improves discovery of reviewed official disease sources.',
+    summaryZh:
+      '本次更新按真实的周、月或年报告周期对齐监测记录，自动恢复人口分母数据，并改进经审核官方疾病来源的发现能力。',
+    sections: [
+      {
+        kind: 'new',
+        labelEn: 'New',
+        labelZh: '新增',
+        items: [
+          {
+            en: 'Added a shared reporting-period model that identifies weekly records by ISO week, monthly records by month, and annual records by year.',
+            zh: '新增共享报告周期模型，分别使用 ISO 周、月份和年份识别周报、月报与年报记录。',
+          },
+          {
+            en: 'Added configurable, reviewed disease-source hints with aliases and prioritized official URLs.',
+            zh: '新增可配置、经审核的疾病来源提示，支持别名与优先官方链接。',
+          },
+          {
+            en: 'Added regression tests for reporting-period alignment, population imports, site projections, and disease knowledge source hints.',
+            zh: '新增报告周期对齐、人口数据导入、站点投影和疾病知识来源提示的回归测试。',
+          },
+        ],
+      },
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        items: [
+          {
+            en: 'Aligned registry and legacy surveillance layers by source reporting period instead of requiring identical calendar dates.',
+            zh: '将新版序列与旧版监测层按来源报告周期对齐，不再要求日历日期完全相同。',
+          },
+          {
+            en: 'Site generation now idempotently restores UN World Population Prospects denominators after database or country rebuilds.',
+            zh: '站点生成现会在数据库或国家数据重建后幂等恢复联合国世界人口展望分母数据。',
+          },
+          {
+            en: 'Disease knowledge discovery now uses ontology labels, local source labels and codes, configured aliases, and reviewed official entry pages.',
+            zh: '疾病知识来源发现现会结合本体标签、本地来源名称与编码、配置别名及经审核官方入口页。',
+          },
+        ],
+      },
+      {
+        kind: 'fixed',
+        labelEn: 'Fixed',
+        labelZh: '修复',
+        items: [
+          {
+            en: 'Prevented duplicate or missing points when the same surveillance week is represented by different dates, such as Saturday and Sunday.',
+            zh: '修复同一监测周使用不同日期（如周六与周日）表示时可能出现的重复或缺失数据点。',
+          },
+          {
+            en: 'Preserved legacy deaths, recoveries, mortality rates, and coverage gaps without reintroducing duplicate case counts.',
+            zh: '在不重复计算病例数的前提下，保留旧版死亡、康复、病死率与覆盖缺口数据。',
+          },
+          {
+            en: 'Prevented incidence calculations from losing population denominators when country identifiers are recreated during rebuilds.',
+            zh: '修复重建过程中国家标识重新生成后，发病率计算可能丢失人口分母的问题。',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '0.4.3',
     date: '2026-08-05',
     titleEn: 'Resilient archives and React 19 readiness',

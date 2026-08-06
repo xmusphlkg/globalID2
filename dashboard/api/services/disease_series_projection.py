@@ -30,6 +30,7 @@ from src.core.disease_cutover import (
     DiseaseReadPolicy,
     get_disease_cutover_config,
 )
+from src.core.reporting_period import report_period_key, selected_series_granularity
 from src.domain.country import Country
 from src.domain.disease import Disease
 from src.domain.disease_ontology import (
@@ -66,7 +67,7 @@ def _get(item: object, name: str, default: Any = None) -> Any:
     return getattr(item, name, default)
 
 
-def _period_key(value: object) -> str:
+def _period_key(value: object, temporal_granularity: str | None = None) -> str:
     """Return the timezone-stable public report-date identity for overlays.
 
     Legacy rows historically use noon UTC while series backfills use midnight
@@ -75,15 +76,7 @@ def _period_key(value: object) -> str:
     static export's UTC calendar date.
     """
 
-    if isinstance(value, datetime):
-        normalized = value
-        if normalized.tzinfo is None:
-            normalized = normalized.replace(tzinfo=timezone.utc)
-        else:
-            normalized = normalized.astimezone(timezone.utc)
-        return normalized.date().isoformat()
-    text = str(value or "")
-    return text[:10] if len(text) >= 10 else text
+    return report_period_key(value, temporal_granularity)
 
 
 def _count(value: object) -> int | float:
@@ -266,6 +259,9 @@ def project_series_first_records(
         return sorted(projected, key=lambda row: _period_key(row.get("time"))), context
 
     selected_codes, projection_policy, loss_risk = _select_series(all_source_series)
+    period_granularity = selected_series_granularity(
+        all_source_series, selected_codes
+    )
     selected = [
         row
         for row in eligible
@@ -274,7 +270,7 @@ def project_series_first_records(
     selected_by_period: dict[str, list[Mapping[str, Any]]] = defaultdict(list)
     seen_source_periods: set[tuple[str, str]] = set()
     for row in selected:
-        period = _period_key(row.get("time"))
+        period = _period_key(row.get("time"), period_granularity)
         identity = (str(row.get("series_code")), period)
         if identity in seen_source_periods:
             raise RuntimeError(
@@ -322,7 +318,11 @@ def project_series_first_records(
             "confidence_score": None,
         }
 
-    legacy_by_period = {_period_key(row.get("time")): row for row in legacy}
+    legacy_by_period: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for row in legacy:
+        legacy_by_period[
+            _period_key(row.get("time"), period_granularity)
+        ].append(row)
     legacy_periods = set(legacy_by_period)
     registry_periods = set(registry)
     overlap = legacy_periods & registry_periods
@@ -354,6 +354,7 @@ def project_series_first_records(
         "selected_series_codes": sorted(selected_codes),
         "available_series_count": len(all_source_series),
         "source_series": all_source_series,
+        "period_granularity": period_granularity,
         "fallback_reason": fallback_reason,
         "metric_layers": {
             "cases": data_layer,
@@ -388,20 +389,30 @@ def project_series_first_records(
 
     projected: list[dict[str, Any]] = []
     for period, row in registry.items():
-        legacy_row = legacy_by_period.get(period)
-        if legacy_row and safely_aligned_metrics:
+        legacy_rows = legacy_by_period.get(period) or []
+        if legacy_rows and safely_aligned_metrics:
+            exact_report_date = _period_key(row.get("time"))
+            legacy_row = next(
+                (
+                    item
+                    for item in legacy_rows
+                    if _period_key(item.get("time")) == exact_report_date
+                ),
+                max(legacy_rows, key=lambda item: _period_key(item.get("time"))),
+            )
             row["deaths"] = legacy_row.get("deaths")
             row["recoveries"] = legacy_row.get("recoveries")
             row["mortality_rate"] = legacy_row.get("mortality_rate")
         projected.append(_decorate(row, data_layer=SERIES_DATA_LAYER, context=context))
     for period in gaps:
-        projected.append(
+        projected.extend(
             _decorate(
-                legacy_by_period[period],
+                legacy_row,
                 data_layer=LEGACY_GAP_FILL_DATA_LAYER,
                 context=context,
                 gap_fill_reason="registry_period_missing",
             )
+            for legacy_row in legacy_by_period[period]
         )
     return sorted(projected, key=lambda row: _period_key(row.get("time"))), context
 
@@ -651,7 +662,14 @@ def _cutover_metadata(
         blocked_reasons.append("no_complete_registered_series_periods")
 
     shadow = (
-        _compare_legacy_and_registry(legacy_records, strict_records)
+        _compare_legacy_and_registry(
+            legacy_records,
+            strict_records,
+            temporal_granularity=(
+                strict_metadata.get("period_granularity")
+                or metadata.get("period_granularity")
+            ),
+        )
         if policy.shadow_compare and strict_records
         else None
     )
@@ -670,14 +688,16 @@ def _cutover_metadata(
 def _compare_legacy_and_registry(
     legacy_records: Sequence[object],
     registry_records: Sequence[Mapping[str, Any]],
+    *,
+    temporal_granularity: str | None = None,
 ) -> dict[str, Any]:
     legacy_by_period = {
-        _period_key(_get(record, "time")): _count(_get(record, "cases"))
+        _period_key(_get(record, "time"), temporal_granularity): _count(_get(record, "cases"))
         for record in legacy_records
         if _get(record, "time") is not None
     }
     registry_by_period = {
-        _period_key(record.get("time")): _count(record.get("cases"))
+        _period_key(record.get("time"), temporal_granularity): _count(record.get("cases"))
         for record in registry_records
         if record.get("time") is not None
     }

@@ -9,6 +9,7 @@ from .catalogue import (
     should_generate_public_disease_page,
 )
 from .llm_brief_generator import AIDiseaseBriefGenerator
+from .reviewed_brief_generator import ReviewedDiseaseBriefGenerator
 from .profile_schema import (
     KnowledgeProfileSchema,
     attach_profile_schema,
@@ -30,6 +31,7 @@ from .sources import DiseaseKnowledgeFetcher, SourceCandidate
 
 __all__ = [
     "AIDiseaseBriefGenerator",
+    "ReviewedDiseaseBriefGenerator",
     "DiseaseKnowledgeFetcher",
     "EvidenceFragment",
     "EvidenceManifest",

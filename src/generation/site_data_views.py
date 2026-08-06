@@ -108,6 +108,7 @@ def _series_provenance_fields(records: list[dict]) -> dict:
         "source_series": context.get("source_series") or [],
         "coverage_status": context.get("coverage_status"),
         "coverage_policy": context.get("coverage_policy"),
+        "period_granularity": context.get("period_granularity"),
         "legacy_gap_fill_count": context.get("legacy_gap_fill_count") or 0,
         "coverage_ratio_against_legacy": context.get("coverage_ratio_against_legacy"),
         "data_provenance": {
