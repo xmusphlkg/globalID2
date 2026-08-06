@@ -40,23 +40,23 @@ const features = [
   {
     icon: 'M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z',
     color: 'teal',
-    titleEn: 'Real-time Surveillance',   titleZh: '实时监测',
-    descEn:  'Automated scrapers refresh data monthly as official bulletins are published.',
-    descZh:  '自动爬虫随官方公报发布每月刷新数据。',
+    titleEn: 'Official-source data',   titleZh: '官方来源数据',
+    descEn:  'Data is updated according to the publication schedule of each official source.',
+    descZh:  '数据按照各官方来源的发布频率更新。',
   },
   {
     icon: 'M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5',
     color: 'blue',
-    titleEn: 'AI-powered Analysis',  titleZh: 'AI 驱动分析',
-    descEn:  'Large language models generate bilingual epidemiological reports with trend insights.',
-    descZh:  '大型语言模型生成含趋势洞察的中英双语流行病学报告。',
+    titleEn: 'Monitoring summaries',  titleZh: '监测摘要',
+    descEn:  'AI-assisted bilingual summaries help readers review reported trends and source context.',
+    descZh:  'AI 辅助生成双语摘要，帮助阅读报告趋势与来源背景。',
   },
   {
     icon: 'M10.5 6a7.5 7.5 0 107.5 7.5h-7.5V6z M13.5 10.5H21A7.5 7.5 0 0013.5 3v7.5z',
     color: 'amber',
     titleEn: 'Interactive Charts', titleZh: '交互图表',
-    descEn:  'Line charts, bar charts, and heatmaps reveal seasonal patterns and outbreak signals.',
-    descZh:  '折线图、柱状图和热力图揭示季节规律与疫情信号。',
+    descEn:  'Line charts, bar charts, and heatmaps support trend and seasonality review.',
+    descZh:  '折线图、柱状图和热力图帮助查看趋势与季节性。',
   },
   {
     icon: 'M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 2.625c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125m16.5 5.625c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125',
@@ -70,7 +70,7 @@ const features = [
 
 <BaseLayout
   title="Global Infectious Disease Surveillance"
-  description="Track 150+ infectious diseases across countries with official-source surveillance data, bilingual reports, and interactive outbreak charts."
+  description="Browse official-source infectious disease data, trends, and monitoring summaries across countries and regions."
 >
 <div class="home-page">
 
@@ -212,9 +212,8 @@ const features = [
         </h1>
 
         <!-- Subtext -->
-        <p class="home-hero-copy text-lg leading-relaxed max-w-xl mb-10" data-lang-en="Track 150+ infectious diseases across countries with structured archives, bilingual reports, and publication-ready charts." data-lang-zh="追踪全球多国 150+ 种传染病，提供结构化归档、双语报告与可直接发表的图表。">
-          Track 150+ infectious diseases across countries with structured archives,
-          bilingual reports, and publication-ready charts.
+        <p class="home-hero-copy text-lg leading-relaxed max-w-xl mb-10" data-lang-en={`Browse ${meta.total_countries ?? '—'} countries and regions and ${meta.total_diseases ?? '—'} infectious diseases with source links, trends, and bilingual monitoring summaries.`} data-lang-zh={`浏览 ${meta.total_countries ?? '—'} 个国家/地区、${meta.total_diseases ?? '—'} 种传染病的来源数据、趋势图与双语监测摘要。`}>
+          Browse {meta.total_countries ?? '—'} countries and regions and {meta.total_diseases ?? '—'} infectious diseases with source links, trends, and bilingual monitoring summaries.
         </p>
 
         <!-- CTAs -->
@@ -275,7 +274,7 @@ const features = [
             </svg>
           </div>
           <div>
-            <div class="home-floating-label text-xs mb-0.5" data-lang-en="Tracking this month" data-lang-zh="本月追踪">Tracking this month</div>
+            <div class="home-floating-label text-xs mb-0.5" data-lang-en="Current coverage" data-lang-zh="当前覆盖">Current coverage</div>
             <div class="home-floating-text font-bold">
               <span class="text-teal-400">{meta.total_diseases ?? 124}</span>
               <span class="home-floating-copy text-sm font-normal ml-1.5" data-lang-en="diseases across" data-lang-zh="种疾病覆盖">diseases across</span>
@@ -341,7 +340,7 @@ const features = [
       <p class="home-section-copy text-sm mt-1" data-lang-en="Categorised by pathogen type" data-lang-zh="按病原体类型分类">Categorised by pathogen type</p>
     </div>
     <a href="/diseases/" class="home-section-link inline-flex items-center gap-1 text-sm transition-colors">
-      <span data-lang-en="Browse all 150+ →" data-lang-zh="浏览全部 150+ →">Browse all 150+ →</span>
+      <span data-lang-en="Browse all →" data-lang-zh="浏览全部 →">Browse all →</span>
     </a>
   </div>
 
@@ -385,7 +384,7 @@ const features = [
     <div class="home-section-header flex items-center justify-between mb-8">
       <div>
         <h2 class="section-heading" data-lang-en="Latest Reports" data-lang-zh="最新报告">Latest Reports</h2>
-        <p class="home-section-copy text-sm mt-1" data-lang-en="AI-generated epidemiological analyses" data-lang-zh="AI 生成的流行病学分析">AI-generated epidemiological analyses</p>
+        <p class="home-section-copy text-sm mt-1" data-lang-en="AI-assisted monitoring summaries" data-lang-zh="AI 辅助生成的监测摘要">AI-assisted monitoring summaries</p>
       </div>
       <a href={`/countries/${(reports[0]?.country_code ?? 'cn').toLowerCase()}/reports/`} class="home-section-link inline-flex items-center gap-1 text-sm transition-colors">
         <span data-lang-en="View all" data-lang-zh="查看全部">View all</span>

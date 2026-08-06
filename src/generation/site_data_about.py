@@ -494,13 +494,13 @@ def build_about_snapshot(
         "features": [
             {
                 "icon": "M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z",
-                "title_en": "Database-backed builds",
-                "title_zh": "数据库驱动构建",
+                "title_en": "Source update schedules",
+                "title_zh": "数据更新频率",
                 "description_en": (
-                    f"Official feeds currently update on {cadence_summary_en.lower()} cadences, and "
-                    "every site build regenerates the public snapshot from PostgreSQL."
+                    "Official sources publish on different schedules. The site is refreshed when "
+                    "a new public data snapshot is released."
                 ),
-                "description_zh": f"当前官方来源按{cadence_summary_zh}节奏更新，每次站点构建都会从 PostgreSQL 重建公开快照。",
+                "description_zh": "官方来源的发布频率不同；每次发布新的公开数据快照时，网站都会同步更新。",
                 "accent": "brand",
             },
             {

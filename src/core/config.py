@@ -12,11 +12,15 @@ from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PROJECT_ENV_FILE = PROJECT_ROOT / ".env"
+
+
 class _BaseEnvSettings(BaseSettings):
     """Shared base for all sub-settings that read from .env."""
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=PROJECT_ENV_FILE,
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
@@ -373,7 +377,7 @@ class AppSettings(BaseSettings):
     """应用配置"""
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=PROJECT_ENV_FILE,
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",

@@ -122,7 +122,7 @@ const countryDataUrl = countryDownload?.site_json_path ?? `/site-data/countries/
   title={countryName}
   description={`Disease surveillance data for ${countryName}`}
   breadcrumbs={[
-    { label: 'Countries', labelZh: '国家', href: '/countries/' },
+    { label: 'Countries and Regions', labelZh: '国家/地区', href: '/countries/' },
     { label: countryName, labelZh: countryNameZh },
   ]}
 >
@@ -224,8 +224,8 @@ const countryDataUrl = countryDownload?.site_json_path ?? `/site-data/countries/
 
     {stats.length > 0 && (
         <section class="figure-panel">
-            <h2 class="figure-title" data-lang-en="Snapshot | Core surveillance indicators for this country." data-lang-zh="概览 | 该国家核心监测指标。">
-              Snapshot | Core surveillance indicators for this country.
+            <h2 class="figure-title" data-lang-en="Key surveillance indicators" data-lang-zh="核心监测指标">
+              Key surveillance indicators
             </h2>
           <div class="mt-5">
             <StatBar stats={stats} />
@@ -234,8 +234,8 @@ const countryDataUrl = countryDownload?.site_json_path ?? `/site-data/countries/
       )}
 
     <section class="figure-panel">
-        <h2 class="figure-title" data-lang-en="Figure 1 | Epidemic curve for the top 10 diseases (weekly-equivalent normalized cases)." data-lang-zh="图 1 | 前 10 种疾病流行曲线（周等价标准化病例）。">
-          Figure 1 | Epidemic curve for the top 10 diseases (weekly-equivalent normalized cases).
+        <h2 class="figure-title" data-lang-en="Case trends by disease" data-lang-zh="疾病病例趋势">
+          Case trends by disease
         </h2>
       <div class="mt-5">
         {countryData?.disease_series ? (
@@ -247,14 +247,14 @@ const countryDataUrl = countryDownload?.site_json_path ?? `/site-data/countries/
             sourceMeta={chartSourceMeta}
           />
         ) : (
-          <div class="card p-8 text-center text-[rgb(var(--text-muted))]">No time-series data available</div>
+          <div class="card p-8 text-center text-[rgb(var(--text-muted))]" data-lang-en="No trend data is available for this view." data-lang-zh="此视图暂无可展示的趋势数据。">No trend data is available for this view.</div>
         )}
       </div>
     </section>
 
     <section class="figure-panel">
-        <h2 class="figure-title" data-lang-en="Figure 2 | Disease-month heatmap across the full coverage period (log-scaled case intensity)." data-lang-zh="图 2 | 全覆盖期疾病-月份热图（对数病例强度）。">
-          Figure 2 | Disease-month heatmap across the full coverage period (log-scaled case intensity).
+        <h2 class="figure-title" data-lang-en="Seasonal patterns" data-lang-zh="季节性变化">
+          Seasonal patterns
         </h2>
       <div class="mt-5">
         {(countryData?.disease_series || countryData?.heatmap?.z?.length) ? (
@@ -265,14 +265,14 @@ const countryDataUrl = countryDownload?.site_json_path ?? `/site-data/countries/
             sourceMeta={chartSourceMeta}
           />
         ) : (
-          <div class="card p-8 text-center text-[rgb(var(--text-muted))]">No heatmap data available</div>
+          <div class="card p-8 text-center text-[rgb(var(--text-muted))]" data-lang-en="No heatmap data is available for this view." data-lang-zh="此视图暂无可展示的热图数据。">No heatmap data is available for this view.</div>
         )}
       </div>
     </section>
 
     <section class="figure-panel">
-        <h2 class="figure-title" data-lang-en="Table 1 | Disease burden comparison with reported totals and latest observations." data-lang-zh="表 1 | 疾病负担对比（含报告总量与最新观测值）。">
-          Table 1 | Disease burden comparison with reported totals and latest observations.
+        <h2 class="figure-title" data-lang-en="Disease comparison" data-lang-zh="疾病数据对比">
+          Disease comparison
         </h2>
       <div class="mt-5">
         {diseaseRows.length > 0 ? (
@@ -283,7 +283,7 @@ const countryDataUrl = countryDownload?.site_json_path ?? `/site-data/countries/
             dataUrl={countryDataUrl}
           />
         ) : (
-          <div class="card p-8 text-center text-[rgb(var(--text-muted))]">No disease data available</div>
+          <div class="card p-8 text-center text-[rgb(var(--text-muted))]" data-lang-en="No disease data is available for this view." data-lang-zh="此视图暂无可展示的疾病数据。">No disease data is available for this view.</div>
         )}
       </div>
     </section>
@@ -292,8 +292,8 @@ const countryDataUrl = countryDownload?.site_json_path ?? `/site-data/countries/
       <section class="figure-panel">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between mb-6">
           <div>
-            <h2 class="figure-title" data-lang-en="Recent Reports | Latest machine-generated analyses for this country." data-lang-zh="近期报告 | 该国家最新自动化生成分析。">
-              Recent Reports | Latest machine-generated analyses for this country.
+            <h2 class="figure-title" data-lang-en="Recent monitoring summaries" data-lang-zh="近期监测摘要">
+              Recent monitoring summaries
             </h2>
           </div>
           <a href={`/countries/${country}/reports/`} class="text-sm font-semibold text-brand-500 hover:text-brand-400 transition-colors">
