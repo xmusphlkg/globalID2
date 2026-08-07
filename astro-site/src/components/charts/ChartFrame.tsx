@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import type { ChartSourceMeta } from '../../utils/chartMeta';
 
 type RenderablePanel = ReactNode | ((state: { isFullscreen: boolean }) => ReactNode);
@@ -7,24 +7,24 @@ type RenderablePanel = ReactNode | ((state: { isFullscreen: boolean }) => ReactN
 interface Props {
   lang: 'en' | 'zh';
   toolbar?: ReactNode;
-  note?: ReactNode;
   chart: RenderablePanel;
   table: RenderablePanel;
   legend?: ReactNode;
   sidebar?: ReactNode;
   fullscreenSidebar?: ReactNode;
+  stageHeight?: number;
   sourceMeta?: ChartSourceMeta | null;
 }
 
 export default function ChartFrame({
   lang,
   toolbar,
-  note,
   chart,
   table,
   legend,
   sidebar,
   fullscreenSidebar,
+  stageHeight,
   sourceMeta = null,
 }: Props) {
   const [mode, setMode] = useState<'chart' | 'table'>('chart');
@@ -80,6 +80,9 @@ export default function ChartFrame({
     hasWideAside ? 'chart-stage-with-wide-aside' : '',
   ].filter(Boolean).join(' ');
   const asideClassName = `chart-aside ${hasWideAside ? 'chart-aside-wide' : ''}`;
+  const stageStyle = stageHeight
+    ? ({ '--chart-stage-height': `${stageHeight}px` } as CSSProperties)
+    : undefined;
   const renderPanel = (panel: RenderablePanel) => (
     typeof panel === 'function' ? panel({ isFullscreen }) : panel
   );
@@ -121,10 +124,8 @@ export default function ChartFrame({
         </div>
       </div>
 
-      {note && <div className="chart-note">{note}</div>}
-
       {mode === 'chart' ? (
-        <div className={stageClassName}>
+        <div className={stageClassName} style={stageStyle}>
           <div className="chart-canvas">{renderPanel(chart)}</div>
           {activeAside && <aside className={asideClassName}>{activeAside}</aside>}
         </div>

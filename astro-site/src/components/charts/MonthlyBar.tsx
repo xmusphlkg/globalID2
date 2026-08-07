@@ -94,10 +94,6 @@ export default function MonthlyBar({
     </>
   );
 
-  const note = lang === 'zh'
-    ? '按自然月比较不同年份的总量，用于识别季节性和异常峰值。可在右侧快速切换年份，全屏模式提供完整筛选信息。'
-    : 'Compare calendar-month totals across years to reveal seasonality and unusual peaks. Use the year selector on the right; full-screen adds detailed filtering.';
-
   const legend = (
     <div className="chart-legend">
       {state.activeYearSummaries.map((summary) => (
@@ -176,7 +172,6 @@ export default function MonthlyBar({
     <ChartFrame
       lang={lang}
       toolbar={toolbar}
-      note={note}
       chart={({ isFullscreen }) => (
         <MonthlyBarPlot
           summaries={state.activeYearSummaries}
@@ -190,6 +185,7 @@ export default function MonthlyBar({
       legend={legend}
       sidebar={compactSelector}
       fullscreenSidebar={fullSelector}
+      stageHeight={height}
       sourceMeta={sourceMeta}
     />
   );

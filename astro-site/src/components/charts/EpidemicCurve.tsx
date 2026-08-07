@@ -7,7 +7,6 @@ import { useChartLanguage, useChartTheme } from './chartPreferences';
 import { useCountryDataset } from './useCountryDataset';
 import { useEpidemicCurveState } from './useEpidemicCurveState';
 import {
-  ANIMATION_POINT_LIMIT,
   METRIC_LABELS,
   buildTableRows,
   findLatestValue,
@@ -111,16 +110,6 @@ export default function EpidemicCurve({
     () => new Map(lines.map((line) => [line.id, line.color])),
     [lines]
   );
-  const activePointCount = useMemo(
-    () => lines.reduce((total, line) => total + line.values.length, 0),
-    [lines]
-  );
-  const incidenceFallbackPoints = useMemo(() => (
-    curveState.activeIds.reduce((total, id) => (
-      total + (series[id]?.incidence_sources ?? []).filter((source) => source === 'original_db').length
-    ), 0)
-  ), [curveState.activeIds, series]);
-
   if (remoteDataset.loadError && Object.keys(series).length === 0) {
     return (
       <div className="chart-shell flex min-h-[160px] flex-col items-center justify-center gap-3 text-slate-500 text-sm" role="alert">
@@ -174,49 +163,6 @@ export default function EpidemicCurve({
       {curveState.dateWindow && (
         <span className="chart-chip">
           {curveState.dateWindow.startDate} → {curveState.dateWindow.endDate}
-        </span>
-      )}
-    </>
-  );
-
-  const entityLabel = entityType === 'country'
-    ? { zh: '国家', en: 'country' }
-    : { zh: '疾病', en: 'disease' };
-  const note = (
-    <>
-      {curveState.metric === 'weekly_equiv_cases'
-        ? (lang === 'zh'
-            ? '默认指标为周等价病例数，用于减弱不同报告频率导致的比较偏差。'
-            : 'Default metric uses weekly-equivalent cases to reduce comparability bias from differing reporting frequencies.')
-        : curveState.metric === 'incidence_rates'
-          ? (lang === 'zh'
-              ? '发病率按每 10 万人口标准化，适合进行跨国家或跨时期强度比较。'
-              : 'Incidence rate is standardised per 100k population for cross-country and cross-period comparisons.')
-          : (lang === 'zh'
-              ? '当前视图显示原始报告值。'
-              : 'This view shows raw reported values.')}
-      {curveState.activeIds.length > curveState.defaultIds.length && (
-        <span>
-          {' '}
-          {lang === 'zh'
-            ? `当前已选择 ${curveState.activeIds.length} 条${entityLabel.zh}序列；可在右侧筛选器中收窄范围。`
-            : `You currently have ${curveState.activeIds.length} ${entityLabel.en} series selected; narrow the selection in the sidebar if needed.`}
-        </span>
-      )}
-      {activePointCount > ANIMATION_POINT_LIMIT && (
-        <span>
-          {' '}
-          {lang === 'zh'
-            ? '长时间序列已启用保峰抽样并关闭动画，以保持交互流畅；表格仍保留完整数据。'
-            : 'Long series use peak-preserving sampling without animation for responsive interaction; the table keeps the full data.'}
-        </span>
-      )}
-      {curveState.metric === 'incidence_rates' && incidenceFallbackPoints > 0 && (
-        <span>
-          {' '}
-          {lang === 'zh'
-            ? `包含 ${incidenceFallbackPoints} 个回退到原始数据库发病率的时间点。`
-            : `Includes ${incidenceFallbackPoints} fallback points that use the original database incidence rate.`}
         </span>
       )}
     </>
@@ -316,7 +262,6 @@ export default function EpidemicCurve({
     <ChartFrame
       lang={lang}
       toolbar={toolbar}
-      note={note}
       chart={({ isFullscreen }) => (
         <EpidemicCurvePlot
           lines={lines}
@@ -334,6 +279,7 @@ export default function EpidemicCurve({
       legend={legend}
       sidebar={compactSelector}
       fullscreenSidebar={fullSelector}
+      stageHeight={height}
       sourceMeta={sourceMeta}
     />
   );

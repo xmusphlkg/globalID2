@@ -22,6 +22,63 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.4.5',
+    date: '2026-08-07',
+    titleEn: 'Cleaner charts and smoother time navigation',
+    titleZh: '更清爽的图表与更顺畅的时间导航',
+    summaryEn:
+      'This release streamlines chart presentation, makes epidemic-curve time navigation faster and easier to control, and keeps charts and selectors precisely aligned across standard and full-screen views.',
+    summaryZh:
+      '本次更新精简图表呈现，提升流行曲线时间范围操作的速度与易用性，并让普通及全屏模式下的图表与筛选器保持精确对齐。',
+    sections: [
+      {
+        kind: 'new',
+        labelEn: 'New',
+        labelZh: '新增',
+        items: [
+          {
+            en: 'Added a dedicated reset control beside the epidemic-curve time slider to restore the complete reporting period in one click.',
+            zh: '在流行曲线时间控制条旁新增重置按钮，可一键恢复完整报告周期。',
+          },
+        ],
+      },
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        items: [
+          {
+            en: 'Redesigned epidemic-curve time navigation with clearer drag handles, live visual feedback, smoother state synchronization, range panning, brush selection, and deliberate Ctrl-wheel zooming.',
+            zh: '重新设计流行曲线时间导航，提供更清晰的拖拽手柄、实时视觉反馈、更顺畅的状态同步、区间平移、框选以及需按住 Ctrl 的滚轮缩放。',
+          },
+          {
+            en: 'Removed redundant chart instructions and implementation notes while retaining actionable controls, legends, dates, and data summaries.',
+            zh: '移除冗余的图表操作说明和实现提示，同时保留可操作控件、图例、日期及数据摘要。',
+          },
+          {
+            en: 'Unified the visual alignment of chart plotting areas, time controls, reset actions, and selector panels in standard and full-screen layouts.',
+            zh: '统一普通与全屏布局中绘图区、时间控件、重置操作和筛选面板的视觉对齐。',
+          },
+        ],
+      },
+      {
+        kind: 'fixed',
+        labelEn: 'Fixed',
+        labelZh: '修复',
+        items: [
+          {
+            en: 'Removed the extra 60-pixel space below monthly pattern charts that occurred when the year selector made the grid row taller than the chart.',
+            zh: '修复年份筛选器将网格行撑高后，月度变化图下方多出 60 像素空白的问题。',
+          },
+          {
+            en: 'Corrected bottom-edge mismatches between standard-view charts, scrollable selectors, and the epidemic-curve time slider.',
+            zh: '修复普通模式下图表、可滚动筛选器与流行曲线时间控制条底边不一致的问题。',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '0.4.4',
     date: '2026-08-06',
     titleEn: 'Accurate reporting periods and stronger source coverage',

@@ -440,10 +440,6 @@ export default function DiseaseHeatmap({ data = null, series: initialSeries, dat
     </>
   );
 
-  const note = lang === 'zh'
-    ? '图例改为左下角横向分段（breaks）样式；y 轴标签区域已压缩并贴左，横向滚动仍只作用于热图主体与 x 轴。'
-    : 'Legend now uses a compact horizontal segmented (breaks) style at the lower-left; the y-axis label area is tightened and left-aligned, while horizontal scrolling still affects only the heatmap body and x-axis.';
-
   const legend = (
     <div className="pointer-events-none absolute bottom-1 left-1 z-[2]">
       <div className="rounded-none border border-[rgb(var(--border)/0.7)] bg-[rgb(var(--surface)/0.94)] px-2 py-1.5">
@@ -549,7 +545,6 @@ export default function DiseaseHeatmap({ data = null, series: initialSeries, dat
     <ChartFrame
       lang={lang}
       toolbar={toolbar}
-      note={note}
       chart={({ isFullscreen }) => (
         <div
           className="grid min-h-0 w-full items-stretch gap-2"
