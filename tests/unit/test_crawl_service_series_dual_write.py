@@ -220,6 +220,47 @@ async def test_us_registered_only_selection_requires_resident_and_total_scopes(
 
 
 @pytest.mark.asyncio
+async def test_series_only_save_surfaces_registry_prefilter_counts(monkeypatch) -> None:
+    rows = [{"Cases": "2"}, {"Cases": ""}, {"Cases": "4"}]
+
+    class Updater:
+        country_code = "CA-ON"
+        ontology_source_id = "SRC_CA_ON_PHO_IDTO"
+        series_geography_key = "country:CA-ON:national"
+        series_registered_rows_only = True
+
+    class Store:
+        def select_registry_rows(self, source_rows, *_args, **_kwargs):
+            return SimpleNamespace(
+                rows=source_rows[:1],
+                skipped_unregistered=1,
+                skipped_missing=1,
+            )
+
+        async def save_rows(self, *_args, **_kwargs):
+            return SimpleNamespace(
+                upserted=1,
+                skipped_unmatched=0,
+                skipped_ambiguous=0,
+                skipped_invalid=0,
+                skipped_registry_not_synced=0,
+                quality_report=SimpleNamespace(
+                    issues=(), highest_severity=None, to_dict=lambda: {"issues": []}
+                ),
+            )
+
+    monkeypatch.setattr(
+        "src.services.crawl_service.SeriesObservationStore", lambda: Store()
+    )
+
+    result = await CrawlService._save_series_rows(object(), Updater(), rows)
+
+    assert result.upserted == 1
+    assert result.skipped_unregistered == 1
+    assert result.skipped_missing == 1
+
+
+@pytest.mark.asyncio
 async def test_us_registered_only_selection_blocks_missing_resident_scope(
     monkeypatch,
 ) -> None:

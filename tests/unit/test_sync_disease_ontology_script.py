@@ -18,6 +18,7 @@ from scripts.sync_disease_ontology import (
     _series_geography_migration_key,
     build_plan,
 )
+from src.ontology import load_disease_ontology
 
 
 def test_us_nndss_total_geography_remap_is_source_and_evidence_scoped() -> None:
@@ -37,6 +38,24 @@ def test_us_nndss_total_geography_remap_is_source_and_evidence_scoped() -> None:
     assert _series_geography_migration_key(remap).startswith(
         "series_geography:SRC_US_NNDSS:"
     )
+
+
+def test_ontario_geography_remap_is_idempotent_and_preserves_source_geocode() -> None:
+    remap = next(
+        item
+        for item in SERIES_GEOGRAPHY_REMAPS
+        if item.source_system == "SRC_CA_ON_PHO_IDTO"
+    )
+
+    assert remap.series_pattern == "SER_CA_ON_PHO_IDTO_%"
+    assert remap.old_key == "country:CA:subdivision:CA-ON"
+    assert remap.new_key == "country:CA-ON:national"
+    assert remap.evidence_fields == ("Geocode",)
+    assert remap.evidence_values == ("CA-ON",)
+    selector = _series_geography_filter_sql(remap, alias="old_observation")
+    assert "old_series.source_system = :source_system" in selector
+    assert "old_observation.raw_data ->> 'Geocode'" in selector
+    assert "old_observation.geography_key = :old_key" in selector
 
 
 def test_managed_mapping_rows_are_unique_and_keep_hiv_aids_distinct() -> None:
@@ -74,6 +93,20 @@ def test_managed_mapping_rows_are_unique_and_keep_hiv_aids_distinct() -> None:
     assert us_hiv["series_id"] == "SER_US_NHSS_HIV_ANNUAL"
 
 
+def test_ontario_mapping_rows_use_filename_jurisdiction_scope() -> None:
+    rows = [
+        row
+        for row in _managed_mapping_rows(_catalogue_ids())
+        if row["source_id"] == "SRC_CA_ON_PHO_IDTO"
+    ]
+
+    assert rows
+    assert {row["country_code"] for row in rows} == {"CA-ON"}
+    assert {row["metadata"]["origin"] for row in rows} == {
+        "configs/mapping/ca-on.csv"
+    }
+
+
 def test_partition_br_ntra_rows_removes_invalid_row_count_projection() -> None:
     raw_rows = [
         {"DiseaseCode": "NTRA", "Cases": "29"},
@@ -101,7 +134,9 @@ def test_sync_plan_declares_br_ntra_semantic_repair() -> None:
     plan = build_plan()
     repair = plan["semantic_repairs"][0]
 
-    assert plan["release_version"] == "2026.08.2"
+    assert plan["release_version"] == load_disease_ontology().to_dict()[
+        "release_version"
+    ]
     assert repair["country_code"] == "BR"
     assert repair["old_disease_id"] == "D193"
     assert repair["source_code"] == "NTRA"
@@ -203,6 +238,32 @@ def test_mapping_sync_deactivates_conflicting_bootstrap_and_removed_owned_rows()
             "local_name": "Bacterial dysentery",
         }
     ]
+
+
+def test_mapping_scope_rekey_deactivates_old_registry_owned_jurisdiction() -> None:
+    incoming = [
+        {
+            "country_code": "CA-ON",
+            "source_id": "SRC_CA_ON_PHO_IDTO",
+            "local_name": "Measles",
+            "disease_id": "D017",
+        }
+    ]
+    existing = [
+        {
+            "id": 17,
+            "country_code": "CA",
+            "source_id": "SRC_CA_ON_PHO_IDTO",
+            "local_name": "Measles",
+            "disease_id": "D017",
+            "metadata": {"origin": "configs/mapping/ca-on.csv"},
+        }
+    ]
+
+    plan = _mapping_deactivation_plan(existing, incoming)
+
+    assert [item["mapping_id"] for item in plan] == [17]
+    assert plan[0]["reason"] == "removed_from_registry"
 
 
 def test_transition_manifest_covers_remap_and_component_reingestion() -> None:

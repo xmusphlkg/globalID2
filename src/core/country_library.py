@@ -44,6 +44,25 @@ COUNTRY_OVERRIDES: dict[str, dict[str, str]] = {
         "language": "en-AU",
         "timezone": "Australia/Sydney",
     },
+    "CA": {
+        "name": "Canada",
+        "name_local": "Canada",
+        "language": "en-CA",
+        "timezone": "America/Toronto",
+    },
+    "CA-ON": {
+        "name": "Ontario, Canada",
+        "name_en": "Ontario, Canada",
+        "name_local": "Ontario, Canada",
+        "language": "en-CA",
+        "timezone": "America/Toronto",
+    },
+    "FI": {
+        "name": "Finland",
+        "name_local": "Suomi",
+        "language": "fi-FI",
+        "timezone": "Europe/Helsinki",
+    },
     "JP": {
         "name": "Japan",
         "name_local": "日本",
@@ -83,18 +102,42 @@ COUNTRY_OVERRIDES: dict[str, dict[str, str]] = {
         "language": "en-CH",
         "timezone": "Europe/Zurich",
     },
+    "NO": {
+        "name": "Norway",
+        "name_local": "Norge",
+        "language": "nb-NO",
+        "timezone": "Europe/Oslo",
+    },
+    "SE": {
+        "name": "Sweden",
+        "name_local": "Sverige",
+        "language": "sv-SE",
+        "timezone": "Europe/Stockholm",
+    },
+    "IS": {
+        "name": "Iceland",
+        "name_local": "Ísland",
+        "language": "is-IS",
+        "timezone": "Atlantic/Reykjavik",
+    },
 }
 
 COUNTRY_NAMES_ZH: dict[str, str] = {
     "AU": "澳大利亚",
     "BR": "巴西",
+    "CA": "加拿大",
+    "CA-ON": "加拿大安大略省",
     "CH": "瑞士",
     "CN": "中国",
+    "FI": "芬兰",
     "JP": "日本",
     "KR": "韩国",
     "NZ": "新西兰",
+    "NO": "挪威",
+    "SE": "瑞典",
     "TW": "中国台湾",
     "HK": "中国香港",
+    "IS": "冰岛",
     "US": "美国",
 }
 
@@ -198,6 +241,63 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
             "lang": "en-AU",
         },
         "notes": "NINDSS Microsoft BI feed aggregated to national via internal globalID2 crawler",
+    },
+    "CA": {
+        "location_type": "country",
+        "iso_country_code": "CA",
+        "crawler_config": {
+            "sources": ["all"],
+            "reporting_area": "national",
+            "geography_key": "country:CA:national",
+        },
+        "notes": "Canada is the national jurisdiction; subdivision feeds are registered separately.",
+    },
+    "CA-ON": {
+        "parent_country_code": "CA",
+        "location_type": "subdivision",
+        "iso_subdivision_code": "CA-ON",
+        "data_source_url": (
+            "https://www.publichealthontario.ca/en/data-and-analysis/"
+            "infectious-disease/reportable-disease-trends-annually"
+        ),
+        "data_source_type": "microsoft_bi",
+        "crawler_config": {
+            "sources": ["pho_idto_monthly"],
+            "cadence": "monthly",
+            "landing_url": (
+                "https://www.publichealthontario.ca/en/data-and-analysis/"
+                "infectious-disease/reportable-disease-trends-annually"
+            ),
+            "embed_url": (
+                "https://ws-rpt1.publichealthontario.ca/Home/EmbedReport/"
+                "14b5691a-c95d-46b2-84f1-9119080e083b"
+            ),
+            "report_id": "14b5691a-c95d-46b2-84f1-9119080e083b",
+            "page_display_name": "Monthly Data Table",
+            "visual_name": "8533f6960c0f199b51ae",
+            "refresh_recent_months": 12,
+            "supports_fill_missing": False,
+            "default_fill_missing": False,
+            "reporting_area": "Ontario",
+            "geocode": "CA-ON",
+            "geography_key": "country:CA-ON:national",
+        },
+        "parser_config": {
+            "primary": "ca_on_pho_idto_monthly",
+        },
+        "disease_mapping_rules": {
+            "strategy": "db_first",
+            "fallback": "quarantine_unmapped",
+        },
+        "report_config": {
+            "default_type": "MONTHLY",
+            "lang": "en-CA",
+        },
+        "notes": (
+            "Public Health Ontario IDTO current-year preliminary monthly case "
+            "counts for Ontario, published as an independent country/region "
+            "dataset linked to parent Canada."
+        ),
     },
     "TW": {
         "data_source_url": "https://nidss.cdc.gov.tw/Home/Index",
@@ -340,6 +440,94 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
         },
         "notes": "Switzerland FOPH/BAG IDD mandatory reporting API normalized to national case rows. Monthly series may use the dashboard CHFL aggregate where CH-only monthly series are not exposed.",
     },
+    "FI": {
+        "public_release_enabled": True,
+        "data_source_url": "https://sampo.thl.fi/pivot/prod/en/ttr/cases/fact_ttr_cases",
+        "data_source_type": "cube_csv",
+        "crawler_config": {
+            "sources": ["thl_ttr"],
+            "cadence": "monthly",
+            "source_update_cadence": "daily",
+            "cube_url": "https://sampo.thl.fi/pivot/prod/en/ttr/cases/fact_ttr_cases",
+            "dimensions_url": "https://sampo.thl.fi/pivot/prod/en/ttr/cases/fact_ttr_cases.dimensions.json",
+            "full_history_start_year": 1995,
+            "refresh_recent_months": 3,
+            "supports_current_month": True,
+            "default_include_current_month": True,
+            "dynamic_revision_enabled": True,
+            "current_month_status": "provisional",
+            "publish_closed_months_only": False,
+            "reporting_area": "national",
+            "geography_key": "country:FI:national",
+            "license": "CC BY 4.0",
+        },
+        "parser_config": {"primary": "fi_thl_ttr_monthly"},
+        "disease_mapping_rules": {
+            "strategy": "db_first",
+            "fallback": "learning_suggestions",
+        },
+        "report_config": {"default_type": "MONTHLY", "lang": "fi-FI"},
+        "notes": "Finland THL Infectious Diseases Register national monthly case counts. The current month is ingested as provisional and the latest three months are refreshed for source revisions.",
+    },
+    "NO": {
+        "public_release_enabled": True,
+        "data_source_url": "https://allvis.fhi.no/msis",
+        "data_source_type": "official_json_api",
+        "crawler_config": {
+            "sources": ["fhi_msis"],
+            "cadence": "monthly",
+            "source_update_cadence": "daily",
+            "diagnoses_url": "https://allvis.fhi.no/api/msis/kodeverk/diagnoser",
+            "monthly_url": "https://allvis.fhi.no/api/msis/etterDiagnoseFordeltPaaMaaned",
+            "full_history_start_year": 1977,
+            "refresh_recent_months": 3,
+            "supports_current_month": True,
+            "default_include_current_month": True,
+            "dynamic_revision_enabled": True,
+            "current_month_status": "provisional",
+            "publish_closed_months_only": False,
+            "reporting_area": "national",
+            "geography_key": "country:NO:national",
+            "api_contract": "unversioned_official_frontend",
+        },
+        "parser_config": {"primary": "no_fhi_msis_monthly"},
+        "disease_mapping_rules": {
+            "strategy": "db_first",
+            "fallback": "learning_suggestions",
+        },
+        "report_config": {"default_type": "MONTHLY", "lang": "nb-NO"},
+        "notes": "Norway FHI MSIS national monthly notifications from the official Allvis frontend API; adapter contract checks guard the unversioned endpoint.",
+    },
+    "SE": {
+        "public_release_enabled": False,
+        "data_source_url": "https://www.folkhalsomyndigheten.se/statistik-och-data/hitta-statistik-och-data/smittsamma-sjukdomar-statistik/",
+        "data_source_type": "official_html_csv",
+        "crawler_config": {
+            "sources": ["fohm_sminet"],
+            "cadence": "monthly",
+            "source_update_cadence": "daily_revisions",
+            "publication_day": 8,
+            "catalog_url": "https://www.folkhalsomyndigheten.se/statistik-och-data/hitta-statistik-och-data/smittsamma-sjukdomar-statistik/",
+            "full_history_start_year": 2016,
+            "refresh_recent_months": 3,
+            "supports_current_month": True,
+            "default_include_current_month": True,
+            "dynamic_revision_enabled": True,
+            "current_month_status": "provisional_when_source_evidence_exists",
+            "publish_closed_months_only": True,
+            "reporting_area": "national",
+            "geography_key": "country:SE:national",
+            "preferred_transport": "csv_with_html_fallback",
+            "reuse_status": "permission_pending",
+        },
+        "parser_config": {"primary": "se_fohm_sminet_monthly"},
+        "disease_mapping_rules": {
+            "strategy": "db_first",
+            "fallback": "learning_suggestions",
+        },
+        "report_config": {"default_type": "MONTHLY", "lang": "sv-SE"},
+        "notes": "Sweden SmiNet national monthly reported cases. Technical ingestion is enabled for internal validation; public release remains disabled pending explicit reuse confirmation.",
+    },
 }
 
 
@@ -384,7 +572,7 @@ def _load_country_bootstrap_registry() -> dict[str, dict]:
 
 
 def get_country_profile(code: str) -> CountryProfile:
-    """Resolve country profile from ISO alpha-2 code using pycountry first."""
+    """Resolve a country or registered subdivision profile."""
     normalized = (code or "").strip().upper()
     if not normalized:
         raise ValueError("country code is required")
@@ -471,10 +659,10 @@ def validate_standard_country_registry() -> list[str]:
     registry = _load_country_bootstrap_registry()
     configured = {k for k in registry.keys() if k != "_DEFAULT"}
 
-    pattern = re.compile(r"^[A-Z]{2}$")
+    pattern = re.compile(r"^[A-Z]{2}(?:-[A-Z0-9]{1,3})?$")
     for code in sorted(hardcoded | fallback | configured):
         if not pattern.match(code):
-            warnings.append(f"invalid country code format: {code}")
+            warnings.append(f"invalid jurisdiction code format: {code}")
 
     # These sets can drift over time; flag it explicitly for maintainers.
     for code in sorted(hardcoded - (fallback | configured)):

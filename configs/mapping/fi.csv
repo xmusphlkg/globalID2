@@ -1,0 +1,49 @@
+disease_id,local_name,local_code,category,aliases,notes,data_source,source_id,series_id
+D025,"Tuberculosis, total",700,National monthly,Tuberculosis|TB,Use the THL reported total only; pulmonary and other-organ child rows remain independent unprojected series,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_700
+D162,"HIV, total",150,National monthly,HIV infection,Use the THL all-stage total; HIV not AIDS is an overlapping child and is not projected,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_150
+D005,AIDS,151,National monthly,Acquired immunodeficiency syndrome,Independent AIDS series; never add to HIV total,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_151
+D115,EHEC,535,National monthly,STEC|Shiga toxin-producing Escherichia coli infection,THL reporting group code 535,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_535
+D124,Salmonella Typhi,1180,National monthly,Typhoid fever,Typhi-only series,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_1180
+D234,Salmonella Paratyphi,1190,National monthly,Paratyphoid fever,Paratyphi-only series,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_1190
+D114,"Salmonella, other",1200,National monthly,Non-typhoidal salmonellosis,Residual Salmonella category excluding Typhi and Paratyphi; retain as its own non-additive series,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_1200
+D068,"Hepatitis B, acute",140,National monthly,Acute hepatitis B,Course-qualified source series,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_140
+D208,"Hepatitis B, chronic",141,National monthly,Chronic hepatitis B,Course-qualified source series,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_141
+D038,Influenza,1135,National monthly,Seasonal influenza,Use reported influenza total; Influenza A and B child rows remain independent unprojected series,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_1135
+D034,Syphilis,116,National monthly,,THL reporting group code 116,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_116
+D033,Gonorrhea,130,National monthly,Gonorrhoea,THL reporting group code 130,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_130
+D094,Chlamydia,1350,National monthly,Chlamydia trachomatis infection,THL reporting group code 1350,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_1350
+D142,RSV,1170,National monthly,Respiratory syncytial virus infection,THL reporting group code 1170,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_1170
+D028,Pertussis,500,National monthly,Whooping cough,THL reporting group code 500,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_500
+D107,Legionellosis,180,National monthly,Legionnaires disease,THL reporting group code 180,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_180
+D155,"Yersinia, total",1220,National monthly,Yersiniosis,Use the THL reported total; species child rows remain independent unprojected series,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_1220
+D105,Shigella,1210,National monthly,Shigellosis,THL reporting group code 1210,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_1210
+D100,"Haemophilus influenzae,total",1459,National monthly,Haemophilus influenzae,Use the THL reported total; serotype child rows remain independent unprojected series,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_1459
+D110,"Meningococcus, total",1430,National monthly,Meningococcal disease,Use the THL reported total; serogroup child rows remain independent unprojected series,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_1430
+D106,Streptococcus pneumoniae,1390,National monthly,Invasive pneumococcal disease,THL register category; preserve source definition in series metadata,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_1390
+D092,Campylobacter,1230,National monthly,Campylobacteriosis,THL reporting group code 1230,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_1230
+D108,Listeria,210,National monthly,Listeriosis,THL reporting group code 210,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_210
+D199,Rotavirus,1260,National monthly,Rotavirus infection,THL reporting group code 1260,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_1260
+D099,Giardiasis,1280,National monthly,Giardia infection,THL reporting group code 1280,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_1280
+D096,Cryptosporidiosis,1270,National monthly,Cryptosporidium infection,THL reporting group code 1270,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_1270
+D007,Hepatitis A,115,National monthly,,THL reporting group code 115,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_115
+D009,Hepatitis C,703,National monthly,,Source does not qualify acute/chronic course,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_703
+D017,Cinderella disease,170,National monthly,Measles|Tuhkarokko,The English cube mistranslates Finnish Tuhkarokko; source code 170 is measles,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_170
+D102,Puumala-virus,1600,National monthly,Puumala hantavirus infection,Etiology-specific subset of hantavirus infections,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_1600
+D205,TBE (tick borne encephalitis),708,National monthly,Tick-borne encephalitis|TBE,THL reporting group code 708,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_708
+D109,Lyme borreliosis,1530,National monthly,Lyme disease,THL reporting group code 1530,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_1530
+D123,Tularaemia (rabbit fever),1540,National monthly,Tularemia|Tularaemia,THL reporting group code 1540,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_1540
+D037,Malaria,190,National monthly,,THL reporting group code 190,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_190
+D052,Chikungunya,1185,National monthly,Chikungunya virus disease,THL reporting group code 1185,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_1185
+D021,Dengue,1910,National monthly,Dengue fever,THL reporting group code 1910,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_1910
+D029,Diphtheria,103,National monthly,,THL reporting group code 103,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_103
+D045,Echinococcus,230,National monthly,Echinococcosis,THL reporting group code 230,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_230
+D013,Polio,107,National monthly,Poliomyelitis,THL reporting group code 107,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_107
+D040,German measles,172,National monthly,Rubella,THL reporting group code 172,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_172
+D039,Swine fever,171,National monthly,Mumps|Sikotauti,The English cube mistranslates Finnish Sikotauti; source code 171 is mumps,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_171
+D153,Atypical mycobacteria,2015,National monthly,Non-tuberculous mycobacterial infection,Distinct from the tuberculosis total and child rows,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_2015
+D213,Varicella zoster virus,1501,National monthly,VZV infection,Source does not distinguish chickenpox from zoster; map to unspecified VZV concept,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_1501
+D010,Hepatitis D,1330,National monthly,,THL reporting group code 1330,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_1330
+D011,Hepatitis E,1340,National monthly,,THL reporting group code 1340,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_1340
+D004,Coronavirus SARS-CoV-2,2801,National monthly,COVID-19|SARS-CoV-2,THL reporting group code 2801,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_2801
+D165,Amebiasis,1290,National monthly,Amoebiasis,THL reporting group code 1290,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_1290
+D051,Zika virus,1195,National monthly,Zika virus disease,THL reporting group code 1195,Finland THL Infectious Diseases Register,SRC_FI_THL_TTR,SER_FI_THL_TTR_1195

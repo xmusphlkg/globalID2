@@ -2,8 +2,13 @@ from __future__ import annotations
 
 import hashlib
 import json
+import subprocess
 
-from scripts.publish_download_repo import sync_managed_assets, validate_source
+from scripts.publish_download_repo import (
+    ensure_commit_identity,
+    sync_managed_assets,
+    validate_source,
+)
 
 
 def _write_source(root, payload: bytes = b"current partition"):
@@ -24,7 +29,7 @@ def _write_source(root, payload: bytes = b"current partition"):
         }
     (root / "countries").mkdir(exist_ok=True)
     manifest = {
-        "schema_version": 3,
+        "schema_version": 4,
         "formats": ["csv", "json", "xlsx"],
         "download_url_base": base,
         "countries": [],
@@ -61,3 +66,50 @@ def test_incremental_sync_copies_only_changed_partition(tmp_path):
     _write_source(source, payload=b"revised current partition")
     third = sync_managed_assets(source, checkout)
     assert third["copied"] == 4  # three current files plus manifest
+
+
+def test_commit_identity_reuses_repository_author_for_fresh_worker(tmp_path, monkeypatch):
+    checkout = tmp_path / "checkout"
+    checkout.mkdir()
+    subprocess.run(["git", "init"], cwd=checkout, check=True, capture_output=True)
+    (checkout / "README.md").write_text("data\n")
+    subprocess.run(["git", "add", "README.md"], cwd=checkout, check=True)
+    subprocess.run(
+        [
+            "git",
+            "-c",
+            "user.name=Repository Author",
+            "-c",
+            "user.email=repository@example.test",
+            "commit",
+            "-m",
+            "initial",
+        ],
+        cwd=checkout,
+        check=True,
+        capture_output=True,
+    )
+    monkeypatch.delenv("GIT_AUTHOR_NAME", raising=False)
+    monkeypatch.delenv("GIT_AUTHOR_EMAIL", raising=False)
+
+    identity = ensure_commit_identity(checkout)
+
+    assert identity == {
+        "name": "Repository Author",
+        "email": "repository@example.test",
+        "source": "repository_history",
+    }
+    assert subprocess.run(
+        ["git", "config", "--get", "user.name"],
+        cwd=checkout,
+        check=True,
+        text=True,
+        capture_output=True,
+    ).stdout.strip() == "Repository Author"
+    assert subprocess.run(
+        ["git", "config", "--get", "user.email"],
+        cwd=checkout,
+        check=True,
+        text=True,
+        capture_output=True,
+    ).stdout.strip() == "repository@example.test"

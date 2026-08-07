@@ -19,13 +19,13 @@ export type EpidemicCurveViewAction =
   | { type: 'dateWindowChanged'; dateWindow: DateWindow }
   | { type: 'dateDomainChanged'; dates: string[] };
 
-export const DEFAULT_METRIC: EpidemicMetric = 'weekly_equiv_cases';
+export const DEFAULT_METRIC: EpidemicMetric = 'cases';
 export const MAX_ACTIVE_SERIES = 20;
 export const ANIMATION_POINT_LIMIT = 5_000;
 
 export const METRIC_LABELS: Record<EpidemicMetric, { en: string; zh: string }> = {
-  weekly_equiv_cases: { en: 'Weekly Equivalent Cases', zh: '周等价病例数' },
-  cases: { en: 'Cases', zh: '病例数' },
+  weekly_equiv_cases: { en: 'Weekly reported cases', zh: '周度报告病例数' },
+  cases: { en: 'Source-period cases', zh: '来源期间病例数' },
   deaths: { en: 'Deaths', zh: '死亡数' },
   incidence_rates: { en: 'Incidence rate (per 100k)', zh: '发病率（每10万）' },
 };
@@ -40,8 +40,123 @@ export function getMetricValues(
   metric: EpidemicMetric
 ): (number | null)[] {
   if (metric === 'incidence_rates') return item.incidence_rates ?? [];
-  if (metric === 'weekly_equiv_cases') return item.weekly_equiv_cases ?? [];
+  if (metric === 'weekly_equiv_cases') {
+    return supportsWeeklyEquivalent(item) ? item.weekly_equiv_cases : [];
+  }
   return item[metric] ?? [];
+}
+
+export function normalizeTemporalGranularity(value: string | null | undefined) {
+  const normalized = String(value ?? '').trim().toLowerCase();
+  return normalized === 'yearly' ? 'annual' : normalized || 'unknown';
+}
+
+export function getSeriesGranularity(item: CurveSeries): string {
+  const direct = normalizeTemporalGranularity(item.period_granularity);
+  if (direct !== 'unknown') return direct;
+
+  const selectedCodes = new Set(item.selected_series_codes ?? []);
+  const candidates = (item.source_series ?? []).filter((source) => (
+    selectedCodes.size === 0 || selectedCodes.has(source.series_code ?? '')
+  ));
+  const granularities = new Set(
+    candidates
+      .map((source) => normalizeTemporalGranularity(source.temporal_granularity))
+      .filter((value) => value !== 'unknown')
+  );
+  return granularities.size === 1 ? [...granularities][0] : 'unknown';
+}
+
+export function formatTemporalGranularity(
+  value: string | null | undefined,
+  lang: 'en' | 'zh',
+) {
+  const granularity = normalizeTemporalGranularity(value);
+  const labels: Record<string, { en: string; zh: string }> = {
+    daily: { en: 'Daily', zh: '每日' },
+    weekly: { en: 'Weekly', zh: '每周' },
+    monthly: { en: 'Monthly', zh: '每月' },
+    quarterly: { en: 'Quarterly', zh: '每季度' },
+    annual: { en: 'Annual', zh: '每年' },
+    mixed: { en: 'Mixed grain', zh: '混合粒度' },
+    unknown: { en: 'Source cadence', zh: '按来源频率' },
+  };
+  return (labels[granularity] ?? {
+    en: granularity.replaceAll('_', ' '),
+    zh: granularity.replaceAll('_', ' '),
+  })[lang];
+}
+
+export function supportsWeeklyEquivalent(item: CurveSeries): boolean {
+  return getSeriesGranularity(item) === 'weekly'
+    && (item.weekly_equiv_cases?.length ?? 0) > 0
+    && item.weekly_equiv_cases.length === item.dates.length;
+}
+
+export function getSelectedSourceSeries(item: CurveSeries) {
+  const selectedCodes = new Set(item.selected_series_codes ?? []);
+  const sources = item.source_series ?? [];
+  return selectedCodes.size > 0
+    ? sources.filter((source) => selectedCodes.has(source.series_code ?? ''))
+    : sources;
+}
+
+export function getSelectableSourceSeries(item: CurveSeries) {
+  return (item.source_series ?? []).filter((source) => (
+    Boolean(source.series_code)
+    && Array.isArray(source.dates)
+    && Array.isArray(source.values)
+    && source.dates.length > 0
+    && source.dates.length === source.values.length
+  ));
+}
+
+export function hasPublicProjection(item: CurveSeries) {
+  return Array.isArray(item.dates)
+    && Array.isArray(item.cases)
+    && item.dates.length > 0
+    && item.dates.length === item.cases.length;
+}
+
+export function hasMixedSourceGranularities(item: CurveSeries) {
+  const granularities = new Set(
+    getSelectableSourceSeries(item)
+      .map((source) => normalizeTemporalGranularity(source.temporal_granularity))
+      .filter((value) => value !== 'unknown')
+  );
+  return granularities.size > 1;
+}
+
+export function selectSourceSeries(
+  item: CurveSeries,
+  seriesCode: string | null | undefined,
+): CurveSeries {
+  if (!seriesCode) return item;
+
+  const source = getSelectableSourceSeries(item).find(
+    (candidate) => candidate.series_code === seriesCode
+  );
+  if (!source || !source.dates || !source.values) return item;
+
+  const totalCases = source.total_value
+    ?? source.values.reduce((total, value) => total + (Number(value) || 0), 0);
+
+  return {
+    ...item,
+    dates: source.dates,
+    cases: source.values,
+    weekly_equiv_cases: [],
+    deaths: [],
+    incidence_rates: [],
+    incidence_sources: [],
+    total_cases: totalCases,
+    total_deaths: 0,
+    latest_cases: findLatestValue(source.values) ?? 0,
+    latest_deaths: 0,
+    period_granularity: source.temporal_granularity,
+    projection_policy: 'source_series_selected',
+    selected_series_codes: [source.series_code ?? seriesCode],
+  };
 }
 
 export function findLatestValue(values: (number | null)[]) {

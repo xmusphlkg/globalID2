@@ -15,12 +15,15 @@ from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 from openpyxl import Workbook
 
+from src.services.disease_series_policy import is_case_count_series
+
 
 DOWNLOAD_FIELDS = [
     "dataset_kind",
     "dataset_id",
     "dataset_slug",
     "dataset_name",
+    "record_kind",
     "country_code",
     "country_name",
     "disease_id",
@@ -29,12 +32,40 @@ DOWNLOAD_FIELDS = [
     "category",
     "date",
     "year_month",
+    "value",
     "cases",
     "weekly_equiv_cases",
     "deaths",
     "incidence_rate_per_100k",
     "incidence_rate_source",
     "mortality_rate",
+    "series_code",
+    "source_series_code",
+    "source_system",
+    "source_label",
+    "metric_type",
+    "reporting_basis",
+    "temporal_granularity",
+    "unit",
+    "geography_key",
+    "dimension_key",
+    "mapping_relation",
+    "comparability",
+    "aggregation_policy",
+    "availability_status",
+    "missing_value_policy",
+    "definition_version",
+    "case_definition",
+    "case_definition_uri",
+    "quality_status",
+    "is_selected_series",
+    "data_layer",
+    "projection_policy",
+    "coverage_status",
+    "loss_risk",
+    "selected_series_codes",
+    "available_series_count",
+    "provenance_note",
     "primary_source_scope",
     "primary_source_label",
     "primary_source_url",
@@ -44,6 +75,26 @@ DOWNLOAD_FIELDS = [
     "source_urls",
     "source_types",
 ]
+
+SOURCE_SERIES_FIELDS = (
+    "source_series_code",
+    "source_system",
+    "source_label",
+    "metric_type",
+    "reporting_basis",
+    "temporal_granularity",
+    "unit",
+    "geography_key",
+    "dimension_key",
+    "mapping_relation",
+    "comparability",
+    "aggregation_policy",
+    "availability_status",
+    "missing_value_policy",
+    "definition_version",
+    "case_definition",
+    "case_definition_uri",
+)
 
 PUBLIC_FORMATS = ("csv", "json", "xlsx")
 GITHUB_MAX_FILE_BYTES = 100 * 1024 * 1024
@@ -98,6 +149,82 @@ def _source_columns(source_info: dict) -> dict:
     }
 
 
+def _projection_provenance_columns(
+    series: dict,
+    source_series: dict | None = None,
+) -> dict:
+    selected_codes = [
+        str(code) for code in series.get("selected_series_codes") or []
+    ]
+    data_provenance = series.get("data_provenance") or {}
+    columns = {
+        "series_code": (
+            source_series.get("series_code")
+            if source_series
+            else (selected_codes[0] if len(selected_codes) == 1 else None)
+        ),
+        "is_selected_series": (
+            source_series.get("series_code") in selected_codes
+            if source_series else None
+        ),
+        "data_layer": series.get("data_layer"),
+        "projection_policy": series.get("projection_policy"),
+        "coverage_status": series.get("coverage_status"),
+        "loss_risk": series.get("loss_risk"),
+        "selected_series_codes": "; ".join(selected_codes),
+        "available_series_count": series.get("available_series_count") or 0,
+        "provenance_note": data_provenance.get("note_en"),
+    }
+    if source_series:
+        columns.update(
+            {field: source_series.get(field) for field in SOURCE_SERIES_FIELDS}
+        )
+        quality_statuses = source_series.get("quality_statuses") or []
+        columns["quality_status"] = "; ".join(
+            str(value) for value in quality_statuses if value
+        )
+    else:
+        columns["temporal_granularity"] = series.get("period_granularity")
+    return columns
+
+
+def _source_observation_rows(
+    series: dict,
+    base_columns: dict,
+    source_columns: dict,
+) -> list[dict]:
+    rows: list[dict] = []
+    for source_series in series.get("source_series") or []:
+        dates = source_series.get("dates") or []
+        values = source_series.get("values") or []
+        granularity = str(source_series.get("temporal_granularity") or "").lower()
+        for index, value_date in enumerate(dates):
+            value = values[index] if index < len(values) else None
+            case_value = value if is_case_count_series(source_series) else None
+            rows.append(
+                {
+                    **base_columns,
+                    "record_kind": "source_series_observation",
+                    "date": value_date,
+                    "year_month": value_date[:7] if value_date else None,
+                    "value": value,
+                    "cases": case_value,
+                    "weekly_equiv_cases": (
+                        float(value)
+                        if granularity == "weekly" and case_value is not None
+                        else None
+                    ),
+                    "deaths": None,
+                    "incidence_rate_per_100k": None,
+                    "incidence_rate_source": None,
+                    "mortality_rate": None,
+                    **_projection_provenance_columns(series, source_series),
+                    **source_columns,
+                }
+            )
+    return rows
+
+
 def build_country_download_rows(country_data: dict, source_info: dict) -> list[dict]:
     """Flatten a country projection without release-volatile fields."""
 
@@ -105,6 +232,21 @@ def build_country_download_rows(country_data: dict, source_info: dict) -> list[d
     source_columns = _source_columns(source_info)
     dataset_id = str(country_data.get("country_code") or "").lower()
     for series in (country_data.get("disease_series") or {}).values():
+        base_columns = {
+            "dataset_kind": "country",
+            "dataset_id": dataset_id,
+            "dataset_slug": dataset_id,
+            "dataset_name": country_data.get("country_name"),
+            "country_code": country_data.get("country_code"),
+            "country_name": country_data.get("country_name"),
+            "disease_id": series.get("disease_id"),
+            "disease_name_en": series.get("name_en"),
+            "disease_name_zh": series.get("name_zh"),
+            "category": series.get("category"),
+        }
+        rows.extend(
+            _source_observation_rows(series, base_columns, source_columns)
+        )
         dates = series.get("dates") or []
         cases = series.get("cases") or []
         weekly_equiv = series.get("weekly_equiv_cases") or []
@@ -115,19 +257,12 @@ def build_country_download_rows(country_data: dict, source_info: dict) -> list[d
         for index, value_date in enumerate(dates):
             rows.append(
                 {
-                    "dataset_kind": "country",
-                    "dataset_id": dataset_id,
-                    "dataset_slug": dataset_id,
-                    "dataset_name": country_data.get("country_name"),
-                    "country_code": country_data.get("country_code"),
-                    "country_name": country_data.get("country_name"),
-                    "disease_id": series.get("disease_id"),
-                    "disease_name_en": series.get("name_en"),
-                    "disease_name_zh": series.get("name_zh"),
-                    "category": series.get("category"),
+                    **base_columns,
+                    "record_kind": "public_projection",
                     "date": value_date,
                     "year_month": value_date[:7] if value_date else None,
                     "cases": cases[index] if index < len(cases) else 0,
+                    "value": cases[index] if index < len(cases) else 0,
                     "weekly_equiv_cases": (
                         weekly_equiv[index] if index < len(weekly_equiv) else None
                     ),
@@ -141,6 +276,7 @@ def build_country_download_rows(country_data: dict, source_info: dict) -> list[d
                     "mortality_rate": (
                         mortality_rates[index] if index < len(mortality_rates) else None
                     ),
+                    **_projection_provenance_columns(series),
                     **source_columns,
                 }
             )
@@ -166,22 +302,30 @@ def build_disease_download_rows(
         source_columns = _source_columns(
             source_info_by_country.get(country_code, {"sources": []})
         )
+        base_columns = {
+            "dataset_kind": "disease",
+            "dataset_id": dataset_id,
+            "dataset_slug": disease_data.get("slug"),
+            "dataset_name": disease_data.get("name_en"),
+            "country_code": country_code,
+            "country_name": country_name_by_code.get(country_code),
+            "disease_id": dataset_id,
+            "disease_name_en": disease_data.get("name_en"),
+            "disease_name_zh": disease_data.get("name_zh"),
+            "category": disease_data.get("category"),
+        }
+        rows.extend(
+            _source_observation_rows(series, base_columns, source_columns)
+        )
         for index, value_date in enumerate(dates):
             rows.append(
                 {
-                    "dataset_kind": "disease",
-                    "dataset_id": dataset_id,
-                    "dataset_slug": disease_data.get("slug"),
-                    "dataset_name": disease_data.get("name_en"),
-                    "country_code": country_code,
-                    "country_name": country_name_by_code.get(country_code),
-                    "disease_id": dataset_id,
-                    "disease_name_en": disease_data.get("name_en"),
-                    "disease_name_zh": disease_data.get("name_zh"),
-                    "category": disease_data.get("category"),
+                    **base_columns,
+                    "record_kind": "public_projection",
                     "date": value_date,
                     "year_month": value_date[:7] if value_date else None,
                     "cases": cases[index] if index < len(cases) else 0,
+                    "value": cases[index] if index < len(cases) else 0,
                     "weekly_equiv_cases": (
                         weekly_equiv[index] if index < len(weekly_equiv) else None
                     ),
@@ -193,6 +337,7 @@ def build_disease_download_rows(
                         incidence_sources[index] if index < len(incidence_sources) else None
                     ),
                     "mortality_rate": None,
+                    **_projection_provenance_columns(series),
                     **source_columns,
                 }
             )
@@ -206,6 +351,8 @@ def _sort_rows(rows: list[dict]) -> list[dict]:
             str(row.get("date") or ""),
             str(row.get("country_code") or ""),
             str(row.get("disease_id") or ""),
+            str(row.get("record_kind") or ""),
+            str(row.get("series_code") or ""),
         ),
     )
 
@@ -305,10 +452,37 @@ def _xlsx_bytes(metadata: dict, rows: list[dict]) -> bytes:
     return canonical.getvalue()
 
 
+def _row_provenance_counts(rows: list[dict]) -> dict:
+    projection_rows = [
+        row for row in rows if row.get("record_kind") == "public_projection"
+    ]
+    source_rows = [
+        row
+        for row in rows
+        if row.get("record_kind") == "source_series_observation"
+    ]
+    return {
+        "projection_record_count": len(projection_rows),
+        "source_observation_count": len(source_rows),
+        "source_series_count": len(
+            {row.get("series_code") for row in source_rows if row.get("series_code")}
+        ),
+    }
+
+
+def _sum_measure(rows: list[dict], field: str) -> int | float:
+    total = sum(float(row.get(field) or 0) for row in rows)
+    return int(total) if total.is_integer() else total
+
+
 def _partition_metadata(dataset: dict, spec: PartitionSpec, rows: list[dict]) -> dict:
     dates = [str(row["date"]) for row in rows]
+    projection_rows = [
+        row for row in rows if row.get("record_kind") == "public_projection"
+    ]
+    summary_rows = projection_rows or rows
     return {
-        "schema_version": 3,
+        "schema_version": 4,
         "dataset_kind": dataset["kind"],
         "dataset_id": dataset["dataset_id"],
         "dataset_slug": dataset["slug"],
@@ -319,8 +493,14 @@ def _partition_metadata(dataset: dict, spec: PartitionSpec, rows: list[dict]) ->
         "data_start": min(dates),
         "data_end": max(dates),
         "record_count": len(rows),
-        "total_cases": sum(int(row.get("cases") or 0) for row in rows),
-        "total_deaths": sum(int(row.get("deaths") or 0) for row in rows),
+        **_row_provenance_counts(rows),
+        "total_cases": _sum_measure(summary_rows, "cases"),
+        "total_deaths": _sum_measure(summary_rows, "deaths"),
+        "total_basis": (
+            "public_projection"
+            if projection_rows
+            else "source_series_observation"
+        ),
     }
 
 
@@ -480,6 +660,7 @@ def _dataset_parts(
                     },
                     "date_range": {"start": min(dates), "end": max(dates)},
                     "record_count": len(base_rows),
+                    **_row_provenance_counts(base_rows),
                     "content_sha256": base_content_sha,
                     "files": existing_files,
                 }
@@ -526,6 +707,7 @@ def _dataset_parts(
                     },
                     "date_range": {"start": min(dates), "end": max(dates)},
                     "record_count": len(part_rows),
+                    **_row_provenance_counts(part_rows),
                     "content_sha256": _sha256(artifacts["json"]),
                     "files": files,
                 }
@@ -605,6 +787,8 @@ def build_direct_download_files(
         entry.update(
             {
                 "record_count": len(rows),
+                **_row_provenance_counts(rows),
+                "includes_series_provenance": True,
                 "parts": parts,
                 "source_info": country_export["source_info"],
             }
@@ -641,6 +825,8 @@ def build_direct_download_files(
         entry.update(
             {
                 "record_count": len(rows),
+                **_row_provenance_counts(rows),
+                "includes_series_provenance": True,
                 "parts": parts,
                 "countries": [
                     {"code": code, "name": country_names.get(code)}
@@ -654,9 +840,10 @@ def build_direct_download_files(
     removed_files = _remove_stale_files(output_dir / "countries", expected_paths)
     removed_files += _remove_stale_files(output_dir / "diseases", expected_paths)
     manifest = {
-        "schema_version": 3,
+        "schema_version": 4,
         "generated_at": generated_at,
         "includes_source_info": True,
+        "includes_series_provenance": True,
         "formats": list(PUBLIC_FORMATS),
         "partitioning": {
             "strategy": "stable_calendar_windows",

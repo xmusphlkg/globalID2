@@ -9,13 +9,19 @@ import EpidemicCurve from '../../../components/charts/EpidemicCurve';
 import DiseaseHeatmap from '../../../components/charts/DiseaseHeatmap';
 import ComparisonTable from '../../../components/charts/ComparisonTable';
 import { buildChartSourceMeta } from '../../../utils/chartMeta';
+import { hasCountryDataSnapshot } from '../../../lib/country-coverage';
+import {
+  buildCountryMetaDescription,
+  buildDatasetDistributions,
+  buildDatasetStructuredData,
+} from '../../../lib/seo';
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
 
 export async function getStaticPaths() {
   const metaPath = resolve('./src/data/meta.json');
   const meta = JSON.parse(readFileSync(metaPath, 'utf-8')) as any;
-  return (meta.countries ?? []).map((c: any) => ({
+  return (meta.countries ?? []).filter(hasCountryDataSnapshot).map((c: any) => ({
     params: { country: c.code.toLowerCase() },
   }));
 }
@@ -98,9 +104,9 @@ const interpretationEn = countryData?.interpretation_en
 const interpretationZh = countryData?.interpretation_zh
   ?? `当前覆盖 ${coverageLabel}，纳入 ${countryData?.disease_count ?? 0} 种追踪疾病。`;
 const reportingCadenceEn = countryData?.reporting_cadence_en
-  ?? 'Reporting cadence can differ by source; charts use weekly-equivalent normalization where applicable.';
+  ?? 'Counts remain at each source\'s declared reporting period; annual, quarterly, monthly, and weekly totals are not frequency-normalized.';
 const reportingCadenceZh = countryData?.reporting_cadence_zh
-  ?? '不同来源的报告频率可能不同；相关图表在适用时使用周等价归一化。';
+  ?? '病例数保持各来源声明的报告期间；年度、季度、月度和周度总量不进行频率归一化。';
 const limitationsEn = countryData?.limitations_en
   ?? 'Counts reflect reported surveillance records and can be affected by source cadence, case definitions, reporting lag, and missing denominators.';
 const limitationsZh = countryData?.limitations_zh
@@ -116,11 +122,57 @@ const chartSourceMeta = buildChartSourceMeta(
   `${countryName} surveillance dataset`
 );
 const countryDataUrl = countryDownload?.site_json_path ?? `/site-data/countries/${country}.json`;
+const countryMetaDescription = buildCountryMetaDescription({
+  name: countryName,
+  diseaseCount: countryData?.disease_count,
+  start: countryData?.date_range?.start,
+  end: countryData?.date_range?.end,
+});
+const siteOrigin = Astro.site ? new URL(Astro.site).origin : Astro.url.origin;
+const countryPageUrl = new URL(Astro.url.pathname, siteOrigin).toString();
+const countrySourceUrls = [
+  countryData?.source_info?.primary_url,
+  ...(countryData?.source_info?.sources ?? []).map((source: any) => source?.url),
+].filter((url): url is string => typeof url === 'string' && url.length > 0);
+const countryDatasetStructuredData = buildDatasetStructuredData({
+  id: `${countryPageUrl}#dataset`,
+  url: countryPageUrl,
+  name: `${countryName} infectious disease surveillance dataset`,
+  description: countryMetaDescription,
+  siteOrigin,
+  dateModified: countryData?.country_brief_updated_at ?? countryDownload?.generated_at,
+  start: countryData?.date_range?.start,
+  end: countryData?.date_range?.end,
+  spatialCoverage: countryName,
+  keywords: [countryName, 'infectious disease surveillance', 'public health data'],
+  distributions: buildDatasetDistributions({
+    entry: countryDownload,
+    siteOrigin,
+    fallbackSiteJsonPath: countryDataUrl,
+  }),
+  sourceUrls: countrySourceUrls,
+});
+const curveSourceSeriesObservations = countryData
+  ? Object.fromEntries(
+      Object.entries(countryData.disease_series as Record<string, any>)
+        .map(([diseaseId, entry]: [string, any]) => ([
+          diseaseId,
+          (entry.source_series ?? []).filter((source: any) => (
+            Array.isArray(source.dates)
+            && Array.isArray(source.values)
+            && source.dates.length > 0
+            && source.dates.length === source.values.length
+          )),
+        ] as [string, any[]]))
+        .filter((entry) => entry[1].length > 0)
+    )
+  : {};
 ---
 
 <ReportLayout
   title={countryName}
-  description={`Disease surveillance data for ${countryName}`}
+  description={countryMetaDescription}
+  structuredData={countryDatasetStructuredData}
   breadcrumbs={[
     { label: 'Countries and Regions', labelZh: '国家/地区', href: '/countries/' },
     { label: countryName, labelZh: countryNameZh },
@@ -130,8 +182,8 @@ const countryDataUrl = countryDownload?.site_json_path ?? `/site-data/countries/
     <section class="academic-hero">
       <div class="flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
         <div class="space-y-4">
-          <p class="academic-kicker" data-lang-en="Country Surveillance Brief | National infectious disease profile" data-lang-zh="国家监测简报 | 国家传染病监测概览">
-            Country Surveillance Brief | National infectious disease profile
+          <p class="academic-kicker" data-lang-en="Country/Region Surveillance Brief | Infectious disease profile" data-lang-zh="国家/地区监测简报 | 传染病监测概览">
+            Country/Region Surveillance Brief | Infectious disease profile
           </p>
           <div class="flex items-center gap-3">
             <CountryFlag
@@ -162,15 +214,17 @@ const countryDataUrl = countryDownload?.site_json_path ?? `/site-data/countries/
               <div class="academic-meta-value font-serif">{countryData?.disease_count ?? 0}</div>
             </div>
           </div>
-          <a
-            href={`/countries/${country}/reports/`}
-            class="site-action-secondary inline-flex items-center gap-2 px-4 py-2 rounded-none border text-sm font-semibold transition-all"
-          >
-            <span data-lang-en="Open report archive" data-lang-zh="查看报告归档">Open report archive</span>
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-            </svg>
-          </a>
+          {reports.length > 0 && (
+            <a
+              href={`/countries/${country}/reports/`}
+              class="site-action-secondary inline-flex items-center gap-2 px-4 py-2 rounded-none border text-sm font-semibold transition-all"
+            >
+              <span data-lang-en="Open report archive" data-lang-zh="查看报告归档">Open report archive</span>
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </a>
+          )}
         </div>
       </div>
     </section>
@@ -178,8 +232,8 @@ const countryDataUrl = countryDownload?.site_json_path ?? `/site-data/countries/
     <section class="figure-panel">
       <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p class="figure-kicker" data-lang-en="Country Brief" data-lang-zh="国家简介">Country Brief</p>
-          <h2 class="figure-title" data-lang-en="How to interpret this surveillance profile." data-lang-zh="如何解读本国家监测画像。">
+          <p class="figure-kicker" data-lang-en="Country/Region Brief" data-lang-zh="国家/地区简介">Country/Region Brief</p>
+          <h2 class="figure-title" data-lang-en="How to interpret this surveillance profile." data-lang-zh="如何解读本国家/地区监测画像。">
             How to interpret this surveillance profile.
           </h2>
         </div>
@@ -237,11 +291,15 @@ const countryDataUrl = countryDownload?.site_json_path ?? `/site-data/countries/
         <h2 class="figure-title" data-lang-en="Case trends by disease" data-lang-zh="疾病病例趋势">
           Case trends by disease
         </h2>
+        <p class="figure-caption mt-2" data-lang-en="Values are source-period counts. Monthly, quarterly, and annual series use visible point markers; annual series use a dashed line." data-lang-zh="数值为来源期间总量；月度、季度和年度序列显示数据点，年度序列使用虚线。">
+          Values are source-period counts. Monthly, quarterly, and annual series use visible point markers; annual series use a dashed line.
+        </p>
       <div class="mt-5">
         {countryData?.disease_series ? (
           <EpidemicCurve
             client:visible
             dataUrl={countryDataUrl}
+            sourceSeriesObservations={curveSourceSeriesObservations}
             topN={10}
             height={420}
             sourceMeta={chartSourceMeta}
@@ -257,7 +315,7 @@ const countryDataUrl = countryDownload?.site_json_path ?? `/site-data/countries/
           Seasonal patterns
         </h2>
       <div class="mt-5">
-        {(countryData?.disease_series || countryData?.heatmap?.z?.length) ? (
+        {(countryData?.heatmap?.z?.length ?? 0) > 0 ? (
           <DiseaseHeatmap
             client:visible
             dataUrl={countryDataUrl}
@@ -265,7 +323,7 @@ const countryDataUrl = countryDownload?.site_json_path ?? `/site-data/countries/
             sourceMeta={chartSourceMeta}
           />
         ) : (
-          <div class="card p-8 text-center text-[rgb(var(--text-muted))]" data-lang-en="No heatmap data is available for this view." data-lang-zh="此视图暂无可展示的热图数据。">No heatmap data is available for this view.</div>
+          <div class="card p-8 text-center text-[rgb(var(--text-muted))]" data-lang-en="A monthly seasonal heatmap is not shown when the available series are annual or quarterly totals." data-lang-zh="当可用序列仅为年度或季度总量时，不展示月度季节性热图。">A monthly seasonal heatmap is not shown when the available series are annual or quarterly totals.</div>
         )}
       </div>
     </section>
@@ -323,8 +381,8 @@ const countryDataUrl = countryDownload?.site_json_path ?? `/site-data/countries/
       <DownloadPanel
         entry={{ ...countryDownload, source_info: countryData?.source_info }}
         title="Download data"
-        descriptionEn="Download the data index used for this page, including source links and update information."
-        descriptionZh="下载本页面使用的数据索引，包含来源链接和更新时间。"
+        descriptionEn="Download source observations and the public compatibility projection with series definitions, reporting grain, and provenance."
+        descriptionZh="下载来源观测与公开兼容投影，并保留序列定义、报告粒度和数据溯源信息。"
       />
     )}
   </div>

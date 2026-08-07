@@ -114,17 +114,16 @@ def audit_semantic_golden_cases(
 
     rows_by_country: dict[str, list[dict[str, Any]]] = {}
     for path in sorted(mapping_dir.glob("*.csv")):
-        country_code = path.stem.upper()
-        if country_code == "EN":
+        file_country_code = path.stem.upper()
+        if file_country_code == "EN":
             continue
         with path.open(encoding="utf-8-sig", newline="") as handle:
-            rows_by_country[country_code] = [
-                {
+            for line_number, raw in enumerate(csv.DictReader(handle), start=2):
+                row = {
                     **{key: (value or "").strip() for key, value in raw.items() if key},
                     "_location": {"path": str(path), "row": line_number},
                 }
-                for line_number, raw in enumerate(csv.DictReader(handle), start=2)
-            ]
+                rows_by_country.setdefault(file_country_code, []).append(row)
 
     findings: list[dict[str, Any]] = []
     identity_fields = ("data_source", "local_code", "local_name")

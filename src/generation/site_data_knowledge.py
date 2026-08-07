@@ -313,7 +313,9 @@ def apply_country_brief_fields(
         or country_data.get("country_code")
     )
     date_range = country_data.get("date_range") or {}
-    frequency = (country_data.get("frequency_meta") or {}).get(
+    frequency_meta = country_data.get("frequency_meta") or {}
+    frequencies = frequency_meta.get("source_frequencies") or []
+    frequency = " / ".join(frequencies) or frequency_meta.get(
         "source_frequency"
     ) or "UNKNOWN"
 
@@ -339,10 +341,10 @@ def apply_country_brief_fields(
         f"覆盖 {country_data.get('disease_count') or 0} 种追踪疾病。"
     )
     country_data["reporting_cadence_en"] = en.get("reporting_cadence") or (
-        f"Source reporting frequency is inferred as {frequency}; charts use weekly-equivalent normalization where applicable."
+        f"Observed source periods are {frequency}; charts preserve source-period counts without frequency normalization."
     )
     country_data["reporting_cadence_zh"] = zh.get("reporting_cadence") or (
-        f"来源报告频率推断为 {frequency}；相关图表在适用时使用周等价归一化。"
+        f"已观测到的来源期间为 {frequency}；图表保留来源期间总量，不进行频率归一化。"
     )
     country_data["limitations_en"] = en.get("data_limitations") or (
         "Counts reflect reported surveillance records and may be affected by case definitions, reporting lag, source cadence, and missing population denominators."

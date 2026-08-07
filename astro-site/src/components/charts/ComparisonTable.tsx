@@ -62,9 +62,7 @@ function Sparkline({
   series?: Props['series'];
 }) {
   const record = series?.[diseaseId];
-  const values = (record?.weekly_equiv_cases?.some((value) => value > 0)
-    ? record.weekly_equiv_cases
-    : record?.cases) ?? [];
+  const values = record?.cases ?? [];
   const trendValues = values.slice(-24);
 
   if (trendValues.length === 0) {

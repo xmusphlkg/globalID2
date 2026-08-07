@@ -7,6 +7,7 @@ import argparse
 from datetime import datetime, timezone
 import hashlib
 import json
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -70,8 +71,8 @@ def validate_source(source_dir: Path, branch: str) -> dict:
             "Run scripts/generate_site_data.py first."
         )
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    if manifest.get("schema_version") != 3:
-        raise RuntimeError("Download manifest must use partition schema version 3")
+    if manifest.get("schema_version") != 4:
+        raise RuntimeError("Download manifest must use partition schema version 4")
     if manifest.get("formats") != ["csv", "json", "xlsx"]:
         raise RuntimeError("Download manifest must advertise CSV, JSON and XLSX")
     base = str(manifest.get("download_url_base") or "")
@@ -143,6 +144,63 @@ def ensure_repo(repo_url: str, branch: str, workdir: Path) -> None:
     run_git(["checkout", "-B", branch], workdir)
     if remote_branch_exists(repo_url, branch):
         run_git(["pull", "--ff-only", "origin", branch], workdir)
+
+
+def ensure_commit_identity(workdir: Path) -> dict[str, str]:
+    """Ensure unattended releases have a repository-local commit identity.
+
+    Fresh worker checkouts do not necessarily inherit a global Git identity.
+    Prefer an explicitly supplied environment identity and otherwise reuse the
+    author of the repository's current commit.  The latter keeps automated
+    updates consistent with the repository that owns the generated assets
+    without inventing a machine-wide identity.
+    """
+
+    def configured(key: str) -> str:
+        completed = subprocess.run(
+            ["git", "config", "--get", key],
+            cwd=workdir,
+            text=True,
+            capture_output=True,
+        )
+        return completed.stdout.strip() if completed.returncode == 0 else ""
+
+    name = configured("user.name")
+    email = configured("user.email")
+    if name and email:
+        return {"name": name, "email": email, "source": "configured"}
+
+    env_name = str(os.environ.get("GIT_AUTHOR_NAME") or "").strip()
+    env_email = str(os.environ.get("GIT_AUTHOR_EMAIL") or "").strip()
+    history = subprocess.run(
+        ["git", "log", "-1", "--format=%an%x00%ae"],
+        cwd=workdir,
+        text=True,
+        capture_output=True,
+    )
+    historical_name = ""
+    historical_email = ""
+    if history.returncode == 0 and "\x00" in history.stdout:
+        historical_name, historical_email = (
+            value.strip() for value in history.stdout.strip().split("\x00", 1)
+        )
+
+    resolved_name = name or env_name or historical_name
+    resolved_email = email or env_email or historical_email
+    if not resolved_name or not resolved_email:
+        raise RuntimeError(
+            "Git commit identity is not configured. Set GIT_AUTHOR_NAME and "
+            "GIT_AUTHOR_EMAIL or configure user.name/user.email in the download repo."
+        )
+    if not name:
+        run_git(["config", "--local", "user.name", resolved_name], workdir)
+    if not email:
+        run_git(["config", "--local", "user.email", resolved_email], workdir)
+    return {
+        "name": resolved_name,
+        "email": resolved_email,
+        "source": "environment" if env_name and env_email else "repository_history",
+    }
 
 
 def sync_managed_assets(source_dir: Path, workdir: Path) -> dict[str, int]:
@@ -310,6 +368,11 @@ def main() -> None:
 
     manifest = validate_source(args.source_dir, args.branch)
     ensure_repo(args.repo_url, args.branch, args.workdir)
+    identity = ensure_commit_identity(args.workdir)
+    print(
+        "Git commit identity: "
+        f"{identity['name']} <{identity['email']}> ({identity['source']})"
+    )
     sync_result = sync_managed_assets(args.source_dir, args.workdir)
     print(
         "Incremental sync: "

@@ -36,8 +36,11 @@ def _legacy(
     cases: int,
     *,
     deaths: int = 0,
+    temporal_granularity: str | None = None,
+    metric_type: str | None = None,
+    reporting_basis: str | None = None,
 ) -> dict:
-    return {
+    record = {
         "disease_id": disease_id,
         "date": date,
         "year_month": date[:7],
@@ -49,6 +52,13 @@ def _legacy(
         "mortality_rate": None,
         "data_quality": "validated",
     }
+    if temporal_granularity is not None:
+        record["temporal_granularity"] = temporal_granularity
+    if metric_type is not None:
+        record["metric_type"] = metric_type
+    if reporting_basis is not None:
+        record["reporting_basis"] = reporting_basis
+    return record
 
 
 def _series(
@@ -61,8 +71,11 @@ def _series(
     metric_type: str = "case_notifications",
     incidence_rate: float | None = None,
     temporal_granularity: str = "monthly",
+    reporting_basis: str = "notification",
+    series_is_active: bool | None = None,
+    mapping_relation: str = "exact",
 ) -> dict:
-    return {
+    record = {
         "disease_id": disease_id,
         "date": date,
         "year_month": date[:7],
@@ -84,10 +97,10 @@ def _series(
         "case_definition": f"Definition {series_code}",
         "case_definition_uri": None,
         "metric_type": metric_type,
-        "reporting_basis": "notification",
+        "reporting_basis": reporting_basis,
         "temporal_granularity": temporal_granularity,
         "series_unit": "count",
-        "mapping_relation": "exact",
+        "mapping_relation": mapping_relation,
         "comparability": "direct",
         "aggregation_policy": aggregation_policy,
         "availability_status": "active",
@@ -97,6 +110,9 @@ def _series(
         "geography_key": "country:XX:national",
         "dimension_key": "all",
     }
+    if series_is_active is not None:
+        record["series_is_active"] = series_is_active
+    return record
 
 
 def _by_disease(records: list[dict], disease_id: str) -> list[dict]:
@@ -335,6 +351,86 @@ def test_reported_aggregate_is_preferred_over_non_additive_components() -> None:
     assert context["selected_series_codes"] == ["SER_REPORTED_TOTAL"]
 
 
+def test_multiple_narrower_non_additive_series_never_use_legacy_fallback() -> None:
+    legacy = [_legacy("D001", "2024-01-01", 999)]
+    series = [
+        _series(
+            "D001",
+            "SER_NARROW_A",
+            "2024-01-01",
+            5,
+            mapping_relation="narrower",
+        ),
+        _series(
+            "D001",
+            "SER_NARROW_B",
+            "2024-01-01",
+            100,
+            mapping_relation="narrower",
+        ),
+    ]
+
+    assert apply_series_first_projection(legacy, series) == []
+
+
+def test_single_narrower_series_can_fill_cases() -> None:
+    projected = apply_series_first_projection(
+        [],
+        [
+            _series(
+                "D001",
+                "SER_NARROW",
+                "2024-01-01",
+                5,
+                mapping_relation="narrower",
+            )
+        ],
+    )
+
+    assert [row["cases"] for row in projected] == [5]
+    assert projected[0]["_series_context"]["projection_policy"] == "single_series"
+
+
+def test_unsafe_case_mapping_never_uses_legacy_fallback() -> None:
+    projected = apply_series_first_projection(
+        [_legacy("D001", "2024-01-01", 999)],
+        [
+            _series(
+                "D001",
+                "SER_RELATED",
+                "2024-01-01",
+                5,
+                mapping_relation="related",
+            )
+        ],
+    )
+
+    assert projected == []
+
+
+def test_exact_series_beats_newer_narrower_series() -> None:
+    projected = apply_series_first_projection(
+        [],
+        [
+            _series("D001", "SER_EXACT", "2020-01-01", 5),
+            _series(
+                "D001",
+                "SER_NARROW",
+                "2026-01-01",
+                100,
+                mapping_relation="narrower",
+            ),
+        ],
+    )
+
+    assert [(row["date"], row["cases"]) for row in projected] == [
+        ("2020-01-01", 5)
+    ]
+    assert projected[0]["_series_context"]["selected_series_codes"] == [
+        "SER_EXACT"
+    ]
+
+
 def test_incompatible_registered_metric_does_not_replace_legacy_cases() -> None:
     legacy = [_legacy("D001", "2024-01-01", 12)]
     death_series = [
@@ -356,6 +452,161 @@ def test_incompatible_registered_metric_does_not_replace_legacy_cases() -> None:
         "registered_facts_not_case_count_compatible"
     )
     assert context["available_series_count"] == 1
+    assert context["source_series"][0]["metric_type"] == "deaths"
+
+
+def test_non_case_indicators_are_retained_but_never_added_to_cases() -> None:
+    series = [
+        _series("D001", "SER_CASES", "2024-01-01", 12),
+        _series(
+            "D001",
+            "SER_HOSPITAL", "2024-01-01", 3,
+            metric_type="hospitalizations",
+        ),
+    ]
+
+    projected = apply_series_first_projection([], series)
+
+    assert [row["cases"] for row in projected] == [12]
+    context = projected[0]["_series_context"]
+    assert context["selected_series_codes"] == ["SER_CASES"]
+    assert context["available_series_count"] == 2
+    assert context["non_projection_series_codes"] == ["SER_HOSPITAL"]
+    assert {item["metric_type"] for item in context["source_series"]} == {
+        "case_notifications",
+        "hospitalizations",
+    }
+
+
+def test_iceland_d033_prefers_current_monthly_series_and_blocks_basis_gap_fill() -> None:
+    legacy = [
+        _legacy(
+            "D033",
+            "2000-01-01",
+            99,
+            temporal_granularity="monthly",
+            metric_type="case_notifications",
+            reporting_basis="national_registry_notifications",
+        )
+    ]
+    series = [
+        _series(
+            "D033",
+            "SER_IS_HISTORY_GONORRHEA_MONTHLY",
+            "2020-01-01",
+            8,
+            reporting_basis="national_registry_notifications",
+            series_is_active=False,
+        ),
+        _series(
+            "D033",
+            "SER_IS_HISTORY_GONORRHEA_MONTHLY",
+            "2021-01-01",
+            9,
+            reporting_basis="national_registry_notifications",
+            series_is_active=False,
+        ),
+        _series(
+            "D033",
+            "SER_IS_DOH_ANNUAL_GONORRHOEA",
+            "2025-01-01",
+            25,
+            temporal_granularity="annual",
+            reporting_basis="registry_and_laboratory_surveillance",
+            series_is_active=True,
+        ),
+        _series(
+            "D033",
+            "SER_IS_DOH_STI_GONORRHOEA_MONTHLY",
+            "2026-06-01",
+            6,
+            reporting_basis="laboratory_and_registry_diagnoses",
+            series_is_active=True,
+        ),
+    ]
+
+    projected = apply_series_first_projection(legacy, series)
+
+    assert [(row["date"], row["cases"]) for row in projected] == [
+        ("2026-06-01", 6)
+    ]
+    context = projected[0]["_series_context"]
+    assert context["selected_series_codes"] == [
+        "SER_IS_DOH_STI_GONORRHOEA_MONTHLY"
+    ]
+    assert context["legacy_gap_fill_count"] == 0
+    assert context["legacy_gap_fill_blocked_count"] == 1
+    assert context["coverage_status"] == "legacy_gap_fill_blocked_incompatible"
+    assert context["legacy_incompatibility_reasons"] == [
+        "reporting_basis_mismatch"
+    ]
+
+
+def test_iceland_d028_keeps_weekly_curve_separate_from_monthly_legacy_basis() -> None:
+    legacy = [
+        _legacy(
+            "D028",
+            "2021-01-01",
+            77,
+            temporal_granularity="monthly",
+            metric_type="case_notifications",
+            reporting_basis="national_registry_notifications",
+        )
+    ]
+    series = [
+        _series(
+            "D028",
+            "SER_IS_HISTORY_PERTUSSIS_MONTHLY",
+            "2020-01-01",
+            4,
+            reporting_basis="national_registry_notifications",
+            series_is_active=False,
+        ),
+        _series(
+            "D028",
+            "SER_IS_HISTORY_PERTUSSIS_MONTHLY",
+            "2021-01-01",
+            5,
+            reporting_basis="national_registry_notifications",
+            series_is_active=False,
+        ),
+        _series(
+            "D028",
+            "SER_IS_DOH_RESPIRATORY_PERTUSSIS_WEEKLY",
+            "2026-05-04",
+            3,
+            temporal_granularity="weekly",
+            reporting_basis="registry_and_laboratory_diagnoses",
+            series_is_active=True,
+        ),
+        _series(
+            "D028",
+            "SER_IS_LEGACY_ICD_A37_KIKHOSTI_MONTHLY",
+            "2020-01-01",
+            12,
+            metric_type="registered_diagnoses",
+            reporting_basis="primary_care_icd_registered_diagnoses",
+            series_is_active=False,
+        ),
+    ]
+
+    projected = apply_series_first_projection(legacy, series)
+
+    assert [(row["date"], row["cases"]) for row in projected] == [
+        ("2026-05-04", 3)
+    ]
+    context = projected[0]["_series_context"]
+    assert context["selected_series_codes"] == [
+        "SER_IS_DOH_RESPIRATORY_PERTUSSIS_WEEKLY"
+    ]
+    assert context["legacy_gap_fill_blocked_count"] == 1
+    assert context["legacy_incompatibility_reasons"] == [
+        "reporting_basis_mismatch",
+        "temporal_granularity_mismatch",
+    ]
+    assert "SER_IS_LEGACY_ICD_A37_KIKHOSTI_MONTHLY" in context[
+        "non_projection_series_codes"
+    ]
 
 
 def test_builders_publish_layer_and_series_definition_metadata() -> None:

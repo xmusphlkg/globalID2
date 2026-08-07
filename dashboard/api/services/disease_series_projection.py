@@ -7,8 +7,10 @@ and report period, so this module builds that compatibility view conservatively:
 * one registered case-count series is read directly;
 * multiple series are summed only when every series explicitly declares
   ``sum_disjoint`` and every selected component exists in the period;
-* otherwise one deterministic representative series is used and every source
-  definition remains visible in provenance;
+* otherwise one deterministic representative exact series is used and every
+  source definition remains visible in provenance;
+* multiple narrower non-additive series without a reported aggregate remain
+  source observations and do not manufacture a generic cases curve;
 * legacy records fill only period keys that have no safe registry projection.
 
 Keeping this logic outside the router makes the projection independently
@@ -40,6 +42,8 @@ from src.domain.disease_ontology import (
 from src.domain.disease_record import DiseaseRecord
 from src.services.disease_series_policy import (
     SERIES_CASE_COUNT_METRICS as _SERIES_CASE_COUNT_METRICS,
+    SOURCE_OBSERVATIONS_ONLY_POLICY,
+    is_case_count_metric,
     is_case_count_series,
     select_series_projection,
 )
@@ -49,6 +53,26 @@ LEGACY_DATA_LAYER = "legacy_fallback"
 MIXED_DATA_LAYER = "mixed"
 LEGACY_GAP_FILL_DATA_LAYER = "legacy_gap_fill"
 SERIES_CASE_COUNT_METRICS = _SERIES_CASE_COUNT_METRICS
+
+# ``is_active`` describes whether a registry declaration belongs to the
+# current ontology release.  Historical declarations intentionally set it to
+# false, even though their observations remain valid for longitudinal charts.
+# Read visibility therefore follows the explicit availability status instead.
+UNREADABLE_SERIES_AVAILABILITY_STATUSES = (
+    "deprecated",
+    "discontinued",
+    "not_available",
+    "retired",
+    "unavailable",
+)
+
+
+def _readable_series_availability_clause():
+    """SQL predicate for series that may contribute observations to reads."""
+
+    return DiseaseSurveillanceSeries.availability_status.not_in(
+        UNREADABLE_SERIES_AVAILABILITY_STATUSES
+    )
 
 
 @dataclass(frozen=True)
@@ -185,6 +209,43 @@ def _legacy_record(item: object) -> dict[str, Any]:
     return {field: _get(item, field) for field in fields}
 
 
+def _source_observations_only_context(
+    *,
+    legacy_count: int,
+    source_series: Sequence[Mapping[str, Any]],
+    source_observation_count: int,
+    loss_risk: str,
+) -> dict[str, Any]:
+    """Describe typed case facts that have no safe concept-level projection."""
+
+    return {
+        "data_layer": SERIES_DATA_LAYER,
+        "projection_policy": SOURCE_OBSERVATIONS_ONLY_POLICY,
+        "registry_projection_policy": SOURCE_OBSERVATIONS_ONLY_POLICY,
+        "loss_risk": loss_risk,
+        "selected_series_codes": [],
+        "available_series_count": len(source_series),
+        "source_series": list(source_series),
+        "period_granularity": None,
+        "fallback_reason": None,
+        "metric_layers": {
+            "cases": "not_available",
+            "deaths": "not_available",
+            "recoveries": "not_available",
+        },
+        "coverage": {
+            "status": SOURCE_OBSERVATIONS_ONLY_POLICY,
+            "legacy_period_count": legacy_count,
+            "registry_period_count": 0,
+            "source_observation_count": source_observation_count,
+            "overlap_period_count": 0,
+            "legacy_gap_fill_count": 0,
+            "registry_only_period_count": 0,
+            "coverage_ratio_against_legacy": 0.0 if legacy_count else 1.0,
+        },
+    }
+
+
 def _decorate(
     record: dict[str, Any],
     *,
@@ -219,10 +280,25 @@ def project_series_first_records(
     """Project one disease/country without hiding legacy coverage gaps."""
 
     legacy = [_legacy_record(item) for item in legacy_records]
+    case_count_facts = [
+        record for record in series_records if is_case_count_metric(record)
+    ]
     eligible = [record for record in series_records if _series_is_case_count(record)]
-    all_source_series = _source_series_details(eligible)
+    projectable_source_series = _source_series_details(eligible)
+    all_source_series = _source_series_details(series_records)
 
     if not eligible:
+        if case_count_facts:
+            typed_source_series = _source_series_details(case_count_facts)
+            return [], _source_observations_only_context(
+                legacy_count=len(legacy),
+                source_series=all_source_series,
+                source_observation_count=sum(
+                    int(item.get("observation_count") or 0)
+                    for item in typed_source_series
+                ),
+                loss_risk="mapping_relation_not_safe_for_generic_cases",
+            )
         fallback_reason = (
             "registered_facts_not_case_count_compatible"
             if series_records
@@ -258,10 +334,23 @@ def project_series_first_records(
         ]
         return sorted(projected, key=lambda row: _period_key(row.get("time"))), context
 
-    selected_codes, projection_policy, loss_risk = _select_series(all_source_series)
-    period_granularity = selected_series_granularity(
-        all_source_series, selected_codes
+    selected_codes, projection_policy, loss_risk = _select_series(
+        projectable_source_series
     )
+    period_granularity = selected_series_granularity(
+        projectable_source_series, selected_codes
+    )
+    if projection_policy == SOURCE_OBSERVATIONS_ONLY_POLICY:
+        source_observation_count = sum(
+            int(item.get("observation_count") or 0)
+            for item in projectable_source_series
+        )
+        return [], _source_observations_only_context(
+            legacy_count=len(legacy),
+            source_series=all_source_series,
+            source_observation_count=source_observation_count,
+            loss_risk=loss_risk or "no_safe_generic_cases_rollup",
+        )
     selected = [
         row
         for row in eligible
@@ -516,7 +605,7 @@ async def load_series_first_records(
             .where(
                 DiseaseSurveillanceSeries.disease_id == disease_code,
                 DiseaseSurveillanceSeries.country_code == country.code,
-                DiseaseSurveillanceSeries.is_active.is_(True),
+                _readable_series_availability_clause(),
             )
             .order_by(
                 DiseaseSeriesObservation.series_code,

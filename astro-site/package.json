@@ -1,7 +1,7 @@
 {
   "name": "globalid-report-site",
   "type": "module",
-  "version": "0.4.5",
+  "version": "0.5.1",
   "scripts": {
     "dev": "astro dev",
     "site:data": "sh -c 'PYTHON_BIN=../venv/bin/python3; if [ ! -x \"$PYTHON_BIN\" ]; then PYTHON_BIN=python3; fi; \"$PYTHON_BIN\" ../scripts/generate_site_data.py'",
@@ -10,8 +10,9 @@
     "build:with-data": "npm run site:data && astro build",
     "test:curve": "node --experimental-strip-types --test src/components/charts/epidemicCurveModel.test.ts",
     "test:monthly": "node --experimental-strip-types --test src/components/charts/monthlyBarModel.test.ts src/components/charts/monthlyBarOption.integration.test.ts",
-    "test:charts": "node --experimental-strip-types --test src/lib/echartsReact.test.ts src/components/charts/epidemicCurveModel.test.ts src/components/charts/monthlyBarModel.test.ts src/components/charts/monthlyBarOption.integration.test.ts",
+    "test:charts": "node --experimental-strip-types --test src/lib/echartsReact.test.ts src/lib/country-coverage.test.ts src/components/charts/epidemicCurveModel.test.ts src/components/charts/monthlyBarModel.test.ts src/components/charts/monthlyBarOption.integration.test.ts",
     "test:knowledge": "node --experimental-strip-types --test src/utils/knowledge.test.ts",
+    "test:seo": "node --experimental-strip-types --test src/lib/report-routes.test.ts src/lib/seo.test.ts src/lib/sitemap-entries.test.ts",
     "check": "astro check",
     "preview": "astro preview",
     "astro": "astro"

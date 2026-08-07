@@ -232,3 +232,10 @@ D232,Infectious syphilis under two years duration,病程不足两年的感染性
 D233,Syphilis over two years or unspecified duration,病程超过两年或病程未明的梅毒,Bacterial,A52-A53,1A70,Australia source-defined syphilis category combining duration over two years with unspecified duration,Australia NINDSS
 D234,Paratyphoid fever,副伤寒,Bacterial,A01.1-A01.4,,Paratyphoid-only surveillance concept; excludes typhoid fever,Global surveillance sources
 D235,Meningitis (all reported etiologies),脑膜炎（全部报告病因）,Other,,,Source-reported meningitis category spanning reported etiologies; not equivalent to bacterial meningitis,Brazil DATASUS SINAN
+D236,Methicillin-resistant Staphylococcus aureus (MRSA) surveillance,耐甲氧西林金黄色葡萄球菌（MRSA）监测,Bacterial,,,Source-defined MRSA surveillance reports that may include infection or colonization; not restricted to community-associated infection,Iceland Directorate of Health
+D237,ESBL/AmpC-producing organism surveillance,ESBL/AmpC产酶菌监测,Bacterial,,,Source-defined surveillance reports of organisms producing extended-spectrum beta-lactamases or AmpC; infection and colonization may not be separable,Iceland Directorate of Health
+D238,Human T-lymphotropic virus 1 or 2 infection,人T淋巴细胞嗜性病毒1型或2型感染,Viral,,,Source-reported combined HTLV-1 or HTLV-2 infection category; virus type is not separable,Sweden Public Health Agency
+D239,Penicillin-non-susceptible/resistant pneumococcal surveillance,青霉素敏感性降低或耐药肺炎球菌监测,Bacterial,,,Source-defined penicillin-non-susceptible or resistant Streptococcus pneumoniae surveillance that may include infection or carriage,Nordic surveillance sources
+D240,Viral meningoencephalitis surveillance,病毒性脑膜脑炎监测,Viral,,,Source-reported aggregate of viral meningitis encephalitis or meningoencephalitis; source definition boundaries remain series-specific,Nordic surveillance sources
+D241,"Escherichia coli enteritis, all reported pathotypes",大肠埃希菌肠炎（所有报告型别）,Bacterial,A04.4,,FHI MSIS aggregate of EHEC/STEC and other reportable diarrheagenic E. coli pathotypes,Norway FHI MSIS
+D242,Lymphogranuloma venereum,性病性淋巴肉芽肿,Bacterial,A55,1A82.1,Invasive Chlamydia trachomatis L1-L3 infection kept distinct from general genital chlamydia,Norway FHI MSIS

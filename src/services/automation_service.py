@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any, Optional
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import select
+from sqlalchemy import inspect, select, text
 
 from src.core import get_config, get_database, get_logger
 from src.core.source_scopes import canonicalize_task_source
@@ -21,6 +21,30 @@ from src.services.smtp_email_service import smtp_email_service
 from src.services.settings_service import system_settings_service
 
 logger = get_logger(__name__)
+
+AUTOMATION_COUNTRY_CODE_LENGTH = 10
+
+
+def _country_code_resize_sql(
+    dialect_name: str, current_length: int | None
+) -> str | None:
+    """Return the safe in-place widening statement for supported SQL dialects."""
+
+    if current_length is None or current_length >= AUTOMATION_COUNTRY_CODE_LENGTH:
+        return None
+    if dialect_name == "postgresql":
+        return (
+            "ALTER TABLE automation_jobs ALTER COLUMN country_code "
+            f"TYPE VARCHAR({AUTOMATION_COUNTRY_CODE_LENGTH})"
+        )
+    if dialect_name in {"mysql", "mariadb"}:
+        return (
+            "ALTER TABLE automation_jobs MODIFY country_code "
+            f"VARCHAR({AUTOMATION_COUNTRY_CODE_LENGTH}) NOT NULL"
+        )
+    # SQLite does not enforce VARCHAR lengths, so existing VARCHAR(2) columns
+    # already accept ISO 3166-2 values such as CA-ON.
+    return None
 
 
 def _iso(value: Optional[datetime]) -> Optional[str]:
@@ -43,6 +67,8 @@ class AutomationJobConfig:
     save_raw: bool = True
     fill_missing: bool = False
     force: bool = False
+    include_current_month: bool = False
+    revision_window_months: int = 3
     retry_threshold: int = 3
     interval_minutes: Optional[int] = None
     daily_time: Optional[str] = None
@@ -70,6 +96,10 @@ class AutomationJobConfig:
             save_raw=bool(payload.get("save_raw", True)),
             fill_missing=bool(payload.get("fill_missing", False)),
             force=bool(payload.get("force", False)),
+            include_current_month=bool(payload.get("include_current_month", False)),
+            revision_window_months=max(
+                1, min(24, int(payload.get("revision_window_months") or 3))
+            ),
             retry_threshold=int(payload.get("retry_threshold") or default_retry_threshold),
             interval_minutes=(
                 int(payload["interval_minutes"])
@@ -125,6 +155,36 @@ class AutomationService:
             engine = get_engine()
             async with engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all, tables=[AutomationJob.__table__])
+                column_defs = await conn.run_sync(
+                    lambda sync_conn: {
+                        column["name"]: column
+                        for column in inspect(sync_conn).get_columns("automation_jobs")
+                    }
+                )
+                columns = set(column_defs)
+                country_code_column = column_defs.get("country_code") or {}
+                current_country_code_length = getattr(
+                    country_code_column.get("type"), "length", None
+                )
+                resize_sql = _country_code_resize_sql(
+                    conn.dialect.name, current_country_code_length
+                )
+                if resize_sql:
+                    await conn.execute(text(resize_sql))
+                if "include_current_month" not in columns:
+                    await conn.execute(
+                        text(
+                            "ALTER TABLE automation_jobs ADD COLUMN "
+                            "include_current_month BOOLEAN NOT NULL DEFAULT FALSE"
+                        )
+                    )
+                if "revision_window_months" not in columns:
+                    await conn.execute(
+                        text(
+                            "ALTER TABLE automation_jobs ADD COLUMN "
+                            "revision_window_months INTEGER NOT NULL DEFAULT 3"
+                        )
+                    )
 
             await self._seed_jobs_from_env_if_needed()
             self._storage_ready = True
@@ -162,6 +222,8 @@ class AutomationService:
                         save_raw=job.save_raw,
                         fill_missing=job.fill_missing,
                         force=job.force,
+                        include_current_month=job.include_current_month,
+                        revision_window_months=job.revision_window_months,
                         retry_threshold=job.retry_threshold,
                         interval_minutes=job.interval_minutes,
                         daily_time=job.daily_time,
@@ -196,6 +258,8 @@ class AutomationService:
                     save_raw=row.save_raw,
                     fill_missing=row.fill_missing,
                     force=row.force,
+                    include_current_month=row.include_current_month,
+                    revision_window_months=row.revision_window_months,
                     retry_threshold=row.retry_threshold,
                     interval_minutes=row.interval_minutes,
                     daily_time=row.daily_time,
@@ -303,6 +367,8 @@ class AutomationService:
                     process=job.process,
                     save_raw=job.save_raw,
                     fill_missing=job.fill_missing,
+                    include_current_month=job.include_current_month,
+                    revision_window_months=job.revision_window_months,
                     priority=job.priority,
                     metadata={
                         "automation_job_id": job.job_id,

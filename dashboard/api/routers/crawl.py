@@ -11,12 +11,43 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..deps import get_db
 from ..schemas.task import TaskOut
+from src.core.source_scopes import canonicalize_task_source
 from src.core.task_manager import task_manager
 from src.domain.country import Country
 from src.domain.task import Task, TaskPriority, TaskStatus, TaskType
 from src.services.crawl_task_service import crawl_task_service
 
 router = APIRouter()
+
+_ICELAND_HISTORY_SCOPES = {"is_doh_history", "is_doh_legacy_icd"}
+
+
+def _validate_iceland_crawl_options(
+    *,
+    country_code: str,
+    source: str,
+    fill_missing: bool,
+    start_year: Optional[int],
+) -> None:
+    normalized_country = str(country_code or "").strip().upper()
+    normalized_source = canonicalize_task_source(
+        source,
+        country_code=normalized_country,
+    )
+    if normalized_country == "IS" and fill_missing:
+        raise HTTPException(
+            400,
+            "Iceland mixed-grain sources preserve missing periods as unknown; fill_missing is not supported",
+        )
+    if (
+        normalized_country == "IS"
+        and normalized_source in _ICELAND_HISTORY_SCOPES
+        and start_year is not None
+    ):
+        raise HTTPException(
+            400,
+            "start_year applies only to Iceland current dashboards; reviewed history sources always process their complete workbook catalogue",
+        )
 
 
 def _cancel_meta(task: Task) -> tuple[bool, Optional[str]]:
@@ -38,6 +69,16 @@ class CrawlStartRequest(BaseModel):
     process: bool = Field(True, description="Also run data processing after fetch")
     save_raw: bool = Field(True, description="Archive original fetched payloads / raw source artifacts")
     fill_missing: bool = Field(False, description="Backfill missing months")
+    include_current_month: Optional[bool] = Field(
+        None,
+        description="Include the open current month as provisional when supported",
+    )
+    revision_window_months: Optional[int] = Field(
+        None,
+        ge=1,
+        le=24,
+        description="Recent monthly periods to re-fetch for upstream revisions",
+    )
     start_year: Optional[int] = Field(
         None,
         ge=1900,
@@ -75,6 +116,12 @@ async def start_crawl(
     country = (await db.execute(select(Country).where(Country.id == body.country_id))).scalar_one_or_none()
     if not country:
         raise HTTPException(404, f"Country not found: {body.country_id}")
+    _validate_iceland_crawl_options(
+        country_code=country.code,
+        source=body.source,
+        fill_missing=body.fill_missing,
+        start_year=body.start_year,
+    )
 
     try:
         result = await crawl_task_service.enqueue_crawl_task(
@@ -84,6 +131,8 @@ async def start_crawl(
             process=body.process,
             save_raw=body.save_raw,
             fill_missing=body.fill_missing,
+            include_current_month=body.include_current_month,
+            revision_window_months=body.revision_window_months,
             priority=body.priority,
             metadata={
                 **({"start_year": body.start_year} if body.start_year is not None else {}),

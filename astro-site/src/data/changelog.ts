@@ -22,6 +22,75 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.5.1',
+    date: '2026-08-07',
+    titleEn: 'Five new surveillance regions and clearer source notes',
+    titleZh: '新增五个监测地区，并改进来源注释呈现',
+    summaryEn:
+      'This release expands public surveillance coverage to Ontario, Finland, Iceland, Norway, and Sweden, strengthens disease-source mapping safeguards, and moves complex source notes out of chart legends into a dedicated data-notes area.',
+    summaryZh:
+      '本次更新将公开监测覆盖扩展至安大略、芬兰、冰岛、挪威和瑞典，加强疾病来源映射保护，并把复杂来源说明从图例中移至专门的数据注释区。',
+    sections: [
+      {
+        kind: 'new',
+        labelEn: 'New',
+        labelZh: '新增',
+        items: [
+          {
+            en: 'Added first-class ingestion, mapping, source-series registration, tests, and public country pages for Ontario, Finland, Iceland, Norway, and Sweden.',
+            zh: '为安大略、芬兰、冰岛、挪威和瑞典新增一等接入能力，包括抓取、映射、来源序列注册、测试和公开国家/地区页面。',
+          },
+          {
+            en: 'Added dynamic monthly/current-period controls for supported Nordic sources, including provisional current-month handling and revision-window refresh options.',
+            zh: '为支持的北欧来源新增动态月度/当前期间控制，包括临时当前月处理和修订窗口刷新选项。',
+          },
+          {
+            en: 'Added SEO-oriented country, disease, report, sitemap, and structured-data helpers so public pages are easier for search engines to discover.',
+            zh: '新增面向 SEO 的国家、疾病、报告、站点地图和结构化数据工具，使公开页面更容易被搜索引擎发现。',
+          },
+        ],
+      },
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        items: [
+          {
+            en: 'Strengthened disease ontology and mapping rules for mixed-grain, non-additive, antimicrobial-resistance, STI, respiratory, and historical workbook series.',
+            zh: '加强混合粒度、不可加总、耐药监测、性传播感染、呼吸道监测和历史工作簿序列的疾病本体与映射规则。',
+          },
+          {
+            en: 'Updated the operations dashboard source flow to show source policy, availability, current-period support, revision windows, and Iceland history-source constraints consistently.',
+            zh: '更新运营控制面板的来源流程，一致展示来源策略、可用性、当前期间支持、修订窗口和冰岛历史来源限制。',
+          },
+          {
+            en: 'Kept source-series observations authoritative while documenting each remaining legacy compatibility projection in the reviewed access baseline.',
+            zh: '保持来源序列观测为权威层，并在已审查访问基线中记录仍需保留的旧版兼容投影。',
+          },
+          {
+            en: 'Moved verbose chart source definitions, reporting basis, availability, and aggregation policy into a bottom data-notes panel instead of overloading the legend.',
+            zh: '将冗长的图表来源定义、报告口径、可用状态和聚合策略移入底部数据注释栏，不再挤入图例。',
+          },
+        ],
+      },
+      {
+        kind: 'fixed',
+        labelEn: 'Fixed',
+        labelZh: '修复',
+        items: [
+          {
+            en: 'Fixed the epidemic-curve frame so a selector sidebar no longer hides the legend; legends now remain visible in a compact footer when both are present.',
+            zh: '修复流行曲线框架中筛选侧栏会隐藏图例的问题；当筛选器与图例同时存在时，图例会以紧凑底栏呈现。',
+          },
+          {
+            en: 'Updated ontology-export tests and legacy-access guard baselines for the expanded registry so full repository validation passes cleanly.',
+            zh: '随扩展后的注册表更新本体导出测试和旧版访问保护基线，使完整仓库验证干净通过。',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '0.4.5',
     date: '2026-08-07',
     titleEn: 'Cleaner charts and smoother time navigation',

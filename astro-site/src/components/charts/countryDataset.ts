@@ -1,3 +1,29 @@
+export interface SourceSeriesMetadata {
+  series_code?: string;
+  source_series_code?: string;
+  source_system?: string;
+  source_label?: string;
+  metric_type?: string;
+  reporting_basis?: string;
+  temporal_granularity?: string;
+  unit?: string;
+  geography_key?: string;
+  dimension_key?: string;
+  mapping_relation?: string;
+  comparability?: string;
+  aggregation_policy?: string;
+  availability_status?: string;
+  missing_value_policy?: string;
+  definition_version?: string;
+  case_definition?: string;
+  case_definition_uri?: string;
+  observation_count?: number;
+  total_value?: number;
+  dates?: string[];
+  values?: number[];
+  quality_statuses?: string[];
+}
+
 export interface CountryDatasetSeriesEntry {
   disease_id: string;
   name_en: string;
@@ -16,6 +42,15 @@ export interface CountryDatasetSeriesEntry {
   latest_deaths?: number;
   incidence_rate?: number | null;
   mortality_rate?: number | null;
+  data_layer?: string;
+  projection_policy?: string;
+  loss_risk?: string | null;
+  period_granularity?: string | null;
+  available_series_count?: number;
+  coverage_status?: string | null;
+  selected_series_codes?: string[];
+  metric_layers?: Record<string, string>;
+  source_series?: SourceSeriesMetadata[];
 }
 
 export interface CountryDatasetHeatmap {
@@ -47,6 +82,15 @@ interface CompactCountryDatasetSeriesEntry {
   ri?: number[];
   rv?: number[];
   rs?: Array<number | null>;
+  data_layer?: string;
+  projection_policy?: string;
+  loss_risk?: string | null;
+  period_granularity?: string | null;
+  available_series_count?: number;
+  coverage_status?: string | null;
+  selected_series_codes?: string[];
+  metric_layers?: Record<string, string>;
+  source_series?: SourceSeriesMetadata[];
 }
 
 interface CompactCountryDataset {
@@ -107,6 +151,15 @@ function normalizeCountryDataset(raw: CountryDataset | CompactCountryDataset): C
           total_deaths: entry.td ?? 0,
           latest_cases: entry.lc ?? 0,
           latest_deaths: entry.ld ?? 0,
+          data_layer: entry.data_layer,
+          projection_policy: entry.projection_policy,
+          loss_risk: entry.loss_risk,
+          period_granularity: entry.period_granularity,
+          available_series_count: entry.available_series_count ?? 0,
+          coverage_status: entry.coverage_status,
+          selected_series_codes: entry.selected_series_codes ?? [],
+          metric_layers: entry.metric_layers ?? {},
+          source_series: entry.source_series ?? [],
         } satisfies CountryDatasetSeriesEntry,
       ];
     })

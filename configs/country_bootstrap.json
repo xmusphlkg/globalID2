@@ -112,6 +112,54 @@
     },
     "notes": "NINDSS Microsoft BI feed aggregated to national via internal globalID2 crawler"
   },
+  "CA": {
+    "location_type": "country",
+    "iso_country_code": "CA",
+    "crawler_config": {
+      "sources": [
+        "all"
+      ],
+      "reporting_area": "national",
+      "geography_key": "country:CA:national"
+    },
+    "notes": "Canada is the national jurisdiction; subdivision feeds are registered separately."
+  },
+  "CA-ON": {
+    "parent_country_code": "CA",
+    "location_type": "subdivision",
+    "iso_subdivision_code": "CA-ON",
+    "data_source_url": "https://www.publichealthontario.ca/en/data-and-analysis/infectious-disease/reportable-disease-trends-annually",
+    "data_source_type": "microsoft_bi",
+    "crawler_config": {
+      "sources": [
+        "pho_idto_monthly"
+      ],
+      "cadence": "monthly",
+      "landing_url": "https://www.publichealthontario.ca/en/data-and-analysis/infectious-disease/reportable-disease-trends-annually",
+      "embed_url": "https://ws-rpt1.publichealthontario.ca/Home/EmbedReport/14b5691a-c95d-46b2-84f1-9119080e083b",
+      "report_id": "14b5691a-c95d-46b2-84f1-9119080e083b",
+      "page_display_name": "Monthly Data Table",
+      "visual_name": "8533f6960c0f199b51ae",
+      "refresh_recent_months": 12,
+      "supports_fill_missing": false,
+      "default_fill_missing": false,
+      "reporting_area": "Ontario",
+      "geocode": "CA-ON",
+      "geography_key": "country:CA-ON:national"
+    },
+    "parser_config": {
+      "primary": "ca_on_pho_idto_monthly"
+    },
+    "disease_mapping_rules": {
+      "strategy": "db_first",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "MONTHLY",
+      "lang": "en-CA"
+    },
+    "notes": "Public Health Ontario IDTO current-year preliminary monthly case counts for Ontario, published as an independent country/region dataset linked to parent Canada."
+  },
   "NZ": {
     "data_source_url": "https://www.phfscience.nz/digital-library/",
     "data_source_type": "web",
@@ -293,5 +341,171 @@
       "lang": "en-CH"
     },
     "notes": "Switzerland FOPH/BAG IDD mandatory reporting API normalized to national case rows. Monthly series may use the dashboard CHFL aggregate where CH-only monthly series are not exposed."
+  },
+  "FI": {
+    "public_release_enabled": true,
+    "data_source_url": "https://sampo.thl.fi/pivot/prod/en/ttr/cases/fact_ttr_cases",
+    "data_source_type": "cube_csv",
+    "crawler_config": {
+      "sources": [
+        "thl_ttr"
+      ],
+      "cadence": "monthly",
+      "source_update_cadence": "daily",
+      "cube_url": "https://sampo.thl.fi/pivot/prod/en/ttr/cases/fact_ttr_cases",
+      "dimensions_url": "https://sampo.thl.fi/pivot/prod/en/ttr/cases/fact_ttr_cases.dimensions.json",
+      "full_history_start_year": 1995,
+      "refresh_recent_months": 3,
+      "supports_current_month": true,
+      "default_include_current_month": true,
+      "dynamic_revision_enabled": true,
+      "current_month_status": "provisional",
+      "publish_closed_months_only": false,
+      "reporting_area": "national",
+      "geography_key": "country:FI:national",
+      "license": "CC BY 4.0",
+      "series_quality_guard": {
+        "mode": "fail_closed",
+        "registry_coverage": "required",
+        "history_lookback_days": 730
+      }
+    },
+    "parser_config": {
+      "primary": "fi_thl_ttr_monthly"
+    },
+    "disease_mapping_rules": {
+      "strategy": "db_first",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "MONTHLY",
+      "lang": "fi-FI"
+    },
+    "notes": "Finland THL Infectious Diseases Register national monthly case counts. The current month is ingested as provisional and the latest three months are refreshed for source revisions."
+  },
+  "NO": {
+    "public_release_enabled": true,
+    "data_source_url": "https://allvis.fhi.no/msis",
+    "data_source_type": "official_json_api",
+    "crawler_config": {
+      "sources": [
+        "fhi_msis"
+      ],
+      "cadence": "monthly",
+      "source_update_cadence": "daily",
+      "diagnoses_url": "https://allvis.fhi.no/api/msis/kodeverk/diagnoser",
+      "monthly_url": "https://allvis.fhi.no/api/msis/etterDiagnoseFordeltPaaMaaned",
+      "full_history_start_year": 1977,
+      "refresh_recent_months": 3,
+      "supports_current_month": true,
+      "default_include_current_month": true,
+      "dynamic_revision_enabled": true,
+      "current_month_status": "provisional",
+      "publish_closed_months_only": false,
+      "reporting_area": "national",
+      "geography_key": "country:NO:national",
+      "api_contract": "unversioned_official_frontend",
+      "series_quality_guard": {
+        "mode": "fail_closed",
+        "registry_coverage": "required",
+        "history_lookback_days": 730
+      }
+    },
+    "parser_config": {
+      "primary": "no_fhi_msis_monthly"
+    },
+    "disease_mapping_rules": {
+      "strategy": "db_first",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "MONTHLY",
+      "lang": "nb-NO"
+    },
+    "notes": "Norway FHI MSIS national monthly notifications from the official Allvis frontend API; adapter contract checks guard the unversioned endpoint."
+  },
+  "SE": {
+    "public_release_enabled": false,
+    "data_source_url": "https://www.folkhalsomyndigheten.se/statistik-och-data/hitta-statistik-och-data/smittsamma-sjukdomar-statistik/",
+    "data_source_type": "official_html_csv",
+    "crawler_config": {
+      "sources": [
+        "fohm_sminet"
+      ],
+      "cadence": "monthly",
+      "source_update_cadence": "daily_revisions",
+      "publication_day": 8,
+      "catalog_url": "https://www.folkhalsomyndigheten.se/statistik-och-data/hitta-statistik-och-data/smittsamma-sjukdomar-statistik/",
+      "full_history_start_year": 2016,
+      "refresh_recent_months": 3,
+      "supports_current_month": true,
+      "default_include_current_month": true,
+      "dynamic_revision_enabled": true,
+      "current_month_status": "provisional_when_source_evidence_exists",
+      "publish_closed_months_only": true,
+      "reporting_area": "national",
+      "geography_key": "country:SE:national",
+      "preferred_transport": "csv_with_html_fallback",
+      "reuse_status": "permission_pending",
+      "series_quality_guard": {
+        "mode": "fail_closed",
+        "registry_coverage": "required",
+        "history_lookback_days": 730
+      }
+    },
+    "parser_config": {
+      "primary": "se_fohm_sminet_monthly"
+    },
+    "disease_mapping_rules": {
+      "strategy": "db_first",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "MONTHLY",
+      "lang": "sv-SE"
+    },
+    "notes": "Sweden SmiNet national monthly reported cases. Technical ingestion is enabled for internal validation; public release remains disabled pending explicit reuse confirmation."
+  },
+  "IS": {
+    "data_source_url": "https://island.is/en/smitsjukdomar-tolur",
+    "data_source_type": "powerbi_publish_to_web_and_excel",
+    "crawler_config": {
+      "sources": [
+        "is_doh_annual",
+        "is_doh_sti",
+        "is_doh_respiratory",
+        "is_doh_history",
+        "is_doh_legacy_icd"
+      ],
+      "cadence": "mixed_annual_monthly_weekly",
+      "landing_url": "https://island.is/en/smitsjukdomar-tolur",
+      "respiratory_landing_url": "https://island.is/en/respiratory-tract-infections",
+      "annual_dashboard_url": "https://app.powerbi.com/view?r=eyJrIjoiY2Q4Mjk2NDQtNDA1MS00YTcxLTk1NzEtZTBlZDYwMTU3ZDNiIiwidCI6IjRkNzYyYWMwLTYyMDUtNDJjZS1iOTY0LWMzYjg5NThmZDRhOSIsImMiOjh9",
+      "sti_dashboard_url": "https://app.powerbi.com/view?r=eyJrIjoiNTNmN2ViYTEtZjdiZi00MmRkLWFjYWQtOWI0ZmEwNjhjYmQyIiwidCI6IjRkNzYyYWMwLTYyMDUtNDJjZS1iOTY0LWMzYjg5NThmZDRhOSIsImMiOjh9",
+      "respiratory_dashboard_url": "https://app.powerbi.com/view?r=eyJrIjoiZjgyOWI0YzgtNjNkZC00Y2QzLTllMzctMWIxMTAxZThlMDJkIiwidCI6IjRkNzYyYWMwLTYyMDUtNDJjZS1iOTY0LWMzYjg5NThmZDRhOSIsImMiOjh9",
+      "full_history_start_year": 1997,
+      "refresh_recent_months": 12,
+      "refresh_recent_weeks": 52,
+      "reporting_area": "national",
+      "series_quality_guard": {
+        "mode": "fail_closed",
+        "registry_coverage": "required",
+        "history_lookback_days": 11000
+      }
+    },
+    "parser_config": {
+      "primary": "is_doh_mixed_surveillance",
+      "history": "is_doh_historical_excel"
+    },
+    "disease_mapping_rules": {
+      "strategy": "db_first",
+      "fallback": "quarantine_unmapped",
+      "unicode_normalization": "NFKC"
+    },
+    "report_config": {
+      "default_type": "WEEKLY",
+      "lang": "is-IS"
+    },
+    "notes": "Iceland Directorate of Health annual, monthly STI, weekly respiratory and historical Excel surveillance. Source series retain reporting basis and temporal grain separately."
   }
 }

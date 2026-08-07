@@ -41,6 +41,7 @@ from src.core.db_schema import (  # noqa: E402
 )
 from src.core.logging import get_logger  # noqa: E402
 from src.core.missing_values import normalize_rate_value  # noqa: E402
+from src.generation.site_data_database import ensure_standard_country_rows  # noqa: E402
 from src.services.database_rebuild_plan import (  # noqa: E402
     RebuildPlan,
     build_rebuild_plan,
@@ -503,107 +504,21 @@ class DatabaseRebuilder:
         await db.commit()
 
     async def _ensure_canonical_country_exists(self, db, country_code: str):
-        """Ensure canonical country (ISO alpha-2) exists in countries table."""
+        """Ensure a canonical country or country/region jurisdiction exists."""
         canonical = country_code.upper()
         profile = get_country_profile(canonical)
-        bootstrap = get_country_bootstrap_config(canonical)
-
+        await ensure_standard_country_rows(db, [canonical])
         result = await db.execute(
             text("SELECT id FROM countries WHERE code = :code"),
             {"code": canonical},
         )
         row = result.fetchone()
-        if row:
-            # Backfill known defaults to reduce sparse country rows.
-            await db.execute(text("""
-                UPDATE countries
-                SET
-                    -- Keep canonical country naming consistent with country library.
-                    name = :name,
-                    name_en = :name_en,
-                    name_local = :name_local,
-                    language = COALESCE(NULLIF(language, ''), :language),
-                    timezone = COALESCE(NULLIF(timezone, ''), :timezone),
-                    data_source_url = COALESCE(NULLIF(data_source_url, ''), :data_source_url),
-                    data_source_type = COALESCE(NULLIF(data_source_type, ''), :data_source_type),
-                    crawler_config = CASE
-                        WHEN crawler_config IS NULL OR crawler_config::text = '{}' THEN CAST(:crawler_config AS json)
-                        ELSE crawler_config
-                    END,
-                    parser_config = CASE
-                        WHEN parser_config IS NULL OR parser_config::text = '{}' THEN CAST(:parser_config AS json)
-                        ELSE parser_config
-                    END,
-                    disease_mapping_rules = CASE
-                        WHEN disease_mapping_rules IS NULL OR disease_mapping_rules::text = '{}' THEN CAST(:disease_mapping_rules AS json)
-                        ELSE disease_mapping_rules
-                    END,
-                    report_config = CASE
-                        WHEN report_config IS NULL OR report_config::text = '{}' THEN CAST(:report_config AS json)
-                        ELSE report_config
-                    END,
-                    notes = COALESCE(NULLIF(notes, ''), :notes),
-                    metadata = CASE
-                        WHEN metadata IS NULL OR metadata::text = '{}' THEN CAST(:metadata AS json)
-                        ELSE metadata
-                    END,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE code = :code
-            """), {
-                "code": canonical,
-                "name": profile.name,
-                "name_en": profile.name_en,
-                "name_local": profile.name_local,
-                "language": profile.language,
-                "timezone": profile.timezone,
-                "data_source_url": bootstrap.get("data_source_url"),
-                "data_source_type": bootstrap.get("data_source_type"),
-                "crawler_config": json.dumps(bootstrap.get("crawler_config", {})),
-                "parser_config": json.dumps(bootstrap.get("parser_config", {})),
-                "disease_mapping_rules": json.dumps(bootstrap.get("disease_mapping_rules", {})),
-                "report_config": json.dumps(bootstrap.get("report_config", {})),
-                "notes": bootstrap.get("notes"),
-                "metadata": json.dumps({
-                    "standard_source": profile.source,
-                    "iso_alpha2": profile.code,
-                }),
-            })
-            logger.info(f"  ✓ Country {canonical} already exists (id: {row[0]})")
-            return profile
-
-        await db.execute(text("""
-            INSERT INTO countries (
-                code, name, name_en, name_local, language, timezone,
-                data_source_url, data_source_type,
-                crawler_config, parser_config, disease_mapping_rules, report_config,
-                is_active, metadata, notes, created_at, updated_at
-            ) VALUES (
-                :code, :name, :name_en, :name_local, :language, :timezone,
-                :data_source_url, :data_source_type,
-                CAST(:crawler_config AS json), CAST(:parser_config AS json),
-                CAST(:disease_mapping_rules AS json), CAST(:report_config AS json),
-                true, CAST(:metadata AS json), :notes, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
-            )
-        """), {
-            "code": profile.code,
-            "name": profile.name,
-            "name_en": profile.name_en,
-            "name_local": profile.name_local,
-            "language": profile.language,
-            "timezone": profile.timezone,
-            "data_source_url": bootstrap.get("data_source_url"),
-            "data_source_type": bootstrap.get("data_source_type"),
-            "crawler_config": json.dumps(bootstrap.get("crawler_config", {})),
-            "parser_config": json.dumps(bootstrap.get("parser_config", {})),
-            "disease_mapping_rules": json.dumps(bootstrap.get("disease_mapping_rules", {})),
-            "report_config": json.dumps(bootstrap.get("report_config", {})),
-            "metadata": json.dumps({
-                "standard_source": profile.source,
-                "iso_alpha2": profile.code,
-            }),
-            "notes": bootstrap.get("notes"),
-        })
-        logger.info(f"  ✓ Created country {profile.code} ({profile.name_en}) from {profile.source}")
+        if row is None:
+            raise RuntimeError(f"Failed to initialize country/region: {canonical}")
+        logger.info(
+            f"  ✓ Ensured country/region {canonical} (id: {row[0]}) "
+            f"from {profile.source}"
+        )
         return profile
     
     async def import_standard_diseases(self, db):

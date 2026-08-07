@@ -1,10 +1,11 @@
-"""Shared orchestration for the AU/NZ/TW/HK monthly crawl pipelines.
+"""Shared orchestration for configured jurisdiction monthly crawl pipelines.
 
 The country-specific source semantics remain explicit in ``MonthlyPipelineConfig``;
 this module only owns the repeated fetch, dual-write, and progress lifecycle.
 """
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -27,6 +28,8 @@ class MonthlyPipelineConfig:
     imported_summary: Callable[[int, str], str]
     no_rows_summary: str
     force_fetches_history: bool = False
+    supports_fill_missing: bool = True
+    refresh_in_thread: bool = False
 
 
 CONFIGS = {
@@ -113,6 +116,95 @@ CONFIGS = {
             "(check mapping config)."
         ),
     ),
+    "CA-ON": MonthlyPipelineConfig(
+        country_code="CA-ON",
+        raw_dir_name="ca/on_idto",
+        start_year=2026,
+        recent_months=12,
+        default_months_label="current-year snapshot",
+        fetch_description=(
+            "Fetching Public Health Ontario IDTO monthly preliminary data..."
+        ),
+        mode_recent="complete current-year snapshot",
+        upsert_description="Ontario IDTO current-year data are preliminary and revisable",
+        finalizing_description=(
+            "Finalizing Ontario monthly update and crawl run summary..."
+        ),
+        process_disabled_summary="Process disabled, refreshed Ontario source only.",
+        imported_summary=lambda count, months: (
+            f"Ontario IDTO data upserted: {count} rows from {months}."
+        ),
+        no_rows_summary=(
+            "Ontario source refreshed; no rows matched disease mapping "
+            "(check mapping config)."
+        ),
+        supports_fill_missing=False,
+        refresh_in_thread=True,
+    ),
+    "FI": MonthlyPipelineConfig(
+        country_code="FI",
+        raw_dir_name="fi",
+        start_year=1995,
+        recent_months=3,
+        default_months_label="3",
+        fetch_description=(
+            "Fetching Finland THL Infectious Diseases Register monthly counts..."
+        ),
+        mode_recent="dynamic recent-month revision window",
+        upsert_description="Finland THL register data may be revised",
+        finalizing_description="Finalizing Finland monthly update and crawl run summary...",
+        process_disabled_summary="Process disabled, refreshed Finland THL source only.",
+        imported_summary=lambda count, months: (
+            f"Finland THL data upserted: {count} rows across {months} month(s)."
+        ),
+        no_rows_summary=(
+            "Finland THL source refreshed; no rows matched disease mapping "
+            "(check mapping config)."
+        ),
+        force_fetches_history=True,
+    ),
+    "NO": MonthlyPipelineConfig(
+        country_code="NO",
+        raw_dir_name="no",
+        start_year=1977,
+        recent_months=3,
+        default_months_label="3",
+        fetch_description="Fetching Norway FHI MSIS national monthly notifications...",
+        mode_recent="dynamic recent-month revision window",
+        upsert_description="Norway FHI MSIS data may be revised",
+        finalizing_description="Finalizing Norway monthly update and crawl run summary...",
+        process_disabled_summary="Process disabled, refreshed Norway FHI source only.",
+        imported_summary=lambda count, months: (
+            f"Norway FHI MSIS data upserted: {count} rows across {months} month(s)."
+        ),
+        no_rows_summary=(
+            "Norway FHI source refreshed; no rows matched disease mapping "
+            "(check mapping config)."
+        ),
+        force_fetches_history=True,
+    ),
+    "SE": MonthlyPipelineConfig(
+        country_code="SE",
+        raw_dir_name="se",
+        start_year=2016,
+        recent_months=3,
+        default_months_label="3",
+        fetch_description=(
+            "Fetching Sweden Public Health Agency SmiNet national monthly counts..."
+        ),
+        mode_recent="dynamic recent-month revision window with source-evidence gate",
+        upsert_description="Sweden SmiNet data may be revised",
+        finalizing_description="Finalizing Sweden monthly update and crawl run summary...",
+        process_disabled_summary="Process disabled, refreshed Sweden SmiNet source only.",
+        imported_summary=lambda count, months: (
+            f"Sweden SmiNet data upserted: {count} rows across {months} month(s)."
+        ),
+        no_rows_summary=(
+            "Sweden SmiNet source refreshed; no rows matched disease mapping "
+            "(check mapping config)."
+        ),
+        force_fetches_history=True,
+    ),
 }
 
 
@@ -133,7 +225,13 @@ async def _months_to_fetch(config, updater, *, fill_missing, force, get_database
         return None
 
     now = datetime.now()
-    months = _recent_months(now, config.recent_months)
+    try:
+        recent_months = max(
+            1, min(24, int(getattr(updater, "refresh_recent_months", config.recent_months)))
+        )
+    except (TypeError, ValueError):
+        recent_months = config.recent_months
+    months = _recent_months(now, recent_months)
     if config.force_fetches_history and force:
         for year in range(config.start_year, now.year + 1):
             last_month = 12 if year < now.year else now.month
@@ -168,10 +266,22 @@ async def execute_monthly_pipeline(
     logger,
 ):
     """Run one configured monthly pipeline without changing its public service API."""
+    if fill_missing and not config.supports_fill_missing:
+        raise ValueError(
+            f"{config.country_code} publishes a complete snapshot; fill_missing is "
+            "not supported. Run a normal refresh instead."
+        )
+
     run_started = perf_counter()
     raw_dir = Path("data/raw") / config.raw_dir_name
     run_id: Optional[int] = None
 
+    include_current_month = bool(
+        getattr(updater, "include_current_month", False)
+    )
+    revision_window_months = int(
+        getattr(updater, "refresh_recent_months", config.recent_months)
+    )
     await task_manager.add_workbook_entry(
         task.task_uuid,
         entry_type="info",
@@ -182,7 +292,9 @@ async def execute_monthly_pipeline(
             f"Force: {'Yes' if force else 'No'}\n"
             f"Process: {'Yes' if process else 'No'}\n"
             f"Save Raw: {'Yes' if save_raw else 'No'}\n"
-            f"Fill Missing: {'Yes' if fill_missing else 'No'}"
+            f"Fill Missing: {'Yes' if fill_missing else 'No'}\n"
+            f"Include Current Month: {'Yes (provisional)' if include_current_month else 'No'}\n"
+            f"Revision Window: {revision_window_months} month(s)"
         ),
         content_type="text",
     )
@@ -198,7 +310,12 @@ async def execute_monthly_pipeline(
                 status="running",
                 started_at=datetime.now(timezone.utc),
                 raw_dir=str(raw_dir) if save_raw else None,
-                metadata_={"force": force, "process": process},
+                metadata_={
+                    "force": force,
+                    "process": process,
+                    "include_current_month": include_current_month,
+                    "revision_window_months": revision_window_months,
+                },
             )
             db.add(run)
             await db.flush()
@@ -232,14 +349,23 @@ async def execute_monthly_pipeline(
         get_database=get_database,
     )
     phase1_started = perf_counter()
-    fetched = updater.refresh_source(
-        source=source,
-        run_external=False,
-        force=force,
-        months=months_to_fetch,
-        save_raw=save_raw,
-        raw_dir=raw_dir if save_raw else None,
-    )
+    refresh_kwargs = {
+        "source": source,
+        "run_external": False,
+        "force": force,
+        "months": months_to_fetch,
+        "save_raw": save_raw,
+        "raw_dir": raw_dir if save_raw else None,
+    }
+    options_factory = getattr(updater, "pipeline_refresh_kwargs", None)
+    if callable(options_factory):
+        extra_options = options_factory(task)
+        if extra_options:
+            refresh_kwargs.update(extra_options)
+    if config.refresh_in_thread:
+        fetched = await asyncio.to_thread(updater.refresh_source, **refresh_kwargs)
+    else:
+        fetched = updater.refresh_source(**refresh_kwargs)
     phase1_elapsed = perf_counter() - phase1_started
     source_latest = (
         fetched.source_latest_date.isoformat()
@@ -260,9 +386,9 @@ async def execute_monthly_pipeline(
         title="Phase 1/3 Complete",
         content=(
             f"Months requested: {months_label}\n"
-            f"Source rows prepared (national monthly): {source_rows}\n"
+            f"Source rows prepared (jurisdiction monthly): {source_rows}\n"
             f"Source latest month date: {source_latest}\n"
-            f"Current national CSV: {fetched.source_csv}\n"
+            f"Current normalized CSV: {fetched.source_csv}\n"
             f"Duration: {phase1_elapsed:.1f}s"
         ),
         content_type="text",

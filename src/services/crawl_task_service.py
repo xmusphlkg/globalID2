@@ -8,6 +8,7 @@ from typing import Any, Optional
 from sqlalchemy import select
 
 from src.core import get_database
+from src.core.country_library import get_country_bootstrap_config
 from src.core.source_scopes import canonicalize_task_source
 from src.core.task_manager import task_manager
 from src.domain import Country, Task, TaskPriority, TaskStatus, TaskType
@@ -33,6 +34,8 @@ class CrawlTaskService:
         process: bool = True,
         save_raw: bool = True,
         fill_missing: bool = False,
+        include_current_month: Optional[bool] = None,
+        revision_window_months: Optional[int] = None,
         priority: str = "normal",
         description: Optional[str] = None,
         metadata: Optional[dict[str, Any]] = None,
@@ -61,6 +64,35 @@ class CrawlTaskService:
 
         normalized_source = canonicalize_task_source(source, country_code=country.code)
         normalized_priority = self._normalize_priority(priority)
+        country_config = get_country_bootstrap_config(country.code)
+        crawler_config = (
+            country_config.get("crawler_config", {})
+            if isinstance(country_config, dict)
+            else {}
+        )
+        effective_include_current_month = (
+            self._as_bool(
+                crawler_config.get("default_include_current_month"), False
+            )
+            if include_current_month is None
+            else bool(include_current_month)
+        )
+        supports_current_month = self._as_bool(
+            crawler_config.get("supports_current_month"), False
+        )
+        if effective_include_current_month and not supports_current_month:
+            raise ValueError(
+                f"Current-month ingestion is not supported for {country.code.upper()}"
+            )
+        try:
+            effective_revision_window = int(
+                revision_window_months
+                if revision_window_months is not None
+                else crawler_config.get("refresh_recent_months", 3)
+            )
+        except (TypeError, ValueError):
+            effective_revision_window = 3
+        effective_revision_window = max(1, min(24, effective_revision_window))
         task = await task_manager.create_task(
             task_type=TaskType.CRAWL_DATA,
             task_name=f"Crawl {country.code.upper()} Data ({normalized_source})",
@@ -69,7 +101,9 @@ class CrawlTaskService:
             description=description
             or (
                 f"Source: {normalized_source}, Force: {'Yes' if force else 'No'}, "
-                f"Process: {'Yes' if process else 'No'}"
+                f"Process: {'Yes' if process else 'No'}, "
+                f"Current Month: {'Yes' if effective_include_current_month else 'No'}, "
+                f"Revision Window: {effective_revision_window} month(s)"
             ),
             input_data={
                 "country": country.code.upper(),
@@ -79,6 +113,8 @@ class CrawlTaskService:
                 "process": process,
                 "save_raw": save_raw,
                 "fill_missing": fill_missing,
+                "include_current_month": effective_include_current_month,
+                "revision_window_months": effective_revision_window,
                 **(metadata or {}),
             },
         )
@@ -109,6 +145,16 @@ class CrawlTaskService:
             return TaskPriority(normalized)
         except ValueError as exc:
             raise ValueError(f"Unsupported priority: {priority}") from exc
+
+    @staticmethod
+    def _as_bool(value: Any, default: bool) -> bool:
+        if value is None:
+            return default
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            return value.strip().casefold() in {"1", "true", "yes", "on"}
+        return bool(value)
 
 
 crawl_task_service = CrawlTaskService()

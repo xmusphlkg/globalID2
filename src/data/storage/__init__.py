@@ -13,6 +13,7 @@ from .series_observation_store import (
     SeriesObservationQualityPolicy,
     SeriesObservationQualityReport,
     SeriesObservationQuarantinedError,
+    SeriesObservationSaveResult,
     SeriesObservationStore,
 )
 
@@ -24,5 +25,6 @@ __all__ = [
     "SeriesObservationQualityPolicy",
     "SeriesObservationQualityReport",
     "SeriesObservationQuarantinedError",
+    "SeriesObservationSaveResult",
     "SeriesObservationStore",
 ]

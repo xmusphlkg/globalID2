@@ -14,6 +14,7 @@ from collections import defaultdict
 
 from sqlalchemy import text
 
+from src.core.country_library import get_country_bootstrap_config
 from src.generation.site_series_projection import (
     _normalise_count,
     apply_disease_cutover_projection,
@@ -150,7 +151,15 @@ async def fetch_countries(session) -> list[dict]:
             FROM countries
             ORDER BY code
             """))
-    return [dict(row._mapping) for row in rows]
+    countries = [dict(row._mapping) for row in rows]
+    return [
+        country
+        for country in countries
+        if get_country_bootstrap_config(country.get("code", "")).get(
+            "public_release_enabled", True
+        )
+        is not False
+    ]
 
 
 async def has_population_table(session) -> bool:
@@ -177,6 +186,18 @@ async def fetch_disease_records(
     session, country_code: str, use_population_table: bool
 ) -> list[dict]:
     """Return a loss-aware Series-first projection for one country."""
+
+    projection_records, _source_records = await fetch_disease_export_layers(
+        session, country_code, use_population_table
+    )
+    return projection_records
+
+
+async def fetch_disease_export_layers(
+    session, country_code: str, use_population_table: bool
+) -> tuple[list[dict], list[dict]]:
+    """Return public projections and lossless source observations separately."""
+
     legacy_records = await fetch_disease_records_direct(
         session, country_code, use_population_table
     )
@@ -184,15 +205,21 @@ async def fetch_disease_records(
         session, "disease_surveillance_series"
     ) and await has_table(session, "disease_series_observations")
     if not registry_tables_exist:
-        return apply_disease_cutover_projection(
-            legacy_records, [], country_code=country_code
+        return (
+            apply_disease_cutover_projection(
+                legacy_records, [], country_code=country_code
+            ),
+            [],
         )
 
     series_records = await fetch_disease_series_records(
         session, country_code, use_population_table
     )
-    return apply_disease_cutover_projection(
-        legacy_records, series_records, country_code=country_code
+    return (
+        apply_disease_cutover_projection(
+            legacy_records, series_records, country_code=country_code
+        ),
+        series_records,
     )
 
 
@@ -237,7 +264,36 @@ async def fetch_disease_records_direct(
                 {incidence_expr} AS incidence_rate,
                 {incidence_source_expr} AS incidence_rate_source,
                 dr.mortality_rate AS mortality_rate,
-                dr.data_quality AS data_quality
+                dr.data_quality AS data_quality,
+                COALESCE(
+                    NULLIF(dr.metadata::jsonb ->> 'frequency', ''),
+                    NULLIF(dr.metadata::jsonb ->> 'temporal_granularity', ''),
+                    NULLIF(dr.raw_data::jsonb ->> 'Frequency', '')
+                ) AS temporal_granularity,
+                COALESCE(
+                    NULLIF(dr.metadata::jsonb ->> 'measure', ''),
+                    NULLIF(dr.metadata::jsonb ->> 'metric_type', ''),
+                    NULLIF(dr.raw_data::jsonb ->> 'Measure', ''),
+                    CASE
+                        WHEN COALESCE(dr.metadata::jsonb ->> 'source_kind', '')
+                            IN ('registry_annual', 'registry_disease_monthly')
+                        THEN 'case_notifications'
+                    END
+                ) AS metric_type,
+                COALESCE(
+                    NULLIF(dr.metadata::jsonb ->> 'reporting_basis', ''),
+                    NULLIF(dr.raw_data::jsonb ->> 'ReportingBasis', ''),
+                    CASE
+                        WHEN COALESCE(dr.metadata::jsonb ->> 'source_kind', '')
+                            IN ('registry_annual', 'registry_disease_monthly')
+                        THEN 'national_registry_notifications'
+                    END
+                ) AS reporting_basis,
+                NULLIF(dr.metadata::jsonb ->> 'comparability', '') AS comparability,
+                COALESCE(
+                    NULLIF(dr.metadata::jsonb ->> 'source_series_code', ''),
+                    NULLIF(dr.raw_data::jsonb ->> 'SourceSeriesCode', '')
+                ) AS legacy_source_series_code
             FROM disease_records dr
             JOIN countries c ON c.id = dr.country_id
             JOIN diseases d ON d.id = dr.disease_id
@@ -321,6 +377,7 @@ async def fetch_disease_series_records(
                 dss.missing_value_policy,
                 dss.valid_from,
                 dss.valid_to,
+                dss.is_active AS series_is_active,
                 dso.quality_status,
                 dso.geography_key,
                 dso.dimension_key
@@ -364,7 +421,60 @@ async def fetch_disease_series_records(
 
 
 async def fetch_country_frequency_meta(session, country_code: str) -> dict:
-    """Infer source reporting frequency from raw (non-truncated) timestamps."""
+    """Describe source periods without converting period totals into weekly rates."""
+    source_frequencies: list[str] = []
+    registry_tables_exist = await has_table(
+        session, "disease_surveillance_series"
+    ) and await has_table(session, "disease_series_observations")
+    if registry_tables_exist:
+        series_rows = await session.execute(
+            text("""
+                SELECT DISTINCT lower(dss.temporal_granularity)
+                    AS temporal_granularity
+                FROM disease_surveillance_series dss
+                JOIN disease_series_observations dso
+                  ON dso.series_code = dss.series_code
+                WHERE dss.country_code = :code
+                  AND dso.suppressed IS FALSE
+                  AND dso.value IS NOT NULL
+                  AND dso.quality_status <> 'rejected'
+                ORDER BY temporal_granularity ASC
+                """),
+            {"code": country_code},
+        )
+        normalized: set[str] = set()
+        for row in series_rows:
+            value = str(
+                dict(row._mapping).get("temporal_granularity") or ""
+            ).upper()
+            normalized.add("ANNUAL" if value == "YEARLY" else value)
+        normalized.discard("")
+        frequency_order = {
+            "DAILY": 0,
+            "WEEKLY": 1,
+            "MONTHLY": 2,
+            "QUARTERLY": 3,
+            "ANNUAL": 4,
+        }
+        source_frequencies = sorted(
+            normalized,
+            key=lambda value: (frequency_order.get(value, 99), value),
+        )
+
+    if source_frequencies:
+        return {
+            "source_frequency": (
+                source_frequencies[0]
+                if len(source_frequencies) == 1
+                else "MIXED"
+            ),
+            "source_frequencies": source_frequencies,
+            "canonical_frequency": "SOURCE_REPORTED_PERIODS",
+            "aggregation_rule": "preserve_source_period_counts",
+        }
+
+    # Legacy-only countries do not carry explicit series definitions. Infer a
+    # display label conservatively, while still preserving the reported count.
     rows = await session.execute(
         text("""
             SELECT DISTINCT timezone('UTC', dr.time)::date AS report_date
@@ -383,8 +493,9 @@ async def fetch_country_frequency_meta(session, country_code: str) -> dict:
     if len(report_dates) < 2:
         return {
             "source_frequency": "UNKNOWN",
-            "canonical_frequency": "WEEKLY_EQUIVALENT_7D",
-            "aggregation_rule": "normalize_counts_to_7_day_equivalent",
+            "source_frequencies": [],
+            "canonical_frequency": "SOURCE_REPORTED_PERIODS",
+            "aggregation_rule": "preserve_source_period_counts",
         }
 
     diffs = []
@@ -397,10 +508,11 @@ async def fetch_country_frequency_meta(session, country_code: str) -> dict:
         source_frequency = "UNKNOWN"
     else:
         median_days = statistics.median(diffs)
-        pct_month_start = sum(1 for date in report_dates if date.day == 1) / len(
-            report_dates
-        )
-        if median_days >= 25 and pct_month_start >= 0.5:
+        if median_days >= 300:
+            source_frequency = "ANNUAL"
+        elif 75 <= median_days <= 120:
+            source_frequency = "QUARTERLY"
+        elif 25 <= median_days <= 35:
             source_frequency = "MONTHLY"
         elif 5 <= median_days <= 10:
             source_frequency = "WEEKLY"
@@ -409,8 +521,11 @@ async def fetch_country_frequency_meta(session, country_code: str) -> dict:
 
     return {
         "source_frequency": source_frequency,
-        "canonical_frequency": "WEEKLY_EQUIVALENT_7D",
-        "aggregation_rule": "normalize_counts_to_7_day_equivalent",
+        "source_frequencies": (
+            [] if source_frequency == "UNKNOWN" else [source_frequency]
+        ),
+        "canonical_frequency": "SOURCE_REPORTED_PERIODS",
+        "aggregation_rule": "preserve_source_period_counts",
     }
 
 
@@ -630,6 +745,7 @@ __all__ = [
     "fetch_country_briefs",
     "fetch_country_frequency_meta",
     "fetch_disease_knowledge_briefs",
+    "fetch_disease_export_layers",
     "fetch_disease_records",
     "fetch_disease_records_direct",
     "fetch_disease_series_records",

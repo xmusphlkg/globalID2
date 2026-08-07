@@ -5,11 +5,12 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import re
 from dataclasses import dataclass, field as dataclass_field
 from datetime import date, datetime, time, timedelta, timezone
 from typing import Any, Iterable, Mapping
 
-from sqlalchemy import case, or_, select
+from sqlalchemy import and_, case, or_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,6 +19,7 @@ from src.domain import DiseaseSeriesObservation, DiseaseSurveillanceSeries
 from src.ontology import DiseaseOntology, load_disease_ontology
 
 _SUPPRESSED_VALUES = {"*", "suppressed", "suppression", "<5", "-"}
+_SUPPRESSED_THRESHOLD = re.compile(r"^<\s*\d+\s*$")
 _WRITE_BATCH_SIZE = 500
 _QUALITY_MODES = {"off", "report", "quarantine", "fail_closed"}
 _REGISTRY_COVERAGE_MODES = {"auto", "required", "legacy_only"}
@@ -203,6 +205,8 @@ class SeriesObservationSaveResult:
     skipped_invalid: int
     skipped_registry_not_synced: int
     quality_report: SeriesObservationQualityReport
+    skipped_unregistered: int = 0
+    skipped_missing: int = 0
 
 
 @dataclass(frozen=True)
@@ -366,6 +370,9 @@ class SeriesObservationStore:
                         row, "PopulationScope", "population_scope"
                     ),
                     "authoritative_revision": _allows_authoritative_revision(row),
+                    "allow_equal_quality_overwrite": (
+                        _allows_equal_quality_overwrite(row)
+                    ),
                 },
             }
             identity = (
@@ -535,7 +542,14 @@ class SeriesObservationStore:
                 # correction by marking the row as an authoritative revision;
                 # that same marker is consumed by the anomaly detector below.
                 where=or_(
-                    incoming_quality_rank >= existing_quality_rank,
+                    incoming_quality_rank > existing_quality_rank,
+                    and_(
+                        incoming_quality_rank == existing_quality_rank,
+                        statement.excluded["metadata"].op("->>")(
+                            "allow_equal_quality_overwrite"
+                        )
+                        == "true",
+                    ),
                     statement.excluded["metadata"].op("->>")(
                         "authoritative_revision"
                     )
@@ -1414,7 +1428,10 @@ def _mmwr_week_end_date(year: int, week: int) -> date:
 
 def _parse_value(value: object) -> tuple[float | None, bool]:
     text = "" if value is None else str(value).strip()
-    if text.casefold() in _SUPPRESSED_VALUES:
+    if (
+        text.casefold() in _SUPPRESSED_VALUES
+        or _SUPPRESSED_THRESHOLD.fullmatch(text) is not None
+    ):
         return None, True
     if not text:
         return None, False
@@ -1547,7 +1564,7 @@ def _json_safe(value: Any) -> Any:
 def _quality_status(row: dict[str, Any]) -> str:
     status = " ".join(
         str(row.get(key) or "")
-        for key in ("DatasetStatus", "IsProvisional", "UpdateMode")
+        for key in ("DatasetStatus", "DataStatus", "IsProvisional", "UpdateMode")
     ).casefold()
     if "final" in status:
         return "final"
@@ -1579,6 +1596,20 @@ def _allows_authoritative_revision(row: Mapping[str, Any]) -> bool:
         "source_correction",
         "restatement",
     }
+
+
+def _allows_equal_quality_overwrite(row: Mapping[str, Any]) -> bool:
+    explicit = row.get(
+        "AllowEqualQualityOverwrite",
+        row.get("allow_equal_quality_overwrite"),
+    )
+    if explicit is None:
+        # Preserve the established behavior for sources that have not opted
+        # into replay protection. CA official-file replays set this false.
+        return True
+    if isinstance(explicit, bool):
+        return explicit
+    return str(explicit).strip().casefold() in {"1", "true", "yes"}
 
 
 def _observation_allows_authoritative_revision(row: Mapping[str, Any]) -> bool:

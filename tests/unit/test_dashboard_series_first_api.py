@@ -45,6 +45,7 @@ def _series(
     aggregation_policy: str = "non_additive",
     metric_type: str = "case_notifications",
     temporal_granularity: str = "monthly",
+    mapping_relation: str = "exact",
 ) -> dict:
     return {
         "time": _time(month),
@@ -62,7 +63,7 @@ def _series(
         "metric_type": metric_type,
         "reporting_basis": "notification",
         "temporal_granularity": temporal_granularity,
-        "mapping_relation": "exact",
+        "mapping_relation": mapping_relation,
         "comparability": "direct",
         "aggregation_policy": aggregation_policy,
         "availability_status": "active",
@@ -204,6 +205,60 @@ def test_non_case_registry_metric_falls_back_without_truncating_legacy() -> None
     assert [row["cases"] for row in records] == [12, 13]
     assert all(row["data_layer"] == LEGACY_DATA_LAYER for row in records)
     assert metadata["fallback_reason"] == ("registered_facts_not_case_count_compatible")
+
+
+def test_multiple_narrower_non_additive_series_are_source_observations_only() -> None:
+    records, metadata = project_series_first_records(
+        [_legacy(1, 999)],
+        [
+            _series("SER_NARROW_A", 1, 5, mapping_relation="narrower"),
+            _series("SER_NARROW_B", 1, 100, mapping_relation="narrower"),
+        ],
+        disease_numeric_id=7,
+        country_id=11,
+    )
+
+    assert records == []
+    assert metadata["projection_policy"] == "source_observations_only"
+    assert metadata["selected_series_codes"] == []
+    assert metadata["fallback_reason"] is None
+    assert metadata["metric_layers"]["cases"] == "not_available"
+    assert metadata["coverage"]["source_observation_count"] == 2
+    assert metadata["coverage"]["legacy_gap_fill_count"] == 0
+    assert {item["series_code"] for item in metadata["source_series"]} == {
+        "SER_NARROW_A",
+        "SER_NARROW_B",
+    }
+
+
+def test_unsafe_mapping_relation_does_not_replace_legacy_cases() -> None:
+    records, metadata = project_series_first_records(
+        [_legacy(1, 12)],
+        [_series("SER_RELATED", 1, 500, mapping_relation="related")],
+        disease_numeric_id=7,
+        country_id=11,
+    )
+
+    assert records == []
+    assert metadata["projection_policy"] == "source_observations_only"
+    assert metadata["fallback_reason"] is None
+    assert metadata["metric_layers"]["cases"] == "not_available"
+    assert metadata["source_series"][0]["mapping_relation"] == "related"
+
+
+def test_exact_series_is_selected_over_newer_narrower_series() -> None:
+    records, metadata = project_series_first_records(
+        [],
+        [
+            _series("SER_EXACT", 1, 5),
+            _series("SER_NARROW", 2, 100, mapping_relation="narrower"),
+        ],
+        disease_numeric_id=7,
+        country_id=11,
+    )
+
+    assert [row["cases"] for row in records] == [5]
+    assert metadata["selected_series_codes"] == ["SER_EXACT"]
 
 
 def _app() -> FastAPI:

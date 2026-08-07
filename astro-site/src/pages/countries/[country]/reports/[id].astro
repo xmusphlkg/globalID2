@@ -2,37 +2,28 @@
 import ReportLayout from '../../../../layouts/ReportLayout.astro';
 import DownloadPanel from '../../../../components/DownloadPanel.astro';
 import ReportV4Panel from '../../../../components/charts/ReportV4Panel';
+import {
+  isReportV4,
+  reportsForCountry,
+} from '../../../../lib/report-routes';
+import {
+  loadReportDetail,
+  readPublishableReports,
+} from '../../../../lib/report-data';
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
 
-function isReportV4(value: any) {
-  return value?.metadata?.report_layout === 'report_v4'
-    || value?.metadata?.report_document_v4
-    || value?.report_document_v4
-    || value?.schema_version === 'report_v4.0';
-}
-
 export async function getStaticPaths() {
-  const reportsPath = resolve('./src/data/reports/index.json');
-  if (!existsSync(reportsPath)) return [];
-  const reports = JSON.parse(readFileSync(reportsPath, 'utf-8')) as any[];
-  return reports.filter((r: any) => (
-    r?.metadata?.report_layout === 'report_v4'
-    || r?.metadata?.report_document_v4
-    || r?.report_document_v4
-    || r?.schema_version === 'report_v4.0'
-  )).map(r => ({
+  return readPublishableReports().map(report => ({
     params: {
-      country: (r.country_code ?? 'cn').toLowerCase(),
-      id: String(r.id),
+      country: report.country,
+      id: report.id,
     },
   }));
 }
 
 const { country, id } = Astro.params;
-const reportPath = resolve(`./src/data/reports/${id}.json`);
 const downloadsPath = resolve('./src/data/downloads.json');
-const reportsIndexPath = resolve('./src/data/reports/index.json');
 const countryDataPath = resolve(`./src/data/countries/${country}.json`);
 
 let report: any = null;
@@ -41,10 +32,8 @@ let prevReport: any = null;
 let nextReport: any = null;
 let countryData: any = null;
 
-if (existsSync(reportPath)) {
-  const loaded = JSON.parse(readFileSync(reportPath, 'utf-8'));
-  report = isReportV4(loaded) ? loaded : null;
-}
+const loadedReport = typeof id === 'string' ? loadReportDetail(id) : null;
+report = isReportV4(loadedReport) ? loadedReport : null;
 
 if (existsSync(countryDataPath)) {
   countryData = JSON.parse(readFileSync(countryDataPath, 'utf-8'));
@@ -57,9 +46,8 @@ if (existsSync(downloadsPath)) {
   ) ?? null;
 }
 
-if (existsSync(reportsIndexPath)) {
-  const allReports = (JSON.parse(readFileSync(reportsIndexPath, 'utf-8')) as any[])
-    .filter(r => isReportV4(r) && r.country_code?.toLowerCase() === country)
+{
+  const allReports = (reportsForCountry(readPublishableReports(), country) as any[])
     .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
   const idx = allReports.findIndex(r => String(r.id) === id);
   if (idx > 0) prevReport = allReports[idx - 1];
@@ -86,8 +74,6 @@ function numericList(value: any): number[] {
 }
 
 function preferredCaseValues(entry: any): number[] {
-  const weekly = numericList(entry?.weekly_equiv_cases);
-  if (weekly.some((value) => value > 0)) return weekly;
   return numericList(entry?.cases);
 }
 
@@ -245,7 +231,7 @@ function reportTypeLabel(value: string | undefined, lang: 'zh' | 'en') {
         )}
 
         <ReportV4Panel
-          client:only="react"
+          client:load
           report={report}
           countryDataUrl={countryDataUrl}
           sparklineSeries={directoryTrendSeries}

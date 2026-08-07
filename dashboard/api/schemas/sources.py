@@ -1,7 +1,9 @@
 """Sources / Data Flow schemas."""
 
-from typing import List, Optional
+from typing import Dict, List, Optional
 from pydantic import BaseModel, Field
+
+from ..location_codes import COUNTRY_REGION_CODE_MAX_LENGTH
 
 
 class StageInfo(BaseModel):
@@ -24,6 +26,14 @@ class DataSourceFlow(BaseModel):
     country_code: Optional[str] = None
     country_name: Optional[str] = None
     record_count: int = 0
+    source_series_count: int = 0
+    source_observation_count: int = 0
+    series_availability: Dict[str, int] = Field(default_factory=dict)
+    source_availability: Dict[str, int] = Field(default_factory=dict)
+    observation_quality: Dict[str, int] = Field(default_factory=dict)
+    metric_types: Dict[str, int] = Field(default_factory=dict)
+    mapping_relations: Dict[str, int] = Field(default_factory=dict)
+    comparability: Dict[str, int] = Field(default_factory=dict)
     earliest_date: Optional[str] = None
     latest_date: Optional[str] = None
     history_start_year: Optional[int] = None
@@ -40,6 +50,20 @@ class SourceOptionOut(BaseModel):
     label_en: str
     label_zh: str
     label: str
+    source_kind: str = "current"
+    supports_start_year: bool = False
+
+
+class SourcePolicyOut(BaseModel):
+    supports_current_month: bool = False
+    default_include_current_month: bool = False
+    dynamic_revision_enabled: bool = False
+    default_revision_window_months: int = 3
+    current_month_status: str = "not_supported"
+    public_release_enabled: bool = True
+    public_release_editable: bool = False
+    publication_day: Optional[int] = None
+    source_update_cadence: Optional[str] = None
 
 
 class CountrySourceConfigOut(BaseModel):
@@ -57,6 +81,7 @@ class CountrySourceConfigOut(BaseModel):
     supports_start_year: bool = False
     supports_source_file: bool = False
     supports_source_dir: bool = False
+    source_policy: SourcePolicyOut = Field(default_factory=SourcePolicyOut)
     source_options: List[SourceOptionOut] = Field(default_factory=list)
 
 
@@ -71,6 +96,8 @@ class AutomationJobOut(BaseModel):
     save_raw: bool
     fill_missing: bool
     force: bool
+    include_current_month: bool
+    revision_window_months: int
     retry_threshold: int
     interval_minutes: Optional[int] = None
     daily_time: Optional[str] = None
@@ -107,7 +134,9 @@ class AutomationTriggerResult(BaseModel):
 class AutomationJobCreate(BaseModel):
     job_id: str
     name: str
-    country_code: str
+    country_code: str = Field(
+        min_length=2, max_length=COUNTRY_REGION_CODE_MAX_LENGTH
+    )
     source: str = "all"
     enabled: bool = True
     priority: str = "normal"
@@ -115,6 +144,8 @@ class AutomationJobCreate(BaseModel):
     save_raw: bool = True
     fill_missing: bool = False
     force: bool = False
+    include_current_month: Optional[bool] = None
+    revision_window_months: int = Field(3, ge=1, le=24)
     retry_threshold: int = 3
     interval_minutes: Optional[int] = None
     daily_time: Optional[str] = None
@@ -124,7 +155,9 @@ class AutomationJobCreate(BaseModel):
 
 class AutomationJobUpdate(BaseModel):
     name: Optional[str] = None
-    country_code: Optional[str] = None
+    country_code: Optional[str] = Field(
+        None, min_length=2, max_length=COUNTRY_REGION_CODE_MAX_LENGTH
+    )
     source: Optional[str] = None
     enabled: Optional[bool] = None
     priority: Optional[str] = None
@@ -132,6 +165,8 @@ class AutomationJobUpdate(BaseModel):
     save_raw: Optional[bool] = None
     fill_missing: Optional[bool] = None
     force: Optional[bool] = None
+    include_current_month: Optional[bool] = None
+    revision_window_months: Optional[int] = Field(None, ge=1, le=24)
     retry_threshold: Optional[int] = None
     interval_minutes: Optional[int] = None
     daily_time: Optional[str] = None

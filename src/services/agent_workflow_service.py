@@ -1461,6 +1461,8 @@ class AgentWorkflowService:
             process=bool(payload.get("process", True)),
             save_raw=bool(payload.get("save_raw", True)),
             fill_missing=bool(payload.get("fill_missing", True)),
+            include_current_month=payload.get("include_current_month"),
+            revision_window_months=payload.get("revision_window_months"),
         )
         return {
             "crawl_run_id": result.crawl_run_id,

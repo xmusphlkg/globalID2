@@ -1,3 +1,5 @@
+import type { SourceSeriesMetadata } from './countryDataset';
+
 export interface DiseaseDatasetSeriesEntry {
   disease_id: string;
   name_en: string;
@@ -10,6 +12,15 @@ export interface DiseaseDatasetSeriesEntry {
   incidence_sources?: (string | null)[];
   total_cases: number;
   total_deaths?: number;
+  data_layer?: string;
+  projection_policy?: string;
+  loss_risk?: string | null;
+  period_granularity?: string | null;
+  available_series_count?: number;
+  coverage_status?: string | null;
+  selected_series_codes?: string[];
+  metric_layers?: Record<string, string>;
+  source_series?: SourceSeriesMetadata[];
 }
 
 export interface DiseaseDatasetMonthlyData {
@@ -36,6 +47,15 @@ interface CompactDiseaseDatasetSeriesEntry {
   ri?: number[];
   rv?: number[];
   rs?: Array<number | null>;
+  data_layer?: string;
+  projection_policy?: string;
+  loss_risk?: string | null;
+  period_granularity?: string | null;
+  available_series_count?: number;
+  coverage_status?: string | null;
+  selected_series_codes?: string[];
+  metric_layers?: Record<string, string>;
+  source_series?: SourceSeriesMetadata[];
 }
 
 interface CompactDiseaseDataset {
@@ -87,6 +107,15 @@ function normalizeDiseaseDataset(raw: DiseaseDataset | CompactDiseaseDataset): D
           incidence_sources: incidenceSources,
           total_cases: entry.tc ?? 0,
           total_deaths: entry.td ?? 0,
+          data_layer: entry.data_layer,
+          projection_policy: entry.projection_policy,
+          loss_risk: entry.loss_risk,
+          period_granularity: entry.period_granularity,
+          available_series_count: entry.available_series_count ?? 0,
+          coverage_status: entry.coverage_status,
+          selected_series_codes: entry.selected_series_codes ?? [],
+          metric_layers: entry.metric_layers ?? {},
+          source_series: entry.source_series ?? [],
         } satisfies DiseaseDatasetSeriesEntry,
       ];
     })
