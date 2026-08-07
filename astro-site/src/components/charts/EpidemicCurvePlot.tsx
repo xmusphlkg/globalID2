@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import EChartsReact from '../../lib/echartsReact';
 import echarts from '../../lib/echarts';
 import {
@@ -60,10 +60,31 @@ export default function EpidemicCurvePlot({
   title,
   height,
 }: Props) {
+  const zoomCommitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activePointCount = useMemo(
     () => lines.reduce((total, line) => total + line.values.length, 0),
     [lines]
   );
+  const fullDateWindow = useMemo(() => (
+    activeDates.length > 0
+      ? {
+          startDate: activeDates[0],
+          endDate: activeDates[activeDates.length - 1],
+        }
+      : null
+  ), [activeDates]);
+  const canResetDateWindow = Boolean(
+    fullDateWindow
+      && dateWindow
+      && (
+        dateWindow.startDate !== fullDateWindow.startDate
+        || dateWindow.endDate !== fullDateWindow.endDate
+      )
+  );
+
+  useEffect(() => () => {
+    if (zoomCommitTimer.current) clearTimeout(zoomCommitTimer.current);
+  }, []);
 
   const handleDataZoom = useCallback((params: any, chart: any) => {
     const eventRange = Array.isArray(params?.batch) ? params.batch[0] : params;
@@ -91,8 +112,26 @@ export default function EpidemicCurvePlot({
       startValue,
       endValue
     );
-    if (nextWindow) onDateWindowChange(nextWindow);
+    if (!nextWindow) return;
+
+    // Let ECharts own the high-frequency drag updates. Committing only after
+    // the pointer settles prevents React option updates from fighting the
+    // slider handles while preserving a live chart preview.
+    if (zoomCommitTimer.current) clearTimeout(zoomCommitTimer.current);
+    zoomCommitTimer.current = setTimeout(() => {
+      onDateWindowChange(nextWindow);
+      zoomCommitTimer.current = null;
+    }, 120);
   }, [activeDates, onDateWindowChange]);
+
+  const resetDateWindow = useCallback(() => {
+    if (!fullDateWindow) return;
+    if (zoomCommitTimer.current) {
+      clearTimeout(zoomCommitTimer.current);
+      zoomCommitTimer.current = null;
+    }
+    onDateWindowChange(fullDateWindow);
+  }, [fullDateWindow, onDateWindowChange]);
 
   const chartEvents = useMemo(
     () => ({ datazoom: handleDataZoom }),
@@ -135,7 +174,7 @@ export default function EpidemicCurvePlot({
         ].join('<br/>');
       },
     },
-    grid: { left: 64, right: 18, top: title ? 38 : 16, bottom: 54 },
+    grid: { left: 64, right: 18, top: title ? 38 : 16, bottom: 62 },
     xAxis: {
       type: 'time' as const,
       axisLabel: { color: colors.font, fontSize: 11 },
@@ -161,7 +200,11 @@ export default function EpidemicCurvePlot({
         filterMode: 'filter' as const,
         startValue: dateWindow?.startDate,
         endValue: dateWindow?.endDate,
-        throttle: 50,
+        throttle: 16,
+        zoomOnMouseWheel: 'ctrl',
+        moveOnMouseWheel: false,
+        moveOnMouseMove: true,
+        preventDefaultMouseMove: true,
       },
       {
         id: 'epidemic-zoom-slider',
@@ -170,14 +213,45 @@ export default function EpidemicCurvePlot({
         filterMode: 'filter' as const,
         startValue: dateWindow?.startDate,
         endValue: dateWindow?.endDate,
-        throttle: 50,
+        throttle: 16,
         realtime: true,
+        left: 64,
+        right: 18,
         bottom: 8,
-        height: 16,
-        backgroundColor: colors.sliderBg,
+        height: 24,
+        showDataShadow: false,
+        showDetail: false,
+        brushSelect: true,
+        handleIcon: 'path://M2,0 L14,0 C15.1,0 16,0.9 16,2 L16,22 C16,23.1 15.1,24 14,24 L2,24 C0.9,24 0,23.1 0,22 L0,2 C0,0.9 0.9,0 2,0 Z',
+        handleSize: '82%',
+        moveHandleIcon: 'path://M0,0 L20,0 L20,4 L0,4 Z',
+        moveHandleSize: 7,
+        backgroundColor: 'transparent',
         borderColor: colors.line,
         textStyle: { color: colors.font, fontSize: 10 },
         fillerColor: colors.fillerColor,
+        handleStyle: {
+          color: colors.hoverBg,
+          borderColor: colors.hoverBorder,
+          borderWidth: 1.5,
+          shadowBlur: 4,
+          shadowColor: 'rgba(15, 23, 42, 0.18)',
+        },
+        moveHandleStyle: {
+          color: colors.hoverBorder,
+          opacity: 0.72,
+        },
+        emphasis: {
+          handleStyle: {
+            color: colors.hoverBg,
+            borderColor: colors.hoverFont,
+            borderWidth: 2,
+          },
+          moveHandleStyle: {
+            color: colors.hoverFont,
+            opacity: 0.9,
+          },
+        },
       },
     ],
     series: lines.map((line, index) => ({
@@ -203,13 +277,28 @@ export default function EpidemicCurvePlot({
   }), [activePointCount, colors, dateWindow, lang, lines, metric, title]);
 
   return (
-    <EChartsReact
-      echarts={echarts}
-      option={option}
-      onEvents={chartEvents}
-      replaceMerge={['series']}
-      lazyUpdate
-      style={{ width: '100%', height }}
-    />
+    <div className="epidemic-curve-plot" style={{ height }}>
+      <EChartsReact
+        echarts={echarts}
+        option={option}
+        onEvents={chartEvents}
+        replaceMerge={['series']}
+        lazyUpdate
+        style={{ width: '100%', height: '100%' }}
+      />
+      <button
+        type="button"
+        className="epidemic-curve-reset"
+        onClick={resetDateWindow}
+        disabled={!canResetDateWindow}
+        aria-label={lang === 'zh' ? '重置时间范围' : 'Reset time range'}
+        title={lang === 'zh' ? '重置时间范围' : 'Reset time range'}
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+          <path d="M3 3v5h5" />
+        </svg>
+      </button>
+    </div>
   );
 }

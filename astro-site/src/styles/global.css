@@ -968,11 +968,6 @@
     @apply rounded-none px-2.5 py-1 text-[11px] font-semibold;
   }
 
-  .chart-note {
-    color: rgb(var(--text-muted));
-    @apply mb-4 text-xs leading-5;
-  }
-
   .chart-stage {
     min-height: 0;
     @apply grid items-stretch gap-4;
@@ -990,6 +985,50 @@
   .chart-canvas {
     min-width: 0;
     min-height: 0;
+  }
+
+  .epidemic-curve-plot {
+    position: relative;
+    min-height: 0;
+    width: 100%;
+  }
+
+  .epidemic-curve-reset {
+    position: absolute;
+    z-index: 3;
+    left: 24px;
+    bottom: 2px;
+    display: inline-flex;
+    width: 24px;
+    height: 24px;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgb(var(--border) / 0.9);
+    background-color: transparent;
+    color: rgb(var(--text-muted));
+    transition: border-color 140ms ease, background-color 140ms ease, color 140ms ease, opacity 140ms ease;
+    touch-action: manipulation;
+  }
+
+  .epidemic-curve-reset svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .epidemic-curve-reset:hover:not(:disabled) {
+    border-color: rgb(var(--color-brand) / 0.58);
+    background-color: rgb(var(--surface-raised));
+    color: rgb(var(--text-strong));
+  }
+
+  .epidemic-curve-reset:focus-visible {
+    outline: 2px solid rgb(var(--color-brand) / 0.62);
+    outline-offset: 2px;
+  }
+
+  .epidemic-curve-reset:disabled {
+    cursor: default;
+    opacity: 0.34;
   }
 
   .chart-scroll-x {
@@ -1626,6 +1665,25 @@
   .chart-loading-panel {
     min-height: 220px;
     @apply rounded-none;
+  }
+}
+
+@media (min-width: 1280px) {
+  .chart-shell:not(.chart-shell-fullscreen) .chart-stage-with-wide-aside {
+    height: var(--chart-stage-height, auto);
+  }
+
+  .chart-shell:not(.chart-shell-fullscreen) .chart-aside-wide {
+    overflow: hidden;
+  }
+
+  .chart-shell:not(.chart-shell-fullscreen) .chart-aside-wide .chart-sidebar {
+    height: 100%;
+  }
+
+  .chart-shell:not(.chart-shell-fullscreen) .chart-aside-wide .chart-sidebar-list {
+    flex: 1 1 auto;
+    max-height: none;
   }
 }
 

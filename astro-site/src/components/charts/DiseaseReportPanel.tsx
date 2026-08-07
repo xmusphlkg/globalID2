@@ -398,15 +398,10 @@ function TrendChart({
     </>
   );
 
-  const note = lang === 'zh'
-    ? '采用更高区分度的蓝 / 橙 / 绿序列配色，主折线统一使用实线，避免不同序列因虚线而降低辨识度。'
-    : 'Uses higher-contrast blue, orange, and green styling while keeping the main series on solid lines to preserve readability.';
-
   return (
     <ChartFrame
       lang={lang}
       toolbar={toolbar}
-      note={note}
       chart={({ isFullscreen }) => (
         <EChartsReact
           echarts={echarts}
@@ -603,15 +598,10 @@ function MonthlyBarChart({
     </>
   );
 
-  const note = lang === 'zh'
-    ? '图例已移至绘图区外，避免与柱体重叠；年份颜色采用高对比方案，便于追踪各年度季节性差异。'
-    : 'The legend sits outside the plotting area to avoid overlap, and year colors use a higher-contrast palette for clearer seasonal comparison.';
-
   return (
     <ChartFrame
       lang={lang}
       toolbar={toolbar}
-      note={note}
       chart={({ isFullscreen }) => (
         <EChartsReact
           echarts={echarts}
