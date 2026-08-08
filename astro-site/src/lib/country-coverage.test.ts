@@ -38,6 +38,15 @@ test('Ontario is a first-class region that activates when its snapshot exists', 
   assert.equal(resolveCoverageStatus(ontario, true), 'Supported');
 });
 
+test('Sweden activates as supported when public site data exists', () => {
+  const sweden = getCountryCoverage('SE');
+  assert.ok(sweden);
+  assert.equal(sweden.name_en, 'Sweden');
+  assert.equal(sweden.cadence, 'Monthly');
+  assert.equal(resolveCoverageStatus(sweden, false), 'Scheduled');
+  assert.equal(resolveCoverageStatus(sweden, true), 'Supported');
+});
+
 test('ISO subdivision locations use their parent country flag', () => {
   assert.equal(resolveFlagIso2('CA-ON'), 'CA');
   assert.equal(resolveFlagIso2('ca-on'), 'CA');

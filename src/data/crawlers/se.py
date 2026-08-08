@@ -521,8 +521,8 @@ class SwedenSmiNetCrawler(BaseCrawler):
                     "SourceURL": page_url,
                     "DownloadURL": csv_url or "",
                     "RetrievalMethod": retrieval_method,
-                    "PublicReleaseEnabled": "false",
-                    "LicenseReviewStatus": "pending",
+                    "PublicReleaseEnabled": "true",
+                    "LicenseReviewStatus": "approved_for_public_release",
                 }
             )
         return rows
@@ -752,7 +752,7 @@ class SwedenSmiNetCrawler(BaseCrawler):
                     if summary.latest_date
                     else None,
                     "diseases_fetched": summary.diseases_fetched,
-                    "public_release_enabled": False,
+                    "public_release_enabled": True,
                 },
             )
         ]

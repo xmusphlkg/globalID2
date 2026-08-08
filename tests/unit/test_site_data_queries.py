@@ -92,7 +92,7 @@ async def test_fetch_countries_preserves_ordering_query_and_plain_dict_rows() ->
 
 
 @pytest.mark.asyncio
-async def test_fetch_countries_excludes_public_release_gated_country() -> None:
+async def test_fetch_countries_includes_sweden_after_public_release_approval() -> None:
     session = FakeSession(
         FakeRows(
             [
@@ -118,7 +118,7 @@ async def test_fetch_countries_excludes_public_release_gated_country() -> None:
 
     countries = await site_data_queries.fetch_countries(session)
 
-    assert [country["code"] for country in countries] == ["FI"]
+    assert [country["code"] for country in countries] == ["FI", "SE"]
 
 
 @pytest.mark.asyncio

@@ -223,7 +223,7 @@ def test_se_crawler_prefers_machine_csv_and_retains_provenance(tmp_path, monkeyp
     assert row["DownloadURL"] == CSV_URL
     assert row["SourceUpdatedAt"] == "2026-08-08"
     assert row["AuthoritativeRevision"] == "true"
-    assert row["PublicReleaseEnabled"] == "false"
+    assert row["PublicReleaseEnabled"] == "true"
 
 
 def test_se_csv_tls_failure_falls_back_to_html_and_caches_failed_host(
@@ -301,7 +301,7 @@ def test_se_probe_year_filters_non_sminet_pages_before_history(tmp_path, monkeyp
     assert summary.row_count == 2
 
 
-def test_se_updater_adds_revision_window_and_keeps_release_gate_closed(tmp_path):
+def test_se_updater_adds_revision_window_and_keeps_public_release_enabled(tmp_path):
     updater = SEMonthlyUpdater(output_csv=tmp_path / "se.csv")
 
     assert updater._resolve_requested_months(
@@ -321,14 +321,14 @@ def test_se_updater_adds_revision_window_and_keeps_release_gate_closed(tmp_path)
     assert updater.country_code == "SE"
     assert updater.source_scope == "fohm_sminet"
     assert updater.ontology_source_id == ONTOLOGY_SOURCE_ID
-    assert updater.public_release_enabled is False
+    assert updater.public_release_enabled is True
     assert callable(updater.refresh_source)
     assert callable(updater.get_db_latest_date)
     assert callable(updater.get_db_months)
     assert callable(updater.import_rows)
 
 
-def test_se_updater_load_rows_cannot_promote_cached_public_gate(tmp_path):
+def test_se_updater_load_rows_uses_reviewed_public_release_gate(tmp_path):
     output = tmp_path / "se.csv"
     output.write_text(
         "Date,RawDiseaseLabel,DiseaseCode,Cases,Source,SourceURL,DownloadURL,"
@@ -348,8 +348,8 @@ def test_se_updater_load_rows_cannot_promote_cached_public_gate(tmp_path):
     assert row["DatasetStatus"] == "provisional"
     assert row["IsProvisional"] == "true"
     assert row["DataComplete"] == "false"
-    assert row["PublicReleaseEnabled"] == "false"
-    assert row["LicenseReviewStatus"] == "pending"
+    assert row["PublicReleaseEnabled"] == "true"
+    assert row["LicenseReviewStatus"] == "approved_for_public_release"
 
 
 def test_se_mapping_is_source_scoped_and_leaves_ambiguous_categories_unmapped():

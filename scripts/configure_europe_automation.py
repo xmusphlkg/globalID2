@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """Idempotently configure dynamic FI/NO/SE surveillance refresh jobs.
 
-The command is read-only unless ``--apply`` is supplied.  Sweden's ingestion
-job is intentionally independent of the public-release gate: data can be
-validated internally while ``country_bootstrap.SE.public_release_enabled``
-remains false pending reuse confirmation.
+The command is read-only unless ``--apply`` is supplied. Sweden is public-
+release enabled, while automation still refreshes recent months independently
+so revised SmiNet totals are captured before site export.
 """
 
 from __future__ import annotations

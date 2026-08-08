@@ -39,7 +39,7 @@ def test_europe_source_policy_is_exposed_to_the_control_plane() -> None:
     assert se.source_policy.current_month_status == (
         "provisional_when_source_evidence_exists"
     )
-    assert se.source_policy.public_release_enabled is False
+    assert se.source_policy.public_release_enabled is True
     assert se.source_policy.public_release_editable is False
 
 
@@ -130,4 +130,3 @@ async def test_crawl_task_snapshot_contains_resolved_dynamic_policy(monkeypatch)
 
     assert captured["input_data"]["include_current_month"] is True
     assert captured["input_data"]["revision_window_months"] == 5
-

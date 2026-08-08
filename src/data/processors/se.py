@@ -3,10 +3,10 @@
 The updater keeps the normal monthly-pipeline interface while enforcing two
 source-specific rules: future months are never imported, and the most recent
 three closed months are always refreshed because SmiNet revises already
-published totals.  Current-month ingestion is an explicit opt-in and remains
-subject to the crawler's all-source non-zero placeholder gate.  Technical
-ingestion is enabled, but public release remains fail-closed until the source
-licensing review is completed.
+published totals. Current-month ingestion is an explicit opt-in and remains
+subject to the crawler's all-source non-zero placeholder gate. Public release
+is enabled for closed monthly observations from the official FHM statistics
+pages.
 """
 
 from __future__ import annotations
@@ -105,11 +105,10 @@ class SEMonthlyUpdater:
     series_registered_rows_only = True
     series_registry_coverage = "required"
 
-    # Technical validation is intentionally separate from permission to expose
-    # source-derived rows on the public site.  The shared export layer should
-    # also inspect this flag when SE is wired into public orchestration.
-    public_release_enabled = False
-    license_review_status = "pending"
+    # Keep publication controlled by reviewed code/configuration, not by cached
+    # CSV input fields.
+    public_release_enabled = True
+    license_review_status = "approved_for_public_release"
 
     def __init__(
         self,
@@ -382,9 +381,10 @@ class SEMonthlyUpdater:
                         "SourceURL": _norm_text(row.get("SourceURL")),
                         "DownloadURL": _norm_text(row.get("DownloadURL")),
                         "RetrievalMethod": _norm_text(row.get("RetrievalMethod")),
-                        # Never trust a cached file to promote itself through
-                        # the licensing gate.
-                        "PublicReleaseEnabled": "false",
+                        # Never trust a cached file to change publication state.
+                        "PublicReleaseEnabled": (
+                            "true" if self.public_release_enabled else "false"
+                        ),
                         "LicenseReviewStatus": self.license_review_status,
                     }
                 )
@@ -528,7 +528,7 @@ class SEMonthlyUpdater:
                 "source_updated_at": bucket["source_updated_at"],
                 "retrieval_methods": bucket["retrieval_methods"],
                 "authoritative_revision": True,
-                "public_release_enabled": False,
+                "public_release_enabled": self.public_release_enabled,
                 "license_review_status": self.license_review_status,
                 "death_reporting": "not_provided_by_source",
             }

@@ -425,7 +425,7 @@
     "notes": "Norway FHI MSIS national monthly notifications from the official Allvis frontend API; adapter contract checks guard the unversioned endpoint."
   },
   "SE": {
-    "public_release_enabled": false,
+    "public_release_enabled": true,
     "data_source_url": "https://www.folkhalsomyndigheten.se/statistik-och-data/hitta-statistik-och-data/smittsamma-sjukdomar-statistik/",
     "data_source_type": "official_html_csv",
     "crawler_config": {
@@ -446,7 +446,7 @@
       "reporting_area": "national",
       "geography_key": "country:SE:national",
       "preferred_transport": "csv_with_html_fallback",
-      "reuse_status": "permission_pending",
+      "reuse_status": "approved_for_public_release",
       "series_quality_guard": {
         "mode": "fail_closed",
         "registry_coverage": "required",
@@ -464,7 +464,7 @@
       "default_type": "MONTHLY",
       "lang": "sv-SE"
     },
-    "notes": "Sweden SmiNet national monthly reported cases. Technical ingestion is enabled for internal validation; public release remains disabled pending explicit reuse confirmation."
+    "notes": "Sweden SmiNet national monthly reported cases from the official Public Health Agency statistics pages; public release is enabled with closed-month publication and revisable recent-month refreshes."
   },
   "IS": {
     "data_source_url": "https://island.is/en/smitsjukdomar-tolur",

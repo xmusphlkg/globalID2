@@ -499,7 +499,7 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
         "notes": "Norway FHI MSIS national monthly notifications from the official Allvis frontend API; adapter contract checks guard the unversioned endpoint.",
     },
     "SE": {
-        "public_release_enabled": False,
+        "public_release_enabled": True,
         "data_source_url": "https://www.folkhalsomyndigheten.se/statistik-och-data/hitta-statistik-och-data/smittsamma-sjukdomar-statistik/",
         "data_source_type": "official_html_csv",
         "crawler_config": {
@@ -518,7 +518,7 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
             "reporting_area": "national",
             "geography_key": "country:SE:national",
             "preferred_transport": "csv_with_html_fallback",
-            "reuse_status": "permission_pending",
+            "reuse_status": "approved_for_public_release",
         },
         "parser_config": {"primary": "se_fohm_sminet_monthly"},
         "disease_mapping_rules": {
@@ -526,7 +526,7 @@ COUNTRY_BOOTSTRAP_CONFIGS: dict[str, dict] = {
             "fallback": "learning_suggestions",
         },
         "report_config": {"default_type": "MONTHLY", "lang": "sv-SE"},
-        "notes": "Sweden SmiNet national monthly reported cases. Technical ingestion is enabled for internal validation; public release remains disabled pending explicit reuse confirmation.",
+        "notes": "Sweden SmiNet national monthly reported cases from the official Public Health Agency statistics pages; public release is enabled with closed-month publication and revisable recent-month refreshes.",
     },
 }
 
