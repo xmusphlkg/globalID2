@@ -65,6 +65,13 @@ export interface CountryDataset {
   heatmap?: CountryDatasetHeatmap | null;
 }
 
+export type SourceSeriesObservations = Record<string, SourceSeriesMetadata[]>;
+
+interface CountrySourceSeriesDataset {
+  v: number;
+  series?: SourceSeriesObservations;
+}
+
 interface CompactCountryDatasetSeriesEntry {
   id: string;
   en: string;
@@ -106,6 +113,7 @@ interface CompactCountryDataset {
 }
 
 const cache = new Map<string, Promise<CountryDataset>>();
+const sourceSeriesCache = new Map<string, Promise<SourceSeriesObservations>>();
 const DEFAULT_REQUEST_TIMEOUT_MS = 15_000;
 
 function isCompactCountryDataset(value: unknown): value is CompactCountryDataset {
@@ -186,6 +194,40 @@ interface LoadCountryDatasetOptions {
 
 export function invalidateCountryDataset(dataUrl: string) {
   cache.delete(dataUrl);
+}
+
+export function loadCountrySourceSeries(
+  dataUrl?: string | null,
+  { timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS }: LoadCountryDatasetOptions = {}
+): Promise<SourceSeriesObservations> {
+  if (!dataUrl) return Promise.resolve({});
+
+  const cached = sourceSeriesCache.get(dataUrl);
+  if (cached) return cached;
+
+  const controller = new AbortController();
+  const timeoutId = globalThis.setTimeout(() => controller.abort(), timeoutMs);
+  const request = fetch(dataUrl, {
+    signal: controller.signal,
+    credentials: 'same-origin',
+  })
+    .then(async (response) => {
+      if (!response.ok) {
+        throw new Error(`Failed to load country source series: ${response.status}`);
+      }
+      const raw = await response.json() as CountrySourceSeriesDataset;
+      return raw?.v === 1 && raw.series && typeof raw.series === 'object'
+        ? raw.series
+        : {};
+    })
+    .catch((error) => {
+      sourceSeriesCache.delete(dataUrl);
+      throw error;
+    })
+    .finally(() => globalThis.clearTimeout(timeoutId));
+
+  sourceSeriesCache.set(dataUrl, request);
+  return request;
 }
 
 export function loadCountryDataset(

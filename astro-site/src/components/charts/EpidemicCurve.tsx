@@ -4,8 +4,7 @@ import CurveEntitySelector from './CurveEntitySelector';
 import EpidemicCurvePlot from './EpidemicCurvePlot';
 import type { ChartSourceMeta } from '../../utils/chartMeta';
 import { useChartLanguage, useChartTheme } from './chartPreferences';
-import type { SourceSeriesMetadata } from './countryDataset';
-import { useCountryDataset } from './useCountryDataset';
+import { useCountryDataset, useCountrySourceSeries } from './useCountryDataset';
 import { useEpidemicCurveState } from './useEpidemicCurveState';
 import {
   METRIC_LABELS,
@@ -32,7 +31,7 @@ interface Props {
   entityType?: CurveEntityType;
   height?: number;
   sourceMeta?: ChartSourceMeta | null;
-  sourceSeriesObservations?: Record<string, SourceSeriesMetadata[]>;
+  sourceSeriesUrl?: string;
 }
 
 const SERIES_COLORS = [
@@ -72,17 +71,18 @@ export default function EpidemicCurve({
   entityType = 'disease',
   height = 420,
   sourceMeta = null,
-  sourceSeriesObservations = {},
+  sourceSeriesUrl,
 }: Props) {
   const hasInitialSeries = Boolean(initialSeries && Object.keys(initialSeries).length > 0);
   const remoteDataset = useCountryDataset(dataUrl, !hasInitialSeries);
   const baseSeries = hasInitialSeries
     ? (initialSeries as Record<string, CurveSeries>)
     : (remoteDataset.data?.disease_series ?? EMPTY_SERIES);
+  const sourceSeries = useCountrySourceSeries(sourceSeriesUrl, !hasInitialSeries);
   const [sourceSelectionById, setSourceSelectionById] = useState<Record<string, string>>({});
   const enrichedSeries = useMemo(() => Object.fromEntries(
     Object.entries(baseSeries).map(([id, item]) => {
-      const observations = sourceSeriesObservations[id] ?? [];
+      const observations = sourceSeries.data[id] ?? [];
       if (observations.length === 0) return [id, item];
 
       const observationsByCode = new Map(
@@ -100,7 +100,7 @@ export default function EpidemicCurve({
       });
       return [id, { ...item, source_series: mergedSources }];
     })
-  ), [baseSeries, sourceSeriesObservations]);
+  ), [baseSeries, sourceSeries.data]);
   const effectiveSourceSelection = useMemo(() => Object.fromEntries(
     Object.entries(enrichedSeries).flatMap(([id, item]) => {
       const explicitSelection = sourceSelectionById[id];

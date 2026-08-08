@@ -43,6 +43,7 @@ from src.generation.site_data_queries import (
 from src.generation.site_data_views import (
     build_country_data,
     build_country_site_data,
+    build_country_source_series_data,
     build_disease_data,
     build_disease_site_data,
     resolve_country_display_names,
@@ -50,6 +51,7 @@ from src.generation.site_data_views import (
 from src.generation.site_data_writer import (
     existing_site_export_has_content,
     prepare_site_output_dirs,
+    remove_stale_json_files,
     write_compact_json,
     write_pretty_json,
 )
@@ -482,6 +484,10 @@ def write_site_export_artifacts(
             public_site_data_dir / "countries" / f"{code.lower()}.json",
             site_data,
         )
+        write_compact_json(
+            public_site_data_dir / "countries" / f"{code.lower()}-source-series.json",
+            build_country_source_series_data(country_data),
+        )
         print(
             f"  ✓ countries/{code.lower()}.json ({len(all_records_by_country[code])} records)"
         )
@@ -584,6 +590,36 @@ def write_site_export_artifacts(
     )
     write_pretty_json(output_dir / "about.json", about_snapshot)
     print("  ✓ about.json")
+
+    # Reconcile stale artifacts only after every new artifact is safely on disk.
+    # This keeps unchanged files intact throughout export and prevents a failed
+    # run from leaving an empty site-data directory behind.
+    remove_stale_json_files(
+        output_dir / "countries",
+        {f"{item['code'].lower()}.json" for item in country_exports},
+    )
+    disease_json_names = {f"{item['disease_id'].lower()}.json" for item in disease_exports}
+    remove_stale_json_files(output_dir / "diseases", disease_json_names | {"index.json"})
+    remove_stale_json_files(output_dir / "disease-knowledge", disease_json_names)
+    remove_stale_json_files(
+        output_dir / "reports",
+        {"index.json", *[f"{report_id}.json" for report_id in report_details]},
+    )
+    remove_stale_json_files(
+        public_site_data_dir / "countries",
+        {
+            filename
+            for item in country_exports
+            for filename in (
+                f"{item['code'].lower()}.json",
+                f"{item['code'].lower()}-source-series.json",
+            )
+        },
+    )
+    remove_stale_json_files(
+        public_site_data_dir / "diseases",
+        disease_json_names,
+    )
 
 
 async def export(

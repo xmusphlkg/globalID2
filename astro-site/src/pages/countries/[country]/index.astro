@@ -152,21 +152,7 @@ const countryDatasetStructuredData = buildDatasetStructuredData({
   }),
   sourceUrls: countrySourceUrls,
 });
-const curveSourceSeriesObservations = countryData
-  ? Object.fromEntries(
-      Object.entries(countryData.disease_series as Record<string, any>)
-        .map(([diseaseId, entry]: [string, any]) => ([
-          diseaseId,
-          (entry.source_series ?? []).filter((source: any) => (
-            Array.isArray(source.dates)
-            && Array.isArray(source.values)
-            && source.dates.length > 0
-            && source.dates.length === source.values.length
-          )),
-        ] as [string, any[]]))
-        .filter((entry) => entry[1].length > 0)
-    )
-  : {};
+const countrySourceSeriesUrl = countryDataUrl.replace(/\.json$/, '-source-series.json');
 ---
 
 <ReportLayout
@@ -299,7 +285,7 @@ const curveSourceSeriesObservations = countryData
           <EpidemicCurve
             client:visible
             dataUrl={countryDataUrl}
-            sourceSeriesObservations={curveSourceSeriesObservations}
+            sourceSeriesUrl={countrySourceSeriesUrl}
             topN={10}
             height={420}
             sourceMeta={chartSourceMeta}

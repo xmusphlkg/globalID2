@@ -8,6 +8,7 @@ JSON encodings used by the build-time and browser-facing artifacts.
 from __future__ import annotations
 
 import json
+import os
 import shutil
 from pathlib import Path
 from typing import Any
@@ -56,42 +57,72 @@ def existing_site_export_has_content(output_dir: Path) -> bool:
 
 
 def prepare_site_output_dirs(output_dir: Path, public_site_data_dir: Path) -> None:
-    """Prepare output trees with the export's existing cleanup semantics."""
+    """Prepare output trees without discarding reusable generated files.
+
+    Full directory resets made every release rewrite all JSON, even when a
+    country or disease had not changed.  Call ``remove_stale_json_files`` after
+    successful writes to reconcile deletions safely.
+    """
 
     output_dir.mkdir(parents=True, exist_ok=True)
     (output_dir / "countries").mkdir(exist_ok=True)
     (output_dir / "diseases").mkdir(exist_ok=True)
     (output_dir / "disease-knowledge").mkdir(exist_ok=True)
     (output_dir / "reports").mkdir(exist_ok=True)
-    reset_public_data_dir(public_site_data_dir / "countries")
-    reset_public_data_dir(public_site_data_dir / "diseases")
-    clean_generated_dir(output_dir / "countries")
-    clean_generated_dir(output_dir / "diseases")
-    clean_generated_dir(output_dir / "disease-knowledge")
-    clean_generated_dir(output_dir / "reports")
+    (public_site_data_dir / "countries").mkdir(parents=True, exist_ok=True)
+    (public_site_data_dir / "diseases").mkdir(parents=True, exist_ok=True)
 
 
-def write_pretty_json(path: Path, payload: Any) -> None:
+def remove_stale_json_files(dir_path: Path, expected_names: set[str]) -> int:
+    """Remove only obsolete top-level JSON artifacts after a successful export."""
+
+    removed = 0
+    if not dir_path.exists():
+        return removed
+    for path in dir_path.glob("*.json"):
+        if path.name not in expected_names:
+            path.unlink()
+            removed += 1
+    return removed
+
+
+def _write_if_changed(path: Path, content: bytes) -> bool:
+    """Atomically replace a file only when its bytes have changed."""
+
+    if path.exists() and path.read_bytes() == content:
+        return False
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    try:
+        temporary.write_bytes(content)
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
+    return True
+
+
+def write_pretty_json(path: Path, payload: Any) -> bool:
     """Write build-time JSON using the historical human-readable encoding."""
 
-    path.write_text(
-        json.dumps(payload, ensure_ascii=False, indent=2),
-        encoding="utf-8",
+    return _write_if_changed(
+        path,
+        json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8"),
     )
 
 
-def write_compact_json(path: Path, payload: Any) -> None:
+def write_compact_json(path: Path, payload: Any) -> bool:
     """Write browser-facing JSON using the historical compact encoding."""
 
-    path.write_text(
-        json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
-        encoding="utf-8",
+    return _write_if_changed(
+        path,
+        json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8"),
     )
 
 
 __all__ = [
     "clean_generated_dir",
     "existing_site_export_has_content",
+    "remove_stale_json_files",
     "prepare_site_output_dirs",
     "reset_public_data_dir",
     "write_compact_json",

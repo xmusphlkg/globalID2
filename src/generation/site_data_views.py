@@ -561,6 +561,36 @@ def build_country_site_data(country_data: dict) -> dict:
     }
 
 
+def build_country_source_series_data(country_data: dict) -> dict:
+    """Build the lazy-only source-observation payload for one country chart.
+
+    Source observations can be much larger than the public projection.  Keeping
+    them out of the document and the regular chart payload makes the page cheap
+    to parse while retaining the source-series selector once the curve is in
+    view.  Only complete, plottable series are emitted here.
+    """
+
+    source_series_by_disease: dict[str, list[dict]] = {}
+    for disease_id, entry in (country_data.get("disease_series") or {}).items():
+        plottable = [
+            source
+            for source in (entry.get("source_series") or [])
+            if isinstance(source, dict)
+            and isinstance(source.get("dates"), list)
+            and isinstance(source.get("values"), list)
+            and source["dates"]
+            and len(source["dates"]) == len(source["values"])
+        ]
+        if plottable:
+            source_series_by_disease[disease_id] = plottable
+
+    return {
+        "v": 1,
+        "country_code": country_data.get("country_code"),
+        "series": source_series_by_disease,
+    }
+
+
 def build_disease_data(
     disease_id: str,
     disease_info: dict,

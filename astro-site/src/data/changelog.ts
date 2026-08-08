@@ -22,6 +22,67 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.5.2',
+    date: '2026-08-08',
+    titleEn: 'Faster data delivery and incremental exports',
+    titleZh: '更快的数据加载与增量导出',
+    summaryEn:
+      'This release reduces initial country-page work, serves compressed static assets with explicit cache policy, and makes public download exports incremental, atomic, and parallel while retaining the newly added surveillance regions.',
+    summaryZh:
+      '本次更新降低国家/地区页面的首次加载负担，为静态资源提供压缩与明确缓存策略，并将公开下载导出改为增量、原子和并行处理，同时保留近期新增的监测地区。',
+    sections: [
+      {
+        kind: 'new',
+        labelEn: 'New',
+        labelZh: '新增',
+        items: [
+          {
+            en: 'Added Ontario, Finland, Iceland, Norway, and Sweden to the public surveillance coverage released in the 0.5 series.',
+            zh: '将安大略、芬兰、冰岛、挪威和瑞典纳入 0.5 系列已发布的公开监测覆盖范围。',
+          },
+          {
+            en: 'Added a lazy source-series payload for country trend charts, preserving source selection without embedding complete observations in the initial HTML document.',
+            zh: '为国家趋势图新增按需加载的来源序列数据，在保留来源选择功能的同时，不再把完整观测值嵌入初始 HTML 文档。',
+          },
+        ],
+      },
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        items: [
+          {
+            en: 'The static site origin now serves gzip-compressed text assets with cache headers for hashed build files, mutable site data, and HTML documents.',
+            zh: '静态站点源站现为文本资源提供 gzip 压缩，并分别为带哈希构建文件、可变站点数据和 HTML 文档设置缓存策略。',
+          },
+          {
+            en: 'Country heatmaps now reuse the precomputed export instead of rebuilding all month-by-disease cells in the browser.',
+            zh: '国家热图现直接复用预计算导出结果，不再在浏览器中重建全部“月份 × 疾病”单元格。',
+          },
+          {
+            en: 'Site JSON generation now preserves unchanged files, replaces changed files atomically, and removes stale artifacts only after a successful write pass.',
+            zh: '站点 JSON 生成现会保留未变化文件、原子替换已变化文件，并仅在成功写入后清理过期产物。',
+          },
+          {
+            en: 'Changed CSV, JSON, and XLSX download partitions now render in parallel while historical partitions continue to be reused by content hash.',
+            zh: '发生变化的 CSV、JSON 和 XLSX 下载分区现可并行生成，而历史分区继续按内容哈希复用。',
+          },
+        ],
+      },
+      {
+        kind: 'fixed',
+        labelEn: 'Fixed',
+        labelZh: '修复',
+        items: [
+          {
+            en: 'Deferred below-the-fold disease charts until they approach the viewport, reducing unnecessary JavaScript work during initial navigation.',
+            zh: '将疾病页首屏以下的图表延迟至接近视口时加载，减少首次访问时不必要的 JavaScript 工作。',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '0.5.1',
     date: '2026-08-07',
     titleEn: 'Five new surveillance regions and clearer source notes',

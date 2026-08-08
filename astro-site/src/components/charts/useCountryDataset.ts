@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   invalidateCountryDataset,
   loadCountryDataset,
+  loadCountrySourceSeries,
+  type SourceSeriesObservations,
   type CountryDataset,
 } from './countryDataset';
 
@@ -10,6 +12,34 @@ type LoadStatus = 'idle' | 'loading' | 'ready' | 'error';
 interface CountryDatasetState {
   data: CountryDataset | null;
   status: LoadStatus;
+}
+
+export function useCountrySourceSeries(dataUrl?: string | null, enabled = true) {
+  const [state, setState] = useState<{
+    data: SourceSeriesObservations;
+    isLoading: boolean;
+  }>({ data: {}, isLoading: Boolean(enabled && dataUrl) });
+
+  useEffect(() => {
+    if (!enabled || !dataUrl) {
+      setState({ data: {}, isLoading: false });
+      return;
+    }
+    let cancelled = false;
+    setState((current) => ({ ...current, isLoading: true }));
+    loadCountrySourceSeries(dataUrl)
+      .then((data) => {
+        if (!cancelled) setState({ data, isLoading: false });
+      })
+      .catch(() => {
+        if (!cancelled) setState({ data: {}, isLoading: false });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [dataUrl, enabled]);
+
+  return state;
 }
 
 export function useCountryDataset(dataUrl?: string | null, enabled = true) {

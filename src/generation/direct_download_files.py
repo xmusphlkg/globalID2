@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import csv
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import date, datetime
 import hashlib
 from io import BytesIO, StringIO
 import json
+import os
 from pathlib import Path
 import shutil
 from typing import Any
@@ -106,6 +108,7 @@ BRIDGE_WINDOW_END = 2029
 ROLLING_WINDOW_START = 2030
 ROLLING_WINDOW_YEARS = 5
 _XLSX_TIMESTAMP = (2000, 1, 1, 0, 0, 0)
+DEFAULT_EXPORT_WORKERS = min(4, max(1, os.cpu_count() or 1))
 
 
 @dataclass(frozen=True)
@@ -715,14 +718,43 @@ def _dataset_parts(
     return parts, changed
 
 
+def _build_dataset_parts_task(
+    dataset: dict,
+    rows: list[dict],
+    output_dir: Path,
+    download_url_base: str,
+    max_file_bytes: int,
+    existing_parts: dict[str, dict],
+) -> tuple[list[dict], int, set[Path]]:
+    """Build one dataset tree independently so changed partitions can overlap."""
+
+    expected_paths: set[Path] = set()
+    parts, changed = _dataset_parts(
+        dataset=dataset,
+        rows=rows,
+        output_dir=output_dir,
+        download_url_base=download_url_base,
+        max_file_bytes=max_file_bytes,
+        expected_paths=expected_paths,
+        existing_parts=existing_parts,
+    )
+    return parts, changed, expected_paths
+
+
 def build_direct_download_files(
     context: dict,
     output_dir: Path,
     *,
     download_url_base: str,
     max_file_bytes: int = DEFAULT_TARGET_FILE_BYTES,
+    workers: int | None = None,
 ) -> dict:
-    """Write deterministic CSV/JSON/XLSX partitions and return the manifest."""
+    """Write deterministic CSV/JSON/XLSX partitions and return the manifest.
+
+    Unchanged windows are reused by content hash.  Changed country and disease
+    trees write to disjoint paths, allowing their CSV/JSON/XLSX generation to
+    run concurrently without changing manifest order.
+    """
 
     if not download_url_base.startswith("https://raw.githubusercontent.com/"):
         raise ValueError("Public downloads require an absolute GitHub Raw URL base")
@@ -757,17 +789,16 @@ def build_direct_download_files(
     disease_entries_by_id = {
         entry["disease_id"]: entry for entry in context["disease_download_entries"]
     }
-    country_entries: list[dict] = []
-    disease_entries: list[dict] = []
-    changed_files = 0
-
+    tasks: list[tuple[str, dict, list[dict], dict[str, dict], dict]] = []
     for country_export in context["country_exports"]:
         code = country_export["code"]
         path_id = code.lower()
-        country_data = country_export["country_data"]
-        rows = build_country_download_rows(country_data, country_export["source_info"])
-        parts, changed = _dataset_parts(
-            dataset={
+        rows = build_country_download_rows(
+            country_export["country_data"], country_export["source_info"]
+        )
+        tasks.append((
+            "country",
+            {
                 "kind": "country",
                 "directory": "countries",
                 "dataset_id": path_id,
@@ -775,25 +806,10 @@ def build_direct_download_files(
                 "slug": path_id,
                 "name": country_export["country_name"],
             },
-            rows=rows,
-            output_dir=output_dir,
-            download_url_base=download_url_base,
-            max_file_bytes=max_file_bytes,
-            expected_paths=expected_paths,
-            existing_parts=existing_country_parts.get(path_id, {}),
-        )
-        changed_files += changed
-        entry = dict(country_entries_by_id[path_id])
-        entry.update(
-            {
-                "record_count": len(rows),
-                **_row_provenance_counts(rows),
-                "includes_series_provenance": True,
-                "parts": parts,
-                "source_info": country_export["source_info"],
-            }
-        )
-        country_entries.append(entry)
+            rows,
+            existing_country_parts.get(path_id, {}),
+            country_export["source_info"],
+        ))
 
     for disease_export in context["disease_exports"]:
         did = disease_export["disease_id"]
@@ -804,8 +820,9 @@ def build_direct_download_files(
             context["country_sources_by_code"],
             country_names,
         )
-        parts, changed = _dataset_parts(
-            dataset={
+        tasks.append((
+            "disease",
+            {
                 "kind": "disease",
                 "directory": "diseases",
                 "dataset_id": did,
@@ -813,15 +830,51 @@ def build_direct_download_files(
                 "slug": disease_data.get("slug"),
                 "name": disease_data.get("name_en"),
             },
-            rows=rows,
-            output_dir=output_dir,
-            download_url_base=download_url_base,
-            max_file_bytes=max_file_bytes,
-            expected_paths=expected_paths,
-            existing_parts=existing_disease_parts.get(did, {}),
-        )
+            rows,
+            existing_disease_parts.get(did, {}),
+            disease_data,
+        ))
+
+    worker_count = max(1, workers or DEFAULT_EXPORT_WORKERS)
+    with ThreadPoolExecutor(
+        max_workers=min(worker_count, max(1, len(tasks)))
+    ) as executor:
+        futures = [
+            executor.submit(
+                _build_dataset_parts_task,
+                dataset,
+                rows,
+                output_dir,
+                download_url_base,
+                max_file_bytes,
+                existing_parts,
+            )
+            for _kind, dataset, rows, existing_parts, _detail in tasks
+        ]
+        results = [future.result() for future in futures]
+
+    country_entries: list[dict] = []
+    disease_entries: list[dict] = []
+    changed_files = 0
+    for (kind, dataset, rows, _existing_parts, detail), (parts, changed, paths) in zip(tasks, results):
+        expected_paths.update(paths)
         changed_files += changed
-        entry = dict(disease_entries_by_id[did])
+        if kind == "country":
+            entry = dict(country_entries_by_id[dataset["path_id"]])
+            entry.update(
+                {
+                    "record_count": len(rows),
+                    **_row_provenance_counts(rows),
+                    "includes_series_provenance": True,
+                    "parts": parts,
+                    "source_info": detail,
+                }
+            )
+            country_entries.append(entry)
+            continue
+
+        disease_data = detail
+        entry = dict(disease_entries_by_id[dataset["dataset_id"]])
         entry.update(
             {
                 "record_count": len(rows),
