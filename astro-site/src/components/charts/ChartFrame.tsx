@@ -74,7 +74,6 @@ export default function ChartFrame({
     ? (fullscreenSidebar ?? sidebar)
     : sidebar;
   const activeAside = interactiveAside ?? legend;
-  const bottomLegend = interactiveAside ? legend : null;
   const hasAside = Boolean(activeAside);
   const hasWideAside = Boolean(interactiveAside);
   const stageClassName = [
@@ -136,10 +135,9 @@ export default function ChartFrame({
         <div className="data-preview-wrap">{renderPanel(table)}</div>
       )}
 
-      {(bottomLegend || notes) && (
+      {notes && (
         <div className="chart-footer-info">
-          {bottomLegend && <div className="chart-bottom-legend">{bottomLegend}</div>}
-          {notes && <div className="chart-note-panel">{notes}</div>}
+          <div className="chart-note-panel">{notes}</div>
         </div>
       )}
     </div>

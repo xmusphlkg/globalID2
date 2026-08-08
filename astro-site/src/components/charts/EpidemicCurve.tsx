@@ -415,8 +415,6 @@ export default function EpidemicCurve({
                   {lang === 'zh' ? '最新值' : 'Latest'} {formatCellValue(findLatestValue(line.values), curveState.metric === 'incidence_rates' ? 2 : 0)}
                   {' · '}
                   {lang === 'zh' ? '累计' : 'Total'} {(source.total_cases ?? 0).toLocaleString()}
-                  {' · '}
-                  {formatTemporalGranularity(line.granularity, lang)}
                 </div>
               </div>
             </div>
