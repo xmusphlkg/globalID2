@@ -1087,16 +1087,6 @@
     @apply mt-4 flex flex-col gap-3 pt-3;
   }
 
-  .chart-bottom-legend .chart-legend {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: 0.4rem;
-  }
-
-  .chart-bottom-legend .chart-legend-item {
-    min-width: 0;
-  }
-
   .chart-note-panel {
     border: 1px solid rgb(var(--border) / 0.64);
     background-color: rgb(var(--surface) / 0.78);
