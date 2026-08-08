@@ -9,13 +9,23 @@ interface Props {
 
 const { initialLanguage = 'en' } = Astro.props;
 const year = new Date().getFullYear();
-const dataVersion = metaData?.generated_at
-  ? new Date(metaData.generated_at).toLocaleDateString(initialLanguage === 'zh' ? 'zh-CN' : 'en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    })
-  : 'Unknown';
+const siteUpdatedAt = import.meta.env.PUBLIC_GIDS_BUILT_AT?.trim() || new Date().toISOString();
+const databaseLatestAt = metaData?.generated_at;
+const formatDate = (value: string | undefined, locale: 'en-US' | 'zh-CN', fallback: string) => {
+  const date = value ? new Date(value) : null;
+  return date && !Number.isNaN(date.getTime())
+    ? date.toLocaleDateString(locale, {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        timeZone: 'UTC',
+      })
+    : fallback;
+};
+const siteUpdatedEn = formatDate(siteUpdatedAt, 'en-US', 'Unknown');
+const siteUpdatedZh = formatDate(siteUpdatedAt, 'zh-CN', '未知');
+const databaseLatestEn = formatDate(databaseLatestAt, 'en-US', 'Unknown');
+const databaseLatestZh = formatDate(databaseLatestAt, 'zh-CN', '未知');
 
 const links = [
   { href: '/', label: 'Home', labelZh: '首页' },
@@ -68,7 +78,32 @@ const links = [
           {initialLanguage === 'zh' ? '数据' : 'Data'}
         </h3>
         <ul class="site-footer-meta space-y-1.5 text-sm">
-          <li>{initialLanguage === 'zh' ? '数据更新' : 'Data updated'}: <span class="site-footer-meta-value">{dataVersion}</span></li>
+          <li>
+            <span data-lang-en="Website updated" data-lang-zh="网站更新">
+              {initialLanguage === 'zh' ? '网站更新' : 'Website updated'}
+            </span>:
+            {' '}
+            <span
+              class="site-footer-meta-value"
+              data-lang-en={siteUpdatedEn}
+              data-lang-zh={siteUpdatedZh}
+            >
+              {initialLanguage === 'zh' ? siteUpdatedZh : siteUpdatedEn}
+            </span>
+          </li>
+          <li>
+            <span data-lang-en="Latest database date" data-lang-zh="数据库最新日期">
+              {initialLanguage === 'zh' ? '数据库最新日期' : 'Latest database date'}
+            </span>:
+            {' '}
+            <span
+              class="site-footer-meta-value"
+              data-lang-en={databaseLatestEn}
+              data-lang-zh={databaseLatestZh}
+            >
+              {initialLanguage === 'zh' ? databaseLatestZh : databaseLatestEn}
+            </span>
+          </li>
           <li><a class="site-footer-link" href="/about/">{initialLanguage === 'zh' ? '数据来源与方法' : 'Sources and methods'}</a></li>
           <li><a class="site-footer-link" href="/terms/">{initialLanguage === 'zh' ? '数据使用提示' : 'Data-use guidance'}</a></li>
         </ul>
@@ -76,10 +111,14 @@ const links = [
     </div>
 
     <div class="site-footer-divider border-t mt-10 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-      <p class="site-footer-legal text-xs">
+      <p
+        class="site-footer-legal text-xs"
+        data-lang-en={`© ${year} GIDS. Website updated ${siteUpdatedEn}.`}
+        data-lang-zh={`© ${year} GIDS。网站更新于 ${siteUpdatedZh}。`}
+      >
         {initialLanguage === 'zh'
-          ? `© ${year} GIDS。数据更新于 ${dataVersion}。`
-          : `© ${year} GIDS. Data updated ${dataVersion}.`}
+          ? `© ${year} GIDS。网站更新于 ${siteUpdatedZh}。`
+          : `© ${year} GIDS. Website updated ${siteUpdatedEn}.`}
       </p>
       <p class="site-footer-legal-note text-xs">
         {initialLanguage === 'zh'

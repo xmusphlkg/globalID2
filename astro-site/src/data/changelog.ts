@@ -22,6 +22,136 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.5.2',
+    date: '2026-08-08',
+    titleEn: 'Faster data delivery and incremental exports',
+    titleZh: '更快的数据加载与增量导出',
+    summaryEn:
+      'This release reduces initial country-page work, serves compressed static assets with explicit cache policy, and makes public download exports incremental, atomic, and parallel while retaining the newly added surveillance regions.',
+    summaryZh:
+      '本次更新降低国家/地区页面的首次加载负担，为静态资源提供压缩与明确缓存策略，并将公开下载导出改为增量、原子和并行处理，同时保留近期新增的监测地区。',
+    sections: [
+      {
+        kind: 'new',
+        labelEn: 'New',
+        labelZh: '新增',
+        items: [
+          {
+            en: 'Added Ontario, Finland, Iceland, Norway, and Sweden to the public surveillance coverage released in the 0.5 series.',
+            zh: '将安大略、芬兰、冰岛、挪威和瑞典纳入 0.5 系列已发布的公开监测覆盖范围。',
+          },
+          {
+            en: 'Added a lazy source-series payload for country trend charts, preserving source selection without embedding complete observations in the initial HTML document.',
+            zh: '为国家趋势图新增按需加载的来源序列数据，在保留来源选择功能的同时，不再把完整观测值嵌入初始 HTML 文档。',
+          },
+        ],
+      },
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        items: [
+          {
+            en: 'The static site origin now serves gzip-compressed text assets with cache headers for hashed build files, mutable site data, and HTML documents.',
+            zh: '静态站点源站现为文本资源提供 gzip 压缩，并分别为带哈希构建文件、可变站点数据和 HTML 文档设置缓存策略。',
+          },
+          {
+            en: 'Country heatmaps now reuse the precomputed export instead of rebuilding all month-by-disease cells in the browser.',
+            zh: '国家热图现直接复用预计算导出结果，不再在浏览器中重建全部“月份 × 疾病”单元格。',
+          },
+          {
+            en: 'Site JSON generation now preserves unchanged files, replaces changed files atomically, and removes stale artifacts only after a successful write pass.',
+            zh: '站点 JSON 生成现会保留未变化文件、原子替换已变化文件，并仅在成功写入后清理过期产物。',
+          },
+          {
+            en: 'Changed CSV, JSON, and XLSX download partitions now render in parallel while historical partitions continue to be reused by content hash.',
+            zh: '发生变化的 CSV、JSON 和 XLSX 下载分区现可并行生成，而历史分区继续按内容哈希复用。',
+          },
+        ],
+      },
+      {
+        kind: 'fixed',
+        labelEn: 'Fixed',
+        labelZh: '修复',
+        items: [
+          {
+            en: 'Deferred below-the-fold disease charts until they approach the viewport, reducing unnecessary JavaScript work during initial navigation.',
+            zh: '将疾病页首屏以下的图表延迟至接近视口时加载，减少首次访问时不必要的 JavaScript 工作。',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    version: '0.5.1',
+    date: '2026-08-07',
+    titleEn: 'Five new surveillance regions and clearer source notes',
+    titleZh: '新增五个监测地区，并改进来源注释呈现',
+    summaryEn:
+      'This release expands public surveillance coverage to Ontario, Finland, Iceland, Norway, and Sweden, strengthens disease-source mapping safeguards, and moves complex source notes out of chart legends into a dedicated data-notes area.',
+    summaryZh:
+      '本次更新将公开监测覆盖扩展至安大略、芬兰、冰岛、挪威和瑞典，加强疾病来源映射保护，并把复杂来源说明从图例中移至专门的数据注释区。',
+    sections: [
+      {
+        kind: 'new',
+        labelEn: 'New',
+        labelZh: '新增',
+        items: [
+          {
+            en: 'Added first-class ingestion, mapping, source-series registration, tests, and public country pages for Ontario, Finland, Iceland, Norway, and Sweden.',
+            zh: '为安大略、芬兰、冰岛、挪威和瑞典新增一等接入能力，包括抓取、映射、来源序列注册、测试和公开国家/地区页面。',
+          },
+          {
+            en: 'Added dynamic monthly/current-period controls for supported Nordic sources, including provisional current-month handling and revision-window refresh options.',
+            zh: '为支持的北欧来源新增动态月度/当前期间控制，包括临时当前月处理和修订窗口刷新选项。',
+          },
+          {
+            en: 'Added SEO-oriented country, disease, report, sitemap, and structured-data helpers so public pages are easier for search engines to discover.',
+            zh: '新增面向 SEO 的国家、疾病、报告、站点地图和结构化数据工具，使公开页面更容易被搜索引擎发现。',
+          },
+        ],
+      },
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        items: [
+          {
+            en: 'Strengthened disease ontology and mapping rules for mixed-grain, non-additive, antimicrobial-resistance, STI, respiratory, and historical workbook series.',
+            zh: '加强混合粒度、不可加总、耐药监测、性传播感染、呼吸道监测和历史工作簿序列的疾病本体与映射规则。',
+          },
+          {
+            en: 'Updated the operations dashboard source flow to show source policy, availability, current-period support, revision windows, and Iceland history-source constraints consistently.',
+            zh: '更新运营控制面板的来源流程，一致展示来源策略、可用性、当前期间支持、修订窗口和冰岛历史来源限制。',
+          },
+          {
+            en: 'Kept source-series observations authoritative while documenting each remaining legacy compatibility projection in the reviewed access baseline.',
+            zh: '保持来源序列观测为权威层，并在已审查访问基线中记录仍需保留的旧版兼容投影。',
+          },
+          {
+            en: 'Moved verbose chart source definitions, reporting basis, availability, and aggregation policy into a bottom data-notes panel instead of overloading the legend.',
+            zh: '将冗长的图表来源定义、报告口径、可用状态和聚合策略移入底部数据注释栏，不再挤入图例。',
+          },
+        ],
+      },
+      {
+        kind: 'fixed',
+        labelEn: 'Fixed',
+        labelZh: '修复',
+        items: [
+          {
+            en: 'Fixed the epidemic-curve frame so a selector sidebar no longer hides the legend; legends now remain visible in a compact footer when both are present.',
+            zh: '修复流行曲线框架中筛选侧栏会隐藏图例的问题；当筛选器与图例同时存在时，图例会以紧凑底栏呈现。',
+          },
+          {
+            en: 'Updated ontology-export tests and legacy-access guard baselines for the expanded registry so full repository validation passes cleanly.',
+            zh: '随扩展后的注册表更新本体导出测试和旧版访问保护基线，使完整仓库验证干净通过。',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '0.4.5',
     date: '2026-08-07',
     titleEn: 'Cleaner charts and smoother time navigation',

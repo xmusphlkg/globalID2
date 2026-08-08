@@ -6,10 +6,12 @@ from src.generation.site_data_writer import (
     clean_generated_dir,
     existing_site_export_has_content,
     prepare_site_output_dirs,
+    remove_stale_json_files,
     reset_public_data_dir,
     write_compact_json,
     write_pretty_json,
 )
+from src.generation.site_data_views import build_country_source_series_data
 
 
 def test_json_writers_preserve_historical_bytes(tmp_path: Path) -> None:
@@ -61,7 +63,7 @@ def test_reset_public_data_dir_replaces_only_target_tree(tmp_path: Path) -> None
     assert sibling.read_text(encoding="utf-8") == "icon"
 
 
-def test_prepare_site_output_dirs_preserves_non_generated_build_assets(
+def test_prepare_site_output_dirs_preserves_existing_artifacts_until_reconciled(
     tmp_path: Path,
 ) -> None:
     output = tmp_path / "build-data"
@@ -78,11 +80,15 @@ def test_prepare_site_output_dirs_preserves_non_generated_build_assets(
     prepare_site_output_dirs(output, public)
 
     for dirname in ("countries", "diseases", "disease-knowledge", "reports"):
-        assert not (output / dirname / "stale.json").exists()
+        assert (output / dirname / "stale.json").exists()
         assert (output / dirname / "keep.md").read_text(encoding="utf-8") == "keep"
-    assert list((public / "countries").iterdir()) == []
+    assert (public / "countries" / "stale.json").exists()
     assert (public / "diseases").is_dir()
     assert (public / "other.txt").read_text(encoding="utf-8") == "keep"
+
+    assert remove_stale_json_files(output / "countries", {"current.json"}) == 1
+    assert not (output / "countries" / "stale.json").exists()
+    assert (output / "countries" / "keep.md").exists()
 
 
 def test_existing_site_export_content_detection_and_legacy_reexports(
@@ -100,3 +106,26 @@ def test_existing_site_export_content_detection_and_legacy_reexports(
     assert generate_site_data.clean_generated_dir is clean_generated_dir
     assert generate_site_data.reset_public_data_dir is reset_public_data_dir
     assert generate_site_data.existing_site_export_has_content is existing_site_export_has_content
+
+
+def test_source_series_payload_keeps_only_complete_plottable_observations() -> None:
+    payload = build_country_source_series_data(
+        {
+            "country_code": "JP",
+            "disease_series": {
+                "D001": {
+                    "source_series": [
+                        {"series_code": "valid", "dates": ["2026-01-01"], "values": [3]},
+                        {"series_code": "invalid", "dates": ["2026-01-01"], "values": []},
+                    ]
+                },
+                "D002": {"source_series": [{"series_code": "metadata-only"}]},
+            },
+        }
+    )
+
+    assert payload == {
+        "v": 1,
+        "country_code": "JP",
+        "series": {"D001": [{"series_code": "valid", "dates": ["2026-01-01"], "values": [3]}]},
+    }

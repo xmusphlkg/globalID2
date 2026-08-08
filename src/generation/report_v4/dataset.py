@@ -25,7 +25,9 @@ class SourcePolicy:
         return asdict(self)
 
 
-CASE_ONLY_COUNTRIES = frozenset({"AU", "BR", "CH", "HK", "JP", "KR", "NZ", "TW", "US"})
+CASE_ONLY_COUNTRIES = frozenset(
+    {"AU", "BR", "CA-ON", "CH", "HK", "JP", "KR", "NZ", "TW", "US"}
+)
 
 
 class DatasetBuilder:

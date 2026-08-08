@@ -9,11 +9,23 @@ EXPECTED_SCOPES_BY_COUNTRY = {
     "US": ["nndss_api", "nhss_hiv"],
     "JP": ["jp_weekly"],
     "AU": ["all"],
+    "CA": ["all"],
+    "CA-ON": ["pho_idto_monthly"],
+    "FI": ["thl_ttr"],
     "TW": ["nidss_open_data"],
     "HK": ["chp_notifiable"],
     "BR": ["sinan_datasus"],
     "KR": ["kdca_open_api"],
     "CH": ["foph_idd"],
+    "NO": ["fhi_msis"],
+    "SE": ["fohm_sminet"],
+    "IS": [
+        "is_doh_annual",
+        "is_doh_sti",
+        "is_doh_respiratory",
+        "is_doh_history",
+        "is_doh_legacy_icd",
+    ],
 }
 
 SOURCE_SCOPE_LABELS: dict[str, dict[str, str]] = {
@@ -65,6 +77,42 @@ SOURCE_SCOPE_LABELS: dict[str, dict[str, str]] = {
         "en": "Switzerland FOPH IDD",
         "zh": "瑞士 FOPH/BAG IDD",
     },
+    "pho_idto_monthly": {
+        "en": "Public Health Ontario IDTO Monthly",
+        "zh": "安大略省公共卫生局 IDTO 月度数据",
+    },
+    "thl_ttr": {
+        "en": "Finland THL Infectious Diseases Register",
+        "zh": "芬兰 THL 传染病登记",
+    },
+    "fhi_msis": {
+        "en": "Norway FHI MSIS Statistics Bank",
+        "zh": "挪威 FHI MSIS 统计库",
+    },
+    "fohm_sminet": {
+        "en": "Sweden Public Health Agency SmiNet",
+        "zh": "瑞典公共卫生局 SmiNet",
+    },
+    "is_doh_annual": {
+        "en": "Iceland Directorate of Health Annual Dashboard",
+        "zh": "冰岛卫生署年度传染病看板",
+    },
+    "is_doh_sti": {
+        "en": "Iceland Directorate of Health STI Dashboard",
+        "zh": "冰岛卫生署性病月度看板",
+    },
+    "is_doh_respiratory": {
+        "en": "Iceland Directorate of Health Respiratory Dashboard",
+        "zh": "冰岛卫生署呼吸道周度看板",
+    },
+    "is_doh_history": {
+        "en": "Iceland Directorate of Health Historical Registry",
+        "zh": "冰岛卫生署历史传染病登记",
+    },
+    "is_doh_legacy_icd": {
+        "en": "Iceland Directorate of Health Legacy ICD Monthly",
+        "zh": "冰岛卫生署历史 ICD 临床月报",
+    },
 }
 
 COUNTRY_SOURCE_LABEL_OVERRIDES: dict[tuple[str, str], dict[str, str]] = {
@@ -105,6 +153,26 @@ _EXACT_SCOPE_BY_DATA_SOURCE = {
     "switzerland bag idd": "foph_idd",
     "foph idd": "foph_idd",
     "bag idd": "foph_idd",
+    "public health ontario idto monthly preliminary data": "pho_idto_monthly",
+    "public health ontario idto monthly": "pho_idto_monthly",
+    "pho idto monthly": "pho_idto_monthly",
+    "finland thl infectious diseases register": "thl_ttr",
+    "finland thl ttr": "thl_ttr",
+    "thl infectious diseases register": "thl_ttr",
+    "norway fhi msis statistics bank": "fhi_msis",
+    "norway fhi msis": "fhi_msis",
+    "fhi msis": "fhi_msis",
+    "sweden public health agency sminet": "fohm_sminet",
+    "sweden fohm sminet": "fohm_sminet",
+    "fohm sminet": "fohm_sminet",
+    "iceland directorate of health annual dashboard": "is_doh_annual",
+    "iceland directorate of health sti dashboard": "is_doh_sti",
+    "iceland directorate of health respiratory dashboard": "is_doh_respiratory",
+    "iceland directorate of health historical registry": "is_doh_history",
+    "iceland directorate of health historical registry annual": "is_doh_history",
+    "iceland directorate of health disease-specific monthly workbooks": "is_doh_history",
+    "iceland directorate of health legacy icd monthly": "is_doh_legacy_icd",
+    "iceland directorate of health legacy icd monthly reports": "is_doh_legacy_icd",
     "nhc": "nhc",
     "gov data": "nhc",
     "pubmed": "pubmed",
@@ -153,6 +221,39 @@ _TASK_SOURCE_ALIASES = {
     "idd": "foph_idd",
     "ch": "foph_idd",
     "switzerland": "foph_idd",
+    "pho": "pho_idto_monthly",
+    "pho_idto": "pho_idto_monthly",
+    "pho_idto_monthly": "pho_idto_monthly",
+    "idto": "pho_idto_monthly",
+    "ontario": "pho_idto_monthly",
+    "ca-on": "pho_idto_monthly",
+    "thl": "thl_ttr",
+    "thl_ttr": "thl_ttr",
+    "ttr": "thl_ttr",
+    "fi": "thl_ttr",
+    "finland": "thl_ttr",
+    "fhi": "fhi_msis",
+    "fhi_msis": "fhi_msis",
+    "msis": "fhi_msis",
+    "no": "fhi_msis",
+    "norway": "fhi_msis",
+    "fohm": "fohm_sminet",
+    "fohm_sminet": "fohm_sminet",
+    "sminet": "fohm_sminet",
+    "se": "fohm_sminet",
+    "sweden": "fohm_sminet",
+    "is_annual": "is_doh_annual",
+    "is_doh_annual": "is_doh_annual",
+    "is_sti": "is_doh_sti",
+    "is_doh_sti": "is_doh_sti",
+    "is_respiratory": "is_doh_respiratory",
+    "is_doh_respiratory": "is_doh_respiratory",
+    "is_history": "is_doh_history",
+    "is_doh_history": "is_doh_history",
+    "is_legacy_icd": "is_doh_legacy_icd",
+    "is_doh_legacy_icd": "is_doh_legacy_icd",
+    "iceland": "all",
+    "is": "all",
 }
 
 
@@ -175,6 +276,14 @@ def canonicalize_task_source(
         return "kdca_open_api"
     if normalized == "all" and (country_code or "").strip().upper() == "CH":
         return "foph_idd"
+    if normalized == "all" and (country_code or "").strip().upper() == "CA-ON":
+        return "pho_idto_monthly"
+    if normalized == "all" and (country_code or "").strip().upper() == "FI":
+        return "thl_ttr"
+    if normalized == "all" and (country_code or "").strip().upper() == "NO":
+        return "fhi_msis"
+    if normalized == "all" and (country_code or "").strip().upper() == "SE":
+        return "fohm_sminet"
 
     return normalized
 
@@ -243,8 +352,8 @@ def source_scope_label(
     lang: str = "en",
 ) -> str:
     """Return a localized UI label for a canonical source scope."""
-    normalized_scope = canonicalize_task_source(scope, country_code=country_code)
     upper_country = (country_code or "").strip().upper()
+    normalized_scope = canonicalize_task_source(scope, country_code=country_code)
     lang_key = "zh" if (lang or "").lower().startswith("zh") else "en"
 
     country_override = COUNTRY_SOURCE_LABEL_OVERRIDES.get((upper_country, normalized_scope))
@@ -314,6 +423,25 @@ def scope_from_data_source(data_source: Optional[str]) -> str:
         return "kdca_open_api"
     if "foph" in text or "bag" in text or "idd" in text or "switzerland" in text:
         return "foph_idd"
+    if "public health ontario" in text or "pho idto" in text:
+        return "pho_idto_monthly"
+    if "finland thl" in text or "thl infectious" in text or "thl ttr" in text:
+        return "thl_ttr"
+    if "fhi msis" in text or "norway fhi" in text:
+        return "fhi_msis"
+    if "sminet" in text or "sweden public health agency" in text or "sweden fohm" in text:
+        return "fohm_sminet"
+    if "iceland directorate of health" in text:
+        if "annual" in text:
+            return "is_doh_annual"
+        if "sti" in text:
+            return "is_doh_sti"
+        if "respiratory" in text:
+            return "is_doh_respiratory"
+        if "legacy icd" in text:
+            return "is_doh_legacy_icd"
+        if "histor" in text or "registry" in text:
+            return "is_doh_history"
     if "nhc" in text or "gov" in text or "ndcpa" in text or "卫健" in text or "疾控局" in text:
         return "nhc"
     if "cdc" in text or "weekly" in text:
@@ -375,6 +503,30 @@ def canonical_data_source_label(
         "bag idd",
     }:
         return "Switzerland FOPH IDD"
+    if text in {
+        "public health ontario idto monthly preliminary data",
+        "public health ontario idto monthly",
+        "pho idto monthly",
+    }:
+        return "Public Health Ontario IDTO Monthly"
+    if text in {
+        "finland thl infectious diseases register",
+        "finland thl ttr",
+        "thl infectious diseases register",
+    }:
+        return "Finland THL Infectious Diseases Register"
+    if text in {
+        "norway fhi msis statistics bank",
+        "norway fhi msis",
+        "fhi msis",
+    }:
+        return "Norway FHI MSIS Statistics Bank"
+    if text in {
+        "sweden public health agency sminet",
+        "sweden fohm sminet",
+        "fohm sminet",
+    }:
+        return "Sweden Public Health Agency SmiNet"
 
     scope = scope_from_data_source(data_source)
     if scope != "all":

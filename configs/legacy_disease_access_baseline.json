@@ -80,6 +80,11 @@
       "reason": "The full-pipeline CLI still derives its report window from legacy CN rows.",
       "max_references": {"DiseaseRecord": 0, "disease_records": 1}
     },
+    "scripts/audit_iceland_integration.py": {
+      "classification": "quality_audit",
+      "reason": "Iceland integration audit checks the bounded compatibility projection against registered source-series facts during cutover validation.",
+      "max_references": {"DiseaseRecord": 0, "disease_records": 1}
+    },
     "scripts/backfill_disease_series_from_legacy.py": {
       "classification": "migration",
       "reason": "One-way recovery tool reads legacy raw_data to bootstrap registered source-series facts under an explicit migration command.",
@@ -133,6 +138,11 @@
     "scripts/import_hk_history.py": {
       "classification": "historical_import",
       "reason": "HK history command calls the updater's legacy-only import method outside CrawlService dual write.",
+      "max_references": {"DiseaseRecord": 0, "disease_records": 1}
+    },
+    "scripts/import_iceland_history.py": {
+      "classification": "historical_import",
+      "reason": "Iceland reviewed-history importer retires only ineligible compatibility rows after source-series import to prevent stale flat projections.",
       "max_references": {"DiseaseRecord": 0, "disease_records": 1}
     },
     "scripts/import_jp_weekly_history.py": {
@@ -195,15 +205,35 @@
       "reason": "BR updater temporarily reads legacy checkpoints and writes a lossy compatibility aggregate alongside source-series facts.",
       "max_references": {"DiseaseRecord": 0, "disease_records": 3}
     },
+    "src/data/processors/ca.py": {
+      "classification": "runtime_write",
+      "reason": "Ontario updater writes a bounded legacy compatibility projection while preserving authoritative source-series observations for public exports.",
+      "max_references": {"DiseaseRecord": 0, "disease_records": 1}
+    },
     "src/data/processors/ch.py": {
       "classification": "runtime_write",
       "reason": "CH updater temporarily reads legacy checkpoints and writes an atomic compatibility projection before Registry cutover.",
+      "max_references": {"DiseaseRecord": 0, "disease_records": 3}
+    },
+    "src/data/processors/fi.py": {
+      "classification": "runtime_write",
+      "reason": "FI THL updater keeps source-series facts authoritative and writes only the reviewed non-aggregating legacy compatibility projection during cutover.",
       "max_references": {"DiseaseRecord": 0, "disease_records": 3}
     },
     "src/data/processors/hk.py": {
       "classification": "runtime_write",
       "reason": "HK updater temporarily reads legacy checkpoints and writes an atomic compatibility projection before Registry cutover.",
       "max_references": {"DiseaseRecord": 0, "disease_records": 3}
+    },
+    "src/data/processors/is.py": {
+      "classification": "runtime_write",
+      "reason": "Iceland current-dashboard updater writes only compatible annual rows to the flat table while monthly and weekly facts remain source-series only.",
+      "max_references": {"DiseaseRecord": 0, "disease_records": 4}
+    },
+    "src/data/processors/is_history.py": {
+      "classification": "runtime_write",
+      "reason": "Iceland history processor projects only eligible reviewed historical series to the legacy table after source-series registration.",
+      "max_references": {"DiseaseRecord": 0, "disease_records": 4}
     },
     "src/data/processors/jp.py": {
       "classification": "runtime_write",
@@ -218,6 +248,16 @@
     "src/data/processors/nz.py": {
       "classification": "runtime_write",
       "reason": "NZ updater temporarily reads legacy checkpoints and writes an atomic compatibility projection before Registry cutover.",
+      "max_references": {"DiseaseRecord": 0, "disease_records": 3}
+    },
+    "src/data/processors/no.py": {
+      "classification": "runtime_write",
+      "reason": "NO FHI updater reads and writes the flat compatibility projection while registered monthly source-series facts are the authoritative layer.",
+      "max_references": {"DiseaseRecord": 0, "disease_records": 3}
+    },
+    "src/data/processors/se.py": {
+      "classification": "runtime_write",
+      "reason": "SE SmiNet updater writes a gated non-public compatibility projection while public release remains blocked pending reuse review.",
       "max_references": {"DiseaseRecord": 0, "disease_records": 3}
     },
     "src/data/processors/tw.py": {

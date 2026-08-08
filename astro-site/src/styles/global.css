@@ -1082,6 +1082,47 @@
     @apply mt-0.5 text-[11px] leading-4;
   }
 
+  .chart-footer-info {
+    border-top: 1px solid rgb(var(--border) / 0.64);
+    @apply mt-4 flex flex-col gap-3 pt-3;
+  }
+
+  .chart-bottom-legend .chart-legend {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 0.4rem;
+  }
+
+  .chart-bottom-legend .chart-legend-item {
+    min-width: 0;
+  }
+
+  .chart-note-panel {
+    border: 1px solid rgb(var(--border) / 0.64);
+    background-color: rgb(var(--surface) / 0.78);
+    color: rgb(var(--text-muted));
+    @apply px-3 py-2 text-xs leading-5;
+  }
+
+  .chart-note-details summary {
+    color: rgb(var(--text-strong));
+    cursor: pointer;
+    @apply font-semibold;
+  }
+
+  .chart-note-list {
+    @apply mt-2 flex flex-col gap-1.5;
+  }
+
+  .chart-note-list li {
+    @apply min-w-0;
+  }
+
+  .chart-note-name {
+    color: rgb(var(--text-strong));
+    @apply mr-1 font-semibold;
+  }
+
   .chart-sidebar {
     min-height: 0;
     @apply flex flex-col gap-3;
@@ -1363,6 +1404,12 @@
   .chart-shell-fullscreen .chart-aside-wide .chart-sidebar-list {
     flex: 1 1 auto;
     max-height: none;
+  }
+
+  .chart-shell-fullscreen .chart-footer-info {
+    flex: 0 0 auto;
+    max-height: min(24vh, 220px);
+    overflow: auto;
   }
 
   .comparison-shell {

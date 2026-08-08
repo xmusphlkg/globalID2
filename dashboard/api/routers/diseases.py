@@ -8,6 +8,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..deps import get_db
+from ..location_codes import COUNTRY_REGION_CODE_MAX_LENGTH
 from ..schemas.disease import DiseaseListItem, DiseaseOut
 from ..schemas.disease_record import DiseaseRecordOut
 from ..services.disease_series_projection import (
@@ -63,7 +64,9 @@ async def get_disease_ontology_concept(disease_code: str):
 @router.get("/disease-ontology/series", response_model=list[dict])
 async def list_disease_ontology_series(
     source_id: Optional[str] = Query(None),
-    country_code: Optional[str] = Query(None, min_length=2, max_length=2),
+    country_code: Optional[str] = Query(
+        None, min_length=2, max_length=COUNTRY_REGION_CODE_MAX_LENGTH
+    ),
     local_code: Optional[str] = Query(None),
     local_label: Optional[str] = Query(None),
     concept_id: Optional[str] = Query(None),
@@ -89,7 +92,9 @@ async def list_disease_ontology_series(
 @router.get("/disease-ontology/availability", response_model=list[dict])
 async def list_disease_ontology_availability(
     source_id: Optional[str] = Query(None),
-    country_code: Optional[str] = Query(None, min_length=2, max_length=2),
+    country_code: Optional[str] = Query(
+        None, min_length=2, max_length=COUNTRY_REGION_CODE_MAX_LENGTH
+    ),
     concept_id: Optional[str] = Query(None),
     group_id: Optional[str] = Query(None),
     series_id: Optional[str] = Query(None),

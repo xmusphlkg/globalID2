@@ -72,6 +72,8 @@ const defaultForm: AutomationJobInput = {
   save_raw: true,
   fill_missing: true,
   force: false,
+  include_current_month: false,
+  revision_window_months: 3,
   retry_threshold: 3,
   interval_minutes: null,
   daily_time: "08:00",
@@ -84,6 +86,7 @@ const crawlOptionLabels: Record<string, { en: string; zh: string }> = {
   save_raw: { en: "Save raw fetched data", zh: "保存 raw 原始抓取数据" },
   fill_missing: { en: "Backfill missing months", zh: "回填缺失月份" },
   force: { en: "Force re-fetch", zh: "强制重新抓取" },
+  include_current_month: { en: "Include current month (provisional)", zh: "接入当前月（临时数据）" },
 };
 
 const DEFAULT_INTERVAL_MINUTES = 60;
@@ -146,6 +149,8 @@ function toForm(job: AutomationJob): AutomationJobInput {
     save_raw: job.save_raw,
     fill_missing: job.fill_missing,
     force: job.force,
+    include_current_month: job.include_current_month ?? false,
+    revision_window_months: job.revision_window_months ?? 3,
     retry_threshold: job.retry_threshold,
     interval_minutes: job.interval_minutes ?? null,
     daily_time: job.daily_time ?? "",
@@ -160,6 +165,14 @@ function findCountryTimezone(countries: Country[] | undefined, code: string): st
 
 function defaultFillMissingForCountry(config?: CountrySourceConfig | null): boolean {
   return config?.default_fill_missing ?? true;
+}
+
+function defaultIncludeCurrentMonthForCountry(config?: CountrySourceConfig | null): boolean {
+  return config?.source_policy?.default_include_current_month ?? false;
+}
+
+function defaultRevisionWindowForCountry(config?: CountrySourceConfig | null): number {
+  return Math.max(1, config?.source_policy?.default_revision_window_months ?? 3);
 }
 
 function presetTimeForIndex(index: number): string {
@@ -319,7 +332,13 @@ export default function SourcesAutomationPage() {
   }, [sourceConfigs]);
 
   const selectedSourceConfig = sourceConfigByCountry.get(form.country_code.trim().toUpperCase()) ?? null;
+  const selectedSourceOption = selectedSourceConfig?.source_options.find(
+    (option) => option.value === form.source,
+  );
   const selectedSupportsCrawl = Boolean(selectedSourceConfig?.supports_crawl);
+  const selectedSourcePolicy = selectedSourceConfig?.source_policy ?? null;
+  const selectedSupportsCurrentMonth = Boolean(selectedSourcePolicy?.supports_current_month);
+  const selectedUsesDynamicRevisions = Boolean(selectedSourcePolicy?.dynamic_revision_enabled);
 
   const sources = useMemo(
     () => getConfiguredSourceOptions(selectedSourceConfig, lang, form.country_code),
@@ -339,10 +358,12 @@ export default function SourcesAutomationPage() {
         daily_time: presetTimeForIndex(index),
         timezone: item.timezone,
         fill_missing: item.default_fill_missing,
+        include_current_month: defaultIncludeCurrentMonthForCountry(item),
+        revision_window_months: defaultRevisionWindowForCountry(item),
       }));
 
     const historyPresets = (sourceConfigs ?? [])
-      .filter((item) => item.supports_start_year)
+      .filter((item) => item.supports_start_year && item.country_code !== "IS")
       .map((item) => ({
         id: `${item.country_code.toLowerCase()}-history`,
         label: `${item.country_code} hist`,
@@ -356,6 +377,8 @@ export default function SourcesAutomationPage() {
         priority: "high",
         fill_missing: true,
         force: true,
+        include_current_month: defaultIncludeCurrentMonthForCountry(item),
+        revision_window_months: defaultRevisionWindowForCountry(item),
       }));
 
     return [...basePresets, ...historyPresets];
@@ -581,6 +604,31 @@ export default function SourcesAutomationPage() {
           <p className="mt-1 truncate text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
             {getSourceDisplayLabel(job.source, lang, job.country_code)}
           </p>
+          {sourceConfigByCountry
+            .get(job.country_code.toUpperCase())
+            ?.source_options.find((option) => option.value === job.source)
+            ?.source_kind === "history" ? (
+              <p className="mt-1 text-[11px] text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+                {job.source === "is_doh_legacy_icd"
+                  ? (lang === "zh" ? "已审核历史工作簿 · 登记诊断量（非病例通知）" : "Reviewed historical workbooks · registered diagnoses (not case notifications)")
+                  : (lang === "zh" ? "已审核历史工作簿全量检查" : "Full reviewed historical-workbook check")}
+              </p>
+            ) : (
+              (() => {
+                const policy = sourceConfigByCountry.get(job.country_code.toUpperCase())?.source_policy;
+                if (!policy?.supports_current_month && !policy?.dynamic_revision_enabled) return null;
+                return (
+                  <p className="mt-1 text-[11px] text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+                    {job.include_current_month
+                      ? (lang === "zh" ? "含当前月（临时）" : "Current month included")
+                      : (lang === "zh" ? "仅已闭合月份" : "Closed months only")}
+                    {policy.dynamic_revision_enabled
+                      ? ` · ${lang === "zh" ? "修订窗口" : "revision window"} ${job.revision_window_months ?? policy.default_revision_window_months}m`
+                      : ""}
+                  </p>
+                );
+              })()
+            )}
         </div>
       ),
     },
@@ -952,6 +1000,8 @@ export default function SourcesAutomationPage() {
                       country_code: nextCode,
                       source: nextConfig?.default_source || prev.source,
                       fill_missing: defaultFillMissingForCountry(nextConfig),
+                      include_current_month: defaultIncludeCurrentMonthForCountry(nextConfig),
+                      revision_window_months: defaultRevisionWindowForCountry(nextConfig),
                       timezone: findCountryTimezone(countries, nextCode) || nextConfig?.timezone || prev.timezone,
                     }));
                   }}
@@ -979,12 +1029,55 @@ export default function SourcesAutomationPage() {
               </Field>
             </div>
 
+            {selectedSourceOption?.source_kind === "history" ? (
+              <AlertPanel tone="warning">
+                {form.source === "is_doh_legacy_icd"
+                  ? (lang === "zh" ? "该任务读取历史 ICD 登记诊断量，仅用于来源事实与溯源，不作为病例通知曲线。" : "This job reads legacy ICD registered diagnoses for source facts and provenance, not as a case-notification curve.")
+                  : (lang === "zh" ? "该任务检查已审核历史工作簿全目录；不使用 start_year 或合成缺失月份。" : "This job checks the full reviewed historical-workbook catalogue; it does not use start_year or synthesize missing months.")}
+              </AlertPanel>
+            ) : null}
+
             {!selectedSupportsCrawl ? (
               <AlertPanel tone="warning">
                 {lang === "zh"
                   ? "这个国家还没有在后端 registry 中声明可采集来源。"
                   : "This country has no crawl source declared in the backend registry yet."}
               </AlertPanel>
+            ) : null}
+
+            {selectedSourcePolicy ? (
+              <div className="rounded-tremor-default border border-tremor-border bg-tremor-background-subtle p-3 dark:border-dark-tremor-border dark:bg-dark-tremor-background-subtle">
+                <p className="text-xs font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
+                  {lang === "zh" ? "来源策略" : "Source policy"}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <StatusBadge tone={selectedSupportsCurrentMonth ? "info" : "neutral"}>
+                    {selectedSupportsCurrentMonth
+                      ? `${lang === "zh" ? "当前月可接入" : "Current month supported"} · ${selectedSourcePolicy.current_month_status}`
+                      : (lang === "zh" ? "仅闭合月份" : "Closed months only")}
+                  </StatusBadge>
+                  <StatusBadge tone={selectedUsesDynamicRevisions ? "success" : "neutral"}>
+                    {selectedUsesDynamicRevisions
+                      ? `${lang === "zh" ? "动态修订" : "Dynamic revisions"} · ${selectedSourcePolicy.default_revision_window_months}m`
+                      : (lang === "zh" ? "无动态修订" : "No dynamic revisions")}
+                  </StatusBadge>
+                  <StatusBadge tone={selectedSourcePolicy.public_release_enabled ? "success" : "warning"}>
+                    {selectedSourcePolicy.public_release_enabled
+                      ? (lang === "zh" ? "公开发布" : "Public release")
+                      : (lang === "zh" ? "仅内部" : "Internal only")}
+                  </StatusBadge>
+                  {selectedSourcePolicy.source_update_cadence ? (
+                    <StatusBadge>{selectedSourcePolicy.source_update_cadence}</StatusBadge>
+                  ) : null}
+                  {selectedSourcePolicy.publication_day ? (
+                    <StatusBadge>
+                      {lang === "zh"
+                        ? `每月 ${selectedSourcePolicy.publication_day} 日发布`
+                        : `Publishes on day ${selectedSourcePolicy.publication_day}`}
+                    </StatusBadge>
+                  ) : null}
+                </div>
+              </div>
             ) : null}
           </FormSection>
 
@@ -1126,6 +1219,24 @@ export default function SourcesAutomationPage() {
                   onChange={(event) => setForm((prev) => ({ ...prev, retry_threshold: Number(event.target.value || 0) }))}
                 />
               </Field>
+              {selectedUsesDynamicRevisions ? (
+                <Field
+                  label={lang === "zh" ? "动态修订窗口（月）" : "Revision window (months)"}
+                  hint={lang === "zh" ? "每次运行会重新抓取并覆盖这个窗口。" : "Each run re-fetches and upserts this window."}
+                >
+                  <input
+                    type="number"
+                    min="1"
+                    max="24"
+                    className={inputClass}
+                    value={form.revision_window_months}
+                    onChange={(event) => setForm((prev) => ({
+                      ...prev,
+                      revision_window_months: Math.max(1, Math.min(24, Number(event.target.value || 1))),
+                    }))}
+                  />
+                </Field>
+              ) : null}
               <Field label={lang === "zh" ? "启用状态" : "Enabled"}>
                 <select
                   className={inputClass}
@@ -1144,8 +1255,13 @@ export default function SourcesAutomationPage() {
                 ["save_raw", form.save_raw],
                 ["fill_missing", form.fill_missing],
                 ["force", form.force],
-              ] as Array<[keyof Pick<AutomationJobInput, "process" | "save_raw" | "fill_missing" | "force">, boolean]>)
-                .filter(([key]) => key !== "fill_missing" || (selectedSourceConfig?.supports_fill_missing ?? true))
+                ["include_current_month", form.include_current_month],
+              ] as Array<[keyof Pick<AutomationJobInput, "process" | "save_raw" | "fill_missing" | "force" | "include_current_month">, boolean]>)
+                .filter(([key]) => {
+                  if (key === "fill_missing") return selectedSourceConfig?.supports_fill_missing ?? true;
+                  if (key === "include_current_month") return selectedSupportsCurrentMonth;
+                  return true;
+                })
                 .map(([key, value]) => (
                   <label
                     key={key}

@@ -15,6 +15,9 @@ export interface EpidemicCurveLine {
   color: string;
   dates: string[];
   values: (number | null)[];
+  granularity: string;
+  reportingBasis?: string;
+  sourceLabel?: string;
 }
 
 interface ChartColors {
@@ -35,6 +38,7 @@ interface Props {
   dateWindow: DateWindow | null;
   onDateWindowChange: (dateWindow: DateWindow) => void;
   metric: EpidemicMetric;
+  metricLabel?: string;
   lang: 'en' | 'zh';
   colors: ChartColors;
   title?: string;
@@ -55,6 +59,7 @@ export default function EpidemicCurvePlot({
   dateWindow,
   onDateWindowChange,
   metric,
+  metricLabel,
   lang,
   colors,
   title,
@@ -184,7 +189,7 @@ export default function EpidemicCurvePlot({
     },
     yAxis: {
       type: 'value' as const,
-      name: METRIC_LABELS[metric][lang],
+      name: metricLabel ?? METRIC_LABELS[metric][lang],
       nameTextStyle: { color: colors.font, fontSize: 11, padding: [0, 0, 8, 0] },
       axisLabel: { color: colors.font, fontSize: 11 },
       axisLine: { lineStyle: { color: colors.line } },
@@ -254,27 +259,37 @@ export default function EpidemicCurvePlot({
         },
       },
     ],
-    series: lines.map((line, index) => ({
-      id: line.id,
-      name: line.name,
-      type: 'line' as const,
-      showSymbol: false,
-      smooth: false,
-      sampling: 'lttb' as const,
-      lineStyle: {
-        color: line.color,
-        width: 2.4,
-        type: 'solid' as const,
-      },
-      itemStyle: { color: line.color },
-      emphasis: { focus: 'series' as const },
-      z: 10 + index,
-      data: line.dates.map((date, valueIndex) => [
-        date,
-        line.values[valueIndex] ?? null,
-      ]),
-    })),
-  }), [activePointCount, colors, dateWindow, lang, lines, metric, title]);
+    series: lines.map((line, index) => {
+      const sparsePeriod = ['monthly', 'quarterly', 'annual'].includes(line.granularity);
+      const symbolSize = line.granularity === 'annual'
+        ? 8
+        : line.granularity === 'quarterly'
+          ? 6
+          : 5;
+      return ({
+        id: line.id,
+        name: line.name,
+        type: 'line' as const,
+        showSymbol: sparsePeriod,
+        symbol: 'circle',
+        symbolSize,
+        smooth: false,
+        sampling: 'lttb' as const,
+        lineStyle: {
+          color: line.color,
+          width: 2.4,
+          type: line.granularity === 'annual' ? 'dashed' as const : 'solid' as const,
+        },
+        itemStyle: { color: line.color },
+        emphasis: { focus: 'series' as const },
+        z: 10 + index,
+        data: line.dates.map((date, valueIndex) => [
+          date,
+          line.values[valueIndex] ?? null,
+        ]),
+      });
+    }),
+  }), [activePointCount, colors, dateWindow, lang, lines, metric, metricLabel, title]);
 
   return (
     <div className="epidemic-curve-plot" style={{ height }}>

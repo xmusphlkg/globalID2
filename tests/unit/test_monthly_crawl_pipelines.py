@@ -107,17 +107,51 @@ async def test_force_history_rule_remains_country_specific(monkeypatch):
         force=True,
         get_database=unused_database,
     )
+    fi_months = await monthly._months_to_fetch(
+        CONFIGS["FI"],
+        SimpleNamespace(),
+        fill_missing=False,
+        force=True,
+        get_database=unused_database,
+    )
+    no_months = await monthly._months_to_fetch(
+        CONFIGS["NO"],
+        SimpleNamespace(),
+        fill_missing=False,
+        force=True,
+        get_database=unused_database,
+    )
+    se_months = await monthly._months_to_fetch(
+        CONFIGS["SE"],
+        SimpleNamespace(),
+        fill_missing=False,
+        force=True,
+        get_database=unused_database,
+    )
 
     assert au_months == [(2025, 12), (2026, 1), (2026, 2)]
     assert nz_months[0] == (2016, 1)
     assert nz_months[-1] == (2026, 2)
     assert len(nz_months) == 122
+    assert fi_months[0] == (1995, 1)
+    assert no_months[0] == (1977, 1)
+    assert se_months[0] == (2016, 1)
+    assert fi_months[-1] == no_months[-1] == se_months[-1] == (2026, 2)
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("country_code", "expected_months"),
-    [("AU", "3"), ("NZ", "3"), ("TW", "3"), ("HK", "latest available 3")],
+    [
+        ("AU", "3"),
+        ("NZ", "3"),
+        ("TW", "3"),
+        ("HK", "latest available 3"),
+        ("CA-ON", "current-year snapshot"),
+        ("FI", "3"),
+        ("NO", "3"),
+        ("SE", "3"),
+    ],
 )
 async def test_monthly_pipeline_preserves_no_process_lifecycle(
     country_code, expected_months
@@ -177,3 +211,29 @@ async def test_monthly_pipeline_preserves_no_process_lifecycle(
     assert service.finished == [
         (42, {"new_reports": 0, "processed": 0, "records": 0})
     ]
+
+
+@pytest.mark.asyncio
+async def test_ontario_snapshot_rejects_fill_missing_before_creating_a_run():
+    @asynccontextmanager
+    async def unused_database():
+        raise AssertionError("unsupported mode must fail before database access")
+        yield
+
+    with pytest.raises(ValueError, match="CA-ON publishes a complete snapshot"):
+        await execute_monthly_pipeline(
+            _Service(),
+            config=CONFIGS["CA-ON"],
+            task=SimpleNamespace(task_uuid="ca-on-fill"),
+            source="pho_idto_monthly",
+            force=False,
+            process=True,
+            save_raw=False,
+            fill_missing=True,
+            updater=_Updater(),
+            get_database=unused_database,
+            task_manager=_TaskManager(),
+            crawl_run_type=_CrawlRun,
+            result_type=lambda *values: values,
+            logger=_Logger(),
+        )

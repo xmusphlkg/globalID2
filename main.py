@@ -27,7 +27,7 @@ def crawl(
     country: str = typer.Option("CN", help="Country code"),
     source: str = typer.Option(
         "all",
-        help="Data source (CN: cdc_weekly/nhc/pubmed/all; US: nndss_api/nhss_hiv/all; JP: jp_weekly/local; AU/NZ: all; TW: nidss_open_data; HK: chp_notifiable; BR: sinan_datasus or comma-separated SINAN prefixes; KR: kdca_open_api or portal/KOSIS download file; CH: foph_idd)",
+        help="Data source (CN: cdc_weekly/nhc/pubmed/all; US: nndss_api/nhss_hiv/all; JP: jp_weekly/local; AU/NZ: all; TW: nidss_open_data; HK: chp_notifiable; BR: sinan_datasus or comma-separated SINAN prefixes; KR: kdca_open_api or portal/KOSIS download file; CH: foph_idd; FI: thl_ttr; NO: fhi_msis; SE: fohm_sminet; IS: is_doh_annual/is_doh_sti/is_doh_respiratory/is_doh_history/is_doh_legacy_icd/all)",
     ),
     process: bool = typer.Option(True, help="Process and store data"),
     save_raw: bool = typer.Option(True, help="Save raw pages as plain text"),
@@ -38,7 +38,7 @@ def crawl(
     ),
     start_year: Optional[int] = typer.Option(
         None,
-        help="Optional historical start year for sources that support it (KR KDCA, BR SINAN, CH IDD).",
+        help="Optional historical start year for sources that support it (KR KDCA, BR SINAN, CH IDD, NO MSIS, and current IS Power BI scopes).",
     ),
     source_file: Optional[str] = typer.Option(
         None,

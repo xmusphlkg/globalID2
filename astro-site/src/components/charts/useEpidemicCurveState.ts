@@ -5,6 +5,7 @@ import {
   collectDates,
   epidemicCurveViewReducer,
   reconcileDateWindow,
+  supportsWeeklyEquivalent,
   type CurveSeries,
   type DateWindow,
   type EpidemicMetric,
@@ -14,9 +15,15 @@ interface Options {
   series: Record<string, CurveSeries>;
   entityIds?: string[];
   topN: number;
+  caseOnlyEntityIds?: string[];
 }
 
-export function useEpidemicCurveState({ series, entityIds, topN }: Options) {
+export function useEpidemicCurveState({
+  series,
+  entityIds,
+  topN,
+  caseOnlyEntityIds = [],
+}: Options) {
   const [viewState, dispatchView] = useReducer(
     epidemicCurveViewReducer,
     INITIAL_CURVE_VIEW_STATE
@@ -57,6 +64,10 @@ export function useEpidemicCurveState({ series, entityIds, topN }: Options) {
       .sort((a, b) => (eligibleRank.get(a) ?? 0) - (eligibleRank.get(b) ?? 0));
   }, [defaultIds, eligibleRank, selectedIds]);
   const activeIdSet = useMemo(() => new Set(activeIds), [activeIds]);
+  const caseOnlyEntityIdSet = useMemo(
+    () => new Set(caseOnlyEntityIds),
+    [caseOnlyEntityIds]
+  );
   const activeDates = useMemo(
     () => collectDates(series, activeIds),
     [activeIds, series]
@@ -71,18 +82,26 @@ export function useEpidemicCurveState({ series, entityIds, topN }: Options) {
   }, [activeDates]);
 
   const availableMetrics = useMemo(() => {
-    const metrics: EpidemicMetric[] = ['weekly_equiv_cases', 'cases'];
+    const metrics: EpidemicMetric[] = ['cases'];
+    if (activeIds.some((id) => caseOnlyEntityIdSet.has(id))) return metrics;
+    const hasCompatibleWeeklyValues = activeIds.length > 0 && activeIds.every((id) => (
+      supportsWeeklyEquivalent(series[id])
+    ));
+    if (hasCompatibleWeeklyValues) metrics.push('weekly_equiv_cases');
     const hasDeaths = activeIds.some((id) => (
       (series[id]?.deaths ?? []).some((value) => (value ?? 0) > 0)
     ));
     if (hasDeaths) metrics.push('deaths');
-    metrics.push('incidence_rates');
+    const hasIncidence = activeIds.some((id) => (
+      (series[id]?.incidence_rates ?? []).some((value) => value != null)
+    ));
+    if (hasIncidence) metrics.push('incidence_rates');
     return metrics;
-  }, [activeIds, series]);
+  }, [activeIds, caseOnlyEntityIdSet, series]);
 
   useEffect(() => {
     if (!availableMetrics.includes(viewState.metric)) {
-      dispatchView({ type: 'metricChanged', metric: 'weekly_equiv_cases' });
+      dispatchView({ type: 'metricChanged', metric: 'cases' });
     }
   }, [availableMetrics, viewState.metric]);
 

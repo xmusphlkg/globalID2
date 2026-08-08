@@ -14,4 +14,5 @@ export type {
   AutomationJobInput,
   AutomationTriggerResult,
   CountrySourceConfig,
+  SourcePolicyMetadata,
 } from "@/lib/hooks/useSources";

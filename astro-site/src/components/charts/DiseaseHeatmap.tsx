@@ -88,6 +88,26 @@ export default function DiseaseHeatmap({ data = null, series: initialSeries, dat
   ), [theme]);
 
   const activeData = useMemo<HeatmapData>(() => {
+    // The export already contains a compact, pre-aggregated heatmap.  Reusing
+    // it avoids rebuilding every month-by-disease cell on the main thread.
+    if (loadedData?.z?.length) {
+      const rowIndexes = loadedData.disease_labels
+        .map((_, index) => index)
+        .filter((index) => !isSummaryRow(loadedData.diseases?.[index], loadedData.disease_labels[index]));
+      return {
+        diseases: rowIndexes.map((index) => loadedData.diseases[index]),
+        disease_labels: rowIndexes.map((index) => {
+          const id = loadedData.diseases[index];
+          const entry = id ? series?.[id] : undefined;
+          return lang === 'zh'
+            ? (entry?.name_zh || entry?.name_en || loadedData.disease_labels[index])
+            : (entry?.name_en || entry?.name_zh || loadedData.disease_labels[index]);
+        }),
+        months: loadedData.months,
+        z: rowIndexes.map((index) => loadedData.z[index]),
+      };
+    }
+
     if (series && Object.keys(series).length > 0) {
       const diseaseEntries = Object.values(series)
         .filter((entry) => entry && entry.category !== 'Summary')
@@ -121,20 +141,7 @@ export default function DiseaseHeatmap({ data = null, series: initialSeries, dat
       };
     }
 
-    if (!loadedData || !loadedData.z || loadedData.z.length === 0) {
-      return { diseases: [], disease_labels: [], months: [], z: [] };
-    }
-
-    const rowIndexes = loadedData.disease_labels
-      .map((_, index) => index)
-      .filter((index) => !isSummaryRow(loadedData.diseases?.[index], loadedData.disease_labels[index]));
-
-    return {
-      diseases: rowIndexes.map((index) => loadedData.diseases[index]),
-      disease_labels: rowIndexes.map((index) => loadedData.disease_labels[index]),
-      months: loadedData.months,
-      z: rowIndexes.map((index) => loadedData.z[index]),
-    };
+    return { diseases: [], disease_labels: [], months: [], z: [] };
   }, [loadedData, lang, series]);
 
   const hasData = activeData.z.length > 0 && activeData.months.length > 0;

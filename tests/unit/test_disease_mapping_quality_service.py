@@ -65,6 +65,26 @@ def test_semantic_golden_case_detects_source_scoped_concept_regression(tmp_path)
     }
 
 
+def test_semantic_golden_case_uses_mapping_filename_jurisdiction(tmp_path):
+    path = tmp_path / "ca-on.csv"
+    path.write_text(
+        "disease_id,local_name,local_code,data_source\n"
+        "D017,Measles,,Public Health Ontario\n",
+        encoding="utf-8",
+    )
+    expectation = (
+        {
+            "country_code": "CA-ON",
+            "data_source": "Public Health Ontario",
+            "local_code": "",
+            "local_name": "Measles",
+            "expected_disease_id": "D017",
+        },
+    )
+
+    assert audit_semantic_golden_cases(path.parent, expectation) == []
+
+
 def test_enteric_fever_and_meningitis_boundaries_are_non_additive():
     registry = load_disease_ontology()
     enteric = registry.group_detail("G_ENTERIC_FEVER_SPECTRUM")

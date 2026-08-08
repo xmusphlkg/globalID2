@@ -15,6 +15,11 @@ import {
   renderCitations,
 } from '../../utils/citations';
 import { resolveKnowledgeText } from '../../utils/knowledge';
+import {
+  buildDatasetDistributions,
+  buildDatasetStructuredData,
+  buildDiseaseMetaDescription,
+} from '../../lib/seo';
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
 
@@ -188,7 +193,9 @@ if (diseaseData?.global_monthly?.cases?.length > 0) {
 }
 
 const coverageDates = Object.values(diseaseData?.country_series ?? {})
-  .flatMap((series: any) => Array.isArray(series?.dates) ? series.dates : []);
+  .flatMap((series: any) => Array.isArray(series?.dates) ? series.dates : [])
+  .filter((date): date is string => typeof date === 'string' && date.length > 0)
+  .sort();
 const coverageStart = coverageDates[0] ?? null;
 const coverageEnd = coverageDates.at(-1) ?? null;
 const coverageLabel = coverageStart && coverageEnd ? `${coverageStart} → ${coverageEnd}` : '—';
@@ -202,11 +209,45 @@ const chartSourceMeta = buildChartSourceMeta(
   `${diseaseData?.name_en ?? disease} surveillance dataset`
 );
 const diseaseDataUrl = diseaseDownload?.site_json_path ?? `/site-data/diseases/${diseaseId.toLowerCase()}.json`;
+const diseaseName = diseaseData?.name_en ?? disease ?? 'Disease';
+const diseaseMetaDescription = buildDiseaseMetaDescription({
+  name: diseaseName,
+  category: diseaseData?.category,
+  countryCount,
+  start: coverageStart,
+  end: coverageEnd,
+});
+const siteOrigin = Astro.site ? new URL(Astro.site).origin : Astro.url.origin;
+const diseasePageUrl = new URL(Astro.url.pathname, siteOrigin).toString();
+const diseaseSourceUrls = [
+  diseaseData?.source_info?.primary_url,
+  ...(diseaseData?.source_info?.sources ?? []).map((source: any) => source?.url),
+  ...knowledgeSourceEntries.map((source: any) => source?.url),
+].filter((url): url is string => typeof url === 'string' && url.length > 0);
+const diseaseDatasetStructuredData = buildDatasetStructuredData({
+  id: `${diseasePageUrl}#dataset`,
+  url: diseasePageUrl,
+  name: `${diseaseName} infectious disease surveillance dataset`,
+  description: diseaseMetaDescription,
+  siteOrigin,
+  dateModified: diseaseDownload?.generated_at ?? knowledgeUpdatedAt,
+  start: coverageStart,
+  end: coverageEnd,
+  keywords: [diseaseName, diseaseData?.category, 'infectious disease surveillance', 'public health data']
+    .filter((keyword): keyword is string => typeof keyword === 'string' && keyword.length > 0),
+  distributions: buildDatasetDistributions({
+    entry: diseaseDownload,
+    siteOrigin,
+    fallbackSiteJsonPath: diseaseDataUrl,
+  }),
+  sourceUrls: diseaseSourceUrls,
+});
 ---
 
 <ReportLayout
-  title={diseaseData?.name_en ?? disease}
-  description={diseaseData?.description ?? `Disease surveillance data for ${diseaseData?.name_en ?? disease}`}
+  title={diseaseName}
+  description={diseaseMetaDescription}
+  structuredData={diseaseDatasetStructuredData}
   breadcrumbs={[
     { label: 'Diseases', href: '/diseases/' },
     { label: diseaseData?.name_en ?? disease },
@@ -429,7 +470,7 @@ const diseaseDataUrl = diseaseDownload?.site_json_path ?? `/site-data/diseases/$
               </h2>
               <div class="mt-5">
               <DiseaseCountryCurve
-                client:only="react"
+                client:visible
                 dataUrl={diseaseDataUrl}
                 topN={countryCount}
                 height={380}
@@ -446,7 +487,7 @@ const diseaseDataUrl = diseaseDownload?.site_json_path ?? `/site-data/diseases/$
               </h2>
               <div class="mt-5">
               <DiseaseMonthlyBar
-                client:only="react"
+                client:visible
                 dataUrl={diseaseDataUrl}
                 height={360}
                 sourceMeta={chartSourceMeta}

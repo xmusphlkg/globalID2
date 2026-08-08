@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -20,6 +20,7 @@ from src.core.task_manager import task_manager
 from src.data.storage import (
     SeriesObservationQualityError,
     SeriesObservationQualityPolicy,
+    SeriesObservationSaveResult,
     SeriesObservationStore,
 )
 from src.domain import CrawlRun, Task
@@ -52,9 +53,16 @@ class CrawlService:
         "NZ": _PipelineSpec("_execute_nz_monthly", "NZMonthlyUpdater"),
         "TW": _PipelineSpec("_execute_tw_monthly", "TWMonthlyUpdater"),
         "HK": _PipelineSpec("_execute_hk_monthly", "HKMonthlyUpdater"),
+        "FI": _PipelineSpec("_execute_fi_monthly", "FIMonthlyUpdater"),
+        "NO": _PipelineSpec("_execute_no_monthly", "NOMonthlyUpdater"),
+        "SE": _PipelineSpec("_execute_se_monthly", "SEMonthlyUpdater"),
+        "CA-ON": _PipelineSpec(
+            "_execute_ca_on_monthly", "CAOntarioMonthlyUpdater"
+        ),
         "BR": _PipelineSpec("_execute_br_monthly", "BRMonthlyUpdater"),
         "KR": _PipelineSpec("_execute_kr_monthly", "KRMonthlyUpdater"),
         "CH": _PipelineSpec("_execute_ch_monthly", "CHMonthlyUpdater"),
+        "IS": _PipelineSpec("_execute_is_mixed", "ISMultiFrequencyUpdater"),
     }
     _SERIES_SOURCE_IDS: Dict[str, str | Dict[str, str]] = {
         "US": {
@@ -66,9 +74,23 @@ class CrawlService:
         "NZ": "SRC_NZ_PHS",
         "TW": "SRC_TW_NIDSS",
         "HK": "SRC_HK_CHP",
+        "FI": "SRC_FI_THL_TTR",
+        "NO": "SRC_NO_FHI_MSIS",
+        "SE": "SRC_SE_FOHM_SMINET",
         "KR": "SRC_KR_KDCA",
         "BR": "SRC_BR_SINAN",
         "CH": "SRC_CH_FOPH_IDD",
+        "CA-ON": "SRC_CA_ON_PHO_IDTO",
+        "IS": {
+            "Iceland Directorate of Health Annual Dashboard": "SRC_IS_DOH_ANNUAL",
+            "Iceland Directorate of Health STI Dashboard": "SRC_IS_DOH_STI",
+            "Iceland Directorate of Health Respiratory Dashboard": "SRC_IS_DOH_RESPIRATORY",
+            "Iceland Directorate of Health historical registry annual": "SRC_IS_DOH_HISTORY",
+            "Iceland Directorate of Health disease-specific monthly workbooks": "SRC_IS_DOH_HISTORY",
+            "Iceland Directorate of Health legacy ICD monthly reports": "SRC_IS_DOH_LEGACY_ICD",
+            "Iceland Directorate of Health Historical Registry": "SRC_IS_DOH_HISTORY",
+            "Iceland Directorate of Health Legacy ICD Monthly": "SRC_IS_DOH_LEGACY_ICD",
+        },
     }
 
     @classmethod
@@ -86,11 +108,16 @@ class CrawlService:
         from src.data.processors import (
             AUMonthlyUpdater,
             BRMonthlyUpdater,
+            CAOntarioMonthlyUpdater,
             CHMonthlyUpdater,
+            FIMonthlyUpdater,
             HKMonthlyUpdater,
+            ISMultiFrequencyUpdater,
             JPWeeklyUpdater,
             KRMonthlyUpdater,
+            NOMonthlyUpdater,
             NZMonthlyUpdater,
+            SEMonthlyUpdater,
             TWMonthlyUpdater,
             USWeeklyUpdater,
         )
@@ -98,28 +125,30 @@ class CrawlService:
         updaters = {
             "AUMonthlyUpdater": AUMonthlyUpdater,
             "BRMonthlyUpdater": BRMonthlyUpdater,
+            "CAOntarioMonthlyUpdater": CAOntarioMonthlyUpdater,
             "CHMonthlyUpdater": CHMonthlyUpdater,
+            "FIMonthlyUpdater": FIMonthlyUpdater,
             "HKMonthlyUpdater": HKMonthlyUpdater,
+            "ISMultiFrequencyUpdater": ISMultiFrequencyUpdater,
             "JPWeeklyUpdater": JPWeeklyUpdater,
             "KRMonthlyUpdater": KRMonthlyUpdater,
+            "NOMonthlyUpdater": NOMonthlyUpdater,
             "NZMonthlyUpdater": NZMonthlyUpdater,
+            "SEMonthlyUpdater": SEMonthlyUpdater,
             "TWMonthlyUpdater": TWMonthlyUpdater,
             "USWeeklyUpdater": USWeeklyUpdater,
         }
         return updaters[updater_name]()
 
     @staticmethod
-    async def _import_rows_with_series(
+    async def _save_series_rows(
         db,
         updater,
         rows,
         *,
         series_rows=None,
-        db_latest_date,
-        source_latest_date,
-        force: bool,
     ):
-        """Persist legacy projections and lossless source-series facts atomically."""
+        """Persist lossless source-series facts without a legacy projection."""
 
         quality_policy = CrawlService._series_quality_policy(updater)
         country_code = str(getattr(updater, "country_code", "") or "").upper()
@@ -139,20 +168,10 @@ class CrawlService:
             # aggregate.  Scope-aware updaters opt out and derive the key from
             # each source row.
             geography_key = f"country:{country_code}:national"
-        # Take the shared mutex before staging the legacy side of the dual
-        # write. SeriesObservationStore takes the same transaction lock again;
-        # doing it here preserves one global lock order and avoids a migration
-        # waiting on legacy rows while this transaction waits on the mutex.
-        await acquire_disease_data_mutation_lock(db)
-        import_result = await updater.import_rows(
-            db,
-            rows,
-            db_latest_date=db_latest_date,
-            source_latest_date=source_latest_date,
-            force=force,
-        )
         series_store = SeriesObservationStore()
         source_series_rows = rows if series_rows is None else series_rows
+        skipped_unregistered = 0
+        skipped_missing = 0
         if bool(getattr(updater, "series_registered_rows_only", False)):
             selection = series_store.select_registry_rows(
                 source_series_rows,
@@ -164,6 +183,8 @@ class CrawlService:
                     "Registry-scoped dual write selected no non-missing source rows"
                 )
             source_series_rows = selection.rows
+            skipped_unregistered = selection.skipped_unregistered
+            skipped_missing = selection.skipped_missing
             logger.info(
                 "Disease source-series Registry selection | country={} "
                 "selected={} omitted_unregistered={} omitted_missing={}",
@@ -217,13 +238,27 @@ class CrawlService:
                 json.dumps(exc.report.to_dict(), ensure_ascii=False, sort_keys=True),
             )
             raise
+        if isinstance(series_result, SeriesObservationSaveResult):
+            series_result = replace(
+                series_result,
+                skipped_unregistered=skipped_unregistered,
+                skipped_missing=skipped_missing,
+            )
+        else:
+            # Test doubles and compatibility stores may return a namespace.
+            # Preserve that contract while surfacing Registry pre-filter counts.
+            setattr(series_result, "skipped_unregistered", skipped_unregistered)
+            setattr(series_result, "skipped_missing", skipped_missing)
         quality_report = series_result.quality_report
         logger.info(
             "Disease source-series dual write complete | country={} upserted={} "
-            "unmatched={} ambiguous={} invalid={} registry_not_synced={} "
+            "unregistered={} missing={} unmatched={} ambiguous={} invalid={} "
+            "registry_not_synced={} "
             "quality_mode={} quality_issues={} quality_highest={}",
             updater.country_code,
             series_result.upserted,
+            series_result.skipped_unregistered,
+            series_result.skipped_missing,
             series_result.skipped_unmatched,
             series_result.skipped_ambiguous,
             series_result.skipped_invalid,
@@ -240,6 +275,39 @@ class CrawlService:
                     quality_report.to_dict(), ensure_ascii=False, sort_keys=True
                 ),
             )
+        return series_result
+
+    @staticmethod
+    async def _import_rows_with_series(
+        db,
+        updater,
+        rows,
+        *,
+        series_rows=None,
+        db_latest_date,
+        source_latest_date,
+        force: bool,
+    ):
+        """Persist legacy projections and lossless source-series facts atomically."""
+
+        # Take the shared mutex before staging the legacy side of the dual
+        # write. SeriesObservationStore takes the same transaction lock again;
+        # doing it here preserves one global lock order and avoids a migration
+        # waiting on legacy rows while this transaction waits on the mutex.
+        await acquire_disease_data_mutation_lock(db)
+        import_result = await updater.import_rows(
+            db,
+            rows,
+            db_latest_date=db_latest_date,
+            source_latest_date=source_latest_date,
+            force=force,
+        )
+        await CrawlService._save_series_rows(
+            db,
+            updater,
+            rows,
+            series_rows=series_rows,
+        )
         return import_result
 
     @staticmethod
@@ -266,8 +334,9 @@ class CrawlService:
         elif country_code in CrawlService._SERIES_SOURCE_IDS:
             raw_policy.setdefault("registry_coverage", "required")
 
+        env_country_code = country_code.replace("-", "_")
         country_env = (
-            os.getenv(f"GLOBALID_{country_code}_SERIES_QUALITY_MODE")
+            os.getenv(f"GLOBALID_{env_country_code}_SERIES_QUALITY_MODE")
             if country_code
             else None
         )
@@ -285,6 +354,8 @@ class CrawlService:
         process: bool,
         save_raw: bool,
         fill_missing: bool,
+        include_current_month: Optional[bool] = None,
+        revision_window_months: Optional[int] = None,
     ) -> CrawlResult:
         """
         Run the full crawl pipeline and return a summary.
@@ -302,6 +373,12 @@ class CrawlService:
 
         if pipeline.handler_name != "_execute_cn_cdc":
             updater = self._make_updater(pipeline.updater_name or "")
+            self._configure_monthly_runtime_policy(
+                updater,
+                country_code=normalized_country,
+                include_current_month=include_current_month,
+                revision_window_months=revision_window_months,
+            )
             if normalized_country == "BR":
                 start_year = (
                     task.input_data.get("start_year")
@@ -339,6 +416,49 @@ class CrawlService:
             save_raw=save_raw,
             fill_missing=fill_missing,
         )
+
+    @staticmethod
+    def _configure_monthly_runtime_policy(
+        updater,
+        *,
+        country_code: str,
+        include_current_month: Optional[bool],
+        revision_window_months: Optional[int],
+    ) -> None:
+        """Apply task/control-plane month policy to a compatible updater."""
+
+        config = get_country_bootstrap_config(country_code)
+        crawler_config = (
+            config.get("crawler_config", {}) if isinstance(config, dict) else {}
+        )
+        if include_current_month is None:
+            raw_current = crawler_config.get("default_include_current_month", False)
+            if isinstance(raw_current, str):
+                effective_current = raw_current.strip().casefold() in {
+                    "1",
+                    "true",
+                    "yes",
+                    "on",
+                }
+            else:
+                effective_current = bool(raw_current)
+        else:
+            effective_current = bool(include_current_month)
+
+        try:
+            effective_window = int(
+                revision_window_months
+                if revision_window_months is not None
+                else crawler_config.get("refresh_recent_months", 3)
+            )
+        except (TypeError, ValueError):
+            effective_window = 3
+        effective_window = max(1, min(24, effective_window))
+
+        if hasattr(updater, "include_current_month"):
+            updater.include_current_month = effective_current
+        if hasattr(updater, "refresh_recent_months"):
+            updater.refresh_recent_months = effective_window
 
     async def _execute_cn_cdc(
         self,
@@ -541,6 +661,105 @@ class CrawlService:
             updater=updater,
         )
 
+    async def _execute_fi_monthly(
+        self,
+        *,
+        task: Task,
+        source: str,
+        force: bool,
+        process: bool,
+        save_raw: bool,
+        fill_missing: bool,
+        updater,
+    ) -> CrawlResult:
+        """Run the Finland THL national monthly pipeline."""
+        return await self._execute_configured_monthly(
+            "FI",
+            task=task,
+            source=source,
+            force=force,
+            process=process,
+            save_raw=save_raw,
+            fill_missing=fill_missing,
+            updater=updater,
+        )
+
+    async def _execute_no_monthly(
+        self,
+        *,
+        task: Task,
+        source: str,
+        force: bool,
+        process: bool,
+        save_raw: bool,
+        fill_missing: bool,
+        updater,
+    ) -> CrawlResult:
+        """Run the Norway FHI MSIS national monthly pipeline."""
+        from src.services.crawl_pipelines.no import execute_no_pipeline
+
+        return await execute_no_pipeline(
+            self,
+            task=task,
+            source=source,
+            force=force,
+            process=process,
+            save_raw=save_raw,
+            fill_missing=fill_missing,
+            updater=updater,
+            get_database=get_database,
+            task_manager=task_manager,
+            crawl_run_type=CrawlRun,
+            result_type=CrawlResult,
+            logger=logger,
+        )
+
+    async def _execute_se_monthly(
+        self,
+        *,
+        task: Task,
+        source: str,
+        force: bool,
+        process: bool,
+        save_raw: bool,
+        fill_missing: bool,
+        updater,
+    ) -> CrawlResult:
+        """Run the Sweden SmiNet internal monthly pipeline."""
+        return await self._execute_configured_monthly(
+            "SE",
+            task=task,
+            source=source,
+            force=force,
+            process=process,
+            save_raw=save_raw,
+            fill_missing=fill_missing,
+            updater=updater,
+        )
+
+    async def _execute_ca_on_monthly(
+        self,
+        *,
+        task: Task,
+        source: str,
+        force: bool,
+        process: bool,
+        save_raw: bool,
+        fill_missing: bool,
+        updater,
+    ) -> CrawlResult:
+        """Run Ontario through the shared country/region monthly pipeline."""
+        return await self._execute_configured_monthly(
+            "CA-ON",
+            task=task,
+            source=source,
+            force=force,
+            process=process,
+            save_raw=save_raw,
+            fill_missing=fill_missing,
+            updater=updater,
+        )
+
     async def _execute_br_monthly(
         self,
         *,
@@ -670,6 +889,36 @@ class CrawlService:
         from src.services.crawl_pipelines.ch import history_start_year
 
         return history_start_year(task, updater)
+
+    async def _execute_is_mixed(
+        self,
+        *,
+        task: Task,
+        source: str,
+        force: bool,
+        process: bool,
+        save_raw: bool,
+        fill_missing: bool,
+        updater,
+    ) -> CrawlResult:
+        """Run Iceland's mixed annual/monthly/weekly surveillance pipeline."""
+        from src.services.crawl_pipelines.is_ import execute_is_pipeline
+
+        return await execute_is_pipeline(
+            self,
+            task=task,
+            source=source,
+            force=force,
+            process=process,
+            save_raw=save_raw,
+            fill_missing=fill_missing,
+            updater=updater,
+            get_database=get_database,
+            task_manager=task_manager,
+            crawl_run_type=CrawlRun,
+            result_type=CrawlResult,
+            logger=logger,
+        )
 
     @staticmethod
     def _source_distribution(results) -> Dict[str, int]:

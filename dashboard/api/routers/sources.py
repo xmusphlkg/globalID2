@@ -7,6 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..deps import get_db
+from ..location_codes import PUBLIC_COUNTRY_REGION_CODE_DB_PATTERN
 from ..schemas.sources import (
     AutomationConfigOut,
     AutomationJobCreate,
@@ -15,11 +16,17 @@ from ..schemas.sources import (
     AutomationTriggerResult,
     CountrySourceConfigOut,
     DataSourceFlow,
+    SourcePolicyOut,
     SourceOptionOut,
     StageInfo,
 )
 from src.domain import AutomationJob
 from src.domain.country import Country
+from src.domain.disease_ontology import (
+    DiseaseSeriesObservation,
+    DiseaseSourceAvailability,
+    DiseaseSurveillanceSeries,
+)
 from src.domain.disease_record import DiseaseRecord
 from src.domain.task import Task, TaskType, TaskWorkbook
 from src.core.source_scopes import (
@@ -44,6 +51,98 @@ DATA_PIPELINE_STAGES = [
     "process_store",
     "finalize",
 ]
+
+_ICELAND_HISTORY_SCOPES = frozenset(
+    {"is_doh_history", "is_doh_legacy_icd"}
+)
+
+_SERIES_SOURCE_SCOPE_OVERRIDES = {
+    "SRC_AU_NINDSS": "all",
+    "SRC_BR_SINAN": "sinan_datasus",
+    "SRC_CA_ON_PHO_IDTO": "pho_idto_monthly",
+    "SRC_CH_FOPH_IDD": "foph_idd",
+    "SRC_CN_CDC": "cdc_weekly",
+    "SRC_FI_THL_TTR": "thl_ttr",
+    "SRC_HK_CHP": "chp_notifiable",
+    "SRC_IS_DOH_ANNUAL": "is_doh_annual",
+    "SRC_IS_DOH_HISTORY": "is_doh_history",
+    "SRC_IS_DOH_LEGACY_ICD": "is_doh_legacy_icd",
+    "SRC_IS_DOH_RESPIRATORY": "is_doh_respiratory",
+    "SRC_IS_DOH_STI": "is_doh_sti",
+    "SRC_JP_NIID": "jp_weekly",
+    "SRC_KR_KDCA": "kdca_open_api",
+    "SRC_NO_FHI_MSIS": "fhi_msis",
+    "SRC_SE_FOHM_SMINET": "fohm_sminet",
+    "SRC_TW_NIDSS": "nidss_open_data",
+    "SRC_US_NHSS": "nhss_hiv",
+    "SRC_US_NNDSS": "nndss_api",
+}
+
+
+def _source_kind(country_code: str, scope: str) -> str:
+    """Classify selector scopes whose execution contracts differ."""
+
+    if country_code == "IS" and scope in _ICELAND_HISTORY_SCOPES:
+        return "history"
+    return "current"
+
+
+def _source_supports_start_year(
+    country_code: str,
+    scope: str,
+    *,
+    configured_start_year: Optional[int],
+) -> bool:
+    """Return whether a crawl scope actually consumes ``start_year``.
+
+    Iceland's two historical workbook branches always process the reviewed
+    catalogue and deliberately ignore this filter.  Its live Power BI branch
+    accepts the filter, including the country-level ``all`` alias (which means
+    all *current* dashboards for Iceland).
+    """
+
+    if configured_start_year is None:
+        return False
+    return not (
+        country_code == "IS" and scope in _ICELAND_HISTORY_SCOPES
+    )
+
+
+def _series_source_scope(source_system: str, *, country_code: str) -> str:
+    """Resolve a series registry source ID to a dashboard crawl scope."""
+
+    raw = str(source_system or "").strip()
+    if raw.upper() in _SERIES_SOURCE_SCOPE_OVERRIDES:
+        return _SERIES_SOURCE_SCOPE_OVERRIDES[raw.upper()]
+    candidate = raw.casefold()
+    if candidate.startswith("src_"):
+        candidate = candidate[4:]
+    expected = set(get_expected_scopes_for_country(country_code))
+    if candidate in expected:
+        return candidate
+    return scope_from_data_source(raw)
+
+
+def _increment_count(
+    target: Dict[str, Dict[str, int]],
+    key: str,
+    value: str,
+    count: int,
+) -> None:
+    bucket = target.setdefault(key, {})
+    bucket[value] = bucket.get(value, 0) + int(count or 0)
+
+
+def _validate_country_automation_options(
+    country_code: str,
+    *,
+    fill_missing: bool,
+) -> None:
+    if str(country_code or "").strip().upper() == "IS" and fill_missing:
+        raise HTTPException(
+            400,
+            "Iceland mixed-grain sources preserve missing periods as unknown; fill_missing is not supported",
+        )
 
 
 def _contains_chinese(text: str | None) -> bool:
@@ -82,27 +181,76 @@ def _optional_bool(value, default: bool) -> bool:
 
 
 def _country_source_config(country: Country, *, lang: str = "en") -> CountrySourceConfigOut:
+    from src.services.crawl_service import CrawlService
+
     code = (country.code or "").strip().upper()
     cfg = get_country_bootstrap_config(code)
     crawler_cfg = cfg.get("crawler_config", {}) if isinstance(cfg, dict) else {}
+    start_year = _history_start_year(code)
     options = [
         SourceOptionOut(
             value=option["value"],
-            label_en=option["label_en"],
-            label_zh=option["label_zh"],
-            label=option["label_zh"] if (lang or "").lower().startswith("zh") else option["label_en"],
+            label_en=(
+                "Iceland Directorate of Health — All Current Dashboards"
+                if code == "IS" and option["value"] == "all"
+                else option["label_en"]
+            ),
+            label_zh=(
+                "冰岛卫生署全部当前看板"
+                if code == "IS" and option["value"] == "all"
+                else option["label_zh"]
+            ),
+            label=(
+                (
+                    "冰岛卫生署全部当前看板"
+                    if code == "IS" and option["value"] == "all"
+                    else option["label_zh"]
+                )
+                if (lang or "").lower().startswith("zh")
+                else (
+                    "Iceland Directorate of Health — All Current Dashboards"
+                    if code == "IS" and option["value"] == "all"
+                    else option["label_en"]
+                )
+            ),
+            source_kind=_source_kind(code, option["value"]),
+            supports_start_year=_source_supports_start_year(
+                code,
+                option["value"],
+                configured_start_year=start_year,
+            ),
         )
         for option in source_options_for_country(code)
     ]
-    start_year = _history_start_year(code)
     supports_fill_missing = _optional_bool(
         crawler_cfg.get("supports_fill_missing"),
-        code not in {"US"},
+        code not in {"IS", "US"},
     )
+    if code == "IS":
+        # All Iceland branches preserve missing source periods as unknown.
+        # Synthetic monthly filling would be incorrect for its mixed grain.
+        supports_fill_missing = False
     default_fill_missing = supports_fill_missing and _optional_bool(
         crawler_cfg.get("default_fill_missing"),
         code not in {"BR"},
     )
+    supports_current_month = _optional_bool(
+        crawler_cfg.get("supports_current_month"), False
+    )
+    default_include_current_month = supports_current_month and _optional_bool(
+        crawler_cfg.get("default_include_current_month"), False
+    )
+    try:
+        revision_window_months = max(
+            1, min(24, int(crawler_cfg.get("refresh_recent_months") or 3))
+        )
+    except (TypeError, ValueError):
+        revision_window_months = 3
+    publication_day = crawler_cfg.get("publication_day")
+    try:
+        publication_day = int(publication_day) if publication_day is not None else None
+    except (TypeError, ValueError):
+        publication_day = None
 
     return CountrySourceConfigOut(
         country_code=code,
@@ -111,14 +259,41 @@ def _country_source_config(country: Country, *, lang: str = "en") -> CountrySour
         country_name_zh=_country_name_zh(country),
         language=country.language or cfg.get("report_config", {}).get("lang") or "en",
         timezone=country.timezone or "UTC",
-        supports_crawl=bool(get_expected_scopes_for_country(code)),
+        supports_crawl=(
+            bool(get_expected_scopes_for_country(code))
+            and code in CrawlService.supported_country_codes()
+        ),
         supports_fill_missing=supports_fill_missing,
         default_fill_missing=default_fill_missing,
         default_source=default_source_for_country(code),
         default_start_year=start_year,
-        supports_start_year=start_year is not None,
-        supports_source_file=bool(crawler_cfg.get("dportal_file_env") or crawler_cfg.get("kosis_file_env")),
+        supports_start_year=any(option.supports_start_year for option in options),
+        supports_source_file=bool(
+            crawler_cfg.get("dportal_file_env")
+            or crawler_cfg.get("kosis_file_env")
+        ),
         supports_source_dir=bool(crawler_cfg.get("dportal_dir_env")),
+        source_policy=SourcePolicyOut(
+            supports_current_month=supports_current_month,
+            default_include_current_month=default_include_current_month,
+            dynamic_revision_enabled=_optional_bool(
+                crawler_cfg.get("dynamic_revision_enabled"), False
+            ),
+            default_revision_window_months=revision_window_months,
+            current_month_status=str(
+                crawler_cfg.get("current_month_status") or "not_supported"
+            ),
+            public_release_enabled=_optional_bool(
+                cfg.get("public_release_enabled"), True
+            ),
+            public_release_editable=False,
+            publication_day=publication_day,
+            source_update_cadence=(
+                str(crawler_cfg.get("source_update_cadence"))
+                if crawler_cfg.get("source_update_cadence")
+                else None
+            ),
+        ),
         source_options=options,
     )
 
@@ -198,6 +373,11 @@ def _pick_latest_crawl_task(
     """Get latest crawl task by exact scope first, then country-wide ('all')."""
     if ":" in scope:
         country_key, scope_name = scope.split(":", 1)
+        if scope_name in _ICELAND_HISTORY_SCOPES:
+            # Iceland's ``all`` task is explicitly current-only.  Reusing it
+            # for the two immutable workbook branches would fabricate a
+            # history-source freshness signal.
+            return latest_by_scope.get(scope)
         return latest_by_scope.get(scope) or latest_by_scope.get(f"{country_key}:all")
     return latest_by_scope.get(scope) or latest_by_scope.get("all")
 
@@ -326,7 +506,7 @@ async def get_sources_config(
             select(Country)
             .where(
                 Country.is_active.is_(True),
-                Country.code.op("~")(r"^[A-Z]{2}$"),
+                Country.code.op("~")(PUBLIC_COUNTRY_REGION_CODE_DB_PATTERN),
             )
             .order_by(Country.name_en.asc(), Country.name.asc())
         )
@@ -365,6 +545,170 @@ async def get_sources_flow(
         src_q = src_q.where(DiseaseRecord.country_id == country_id)
     src_rows = (await db.execute(src_q)).all()
 
+    # Source-series facts are the lossless surveillance layer.  They must be
+    # counted independently from ``disease_records`` compatibility projections
+    # so the same observation is never double-counted and non-case metrics such
+    # as Iceland's registered diagnoses retain their actual semantics.
+    series_q = (
+        select(
+            Country.id.label("country_id"),
+            Country.code.label("country_code"),
+            Country.name_en.label("country_name"),
+            DiseaseSurveillanceSeries.source_system,
+            func.count(
+                func.distinct(DiseaseSurveillanceSeries.series_code)
+            ).label("series_count"),
+            func.count(DiseaseSeriesObservation.id).label("observation_count"),
+            func.min(DiseaseSeriesObservation.time).label("earliest_date"),
+            func.max(DiseaseSeriesObservation.time).label("latest_date"),
+        )
+        .select_from(DiseaseSurveillanceSeries)
+        .join(Country, Country.code == DiseaseSurveillanceSeries.country_code)
+        .outerjoin(
+            DiseaseSeriesObservation,
+            DiseaseSeriesObservation.series_code
+            == DiseaseSurveillanceSeries.series_code,
+        )
+        .group_by(
+            Country.id,
+            Country.code,
+            Country.name_en,
+            DiseaseSurveillanceSeries.source_system,
+        )
+    )
+    if country_id is not None:
+        series_q = series_q.where(Country.id == country_id)
+    series_rows = (await db.execute(series_q)).all()
+
+    definition_q = (
+        select(
+            Country.id.label("country_id"),
+            Country.code.label("country_code"),
+            DiseaseSurveillanceSeries.source_system,
+            DiseaseSurveillanceSeries.availability_status,
+            DiseaseSurveillanceSeries.metric_type,
+            DiseaseSurveillanceSeries.mapping_relation,
+            DiseaseSurveillanceSeries.comparability,
+            func.count().label("count"),
+        )
+        .select_from(DiseaseSurveillanceSeries)
+        .join(Country, Country.code == DiseaseSurveillanceSeries.country_code)
+        .group_by(
+            Country.id,
+            Country.code,
+            DiseaseSurveillanceSeries.source_system,
+            DiseaseSurveillanceSeries.availability_status,
+            DiseaseSurveillanceSeries.metric_type,
+            DiseaseSurveillanceSeries.mapping_relation,
+            DiseaseSurveillanceSeries.comparability,
+        )
+    )
+    if country_id is not None:
+        definition_q = definition_q.where(Country.id == country_id)
+    definition_rows = (await db.execute(definition_q)).all()
+
+    quality_q = (
+        select(
+            Country.id.label("country_id"),
+            Country.code.label("country_code"),
+            DiseaseSurveillanceSeries.source_system,
+            DiseaseSeriesObservation.quality_status,
+            func.count().label("count"),
+        )
+        .select_from(DiseaseSurveillanceSeries)
+        .join(Country, Country.code == DiseaseSurveillanceSeries.country_code)
+        .join(
+            DiseaseSeriesObservation,
+            DiseaseSeriesObservation.series_code
+            == DiseaseSurveillanceSeries.series_code,
+        )
+        .group_by(
+            Country.id,
+            Country.code,
+            DiseaseSurveillanceSeries.source_system,
+            DiseaseSeriesObservation.quality_status,
+        )
+    )
+    if country_id is not None:
+        quality_q = quality_q.where(Country.id == country_id)
+    quality_rows = (await db.execute(quality_q)).all()
+
+    availability_q = (
+        select(
+            Country.id.label("country_id"),
+            Country.code.label("country_code"),
+            DiseaseSourceAvailability.source_system,
+            DiseaseSourceAvailability.status,
+            func.count().label("count"),
+        )
+        .select_from(DiseaseSourceAvailability)
+        .join(Country, Country.code == DiseaseSourceAvailability.country_code)
+        .group_by(
+            Country.id,
+            Country.code,
+            DiseaseSourceAvailability.source_system,
+            DiseaseSourceAvailability.status,
+        )
+    )
+    if country_id is not None:
+        availability_q = availability_q.where(Country.id == country_id)
+    availability_rows = (await db.execute(availability_q)).all()
+
+    series_availability_by_key: Dict[str, Dict[str, int]] = {}
+    metric_types_by_key: Dict[str, Dict[str, int]] = {}
+    mapping_relations_by_key: Dict[str, Dict[str, int]] = {}
+    comparability_by_key: Dict[str, Dict[str, int]] = {}
+    observation_quality_by_key: Dict[str, Dict[str, int]] = {}
+    source_availability_by_key: Dict[str, Dict[str, int]] = {}
+
+    for row in definition_rows:
+        scope = _series_source_scope(
+            row.source_system,
+            country_code=row.country_code,
+        )
+        key = f"{row.country_id}:{scope}"
+        _increment_count(
+            series_availability_by_key,
+            key,
+            str(row.availability_status),
+            row.count,
+        )
+        _increment_count(
+            metric_types_by_key, key, str(row.metric_type), row.count
+        )
+        _increment_count(
+            mapping_relations_by_key,
+            key,
+            str(row.mapping_relation),
+            row.count,
+        )
+        _increment_count(
+            comparability_by_key, key, str(row.comparability), row.count
+        )
+
+    for row in quality_rows:
+        scope = _series_source_scope(
+            row.source_system,
+            country_code=row.country_code,
+        )
+        key = f"{row.country_id}:{scope}"
+        _increment_count(
+            observation_quality_by_key,
+            key,
+            str(row.quality_status),
+            row.count,
+        )
+
+    for row in availability_rows:
+        scope = _series_source_scope(
+            row.source_system,
+            country_code=row.country_code,
+        )
+        key = f"{row.country_id}:{scope}"
+        _increment_count(
+            source_availability_by_key, key, str(row.status), row.count
+        )
+
     # Normalize/merge rows by canonical source scope (not raw display text).
     merged_sources: Dict[str, Dict[str, object]] = {}
     for row in src_rows:
@@ -386,6 +730,14 @@ async def get_sources_flow(
                 "scope": scope,
                 "data_source": display_label,
                 "record_count": int(row.record_count or 0),
+                "source_series_count": 0,
+                "source_observation_count": 0,
+                "series_availability": {},
+                "source_availability": {},
+                "observation_quality": {},
+                "metric_types": {},
+                "mapping_relations": {},
+                "comparability": {},
                 "earliest_date": row.earliest_date,
                 "latest_date": row.latest_date,
                 "history_start_year": _history_start_year(row.country_code),
@@ -401,13 +753,78 @@ async def get_sources_flow(
         if (prev_latest is None) or (row.latest_date and row.latest_date > prev_latest):
             prev["latest_date"] = row.latest_date
 
+    for row in series_rows:
+        scope = _series_source_scope(
+            row.source_system,
+            country_code=row.country_code,
+        )
+        merged_key = f"{row.country_id}:{scope}"
+        prev = merged_sources.get(merged_key)
+        if prev is None:
+            prev = {
+                "key": merged_key,
+                "country_id": row.country_id,
+                "country_code": row.country_code,
+                "country_name": row.country_name,
+                "scope": scope,
+                "data_source": scope_display_label(
+                    scope, country_code=row.country_code
+                ),
+                "record_count": 0,
+                "source_series_count": 0,
+                "source_observation_count": 0,
+                "series_availability": {},
+                "source_availability": {},
+                "observation_quality": {},
+                "metric_types": {},
+                "mapping_relations": {},
+                "comparability": {},
+                "earliest_date": row.earliest_date,
+                "latest_date": row.latest_date,
+                "history_start_year": _history_start_year(row.country_code),
+                "expected_source": scope
+                in get_expected_scopes_for_country(row.country_code),
+            }
+            merged_sources[merged_key] = prev
+
+        prev["source_series_count"] = int(
+            prev.get("source_series_count") or 0
+        ) + int(row.series_count or 0)
+        prev["source_observation_count"] = int(
+            prev.get("source_observation_count") or 0
+        ) + int(row.observation_count or 0)
+        prev["series_availability"] = series_availability_by_key.get(
+            merged_key, {}
+        )
+        prev["source_availability"] = source_availability_by_key.get(
+            merged_key, {}
+        )
+        prev["observation_quality"] = observation_quality_by_key.get(
+            merged_key, {}
+        )
+        prev["metric_types"] = metric_types_by_key.get(merged_key, {})
+        prev["mapping_relations"] = mapping_relations_by_key.get(
+            merged_key, {}
+        )
+        prev["comparability"] = comparability_by_key.get(merged_key, {})
+        prev_earliest = prev.get("earliest_date")
+        if (prev_earliest is None) or (
+            row.earliest_date and row.earliest_date < prev_earliest
+        ):
+            prev["earliest_date"] = row.earliest_date
+        prev_latest = prev.get("latest_date")
+        if (prev_latest is None) or (
+            row.latest_date and row.latest_date > prev_latest
+        ):
+            prev["latest_date"] = row.latest_date
+
     # 2. Gather most-recent crawl tasks and index them by source scope.
     task_q = select(Task).where(Task.task_type == TaskType.CRAWL_DATA).order_by(Task.created_at.desc())
     if country_id is not None:
         task_q = task_q.where(Task.country_id == country_id)
     tasks = (await db.execute(task_q)).scalars().all()
 
-    if not src_rows and not tasks and country_id is None:
+    if not src_rows and not series_rows and not tasks and country_id is None:
         return []
 
     # Index: country_id:scope -> latest crawl task (query already desc by created_at).
@@ -435,6 +852,10 @@ async def get_sources_flow(
     country_ids_for_meta = {
         int(row.country_id)
         for row in src_rows
+        if row.country_id is not None
+    } | {
+        int(row.country_id)
+        for row in series_rows
         if row.country_id is not None
     } | {
         int(t.country_id)
@@ -472,6 +893,14 @@ async def get_sources_flow(
                 "scope": scope,
                 "data_source": label,
                 "record_count": 0,
+                "source_series_count": 0,
+                "source_observation_count": 0,
+                "series_availability": {},
+                "source_availability": {},
+                "observation_quality": {},
+                "metric_types": {},
+                "mapping_relations": {},
+                "comparability": {},
                 "earliest_date": None,
                 "latest_date": None,
                 "history_start_year": _history_start_year(country.code if country else None),
@@ -519,6 +948,14 @@ async def get_sources_flow(
                 "scope": scope,
                 "data_source": scope_display_label(scope, country_code=country.code),
                 "record_count": 0,
+                "source_series_count": 0,
+                "source_observation_count": 0,
+                "series_availability": {},
+                "source_availability": {},
+                "observation_quality": {},
+                "metric_types": {},
+                "mapping_relations": {},
+                "comparability": {},
                 "earliest_date": None,
                 "latest_date": None,
                 "history_start_year": _history_start_year(country.code),
@@ -531,7 +968,7 @@ async def get_sources_flow(
         merged_sources.values(),
         key=lambda item: (
             str(item.get("country_name") or "").lower(),
-            -int(item["record_count"]),
+            -int(item.get("source_observation_count") or item["record_count"]),
             str(item["data_source"]).lower(),
         ),
     )
@@ -551,7 +988,11 @@ async def get_sources_flow(
                 else (task.created_at.isoformat() if task.created_at else None)
             )
 
-        has_records = int(src["record_count"]) > 0
+        has_records = (
+            int(src["record_count"]) > 0
+            or int(src.get("source_series_count") or 0) > 0
+            or int(src.get("source_observation_count") or 0) > 0
+        )
         has_real_country = src.get("country_id") is not None
         is_expected_source = bool(src.get("expected_source"))
         if not has_real_country:
@@ -566,6 +1007,16 @@ async def get_sources_flow(
                 country_code=src.get("country_code"),
                 country_name=src.get("country_name"),
                 record_count=int(src["record_count"]),
+                source_series_count=int(src.get("source_series_count") or 0),
+                source_observation_count=int(
+                    src.get("source_observation_count") or 0
+                ),
+                series_availability=dict(src.get("series_availability") or {}),
+                source_availability=dict(src.get("source_availability") or {}),
+                observation_quality=dict(src.get("observation_quality") or {}),
+                metric_types=dict(src.get("metric_types") or {}),
+                mapping_relations=dict(src.get("mapping_relations") or {}),
+                comparability=dict(src.get("comparability") or {}),
                 earliest_date=(
                     src["earliest_date"].strftime("%Y-%m-%d")
                     if src.get("earliest_date")
@@ -614,6 +1065,10 @@ async def list_automation_jobs(db: AsyncSession = Depends(get_db)):
 async def create_automation_job(body: AutomationJobCreate, db: AsyncSession = Depends(get_db)):
     await automation_service.ensure_storage()
     _validate_automation_schedule(body.interval_minutes, body.daily_time)
+    _validate_country_automation_options(
+        body.country_code,
+        fill_missing=body.fill_missing,
+    )
     existing = (
         await db.execute(select(AutomationJob).where(AutomationJob.job_id == body.job_id))
     ).scalar_one_or_none()
@@ -634,6 +1089,19 @@ async def create_automation_job(body: AutomationJobCreate, db: AsyncSession = De
         save_raw=body.save_raw,
         fill_missing=body.fill_missing,
         force=body.force,
+        include_current_month=(
+            body.include_current_month
+            if body.include_current_month is not None
+            else _optional_bool(
+                (
+                    get_country_bootstrap_config(body.country_code)
+                    .get("crawler_config", {})
+                    .get("default_include_current_month")
+                ),
+                False,
+            )
+        ),
+        revision_window_months=body.revision_window_months,
         retry_threshold=body.retry_threshold,
         interval_minutes=body.interval_minutes,
         daily_time=body.daily_time,
@@ -667,6 +1135,10 @@ async def update_automation_job(job_id: str, body: AutomationJobUpdate, db: Asyn
         str(updates.get("country_code", job.country_code) or "").strip().upper()
         if ("country_code" in updates or job.country_code)
         else ""
+    )
+    _validate_country_automation_options(
+        next_country_code,
+        fill_missing=bool(updates.get("fill_missing", job.fill_missing)),
     )
 
     for field, value in updates.items():
@@ -742,6 +1214,8 @@ def _automation_job_out(job: AutomationJob, state: dict | None) -> AutomationJob
         save_raw=job.save_raw,
         fill_missing=job.fill_missing,
         force=job.force,
+        include_current_month=job.include_current_month,
+        revision_window_months=job.revision_window_months,
         retry_threshold=job.retry_threshold,
         interval_minutes=job.interval_minutes,
         daily_time=job.daily_time,

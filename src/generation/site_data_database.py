@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable
 from typing import Any
 
 from sqlalchemy import text
@@ -16,9 +17,49 @@ from src.core.database import get_db, init_database
 from src.core.db_schema import ensure_country_scope, ensure_country_scope_schema
 
 
-async def ensure_standard_country_rows(session: Any) -> None:
-    """Seed canonical country rows required by the public site export."""
-    for code in get_standard_country_codes():
+def _build_country_metadata(profile: Any, bootstrap: dict) -> dict:
+    """Build location-aware metadata without labelling subdivisions as ISO alpha-2."""
+
+    metadata = {
+        "standard_source": profile.source,
+        "site_export_bootstrap": True,
+    }
+    for field in (
+        "parent_country_code",
+        "location_type",
+        "iso_country_code",
+        "iso_subdivision_code",
+    ):
+        if bootstrap.get(field):
+            metadata[field] = bootstrap[field]
+
+    iso_alpha2 = bootstrap.get("iso_country_code")
+    if not iso_alpha2 and len(profile.code) == 2:
+        iso_alpha2 = profile.code
+    if iso_alpha2:
+        metadata["iso_alpha2"] = iso_alpha2
+
+    flag_country_code = bootstrap.get("parent_country_code") or iso_alpha2
+    if flag_country_code:
+        metadata["flag_country_code"] = flag_country_code
+    return metadata
+
+
+async def ensure_standard_country_rows(
+    session: Any,
+    country_codes: Iterable[str] | None = None,
+) -> None:
+    """Seed canonical country rows required by the public site export.
+
+    ``country_codes`` permits a rollout to initialize only its approved scope;
+    the default remains the complete public-site catalogue.
+    """
+    selected_codes = (
+        get_standard_country_codes()
+        if country_codes is None
+        else sorted({str(code).strip().upper() for code in country_codes})
+    )
+    for code in selected_codes:
         profile = get_country_profile(code)
         bootstrap = get_country_bootstrap_config(code)
         await session.execute(
@@ -60,6 +101,11 @@ async def ensure_standard_country_rows(session: Any) -> None:
                         ELSE countries.report_config
                     END,
                     metadata = CASE
+                        WHEN EXCLUDED.metadata::jsonb ? 'iso_subdivision_code' THEN
+                            (
+                                (COALESCE(countries.metadata::jsonb, '{}'::jsonb) - 'iso_alpha2')
+                                || EXCLUDED.metadata::jsonb
+                            )::json
                         WHEN countries.metadata IS NULL OR countries.metadata::text = '{}' THEN EXCLUDED.metadata
                         ELSE countries.metadata
                     END,
@@ -80,13 +126,7 @@ async def ensure_standard_country_rows(session: Any) -> None:
                 "parser_config": json.dumps(bootstrap.get("parser_config", {})),
                 "disease_mapping_rules": json.dumps(bootstrap.get("disease_mapping_rules", {})),
                 "report_config": json.dumps(bootstrap.get("report_config", {})),
-                "metadata": json.dumps(
-                    {
-                        "standard_source": profile.source,
-                        "iso_alpha2": profile.code,
-                        "site_export_bootstrap": True,
-                    }
-                ),
+                "metadata": json.dumps(_build_country_metadata(profile, bootstrap)),
                 "notes": bootstrap.get("notes"),
             },
         )

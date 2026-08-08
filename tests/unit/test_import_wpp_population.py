@@ -76,3 +76,20 @@ def test_population_plan_rejects_unmatched_or_incomplete_new_country() -> None:
         import_wpp_population.validate_population_import_plan(plan)
 
     assert "KR missing 1 year" in str(error.value)
+
+
+def test_population_plan_excludes_subdivision_without_using_parent_denominator() -> None:
+    rows = [import_wpp_population.PopulationRow("CA", 2026, 40000000.0)]
+    plan = import_wpp_population.build_population_import_plan(
+        rows,
+        {"CA": 1, "CA-ON": 2},
+        excluded_location_codes={"CA-ON"},
+    )
+
+    import_wpp_population.validate_population_import_plan(plan)
+    assert plan["mapped_country_codes"] == ["CA"]
+    assert plan["excluded_location_codes"] == ["CA-ON"]
+    assert all(row.country_code != "CA-ON" for row in plan["rows"])
+    assert import_wpp_population.is_wpp_population_target(
+        {"location_type": "subdivision", "iso_subdivision_code": "CA-ON"}
+    ) is False

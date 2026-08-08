@@ -3,7 +3,11 @@ import type { CSSProperties } from 'react';
 import {
   MAX_ACTIVE_SERIES,
   findLatestValue,
+  formatTemporalGranularity,
   getMetricValues,
+  getSelectedSourceSeries,
+  getSeriesGranularity,
+  hasPublicProjection,
   type CurveEntityType,
   type CurveSeries,
   type EpidemicMetric,
@@ -178,6 +182,10 @@ export default function CurveEntitySelector({
             const latestValue = isCompact
               ? null
               : findLatestValue(getMetricValues(item, metric));
+            const selectedSource = hasPublicProjection(item)
+              || (item.selected_series_codes?.length ?? 0) > 0
+              ? getSelectedSourceSeries(item)[0]
+              : undefined;
             const volumePercent = totalCasesRange.max <= totalCasesRange.min
               ? (totalCasesRange.max === 0 ? 0 : 100)
               : ((totalCases - totalCasesRange.min) / (totalCasesRange.max - totalCasesRange.min)) * 100;
@@ -221,6 +229,17 @@ export default function CurveEntitySelector({
                         {lang === 'zh' ? '最新值' : 'Latest'} {formatValue(latestValue, metric === 'incidence_rates' ? 2 : 0)}
                         {' · '}
                         {lang === 'zh' ? '累计' : 'Total'} {totalCases.toLocaleString()}
+                        {' · '}
+                        {formatTemporalGranularity(getSeriesGranularity(item), lang)}
+                      </div>
+                    )}
+                    {isActive && selectedSource && (
+                      <div className="chart-sidebar-meta">
+                        {lang === 'zh' ? '报告粒度' : 'Grain'} {formatTemporalGranularity(selectedSource.temporal_granularity, lang)}
+                        {' · '}
+                        {lang === 'zh' ? '报告口径' : 'Basis'} {(selectedSource.reporting_basis ?? 'unknown').replaceAll('_', ' ')}
+                        {' · '}
+                        {lang === 'zh' ? '可用状态' : 'Availability'} {(selectedSource.availability_status ?? 'unknown').replaceAll('_', ' ')}
                       </div>
                     )}
                   </div>

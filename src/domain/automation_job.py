@@ -15,7 +15,7 @@ class AutomationJob(BaseModel):
 
     job_id: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    country_code: Mapped[str] = mapped_column(String(2), nullable=False)
+    country_code: Mapped[str] = mapped_column(String(10), nullable=False)
     source: Mapped[str] = mapped_column(String(50), nullable=False, default="all")
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     priority: Mapped[str] = mapped_column(String(20), nullable=False, default="normal")
@@ -23,6 +23,12 @@ class AutomationJob(BaseModel):
     save_raw: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     fill_missing: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     force: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    include_current_month: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False
+    )
+    revision_window_months: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=3
+    )
     retry_threshold: Mapped[int] = mapped_column(Integer, nullable=False, default=3)
     interval_minutes: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     daily_time: Mapped[Optional[str]] = mapped_column(String(5), nullable=True)

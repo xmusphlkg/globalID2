@@ -30,6 +30,9 @@ interface DownloadPart {
   label?: string;
   is_current?: boolean;
   record_count?: number;
+  projection_record_count?: number;
+  source_observation_count?: number;
+  source_series_count?: number;
   date_range?: { start?: string; end?: string };
   files?: {
     csv?: DownloadFile;
@@ -42,6 +45,10 @@ interface DownloadEntry {
   parts?: DownloadPart[];
   generated_at?: string;
   record_count?: number;
+  projection_record_count?: number;
+  source_observation_count?: number;
+  source_series_count?: number;
+  includes_series_provenance?: boolean;
   date_range?: { start?: string; end?: string };
   source_info?: SourceInfoGroup | SourceInfoGroup[];
 }
@@ -93,14 +100,28 @@ function githubRawUrl(value?: string) {
 }
 
 const CADENCE_ZH: Record<string, string> = {
-  daily: '每日', weekly: '每周', monthly: '每月', quarterly: '每季度', yearly: '每年',
+  annual: '每年', daily: '每日', weekly: '每周', monthly: '每月', quarterly: '每季度', yearly: '每年',
+  'annual and monthly': '年度与月度',
+  'monthly facts · quarterly publication': '月度事实（按季度发布）',
 };
 const TYPE_ZH: Record<string, string> = {
-  api: '接口', csv: '表格', open_data_csv: '开放数据', web: '网页',
+  api: '接口', csv: '表格', microsoft_bi: 'Power BI 看板', official_excel: '官方 Excel', open_data_csv: '开放数据', web: '网页',
 };
-const SOURCE_LABEL_ZH: Record<string, string> = { jp_weekly: '日本 NIID/JIHS 周报' };
+const SOURCE_LABEL_ZH: Record<string, string> = {
+  jp_weekly: '日本 NIID/JIHS 周报',
+  is_doh_annual: '冰岛卫生署年度传染病看板',
+  is_doh_sti: '冰岛卫生署性病监测看板',
+  is_doh_respiratory: '冰岛卫生署呼吸道感染周度看板',
+  is_doh_history: '冰岛卫生署历史传染病登记',
+  is_doh_legacy_icd: '冰岛卫生署历史 ICD 临床月报',
+};
 const SOURCE_DESCRIPTION_ZH: Record<string, string> = {
   jp_weekly: '日本 NIID/JIHS 周度传染病监测数据。',
+  is_doh_annual: '冰岛全国分病种年度病例通报；历史值可能追溯修订，并保持年度总量口径。',
+  is_doh_sti: '实验室与登记监测的月度性病诊断事实；官方看板按季度发布。',
+  is_doh_respiratory: '按 ISO 周记录的呼吸道疾病诊断数；住院、样本和疫苗指标不计入诊断数。',
+  is_doh_history: '1997—2021 年官方历史登记表，年度与月度事实按原始粒度保留。',
+  is_doh_legacy_icd: 'Saga 电子病历 ICD 就诊数；与登记通报不可比并保持独立。',
 };
 
 function sourceZhLabel(source: SourceSummary) {
@@ -153,6 +174,11 @@ const formatCards = [
         <p class="figure-kicker" data-lang-en="Data access" data-lang-zh="数据获取">{pick('Data access', '数据获取')}</p>
         <h2 class="figure-title" data-lang-en={title} data-lang-zh="下载数据">{pick(title, '下载数据')}</h2>
         <p class="figure-caption" data-lang-en={descriptionEn} data-lang-zh={descriptionZh}>{pick(descriptionEn, descriptionZh)}</p>
+        {entry.includes_series_provenance && (
+          <p class="figure-caption" data-lang-en="Files distinguish source_series_observation rows from the public_projection and retain series definitions and provenance columns." data-lang-zh="文件区分来源序列观测（source_series_observation）与公开投影（public_projection），并保留序列定义和溯源字段。">
+            {pick('Files distinguish source_series_observation rows from the public_projection and retain series definitions and provenance columns.', '文件区分来源序列观测（source_series_observation）与公开投影（public_projection），并保留序列定义和溯源字段。')}
+          </p>
+        )}
       </div>
       {downloadParts.length > 0 && (
         <button type="button" data-download-modal-trigger class="site-action-secondary inline-flex items-center gap-2 rounded-none border px-4 py-2 text-sm font-semibold transition-all">
@@ -166,7 +192,7 @@ const formatCards = [
 
     <div class="academic-meta-grid">
       <div class="academic-meta-item">
-        <div class="academic-meta-label" data-lang-en="Records" data-lang-zh="记录数">{pick('Records', '记录数')}</div>
+        <div class="academic-meta-label" data-lang-en="Download rows" data-lang-zh="下载行数">{pick('Download rows', '下载行数')}</div>
         <div class="academic-meta-value font-serif">{formatCount(entry.record_count)}</div>
       </div>
       <div class="academic-meta-item">
@@ -181,6 +207,13 @@ const formatCards = [
         <div class="academic-meta-label" data-lang-en="Download partitions" data-lang-zh="下载分块">{pick('Download partitions', '下载分块')}</div>
         <div class="academic-meta-value text-sm font-medium">{formatCount(downloadParts.length)}</div>
       </div>
+      {entry.includes_series_provenance && (
+        <div class="academic-meta-item">
+          <div class="academic-meta-label" data-lang-en="Source series" data-lang-zh="来源序列">{pick('Source series', '来源序列')}</div>
+          <div class="academic-meta-value text-sm font-medium">{formatCount(entry.source_series_count)}</div>
+          <div class="mt-1 text-xs text-[rgb(var(--text-muted))]">{formatCount(entry.source_observation_count)} {pick('source observations', '条来源观测')}</div>
+        </div>
+      )}
     </div>
 
     {sourceEntries.length > 0 && (

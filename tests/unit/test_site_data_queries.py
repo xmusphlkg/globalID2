@@ -15,6 +15,7 @@ QUERY_EXPORTS = (
     "fetch_countries",
     "fetch_country_briefs",
     "fetch_country_frequency_meta",
+    "fetch_disease_export_layers",
     "fetch_disease_knowledge_briefs",
     "fetch_disease_records",
     "fetch_disease_records_direct",
@@ -91,6 +92,36 @@ async def test_fetch_countries_preserves_ordering_query_and_plain_dict_rows() ->
 
 
 @pytest.mark.asyncio
+async def test_fetch_countries_includes_sweden_after_public_release_approval() -> None:
+    session = FakeSession(
+        FakeRows(
+            [
+                mapped_row(
+                    code="FI",
+                    name="Finland",
+                    name_en="Finland",
+                    name_local="Suomi",
+                    language="fi-FI",
+                    timezone="Europe/Helsinki",
+                ),
+                mapped_row(
+                    code="SE",
+                    name="Sweden",
+                    name_en="Sweden",
+                    name_local="Sverige",
+                    language="sv-SE",
+                    timezone="Europe/Stockholm",
+                ),
+            ]
+        )
+    )
+
+    countries = await site_data_queries.fetch_countries(session)
+
+    assert [country["code"] for country in countries] == ["FI", "SE"]
+
+
+@pytest.mark.asyncio
 async def test_has_population_table_delegates_to_parameterized_table_check() -> None:
     session = FakeSession(FakeRows([(True,)]))
 
@@ -105,11 +136,11 @@ async def test_has_population_table_delegates_to_parameterized_table_check() -> 
 @pytest.mark.asyncio
 async def test_frequency_metadata_keeps_weekly_classification_and_query_params() -> None:
     session = FakeSession(
+        FakeRows([(True,)]),
+        FakeRows([(True,)]),
         FakeRows(
             [
-                mapped_row(report_date=date(2026, 1, 4)),
-                mapped_row(report_date=date(2026, 1, 11)),
-                mapped_row(report_date=date(2026, 1, 18)),
+                mapped_row(temporal_granularity="weekly"),
             ]
         )
     )
@@ -118,13 +149,34 @@ async def test_frequency_metadata_keeps_weekly_classification_and_query_params()
 
     assert metadata == {
         "source_frequency": "WEEKLY",
-        "canonical_frequency": "WEEKLY_EQUIVALENT_7D",
-        "aggregation_rule": "normalize_counts_to_7_day_equivalent",
+        "source_frequencies": ["WEEKLY"],
+        "canonical_frequency": "SOURCE_REPORTED_PERIODS",
+        "aggregation_rule": "preserve_source_period_counts",
     }
-    sql, params = session.calls[0]
-    assert "SELECT DISTINCT timezone('UTC', dr.time)::date" in sql
-    assert "ORDER BY report_date ASC" in sql
+    sql, params = session.calls[2]
+    assert "disease_surveillance_series" in sql
+    assert "disease_series_observations" in sql
     assert params == {"code": "US"}
+
+
+@pytest.mark.asyncio
+async def test_frequency_metadata_does_not_misclassify_annual_january_rows() -> None:
+    session = FakeSession(
+        FakeRows([(False,)]),
+        FakeRows(
+            [
+                mapped_row(report_date=date(2022, 1, 1)),
+                mapped_row(report_date=date(2023, 1, 1)),
+                mapped_row(report_date=date(2024, 1, 1)),
+            ]
+        ),
+    )
+
+    metadata = await site_data_queries.fetch_country_frequency_meta(session, "IS")
+
+    assert metadata["source_frequency"] == "ANNUAL"
+    assert metadata["source_frequencies"] == ["ANNUAL"]
+    assert metadata["canonical_frequency"] == "SOURCE_REPORTED_PERIODS"
 
 
 @pytest.mark.asyncio
@@ -170,4 +222,45 @@ async def test_direct_disease_rows_keep_site_facing_normalization() -> None:
     assert "FROM disease_records dr" in sql
     assert "ORDER BY timezone('UTC', dr.time)::date ASC, d.name" in sql
     assert "population_records" not in sql
+    assert "raw_data::jsonb ->> 'Frequency'" in sql
+    assert "national_registry_notifications" in sql
     assert params == {"code": "CN"}
+
+
+@pytest.mark.asyncio
+async def test_series_query_exports_inactive_history_with_active_selection_flag() -> None:
+    session = FakeSession(
+        FakeRows(
+            [
+                mapped_row(
+                    date=date(2020, 1, 1),
+                    year_month="2020-01",
+                    disease_id="D028",
+                    cases=3,
+                    deaths=0,
+                    recoveries=0,
+                    incidence_rate=None,
+                    incidence_rate_source="missing_population",
+                    mortality_rate=None,
+                    series_code="SER_IS_HISTORY_PERTUSSIS_MONTHLY",
+                    series_is_active=False,
+                    valid_from=None,
+                    valid_to=None,
+                )
+            ]
+        )
+    )
+
+    records = await site_data_queries.fetch_disease_series_records(
+        session, "IS", False
+    )
+
+    assert records[0]["series_is_active"] is False
+    assert records[0]["date"] == "2020-01-01"
+    sql, params = session.calls[0]
+    assert "dss.is_active AS series_is_active" in sql
+    assert "dss.is_active IS TRUE" not in sql
+    assert params == {
+        "code": "IS",
+        "geography_key": "country:IS:national",
+    }

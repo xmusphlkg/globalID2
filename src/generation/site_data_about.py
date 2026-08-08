@@ -52,6 +52,23 @@ SOURCE_DETAILS_BY_SCOPE: dict[tuple[str, str], dict[str, str]] = {
         "type": "microsoft_bi",
         "description": "Australian national notifiable diseases surveillance dashboard.",
     },
+    ("CA-ON", "pho_idto_monthly"): {
+        "label": "Public Health Ontario IDTO Monthly",
+        "url": (
+            "https://www.publichealthontario.ca/en/data-and-analysis/"
+            "infectious-disease/reportable-disease-trends-annually"
+        ),
+        "machine_url": (
+            "https://ws-rpt1.publichealthontario.ca/Home/EmbedReport/"
+            "14b5691a-c95d-46b2-84f1-9119080e083b"
+        ),
+        "type": "microsoft_bi",
+        "cadence": "monthly",
+        "description": (
+            "Ontario-level current-year preliminary monthly case counts from "
+            "Public Health Ontario's IDTO report."
+        ),
+    },
     ("TW", "nidss_open_data"): {
         "label": "Taiwan, China CDC NIDSS",
         "url": "https://nidss.cdc.gov.tw/Home/Index",
@@ -79,14 +96,70 @@ SOURCE_DETAILS_BY_SCOPE: dict[tuple[str, str], dict[str, str]] = {
             "aggregated to national monthly notification counts."
         ),
     },
+    ("IS", "is_doh_annual"): {
+        "label": "Iceland Directorate of Health Annual Dashboard",
+        "url": "https://island.is/en/smitsjukdomar-tolur",
+        "machine_url": "https://app.powerbi.com/view?r=eyJrIjoiY2Q4Mjk2NDQtNDA1MS00YTcxLTk1NzEtZTBlZDYwMTU3ZDNiIiwidCI6IjRkNzYyYWMwLTYyMDUtNDJjZS1iOTY0LWMzYjg5NThmZDRhOSIsImMiOjh9",
+        "type": "microsoft_bi",
+        "cadence": "annual",
+        "description": (
+            "National annual case notifications by disease. Published values "
+            "can be revised retrospectively and remain annual period totals."
+        ),
+    },
+    ("IS", "is_doh_sti"): {
+        "label": "Iceland Directorate of Health STI Dashboard",
+        "url": "https://island.is/en/smitsjukdomar-tolur",
+        "machine_url": "https://app.powerbi.com/view?r=eyJrIjoiNTNmN2ViYTEtZjdiZi00MmRkLWFjYWQtOWI0ZmEwNjhjYmQyIiwidCI6IjRkNzYyYWMwLTYyMDUtNDJjZS1iOTY0LWMzYjg5NThmZDRhOSIsImMiOjh9",
+        "type": "microsoft_bi",
+        "cadence": "monthly facts · quarterly publication",
+        "description": (
+            "Monthly STI diagnosis facts from laboratory and registry surveillance; "
+            "the official dashboard is published on a quarterly schedule."
+        ),
+    },
+    ("IS", "is_doh_respiratory"): {
+        "label": "Iceland Directorate of Health Respiratory Dashboard",
+        "url": "https://island.is/en/respiratory-tract-infections",
+        "machine_url": "https://app.powerbi.com/view?r=eyJrIjoiZjgyOWI0YzgtNjNkZC00Y2QzLTllMzctMWIxMTAxZThlMDJkIiwidCI6IjRkNzYyYWMwLTYyMDUtNDJjZS1iOTY0LWMzYjg5NThmZDRhOSIsImMiOjh9",
+        "type": "microsoft_bi",
+        "cadence": "weekly",
+        "description": (
+            "ISO-week respiratory diagnosis counts. Hospitalizations, samples, "
+            "and vaccination indicators are separate measures and are not counted as diagnoses."
+        ),
+    },
+    ("IS", "is_doh_history"): {
+        "label": "Iceland Directorate of Health Historical Registry",
+        "url": "https://island.is/en/smitsjukdomar-tolur",
+        "type": "official_excel",
+        "cadence": "annual and monthly",
+        "description": (
+            "Historical official registry tables for 1997–2021, with annual totals "
+            "and disease-specific monthly notification facts retained at source grain."
+        ),
+    },
+    ("IS", "is_doh_legacy_icd"): {
+        "label": "Iceland Directorate of Health Legacy ICD Monthly",
+        "url": "https://island.is/en/smitsjukdomar-tolur",
+        "type": "official_excel",
+        "cadence": "monthly",
+        "description": (
+            "Historical Saga EHR ICD encounter counts for 1997–2020. This clinical "
+            "measure is non-comparable with registry notifications and is kept separate."
+        ),
+    },
 }
 
 ABOUT_COUNTRY_NAMES_ZH: dict[str, str] = {
     "AU": "澳大利亚",
     "BR": "巴西",
+    "CA": "加拿大",
+    "CA-ON": "加拿大安大略省",
     "CH": "瑞士",
     "CN": "中国",
     "HK": "中国香港",
+    "IS": "冰岛",
     "JP": "日本",
     "KR": "韩国",
     "NZ": "新西兰",
@@ -97,11 +170,17 @@ ABOUT_COUNTRY_NAMES_ZH: dict[str, str] = {
 ABOUT_SOURCE_LABELS_ZH: dict[tuple[str, str], str] = {
     ("AU", "all"): "澳大利亚 NINDSS",
     ("BR", "sinan_datasus"): "巴西 DATASUS SINAN",
+    ("CA-ON", "pho_idto_monthly"): "安大略省公共卫生局 IDTO 月度数据",
     ("CH", "foph_idd"): "瑞士 FOPH/BAG IDD",
     ("CN", "cdc_weekly"): "中国疾控中心周报",
     ("CN", "nhc"): "国家疾病预防控制局",
     ("CN", "pubmed"): "PubMed 生物医学文献库",
     ("HK", "chp_notifiable"): "中国香港 CHP 法定传染病",
+    ("IS", "is_doh_annual"): "冰岛卫生署年度传染病看板",
+    ("IS", "is_doh_sti"): "冰岛卫生署性病监测看板",
+    ("IS", "is_doh_respiratory"): "冰岛卫生署呼吸道感染周度看板",
+    ("IS", "is_doh_history"): "冰岛卫生署历史传染病登记",
+    ("IS", "is_doh_legacy_icd"): "冰岛卫生署历史 ICD 临床月报",
     ("JP", "jp_weekly"): "日本 NIID/JIHS 周报",
     ("KR", "kdca_open_api"): "韩国 KDCA EID",
     ("NZ", "phf_monthly"): "新西兰 PHF Science 法定传染病",
@@ -115,6 +194,10 @@ ABOUT_SOURCE_DESCRIPTIONS_ZH: dict[tuple[str, str], str] = {
         "BR",
         "sinan_datasus",
     ): "巴西卫生部 DATASUS/SINAN 的 SUS 开放 DBC 微数据，按通报月份聚合为全国月度病例数。",
+    (
+        "CA-ON",
+        "pho_idto_monthly",
+    ): "安大略省公共卫生局 IDTO 报告中的当年月度初步病例数，与加拿大全国数据分开保留。",
     ("CH", "foph_idd"): "瑞士 FOPH/BAG IDD 法定传染病报告 API，标准化为全国病例记录。",
     ("CN", "cdc_weekly"): "中国疾控中心发布的月度法定传染病报告。",
     ("CN", "nhc"): "中国官方公共卫生公报与查询门户。",
@@ -123,6 +206,11 @@ ABOUT_SOURCE_DESCRIPTIONS_ZH: dict[tuple[str, str], str] = {
         "HK",
         "chp_notifiable",
     ): "中国香港 CHP 年度法定传染病 CSV，标准化为全国月度病例数。",
+    ("IS", "is_doh_annual"): "冰岛全国分病种年度病例通报；来源可能追溯修订，数据保持年度总量口径。",
+    ("IS", "is_doh_sti"): "来自实验室与登记监测的月度性病诊断事实；官方看板按季度发布。",
+    ("IS", "is_doh_respiratory"): "按 ISO 周记录的呼吸道疾病诊断数；住院、样本和疫苗指标保持独立，不计入诊断数。",
+    ("IS", "is_doh_history"): "1997—2021 年官方历史登记表，年度总量和分病种月度通报按原始粒度分别保留。",
+    ("IS", "is_doh_legacy_icd"): "1997—2020 年 Saga 电子病历 ICD 就诊数；该临床口径与登记通报不可比，保持独立。",
     ("JP", "jp_weekly"): "日本 NIID/JIHS 的周度传染病监测数据。",
     (
         "KR",
@@ -134,8 +222,11 @@ ABOUT_SOURCE_DESCRIPTIONS_ZH: dict[tuple[str, str], str] = {
 }
 
 CADENCE_LABELS_ZH: dict[str, str] = {
+    "annual": "每年",
+    "annual and monthly": "年度与月度",
     "daily": "每日",
     "monthly": "每月",
+    "monthly facts · quarterly publication": "月度事实（按季度发布）",
     "quarterly": "每季度",
     "unknown": "按来源更新",
     "weekly": "每周",
@@ -146,7 +237,8 @@ def build_country_source_info(
     country_code: str, frequency_meta: dict | None = None
 ) -> dict:
     """Build structured source metadata for downloads and UI badges."""
-    cfg = get_country_bootstrap_config(country_code)
+    normalized_code = (country_code or "").strip().upper()
+    cfg = get_country_bootstrap_config(normalized_code)
     crawler_cfg = cfg.get("crawler_config", {})
     source_scopes = list(crawler_cfg.get("sources") or ["all"])
     fallback_cadence = (
@@ -157,7 +249,7 @@ def build_country_source_info(
     sources: list[dict] = []
 
     for scope in source_scopes:
-        details = SOURCE_DETAILS_BY_SCOPE.get((country_code, scope), {})
+        details = SOURCE_DETAILS_BY_SCOPE.get((normalized_code, scope), {})
         url = details.get("url") or cfg.get("data_source_url")
         machine_url = details.get("machine_url")
         if not machine_url:
@@ -171,18 +263,20 @@ def build_country_source_info(
             {
                 "scope": scope,
                 "label": details.get("label")
-                or scope_display_label(scope, country_code=country_code),
+                or scope_display_label(scope, country_code=normalized_code),
                 "url": url,
                 "machine_url": machine_url,
                 "type": source_type,
-                "cadence": crawler_cfg.get("cadence") or fallback_cadence,
+                "cadence": details.get("cadence")
+                or crawler_cfg.get("cadence")
+                or fallback_cadence,
                 "description": details.get("description") or cfg.get("notes"),
             }
         )
 
     primary = sources[0] if sources else None
-    return {
-        "country_code": country_code,
+    result = {
+        "country_code": normalized_code,
         "primary_scope": primary.get("scope") if primary else None,
         "primary_label": primary.get("label") if primary else None,
         "primary_url": primary.get("url") if primary else None,
@@ -191,6 +285,15 @@ def build_country_source_info(
         "notes": cfg.get("notes"),
         "sources": sources,
     }
+    for field in (
+        "parent_country_code",
+        "location_type",
+        "iso_country_code",
+        "iso_subdivision_code",
+    ):
+        if cfg.get(field):
+            result[field] = cfg[field]
+    return result
 
 
 def normalize_cadence_label(cadence: str | None) -> str:
@@ -200,6 +303,7 @@ def normalize_cadence_label(cadence: str | None) -> str:
         return "Variable"
     normalized = value.lower()
     mapping = {
+        "annual": "Annual",
         "daily": "Daily",
         "monthly": "Monthly",
         "quarterly": "Quarterly",

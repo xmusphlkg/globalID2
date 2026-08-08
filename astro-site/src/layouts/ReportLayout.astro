@@ -1,19 +1,46 @@
 ---
 // src/layouts/ReportLayout.astro
 import BaseLayout from './BaseLayout.astro';
+import {
+  buildBreadcrumbStructuredData,
+  type JsonLdNode,
+} from '../lib/seo';
 
 interface Props {
   title: string;
   description?: string;
   breadcrumbs?: Array<{ label: string; labelZh?: string; href?: string }>;
   initialLanguage?: 'en' | 'zh';
+  structuredData?: JsonLdNode | JsonLdNode[];
 }
 
-const { title, description, breadcrumbs = [], initialLanguage = 'en' } = Astro.props;
+const {
+  title,
+  description,
+  breadcrumbs = [],
+  initialLanguage = 'en',
+  structuredData = [],
+} = Astro.props;
 const homeLabel = initialLanguage === 'zh' ? '首页' : 'Home';
+const siteOrigin = Astro.site ? new URL(Astro.site).origin : Astro.url.origin;
+const breadcrumbStructuredData = buildBreadcrumbStructuredData({
+  siteOrigin,
+  currentPath: Astro.url.pathname,
+  breadcrumbs,
+});
+const pageStructuredData = Array.isArray(structuredData) ? structuredData : [structuredData];
+const additionalStructuredData = [
+  ...(breadcrumbStructuredData ? [breadcrumbStructuredData] : []),
+  ...pageStructuredData,
+];
 ---
 
-<BaseLayout title={title} description={description} initialLanguage={initialLanguage}>
+<BaseLayout
+  title={title}
+  description={description}
+  initialLanguage={initialLanguage}
+  additionalStructuredData={additionalStructuredData}
+>
   <!-- Breadcrumb -->
   {breadcrumbs.length > 0 && (
     <nav class="site-breadcrumb border-b backdrop-blur-sm sticky top-16 z-40">

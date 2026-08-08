@@ -19,10 +19,9 @@ interface Props {
 }
 
 function useLang(): Lang {
-  const [lang, setLang] = useState<Lang>(() => {
-    if (typeof document === 'undefined') return 'zh';
-    return document.documentElement.getAttribute('data-lang') === 'en' ? 'en' : 'zh';
-  });
+  // Report pages are rendered in Chinese first. Keep the server and hydration
+  // renders identical, then sync a previously selected language in the effect.
+  const [lang, setLang] = useState<Lang>('zh');
 
   useEffect(() => {
     if (typeof document === 'undefined') return;
@@ -92,7 +91,7 @@ function MarkdownBlock({ content }: { content: string }) {
 function fmtNumber(value: unknown): string {
   const parsed = typeof value === 'number' ? value : Number(value);
   if (!Number.isFinite(parsed)) return '—';
-  return parsed.toLocaleString();
+  return parsed.toLocaleString('zh-CN');
 }
 
 function percent(value: unknown): string {
@@ -213,8 +212,6 @@ function numericSeries(value: unknown): number[] {
 
 function primaryCaseSeries(record: SparklineSeriesEntry | undefined): number[] {
   if (!record) return [];
-  const weekly = numericSeries(record.weekly_equiv_cases);
-  if (weekly.some((value) => value > 0)) return weekly;
   return numericSeries(record.cases);
 }
 
@@ -386,7 +383,10 @@ export default function ReportV4Panel({ report, countryDataUrl, sparklineSeries 
   const dataQuality = asRecord(document.data_quality);
   const riskRanking = asArray(document.risk_ranking).slice(0, 8);
   const diseaseDirectory = asArray(document.disease_directory);
-  const showAudit = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('audit');
+  const [showAudit, setShowAudit] = useState(false);
+  useEffect(() => {
+    setShowAudit(new URLSearchParams(window.location.search).has('audit'));
+  }, []);
   const sections = asArray(document.sections)
     .filter((section) => showAudit || section.type !== 'method_appendix')
     .sort((a, b) => Number(a.order || 0) - Number(b.order || 0));

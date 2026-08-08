@@ -17,6 +17,14 @@ export interface DataSourceFlow {
   country_code?: string | null;
   country_name?: string | null;
   record_count: number;
+  source_series_count: number;
+  source_observation_count: number;
+  series_availability: Record<string, number>;
+  source_availability: Record<string, number>;
+  observation_quality: Record<string, number>;
+  metric_types: Record<string, number>;
+  mapping_relations: Record<string, number>;
+  comparability: Record<string, number>;
   earliest_date?: string | null;
   latest_date: string | null;
   history_start_year?: number | null;
@@ -33,6 +41,41 @@ export interface SourceOption {
   label: string;
   label_en: string;
   label_zh: string;
+  source_kind: "current" | "history";
+  supports_start_year: boolean;
+}
+
+export interface SourcePolicyMetadata {
+  supports_current_month: boolean;
+  default_include_current_month: boolean;
+  dynamic_revision_enabled: boolean;
+  default_revision_window_months: number;
+  current_month_status: string;
+  public_release_enabled: boolean;
+  public_release_editable: boolean;
+  publication_day?: number | null;
+  source_update_cadence?: string | null;
+}
+
+export interface OntologySeries {
+  id: string;
+  source_id: string;
+  concept_id?: string | null;
+  local_codes: string[];
+  local_labels: string[];
+  frequency: string;
+  measure: string;
+  reporting_basis: string;
+  unit: string;
+  mapping_relation: string;
+  comparability: string;
+  aggregation_policy: string;
+  status: string;
+  target?: {
+    id?: string | null;
+    labels?: { en?: string | null; zh?: string | null };
+  } | null;
+  availability?: Array<{ status?: string | null }>;
 }
 
 export interface CountrySourceConfig {
@@ -51,6 +94,7 @@ export interface CountrySourceConfig {
   supports_source_file: boolean;
   supports_source_dir: boolean;
   source_options: SourceOption[];
+  source_policy?: SourcePolicyMetadata | null;
 }
 
 export interface AutomationJob {
@@ -64,6 +108,8 @@ export interface AutomationJob {
   save_raw: boolean;
   fill_missing: boolean;
   force: boolean;
+  include_current_month: boolean;
+  revision_window_months: number;
   retry_threshold: number;
   interval_minutes?: number | null;
   daily_time?: string | null;
@@ -90,6 +136,8 @@ export interface AutomationJobInput {
   save_raw: boolean;
   fill_missing: boolean;
   force: boolean;
+  include_current_month: boolean;
+  revision_window_months: number;
   retry_threshold: number;
   interval_minutes?: number | null;
   daily_time?: string | null;
@@ -132,6 +180,17 @@ export function useSourceConfigs(lang: "en" | "zh" = "en") {
   });
 }
 
+export function useOntologySeries(countryCode?: string | null) {
+  const normalizedCode = (countryCode || "").trim().toUpperCase();
+  return useQuery<OntologySeries[]>({
+    queryKey: ["disease-ontology-series", normalizedCode],
+    queryFn: () =>
+      apiFetch(`/disease-ontology/series?country_code=${encodeURIComponent(normalizedCode)}`),
+    enabled: Boolean(normalizedCode),
+    staleTime: 30 * 60 * 1000,
+  });
+}
+
 export function useAutomationConfig() {
   return useQuery<AutomationConfig>({
     queryKey: ["sources-automation"],
@@ -166,6 +225,8 @@ export interface StartCrawlPayload {
   process?: boolean;
   save_raw?: boolean;
   fill_missing?: boolean;
+  include_current_month?: boolean;
+  revision_window_months?: number;
   start_year?: number | null;
   source_file?: string | null;
   source_dir?: string | null;
