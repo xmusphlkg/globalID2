@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..deps import get_db
+from ..location_codes import PUBLIC_COUNTRY_REGION_CODE_DB_PATTERN
 from ..schemas.country import CountryOut
 from src.core.country_library import get_country_display_name
 from src.domain.country import Country
@@ -47,7 +48,7 @@ async def list_countries(db: AsyncSession = Depends(get_db)):
         select(Country)
         .where(
             Country.is_active.is_(True),
-            Country.code.op("~")(r"^[A-Z]{2}$"),
+            Country.code.op("~")(PUBLIC_COUNTRY_REGION_CODE_DB_PATTERN),
         )
         .order_by(Country.name)
     )

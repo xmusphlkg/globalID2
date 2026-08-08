@@ -12,7 +12,7 @@ from src.ontology import load_disease_ontology
 def test_export_catalogue_entries_receive_compact_ontology_metadata() -> None:
     diseases = [
         {"disease_id": "D005", "name_en": "AIDS"},
-        {"disease_id": "D001", "name_en": "Plague"},
+        {"disease_id": "D014", "name_en": "H5N1"},
     ]
 
     enriched = enrich_diseases_with_ontology(diseases, load_disease_ontology())

@@ -34,8 +34,8 @@ from src.generation.site_data_queries import (
     fetch_countries,
     fetch_country_briefs,
     fetch_country_frequency_meta,
+    fetch_disease_export_layers,
     fetch_disease_knowledge_briefs,
-    fetch_disease_records,
     fetch_report_detail,
     fetch_reports,
     has_population_table,
@@ -43,6 +43,7 @@ from src.generation.site_data_queries import (
 from src.generation.site_data_views import (
     build_country_data,
     build_country_site_data,
+    build_country_source_series_data,
     build_disease_data,
     build_disease_site_data,
     resolve_country_display_names,
@@ -50,6 +51,7 @@ from src.generation.site_data_views import (
 from src.generation.site_data_writer import (
     existing_site_export_has_content,
     prepare_site_output_dirs,
+    remove_stale_json_files,
     write_compact_json,
     write_pretty_json,
 )
@@ -67,6 +69,63 @@ DEFAULT_DIRECT_DOWNLOAD_URL_BASE = derive_github_raw_base_url(
     DEFAULT_DOWNLOAD_REPO_URL,
     DEFAULT_DIRECT_DOWNLOAD_BRANCH,
 )
+
+_ICELAND_SCOPE_MARKERS = {
+    "is_doh_annual": ("annual:", "ser_is_doh_annual"),
+    "is_doh_sti": ("sti:", "ser_is_doh_sti"),
+    "is_doh_respiratory": ("respiratory:", "ser_is_doh_respiratory"),
+    "is_doh_history": ("ser_is_history", "is_history_"),
+    "is_doh_legacy_icd": ("ser_is_legacy_icd", "is_legacy_icd_"),
+}
+
+
+def _retain_observed_iceland_sources(
+    source_info: dict,
+    country_data: dict,
+) -> dict:
+    """Do not advertise configured Iceland feeds until facts are exported."""
+    searchable_values: list[str] = []
+    for series in (country_data.get("disease_series") or {}).values():
+        for source_series in series.get("source_series") or []:
+            searchable_values.extend(
+                str(source_series.get(field) or "").lower()
+                for field in (
+                    "series_code",
+                    "source_series_code",
+                    "source_system",
+                    "source_label",
+                )
+            )
+    observed_scopes = {
+        scope
+        for scope, markers in _ICELAND_SCOPE_MARKERS.items()
+        if any(
+            marker in value
+            for marker in markers
+            for value in searchable_values
+        )
+    }
+    if not observed_scopes:
+        return source_info
+
+    retained = [
+        source
+        for source in source_info.get("sources") or []
+        if source.get("scope") in observed_scopes
+    ]
+    if not retained:
+        return source_info
+    result = {**source_info, "sources": retained}
+    primary = retained[0]
+    result.update(
+        {
+            "primary_scope": primary.get("scope"),
+            "primary_label": primary.get("label"),
+            "primary_url": primary.get("url"),
+            "primary_type": primary.get("type"),
+        }
+    )
+    return result
 
 
 async def ensure_site_export_database_ready() -> None:
@@ -159,6 +218,7 @@ async def collect_site_export_context(
             )
 
         all_records_by_country: dict[str, list] = {}
+        all_source_records_by_country: dict[str, list] = {}
         country_sources_by_code: dict[str, dict] = {}
         country_name_by_code = {c["code"]: c["name"] for c in countries_simple}
         country_name_zh_by_code = {c["code"]: c["name_zh"] for c in countries_simple}
@@ -170,18 +230,32 @@ async def collect_site_export_context(
             print(f"  Fetching records for {code}…")
             frequency_meta = await fetch_country_frequency_meta(session, code)
             country_source_info = build_country_source_info(code, frequency_meta)
-            records = await fetch_disease_records(session, code, population_enabled)
+            records, source_records = await fetch_disease_export_layers(
+                session, code, population_enabled
+            )
             validate_record_catalogue_coverage(
-                records,
+                [*records, *source_records],
                 catalogue_ids,
                 set(diseases_by_id),
             )
 
             all_records_by_country[code] = records
+            all_source_records_by_country[code] = source_records
             country_sources_by_code[code] = country_source_info
             country_data = build_country_data(
-                code, country_name_en, records, diseases_by_id, frequency_meta
+                code,
+                country_name_en,
+                records,
+                diseases_by_id,
+                frequency_meta,
+                source_records,
             )
+            if code.upper() == "IS":
+                country_source_info = _retain_observed_iceland_sources(
+                    country_source_info,
+                    country_data,
+                )
+                country_sources_by_code[code] = country_source_info
             layer_summary = country_data["data_layer_summary"]
             print(
                 "    Series-first: "
@@ -202,10 +276,25 @@ async def collect_site_export_context(
             # Augment countries_simple with stats
             for c in countries_simple:
                 if c["code"] == code:
+                    record_count = sum(
+                        len(series.get("dates") or [])
+                        for series in (
+                            country_data.get("disease_series") or {}
+                        ).values()
+                    )
                     c["total_cases"] = country_data["total_cases"]
                     c["total_deaths"] = country_data["total_deaths"]
                     c["disease_count"] = country_data["disease_count"]
                     c["date_range"] = country_data["date_range"]
+                    c["record_count"] = record_count
+                    c["data_available"] = bool(
+                        record_count
+                        and country_data["disease_count"]
+                        and (
+                            country_data["date_range"].get("start")
+                            or country_data["date_range"].get("end")
+                        )
+                    )
                     c["source_info"] = country_source_info
                     c["data_layer_summary"] = country_data["data_layer_summary"]
 
@@ -222,6 +311,8 @@ async def collect_site_export_context(
         reports = await fetch_reports(session)
         total_record_count = sum(
             len(records) for records in all_records_by_country.values()
+        ) + sum(
+            len(records) for records in all_source_records_by_country.values()
         )
         if total_record_count == 0 and not allow_empty_export:
             message = (
@@ -268,7 +359,12 @@ async def collect_site_export_context(
         # ── Per-disease files ──
         for disease in diseases:
             did = disease["disease_id"]
-            disease_data = build_disease_data(did, disease, all_records_by_country)
+            disease_data = build_disease_data(
+                did,
+                disease,
+                all_records_by_country,
+                all_source_records_by_country,
+            )
             disease_site_data = build_disease_site_data(
                 disease_data,
                 country_name_by_code,
@@ -323,6 +419,7 @@ async def collect_site_export_context(
 
     return {
         "all_records_by_country": all_records_by_country,
+        "all_source_records_by_country": all_source_records_by_country,
         "countries_simple": countries_simple,
         "country_download_entries": country_download_entries,
         "country_exports": country_exports,
@@ -387,6 +484,10 @@ def write_site_export_artifacts(
             public_site_data_dir / "countries" / f"{code.lower()}.json",
             site_data,
         )
+        write_compact_json(
+            public_site_data_dir / "countries" / f"{code.lower()}-source-series.json",
+            build_country_source_series_data(country_data),
+        )
         print(
             f"  ✓ countries/{code.lower()}.json ({len(all_records_by_country[code])} records)"
         )
@@ -447,7 +548,9 @@ def write_site_export_artifacts(
     # ── Meta ──
     meta = {
         "generated_at": generated_at,
-        "total_countries": len(countries_simple),
+        "total_countries": sum(
+            1 for country in countries_simple if country.get("data_available")
+        ),
         "total_diseases": len(diseases),
         "total_reports": len(reports),
         "countries": countries_simple,
@@ -476,13 +579,47 @@ def write_site_export_artifacts(
     print("  ✓ meta.json")
 
     about_snapshot = build_about_snapshot(
-        countries_simple=countries_simple,
+        countries_simple=[
+            country
+            for country in countries_simple
+            if country.get("data_available")
+        ],
         diseases=diseases,
         reports=reports,
         generated_at=generated_at,
     )
     write_pretty_json(output_dir / "about.json", about_snapshot)
     print("  ✓ about.json")
+
+    # Reconcile stale artifacts only after every new artifact is safely on disk.
+    # This keeps unchanged files intact throughout export and prevents a failed
+    # run from leaving an empty site-data directory behind.
+    remove_stale_json_files(
+        output_dir / "countries",
+        {f"{item['code'].lower()}.json" for item in country_exports},
+    )
+    disease_json_names = {f"{item['disease_id'].lower()}.json" for item in disease_exports}
+    remove_stale_json_files(output_dir / "diseases", disease_json_names | {"index.json"})
+    remove_stale_json_files(output_dir / "disease-knowledge", disease_json_names)
+    remove_stale_json_files(
+        output_dir / "reports",
+        {"index.json", *[f"{report_id}.json" for report_id in report_details]},
+    )
+    remove_stale_json_files(
+        public_site_data_dir / "countries",
+        {
+            filename
+            for item in country_exports
+            for filename in (
+                f"{item['code'].lower()}.json",
+                f"{item['code'].lower()}-source-series.json",
+            )
+        },
+    )
+    remove_stale_json_files(
+        public_site_data_dir / "diseases",
+        disease_json_names,
+    )
 
 
 async def export(

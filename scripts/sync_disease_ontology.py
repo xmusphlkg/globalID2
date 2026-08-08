@@ -257,6 +257,18 @@ SERIES_GEOGRAPHY_REMAPS = (
             "US-resident national population"
         ),
     ),
+    SeriesGeographyRemap(
+        series_pattern="SER_CA_ON_PHO_IDTO_%",
+        source_system="SRC_CA_ON_PHO_IDTO",
+        old_key="country:CA:subdivision:CA-ON",
+        new_key="country:CA-ON:national",
+        evidence_fields=("Geocode",),
+        evidence_values=("CA-ON",),
+        reason=(
+            "Ontario is published as the independent CA-ON jurisdiction while "
+            "the source ISO subdivision Geocode remains CA-ON"
+        ),
+    ),
 )
 
 
@@ -283,14 +295,21 @@ def _split_aliases(*values: object) -> list[str]:
     return result
 
 
+def _mapping_scope_code(path: Path) -> str:
+    """Resolve a mapping jurisdiction from the canonical mapping filename."""
+
+    return path.stem.upper()
+
+
 def _managed_mapping_rows(managed_ids: set[str]) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for path in sorted(MAPPING_DIR.glob("*.csv")):
-        scope_code = path.stem.upper()
-        if scope_code == "EN":
+        file_scope_code = path.stem.upper()
+        if file_scope_code == "EN":
             continue
         with path.open(encoding="utf-8-sig", newline="") as handle:
             for raw in csv.DictReader(handle):
+                scope_code = _mapping_scope_code(path)
                 disease_id = str(raw.get("disease_id") or "").strip().upper()
                 if disease_id not in managed_ids:
                     continue
@@ -440,9 +459,9 @@ def _transition_configuration_errors() -> list[str]:
     for path in sorted(MAPPING_DIR.glob("*.csv")):
         if path.stem.casefold() == "en":
             continue
-        country_code = path.stem.upper()
         with path.open(encoding="utf-8-sig", newline="") as handle:
             for row in csv.DictReader(handle):
+                country_code = _mapping_scope_code(path)
                 configured.add(
                     (
                         country_code,
@@ -691,20 +710,30 @@ async def preflight_sync() -> dict[str, Any]:
 async def _upsert_rows(db, table, rows: list[dict[str, Any]], keys: list[str]) -> int:
     if not rows:
         return 0
-    statement = pg_insert(table).values(rows)
     update_keys = [
         column.name
         for column in table.columns
         if column.name not in {"id", "created_at", *keys} and column.name in rows[0]
     ]
-    statement = statement.on_conflict_do_update(
-        index_elements=keys,
-        set_={
-            **{key: statement.excluded[key] for key in update_keys},
-            "updated_at": func.now(),
-        },
-    )
-    await db.execute(statement)
+    # asyncpg rejects statements with more than 32,767 bind parameters. The
+    # managed mapping catalogue can legitimately exceed that once aliases from
+    # every country are expanded, so keep the operation atomic but execute it
+    # in bounded statements inside the caller's transaction.
+    # SQLAlchemy may add Python-side default columns (for example audit
+    # timestamps) that are absent from the input dictionaries, so the exact
+    # bind count can exceed ``len(rows[0])``. A fixed 1,000-row ceiling keeps
+    # even the widest managed table comfortably below asyncpg's hard limit.
+    batch_size = 1_000
+    for offset in range(0, len(rows), batch_size):
+        statement = pg_insert(table).values(rows[offset : offset + batch_size])
+        statement = statement.on_conflict_do_update(
+            index_elements=keys,
+            set_={
+                **{key: statement.excluded[key] for key in update_keys},
+                "updated_at": func.now(),
+            },
+        )
+        await db.execute(statement)
     return len(rows)
 
 
@@ -922,6 +951,13 @@ def _mapping_rows_to_deactivate(
 async def _sync_mappings(db, managed_ids: set[str]) -> tuple[int, list[int]]:
     rows = _managed_mapping_rows(managed_ids)
     scopes = sorted({row["country_code"] for row in rows})
+    source_ids = sorted(
+        {
+            str(row.get("source_id") or "").strip().upper()
+            for row in rows
+            if str(row.get("source_id") or "").strip() not in {"", "*"}
+        }
+    )
     for scope_code in scopes:
         await ensure_country_scope_for_code(db, scope_code)
 
@@ -933,9 +969,12 @@ async def _sync_mappings(db, managed_ids: set[str]) -> tuple[int, list[int]]:
                        source_id, series_id, metadata
                 FROM disease_mappings
                 WHERE is_active = true
-                  AND country_code = ANY(:scopes)
+                  AND (
+                      country_code = ANY(:scopes)
+                      OR source_id = ANY(:source_ids)
+                  )
                 """),
-                {"scopes": scopes},
+                {"scopes": scopes, "source_ids": source_ids},
             )
         )
         .mappings()

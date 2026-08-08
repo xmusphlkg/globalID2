@@ -6,7 +6,9 @@ import { t } from "@/lib/i18n";
 import {
   type CountrySourceConfig,
   type DataSourceFlow,
+  type OntologySeries,
   type StageInfo,
+  useOntologySeries,
   useSourceConfigs,
   useSourcesFlow,
   useStartCrawl,
@@ -27,6 +29,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import {
   GitBranch,
+  Database,
   Download,
   Cog,
   Plus,
@@ -127,6 +130,9 @@ function FlowRow({
   flow: DataSourceFlow;
   lang: "en" | "zh";
 }) {
+  const sourceSeriesCount = flow.source_series_count ?? 0;
+  const sourceObservationCount = flow.source_observation_count ?? 0;
+  const hasSeriesFacts = sourceSeriesCount > 0 || sourceObservationCount > 0;
   const coverageStart = flow.earliest_date ?? (
     flow.history_start_year ? `${flow.history_start_year}-01-01` : null
   );
@@ -150,11 +156,23 @@ function FlowRow({
           <Title className="text-sm font-semibold break-words whitespace-normal leading-tight">{flow.data_source}</Title>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
             <span className="inline-flex items-center gap-1 text-tremor-content dark:text-dark-tremor-content">
-              {flow.record_count.toLocaleString()} records
+              {hasSeriesFacts
+                ? `${sourceObservationCount.toLocaleString()} ${lang === "zh" ? "条来源观测" : "source observations"}`
+                : `${flow.record_count.toLocaleString()} ${lang === "zh" ? "条兼容记录" : "compatibility records"}`}
             </span>
+            {hasSeriesFacts ? (
+              <span className="inline-flex items-center gap-1 text-tremor-content dark:text-dark-tremor-content">
+                {sourceSeriesCount.toLocaleString()} {lang === "zh" ? "个来源序列" : "source series"}
+              </span>
+            ) : null}
+            {hasSeriesFacts && flow.record_count > 0 ? (
+              <span className="inline-flex items-center gap-1 text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+                {lang === "zh" ? "兼容投影" : "Compatibility projection"}: {flow.record_count.toLocaleString()}
+              </span>
+            ) : null}
             {flow.latest_date && (
               <span className="inline-flex items-center gap-1 text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
-                {t(lang, "latest_date")}: {flow.latest_date}
+                {lang === "zh" ? "数据覆盖截止" : "Coverage end"}: {flow.latest_date}
               </span>
             )}
             {coverageText && (
@@ -163,14 +181,66 @@ function FlowRow({
               </span>
             )}
           </div>
+          {hasSeriesFacts ? (
+            <div className="space-y-1.5 pt-1 text-[11px] text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+              {Object.entries(flow.metric_types ?? {}).length > 0 ? (
+                <div className="flex flex-wrap gap-1">
+                  {Object.entries(flow.metric_types).map(([metric, count]) => (
+                    <StatusBadge key={metric} tone={metric === "registered_diagnoses" ? "warning" : "info"}>
+                      {metric === "registered_diagnoses"
+                        ? (lang === "zh" ? "登记诊断序列（非病例通知）" : "Registered-diagnosis series (not case notifications)")
+                        : metric === "case_notifications"
+                          ? (lang === "zh" ? "病例通知序列" : "Case-notification series")
+                          : metric.replaceAll("_", " ")}
+                      {` ${count}`}
+                    </StatusBadge>
+                  ))}
+                </div>
+              ) : null}
+              <div className="flex flex-wrap gap-1">
+                {Object.entries(flow.series_availability ?? {}).map(([status, count]) => (
+                  <StatusBadge key={`series-${status}`} tone={status === "active" ? "success" : "neutral"}>
+                    {lang === "zh" ? "序列状态" : "Series"} {status} {count}
+                  </StatusBadge>
+                ))}
+                {Object.entries(flow.source_availability ?? {}).map(([status, count]) => (
+                  <StatusBadge key={`source-${status}`} tone={status === "available" ? "success" : "warning"}>
+                    {lang === "zh" ? "可用性" : "Availability"} {status} {count}
+                  </StatusBadge>
+                ))}
+                {Object.entries(flow.observation_quality ?? {}).map(([status, count]) => (
+                  <StatusBadge key={`quality-${status}`} tone={status === "rejected" ? "danger" : "neutral"}>
+                    {lang === "zh" ? "质量" : "Quality"} {status} {count.toLocaleString()}
+                  </StatusBadge>
+                ))}
+                {Object.entries(flow.mapping_relations ?? {}).map(([status, count]) => (
+                  <StatusBadge key={`mapping-${status}`} tone={status === "exact" ? "success" : "warning"}>
+                    {lang === "zh" ? "映射" : "Mapping"} {status} {count}
+                  </StatusBadge>
+                ))}
+                {Object.entries(flow.comparability ?? {}).map(([status, count]) => (
+                  <StatusBadge key={`comparability-${status}`} tone={status === "direct" ? "success" : "neutral"}>
+                    {lang === "zh" ? "可比性" : "Comparability"} {status.replaceAll("_", " ")} {count}
+                  </StatusBadge>
+                ))}
+              </div>
+            </div>
+          ) : null}
           {flow.latest_task_uuid && (
             <div className="text-[11px] text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
-              {lang === "zh" ? "最近任务" : "Latest task"}: {getSourceDisplayLabel(flow.latest_task_source, lang, flow.country_code)}
+              {lang === "zh" ? "最近运行/检查" : "Latest run/check"}: {getSourceDisplayLabel(flow.latest_task_source, lang, flow.country_code)}
               {" · "}
               {flow.latest_task_status || "-"}
               {flow.latest_task_time ? ` · ${formatDate(flow.latest_task_time)}` : ""}
             </div>
           )}
+          {!flow.latest_task_uuid && flow.source_scope ? (
+            <div className="text-[11px] text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+              {lang === "zh"
+                ? "最近运行/检查：未记录（待首次调度运行）"
+                : "Latest run/check: not recorded (awaiting first scheduled run)"}
+            </div>
+          ) : null}
         </div>
 
         {/* Pipeline stages */}
@@ -186,6 +256,222 @@ function FlowRow({
         </div>
       </div>
     </div>
+  );
+}
+
+interface SeriesMappingRisk {
+  key: string;
+  conceptId: string;
+  sourceId: string;
+  frequency: string;
+  measure: string;
+  rows: OntologySeries[];
+  labels: string[];
+}
+
+function buildSeriesMappingRisks(rows: OntologySeries[]): SeriesMappingRisk[] {
+  const groups = new Map<string, OntologySeries[]>();
+  for (const row of rows) {
+    const conceptId = row.concept_id || row.target?.id || "unmapped";
+    const key = [
+      conceptId,
+      row.source_id,
+      row.frequency,
+      row.measure,
+      row.reporting_basis,
+    ].join("|");
+    groups.set(key, [...(groups.get(key) ?? []), row]);
+  }
+
+  const risks: SeriesMappingRisk[] = [];
+  for (const [key, groupedRows] of groups) {
+    if (groupedRows.length < 2) continue;
+    const labels = Array.from(
+      new Set(
+        groupedRows
+          .flatMap((row) => row.local_labels ?? [])
+          .map((label) => label.trim())
+          .filter(Boolean),
+      ),
+    );
+    const normalizedLabels = new Set(labels.map((label) => label.toLocaleLowerCase()));
+    if (normalizedLabels.size < 2) continue;
+    const first = groupedRows[0];
+    risks.push({
+      key,
+      conceptId: first.concept_id || first.target?.id || "unmapped",
+      sourceId: first.source_id,
+      frequency: first.frequency,
+      measure: first.measure,
+      rows: groupedRows,
+      labels,
+    });
+  }
+
+  return risks.sort((left, right) => {
+    const leftNonCase = left.measure === "registered_diagnoses" ? 1 : 0;
+    const rightNonCase = right.measure === "registered_diagnoses" ? 1 : 0;
+    return leftNonCase - rightNonCase || left.conceptId.localeCompare(right.conceptId);
+  });
+}
+
+function SeriesMappingRegister({
+  rows,
+  lang,
+}: {
+  rows: OntologySeries[];
+  lang: "en" | "zh";
+}) {
+  const [search, setSearch] = useState("");
+  const risks = useMemo(() => buildSeriesMappingRisks(rows), [rows]);
+  const targetCount = useMemo(
+    () => new Set(rows.map((row) => row.concept_id || row.target?.id).filter(Boolean)).size,
+    [rows],
+  );
+  const normalizedSearch = search.trim().toLocaleLowerCase();
+  const filteredRows = useMemo(
+    () => rows.filter((row) => {
+      if (!normalizedSearch) return true;
+      return [
+        row.id,
+        row.source_id,
+        row.concept_id ?? "",
+        ...(row.local_codes ?? []),
+        ...(row.local_labels ?? []),
+        row.target?.labels?.en ?? "",
+        row.target?.labels?.zh ?? "",
+        row.measure,
+        row.mapping_relation,
+        row.comparability,
+      ]
+        .join(" ")
+        .toLocaleLowerCase()
+        .includes(normalizedSearch);
+    }),
+    [normalizedSearch, rows],
+  );
+
+  return (
+    <section className="app-panel p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-base font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
+            {lang === "zh" ? "来源序列与疾病映射" : "Source-series disease mappings"}
+          </h2>
+          <p className="mt-1 max-w-3xl text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+            {lang === "zh"
+              ? "以 series registry 为全量口径；历史序列不会因 is_active=false 被隐藏。映射关系与可比性是两个独立结论。"
+              : "The series registry is the complete source of truth; historical series remain visible even when is_active=false. Mapping relation and comparability are separate assertions."}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <StatusBadge tone="info">{rows.length} {lang === "zh" ? "个序列" : "series"}</StatusBadge>
+          <StatusBadge>{targetCount} {lang === "zh" ? "个疾病目标" : "disease targets"}</StatusBadge>
+          <StatusBadge tone={risks.length > 0 ? "warning" : "success"}>
+            {risks.length} {lang === "zh" ? "组语义复核" : "semantic review groups"}
+          </StatusBadge>
+        </div>
+      </div>
+
+      {risks.length > 0 ? (
+        <div className="mt-4 space-y-2">
+          <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">
+            {lang === "zh"
+              ? "同一目标、来源、粒度下存在多个非同义标签；代表序列选择不能被理解为合并。"
+              : "Multiple non-synonymous labels share a target, source, and grain; representative selection must not be interpreted as a merge."}
+          </p>
+          <div className="grid gap-2 lg:grid-cols-2">
+            {risks.map((risk) => (
+              <div key={risk.key} className="rounded-tremor-default border border-amber-200 bg-amber-50/70 p-3 dark:border-amber-900/50 dark:bg-amber-950/20">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <StatusBadge tone="warning">{risk.conceptId}</StatusBadge>
+                  <StatusBadge>{risk.frequency}</StatusBadge>
+                  <StatusBadge tone={risk.measure === "registered_diagnoses" ? "warning" : "info"}>
+                    {risk.measure === "registered_diagnoses"
+                      ? (lang === "zh" ? "登记诊断量（非病例通知）" : "registered diagnoses (not case notifications)")
+                      : risk.measure.replaceAll("_", " ")}
+                  </StatusBadge>
+                </div>
+                <p className="mt-2 text-xs font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">
+                  {risk.labels.join(" · ")}
+                </p>
+                <p className="mt-1 font-mono text-[10px] text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+                  {risk.rows.map((row) => row.id).join(" · ")}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      <details className="mt-4 rounded-tremor-default border border-tremor-border dark:border-dark-tremor-border">
+        <summary className="cursor-pointer px-3 py-2 text-sm font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">
+          {lang === "zh" ? `核查全部 ${rows.length} 个来源序列` : `Inspect all ${rows.length} source series`}
+        </summary>
+        <div className="border-t border-tremor-border p-3 dark:border-dark-tremor-border">
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder={lang === "zh" ? "搜索 D-code、来源标签、metric…" : "Search D-code, source label, metric…"}
+            className="mb-3 h-9 w-full max-w-md rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm text-tremor-content-strong outline-none focus:ring-2 focus:ring-tremor-brand-muted dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong"
+          />
+          <div className="max-h-[560px] overflow-auto">
+            <table className="w-full min-w-[980px] border-collapse text-left text-xs">
+              <thead className="sticky top-0 bg-tremor-background dark:bg-dark-tremor-background">
+                <tr className="border-b border-tremor-border dark:border-dark-tremor-border">
+                  <th className="px-2 py-2">Series / source</th>
+                  <th className="px-2 py-2">Local label</th>
+                  <th className="px-2 py-2">Target</th>
+                  <th className="px-2 py-2">Metric / grain</th>
+                  <th className="px-2 py-2">Mapping / comparability</th>
+                  <th className="px-2 py-2">Availability</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredRows.map((row) => (
+                  <tr key={row.id} className="border-b border-tremor-border/70 align-top dark:border-dark-tremor-border/70">
+                    <td className="px-2 py-2">
+                      <div className="font-mono text-[11px] text-tremor-content-strong dark:text-dark-tremor-content-strong">{row.id}</div>
+                      <div className="mt-1 font-mono text-[10px] text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{row.source_id}</div>
+                    </td>
+                    <td className="max-w-[260px] px-2 py-2 text-tremor-content dark:text-dark-tremor-content">{row.local_labels.join(" · ") || "-"}</td>
+                    <td className="px-2 py-2">
+                      <div className="font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">{row.concept_id || row.target?.id || "-"}</div>
+                      <div className="mt-1 text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+                        {lang === "zh" ? row.target?.labels?.zh || row.target?.labels?.en : row.target?.labels?.en || row.target?.labels?.zh}
+                      </div>
+                    </td>
+                    <td className="px-2 py-2">
+                      <StatusBadge tone={row.measure === "registered_diagnoses" ? "warning" : "info"}>
+                        {row.measure === "registered_diagnoses"
+                          ? (lang === "zh" ? "登记诊断量（非病例通知）" : "registered diagnoses (not case notifications)")
+                          : row.measure.replaceAll("_", " ")}
+                      </StatusBadge>
+                      <div className="mt-1 text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{row.frequency} · {row.reporting_basis.replaceAll("_", " ")}</div>
+                    </td>
+                    <td className="px-2 py-2">
+                      <div className="flex flex-wrap gap-1">
+                        <StatusBadge tone={row.mapping_relation === "exact" ? "success" : "warning"}>{row.mapping_relation}</StatusBadge>
+                        <StatusBadge tone={row.comparability === "direct" ? "success" : "neutral"}>{row.comparability.replaceAll("_", " ")}</StatusBadge>
+                      </div>
+                      <div className="mt-1 text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{row.aggregation_policy.replaceAll("_", " ")}</div>
+                    </td>
+                    <td className="px-2 py-2">
+                      <div className="flex flex-wrap gap-1">
+                        <StatusBadge tone={row.status === "active" ? "success" : "neutral"}>{row.status}</StatusBadge>
+                        {Array.from(new Set((row.availability ?? []).map((item) => item.status).filter(Boolean))).map((status) => (
+                          <StatusBadge key={status} tone={status === "available" ? "success" : "warning"}>{status}</StatusBadge>
+                        ))}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </details>
+    </section>
   );
 }
 
@@ -213,16 +499,30 @@ function CreateCrawlModal({
     [lang, normalizedCountryCode, sourceConfig],
   );
   const supportedMode = Boolean(sourceConfig?.supports_crawl && sourceOptions.length);
-  const supportsFillMissing = sourceConfig?.supports_fill_missing ?? normalizedCountryCode !== "US";
-  const supportsStartYear = Boolean(sourceConfig?.supports_start_year);
+  const supportsFillMissing = sourceConfig?.supports_fill_missing ?? !["IS", "US"].includes(normalizedCountryCode);
   const supportsSourceFile = Boolean(sourceConfig?.supports_source_file);
   const supportsSourceDir = Boolean(sourceConfig?.supports_source_dir);
+  const sourcePolicy = sourceConfig?.source_policy ?? null;
+  const supportsCurrentMonth = Boolean(sourcePolicy?.supports_current_month);
+  const usesDynamicRevisions = Boolean(sourcePolicy?.dynamic_revision_enabled);
   const [source, setSource] = useState("all");
+  const selectedSourceOption = sourceConfig?.source_options.find((option) => option.value === source);
+  const supportsStartYear = Boolean(
+    selectedSourceOption?.supports_start_year
+      ?? sourceConfig?.supports_start_year,
+  );
+  const isReviewedHistorySource = selectedSourceOption?.source_kind === "history";
   const [priority, setPriority] = useState("normal");
   const [force, setForce] = useState(false);
   const [process, setProcess] = useState(true);
   const [saveRaw, setSaveRaw] = useState(true);
   const [fillMissing, setFillMissing] = useState(sourceConfig?.default_fill_missing ?? true);
+  const [includeCurrentMonth, setIncludeCurrentMonth] = useState(
+    sourcePolicy?.default_include_current_month ?? false,
+  );
+  const [revisionWindowMonths, setRevisionWindowMonths] = useState(
+    Math.max(1, sourcePolicy?.default_revision_window_months ?? 3),
+  );
   const [historyStartYear, setHistoryStartYear] = useState(sourceConfig?.default_start_year ?? 2001);
   const [sourceFile, setSourceFile] = useState("");
   const [sourceDir, setSourceDir] = useState("");
@@ -231,10 +531,18 @@ function CreateCrawlModal({
 
   useEffect(() => {
     setFillMissing(sourceConfig?.default_fill_missing ?? true);
+    setIncludeCurrentMonth(sourceConfig?.source_policy?.default_include_current_month ?? false);
+    setRevisionWindowMonths(Math.max(1, sourceConfig?.source_policy?.default_revision_window_months ?? 3));
     setHistoryStartYear(sourceConfig?.default_start_year ?? 2001);
     setSourceFile("");
     setSourceDir("");
-  }, [open, sourceConfig?.default_fill_missing, sourceConfig?.default_start_year]);
+  }, [
+    open,
+    sourceConfig?.default_fill_missing,
+    sourceConfig?.default_start_year,
+    sourceConfig?.source_policy?.default_include_current_month,
+    sourceConfig?.source_policy?.default_revision_window_months,
+  ]);
 
   useEffect(() => {
     if (sourceOptions.length > 0) {
@@ -253,6 +561,8 @@ function CreateCrawlModal({
         process,
         save_raw: saveRaw,
         fill_missing: fillMissing,
+        include_current_month: supportsCurrentMonth ? includeCurrentMonth : false,
+        revision_window_months: usesDynamicRevisions ? revisionWindowMonths : 3,
         start_year: supportsStartYear ? historyStartYear : undefined,
         source_file: supportsSourceFile && sourceFile.trim() ? sourceFile.trim() : undefined,
         source_dir: supportsSourceDir && sourceDir.trim() ? sourceDir.trim() : undefined,
@@ -319,6 +629,31 @@ function CreateCrawlModal({
               </select>
             </div>
 
+            {isReviewedHistorySource ? (
+              <div className="rounded-tremor-default border border-violet-200 bg-violet-50 px-3 py-2 text-xs text-violet-800 dark:border-violet-900/50 dark:bg-violet-950/25 dark:text-violet-200">
+                {lang === "zh"
+                  ? "该来源按已审核官方工作簿目录全量检查；起始年份过滤仅适用于 Iceland 当前看板，本历史分支不会读取 start_year。"
+                  : "This source checks the complete reviewed official-workbook catalogue. The start-year filter applies only to Iceland's current dashboards and is not consumed by this history branch."}
+              </div>
+            ) : null}
+
+            {sourcePolicy ? (
+              <div className="rounded-tremor-default border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-800 dark:border-sky-900/50 dark:bg-sky-950/25 dark:text-sky-200">
+                <p className="font-semibold">{lang === "zh" ? "来源策略" : "Source policy"}</p>
+                <p className="mt-1">
+                  {supportsCurrentMonth
+                    ? `${lang === "zh" ? "当前月可按临时数据接入" : "Current month can be ingested as provisional"} (${sourcePolicy.current_month_status})`
+                    : (lang === "zh" ? "仅接入已闭合月份" : "Closed months only")}
+                  {usesDynamicRevisions
+                    ? ` · ${lang === "zh" ? "默认修订窗口" : "default revision window"} ${sourcePolicy.default_revision_window_months}m`
+                    : ""}
+                  {` · ${sourcePolicy.public_release_enabled
+                    ? (lang === "zh" ? "允许公开" : "public")
+                    : (lang === "zh" ? "仅内部" : "internal only")}`}
+                </p>
+              </div>
+            ) : null}
+
             {/* Priority */}
             <div>
               <label className={labelCls}>{t(lang, "priority")}</label>
@@ -348,12 +683,47 @@ function CreateCrawlModal({
                   {lang === "zh" ? "回填缺失月份" : "Backfill missing months"}
                 </label>
               )}
+              {supportsCurrentMonth && (
+                <label className="flex items-center gap-2.5 text-sm text-tremor-content-emphasis dark:text-dark-tremor-content-emphasis cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={includeCurrentMonth}
+                    onChange={(e) => setIncludeCurrentMonth(e.target.checked)}
+                    className="h-4 w-4 rounded border-tremor-border text-tremor-brand focus:ring-tremor-brand-muted"
+                  />
+                  {lang === "zh" ? "接入当前月（标记为临时数据）" : "Include current month (provisional)"}
+                </label>
+              )}
+              {usesDynamicRevisions && (
+                <div>
+                  <label className={labelCls}>
+                    {lang === "zh" ? "动态修订窗口（月）" : "Revision window (months)"}
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={24}
+                    value={revisionWindowMonths}
+                    onChange={(e) => setRevisionWindowMonths(
+                      Math.max(1, Math.min(24, Number(e.target.value || 1))),
+                    )}
+                    className={inputCls}
+                  />
+                  <p className="mt-1 text-[11px] text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+                    {lang === "zh"
+                      ? "抓取时重新读取并覆盖最近月份，以吸收来源修订。"
+                      : "Recent months are re-fetched and upserted to absorb source revisions."}
+                  </p>
+                </div>
+              )}
               {(supportsStartYear || supportsSourceFile || supportsSourceDir) && (
                 <div className="space-y-2.5">
                   {supportsStartYear && (
                     <div>
                       <label className={labelCls}>
-                        {lang === "zh" ? "历史起始年份" : "History Start Year"}
+                        {normalizedCountryCode === "IS"
+                          ? (lang === "zh" ? "当前看板起始年份过滤" : "Current-dashboard start-year filter")
+                          : (lang === "zh" ? "历史起始年份" : "History Start Year")}
                       </label>
                       <input
                         type="number"
@@ -363,6 +733,13 @@ function CreateCrawlModal({
                         onChange={(e) => setHistoryStartYear(Number(e.target.value || sourceConfig?.default_start_year || 2001))}
                         className={inputCls}
                       />
+                      {normalizedCountryCode === "IS" ? (
+                        <p className="mt-1 text-[11px] text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
+                          {lang === "zh"
+                            ? "只过滤 all / annual / STI / respiratory 当前来源；不改变历史工作簿目录。"
+                            : "Filters only current all / annual / STI / respiratory sources; it does not alter the historical workbook catalogue."}
+                        </p>
+                      ) : null}
                     </div>
                   )}
                   {supportsSourceFile && (
@@ -448,6 +825,9 @@ export default function SourcesFlowPage() {
 
   const { data: flows, isLoading, error } = useSourcesFlow(effectiveCountryId);
   const { data: sourceConfigs } = useSourceConfigs(lang);
+  const { data: ontologySeries } = useOntologySeries(
+    scopeMode === "selected" ? countryCode : null,
+  );
   const sourceConfigByCountry = useMemo(() => {
     const map = new Map<string, CountrySourceConfig>();
     for (const config of sourceConfigs ?? []) {
@@ -467,6 +847,14 @@ export default function SourcesFlowPage() {
 
   // summary counts
   const totalSources = flows?.length ?? 0;
+  const totalSourceSeries = (flows ?? []).reduce(
+    (total, flow) => total + (flow.source_series_count ?? 0),
+    0,
+  );
+  const totalSourceObservations = (flows ?? []).reduce(
+    (total, flow) => total + (flow.source_observation_count ?? 0),
+    0,
+  );
   const activeFlows = flows?.filter((f) =>
     f.stages.some((s) => s.status === "running"),
   ).length ?? 0;
@@ -474,7 +862,8 @@ export default function SourcesFlowPage() {
     f.stages.some((s) => s.status === "failed"),
   ).length ?? 0;
   const completedFlows = flows?.filter((f) =>
-    f.stages.every((s) => !s.status || s.status === "completed"),
+    f.stages.some((s) => Boolean(s.status))
+    && f.stages.every((s) => !s.status || s.status === "completed"),
   ).length ?? 0;
   const flowsByCountry = useMemo(() => {
     const groups = new Map<string, DataSourceFlow[]>();
@@ -489,7 +878,11 @@ export default function SourcesFlowPage() {
         key,
         countryName: items[0]?.country_name || key,
         countryCode: items[0]?.country_code || null,
-        items: items.sort((a, b) => b.record_count - a.record_count),
+        items: items.sort(
+          (a, b) =>
+            (b.source_observation_count ?? b.record_count)
+            - (a.source_observation_count ?? a.record_count),
+        ),
       }))
       .sort((a, b) => a.countryName.localeCompare(b.countryName));
   }, [flows]);
@@ -556,7 +949,19 @@ export default function SourcesFlowPage() {
         </div>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+        <MetricTile
+          label={lang === "zh" ? "来源序列" : "Source series"}
+          value={totalSourceSeries}
+          icon={<GitBranch className="h-4 w-4" />}
+          tone="primary"
+        />
+        <MetricTile
+          label={lang === "zh" ? "来源观测" : "Source observations"}
+          value={totalSourceObservations}
+          icon={<Database className="h-4 w-4" />}
+          tone="info"
+        />
         <MetricTile
           label={t(lang, "flow_kpi_sources")}
           value={totalSources}
@@ -670,6 +1075,10 @@ export default function SourcesFlowPage() {
           )}
         </div>
       )}
+
+      {scopeMode === "selected" && ontologySeries && ontologySeries.length > 0 ? (
+        <SeriesMappingRegister rows={ontologySeries} lang={lang} />
+      ) : null}
 
       {/* Modal */}
       {modalOpen && countryId && (

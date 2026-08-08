@@ -6,21 +6,24 @@ import CountryFlag from '../../components/CountryFlag.astro';
 import CountriesMapView from '../../components/charts/CountriesMapView';
 import {
   COUNTRY_COVERAGE,
+  hasCountryDataSnapshot,
   resolveCoverageStatus,
   type CountryCoverageItem,
 } from '../../lib/country-coverage';
 import metaRaw from '../../data/meta.json';
 
 const meta = metaRaw as any;
-const supportedCountries = (meta.countries ?? []) as Array<{
+const metaCountries = (meta.countries ?? []) as Array<{
   code: string; name: string; name_en?: string; name_zh?: string; language: string;
   total_cases: number; total_deaths: number; disease_count: number;
+  data_available?: boolean; record_count?: number;
   date_range: { start: string | null; end: string | null };
 }>;
+const supportedCountries = metaCountries.filter(hasCountryDataSnapshot);
 
 const metaByCode = Object.fromEntries(
-  supportedCountries.map(c => [c.code.toUpperCase(), c])
-) as Record<string, typeof supportedCountries[0]>;
+  metaCountries.map(c => [c.code.toUpperCase(), c])
+) as Record<string, typeof metaCountries[0]>;
 
 const coverageByCode = Object.fromEntries(
   COUNTRY_COVERAGE.map(c => [c.code.toUpperCase(), c])
@@ -42,14 +45,14 @@ const CARD_COUNTRIES: CountryCoverageItem[] = [
 ];
 
 const ORDERED_COUNTRIES = [...CARD_COUNTRIES].sort((a, b) => {
-  const aSupported = resolveCoverageStatus(a, Boolean(metaByCode[a.code])) === 'Supported';
-  const bSupported = resolveCoverageStatus(b, Boolean(metaByCode[b.code])) === 'Supported';
+  const aSupported = resolveCoverageStatus(a, hasCountryDataSnapshot(metaByCode[a.code])) === 'Supported';
+  const bSupported = resolveCoverageStatus(b, hasCountryDataSnapshot(metaByCode[b.code])) === 'Supported';
   if (aSupported === bSupported) return 0;
   return aSupported ? -1 : 1;
 });
 
 const scheduledCount = ORDERED_COUNTRIES.filter(
-  c => resolveCoverageStatus(c, Boolean(metaByCode[c.code])) === 'Scheduled'
+  c => resolveCoverageStatus(c, hasCountryDataSnapshot(metaByCode[c.code])) === 'Scheduled'
 ).length;
 
 const CADENCE_ZH: Record<string, string> = {
@@ -81,11 +84,11 @@ const TRACK_ZH: Record<string, string> = {
     <section class="card coverage-surface p-6 sm:p-8">
       <div class="coverage-section-header flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h2 class="coverage-section-title"
+          <h1 class="coverage-section-title"
               data-lang-en="Data Coverage"
               data-lang-zh="数据覆盖国家/地区">
             Data Coverage
-          </h2>
+          </h1>
 
         </div>
 
@@ -137,10 +140,11 @@ const TRACK_ZH: Record<string, string> = {
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {ORDERED_COUNTRIES.map((c) => {
           const m = metaByCode[c.code];
-          const status = resolveCoverageStatus(c, Boolean(m));
+          const hasData = hasCountryDataSnapshot(m);
+          const status = resolveCoverageStatus(c, hasData);
           const cadenceZh = c.cadence ? CADENCE_ZH[c.cadence] ?? c.cadence : '';
           const trackZh = c.onboarding_track ? TRACK_ZH[c.onboarding_track] ?? c.onboarding_track : '';
-          if (m) {
+          if (m && hasData) {
             return (
               <CountryCard
                 code={m.code}

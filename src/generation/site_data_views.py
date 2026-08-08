@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 import math
-import statistics
 from collections import defaultdict
-from datetime import datetime
 
 from src.core.country_library import get_country_display_name
 from src.generation.site_series_projection import (
@@ -13,7 +11,10 @@ from src.generation.site_series_projection import (
     MIXED_DATA_LAYER,
     SERIES_DATA_LAYER,
     _legacy_projection_context,
+    _source_series_details,
 )
+
+SOURCE_OBSERVATIONS_ONLY_DATA_LAYER = "source_observations_only"
 
 
 def resolve_country_display_names(
@@ -54,36 +55,22 @@ def dominant_value(values: list[str | None]) -> str | None:
     return max(counts.items(), key=lambda item: item[1])[0]
 
 
-def calculate_weekly_equivalent(dates: list[str], values: list[int]) -> list[float]:
-    """Convert reported counts to 7-day equivalents using report intervals."""
+def calculate_weekly_equivalent(
+    dates: list[str],
+    values: list[int | float],
+    temporal_granularity: str | None = None,
+) -> list[float]:
+    """Expose weekly counts only when the source explicitly declares weekly grain.
+
+    Monthly, quarterly, and annual period totals are not rates. Dividing them by
+    elapsed days invents a measure that the source did not report, so those
+    series intentionally return no weekly-equivalent values.
+    """
     if not dates or not values or len(dates) != len(values):
         return []
-
-    parsed_dates = [datetime.fromisoformat(d).date() for d in dates]
-    forward_diffs = [
-        (parsed_dates[i] - parsed_dates[i - 1]).days
-        for i in range(1, len(parsed_dates))
-        if (parsed_dates[i] - parsed_dates[i - 1]).days > 0
-    ]
-    cadence_diffs = [d for d in forward_diffs if d >= 3]
-    typical_interval = int(statistics.median(cadence_diffs)) if cadence_diffs else 7
-
-    weekly_equiv: list[float] = []
-    for i, val in enumerate(values):
-        if i == 0:
-            if len(parsed_dates) > 1:
-                interval_days = (parsed_dates[1] - parsed_dates[0]).days
-            else:
-                interval_days = typical_interval
-        else:
-            interval_days = (parsed_dates[i] - parsed_dates[i - 1]).days
-
-        if interval_days < 3:
-            interval_days = typical_interval
-        interval_days = max(1, interval_days)
-        weekly_equiv.append((float(val) / interval_days) * 7.0)
-
-    return weekly_equiv
+    if str(temporal_granularity or "").strip().lower() != "weekly":
+        return []
+    return [float(value) for value in values]
 
 
 def _series_context_for_records(records: list[dict]) -> dict:
@@ -117,6 +104,82 @@ def _series_provenance_fields(records: list[dict]) -> dict:
     }
 
 
+def _source_observation_provenance(source_records: list[dict]) -> dict:
+    """Describe retained source facts that cannot truthfully form a cases curve."""
+
+    source_series = _source_series_details(source_records)
+    granularities = {
+        str(item.get("temporal_granularity") or "").strip().lower()
+        for item in source_series
+        if str(item.get("temporal_granularity") or "").strip()
+    }
+    context = {
+        "data_layer": SOURCE_OBSERVATIONS_ONLY_DATA_LAYER,
+        "projection_policy": "no_eligible_public_projection",
+        "loss_risk": None,
+        "selected_series_codes": [],
+        "available_series_count": len(source_series),
+        "non_projection_series_codes": [
+            item["series_code"] for item in source_series
+        ],
+        "period_granularity": (
+            next(iter(granularities)) if len(granularities) == 1 else None
+        ),
+        "metric_layers": {
+            "cases": "not_available",
+            "deaths": "not_available",
+            "recoveries": "not_available",
+        },
+        "source_series_export_decoupled": True,
+        "note_en": (
+            "Registered source observations are retained for provenance and "
+            "downloads, but their measure is not eligible for the public cases curve."
+        ),
+        "note_zh": "注册来源观测保留用于溯源和下载，但其度量不适合生成公开病例曲线。",
+    }
+    return {
+        "data_layer": context["data_layer"],
+        "projection_policy": context["projection_policy"],
+        "loss_risk": None,
+        "selected_series_codes": [],
+        "available_series_count": len(source_series),
+        "source_series": source_series,
+        "coverage_status": "source_observations_only",
+        "coverage_policy": "no_public_projection",
+        "period_granularity": context["period_granularity"],
+        "legacy_gap_fill_count": 0,
+        "coverage_ratio_against_legacy": None,
+        "data_provenance": context,
+    }
+
+
+def _provenance_with_source_records(
+    projected_records: list[dict],
+    source_records: list[dict] | None,
+) -> dict:
+    """Attach lossless source facts independently from the public projection."""
+
+    if not projected_records:
+        return _source_observation_provenance(source_records or [])
+    provenance = _series_provenance_fields(projected_records)
+    if source_records is None:
+        return provenance
+    source_series = _source_series_details(source_records)
+    selected = set(provenance.get("selected_series_codes") or [])
+    provenance["source_series"] = source_series
+    provenance["available_series_count"] = len(source_series)
+    data_provenance = dict(provenance.get("data_provenance") or {})
+    data_provenance["available_series_count"] = len(source_series)
+    data_provenance["non_projection_series_codes"] = sorted(
+        item["series_code"]
+        for item in source_series
+        if item.get("series_code") not in selected
+    )
+    data_provenance["source_series_export_decoupled"] = True
+    provenance["data_provenance"] = data_provenance
+    return provenance
+
+
 def _data_layer_summary(disease_series: dict[str, dict]) -> dict:
     counts: dict[str, int] = defaultdict(int)
     risky_diseases: list[str] = []
@@ -130,7 +193,7 @@ def _data_layer_summary(disease_series: dict[str, dict]) -> dict:
             risky_diseases.append(disease_id)
         if series.get("loss_risk") == "non_additive_series_not_rolled_up":
             non_additive_diseases.append(disease_id)
-    return {
+    summary = {
         "series_registry_disease_count": counts.get(SERIES_DATA_LAYER, 0),
         "mixed_disease_count": counts.get(MIXED_DATA_LAYER, 0),
         "legacy_fallback_disease_count": counts.get(LEGACY_DATA_LAYER, 0),
@@ -138,6 +201,10 @@ def _data_layer_summary(disease_series: dict[str, dict]) -> dict:
         "loss_risk_disease_ids": sorted(risky_diseases),
         "non_additive_series_disease_ids": sorted(non_additive_diseases),
     }
+    source_only_count = counts.get(SOURCE_OBSERVATIONS_ONLY_DATA_LAYER, 0)
+    if source_only_count:
+        summary["source_observations_only_disease_count"] = source_only_count
+    return summary
 
 
 def _compact_source_series_metadata(source_series: list[dict]) -> list[dict]:
@@ -167,10 +234,15 @@ def _country_series_data_layer_summary(country_series: dict[str, dict]) -> dict:
         for code, series in country_series.items()
         if series.get("data_layer") == MIXED_DATA_LAYER
     )
+    source_only_countries = sorted(
+        code
+        for code, series in country_series.items()
+        if series.get("data_layer") == SOURCE_OBSERVATIONS_ONLY_DATA_LAYER
+    )
     risky_countries = sorted(
         code for code, series in country_series.items() if series.get("loss_risk")
     )
-    return {
+    summary = {
         "series_registry_country_count": len(registry_countries),
         "mixed_country_count": len(mixed_countries),
         "legacy_fallback_country_count": len(legacy_countries),
@@ -179,6 +251,12 @@ def _country_series_data_layer_summary(country_series: dict[str, dict]) -> dict:
         "legacy_fallback_country_codes": legacy_countries,
         "loss_risk_country_codes": risky_countries,
     }
+    if source_only_countries:
+        summary["source_observations_only_country_count"] = len(
+            source_only_countries
+        )
+        summary["source_observations_only_country_codes"] = source_only_countries
+    return summary
 
 
 def build_country_data(
@@ -187,13 +265,22 @@ def build_country_data(
     records: list[dict],
     diseases_by_id: dict,
     frequency_meta: dict | None = None,
+    source_records: list[dict] | None = None,
 ) -> dict:
     """Build the full country JSON blob with time-series per disease."""
     records = [rec for rec in records if rec.get("disease_id") in diseases_by_id]
+    filtered_source_records = [
+        rec
+        for rec in (source_records or [])
+        if rec.get("disease_id") in diseases_by_id
+    ]
     # Group records by disease_id
     by_disease: dict[str, list] = defaultdict(list)
     for rec in records:
         by_disease[rec["disease_id"]].append(rec)
+    source_by_disease: dict[str, list] = defaultdict(list)
+    for rec in filtered_source_records:
+        source_by_disease[rec["disease_id"]].append(rec)
 
     total_cases = sum(r["cases"] for r in records)
     total_deaths = sum(r["deaths"] for r in records)
@@ -201,7 +288,8 @@ def build_country_data(
 
     # Build time series per disease
     disease_series = {}
-    for disease_id, recs in by_disease.items():
+    for disease_id in sorted(set(by_disease) | set(source_by_disease)):
+        recs = by_disease.get(disease_id) or []
         points: dict[str, dict] = {}
         for rec in recs:
             d = rec.get("date")
@@ -233,7 +321,15 @@ def build_country_data(
         series_mortality = [
             avg_or_none(points[d]["mortality_rates"]) for d in series_dates
         ]
-        weekly_equiv_cases = calculate_weekly_equivalent(series_dates, series_cases)
+        provenance = _provenance_with_source_records(
+            recs,
+            source_by_disease.get(disease_id) if source_records is not None else None,
+        )
+        weekly_equiv_cases = calculate_weekly_equivalent(
+            series_dates,
+            series_cases,
+            provenance.get("period_granularity"),
+        )
 
         disease_info = diseases_by_id.get(disease_id, {})
         disease_series[disease_id] = {
@@ -253,7 +349,7 @@ def build_country_data(
             "total_deaths": sum(series_deaths),
             "latest_cases": series_cases[-1] if series_cases else 0,
             "latest_deaths": series_deaths[-1] if series_deaths else 0,
-            **_series_provenance_fields(recs),
+            **provenance,
         }
 
     incidence_source_counts: dict[str, int] = defaultdict(int)
@@ -261,10 +357,27 @@ def build_country_data(
         source = rec.get("incidence_rate_source") or "missing_population"
         incidence_source_counts[source] += 1
 
-    # Heatmap data: diseases (rows) × months (cols)
-    all_months = sorted({r["year_month"] for r in records if r["year_month"]})
+    # Heatmap data: diseases (rows) × months (cols). Annual and quarterly
+    # totals cannot describe seasonality and would otherwise appear as false
+    # January spikes merely because of their storage date.
+    heatmap_records_by_disease = {
+        disease_id: recs
+        for disease_id, recs in by_disease.items()
+        if str(
+            disease_series[disease_id].get("period_granularity") or ""
+        ).lower()
+        not in {"annual", "yearly", "quarterly"}
+    }
+    all_months = sorted(
+        {
+            record["year_month"]
+            for recs in heatmap_records_by_disease.values()
+            for record in recs
+            if record.get("year_month")
+        }
+    )
     heatmap_diseases = sorted(
-        disease_series.keys(),
+        heatmap_records_by_disease.keys(),
         key=lambda d: disease_series[d]["total_cases"],
         reverse=True,
     )[
@@ -274,7 +387,7 @@ def build_country_data(
     heatmap_z = []
     for did in heatmap_diseases:
         month_totals: dict[str, int] = defaultdict(int)
-        for rec in by_disease[did]:
+        for rec in heatmap_records_by_disease[did]:
             ym = rec.get("year_month")
             if ym:
                 month_totals[ym] += rec.get("cases") or 0
@@ -302,16 +415,19 @@ def build_country_data(
         "frequency_meta": frequency_meta
         or {
             "source_frequency": "UNKNOWN",
-            "canonical_frequency": "WEEKLY_EQUIVALENT_7D",
-            "aggregation_rule": "normalize_counts_to_7_day_equivalent",
+            "source_frequencies": [],
+            "canonical_frequency": "SOURCE_REPORTED_PERIODS",
+            "aggregation_rule": "preserve_source_period_counts",
         },
         "date_range": {
             "start": dates[0] if dates else None,
             "end": dates[-1] if dates else None,
         },
         "comparison_basis": {
-            "frequency": "WEEKLY_EQUIVALENT_7D",
-            "metric": "weekly_equiv_cases",
+            "frequency": "SOURCE_REPORTED_PERIODS",
+            "metric": "cases",
+            "note_en": "Counts are shown at each source's declared reporting period and are not normalized across annual, quarterly, monthly, and weekly series.",
+            "note_zh": "病例数按各来源声明的报告期间展示，不在年度、季度、月度和周度序列之间进行频率归一化。",
         },
         "incidence_rate_basis": {
             "formula": "cases / population * 100000",
@@ -361,6 +477,8 @@ def build_country_site_data(country_data: dict) -> dict:
     compact_series = []
     for entry in disease_series.values():
         dates = entry.get("dates") or []
+        if not dates:
+            continue
         incidence_rates = entry.get("incidence_rates") or []
         incidence_sources = entry.get("incidence_sources") or []
 
@@ -399,6 +517,9 @@ def build_country_site_data(country_data: dict) -> dict:
             "data_layer": entry.get("data_layer") or LEGACY_DATA_LAYER,
             "projection_policy": entry.get("projection_policy") or "legacy_fallback",
             "loss_risk": entry.get("loss_risk"),
+            "period_granularity": entry.get("period_granularity"),
+            "available_series_count": entry.get("available_series_count") or 0,
+            "coverage_status": entry.get("coverage_status"),
             "selected_series_codes": entry.get("selected_series_codes") or [],
             "metric_layers": (entry.get("data_provenance") or {}).get("metric_layers")
             or {},
@@ -440,16 +561,58 @@ def build_country_site_data(country_data: dict) -> dict:
     }
 
 
+def build_country_source_series_data(country_data: dict) -> dict:
+    """Build the lazy-only source-observation payload for one country chart.
+
+    Source observations can be much larger than the public projection.  Keeping
+    them out of the document and the regular chart payload makes the page cheap
+    to parse while retaining the source-series selector once the curve is in
+    view.  Only complete, plottable series are emitted here.
+    """
+
+    source_series_by_disease: dict[str, list[dict]] = {}
+    for disease_id, entry in (country_data.get("disease_series") or {}).items():
+        plottable = [
+            source
+            for source in (entry.get("source_series") or [])
+            if isinstance(source, dict)
+            and isinstance(source.get("dates"), list)
+            and isinstance(source.get("values"), list)
+            and source["dates"]
+            and len(source["dates"]) == len(source["values"])
+        ]
+        if plottable:
+            source_series_by_disease[disease_id] = plottable
+
+    return {
+        "v": 1,
+        "country_code": country_data.get("country_code"),
+        "series": source_series_by_disease,
+    }
+
+
 def build_disease_data(
     disease_id: str,
     disease_info: dict,
     all_records_by_country: dict[str, list],
+    source_records_by_country: dict[str, list] | None = None,
 ) -> dict:
     """Build per-disease JSON with time-series across all countries."""
     country_series = {}
-    for country_code, records in all_records_by_country.items():
+    source_records_by_country = source_records_by_country or {}
+    country_codes = list(all_records_by_country)
+    country_codes.extend(
+        code for code in source_records_by_country if code not in all_records_by_country
+    )
+    for country_code in country_codes:
+        records = all_records_by_country.get(country_code) or []
         disease_records = [r for r in records if r["disease_id"] == disease_id]
-        if not disease_records:
+        disease_source_records = [
+            r
+            for r in (source_records_by_country.get(country_code) or [])
+            if r["disease_id"] == disease_id
+        ]
+        if not disease_records and not disease_source_records:
             continue
 
         points: dict[str, dict] = {}
@@ -479,18 +642,24 @@ def build_disease_data(
             dominant_value(points[d]["incidence_sources"]) for d in series_dates
         ]
 
+        provenance = _provenance_with_source_records(
+            disease_records,
+            disease_source_records if source_records_by_country else None,
+        )
         country_series[country_code] = {
             "dates": series_dates,
             "cases": series_cases,
             "weekly_equiv_cases": calculate_weekly_equivalent(
-                series_dates, series_cases
+                series_dates,
+                series_cases,
+                provenance.get("period_granularity"),
             ),
             "deaths": series_deaths,
             "incidence_rates": series_incidence,
             "incidence_sources": series_incidence_sources,
             "total_cases": sum(series_cases),
             "total_deaths": sum(series_deaths),
-            **_series_provenance_fields(disease_records),
+            **provenance,
         }
 
     all_disease_records = [
@@ -501,6 +670,11 @@ def build_disease_data(
     ]
     monthly: dict[str, dict] = defaultdict(lambda: {"cases": 0, "deaths": 0})
     for r in all_disease_records:
+        granularity = str(
+            _series_context_for_records([r]).get("period_granularity") or ""
+        ).lower()
+        if granularity in {"annual", "yearly", "quarterly"}:
+            continue
         if r["year_month"]:
             monthly[r["year_month"]]["cases"] += r["cases"]
             monthly[r["year_month"]]["deaths"] += r["deaths"]
@@ -553,6 +727,8 @@ def build_disease_site_data(
     compact_series = []
     for country_code, entry in country_series.items():
         dates = entry.get("dates") or []
+        if not dates:
+            continue
         incidence_rates = entry.get("incidence_rates") or []
         incidence_sources = entry.get("incidence_sources") or []
 
@@ -587,6 +763,9 @@ def build_disease_site_data(
             "data_layer": entry.get("data_layer") or LEGACY_DATA_LAYER,
             "projection_policy": entry.get("projection_policy") or "legacy_fallback",
             "loss_risk": entry.get("loss_risk"),
+            "period_granularity": entry.get("period_granularity"),
+            "available_series_count": entry.get("available_series_count") or 0,
+            "coverage_status": entry.get("coverage_status"),
             "selected_series_codes": entry.get("selected_series_codes") or [],
             "metric_layers": (entry.get("data_provenance") or {}).get("metric_layers")
             or {},

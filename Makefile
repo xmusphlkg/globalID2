@@ -134,7 +134,7 @@ site-dev:
 
 site-build:
 	@echo "构建静态站点（自动刷新数据库快照）..."
-	cd astro-site && npm run build
+	cd astro-site && npm run build:with-data
 	@echo "构建完成，输出目录: astro-site/dist/"
 
 site-preview:

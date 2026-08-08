@@ -75,6 +75,45 @@ def test_context_phase_performs_no_filesystem_writes() -> None:
     )
 
 
+def test_iceland_source_catalogue_keeps_only_observed_feeds() -> None:
+    source_info = {
+        "primary_scope": "is_doh_annual",
+        "sources": [
+            {"scope": "is_doh_annual", "label": "Annual", "url": "annual"},
+            {"scope": "is_doh_sti", "label": "STI", "url": "sti"},
+            {"scope": "is_doh_respiratory", "label": "Resp", "url": "resp"},
+            {"scope": "is_doh_history", "label": "History", "url": "history"},
+        ],
+    }
+    country_data = {
+        "disease_series": {
+            "D094": {
+                "source_series": [
+                    {"source_series_code": "sti:chlamydia:monthly-diagnoses"}
+                ]
+            },
+            "D038": {
+                "source_series": [
+                    {
+                        "series_code": "SER_IS_DOH_RESPIRATORY_INFLUENZA_WEEKLY"
+                    }
+                ]
+            },
+        }
+    }
+
+    result = site_data_export._retain_observed_iceland_sources(
+        source_info,
+        country_data,
+    )
+
+    assert [source["scope"] for source in result["sources"]] == [
+        "is_doh_sti",
+        "is_doh_respiratory",
+    ]
+    assert result["primary_scope"] == "is_doh_sti"
+
+
 def test_site_artifact_write_order_remains_stable() -> None:
     calls = _called_names(site_data_export.write_site_export_artifacts)
     expected = [

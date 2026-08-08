@@ -5,7 +5,7 @@ import StatBar from '../components/StatBar.astro';
 import CountryCard from '../components/CountryCard.astro';
 import DiseaseCard from '../components/DiseaseCard.astro';
 import ReportCard from '../components/ReportCard.astro';
-import { getCountryCoverage } from '../lib/country-coverage';
+import { getCountryCoverage, hasCountryDataSnapshot } from '../lib/country-coverage';
 
 import metaRaw from '../data/meta.json';
 import diseasesRaw from '../data/diseases/index.json';
@@ -14,6 +14,9 @@ import reportsRaw from '../data/reports/index.json';
 const meta = metaRaw as any;
 const diseases = diseasesRaw as any[];
 const reports = (reportsRaw as any[]).slice(0, 6);
+// Keep homepage cards aligned with the stat counter and generated country routes.
+// Metadata can include seeded jurisdictions that have no public data snapshot yet.
+const countries = (meta.countries ?? []).filter(hasCountryDataSnapshot);
 
 function fmtNum(n: number) {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
@@ -21,11 +24,10 @@ function fmtNum(n: number) {
   return n.toLocaleString();
 }
 
-const totalCases  = (meta.countries ?? []).reduce((s: number, c: any) => s + (c.total_cases  ?? 0), 0);
-const totalDeaths = (meta.countries ?? []).reduce((s: number, c: any) => s + (c.total_deaths ?? 0), 0);
+const totalCases = countries.reduce((s: number, c: any) => s + (c.total_cases ?? 0), 0);
 
 const stats = [
-  { label: 'Countries',         labelZh: '国家数',    value: meta.total_countries ?? '—', accent: 'teal'  as const },
+  { label: 'Countries',         labelZh: '国家数',    value: countries.length, accent: 'teal'  as const },
   { label: 'Diseases Tracked',  labelZh: '追踪疾病',  value: meta.total_diseases  ?? '—', accent: 'blue'  as const },
   { label: 'Total Cases',       labelZh: '累计病例',  value: fmtNum(totalCases),           accent: 'amber' as const },
   { label: 'Reports Generated', labelZh: '已生成报告', value: meta.total_reports  ?? '—', accent: 'teal'  as const },
@@ -316,7 +318,7 @@ const features = [
     </a>
   </div>
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-    {(meta.countries ?? []).map((c: any) => (
+    {countries.map((c: any) => (
       <CountryCard
         code={c.code}
         name={c.name_en ?? c.name}

@@ -165,6 +165,12 @@ def _source_scope_note(death_reporting: dict[str, Any], lang: str) -> str:
             if lang == "zh"
             else "This source uses national reporting, but reporting lag, testing volume, and case-definition changes still need review."
         )
+    if case_scope == "subnational_jurisdiction":
+        return (
+            "该来源覆盖明确标注的省级辖区，不代表所属国家的全国总量。"
+            if lang == "zh"
+            else "This source covers the named provincial jurisdiction and is not a national total for its parent country."
+        )
     return (
         "病例口径按来源定义解释，趋势判断需结合分层数据复核。"
         if lang == "zh"
@@ -203,12 +209,14 @@ def _enum_label(kind: str, value: Any, lang: str) -> str:
                 "national": "全国报告",
                 "sentinel": "哨点监测",
                 "national_or_sentinel": "全国或哨点监测",
+                "subnational_jurisdiction": "省级辖区报告",
                 "unknown": "未说明",
             },
             "en": {
                 "national": "national reporting",
                 "sentinel": "sentinel surveillance",
                 "national_or_sentinel": "national or sentinel surveillance",
+                "subnational_jurisdiction": "provincial-jurisdiction reporting",
                 "unknown": "unspecified",
             },
         },

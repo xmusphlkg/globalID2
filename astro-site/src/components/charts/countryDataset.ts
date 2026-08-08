@@ -1,3 +1,29 @@
+export interface SourceSeriesMetadata {
+  series_code?: string;
+  source_series_code?: string;
+  source_system?: string;
+  source_label?: string;
+  metric_type?: string;
+  reporting_basis?: string;
+  temporal_granularity?: string;
+  unit?: string;
+  geography_key?: string;
+  dimension_key?: string;
+  mapping_relation?: string;
+  comparability?: string;
+  aggregation_policy?: string;
+  availability_status?: string;
+  missing_value_policy?: string;
+  definition_version?: string;
+  case_definition?: string;
+  case_definition_uri?: string;
+  observation_count?: number;
+  total_value?: number;
+  dates?: string[];
+  values?: number[];
+  quality_statuses?: string[];
+}
+
 export interface CountryDatasetSeriesEntry {
   disease_id: string;
   name_en: string;
@@ -16,6 +42,15 @@ export interface CountryDatasetSeriesEntry {
   latest_deaths?: number;
   incidence_rate?: number | null;
   mortality_rate?: number | null;
+  data_layer?: string;
+  projection_policy?: string;
+  loss_risk?: string | null;
+  period_granularity?: string | null;
+  available_series_count?: number;
+  coverage_status?: string | null;
+  selected_series_codes?: string[];
+  metric_layers?: Record<string, string>;
+  source_series?: SourceSeriesMetadata[];
 }
 
 export interface CountryDatasetHeatmap {
@@ -28,6 +63,13 @@ export interface CountryDatasetHeatmap {
 export interface CountryDataset {
   disease_series?: Record<string, CountryDatasetSeriesEntry>;
   heatmap?: CountryDatasetHeatmap | null;
+}
+
+export type SourceSeriesObservations = Record<string, SourceSeriesMetadata[]>;
+
+interface CountrySourceSeriesDataset {
+  v: number;
+  series?: SourceSeriesObservations;
 }
 
 interface CompactCountryDatasetSeriesEntry {
@@ -47,6 +89,15 @@ interface CompactCountryDatasetSeriesEntry {
   ri?: number[];
   rv?: number[];
   rs?: Array<number | null>;
+  data_layer?: string;
+  projection_policy?: string;
+  loss_risk?: string | null;
+  period_granularity?: string | null;
+  available_series_count?: number;
+  coverage_status?: string | null;
+  selected_series_codes?: string[];
+  metric_layers?: Record<string, string>;
+  source_series?: SourceSeriesMetadata[];
 }
 
 interface CompactCountryDataset {
@@ -62,6 +113,7 @@ interface CompactCountryDataset {
 }
 
 const cache = new Map<string, Promise<CountryDataset>>();
+const sourceSeriesCache = new Map<string, Promise<SourceSeriesObservations>>();
 const DEFAULT_REQUEST_TIMEOUT_MS = 15_000;
 
 function isCompactCountryDataset(value: unknown): value is CompactCountryDataset {
@@ -107,6 +159,15 @@ function normalizeCountryDataset(raw: CountryDataset | CompactCountryDataset): C
           total_deaths: entry.td ?? 0,
           latest_cases: entry.lc ?? 0,
           latest_deaths: entry.ld ?? 0,
+          data_layer: entry.data_layer,
+          projection_policy: entry.projection_policy,
+          loss_risk: entry.loss_risk,
+          period_granularity: entry.period_granularity,
+          available_series_count: entry.available_series_count ?? 0,
+          coverage_status: entry.coverage_status,
+          selected_series_codes: entry.selected_series_codes ?? [],
+          metric_layers: entry.metric_layers ?? {},
+          source_series: entry.source_series ?? [],
         } satisfies CountryDatasetSeriesEntry,
       ];
     })
@@ -133,6 +194,40 @@ interface LoadCountryDatasetOptions {
 
 export function invalidateCountryDataset(dataUrl: string) {
   cache.delete(dataUrl);
+}
+
+export function loadCountrySourceSeries(
+  dataUrl?: string | null,
+  { timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS }: LoadCountryDatasetOptions = {}
+): Promise<SourceSeriesObservations> {
+  if (!dataUrl) return Promise.resolve({});
+
+  const cached = sourceSeriesCache.get(dataUrl);
+  if (cached) return cached;
+
+  const controller = new AbortController();
+  const timeoutId = globalThis.setTimeout(() => controller.abort(), timeoutMs);
+  const request = fetch(dataUrl, {
+    signal: controller.signal,
+    credentials: 'same-origin',
+  })
+    .then(async (response) => {
+      if (!response.ok) {
+        throw new Error(`Failed to load country source series: ${response.status}`);
+      }
+      const raw = await response.json() as CountrySourceSeriesDataset;
+      return raw?.v === 1 && raw.series && typeof raw.series === 'object'
+        ? raw.series
+        : {};
+    })
+    .catch((error) => {
+      sourceSeriesCache.delete(dataUrl);
+      throw error;
+    })
+    .finally(() => globalThis.clearTimeout(timeoutId));
+
+  sourceSeriesCache.set(dataUrl, request);
+  return request;
 }
 
 export function loadCountryDataset(

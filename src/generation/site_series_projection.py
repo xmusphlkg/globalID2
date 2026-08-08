@@ -13,6 +13,8 @@ from collections import defaultdict
 from src.core.disease_cutover import get_disease_cutover_config
 from src.core.reporting_period import report_period_key, selected_series_granularity
 from src.services.disease_series_policy import (
+    SOURCE_OBSERVATIONS_ONLY_POLICY,
+    is_case_count_metric,
     is_case_count_series,
     select_series_projection,
 )
@@ -74,6 +76,7 @@ def _source_series_details(records: list[dict]) -> list[dict]:
         "metric_type", "reporting_basis", "temporal_granularity",
         "mapping_relation", "comparability", "aggregation_policy",
         "availability_status", "missing_value_policy", "valid_from", "valid_to",
+        "series_is_active",
     )
     details: list[dict] = []
     for series_code in sorted(by_series):
@@ -128,6 +131,16 @@ def _projection_context(series_records: list[dict]) -> tuple[set[str], dict]:
     elif projection_policy == "sum_disjoint":
         note_en = "Registered source series are summed under an explicit disjoint-series policy."
         note_zh = "多个来源序列依据明确的互斥可加策略进行汇总。"
+    elif projection_policy == SOURCE_OBSERVATIONS_ONLY_POLICY:
+        note_en = (
+            "The registered definitions are narrower non-additive source series "
+            "without a reported aggregate. They remain available as source "
+            "observations, but no generic public cases curve is inferred."
+        )
+        note_zh = (
+            "已注册定义均为不可相加的窄口径来源序列，且没有来源报告的汇总序列；"
+            "这些事实仅作为来源观测保留，不推导通用病例公开曲线。"
+        )
     else:
         note_en = (
             "Multiple registered series are not declared safely additive. "
@@ -271,6 +284,73 @@ def _attach_legacy_supplemental_metrics(
     return context
 
 
+def _semantic_value(value: object, *, granularity: bool = False) -> str:
+    normalized = str(value or "").strip().lower()
+    if granularity and normalized == "yearly":
+        return "annual"
+    return normalized
+
+
+def _partition_compatible_legacy_records(
+    context: dict,
+    legacy_records: list[dict],
+) -> tuple[list[dict], list[dict], list[str]]:
+    """Keep only legacy rows whose declared grain and measure are compatible.
+
+    Older countries often have no structured legacy semantics at all.  Missing
+    declarations therefore remain backward compatible, while an explicit
+    mismatch is never allowed to extend a registered curve.  This is especially
+    important for Iceland, where notification counts and primary-care diagnoses
+    coexist under the same ontology concept.
+    """
+
+    selected_codes = set(context.get("selected_series_codes") or [])
+    selected_series = [
+        item
+        for item in context.get("source_series") or []
+        if str(item.get("series_code") or "") in selected_codes
+    ]
+    field_specs = (
+        ("temporal_granularity", True),
+        ("metric_type", False),
+        ("reporting_basis", False),
+    )
+    expected: dict[str, str] = {}
+    reasons: set[str] = set()
+    for field, is_granularity in field_specs:
+        values = {
+            _semantic_value(item.get(field), granularity=is_granularity)
+            for item in selected_series
+            if _semantic_value(item.get(field), granularity=is_granularity)
+        }
+        if len(values) == 1:
+            expected[field] = next(iter(values))
+        elif len(values) > 1:
+            reasons.add(f"selected_series_mixed_{field}")
+
+    if reasons:
+        return [], list(legacy_records), sorted(reasons)
+
+    compatible: list[dict] = []
+    blocked: list[dict] = []
+    for record in legacy_records:
+        record_reasons: list[str] = []
+        for field, is_granularity in field_specs:
+            actual = _semantic_value(
+                record.get(field), granularity=is_granularity
+            )
+            if actual and expected.get(field) and actual != expected[field]:
+                record_reasons.append(f"{field}_mismatch")
+        if _semantic_value(record.get("comparability")) == "not_comparable":
+            record_reasons.append("legacy_not_comparable")
+        if record_reasons:
+            blocked.append(record)
+            reasons.update(record_reasons)
+        else:
+            compatible.append(record)
+    return compatible, blocked, sorted(reasons)
+
+
 def _overlay_legacy_coverage_gaps(
     projected: list[dict], context: dict, legacy_records: list[dict]
 ) -> list[dict]:
@@ -382,28 +462,74 @@ def apply_series_first_projection(
         if disease_id:
             legacy_by_disease[disease_id].append(record)
     all_series: dict[str, list[dict]] = defaultdict(list)
+    case_count_series: dict[str, list[dict]] = defaultdict(list)
     eligible_series: dict[str, list[dict]] = defaultdict(list)
     for record in series_records:
         disease_id = str(record.get("disease_id") or "").strip()
         if disease_id:
             all_series[disease_id].append(record)
+            if is_case_count_metric(record):
+                case_count_series[disease_id].append(record)
             if _series_is_case_count(record):
                 eligible_series[disease_id].append(record)
 
     result: list[dict] = []
-    for disease_id in sorted(set(legacy_by_disease) | set(eligible_series)):
+    for disease_id in sorted(
+        set(legacy_by_disease) | set(case_count_series) | set(eligible_series)
+    ):
         eligible = eligible_series.get(disease_id) or []
         if eligible:
             _selected, context = _projection_context(eligible)
+            retained_source_series = _source_series_details(
+                all_series.get(disease_id) or eligible
+            )
+            context["source_series"] = retained_source_series
+            context["available_series_count"] = len(retained_source_series)
+            context["non_projection_series_codes"] = sorted(
+                {
+                    str(item.get("series_code") or "")
+                    for item in retained_source_series
+                    if str(item.get("series_code") or "")
+                    not in context["selected_series_codes"]
+                }
+            )
+            if context["projection_policy"] == SOURCE_OBSERVATIONS_ONLY_POLICY:
+                # Typed source observations are exported separately.  A legacy
+                # flat row must not disguise the absence of a safe rollup.
+                continue
             projected = _collapse_selected_series_records(eligible, context)
+            legacy_candidates = legacy_by_disease.get(disease_id) or []
+            compatible_legacy, blocked_legacy, incompatibility_reasons = (
+                _partition_compatible_legacy_records(context, legacy_candidates)
+            )
             _attach_legacy_supplemental_metrics(
-                projected, context, legacy_by_disease.get(disease_id) or []
+                projected, context, compatible_legacy
             )
-            result.extend(
-                _overlay_legacy_coverage_gaps(
-                    projected, context, legacy_by_disease.get(disease_id) or []
-                )
+            overlaid = _overlay_legacy_coverage_gaps(
+                projected, context, compatible_legacy
             )
+            context["coverage_policy"] = "compatible_source_period_overlay"
+            context["legacy_gap_fill_blocked_count"] = len(blocked_legacy)
+            context["legacy_incompatibility_reasons"] = incompatibility_reasons
+            if blocked_legacy:
+                context["note_en"] = (
+                    f"{context.get('note_en') or ''} Legacy rows with a different "
+                    "reporting grain or comparison basis were not joined to this curve."
+                ).strip()
+                context["note_zh"] = (
+                    f"{context.get('note_zh') or ''} 与所选序列报告粒度或比较口径不同的"
+                    "旧表记录未拼接到该曲线。"
+                ).strip()
+                if not compatible_legacy:
+                    context["coverage_status"] = (
+                        "legacy_gap_fill_blocked_incompatible"
+                    )
+            result.extend(overlaid)
+            continue
+        if case_count_series.get(disease_id):
+            # A typed case-count fact with an unsafe ontology relation remains
+            # downloadable as a source observation.  It must not be replaced
+            # by an opaque legacy cases row.
             continue
         raw_count = len(all_series.get(disease_id) or [])
         context = _legacy_projection_context(
@@ -412,6 +538,16 @@ def apply_series_first_projection(
                 "registered_facts_not_case_count_compatible"
                 if raw_count else "no_eligible_registered_series_facts"
             ),
+        )
+        retained_source_series = _source_series_details(
+            all_series.get(disease_id) or []
+        )
+        context["source_series"] = retained_source_series
+        context["available_series_count"] = len(retained_source_series)
+        context["non_projection_series_codes"] = sorted(
+            str(item.get("series_code") or "")
+            for item in retained_source_series
+            if item.get("series_code")
         )
         for legacy_record in legacy_by_disease.get(disease_id) or []:
             record = dict(legacy_record)

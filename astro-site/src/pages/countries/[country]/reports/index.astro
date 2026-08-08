@@ -2,29 +2,22 @@
 // src/pages/countries/[country]/reports/index.astro — Report list for a country
 import ReportLayout from '../../../../layouts/ReportLayout.astro';
 import ReportCard from '../../../../components/ReportCard.astro';
-import { readFileSync, existsSync } from 'fs';
-import { resolve } from 'path';
+import {
+  reportArchiveCountries,
+  reportsForCountry,
+} from '../../../../lib/report-routes';
+import { readPublishableReports } from '../../../../lib/report-data';
 
 export async function getStaticPaths() {
-  const metaPath = resolve('./src/data/meta.json');
-  const meta = JSON.parse(readFileSync(metaPath, 'utf-8')) as any;
-  return (meta.countries ?? []).map((c: any) => ({
-    params: { country: c.code.toLowerCase() },
+  return reportArchiveCountries(readPublishableReports()).map(country => ({
+    params: { country },
   }));
 }
 
 const { country } = Astro.params;
 const fallbackCountryCode = String(country ?? '').toUpperCase();
 
-const reportsPath = resolve('./src/data/reports/index.json');
-let reports: any[] = [];
-if (existsSync(reportsPath)) {
-  const all = JSON.parse(readFileSync(reportsPath, 'utf-8')) as any[];
-  reports = all.filter(r => (
-    r.country_code?.toLowerCase() === country
-    && (r.metadata?.report_layout === 'report_v4' || r.metadata?.report_document_v4 || r.report_document_v4)
-  ));
-}
+const reports = reportsForCountry(readPublishableReports(), country) as any[];
 
 const countryName = reports[0]?.country_name ?? fallbackCountryCode;
 

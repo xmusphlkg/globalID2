@@ -14,19 +14,56 @@ export interface CountryCoverageItem {
   onboarding_track?: 'National source' | 'Regional baseline' | 'Source research';
 }
 
+export interface CountryDataSnapshotMeta {
+  data_available?: boolean;
+  record_count?: number;
+  disease_count?: number;
+  date_range?: { start?: string | null; end?: string | null } | null;
+}
+
 export const COUNTRY_COVERAGE: CountryCoverageItem[] = [
   // Active country pipelines. Database metadata remains the source of truth for
   // their totals, disease counts, coverage windows, and supported status.
-  { code: 'AU', name_en: 'Australia', name_zh: '澳大利亚', lat: -25, lng: 133, status: 'Supported', labelOffset: [92, -38] },
-  { code: 'BR', name_en: 'Brazil', name_zh: '巴西', lat: -14.2, lng: -51.9, status: 'Supported', labelOffset: [112, 34] },
-  { code: 'CH', name_en: 'Switzerland', name_zh: '瑞士', lat: 46.8, lng: 8.2, status: 'Supported', labelOffset: [-76, 10] },
-  { code: 'CN', name_en: 'China', name_zh: '中国', lat: 35, lng: 104, status: 'Supported', labelOffset: [-82, -8] },
-  { code: 'HK', name_en: 'Hong Kong, China', name_zh: '中国香港', lat: 22.32, lng: 114.17, status: 'Supported', labelOffset: [-120, 10] },
-  { code: 'JP', name_en: 'Japan', name_zh: '日本', lat: 36, lng: 138, status: 'Supported', labelOffset: [112, -18] },
-  { code: 'KR', name_en: 'South Korea', name_zh: '韩国', lat: 36.5, lng: 127.5, status: 'Supported', labelOffset: [-92, -86] },
-  { code: 'NZ', name_en: 'New Zealand', name_zh: '新西兰', lat: -41, lng: 171, status: 'Supported', labelOffset: [94, -18] },
-  { code: 'TW', name_en: 'Taiwan, China', name_zh: '中国台湾', lat: 23.7, lng: 121, status: 'Supported', labelOffset: [118, 28] },
-  { code: 'US', name_en: 'United States', name_zh: '美国', lat: 39, lng: -98, status: 'Supported', labelOffset: [-120, -28] },
+  {
+    code: 'AU', name_en: 'Australia', name_zh: '澳大利亚', lat: -25, lng: 133,
+    status: 'Supported', labelOffset: [92, -38],
+  },
+  {
+    code: 'BR', name_en: 'Brazil', name_zh: '巴西', lat: -14.2, lng: -51.9,
+    status: 'Supported', labelOffset: [-100, 0],
+  },
+  {
+    code: 'CH', name_en: 'Switzerland', name_zh: '瑞士', lat: 46.8, lng: 8.2,
+    status: 'Supported', labelOffset: [-120, 80],
+  },
+  {
+    code: 'CN', name_en: 'China', name_zh: '中国', lat: 35, lng: 104,
+    status: 'Supported', labelOffset: [-82, -8],
+  },
+  {
+    code: 'HK', name_en: 'Hong Kong, China', name_zh: '中国香港', lat: 22.32, lng: 114.17,
+    status: 'Supported', labelOffset: [-120, 10],
+  },
+  {
+    code: 'JP', name_en: 'Japan', name_zh: '日本', lat: 36, lng: 138,
+    status: 'Supported', labelOffset: [112, -18],
+  },
+  {
+    code: 'KR', name_en: 'South Korea', name_zh: '韩国', lat: 36.5, lng: 127.5,
+    status: 'Supported', labelOffset: [-92, -86],
+  },
+  {
+    code: 'NZ', name_en: 'New Zealand', name_zh: '新西兰', lat: -41, lng: 171,
+    status: 'Supported', labelOffset: [94, -18],
+  },
+  {
+    code: 'TW', name_en: 'Taiwan, China', name_zh: '中国台湾', lat: 23.7, lng: 121,
+    status: 'Supported', labelOffset: [118, 28],
+  },
+  {
+    code: 'US', name_en: 'United States', name_zh: '美国', lat: 39, lng: -98,
+    status: 'Supported', labelOffset: [-120, -28],
+  },
 
   // National-source onboarding candidates, ordered by recommended delivery
   // sequence. These entries are visible on the map and the country cards, but
@@ -57,7 +94,7 @@ export const COUNTRY_COVERAGE: CountryCoverageItem[] = [
   },
   {
     code: 'NO', name_en: 'Norway', name_zh: '挪威', lat: 62, lng: 10,
-    status: 'Scheduled', labelOffset: [80, -30], cadence: 'Daily', onboarding_track: 'National source',
+    status: 'Scheduled', labelOffset: [-80, -80], cadence: 'Daily', onboarding_track: 'National source',
     source_name: 'FHI MSIS Statistics Bank',
     source_url: 'https://allvis.fhi.no/msis',
   },
@@ -69,7 +106,7 @@ export const COUNTRY_COVERAGE: CountryCoverageItem[] = [
   },
   {
     code: 'FI', name_en: 'Finland', name_zh: '芬兰', lat: 64, lng: 26,
-    status: 'Scheduled', labelOffset: [80, -30], cadence: 'Periodic', onboarding_track: 'National source',
+    status: 'Scheduled', labelOffset: [80, -60], cadence: 'Periodic', onboarding_track: 'National source',
     source_name: 'THL Infectious Diseases Register',
     source_url: 'https://sampo.thl.fi/pivot/prod/en/ttr/cases/fact_ttr_cases',
   },
@@ -78,6 +115,12 @@ export const COUNTRY_COVERAGE: CountryCoverageItem[] = [
     status: 'Scheduled', labelOffset: [80, -30], cadence: 'Annual', onboarding_track: 'National source',
     source_name: 'Canadian Notifiable Disease Surveillance System',
     source_url: 'https://diseases.canada.ca/notifiable/charts-list?wbdisable=true',
+  },
+  {
+    code: 'CA-ON', name_en: 'Ontario, Canada', name_zh: '加拿大安大略省', lat: 50, lng: -85,
+    status: 'Scheduled', labelOffset: [104, 34], cadence: 'Monthly',
+    source_name: 'Public Health Ontario Reportable Disease Trends',
+    source_url: 'https://www.publichealthontario.ca/en/Data-and-Analysis/Infectious-Disease/Reportable-Disease-Trends-Annually',
   },
   {
     code: 'DE', name_en: 'Germany', name_zh: '德国', lat: 51, lng: 10,
@@ -99,7 +142,7 @@ export const COUNTRY_COVERAGE: CountryCoverageItem[] = [
   },
   {
     code: 'IS', name_en: 'Iceland', name_zh: '冰岛', lat: 65, lng: -19,
-    status: 'Scheduled', labelOffset: [80, -30], cadence: 'Mixed', onboarding_track: 'National source',
+    status: 'Scheduled', labelOffset: [-100, -20], cadence: 'Mixed', onboarding_track: 'National source',
     source_name: 'Directorate of Health Infectious Disease Statistics',
     source_url: 'https://island.is/en/smitsjukdomar-tolur',
   },
@@ -131,8 +174,23 @@ export function getCountryCoverage(code: string | null | undefined) {
   return COUNTRY_COVERAGE_BY_CODE.get((code ?? '').toUpperCase());
 }
 
-export function resolveCoverageStatus(country: Pick<CountryCoverageItem, 'status'>, hasMeta = false): CoverageStatus {
-  return hasMeta || country.status === 'Supported' ? 'Supported' : 'Scheduled';
+export function hasCountryDataSnapshot(
+  meta: CountryDataSnapshotMeta | null | undefined,
+): boolean {
+  if (!meta) return false;
+  if (meta.data_available === true) return true;
+  if ((meta.record_count ?? 0) > 0) return true;
+
+  const dateRange = meta.date_range;
+  return (meta.disease_count ?? 0) > 0
+    && Boolean(dateRange?.start || dateRange?.end);
+}
+
+export function resolveCoverageStatus(
+  country: Pick<CountryCoverageItem, 'status'>,
+  hasDataSnapshot = false,
+): CoverageStatus {
+  return hasDataSnapshot || country.status === 'Supported' ? 'Supported' : 'Scheduled';
 }
 
 export function getCoverageDisplayName(

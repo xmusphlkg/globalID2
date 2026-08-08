@@ -372,6 +372,39 @@ def test_mapping_quality_series_registry_exports_exact_targets_and_statuses(
     )
 
 
+def test_ontology_accepts_iso_subdivision_source_jurisdiction(document: dict) -> None:
+    source = _find(document["sources"], "SRC_CA_ON_PHO_IDTO")
+    source["country_code"] = "CA-ON"
+
+    registry = DiseaseOntology.from_dict(document)
+
+    ontario = registry.series_lookup(
+        country_code="ca-on",
+        series_id=None,
+        source_id="SRC_CA_ON_PHO_IDTO",
+    )
+    assert ontario
+    assert {item["source"]["country_code"] for item in ontario} == {"CA-ON"}
+    assert {item["geography_key"] for item in ontario} == {
+        "country:CA-ON:national"
+    }
+    assert {
+        availability["status"]
+        for item in ontario
+        for availability in item["availability"]
+    } == {"available"}
+
+
+@pytest.mark.parametrize("invalid_code", ["ca-on", "CA--ON", "CAN-ON", "CA-ONTARIO"])
+def test_ontology_rejects_invalid_source_jurisdiction_codes(
+    document: dict, invalid_code: str
+) -> None:
+    _find(document["sources"], "SRC_CA_ON_PHO_IDTO")["country_code"] = invalid_code
+
+    with pytest.raises(OntologyValidationError, match="jurisdiction code"):
+        DiseaseOntology.from_dict(document)
+
+
 @pytest.mark.parametrize(
     ("collection", "entity_id", "field", "bad_value", "message"),
     [

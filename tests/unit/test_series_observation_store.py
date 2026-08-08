@@ -10,6 +10,7 @@ from src.data.storage.series_observation_store import (
     SeriesObservationQualityPolicy,
     SeriesObservationQuarantinedError,
     SeriesObservationStore,
+    _quality_status,
 )
 
 
@@ -299,6 +300,26 @@ def test_au_acquisition_series_and_suppression_are_preserved() -> None:
     assert result.observations[1]["value"] is None
 
 
+def test_numeric_threshold_suppression_is_not_treated_as_invalid() -> None:
+    result = SeriesObservationStore().build_observations(
+        [
+            {
+                "Date": "2026-06-01",
+                "RawDiseaseLabel": "Hepatitis C (unspecified)",
+                "Cases": "<10",
+            }
+        ],
+        "AU",
+        source_id="SRC_AU_NINDSS",
+    )
+
+    assert result.skipped_invalid == 0
+    assert len(result.observations) == 1
+    assert result.observations[0]["suppressed"] is True
+    assert result.observations[0]["value"] is None
+    assert result.observations[0]["raw_data"]["Cases"] == "<10"
+
+
 def test_revised_quality_outranks_provisional_marker() -> None:
     result = SeriesObservationStore().build_observations(
         [
@@ -315,6 +336,10 @@ def test_revised_quality_outranks_provisional_marker() -> None:
 
     assert result.observations[0]["quality_status"] == "revised"
     assert result.observations[0]["metadata"]["authoritative_revision"] is True
+
+
+def test_source_data_status_marks_open_month_provisional() -> None:
+    assert _quality_status({"DataStatus": "provisional"}) == "provisional"
 
 
 def test_cn_code_and_local_label_resolve_reported_aggregate_and_subtype() -> None:

@@ -8,6 +8,11 @@ BR:
     death_counts: not_reported
     case_scope: national
     rate_basis: unavailable
+CA-ON:
+  default:
+    death_counts: not_reported
+    case_scope: subnational_jurisdiction
+    rate_basis: unavailable
 CH:
   default:
     death_counts: not_reported
@@ -18,11 +23,21 @@ CN:
     death_counts: reported
     case_scope: national
     rate_basis: source_rate
+FI:
+  default:
+    death_counts: not_reported
+    case_scope: national
+    rate_basis: unavailable
 HK:
   default:
     death_counts: not_reported
     case_scope: national
     rate_basis: unavailable
+IS:
+  default:
+    death_counts: not_reported
+    case_scope: national
+    rate_basis: source_rate
 JP:
   default:
     death_counts: not_reported
@@ -34,6 +49,16 @@ KR:
     case_scope: national
     rate_basis: unavailable
 NZ:
+  default:
+    death_counts: not_reported
+    case_scope: national
+    rate_basis: unavailable
+NO:
+  default:
+    death_counts: not_reported
+    case_scope: national
+    rate_basis: unavailable
+SE:
   default:
     death_counts: not_reported
     case_scope: national

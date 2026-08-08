@@ -249,6 +249,8 @@ async def _run_crawl(task: Task) -> Dict[str, Any]:
     process = inp.get("process", True)
     save_raw = inp.get("save_raw", True)
     fill_missing = inp.get("fill_missing", True)
+    include_current_month = inp.get("include_current_month")
+    revision_window_months = inp.get("revision_window_months")
 
     async with task_lifecycle(task, exit_on_cancel=False):
         service = CrawlService()
@@ -260,6 +262,8 @@ async def _run_crawl(task: Task) -> Dict[str, Any]:
             process=process,
             save_raw=save_raw,
             fill_missing=fill_missing,
+            include_current_month=include_current_month,
+            revision_window_months=revision_window_months,
         )
 
         output = {

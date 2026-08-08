@@ -5,9 +5,16 @@ from src.generation import site_data_views as views
 from src.generation.site_series_projection import SERIES_DATA_LAYER
 
 
-def _record(date: str, cases: int, deaths: int = 0) -> dict:
+def _record(
+    date: str,
+    cases: int,
+    deaths: int = 0,
+    *,
+    disease_id: str = "D_TEST",
+    granularity: str = "monthly",
+) -> dict:
     return {
-        "disease_id": "D_TEST",
+        "disease_id": disease_id,
         "date": date,
         "year_month": date[:7],
         "cases": cases,
@@ -20,6 +27,7 @@ def _record(date: str, cases: int, deaths: int = 0) -> dict:
             "projection_policy": "single_series",
             "selected_series_codes": ["SER_TEST"],
             "available_series_count": 1,
+            "period_granularity": granularity,
             "source_series": [
                 {
                     "series_code": "SER_TEST",
@@ -27,6 +35,7 @@ def _record(date: str, cases: int, deaths: int = 0) -> dict:
                     "values": [999],
                     "quality_statuses": ["validated"],
                     "metric_type": "case_notifications",
+                    "temporal_granularity": granularity,
                 }
             ],
             "metric_layers": {"cases": SERIES_DATA_LAYER},
@@ -84,8 +93,10 @@ def test_country_builders_preserve_schema_sorting_and_compaction() -> None:
         "end": "2024-02-01",
     }
     assert country["frequency_meta"]["canonical_frequency"] == (
-        "WEEKLY_EQUIVALENT_7D"
+        "SOURCE_REPORTED_PERIODS"
     )
+    assert country["comparison_basis"]["metric"] == "cases"
+    assert series["weekly_equiv_cases"] == []
     assert country["data_layer_summary"] == {
         "series_registry_disease_count": 1,
         "mixed_disease_count": 0,
@@ -104,8 +115,37 @@ def test_country_builders_preserve_schema_sorting_and_compaction() -> None:
         {
             "series_code": "SER_TEST",
             "metric_type": "case_notifications",
+            "temporal_granularity": "monthly",
         }
     ]
+
+
+def test_country_builder_preserves_annual_and_weekly_period_semantics() -> None:
+    records = [
+        _record("2023-01-01", 120, disease_id="D_ANNUAL", granularity="annual"),
+        _record("2024-01-01", 140, disease_id="D_ANNUAL", granularity="annual"),
+        _record("2024-01-07", 4, disease_id="D_WEEKLY", granularity="weekly"),
+        _record("2024-01-14", 6, disease_id="D_WEEKLY", granularity="weekly"),
+    ]
+    diseases = {
+        disease_id: {
+            "name_en": disease_id,
+            "name_zh": disease_id,
+            "category": "Test",
+            "slug": disease_id.lower(),
+        }
+        for disease_id in ("D_ANNUAL", "D_WEEKLY")
+    }
+
+    country = views.build_country_data("IS", "Iceland", records, diseases)
+
+    assert country["disease_series"]["D_ANNUAL"]["weekly_equiv_cases"] == []
+    assert country["disease_series"]["D_WEEKLY"]["weekly_equiv_cases"] == [
+        4.0,
+        6.0,
+    ]
+    assert country["heatmap"]["diseases"] == ["D_WEEKLY"]
+    assert "2023-01" not in country["heatmap"]["months"]
 
 
 def test_disease_builders_preserve_country_order_and_sorted_summary_codes() -> None:

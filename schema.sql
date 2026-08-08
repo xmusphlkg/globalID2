@@ -45,7 +45,7 @@ CREATE INDEX idx_ai_provider_priority ON ai_provider_configs (priority);
 CREATE TABLE automation_jobs (
 	job_id VARCHAR(100) NOT NULL,
 	name VARCHAR(255) NOT NULL,
-	country_code VARCHAR(2) NOT NULL,
+	country_code VARCHAR(10) NOT NULL,
 	source VARCHAR(50) NOT NULL,
 	enabled BOOLEAN NOT NULL,
 	priority VARCHAR(20) NOT NULL,

@@ -1,0 +1,65 @@
+disease_id,local_name,local_code,category,aliases,notes,data_source,source_id,series_id
+D029,Difteri,108,Barnevaksinasjonsprogrammet,Diphtheria,FHI MSIS diagnosis mapping,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_108_MONTHLY
+D028,Kikhoste,101,Barnevaksinasjonsprogrammet,Pertussis|Whooping cough,FHI MSIS diagnosis mapping,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_101_MONTHLY
+D039,Kusma,105,Barnevaksinasjonsprogrammet,Mumps,FHI MSIS diagnosis mapping,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_105_MONTHLY
+D017,Meslinger,107,Barnevaksinasjonsprogrammet,Measles,FHI MSIS diagnosis mapping,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_107_MONTHLY
+D013,Poliomyelitt,109,Barnevaksinasjonsprogrammet,Poliomyelitis|Polio,FHI MSIS diagnosis mapping,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_109_MONTHLY
+D199,Rotavirussykdom,110,Barnevaksinasjonsprogrammet,Rotavirus infection|Rotavirus disease,FHI MSIS diagnosis mapping,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_110_MONTHLY
+D040,Røde hunder,106,Barnevaksinasjonsprogrammet,Rubella|German measles,FHI MSIS diagnosis mapping,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_106_MONTHLY
+D100,Syst. H. influenzae-sykdom,103,Barnevaksinasjonsprogrammet,Invasive Haemophilus influenzae disease|Hib disease,FHI MSIS systemic disease mapping,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_103_MONTHLY
+D120,Tetanus,104,Barnevaksinasjonsprogrammet,Tetanus,FHI MSIS diagnosis mapping,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_104_MONTHLY
+D025,Tuberkulose,102,Barnevaksinasjonsprogrammet,Tuberculosis|TB,FHI MSIS disease mapping; excludes preventive treatment,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_102_MONTHLY
+D007,Hepatitt A,201,Virushepatitter,Hepatitis A,FHI MSIS diagnosis mapping,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_201_MONTHLY
+D068,"Hepatitt B, akutt",202,Virushepatitter,Acute hepatitis B,FHI MSIS acute category,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_202_MONTHLY
+D208,"Hepatitt B, kronisk",204,Virushepatitter,Chronic hepatitis B,FHI MSIS chronic category,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_204_MONTHLY
+D009,Hepatitt C,203,Virushepatitter,Hepatitis C,FHI MSIS clinical course not specified,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_203_MONTHLY
+D091,Botulisme,307,Mat- og vannbårne sykdommer,Botulism,FHI MSIS diagnosis mapping,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_307_MONTHLY
+D092,Campylobacteriose,301,Mat- og vannbårne sykdommer,Campylobacteriosis,FHI MSIS diagnosis mapping,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_301_MONTHLY
+D096,Cryptosporidose,309,Mat- og vannbårne sykdommer,Cryptosporidiosis,FHI MSIS diagnosis mapping,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_309_MONTHLY
+D099,Giardiasis,305,Mat- og vannbårne sykdommer,Giardiasis,FHI MSIS diagnosis mapping,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_305_MONTHLY
+D108,Listeriose,306,Mat- og vannbårne sykdommer,Listeriosis,FHI MSIS diagnosis mapping,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_306_MONTHLY
+D114,Salmonellose,302,Mat- og vannbårne sykdommer,Salmonellosis,FHI MSIS diagnosis mapping,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_302_MONTHLY
+D155,Yersiniose,303,Mat- og vannbårne sykdommer,Yersiniosis,FHI MSIS diagnosis mapping,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_303_MONTHLY
+D032,Brucellose,404,Zoonoser,Brucellosis,FHI MSIS diagnosis mapping,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_404_MONTHLY
+D045,Ekinokokkose,405,Zoonoser,Echinococcosis,FHI MSIS diagnosis mapping,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_405_MONTHLY
+D109,Lyme borreliose,401,Zoonoser,Lyme disease|Lyme borreliosis,FHI MSIS diagnosis mapping,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_401_MONTHLY
+D023,Miltbrann,408,Zoonoser,Anthrax,FHI MSIS diagnosis mapping,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_408_MONTHLY
+D163,Nephropathia epidemica,402,Zoonoser,Hantavirus hemorrhagic fever with renal syndrome|Puumala virus infection,FHI MSIS renal hantavirus syndrome category,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_402_MONTHLY
+D019,Rabies,406,Zoonoser,Rabies,FHI MSIS diagnosis mapping,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_406_MONTHLY
+D122,Trikinose,407,Zoonoser,Trichinellosis|Trichinosis,FHI MSIS diagnosis mapping,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_407_MONTHLY
+D123,Tularemi,403,Zoonoser,Tularemia,FHI MSIS diagnosis mapping,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_403_MONTHLY
+D021,Denguefeber,510,Alvorlige importsykdommer,Dengue|Dengue fever,FHI MSIS diagnosis mapping,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_510_MONTHLY
+D043,Flekktyfus,504,Alvorlige importsykdommer,Typhus,FHI MSIS typhus category,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_504_MONTHLY
+D059,Gulfeber,506,Alvorlige importsykdommer,Yellow fever,FHI MSIS diagnosis mapping,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_506_MONTHLY
+D127,Hemoragisk feber,507,Alvorlige importsykdommer,Viral hemorrhagic fevers,FHI MSIS aggregate hemorrhagic-fever category,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_507_MONTHLY
+D002,Kolera,505,Alvorlige importsykdommer,Cholera,FHI MSIS diagnosis mapping,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_505_MONTHLY
+D042,Lepra,503,Alvorlige importsykdommer,Leprosy|Hansen disease,FHI MSIS diagnosis mapping,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_503_MONTHLY
+D037,Malaria,501,Alvorlige importsykdommer,Malaria,FHI MSIS diagnosis mapping,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_501_MONTHLY
+D001,Pest,508,Alvorlige importsykdommer,Plague,FHI MSIS diagnosis mapping,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_508_MONTHLY
+D113,Q-feber,511,Alvorlige importsykdommer,Q fever,FHI MSIS diagnosis mapping,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_511_MONTHLY
+D105,Shigellose,502,Alvorlige importsykdommer,Shigellosis,FHI MSIS diagnosis mapping,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_502_MONTHLY
+D145,Tilbakefallsfeber,509,Alvorlige importsykdommer,Relapsing fever,FHI MSIS diagnosis mapping,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_509_MONTHLY
+D128,Vestnilfeber,512,Alvorlige importsykdommer,West Nile virus disease|West Nile fever,FHI MSIS diagnosis mapping,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_512_MONTHLY
+D051,Zikafeber-infeksjon,513,Alvorlige importsykdommer,Zika virus disease|Zika virus infection,FHI MSIS diagnosis mapping,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_513_MONTHLY
+D107,Legionellose,602,Alvorlige miljøsykdommer,Legionellosis|Legionnaires disease,FHI MSIS diagnosis mapping,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_602_MONTHLY
+D035,Leptospirose,605,Alvorlige miljøsykdommer,Leptospirosis,FHI MSIS diagnosis mapping,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_605_MONTHLY
+D126,Vibrioinfeksjon,603,Alvorlige miljøsykdommer,Vibriosis|Vibrio infection,FHI MSIS diagnosis mapping,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_603_MONTHLY
+D005,Aids,701,"Alvorlige, systemiske sykdommer",AIDS|Advanced HIV disease,FHI MSIS AIDS category kept distinct from all-stage HIV,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_701_MONTHLY
+D016,Influensa A (H1N1),715,"Alvorlige, systemiske sykdommer",Influenza A H1N1|Pandemic H1N1,FHI MSIS source-specific novel influenza series,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_715_MONTHLY
+D016,Influensa forårsaket av virus med pandemisk potens,712,"Alvorlige, systemiske sykdommer",Influenza caused by virus with pandemic potential|Novel influenza A,FHI MSIS source-specific novel influenza series,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_712_MONTHLY
+D064,Kopper,704,"Alvorlige, systemiske sykdommer",Smallpox,FHI MSIS diagnosis mapping,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_704_MONTHLY
+D065,M-kopper,714,"Alvorlige, systemiske sykdommer",Mpox|Monkeypox,FHI MSIS diagnosis mapping,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_714_MONTHLY
+D234,Paratyfoidfeber,705,"Alvorlige, systemiske sykdommer",Paratyphoid fever,FHI MSIS paratyphoid-only category,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_705_MONTHLY
+D144,Prionsykdommer,706,"Alvorlige, systemiske sykdommer",Prion diseases|Creutzfeldt-Jakob disease,FHI MSIS prion disease category,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_706_MONTHLY
+D157,Syst. gr. A streptokokksykdom,709,"Alvorlige, systemiske sykdommer",Invasive group A streptococcal disease|iGAS,FHI MSIS systemic group A streptococcal category,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_709_MONTHLY
+D110,Syst. meningokokksykdom,707,"Alvorlige, systemiske sykdommer",Invasive meningococcal disease|Meningococcal disease,FHI MSIS systemic meningococcal category,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_707_MONTHLY
+D106,Syst. pneumokokksykdom,708,"Alvorlige, systemiske sykdommer",Invasive pneumococcal disease,FHI MSIS systemic pneumococcal category,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_708_MONTHLY
+D124,Tyfoidfeber,711,"Alvorlige, systemiske sykdommer",Typhoid fever,FHI MSIS typhoid-only category,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_711_MONTHLY
+D236,MRSA,806,Sykdommer forårsaket av visse resistente mikrober,Methicillin-resistant Staphylococcus aureus|MRSA,FHI MSIS MRSA surveillance category,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_806_MONTHLY
+D125,Resistent enterokokk,803,Sykdommer forårsaket av visse resistente mikrober,Vancomycin-resistant enterococcus|VRE,FHI MSIS resistant-enterococcus category,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_803_MONTHLY
+D094,"Chlamydiainfeksjon, genital",904,Seksuelt overførbare sykdommer,Genital Chlamydia trachomatis infection|Chlamydia,FHI MSIS genital chlamydia category,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_904_MONTHLY
+D033,Gonore,901,Seksuelt overførbare sykdommer,Gonorrhea|Gonorrhoea,FHI MSIS diagnosis mapping,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_901_MONTHLY
+D162,Hiv-infeksjon,902,Seksuelt overførbare sykdommer,HIV infection,FHI MSIS HIV infection kept distinct from AIDS,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_902_MONTHLY
+D034,Syfilis,903,Seksuelt overførbare sykdommer,Syphilis,FHI MSIS diagnosis mapping,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_903_MONTHLY
+D241,E. coli-enteritt,304,Mat- og vannbårne sykdommer,"Escherichia coli enteritis|Diarrheagenic E. coli enteritis",FHI MSIS aggregate includes EHEC/STEC and other reportable pathotypes; do not add to D115,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_304_MONTHLY
+D242,Lymfogranuloma venerum (LGV),910,Seksuelt overførbare sykdommer,"Lymphogranuloma venereum|LGV",Kept distinct from general genital chlamydia code 904 to prevent double counting,Norway FHI MSIS Statistics Bank,SRC_NO_FHI_MSIS,SER_NO_FHI_910_MONTHLY

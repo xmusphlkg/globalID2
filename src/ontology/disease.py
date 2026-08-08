@@ -514,9 +514,24 @@ class DiseaseOntology:
     def _validate_sources(self) -> None:
         for source_id, source in self._sources.items():
             country = _required_string(source, "country_code", f"source {source_id}")
-            if len(country) != 2 or country != country.upper():
+            parts = country.split("-")
+            is_country = len(parts) == 1 and len(parts[0]) == 2
+            is_subdivision = (
+                len(parts) == 2
+                and len(parts[0]) == 2
+                and 1 <= len(parts[1]) <= 3
+                and parts[1].isalnum()
+                and parts[1].isascii()
+            )
+            if (
+                not (is_country or is_subdivision)
+                or country != country.upper()
+                or not parts[0].isalpha()
+                or not parts[0].isascii()
+            ):
                 raise OntologyValidationError(
-                    f"source {source_id}.country_code must be a two-letter uppercase code"
+                    f"source {source_id}.country_code must be a two-letter uppercase "
+                    "country code or an ISO 3166-2-style jurisdiction code"
                 )
             _labels(source, f"source {source_id}")
             legacy_sources = source.get("legacy_data_sources", [])

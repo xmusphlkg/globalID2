@@ -141,8 +141,10 @@ def load_rows(csv_path: Path) -> list[PopulationRow]:
 def build_population_import_plan(
     rows: list[PopulationRow],
     country_by_code: dict[str, int],
+    *,
+    excluded_location_codes: set[str] | None = None,
 ) -> dict[str, Any]:
-    """Match every enabled database country to its complete WPP time series."""
+    """Match every eligible country to its complete WPP time series."""
 
     rows_by_iso2: dict[str, list[PopulationRow]] = {}
     for row in rows:
@@ -155,8 +157,13 @@ def build_population_import_plan(
     missing_country_codes: list[str] = []
     incomplete_country_years: dict[str, list[int]] = {}
 
+    excluded_codes = {
+        norm_text(code).upper() for code in (excluded_location_codes or set())
+    }
     for raw_code, country_id in sorted(country_by_code.items()):
         country_code = norm_text(raw_code).upper()
+        if country_code in excluded_codes:
+            continue
         wpp_iso2 = COUNTRY_CODE_TO_WPP_ISO2.get(country_code, country_code)
         source_rows = rows_by_iso2.get(wpp_iso2) or []
         if not source_rows:
@@ -185,7 +192,8 @@ def build_population_import_plan(
         "rows": planned_rows,
         "expected_years": expected_years,
         "available_wpp_codes": sorted(rows_by_iso2),
-        "target_country_codes": sorted(country_by_code),
+        "target_country_codes": sorted(set(country_by_code) - excluded_codes),
+        "excluded_location_codes": sorted(excluded_codes),
         "mapped_country_codes": mapped_country_codes,
         "missing_country_codes": missing_country_codes,
         "incomplete_country_years": incomplete_country_years,
@@ -208,6 +216,23 @@ def validate_population_import_plan(plan: dict[str, Any]) -> None:
         issues.append(f"incomplete WPP coverage: {details}")
     if issues:
         raise ValueError("Population onboarding failed: " + " | ".join(issues))
+
+
+def is_wpp_population_target(metadata: object) -> bool:
+    """Return whether a location may use a national WPP denominator."""
+
+    value = metadata
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except json.JSONDecodeError:
+            value = {}
+    if not isinstance(value, dict):
+        value = {}
+    location_type = norm_text(value.get("location_type")).casefold()
+    return location_type != "subdivision" and not norm_text(
+        value.get("iso_subdivision_code")
+    )
 
 
 async def ensure_table(db) -> None:
@@ -301,13 +326,23 @@ async def ensure_wpp_population(
     async with get_db() as db:
         await ensure_table(db)
         countries_result = await db.execute(
-            text("SELECT id, code FROM countries WHERE is_active = TRUE")
+            text("SELECT id, code, metadata FROM countries WHERE is_active = TRUE")
         )
+        country_rows = countries_result.fetchall()
         country_by_code = {
             str(code).upper(): int(country_id)
-            for country_id, code in countries_result.fetchall()
+            for country_id, code, _metadata in country_rows
         }
-        plan = build_population_import_plan(rows, country_by_code)
+        excluded_location_codes = {
+            str(code).upper()
+            for _country_id, code, metadata in country_rows
+            if not is_wpp_population_target(metadata)
+        }
+        plan = build_population_import_plan(
+            rows,
+            country_by_code,
+            excluded_location_codes=excluded_location_codes,
+        )
         if strict:
             validate_population_import_plan(plan)
         planned_rows: list[PlannedPopulationRow] = plan["rows"]
@@ -344,6 +379,7 @@ async def ensure_wpp_population(
         "parsed_rows": len(rows),
         "available_wpp_codes": len(plan["available_wpp_codes"]),
         "target_countries": len(plan["target_country_codes"]),
+        "excluded_location_codes": plan["excluded_location_codes"],
         "mapped_rows": len(planned_rows),
         "mapped_countries": len(plan["mapped_country_codes"]),
         "missing_country_codes": plan["missing_country_codes"],

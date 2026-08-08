@@ -39,4 +39,7 @@ fi
 
 cd "$ROOT_DIR"
 
-exec "$PYTHON_BIN" -m http.server "$SITE_PORT" --bind "$SITE_HOST" --directory "$DIST_DIR"
+exec "$PYTHON_BIN" "$ROOT_DIR/scripts/serve_site.py" \
+  --host "$SITE_HOST" \
+  --port "$SITE_PORT" \
+  --directory "$DIST_DIR"

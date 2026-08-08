@@ -4,21 +4,15 @@
 import ReportLayout from '../../../../../layouts/ReportLayout.astro';
 import DownloadPanel from '../../../../../components/DownloadPanel.astro';
 import DiseaseDetailView from '../../../../../components/charts/DiseaseDetailView';
-import { readFileSync, existsSync } from 'fs';
+import { isReportV4 } from '../../../../../lib/report-routes';
+import {
+  loadReportDetail,
+  readJsonFile,
+  readPublishableReports,
+} from '../../../../../lib/report-data';
 import { resolve } from 'path';
 
 type Lang = 'zh' | 'en';
-
-function readJson(path: string) {
-  return existsSync(path) ? JSON.parse(readFileSync(path, 'utf-8')) : null;
-}
-
-function isReportV4(value: any) {
-  return value?.metadata?.report_layout === 'report_v4'
-    || value?.metadata?.report_document_v4
-    || value?.report_document_v4
-    || value?.schema_version === 'report_v4.0';
-}
 
 function documentFor(report: any) {
   return report?.report_document_v4 ?? report?.metadata?.report_document_v4 ?? report;
@@ -30,31 +24,14 @@ function directoryFor(report: any) {
 }
 
 export async function getStaticPaths() {
-  const readStaticJson = (path: string) => existsSync(path) ? JSON.parse(readFileSync(path, 'utf-8')) : null;
-  const isStaticReportV4 = (value: any) => value?.metadata?.report_layout === 'report_v4'
-    || value?.metadata?.report_document_v4
-    || value?.report_document_v4
-    || value?.schema_version === 'report_v4.0';
-  const staticDocumentFor = (report: any) => report?.report_document_v4 ?? report?.metadata?.report_document_v4 ?? report;
-  const staticDirectoryFor = (report: any) => {
-    const document = staticDocumentFor(report);
-    return Array.isArray(document?.disease_directory) ? document.disease_directory : [];
-  };
-  const reportsPath = resolve('./src/data/reports/index.json');
-  const reports = readStaticJson(reportsPath);
-  if (!Array.isArray(reports)) return [];
-
   const paths: any[] = [];
-  for (const report of reports.filter(isStaticReportV4)) {
-    const detailPath = resolve(`./src/data/reports/${report.id}.json`);
-    const detail = readStaticJson(detailPath) ?? report;
-    for (const row of staticDirectoryFor(detail)) {
-      if (!row?.slug) continue;
+  for (const report of readPublishableReports()) {
+    for (const disease of report.diseaseSlugs) {
       paths.push({
         params: {
-          country: String(report.country_code ?? 'cn').toLowerCase(),
-          id: String(report.id),
-          disease: String(row.slug),
+          country: report.country,
+          id: report.id,
+          disease,
         },
       });
     }
@@ -64,15 +41,15 @@ export async function getStaticPaths() {
 
 const { country, id, disease } = Astro.params;
 
-const reportPath = resolve(`./src/data/reports/${id}.json`);
 const countryPath = resolve(`./src/data/countries/${country}.json`);
 const downloadsPath = resolve('./src/data/downloads.json');
 
-const report = readJson(reportPath);
+const loadedReport = typeof id === 'string' ? loadReportDetail(id) : null;
+const report: any = isReportV4(loadedReport) ? loadedReport : null;
 const document = documentFor(report);
 const diseaseRow = directoryFor(report).find((row: any) => row.slug === disease) ?? null;
-const countryData = readJson(countryPath);
-const downloads = readJson(downloadsPath);
+const countryData: any = readJsonFile(countryPath);
+const downloads: any = readJsonFile(downloadsPath);
 const diseaseDownload = (downloads?.diseases ?? []).find((entry: any) => entry.slug === disease) ?? null;
 const countryNameEn = report?.country_name_en ?? report?.country_name ?? country?.toUpperCase();
 const countryNameZh = report?.country_name_local ?? countryData?.country_name_zh ?? countryNameEn;
@@ -283,7 +260,7 @@ const pageTitle = diseaseMeta
     { label: diseaseMeta?.name_en ?? String(disease), labelZh: diseaseMeta?.name_zh ?? String(disease) },
   ]}
 >
-  {!diseaseMeta || !report || !isReportV4(report) ? (
+  {!diseaseMeta || !report ? (
     <div class="max-w-4xl mx-auto px-4 py-24 text-center text-slate-500">
       <span data-lang-en="Disease page not found." data-lang-zh="未找到该疾病页面。">未找到该疾病页面。</span>
       <a href={`/countries/${country}/reports/${id}/`} class="text-brand-400 hover:underline ml-2" data-lang-en="← Back to overview" data-lang-zh="← 返回国家总览">← 返回国家总览</a>

@@ -40,6 +40,7 @@ from src.generation.site_data_queries import (  # noqa: E402
     fetch_countries,
     fetch_country_briefs,
     fetch_country_frequency_meta,
+    fetch_disease_export_layers,
     fetch_disease_knowledge_briefs,
     fetch_disease_records,
     fetch_disease_records_direct,

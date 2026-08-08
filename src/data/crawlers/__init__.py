@@ -3,6 +3,8 @@ GlobalID V2 Data Crawlers
 
 Public exports for the crawlers sub-package.
 """
+from importlib import import_module
+
 from .base import BaseCrawler, CrawlerResult
 from .cn import ChinaCDCCrawler
 from .jp import JapanIDWRCrawler
@@ -14,6 +16,14 @@ from .br import BrazilSINANCrawler
 from .kr import KoreaKDCAOpenAPICrawler
 from .hk import HongKongCHPCrawler
 from .ch import SwitzerlandIDDCrawler
+from .ca import CanadaOntarioPHOCrawler
+from .fi import FinlandTHLCrawler
+from .no import NorwayMSISCrawler
+from .se import SwedenSmiNetCrawler
+
+# ``is`` is Iceland's ISO code and a Python keyword, so this one module must be
+# loaded dynamically rather than through a ``from .is import ...`` statement.
+IcelandDOHCrawler = import_module(".is", __name__).IcelandDOHCrawler
 
 # Backward-compatible aliases
 JPIDWRCrawler = JapanIDWRCrawler
@@ -33,4 +43,9 @@ __all__ = [
     "KoreaKDCAOpenAPICrawler",
     "HongKongCHPCrawler",
     "SwitzerlandIDDCrawler",
+    "CanadaOntarioPHOCrawler",
+    "FinlandTHLCrawler",
+    "NorwayMSISCrawler",
+    "SwedenSmiNetCrawler",
+    "IcelandDOHCrawler",
 ]

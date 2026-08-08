@@ -7,10 +7,12 @@ import React, {
 } from 'react';
 import ReactEChartsCore from '../../lib/echartsReact';
 import echarts from '../../lib/echarts';
+import { resolveFlagIso2 } from '../../lib/country-flag';
 import {
   COUNTRY_COVERAGE,
   getCoverageDisplayName,
   getCoverageLabelOffset,
+  hasCountryDataSnapshot,
   resolveCoverageStatus,
   type CoverageStatus,
 } from '../../lib/country-coverage';
@@ -82,6 +84,9 @@ interface MetaCountry {
   total_cases: number;
   total_deaths: number;
   disease_count: number;
+  data_available?: boolean;
+  record_count?: number;
+  date_range?: { start?: string | null; end?: string | null } | null;
 }
 
 interface DotPos {
@@ -119,7 +124,7 @@ export default function CountriesMapView({ metaCountries = [], height = 450 }: P
   const countriesWithStatus = useMemo(
     () => COUNTRY_COVERAGE.map((c) => {
       const meta = metaByCode[c.code];
-      const status = resolveCoverageStatus(c, Boolean(meta));
+      const status = resolveCoverageStatus(c, hasCountryDataSnapshot(meta));
       return {
         iso2: c.code,
         lat: c.lat,
@@ -424,7 +429,7 @@ export default function CountriesMapView({ metaCountries = [], height = 450 }: P
         const accentColor = isSupported ? palette.supported : palette.scheduled;
         const borderColor = isSupported ? palette.boxSupportedBorder : palette.boxScheduledBorder;
         const href = isSupported ? `/countries/${d.iso2.toLowerCase()}/` : undefined;
-        const flagCode = d.iso2 === 'TW' || d.iso2 === 'HK' ? 'cn' : d.iso2.toLowerCase();
+        const flagCode = resolveFlagIso2(d.iso2).toLowerCase();
 
         const boxStyles: React.CSSProperties = {
           position: 'absolute',
