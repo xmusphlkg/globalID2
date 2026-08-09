@@ -130,6 +130,16 @@ def _sha256(content: bytes) -> str:
     return hashlib.sha256(content).hexdigest()
 
 
+def _file_sha256(path: Path) -> str:
+    """Hash an existing artifact without loading large downloads into memory."""
+
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        while chunk := source.read(1024 * 1024):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 def _source_columns(source_info: dict) -> dict:
     sources = source_info.get("sources") or []
     return {
@@ -635,7 +645,11 @@ def _dataset_parts(
         base_content_sha = _sha256(_json_bytes(base_metadata, base_rows))
         existing = existing_parts.get(base_spec.key)
         existing_files = (existing or {}).get("files") or {}
-        can_reuse = bool(existing and existing.get("content_sha256") == base_content_sha)
+        can_reuse = bool(
+            existing
+            and existing.get("content_sha256") == base_content_sha
+            and set(existing_files) == set(PUBLIC_FORMATS)
+        )
         for format_name in PUBLIC_FORMATS:
             file_meta = existing_files.get(format_name) or {}
             relative_path = str(file_meta.get("relative_path") or "")
@@ -645,13 +659,26 @@ def _dataset_parts(
                 or not path.is_file()
                 or path.stat().st_size != int(file_meta.get("bytes") or -1)
                 or path.stat().st_size >= max_file_bytes
+                or _file_sha256(path) != str(file_meta.get("sha256") or "")
             ):
                 can_reuse = False
                 break
         if can_reuse:
             dates = [str(row["date"]) for row in base_rows]
-            for file_meta in existing_files.values():
+            files: dict[str, dict] = {}
+            for format_name in PUBLIC_FORMATS:
+                file_meta = existing_files[format_name]
                 expected_paths.add(output_dir / file_meta["relative_path"])
+                # The artifacts are content-addressed and can be reused, but
+                # their public locations are tied to the configured Git branch.
+                # Never carry an old Raw base URL forward into a new manifest.
+                files[format_name] = {
+                    **file_meta,
+                    "url": _download_url(
+                        download_url_base,
+                        file_meta["relative_path"],
+                    ),
+                }
             parts.append(
                 {
                     "id": base_spec.key,
@@ -665,7 +692,7 @@ def _dataset_parts(
                     "record_count": len(base_rows),
                     **_row_provenance_counts(base_rows),
                     "content_sha256": base_content_sha,
-                    "files": existing_files,
+                    "files": files,
                 }
             )
             continue

@@ -486,6 +486,19 @@ def test_download_publish_command_uses_incremental_partition_publisher(tmp_path)
     assert "--raw-base-url" not in command
 
 
+def test_download_publish_command_honors_resolved_download_branch(tmp_path):
+    service = DataReleaseService()
+
+    command = service._publish_download_repo_command(
+        python_path=tmp_path / "python",
+        repo_url="git@example/data.git",
+        commit_message="publish direct downloads",
+        branch="release-data",
+    )
+
+    assert command[command.index("--branch") + 1] == "release-data"
+
+
 def test_raw_archive_publish_command_uses_dedicated_incremental_publisher(
     monkeypatch, tmp_path
 ):
