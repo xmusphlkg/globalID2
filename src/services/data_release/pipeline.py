@@ -49,7 +49,11 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
         raise RuntimeError("Release preflight failed: " + "; ".join(checks["blockers"]))
 
     tz = ZoneInfo(job.timezone or service._config().timezone)
-    branch = runtime.download_repo_branch
+    # Keep generation, publishing, and the release record on the exact same
+    # data-repository branch.  A job may override the configured default.
+    # Using the runtime default here while generation uses the job branch makes
+    # the publisher reject the generated manifest's Raw URL base.
+    branch = service._download_repo_branch(job)
     project_name = service._cloudflare_project_name(job.cloudflare_project_name)
     download_repo_url = service._download_repo_url()
     git_transport = str((checks.get("git") or {}).get("ssh_transport") or "default")
@@ -134,13 +138,14 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
                 python_path=python_path,
                 repo_url=download_repo_url,
                 commit_message=publish_commit_message,
+                branch=branch,
             ),
             cwd=runtime.root_dir,
             env=git_env,
             metadata={
                 "event": "github_direct_download_publish",
                 "release_job_id": job.job_id,
-                "branch": runtime.download_repo_branch,
+                "branch": branch,
             },
             timeout_seconds=runtime.download_publish_timeout_seconds,
         )

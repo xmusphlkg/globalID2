@@ -4,6 +4,8 @@ import hashlib
 import json
 import subprocess
 
+import pytest
+
 from scripts.publish_download_repo import (
     ensure_commit_identity,
     sync_managed_assets,
@@ -49,6 +51,24 @@ def test_validate_source_accepts_partitioned_three_format_manifest(tmp_path):
     _write_source(tmp_path)
     manifest = validate_source(tmp_path, "main")
     assert manifest["diseases"][0]["parts"][0]["id"] == "2026-2029"
+
+
+def test_validate_source_rejects_assets_not_declared_by_manifest(tmp_path):
+    _write_source(tmp_path)
+    unexpected = tmp_path / "diseases" / "d007" / "unexpected.csv"
+    unexpected.write_text("unexpected")
+
+    with pytest.raises(RuntimeError, match="not declared by manifest"):
+        validate_source(tmp_path, "main")
+
+
+def test_validate_source_rejects_unsafe_manifest_asset_path(tmp_path):
+    manifest = _write_source(tmp_path)
+    manifest["diseases"][0]["parts"][0]["files"]["csv"]["relative_path"] = "../outside.csv"
+    (tmp_path / "manifest.json").write_text(json.dumps(manifest))
+
+    with pytest.raises(RuntimeError, match="Unsafe manifest asset path"):
+        validate_source(tmp_path, "main")
 
 
 def test_incremental_sync_copies_only_changed_partition(tmp_path):

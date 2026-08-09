@@ -926,13 +926,14 @@ class DataReleaseService:
         python_path: Path,
         repo_url: str,
         commit_message: str,
+        branch: str | None = None,
     ) -> list[str]:
         return build_publish_download_repo_command(
             python_path=python_path,
             source_dir=DIRECT_DOWNLOAD_DIR,
             repo_url=repo_url,
             commit_message=commit_message,
-            branch=DOWNLOAD_REPO_BRANCH,
+            branch=branch.strip() if branch and branch.strip() else get_data_share_repo_branch(),
         )
 
     def _publish_raw_archive_command(self, *, python_path: Path) -> list[str]:

@@ -444,6 +444,61 @@ def test_historical_partition_bytes_stay_stable_when_current_data_changes(tmp_pa
         assert path.read_bytes() == before[format_name]
 
 
+def test_reused_partition_metadata_uses_the_current_download_base(tmp_path) -> None:
+    legacy_base = "https://raw.githubusercontent.com/example/data/master"
+    current_base = "https://raw.githubusercontent.com/example/data/main"
+    first = build_direct_download_files(
+        _context(),
+        tmp_path,
+        download_url_base=legacy_base,
+    )
+    bytes_before = {
+        file_meta["relative_path"]: (tmp_path / file_meta["relative_path"]).read_bytes()
+        for entry in first["countries"] + first["diseases"]
+        for part in entry["parts"]
+        for file_meta in part["files"].values()
+    }
+
+    second = build_direct_download_files(
+        _context(),
+        tmp_path,
+        download_url_base=current_base,
+    )
+
+    assert second["generation"]["changed_files"] == 0
+    assert all(
+        file_meta["url"] == f"{current_base}/{file_meta['relative_path']}"
+        for entry in second["countries"] + second["diseases"]
+        for part in entry["parts"]
+        for file_meta in part["files"].values()
+    )
+    assert {
+        relative_path: (tmp_path / relative_path).read_bytes()
+        for relative_path in bytes_before
+    } == bytes_before
+
+
+def test_corrupted_reused_artifact_is_regenerated(tmp_path) -> None:
+    manifest = build_direct_download_files(
+        _context(),
+        tmp_path,
+        download_url_base="https://raw.githubusercontent.com/example/data/main",
+    )
+    file_meta = manifest["diseases"][0]["parts"][0]["files"]["csv"]
+    path = tmp_path / file_meta["relative_path"]
+    original = path.read_bytes()
+    path.write_bytes(b"x" * len(original))
+
+    rebuilt = build_direct_download_files(
+        _context(),
+        tmp_path,
+        download_url_base="https://raw.githubusercontent.com/example/data/main",
+    )
+
+    assert rebuilt["generation"]["changed_files"] == 1
+    assert path.read_bytes() == original
+
+
 def test_oversized_calendar_window_is_split_below_target(tmp_path) -> None:
     dates = [f"2026-{month:02d}-01" for month in range(1, 13)] + [
         f"2027-{month:02d}-01" for month in range(1, 13)
