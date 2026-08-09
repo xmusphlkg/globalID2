@@ -93,6 +93,9 @@ async def test_pipeline_local_only_success_preserves_stage_order():
         def _download_repo_raw_base(self, _job):
             return "https://raw.example/data/main"
 
+        def _download_repo_branch(self, _job):
+            return "main"
+
         def _render_commit_message(self, *_args, **_kwargs):
             return "publish main"
 
@@ -114,6 +117,9 @@ async def test_pipeline_local_only_success_preserves_stage_order():
 
         def _generate_site_data_command(self, **_kwargs):
             return ["generate"]
+
+        def _publish_download_repo_command(self, **_kwargs):
+            return ["publish-downloads"]
 
         async def _run_logged_command(self, _task_uuid, *, title, **_kwargs):
             commands.append(title)

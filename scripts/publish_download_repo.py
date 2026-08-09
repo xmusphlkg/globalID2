@@ -28,6 +28,7 @@ DEFAULT_REPO_URL = get_data_share_repo_url()
 DEFAULT_REPO_BRANCH = get_data_share_repo_branch()
 MANAGED_PATHS = ("countries", "diseases", "manifest.json")
 GITHUB_MAX_FILE_BYTES = 100 * 1024 * 1024
+ASSET_DIRECTORIES = ("countries", "diseases")
 
 
 def files_match(source_path: Path, target_path: Path) -> bool:
@@ -63,6 +64,21 @@ def remote_branch_exists(repo_url: str, branch: str) -> bool:
     return bool(completed.stdout.strip())
 
 
+def _asset_relative_path(relative_path: str) -> Path:
+    """Return a safe, managed download asset path from manifest metadata."""
+
+    candidate = Path(relative_path)
+    if (
+        not relative_path
+        or candidate.is_absolute()
+        or ".." in candidate.parts
+        or not candidate.parts
+        or candidate.parts[0] not in ASSET_DIRECTORIES
+    ):
+        raise RuntimeError(f"Unsafe manifest asset path: {relative_path!r}")
+    return candidate
+
+
 def validate_source(source_dir: Path, branch: str) -> dict:
     manifest_path = source_dir / "manifest.json"
     if not manifest_path.exists():
@@ -87,6 +103,7 @@ def validate_source(source_dir: Path, branch: str) -> dict:
     )
     if not entries:
         raise RuntimeError("Refusing to publish an empty download manifest")
+    declared_paths: set[Path] = set()
     for entry in entries:
         for part in entry.get("parts") or []:
             files = part.get("files") or {}
@@ -94,13 +111,17 @@ def validate_source(source_dir: Path, branch: str) -> dict:
                 file_meta = files.get(format_name) or {}
                 relative = str(file_meta.get("relative_path") or "")
                 public_url = str(file_meta.get("url") or "")
-                file_path = source_dir / relative
-                if not relative or not file_path.is_file():
+                asset_path = _asset_relative_path(relative)
+                if asset_path in declared_paths:
+                    raise RuntimeError(f"Manifest declares the same asset twice: {relative}")
+                declared_paths.add(asset_path)
+                file_path = source_dir / asset_path
+                if not file_path.is_file():
                     raise FileNotFoundError(
                         f"Missing {format_name.upper()} asset for "
                         f"{entry.get('id')}/{part.get('id')}: {file_path}"
                     )
-                if public_url != f"{base}/{relative}":
+                if public_url != f"{base}/{asset_path.as_posix()}":
                     raise RuntimeError(
                         f"Public URL does not match generated file: {public_url!r}"
                     )
@@ -114,6 +135,21 @@ def validate_source(source_dir: Path, branch: str) -> dict:
                 digest = hashlib.sha256(file_path.read_bytes()).hexdigest()
                 if digest != file_meta.get("sha256"):
                     raise RuntimeError(f"Manifest checksum mismatch: {file_path}")
+
+    actual_paths = {
+        path.relative_to(source_dir)
+        for directory in ASSET_DIRECTORIES
+        for path in (source_dir / directory).rglob("*")
+        if path.is_file()
+    }
+    unexpected_paths = sorted(actual_paths - declared_paths)
+    if unexpected_paths:
+        displayed = ", ".join(path.as_posix() for path in unexpected_paths[:10])
+        suffix = "" if len(unexpected_paths) <= 10 else f" (+{len(unexpected_paths) - 10} more)"
+        raise RuntimeError(
+            "Generated download assets are not declared by manifest.json: "
+            f"{displayed}{suffix}"
+        )
     return manifest
 
 
