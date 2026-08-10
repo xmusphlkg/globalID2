@@ -1,6 +1,17 @@
 # Cloudflare Pages redirect rules
 # https://developers.cloudflare.com/pages/configuration/redirects/
 
+# Legacy disease slugs emitted before URL normalization. Keep these exact
+# redirects so existing links and indexed URLs preserve their authority.
+/diseases/erythema-infectiosum-(fifth-disease)/  /diseases/erythema-infectiosum-fifth-disease/  301
+/diseases/respiratory-syncytial-virus-infection-(rsv)/  /diseases/respiratory-syncytial-virus-infection-rsv/  301
+/diseases/roseola-(exanthem-subitum)/  /diseases/roseola-exanthem-subitum/  301
+/diseases/flavivirus-infection-(unspecified)/  /diseases/flavivirus-infection-unspecified/  301
+/diseases/haemolytic-uraemic-syndrome-(hus)/  /diseases/haemolytic-uraemic-syndrome-hus/  301
+/diseases/meningitis-(all-reported-etiologies)/  /diseases/meningitis-all-reported-etiologies/  301
+/diseases/methicillin-resistant-staphylococcus-aureus-(mrsa)-surveillance/  /diseases/methicillin-resistant-staphylococcus-aureus-mrsa-surveillance/  301
+/diseases/escherichia-coli-enteritis,-all-reported-pathotypes/  /diseases/escherichia-coli-enteritis-all-reported-pathotypes/  301
+
 # Trailing slash normalization (Astro handles this, but keep as safety net)
 /countries  /countries/  301
 /diseases   /diseases/   301

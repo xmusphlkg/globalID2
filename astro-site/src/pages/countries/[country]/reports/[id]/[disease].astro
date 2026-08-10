@@ -251,7 +251,7 @@ const pageTitle = diseaseMeta
 <ReportLayout
   title={pageTitle}
   description={`${diseaseMeta?.name_en ?? 'Disease'} disease-level view from ${countryNameEn} report #${id}.`}
-  initialLanguage="zh"
+  initialLanguage="en"
   breadcrumbs={[
     { label: 'Countries', labelZh: '国家/地区', href: '/countries/' },
     { label: countryNameEn, labelZh: countryNameZh, href: `/countries/${country}/` },
@@ -268,7 +268,7 @@ const pageTitle = diseaseMeta
   ) : (
     <div class="max-w-6xl mx-auto px-4 py-10 space-y-8">
       <DiseaseDetailView
-        client:load
+        client:visible
         diseaseMeta={diseaseMeta}
         sections={sections}
         series={series}
@@ -286,7 +286,7 @@ const pageTitle = diseaseMeta
         <DownloadPanel
           entry={{ ...diseaseDownload, source_info: countryData?.source_info }}
           title="下载疾病数据集"
-          initialLanguage="zh"
+          initialLanguage="en"
           descriptionEn="Download the full disease dataset referenced by this report section, including source metadata."
           descriptionZh="下载本报告疾病页面对应的完整数据集，并附带数据源信息。"
         />

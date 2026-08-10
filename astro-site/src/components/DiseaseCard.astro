@@ -1,5 +1,6 @@
 ---
 // src/components/DiseaseCard.astro
+import { toSeoSlug } from '../lib/seo';
 interface Props {
   diseaseId: string;
   nameEn: string;
@@ -19,6 +20,7 @@ const categoryStyles: Record<string, string> = {
   Fungal: 'badge-fungal',
 };
 const badgeClass = categoryStyles[category] ?? 'badge-other';
+const seoSlug = toSeoSlug(slug) || slug;
 
 const categoryZh: Record<string, string> = {
   Viral: '病毒性', Bacterial: '细菌性', Parasitic: '寄生虫', Fungal: '真菌性',
@@ -26,7 +28,7 @@ const categoryZh: Record<string, string> = {
 ---
 
 <a
-  href={`/diseases/${slug}/`}
+  href={`/diseases/${seoSlug}/`}
   class="card site-card-link p-5 block group h-full flex flex-col"
 >
   <div class="flex items-start justify-between mb-3">

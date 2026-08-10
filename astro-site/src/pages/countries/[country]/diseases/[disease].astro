@@ -1,0 +1,87 @@
+---
+import ReportLayout from '../../../../layouts/ReportLayout.astro';
+import { countryDiseaseCandidates } from '../../../../lib/seo-page-data';
+import {
+  buildAlternatePaths,
+  buildDatasetStructuredData,
+  buildSeoTitle,
+  formatYearRange,
+} from '../../../../lib/seo';
+
+export function getStaticPaths() {
+  return countryDiseaseCandidates().map(candidate => ({
+    params: { country: candidate.code, disease: candidate.slug },
+    props: candidate,
+  }));
+}
+
+const { code, country, series, slug } = Astro.props;
+const countryName = country.country_name_en ?? country.country_name ?? String(code).toUpperCase();
+const diseaseName = series.disease_name_en ?? series.disease_name ?? series.name ?? slug;
+const dates = Array.isArray(series.dates) ? series.dates : [];
+const cases = Array.isArray(series.cases) ? series.cases : [];
+const coverage = formatYearRange(dates[0], dates.at(-1));
+const latestCases = Number(cases.at(-1));
+const sourceInfo = country.source_info ?? {};
+const sourceUrls = [sourceInfo.primary_url, ...(sourceInfo.sources ?? []).map((source: any) => source?.url)]
+  .filter((url): url is string => typeof url === 'string' && url.length > 0);
+const canonicalPath = `/countries/${code}/diseases/${slug}/`;
+const siteOrigin = Astro.site?.toString().replace(/\/$/, '') ?? 'https://globalinfectiousdisease.com';
+const dataset = buildDatasetStructuredData({
+  id: `${siteOrigin}${canonicalPath}#dataset`,
+  name: `${diseaseName} surveillance in ${countryName}`,
+  description: `Official-source ${diseaseName} surveillance observations for ${countryName}, covering ${coverage}.`,
+  url: `${siteOrigin}${canonicalPath}`,
+  siteOrigin,
+  identifier: `gids:${code}:${slug}`,
+  version: country.generated_at ?? undefined,
+  start: dates[0],
+  end: dates.at(-1),
+  spatialCoverage: countryName,
+  variableMeasured: ['cases', 'deaths', 'incidence rate'],
+  includedInDataCatalog: `${siteOrigin}#catalog`,
+  dateModified: country.generated_at,
+  distributions: country.download_url ? [{ '@type': 'DataDownload', encodingFormat: 'application/json', contentUrl: country.download_url }] : undefined,
+  sourceUrls,
+});
+const seo = {
+  title: buildSeoTitle(diseaseName, `surveillance in ${countryName}`, coverage),
+  description: `${diseaseName} surveillance in ${countryName}: ${coverage} coverage, latest reported value${Number.isFinite(latestCases) ? ` ${latestCases.toLocaleString()} cases` : ''}, official sources, trend context, and downloadable data.`,
+  canonicalPath,
+  alternatePaths: buildAlternatePaths(canonicalPath, 'en'),
+  dateModified: country.generated_at,
+  structuredData: dataset,
+};
+---
+
+<ReportLayout title={seo.title} description={seo.description} seo={seo} structuredData={dataset}>
+  <article class="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
+    <nav aria-label="Breadcrumb" class="mb-6 text-sm text-slate-500">
+      <a href="/countries/">Countries</a> / <a href={`/countries/${code}/`}>{countryName}</a> / {diseaseName}
+    </nav>
+    <header class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+      <p class="text-sm font-semibold uppercase tracking-wide text-sky-700">Country disease surveillance profile</p>
+      <h1 class="mt-2 text-3xl font-bold tracking-tight text-slate-900">{diseaseName} surveillance in {countryName} {coverage}</h1>
+      <p class="mt-3 max-w-3xl text-slate-600">Official-source observations, coverage details, trend context, and a direct route to the underlying country dataset.</p>
+      <dl class="mt-6 grid gap-4 sm:grid-cols-3">
+        <div><dt class="text-sm text-slate-500">Coverage</dt><dd class="font-semibold text-slate-900">{coverage}</dd></div>
+        <div><dt class="text-sm text-slate-500">Reporting granularity</dt><dd class="font-semibold text-slate-900">{series.period_granularity ?? 'Not specified'}</dd></div>
+        <div><dt class="text-sm text-slate-500">Latest reported value</dt><dd class="font-semibold text-slate-900">{Number.isFinite(latestCases) ? latestCases.toLocaleString() : 'Not available'}</dd></div>
+      </dl>
+    </header>
+    <section class="mt-6 grid gap-6 lg:grid-cols-2">
+      <div class="rounded-lg border border-slate-200 bg-white p-6">
+        <h2 class="text-xl font-bold text-slate-900">Data and limitations</h2>
+        <p class="mt-3 text-slate-600">Values are surveillance reports, not estimates of true disease burden. Reporting practices, case definitions, completeness, and publication timing can change over time.</p>
+        <a class="mt-4 inline-flex font-semibold text-sky-700 hover:underline" href={`/countries/${code}/`} data-file-download>Open the {countryName} dataset →</a>
+      </div>
+      <div class="rounded-lg border border-slate-200 bg-white p-6">
+        <h2 class="text-xl font-bold text-slate-900">Official sources</h2>
+        {sourceUrls.length ? <ul class="mt-3 list-disc space-y-2 pl-5 text-sky-700">
+          {sourceUrls.slice(0, 4).map((url) => <li><a href={url} rel="nofollow noopener" target="_blank" class="hover:underline">{url}</a></li>)}
+        </ul> : <p class="mt-3 text-slate-600">Source URL is recorded in the country dataset.</p>}
+        <a class="mt-4 inline-flex font-semibold text-sky-700 hover:underline" href={`/diseases/${slug}/`}>View global {diseaseName} profile →</a>
+      </div>
+    </section>
+  </article>
+</ReportLayout>

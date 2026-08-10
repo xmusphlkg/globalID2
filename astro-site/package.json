@@ -5,9 +5,9 @@
   "scripts": {
     "dev": "astro dev",
     "site:data": "sh -c 'PYTHON_BIN=../venv/bin/python3; if [ ! -x \"$PYTHON_BIN\" ]; then PYTHON_BIN=python3; fi; \"$PYTHON_BIN\" ../scripts/generate_site_data.py'",
-    "build": "astro build",
+    "build": "node scripts/build-site.mjs",
     "build:astro": "astro build",
-    "build:with-data": "npm run site:data && astro build",
+    "build:with-data": "npm run site:data && npm run build",
     "test:curve": "node --experimental-strip-types --test src/components/charts/epidemicCurveModel.test.ts",
     "test:monthly": "node --experimental-strip-types --test src/components/charts/monthlyBarModel.test.ts src/components/charts/monthlyBarOption.integration.test.ts",
     "test:charts": "node --experimental-strip-types --test src/lib/echartsReact.test.ts src/lib/country-coverage.test.ts src/components/charts/epidemicCurveModel.test.ts src/components/charts/monthlyBarModel.test.ts src/components/charts/monthlyBarOption.integration.test.ts",

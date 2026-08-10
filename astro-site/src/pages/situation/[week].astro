@@ -1,0 +1,22 @@
+---
+import { existsSync, readFileSync, readdirSync } from 'fs';
+import { resolve } from 'path';
+import ReportLayout from '../../layouts/ReportLayout.astro';
+import SituationSummary from '../../components/SituationSummary.astro';
+
+const archiveDir = resolve('./src/data/situation/archive');
+export async function getStaticPaths() {
+  const archiveDir = resolve('./src/data/situation/archive');
+  if (!existsSync(archiveDir)) return [];
+  return readdirSync(archiveDir).filter(name => /^\d{4}-W\d{2}\.json$/.test(name)).map(name => ({ params: { week: name.replace(/\.json$/, '') } }));
+}
+const { week } = Astro.params;
+const file = resolve(archiveDir, `${week}.json`);
+const snapshot = existsSync(file) ? JSON.parse(readFileSync(file, 'utf-8')) : null;
+---
+<ReportLayout title={`Global Infectious Disease Situation – ${week}`} description={`Archived GIDS infectious disease situation snapshot for ${week}.`} breadcrumbs={[{ label: 'Situation Room', labelZh: '全球态势室', href: '/situation/' }, { label: week ?? 'Archive', labelZh: week }]}>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-6">
+    {snapshot ? <><p class="archive-note" data-lang-en="This is a permanent weekly snapshot. Later source revisions are published as a new revision rather than silently changing this record." data-lang-zh="这是永久周度快照。后续来源修订将以新版本发布，不会静默修改此记录。">This is a permanent weekly snapshot. Later source revisions are published as a new revision rather than silently changing this record.</p><SituationSummary snapshot={snapshot} /></> : <p>Archive not found.</p>}
+  </div>
+</ReportLayout>
+<style>.archive-note { color: rgb(var(--text-faint)); font-size: .85rem; margin: 0; }</style>
