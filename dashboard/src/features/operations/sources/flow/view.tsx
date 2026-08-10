@@ -499,14 +499,18 @@ function CreateCrawlModal({
     [lang, normalizedCountryCode, sourceConfig],
   );
   const supportedMode = Boolean(sourceConfig?.supports_crawl && sourceOptions.length);
-  const supportsFillMissing = sourceConfig?.supports_fill_missing ?? !["IS", "US"].includes(normalizedCountryCode);
   const supportsSourceFile = Boolean(sourceConfig?.supports_source_file);
   const supportsSourceDir = Boolean(sourceConfig?.supports_source_dir);
-  const sourcePolicy = sourceConfig?.source_policy ?? null;
-  const supportsCurrentMonth = Boolean(sourcePolicy?.supports_current_month);
-  const usesDynamicRevisions = Boolean(sourcePolicy?.dynamic_revision_enabled);
   const [source, setSource] = useState("all");
   const selectedSourceOption = sourceConfig?.source_options.find((option) => option.value === source);
+  const sourcePolicy = selectedSourceOption?.source_policy ?? sourceConfig?.source_policy ?? null;
+  const supportsFillMissing = selectedSourceOption?.supports_fill_missing
+    ?? sourceConfig?.supports_fill_missing
+    ?? !["IS", "US"].includes(normalizedCountryCode);
+  const supportsCurrentMonth = Boolean(sourcePolicy?.supports_current_month);
+  const usesDynamicRevisions = Boolean(sourcePolicy?.dynamic_revision_enabled);
+  const revisionWindowUnit = sourcePolicy?.revision_window_unit ?? "months";
+  const revisionWindowSuffix = revisionWindowUnit === "weeks" ? "w" : revisionWindowUnit === "years" ? "y" : "m";
   const supportsStartYear = Boolean(
     selectedSourceOption?.supports_start_year
       ?? sourceConfig?.supports_start_year,
@@ -516,14 +520,14 @@ function CreateCrawlModal({
   const [force, setForce] = useState(false);
   const [process, setProcess] = useState(true);
   const [saveRaw, setSaveRaw] = useState(true);
-  const [fillMissing, setFillMissing] = useState(sourceConfig?.default_fill_missing ?? true);
+  const [fillMissing, setFillMissing] = useState(selectedSourceOption?.default_fill_missing ?? sourceConfig?.default_fill_missing ?? true);
   const [includeCurrentMonth, setIncludeCurrentMonth] = useState(
     sourcePolicy?.default_include_current_month ?? false,
   );
   const [revisionWindowMonths, setRevisionWindowMonths] = useState(
-    Math.max(1, sourcePolicy?.default_revision_window_months ?? 3),
+    Math.max(1, sourcePolicy?.default_revision_window ?? sourcePolicy?.default_revision_window_months ?? 3),
   );
-  const [historyStartYear, setHistoryStartYear] = useState(sourceConfig?.default_start_year ?? 2001);
+  const [historyStartYear, setHistoryStartYear] = useState(selectedSourceOption?.default_start_year ?? sourceConfig?.default_start_year ?? 2001);
   const [sourceFile, setSourceFile] = useState("");
   const [sourceDir, setSourceDir] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -549,6 +553,21 @@ function CreateCrawlModal({
       setSource(sourceOptions[0].value);
     }
   }, [sourceOptions]);
+
+  useEffect(() => {
+    setFillMissing(selectedSourceOption?.default_fill_missing ?? sourceConfig?.default_fill_missing ?? true);
+    setIncludeCurrentMonth(sourcePolicy?.default_include_current_month ?? false);
+    setRevisionWindowMonths(Math.max(1, sourcePolicy?.default_revision_window ?? sourcePolicy?.default_revision_window_months ?? 3));
+    setHistoryStartYear(selectedSourceOption?.default_start_year ?? sourceConfig?.default_start_year ?? 2001);
+  }, [
+    selectedSourceOption?.default_fill_missing,
+    selectedSourceOption?.default_start_year,
+    sourceConfig?.default_fill_missing,
+    sourceConfig?.default_start_year,
+    sourcePolicy?.default_include_current_month,
+    sourcePolicy?.default_revision_window,
+    sourcePolicy?.default_revision_window_months,
+  ]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -632,8 +651,12 @@ function CreateCrawlModal({
             {isReviewedHistorySource ? (
               <div className="rounded-tremor-default border border-violet-200 bg-violet-50 px-3 py-2 text-xs text-violet-800 dark:border-violet-900/50 dark:bg-violet-950/25 dark:text-violet-200">
                 {lang === "zh"
-                  ? "该来源按已审核官方工作簿目录全量检查；起始年份过滤仅适用于 Iceland 当前看板，本历史分支不会读取 start_year。"
-                  : "This source checks the complete reviewed official-workbook catalogue. The start-year filter applies only to Iceland's current dashboards and is not consumed by this history branch."}
+                  ? (normalizedCountryCode === "IE"
+                    ? "该来源回补 HPSC 2004–2020 年度历史，并与 2021 年起的周度源分开保存；NA 保留为缺失。"
+                    : "该来源按已审核官方工作簿目录全量检查；不会合成缺失期。")
+                  : (normalizedCountryCode === "IE"
+                    ? "This source backfills HPSC annual history for 2004–2020 and keeps it separate from the weekly source beginning in 2021; NA remains missing."
+                    : "This source checks the complete reviewed official-workbook catalogue without synthesizing missing periods.")}
               </div>
             ) : null}
 
@@ -645,7 +668,7 @@ function CreateCrawlModal({
                     ? `${lang === "zh" ? "当前月可按临时数据接入" : "Current month can be ingested as provisional"} (${sourcePolicy.current_month_status})`
                     : (lang === "zh" ? "仅接入已闭合月份" : "Closed months only")}
                   {usesDynamicRevisions
-                    ? ` · ${lang === "zh" ? "默认修订窗口" : "default revision window"} ${sourcePolicy.default_revision_window_months}m`
+                    ? ` · ${lang === "zh" ? "默认修订窗口" : "default revision window"} ${sourcePolicy.default_revision_window ?? sourcePolicy.default_revision_window_months}${revisionWindowSuffix}`
                     : ""}
                   {` · ${sourcePolicy.public_release_enabled
                     ? (lang === "zh" ? "允许公开" : "public")
@@ -680,7 +703,9 @@ function CreateCrawlModal({
                 <label className="flex items-center gap-2.5 text-sm text-tremor-content-emphasis dark:text-dark-tremor-content-emphasis cursor-pointer">
                   <input type="checkbox" checked={fillMissing} onChange={(e) => setFillMissing(e.target.checked)}
                     className="h-4 w-4 rounded border-tremor-border text-tremor-brand focus:ring-tremor-brand-muted" />
-                  {lang === "zh" ? "回填缺失月份" : "Backfill missing months"}
+                  {lang === "zh"
+                    ? `回填缺失${sourcePolicy?.temporal_granularity === "weekly" ? "周" : sourcePolicy?.temporal_granularity === "annual" ? "年份" : "月份"}`
+                    : `Backfill missing ${sourcePolicy?.temporal_granularity === "weekly" ? "weeks" : sourcePolicy?.temporal_granularity === "annual" ? "years" : "months"}`}
                 </label>
               )}
               {supportsCurrentMonth && (
@@ -697,22 +722,26 @@ function CreateCrawlModal({
               {usesDynamicRevisions && (
                 <div>
                   <label className={labelCls}>
-                    {lang === "zh" ? "动态修订窗口（月）" : "Revision window (months)"}
+                    {revisionWindowUnit === "weeks"
+                      ? (lang === "zh" ? "动态修订窗口（周）" : "Revision window (weeks)")
+                      : revisionWindowUnit === "years"
+                        ? (lang === "zh" ? "动态修订窗口（年）" : "Revision window (years)")
+                        : (lang === "zh" ? "动态修订窗口（月）" : "Revision window (months)")}
                   </label>
                   <input
                     type="number"
                     min={1}
-                    max={24}
+                    max={revisionWindowUnit === "weeks" ? 52 : revisionWindowUnit === "years" ? 10 : 24}
                     value={revisionWindowMonths}
                     onChange={(e) => setRevisionWindowMonths(
-                      Math.max(1, Math.min(24, Number(e.target.value || 1))),
+                      Math.max(1, Math.min(revisionWindowUnit === "weeks" ? 52 : revisionWindowUnit === "years" ? 10 : 24, Number(e.target.value || 1))),
                     )}
                     className={inputCls}
                   />
                   <p className="mt-1 text-[11px] text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
                     {lang === "zh"
-                      ? "抓取时重新读取并覆盖最近月份，以吸收来源修订。"
-                      : "Recent months are re-fetched and upserted to absorb source revisions."}
+                      ? `抓取时重新读取并覆盖最近${revisionWindowUnit === "weeks" ? "周" : revisionWindowUnit === "years" ? "年份" : "月份"}，以吸收来源修订。`
+                      : `Recent ${revisionWindowUnit} are re-fetched and upserted to absorb source revisions.`}
                   </p>
                 </div>
               )}
@@ -727,10 +756,10 @@ function CreateCrawlModal({
                       </label>
                       <input
                         type="number"
-                        min={sourceConfig?.default_start_year ?? 1900}
-                        max={new Date().getFullYear()}
+                        min={selectedSourceOption?.default_start_year ?? sourceConfig?.default_start_year ?? 1900}
+                        max={selectedSourceOption?.history_end_year ?? new Date().getFullYear()}
                         value={historyStartYear}
-                        onChange={(e) => setHistoryStartYear(Number(e.target.value || sourceConfig?.default_start_year || 2001))}
+                        onChange={(e) => setHistoryStartYear(Number(e.target.value || selectedSourceOption?.default_start_year || sourceConfig?.default_start_year || 2001))}
                         className={inputCls}
                       />
                       {normalizedCountryCode === "IS" ? (

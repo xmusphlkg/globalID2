@@ -15,6 +15,7 @@ import {
   Send,
   Settings2,
   ShieldCheck,
+  Waypoints,
 } from "lucide-react";
 
 import type { LangKey } from "@/lib/i18n";
@@ -90,6 +91,7 @@ export const navigationSections: RouteSection[] = [
       { id: "ai.agentRuns", href: "/ai/agent-runs", labelKey: "agent_runs", icon: GitBranch, section: "ai", countryScope: "optional" },
       { id: "ai.interactions", href: "/ai/interactions", labelKey: "ai_interactions", icon: Search, section: "ai", countryScope: "optional" },
       { id: "ai.diseaseAudit", href: "/ai/disease-audit", labelKey: "disease_audit", icon: ShieldCheck, section: "ai", countryScope: "none" },
+      { id: "ai.diseaseMapping", href: "/ai/disease-mapping", labelKey: "disease_mapping", icon: Waypoints, section: "ai", countryScope: "none" },
       { id: "ai.models", href: "/ai/models", labelKey: "ai_models", icon: Settings2, section: "ai", countryScope: "none" },
     ],
   },
