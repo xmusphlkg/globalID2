@@ -1,5 +1,89 @@
 export type JsonLdNode = Record<string, unknown>;
 
+export type SeoLocale = 'en' | 'zh';
+
+export interface SeoDocument {
+  title: string;
+  description: string;
+  locale?: SeoLocale;
+  canonicalPath?: string;
+  alternatePaths?: Partial<Record<SeoLocale, string>>;
+  noindex?: boolean;
+  image?: string;
+  pageType?: string;
+  datePublished?: string | null;
+  dateModified?: string | null;
+  structuredData?: JsonLdNode | JsonLdNode[] | readonly JsonLdNode[];
+}
+
+const SITE_NAME = 'Global Infectious Disease Surveillance';
+const SITE_SHORT_NAME = 'GIDS';
+const SEO_DESCRIPTION_LIMIT = 160;
+
+export function toSeoSlug(value: unknown): string {
+  return normalizeSeoText(value)
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+export function yearFromDate(value: string | null | undefined): string | null {
+  const match = normalizeSeoText(value).match(/^\d{4}/);
+  return match?.[0] ?? null;
+}
+
+export function formatYearRange(start?: string | null, end?: string | null): string {
+  const startYear = yearFromDate(start);
+  const endYear = yearFromDate(end);
+  if (startYear && endYear) return startYear === endYear ? startYear : `${startYear}–${endYear}`;
+  return startYear ?? endYear ?? '';
+}
+
+export function clampSeoDescription(value: unknown, limit = SEO_DESCRIPTION_LIMIT): string {
+  const text = normalizeSeoText(value);
+  if (text.length <= limit) return text;
+  const boundary = text.lastIndexOf(' ', limit - 1);
+  return `${text.slice(0, boundary > 40 ? boundary : limit - 1).trimEnd()}…`;
+}
+
+export function buildSeoTitle(subject: string, intent: string, coverage?: string, locale: SeoLocale = 'en'): string {
+  const cleanSubject = normalizeSeoText(subject) || (locale === 'zh' ? '传染病监测' : 'Infectious disease surveillance');
+  const cleanCoverage = normalizeSeoText(coverage);
+  if (locale === 'zh') {
+    return `${cleanSubject}${cleanCoverage ? `监测数据 ${cleanCoverage}` : '监测数据'} | ${SITE_NAME}`;
+  }
+  return `${cleanSubject} ${intent}${cleanCoverage ? ` ${cleanCoverage}` : ''} | ${SITE_NAME}`;
+}
+
+export function buildAlternatePaths(canonicalPath: string, locale: SeoLocale): Record<SeoLocale, string> {
+  const englishPath = canonicalPath.replace(/^\/zh(?=\/|$)/, '') || '/';
+  const chinesePath = englishPath === '/' ? '/zh/' : `/zh${englishPath}`;
+  return locale === 'zh'
+    ? { en: englishPath, zh: canonicalPath }
+    : { en: canonicalPath, zh: chinesePath };
+}
+
+export function isIndexableDisease(input: {
+  countrySeries?: unknown;
+  knowledgeStatus?: unknown;
+  knowledgeSources?: unknown;
+}): boolean {
+  const series = input.countrySeries && typeof input.countrySeries === 'object'
+    ? Object.values(input.countrySeries as Record<string, unknown>)
+    : [];
+  const hasObservation = series.some(entry => (
+    entry && typeof entry === 'object' && Array.isArray((entry as Record<string, unknown>).dates)
+      && ((entry as Record<string, unknown>).dates as unknown[]).length > 0
+  ));
+  const hasPublishedProfile = input.knowledgeStatus === 'published'
+    && Array.isArray(input.knowledgeSources)
+    && input.knowledgeSources.some(source => (
+      source && typeof source === 'object' && Boolean((source as Record<string, unknown>).url)
+    ));
+  return hasObservation || hasPublishedProfile;
+}
+
 export type BreadcrumbItem = {
   label: string;
   href?: string;
@@ -145,6 +229,10 @@ export function buildDatasetStructuredData(input: {
   keywords?: string[];
   distributions?: JsonLdNode[];
   sourceUrls?: string[];
+  identifier?: string;
+  version?: string | null;
+  variableMeasured?: string[];
+  includedInDataCatalog?: string;
 }): JsonLdNode {
   const dateModified = normalizeSeoText(input.dateModified);
   const spatialCoverage = normalizeSeoText(input.spatialCoverage);
@@ -157,14 +245,22 @@ export function buildDatasetStructuredData(input: {
     '@id': input.id,
     url: input.url,
     name: normalizeSeoText(input.name),
-    description: normalizeSeoText(input.description),
+    description: clampSeoDescription(input.description, 5000),
     creator: { '@id': `${input.siteOrigin}#organization` },
+    publisher: { '@id': `${input.siteOrigin}#organization` },
+    isAccessibleForFree: true,
+    ...(normalizeSeoText(input.identifier) ? { identifier: normalizeSeoText(input.identifier) } : {}),
+    ...(normalizeSeoText(input.version) ? { version: normalizeSeoText(input.version) } : {}),
     ...(dateModified ? { dateModified } : {}),
     ...(input.start && input.end ? { temporalCoverage: `${input.start}/${input.end}` } : {}),
     ...(spatialCoverage ? {
       spatialCoverage: { '@type': 'Place', name: spatialCoverage },
     } : {}),
     ...(input.keywords?.length ? { keywords: input.keywords } : {}),
+    ...(input.variableMeasured?.length ? { variableMeasured: input.variableMeasured } : {}),
+    ...(normalizeSeoText(input.includedInDataCatalog) ? {
+      includedInDataCatalog: { '@id': normalizeSeoText(input.includedInDataCatalog) },
+    } : {}),
     ...(input.distributions?.length ? { distribution: input.distributions } : {}),
     ...(sourceUrls.length ? { isBasedOn: sourceUrls } : {}),
   };

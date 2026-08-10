@@ -1,0 +1,65 @@
+---
+interface Props { snapshot: any; compact?: boolean; }
+const { snapshot, compact = false } = Astro.props;
+const date = snapshot?.generated_at ? new Date(snapshot.generated_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—';
+const signals = (snapshot?.increasing ?? []).slice(0, compact ? 3 : 12);
+const events = (snapshot?.emerging ?? []).slice(0, compact ? 3 : 9);
+const fmtPct = (value: unknown) => typeof value === 'number' ? `${value >= 0 ? '+' : ''}${value.toFixed(0)}%` : 'Reappearing';
+const diseaseHref = (signal: any) => signal?.disease_slug ? `/diseases/${signal.disease_slug}/` : '/diseases/';
+const countryHref = (signal: any) => signal?.country_code ? `/countries/${String(signal.country_code).toLowerCase()}/` : '/countries/';
+---
+
+<section class:list={['situation-summary', compact && 'situation-summary-compact']} aria-labelledby="situation-summary-title">
+  <div class="situation-heading">
+    <div>
+      <p class="situation-kicker" data-lang-en="Global Infectious Disease Situation" data-lang-zh="全球传染病态势">Global Infectious Disease Situation</p>
+      <h2 id="situation-summary-title" data-lang-en="Signals across GIDS-covered jurisdictions" data-lang-zh="GIDS 已覆盖地区的监测信号">Signals across GIDS-covered jurisdictions</h2>
+    </div>
+    <div class="situation-meta">
+      <span data-lang-en={`Updated ${date}`} data-lang-zh={`更新于 ${date}`}>Updated {date}</span>
+      {snapshot?.data_through && <span data-lang-en={`Data through ${snapshot.data_through}`} data-lang-zh={`数据截至 ${snapshot.data_through}`}>Data through {snapshot.data_through}</span>}
+    </div>
+  </div>
+  <div class="situation-grid">
+    <article class="situation-panel">
+      <h3 data-lang-en="Increasing signals" data-lang-zh="上升信号">Increasing signals</h3>
+      {signals.length ? <ul>{signals.map((signal: any) => <li>
+        <a href={diseaseHref(signal)}>{signal.disease_name}</a>
+        <span class="situation-place"><a href={countryHref(signal)}>{signal.country_name}</a> · {signal.cadence}</span>
+        <strong>{fmtPct(signal?.window?.change_pct)}</strong>
+        <span class:list={['signal-level', `signal-level-${signal.signal_level}`]}>{signal.signal_level}</span>
+      </li>)}</ul> : <p class="situation-empty" data-lang-en="No signals met the publication threshold this period." data-lang-zh="本期没有信号达到公开阈值。">No signals met the publication threshold this period.</p>}
+    </article>
+    <article class="situation-panel">
+      <h3 data-lang-en="Emerging events" data-lang-zh="新发事件">Emerging events</h3>
+      {events.length ? <ul>{events.map((event: any) => <li>
+        <a href={event.source_url} target="_blank" rel="noreferrer">{event.title}</a>
+        <span class="situation-place">{event.source} · {event.published_at ?? 'Date not supplied'}</span>
+      </li>)}</ul> : <p class="situation-empty" data-lang-en="No published official events currently match the display criteria." data-lang-zh="当前没有符合展示条件的已发布官方事件。">No published official events currently match the display criteria.</p>}
+    </article>
+  </div>
+  {compact && <a class="situation-link" href="/situation/" data-lang-en="Open Situation Room →" data-lang-zh="进入态势室 →">Open Situation Room →</a>}
+</section>
+
+<style>
+  .situation-summary { border: 1px solid rgb(var(--border)); background: rgb(var(--surface)); padding: 1.5rem; box-shadow: var(--paper-shadow); }
+  .situation-heading { display: flex; gap: 1rem; align-items: start; justify-content: space-between; margin-bottom: 1.25rem; }
+  .situation-kicker { color: rgb(var(--color-teal)); font-size: .7rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; margin: 0 0 .35rem; }
+  h2 { color: rgb(var(--text-strong)); font-family: 'Source Serif 4', serif; font-size: 1.55rem; line-height: 1.1; margin: 0; }
+  .situation-meta { color: rgb(var(--text-faint)); display: grid; font-family: 'JetBrains Mono', monospace; font-size: .7rem; gap: .25rem; text-align: right; }
+  .situation-grid { display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .situation-panel { border: 1px solid rgb(var(--border)); background: rgb(var(--surface-raised)); padding: 1rem; }
+  h3 { color: rgb(var(--text)); font-size: .76rem; font-weight: 700; letter-spacing: .09em; margin: 0 0 .7rem; text-transform: uppercase; }
+  ul { display: grid; gap: .7rem; list-style: none; margin: 0; padding: 0; }
+  li { display: grid; gap: .15rem; grid-template-columns: minmax(0, 1fr) auto; }
+  li > a { color: rgb(var(--text-strong)); font-size: .9rem; font-weight: 600; grid-column: 1 / -1; text-decoration: none; }
+  li > a:hover, .situation-link:hover { color: rgb(var(--color-teal)); text-decoration: underline; }
+  .situation-place { color: rgb(var(--text-faint)); font-size: .74rem; }
+  .situation-place a { color: inherit; }
+  strong { color: rgb(10 130 101); font-family: 'JetBrains Mono', monospace; font-size: .75rem; }
+  .signal-level { border: 1px solid currentColor; font-size: .62rem; font-weight: 700; justify-self: end; letter-spacing: .08em; padding: .1rem .3rem; text-transform: uppercase; }
+  .signal-level-watch { color: rgb(87 116 144); } .signal-level-elevated { color: rgb(181 106 20); } .signal-level-strong { color: rgb(190 69 55); }
+  .situation-empty { color: rgb(var(--text-faint)); font-size: .86rem; margin: 0; }
+  .situation-link { color: rgb(var(--color-teal)); display: inline-block; font-size: .86rem; font-weight: 700; margin-top: 1.15rem; text-decoration: none; }
+  @media (max-width: 640px) { .situation-heading, .situation-grid { grid-template-columns: 1fr; display: grid; } .situation-meta { text-align: left; } }
+</style>

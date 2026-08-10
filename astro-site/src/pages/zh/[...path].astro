@@ -1,0 +1,136 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { existsSync, readdirSync } from 'node:fs';
+import { resolve } from 'node:path';
+import {
+  countryDiseaseCandidates,
+  indexableDiseases,
+  loadCountry,
+  publishableReports,
+  siteMeta,
+} from '../../lib/seo-page-data';
+import { buildAlternatePaths, formatYearRange, toSeoSlug } from '../../lib/seo';
+
+type ZhPage = { path?: string; kind: string; code?: string; slug?: string; id?: string };
+
+export function getStaticPaths() {
+  const situationArchiveDir = resolve('./src/data/situation/archive');
+  const situationPaths = existsSync(situationArchiveDir)
+    ? readdirSync(situationArchiveDir)
+      .filter(name => /^\d{4}-W\d{2}\.json$/.test(name))
+      .map(name => ({ path: `situation/${name.replace(/\.json$/, '')}`, kind: 'situation', slug: name.replace(/\.json$/, '') }))
+    : [];
+  const pages: ZhPage[] = [
+    { kind: 'static' },
+    ...['about', 'changelog', 'subscribe', 'terms', 'countries', 'diseases'].map(path => ({ path, kind: 'static' })),
+    ...indexableDiseases().map(disease => ({ path: `diseases/${toSeoSlug(disease.slug)}`, kind: 'disease', id: String(disease.disease_id) })),
+    ...(siteMeta.countries ?? [])
+      .filter((country: any) => country.data_available || Number(country.record_count ?? 0) > 0)
+      .map((country: any) => ({ path: `countries/${String(country.code).toLowerCase()}`, kind: 'country', code: String(country.code).toLowerCase() })),
+    ...publishableReports().flatMap(report => [
+      { path: `countries/${report.country}/reports`, kind: 'report-archive', code: report.country },
+      { path: `countries/${report.country}/reports/${report.id}`, kind: 'report', code: report.country, id: report.id },
+      ...report.diseaseSlugs.map(slug => ({ path: `countries/${report.country}/reports/${report.id}/${toSeoSlug(slug)}`, kind: 'report-disease', code: report.country, id: report.id, slug: toSeoSlug(slug) })),
+    ]),
+    ...countryDiseaseCandidates().map(item => ({ path: `countries/${item.code}/diseases/${item.slug}`, kind: 'country-disease', code: item.code, slug: item.slug })),
+    { path: 'situation', kind: 'situation' },
+    ...situationPaths,
+  ];
+  return pages.map(({ path, ...props }) => ({ params: { path }, props }));
+}
+
+const page = Astro.props as ZhPage;
+const path = Astro.params.path ? `/${Astro.params.path}/` : '/zh/';
+const englishPath = path === '/zh/' ? '/' : path.replace(/^\/zh/, '');
+const canonicalPath = path;
+const staticCopy: Record<string, [string, string]> = {
+  '': ['全球传染病监测数据', '浏览来自官方卫生机构的传染病监测数据、趋势、来源与可下载数据集。'],
+  about: ['关于 GIDS', '了解 GIDS 的数据采集、标准化、发布原则和纠错渠道。'],
+  changelog: ['更新记录', '查看 GIDS 数据和产品更新记录。'],
+  subscribe: ['订阅 GIDS', '订阅传染病监测数据与报告更新。'],
+  terms: ['使用条款', '查看 GIDS 数据和网站使用条款。'],
+  countries: ['国家监测数据', '按国家浏览传染病监测数据、数据覆盖范围与官方来源。'],
+  diseases: ['疾病监测数据', '按疾病浏览全球监测数据、趋势、来源与数据限制。'],
+};
+let title = '全球传染病监测数据';
+let description = '浏览来自官方卫生机构的传染病监测数据、趋势、来源与可下载数据集。';
+let heading = title;
+let coverage = '';
+let facts: Array<[string, string]> = [];
+let sources: string[] = [];
+
+if (page.kind === 'static') {
+  const copy = staticCopy[Astro.params.path ?? ''] ?? staticCopy[''];
+  [title, description] = copy;
+  heading = title;
+} else if (page.kind === 'disease') {
+  const disease = indexableDiseases().find(item => String(item.disease_id) === page.id);
+  const name = disease?.name_zh ?? disease?.name_en ?? disease?.name ?? page.id ?? '';
+  const start = disease?.global_coverage?.start ?? disease?.coverage_start;
+  const end = disease?.global_coverage?.end ?? disease?.coverage_end;
+  coverage = formatYearRange(start, end);
+  title = `${name}监测数据 ${coverage} | 全球传染病监测`;
+  heading = `${name}监测数据`;
+  description = `${name}全球监测数据，覆盖${coverage}，含报告国家、趋势、官方来源和下载入口。`;
+  facts = [['数据覆盖', coverage], ['报告国家/地区', String(disease?.country_count ?? disease?.reporting_countries ?? '—')]];
+} else if (page.kind === 'country' || page.kind === 'country-disease') {
+  const country = loadCountry(page.code ?? '');
+  const countryName = country?.country_name_zh ?? country?.country_name_en ?? String(page.code).toUpperCase();
+  if (page.kind === 'country-disease') {
+    const series = Object.values(country?.disease_series ?? {}).find((item: any) => toSeoSlug(item.slug) === page.slug) as any;
+    const diseaseName = series?.disease_name_zh ?? series?.disease_name_en ?? page.slug;
+    coverage = formatYearRange(series?.dates?.[0], series?.dates?.at(-1));
+    title = `${countryName}${diseaseName}监测 ${coverage} | 全球传染病监测`;
+    heading = `${countryName}${diseaseName}监测`;
+    description = `${countryName}${diseaseName}监测数据，覆盖${coverage}，包含最新报告值、数据粒度、官方来源和下载入口。`;
+    facts = [['数据覆盖', coverage], ['报告粒度', series?.period_granularity ?? '未说明'], ['最新报告值', Number.isFinite(Number(series?.cases?.at(-1))) ? Number(series.cases.at(-1)).toLocaleString() : '暂无']];
+  } else {
+    coverage = formatYearRange(country?.date_range?.start, country?.date_range?.end);
+    title = `${countryName}传染病监测数据 ${coverage} | 全球传染病监测`;
+    heading = `${countryName}传染病监测数据`;
+    description = `${countryName}传染病监测数据，覆盖${coverage}，包含疾病概览、官方来源和可下载数据。`;
+    facts = [['数据覆盖', coverage], ['疾病数量', String(country?.disease_count ?? Object.keys(country?.disease_series ?? {}).length ?? '—')], ['最后更新', country?.generated_at ? new Date(country.generated_at).toLocaleDateString('zh-CN') : '—']];
+  }
+  sources = [country?.source_info?.primary_url, ...(country?.source_info?.sources ?? []).map((source: any) => source?.url)].filter((url): url is string => typeof url === 'string' && url.length > 0);
+} else if (page.kind.startsWith('report')) {
+  const report = publishableReports().find(item => item.id === page.id && item.country === page.code);
+  const document: any = report?.detail?.report_document_v4 ?? report?.detail?.metadata?.report_document_v4 ?? report?.detail;
+  const countryName = document?.country_name_local ?? report?.detail?.country_name_local ?? String(page.code).toUpperCase();
+  title = document?.title?.zh ?? `${countryName}传染病监测报告`;
+  heading = page.kind === 'report-archive' ? `${countryName}监测报告` : title;
+  description = document?.summary?.zh ?? `${countryName}传染病监测报告，提供报告周期、疾病内容、来源与下载入口。`;
+  facts = [['报告国家/地区', countryName], ['发布日期', report?.detail?.created_at ? new Date(String(report.detail.created_at)).toLocaleDateString('zh-CN') : '—']];
+} else if (page.kind === 'situation') {
+  title = page.slug ? `全球传染病态势快照 ${page.slug} | 全球传染病监测` : '全球传染病态势 | 全球传染病监测';
+  heading = page.slug ? `全球传染病态势快照 ${page.slug}` : '全球传染病态势';
+  description = 'GIDS 汇总各覆盖地区的传染病监测信号、官方事件来源、方法和数据限制。';
+  facts = [['快照类型', page.slug ? '历史周度快照' : '最新态势快照']];
+}
+
+const seo = {
+  title,
+  description,
+  locale: 'zh' as const,
+  canonicalPath,
+  alternatePaths: buildAlternatePaths(englishPath, 'zh'),
+  pageType: page.kind === 'disease' || page.kind === 'report' ? 'MedicalWebPage' : 'WebPage',
+};
+---
+
+<BaseLayout title={title} description={description} initialLanguage="zh" seo={seo}>
+  <article class="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
+    <nav aria-label="面包屑" class="mb-6 text-sm text-slate-500"><a href="/zh/">首页</a> / {heading}</nav>
+    <header class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+      <p class="text-sm font-semibold tracking-wide text-sky-700">GIDS 数据档案</p>
+      <h1 class="mt-2 text-3xl font-bold tracking-tight text-slate-900">{heading}</h1>
+      <p class="mt-3 max-w-3xl text-slate-600">{description}</p>
+      {facts.length > 0 && <dl class="mt-6 grid gap-4 sm:grid-cols-3">{facts.map(([label, value]) => <div><dt class="text-sm text-slate-500">{label}</dt><dd class="font-semibold text-slate-900">{value || '—'}</dd></div>)}</dl>}
+    </header>
+    <section class="mt-6 rounded-lg border border-slate-200 bg-white p-6">
+      <h2 class="text-xl font-bold text-slate-900">来源、方法与使用说明</h2>
+      <p class="mt-3 text-slate-600">GIDS 由项目团队维护，整理公开卫生机构来源并标准化为可比较的数据结构。监测数据可能受病例定义、报告完整性和发布时间影响，不应单独作为临床或公共卫生决策依据。</p>
+      {sources.length > 0 && <ul class="mt-4 list-disc space-y-2 pl-5 text-sky-700">{sources.slice(0, 4).map(url => <li><a href={url} target="_blank" rel="nofollow noopener" class="hover:underline">{url}</a></li>)}</ul>}
+      <a href={englishPath} class="mt-5 inline-flex font-semibold text-sky-700 hover:underline">查看英文完整数据页 →</a>
+    </section>
+  </article>
+</BaseLayout>

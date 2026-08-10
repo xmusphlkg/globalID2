@@ -19,6 +19,11 @@ import {
   buildDatasetDistributions,
   buildDatasetStructuredData,
   buildDiseaseMetaDescription,
+  buildAlternatePaths,
+  buildSeoTitle,
+  formatYearRange,
+  isIndexableDisease,
+  toSeoSlug,
 } from '../../lib/seo';
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
@@ -28,7 +33,7 @@ export async function getStaticPaths() {
   if (!existsSync(diseasesPath)) return [];
   const diseases = JSON.parse(readFileSync(diseasesPath, 'utf-8')) as any[];
   return diseases.map(d => ({
-    params: { disease: d.slug },
+    params: { disease: toSeoSlug(d.slug) || d.slug },
     props: { diseaseId: d.disease_id },
   }));
 }
@@ -241,13 +246,59 @@ const diseaseDatasetStructuredData = buildDatasetStructuredData({
     fallbackSiteJsonPath: diseaseDataUrl,
   }),
   sourceUrls: diseaseSourceUrls,
+  identifier: `GIDS:${diseaseId}`,
+  version: diseaseDownload?.generated_at ?? knowledgeUpdatedAt,
+  variableMeasured: ['reported cases', 'reported deaths', 'incidence rate'],
+  includedInDataCatalog: `${siteOrigin}#catalog`,
 });
+const diseaseConditionStructuredData = {
+  '@type': 'MedicalCondition',
+  '@id': `${diseasePageUrl}#condition`,
+  name: diseaseName,
+  alternateName: [diseaseData?.name_zh, diseaseData?.icd_10, diseaseData?.icd_11]
+    .filter((value): value is string => typeof value === 'string' && value.length > 0),
+  ...(diseaseData?.icd_10 ? {
+    code: {
+      '@type': 'MedicalCode',
+      code: diseaseData.icd_10,
+      codingSystem: 'ICD-10',
+    },
+  } : {}),
+  url: diseasePageUrl,
+};
+const diseaseMedicalPageStructuredData = {
+  '@type': 'MedicalWebPage',
+  '@id': `${diseasePageUrl}#medical-webpage`,
+  url: diseasePageUrl,
+  name: diseaseName,
+  about: { '@id': `${diseasePageUrl}#condition` },
+  mainEntity: { '@id': `${diseasePageUrl}#dataset` },
+  dateModified: diseaseDownload?.generated_at ?? knowledgeUpdatedAt ?? undefined,
+  medicalAudience: 'MedicalAudience',
+};
+const diseaseCoverage = formatYearRange(coverageStart, coverageEnd);
+const diseaseIndexable = isIndexableDisease({
+  countrySeries: diseaseData?.country_series,
+  knowledgeStatus,
+  knowledgeSources,
+});
+const diseaseSeo = {
+  title: buildSeoTitle(diseaseName, 'surveillance data', diseaseCoverage),
+  description: diseaseMetaDescription,
+  canonicalPath: Astro.url.pathname,
+  alternatePaths: buildAlternatePaths(Astro.url.pathname, 'en'),
+  noindex: !diseaseIndexable,
+  pageType: 'MedicalWebPage',
+  dateModified: diseaseDownload?.generated_at ?? knowledgeUpdatedAt,
+  structuredData: [diseaseMedicalPageStructuredData, diseaseConditionStructuredData, diseaseDatasetStructuredData],
+} as const;
 ---
 
 <ReportLayout
   title={diseaseName}
   description={diseaseMetaDescription}
-  structuredData={diseaseDatasetStructuredData}
+  structuredData={[diseaseMedicalPageStructuredData, diseaseConditionStructuredData, diseaseDatasetStructuredData]}
+  seo={diseaseSeo}
   breadcrumbs={[
     { label: 'Diseases', href: '/diseases/' },
     { label: diseaseData?.name_en ?? disease },
@@ -462,6 +513,24 @@ const diseaseDatasetStructuredData = buildDatasetStructuredData({
             </div>
           </div>
         </section>
+
+        {countryCount > 0 && (
+          <section class="figure-panel">
+            <p class="figure-kicker" data-lang-en="Coverage" data-lang-zh="数据覆盖">Coverage</p>
+            <h2 class="figure-title" data-lang-en="Reporting countries and regions" data-lang-zh="报告国家和地区">
+              Reporting countries and regions
+            </h2>
+            <ul class="mt-4 flex flex-wrap gap-2">
+              {Object.keys(diseaseData.country_series ?? {}).sort().map((code) => (
+                <li>
+                  <a href={`/countries/${code.toLowerCase()}/`} class="site-action-secondary inline-flex px-3 py-1.5 text-sm rounded-none border">
+                    {code.toUpperCase()} <span class="sr-only">surveillance profile</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         {countryCount > 0 && (
           <section class="figure-panel">

@@ -322,7 +322,7 @@ const formatCards = [
                     <span>{formatBytes(file.bytes)}</span>
                     <span data-lang-en={format.en} data-lang-zh={format.zh}>{pick(format.en, format.zh)}</span>
                   </div>
-                  <a class="download-file-item__raw" href={file.url} target="_blank" rel="noopener noreferrer" title={file.url}><code>{file.url}</code></a>
+                  <a class="download-file-item__raw" href={file.url} target="_blank" rel="noopener noreferrer" title={file.url} data-file-download><code>{file.url}</code></a>
                   <p class="download-file-item__status" data-download-status aria-live="polite"></p>
                 </article>
               );
