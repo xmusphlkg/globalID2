@@ -43,13 +43,21 @@ export interface SourceOption {
   label_zh: string;
   source_kind: "current" | "history";
   supports_start_year: boolean;
+  default_start_year?: number | null;
+  history_end_year?: number | null;
+  supports_fill_missing: boolean;
+  default_fill_missing: boolean;
+  source_policy?: SourcePolicyMetadata | null;
 }
 
 export interface SourcePolicyMetadata {
   supports_current_month: boolean;
   default_include_current_month: boolean;
   dynamic_revision_enabled: boolean;
+  default_revision_window: number;
   default_revision_window_months: number;
+  revision_window_unit: "months" | "weeks" | "years";
+  temporal_granularity: string;
   current_month_status: string;
   public_release_enabled: boolean;
   public_release_editable: boolean;

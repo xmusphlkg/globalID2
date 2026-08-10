@@ -40,10 +40,17 @@ export interface CloudflareSettings {
   cloudflare_configured: boolean;
 }
 
+export interface SiteSettings {
+  source: string;
+  public_ga4_measurement_id: string;
+  ga4_configured: boolean;
+}
+
 export interface RuntimeSettings {
   smtp: SmtpSettings;
   github: GithubSettings;
   cloudflare: CloudflareSettings;
+  site: SiteSettings;
 }
 
 export interface SmtpSettingsInput {
@@ -54,6 +61,7 @@ export interface SmtpSettingsInput {
   smtp_from_email?: string;
   smtp_use_tls?: boolean;
   admin_emails_raw?: string;
+  clear_smtp_password?: boolean;
 }
 
 export interface GithubSettingsInput {
@@ -71,6 +79,12 @@ export interface CloudflareSettingsInput {
   cloudflare_api_token?: string;
   cloudflare_account_id?: string;
   default_cloudflare_project_name?: string;
+  clear_cloudflare_api_token?: boolean;
+  clear_cloudflare_account_id?: boolean;
+}
+
+export interface SiteSettingsInput {
+  public_ga4_measurement_id?: string;
 }
 
 export function useSettings() {
@@ -78,6 +92,7 @@ export function useSettings() {
     queryKey: ["settings"],
     queryFn: () => apiFetch("/settings"),
     staleTime: 5 * 1000,
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -131,10 +146,22 @@ export function useUpdateCloudflareSettings() {
   });
 }
 
+export function useUpdateSiteSettings() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: SiteSettingsInput) =>
+      apiFetch("/settings/site", {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      }) as Promise<RuntimeSettings>,
+    onSuccess: () => invalidateSettingsRelatedQueries(queryClient, ["site"]),
+  });
+}
+
 export function useResetSettingsSection() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (section: "smtp" | "github" | "cloudflare") =>
+    mutationFn: (section: "smtp" | "github" | "cloudflare" | "site") =>
       apiFetch(`/settings/${section}`, {
         method: "DELETE",
       }) as Promise<RuntimeSettings>,

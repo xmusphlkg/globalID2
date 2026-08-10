@@ -172,7 +172,7 @@ function defaultIncludeCurrentMonthForCountry(config?: CountrySourceConfig | nul
 }
 
 function defaultRevisionWindowForCountry(config?: CountrySourceConfig | null): number {
-  return Math.max(1, config?.source_policy?.default_revision_window_months ?? 3);
+  return Math.max(1, config?.source_policy?.default_revision_window ?? config?.source_policy?.default_revision_window_months ?? 3);
 }
 
 function presetTimeForIndex(index: number): string {
@@ -336,9 +336,14 @@ export default function SourcesAutomationPage() {
     (option) => option.value === form.source,
   );
   const selectedSupportsCrawl = Boolean(selectedSourceConfig?.supports_crawl);
-  const selectedSourcePolicy = selectedSourceConfig?.source_policy ?? null;
+  const selectedSourcePolicy = selectedSourceOption?.source_policy ?? selectedSourceConfig?.source_policy ?? null;
+  const selectedSupportsFillMissing = selectedSourceOption?.supports_fill_missing
+    ?? selectedSourceConfig?.supports_fill_missing
+    ?? true;
   const selectedSupportsCurrentMonth = Boolean(selectedSourcePolicy?.supports_current_month);
   const selectedUsesDynamicRevisions = Boolean(selectedSourcePolicy?.dynamic_revision_enabled);
+  const selectedRevisionWindowUnit = selectedSourcePolicy?.revision_window_unit ?? "months";
+  const selectedRevisionWindowSuffix = selectedRevisionWindowUnit === "weeks" ? "w" : selectedRevisionWindowUnit === "years" ? "y" : "m";
 
   const sources = useMemo(
     () => getConfiguredSourceOptions(selectedSourceConfig, lang, form.country_code),
@@ -364,22 +369,31 @@ export default function SourcesAutomationPage() {
 
     const historyPresets = (sourceConfigs ?? [])
       .filter((item) => item.supports_start_year && item.country_code !== "IS")
-      .map((item) => ({
-        id: `${item.country_code.toLowerCase()}-history`,
-        label: `${item.country_code} hist`,
-        job_id: `${item.country_code.toLowerCase()}-history-backfill`,
-        name: `${item.country_code} Historical Backfill`,
-        country_code: item.country_code,
-        source: item.default_source,
-        daily_time: "02:00",
-        timezone: item.timezone,
-        enabled: false,
-        priority: "high",
-        fill_missing: true,
-        force: true,
-        include_current_month: defaultIncludeCurrentMonthForCountry(item),
-        revision_window_months: defaultRevisionWindowForCountry(item),
-      }));
+      .flatMap((item) => {
+        const configuredHistory = item.source_options.filter((option) => option.source_kind === "history");
+        const targets = configuredHistory.length > 0 ? configuredHistory : [undefined];
+        return targets.map((historySource) => {
+          const historyPolicy = historySource?.source_policy ?? item.source_policy;
+          const source = historySource?.value ?? item.default_source;
+          const sourceSuffix = configuredHistory.length > 1 ? `-${source.replaceAll("_", "-")}` : "";
+          return {
+            id: `${item.country_code.toLowerCase()}-history${sourceSuffix}`,
+            label: `${item.country_code} hist${configuredHistory.length > 1 ? ` ${source}` : ""}`,
+            job_id: `${item.country_code.toLowerCase()}-history${sourceSuffix}-backfill`,
+            name: `${item.country_code} Historical Backfill${configuredHistory.length > 1 ? ` — ${source}` : ""}`,
+            country_code: item.country_code,
+            source,
+            daily_time: "02:00",
+            timezone: item.timezone,
+            enabled: false,
+            priority: "high",
+            fill_missing: historySource?.default_fill_missing ?? true,
+            force: true,
+            include_current_month: defaultIncludeCurrentMonthForCountry(item),
+            revision_window_months: Math.max(1, historyPolicy?.default_revision_window ?? historyPolicy?.default_revision_window_months ?? 3),
+          };
+        });
+      });
 
     return [...basePresets, ...historyPresets];
   }, [sourceConfigs]);
@@ -615,7 +629,8 @@ export default function SourcesAutomationPage() {
               </p>
             ) : (
               (() => {
-                const policy = sourceConfigByCountry.get(job.country_code.toUpperCase())?.source_policy;
+                const jobConfig = sourceConfigByCountry.get(job.country_code.toUpperCase());
+                const policy = jobConfig?.source_options.find((option) => option.value === job.source)?.source_policy ?? jobConfig?.source_policy;
                 if (!policy?.supports_current_month && !policy?.dynamic_revision_enabled) return null;
                 return (
                   <p className="mt-1 text-[11px] text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
@@ -623,7 +638,7 @@ export default function SourcesAutomationPage() {
                       ? (lang === "zh" ? "含当前月（临时）" : "Current month included")
                       : (lang === "zh" ? "仅已闭合月份" : "Closed months only")}
                     {policy.dynamic_revision_enabled
-                      ? ` · ${lang === "zh" ? "修订窗口" : "revision window"} ${job.revision_window_months ?? policy.default_revision_window_months}m`
+                      ? ` · ${lang === "zh" ? "修订窗口" : "revision window"} ${job.revision_window_months ?? policy.default_revision_window ?? policy.default_revision_window_months}${policy.revision_window_unit === "weeks" ? "w" : policy.revision_window_unit === "years" ? "y" : "m"}`
                       : ""}
                   </p>
                 );
@@ -1018,7 +1033,18 @@ export default function SourcesAutomationPage() {
                   className={inputClass}
                   value={form.source}
                   disabled={!selectedSupportsCrawl}
-                  onChange={(event) => setForm((prev) => ({ ...prev, source: event.target.value }))}
+                  onChange={(event) => {
+                    const nextSource = event.target.value;
+                    const nextOption = selectedSourceConfig?.source_options.find((option) => option.value === nextSource);
+                    const nextPolicy = nextOption?.source_policy ?? selectedSourceConfig?.source_policy;
+                    setForm((prev) => ({
+                      ...prev,
+                      source: nextSource,
+                      fill_missing: nextOption?.default_fill_missing ?? selectedSourceConfig?.default_fill_missing ?? prev.fill_missing,
+                      include_current_month: nextPolicy?.default_include_current_month ?? false,
+                      revision_window_months: Math.max(1, nextPolicy?.default_revision_window ?? nextPolicy?.default_revision_window_months ?? 3),
+                    }));
+                  }}
                 >
                   {sources.map((source) => (
                     <option key={source.value} value={source.value}>
@@ -1031,7 +1057,11 @@ export default function SourcesAutomationPage() {
 
             {selectedSourceOption?.source_kind === "history" ? (
               <AlertPanel tone="warning">
-                {form.source === "is_doh_legacy_icd"
+                {form.source === "hpsc_annual"
+                  ? (lang === "zh" ? "该任务回补 HPSC 2004–2020 年度历史；与 2021 年起周度源分开保存，NA 不补零。" : "This job backfills HPSC annual history for 2004–2020, stored separately from the weekly source beginning in 2021; NA is not zero-filled.")
+                  : form.source === "hpsc_weekly_archive"
+                  ? (lang === "zh" ? "该任务从 Lenus 与网页档案重建 HPSC 历史周报快照；只取当周列，目录缺周保持未知且不补零。许可不阻断内部接入，但该来源禁止公开发布。" : "This job rebuilds historical HPSC weekly snapshots from Lenus and web archives; it uses only the current-week column and leaves uncatalogued weeks unknown. Licence checks do not block internal ingestion, but public release is disabled.")
+                  : form.source === "is_doh_legacy_icd"
                   ? (lang === "zh" ? "该任务读取历史 ICD 登记诊断量，仅用于来源事实与溯源，不作为病例通知曲线。" : "This job reads legacy ICD registered diagnoses for source facts and provenance, not as a case-notification curve.")
                   : (lang === "zh" ? "该任务检查已审核历史工作簿全目录；不使用 start_year 或合成缺失月份。" : "This job checks the full reviewed historical-workbook catalogue; it does not use start_year or synthesize missing months.")}
               </AlertPanel>
@@ -1058,7 +1088,7 @@ export default function SourcesAutomationPage() {
                   </StatusBadge>
                   <StatusBadge tone={selectedUsesDynamicRevisions ? "success" : "neutral"}>
                     {selectedUsesDynamicRevisions
-                      ? `${lang === "zh" ? "动态修订" : "Dynamic revisions"} · ${selectedSourcePolicy.default_revision_window_months}m`
+                      ? `${lang === "zh" ? "动态修订" : "Dynamic revisions"} · ${selectedSourcePolicy.default_revision_window ?? selectedSourcePolicy.default_revision_window_months}${selectedRevisionWindowSuffix}`
                       : (lang === "zh" ? "无动态修订" : "No dynamic revisions")}
                   </StatusBadge>
                   <StatusBadge tone={selectedSourcePolicy.public_release_enabled ? "success" : "warning"}>
@@ -1221,18 +1251,22 @@ export default function SourcesAutomationPage() {
               </Field>
               {selectedUsesDynamicRevisions ? (
                 <Field
-                  label={lang === "zh" ? "动态修订窗口（月）" : "Revision window (months)"}
+                  label={selectedRevisionWindowUnit === "weeks"
+                    ? (lang === "zh" ? "动态修订窗口（周）" : "Revision window (weeks)")
+                    : selectedRevisionWindowUnit === "years"
+                      ? (lang === "zh" ? "动态修订窗口（年）" : "Revision window (years)")
+                      : (lang === "zh" ? "动态修订窗口（月）" : "Revision window (months)")}
                   hint={lang === "zh" ? "每次运行会重新抓取并覆盖这个窗口。" : "Each run re-fetches and upserts this window."}
                 >
                   <input
                     type="number"
                     min="1"
-                    max="24"
+                    max={selectedRevisionWindowUnit === "weeks" ? "52" : selectedRevisionWindowUnit === "years" ? "10" : "24"}
                     className={inputClass}
                     value={form.revision_window_months}
                     onChange={(event) => setForm((prev) => ({
                       ...prev,
-                      revision_window_months: Math.max(1, Math.min(24, Number(event.target.value || 1))),
+                      revision_window_months: Math.max(1, Math.min(selectedRevisionWindowUnit === "weeks" ? 52 : selectedRevisionWindowUnit === "years" ? 10 : 24, Number(event.target.value || 1))),
                     }))}
                   />
                 </Field>
@@ -1258,7 +1292,7 @@ export default function SourcesAutomationPage() {
                 ["include_current_month", form.include_current_month],
               ] as Array<[keyof Pick<AutomationJobInput, "process" | "save_raw" | "fill_missing" | "force" | "include_current_month">, boolean]>)
                 .filter(([key]) => {
-                  if (key === "fill_missing") return selectedSourceConfig?.supports_fill_missing ?? true;
+                  if (key === "fill_missing") return selectedSupportsFillMissing;
                   if (key === "include_current_month") return selectedSupportsCurrentMonth;
                   return true;
                 })
@@ -1273,7 +1307,11 @@ export default function SourcesAutomationPage() {
                       onChange={(event) => setForm((prev) => ({ ...prev, [key]: event.target.checked }))}
                       className="h-4 w-4 rounded border-tremor-border text-tremor-brand"
                     />
-                    <span>{crawlOptionLabels[key]?.[lang] ?? key}</span>
+                    <span>{key === "fill_missing"
+                      ? (lang === "zh"
+                        ? `回填缺失${selectedSourcePolicy?.temporal_granularity === "weekly" ? "周" : selectedSourcePolicy?.temporal_granularity === "annual" ? "年份" : "月份"}`
+                        : `Backfill missing ${selectedSourcePolicy?.temporal_granularity === "weekly" ? "weeks" : selectedSourcePolicy?.temporal_granularity === "annual" ? "years" : "months"}`)
+                      : crawlOptionLabels[key]?.[lang] ?? key}</span>
                   </label>
                 ))}
             </div>
