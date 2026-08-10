@@ -195,6 +195,7 @@ const dict = {
     select_country_unavailable: "Countries unavailable",
     language_toggle_label: "Switch language",
     current_language: "English",
+    disease_mapping: "Disease Mapping",
   },
   zh: {
     app_title: "GIDS 数据看板",
@@ -388,6 +389,7 @@ const dict = {
     select_country_unavailable: "国家列表不可用",
     language_toggle_label: "切换语言",
     current_language: "中文",
+    disease_mapping: "疾病映射",
   },
 } as const;
 

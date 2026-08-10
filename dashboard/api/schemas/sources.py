@@ -45,6 +45,21 @@ class DataSourceFlow(BaseModel):
     stages: List[StageInfo] = Field(default_factory=list)
 
 
+class SourcePolicyOut(BaseModel):
+    supports_current_month: bool = False
+    default_include_current_month: bool = False
+    dynamic_revision_enabled: bool = False
+    default_revision_window: int = 3
+    default_revision_window_months: int = 3
+    revision_window_unit: str = "months"
+    temporal_granularity: str = "monthly"
+    current_month_status: str = "not_supported"
+    public_release_enabled: bool = True
+    public_release_editable: bool = False
+    publication_day: Optional[int] = None
+    source_update_cadence: Optional[str] = None
+
+
 class SourceOptionOut(BaseModel):
     value: str
     label_en: str
@@ -52,18 +67,11 @@ class SourceOptionOut(BaseModel):
     label: str
     source_kind: str = "current"
     supports_start_year: bool = False
-
-
-class SourcePolicyOut(BaseModel):
-    supports_current_month: bool = False
-    default_include_current_month: bool = False
-    dynamic_revision_enabled: bool = False
-    default_revision_window_months: int = 3
-    current_month_status: str = "not_supported"
-    public_release_enabled: bool = True
-    public_release_editable: bool = False
-    publication_day: Optional[int] = None
-    source_update_cadence: Optional[str] = None
+    default_start_year: Optional[int] = None
+    history_end_year: Optional[int] = None
+    supports_fill_missing: bool = False
+    default_fill_missing: bool = False
+    source_policy: Optional[SourcePolicyOut] = None
 
 
 class CountrySourceConfigOut(BaseModel):
@@ -145,7 +153,7 @@ class AutomationJobCreate(BaseModel):
     fill_missing: bool = False
     force: bool = False
     include_current_month: Optional[bool] = None
-    revision_window_months: int = Field(3, ge=1, le=24)
+    revision_window_months: int = Field(3, ge=1, le=52)
     retry_threshold: int = 3
     interval_minutes: Optional[int] = None
     daily_time: Optional[str] = None
@@ -166,7 +174,7 @@ class AutomationJobUpdate(BaseModel):
     fill_missing: Optional[bool] = None
     force: Optional[bool] = None
     include_current_month: Optional[bool] = None
-    revision_window_months: Optional[int] = Field(None, ge=1, le=24)
+    revision_window_months: Optional[int] = Field(None, ge=1, le=52)
     retry_threshold: Optional[int] = None
     interval_minutes: Optional[int] = None
     daily_time: Optional[str] = None

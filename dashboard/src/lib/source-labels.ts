@@ -89,6 +89,34 @@ export function getSourceDisplayLabel(
   ) {
     return lang === "zh" ? "芬兰 THL 传染病登记" : "Finland THL Infectious Diseases Register";
   }
+  if (s === "ages_radar" || s === "ages" || ((s === "all" || s === "at" || s === "austria") && cc === "AT")) {
+    return lang === "zh" ? "奥地利 AGES 传染病雷达" : "Austria AGES Radar for Infectious Diseases";
+  }
+  if (s === "rki_survstat" || s === "survstat" || ((s === "all" || s === "de" || s === "germany") && cc === "DE")) {
+    return lang === "zh" ? "德国 RKI SurvStat 2.0" : "Germany RKI SurvStat 2.0";
+  }
+  if (
+    s === "hpsc_weekly_archive" ||
+    s === "hpsc_archive" ||
+    s === "ie_weekly_archive"
+  ) {
+    return lang === "zh" ? "爱尔兰 HPSC 周报档案（2017–2021年第29周）" : "Ireland HPSC Weekly Report Archive (2017–2021 W29)";
+  }
+  if (
+    s === "hpsc_annual" ||
+    s === "hpsc_annual_history" ||
+    s === "ie_annual"
+  ) {
+    return lang === "zh" ? "爱尔兰 HPSC 年度历史统计（2004–2020）" : "Ireland HPSC Annual Statistics (2004–2020)";
+  }
+  if (
+    s === "hpsc_ndh" ||
+    s === "hpsc" ||
+    s === "ndh" ||
+    ((s === "all" || s === "ie" || s === "ireland") && cc === "IE")
+  ) {
+    return lang === "zh" ? "爱尔兰 HPSC 法定传染病中心" : "Ireland HPSC Notifiable Diseases Hub";
+  }
   if (
     s === "fhi_msis" ||
     s === "fhi" ||
@@ -183,6 +211,19 @@ export function getSourceOptionsForCountry(
   }
   if (code === "FI") {
     return [{ value: "thl_ttr", label: lang === "zh" ? "芬兰 THL 传染病登记" : "Finland THL Infectious Diseases Register" }];
+  }
+  if (code === "AT") {
+    return [{ value: "ages_radar", label: lang === "zh" ? "奥地利 AGES 传染病雷达" : "Austria AGES Radar for Infectious Diseases" }];
+  }
+  if (code === "DE") {
+    return [{ value: "rki_survstat", label: lang === "zh" ? "德国 RKI SurvStat 2.0" : "Germany RKI SurvStat 2.0" }];
+  }
+  if (code === "IE") {
+    return [
+      { value: "hpsc_ndh", label: lang === "zh" ? "爱尔兰 HPSC 法定传染病中心" : "Ireland HPSC Notifiable Diseases Hub" },
+      { value: "hpsc_weekly_archive", label: lang === "zh" ? "爱尔兰 HPSC 周报档案（2017–2021年第29周）" : "Ireland HPSC Weekly Report Archive (2017–2021 W29)" },
+      { value: "hpsc_annual", label: lang === "zh" ? "爱尔兰 HPSC 年度历史统计（2004–2020）" : "Ireland HPSC Annual Statistics (2004–2020)" },
+    ];
   }
   if (code === "NO") {
     return [{ value: "fhi_msis", label: lang === "zh" ? "挪威 FHI MSIS 统计库" : "Norway FHI MSIS Statistics Bank" }];

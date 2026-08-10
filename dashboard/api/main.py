@@ -17,11 +17,13 @@ from .routers import (
     crawl,
     diseases,
     explorer,
+    mappings,
     overview,
     quality,
     release,
     reports,
     settings,
+    situation,
     sources,
     subscriptions,
     tasks,
@@ -43,14 +45,19 @@ async def lifespan(app: FastAPI):
     from .routers.tasks import task_hub
     from src.services.automation_service import automation_service
     from src.services.data_release_service import data_release_service
+    from src.services.disease_mapping_automation_service import (
+        disease_mapping_automation_service,
+    )
 
     task_manager.set_broadcast_hook(task_hub.broadcast)
     logger.info("Task broadcast hook registered")
 
     await automation_service.start()
     await data_release_service.start()
+    await disease_mapping_automation_service.start()
 
     yield
+    await disease_mapping_automation_service.stop()
     await data_release_service.stop()
     await automation_service.stop()
     logger.info("API shutting down")
@@ -98,9 +105,11 @@ def create_app() -> FastAPI:
     # Mount routers
     prefix = "/api/v1"
     app.include_router(countries.router, prefix=prefix, tags=["Countries"])
+    app.include_router(mappings.router, prefix=prefix, tags=["Disease Mapping Registry v3"])
     app.include_router(overview.router, prefix=prefix, tags=["Overview"])
     app.include_router(diseases.router, prefix=prefix, tags=["Diseases"])
     app.include_router(reports.router, prefix=prefix, tags=["Reports"])
+    app.include_router(situation.router, prefix=prefix, tags=["Situation Room"])
     app.include_router(tasks.router, prefix=prefix, tags=["Tasks"])
     app.include_router(crawl.router, prefix=prefix, tags=["Crawl"])
     app.include_router(ai.router, prefix=prefix, tags=["AI"])
