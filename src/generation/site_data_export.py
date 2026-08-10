@@ -57,6 +57,7 @@ from src.generation.site_data_writer import (
 )
 from src.knowledge.catalogue import should_generate_public_disease_page
 from src.ontology import load_disease_ontology
+from src.services.situation_room import latest_snapshot, weekly_snapshots
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUTPUT = ROOT / "astro-site" / "src" / "data"
@@ -417,6 +418,9 @@ async def collect_site_export_context(
             if detail:
                 report_details[rep["id"]] = detail
 
+    situation_latest = await latest_snapshot()
+    situation_weekly = await weekly_snapshots()
+
     return {
         "all_records_by_country": all_records_by_country,
         "all_source_records_by_country": all_source_records_by_country,
@@ -434,6 +438,8 @@ async def collect_site_export_context(
         "ontology_document": ontology_document,
         "report_details": report_details,
         "reports": reports,
+        "situation_latest": situation_latest,
+        "situation_weekly": situation_weekly,
     }
 
 
@@ -457,6 +463,8 @@ def write_site_export_artifacts(
     ontology_document = context["ontology_document"]
     report_details = context["report_details"]
     reports = context["reports"]
+    situation_latest = context.get("situation_latest")
+    situation_weekly = context.get("situation_weekly") or []
 
     prepare_site_output_dirs(output_dir, public_site_data_dir)
 
@@ -591,6 +599,20 @@ def write_site_export_artifacts(
     write_pretty_json(output_dir / "about.json", about_snapshot)
     print("  ✓ about.json")
 
+    # Situation Room artifacts are generated from durable snapshots.  The
+    # public-site copy is compact; build-time pages retain readable JSON.
+    situation_public = bool(situation_latest and situation_latest.get("public_enabled"))
+    if situation_public:
+        write_pretty_json(output_dir / "situation" / "latest.json", situation_latest)
+        write_compact_json(public_site_data_dir / "situation" / "latest.json", situation_latest)
+        for snapshot in situation_weekly:
+            iso_week = str(snapshot.get("iso_week") or "")
+            if not iso_week:
+                continue
+            write_pretty_json(output_dir / "situation" / "archive" / f"{iso_week}.json", snapshot)
+            write_compact_json(public_site_data_dir / "situation" / "archive" / f"{iso_week}.json", snapshot)
+        print(f"  ✓ situation snapshots (latest + {len(situation_weekly)} weekly archives)")
+
     # Reconcile stale artifacts only after every new artifact is safely on disk.
     # This keeps unchanged files intact throughout export and prevents a failed
     # run from leaving an empty site-data directory behind.
@@ -620,6 +642,10 @@ def write_site_export_artifacts(
         public_site_data_dir / "diseases",
         disease_json_names,
     )
+    if situation_public:
+        week_names = {f"{snapshot['iso_week']}.json" for snapshot in situation_weekly if snapshot.get("iso_week")}
+        remove_stale_json_files(output_dir / "situation" / "archive", week_names)
+        remove_stale_json_files(public_site_data_dir / "situation" / "archive", week_names)
 
 
 async def export(

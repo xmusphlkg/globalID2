@@ -9,6 +9,7 @@ if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
 from src.services.settings_service import RuntimeSettingsService
+import pytest
 
 
 def _fake_config(tmp_path: Path):
@@ -40,6 +41,7 @@ def _fake_config(tmp_path: Path):
         ),
         cloudflare_api_token="env-cloudflare-token",
         cloudflare_account_id="env-account-id",
+        public_ga4_measurement_id="G-8P39XV52NC",
     )
 
 
@@ -65,6 +67,8 @@ def test_public_snapshot_uses_env_defaults(monkeypatch, tmp_path):
 
     assert snapshot["cloudflare"]["source"] == "env"
     assert snapshot["cloudflare"]["cloudflare_configured"] is True
+    assert snapshot["site"]["public_ga4_measurement_id"] == "G-8P39XV52NC"
+    assert snapshot["site"]["ga4_configured"] is True
     assert not (tmp_path / "system-settings.json").exists()
 
 
@@ -100,6 +104,7 @@ def test_updates_persist_and_reset_to_env(monkeypatch, tmp_path):
     settings_file = tmp_path / "system-settings.json"
     stored = json.loads(settings_file.read_text(encoding="utf-8"))
     assert stored["smtp"]["smtp_password"] == "local-secret"
+    assert settings_file.stat().st_mode & 0o777 == 0o600
 
     service.update_smtp(
         {
@@ -144,9 +149,36 @@ def test_updates_persist_and_reset_to_env(monkeypatch, tmp_path):
     assert cloudflare_snapshot["cloudflare_configured"] is True
     assert cloudflare_snapshot["default_cloudflare_project_name"] == "globalid-prod"
 
+    service.update_site({"public_ga4_measurement_id": "g-8p39xv52nc"})
+    site_snapshot = service.public_snapshot()["site"]
+    assert site_snapshot["source"] == "local"
+    assert site_snapshot["public_ga4_measurement_id"] == "G-8P39XV52NC"
+    assert service.site_runtime()["public_ga4_measurement_id"] == "G-8P39XV52NC"
+
+    service.update_smtp({"clear_smtp_password": True})
+    assert service.public_snapshot()["smtp"]["smtp_password_present"] is False
+    service.update_cloudflare(
+        {
+            "clear_cloudflare_api_token": True,
+            "clear_cloudflare_account_id": True,
+        }
+    )
+    assert service.public_snapshot()["cloudflare"]["cloudflare_configured"] is False
+
     service.reset_section("smtp")
     reset_snapshot = service.public_snapshot()["smtp"]
     assert reset_snapshot["source"] == "env"
     assert reset_snapshot["smtp_host"] == "smtp.env.local"
     assert reset_snapshot["smtp_password_present"] is False
     assert reset_snapshot["alerting_ready"] is False
+
+
+def test_site_settings_reject_invalid_ga4_measurement_id(monkeypatch, tmp_path):
+    monkeypatch.setattr("src.services.settings_service.get_config", lambda: _fake_config(tmp_path))
+    service = RuntimeSettingsService()
+
+    with pytest.raises(ValueError, match="GA4 Measurement ID"):
+        service.update_site({"public_ga4_measurement_id": "UA-OLD-FORMAT"})
+
+    with pytest.raises(ValueError, match="Raw archive repository URL"):
+        service.update_github({"raw_archive_enabled": True, "raw_archive_repo_url": ""})

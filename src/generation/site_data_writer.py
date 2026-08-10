@@ -69,8 +69,10 @@ def prepare_site_output_dirs(output_dir: Path, public_site_data_dir: Path) -> No
     (output_dir / "diseases").mkdir(exist_ok=True)
     (output_dir / "disease-knowledge").mkdir(exist_ok=True)
     (output_dir / "reports").mkdir(exist_ok=True)
+    (output_dir / "situation" / "archive").mkdir(parents=True, exist_ok=True)
     (public_site_data_dir / "countries").mkdir(parents=True, exist_ok=True)
     (public_site_data_dir / "diseases").mkdir(parents=True, exist_ok=True)
+    (public_site_data_dir / "situation" / "archive").mkdir(parents=True, exist_ok=True)
 
 
 def remove_stale_json_files(dir_path: Path, expected_names: set[str]) -> int:

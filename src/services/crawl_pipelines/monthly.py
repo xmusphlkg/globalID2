@@ -205,6 +205,21 @@ CONFIGS = {
         ),
         force_fetches_history=True,
     ),
+    "AT": MonthlyPipelineConfig(
+        country_code="AT",
+        raw_dir_name="at",
+        start_year=2025,
+        recent_months=3,
+        default_months_label="3",
+        fetch_description="Fetching Austria AGES Radar monthly national tables...",
+        mode_recent="dynamic recent-month revision window",
+        upsert_description="Austria AGES Radar data may be revised",
+        finalizing_description="Finalizing Austria AGES Radar monthly update...",
+        process_disabled_summary="Process disabled, refreshed Austria AGES source only.",
+        imported_summary=lambda count, months: f"Austria AGES data upserted: {count} rows across {months} month(s).",
+        no_rows_summary="Austria AGES source refreshed; no rows matched legacy mapping.",
+        force_fetches_history=True,
+    ),
 }
 
 
