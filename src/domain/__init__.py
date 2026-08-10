@@ -29,6 +29,15 @@ from .task import Task, TaskWorkbook, TaskDependency, TaskStatus, TaskType, Task
 from .standard_disease import StandardDisease
 from .disease_mapping import DiseaseMapping
 from .disease_learning_suggestion import DiseaseLearningSuggestion
+from .disease_mapping_registry import (
+    DiseaseMappingAssertion,
+    DiseaseMappingCandidate,
+    DiseaseMappingRelease,
+    DiseaseMappingReleaseItem,
+    MappingNotificationOutbox,
+    SourceDiseaseCategory,
+    SourceDiseaseCategoryAlias,
+)
 from .country_scope import CountryScope
 from .population_record import PopulationRecord
 from .ai_model_center import AIProviderConfig, AIModelConfig
@@ -44,6 +53,7 @@ from .disease_ontology import (
     DiseaseTaxonomyEdge,
     DiseaseTaxonomyNode,
 )
+from .situation import PublicHealthEvent, SituationOverride, SituationSnapshot
 
 __all__ = [
     # Base classes
@@ -79,6 +89,13 @@ __all__ = [
     "StandardDisease",
     "DiseaseMapping",
     "DiseaseLearningSuggestion",
+    "SourceDiseaseCategory",
+    "SourceDiseaseCategoryAlias",
+    "DiseaseMappingAssertion",
+    "DiseaseMappingCandidate",
+    "DiseaseMappingRelease",
+    "DiseaseMappingReleaseItem",
+    "MappingNotificationOutbox",
     "CountryScope",
     "PopulationRecord",
     "AIProviderConfig",
@@ -95,4 +112,7 @@ __all__ = [
     "DiseaseSeriesObservation",
     "DiseaseSourceAvailability",
     "DiseaseSurveillanceSeries",
+    "PublicHealthEvent",
+    "SituationOverride",
+    "SituationSnapshot",
 ]

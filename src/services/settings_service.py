@@ -1,4 +1,4 @@
-"""Runtime settings storage for SMTP, GitHub, and Cloudflare.
+"""Runtime settings storage for SMTP, GitHub, Cloudflare, and site builds.
 
 The service keeps a small JSON file under ``data/`` as the writable source of
 truth, while environment variables remain the fallback defaults.  This lets the
@@ -9,6 +9,7 @@ state.
 from __future__ import annotations
 
 import json
+import os
 from copy import deepcopy
 from pathlib import Path
 from threading import RLock
@@ -25,6 +26,7 @@ _GITHUB_REPO_PATTERNS = (
     re.compile(r"^ssh://git@github\.com/(?P<owner>[^/]+)/(?P<repo>[^/]+?)(?:\.git)?$"),
     re.compile(r"^https://github\.com/(?P<owner>[^/]+)/(?P<repo>[^/]+?)(?:\.git)?/?$"),
 )
+_GA4_MEASUREMENT_ID_PATTERN = re.compile(r"^G-[A-Z0-9]{6,20}$", re.IGNORECASE)
 
 
 def _coerce_bool(value: Any, default: bool = False) -> bool:
@@ -105,6 +107,9 @@ class RuntimeSettingsService:
                 "cloudflare_account_id": cfg.cloudflare_account_id.strip(),
                 "default_cloudflare_project_name": data_release.default_cloudflare_project_name.strip() or "globalid",
             },
+            "site": {
+                "public_ga4_measurement_id": str(getattr(cfg, "public_ga4_measurement_id", "") or "").strip().upper(),
+            },
         }
 
     def _load_overrides(self) -> dict[str, Any]:
@@ -129,6 +134,10 @@ class RuntimeSettingsService:
             encoding="utf-8",
         )
         tmp_path.replace(path)
+        try:
+            os.chmod(path, 0o600)
+        except OSError as exc:
+            logger.warning("Failed to restrict runtime settings file permissions for %s: %s", path, exc)
 
     def _merge_snapshot(self) -> tuple[dict[str, Any], dict[str, Any]]:
         defaults = self._default_raw_snapshot()
@@ -178,6 +187,13 @@ class RuntimeSettingsService:
             "default_cloudflare_project_name": str(raw.get("default_cloudflare_project_name") or "").strip() or "globalid",
         }
 
+    def _site_raw(self) -> dict[str, Any]:
+        merged, _ = self._merge_snapshot()
+        raw = merged.get("site", {})
+        return {
+            "public_ga4_measurement_id": str(raw.get("public_ga4_measurement_id") or "").strip().upper(),
+        }
+
     def smtp_runtime(self) -> dict[str, Any]:
         """Return the raw SMTP runtime settings, including the password."""
         return self._smtp_raw()
@@ -188,6 +204,9 @@ class RuntimeSettingsService:
     def cloudflare_runtime(self) -> dict[str, Any]:
         return self._cloudflare_raw()
 
+    def site_runtime(self) -> dict[str, Any]:
+        return self._site_raw()
+
     def public_snapshot(self) -> dict[str, Any]:
         merged, overrides = self._merge_snapshot()
         smtp = self._build_smtp_public(merged.get("smtp", {}), source="local" if "smtp" in overrides else "env")
@@ -196,10 +215,15 @@ class RuntimeSettingsService:
             merged.get("cloudflare", {}),
             source="local" if "cloudflare" in overrides else "env",
         )
+        site = self._build_site_public(
+            merged.get("site", {}),
+            source="local" if "site" in overrides else "env",
+        )
         return {
             "smtp": smtp,
             "github": github,
             "cloudflare": cloudflare,
+            "site": site,
         }
 
     def _build_smtp_public(self, raw: dict[str, Any], *, source: str) -> dict[str, Any]:
@@ -245,11 +269,11 @@ class RuntimeSettingsService:
             "raw_archive_enabled": raw_archive_enabled,
             "raw_archive_repo_url": raw_archive_repo_url,
             "raw_archive_branch": raw_archive_branch,
-            "raw_archive_configured": bool(raw_archive_repo_url),
+            "raw_archive_configured": bool(raw_archive_enabled and raw_archive_repo_url),
             "default_github_remote": default_remote,
             "default_github_branch": default_branch,
-            "github_configured": bool(repo_url or raw_base_url),
-            "release_defaults_ready": bool(default_remote),
+            "github_configured": bool(repo_url or raw_base_url or raw_archive_repo_url),
+            "release_defaults_ready": bool((repo_url or raw_base_url) and default_remote),
         }
 
     def _build_cloudflare_public(self, raw: dict[str, Any], *, source: str) -> dict[str, Any]:
@@ -264,12 +288,29 @@ class RuntimeSettingsService:
             "cloudflare_configured": bool(api_token_present and account_id_present and default_project_name),
         }
 
+    def _build_site_public(self, raw: dict[str, Any], *, source: str) -> dict[str, Any]:
+        measurement_id = str(raw.get("public_ga4_measurement_id") or "").strip().upper()
+        return {
+            "source": source,
+            "public_ga4_measurement_id": measurement_id,
+            "ga4_configured": bool(_GA4_MEASUREMENT_ID_PATTERN.fullmatch(measurement_id)),
+        }
+
     def _update_section(self, section: str, payload: dict[str, Any]) -> dict[str, Any]:
         with self._lock:
             overrides = self._load_overrides()
             section_overrides = dict(overrides.get(section, {}))
+            clear_secret_targets = {
+                "clear_smtp_password": "smtp_password",
+                "clear_cloudflare_api_token": "cloudflare_api_token",
+                "clear_cloudflare_account_id": "cloudflare_account_id",
+            }
             for key, value in payload.items():
                 if key.startswith("_"):
+                    continue
+                if key in clear_secret_targets:
+                    if _coerce_bool(value):
+                        section_overrides[clear_secret_targets[key]] = ""
                     continue
                 if value is None:
                     section_overrides.pop(key, None)
@@ -294,10 +335,22 @@ class RuntimeSettingsService:
         return self._update_section("smtp", payload)
 
     def update_github(self, payload: dict[str, Any]) -> dict[str, Any]:
+        prospective = {**self._github_raw(), **{key: value for key, value in payload.items() if value is not None}}
+        if _coerce_bool(prospective.get("raw_archive_enabled")) and not str(prospective.get("raw_archive_repo_url") or "").strip():
+            raise ValueError("Raw archive repository URL is required when archiving is enabled.")
         return self._update_section("github", payload)
 
     def update_cloudflare(self, payload: dict[str, Any]) -> dict[str, Any]:
         return self._update_section("cloudflare", payload)
+
+    def update_site(self, payload: dict[str, Any]) -> dict[str, Any]:
+        measurement_id = payload.get("public_ga4_measurement_id")
+        if measurement_id is not None:
+            normalized = str(measurement_id).strip().upper()
+            if normalized and not _GA4_MEASUREMENT_ID_PATTERN.fullmatch(normalized):
+                raise ValueError("GA4 Measurement ID must use the format G-XXXXXXXXXX.")
+            payload = {**payload, "public_ga4_measurement_id": normalized}
+        return self._update_section("site", payload)
 
     def reset_section(self, section: str) -> dict[str, Any]:
         with self._lock:

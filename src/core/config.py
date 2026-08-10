@@ -406,6 +406,11 @@ class AppSettings(BaseSettings):
     github_data_share_raw_base_url: str = Field(default="", description="下载数据分享公开 raw base URL")
     cloudflare_api_token: str = Field(default="", description="Cloudflare API token")
     cloudflare_account_id: str = Field(default="", description="Cloudflare account id")
+    public_ga4_measurement_id: str = Field(
+        default="G-8P39XV52NC",
+        validation_alias="PUBLIC_GA4_MEASUREMENT_ID",
+        description="Astro 网站构建时注入的公开 GA4 Measurement ID",
+    )
     dashboard_api_key: str = Field(
         default="",
         validation_alias="DASHBOARD_API_KEY",

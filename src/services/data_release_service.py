@@ -31,6 +31,7 @@ from src.services.data_release.commands import (
     build_generate_site_data_command,
     build_publish_download_repo_command,
     build_publish_raw_archive_command,
+    build_update_situation_room_command,
 )
 from src.services.data_release.process_runner import (
     run_capture,
@@ -60,6 +61,7 @@ GENERATED_DATA_PATHS = (
     "astro-site/src/data/downloads.json",
     "astro-site/src/data/meta.json",
     "astro-site/src/data/reports",
+    "astro-site/src/data/situation",
     "data/current",
     "data/raw",
 )
@@ -192,14 +194,14 @@ class DataReleaseService:
                     include_git_push=True,
                     include_cloudflare_deploy=True,
                     require_clean_worktree=True,
-                    daily_time=None,
+                    daily_time="03:00",
                     interval_minutes=None,
                     timezone=cfg.timezone,
                     github_remote=github_settings["default_github_remote"] or "origin",
                     github_branch=get_data_share_repo_branch(),
                     cloudflare_project_name=cloudflare_settings["default_cloudflare_project_name"] or "globalid",
                     commit_message_template=cfg.default_commit_message_template,
-                    notes="Default release pipeline for generated site data and Cloudflare Pages deploy.",
+                    notes="Default 03:00 UTC release pipeline for generated site data, Situation Room refresh, and Cloudflare Pages deploy.",
                 )
             )
             await db.commit()
@@ -920,6 +922,9 @@ class DataReleaseService:
             python_path=python_path,
             download_url_base=download_url_base,
         )
+
+    def _update_situation_room_command(self, *, python_path: Path) -> list[str]:
+        return build_update_situation_room_command(python_path=python_path)
 
     def _publish_download_repo_command(
         self,

@@ -13,6 +13,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from src.core import get_database, get_logger
 from src.core.country_library import get_country_bootstrap_config
 from src.core.disease_mutation_lock import acquire_disease_data_mutation_lock
@@ -54,8 +56,11 @@ class CrawlService:
         "TW": _PipelineSpec("_execute_tw_monthly", "TWMonthlyUpdater"),
         "HK": _PipelineSpec("_execute_hk_monthly", "HKMonthlyUpdater"),
         "FI": _PipelineSpec("_execute_fi_monthly", "FIMonthlyUpdater"),
+        "IE": _PipelineSpec("_execute_ie_weekly", "IEWeeklyUpdater"),
         "NO": _PipelineSpec("_execute_no_monthly", "NOMonthlyUpdater"),
         "SE": _PipelineSpec("_execute_se_monthly", "SEMonthlyUpdater"),
+        "AT": _PipelineSpec("_execute_at_monthly", "ATMonthlyUpdater"),
+        "DE": _PipelineSpec("_execute_de_weekly", "DEWeeklyUpdater"),
         "CA-ON": _PipelineSpec(
             "_execute_ca_on_monthly", "CAOntarioMonthlyUpdater"
         ),
@@ -75,8 +80,11 @@ class CrawlService:
         "TW": "SRC_TW_NIDSS",
         "HK": "SRC_HK_CHP",
         "FI": "SRC_FI_THL_TTR",
+        "IE": "SRC_IE_HPSC_NDH",
         "NO": "SRC_NO_FHI_MSIS",
         "SE": "SRC_SE_FOHM_SMINET",
+        "AT": "SRC_AT_AGES_RADAR",
+        "DE": "SRC_DE_RKI_SURVSTAT",
         "KR": "SRC_KR_KDCA",
         "BR": "SRC_BR_SINAN",
         "CH": "SRC_CH_FOPH_IDD",
@@ -107,34 +115,40 @@ class CrawlService:
     def _make_updater(updater_name: str):
         from src.data.processors import (
             AUMonthlyUpdater,
+            ATMonthlyUpdater,
             BRMonthlyUpdater,
             CAOntarioMonthlyUpdater,
             CHMonthlyUpdater,
             FIMonthlyUpdater,
             HKMonthlyUpdater,
+            IEWeeklyUpdater,
             ISMultiFrequencyUpdater,
             JPWeeklyUpdater,
             KRMonthlyUpdater,
             NOMonthlyUpdater,
             NZMonthlyUpdater,
             SEMonthlyUpdater,
+            DEWeeklyUpdater,
             TWMonthlyUpdater,
             USWeeklyUpdater,
         )
 
         updaters = {
             "AUMonthlyUpdater": AUMonthlyUpdater,
+            "ATMonthlyUpdater": ATMonthlyUpdater,
             "BRMonthlyUpdater": BRMonthlyUpdater,
             "CAOntarioMonthlyUpdater": CAOntarioMonthlyUpdater,
             "CHMonthlyUpdater": CHMonthlyUpdater,
             "FIMonthlyUpdater": FIMonthlyUpdater,
             "HKMonthlyUpdater": HKMonthlyUpdater,
+            "IEWeeklyUpdater": IEWeeklyUpdater,
             "ISMultiFrequencyUpdater": ISMultiFrequencyUpdater,
             "JPWeeklyUpdater": JPWeeklyUpdater,
             "KRMonthlyUpdater": KRMonthlyUpdater,
             "NOMonthlyUpdater": NOMonthlyUpdater,
             "NZMonthlyUpdater": NZMonthlyUpdater,
             "SEMonthlyUpdater": SEMonthlyUpdater,
+            "DEWeeklyUpdater": DEWeeklyUpdater,
             "TWMonthlyUpdater": TWMonthlyUpdater,
             "USWeeklyUpdater": USWeeklyUpdater,
         }
@@ -170,6 +184,28 @@ class CrawlService:
             geography_key = f"country:{country_code}:national"
         series_store = SeriesObservationStore()
         source_series_rows = rows if series_rows is None else series_rows
+        # Mapping Registry v3 discovers source categories for every country at
+        # the same transactional boundary as the source facts.  Unknown
+        # categories are retained and queued for AI review; they are never
+        # silently coerced to a legacy disease ID.
+        if isinstance(db, AsyncSession) and source_series_rows:
+            from src.services.disease_mapping_registry_service import (
+                disease_mapping_registry_service,
+            )
+
+            discovery = await disease_mapping_registry_service.discover_rows(
+                db,
+                country_code=country_code,
+                source_id=source_id,
+                rows=source_series_rows,
+                notify=True,
+            )
+            logger.info(
+                "Disease Mapping Registry discovery | country={} categories={} new={}",
+                country_code,
+                discovery["source_category_count"],
+                discovery["new_category_count"],
+            )
         skipped_unregistered = 0
         skipped_missing = 0
         if bool(getattr(updater, "series_registered_rows_only", False)):
@@ -302,12 +338,29 @@ class CrawlService:
             source_latest_date=source_latest_date,
             force=force,
         )
-        await CrawlService._save_series_rows(
+        series_result = await CrawlService._save_series_rows(
             db,
             updater,
             rows,
             series_rows=series_rows,
         )
+        # Source-native integrations can intentionally have no legacy disease
+        # projection.  Surface their successfully persisted fact count to the
+        # task/control-plane result instead of incorrectly reporting zero.
+        if (
+            int(getattr(import_result, "inserted_or_updated", 0) or 0) == 0
+            and int(getattr(series_result, "upserted", 0) or 0) > 0
+        ):
+            try:
+                return replace(
+                    import_result,
+                    inserted_or_updated=series_result.upserted,
+                    imported_new_data=True,
+                )
+            except TypeError:
+                # Compatibility test doubles need not be dataclasses.
+                setattr(import_result, "inserted_or_updated", series_result.upserted)
+                setattr(import_result, "imported_new_data", True)
         return import_result
 
     @staticmethod
@@ -376,6 +429,7 @@ class CrawlService:
             self._configure_monthly_runtime_policy(
                 updater,
                 country_code=normalized_country,
+                source=source,
                 include_current_month=include_current_month,
                 revision_window_months=revision_window_months,
             )
@@ -424,6 +478,7 @@ class CrawlService:
         country_code: str,
         include_current_month: Optional[bool],
         revision_window_months: Optional[int],
+        source: str = "",
     ) -> None:
         """Apply task/control-plane month policy to a compatible updater."""
 
@@ -431,8 +486,17 @@ class CrawlService:
         crawler_config = (
             config.get("crawler_config", {}) if isinstance(config, dict) else {}
         )
+        source_policies = crawler_config.get("source_policies", {})
+        source_policy = (
+            source_policies.get(str(source or "").strip().casefold(), {})
+            if isinstance(source_policies, dict)
+            else {}
+        )
+        if not isinstance(source_policy, dict):
+            source_policy = {}
+        effective_config = {**crawler_config, **source_policy}
         if include_current_month is None:
-            raw_current = crawler_config.get("default_include_current_month", False)
+            raw_current = effective_config.get("default_include_current_month", False)
             if isinstance(raw_current, str):
                 effective_current = raw_current.strip().casefold() in {
                     "1",
@@ -445,20 +509,34 @@ class CrawlService:
         else:
             effective_current = bool(include_current_month)
 
+        weekly_window = hasattr(updater, "refresh_recent_weeks")
+        configured_window = (
+            effective_config.get(
+                "default_revision_window",
+                effective_config.get("refresh_recent_weeks", 12),
+            )
+            if weekly_window
+            else effective_config.get(
+                "default_revision_window",
+                effective_config.get("refresh_recent_months", 3),
+            )
+        )
         try:
             effective_window = int(
                 revision_window_months
                 if revision_window_months is not None
-                else crawler_config.get("refresh_recent_months", 3)
+                else configured_window
             )
         except (TypeError, ValueError):
-            effective_window = 3
-        effective_window = max(1, min(24, effective_window))
+            effective_window = 12 if weekly_window else 3
+        effective_window = max(1, min(52 if weekly_window else 24, effective_window))
 
         if hasattr(updater, "include_current_month"):
             updater.include_current_month = effective_current
         if hasattr(updater, "refresh_recent_months"):
             updater.refresh_recent_months = effective_window
+        if hasattr(updater, "refresh_recent_weeks"):
+            updater.refresh_recent_weeks = effective_window
 
     async def _execute_cn_cdc(
         self,
@@ -684,6 +762,80 @@ class CrawlService:
             updater=updater,
         )
 
+    async def _execute_ie_weekly(
+        self,
+        *,
+        task: Task,
+        source: str,
+        force: bool,
+        process: bool,
+        save_raw: bool,
+        fill_missing: bool,
+        updater,
+    ) -> CrawlResult:
+        """Dispatch Ireland's current, annual, or archived-weekly source."""
+        if str(source or "").strip().casefold() == "hpsc_weekly_archive":
+            from src.data.processors import IEWeeklyArchiveUpdater
+            from src.services.crawl_pipelines.ie_weekly_archive import (
+                execute_ie_weekly_archive_pipeline,
+            )
+
+            return await execute_ie_weekly_archive_pipeline(
+                self,
+                task=task,
+                source=source,
+                force=force,
+                process=process,
+                save_raw=save_raw,
+                fill_missing=fill_missing,
+                updater=IEWeeklyArchiveUpdater(),
+                get_database=get_database,
+                task_manager=task_manager,
+                crawl_run_type=CrawlRun,
+                result_type=CrawlResult,
+                logger=logger,
+            )
+
+        if str(source or "").strip().casefold() == "hpsc_annual":
+            from src.data.processors import IEAnnualUpdater
+            from src.services.crawl_pipelines.ie_annual import (
+                execute_ie_annual_pipeline,
+            )
+
+            return await execute_ie_annual_pipeline(
+                self,
+                task=task,
+                source=source,
+                force=force,
+                process=process,
+                save_raw=save_raw,
+                fill_missing=fill_missing,
+                updater=IEAnnualUpdater(),
+                get_database=get_database,
+                task_manager=task_manager,
+                crawl_run_type=CrawlRun,
+                result_type=CrawlResult,
+                logger=logger,
+            )
+
+        from src.services.crawl_pipelines.ie import execute_ie_pipeline
+
+        return await execute_ie_pipeline(
+            self,
+            task=task,
+            source=source,
+            force=force,
+            process=process,
+            save_raw=save_raw,
+            fill_missing=fill_missing,
+            updater=updater,
+            get_database=get_database,
+            task_manager=task_manager,
+            crawl_run_type=CrawlRun,
+            result_type=CrawlResult,
+            logger=logger,
+        )
+
     async def _execute_no_monthly(
         self,
         *,
@@ -735,6 +887,27 @@ class CrawlService:
             save_raw=save_raw,
             fill_missing=fill_missing,
             updater=updater,
+        )
+
+    async def _execute_at_monthly(
+        self, *, task: Task, source: str, force: bool, process: bool,
+        save_raw: bool, fill_missing: bool, updater,
+    ) -> CrawlResult:
+        return await self._execute_configured_monthly(
+            "AT", task=task, source=source, force=force, process=process,
+            save_raw=save_raw, fill_missing=fill_missing, updater=updater,
+        )
+
+    async def _execute_de_weekly(
+        self, *, task: Task, source: str, force: bool, process: bool,
+        save_raw: bool, fill_missing: bool, updater,
+    ) -> CrawlResult:
+        from src.services.crawl_pipelines.de import execute_de_pipeline
+        return await execute_de_pipeline(
+            self, task=task, source=source, force=force, process=process,
+            save_raw=save_raw, fill_missing=fill_missing, updater=updater,
+            get_database=get_database, task_manager=task_manager, crawl_run_type=CrawlRun,
+            result_type=CrawlResult, logger=logger,
         )
 
     async def _execute_ca_on_monthly(
