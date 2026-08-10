@@ -1,0 +1,57 @@
+disease_id,local_name,local_code,category,aliases,notes,data_source,source_id,series_id
+D135,Bacterial meningitis (not otherwise specified),bacterial_meningitis_not_otherwise_specified,National weekly,Bacterial meningitis NOS,Source category excludes specified aetiologies,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_BACTERIAL_MENINGITIS_NOS_WEEKLY
+D091,Botulism,botulism,National weekly,,HPSC national weekly notifications,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_BOTULISM_WEEKLY
+D032,Brucellosis,brucellosis,National weekly,,HPSC national weekly notifications,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_BRUCELLOSIS_WEEKLY
+D092,Campylobacter infection,campylobacter_infection,National weekly,Campylobacteriosis,HPSC source label retained,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_CAMPYLOBACTER_WEEKLY
+D227,Carbapenem-resistant Enterobacteriaceae infection (invasive),carbapenem_resistant_enterobacteriaceae_infection_invasive,National weekly,Invasive CRE infection,Invasive source category; do not merge with carriage or broader CPO series,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_INVASIVE_CRE_WEEKLY
+D054,Chickenpox - hospitalised cases,chickenpox_hospitalised_cases,National weekly,Hospitalised varicella,Hospitalised-case subset and not comparable with all chickenpox notifications,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_CHICKENPOX_HOSPITALISED_WEEKLY
+D052,Chikungunya disease,chikungunya_disease,National weekly,Chikungunya,HPSC national weekly notifications,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_CHIKUNGUNYA_WEEKLY
+D094,Chlamydia trachomatis infection,chlamydia_trachomatis_infection,National weekly,Chlamydia,HPSC national weekly notifications,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_CHLAMYDIA_WEEKLY
+D002,Cholera,cholera,National weekly,,HPSC national weekly notifications,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_CHOLERA_WEEKLY
+D004,COVID-19,covid_19,National weekly,SARS-CoV-2 infection,HPSC national weekly notification series,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_COVID19_WEEKLY
+D144,Creutzfeldt Jakob disease,creutzfeldt_jakob_disease,National weekly,CJD,Source is CJD rather than all prion diseases,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_CJD_WEEKLY
+D096,Cryptosporidiosis,cryptosporidiosis,National weekly,Cryptosporidium infection,HPSC national weekly notifications,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_CRYPTOSPORIDIOSIS_WEEKLY
+D021,Dengue fever,dengue_fever,National weekly,Dengue,HPSC national weekly notifications,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_DENGUE_WEEKLY
+D029,Diphtheria,diphtheria,National weekly,,HPSC national weekly notifications,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_DIPHTHERIA_WEEKLY
+D045,Echinococcosis,echinococcosis,National weekly,Hydatid disease,HPSC national weekly notifications,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_ECHINOCOCCOSIS_WEEKLY
+D099,Giardiasis,giardiasis,National weekly,Giardia infection,HPSC national weekly notifications,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_GIARDIASIS_WEEKLY
+D033,Gonorrhoea,gonorrhoea,National weekly,Gonorrhea,HPSC national weekly notifications,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_GONORRHOEA_WEEKLY
+D100,Haemophilus influenzae disease (invasive),haemophilus_influenzae_disease_invasive,National weekly,Invasive Haemophilus influenzae disease,Invasive source category,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_INVASIVE_HAEMOPHILUS_WEEKLY
+D007,Hepatitis A (acute),hepatitis_a_acute,National weekly,Acute hepatitis A,Course-qualified source series,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_HEPATITIS_A_ACUTE_WEEKLY
+D008,Hepatitis B (acute and chronic),hepatitis_b_acute_and_chronic,National weekly,Hepatitis B combined,Combined course series; never split or add to acute/chronic child series,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_HEPATITIS_B_COMBINED_WEEKLY
+D009,Hepatitis C,hepatitis_c,National weekly,,Source does not qualify acute/chronic course,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_HEPATITIS_C_WEEKLY
+D011,Hepatitis E infection,hepatitis_e_infection,National weekly,Hepatitis E,HPSC national weekly notifications,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_HEPATITIS_E_WEEKLY
+D162,Human immunodeficiency virus infection,human_immunodeficiency_virus_infection,National weekly,HIV infection,Kept distinct from AIDS,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_HIV_WEEKLY
+D038,Influenza,influenza,National weekly,Seasonal influenza,HPSC notification series; source case definition retained,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_INFLUENZA_WEEKLY
+D107,Legionellosis,legionellosis,National weekly,Legionnaires disease,HPSC national weekly notifications,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_LEGIONELLOSIS_WEEKLY
+D042,Leprosy,leprosy,National weekly,Hansen disease,HPSC national weekly notifications,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_LEPROSY_WEEKLY
+D035,Leptospirosis,leptospirosis,National weekly,,HPSC national weekly notifications,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_LEPTOSPIROSIS_WEEKLY
+D108,Listeriosis,listeriosis,National weekly,Listeria infection,HPSC national weekly notifications,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_LISTERIOSIS_WEEKLY
+D109,Lyme disease,lyme_disease,National weekly,Lyme borreliosis,HPSC national weekly notifications,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_LYME_WEEKLY
+D242,Lymphogranuloma venereum,lymphogranuloma_venereum,National weekly,LGV,Kept distinct from general chlamydia series,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_LGV_WEEKLY
+D037,Malaria,malaria,National weekly,,HPSC national weekly notifications,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_MALARIA_WEEKLY
+D017,Measles,measles,National weekly,,HPSC national weekly notifications,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_MEASLES_WEEKLY
+D110,Meningococcal disease,meningococcal_disease,National weekly,Invasive meningococcal disease,HPSC source definition retained,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_MENINGOCOCCAL_WEEKLY
+D065,Mpox,mpox,National weekly,Monkeypox,HPSC national weekly notifications,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_MPOX_WEEKLY
+D039,Mumps,mumps,National weekly,,HPSC national weekly notifications,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_MUMPS_WEEKLY
+D234,Paratyphoid,paratyphoid,National weekly,Paratyphoid fever,Paratyphoid-only series,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_PARATYPHOID_WEEKLY
+D028,Pertussis,pertussis,National weekly,Whooping cough,HPSC national weekly notifications,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_PERTUSSIS_WEEKLY
+D113,Q fever,q_fever,National weekly,Q-fever,HPSC national weekly notifications,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_Q_FEVER_WEEKLY
+D142,Respiratory syncytial virus infection,respiratory_syncytial_virus_infection,National weekly,RSV infection,HPSC source definition retained,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_RSV_WEEKLY
+D199,Rotavirus infection,rotavirus_infection,National weekly,Rotavirus,HPSC national weekly notifications,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_ROTAVIRUS_WEEKLY
+D114,Salmonellosis,salmonellosis,National weekly,Non-typhoidal salmonellosis,Typhoid and paratyphoid are separate source series,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_SALMONELLOSIS_WEEKLY
+D105,Shigellosis,shigellosis,National weekly,Shigella infection,HPSC national weekly notifications,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_SHIGELLOSIS_WEEKLY
+D157,Streptococcus group A infection (invasive),streptococcus_group_a_infection_invasive,National weekly,Invasive group A streptococcal infection,iGAS source category,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_INVASIVE_GAS_WEEKLY
+D106,Streptococcus pneumoniae infection (invasive),streptococcus_pneumoniae_infection_invasive,National weekly,Invasive pneumococcal disease,Invasive source category,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_INVASIVE_PNEUMOCOCCAL_WEEKLY
+D034,Syphilis,syphilis,National weekly,,Source does not qualify clinical stage,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_SYPHILIS_WEEKLY
+D085,Toxoplasmosis,toxoplasmosis,National weekly,Toxoplasma infection,HPSC national weekly notifications,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_TOXOPLASMOSIS_WEEKLY
+D025,Tuberculosis,tuberculosis,National weekly,TB,HPSC national weekly notifications,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_TUBERCULOSIS_WEEKLY
+D123,Tularemia,tularemia,National weekly,Tularaemia,HPSC national weekly notifications,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_TULAREMIA_WEEKLY
+D124,Typhoid,typhoid,National weekly,Typhoid fever,Typhoid-only series,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_TYPHOID_WEEKLY
+D043,Typhus,typhus,National weekly,,HPSC source definition retained,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_TYPHUS_WEEKLY
+D115,Verotoxigenic Escherichia coli infection,verotoxigenic_escherichia_coli_infection,National weekly,VTEC|STEC|Shiga toxin-producing Escherichia coli infection,HPSC national weekly notifications,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_VTEC_WEEKLY
+D240,Viral encephalitis,viral_encephalitis,National weekly,Viral meningoencephalitis surveillance,Source category is narrower than the aggregate canonical surveillance concept,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_VIRAL_ENCEPHALITIS_WEEKLY
+D134,Viral meningitis,viral_meningitis,National weekly,Aseptic meningitis,Source category is viral meningitis and remains definition-specific,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_VIRAL_MENINGITIS_WEEKLY
+D128,West Nile fever,west_nile_fever,National weekly,West Nile virus disease,HPSC national weekly notifications,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_WEST_NILE_WEEKLY
+D155,Yersiniosis,yersiniosis,National weekly,Yersinia infection,HPSC national weekly notifications,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_YERSINIOSIS_WEEKLY
+D051,Zika virus infection,zika_virus_infection,National weekly,Zika virus disease,HPSC national weekly notifications,Ireland HPSC Notifiable Diseases Hub,SRC_IE_HPSC_NDH,SER_IE_HPSC_ZIKA_WEEKLY

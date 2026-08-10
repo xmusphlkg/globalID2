@@ -886,7 +886,63 @@ def load_disease_ontology(
 ) -> DiseaseOntology:
     """Load the default registry or a caller-supplied JSON registry path."""
 
-    return DiseaseOntology.from_file(DEFAULT_ONTOLOGY_PATH if path is None else path)
+    registry_path = Path(DEFAULT_ONTOLOGY_PATH if path is None else path)
+    with registry_path.open("r", encoding="utf-8") as handle:
+        document = json.load(handle)
+
+    # A source may reuse a large reviewed source vocabulary while retaining a
+    # distinct source identity, frequency, validity window, and provenance.
+    # Expansion happens before validation so all downstream APIs and database
+    # syncs see ordinary explicit source-series records.
+    existing_ids = {series.get("id") for series in document.get("source_series", [])}
+    for source in document.get("sources", []):
+        template_source_id = source.get("series_template_source_id")
+        template = source.get("series_template")
+        if not template_source_id or not isinstance(template, Mapping):
+            continue
+        source_prefix = str(template.get("id_prefix_from") or "")
+        target_prefix = str(template.get("id_prefix_to") or "")
+        source_suffix = str(template.get("id_suffix_from") or "")
+        target_suffix = str(template.get("id_suffix_to") or "")
+        for base in list(document.get("source_series", [])):
+            if base.get("source_id") != template_source_id:
+                continue
+            base_id = str(base.get("id") or "")
+            if source_prefix and not base_id.startswith(source_prefix):
+                continue
+            derived_id = target_prefix + base_id[len(source_prefix):]
+            if source_suffix and derived_id.endswith(source_suffix):
+                derived_id = derived_id[: -len(source_suffix)] + target_suffix
+            if derived_id in existing_ids:
+                continue
+            derived = copy.deepcopy(base)
+            derived.update(
+                {
+                    "id": derived_id,
+                    "source_id": source["id"],
+                    **dict(template.get("overrides") or {}),
+                }
+            )
+            for key in template.get("remove_fields", []):
+                derived.pop(str(key), None)
+            document["source_series"].append(derived)
+            existing_ids.add(derived_id)
+            target_kind = "concept" if derived.get("concept_id") else "group"
+            target_id = derived.get("concept_id") or derived.get("group_id")
+            document["availability"].append(
+                {
+                    "id": "AV_" + derived_id.removeprefix("SER_"),
+                    "source_id": source["id"],
+                    "target_ref": {"kind": target_kind, "id": target_id},
+                    "series_id": derived_id,
+                    "status": "available",
+                    "reason_code": "historical_weekly_pdf_snapshot_catalogued",
+                    "missing_value_policy": derived.get(
+                        "missing_value_policy", "missing_is_unknown"
+                    ),
+                }
+            )
+    return DiseaseOntology.from_dict(document)
 
 
 def _indexed(values: list[Any], collection: str) -> dict[str, dict[str, Any]]:

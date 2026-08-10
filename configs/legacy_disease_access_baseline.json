@@ -225,6 +225,11 @@
       "reason": "HK updater temporarily reads legacy checkpoints and writes an atomic compatibility projection before Registry cutover.",
       "max_references": {"DiseaseRecord": 0, "disease_records": 3}
     },
+    "src/data/processors/ie.py": {
+      "classification": "runtime_write",
+      "reason": "IE HPSC updater writes only reviewed compatibility rows while the permission-gated weekly source-series layer remains authoritative.",
+      "max_references": {"DiseaseRecord": 0, "disease_records": 3}
+    },
     "src/data/processors/is.py": {
       "classification": "runtime_write",
       "reason": "Iceland current-dashboard updater writes only compatible annual rows to the flat table while monthly and weekly facts remain source-series only.",

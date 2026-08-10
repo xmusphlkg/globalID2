@@ -117,6 +117,17 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
         )
     await runtime.task_manager.update_task_progress(task.task_uuid, 15)
 
+    await service._run_logged_command(
+        task.task_uuid,
+        title="Refresh Situation Room",
+        cmd=service._update_situation_room_command(python_path=python_path),
+        cwd=runtime.root_dir,
+        env=git_env,
+        metadata={"event": "refresh_situation_room", "release_job_id": job.job_id},
+        timeout_seconds=min(runtime.generate_timeout_seconds, 10 * 60),
+    )
+    await runtime.task_manager.update_task_progress(task.task_uuid, 22)
+
     generate_cmd = service._generate_site_data_command(
         python_path=python_path,
         download_url_base=download_url_base,

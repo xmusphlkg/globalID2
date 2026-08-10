@@ -13,6 +13,9 @@ EXPECTED_SCOPES_BY_COUNTRY = {
     "CA-ON": ["pho_idto_monthly"],
     "NZ": ["phf_monthly"],
     "FI": ["thl_ttr"],
+    "AT": ["ages_radar"],
+    "DE": ["rki_survstat"],
+    "IE": ["hpsc_ndh", "hpsc_weekly_archive", "hpsc_annual"],
     "TW": ["nidss_open_data"],
     "HK": ["chp_notifiable"],
     "BR": ["sinan_datasus"],
@@ -89,6 +92,20 @@ SOURCE_SCOPE_LABELS: dict[str, dict[str, str]] = {
     "thl_ttr": {
         "en": "Finland THL Infectious Diseases Register",
         "zh": "芬兰 THL 传染病登记",
+    },
+    "ages_radar": {"en": "Austria AGES Radar for Infectious Diseases", "zh": "奥地利 AGES 传染病雷达"},
+    "rki_survstat": {"en": "Germany RKI SurvStat 2.0", "zh": "德国 RKI SurvStat 2.0"},
+    "hpsc_ndh": {
+        "en": "Ireland HPSC Notifiable Diseases Hub",
+        "zh": "爱尔兰 HPSC 法定传染病中心",
+    },
+    "hpsc_annual": {
+        "en": "Ireland HPSC Annual Statistics (2004–2020)",
+        "zh": "爱尔兰 HPSC 年度历史统计（2004–2020）",
+    },
+    "hpsc_weekly_archive": {
+        "en": "Ireland HPSC Weekly Report Archive (2015–2021 W29)",
+        "zh": "爱尔兰 HPSC 周报档案（2015–2021年第29周）",
     },
     "fhi_msis": {
         "en": "Norway FHI MSIS Statistics Bank",
@@ -167,6 +184,16 @@ _EXACT_SCOPE_BY_DATA_SOURCE = {
     "finland thl infectious diseases register": "thl_ttr",
     "finland thl ttr": "thl_ttr",
     "thl infectious diseases register": "thl_ttr",
+    "austria ages radar for infectious diseases": "ages_radar",
+    "ages radar": "ages_radar",
+    "germany rki survstat 2.0": "rki_survstat",
+    "rki survstat": "rki_survstat",
+    "ireland hpsc notifiable diseases hub": "hpsc_ndh",
+    "ireland hpsc ndh": "hpsc_ndh",
+    "hpsc notifiable diseases hub": "hpsc_ndh",
+    "ireland hpsc annual infectious disease statistics": "hpsc_annual",
+    "ireland hpsc annual statistics": "hpsc_annual",
+    "ireland hpsc weekly infectious disease report archive": "hpsc_weekly_archive",
     "norway fhi msis statistics bank": "fhi_msis",
     "norway fhi msis": "fhi_msis",
     "fhi msis": "fhi_msis",
@@ -244,6 +271,24 @@ _TASK_SOURCE_ALIASES = {
     "ttr": "thl_ttr",
     "fi": "thl_ttr",
     "finland": "thl_ttr",
+    "ages": "ages_radar",
+    "at": "ages_radar",
+    "austria": "ages_radar",
+    "survstat": "rki_survstat",
+    "rki": "rki_survstat",
+    "de": "rki_survstat",
+    "germany": "rki_survstat",
+    "hpsc": "hpsc_ndh",
+    "hpsc_ndh": "hpsc_ndh",
+    "ndh": "hpsc_ndh",
+    "hpsc_annual": "hpsc_annual",
+    "hpsc_annual_history": "hpsc_annual",
+    "ie_annual": "hpsc_annual",
+    "hpsc_weekly_archive": "hpsc_weekly_archive",
+    "hpsc_archive": "hpsc_weekly_archive",
+    "ie_weekly_archive": "hpsc_weekly_archive",
+    "ie": "hpsc_ndh",
+    "ireland": "hpsc_ndh",
     "fhi": "fhi_msis",
     "fhi_msis": "fhi_msis",
     "msis": "fhi_msis",
@@ -294,6 +339,12 @@ def canonicalize_task_source(
         return "phf_monthly"
     if normalized == "all" and (country_code or "").strip().upper() == "FI":
         return "thl_ttr"
+    if normalized == "all" and (country_code or "").strip().upper() == "AT":
+        return "ages_radar"
+    if normalized == "all" and (country_code or "").strip().upper() == "DE":
+        return "rki_survstat"
+    if normalized == "all" and (country_code or "").strip().upper() == "IE":
+        return "hpsc_ndh"
     if normalized == "all" and (country_code or "").strip().upper() == "NO":
         return "fhi_msis"
     if normalized == "all" and (country_code or "").strip().upper() == "SE":
@@ -389,7 +440,7 @@ def source_options_for_country(country_code: Optional[str]) -> list[dict[str, st
         scopes = ["all"]
 
     option_scopes = list(scopes)
-    if len(scopes) > 1 and "all" not in option_scopes:
+    if len(scopes) > 1 and "all" not in option_scopes and code != "IE":
         option_scopes.insert(0, "all")
 
     return [
@@ -406,7 +457,7 @@ def default_source_for_country(country_code: Optional[str]) -> str:
     """Return the preferred source value for forms and automation presets."""
     code = (country_code or "").strip().upper()
     scopes = get_expected_scopes_for_country(code)
-    if len(scopes) > 1:
+    if len(scopes) > 1 and code != "IE":
         return "all"
     if scopes:
         return scopes[0]
@@ -445,6 +496,10 @@ def scope_from_data_source(data_source: Optional[str]) -> str:
         return "thl_ttr"
     if "fhi msis" in text or "norway fhi" in text:
         return "fhi_msis"
+    if "hpsc weekly infectious disease report archive" in text:
+        return "hpsc_weekly_archive"
+    if "ireland hpsc annual" in text or "hpsc annual infectious" in text:
+        return "hpsc_annual"
     if "sminet" in text or "sweden public health agency" in text or "sweden fohm" in text:
         return "fohm_sminet"
     if "iceland directorate of health" in text:

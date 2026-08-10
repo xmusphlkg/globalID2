@@ -70,29 +70,56 @@ class CrawlTaskService:
             if isinstance(country_config, dict)
             else {}
         )
+        source_policies = crawler_config.get("source_policies", {})
+        source_policy = (
+            source_policies.get(normalized_source, {})
+            if isinstance(source_policies, dict)
+            else {}
+        )
+        if not isinstance(source_policy, dict):
+            source_policy = {}
+        effective_config = {**crawler_config, **source_policy}
         effective_include_current_month = (
             self._as_bool(
-                crawler_config.get("default_include_current_month"), False
+                effective_config.get("default_include_current_month"), False
             )
             if include_current_month is None
             else bool(include_current_month)
         )
         supports_current_month = self._as_bool(
-            crawler_config.get("supports_current_month"), False
+            effective_config.get("supports_current_month"), False
         )
         if effective_include_current_month and not supports_current_month:
             raise ValueError(
                 f"Current-month ingestion is not supported for {country.code.upper()}"
             )
+        revision_unit = str(
+            effective_config.get("revision_window_unit")
+            or (
+                "weeks"
+                if str(effective_config.get("temporal_granularity") or effective_config.get("cadence") or "").lower() == "weekly"
+                else "months"
+            )
+        ).lower()
+        configured_revision_window = effective_config.get("default_revision_window")
+        if configured_revision_window is None:
+            configured_revision_window = (
+                effective_config.get("refresh_recent_weeks", 12)
+                if revision_unit == "weeks"
+                else effective_config.get("refresh_recent_months", 3)
+            )
         try:
             effective_revision_window = int(
                 revision_window_months
                 if revision_window_months is not None
-                else crawler_config.get("refresh_recent_months", 3)
+                else configured_revision_window
             )
         except (TypeError, ValueError):
-            effective_revision_window = 3
-        effective_revision_window = max(1, min(24, effective_revision_window))
+            effective_revision_window = 12 if revision_unit == "weeks" else 3
+        effective_revision_window = max(
+            1,
+            min(52 if revision_unit == "weeks" else 24, effective_revision_window),
+        )
         task = await task_manager.create_task(
             task_type=TaskType.CRAWL_DATA,
             task_name=f"Crawl {country.code.upper()} Data ({normalized_source})",
@@ -103,7 +130,7 @@ class CrawlTaskService:
                 f"Source: {normalized_source}, Force: {'Yes' if force else 'No'}, "
                 f"Process: {'Yes' if process else 'No'}, "
                 f"Current Month: {'Yes' if effective_include_current_month else 'No'}, "
-                f"Revision Window: {effective_revision_window} month(s)"
+                f"Revision Window: {effective_revision_window} {revision_unit}"
             ),
             input_data={
                 "country": country.code.upper(),
@@ -115,6 +142,7 @@ class CrawlTaskService:
                 "fill_missing": fill_missing,
                 "include_current_month": effective_include_current_month,
                 "revision_window_months": effective_revision_window,
+                "revision_window_unit": revision_unit,
                 **(metadata or {}),
             },
         )

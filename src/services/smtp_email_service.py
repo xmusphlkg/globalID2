@@ -56,6 +56,7 @@ class SMTPEmailService:
         attachments: Optional[Iterable[str]] = None,
         cc_recipients: Optional[Iterable[str]] = None,
         bcc_recipients: Optional[Iterable[str]] = None,
+        raise_on_error: bool = False,
     ) -> bool:
         config = self._settings.smtp_runtime()
         recipient_list = [addr.strip() for addr in recipients if addr and addr.strip()]
@@ -122,6 +123,8 @@ class SMTPEmailService:
                 server.quit()
         except Exception as exc:
             logger.error(f"Failed to send SMTP email: {exc}")
+            if raise_on_error:
+                raise
             return False
 
     def test_connection(self) -> bool:
