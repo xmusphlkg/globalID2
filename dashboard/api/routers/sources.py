@@ -64,6 +64,9 @@ _SERIES_SOURCE_SCOPE_OVERRIDES = {
     "SRC_CN_CDC": "cdc_weekly",
     "SRC_FI_THL_TTR": "thl_ttr",
     "SRC_HK_CHP": "chp_notifiable",
+    "SRC_IE_HPSC_NDH": "hpsc_ndh",
+    "SRC_IE_HPSC_ANNUAL": "hpsc_annual",
+    "SRC_IE_HPSC_WEEKLY_ARCHIVE": "hpsc_weekly_archive",
     "SRC_IS_DOH_ANNUAL": "is_doh_annual",
     "SRC_IS_DOH_HISTORY": "is_doh_history",
     "SRC_IS_DOH_LEGACY_ICD": "is_doh_legacy_icd",
@@ -158,10 +161,19 @@ def _country_name_zh(country: Country) -> str:
     return resolved
 
 
-def _history_start_year(country_code: Optional[str]) -> Optional[int]:
+def _history_start_year(
+    country_code: Optional[str], scope: Optional[str] = None
+) -> Optional[int]:
     cfg = get_country_bootstrap_config(country_code or "")
     crawler_cfg = cfg.get("crawler_config", {}) if isinstance(cfg, dict) else {}
-    raw_value = crawler_cfg.get("full_history_start_year")
+    policy = _source_policy_config(
+        crawler_cfg,
+        country_code=str(country_code or "").strip().upper(),
+        scope=scope or default_source_for_country(country_code),
+    )
+    raw_value = policy.get(
+        "full_history_start_year", crawler_cfg.get("full_history_start_year")
+    )
     if raw_value is None:
         return None
     try:
@@ -180,6 +192,92 @@ def _optional_bool(value, default: bool) -> bool:
     return bool(value)
 
 
+def _source_policy_config(
+    crawler_cfg: dict,
+    *,
+    country_code: str,
+    scope: str,
+) -> dict:
+    policies = crawler_cfg.get("source_policies")
+    if not isinstance(policies, dict):
+        return {}
+    effective_scope = canonicalize_task_source(scope, country_code=country_code)
+    policy = policies.get(effective_scope)
+    return policy if isinstance(policy, dict) else {}
+
+
+def _build_source_policy(
+    cfg: dict,
+    crawler_cfg: dict,
+    *,
+    policy_cfg: Optional[dict] = None,
+) -> SourcePolicyOut:
+    policy_cfg = policy_cfg or {}
+    combined = {**crawler_cfg, **policy_cfg}
+    supports_current_month = _optional_bool(
+        combined.get("supports_current_month"), False
+    )
+    default_include_current_month = supports_current_month and _optional_bool(
+        combined.get("default_include_current_month"), False
+    )
+    temporal_granularity = str(
+        combined.get("temporal_granularity")
+        or combined.get("cadence")
+        or cfg.get("report_config", {}).get("default_type")
+        or "monthly"
+    ).strip().lower()
+    revision_window_unit = str(
+        combined.get("revision_window_unit")
+        or ("weeks" if temporal_granularity == "weekly" else "months")
+    ).strip().lower()
+    revision_window_value = combined.get("default_revision_window")
+    if revision_window_value is None:
+        revision_window_value = (
+            combined.get("refresh_recent_weeks")
+            if revision_window_unit == "weeks"
+            else combined.get("refresh_recent_months")
+        )
+    default_window = 12 if revision_window_unit == "weeks" else 3
+    max_window = 52 if revision_window_unit == "weeks" else 24
+    try:
+        revision_window = max(
+            1, min(max_window, int(revision_window_value or default_window))
+        )
+    except (TypeError, ValueError):
+        revision_window = default_window
+    publication_day = combined.get("publication_day")
+    try:
+        publication_day = int(publication_day) if publication_day is not None else None
+    except (TypeError, ValueError):
+        publication_day = None
+    return SourcePolicyOut(
+        supports_current_month=supports_current_month,
+        default_include_current_month=default_include_current_month,
+        dynamic_revision_enabled=_optional_bool(
+            combined.get("dynamic_revision_enabled"), False
+        ),
+        default_revision_window=revision_window,
+        # Compatibility for older dashboard clients; the unit field is authoritative.
+        default_revision_window_months=revision_window,
+        revision_window_unit=revision_window_unit,
+        temporal_granularity=temporal_granularity,
+        current_month_status=str(
+            combined.get("current_month_status") or "not_supported"
+        ),
+        public_release_enabled=_optional_bool(
+            combined.get("public_release_enabled"),
+            _optional_bool(cfg.get("public_release_enabled"), True),
+        ),
+        public_release_editable=False,
+        publication_day=publication_day,
+        source_update_cadence=(
+            str(combined.get("source_update_cadence"))
+            if combined.get("source_update_cadence")
+            else None
+        ),
+    )
+
+
 def _country_source_config(country: Country, *, lang: str = "en") -> CountrySourceConfigOut:
     from src.services.crawl_service import CrawlService
 
@@ -187,8 +285,34 @@ def _country_source_config(country: Country, *, lang: str = "en") -> CountrySour
     cfg = get_country_bootstrap_config(code)
     crawler_cfg = cfg.get("crawler_config", {}) if isinstance(cfg, dict) else {}
     start_year = _history_start_year(code)
-    options = [
-        SourceOptionOut(
+    options = []
+    for option in source_options_for_country(code):
+        option_policy_cfg = _source_policy_config(
+            crawler_cfg, country_code=code, scope=option["value"]
+        )
+        option_start_year = option_policy_cfg.get("full_history_start_year", start_year)
+        try:
+            option_start_year = (
+                int(option_start_year) if option_start_year is not None else None
+            )
+        except (TypeError, ValueError):
+            option_start_year = start_year
+        option_end_year = option_policy_cfg.get("history_end_year")
+        try:
+            option_end_year = int(option_end_year) if option_end_year is not None else None
+        except (TypeError, ValueError):
+            option_end_year = None
+        option_supports_fill = _optional_bool(
+            option_policy_cfg.get("supports_fill_missing"),
+            _optional_bool(crawler_cfg.get("supports_fill_missing"), code not in {"IS", "US"}),
+        )
+        if code == "IS":
+            option_supports_fill = False
+        option_default_fill = option_supports_fill and _optional_bool(
+            option_policy_cfg.get("default_fill_missing"),
+            _optional_bool(crawler_cfg.get("default_fill_missing"), code not in {"BR"}),
+        )
+        options.append(SourceOptionOut(
             value=option["value"],
             label_en=(
                 "Iceland Directorate of Health — All Current Dashboards"
@@ -213,15 +337,26 @@ def _country_source_config(country: Country, *, lang: str = "en") -> CountrySour
                     else option["label_en"]
                 )
             ),
-            source_kind=_source_kind(code, option["value"]),
-            supports_start_year=_source_supports_start_year(
-                code,
-                option["value"],
-                configured_start_year=start_year,
+            source_kind=str(
+                option_policy_cfg.get("source_kind")
+                or _source_kind(code, option["value"])
             ),
-        )
-        for option in source_options_for_country(code)
-    ]
+            supports_start_year=_optional_bool(
+                option_policy_cfg.get("supports_start_year"),
+                _source_supports_start_year(
+                    code,
+                    option["value"],
+                    configured_start_year=option_start_year,
+                ),
+            ),
+            default_start_year=option_start_year,
+            history_end_year=option_end_year,
+            supports_fill_missing=option_supports_fill,
+            default_fill_missing=option_default_fill,
+            source_policy=_build_source_policy(
+                cfg, crawler_cfg, policy_cfg=option_policy_cfg
+            ),
+        ))
     supports_fill_missing = _optional_bool(
         crawler_cfg.get("supports_fill_missing"),
         code not in {"IS", "US"},
@@ -234,23 +369,11 @@ def _country_source_config(country: Country, *, lang: str = "en") -> CountrySour
         crawler_cfg.get("default_fill_missing"),
         code not in {"BR"},
     )
-    supports_current_month = _optional_bool(
-        crawler_cfg.get("supports_current_month"), False
+    default_policy_cfg = _source_policy_config(
+        crawler_cfg,
+        country_code=code,
+        scope=default_source_for_country(code),
     )
-    default_include_current_month = supports_current_month and _optional_bool(
-        crawler_cfg.get("default_include_current_month"), False
-    )
-    try:
-        revision_window_months = max(
-            1, min(24, int(crawler_cfg.get("refresh_recent_months") or 3))
-        )
-    except (TypeError, ValueError):
-        revision_window_months = 3
-    publication_day = crawler_cfg.get("publication_day")
-    try:
-        publication_day = int(publication_day) if publication_day is not None else None
-    except (TypeError, ValueError):
-        publication_day = None
 
     return CountrySourceConfigOut(
         country_code=code,
@@ -273,26 +396,8 @@ def _country_source_config(country: Country, *, lang: str = "en") -> CountrySour
             or crawler_cfg.get("kosis_file_env")
         ),
         supports_source_dir=bool(crawler_cfg.get("dportal_dir_env")),
-        source_policy=SourcePolicyOut(
-            supports_current_month=supports_current_month,
-            default_include_current_month=default_include_current_month,
-            dynamic_revision_enabled=_optional_bool(
-                crawler_cfg.get("dynamic_revision_enabled"), False
-            ),
-            default_revision_window_months=revision_window_months,
-            current_month_status=str(
-                crawler_cfg.get("current_month_status") or "not_supported"
-            ),
-            public_release_enabled=_optional_bool(
-                cfg.get("public_release_enabled"), True
-            ),
-            public_release_editable=False,
-            publication_day=publication_day,
-            source_update_cadence=(
-                str(crawler_cfg.get("source_update_cadence"))
-                if crawler_cfg.get("source_update_cadence")
-                else None
-            ),
+        source_policy=_build_source_policy(
+            cfg, crawler_cfg, policy_cfg=default_policy_cfg
         ),
         source_options=options,
     )
@@ -740,7 +845,7 @@ async def get_sources_flow(
                 "comparability": {},
                 "earliest_date": row.earliest_date,
                 "latest_date": row.latest_date,
-                "history_start_year": _history_start_year(row.country_code),
+                "history_start_year": _history_start_year(row.country_code, scope),
                 "expected_source": False,
             }
             continue
@@ -781,7 +886,7 @@ async def get_sources_flow(
                 "comparability": {},
                 "earliest_date": row.earliest_date,
                 "latest_date": row.latest_date,
-                "history_start_year": _history_start_year(row.country_code),
+                "history_start_year": _history_start_year(row.country_code, scope),
                 "expected_source": scope
                 in get_expected_scopes_for_country(row.country_code),
             }
@@ -903,7 +1008,9 @@ async def get_sources_flow(
                 "comparability": {},
                 "earliest_date": None,
                 "latest_date": None,
-                "history_start_year": _history_start_year(country.code if country else None),
+                "history_start_year": _history_start_year(
+                    country.code if country else None, scope
+                ),
                 "expected_source": is_expected_source,
         }
 
@@ -958,7 +1065,7 @@ async def get_sources_flow(
                 "comparability": {},
                 "earliest_date": None,
                 "latest_date": None,
-                "history_start_year": _history_start_year(country.code),
+                "history_start_year": _history_start_year(country.code, scope),
                 "expected_source": True,
             }
 

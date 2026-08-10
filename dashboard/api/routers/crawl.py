@@ -76,8 +76,8 @@ class CrawlStartRequest(BaseModel):
     revision_window_months: Optional[int] = Field(
         None,
         ge=1,
-        le=24,
-        description="Recent monthly periods to re-fetch for upstream revisions",
+        le=52,
+        description="Recent source periods to re-fetch for upstream revisions (months or weeks per source policy)",
     )
     start_year: Optional[int] = Field(
         None,
