@@ -81,6 +81,7 @@ pnpm-debug.log*
 /data/current/
 /data/raw/
 /data/history/
+/dashboard/logs/
 /data/processed/
 /data/cache/
 /data/demo_output/
