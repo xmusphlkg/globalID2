@@ -239,3 +239,10 @@ D239,Penicillin-non-susceptible/resistant pneumococcal surveillance,青霉素敏
 D240,Viral meningoencephalitis surveillance,病毒性脑膜脑炎监测,Viral,,,Source-reported aggregate of viral meningitis encephalitis or meningoencephalitis; source definition boundaries remain series-specific,Nordic surveillance sources
 D241,"Escherichia coli enteritis, all reported pathotypes",大肠埃希菌肠炎（所有报告型别）,Bacterial,A04.4,,FHI MSIS aggregate of EHEC/STEC and other reportable diarrheagenic E. coli pathotypes,Norway FHI MSIS
 D242,Lymphogranuloma venereum,性病性淋巴肉芽肿,Bacterial,A55,1A82.1,Invasive Chlamydia trachomatis L1-L3 infection kept distinct from general genital chlamydia,Norway FHI MSIS
+D243,Blastomycosis,芽生菌病,Fungal,B40,,Blastomycosis surveillance concept,Ontario IDTO
+D244,Carbapenemase-producing Enterobacteriaceae surveillance,产碳青霉烯酶肠杆菌科细菌监测,Bacterial,,,Source-reported CPE surveillance category distinct from broad CPO and CRE concepts,Ontario IDTO
+D245,Neonatal group B streptococcal disease,新生儿B族链球菌病,Bacterial,P36.0,,Neonatal invasive group B streptococcal disease surveillance concept,Ontario IDTO
+D246,Ophthalmia neonatorum,新生儿眼炎,Other,P39.1,,Neonatal conjunctivitis surveillance concept with pathogen unspecified by the source,Ontario IDTO
+D247,Paralytic shellfish poisoning,麻痹性贝类中毒,Other,T61.2,,Marine biotoxin poisoning surveillance concept,Ontario IDTO
+D248,Powassan virus disease,波瓦桑病毒病,Viral,A84.8,,Powassan virus disease surveillance concept,Ontario IDTO
+D249,Infectious syphilis,感染性梅毒,Bacterial,A51,,Ontario source-defined category combining primary secondary and early latent syphilis,Ontario IDTO

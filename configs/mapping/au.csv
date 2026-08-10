@@ -25,7 +25,7 @@ D007,Hepatitis A,,National,,AU NINDSS mapping,AU NINDSS Monthly
 D068,Hepatitis B (newly acquired),,National,,AU NINDSS mapping,AU NINDSS Monthly
 D008,Hepatitis B (unspecified),,National,,AU NINDSS mapping,AU NINDSS Monthly
 D210,Hepatitis C (newly acquired),,National,,AU NINDSS mapping,AU NINDSS Monthly
-D009,Hepatitis C (unspecified),,National,,AU NINDSS mapping,AU NINDSS Monthly
+D009,Hepatitis C (unspecified),,National,Hepatitis C (unspecified active),AU NINDSS source label includes an active-status qualifier; it remains the unspecified-course hepatitis C series,AU NINDSS Monthly,SRC_AU_NINDSS,SER_AU_HEPATITIS_C_UNSPECIFIED
 D010,Hepatitis D,,National,,AU NINDSS mapping,AU NINDSS Monthly
 D011,Hepatitis E,,National,,AU NINDSS mapping,AU NINDSS Monthly
 D045,Hydatid infection,,National,,AU NINDSS mapping,AU NINDSS Monthly
