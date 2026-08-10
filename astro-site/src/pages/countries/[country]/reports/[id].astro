@@ -12,6 +12,7 @@ import {
 } from '../../../../lib/report-data';
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
+import { buildAlternatePaths, buildSeoTitle } from '../../../../lib/seo';
 
 export async function getStaticPaths() {
   return readPublishableReports().map(report => ({
@@ -55,12 +56,37 @@ if (existsSync(downloadsPath)) {
 }
 
 const document = report?.report_document_v4 ?? report?.metadata?.report_document_v4 ?? report;
-const reportLanguage = 'zh';
+const reportLanguage = 'en';
 const countryNameEn = report?.country_name_en ?? report?.country_name ?? country?.toUpperCase();
 const countryNameZh = report?.country_name_local ?? report?.country_name ?? countryNameEn;
 const reportTitleEn = document?.title?.en ?? report?.title ?? `Report #${id}`;
 const reportTitleZh = document?.title?.zh ?? report?.title ?? `报告 #${id}`;
 const reportSummary = document?.summary?.zh ?? report?.summary ?? '';
+const reportSummaryEn = document?.summary?.en ?? report?.summary ?? '';
+const reportCoverage = report?.period_start && report?.period_end
+  ? `${String(report.period_start).slice(0, 7)}–${String(report.period_end).slice(0, 7)}`
+  : '';
+const canonicalPath = `/countries/${country}/reports/${id}/`;
+const reportSeo = {
+  title: buildSeoTitle(countryNameEn, 'weekly infectious disease surveillance report', reportCoverage),
+  description: `${countryNameEn} infectious disease surveillance report${reportCoverage ? ` for ${reportCoverage}` : ''}. Includes reporting period, summary, disease signals, official-source data, and downloads.`,
+  canonicalPath,
+  alternatePaths: buildAlternatePaths(canonicalPath, 'en'),
+  pageType: 'MedicalWebPage',
+  datePublished: report?.created_at,
+  dateModified: report?.created_at,
+};
+const reportStructuredData = {
+  '@type': 'Report',
+  '@id': `${canonicalPath}#report`,
+  name: reportTitleEn,
+  inLanguage: 'en',
+  datePublished: report?.created_at,
+  dateModified: report?.created_at,
+  temporalCoverage: report?.period_start && report?.period_end ? `${report.period_start}/${report.period_end}` : undefined,
+  spatialCoverage: { '@type': 'Place', name: countryNameEn },
+  isBasedOn: countryData?.source_info?.primary_url,
+};
 const scoreColor = !report?.quality_score ? 'text-slate-500'
   : report.quality_score >= 0.85 ? 'text-green-400'
   : report.quality_score >= 0.65 ? 'text-amber-400'
@@ -151,9 +177,11 @@ function reportTypeLabel(value: string | undefined, lang: 'zh' | 'en') {
 ---
 
 <ReportLayout
-  title={reportTitleZh}
-  description={`Surveillance report for ${countryNameEn}. ${report?.period_start ? `Period: ${report.period_start} to ${report.period_end}` : ''}`}
+  title={reportSeo.title}
+  description={reportSeo.description}
   initialLanguage={reportLanguage}
+  seo={reportSeo}
+  structuredData={reportStructuredData}
   breadcrumbs={[
     { label: 'Countries', labelZh: '国家/地区', href: '/countries/' },
     { label: countryNameEn, labelZh: countryNameZh, href: `/countries/${country}/` },
@@ -183,7 +211,7 @@ function reportTypeLabel(value: string | undefined, lang: 'zh' | 'en') {
                 <span class="text-xs text-slate-600" data-lang-en="Version 4" data-lang-zh="第四版">第四版</span>
               </div>
               <h1 class="academic-title text-3xl sm:text-4xl leading-tight" data-lang-en={reportTitleEn} data-lang-zh={reportTitleZh}>
-                {reportTitleZh}
+                {reportTitleEn}
               </h1>
             </div>
             {report.quality_score != null && (
@@ -225,13 +253,13 @@ function reportTypeLabel(value: string | undefined, lang: 'zh' | 'en') {
             <p class="figure-kicker" data-lang-en="Executive summary" data-lang-zh="执行摘要">执行摘要</p>
             <h2 class="figure-title" data-lang-en="Current Situation" data-lang-zh="当前态势">当前态势</h2>
             <p class="mt-5 text-sm leading-7 text-slate-400" data-lang-en={document?.summary?.en ?? reportSummary} data-lang-zh={reportSummary}>
-              {reportSummary}
+              {reportSummaryEn}
             </p>
           </section>
         )}
 
         <ReportV4Panel
-          client:load
+          client:visible
           report={report}
           countryDataUrl={countryDataUrl}
           sparklineSeries={directoryTrendSeries}
@@ -261,7 +289,7 @@ function reportTypeLabel(value: string | undefined, lang: 'zh' | 'en') {
           <DownloadPanel
             entry={{ ...countryDownload, source_info: countryData?.source_info }}
             title="Download Underlying Dataset"
-            initialLanguage="zh"
+            initialLanguage="en"
             descriptionEn="Download the country dataset used to generate this report, including source metadata."
             descriptionZh="下载生成本报告所依据的国家数据集，并附带数据源信息。"
           />

@@ -12,7 +12,7 @@ import '@fontsource/jetbrains-mono/500.css';
 import '../styles/global.css';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
-import type { JsonLdNode } from '../lib/seo';
+import { buildAlternatePaths, type JsonLdNode, type SeoDocument } from '../lib/seo';
 
 interface Props {
   title: string;
@@ -21,6 +21,7 @@ interface Props {
   noindex?: boolean;
   initialLanguage?: 'en' | 'zh';
   additionalStructuredData?: JsonLdNode | JsonLdNode[];
+  seo?: SeoDocument;
 }
 
 const {
@@ -30,17 +31,37 @@ const {
   noindex = false,
   initialLanguage = 'en',
   additionalStructuredData = [],
+  seo,
 } = Astro.props;
 
 const siteReleaseId = import.meta.env.PUBLIC_GIDS_RELEASE_ID?.trim() || 'development';
 const siteSourceCommit = import.meta.env.PUBLIC_GIDS_SOURCE_COMMIT?.trim() || '';
 const siteDeploymentBranch = import.meta.env.PUBLIC_GIDS_DEPLOY_BRANCH?.trim() || '';
-const canonicalURL = new URL(Astro.url.pathname, Astro.site);
-const siteOrigin = Astro.site ? new URL(Astro.site).origin : canonicalURL.origin;
-const pageTitle = title === 'GIDS' ? title : `${title} | GIDS`;
-const robotsContent = noindex
+const siteBase = Astro.site?.toString() ?? Astro.url.origin;
+const canonicalURL = new URL(seo?.canonicalPath ?? Astro.url.pathname, siteBase);
+const siteOrigin = new URL(siteBase).origin;
+const documentLocale = seo?.locale ?? initialLanguage;
+const pageTitle = seo?.title ?? (title === 'GIDS' ? title : `${title} | GIDS`);
+const pageDescription = seo?.description ?? description;
+const pageImage = seo?.image ?? image;
+const shouldNoindex = seo?.noindex ?? noindex;
+const robotsContent = shouldNoindex
   ? 'noindex,nofollow'
   : 'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1';
+const alternatePaths = seo?.alternatePaths ?? buildAlternatePaths(
+  Astro.url.pathname,
+  documentLocale,
+);
+const alternateUrls = Object.entries(alternatePaths).map(([locale, path]) => ({
+  locale,
+  url: new URL(path, siteBase).toString(),
+}));
+const pageType = seo?.pageType ?? 'WebPage';
+const ogType = pageType === 'Report' ? 'article' : 'website';
+const gaMeasurementId = import.meta.env.PUBLIC_GA4_MEASUREMENT_ID?.trim();
+const validGaMeasurementId = gaMeasurementId && /^G-[A-Z0-9]+$/i.test(gaMeasurementId)
+  ? gaMeasurementId
+  : null;
 const maintenanceMessage = import.meta.env.PUBLIC_GIDS_MAINTENANCE_MESSAGE?.trim();
 const extraStructuredData = Array.isArray(additionalStructuredData)
   ? additionalStructuredData
@@ -52,8 +73,9 @@ const structuredData = {
       '@type': 'WebSite',
       '@id': `${siteOrigin}#website`,
       url: siteOrigin,
-      name: 'GIDS',
-      description,
+      name: 'Global Infectious Disease Surveillance',
+      alternateName: 'GIDS',
+      description: 'Official-source infectious disease surveillance data, trends, downloadable datasets, and methodology.',
       inLanguage: ['en', 'zh'],
       publisher: {
         '@id': `${siteOrigin}#organization`,
@@ -62,19 +84,31 @@ const structuredData = {
     {
       '@type': 'Organization',
       '@id': `${siteOrigin}#organization`,
-      name: 'GIDS',
+      name: 'Global Infectious Disease Surveillance',
+      alternateName: 'GIDS',
       url: siteOrigin,
       logo: new URL('/logo.png', siteOrigin).toString(),
+      sameAs: ['https://github.com/xmusphlkg/globalID2'],
     },
     {
-      '@type': 'WebPage',
+      '@type': 'DataCatalog',
+      '@id': `${siteOrigin}#catalog`,
+      name: 'GIDS infectious disease surveillance data catalog',
+      url: new URL('/diseases/', siteOrigin).toString(),
+      publisher: { '@id': `${siteOrigin}#organization` },
+    },
+    {
+      '@type': pageType,
       '@id': `${canonicalURL}#webpage`,
       url: canonicalURL.toString(),
       name: pageTitle,
-      description,
+      description: pageDescription,
       isPartOf: {
         '@id': `${siteOrigin}#website`,
       },
+      inLanguage: documentLocale === 'zh' ? 'zh-CN' : 'en',
+      ...(seo?.datePublished ? { datePublished: seo.datePublished } : {}),
+      ...(seo?.dateModified ? { dateModified: seo.dateModified } : {}),
     },
     ...extraStructuredData,
   ],
@@ -83,8 +117,8 @@ const structuredData = {
 
 <!doctype html>
 <html
-  lang={initialLanguage === 'zh' ? 'zh-CN' : 'en'}
-  data-initial-lang={initialLanguage}
+  lang={documentLocale === 'zh' ? 'zh-CN' : 'en'}
+  data-initial-lang={documentLocale}
   data-release-id={siteReleaseId}
 >
   <head>
@@ -97,26 +131,35 @@ const structuredData = {
 
     <!-- SEO -->
     <title>{pageTitle}</title>
-    <meta name="description" content={description} />
+    <meta name="description" content={pageDescription} />
     <link rel="canonical" href={canonicalURL} />
+    {alternateUrls.map(({ locale, url }) => (
+      <link rel="alternate" hreflang={locale === 'zh' ? 'zh-CN' : 'en'} href={url} />
+    ))}
+    {alternatePaths.en && <link rel="alternate" hreflang="x-default" href={new URL(alternatePaths.en, siteBase)} />}
     <meta name="robots" content={robotsContent} />
     <meta name="theme-color" content="#f4f7fb" />
 
     <!-- Open Graph -->
-    <meta property="og:type" content="website" />
+    <meta property="og:type" content={ogType} />
     <meta property="og:site_name" content="GIDS" />
-    <meta property="og:locale" content="en_US" />
+    <meta property="og:locale" content={documentLocale === 'zh' ? 'zh_CN' : 'en_US'} />
+    <meta property="og:locale:alternate" content={documentLocale === 'zh' ? 'en_US' : 'zh_CN'} />
     <meta property="og:title" content={pageTitle} />
-    <meta property="og:description" content={description} />
-    <meta property="og:image" content={new URL(image, Astro.site)} />
+    <meta property="og:description" content={pageDescription} />
+    <meta property="og:image" content={new URL(pageImage, siteBase)} />
     <meta property="og:url" content={canonicalURL} />
+    {seo?.datePublished && <meta property="article:published_time" content={seo.datePublished} />}
+    {seo?.dateModified && <meta property="article:modified_time" content={seo.dateModified} />}
 
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={pageTitle} />
-    <meta name="twitter:description" content={description} />
-    <meta name="twitter:image" content={new URL(image, Astro.site)} />
+    <meta name="twitter:description" content={pageDescription} />
+    <meta name="twitter:image" content={new URL(pageImage, siteBase)} />
     <script type="application/ld+json" set:html={JSON.stringify(structuredData)} />
+    {validGaMeasurementId && <script async src={`https://www.googletagmanager.com/gtag/js?id=${validGaMeasurementId}`} />}
+    {validGaMeasurementId && <script is:inline set:html={`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','${validGaMeasurementId}');document.addEventListener('click',function(event){const target=event.target instanceof Element?event.target.closest('[data-seo-event],[data-file-download]'):null;if(!target)return;gtag('event',target.getAttribute('data-seo-event')||'dataset_download');});`} />}
 
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="/logo.png" />

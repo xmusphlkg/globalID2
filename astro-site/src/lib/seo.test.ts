@@ -6,6 +6,12 @@ import {
   buildCountryMetaDescription,
   buildDatasetDistributions,
   buildDiseaseMetaDescription,
+  buildAlternatePaths,
+  buildSeoTitle,
+  clampSeoDescription,
+  formatYearRange,
+  isIndexableDisease,
+  toSeoSlug,
 } from './seo.ts';
 
 test('builds unique, descriptive country and disease snippets', () => {
@@ -72,4 +78,22 @@ test('exposes page JSON and only the current download part', () => {
   assert.equal(distributions[1].contentUrl, 'https://data.example/current.csv');
   assert.equal(distributions[1].encodingFormat, 'text/csv');
   assert.equal(distributions[1].contentSize, '42 bytes');
+});
+
+test('normalizes SEO slugs, titles, descriptions, and language alternates', () => {
+  assert.equal(toSeoSlug('Respiratory syncytial virus infection (RSV)'), 'respiratory-syncytial-virus-infection-rsv');
+  assert.equal(formatYearRange('1982-01-01', '2026-08-01'), '1982–2026');
+  assert.equal(
+    buildSeoTitle('Pertussis', 'surveillance data', '1982–2026'),
+    'Pertussis surveillance data 1982–2026 | Global Infectious Disease Surveillance',
+  );
+  assert.equal(buildAlternatePaths('/countries/jp/', 'en').zh, '/zh/countries/jp/');
+  assert.equal(buildAlternatePaths('/zh/countries/jp/', 'zh').en, '/countries/jp/');
+  assert.ok(clampSeoDescription('word '.repeat(60)).length <= 160);
+});
+
+test('requires an observation or sourced published profile before indexing a disease', () => {
+  assert.equal(isIndexableDisease({ countrySeries: { jp: { dates: ['2026-01-01'] } } }), true);
+  assert.equal(isIndexableDisease({ knowledgeStatus: 'published', knowledgeSources: [{ url: 'https://example.gov/source' }] }), true);
+  assert.equal(isIndexableDisease({ knowledgeStatus: 'draft', knowledgeSources: [{ url: 'https://example.gov/source' }] }), false);
 });

@@ -5,7 +5,10 @@ import StatBar from '../components/StatBar.astro';
 import CountryCard from '../components/CountryCard.astro';
 import DiseaseCard from '../components/DiseaseCard.astro';
 import ReportCard from '../components/ReportCard.astro';
+import SituationSummary from '../components/SituationSummary.astro';
 import { getCountryCoverage, hasCountryDataSnapshot } from '../lib/country-coverage';
+import { existsSync, readFileSync } from 'fs';
+import { resolve } from 'path';
 
 import metaRaw from '../data/meta.json';
 import diseasesRaw from '../data/diseases/index.json';
@@ -14,6 +17,8 @@ import reportsRaw from '../data/reports/index.json';
 const meta = metaRaw as any;
 const diseases = diseasesRaw as any[];
 const reports = (reportsRaw as any[]).slice(0, 6);
+const situationPath = resolve('./src/data/situation/latest.json');
+const situation = existsSync(situationPath) ? JSON.parse(readFileSync(situationPath, 'utf-8')) : null;
 // Keep homepage cards aligned with the stat counter and generated country routes.
 // Metadata can include seeded jurisdictions that have no public data snapshot yet.
 const countries = (meta.countries ?? []).filter(hasCountryDataSnapshot);
@@ -296,6 +301,14 @@ const features = [
     </svg>
   </div>
 </section>
+
+{situation && (
+  <section class="home-band">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-2">
+      <SituationSummary snapshot={situation} compact />
+    </div>
+  </section>
+)}
 
 <!-- ═══════════════════════ STATS ════════════════════════ -->
 <section class="home-band home-band-stat">
