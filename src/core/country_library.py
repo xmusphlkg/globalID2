@@ -57,6 +57,12 @@ COUNTRY_OVERRIDES: dict[str, dict[str, str]] = {
         "language": "en-CA",
         "timezone": "America/Toronto",
     },
+    "NZ": {
+        "name": "New Zealand",
+        "name_local": "New Zealand",
+        "language": "en-NZ",
+        "timezone": "Pacific/Auckland",
+    },
     "FI": {
         "name": "Finland",
         "name_local": "Suomi",

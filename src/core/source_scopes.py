@@ -11,6 +11,7 @@ EXPECTED_SCOPES_BY_COUNTRY = {
     "AU": ["all"],
     "CA": ["all"],
     "CA-ON": ["pho_idto_monthly"],
+    "NZ": ["phf_monthly"],
     "FI": ["thl_ttr"],
     "TW": ["nidss_open_data"],
     "HK": ["chp_notifiable"],
@@ -80,6 +81,10 @@ SOURCE_SCOPE_LABELS: dict[str, dict[str, str]] = {
     "pho_idto_monthly": {
         "en": "Public Health Ontario IDTO Monthly",
         "zh": "安大略省公共卫生局 IDTO 月度数据",
+    },
+    "phf_monthly": {
+        "en": "New Zealand PHF Science Monthly Notifiable Diseases",
+        "zh": "新西兰 PHF Science 法定传染病月度监测",
     },
     "thl_ttr": {
         "en": "Finland THL Infectious Diseases Register",
@@ -156,6 +161,9 @@ _EXACT_SCOPE_BY_DATA_SOURCE = {
     "public health ontario idto monthly preliminary data": "pho_idto_monthly",
     "public health ontario idto monthly": "pho_idto_monthly",
     "pho idto monthly": "pho_idto_monthly",
+    "nz phf science monthly notifiable disease surveillance": "phf_monthly",
+    "nz phf science monthly notifiable disease surveillance (pdf)": "phf_monthly",
+    "new zealand phf science monthly notifiable disease surveillance": "phf_monthly",
     "finland thl infectious diseases register": "thl_ttr",
     "finland thl ttr": "thl_ttr",
     "thl infectious diseases register": "thl_ttr",
@@ -227,6 +235,10 @@ _TASK_SOURCE_ALIASES = {
     "idto": "pho_idto_monthly",
     "ontario": "pho_idto_monthly",
     "ca-on": "pho_idto_monthly",
+    "phf": "phf_monthly",
+    "phf_monthly": "phf_monthly",
+    "nz": "phf_monthly",
+    "new_zealand": "phf_monthly",
     "thl": "thl_ttr",
     "thl_ttr": "thl_ttr",
     "ttr": "thl_ttr",
@@ -278,6 +290,8 @@ def canonicalize_task_source(
         return "foph_idd"
     if normalized == "all" and (country_code or "").strip().upper() == "CA-ON":
         return "pho_idto_monthly"
+    if normalized == "all" and (country_code or "").strip().upper() == "NZ":
+        return "phf_monthly"
     if normalized == "all" and (country_code or "").strip().upper() == "FI":
         return "thl_ttr"
     if normalized == "all" and (country_code or "").strip().upper() == "NO":
@@ -425,6 +439,8 @@ def scope_from_data_source(data_source: Optional[str]) -> str:
         return "foph_idd"
     if "public health ontario" in text or "pho idto" in text:
         return "pho_idto_monthly"
+    if "phf science" in text or "nz phf" in text:
+        return "phf_monthly"
     if "finland thl" in text or "thl infectious" in text or "thl ttr" in text:
         return "thl_ttr"
     if "fhi msis" in text or "norway fhi" in text:
@@ -509,6 +525,12 @@ def canonical_data_source_label(
         "pho idto monthly",
     }:
         return "Public Health Ontario IDTO Monthly"
+    if text in {
+        "nz phf science monthly notifiable disease surveillance",
+        "nz phf science monthly notifiable disease surveillance (pdf)",
+        "new zealand phf science monthly notifiable disease surveillance",
+    }:
+        return "New Zealand PHF Science Monthly Notifiable Diseases"
     if text in {
         "finland thl infectious diseases register",
         "finland thl ttr",
