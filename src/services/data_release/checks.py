@@ -75,7 +75,7 @@ async def raw_archive_check(
     if not enabled:
         return {"payload": payload, "blockers": blockers}
     if not repo_url.strip():
-        blockers.append("Missing RAW_ARCHIVE__REPO_URL.")
+        blockers.append("Missing raw archive repository URL.")
     if not source_dir.is_dir():
         blockers.append(f"Raw archive source directory is missing: {source_dir}")
     if blockers:

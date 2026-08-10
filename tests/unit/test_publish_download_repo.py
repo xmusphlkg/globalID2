@@ -8,6 +8,7 @@ import pytest
 
 from scripts.publish_download_repo import (
     ensure_commit_identity,
+    ensure_repo,
     sync_managed_assets,
     validate_source,
 )
@@ -86,6 +87,58 @@ def test_incremental_sync_copies_only_changed_partition(tmp_path):
     _write_source(source, payload=b"revised current partition")
     third = sync_managed_assets(source, checkout)
     assert third["copied"] == 4  # three current files plus manifest
+
+
+def test_ensure_repo_switches_a_stale_checkout_to_divergent_remote_branch(tmp_path):
+    remote = tmp_path / "remote.git"
+    seed = tmp_path / "seed"
+    checkout = tmp_path / "checkout"
+    subprocess.run(["git", "init", "--bare", str(remote)], check=True, capture_output=True)
+    subprocess.run(["git", "init", str(seed)], check=True, capture_output=True)
+
+    def commit(filename: str, content: str, message: str) -> str:
+        (seed / filename).write_text(content)
+        subprocess.run(["git", "add", filename], cwd=seed, check=True)
+        subprocess.run(
+            [
+                "git",
+                "-c",
+                "user.name=Release Test",
+                "-c",
+                "user.email=release@example.test",
+                "commit",
+                "-m",
+                message,
+            ],
+            cwd=seed,
+            check=True,
+            capture_output=True,
+        )
+        return subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=seed, check=True, text=True, capture_output=True
+        ).stdout.strip()
+
+    commit("base.txt", "base\n", "base")
+    subprocess.run(["git", "branch", "-M", "main"], cwd=seed, check=True)
+    subprocess.run(["git", "remote", "add", "origin", str(remote)], cwd=seed, check=True)
+    subprocess.run(["git", "push", "origin", "main"], cwd=seed, check=True, capture_output=True)
+    main_head = commit("main.txt", "main\n", "main only")
+    subprocess.run(["git", "push", "origin", "main"], cwd=seed, check=True, capture_output=True)
+
+    subprocess.run(["git", "checkout", "-b", "master", "HEAD~1"], cwd=seed, check=True)
+    master_head = commit("master.txt", "master\n", "master only")
+    subprocess.run(["git", "push", "origin", "master"], cwd=seed, check=True, capture_output=True)
+
+    subprocess.run(["git", "clone", "--branch", "main", str(remote), str(checkout)], check=True, capture_output=True)
+    assert subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=checkout, check=True, text=True, capture_output=True
+    ).stdout.strip() == main_head
+
+    ensure_repo(str(remote), "master", checkout)
+
+    assert subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=checkout, check=True, text=True, capture_output=True
+    ).stdout.strip() == master_head
 
 
 def test_commit_identity_reuses_repository_author_for_fresh_worker(tmp_path, monkeypatch):

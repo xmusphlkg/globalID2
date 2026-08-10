@@ -31,6 +31,13 @@ def _fake_config(tmp_path: Path):
         github_data_share_repo_url="git@github.com:env-owner/env-repo.git",
         github_data_share_repo_branch="release",
         github_data_share_raw_base_url="",
+        raw_archive=SimpleNamespace(
+            enabled=True,
+            repo_url="git@github.com:env-owner/raw-archive.git",
+            branch="main",
+            repository_dir=tmp_path / "raw-archive",
+            git_timeout_seconds=1800,
+        ),
         cloudflare_api_token="env-cloudflare-token",
         cloudflare_account_id="env-account-id",
     )
@@ -53,6 +60,8 @@ def test_public_snapshot_uses_env_defaults(monkeypatch, tmp_path):
     assert snapshot["github"]["github_data_share_raw_base_url_effective"] == (
         "https://raw.githubusercontent.com/env-owner/env-repo/release"
     )
+    assert snapshot["github"]["raw_archive_repo_url"] == "git@github.com:env-owner/raw-archive.git"
+    assert snapshot["github"]["raw_archive_branch"] == "main"
 
     assert snapshot["cloudflare"]["source"] == "env"
     assert snapshot["cloudflare"]["cloudflare_configured"] is True
@@ -106,6 +115,9 @@ def test_updates_persist_and_reset_to_env(monkeypatch, tmp_path):
         {
             "github_data_share_repo_url": "https://github.com/local-owner/local-repo.git",
             "github_data_share_repo_branch": "stable",
+            "raw_archive_enabled": False,
+            "raw_archive_repo_url": "git@github.com:local-owner/raw.git",
+            "raw_archive_branch": "archive-v2",
             "default_github_remote": "upstream",
             "default_github_branch": "stable",
         }
@@ -116,6 +128,9 @@ def test_updates_persist_and_reset_to_env(monkeypatch, tmp_path):
     assert github_snapshot["github_data_share_raw_base_url_effective"] == (
         "https://raw.githubusercontent.com/local-owner/local-repo/stable"
     )
+    assert github_snapshot["raw_archive_enabled"] is False
+    assert github_snapshot["raw_archive_repo_url"] == "git@github.com:local-owner/raw.git"
+    assert github_snapshot["raw_archive_branch"] == "archive-v2"
 
     service.update_cloudflare(
         {
