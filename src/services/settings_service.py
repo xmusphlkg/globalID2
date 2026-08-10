@@ -94,6 +94,9 @@ class RuntimeSettingsService:
                 "github_data_share_repo_url": cfg.github_data_share_repo_url.strip(),
                 "github_data_share_repo_branch": cfg.github_data_share_repo_branch.strip(),
                 "github_data_share_raw_base_url": cfg.github_data_share_raw_base_url.strip(),
+                "raw_archive_enabled": bool(cfg.raw_archive.enabled),
+                "raw_archive_repo_url": cfg.raw_archive.repo_url.strip(),
+                "raw_archive_branch": str(getattr(cfg.raw_archive, "branch", "main") or "main").strip() or "main",
                 "default_github_remote": data_release.default_github_remote.strip() or "origin",
                 "default_github_branch": data_release.default_github_branch.strip(),
             },
@@ -159,6 +162,9 @@ class RuntimeSettingsService:
             "github_data_share_repo_url": str(raw.get("github_data_share_repo_url") or "").strip(),
             "github_data_share_repo_branch": str(raw.get("github_data_share_repo_branch") or "").strip(),
             "github_data_share_raw_base_url": str(raw.get("github_data_share_raw_base_url") or "").strip(),
+            "raw_archive_enabled": _coerce_bool(raw.get("raw_archive_enabled"), False),
+            "raw_archive_repo_url": str(raw.get("raw_archive_repo_url") or "").strip(),
+            "raw_archive_branch": str(raw.get("raw_archive_branch") or "").strip() or "main",
             "default_github_remote": str(raw.get("default_github_remote") or "").strip() or "origin",
             "default_github_branch": str(raw.get("default_github_branch") or "").strip(),
         }
@@ -224,6 +230,9 @@ class RuntimeSettingsService:
         repo_url = str(raw.get("github_data_share_repo_url") or "").strip()
         repo_branch = str(raw.get("github_data_share_repo_branch") or "").strip()
         raw_base_url = str(raw.get("github_data_share_raw_base_url") or "").strip()
+        raw_archive_enabled = _coerce_bool(raw.get("raw_archive_enabled"), False)
+        raw_archive_repo_url = str(raw.get("raw_archive_repo_url") or "").strip()
+        raw_archive_branch = str(raw.get("raw_archive_branch") or "").strip() or "main"
         default_remote = str(raw.get("default_github_remote") or "").strip() or "origin"
         default_branch = str(raw.get("default_github_branch") or "").strip()
         derived_raw_base_url = raw_base_url.rstrip("/") if raw_base_url else _derive_github_raw_base_url(repo_url, repo_branch)
@@ -233,6 +242,10 @@ class RuntimeSettingsService:
             "github_data_share_repo_branch": repo_branch,
             "github_data_share_raw_base_url": raw_base_url,
             "github_data_share_raw_base_url_effective": derived_raw_base_url or "/downloads",
+            "raw_archive_enabled": raw_archive_enabled,
+            "raw_archive_repo_url": raw_archive_repo_url,
+            "raw_archive_branch": raw_archive_branch,
+            "raw_archive_configured": bool(raw_archive_repo_url),
             "default_github_remote": default_remote,
             "default_github_branch": default_branch,
             "github_configured": bool(repo_url or raw_base_url),
@@ -305,4 +318,3 @@ class RuntimeSettingsService:
 
 
 system_settings_service = RuntimeSettingsService()
-

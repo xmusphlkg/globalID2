@@ -25,6 +25,10 @@ class GithubSettingsOut(BaseModel):
     github_data_share_repo_branch: str
     github_data_share_raw_base_url: str
     github_data_share_raw_base_url_effective: str
+    raw_archive_enabled: bool
+    raw_archive_repo_url: str
+    raw_archive_branch: str
+    raw_archive_configured: bool
     default_github_remote: str
     default_github_branch: str
     github_configured: bool
@@ -59,6 +63,9 @@ class GithubSettingsUpdate(BaseModel):
     github_data_share_repo_url: Optional[str] = None
     github_data_share_repo_branch: Optional[str] = None
     github_data_share_raw_base_url: Optional[str] = None
+    raw_archive_enabled: Optional[bool] = None
+    raw_archive_repo_url: Optional[str] = None
+    raw_archive_branch: Optional[str] = None
     default_github_remote: Optional[str] = None
     default_github_branch: Optional[str] = None
 
@@ -71,4 +78,3 @@ class CloudflareSettingsUpdate(BaseModel):
 
 class TestEmailRequest(BaseModel):
     recipient: str
-

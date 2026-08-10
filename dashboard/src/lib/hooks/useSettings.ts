@@ -22,6 +22,10 @@ export interface GithubSettings {
   github_data_share_repo_branch: string;
   github_data_share_raw_base_url: string;
   github_data_share_raw_base_url_effective: string;
+  raw_archive_enabled: boolean;
+  raw_archive_repo_url: string;
+  raw_archive_branch: string;
+  raw_archive_configured: boolean;
   default_github_remote: string;
   default_github_branch: string;
   github_configured: boolean;
@@ -56,6 +60,9 @@ export interface GithubSettingsInput {
   github_data_share_repo_url?: string;
   github_data_share_repo_branch?: string;
   github_data_share_raw_base_url?: string;
+  raw_archive_enabled?: boolean;
+  raw_archive_repo_url?: string;
+  raw_archive_branch?: string;
   default_github_remote?: string;
   default_github_branch?: string;
 }
