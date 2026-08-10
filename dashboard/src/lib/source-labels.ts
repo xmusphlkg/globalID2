@@ -75,6 +75,13 @@ export function getSourceDisplayLabel(
     return lang === "zh" ? "安大略省公共卫生局 IDTO 月度数据" : "Public Health Ontario IDTO Monthly";
   }
   if (
+    s === "phf_monthly" ||
+    s === "phf" ||
+    ((s === "all" || s === "nz" || s === "new_zealand") && cc === "NZ")
+  ) {
+    return lang === "zh" ? "新西兰 PHF Science 法定传染病月度监测" : "New Zealand PHF Science Monthly Notifiable Diseases";
+  }
+  if (
     s === "thl_ttr" ||
     s === "thl" ||
     s === "ttr" ||
@@ -149,6 +156,9 @@ export function getSourceOptionsForCountry(
   }
   if (code === "AU") {
     return [{ value: "all", label: "Australia NINDSS" }];
+  }
+  if (code === "NZ") {
+    return [{ value: "phf_monthly", label: lang === "zh" ? "新西兰 PHF Science 法定传染病月度监测" : "New Zealand PHF Science Monthly Notifiable Diseases" }];
   }
   if (code === "TW") {
     return [{ value: "nidss_open_data", label: lang === "zh" ? "中国台湾 CDC NIDSS" : "Taiwan, China CDC NIDSS" }];
