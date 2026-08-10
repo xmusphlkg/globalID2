@@ -22,6 +22,75 @@ export type ChangelogRelease = {
 
 export const changelogReleases: ChangelogRelease[] = [
   {
+    version: '0.5.3',
+    date: '2026-08-10',
+    titleEn: 'Broader surveillance coverage and a clearer public data experience',
+    titleZh: '扩展监测覆盖，并改进公开数据体验',
+    summaryEn:
+      'This release adds new European source pipelines, expands public discovery with situation pages and multilingual routes, and gives operators stronger source, settings, and disease-mapping workflows.',
+    summaryZh:
+      '本次更新新增欧洲来源接入，利用态势页面和多语言路由扩展公开数据发现能力，并为运营人员提供更完善的来源、设置和疾病映射工作流。',
+    sections: [
+      {
+        kind: 'new',
+        labelEn: 'New',
+        labelZh: '新增',
+        items: [
+          {
+            en: 'Added Austria AGES Radar, Germany RKI SurvStat, and Ireland HPSC source definitions, crawlers, processors, reporting policies, and regression coverage.',
+            zh: '新增奥地利 AGES Radar、德国 RKI SurvStat 和爱尔兰 HPSC 的来源定义、抓取器、处理器、报告策略及回归测试。',
+          },
+          {
+            en: 'Added a public Situation Room with weekly pages, disease summaries, surveillance notes, and dedicated data exports.',
+            zh: '新增公开态势中心，提供周度页面、疾病摘要、监测注释和专用数据导出。',
+          },
+          {
+            en: 'Added multilingual Chinese routes, country-disease pages, custom 404 handling, segmented sitemaps, and richer SEO page metadata.',
+            zh: '新增中文多语言路由、国家疾病页面、自定义 404、分片站点地图和更完整的 SEO 页面元数据。',
+          },
+          {
+            en: 'Added an AI-assisted disease-mapping workspace with registry, audit, automation, and notification services in the operations dashboard.',
+            zh: '在运营控制面板新增 AI 辅助疾病映射工作区，以及注册表、审计、自动化和通知服务。',
+          },
+        ],
+      },
+      {
+        kind: 'improved',
+        labelEn: 'Improved',
+        labelZh: '优化',
+        items: [
+          {
+            en: 'Expanded country and source policy configuration with revision windows, fill-missing behavior, source aliases, licensing states, and permission-gated release controls.',
+            zh: '扩展国家与来源策略配置，支持修订窗口、缺失填补、来源别名、授权状态和权限控制的发布策略。',
+          },
+          {
+            en: 'Reworked the dashboard settings, automation, and source flows to expose operational state and configuration more consistently.',
+            zh: '重构控制面板的设置、自动化和来源流程，更一致地展示运营状态与配置。',
+          },
+          {
+            en: 'Improved static-site builds, redirects, analytics configuration, country coverage metadata, and report-page navigation for the expanded public routes.',
+            zh: '改进静态站点构建、重定向、分析配置、国家覆盖元数据和扩展公开路由后的报告页导航。',
+          },
+        ],
+      },
+      {
+        kind: 'fixed',
+        labelEn: 'Fixed',
+        labelZh: '修复',
+        items: [
+          {
+            en: 'Fixed source-scope canonicalization and legacy-access safeguards so newly ingested categories remain separated from reviewed compatibility projections.',
+            zh: '修复来源范围规范化和旧版访问保护，确保新接入类别与经审核的兼容投影保持分离。',
+          },
+          {
+            en: 'Added regression coverage for European source scopes, dynamic month policies, settings behavior, situation pages, disease mappings, and surveillance-note overrides.',
+            zh: '新增欧洲来源范围、动态月份策略、设置行为、态势页面、疾病映射和监测注释覆盖规则的回归测试。',
+          },
+        ],
+      },
+    ],
+  },
+  {
     version: '0.5.2',
     date: '2026-08-08',
     titleEn: 'Faster data delivery and incremental exports',

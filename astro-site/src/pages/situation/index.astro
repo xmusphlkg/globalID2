@@ -1,0 +1,35 @@
+---
+import { existsSync, readFileSync } from 'fs';
+import { resolve } from 'path';
+import ReportLayout from '../../layouts/ReportLayout.astro';
+import SituationSummary from '../../components/SituationSummary.astro';
+
+const latestPath = resolve('./src/data/situation/latest.json');
+const snapshot = existsSync(latestPath) ? JSON.parse(readFileSync(latestPath, 'utf-8')) : null;
+const titleDate = snapshot?.generated_at ? new Date(snapshot.generated_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Latest';
+const sourceUrls = (snapshot?.event_sources ?? []).map((source: any) => source.url).filter(Boolean);
+const structuredData = snapshot ? [{
+  '@type': 'Report', '@id': `${Astro.url.toString()}#report`, name: `Global Infectious Disease Trends – ${titleDate}`,
+  dateModified: snapshot.generated_at, temporalCoverage: snapshot.data_through ? `/${snapshot.data_through}` : undefined,
+  isBasedOn: sourceUrls, mainEntity: { '@type': 'ItemList', numberOfItems: (snapshot.increasing?.length ?? 0) + (snapshot.emerging?.length ?? 0) },
+}] : [];
+---
+
+<ReportLayout title={`Global Infectious Disease Trends – ${titleDate}`} description="Current infectious-disease surveillance signals across GIDS-covered jurisdictions and attributed official event notices." structuredData={structuredData} breadcrumbs={[{ label: 'Situation Room', labelZh: '全球态势室' }]}>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+    {snapshot ? <>
+      <SituationSummary snapshot={snapshot} />
+      <section class="situation-detail-grid">
+        <article class="card p-6"><h2 data-lang-en="Respiratory Watch" data-lang-zh="呼吸道监测">Respiratory Watch</h2>
+          {(snapshot.respiratory ?? []).length ? <ul>{snapshot.respiratory.map((signal: any) => <li><a href={`/diseases/${signal.disease_slug}/`}>{signal.disease_name}</a><span>{signal.country_name} · {signal.window.current_cases.toLocaleString()} cases in latest window</span></li>)}</ul> : <p data-lang-en="No respiratory series met the signal threshold this period." data-lang-zh="本期没有呼吸道序列达到信号阈值。">No respiratory series met the signal threshold this period.</p>}</article>
+        <article class="card p-6"><h2 data-lang-en="Unusual Signals" data-lang-zh="异常信号">Unusual Signals</h2>
+          {(snapshot.unusual ?? []).length ? <ul>{snapshot.unusual.map((signal: any) => <li><a href={`/diseases/${signal.disease_slug}/`}>{signal.disease_name}</a><span>{signal.country_name} · robust z {signal.statistics.robust_z ?? '—'}</span></li>)}</ul> : <p data-lang-en="No statistical signal met the unusual-signal rule." data-lang-zh="没有统计信号达到异常信号规则。">No statistical signal met the unusual-signal rule.</p>}</article>
+      </section>
+      <section class="card p-6 space-y-4"><h2 data-lang-en="Coverage & Method" data-lang-zh="覆盖范围与方法">Coverage & Method</h2><p data-lang-en={snapshot.coverage.note_en} data-lang-zh={snapshot.coverage.note_zh}>{snapshot.coverage.note_en}</p><p data-lang-en={snapshot.methodology.en} data-lang-zh={snapshot.methodology.zh}>{snapshot.methodology.en}</p><p class="situation-note" data-lang-en={snapshot.limitations.en} data-lang-zh={snapshot.limitations.zh}>{snapshot.limitations.en}</p></section>
+    </> : <section class="card p-10 text-center"><h1 data-lang-en="Situation Room is preparing its first snapshot" data-lang-zh="态势室正在生成首个快照">Situation Room is preparing its first snapshot</h1><p data-lang-en="No published snapshot is available yet. Existing country and disease datasets remain available." data-lang-zh="尚无已发布快照；现有国家和疾病数据仍可正常使用。">No published snapshot is available yet. Existing country and disease datasets remain available.</p></section>}
+  </div>
+</ReportLayout>
+
+<style>
+  h2 { color: rgb(var(--text-strong)); font-family: 'Source Serif 4', serif; font-size: 1.45rem; margin: 0 0 .8rem; } p { color: rgb(var(--text-muted)); line-height: 1.7; } .situation-detail-grid { display: grid; gap: 1.5rem; grid-template-columns: repeat(2, minmax(0, 1fr)); } ul { display: grid; gap: .7rem; list-style: none; margin: 0; padding: 0; } li { border-top: 1px solid rgb(var(--border)); display: grid; gap: .2rem; padding-top: .7rem; } li a { color: rgb(var(--text-strong)); font-weight: 600; } li span, .situation-note { color: rgb(var(--text-faint)); font-size: .85rem; } @media (max-width: 640px) { .situation-detail-grid { grid-template-columns: 1fr; } }
+</style>

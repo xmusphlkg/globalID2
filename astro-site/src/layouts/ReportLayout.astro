@@ -12,6 +12,7 @@ interface Props {
   breadcrumbs?: Array<{ label: string; labelZh?: string; href?: string }>;
   initialLanguage?: 'en' | 'zh';
   structuredData?: JsonLdNode | JsonLdNode[];
+  seo?: import('../lib/seo').SeoDocument;
 }
 
 const {
@@ -20,6 +21,7 @@ const {
   breadcrumbs = [],
   initialLanguage = 'en',
   structuredData = [],
+  seo,
 } = Astro.props;
 const homeLabel = initialLanguage === 'zh' ? '首页' : 'Home';
 const siteOrigin = Astro.site ? new URL(Astro.site).origin : Astro.url.origin;
@@ -40,6 +42,7 @@ const additionalStructuredData = [
   description={description}
   initialLanguage={initialLanguage}
   additionalStructuredData={additionalStructuredData}
+  seo={seo}
 >
   <!-- Breadcrumb -->
   {breadcrumbs.length > 0 && (

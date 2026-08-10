@@ -477,6 +477,7 @@ const subscriptionsApiBase = (
 
         setSubmitting(true);
         setStatus('pending', messages.submitting);
+        window.gtag?.('event', 'subscription_start');
 
         try {
           const response = await fetch(`${apiBase}/api/subscriptions`, {
@@ -500,6 +501,7 @@ const subscriptionsApiBase = (
             ? messages.emailSent
             : messages.received;
           setStatus('success', successMessage);
+          window.gtag?.('event', 'subscription_complete');
           showModal(successMessage);
           form.reset();
           if (diseaseSearch) diseaseSearch.value = '';
