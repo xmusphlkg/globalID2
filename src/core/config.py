@@ -306,6 +306,7 @@ class RawArchiveSettings(_BaseEnvSettings):
 
     enabled: bool = Field(default=False, description="是否在数据更新任务后自动归档 data/raw")
     repo_url: str = Field(default="", description="原始数据专用 GitHub 仓库 URL")
+    branch: str = Field(default="main", description="原始数据归档 GitHub 分支")
     repository_dir: Path = Field(
         default=Path("exports/raw-git-archive"),
         description="原始数据仓库 main 分支的持久本地克隆目录",

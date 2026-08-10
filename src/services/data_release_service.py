@@ -11,6 +11,7 @@ from pathlib import Path
 import signal  # Re-exported for compatibility with existing diagnostics/tests.
 import sys
 from typing import Any, Optional
+from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
@@ -88,7 +89,6 @@ SUBSCRIPTION_SYNC_TIMEOUT_SECONDS = 10 * 60
 DOWNLOAD_PUBLISH_TIMEOUT_SECONDS = 15 * 60
 DOWNLOAD_REPO_BRANCH = get_data_share_repo_branch()
 DIRECT_DOWNLOAD_DIR = ROOT_DIR / "exports" / "site-downloads"
-RAW_ARCHIVE_BRANCH = "main"
 
 
 def _iso(value: Optional[datetime]) -> Optional[str]:
@@ -524,11 +524,12 @@ class DataReleaseService:
         project_name = self._cloudflare_project_name(job.cloudflare_project_name)
         download_repo_url = self._download_repo_url()
         download_url_base = self._download_repo_raw_base(job)
+        raw_archive = self._raw_archive_runtime()
         description_parts = [
             f"Generate site data and build Astro site for release job {job.job_id}.",
             (
-                f"Incrementally archive raw crawler data to {RAW_ARCHIVE_BRANCH}."
-                if get_config().raw_archive.enabled
+                f"Incrementally archive raw crawler data to {raw_archive.branch}."
+                if raw_archive.enabled
                 else "Raw crawler archive publication disabled for this run."
             ),
             (
@@ -558,9 +559,9 @@ class DataReleaseService:
             "manual_trigger": manual,
             "trigger_task_uuid": trigger_task_uuid,
             "generated_paths": list(GENERATED_DATA_PATHS),
-            "raw_archive_enabled": get_config().raw_archive.enabled,
-            "raw_archive_repo_url": get_config().raw_archive.repo_url,
-            "raw_archive_branch": RAW_ARCHIVE_BRANCH,
+            "raw_archive_enabled": raw_archive.enabled,
+            "raw_archive_repo_url": raw_archive.repo_url,
+            "raw_archive_branch": raw_archive.branch,
         }
         task = await task_manager.create_task(
             task_type=TaskType.EXPORT_DATA,
@@ -726,7 +727,7 @@ class DataReleaseService:
             root_dir=ROOT_DIR,
             astro_dir=ASTRO_DIR,
             download_repo_branch=DOWNLOAD_REPO_BRANCH,
-            raw_archive_branch=RAW_ARCHIVE_BRANCH,
+            raw_archive_branch=self._raw_archive_runtime().branch,
             generate_timeout_seconds=GENERATE_SITE_DATA_TIMEOUT_SECONDS,
             astro_build_timeout_seconds=ASTRO_BUILD_TIMEOUT_SECONDS,
             download_publish_timeout_seconds=DOWNLOAD_PUBLISH_TIMEOUT_SECONDS,
@@ -936,14 +937,31 @@ class DataReleaseService:
             branch=branch.strip() if branch and branch.strip() else get_data_share_repo_branch(),
         )
 
-    def _publish_raw_archive_command(self, *, python_path: Path) -> list[str]:
-        cfg = get_config().raw_archive
+    def _raw_archive_runtime(self) -> SimpleNamespace:
+        """Resolve raw-archive settings from the same control-center source as downloads."""
+
+        cfg = get_config()
+        archive = cfg.raw_archive
+        github = system_settings_service.github_runtime()
+        return SimpleNamespace(
+            enabled=bool(github["raw_archive_enabled"]),
+            repo_url=str(github["raw_archive_repo_url"] or "").strip(),
+            branch=str(github["raw_archive_branch"] or "").strip() or "main",
+            repository_dir=archive.repository_dir,
+            git_timeout_seconds=archive.git_timeout_seconds,
+        )
+
+    def _publish_raw_archive_command(
+        self, *, python_path: Path, archive: Any | None = None
+    ) -> list[str]:
+        archive = archive or self._raw_archive_runtime()
+        cfg = get_config()
         return build_publish_raw_archive_command(
             python_path=python_path,
-            source_dir=get_config().raw_data_dir,
-            repository_dir=cfg.repository_dir,
-            repo_url=cfg.repo_url,
-            git_timeout_seconds=cfg.git_timeout_seconds,
+            source_dir=cfg.raw_data_dir,
+            repository_dir=archive.repository_dir,
+            repo_url=archive.repo_url,
+            git_timeout_seconds=archive.git_timeout_seconds,
         )
 
     def _env_file_values(self) -> dict[str, str]:
@@ -1044,13 +1062,13 @@ class DataReleaseService:
 
     async def _raw_archive_check(self) -> dict[str, Any]:
         config = get_config()
-        archive = config.raw_archive
+        archive = self._raw_archive_runtime()
         return await release_checks.raw_archive_check(
             enabled=archive.enabled,
             repo_url=archive.repo_url,
             source_dir=config.raw_data_dir,
             repository_dir=archive.repository_dir,
-            branch=RAW_ARCHIVE_BRANCH,
+            branch=archive.branch,
             root_dir=ROOT_DIR,
             github_ssh_prefixes=GITHUB_SSH_PREFIXES,
             run_capture=self._run_capture,

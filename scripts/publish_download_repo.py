@@ -176,10 +176,16 @@ def ensure_repo(repo_url: str, branch: str, workdir: Path) -> None:
         run_git(["checkout", "-B", branch], workdir)
         return
 
-    run_git(["fetch", "origin", branch, "--depth", "1"], workdir)
-    run_git(["checkout", "-B", branch], workdir)
     if remote_branch_exists(repo_url, branch):
-        run_git(["pull", "--ff-only", "origin", branch], workdir)
+        # A long-lived publisher checkout may currently point at a different
+        # data branch (for example, the old default ``main``).  Checking out
+        # the requested branch from the fetched remote ref avoids an
+        # impossible fast-forward when those histories diverge.
+        remote_ref = f"refs/remotes/origin/{branch}"
+        run_git(["fetch", "origin", f"{branch}:{remote_ref}", "--depth", "1"], workdir)
+        run_git(["checkout", "-B", branch, f"origin/{branch}"], workdir)
+    else:
+        run_git(["checkout", "-B", branch], workdir)
 
 
 def ensure_commit_identity(workdir: Path) -> dict[str, str]:

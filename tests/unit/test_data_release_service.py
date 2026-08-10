@@ -506,12 +506,23 @@ def test_raw_archive_publish_command_uses_dedicated_incremental_publisher(
     config = SimpleNamespace(
         raw_data_dir=tmp_path / "raw",
         raw_archive=SimpleNamespace(
+            enabled=True,
             repo_url="git@example/raw-archive.git",
+            branch="archive-main",
             repository_dir=tmp_path / "raw-git-archive",
             git_timeout_seconds=1800,
         ),
     )
     monkeypatch.setattr(release_module, "get_config", lambda: config)
+    monkeypatch.setattr(
+        release_module.system_settings_service,
+        "github_runtime",
+        lambda: {
+            "raw_archive_enabled": True,
+            "raw_archive_repo_url": config.raw_archive.repo_url,
+            "raw_archive_branch": config.raw_archive.branch,
+        },
+    )
 
     command = service._publish_raw_archive_command(python_path=tmp_path / "python")
 
@@ -533,10 +544,21 @@ async def test_raw_archive_preflight_is_noop_when_disabled(monkeypatch, tmp_path
         raw_archive=SimpleNamespace(
             enabled=False,
             repo_url="",
+            branch="main",
             repository_dir=tmp_path / "archive",
+            git_timeout_seconds=1800,
         ),
     )
     monkeypatch.setattr(release_module, "get_config", lambda: config)
+    monkeypatch.setattr(
+        release_module.system_settings_service,
+        "github_runtime",
+        lambda: {
+            "raw_archive_enabled": False,
+            "raw_archive_repo_url": "",
+            "raw_archive_branch": "main",
+        },
+    )
 
     result = await service._raw_archive_check()
 

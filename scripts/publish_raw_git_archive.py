@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Mirror ``data/raw`` into the ``main`` branch of a dedicated Git repository.
+"""Mirror ``data/raw`` into a configured branch of a dedicated Git repository.
 
 Normal files keep their original paths and bytes so people can browse them on
 GitHub. Files above GitHub's per-file limit are split into adjacent raw byte
@@ -26,7 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_SOURCE_DIR = ROOT / "data" / "raw"
 DEFAULT_REPOSITORY_DIR = ROOT / "exports" / "raw-git-archive"
 DEFAULT_REPO_URL = os.getenv("RAW_ARCHIVE__REPO_URL", "").strip()
-TARGET_BRANCH = "main"
+TARGET_BRANCH = os.getenv("RAW_ARCHIVE__BRANCH", "main").strip() or "main"
 DATA_ROOT = PurePosixPath("data/raw")
 MARKER_FILE = ".globalid-raw-mirror"
 MARKER_CONTENT = "globalid-raw-mirror-v2\n"
@@ -269,7 +269,7 @@ def _fast_forward_from_remote(repository_dir: Path, timeout_seconds: float) -> N
         run_git(["merge", "--ff-only", remote_ref], repository_dir, timeout_seconds=timeout_seconds)
         return
     raise RawArchiveError(
-        "Local and remote main histories diverged; refusing to overwrite either side"
+        f"Local and remote {TARGET_BRANCH!r} histories diverged; refusing to overwrite either side"
     )
 
 
@@ -560,9 +560,9 @@ def _write_repository_metadata(
     _write_text_if_changed(
         repository_dir / "README.md",
         "# GlobalID raw data archive\n\n"
-        "本仓库由 GlobalID 自动维护，`main` 分支直接镜像 `data/raw`。普通文件保留原始目录、"
+        f"本仓库由 GlobalID 自动维护，`{TARGET_BRANCH}` 分支直接镜像 `data/raw`。普通文件保留原始目录、"
         "文件名和内容，可以直接浏览或下载。同步任务只提交实际新增、更新或删除的数据；不创建 PR 或 Release。\n\n"
-        "This repository is maintained automatically by GlobalID. The `main` branch mirrors "
+        f"This repository is maintained automatically by GlobalID. The `{TARGET_BRANCH}` branch mirrors "
         "`data/raw` with original paths and bytes. Authentication data under `_auth` is excluded.\n\n"
         "## 超大文件 / Large files\n\n"
         "GitHub 不接受超过 100 MiB 的单个 Git 文件，因此极少数超大文件会保存为相邻的 "
@@ -892,7 +892,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--push",
         action="store_true",
-        help="Commit changes and push them directly to the remote main branch.",
+        help="Commit changes and push them directly to the configured remote branch.",
     )
     # A running worker may still have the old command builder in memory until
     # its next planned service restart. Accept and ignore those obsolete
