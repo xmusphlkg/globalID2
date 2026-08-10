@@ -9,7 +9,7 @@
   "definition_version": "PHO_IDTO_2026_07",
   "reviewed_at": "2026-08-07",
   "expected_source_label_count": 54,
-  "registered_label_count": 42,
+  "registered_label_count": 54,
   "reviewed_source_labels": [
     "Acquired immunodeficiency syndrome (AIDS)",
     "Amebiasis",
@@ -66,70 +66,5 @@
     "West Nile Virus Illness",
     "Yersiniosis"
   ],
-  "exclusions": [
-    {
-      "local_label": "Anaplasmosis",
-      "reason_code": "no_dedicated_concept",
-      "decision": "retain_in_normalized_snapshot_only"
-    },
-    {
-      "local_label": "Babesiosis",
-      "reason_code": "no_dedicated_concept",
-      "decision": "retain_in_normalized_snapshot_only"
-    },
-    {
-      "local_label": "Blastomycosis",
-      "reason_code": "no_dedicated_concept",
-      "decision": "retain_in_normalized_snapshot_only"
-    },
-    {
-      "local_label": "Candida auris infection",
-      "reason_code": "no_dedicated_concept",
-      "decision": "retain_in_normalized_snapshot_only"
-    },
-    {
-      "local_label": "Carbapenemase-producing Enterobacteriaceae (CPE)",
-      "reason_code": "near_neighbor_not_equivalent",
-      "decision": "retain_in_normalized_snapshot_only",
-      "notes": "Do not substitute the broader CPO concept or the narrower CRE concept."
-    },
-    {
-      "local_label": "Cyclosporiasis",
-      "reason_code": "no_dedicated_concept",
-      "decision": "retain_in_normalized_snapshot_only"
-    },
-    {
-      "local_label": "Group A Streptococcal Disease, Invasive",
-      "reason_code": "near_neighbor_not_equivalent",
-      "decision": "retain_in_normalized_snapshot_only",
-      "notes": "The available streptococcal concepts are broader or jurisdiction-specific."
-    },
-    {
-      "local_label": "Group B Streptococcal Disease, Neonatal",
-      "reason_code": "near_neighbor_not_equivalent",
-      "decision": "retain_in_normalized_snapshot_only",
-      "notes": "The available streptococcal concept is broader than neonatal invasive GBS."
-    },
-    {
-      "local_label": "Ophthalmia Neonatorum",
-      "reason_code": "no_dedicated_concept",
-      "decision": "retain_in_normalized_snapshot_only"
-    },
-    {
-      "local_label": "Paralytic Shellfish Poisoning",
-      "reason_code": "no_dedicated_concept",
-      "decision": "retain_in_normalized_snapshot_only"
-    },
-    {
-      "local_label": "Powassan virus",
-      "reason_code": "no_dedicated_concept",
-      "decision": "retain_in_normalized_snapshot_only"
-    },
-    {
-      "local_label": "Syphilis, Infectious",
-      "reason_code": "near_neighbor_not_equivalent",
-      "decision": "retain_in_normalized_snapshot_only",
-      "notes": "Ontario uses primary, secondary, and early latent infection under one year; do not map it to the Australian under-two-year series or broad syphilis."
-    }
-  ]
+  "exclusions": []
 }
