@@ -72,6 +72,9 @@ export default function SettingPage() {
     github_data_share_repo_url: "",
     github_data_share_repo_branch: "",
     github_data_share_raw_base_url: "",
+    raw_archive_enabled: false,
+    raw_archive_repo_url: "",
+    raw_archive_branch: "main",
     default_github_remote: "origin",
     default_github_branch: "",
   });
@@ -103,6 +106,9 @@ export default function SettingPage() {
       github_data_share_repo_url: settings.github.github_data_share_repo_url,
       github_data_share_repo_branch: settings.github.github_data_share_repo_branch,
       github_data_share_raw_base_url: settings.github.github_data_share_raw_base_url,
+      raw_archive_enabled: settings.github.raw_archive_enabled,
+      raw_archive_repo_url: settings.github.raw_archive_repo_url,
+      raw_archive_branch: settings.github.raw_archive_branch,
       default_github_remote: settings.github.default_github_remote,
       default_github_branch: settings.github.default_github_branch,
     }));
@@ -172,6 +178,9 @@ export default function SettingPage() {
       github_data_share_repo_url: githubForm.github_data_share_repo_url?.trim() || "",
       github_data_share_repo_branch: githubForm.github_data_share_repo_branch?.trim() || "",
       github_data_share_raw_base_url: githubForm.github_data_share_raw_base_url?.trim() || "",
+      raw_archive_enabled: Boolean(githubForm.raw_archive_enabled),
+      raw_archive_repo_url: githubForm.raw_archive_repo_url?.trim() || "",
+      raw_archive_branch: githubForm.raw_archive_branch?.trim() || "main",
       default_github_remote: githubForm.default_github_remote?.trim() || "",
       default_github_branch: githubForm.default_github_branch?.trim() || "",
     };
@@ -361,6 +370,34 @@ export default function SettingPage() {
               <div>
                 <SectionLabel>{isZh ? "SMTP 端口" : "SMTP Port"}</SectionLabel>
                 <input type="number" min={1} value={smtpForm.smtp_port ?? 587} onChange={(e) => setSmtpForm((current) => ({ ...current, smtp_port: Number(e.target.value) || 587 }))} className={inputCls} />
+              </div>
+            </div>
+            <div className="rounded-tremor-default border border-tremor-border p-3 dark:border-dark-tremor-border">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <SectionLabel>{isZh ? "原始数据归档仓库" : "Raw Data Archive"}</SectionLabel>
+                  <Text className="text-xs text-tremor-content-subtle">
+                    {isZh ? "发布流程会将 data/raw 增量同步到这个独立 GitHub 仓库。" : "The release pipeline incrementally mirrors data/raw to this dedicated GitHub repository."}
+                  </Text>
+                </div>
+                <label className="flex items-center gap-2 text-sm text-tremor-content-emphasis dark:text-dark-tremor-content-emphasis">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(githubForm.raw_archive_enabled)}
+                    onChange={(e) => setGithubForm((current) => ({ ...current, raw_archive_enabled: e.target.checked }))}
+                  />
+                  {isZh ? "启用归档" : "Enable archive"}
+                </label>
+              </div>
+              <div className="mt-3 grid gap-3 md:grid-cols-[minmax(0,1fr)_10rem]">
+                <div>
+                  <SectionLabel>{isZh ? "归档仓库 URL" : "Archive Repo URL"}</SectionLabel>
+                  <input value={githubForm.raw_archive_repo_url ?? ""} onChange={(e) => setGithubForm((current) => ({ ...current, raw_archive_repo_url: e.target.value }))} className={inputCls} placeholder="git@github.com:owner/raw-archive.git" />
+                </div>
+                <div>
+                  <SectionLabel>{isZh ? "归档分支" : "Archive Branch"}</SectionLabel>
+                  <input value={githubForm.raw_archive_branch ?? ""} onChange={(e) => setGithubForm((current) => ({ ...current, raw_archive_branch: e.target.value }))} className={inputCls} placeholder="main" />
+                </div>
               </div>
             </div>
 

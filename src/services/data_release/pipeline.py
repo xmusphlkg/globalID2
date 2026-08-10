@@ -73,7 +73,10 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
     release_identity = await service._site_release_identity(deployment_branch)
 
     await runtime.task_manager.update_task_progress(task.task_uuid, 5)
-    raw_archive_cfg = runtime.get_config().raw_archive
+    raw_archive_cfg = getattr(service, "_raw_archive_runtime", lambda: runtime.get_config().raw_archive)()
+    raw_archive_branch = str(
+        getattr(raw_archive_cfg, "branch", runtime.raw_archive_branch) or runtime.raw_archive_branch
+    )
     raw_archive_published = False
     if raw_archive_cfg.enabled:
         raw_git_transport = str(
@@ -86,13 +89,16 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
         await service._run_logged_command(
             task.task_uuid,
             title="Archive Raw Crawler Data",
-            cmd=service._publish_raw_archive_command(python_path=python_path),
+            cmd=service._publish_raw_archive_command(
+                python_path=python_path,
+                archive=raw_archive_cfg,
+            ),
             cwd=runtime.root_dir,
-            env=raw_git_env,
+            env={**raw_git_env, "RAW_ARCHIVE__BRANCH": raw_archive_branch},
             metadata={
                 "event": "raw_git_archive_publish",
                 "release_job_id": job.job_id,
-                "branch": runtime.raw_archive_branch,
+                "branch": raw_archive_branch,
             },
             timeout_seconds=float(raw_archive_cfg.git_timeout_seconds) + 60 * 60,
         )
@@ -270,7 +276,7 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
         "git_pushed": downloads_published,
         "raw_archive_published": raw_archive_published,
         "raw_archive_repo_url": raw_archive_cfg.repo_url or None,
-        "raw_archive_branch": runtime.raw_archive_branch if raw_archive_cfg.enabled else None,
+        "raw_archive_branch": raw_archive_branch if raw_archive_cfg.enabled else None,
         "pages_deployed": pages_deployed,
         "subscription_options_synced": subscription_options_synced,
         "preflight": checks,
