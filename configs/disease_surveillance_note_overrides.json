@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "review_version": "2026.08.10-country-manual-review-1",
+  "reviewed_at": "2026-08-10",
+  "notes": {
+    "D005": {
+      "en": "Brazil publishes separate SINAN series for AIDS in adults and AIDS in children; these are population slices of the same AIDS concept, not different diseases. Norway reports AIDS separately from HIV infection. Do not add overlapping AIDS and HIV series as though they were disjoint case totals.",
+      "zh": "巴西 SINAN 分别发布成人 AIDS 与儿童 AIDS 序列；它们是同一 AIDS 疾病概念下的人群分层，不是两个不同病种。挪威将 AIDS 与 HIV 感染分别报告。计算总量时，不应把相互重叠的 AIDS 与 HIV 序列当作互斥病例直接相加。"
+    },
+    "D017": {
+      "en": "Finland THL source code 170 is displayed in the upstream English dimension as ‘Cinderella disease’. The official Finnish label is ‘Tuhkarokko’, meaning measles; this is an upstream translation error, not a mapping to a different disease.",
+      "zh": "芬兰 THL 来源代码 170 在上游英文维度中显示为“Cinderella disease”，但其官方芬兰语名称为“Tuhkarokko”，即麻疹。这是上游英文翻译错误，并非映射到了另一个疾病。"
+    },
+    "D026": {
+      "en": "Switzerland and China publish source-reported combined typhoid-and-paratyphoid series. These combined totals cannot be decomposed into typhoid and paratyphoid from the published value and must not be added to separate component series.",
+      "zh": "瑞士和中国发布的是来源直接报告的伤寒与副伤寒合并序列。公开数值无法再拆分为伤寒和副伤寒，也不能与单独的分病种序列重复相加。"
+    },
+    "D034": {
+      "en": "Korea's historical surveillance contains separate primary, secondary, tertiary, and latent syphilis series as well as a broader syphilis series. The stage-specific rows are subdivisions, so a broad total must not be summed with its stage components; comparisons across the 2024 definition transition require the source period and label.",
+      "zh": "韩国历史监测同时包含一期、二期、三期和潜伏梅毒分期序列，以及更宽泛的梅毒序列。分期行属于子集，不能与总体序列重复相加；跨越 2024 年口径转换比较时必须同时查看来源时期和原始标签。"
+    },
+    "D039": {
+      "en": "Finland THL source code 171 is displayed in the upstream English dimension as ‘Swine fever’. Its official Finnish label is ‘Sikotauti’, meaning mumps; it does not refer to the animal disease classical swine fever.",
+      "zh": "芬兰 THL 来源代码 171 在上游英文维度中显示为“Swine fever”，其官方芬兰语名称“Sikotauti”实际指流行性腮腺炎，并非动物疾病猪瘟。"
+    },
+    "D043": {
+      "en": "Language is decisive for this concept: German ‘Typhus’ or ‘Typhus abdominalis’ means typhoid fever and belongs on the typhoid page, whereas German ‘Fleckfieber’ and Norwegian ‘Flekktyfus’ denote rickettsial typhus. Generic source labels should be read with their country and original language.",
+      "zh": "该概念必须结合原始语言判断：德语“Typhus”或“Typhus abdominalis”指伤寒，应归入伤寒页；德语“Fleckfieber”和挪威语“Flekktyfus”才指立克次体性斑疹伤寒。通用英文标签必须结合国家和原文解读。"
+    },
+    "D054": {
+      "en": "Ireland and Japan publish varicella series restricted to hospitalised cases, while other countries report broader notification or sentinel series. Hospitalised-case counts measure a severe subset and should not be interpreted as all community varicella or compared directly with unrestricted series.",
+      "zh": "爱尔兰和日本发布的水痘序列仅包含住院病例，而其他国家可能采用更宽的法定报告或哨点口径。住院病例数只反映较重子集，不能解释为全部社区水痘病例，也不宜与不限住院状态的序列直接比较。"
+    },
+    "D100": {
+      "en": "Ontario, Ireland, Iceland, Norway, and Sweden report invasive or systemic Haemophilus influenzae disease. Finland also publishes a total and separate serotype components. These are source-defined surveillance slices: do not interpret invasive counts as all H. influenzae infections, and do not add a reported total to its serotype components.",
+      "zh": "安大略、爱尔兰、冰岛、挪威和瑞典报告的是侵袭性或全身性流感嗜血杆菌疾病；芬兰还同时发布总计及不同血清型分项。这些都是来源定义的监测切片：侵袭性病例不能代表全部感染，总计也不能与其血清型分项重复相加。"
+    },
+    "D124": {
+      "en": "German ‘Typhus’ and ‘Typhus abdominalis’ mean typhoid fever, not rickettsial typhus. Country series may be typhoid-only, paratyphoid-only, or a reported combined enteric-fever total; retain the source label before comparing or aggregating them.",
+      "zh": "德语“Typhus”和“Typhus abdominalis”指伤寒，并非立克次体性斑疹伤寒。各国来源可能分别报告仅伤寒、仅副伤寒或二者合计；比较或汇总前必须保留并核对原始来源标签。"
+    },
+    "D127": {
+      "en": "Broad viral-haemorrhagic-fever categories from Ireland, Norway, and New Zealand may cover different reportable agents and case definitions. Treat each as its source's aggregate surveillance category rather than a pathogen-specific count.",
+      "zh": "爱尔兰、挪威和新西兰的广义病毒性出血热类别可能覆盖不同的法定报告病原体和病例定义。应将其视为各来源自己的合并监测类别，而不是某一种特定病原体的病例数。"
+    },
+    "D134": {
+      "en": "Ireland's source category is specifically viral meningitis, while this knowledge concept covers aseptic meningitis more broadly. The Irish values therefore describe the viral subset and must not be interpreted as all aseptic meningitis etiologies.",
+      "zh": "爱尔兰来源类别明确为病毒性脑膜炎，而本知识概念覆盖更广的无菌性脑膜炎。爱尔兰数值只代表其中的病毒性子集，不能解释为全部无菌性脑膜炎病因。"
+    },
+    "D144": {
+      "en": "Norway MSIS publishes the source category ‘Prionsykdommer’ (prion diseases). Reported Norwegian cases have predominantly been CJD, but the category and reporting criteria can include other prion diseases; interpret the series as the official source category rather than assuming every value is a subtype-confirmed CJD case.",
+      "zh": "挪威 MSIS 发布的来源类别为“Prionsykdommer”（朊病毒病）。挪威已报告病例以 CJD 为主，但该类别及报告标准可以包含其他朊病毒病；因此应按官方来源类别解释，而不应假定每个数值都是已完成亚型确认的 CJD 病例。"
+    },
+    "D162": {
+      "en": "HIV surveillance populations differ by source: Brazil separates adult and child series, the United States NHSS series covers persons aged 13 years and older, Taiwan's source label includes vertical-transmission and pregnancy-related reporting, and some countries publish AIDS separately. Use the original source label and population scope; these rows are not interchangeable all-age totals.",
+      "zh": "HIV 监测人群因来源而异：巴西分成人与儿童序列，美国 NHSS 序列覆盖 13 岁及以上人群，台湾来源标签还包含母婴垂直传播和孕产妇相关报告，部分国家另行报告 AIDS。必须结合原始来源标签和人群范围解读，这些行不是可互换的全人群总计。"
+    },
+    "D178": {
+      "en": "Japan's acute flaccid paralysis surveillance series explicitly excludes acute poliomyelitis. It is a syndrome-surveillance count for non-polio AFP and must not be used as a poliomyelitis count or as an unrestricted total of every AFP cause.",
+      "zh": "日本急性弛缓性麻痹监测序列明确排除急性脊髓灰质炎。它是非脊灰 AFP 的综合征监测数，不能作为脊灰病例数，也不能当作涵盖全部 AFP 病因的无限定总计。"
+    },
+    "D240": {
+      "en": "Norway's viral central-nervous-system infection category and Sweden's viral meningoencephalitis category are source-reported aggregates whose component etiologies are not separable in the published totals. They are retained for source-faithful analysis and should not be rolled into a single named pathogen.",
+      "zh": "挪威的病毒性中枢神经系统感染类别与瑞典的病毒性脑膜脑炎类别均为来源直接报告的合计，公开总数无法拆分具体病原。它们用于保持来源口径，不应再归并为某一个命名病原体。"
+    }
+  }
+}

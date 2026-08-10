@@ -1,0 +1,57 @@
+from __future__ import annotations
+
+import pandas as pd
+
+from src.services.situation_room import analyze_frame, build_snapshot, load_config
+
+
+def _weekly_frame(values: list[int]) -> pd.DataFrame:
+    return pd.DataFrame([
+        {
+            "time": period,
+            "value": value,
+            "quality_status": "validated",
+            "geography_key": "national",
+            "series_code": "jp-influenza-weekly",
+            "disease_id": "D004",
+            "disease_name": "Influenza",
+            "disease_slug": "influenza",
+            "country_code": "JP",
+            "country_name": "Japan",
+            "source_label": "Test source",
+            "temporal_granularity": "weekly",
+        }
+        for period, value in zip(pd.date_range("2019-01-07", periods=len(values), freq="W-MON"), values, strict=True)
+    ])
+
+
+def test_detects_confirmed_source_native_increase() -> None:
+    signals = analyze_frame(_weekly_frame([10] * 176 + [35] * 4), load_config())
+
+    assert len(signals) == 1
+    assert signals[0]["window"] == {
+        "periods": 4,
+        "current_cases": 140,
+        "previous_cases": 40,
+        "absolute_change": 100,
+        "change_pct": 250.0,
+    }
+    assert signals[0]["cadence"] == "weekly"
+
+
+def test_suppresses_low_base_percentage_artifact() -> None:
+    signals = analyze_frame(_weekly_frame([0] * 176 + [1, 1, 1, 1]), load_config())
+
+    assert signals == []
+
+
+def test_snapshot_separates_statistical_and_official_event_evidence() -> None:
+    config = load_config()
+    signals = analyze_frame(_weekly_frame([10] * 176 + [35] * 4), config)
+    event = {"id": "event:1", "kind": "official_event", "source": "who_don", "title": "Official event", "source_url": "https://example.test/event"}
+
+    snapshot = build_snapshot(signals, [event], {"who_don": {"status": "fresh"}}, config)
+
+    assert snapshot["increasing"][0]["kind"] == "statistical_signal"
+    assert snapshot["emerging"] == [event]
+    assert snapshot["coverage"]["note_en"].startswith("Statistical signals cover")

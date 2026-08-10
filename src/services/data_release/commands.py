@@ -48,6 +48,12 @@ def build_generate_site_data_command(
         download_url_base,
     ]
 
+
+def build_update_situation_room_command(*, python_path: Path) -> list[str]:
+    """Refresh external event metadata before static site data is exported."""
+
+    return [str(python_path), "scripts/update_situation_room.py"]
+
 def build_publish_download_repo_command(
     *,
     python_path: Path,

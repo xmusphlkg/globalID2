@@ -181,7 +181,10 @@ async def _mark_stale_sources(db, disease_id: str, candidates: list, enabled_sou
 
 
 async def _upsert_brief(db, payload: dict[str, Any]) -> DiseaseKnowledgeBrief:
+    from src.knowledge.surveillance_note_overrides import apply_surveillance_note_override
+
     payload = normalize_knowledge_citations(payload)
+    payload = apply_surveillance_note_override(payload)
     result = await db.execute(
         select(DiseaseKnowledgeBrief).where(
             DiseaseKnowledgeBrief.disease_id == payload["disease_id"],

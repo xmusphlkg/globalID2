@@ -342,6 +342,34 @@
     },
     "notes": "Switzerland FOPH/BAG IDD mandatory reporting API normalized to national case rows. Monthly series may use the dashboard CHFL aggregate where CH-only monthly series are not exposed."
   },
+  "AT": {
+    "public_release_enabled": false,
+    "data_source_url": "https://www.ages.at/en/human/disease/ages-radar-for-infectious-diseases",
+    "data_source_type": "official_monthly_csv",
+    "crawler_config": {
+      "sources": ["ages_radar"], "cadence": "monthly",
+      "source_update_cadence": "monthly_revisable", "refresh_recent_months": 3, "dynamic_revision_enabled": true,
+      "reporting_area": "national", "geography_key": "country:AT:national", "reuse_status": "license_review_pending"
+    },
+    "parser_config": {"primary": "at_ages_radar_monthly"},
+    "disease_mapping_rules": {"strategy": "db_first", "fallback": "quarantine_unmapped"},
+    "report_config": {"default_type": "MONTHLY", "lang": "de-AT"},
+    "notes": "AGES Radar monthly national source. Internal ingestion retains native categories; public release is disabled pending licence review."
+  },
+  "DE": {
+    "public_release_enabled": true,
+    "data_source_url": "https://survstat.rki.de/Content/Query/Create.aspx",
+    "data_source_type": "official_webforms_csv_export",
+    "crawler_config": {
+      "sources": ["rki_survstat"], "cadence": "weekly", "source_update_cadence": "weekly_revisable", "full_history_start_year": 2001,
+      "refresh_recent_weeks": 12, "dynamic_revision_enabled": true,
+      "reporting_area": "national", "geography_key": "country:DE:national", "export_format": "zip_csv"
+    },
+    "parser_config": {"primary": "de_rki_survstat_weekly"},
+    "disease_mapping_rules": {"strategy": "db_first", "fallback": "quarantine_unmapped"},
+    "report_config": {"default_type": "WEEKLY", "lang": "de-DE"},
+    "notes": "RKI SurvStat national weekly notification export; raw ZIP exports are retained and recent weeks are overwritten for revisions."
+  },
   "FI": {
     "public_release_enabled": true,
     "data_source_url": "https://sampo.thl.fi/pivot/prod/en/ttr/cases/fact_ttr_cases",
@@ -382,6 +410,96 @@
       "lang": "fi-FI"
     },
     "notes": "Finland THL Infectious Diseases Register national monthly case counts. The current month is ingested as provisional and the latest three months are refreshed for source revisions."
+  },
+  "IE": {
+    "public_release_enabled": false,
+    "data_source_url": "https://notifiabledisease.hpsc.ie/",
+    "data_source_type": "official_arcgis_and_reviewed_pdf_catalogue",
+    "crawler_config": {
+      "sources": [
+        "hpsc_ndh",
+        "hpsc_weekly_archive",
+        "hpsc_annual"
+      ],
+      "cadence": "weekly",
+      "source_update_cadence": "weekly_revisable",
+      "service_url": "https://services3.arcgis.com/dQsP3byyKkTT53Ep/arcgis/rest/services/IDHUB_AllCasesTS_L/FeatureServer/0",
+      "full_history_start_year": 2021,
+      "history_start_week": 30,
+      "refresh_recent_weeks": 12,
+      "dynamic_revision_enabled": true,
+      "reporting_area": "national",
+      "geography_key": "country:IE:national",
+      "api_contract": "unversioned_official_arcgis_table",
+      "reuse_status": "written_permission_required",
+      "annual_index_url": "https://www.hpsc.ie/notifiablediseases/annualidstatistics/",
+      "annual_history_start_year": 2004,
+      "annual_history_end_year": 2020,
+      "supports_fill_missing": true,
+      "default_fill_missing": true,
+      "source_policies": {
+        "hpsc_ndh": {
+          "source_kind": "current",
+          "temporal_granularity": "weekly",
+          "full_history_start_year": 2021,
+          "supports_start_year": true,
+          "supports_fill_missing": true,
+          "default_fill_missing": true,
+          "dynamic_revision_enabled": true,
+          "revision_window_unit": "weeks",
+          "default_revision_window": 12,
+          "source_update_cadence": "weekly_revisable",
+          "public_release_enabled": false
+        },
+        "hpsc_annual": {
+          "source_kind": "history",
+          "temporal_granularity": "annual",
+          "full_history_start_year": 2004,
+          "history_end_year": 2020,
+          "supports_start_year": true,
+          "supports_fill_missing": true,
+          "default_fill_missing": true,
+          "dynamic_revision_enabled": false,
+          "revision_window_unit": "years",
+          "default_revision_window": 3,
+          "source_update_cadence": "reviewed_annual_history",
+          "public_release_enabled": false
+        },
+        "hpsc_weekly_archive": {
+          "source_kind": "history",
+          "temporal_granularity": "weekly",
+          "full_history_start_year": 2015,
+          "history_end_year": 2021,
+          "supports_start_year": true,
+          "supports_fill_missing": true,
+          "default_fill_missing": true,
+          "dynamic_revision_enabled": false,
+          "revision_window_unit": "weeks",
+          "default_revision_window": 1,
+          "source_update_cadence": "immutable_archive_reconciliation",
+          "public_release_enabled": false
+        }
+      },
+      "series_quality_guard": {
+        "mode": "fail_closed",
+        "registry_coverage": "required",
+        "history_lookback_days": 730
+      }
+    },
+    "parser_config": {
+      "primary": "ie_hpsc_ndh_weekly",
+      "history": "ie_hpsc_annual_pdf",
+      "weekly_archive": "ie_hpsc_lenus_wayback_pdf"
+    },
+    "disease_mapping_rules": {
+      "strategy": "db_first",
+      "fallback": "quarantine_unmapped"
+    },
+    "report_config": {
+      "default_type": "WEEKLY",
+      "lang": "en-IE"
+    },
+    "notes": "Ireland HPSC national weekly totals from 2021 W30 onward, a sparse reconstructed weekly PDF archive for 2015–2021 W29, and separate annual history for 2004–2020. Source grains are not spliced. Archive licence validation does not block internal ingestion; public release remains disabled."
   },
   "NO": {
     "public_release_enabled": true,

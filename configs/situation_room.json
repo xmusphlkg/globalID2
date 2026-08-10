@@ -1,0 +1,22 @@
+{
+  "method_version": "situation_room_v1.0",
+  "public_enabled": false,
+  "daily_retention_days": 90,
+  "signal_limits": { "increasing": 12, "respiratory": 9, "emerging": 9, "unusual": 9 },
+  "thresholds": {
+    "minimum_observations": { "weekly": 156, "monthly": 36, "daily": 730 },
+    "current_window_periods": 4,
+    "minimum_current_cases": 20,
+    "minimum_absolute_increase": 10,
+    "minimum_relative_increase_pct": 25,
+    "low_base_previous_cases": 10,
+    "robust_z_elevated": 2.0,
+    "robust_z_strong": 3.5,
+    "z_strong": 3.0,
+    "ewma_lambda": 0.3,
+    "ewma_limit_sigma": 3.0,
+    "reappearance_zero_periods": 8
+  },
+  "respiratory_slugs": ["influenza", "respiratory-syncytial-virus", "rsv", "covid-19"],
+  "event_sources": ["who_don", "ecdc_cdtr", "africa_cdc_ebs", "paho_alerts"]
+}
