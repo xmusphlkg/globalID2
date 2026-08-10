@@ -144,3 +144,10 @@ D212,Perinatal hepatitis C,,Viral,,From standard_diseases: 围产期丙型肝炎
 D234,Paratyphoid fever,A01.1-A01.4,Bacterial,Salmonella Paratyphi infection,From standard_diseases: 副伤寒,Standard Database + Ontology
 D235,Meningitis (all reported etiologies),,Other,Meningitis|Meningite,From standard_diseases: 脑膜炎（全部报告病因）,Standard Database + Ontology
 D999,Total,,Summary,,Legacy flat-target compatibility only; ontology represents this as G_CN_NOTIFIABLE_DISEASE_REPORTED_TOTAL,Standard Database + CN Mapping
+D243,Blastomycosis,B40,Fungal,,Ontario IDTO source concept,Ontario IDTO
+D244,Carbapenemase-producing Enterobacteriaceae surveillance,,Bacterial,"Carbapenemase-producing Enterobacteriaceae (CPE)",Ontario IDTO source concept distinct from broader CPO and CRE surveillance,Ontario IDTO
+D245,Neonatal group B streptococcal disease,P36.0,Bacterial,"Group B Streptococcal Disease, Neonatal",Ontario IDTO source concept,Ontario IDTO
+D246,Ophthalmia neonatorum,P39.1,Other,Ophthalmia Neonatorum,Ontario IDTO source concept,Ontario IDTO
+D247,Paralytic shellfish poisoning,T61.2,Other,Paralytic Shellfish Poisoning,Ontario IDTO source concept,Ontario IDTO
+D248,Powassan virus disease,A84.8,Viral,"Powassan virus|Powassan virus disease",Ontario IDTO source concept,Ontario IDTO
+D249,Infectious syphilis,A51,Bacterial,"Syphilis, Infectious",Ontario source-defined primary secondary and early latent category,Ontario IDTO

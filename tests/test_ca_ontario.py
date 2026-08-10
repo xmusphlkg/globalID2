@@ -697,13 +697,15 @@ def test_reviewed_source_labels_partition_registered_and_excluded_diseases() -> 
         CAOntarioMonthlyUpdater._load_source_label_contract()
     )
 
-    assert len(registered) == 42
-    assert len(excluded) == 12
+    assert len(registered) == 54
+    assert len(excluded) == 0
     assert len(reviewed) == 54
     assert registered.isdisjoint(excluded)
     assert registered | excluded == reviewed
     assert "Mpox" in registered
     assert "Mpox" not in excluded
+    assert "Carbapenemase-producing Enterobacteriaceae (CPE)" in registered
+    assert "Syphilis, Infectious" in registered
 
 
 def test_source_label_contract_rejects_unknown_and_incomplete_live_manifests() -> None:
