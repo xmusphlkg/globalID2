@@ -8,6 +8,43 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from src.core.country_library import (
+    get_country_display_name,
+    get_country_profile,
+    validate_standard_country_registry,
+)
+from src.core.source_scopes import (
+    canonical_data_source_label,
+    canonicalize_task_source,
+    scope_from_data_source,
+    source_options_for_country,
+)
+
+
+def test_nz_country_registration_and_source_scope_are_complete():
+    profile = get_country_profile("NZ")
+
+    assert profile.name_en == "New Zealand"
+    assert profile.language == "en-NZ"
+    assert profile.timezone == "Pacific/Auckland"
+    assert get_country_display_name("NZ", "zh") == "新西兰"
+    assert not any("NZ" in warning for warning in validate_standard_country_registry())
+    assert canonicalize_task_source("all", country_code="NZ") == "phf_monthly"
+    assert canonicalize_task_source("nz", country_code="NZ") == "phf_monthly"
+    assert scope_from_data_source(
+        "NZ PHF Science Monthly Notifiable Disease Surveillance (PDF)"
+    ) == "phf_monthly"
+    assert canonical_data_source_label(
+        "NZ PHF Science Monthly Notifiable Disease Surveillance"
+    ) == "New Zealand PHF Science Monthly Notifiable Diseases"
+    assert source_options_for_country("NZ") == [
+        {
+            "value": "phf_monthly",
+            "label_en": "New Zealand PHF Science Monthly Notifiable Diseases",
+            "label_zh": "新西兰 PHF Science 法定传染病月度监测",
+        }
+    ]
+
 
 def test_nz_monthly_zip_prefers_national_pdf_over_rolling(monkeypatch):
     from src.data.crawlers.nz import NewZealandPHFCrawler
