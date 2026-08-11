@@ -621,10 +621,20 @@ async def get_sources_config(
 
 @router.get("/sources/flow", response_model=List[DataSourceFlow])
 async def get_sources_flow(
-    country_id: Optional[int] = Query(None, ge=1, description="Country ID"),
+    country_code: Optional[str] = Query(None, min_length=2, max_length=10, description="Country code"),
     db: AsyncSession = Depends(get_db),
 ):
     """Return ingestion flow status per data source for the given country or all countries."""
+
+    country_id = None
+    if country_code:
+        country_id = (
+            await db.execute(
+                select(Country.id).where(func.upper(Country.code) == country_code.strip().upper())
+            )
+        ).scalar_one_or_none()
+        if country_id is None:
+            raise HTTPException(404, "Country not found")
 
     # 1. Distinct data sources + basic stats from disease_records
     src_q = (
@@ -1147,12 +1157,12 @@ async def get_sources_flow(
     return result
 
 
-@router.get("/sources/automation", response_model=AutomationConfigOut)
+@router.get("/schedules/ingestion/config", response_model=AutomationConfigOut)
 async def get_sources_automation():
     return AutomationConfigOut(**(await automation_service.snapshot_async()))
 
 
-@router.get("/sources/automation/jobs", response_model=List[AutomationJobOut])
+@router.get("/schedules/ingestion/jobs", response_model=List[AutomationJobOut])
 async def list_automation_jobs(db: AsyncSession = Depends(get_db)):
     await automation_service.ensure_storage()
     rows = (
@@ -1168,7 +1178,7 @@ async def list_automation_jobs(db: AsyncSession = Depends(get_db)):
     ]
 
 
-@router.post("/sources/automation/jobs", response_model=AutomationJobOut, status_code=201)
+@router.post("/schedules/ingestion/jobs", response_model=AutomationJobOut, status_code=201)
 async def create_automation_job(body: AutomationJobCreate, db: AsyncSession = Depends(get_db)):
     await automation_service.ensure_storage()
     _validate_automation_schedule(body.interval_minutes, body.daily_time)
@@ -1224,7 +1234,7 @@ async def create_automation_job(body: AutomationJobCreate, db: AsyncSession = De
     return _automation_job_out(job, state_by_job.get(job.job_id))
 
 
-@router.put("/sources/automation/jobs/{job_id}", response_model=AutomationJobOut)
+@router.put("/schedules/ingestion/jobs/{job_id}", response_model=AutomationJobOut)
 async def update_automation_job(job_id: str, body: AutomationJobUpdate, db: AsyncSession = Depends(get_db)):
     await automation_service.ensure_storage()
     job = (
@@ -1267,7 +1277,7 @@ async def update_automation_job(job_id: str, body: AutomationJobUpdate, db: Asyn
     return _automation_job_out(job, state_by_job.get(job.job_id))
 
 
-@router.delete("/sources/automation/jobs/{job_id}")
+@router.delete("/schedules/ingestion/jobs/{job_id}")
 async def delete_automation_job(job_id: str, db: AsyncSession = Depends(get_db)):
     await automation_service.ensure_storage()
     job = (
@@ -1281,7 +1291,7 @@ async def delete_automation_job(job_id: str, db: AsyncSession = Depends(get_db))
     return {"ok": True, "job_id": job_id}
 
 
-@router.post("/sources/automation/jobs/{job_id}/run", response_model=AutomationTriggerResult, status_code=202)
+@router.post("/schedules/ingestion/jobs/{job_id}/runs", response_model=AutomationTriggerResult, status_code=202)
 async def run_automation_job(job_id: str):
     try:
         result = await automation_service.trigger_job(job_id, manual=True)

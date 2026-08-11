@@ -4,7 +4,7 @@ export {
   usePaginatedTasks,
   useTaskDetail,
   useTasks,
-  useTaskWebSocket,
+  useTaskEventStream,
   useWorkerStatus,
 } from "@/lib/hooks/useTasks";
 

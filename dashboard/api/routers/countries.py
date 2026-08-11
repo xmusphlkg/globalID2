@@ -55,9 +55,9 @@ async def list_countries(db: AsyncSession = Depends(get_db)):
     return [_country_to_out(country) for country in result.scalars().all()]
 
 
-@router.get("/countries/{country_id}", response_model=CountryOut)
-async def get_country(country_id: int, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Country).where(Country.id == country_id))
+@router.get("/countries/{country_code}", response_model=CountryOut)
+async def get_country(country_code: str, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Country).where(Country.code == country_code.strip().upper()))
     country = result.scalar_one_or_none()
     if not country:
         from fastapi import HTTPException

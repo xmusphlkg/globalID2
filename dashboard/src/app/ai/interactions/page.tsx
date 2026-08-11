@@ -1,3 +1,2 @@
-import AIInteractionsView from "@/features/ai/interactions/view";
-
-export default AIInteractionsView;
+import { permanentRedirect } from "next/navigation";
+export default function LegacyPage() { permanentRedirect("/production/interactions"); }

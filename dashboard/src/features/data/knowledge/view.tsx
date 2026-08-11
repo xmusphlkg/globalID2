@@ -14,7 +14,7 @@ export default function KnowledgePage() {
   const { lang } = useAppStore();
   const state = useKnowledgePage(lang);
   const {
-    totalDiseases, fullProfiles, partialProfiles, blockedProfiles, selectedCount, visibleEntries,
+    totalDiseases, fullProfiles, partialProfiles, blockedProfiles, selectedCount, visibleEntries, isLoading,
   } = state;
 
   return (
@@ -34,7 +34,9 @@ export default function KnowledgePage() {
             <UiStatusBadge tone={blockedProfiles > 0 ? "danger" : "success"}>
               {lang === "zh" ? `阻断 ${blockedProfiles}` : `${blockedProfiles} blocked`}
             </UiStatusBadge>
-            <UiStatusBadge>{lang === "zh" ? `可见 ${visibleEntries.length}` : `${visibleEntries.length} visible`}</UiStatusBadge>
+            <UiStatusBadge>
+              {isLoading ? (lang === "zh" ? "加载中" : "Loading") : lang === "zh" ? `可见 ${visibleEntries.length}` : `${visibleEntries.length} visible`}
+            </UiStatusBadge>
           </>
         }
       />
@@ -42,31 +44,31 @@ export default function KnowledgePage() {
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <MetricTile
           label={lang === "zh" ? "监测疾病" : "Tracked diseases"}
-          value={totalDiseases}
+          value={isLoading ? "—" : totalDiseases}
           icon={<BookOpen className="h-4 w-4" />}
           tone="primary"
         />
         <MetricTile
           label={lang === "zh" ? "完整画像" : "Full profiles"}
-          value={fullProfiles}
+          value={isLoading ? "—" : fullProfiles}
           icon={<ShieldCheck className="h-4 w-4" />}
           tone="success"
         />
         <MetricTile
           label={lang === "zh" ? "部分画像" : "Partial profiles"}
-          value={partialProfiles}
+          value={isLoading ? "—" : partialProfiles}
           icon={<AlertTriangle className="h-4 w-4" />}
           tone="warning"
         />
         <MetricTile
           label={lang === "zh" ? "证据阻断" : "Blocked profiles"}
-          value={blockedProfiles}
+          value={isLoading ? "—" : blockedProfiles}
           icon={<FlaskConical className="h-4 w-4" />}
           tone="danger"
         />
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_420px]">
+      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[minmax(0,1fr)_420px]">
         <CataloguePanel lang={lang} state={state} />
         <DetailPanel lang={lang} state={state} />
       </div>

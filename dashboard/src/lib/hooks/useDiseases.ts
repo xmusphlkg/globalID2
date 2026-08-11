@@ -48,41 +48,41 @@ export interface CompareResult {
   }[];
 }
 
-export function useDiseases(countryId: number | null, lang: string) {
+export function useDiseases(countryCode: string | null, lang: string) {
   return useQuery<DiseaseListItem[]>({
-    queryKey: ["diseases", countryId, lang],
+    queryKey: ["diseases", countryCode, lang],
     queryFn: () =>
-      apiFetch(`/diseases?country_id=${countryId}&lang=${lang}`),
-    enabled: !!countryId,
+      apiFetch(`/diseases?country_code=${encodeURIComponent(countryCode || "")}&lang=${lang}`),
+    enabled: !!countryCode,
     staleTime: 10 * 60 * 1000,
   });
 }
 
 export function useDiseaseRecords(
   code: string | null,
-  countryId: number | null,
+  countryCode: string | null,
 ) {
   return useQuery<DiseaseRecord[]>({
-    queryKey: ["disease-records", code, countryId],
+    queryKey: ["disease-records", code, countryCode],
     queryFn: () =>
-      apiFetch(`/diseases/${code}/records?country_id=${countryId}`),
-    enabled: !!code && !!countryId,
+      apiFetch(`/diseases/${code}/records?country_code=${encodeURIComponent(countryCode || "")}`),
+    enabled: !!code && !!countryCode,
     staleTime: 5 * 60 * 1000,
   });
 }
 
 export function useCompare(
-  countryId: number | null,
+  countryCode: string | null,
   codes: string[],
 ) {
   const joined = codes.join(",");
   return useQuery<CompareResult>({
-    queryKey: ["compare", countryId, joined],
+    queryKey: ["compare", countryCode, joined],
     queryFn: () =>
       apiFetch(
-        `/analysis/compare?country_id=${countryId}&diseases=${encodeURIComponent(joined)}`,
+        `/analytics/compare?country_code=${encodeURIComponent(countryCode || "")}&diseases=${encodeURIComponent(joined)}`,
       ),
-    enabled: !!countryId && codes.length > 0,
+    enabled: !!countryCode && codes.length > 0,
     staleTime: 5 * 60 * 1000,
   });
 }

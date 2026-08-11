@@ -501,8 +501,8 @@ export function TaskDetailPanel({
 
                     {structuredRows.length > 0 && logDisplayMode !== "minimal" && (
                       <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                        {structuredRows.map((row) => (
-                          <div key={`${entry.id}-${row.label}`} className="rounded-md border border-tremor-border bg-tremor-background px-2 py-1.5 dark:border-dark-tremor-border dark:bg-dark-tremor-background">
+                        {structuredRows.map((row, rowIndex) => (
+                          <div key={`${entry.id}-${rowIndex}-${row.label}`} className="rounded-md border border-tremor-border bg-tremor-background px-2 py-1.5 dark:border-dark-tremor-border dark:bg-dark-tremor-background">
                             <Text className="text-[10px] uppercase text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{row.label}</Text>
                             <Text className="mt-1 text-xs font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">{row.value}</Text>
                           </div>

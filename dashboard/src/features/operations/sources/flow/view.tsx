@@ -13,9 +13,10 @@ import {
   useSourcesFlow,
   useStartCrawl,
 } from "@/features/operations/sources/api";
-import { useTaskWebSocket } from "@/features/operations/tasks/api";
+import { useTaskEventStream } from "@/features/operations/tasks/api";
 import { formatDate } from "@/lib/utils";
 import { getConfiguredSourceOptions, getSourceDisplayLabel } from "@/lib/source-labels";
+import { formatSeriesMetadata } from "./series-format";
 import {
   Badge,
   Text,
@@ -191,7 +192,7 @@ function FlowRow({
                         ? (lang === "zh" ? "登记诊断序列（非病例通知）" : "Registered-diagnosis series (not case notifications)")
                         : metric === "case_notifications"
                           ? (lang === "zh" ? "病例通知序列" : "Case-notification series")
-                          : metric.replaceAll("_", " ")}
+                        : formatSeriesMetadata(metric)}
                       {` ${count}`}
                     </StatusBadge>
                   ))}
@@ -220,7 +221,7 @@ function FlowRow({
                 ))}
                 {Object.entries(flow.comparability ?? {}).map(([status, count]) => (
                   <StatusBadge key={`comparability-${status}`} tone={status === "direct" ? "success" : "neutral"}>
-                    {lang === "zh" ? "可比性" : "Comparability"} {status.replaceAll("_", " ")} {count}
+                    {lang === "zh" ? "可比性" : "Comparability"} {formatSeriesMetadata(status)} {count}
                   </StatusBadge>
                 ))}
               </div>
@@ -267,6 +268,14 @@ interface SeriesMappingRisk {
   measure: string;
   rows: OntologySeries[];
   labels: string[];
+}
+
+function flowRowKey(flow: DataSourceFlow) {
+  return [
+    flow.country_code || flow.country_name || "unknown",
+    flow.source_scope || "default",
+    flow.data_source,
+  ].join("::");
 }
 
 function buildSeriesMappingRisks(rows: OntologySeries[]): SeriesMappingRisk[] {
@@ -389,7 +398,7 @@ function SeriesMappingRegister({
                   <StatusBadge tone={risk.measure === "registered_diagnoses" ? "warning" : "info"}>
                     {risk.measure === "registered_diagnoses"
                       ? (lang === "zh" ? "登记诊断量（非病例通知）" : "registered diagnoses (not case notifications)")
-                      : risk.measure.replaceAll("_", " ")}
+                      : formatSeriesMetadata(risk.measure)}
                   </StatusBadge>
                 </div>
                 <p className="mt-2 text-xs font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">
@@ -434,7 +443,7 @@ function SeriesMappingRegister({
                       <div className="font-mono text-[11px] text-tremor-content-strong dark:text-dark-tremor-content-strong">{row.id}</div>
                       <div className="mt-1 font-mono text-[10px] text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{row.source_id}</div>
                     </td>
-                    <td className="max-w-[260px] px-2 py-2 text-tremor-content dark:text-dark-tremor-content">{row.local_labels.join(" · ") || "-"}</td>
+                    <td className="max-w-[260px] px-2 py-2 text-tremor-content dark:text-dark-tremor-content">{(row.local_labels ?? []).join(" · ") || "-"}</td>
                     <td className="px-2 py-2">
                       <div className="font-medium text-tremor-content-strong dark:text-dark-tremor-content-strong">{row.concept_id || row.target?.id || "-"}</div>
                       <div className="mt-1 text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
@@ -445,16 +454,16 @@ function SeriesMappingRegister({
                       <StatusBadge tone={row.measure === "registered_diagnoses" ? "warning" : "info"}>
                         {row.measure === "registered_diagnoses"
                           ? (lang === "zh" ? "登记诊断量（非病例通知）" : "registered diagnoses (not case notifications)")
-                          : row.measure.replaceAll("_", " ")}
+                          : formatSeriesMetadata(row.measure)}
                       </StatusBadge>
-                      <div className="mt-1 text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{row.frequency} · {row.reporting_basis.replaceAll("_", " ")}</div>
+                      <div className="mt-1 text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{row.frequency} · {formatSeriesMetadata(row.reporting_basis)}</div>
                     </td>
                     <td className="px-2 py-2">
                       <div className="flex flex-wrap gap-1">
-                        <StatusBadge tone={row.mapping_relation === "exact" ? "success" : "warning"}>{row.mapping_relation}</StatusBadge>
-                        <StatusBadge tone={row.comparability === "direct" ? "success" : "neutral"}>{row.comparability.replaceAll("_", " ")}</StatusBadge>
+                        <StatusBadge tone={row.mapping_relation === "exact" ? "success" : row.mapping_relation ? "warning" : "neutral"}>{formatSeriesMetadata(row.mapping_relation)}</StatusBadge>
+                        <StatusBadge tone={row.comparability === "direct" ? "success" : "neutral"}>{formatSeriesMetadata(row.comparability)}</StatusBadge>
                       </div>
-                      <div className="mt-1 text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{row.aggregation_policy.replaceAll("_", " ")}</div>
+                      <div className="mt-1 text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{formatSeriesMetadata(row.aggregation_policy)}</div>
                     </td>
                     <td className="px-2 py-2">
                       <div className="flex flex-wrap gap-1">
@@ -574,7 +583,7 @@ function CreateCrawlModal({
     setError(null);
     startCrawl(
       {
-        country_id: countryId,
+        country_code: normalizedCountryCode,
         source,
         force,
         process,
@@ -846,13 +855,13 @@ function CreateCrawlModal({
 export default function SourcesFlowPage() {
   const { lang, countryId, countryName, countryCode } = useAppStore();
   const [scopeMode, setScopeMode] = useState<"selected" | "all">("selected");
-  const effectiveCountryId = scopeMode === "all" ? null : countryId;
+  const effectiveCountryCode = scopeMode === "all" ? null : countryCode;
   const effectiveCountryName =
     scopeMode === "all"
       ? (lang === "zh" ? "全部国家" : "All countries")
       : countryName;
 
-  const { data: flows, isLoading, error } = useSourcesFlow(effectiveCountryId);
+  const { data: flows, isLoading, error } = useSourcesFlow(effectiveCountryCode);
   const { data: sourceConfigs } = useSourceConfigs(lang);
   const { data: ontologySeries } = useOntologySeries(
     scopeMode === "selected" ? countryCode : null,
@@ -869,7 +878,7 @@ export default function SourcesFlowPage() {
 
   const [modalOpen, setModalOpen] = useState(false);
 
-  useTaskWebSocket({ extraQueryKeys: [["sources-flow"]] });
+  useTaskEventStream({ extraQueryKeys: [["sources-flow"]] });
 
   const openModal = () => setModalOpen(true);
   const closeModal = () => setModalOpen(false);
@@ -1078,7 +1087,7 @@ export default function SourcesFlowPage() {
                 </div>
                 {group.items.map((flow) => (
                   <FlowRow
-                    key={`${group.key}-${flow.data_source}`}
+                    key={flowRowKey(flow)}
                     flow={flow}
                     lang={lang}
                   />
@@ -1095,7 +1104,7 @@ export default function SourcesFlowPage() {
               </div>
               {flows.map((flow) => (
                 <FlowRow
-                  key={flow.data_source}
+                  key={flowRowKey(flow)}
                   flow={flow}
                   lang={lang}
                 />

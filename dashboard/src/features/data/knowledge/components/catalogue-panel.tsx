@@ -17,7 +17,7 @@ export function CataloguePanel({ lang, state }: { lang: "en" | "zh"; state: Know
     clearSelection, handleBatchRefresh, queryKnowledgeBrief,
   } = state;
   return (
-        <div className="space-y-5">
+        <div className="min-w-0 space-y-5">
           <Panel>
             <div className="space-y-4">
               <FilterToolbar className="border-0 bg-transparent p-0 dark:bg-transparent">
@@ -187,7 +187,7 @@ export function CataloguePanel({ lang, state }: { lang: "en" | "zh"; state: Know
                             {task.task_uuid}
                           </span>
                           <Link
-                            href={`/ai/tasks?task=${encodeURIComponent(task.task_uuid)}&task_type=update_disease_knowledge`}
+                            href={`/production/ai?task=${encodeURIComponent(task.task_uuid)}&task_type=update_disease_knowledge`}
                             className="inline-flex items-center gap-1 rounded-tremor-default border border-emerald-200 px-2 py-1 font-medium text-emerald-800 transition hover:bg-emerald-100 dark:border-emerald-900/40 dark:text-emerald-300 dark:hover:bg-emerald-950/30"
                           >
                             {t(lang, "knowledge_view_task_logs")}
@@ -247,6 +247,7 @@ export function CataloguePanel({ lang, state }: { lang: "en" | "zh"; state: Know
                       <th className="w-10 px-3 py-2 text-left text-xs font-semibold uppercase text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
                         <input
                           type="checkbox"
+                          aria-label={lang === "zh" ? "选择当前可见疾病" : "Select all visible diseases"}
                           checked={visibleAllSelected}
                           onChange={toggleVisibleSelection}
                           className="h-4 w-4 rounded border-tremor-border text-blue-600 focus:ring-blue-500"
@@ -298,6 +299,11 @@ export function CataloguePanel({ lang, state }: { lang: "en" | "zh"; state: Know
                             <td className="px-3 py-3 align-top">
                               <input
                                 type="checkbox"
+                                aria-label={
+                                  lang === "zh"
+                                    ? `选择疾病 ${item.name_zh ?? item.name_en ?? item.disease_id}`
+                                    : `Select disease ${item.name_en ?? item.name_zh ?? item.disease_id}`
+                                }
                                 checked={checked}
                                 onChange={() => toggleDiseaseSelection(item.disease_id)}
                                 className="h-4 w-4 rounded border-tremor-border text-blue-600 focus:ring-blue-500"

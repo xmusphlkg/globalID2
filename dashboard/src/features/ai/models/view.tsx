@@ -234,12 +234,12 @@ export default function AIModelsPage() {
 
   const [providerDrawerMode, setProviderDrawerMode] = useState<DrawerMode>(null);
   const [modelDrawerMode, setModelDrawerMode] = useState<DrawerMode>(null);
-  const [editingProviderId, setEditingProviderId] = useState<number | null>(null);
-  const [editingModelId, setEditingModelId] = useState<number | null>(null);
+  const [editingProviderId, setEditingProviderId] = useState<string | null>(null);
+  const [editingModelId, setEditingModelId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [healthFilter, setHealthFilter] = useState<HealthFilter>("all");
-  const [deletingProviderId, setDeletingProviderId] = useState<number | null>(null);
-  const [deletingModelId, setDeletingModelId] = useState<number | null>(null);
+  const [deletingProviderId, setDeletingProviderId] = useState<string | null>(null);
+  const [deletingModelId, setDeletingModelId] = useState<string | null>(null);
 
   const [providerForm, setProviderForm] = useState({
     provider_key: "",
@@ -499,7 +499,7 @@ export default function AIModelsPage() {
   };
 
   const openEditProvider = (provider: AIProviderItem) => {
-    setEditingProviderId(provider.id);
+    setEditingProviderId(provider.provider_key);
     setProviderForm({
       provider_key: provider.provider_key,
       provider_name: provider.provider_name,
@@ -521,7 +521,7 @@ export default function AIModelsPage() {
   };
 
   const openEditModel = (model: AIModelItem) => {
-    setEditingModelId(model.id);
+    setEditingModelId(model.model_key);
     setModelForm({
       provider_id: model.provider_id,
       model_name: model.model_name,
@@ -542,7 +542,7 @@ export default function AIModelsPage() {
     if (providerDrawerMode === "edit" && editingProviderId) {
       updateProvider.mutate(
         {
-          providerId: editingProviderId,
+          providerKey: editingProviderId,
           payload: {
             display_name: providerForm.display_name.trim(),
             api_style: providerForm.api_style,
@@ -591,13 +591,15 @@ export default function AIModelsPage() {
     };
 
     if (modelDrawerMode === "edit" && editingModelId) {
-      updateModel.mutate({ modelId: editingModelId, payload }, { onSuccess: () => setModelDrawerMode(null) });
+      updateModel.mutate({ modelKey: editingModelId, payload }, { onSuccess: () => setModelDrawerMode(null) });
       return;
     }
 
+    const selectedProvider = providers?.find((provider) => provider.id === Number(modelForm.provider_id));
+    if (!selectedProvider) return;
     createModel.mutate(
       {
-        provider_id: Number(modelForm.provider_id),
+        provider_key: selectedProvider.provider_key,
         model_name: modelForm.model_name.trim(),
         ...payload,
       },
@@ -611,8 +613,8 @@ export default function AIModelsPage() {
       ? `确认删除提供商 ${provider.display_name}？${modelCount > 0 ? `\n\n该提供商下 ${modelCount} 个模型也会被删除。` : ""}`
       : `Delete provider ${provider.display_name}?${modelCount > 0 ? `\n\n${modelCount} models under this provider will also be removed.` : ""}`;
     if (!window.confirm(confirmText)) return;
-    setDeletingProviderId(provider.id);
-    deleteProvider.mutate(provider.id, { onSettled: () => setDeletingProviderId(null) });
+    setDeletingProviderId(provider.provider_key);
+    deleteProvider.mutate(provider.provider_key, { onSettled: () => setDeletingProviderId(null) });
   };
 
   const onDeleteModel = (model: AIModelItem) => {
@@ -620,8 +622,8 @@ export default function AIModelsPage() {
       ? `确认删除模型 ${model.display_name}？${model.is_default ? "\n\n这是默认模型，删除后系统会自动选择下一个模型作为默认。" : ""}`
       : `Delete model ${model.display_name}?${model.is_default ? "\n\nThis is the default model. A replacement default will be selected automatically." : ""}`;
     if (!window.confirm(confirmText)) return;
-    setDeletingModelId(model.id);
-    deleteModel.mutate(model.id, { onSettled: () => setDeletingModelId(null) });
+    setDeletingModelId(model.model_key);
+    deleteModel.mutate(model.model_key, { onSettled: () => setDeletingModelId(null) });
   };
 
   const onRebuildFromEnv = () => {
@@ -693,16 +695,16 @@ export default function AIModelsPage() {
         className: "text-right",
         render: (provider) => (
           <div className="flex min-w-[310px] justify-end gap-2">
-            <ActionButton disabled={testProvider.isPending} onClick={() => testProvider.mutate(provider.id)}>{copy.test}</ActionButton>
+            <ActionButton disabled={testProvider.isPending} onClick={() => testProvider.mutate(provider.provider_key)}>{copy.test}</ActionButton>
             <ActionButton onClick={() => openEditProvider(provider)} icon={<Pencil className="h-4 w-4" />}>{copy.edit}</ActionButton>
             <ActionButton
-              onClick={() => updateProvider.mutate({ providerId: provider.id, payload: { is_active: !provider.is_active } })}
+              onClick={() => updateProvider.mutate({ providerKey: provider.provider_key, payload: { is_active: !provider.is_active } })}
             >
               {provider.is_active ? copy.disable : copy.enable}
             </ActionButton>
             <ActionButton
               tone="danger"
-              disabled={deleteProvider.isPending && deletingProviderId === provider.id}
+              disabled={deleteProvider.isPending && deletingProviderId === provider.provider_key}
               onClick={() => onDeleteProvider(provider)}
               icon={<Trash2 className="h-4 w-4" />}
             >
@@ -778,17 +780,17 @@ export default function AIModelsPage() {
         className: "text-right",
         render: (model) => (
           <div className="flex min-w-[360px] justify-end gap-2">
-            <ActionButton disabled={testModel.isPending} onClick={() => testModel.mutate(model.id)}>{copy.test}</ActionButton>
+            <ActionButton disabled={testModel.isPending} onClick={() => testModel.mutate(model.model_key)}>{copy.test}</ActionButton>
             <ActionButton onClick={() => openEditModel(model)} icon={<Pencil className="h-4 w-4" />}>{copy.edit}</ActionButton>
-            <ActionButton onClick={() => updateModel.mutate({ modelId: model.id, payload: { is_enabled: !model.is_enabled } })}>
+            <ActionButton onClick={() => updateModel.mutate({ modelKey: model.model_key, payload: { is_enabled: !model.is_enabled } })}>
               {model.is_enabled ? copy.disable : copy.enable}
             </ActionButton>
             {!model.is_default ? (
-              <ActionButton onClick={() => updateModel.mutate({ modelId: model.id, payload: { is_default: true } })}>{copy.setDefault}</ActionButton>
+              <ActionButton onClick={() => updateModel.mutate({ modelKey: model.model_key, payload: { is_default: true } })}>{copy.setDefault}</ActionButton>
             ) : null}
             <ActionButton
               tone="danger"
-              disabled={deleteModel.isPending && deletingModelId === model.id}
+              disabled={deleteModel.isPending && deletingModelId === model.model_key}
               onClick={() => onDeleteModel(model)}
               icon={<Trash2 className="h-4 w-4" />}
             >
@@ -867,14 +869,14 @@ export default function AIModelsPage() {
         actions={
           <>
             <Link
-              href="/ai/tasks"
+              href="/production/ai"
               className="inline-flex h-9 items-center gap-2 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm font-medium text-tremor-content-strong transition hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:hover:bg-dark-tremor-background-subtle"
             >
               <ListTodo className="h-4 w-4" />
               {copy.openTasks}
             </Link>
             <Link
-              href="/ai/interactions"
+              href="/production/interactions"
               className="inline-flex h-9 items-center gap-2 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm font-medium text-tremor-content-strong transition hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:hover:bg-dark-tremor-background-subtle"
             >
               <MessageSquareText className="h-4 w-4" />

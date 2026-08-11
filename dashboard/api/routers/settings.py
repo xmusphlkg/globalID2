@@ -39,6 +39,15 @@ async def get_settings():
     return _runtime_settings_response(snapshot)
 
 
+@router.get("/settings/{section}")
+async def get_settings_section(section: str):
+    normalized = section.strip().lower()
+    snapshot = system_settings_service.public_snapshot()
+    if normalized not in snapshot:
+        raise HTTPException(404, f"Unknown settings section: {section}")
+    return snapshot[normalized]
+
+
 @router.put("/settings/smtp", response_model=RuntimeSettingsOut)
 async def update_smtp_settings(body: SmtpSettingsUpdate):
     payload = body.model_dump(exclude_unset=True)

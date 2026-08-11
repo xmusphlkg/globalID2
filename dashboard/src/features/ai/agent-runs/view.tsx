@@ -21,7 +21,7 @@ import {
 import { ApiError } from "@/lib/api";
 import { useAppStore } from "@/stores/app-store";
 import { t } from "@/lib/i18n";
-import { useTaskWebSocket } from "@/features/operations/tasks/api";
+import { useTaskEventStream } from "@/features/operations/tasks/api";
 import {
   type AgentRunSummary,
   type AgentWorkflowEvidence,
@@ -150,7 +150,7 @@ function JsonDetails({ title, value }: { title: string; value: unknown }) {
 }
 
 function AgentRunsPageContent() {
-  const { lang, countryId } = useAppStore();
+  const { lang, countryCode } = useAppStore();
   const router = useRouter();
   const searchParams = useSearchParams();
   const searchParamsString = searchParams.toString();
@@ -160,9 +160,9 @@ function AgentRunsPageContent() {
   const [search, setSearch] = useState("");
   const autoSelectedRef = useRef(false);
 
-  useTaskWebSocket({ extraQueryKeys: [["agent-runs"], ["agent-run"]] });
+  useTaskEventStream({ extraQueryKeys: [["agent-runs"], ["agent-run"]] });
 
-  const listQuery = useAgentRuns(countryId, statusFilter || undefined, search || undefined, LIST_LIMIT, 0);
+  const listQuery = useAgentRuns(countryCode || null, statusFilter || undefined, search || undefined, LIST_LIMIT, 0);
   const detailQuery = useAgentRunDetail(selectedUuid);
   const resumeMutation = useResumeAgentRun();
   const cancelMutation = useCancelAgentRun();
@@ -186,7 +186,7 @@ function AgentRunsPageContent() {
       autoSelectedRef.current = true;
       const params = new URLSearchParams(searchParamsString);
       params.set("task_uuid", next);
-      router.replace(`/ai/agent-runs?${params.toString()}`, { scroll: false });
+      router.replace(`/production/runs?${params.toString()}`, { scroll: false });
     }
   }, [router, runs, searchParamsString, selectedUuid]);
 
@@ -229,7 +229,7 @@ function AgentRunsPageContent() {
     setSelectedUuid(uuid);
     const params = new URLSearchParams(searchParamsString);
     params.set("task_uuid", uuid);
-    router.replace(`/ai/agent-runs?${params.toString()}`, { scroll: false });
+    router.replace(`/production/runs?${params.toString()}`, { scroll: false });
   };
 
   const handleResume = async () => {
@@ -351,7 +351,7 @@ function AgentRunsPageContent() {
               {lang === "zh" ? "刷新" : "Refresh"}
             </ActionButton>
             <Link
-              href="/ai/tasks"
+              href="/production/ai"
               className="inline-flex h-9 items-center gap-2 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm font-medium text-tremor-content-strong transition hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:hover:bg-dark-tremor-background-subtle"
             >
               <MessageSquareText className="h-4 w-4" />
@@ -457,7 +457,7 @@ function AgentRunsPageContent() {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Link
-                    href={`/ai/tasks?task_uuid=${encodeURIComponent(detail.task.task_uuid)}`}
+                    href={`/production/ai?task_uuid=${encodeURIComponent(detail.task.task_uuid)}`}
                     className="inline-flex h-9 items-center gap-2 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm font-medium text-tremor-content-strong transition hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:hover:bg-dark-tremor-background-subtle"
                   >
                     <MessageSquareText className="h-4 w-4" />

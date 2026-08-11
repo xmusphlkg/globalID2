@@ -1,3 +1,2 @@
-import DataOverviewView from "@/features/data/overview/view";
-
-export default DataOverviewView;
+import { permanentRedirect } from "next/navigation";
+export default function LegacyPage() { permanentRedirect("/data/analytics"); }

@@ -1,8 +1,11 @@
+import asyncio
 import smtplib
+
+import pytest
 
 from src.domain import DiseaseConceptRelation, StandardDisease
 from src.services.disease_mapping_ai_service import DiseaseMappingAIService
-from src.services.disease_mapping_registry_service import normalize_source_text
+from src.services.disease_mapping_registry_service import DiseaseMappingRegistryService, normalize_source_text
 from src.services.mapping_notification_service import MappingEmailTransport
 
 
@@ -107,3 +110,21 @@ def test_smtp_retry_classification_distinguishes_transient_and_permanent_errors(
     assert transport._smtp_retryable(smtplib.SMTPResponseException(421, b"temporary")) is True
     assert transport._smtp_retryable(smtplib.SMTPResponseException(550, b"rejected")) is False
     assert transport._smtp_retryable(smtplib.SMTPAuthenticationError(535, b"bad auth")) is False
+
+
+@pytest.mark.asyncio
+async def test_mapping_schema_preflight_is_serialized_for_parallel_page_queries(monkeypatch):
+    service = DiseaseMappingRegistryService()
+    calls = 0
+
+    async def initialize(_db):
+        nonlocal calls
+        calls += 1
+        await asyncio.sleep(0.01)
+        service._schema_ready = True
+
+    monkeypatch.setattr(service, "_initialize_schema", initialize)
+
+    await asyncio.gather(*(service.ensure_schema(object()) for _ in range(4)))
+
+    assert calls == 1

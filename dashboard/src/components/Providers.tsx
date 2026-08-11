@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, type ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useEffect, useState, type ReactNode } from "react";
+import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
+import { eventStreamUrl } from "@/lib/api";
 
 function makeQueryClient() {
   return new QueryClient({
@@ -26,6 +27,28 @@ function getQueryClient() {
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(getQueryClient);
   return (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    <QueryClientProvider client={queryClient}>
+      <ControlPlaneEventBridge />
+      {children}
+    </QueryClientProvider>
   );
+}
+
+function ControlPlaneEventBridge() {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const source = new EventSource(eventStreamUrl());
+    const refresh = () => {
+      queryClient.invalidateQueries({ queryKey: ["control-plane"] });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["worker-status"] });
+    };
+    for (const type of ["task.status", "task.claimed", "task.cancel_requested", "runtime.started", "runtime.stopped"]) {
+      source.addEventListener(type, refresh);
+    }
+    return () => source.close();
+  }, [queryClient]);
+
+  return null;
 }

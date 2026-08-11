@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, apiFetchWithMeta } from "@/lib/api";
 
 export interface SubscriptionListOption {
   code: string;
@@ -168,15 +168,16 @@ function recordsParams(filters: SubscriptionRecordFilters) {
   if (filters.status) params.set("status", filters.status);
   if (filters.listCode) params.set("list_code", filters.listCode);
   if (filters.q) params.set("q", filters.q);
-  if (filters.limit) params.set("limit", String(filters.limit));
-  if (filters.offset) params.set("offset", String(filters.offset));
+  const pageSize = filters.limit ?? 50;
+  params.set("page_size", String(pageSize));
+  params.set("page", String(Math.floor((filters.offset ?? 0) / pageSize) + 1));
   return params.toString();
 }
 
 function paginationParams(limit = 25, offset = 0) {
   const params = new URLSearchParams();
-  params.set("limit", String(limit));
-  params.set("offset", String(offset));
+  params.set("page_size", String(limit));
+  params.set("page", String(Math.floor(offset / limit) + 1));
   return params.toString();
 }
 
@@ -207,9 +208,17 @@ export function useSubscriptionOptions() {
 export function useSubscriptionRecords(filters: SubscriptionRecordFilters = {}) {
   return useQuery<SubscriptionRecordsResponse>({
     queryKey: ["subscriptions", "records", filters],
-    queryFn: () => {
+    queryFn: async () => {
       const params = recordsParams(filters);
-      return apiFetch(`/subscriptions/records${params ? `?${params}` : ""}`);
+      const response = await apiFetchWithMeta<SubscriptionRecord[]>(`/subscriptions/records${params ? `?${params}` : ""}`);
+      return {
+        subscriptions: response.data,
+        pagination: {
+          total: response.meta.pagination?.total ?? response.data.length,
+          limit: response.meta.pagination?.page_size ?? filters.limit ?? 50,
+          offset: ((response.meta.pagination?.page ?? 1) - 1) * (response.meta.pagination?.page_size ?? filters.limit ?? 50),
+        },
+      };
     },
     staleTime: 30 * 1000,
   });
@@ -242,7 +251,17 @@ export function useSyncSubscriptionOptions() {
 export function useNotificationCampaigns(limit = 25, offset = 0) {
   return useQuery<NotificationCampaignsResponse>({
     queryKey: ["subscriptions", "notifications", { limit, offset }],
-    queryFn: () => apiFetch(`/subscriptions/notifications?${paginationParams(limit, offset)}`),
+    queryFn: async () => {
+      const response = await apiFetchWithMeta<NotificationCampaign[]>(`/notification-campaigns?${paginationParams(limit, offset)}`);
+      return {
+        campaigns: response.data,
+        pagination: {
+          total: response.meta.pagination?.total ?? response.data.length,
+          limit: response.meta.pagination?.page_size ?? limit,
+          offset: ((response.meta.pagination?.page ?? 1) - 1) * (response.meta.pagination?.page_size ?? limit),
+        },
+      };
+    },
     refetchInterval: (query) => {
       const active = query.state.data?.campaigns?.some(
         (campaign) => campaign.status === "queued" || campaign.status === "sending",
@@ -256,7 +275,7 @@ export function useNotificationCampaigns(limit = 25, offset = 0) {
 export function useNotificationCampaignDetail(campaignId?: string | null, deliveryLimit = 100) {
   return useQuery<NotificationCampaignResponse>({
     queryKey: ["subscriptions", "notifications", campaignId, { deliveryLimit }],
-    queryFn: () => apiFetch(`/subscriptions/notifications/${campaignId}?delivery_limit=${deliveryLimit}`),
+    queryFn: () => apiFetch(`/notification-campaigns/${campaignId}?delivery_limit=${deliveryLimit}`),
     enabled: Boolean(campaignId),
     refetchInterval: (query) => {
       const status = query.state.data?.campaign?.status;
@@ -271,7 +290,7 @@ export function useCreateNotificationCampaign() {
 
   return useMutation({
     mutationFn: (payload: CreateNotificationPayload) =>
-      apiFetch<NotificationCampaignResponse & { send_started?: boolean }>("/subscriptions/notifications", {
+      apiFetch<NotificationCampaignResponse & { send_started?: boolean }>("/notification-campaigns", {
         method: "POST",
         body: JSON.stringify(payload),
         timeoutMs: 180000,
@@ -288,7 +307,7 @@ export function useStartNotificationSend() {
 
   return useMutation({
     mutationFn: ({ campaignId, batchSize = 20 }: { campaignId: string; batchSize?: number }) =>
-      apiFetch(`/subscriptions/notifications/${campaignId}/send?batch_size=${batchSize}`, {
+      apiFetch(`/notification-campaigns/${campaignId}/send?batch_size=${batchSize}`, {
         method: "POST",
         timeoutMs: 30000,
       }),

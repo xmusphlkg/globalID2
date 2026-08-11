@@ -1,3 +1,2 @@
-import AllTasksView from "@/features/operations/tasks/all/view";
-
-export default AllTasksView;
+import { permanentRedirect } from "next/navigation";
+export default function LegacyPage() { permanentRedirect("/operations/tasks"); }

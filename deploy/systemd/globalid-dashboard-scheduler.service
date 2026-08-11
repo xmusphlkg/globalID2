@@ -1,0 +1,19 @@
+[Unit]
+Description=GlobalID control-plane scheduler
+After=globalid-docker.service globalid-dashboard-api.service
+Wants=globalid-docker.service globalid-dashboard-api.service
+PartOf=globalid-stack.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
+OnFailure=globalid-notify-failure@%n.service
+
+[Service]
+Type=simple
+User=__RUN_AS_USER__
+Group=__RUN_AS_GROUP__
+WorkingDirectory=__PROJECT_DIR__
+EnvironmentFile=-__PROJECT_DIR__/.env
+ExecStart=__PROJECT_DIR__/scripts/run_dashboard_scheduler_service.sh
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=60

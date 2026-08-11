@@ -93,15 +93,15 @@ export interface ReportSectionRun {
 }
 
 export function useReports(
-  countryId: number | null,
+  countryCode: string | null,
   status?: string,
   limit = 50,
 ) {
   return useQuery<ReportListItem[]>({
-    queryKey: ["reports", countryId, status, limit],
+    queryKey: ["reports", countryCode, status, limit],
     queryFn: () => {
-      const params = new URLSearchParams({ limit: String(limit) });
-      if (countryId) params.set("country_id", String(countryId));
+      const params = new URLSearchParams({ page: "1", page_size: String(limit) });
+      if (countryCode) params.set("country_code", countryCode);
       if (status) params.set("status", status);
       return apiFetch(`/reports?${params}`);
     },
@@ -120,15 +120,15 @@ export function useReportDetail(uuid: string | null) {
 
 export function useSectionConversations(
   reportUuid: string | null,
-  sectionId: number | null,
+  sectionKey: string | null,
 ) {
   return useQuery<AIConversation[]>({
-    queryKey: ["conversations", reportUuid, sectionId],
+    queryKey: ["conversations", reportUuid, sectionKey],
     queryFn: () =>
       apiFetch(
-        `/reports/${reportUuid}/sections/${sectionId}/conversations`,
+        `/reports/${reportUuid}/sections/${encodeURIComponent(sectionKey || "")}/conversations`,
       ),
-    enabled: !!reportUuid && !!sectionId,
+    enabled: !!reportUuid && !!sectionKey,
   });
 }
 

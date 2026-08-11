@@ -16,6 +16,9 @@ from src.core import get_database, get_logger
 from src.core.config import get_config
 from src.domain import Task, TaskPriority, TaskStatus
 from src.services.task_executor import execute_task, recover_interrupted_tasks_on_startup
+from src.control_plane.events import control_plane_events
+from src.control_plane.runtime import runtime_registry
+from src.core.task_manager import task_manager
 
 logger = get_logger(__name__)
 
@@ -63,11 +66,24 @@ async def run_worker() -> None:
         MAX_CONCURRENT_TASKS,
     )
 
+    instance_id = runtime_registry.new_instance_id("worker")
+    task_manager.set_broadcast_hook(control_plane_events.publish_task_event)
+
     recovered = await recover_interrupted_tasks_on_startup()
     if recovered:
         logger.warning("Recovered %s interrupted task(s) on worker startup", recovered)
 
     stop_event = asyncio.Event()
+    heartbeat = asyncio.create_task(
+        runtime_registry.run_heartbeat(
+            "worker",
+            instance_id,
+            stop_event,
+            metadata={"concurrency": MAX_CONCURRENT_TASKS},
+        ),
+        name="control-plane-worker-heartbeat",
+    )
+    await control_plane_events.publish("runtime.started", resource_type="runtime", resource_id=instance_id)
 
     def _request_stop() -> None:
         logger.info("Stop signal received, task worker shutting down soon")
@@ -82,11 +98,18 @@ async def run_worker() -> None:
             pass
 
     async def _run_claimed_task(task_uuid: str) -> None:
+        task_logger = logger.bind(task_uuid=task_uuid, worker_instance_id=instance_id)
         try:
-            logger.info("Executing claimed task {}", task_uuid)
+            task_logger.info("Executing claimed task")
+            await control_plane_events.publish(
+                "task.claimed",
+                resource_type="task",
+                resource_id=task_uuid,
+                data={"worker_instance_id": instance_id},
+            )
             await execute_task(task_uuid)
         except Exception as exc:
-            logger.exception("Worker failed executing task {}: {}", task_uuid, exc)
+            task_logger.exception("Worker failed executing task: {}", exc)
 
     active_tasks: set[asyncio.Task[None]] = set()
     idle_ticks = 0
@@ -114,8 +137,17 @@ async def run_worker() -> None:
         idle_ticks += 1
         if idle_ticks % max(1, IDLE_LOG_EVERY) == 0:
             logger.info("Task worker idle, waiting for queued tasks")
-        await asyncio.sleep(POLL_INTERVAL_SECONDS)
+        try:
+            await asyncio.wait_for(stop_event.wait(), timeout=POLL_INTERVAL_SECONDS)
+        except asyncio.TimeoutError:
+            pass
 
+    stop_event.set()
+    await heartbeat
+    await control_plane_events.publish("runtime.stopped", resource_type="runtime", resource_id=instance_id)
+    task_manager.set_broadcast_hook(None)
+    await runtime_registry.close()
+    await control_plane_events.close()
     logger.info("Task worker stopped")
 
 

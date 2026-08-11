@@ -103,7 +103,6 @@ class TaskExecuteRequest(BaseModel):
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
-@router.post("/crawl/start", response_model=TaskOut, status_code=201)
 async def start_crawl(
     body: CrawlStartRequest,
     db: AsyncSession = Depends(get_db),
@@ -153,7 +152,6 @@ async def start_crawl(
     return _task_to_out(result.task)
 
 
-@router.post("/tasks/{task_uuid}/execute", response_model=TaskOut, status_code=202)
 async def execute_existing_task(
     task_uuid: str,
     db: AsyncSession = Depends(get_db),

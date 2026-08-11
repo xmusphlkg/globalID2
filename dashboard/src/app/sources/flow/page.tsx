@@ -1,3 +1,2 @@
-import SourceFlowView from "@/features/operations/sources/flow/view";
-
-export default SourceFlowView;
+import { permanentRedirect } from "next/navigation";
+export default function LegacyPage() { permanentRedirect("/operations/sources"); }

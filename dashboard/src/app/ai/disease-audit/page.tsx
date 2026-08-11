@@ -1,3 +1,2 @@
-import DiseaseAuditView from "@/features/ai/disease-audit/view";
-
-export default DiseaseAuditView;
+import { permanentRedirect } from "next/navigation";
+export default function LegacyPage() { permanentRedirect("/data/audit"); }

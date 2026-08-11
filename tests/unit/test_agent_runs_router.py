@@ -3,6 +3,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import pytest
+from fastapi import Response
 
 from dashboard.api.routers import agent_runs
 from src.domain.task import TaskStatus, TaskType
@@ -116,17 +117,32 @@ async def test_list_agent_runs_delegates_to_service(monkeypatch):
 
     async def _fake_list_runs(**kwargs):
         assert kwargs["limit"] == 10
-        assert kwargs["offset"] == 2
+        assert kwargs["offset"] == 10
         assert kwargs["status"] == "running"
         assert kwargs["search"] == "flu"
         assert kwargs["country_id"] == 7
         return payload
 
+    async def _fake_country_id(_self, country_code):
+        assert country_code == "DE"
+        return 7
+
     monkeypatch.setattr(agent_runs.agent_workflow_service, "list_runs", _fake_list_runs)
+    monkeypatch.setattr(agent_runs.CountryQueryRepository, "id_for_code", _fake_country_id)
 
-    result = await agent_runs.list_agent_runs(limit=10, offset=2, status="running", search="flu", country_id=7)
+    response = Response()
+    result = await agent_runs.list_agent_runs(
+        response=response,
+        page=2,
+        page_size=10,
+        status="running",
+        search="flu",
+        country_code="DE",
+        db=object(),
+    )
 
-    assert result == payload
+    assert result == payload["items"]
+    assert response.headers["X-Total-Count"] == "1"
 
 
 @pytest.mark.asyncio

@@ -1,6 +1,2 @@
-import { redirect } from "next/navigation";
-
-export default function SettingsAliasPage() {
-  redirect("/setting");
-}
-
+import { permanentRedirect } from "next/navigation";
+export default function LegacyPage() { permanentRedirect("/settings/integrations"); }
