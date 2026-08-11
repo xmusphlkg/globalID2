@@ -53,12 +53,12 @@ function ProgressLine({ value }: { value: number }) {
 type CompletenessRow = NonNullable<ReturnType<typeof useQualityCompleteness>["data"]>[number];
 
 export default function QualityPage() {
-  const { lang, countryId } = useAppStore();
+  const { lang, countryCode } = useAppStore();
 
-  const { data: stats } = useQualityStats(countryId);
-  const { data: gaps } = useQualityGaps(countryId);
-  const { data: sources } = useQualitySources(countryId);
-  const { data: completeness } = useQualityCompleteness(countryId, undefined, undefined, lang);
+  const { data: stats } = useQualityStats(countryCode || null);
+  const { data: gaps } = useQualityGaps(countryCode || null);
+  const { data: sources } = useQualitySources(countryCode || null);
+  const { data: completeness } = useQualityCompleteness(countryCode || null, undefined, undefined, lang);
   const gapUnit = gaps?.[0]?.period_unit ?? "month";
   const completenessUnits = Array.from(new Set((completeness ?? []).map((item) => item.period_unit)));
   const mixedCadence = completenessUnits.length > 1;
@@ -66,7 +66,7 @@ export default function QualityPage() {
     ? "Adaptive"
     : cadenceLabel(completenessUnits[0] ?? gapUnit, "adjective");
 
-  if (!countryId) {
+  if (!countryCode) {
     return (
       <EmptyState
         icon={<ShieldCheck className="h-12 w-12" />}
@@ -163,12 +163,14 @@ export default function QualityPage() {
             value={stats.earliest_date ?? "-"}
             icon={<CalendarDays className="h-4 w-4" />}
             tone="success"
+            valueClassName="text-[17px] tracking-tight"
           />
           <MetricTile
             label="Latest"
             value={stats.latest_date ?? "-"}
             icon={<Clock className="h-4 w-4" />}
             tone="warning"
+            valueClassName="text-[17px] tracking-tight"
           />
         </div>
       ) : null}

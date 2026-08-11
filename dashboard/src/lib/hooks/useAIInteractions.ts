@@ -49,7 +49,7 @@ export interface AIInteractionSummary {
 }
 
 export interface AIInteractionFilters {
-  countryId?: number | null;
+  countryCode?: string | null;
   taskUuid?: string;
   reportUuid?: string;
   agent?: string;
@@ -64,13 +64,14 @@ interface AIInteractionQueryOptions {
 
 function buildQuery(filters: AIInteractionFilters): string {
   const params = new URLSearchParams();
-  if (filters.countryId) params.set("country_id", String(filters.countryId));
+  if (filters.countryCode) params.set("country_code", filters.countryCode);
   if (filters.taskUuid) params.set("task_uuid", filters.taskUuid);
   if (filters.reportUuid) params.set("report_uuid", filters.reportUuid);
   if (filters.agent) params.set("agent", filters.agent);
   if (filters.model) params.set("model", filters.model);
   if (filters.disease) params.set("disease", filters.disease);
-  if (filters.limit) params.set("limit", String(filters.limit));
+  if (filters.limit) params.set("page_size", String(filters.limit));
+  params.set("page", "1");
   return params.toString();
 }
 

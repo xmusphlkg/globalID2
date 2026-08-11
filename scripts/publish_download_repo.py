@@ -12,6 +12,7 @@ import shutil
 import subprocess
 from pathlib import Path
 import sys
+import time
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -47,11 +48,50 @@ def run_git(args: list[str], cwd: Path) -> str:
     completed = subprocess.run(
         ["git", *args],
         cwd=cwd,
-        check=True,
         text=True,
         capture_output=True,
     )
+    if completed.returncode != 0:
+        output = "\n".join(
+            part.strip() for part in (completed.stdout, completed.stderr) if part.strip()
+        )
+        command = "git " + " ".join(args)
+        raise RuntimeError(
+            f"Git command failed with exit code {completed.returncode}: {command}"
+            + (f"\n{output}" if output else "\nGit returned no diagnostic output.")
+        )
     return completed.stdout.strip()
+
+
+def push_branch(
+    workdir: Path,
+    branch: str,
+    *,
+    attempts: int = 3,
+    retry_delay_seconds: float = 2,
+) -> None:
+    """Retry bounded push failures while keeping Git's fast-forward safety intact."""
+
+    if attempts < 1:
+        raise ValueError("Push attempts must be at least 1")
+    last_error: RuntimeError | None = None
+    for attempt in range(1, attempts + 1):
+        try:
+            run_git(["push", "origin", branch], workdir)
+            return
+        except RuntimeError as exc:
+            last_error = exc
+            if attempt == attempts:
+                break
+            print(
+                f"Git push attempt {attempt}/{attempts} failed; "
+                f"retrying in {retry_delay_seconds:g} seconds.\n{exc}",
+                file=sys.stderr,
+            )
+            time.sleep(retry_delay_seconds)
+    raise RuntimeError(
+        f"Git push failed after {attempts} attempts. Latest error:\n{last_error}"
+    ) from last_error
 
 
 def remote_branch_exists(repo_url: str, branch: str) -> bool:
@@ -323,7 +363,7 @@ def commit_and_push(
         return False
     run_git(["add", "countries", "diseases", "manifest.json", "README.md"], workdir)
     run_git(["commit", "-m", commit_message], workdir)
-    run_git(["push", "origin", branch], workdir)
+    push_branch(workdir, branch)
     return True
 
 

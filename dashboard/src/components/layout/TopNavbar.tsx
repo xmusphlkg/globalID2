@@ -1,25 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
-import { usePathname } from "next/navigation";
-import { useAppStore } from "@/stores/app-store";
+import { useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { ChevronRight, Globe2, Menu, PanelLeftClose, PanelLeftOpen, Search, X } from "lucide-react";
+
+import { cn } from "@/lib/utils";
 import { getCountryDisplayName, useCountries } from "@/shared/config/countries";
-import { type CountryScope, findRouteByPath, navigationSections } from "@/shared/navigation/route-registry";
-import { t } from "@/lib/i18n";
-import { ApiError } from "@/lib/api";
-import { Menu, Globe, Languages, ShieldCheck, AlertTriangle, PanelLeftClose, PanelLeftOpen } from "lucide-react";
-
-function scopeLabel(lang: "en" | "zh", scope: CountryScope) {
-  if (scope === "required") return t(lang, "country_scope_required");
-  if (scope === "optional") return t(lang, "country_scope_optional");
-  return t(lang, "country_scope_global");
-}
-
-function scopeHint(lang: "en" | "zh", scope: CountryScope) {
-  if (scope === "required") return t(lang, "country_scope_required_hint");
-  if (scope === "optional") return t(lang, "country_scope_optional_hint");
-  return t(lang, "country_scope_global_hint");
-}
+import { allRoutes, findRouteByPath, findSectionByPath } from "@/shared/navigation/route-registry";
+import { useAppStore } from "@/stores/app-store";
 
 export function TopNavbar({
   onMenuClick,
@@ -30,169 +18,136 @@ export function TopNavbar({
   sidebarCollapsed?: boolean;
   onToggleSidebar?: () => void;
 }) {
-  const { lang, setLang, countryId, countryName, countryCode, setCountry } = useAppStore();
-  const { data: countries, isLoading, error } = useCountries();
   const pathname = usePathname();
-  const currentRoute = findRouteByPath(pathname);
-  const currentSection = currentRoute
-    ? navigationSections.find((section) => section.id === currentRoute.section)
-    : null;
-  const CurrentIcon = currentRoute?.icon;
-  const countryScope = currentRoute?.countryScope ?? "none";
-  const showCountrySelector = countryScope !== "none";
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const route = findRouteByPath(pathname);
+  const section = findSectionByPath(pathname);
+  const { countryId, countryCode, setCountry } = useAppStore();
+  const { data: countries, isLoading } = useCountries();
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
-    if (!countries || countries.length === 0) {
-      return;
-    }
-
-    if (countryId) {
-      const selected = countries.find((country) => country.id === countryId);
-      if (!selected) {
-        return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setPaletteOpen((value) => !value);
       }
+      if (event.key === "Escape") setPaletteOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
-      const displayName = getCountryDisplayName(selected, lang);
-      if (countryName !== displayName || countryCode !== selected.code) {
-        setCountry(selected.id, displayName, selected.code);
-      }
-      return;
+  useEffect(() => {
+    if (!countries?.length) return;
+    const requestedCode = searchParams.get("country")?.toUpperCase();
+    const requested = requestedCode ? countries.find((country) => country.code.toUpperCase() === requestedCode) : undefined;
+    const stored = countryId ? countries.find((country) => country.id === countryId) : undefined;
+    const preferred = countries.find((country) => country.code.toUpperCase() === "US");
+    const selected = requested ?? stored ?? preferred ?? countries.find((country) => country.is_active) ?? countries[0];
+    if (selected && (selected.id !== countryId || selected.code !== countryCode)) {
+      setCountry(selected.id, selected.name_en || selected.name, selected.code);
     }
+    if (selected && !requestedCode && route?.countryScope !== "none") {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("country", selected.code.toUpperCase());
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    }
+  }, [countries, countryCode, countryId, pathname, route?.countryScope, router, searchParams, setCountry]);
 
-    const preferredCodes = new Set(["CN", "US", "GB", "UK"]);
-    const preferred = countries.find((country) => preferredCodes.has(country.code.toUpperCase()));
-    const fallback = countries.find((country) => country.is_active) ?? countries[0];
-    const next = preferred ?? fallback;
-    setCountry(next.id, getCountryDisplayName(next, lang), next.code);
-  }, [countryCode, countryId, countryName, countries, lang, setCountry]);
+  const filteredRoutes = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    if (!normalized) return allRoutes;
+    return allRoutes.filter((item) => `${item.label} ${item.description}`.toLowerCase().includes(normalized));
+  }, [query]);
 
-  const selectorValue = countryId ? String(countryId) : "";
-  const selectorDisabled = isLoading || !!error || !countries || countries.length === 0;
-  const errorStatus =
-    error instanceof ApiError ? `${error.status}` : error ? t(lang, "system_status_unavailable") : null;
-  const countryHealthTone = error
-    ? "text-rose-700 bg-rose-50 border-rose-200"
-    : countries && countries.length > 0
-      ? "text-emerald-700 bg-emerald-50 border-emerald-200"
-      : "text-amber-700 bg-amber-50 border-amber-200";
-  const countryHealthLabel = error
-    ? t(lang, "system_status_country_unavailable")
-    : countries && countries.length > 0
-      ? t(lang, "system_status_country_ready")
-      : t(lang, "system_status_country_empty");
+  const setCountryContext = (id: number) => {
+    const country = countries?.find((item) => item.id === id);
+    if (!country) return;
+    setCountry(country.id, country.name_en || country.name, country.code);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("country", country.code.toUpperCase());
+    router.replace(`${pathname}?${params.toString()}`);
+  };
 
   return (
-    <header className="glass-panel sticky top-0 z-40 border-b border-tremor-border px-4 sm:px-6 lg:px-8">
-      <div className="flex min-h-[68px] items-center gap-x-4 py-2 sm:gap-x-6">
-        <button
-          type="button"
-          className="icon-button lg:hidden"
-          onClick={onMenuClick}
-        >
-          <span className="sr-only">Open sidebar</span>
-          <Menu className="h-5 w-5" aria-hidden="true" />
-        </button>
+    <>
+      <header className="sticky top-0 z-30 border-b border-[#D9D9D6] bg-white/95 backdrop-blur">
+        <div className="flex h-16 items-center gap-3 px-4 sm:px-6">
+          <button type="button" onClick={onMenuClick} className="icon-button lg:hidden" aria-label="Open navigation">
+            <Menu className="h-5 w-5" />
+          </button>
+          <button type="button" onClick={onToggleSidebar} className="icon-button hidden lg:inline-flex" aria-label={sidebarCollapsed ? "Expand navigation" : "Collapse navigation"}>
+            {sidebarCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+          </button>
 
-        <div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
-          <div className="flex min-w-0 flex-1 items-center gap-3 font-semibold text-tremor-content-strong">
-            <button
-              type="button"
-              onClick={onToggleSidebar}
-              className="icon-button hidden lg:inline-flex"
-              aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-              title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-            >
-              {sidebarCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
-            </button>
-            <div className="flex min-w-0 items-center gap-3">
-              {CurrentIcon ? (
-                <span className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-tremor-default border border-tremor-border bg-tremor-background text-tremor-brand sm:flex">
-                  <CurrentIcon className="h-5 w-5" />
-                </span>
-              ) : null}
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="truncate text-base font-semibold text-tremor-content-strong">
-                    {currentRoute ? t(lang, currentRoute.labelKey) : t(lang, "brand_name")}
-                  </p>
-                  {currentSection ? (
-                    <span className="hidden rounded-tremor-default bg-tremor-background-muted px-2 py-0.5 text-[11px] font-semibold uppercase text-tremor-content-subtle sm:inline-flex">
-                      {t(lang, currentSection.titleKey)}
-                    </span>
-                  ) : null}
-                </div>
-                <p className="hidden truncate text-xs font-normal text-tremor-content-subtle sm:block">
-                  {showCountrySelector
-                    ? `${scopeLabel(lang, countryScope)} · ${countryName || t(lang, "select_country")}`
-                    : scopeHint(lang, countryScope)}
-                </p>
-              </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 items-center gap-1.5 text-xs text-[#6B7280]">
+              <span className="truncate">{section.title}</span>
+              <ChevronRight className="h-3 w-3 shrink-0" />
+              <span className="truncate font-medium text-[#374151]">{route?.label ?? "Control Center"}</span>
             </div>
-            {showCountrySelector ? (
-              <div className={`hidden rounded-tremor-default border px-2.5 py-1 text-xs font-medium xl:flex xl:items-center xl:gap-2 ${countryHealthTone}`}>
-              {error ? <AlertTriangle className="h-3.5 w-3.5" /> : <ShieldCheck className="h-3.5 w-3.5" />}
-              <span>{countryHealthLabel}</span>
-              {errorStatus ? <span className="opacity-75">({errorStatus})</span> : null}
-              </div>
-            ) : null}
+            <p className="mt-0.5 truncate text-sm font-semibold text-[#1D1D1F]">{route?.description ?? section.description}</p>
           </div>
-          <div className="flex items-center gap-2 lg:gap-3">
-            {showCountrySelector ? (
-              <>
-                <div className="hidden text-right lg:block">
-                  <p className="text-[11px] font-semibold uppercase text-tremor-content-subtle">
-                    {t(lang, "active_country")}
-                  </p>
-                  <p className="text-sm font-semibold text-tremor-content-strong">
-                    {countryName || t(lang, "select_country")}
-                  </p>
-                </div>
 
-                <div className="flex h-10 items-center gap-2 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 shadow-[0_1px_2px_rgba(23,33,31,0.04)]">
-                  <Globe className="h-4 w-4 text-tremor-content-subtle" />
-                  <select
-                    title={t(lang, "select_country")}
-                    aria-label={t(lang, "select_country")}
-                    value={selectorValue}
-                    disabled={selectorDisabled}
-                    onChange={(e) => {
-                      const nextId = Number(e.target.value);
-                      const c = countries?.find((country) => country.id === nextId);
-                      if (c) setCountry(c.id, getCountryDisplayName(c, lang), c.code);
-                    }}
-                    className="block max-w-[46vw] bg-transparent py-0 pl-0 pr-6 text-sm font-medium text-tremor-content-strong outline-none sm:min-w-[150px]"
+          <button type="button" onClick={() => setPaletteOpen(true)} className="hidden h-9 min-w-48 items-center gap-2 rounded-md border border-[#D9D9D6] bg-[#F7F7F5] px-3 text-left text-sm text-[#6B7280] transition hover:border-[#C8C8C4] sm:flex">
+            <Search className="h-4 w-4" />
+            <span className="flex-1">Jump to...</span>
+            <kbd className="rounded border border-[#D9D9D6] bg-white px-1.5 py-0.5 text-[10px]">⌘K</kbd>
+          </button>
+
+          {route?.countryScope !== "none" ? (
+            <label className="flex h-9 items-center gap-2 rounded-md border border-[#D9D9D6] bg-white px-2.5 text-sm">
+              <Globe2 className="h-4 w-4 text-[#6B7280]" />
+              <span className="sr-only">Active country</span>
+              <select
+                value={countryId ?? ""}
+                disabled={isLoading || !countries?.length}
+                onChange={(event) => setCountryContext(Number(event.target.value))}
+                className="max-w-36 bg-transparent pr-5 font-medium text-[#1D1D1F] outline-none"
+              >
+                {!countries?.length ? <option value="">No countries</option> : null}
+                {countries?.map((country) => (
+                  <option key={country.id} value={country.id}>{getCountryDisplayName(country, "en")}</option>
+                ))}
+              </select>
+            </label>
+          ) : (
+            <span className="hidden rounded-md border border-[#E5E5E2] bg-[#F7F7F5] px-2.5 py-1.5 text-xs font-medium text-[#6B7280] md:inline-flex">Global scope</span>
+          )}
+        </div>
+      </header>
+
+      {paletteOpen ? (
+        <div className="fixed inset-0 z-[70] flex items-start justify-center bg-black/30 px-4 pt-[12vh]" onMouseDown={() => setPaletteOpen(false)}>
+          <div className="w-full max-w-xl overflow-hidden rounded-lg border border-[#D9D9D6] bg-white shadow-2xl" onMouseDown={(event) => event.stopPropagation()}>
+            <div className="flex items-center gap-3 border-b border-[#E5E5E2] px-4">
+              <Search className="h-5 w-5 text-[#6B7280]" />
+              <input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search workspaces and tools" className="h-14 flex-1 bg-transparent text-sm outline-none" />
+              <button type="button" onClick={() => setPaletteOpen(false)} className="rounded p-1 text-[#6B7280] hover:bg-[#F7F7F5]" aria-label="Close jump menu"><X className="h-4 w-4" /></button>
+            </div>
+            <div className="max-h-[55vh] overflow-y-auto p-2">
+              {filteredRoutes.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => { setPaletteOpen(false); setQuery(""); router.push(item.href); }}
+                    className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left hover:bg-[#F7F7F5]"
                   >
-                    {isLoading ? <option value="">{t(lang, "select_country_loading")}</option> : null}
-                    {error ? <option value="">{t(lang, "select_country_unavailable")}</option> : null}
-                    {!isLoading && !error && (!countries || countries.length === 0) ? (
-                      <option value="">{t(lang, "select_country_empty")}</option>
-                    ) : null}
-                    {countries?.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {getCountryDisplayName(c, lang)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </>
-            ) : (
-              <div className="hidden h-10 items-center gap-2 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm font-semibold text-tremor-content-strong shadow-[0_1px_2px_rgba(23,33,31,0.04)] sm:flex">
-                <Globe className="h-4 w-4 text-tremor-content-subtle" />
-                {t(lang, "country_scope_global")}
-              </div>
-            )}
-
-            <button
-              onClick={() => setLang(lang === "en" ? "zh" : "en")}
-              aria-label={t(lang, "language_toggle_label")}
-              className="inline-flex h-10 items-center gap-2 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm font-medium text-tremor-content-strong shadow-[0_1px_2px_rgba(23,33,31,0.04)] transition hover:border-tremor-ring hover:bg-tremor-background-muted"
-            >
-              <Languages className="h-4 w-4" />
-              {lang === "en" ? "中文" : "EN"}
-            </button>
+                    <span className="flex h-8 w-8 items-center justify-center rounded-md border border-[#E5E5E2] bg-white text-[#C2410C]"><Icon className="h-4 w-4" /></span>
+                    <span className="min-w-0 flex-1"><span className="block text-sm font-medium text-[#1D1D1F]">{item.label}</span><span className="block truncate text-xs text-[#6B7280]">{item.description}</span></span>
+                  </button>
+                );
+              })}
+              {!filteredRoutes.length ? <p className="px-3 py-8 text-center text-sm text-[#6B7280]">No matching tools.</p> : null}
+            </div>
           </div>
         </div>
-      </div>
-    </header>
+      ) : null}
+    </>
   );
 }

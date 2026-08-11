@@ -4,6 +4,7 @@ import { apiFetch } from "@/lib/api";
 
 export interface MappingCandidate {
   id: number;
+  candidate_key: string;
   target_code?: string | null;
   proposed_name_en?: string | null;
   candidate_kind: string;
@@ -75,7 +76,7 @@ export interface MappingAudit {
   }>;
 }
 
-const root = "/disease-mappings/v3";
+const root = "/mappings";
 
 export function useMappingSummary() {
   return useQuery({ queryKey: ["mapping-v3-summary"], queryFn: () => apiFetch<MappingSummary>(`${root}/summary`), refetchInterval: 15_000 });
@@ -90,7 +91,7 @@ export function useMappingAudit() {
 }
 
 export function useMappingCategories(countryCode: string, aiStatus: string) {
-  const params = new URLSearchParams({ limit: "300" });
+  const params = new URLSearchParams({ page: "1", page_size: "300" });
   if (countryCode) params.set("country_code", countryCode);
   if (aiStatus) params.set("ai_status", aiStatus);
   return useQuery({
@@ -114,17 +115,17 @@ function useMappingMutation<TVariables>(mutationFn: (variables: TVariables) => P
 export function useRunMappingAutomation() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: () => apiFetch(`${root}/automation/run`, { method: "POST", timeoutMs: 180_000 }),
+    mutationFn: () => apiFetch(`${root}/automation/runs`, { method: "POST", timeoutMs: 180_000 }),
     onSuccess: () => client.invalidateQueries(),
   });
 }
 
 export function useSuggestCategory() {
-  return useMappingMutation<number>((id) => apiFetch(`${root}/categories/${id}/suggest`, { method: "POST", timeoutMs: 180_000 }));
+  return useMappingMutation<string>((key) => apiFetch(`${root}/categories/${encodeURIComponent(key)}/suggest`, { method: "POST", timeoutMs: 180_000 }));
 }
 
 export function useReviewCandidate(action: "accept" | "reject") {
-  return useMappingMutation<number>((id) => apiFetch(`${root}/candidates/${id}/${action}`, {
+  return useMappingMutation<string>((key) => apiFetch(`${root}/candidates/${encodeURIComponent(key)}/${action}`, {
     method: "POST",
     body: JSON.stringify({ reviewer: "control-panel", notes: "Reviewed in Mapping Registry v3 control panel" }),
   }));
@@ -138,5 +139,5 @@ export function useCreateMappingRelease() {
 }
 
 export function useActivateMappingRelease() {
-  return useMappingMutation<number>((id) => apiFetch(`${root}/releases/${id}/activate`, { method: "POST" }));
+  return useMappingMutation<string>((code) => apiFetch(`${root}/releases/${encodeURIComponent(code)}/activate`, { method: "POST" }));
 }

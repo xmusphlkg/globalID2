@@ -43,6 +43,7 @@ from .population_record import PopulationRecord
 from .ai_model_center import AIProviderConfig, AIModelConfig
 from .automation_job import AutomationJob
 from .data_release_job import DataReleaseJob
+from .scheduled_job_state import ScheduledJobState
 from .knowledge import CountryBrief, DiseaseKnowledgeBrief, DiseaseKnowledgeSource
 from .disease_ontology import (
     DiseaseConceptAssignment,
@@ -102,6 +103,7 @@ __all__ = [
     "AIModelConfig",
     "AutomationJob",
     "DataReleaseJob",
+    "ScheduledJobState",
     "CountryBrief",
     "DiseaseKnowledgeBrief",
     "DiseaseKnowledgeSource",

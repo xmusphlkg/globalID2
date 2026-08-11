@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#f8fafc", // Tremor background subtle
+  themeColor: "#F7F7F5",
 };
 
 export default function RootLayout({
@@ -27,10 +27,8 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full">
       <head>
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
-        />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
       </head>
       <body className="h-full bg-tremor-background-subtle text-tremor-content-strong antialiased m-0">
         <Providers>

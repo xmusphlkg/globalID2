@@ -8,7 +8,7 @@ import { t } from "@/lib/i18n";
 import {
   usePaginatedTasks,
   useTaskDetail,
-  useTaskWebSocket,
+  useTaskEventStream,
   useExecuteTask,
   useCancelTask,
   useWorkerStatus,
@@ -89,7 +89,7 @@ function parseReportUuid(value: unknown): string | null {
 }
 
 function AIPageContent() {
-  const { lang, countryId } = useAppStore();
+  const { lang, countryId, countryCode } = useAppStore();
   const searchParams = useSearchParams();
   const searchParamsString = searchParams.toString();
   const [statusFilter, setStatusFilter] = useState("");
@@ -102,7 +102,7 @@ function AIPageContent() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [knowledgeModalOpen, setKnowledgeModalOpen] = useState(false);
 
-  useTaskWebSocket({
+  useTaskEventStream({
     extraQueryKeys: [
       ["reports"],
       ["report-runs"],
@@ -252,21 +252,21 @@ function AIPageContent() {
             {lang === "zh" ? "更新疾病知识" : "Update Disease Knowledge"}
           </button>
           <Link
-            href="/ai/interactions"
+            href="/production/interactions"
             className="inline-flex h-10 items-center gap-2 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm font-medium text-tremor-content-strong transition hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong dark:hover:bg-dark-tremor-background-subtle"
           >
             <MessageSquareText className="h-4 w-4" />
             Open AI Interactions
           </Link>
           <Link
-            href="/ai/agent-runs"
+            href="/production/runs"
             className="inline-flex h-10 items-center gap-2 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm font-medium text-tremor-content-strong transition hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong dark:hover:bg-dark-tremor-background-subtle"
           >
             <GitBranch className="h-4 w-4" />
             {t(lang, "agent_runs")}
           </Link>
           <Link
-            href="/ai/models"
+            href="/settings/models"
             className="inline-flex h-10 items-center gap-2 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm font-medium text-tremor-content-strong transition hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong dark:hover:bg-dark-tremor-background-subtle"
           >
             <Settings2 className="h-4 w-4" />
@@ -330,7 +330,7 @@ function AIPageContent() {
             </div>
           </div>
           <Link
-            href="/setting"
+            href="/settings/integrations"
             className="inline-flex items-center gap-2 rounded-tremor-default bg-tremor-brand px-4 py-2 text-sm font-semibold text-tremor-brand-inverted transition hover:opacity-90"
           >
             {lang === "zh" ? "打开设置中心" : "Open Settings"}
@@ -398,6 +398,7 @@ function AIPageContent() {
             />
           </div>
           <select
+            aria-label={lang === "zh" ? "任务状态筛选" : "Task status filter"}
             className="rounded-tremor-default border border-tremor-border bg-tremor-background px-3 py-2 text-sm text-tremor-content-strong shadow-tremor-input outline-none transition focus:border-tremor-brand-subtle focus:ring-2 focus:ring-tremor-brand-muted dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
@@ -408,6 +409,7 @@ function AIPageContent() {
             )}
           </select>
           <select
+            aria-label={lang === "zh" ? "AI 任务类型筛选" : "AI task type filter"}
             className="rounded-tremor-default border border-tremor-border bg-tremor-background px-3 py-2 text-sm text-tremor-content-strong shadow-tremor-input outline-none transition focus:border-tremor-brand-subtle focus:ring-2 focus:ring-tremor-brand-muted dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong"
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
@@ -497,7 +499,7 @@ function AIPageContent() {
                   {expandedUuid === task.task_uuid && (
                     <div className="mb-3">
                       <Link
-                        href={`/ai/interactions?task=${encodeURIComponent(task.task_uuid)}${activeTaskReportUuid ? `&uuid=${encodeURIComponent(activeTaskReportUuid)}` : ""}`}
+                        href={`/production/interactions?task=${encodeURIComponent(task.task_uuid)}${activeTaskReportUuid ? `&uuid=${encodeURIComponent(activeTaskReportUuid)}` : ""}`}
                         className="inline-flex items-center gap-1 rounded-tremor-default border border-blue-300/70 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 transition hover:bg-blue-100 dark:border-blue-900 dark:bg-blue-950/25 dark:text-blue-300"
                       >
                         <MessageSquareText className="h-3.5 w-3.5" />
@@ -508,21 +510,21 @@ function AIPageContent() {
                   <div className="mb-3 flex flex-wrap gap-2">
                     {expandedUuid === task.task_uuid && task.task_type === "agent_workflow" && (
                       <Link
-                        href={`/ai/agent-runs?task_uuid=${encodeURIComponent(task.task_uuid)}`}
+                        href={`/production/runs?task_uuid=${encodeURIComponent(task.task_uuid)}`}
                         className="inline-flex items-center gap-1 rounded-tremor-default border border-cyan-300/70 bg-cyan-50 px-3 py-1.5 text-xs font-medium text-cyan-700 transition hover:bg-cyan-100 dark:border-cyan-900 dark:bg-cyan-950/25 dark:text-cyan-300"
                       >
                         <GitBranch className="h-3.5 w-3.5" />
                         {lang === "zh" ? "查看 Agent Run" : "View Agent Run"}
                       </Link>
                     )}
-                    {expandedUuid === task.task_uuid && ["pending", "queued", "failed", "cancelled"].includes(task.status) && (
+                    {expandedUuid === task.task_uuid && ["failed", "cancelled"].includes(task.status) && (
                       <button
                         onClick={() => executeTask(task.task_uuid)}
                         disabled={executingTask}
                         className="inline-flex items-center gap-1 rounded-tremor-default border border-amber-300/70 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-amber-900 dark:bg-amber-950/25 dark:text-amber-300"
                       >
                         {executingTask ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Cpu className="h-3.5 w-3.5" />}
-                        {task.status === "cancelled" ? (lang === "zh" ? "从中断点继续" : "Resume Task") : (lang === "zh" ? "执行任务" : "Execute Task")}
+                        {lang === "zh" ? "重试任务" : "Retry Task"}
                       </button>
                     )}
                     {expandedUuid === task.task_uuid && ["pending", "queued", "running"].includes(task.status) && (
@@ -577,10 +579,10 @@ function AIPageContent() {
         </Card>
       )}
 
-      {createModalOpen && countryId && (
+      {createModalOpen && countryId && countryCode && (
         <CreateAITaskModal
           open={true}
-          countryId={countryId}
+          countryCode={countryCode}
           lang={lang}
           onClose={() => setCreateModalOpen(false)}
         />

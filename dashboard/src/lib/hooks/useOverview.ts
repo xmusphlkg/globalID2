@@ -34,56 +34,56 @@ export interface MonthlyComparisonPoint {
   mortality_rate: number | null;
 }
 
-export function useOverviewSummary(countryId: number | null, lang: string) {
+export function useOverviewSummary(countryCode: string | null, lang: string) {
   return useQuery<OverviewSummary>({
-    queryKey: ["overview", "summary", countryId, lang],
+    queryKey: ["overview", "summary", countryCode, lang],
     queryFn: () =>
-      apiFetch(`/overview/summary?country_id=${countryId}&lang=${lang}`),
-    enabled: !!countryId,
+      apiFetch(`/analytics/summary?country_code=${encodeURIComponent(countryCode || "")}&lang=${lang}`),
+    enabled: !!countryCode,
     staleTime: 5 * 60 * 1000,
   });
 }
 
 export function useOverviewTrend(
-  countryId: number | null,
+  countryCode: string | null,
   diseaseCode?: string | null,
   interval?: number | null,
   startDate?: string | null,
   endDate?: string | null,
 ) {
   return useQuery<TrendPoint[]>({
-    queryKey: ["overview", "trend", countryId, diseaseCode, interval, startDate, endDate],
+    queryKey: ["overview", "trend", countryCode, diseaseCode, interval, startDate, endDate],
     queryFn: () => {
-      const params = new URLSearchParams({ country_id: String(countryId) });
+      const params = new URLSearchParams({ country_code: countryCode || "" });
       if (diseaseCode) params.set("disease_code", diseaseCode);
       if (startDate) params.set("start_date", startDate);
       if (endDate) params.set("end_date", endDate);
       if (interval && !startDate && !endDate) params.set("interval", String(interval));
-      return apiFetch(`/overview/trend?${params}`);
+      return apiFetch(`/analytics/trends?${params}`);
     },
-    enabled: !!countryId,
+    enabled: !!countryCode,
     staleTime: 5 * 60 * 1000,
   });
 }
 
 export function useOverviewMonthlyComparison(
-  countryId: number | null,
+  countryCode: string | null,
   diseaseCode?: string | null,
   interval?: number | null,
   startDate?: string | null,
   endDate?: string | null,
 ) {
   return useQuery<MonthlyComparisonPoint[]>({
-    queryKey: ["overview", "monthly-comparison", countryId, diseaseCode, interval, startDate, endDate],
+    queryKey: ["overview", "monthly-comparison", countryCode, diseaseCode, interval, startDate, endDate],
     queryFn: () => {
-      const params = new URLSearchParams({ country_id: String(countryId) });
+      const params = new URLSearchParams({ country_code: countryCode || "" });
       if (diseaseCode) params.set("disease_code", diseaseCode);
       if (startDate) params.set("start_date", startDate);
       if (endDate) params.set("end_date", endDate);
       if (interval && !startDate && !endDate) params.set("interval", String(interval));
-      return apiFetch(`/overview/monthly-comparison?${params}`);
+      return apiFetch(`/analytics/monthly-comparison?${params}`);
     },
-    enabled: !!countryId,
+    enabled: !!countryCode,
     staleTime: 5 * 60 * 1000,
   });
 }

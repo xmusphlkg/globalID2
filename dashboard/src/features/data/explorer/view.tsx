@@ -10,7 +10,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { FilterToolbar } from "@/components/ui/FilterToolbar";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, apiFetchWithMeta } from "@/lib/api";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/stores/app-store";
 
@@ -37,16 +37,24 @@ export default function ExplorerPage() {
 
   const { data: tables } = useQuery<{ tables: string[] }>({
     queryKey: ["explorer", "tables"],
-    queryFn: () => apiFetch("/explorer/tables"),
+    queryFn: () => apiFetch("/catalog/tables"),
     staleTime: Infinity,
   });
 
   const { data: result, isLoading } = useQuery<BrowseResult>({
     queryKey: ["explorer", "browse", table, page],
-    queryFn: () =>
-      apiFetch(
-        `/explorer/browse?table=${encodeURIComponent(table)}&limit=${limit}&offset=${page * limit}`,
-      ),
+    queryFn: async () => {
+      const response = await apiFetchWithMeta<Record<string, unknown>[]>(
+        `/catalog/browse?table=${encodeURIComponent(table)}&page=${page + 1}&page_size=${limit}`,
+      );
+      return {
+        table,
+        total: response.meta.pagination?.total ?? response.data.length,
+        limit: response.meta.pagination?.page_size ?? limit,
+        offset: ((response.meta.pagination?.page ?? page + 1) - 1) * (response.meta.pagination?.page_size ?? limit),
+        data: response.data,
+      };
+    },
     staleTime: 60 * 1000,
   });
 
@@ -121,6 +129,7 @@ export default function ExplorerPage() {
 
       <FilterToolbar>
         <select
+          aria-label={lang === "zh" ? "选择数据表" : "Select data table"}
           className="h-10 min-w-[220px] rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm text-tremor-content-strong outline-none transition focus:border-tremor-brand-subtle focus:ring-2 focus:ring-tremor-brand-muted dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong"
           value={table}
           onChange={(event) => setTable(event.target.value)}

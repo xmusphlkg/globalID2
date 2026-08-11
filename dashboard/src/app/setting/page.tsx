@@ -1,3 +1,2 @@
-import SettingsView from "@/features/admin/settings/view";
-
-export default SettingsView;
+import { permanentRedirect } from "next/navigation";
+export default function LegacyPage() { permanentRedirect("/settings/integrations"); }

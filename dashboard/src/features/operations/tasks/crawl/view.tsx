@@ -28,7 +28,7 @@ import {
   useCancelTask,
   useTaskDetail,
   useTasks,
-  useTaskWebSocket,
+  useTaskEventStream,
   useWorkerStatus,
 } from "@/features/operations/tasks/api";
 import { t } from "@/lib/i18n";
@@ -87,7 +87,7 @@ function TaskNameCell({ task }: { task: TaskItem }) {
 }
 
 function CrawlTasksPageContent() {
-  const { lang, countryId } = useAppStore();
+  const { lang, countryId, countryCode } = useAppStore();
   const searchParams = useSearchParams();
   const searchParamsString = searchParams.toString();
   const [scopeMode, setScopeMode] = useState<"selected" | "all">(
@@ -97,14 +97,14 @@ function CrawlTasksPageContent() {
   const [taskTypeFilter, setTaskTypeFilter] = useState(searchParams.get("task_type") ?? "crawl_data");
   const [search, setSearch] = useState(searchParams.get("search") ?? searchParams.get("task") ?? "");
   const [selectedUuid, setSelectedUuid] = useState<string | null>(null);
-  const effectiveCountryId = scopeMode === "all" ? null : countryId;
+  const effectiveCountryCode = scopeMode === "all" ? null : countryCode;
 
-  useTaskWebSocket({ extraQueryKeys: [["sources-automation"], ["sources-flow"]] });
+  useTaskEventStream({ extraQueryKeys: [["sources-automation"], ["sources-flow"]] });
 
   const { data: tasks, isLoading } = useTasks(
     statusFilter || undefined,
     taskTypeFilter || undefined,
-    effectiveCountryId,
+    effectiveCountryCode,
     search || undefined,
     200,
   );

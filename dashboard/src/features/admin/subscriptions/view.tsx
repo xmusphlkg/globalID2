@@ -275,7 +275,7 @@ export default function SubscriptionsPage() {
       </section>
 
       <FilterToolbar>
-        <select className={inputClass} value={status} onChange={(event) => setStatus(event.target.value)}>
+        <select aria-label={isZh ? "订阅状态筛选" : "Subscription status filter"} className={inputClass} value={status} onChange={(event) => setStatus(event.target.value)}>
           {statusOptions.map((item) => (
             <option key={item || "all"} value={item}>
               {item || (isZh ? "全部状态" : "All statuses")}
@@ -283,7 +283,7 @@ export default function SubscriptionsPage() {
           ))}
         </select>
 
-        <select className={inputClass} value={listCode} onChange={(event) => setListCode(event.target.value)}>
+        <select aria-label={isZh ? "订阅列表筛选" : "Subscription list filter"} className={inputClass} value={listCode} onChange={(event) => setListCode(event.target.value)}>
           <option value="">{isZh ? "全部列表" : "All lists"}</option>
           {options?.lists.map((item) => (
             <option key={item.code} value={item.code}>
@@ -302,7 +302,7 @@ export default function SubscriptionsPage() {
           />
         </label>
 
-        <select className={inputClass} value={limit} onChange={(event) => setLimit(Number(event.target.value))}>
+        <select aria-label={isZh ? "每页行数" : "Rows per page"} className={inputClass} value={limit} onChange={(event) => setLimit(Number(event.target.value))}>
           {[25, 50, 100, 250].map((value) => (
             <option key={value} value={value}>
               {value} rows

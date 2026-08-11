@@ -1,6 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  Children,
+  cloneElement,
+  isValidElement,
+  useEffect,
+  useId,
+  useMemo,
+  useState,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 import Link from "next/link";
 import { Badge, Button, Card, Text, Title } from "@/components/ui/tremor";
 import {
@@ -41,8 +51,8 @@ const inputCls =
   "h-10 w-full rounded-lg border border-tremor-border bg-tremor-background px-3 text-sm text-tremor-content-emphasis outline-none transition placeholder:text-tremor-content-subtle focus:border-tremor-brand-subtle focus:ring-2 focus:ring-tremor-brand-muted dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-emphasis";
 const areaCls = `${inputCls} h-auto min-h-20 py-2`;
 
-function Label({ children }: { children: ReactNode }) {
-  return <label className="mb-1.5 block text-xs font-semibold text-tremor-content-emphasis dark:text-dark-tremor-content-emphasis">{children}</label>;
+function Label({ children, htmlFor }: { children: ReactNode; htmlFor?: string }) {
+  return <label htmlFor={htmlFor} className="mb-1.5 block text-xs font-semibold text-tremor-content-emphasis dark:text-dark-tremor-content-emphasis">{children}</label>;
 }
 
 function StateBadge({ label, color = "slate" }: { label: string; color?: "slate" | "teal" | "emerald" | "rose" | "amber" | "blue" }) {
@@ -50,7 +60,16 @@ function StateBadge({ label, color = "slate" }: { label: string; color?: "slate"
 }
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
-  return <div><Label>{label}</Label>{children}{hint && <p className="mt-1.5 text-xs leading-5 text-tremor-content-subtle">{hint}</p>}</div>;
+  const fieldId = useId();
+  let labelled = false;
+  const labelledChildren = Children.map(children, (child) => {
+    if (labelled || !isValidElement(child) || typeof child.type !== "string") return child;
+    if (!["input", "select", "textarea"].includes(child.type)) return child;
+    labelled = true;
+    const control = child as ReactElement<{ id?: string }>;
+    return cloneElement(control, { id: control.props.id || fieldId });
+  });
+  return <div><Label htmlFor={fieldId}>{label}</Label>{labelledChildren}{hint && <p className="mt-1.5 text-xs leading-5 text-tremor-content-subtle">{hint}</p>}</div>;
 }
 
 function SectionHeading({ icon, title, description, status, onReset, resetLabel }: { icon: ReactNode; title: string; description: string; status: ReactNode; onReset: () => void; resetLabel: string }) {
@@ -160,7 +179,7 @@ export default function SettingPage() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
-      <PageHeader eyebrow={isZh ? "管理" : "Administration"} title={isZh ? "设置中心" : "Settings"} description={isZh ? "集中管理系统连接和网站配置。选择一个分组开始编辑。" : "Manage system connections and site configuration in one place. Choose a section to edit."} actions={<div className="flex gap-2"><Link href="/data/release" className="inline-flex h-10 items-center gap-2 rounded-lg border border-tremor-border bg-tremor-background px-3 text-sm font-semibold text-tremor-content-strong hover:bg-tremor-background-subtle"><ExternalLink className="h-4 w-4" />{isZh ? "数据发布" : "Release"}</Link></div>} />
+      <PageHeader eyebrow="Settings" title="Integrations" description="Manage system connections and site configuration in one place. Choose a section to edit." actions={<div className="flex gap-2"><Link href="/production/releases" className="inline-flex h-10 items-center gap-2 rounded-lg border border-tremor-border bg-tremor-background px-3 text-sm font-semibold text-tremor-content-strong hover:bg-tremor-background-subtle"><ExternalLink className="h-4 w-4" />Data releases</Link></div>} />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {summary.map((item) => <button key={item.key} type="button" onClick={() => setActiveSection(item.key)} className={`rounded-xl border bg-tremor-background p-4 text-left transition hover:-translate-y-0.5 hover:shadow-sm ${activeSection === item.key ? "border-tremor-brand ring-1 ring-tremor-brand/20" : "border-tremor-border"}`}><div className="flex items-center justify-between"><span className="text-tremor-content-subtle">{item.icon}</span><StateBadge label={item.value} color={item.ready ? "emerald" : "amber"} /></div><p className="mt-3 text-sm font-semibold text-tremor-content-strong">{item.title}</p><p className="mt-1 truncate text-xs text-tremor-content-subtle">{item.detail}</p></button>)}

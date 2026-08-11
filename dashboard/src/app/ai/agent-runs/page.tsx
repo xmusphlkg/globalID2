@@ -1,3 +1,2 @@
-import AgentRunsView from "@/features/ai/agent-runs/view";
-
-export default AgentRunsView;
+import { permanentRedirect } from "next/navigation";
+export default function LegacyPage() { permanentRedirect("/production/runs"); }

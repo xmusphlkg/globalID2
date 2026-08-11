@@ -40,6 +40,7 @@ from src.services.data_release.process_runner import (
 )
 from src.services.exceptions import TaskCancelledError
 from src.services.settings_service import system_settings_service
+from src.control_plane.schedule_state import schedule_state_repository
 
 try:
     from dotenv import dotenv_values
@@ -160,17 +161,20 @@ class DataReleaseService:
         return get_config().data_release
 
     async def ensure_storage(self) -> None:
+        """Verify managed storage and seed configuration without running DDL."""
         if self._storage_ready:
             return
         async with self._storage_lock:
             if self._storage_ready:
                 return
-            from src.core.database import get_engine
-
-            engine = get_engine()
-            async with engine.begin() as conn:
-                await conn.run_sync(DataReleaseJob.__table__.create, checkfirst=True)
-            await self._seed_default_job_if_needed()
+            try:
+                async with get_database() as db:
+                    await db.execute(select(DataReleaseJob.id).limit(1))
+                await self._seed_default_job_if_needed()
+            except Exception as exc:
+                raise RuntimeError(
+                    "data_release_jobs storage is not ready; run the Alembic preflight and upgrade"
+                ) from exc
             self._storage_ready = True
 
     async def _seed_default_job_if_needed(self) -> None:
@@ -265,10 +269,12 @@ class DataReleaseService:
                 return
             state = self._states.setdefault(job.job_id, DataReleaseJobState())
             self._sync_state_schedule(job, state, reset=True)
+            await schedule_state_repository.save("release", job.job_id, state)
 
     async def remove_job_state(self, job_id: str) -> None:
         async with self._lock:
             self._states.pop(job_id, None)
+            await schedule_state_repository.remove("release", job_id)
 
     async def start(self) -> None:
         cfg = self._config()
@@ -279,9 +285,13 @@ class DataReleaseService:
         if self._task and not self._task.done():
             return
         self._stop_event = asyncio.Event()
+        persisted = await schedule_state_repository.load("release")
         for job in await self.load_jobs():
             state = self._states.setdefault(job.job_id, DataReleaseJobState())
+            for field, value in persisted.get(job.job_id, {}).items():
+                setattr(state, field, value)
             self._sync_state_schedule(job, state, reset=state.next_run_at is None)
+            await schedule_state_repository.save("release", job.job_id, state)
         self._task = asyncio.create_task(self._run_loop(), name="globalid-data-release-scheduler")
         logger.info("Data release scheduler started with %s configured job(s)", len(await self.load_jobs()))
 
@@ -364,6 +374,8 @@ class DataReleaseService:
                 state.next_run_at = self._compute_next_run(job, now=state.last_finished_at)
                 logger.error("Data release job %s failed to queue: %s", job.job_id, exc)
                 raise
+            finally:
+                await schedule_state_repository.save("release", job.job_id, state)
 
     async def maybe_trigger_after_task_completion(
         self,
@@ -657,6 +669,15 @@ class DataReleaseService:
         tracked_generated_paths = await self._tracked_generated_paths()
 
         python_path = self._python_executable()
+        situation_room_check = (
+            await self._run_capture(
+                [*self._update_situation_room_command(python_path=python_path), "--help"],
+                cwd=ROOT_DIR,
+                timeout=60,
+            )
+            if python_path.exists()
+            else {"returncode": 127, "stdout": f"Python executable not found: {python_path}"}
+        )
         wrangler_check = await self._run_capture(
             ["npm", "exec", "--", "wrangler", "--version"],
             cwd=ASTRO_DIR,
@@ -678,6 +699,10 @@ class DataReleaseService:
         blockers.extend(raw_archive["blockers"])
         if not python_path.exists():
             blockers.append(f"Python executable not found: {python_path}")
+        elif situation_room_check["returncode"] != 0:
+            output = str(situation_room_check.get("stdout") or "").strip()
+            detail = output.splitlines()[-1] if output else "command returned no diagnostic output"
+            blockers.append(f"Situation Room refresh command is unavailable: {detail}")
         if job.include_cloudflare_deploy and wrangler_check["returncode"] != 0:
             blockers.append("Wrangler CLI is unavailable.")
         if job.include_cloudflare_deploy and not cloudflare["payload"].get("production_branch"):

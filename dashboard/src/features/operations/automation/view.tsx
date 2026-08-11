@@ -41,7 +41,7 @@ import {
   useSourceConfigs,
   useUpdateAutomationJob,
 } from "@/features/operations/automation/api";
-import { useTaskWebSocket, useWorkerStatus } from "@/features/operations/tasks/api";
+import { useTaskEventStream, useWorkerStatus } from "@/features/operations/tasks/api";
 import { t } from "@/lib/i18n";
 import { getConfiguredSourceOptions, getSourceDisplayLabel } from "@/lib/source-labels";
 import { cn } from "@/lib/utils";
@@ -317,7 +317,7 @@ export default function SourcesAutomationPage() {
   const [jobSearch, setJobSearch] = useState("");
   const [jobFilter, setJobFilter] = useState<JobFilter>("all");
 
-  useTaskWebSocket({ extraQueryKeys: [["sources-automation"], ["sources-automation-jobs"], ["sources-flow"]] });
+  useTaskEventStream({ extraQueryKeys: [["sources-automation"], ["sources-automation-jobs"], ["sources-flow"]] });
 
   const schedulerEnabled = Boolean(config?.enabled);
   const workerRunning = Boolean(workerStatus?.worker_process_running);
@@ -748,14 +748,14 @@ export default function SourcesAutomationPage() {
         actions={
           <>
             <Link
-              href="/sources/tasks?scope=all"
+              href="/operations/tasks?scope=all"
               className="inline-flex h-9 items-center gap-2 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm font-medium text-tremor-content-strong transition hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:hover:bg-dark-tremor-background-subtle"
             >
               {lang === "zh" ? "采集任务" : "Crawl Tasks"}
               <ArrowRight className="h-4 w-4" />
             </Link>
             <Link
-              href="/sources/flow"
+              href="/operations/sources"
               className="inline-flex h-9 items-center gap-2 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm font-medium text-tremor-content-strong transition hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:hover:bg-dark-tremor-background-subtle"
             >
               {lang === "zh" ? "数据流程" : "Data Flow"}
@@ -819,8 +819,8 @@ export default function SourcesAutomationPage() {
         />
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[320px_minmax(0,1fr)]">
-        <aside className="space-y-5">
+      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-5 xl:grid-cols-[320px_minmax(0,1fr)]">
+        <aside className="min-w-0 space-y-5">
           <section className="rounded-tremor-default border border-tremor-border bg-tremor-background px-4 py-3 dark:border-dark-tremor-border dark:bg-dark-tremor-background">
             <div className="mb-1 flex items-center justify-between gap-3">
               <h2 className="text-sm font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
@@ -885,7 +885,7 @@ export default function SourcesAutomationPage() {
                 )}
               </div>
               <Link
-                href="/setting"
+                href="/settings/integrations"
                 className="inline-flex h-9 items-center gap-2 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm font-medium text-tremor-content-strong transition hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:hover:bg-dark-tremor-background-subtle"
               >
                 {lang === "zh" ? "打开设置中心" : "Open Settings"}
@@ -895,7 +895,7 @@ export default function SourcesAutomationPage() {
           </section>
         </aside>
 
-        <section className="space-y-3">
+        <section className="min-w-0 space-y-3">
           <FilterToolbar>
             <input
               type="search"

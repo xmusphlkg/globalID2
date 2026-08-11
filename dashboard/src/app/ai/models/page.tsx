@@ -1,3 +1,2 @@
-import AIModelsView from "@/features/ai/models/view";
-
-export default AIModelsView;
+import { permanentRedirect } from "next/navigation";
+export default function LegacyPage() { permanentRedirect("/settings/models"); }

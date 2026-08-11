@@ -330,7 +330,7 @@ export default function SubscriptionNotificationsPage() {
               onChange={(event) => setSubject(event.target.value)}
               placeholder={isZh ? "邮件标题，可留空使用第一个 H1" : "Subject, or leave empty to use first H1"}
             />
-            <select className={inputClass} value={sourceLocale} onChange={(event) => setSourceLocale(event.target.value)}>
+            <select aria-label={isZh ? "源语言" : "Source language"} className={inputClass} value={sourceLocale} onChange={(event) => setSourceLocale(event.target.value)}>
               {localeOptions.map((item) => (
                 <option key={item.value} value={item.value}>
                   {isZh ? item.label_zh : item.label_en}
@@ -491,7 +491,7 @@ export default function SubscriptionNotificationsPage() {
             </div>
 
             <div className="mt-4">
-              <select className={inputClass} value={detailLocale} onChange={(event) => setDetailLocale(event.target.value)}>
+              <select aria-label={isZh ? "内容语言" : "Content language"} className={inputClass} value={detailLocale} onChange={(event) => setDetailLocale(event.target.value)}>
                 {Object.keys(selectedContents).map((locale) => (
                   <option key={locale} value={locale}>
                     {locale}

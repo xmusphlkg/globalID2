@@ -13,4 +13,4 @@ EnvironmentFile=-__PROJECT_DIR__/.env
 ExecStart=__PROJECT_DIR__/scripts/run_dashboard_web_service.sh
 Restart=always
 RestartSec=5
-
+TimeoutStopSec=20

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, apiFetchWithMeta } from "@/lib/api";
 import type { TaskDetail, TaskItem } from "@/lib/hooks/useTasks";
 
 export interface AgentWorkflowRun {
@@ -169,23 +169,29 @@ function buildQuery(params: Record<string, string | number | null | undefined>):
 }
 
 export function useAgentRuns(
-  countryId: number | null,
+  countryCode: string | null,
   status?: string,
   search?: string,
   limit = 30,
   offset = 0,
 ) {
   return useQuery<AgentRunListResponse>({
-    queryKey: ["agent-runs", countryId, status, search, limit, offset],
+    queryKey: ["agent-runs", countryCode, status, search, limit, offset],
     queryFn: async () => {
       const query = buildQuery({
-        country_id: countryId,
+        country_code: countryCode,
         status,
         search,
-        limit,
-        offset,
+        page: Math.floor(offset / limit) + 1,
+        page_size: limit,
       });
-      return apiFetch(`/ai/agent-runs${query ? `?${query}` : ""}`);
+      const { data, meta } = await apiFetchWithMeta<AgentRunSummary[]>(`/ai/runs${query ? `?${query}` : ""}`);
+      return {
+        items: data,
+        total: meta.pagination?.total ?? data.length,
+        limit: meta.pagination?.page_size ?? limit,
+        offset: ((meta.pagination?.page ?? 1) - 1) * (meta.pagination?.page_size ?? limit),
+      };
     },
     staleTime: 10 * 1000,
     refetchInterval: 5 * 1000,
@@ -195,7 +201,7 @@ export function useAgentRuns(
 export function useAgentRunDetail(taskUuid: string | null) {
   return useQuery<AgentRunDetailResponse>({
     queryKey: ["agent-run", taskUuid],
-    queryFn: () => apiFetch(`/ai/agent-runs/${taskUuid}`),
+    queryFn: () => apiFetch(`/ai/runs/${taskUuid}`),
     enabled: !!taskUuid,
     staleTime: 5 * 1000,
     refetchInterval: taskUuid ? 5 * 1000 : false,
@@ -207,7 +213,7 @@ export function useResumeAgentRun() {
 
   return useMutation({
     mutationFn: (taskUuid: string) =>
-      apiFetch<AgentRunActionResponse>(`/ai/agent-runs/${taskUuid}/resume`, { method: "POST" }),
+      apiFetch<AgentRunActionResponse>(`/ai/runs/${taskUuid}/resume`, { method: "POST" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["agent-runs"] });
       queryClient.invalidateQueries({ queryKey: ["agent-run"] });
@@ -222,7 +228,7 @@ export function useCancelAgentRun() {
 
   return useMutation({
     mutationFn: (taskUuid: string) =>
-      apiFetch<AgentRunActionResponse>(`/ai/agent-runs/${taskUuid}/cancel`, { method: "POST" }),
+      apiFetch<AgentRunActionResponse>(`/ai/runs/${taskUuid}/cancel`, { method: "POST" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["agent-runs"] });
       queryClient.invalidateQueries({ queryKey: ["agent-run"] });

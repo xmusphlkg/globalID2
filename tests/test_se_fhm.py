@@ -356,17 +356,19 @@ def test_se_mapping_is_source_scoped_and_leaves_ambiguous_categories_unmapped():
     mapping_path = Path(__file__).parents[1] / "configs/mapping/se.csv"
     rows = list(csv.DictReader(mapping_path.open(encoding="utf-8")))
     labels = {row["local_name"] for row in rows}
+    mapped_rows = [row for row in rows if row["series_id"]]
+    unmapped_labels = {row["local_name"] for row in rows if not row["series_id"]}
 
-    assert len(rows) == 48
-    assert len({row["series_id"] for row in rows}) == len(rows)
+    assert len(rows) == 52
+    assert len({row["series_id"] for row in mapped_rows}) == len(mapped_rows)
     assert {row["source_id"] for row in rows} == {ONTOLOGY_SOURCE_ID}
     assert {row["data_source"] for row in rows} == {DEFAULT_SOURCE_NAME}
     assert "Gonorré" in labels
     assert "HTLV 1- och HTLV 2-infektion" in labels
     assert "Meticillinresistenta gula stafylokocker" in labels
-    assert {
-        "ESBL-CARBA",
+    assert "ESBL-CARBA" in labels
+    assert unmapped_labels == {
         "Extended Spectrum Beta-Lactamase",
         "Penicillinresistenta pneumokocker",
         "Viral meningoencefalit",
-    }.isdisjoint(labels)
+    }

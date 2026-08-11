@@ -13,10 +13,10 @@ export type Language = "en" | "zh";
 export type Priority = "low" | "normal" | "high" | "urgent";
 
 export function useCreateAITaskForm({
-  countryId,
+  countryCode,
   onClose,
 }: {
-  countryId: number;
+  countryCode: string;
   onClose: () => void;
 }) {
   const [reportType, setReportType] = useState<"daily" | "weekly" | "monthly" | "special">("monthly");
@@ -43,7 +43,7 @@ export function useCreateAITaskForm({
 
     startAITask(
       {
-        country_id: countryId,
+        country_code: countryCode,
         report_type: reportType,
         language: reportLanguage,
         days,

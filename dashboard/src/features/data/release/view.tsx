@@ -47,7 +47,7 @@ import {
   useCancelTask,
   useTaskDetail,
   useTasks,
-  useTaskWebSocket,
+  useTaskEventStream,
   useWorkerStatus,
 } from "@/features/operations/tasks/api";
 import { t } from "@/lib/i18n";
@@ -284,7 +284,7 @@ export default function DataReleasePage() {
   const { data: checks, refetch: refetchChecks, isFetching: checkingAccess, isLoading: loadingChecks } = useDataReleaseChecks(selectedJobId);
   const { data: taskDetail, isFetching: taskDetailLoading } = useTaskDetail(taskDetailUuid);
 
-  useTaskWebSocket({ extraQueryKeys: [["data-release"], ["data-release-jobs"], ["data-release-checks"], ["tasks"], ["task"]] });
+  useTaskEventStream({ extraQueryKeys: [["data-release"], ["data-release-jobs"], ["data-release-checks"], ["tasks"], ["task"]] });
 
   const selectedJob = useMemo(() => jobs?.find((job) => job.job_id === selectedJobId) ?? null, [jobs, selectedJobId]);
 
@@ -623,7 +623,7 @@ export default function DataReleasePage() {
         actions={
           <>
             <Link
-              href="/setting"
+              href="/settings/integrations"
               className="inline-flex h-9 items-center gap-2 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm font-medium text-tremor-content-strong transition hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:hover:bg-dark-tremor-background-subtle"
             >
               {lang === "zh" ? "设置中心" : "Settings"}
@@ -674,8 +674,8 @@ export default function DataReleasePage() {
         />
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
-        <aside className="space-y-5">
+      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
+        <aside className="min-w-0 space-y-5">
           <section className="rounded-tremor-default border border-tremor-border bg-tremor-background px-4 py-3 dark:border-dark-tremor-border dark:bg-dark-tremor-background">
             <div className="mb-1 flex items-center justify-between gap-3">
               <h2 className="text-sm font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">
@@ -823,7 +823,7 @@ export default function DataReleasePage() {
               <AccessDetail label="Recipients" value={settings?.smtp.admin_emails?.length ? settings.smtp.admin_emails.join(", ") : "-"} />
             </div>
             <Link
-              href="/setting"
+              href="/settings/integrations"
               className="mt-3 inline-flex h-9 items-center gap-2 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm font-medium text-tremor-content-strong transition hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:hover:bg-dark-tremor-background-subtle"
             >
               {lang === "zh" ? "打开设置中心" : "Open Settings"}
@@ -832,7 +832,7 @@ export default function DataReleasePage() {
           </section>
         </aside>
 
-        <main className="space-y-5">
+        <main className="min-w-0 space-y-5">
           <section className="space-y-3">
             <FilterToolbar>
               <input

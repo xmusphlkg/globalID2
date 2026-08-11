@@ -1,3 +1,2 @@
-import NotificationsView from "@/features/admin/notifications/view";
-
-export default NotificationsView;
+import { permanentRedirect } from "next/navigation";
+export default function LegacyPage() { permanentRedirect("/production/campaigns"); }

@@ -102,7 +102,7 @@ export interface ProviderUpdatePayload {
 }
 
 export interface ModelPayload {
-  provider_id: number;
+  provider_key: string;
   model_name: string;
   display_name?: string;
   model_key?: string;
@@ -177,8 +177,8 @@ export function useCreateAIProvider() {
 export function useUpdateAIProvider() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ providerId, payload }: { providerId: number; payload: ProviderUpdatePayload }) =>
-      apiFetch(`/ai/models/providers/${providerId}`, {
+    mutationFn: ({ providerKey, payload }: { providerKey: string; payload: ProviderUpdatePayload }) =>
+      apiFetch(`/ai/models/providers/${encodeURIComponent(providerKey)}`, {
         method: "PUT",
         body: JSON.stringify(payload),
       }),
@@ -189,7 +189,7 @@ export function useUpdateAIProvider() {
 export function useDeleteAIProvider() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (providerId: number) => apiFetch(`/ai/models/providers/${providerId}`, { method: "DELETE" }),
+    mutationFn: (providerKey: string) => apiFetch(`/ai/models/providers/${encodeURIComponent(providerKey)}`, { method: "DELETE" }),
     onSuccess: () => invalidateAIModelQueries(queryClient),
   });
 }
@@ -197,7 +197,7 @@ export function useDeleteAIProvider() {
 export function useTestAIProvider() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (providerId: number) => apiFetch(`/ai/models/providers/${providerId}/test`, { method: "POST" }),
+    mutationFn: (providerKey: string) => apiFetch(`/ai/models/providers/${encodeURIComponent(providerKey)}/test`, { method: "POST" }),
     onSuccess: () => invalidateAIModelQueries(queryClient),
   });
 }
@@ -229,8 +229,8 @@ export function useCreateAIModel() {
 export function useUpdateAIModel() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ modelId, payload }: { modelId: number; payload: ModelUpdatePayload }) =>
-      apiFetch(`/ai/models/${modelId}`, {
+    mutationFn: ({ modelKey, payload }: { modelKey: string; payload: ModelUpdatePayload }) =>
+      apiFetch(`/ai/models/${encodeURIComponent(modelKey)}`, {
         method: "PUT",
         body: JSON.stringify(payload),
       }),
@@ -241,7 +241,7 @@ export function useUpdateAIModel() {
 export function useTestAIModel() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (modelId: number) => apiFetch(`/ai/models/${modelId}/test`, { method: "POST" }),
+    mutationFn: (modelKey: string) => apiFetch(`/ai/models/${encodeURIComponent(modelKey)}/test`, { method: "POST" }),
     onSuccess: () => invalidateAIModelQueries(queryClient),
   });
 }
@@ -249,7 +249,7 @@ export function useTestAIModel() {
 export function useDeleteAIModel() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (modelId: number) => apiFetch(`/ai/models/${modelId}`, { method: "DELETE" }),
+    mutationFn: (modelKey: string) => apiFetch(`/ai/models/${encodeURIComponent(modelKey)}`, { method: "DELETE" }),
     onSuccess: () => invalidateAIModelQueries(queryClient),
   });
 }

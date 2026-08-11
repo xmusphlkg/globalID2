@@ -93,13 +93,11 @@ The API entrypoint is `dashboard.api.main:app`. It serves the dashboard and expo
 
 The dashboard under `dashboard/` is the current operational UI. Typical pages include:
 
-- `/` overview
-- `/diseases`
-- `/quality`
-- `/explorer`
-- `/ai`
-- `/ai/interactions`
-- `/reports`
+- `/` Overview
+- `/operations/*` ingestion, task, schedule, and runtime operations
+- `/data/*` governance, analytics, quality, explorer, knowledge, and mappings
+- `/production/*` AI runs, reports, releases, subscriptions, and campaigns
+- `/settings/*` integrations, models, and runtime configuration
 
 ### 4. Astro static site
 
@@ -319,6 +317,12 @@ Run task execution in a separate process so API reloads do not interrupt running
 python -m src.services.task_worker
 ```
 
+Run scheduling in its own process so the API remains stateless:
+
+```bash
+python -m src.control_plane.scheduler
+```
+
 ### Next.js dashboard
 
 ```bash
@@ -327,7 +331,7 @@ npm install
 npm run dev
 ```
 
-By default the dashboard expects the API at `/api/v1` via `dashboard/.env.local`. If you are running the API on a different origin, update `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_WS_URL`.
+The browser always uses same-origin `/api/v1`. If the API runs elsewhere, set the server-only `API_PROXY_TARGET` for the Next.js process.
 
 ### Astro site
 
@@ -651,8 +655,8 @@ Either stop the conflicting service or override ports in the Docker full-stack f
 
 Check `dashboard/.env.local` and make sure:
 
-- `NEXT_PUBLIC_API_URL` points to the running backend
-- `NEXT_PUBLIC_WS_URL` points to the same backend for task updates
+- `API_PROXY_TARGET` points to the running FastAPI service
+- the web and API processes use the same server-only `DASHBOARD_API_KEY`
 
 ### Database initialization appears incomplete
 

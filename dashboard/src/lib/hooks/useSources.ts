@@ -73,11 +73,11 @@ export interface OntologySeries {
   local_labels: string[];
   frequency: string;
   measure: string;
-  reporting_basis: string;
-  unit: string;
-  mapping_relation: string;
-  comparability: string;
-  aggregation_policy: string;
+  reporting_basis?: string | null;
+  unit?: string | null;
+  mapping_relation?: string | null;
+  comparability?: string | null;
+  aggregation_policy?: string | null;
   status: string;
   target?: {
     id?: string | null;
@@ -171,11 +171,11 @@ export interface AutomationTriggerResult {
   reason?: string | null;
 }
 
-export function useSourcesFlow(countryId: number | null) {
+export function useSourcesFlow(countryCode: string | null) {
   return useQuery<DataSourceFlow[]>({
-    queryKey: ["sources-flow", countryId],
+    queryKey: ["sources-flow", countryCode],
     queryFn: () =>
-      apiFetch(countryId ? `/sources/flow?country_id=${countryId}` : "/sources/flow"),
+      apiFetch(countryCode ? `/sources/flow?country_code=${encodeURIComponent(countryCode)}` : "/sources/flow"),
     staleTime: 15 * 1000,
   });
 }
@@ -202,7 +202,7 @@ export function useOntologySeries(countryCode?: string | null) {
 export function useAutomationConfig() {
   return useQuery<AutomationConfig>({
     queryKey: ["sources-automation"],
-    queryFn: () => apiFetch("/sources/automation"),
+    queryFn: () => apiFetch("/schedules/ingestion/config"),
     staleTime: 5 * 1000,
     refetchInterval: 5 * 1000,
   });
@@ -211,7 +211,7 @@ export function useAutomationConfig() {
 export function useAutomationJobs() {
   return useQuery<AutomationJob[]>({
     queryKey: ["sources-automation-jobs"],
-    queryFn: () => apiFetch("/sources/automation/jobs"),
+    queryFn: () => apiFetch("/schedules/ingestion/jobs"),
     staleTime: 5 * 1000,
     refetchInterval: 5 * 1000,
   });
@@ -219,7 +219,7 @@ export function useAutomationJobs() {
 
 export interface CreateCrawlTaskPayload {
   task_name: string;
-  country_id: number;
+  country_code: string;
   description?: string;
   priority?: string;
   input_data?: Record<string, unknown>;
@@ -227,7 +227,7 @@ export interface CreateCrawlTaskPayload {
 
 /** Start a crawl that actually executes (not just creates a DB record). */
 export interface StartCrawlPayload {
-  country_id: number;
+  country_code: string;
   source?: string;
   force?: boolean;
   process?: boolean;
@@ -245,9 +245,9 @@ export function useStartCrawl() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: StartCrawlPayload) =>
-      apiFetch("/crawl/start", {
+      apiFetch(`/sources/${encodeURIComponent(payload.country_code)}/runs`, {
         method: "POST",
-        body: JSON.stringify(payload),
+        body: JSON.stringify(Object.fromEntries(Object.entries(payload).filter(([key]) => key !== "country_code"))),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sources-flow"] });
@@ -260,7 +260,7 @@ export function useRunAutomationJob() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (jobId: string) =>
-      apiFetch<AutomationTriggerResult>(`/sources/automation/jobs/${jobId}/run`, {
+      apiFetch<AutomationTriggerResult>(`/schedules/ingestion/jobs/${jobId}/runs`, {
         method: "POST",
       }),
     onSuccess: () => {
@@ -275,7 +275,7 @@ export function useCreateAutomationJob() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: AutomationJobInput) =>
-      apiFetch<AutomationJob>("/sources/automation/jobs", {
+      apiFetch<AutomationJob>("/schedules/ingestion/jobs", {
         method: "POST",
         body: JSON.stringify(payload),
       }),
@@ -290,7 +290,7 @@ export function useUpdateAutomationJob() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ jobId, payload }: { jobId: string; payload: Partial<AutomationJobInput> }) =>
-      apiFetch<AutomationJob>(`/sources/automation/jobs/${jobId}`, {
+      apiFetch<AutomationJob>(`/schedules/ingestion/jobs/${jobId}`, {
         method: "PUT",
         body: JSON.stringify(payload),
       }),
@@ -305,7 +305,7 @@ export function useDeleteAutomationJob() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (jobId: string) =>
-      apiFetch(`/sources/automation/jobs/${jobId}`, {
+      apiFetch(`/schedules/ingestion/jobs/${jobId}`, {
         method: "DELETE",
       }),
     onSuccess: () => {
@@ -320,7 +320,7 @@ export function useExecuteTask() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (taskUuid: string) =>
-      apiFetch(`/tasks/${taskUuid}/execute`, { method: "POST" }),
+      apiFetch(`/tasks/${taskUuid}/retry`, { method: "POST" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sources-flow"] });
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
