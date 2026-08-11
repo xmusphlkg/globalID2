@@ -1,6 +1,6 @@
 [Unit]
 Description=GlobalID application stack
-Wants=globalid-docker.service globalid-dashboard-api.service globalid-dashboard-worker.service globalid-dashboard-web.service globalid-site.service
+Wants=globalid-docker.service globalid-dashboard-api.service globalid-dashboard-scheduler.service globalid-dashboard-worker.service globalid-dashboard-web.service globalid-site.service
 
 [Install]
 WantedBy=multi-user.target

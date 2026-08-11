@@ -1,6 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiFetch, apiFetchWithHeaders, wsUrl } from "@/lib/api";
+import { apiFetch, apiFetchWithMeta, eventStreamUrl } from "@/lib/api";
 
 export interface TaskItem {
   id: number;
@@ -74,17 +74,17 @@ export interface TaskPage {
 export function useTasks(
   status?: string,
   taskType?: string,
-  countryId?: number | null,
+  countryCode?: string | null,
   search?: string,
   limit = 50,
 ) {
   return useQuery<TaskItem[]>({
-    queryKey: ["tasks", status, taskType, countryId, search, limit],
+    queryKey: ["tasks", status, taskType, countryCode, search, limit],
     queryFn: () => {
-      const params = new URLSearchParams({ limit: String(limit) });
+      const params = new URLSearchParams({ page: "1", page_size: String(limit) });
       if (status) params.set("status", status);
       if (taskType) params.set("task_type", taskType);
-      if (countryId) params.set("country_id", String(countryId));
+      if (countryCode) params.set("country_code", countryCode);
       if (search) params.set("search", search);
       return apiFetch(`/tasks?${params}`);
     },
@@ -96,27 +96,28 @@ export function useTasks(
 export function usePaginatedTasks(
   status?: string,
   taskType?: string,
-  countryId?: number | null,
+  countryCode?: string | null,
   search?: string,
   limit = 50,
   offset = 0,
 ) {
   return useQuery<TaskPage>({
-    queryKey: ["tasks", "paged", status, taskType, countryId, search, limit, offset],
+    queryKey: ["tasks", "paged", status, taskType, countryCode, search, limit, offset],
     queryFn: async () => {
+      const apiPage = Math.floor(offset / limit) + 1;
       const params = new URLSearchParams({
-        limit: String(limit),
-        offset: String(offset),
+        page: String(apiPage),
+        page_size: String(limit),
       });
       if (status) params.set("status", status);
       if (taskType) params.set("task_type", taskType);
-      if (countryId) params.set("country_id", String(countryId));
+      if (countryCode) params.set("country_code", countryCode);
       if (search) params.set("search", search);
 
-      const { data, headers } = await apiFetchWithHeaders<TaskItem[]>(`/tasks?${params}`);
-      const totalCount = Number(headers.get("x-total-count") ?? data.length);
-      const parsedLimit = Number(headers.get("x-limit") ?? limit);
-      const parsedOffset = Number(headers.get("x-offset") ?? offset);
+      const { data, meta } = await apiFetchWithMeta<TaskItem[]>(`/tasks?${params}`);
+      const totalCount = meta.pagination?.total ?? data.length;
+      const parsedLimit = meta.pagination?.page_size ?? limit;
+      const parsedOffset = ((meta.pagination?.page ?? apiPage) - 1) * parsedLimit;
 
       return {
         items: data,
@@ -154,7 +155,7 @@ export function useExecuteTask() {
 
   return useMutation({
     mutationFn: (taskUuid: string) =>
-      apiFetch(`/tasks/${taskUuid}/execute`, { method: "POST" }),
+      apiFetch(`/tasks/${taskUuid}/retry`, { method: "POST" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       queryClient.invalidateQueries({ queryKey: ["task"] });
@@ -181,117 +182,36 @@ export function useCancelTask() {
 }
 
 /**
- * Subscribe to real-time task updates via WebSocket.
+ * Subscribe to cross-process task updates via the control-plane SSE stream.
  * Automatically invalidates the tasks query cache on each message.
  */
-interface TaskWebSocketOptions {
+interface TaskEventStreamOptions {
   extraQueryKeys?: ReadonlyArray<readonly unknown[]>;
-  pingIntervalMs?: number;
 }
 
 const EMPTY_EXTRA_QUERY_KEYS: ReadonlyArray<readonly unknown[]> = [];
 
-export function useTaskWebSocket(options: TaskWebSocketOptions = {}) {
+export function useTaskEventStream(options: TaskEventStreamOptions = {}) {
   const queryClient = useQueryClient();
-  const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimerRef = useRef<number | null>(null);
-  const pingTimerRef = useRef<number | null>(null);
   const extraQueryKeys = options.extraQueryKeys ?? EMPTY_EXTRA_QUERY_KEYS;
-  const pingIntervalMs = options.pingIntervalMs ?? 15000;
   const extraQueryKeysSignature = JSON.stringify(extraQueryKeys);
 
   useEffect(() => {
-    let disposed = false;
-
-    const clearReconnectTimer = () => {
-      if (reconnectTimerRef.current !== null) {
-        window.clearTimeout(reconnectTimerRef.current);
-        reconnectTimerRef.current = null;
-      }
+    const stream = new EventSource(eventStreamUrl());
+    const refresh = () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["task"] });
+      extraQueryKeys.forEach((queryKey) => {
+        queryClient.invalidateQueries({ queryKey: [...queryKey] });
+      });
     };
 
-    const clearPingTimer = () => {
-      if (pingTimerRef.current !== null) {
-        window.clearInterval(pingTimerRef.current);
-        pingTimerRef.current = null;
-      }
-    };
-
-    const connect = () => {
-      const ws = new WebSocket(wsUrl("/tasks/ws"));
-      wsRef.current = ws;
-
-      ws.onopen = () => {
-        if (disposed) {
-          ws.close();
-          return;
-        }
-
-        clearPingTimer();
-        pingTimerRef.current = window.setInterval(() => {
-          if (ws.readyState === WebSocket.OPEN) {
-            ws.send("ping");
-          }
-        }, pingIntervalMs);
-      };
-
-      ws.onmessage = () => {
-        // Invalidate so TanStack Query refetches.
-        queryClient.invalidateQueries({ queryKey: ["tasks"] });
-        queryClient.invalidateQueries({ queryKey: ["task"] });
-        extraQueryKeys.forEach((queryKey) => {
-          queryClient.invalidateQueries({ queryKey: [...queryKey] });
-        });
-      };
-
-      ws.onclose = () => {
-        clearPingTimer();
-        if (wsRef.current === ws) {
-          wsRef.current = null;
-        }
-
-        if (disposed) {
-          return;
-        }
-
-        clearReconnectTimer();
-        reconnectTimerRef.current = window.setTimeout(() => {
-          reconnectTimerRef.current = null;
-          if (!disposed) {
-            connect();
-          }
-        }, 3000);
-      };
-    };
-
-    connect();
+    ["task.created", "task.claimed", "task.started", "task.progress", "task.status", "task.cancel_requested", "task.cancelled", "task.failed", "task.completed"].forEach(
+      (eventName) => stream.addEventListener(eventName, refresh),
+    );
 
     return () => {
-      disposed = true;
-      clearReconnectTimer();
-      clearPingTimer();
-
-      const ws = wsRef.current;
-      wsRef.current = null;
-
-      if (!ws) {
-        return;
-      }
-
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.close();
-        return;
-      }
-
-      if (ws.readyState === WebSocket.CONNECTING) {
-        ws.addEventListener(
-          "open",
-          () => {
-            ws.close();
-          },
-          { once: true },
-        );
-      }
+      stream.close();
     };
-  }, [extraQueryKeysSignature, pingIntervalMs, queryClient]);
+  }, [extraQueryKeysSignature, queryClient]);
 }

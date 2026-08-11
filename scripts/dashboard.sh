@@ -9,9 +9,11 @@ LOG_DIR="$ROOT_DIR/logs"
 API_LOG="$LOG_DIR/dashboard-api.log"
 WEB_LOG="$LOG_DIR/dashboard-web.log"
 WORKER_LOG="$LOG_DIR/dashboard-worker.log"
+SCHEDULER_LOG="$LOG_DIR/dashboard-scheduler.log"
 API_PID_FILE="$LOG_DIR/dashboard-api.pid"
 WEB_PID_FILE="$LOG_DIR/dashboard-web.pid"
 WORKER_PID_FILE="$LOG_DIR/dashboard-worker.pid"
+SCHEDULER_PID_FILE="$LOG_DIR/dashboard-scheduler.pid"
 
 ACTION="${1:-status}"
 TARGET="${2:-all}"
@@ -21,16 +23,17 @@ mkdir -p "$LOG_DIR"
 usage() {
   cat <<'EOF'
 Usage:
-  ./scripts/dashboard.sh start [all|api|worker|web]
-  ./scripts/dashboard.sh stop [all|api|worker|web]
-  ./scripts/dashboard.sh restart [all|api|worker|web]
+  ./scripts/dashboard.sh start [all|api|scheduler|worker|web]
+  ./scripts/dashboard.sh stop [all|api|scheduler|worker|web]
+  ./scripts/dashboard.sh restart [all|api|scheduler|worker|web]
   ./scripts/dashboard.sh status
-  ./scripts/dashboard.sh logs [api|worker|web]
+  ./scripts/dashboard.sh logs [api|scheduler|worker|web]
 
 Examples:
   ./scripts/dashboard.sh start
   ./scripts/dashboard.sh start api
   ./scripts/dashboard.sh start worker
+  ./scripts/dashboard.sh start scheduler
   DASHBOARD_API_RELOAD=1 ./scripts/dashboard.sh start api
   ./scripts/dashboard.sh stop web
   ./scripts/dashboard.sh logs api
@@ -91,6 +94,13 @@ is_managed_worker_pid() {
   [[ "$cmd" == *"src.services.task_worker"* ]]
 }
 
+is_managed_scheduler_pid() {
+  local pid="$1"
+  local cmd
+  cmd="$(pid_cmdline "$pid")"
+  [[ "$cmd" == *"src.control_plane.scheduler"* ]]
+}
+
 is_managed_web_pid() {
   local pid="$1"
   local cmd
@@ -98,11 +108,18 @@ is_managed_web_pid() {
   cmd="$(pid_cmdline "$pid")"
   cwd="$(readlink "/proc/$pid/cwd" 2>/dev/null || true)"
   [[ "$cmd" == *"dashboard/node_modules/.bin/next"* && "$cmd" == *"dev"* && "$cmd" == *"--port 3000"* ]] ||
-    [[ "$cmd" == *"next-server"* && "$cwd" == "$DASHBOARD_DIR"* ]]
+    [[ "$cmd" == *"next-server"* && (
+      "$cwd" == "$DASHBOARD_DIR"* ||
+      "$cwd" == "$LOG_DIR/dashboard-web-releases/"*
+    ) ]]
 }
 
 find_worker_pid() {
   ps -eo pid=,args= 2>/dev/null | awk '/src\.services\.task_worker/ && !/awk/ {print $1; exit}'
+}
+
+find_scheduler_pid() {
+  ps -eo pid=,args= 2>/dev/null | awk '/src\.control_plane\.scheduler/ && !/awk/ {print $1; exit}'
 }
 
 find_web_pid() {
@@ -127,6 +144,9 @@ find_managed_service_pid() {
       ;;
     worker)
       find_worker_pid
+      ;;
+    scheduler)
+      find_scheduler_pid
       ;;
     web)
       find_web_pid
@@ -326,6 +346,7 @@ start_web() {
   (
     cd "$DASHBOARD_DIR"
     export_env_from_root_if_unset "DASHBOARD_API_KEY"
+    export_env_from_root_if_unset "API_PROXY_TARGET"
     nohup npm run dev -- --port 3000 > "$WEB_LOG" 2>&1 &
     echo $! > "$WEB_PID_FILE"
   )
@@ -386,6 +407,36 @@ start_worker() {
   else
     echo "Task worker failed to start. Check $WORKER_LOG" >&2
     rm -f "$WORKER_PID_FILE"
+    exit 1
+  fi
+}
+
+start_scheduler() {
+  adopt_managed_pid_if_needed "scheduler" "$SCHEDULER_PID_FILE"
+  cleanup_pid_file_if_stale "$SCHEDULER_PID_FILE"
+  local pid
+  pid="$(read_pid "$SCHEDULER_PID_FILE")"
+  if [[ -n "$pid" ]] && pid_is_running "$pid"; then
+    echo "Control-plane scheduler is already running (PID $pid)"
+    return
+  fi
+
+  local python_bin
+  python_bin="$(resolve_python)"
+  echo "Starting control-plane scheduler"
+  (
+    cd "$ROOT_DIR"
+    nohup "$python_bin" -m src.control_plane.scheduler > "$SCHEDULER_LOG" 2>&1 &
+    echo $! > "$SCHEDULER_PID_FILE"
+  )
+  sleep 2
+
+  pid="$(read_pid "$SCHEDULER_PID_FILE")"
+  if [[ -n "$pid" ]] && pid_is_running "$pid"; then
+    echo "Control-plane scheduler started (PID $pid)"
+  else
+    echo "Control-plane scheduler failed to start. Check $SCHEDULER_LOG" >&2
+    rm -f "$SCHEDULER_PID_FILE"
     exit 1
   fi
 }
@@ -470,12 +521,16 @@ show_logs() {
       touch "$WORKER_LOG"
       tail -f "$WORKER_LOG"
       ;;
+    scheduler)
+      touch "$SCHEDULER_LOG"
+      tail -f "$SCHEDULER_LOG"
+      ;;
     web)
       touch "$WEB_LOG"
       tail -f "$WEB_LOG"
       ;;
     *)
-      echo "logs requires one target: api, worker, or web" >&2
+      echo "logs requires one target: api, scheduler, worker, or web" >&2
       exit 1
       ;;
   esac
@@ -486,10 +541,11 @@ run_for_target() {
   case "$TARGET" in
     all)
       "$operation" api
+      "$operation" scheduler
       "$operation" worker
       "$operation" web
       ;;
-    api|worker|web)
+    api|scheduler|worker|web)
       "$operation" "$TARGET"
       ;;
     *)
@@ -503,6 +559,7 @@ run_for_target() {
 dispatch_start() {
   case "$1" in
     api) start_api ;;
+    scheduler) start_scheduler ;;
     worker) start_worker ;;
     web) start_web ;;
   esac
@@ -511,6 +568,7 @@ dispatch_start() {
 dispatch_stop() {
   case "$1" in
     api) stop_one "API" "$API_PID_FILE" "api" ;;
+    scheduler) stop_one "Control-plane scheduler" "$SCHEDULER_PID_FILE" "scheduler" ;;
     worker) stop_one "Task worker" "$WORKER_PID_FILE" "worker" ;;
     web) stop_one "Dashboard web" "$WEB_PID_FILE" "web" ;;
   esac
@@ -530,6 +588,17 @@ dispatch_status() {
         echo "Task worker: stopped"
       fi
       ;;
+    scheduler)
+      adopt_managed_pid_if_needed "scheduler" "$SCHEDULER_PID_FILE"
+      cleanup_pid_file_if_stale "$SCHEDULER_PID_FILE"
+      local scheduler_pid
+      scheduler_pid="$(read_pid "$SCHEDULER_PID_FILE")"
+      if [[ -n "$scheduler_pid" ]] && pid_is_running "$scheduler_pid"; then
+        echo "Control-plane scheduler: running (PID $scheduler_pid)"
+      else
+        echo "Control-plane scheduler: stopped"
+      fi
+      ;;
     web) status_one "Dashboard web" "$WEB_PID_FILE" "http://localhost:3000" 3000 "web" ;;
   esac
 }
@@ -542,6 +611,7 @@ case "$ACTION" in
     if [[ "$TARGET" == "all" ]]; then
       dispatch_stop web
       dispatch_stop worker
+      dispatch_stop scheduler
       dispatch_stop api
     else
       run_for_target dispatch_stop
@@ -551,8 +621,10 @@ case "$ACTION" in
     if [[ "$TARGET" == "all" ]]; then
       dispatch_stop web
       dispatch_stop worker
+      dispatch_stop scheduler
       dispatch_stop api
       dispatch_start api
+      dispatch_start scheduler
       dispatch_start worker
       dispatch_start web
     else
@@ -562,6 +634,7 @@ case "$ACTION" in
     ;;
   status)
     dispatch_status api
+    dispatch_status scheduler
     dispatch_status worker
     dispatch_status web
     ;;

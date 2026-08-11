@@ -55,8 +55,11 @@ def test_disease_trend_uses_series_first_curve(monkeypatch) -> None:
         return _result()
 
     monkeypatch.setattr(overview, "load_series_first_records", fake_load)
+    async def fake_country_id(_country_code, _db):
+        return 11
+    monkeypatch.setattr(overview, "_resolve_country_id", fake_country_id)
 
-    response = TestClient(_app()).get("/overview/trend?country_id=11&disease_code=D001")
+    response = TestClient(_app()).get("/analytics/trends?country_code=XX&disease_code=D001")
 
     assert response.status_code == 200
     assert [point["cases"] for point in response.json()] == [2, 3]
@@ -68,9 +71,12 @@ def test_monthly_comparison_aggregates_projected_curve(monkeypatch) -> None:
         return _result()
 
     monkeypatch.setattr(overview, "load_series_first_records", fake_load)
+    async def fake_country_id(_country_code, _db):
+        return 11
+    monkeypatch.setattr(overview, "_resolve_country_id", fake_country_id)
 
     response = TestClient(_app()).get(
-        "/overview/monthly-comparison?country_id=11&disease_code=D001"
+        "/analytics/monthly-comparison?country_code=XX&disease_code=D001"
     )
 
     assert response.status_code == 200

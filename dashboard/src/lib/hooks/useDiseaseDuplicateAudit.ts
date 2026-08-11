@@ -143,7 +143,7 @@ export function useDiseaseDuplicateAuditStatus(includeNewDiseaseCandidates = tru
 export function useDiseaseDuplicateAuditLogs(limit = 100) {
   return useQuery<DiseaseAuditLogEntry[]>({
     queryKey: ["disease-duplicate-audit-logs", limit],
-    queryFn: () => apiFetch(`/ai/disease-audit/logs?limit=${limit}`),
+    queryFn: () => apiFetch(`/ai/disease-audit/logs?page=1&page_size=${limit}`),
     staleTime: 5 * 1000,
     refetchInterval: 10 * 1000,
   });

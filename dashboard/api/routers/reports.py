@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Any, List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -165,9 +165,11 @@ async def _resolve_task_report_id(task: Task, db: AsyncSession) -> Optional[int]
 
 @router.get("/reports", response_model=List[ReportOut])
 async def list_reports(
-    country_id: Optional[int] = Query(None),
+    response: Response,
+    country_code: Optional[str] = Query(None, min_length=2, max_length=10),
     status: Optional[str] = Query(None),
-    limit: int = Query(50, ge=1, le=200),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
 ):
     q = (
@@ -180,15 +182,24 @@ async def list_reports(
         .outerjoin(ReportSection, ReportSection.report_id == Report.id)
         .group_by(Report.id, Country.name)
         .order_by(Report.created_at.desc())
-        .limit(limit)
     )
 
-    if country_id is not None:
-        q = q.where(Report.country_id == country_id)
-    if status:
-        q = q.where(Report.status == parse_enum_member(ReportStatus, status, "status"))
+    count_q = select(func.count()).select_from(Report).join(Country, Report.country_id == Country.id)
 
-    rows = (await db.execute(q)).all()
+    if country_code:
+        q = q.where(func.upper(Country.code) == country_code.strip().upper())
+        count_q = count_q.where(func.upper(Country.code) == country_code.strip().upper())
+    if status:
+        status_value = parse_enum_member(ReportStatus, status, "status")
+        q = q.where(Report.status == status_value)
+        count_q = count_q.where(Report.status == status_value)
+
+    total = int((await db.execute(count_q)).scalar_one() or 0)
+    offset = (page - 1) * page_size
+    rows = (await db.execute(q.offset(offset).limit(page_size))).all()
+    response.headers["X-Total-Count"] = str(total)
+    response.headers["X-Limit"] = str(page_size)
+    response.headers["X-Offset"] = str(offset)
 
     disease_map: dict[int, list[str]] = {}
     report_ids = [r.Report.id for r in rows]
@@ -352,12 +363,12 @@ async def get_report_runs(report_uuid: UUID, db: AsyncSession = Depends(get_db))
 
 
 @router.get(
-    "/reports/{report_uuid}/sections/{section_id}/conversations",
+    "/reports/{report_uuid}/sections/{section_key}/conversations",
     response_model=List[AIConversationOut],
 )
 async def get_section_conversations(
     report_uuid: str,
-    section_id: int,
+    section_key: str,
     db: AsyncSession = Depends(get_db),
 ):
     # Validate report exists
@@ -366,7 +377,18 @@ async def get_section_conversations(
     if report_id is None:
         raise HTTPException(404, "Report not found")
 
-    # Find matching run(s) for this section
+    section_id = (
+        await db.execute(
+            select(ReportSection.id).where(
+                ReportSection.report_id == report_id,
+                ReportSection.section_type == section_key,
+            )
+        )
+    ).scalar_one_or_none()
+    if section_id is None:
+        raise HTTPException(404, "Report section not found")
+
+    # Find matching run(s) for this stable section type.
     run_q = select(ReportSectionRun.id).where(
         ReportSectionRun.report_id == report_id,
         ReportSectionRun.section_id == section_id,
@@ -385,13 +407,15 @@ async def get_section_conversations(
 
 @router.get("/ai/interactions", response_model=List[AIInteractionOut])
 async def list_ai_interactions(
-    country_id: Optional[int] = Query(None),
+    response: Response,
+    country_code: Optional[str] = Query(None, min_length=2, max_length=10),
     task_uuid: Optional[str] = Query(None),
     report_uuid: Optional[str] = Query(None),
     agent: Optional[str] = Query(None),
     model: Optional[str] = Query(None),
     disease: Optional[str] = Query(None),
-    limit: int = Query(200, ge=1, le=1000),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(200, ge=1, le=1000),
     db: AsyncSession = Depends(get_db),
 ):
     task = None
@@ -412,6 +436,9 @@ async def list_ai_interactions(
             raise HTTPException(404, "Report not found")
 
     if task_uuid and report_id is None:
+        response.headers["X-Total-Count"] = "0"
+        response.headers["X-Limit"] = str(page_size)
+        response.headers["X-Offset"] = str((page - 1) * page_size)
         return []
 
     q = (
@@ -420,11 +447,14 @@ async def list_ai_interactions(
         .join(Report, AIConversation.report_id == Report.id)
         .outerjoin(ReportSection, AIConversation.section_id == ReportSection.id)
         .order_by(AIConversation.timestamp.desc())
-        .limit(limit)
     )
 
-    if country_id is not None:
-        q = q.where(Report.country_id == country_id)
+    if country_code:
+        q = q.where(
+            Report.country_id.in_(
+                select(Country.id).where(func.upper(Country.code) == country_code.strip().upper())
+            )
+        )
     if report_id is not None:
         q = q.where(AIConversation.report_id == report_id)
     if agent:
@@ -434,7 +464,13 @@ async def list_ai_interactions(
     if disease:
         q = q.where(ReportSectionRun.disease_name.ilike(f"%{disease}%"))
 
-    rows = (await db.execute(q)).all()
+    count_q = select(func.count()).select_from(q.order_by(None).subquery())
+    total = int((await db.execute(count_q)).scalar_one() or 0)
+    offset = (page - 1) * page_size
+    rows = (await db.execute(q.offset(offset).limit(page_size))).all()
+    response.headers["X-Total-Count"] = str(total)
+    response.headers["X-Limit"] = str(page_size)
+    response.headers["X-Offset"] = str(offset)
     return [
         AIInteractionOut(
             id=row.AIConversation.id,
@@ -477,7 +513,7 @@ async def list_ai_interactions(
 
 @router.get("/ai/interactions/summary", response_model=AIInteractionSummaryOut)
 async def get_ai_interactions_summary(
-    country_id: Optional[int] = Query(None),
+    country_code: Optional[str] = Query(None, min_length=2, max_length=10),
     task_uuid: Optional[str] = Query(None),
     report_uuid: Optional[str] = Query(None),
     agent: Optional[str] = Query(None),
@@ -520,8 +556,12 @@ async def get_ai_interactions_summary(
         .join(Report, AIConversation.report_id == Report.id)
     )
 
-    if country_id is not None:
-        q = q.where(Report.country_id == country_id)
+    if country_code:
+        q = q.where(
+            Report.country_id.in_(
+                select(Country.id).where(func.upper(Country.code) == country_code.strip().upper())
+            )
+        )
     if report_id is not None:
         q = q.where(AIConversation.report_id == report_id)
     if agent:

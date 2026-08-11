@@ -16,15 +16,15 @@ import { formatNumber } from "@/lib/utils";
 import { useAppStore } from "@/stores/app-store";
 
 export default function DiseasesPage() {
-  const { lang, countryId } = useAppStore();
-  const { data: diseases } = useDiseases(countryId, lang);
+  const { lang, countryCode } = useAppStore();
+  const { data: diseases } = useDiseases(countryCode || null, lang);
 
   const [selectedCode, setSelectedCode] = useState<string | null>(null);
   const [compareMode, setCompareMode] = useState(false);
   const [compareCodes, setCompareCodes] = useState<string[]>([]);
 
-  const { data: records } = useDiseaseRecords(compareMode ? null : selectedCode, countryId);
-  const { data: compareData } = useCompare(compareMode ? countryId : null, compareCodes);
+  const { data: records } = useDiseaseRecords(compareMode ? null : selectedCode, countryCode || null);
+  const { data: compareData } = useCompare(compareMode ? countryCode || null : null, compareCodes);
 
   useEffect(() => {
     if (!compareMode && !selectedCode && diseases && diseases.length > 0) {
@@ -39,7 +39,7 @@ export default function DiseasesPage() {
     ).sort();
   }, [compareData]);
 
-  if (!countryId) {
+  if (!countryCode) {
     return (
       <EmptyState
         icon={<Activity className="h-12 w-12" />}
@@ -106,6 +106,7 @@ export default function DiseasesPage() {
 
         {compareMode ? (
           <select
+            aria-label={lang === "zh" ? "选择疾病" : "Select disease"}
             multiple
             value={compareCodes}
             onChange={(event) => {
@@ -122,6 +123,7 @@ export default function DiseasesPage() {
           </select>
         ) : (
           <select
+            aria-label={lang === "zh" ? "选择对比疾病" : "Select diseases to compare"}
             value={selectedCode || "all"}
             onChange={(event) => setSelectedCode(event.target.value === "all" ? null : event.target.value)}
             className="h-10 min-w-[280px] rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm text-tremor-content-strong outline-none transition focus:border-tremor-brand-subtle focus:ring-2 focus:ring-tremor-brand-muted dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong"

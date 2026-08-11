@@ -1,3 +1,2 @@
-import ReportsView from "@/features/reports/list/view";
-
-export default ReportsView;
+import { permanentRedirect } from "next/navigation";
+export default function LegacyPage() { permanentRedirect("/production/reports"); }

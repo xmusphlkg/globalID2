@@ -15,7 +15,7 @@ from urllib import parse as urlparse
 from urllib import request as urlrequest
 
 from anthropic import AsyncAnthropic
-from fastapi import APIRouter, BackgroundTasks, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Response
 from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 
@@ -493,22 +493,30 @@ async def subscription_stats():
 
 @router.get("/subscriptions/records")
 async def subscription_records(
+    response: Response,
     status: Optional[str] = Query(default=None),
     list_code: Optional[str] = Query(default=None),
     q: Optional[str] = Query(default=None),
-    limit: int = Query(default=50, ge=1, le=250),
-    offset: int = Query(default=0, ge=0),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=50, ge=1, le=250),
 ):
-    return await _worker_request(
+    offset = (page - 1) * page_size
+    result = await _worker_request(
         "/api/admin/subscriptions",
         query={
             "status": status,
             "list_code": list_code,
             "q": q,
-            "limit": limit,
+            "limit": page_size,
             "offset": offset,
         },
     )
+    pagination = result.get("pagination") if isinstance(result, dict) else {}
+    total = int((pagination or {}).get("total") or len(result.get("subscriptions") or []))
+    response.headers["X-Total-Count"] = str(total)
+    response.headers["X-Limit"] = str(page_size)
+    response.headers["X-Offset"] = str(offset)
+    return result.get("subscriptions") or []
 
 
 @router.post("/subscriptions/audience")
@@ -521,18 +529,26 @@ async def subscription_maintenance():
     return await _worker_request("/api/admin/maintenance", method="POST", payload={})
 
 
-@router.get("/subscriptions/notifications")
+@router.get("/notification-campaigns")
 async def subscription_notifications(
-    limit: int = Query(default=25, ge=1, le=100),
-    offset: int = Query(default=0, ge=0),
+    response: Response,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=25, ge=1, le=100),
 ):
-    return await _worker_request(
+    offset = (page - 1) * page_size
+    result = await _worker_request(
         "/api/admin/notifications",
-        query={"limit": limit, "offset": offset},
+        query={"limit": page_size, "offset": offset},
     )
+    pagination = result.get("pagination") if isinstance(result, dict) else {}
+    total = int((pagination or {}).get("total") or len(result.get("campaigns") or []))
+    response.headers["X-Total-Count"] = str(total)
+    response.headers["X-Limit"] = str(page_size)
+    response.headers["X-Offset"] = str(offset)
+    return result.get("campaigns") or []
 
 
-@router.get("/subscriptions/notifications/{campaign_id}")
+@router.get("/notification-campaigns/{campaign_id}")
 async def subscription_notification_detail(
     campaign_id: str,
     delivery_limit: int = Query(default=100, ge=1, le=500),
@@ -543,7 +559,7 @@ async def subscription_notification_detail(
     )
 
 
-@router.post("/subscriptions/notifications")
+@router.post("/notification-campaigns", status_code=201)
 async def create_subscription_notification(
     body: NotificationCreateRequest,
     background_tasks: BackgroundTasks,
@@ -592,7 +608,7 @@ async def create_subscription_notification(
     }
 
 
-@router.post("/subscriptions/notifications/{campaign_id}/send")
+@router.post("/notification-campaigns/{campaign_id}/send", status_code=202)
 async def start_subscription_notification_send(
     campaign_id: str,
     background_tasks: BackgroundTasks,
@@ -607,7 +623,7 @@ async def start_subscription_notification_send(
     }
 
 
-@router.post("/subscriptions/notifications/{campaign_id}/process")
+@router.post("/notification-campaigns/{campaign_id}/process", status_code=202)
 async def process_subscription_notification_batch(
     campaign_id: str,
     batch_size: int = Query(default=20, ge=1, le=100),

@@ -50,7 +50,12 @@ class BaseModel(Base, IDMixin, TimestampMixin):
         """转换为字典"""
         result = {}
         for column in self.__table__.columns:
-            value = getattr(self, column.name)
+            # The Python attribute can intentionally differ from the database
+            # column name (for example ``metadata_`` maps to ``metadata``).
+            # Reading by column.name would resolve DeclarativeBase.metadata in
+            # that case and leak SQLAlchemy's MetaData object into API output.
+            attribute_name = self.__mapper__.get_property_by_column(column).key
+            value = getattr(self, attribute_name)
             if isinstance(value, datetime):
                 value = value.isoformat()
             result[column.name] = value

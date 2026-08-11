@@ -20,7 +20,7 @@ DEFAULT_AGENT_ACTIONS = [
 
 class AgentWorkflowCreateRequest(BaseModel):
     prompt: str = Field(..., min_length=1)
-    country_id: Optional[int] = Field(None, ge=1)
+    country_code: Optional[str] = Field(None, min_length=2, max_length=10)
     mode: str = Field("research")
     output_format: str = Field("evidence_report")
     allowed_actions: List[str] = Field(default_factory=lambda: list(DEFAULT_AGENT_ACTIONS))

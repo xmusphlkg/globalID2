@@ -1,3 +1,5 @@
-import HomeView from "@/features/workbench/home/view";
+import { permanentRedirect } from "next/navigation";
 
-export default HomeView;
+export default function RootPage() {
+  permanentRedirect("/overview");
+}

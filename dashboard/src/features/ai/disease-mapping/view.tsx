@@ -105,11 +105,11 @@ export default function DiseaseMappingView() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-base font-semibold">{copy.review}</h2>
           <div className="flex gap-2">
-            <select className={button} value={country} onChange={(event) => setCountry(event.target.value)}>
+            <select aria-label={lang === "zh" ? "国家筛选" : "Country filter"} className={button} value={country} onChange={(event) => setCountry(event.target.value)}>
               <option value="">{copy.all}</option>
               {summary.data?.countries.map((item) => <option key={item.country_code} value={item.country_code}>{item.country_code} ({item.categories})</option>)}
             </select>
-            <select className={button} value={aiStatus} onChange={(event) => setAiStatus(event.target.value)}>
+            <select aria-label={lang === "zh" ? "AI 状态筛选" : "AI status filter"} className={button} value={aiStatus} onChange={(event) => setAiStatus(event.target.value)}>
               <option value="">{copy.allStates}</option><option value="pending">pending</option><option value="completed">completed</option><option value="failed">failed</option><option value="not_required">not_required</option>
             </select>
           </div>
@@ -119,13 +119,13 @@ export default function DiseaseMappingView() {
             <article key={category.id} className="rounded-tremor-default border border-tremor-border p-4 dark:border-dark-tremor-border">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div><div className="flex flex-wrap gap-2"><StatusBadge tone="info">{category.country_code}</StatusBadge><StatusBadge>{category.source_id}</StatusBadge><StatusBadge status={category.ai_status}>{category.ai_status}</StatusBadge></div><h3 className="mt-2 font-semibold">{category.canonical_source_label}</h3><p className="mt-1 text-xs text-tremor-content-subtle">{category.source_code}</p></div>
-                {category.ai_status !== "not_required" && !category.candidates.length ? <button className={button} disabled={busy} onClick={() => suggest.mutate(category.id)}><RotateCw className="h-4 w-4" />{copy.suggest}</button> : null}
+                {category.ai_status !== "not_required" && !category.candidates.length ? <button className={button} disabled={busy} onClick={() => suggest.mutate(category.category_key)}><RotateCw className="h-4 w-4" />{copy.suggest}</button> : null}
               </div>
               {category.candidates.map((candidate) => (
                 <div key={candidate.id} className="mt-3 rounded-tremor-default bg-tremor-background-subtle p-3 dark:bg-dark-tremor-background-subtle">
                   <div className="flex flex-wrap items-center gap-2"><StatusBadge tone="primary">#{candidate.target_code || candidate.proposed_name_en || "unmapped"}</StatusBadge><StatusBadge>{candidate.mapping_relation}</StatusBadge><StatusBadge>{candidate.comparability}</StatusBadge><StatusBadge tone={candidate.confidence_score >= .8 ? "success" : "warning"}>{Math.round(candidate.confidence_score * 100)}%</StatusBadge></div>
                   {candidate.reasoning ? <p className="mt-2 text-sm leading-6">{candidate.reasoning}</p> : null}
-                  <div className="mt-3 flex gap-2"><button className={button} disabled={busy || candidate.candidate_kind === "new_concept"} onClick={() => accept.mutate(candidate.id)}><Check className="h-4 w-4" />{copy.accept}</button><button className={button} disabled={busy} onClick={() => reject.mutate(candidate.id)}><X className="h-4 w-4" />{copy.reject}</button></div>
+                  <div className="mt-3 flex gap-2"><button className={button} disabled={busy || candidate.candidate_kind === "new_concept"} onClick={() => accept.mutate(candidate.candidate_key)}><Check className="h-4 w-4" />{copy.accept}</button><button className={button} disabled={busy} onClick={() => reject.mutate(candidate.candidate_key)}><X className="h-4 w-4" />{copy.reject}</button></div>
                 </div>
               ))}
             </article>
@@ -136,7 +136,7 @@ export default function DiseaseMappingView() {
       <section className="app-panel p-4">
         <div className="flex items-center justify-between"><h2 className="text-base font-semibold">{copy.releases}</h2><StatusBadge tone="info"><Mail className="mr-1 h-3 w-3" />{copy.email}: {summary.data?.automation.email_provider ?? "—"}</StatusBadge></div>
         <div className="mt-4 divide-y divide-tremor-border dark:divide-dark-tremor-border">
-          {releases.data?.map((release) => <div key={release.id} className="flex flex-wrap items-center justify-between gap-3 py-3"><div><span className="font-mono text-sm font-semibold">{release.release_code}</span><div className="mt-1 flex gap-2"><StatusBadge status={release.status}>{release.status}</StatusBadge><span className="text-xs text-tremor-content-subtle">{release.metadata?.assertion_count ?? 0} assertions · {release.checksum.slice(0, 12)}</span></div></div>{release.status === "draft" ? <button className={button} disabled={activate.isPending} onClick={() => activate.mutate(release.id)}>{copy.activate}</button> : null}</div>)}
+          {releases.data?.map((release) => <div key={release.release_code} className="flex flex-wrap items-center justify-between gap-3 py-3"><div><span className="font-mono text-sm font-semibold">{release.release_code}</span><div className="mt-1 flex gap-2"><StatusBadge status={release.status}>{release.status}</StatusBadge><span className="text-xs text-tremor-content-subtle">{release.metadata?.assertion_count ?? 0} assertions · {release.checksum.slice(0, 12)}</span></div></div>{release.status === "draft" ? <button className={button} disabled={activate.isPending} onClick={() => activate.mutate(release.release_code)}>{copy.activate}</button> : null}</div>)}
         </div>
       </section>
     </div>

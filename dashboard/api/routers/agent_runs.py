@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,11 +14,12 @@ from ..schemas.agent import (
     AgentWorkflowActionOut,
     AgentWorkflowCreateRequest,
     AgentWorkflowRunDetailOut,
-    AgentWorkflowRunListOut,
+    AgentWorkflowRunSummaryOut,
 )
 from src.core.task_manager import task_manager
 from src.domain import AgentWorkflowRun, TaskStatus, TaskType, TaskPriority
 from src.services.agent_workflow_service import agent_workflow_service
+from src.control_plane.operations import CountryQueryRepository
 
 router = APIRouter()
 
@@ -37,17 +38,21 @@ def _not_found_or_conflict(exc: ValueError) -> HTTPException:
     return HTTPException(status_code=409, detail=message)
 
 
-@router.post("/ai/agent-runs", response_model=AgentWorkflowRunDetailOut, status_code=201)
+@router.post("/ai/runs", response_model=AgentWorkflowRunDetailOut, status_code=202)
 async def create_agent_run(body: AgentWorkflowCreateRequest, db: AsyncSession = Depends(get_db)):
     prompt = body.prompt.strip()
     if not prompt:
         raise HTTPException(status_code=422, detail="prompt is required")
 
+    country_id = await CountryQueryRepository(db).id_for_code(body.country_code)
+    if body.country_code and country_id is None:
+        raise HTTPException(404, "Country not found")
+
     task_name = body.task_name or f"Agent workflow: {prompt[:80]}"
     description = body.description or prompt
     input_data = {
         "prompt": prompt,
-        "country_id": body.country_id,
+        "country_code": body.country_code.strip().upper() if body.country_code else None,
         "mode": body.mode,
         "output_format": body.output_format,
         "allowed_actions": body.allowed_actions,
@@ -63,7 +68,7 @@ async def create_agent_run(body: AgentWorkflowCreateRequest, db: AsyncSession = 
     task = await task_manager.create_task(
         task_type=TaskType.AGENT_WORKFLOW,
         task_name=task_name,
-        country_id=body.country_id,
+        country_id=country_id,
         priority=_priority_from_text(body.priority),
         description=description,
         input_data=input_data,
@@ -80,7 +85,7 @@ async def create_agent_run(body: AgentWorkflowCreateRequest, db: AsyncSession = 
             prompt=prompt,
             status="queued",
             risk_level="medium",
-            country_id=body.country_id,
+            country_id=country_id,
             search_scope=body.search_scope,
             memory_scope=body.memory_scope,
             allowed_actions=list(body.allowed_actions),
@@ -118,7 +123,7 @@ async def create_agent_run(body: AgentWorkflowCreateRequest, db: AsyncSession = 
         run.output_format = body.output_format
         run.prompt = prompt
         run.status = run.status if run.status == "running" else "queued"
-        run.country_id = body.country_id
+        run.country_id = country_id
         run.search_scope = body.search_scope
         run.memory_scope = body.memory_scope
         run.allowed_actions = list(body.allowed_actions)
@@ -166,24 +171,33 @@ async def create_agent_run(body: AgentWorkflowCreateRequest, db: AsyncSession = 
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.get("/ai/agent-runs", response_model=AgentWorkflowRunListOut)
+@router.get("/ai/runs", response_model=list[AgentWorkflowRunSummaryOut])
 async def list_agent_runs(
-    limit: int = Query(20, ge=1, le=200),
-    offset: int = Query(0, ge=0),
+    response: Response,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=200),
     status: Optional[str] = Query(None),
     search: Optional[str] = Query(None),
-    country_id: Optional[int] = Query(None, ge=1),
+    country_code: Optional[str] = Query(None, min_length=2, max_length=10),
+    db: AsyncSession = Depends(get_db),
 ):
-    return await agent_workflow_service.list_runs(
-        limit=limit,
-        offset=offset,
+    country_id = await CountryQueryRepository(db).id_for_code(country_code)
+    if country_code and country_id is None:
+        raise HTTPException(404, "Country not found")
+    payload = await agent_workflow_service.list_runs(
+        limit=page_size,
+        offset=(page - 1) * page_size,
         status=status,
         search=search,
         country_id=country_id,
     )
+    response.headers["X-Total-Count"] = str(payload["total"])
+    response.headers["X-Limit"] = str(page_size)
+    response.headers["X-Offset"] = str((page - 1) * page_size)
+    return payload["items"]
 
 
-@router.get("/ai/agent-runs/{task_uuid}", response_model=AgentWorkflowRunDetailOut)
+@router.get("/ai/runs/{task_uuid}", response_model=AgentWorkflowRunDetailOut)
 async def get_agent_run(task_uuid: str):
     try:
         return await agent_workflow_service.get_run_detail(task_uuid)
@@ -191,7 +205,7 @@ async def get_agent_run(task_uuid: str):
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
-@router.post("/ai/agent-runs/{task_uuid}/resume", response_model=AgentWorkflowActionOut)
+@router.post("/ai/runs/{task_uuid}/resume", response_model=AgentWorkflowActionOut, status_code=202)
 async def resume_agent_run(task_uuid: str):
     try:
         await agent_workflow_service.resume_run(task_uuid)
@@ -208,7 +222,7 @@ async def resume_agent_run(task_uuid: str):
         raise _not_found_or_conflict(exc) from exc
 
 
-@router.post("/ai/agent-runs/{task_uuid}/cancel", response_model=AgentWorkflowActionOut)
+@router.post("/ai/runs/{task_uuid}/cancel", response_model=AgentWorkflowActionOut, status_code=202)
 async def cancel_agent_run(task_uuid: str):
     try:
         await agent_workflow_service.cancel_run(task_uuid)

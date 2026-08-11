@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { BookOpen, CheckCircle2, CheckSquare2, Loader2, RefreshCcw, Search, X } from "lucide-react";
 import { Badge, Text, Title, type Color } from "@/components/ui/tremor";
 import { t } from "@/lib/i18n";
@@ -26,12 +27,20 @@ export function CreateDiseaseKnowledgeTaskModal({
   onClose: () => void;
 }) {
   const form = useDiseaseKnowledgeTaskForm({ lang, onClose });
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !form.isPending) onClose();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [form.isPending, onClose, open]);
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-sm">
-      <div className="relative w-full max-w-6xl rounded-tremor-default bg-tremor-background p-6 shadow-xl dark:bg-dark-tremor-background">
-        <button onClick={onClose} className="absolute right-4 top-4 text-tremor-content-subtle hover:text-tremor-content-strong dark:text-dark-tremor-content-subtle dark:hover:text-dark-tremor-content-strong">
+      <div role="dialog" aria-modal="true" aria-labelledby="create-knowledge-task-title" className="relative w-full max-w-6xl rounded-tremor-default bg-tremor-background p-6 shadow-xl dark:bg-dark-tremor-background">
+        <button type="button" aria-label={lang === "zh" ? "关闭" : "Close"} onClick={onClose} className="absolute right-4 top-4 text-tremor-content-subtle hover:text-tremor-content-strong dark:text-dark-tremor-content-subtle dark:hover:text-dark-tremor-content-strong">
           <X className="h-5 w-5" />
         </button>
 
@@ -40,7 +49,7 @@ export function CreateDiseaseKnowledgeTaskModal({
             <BookOpen className="h-5 w-5" />
           </div>
           <div>
-            <Title className="text-xl">{lang === "zh" ? "新建疾病知识更新任务" : "New disease knowledge update task"}</Title>
+            <Title id="create-knowledge-task-title" className="text-xl">{lang === "zh" ? "新建疾病知识更新任务" : "New disease knowledge update task"}</Title>
             <Text className="mt-1">
               {lang === "zh" ? "选择一个或多个疾病，批量刷新知识库，并在任务列表里查看每个疾病的日志。" : "Select one or more diseases, queue them in batch, and inspect each disease task log from the task list."}
             </Text>
@@ -84,7 +93,7 @@ export function CreateDiseaseKnowledgeTaskModal({
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="relative flex-1 min-w-[220px]">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-tremor-content-subtle" />
-                    <input type="search" value={form.search} onChange={(e) => form.setSearch(e.target.value)} className={`${inputCls} pl-9`} placeholder={lang === "zh" ? "搜索疾病名称、编码或分类" : "Search disease name, code, or category"} />
+                    <input aria-label={lang === "zh" ? "搜索疾病" : "Search diseases"} type="search" value={form.search} onChange={(e) => form.setSearch(e.target.value)} className={`${inputCls} pl-9`} placeholder={lang === "zh" ? "搜索疾病名称、编码或分类" : "Search disease name, code, or category"} />
                   </div>
                   <button type="button" onClick={form.selectVisible} className="inline-flex items-center gap-1 rounded-tremor-default border border-tremor-border px-3 py-2 text-xs font-medium text-tremor-content-emphasis transition hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:text-dark-tremor-content-emphasis dark:hover:bg-dark-tremor-background-subtle">
                     <CheckSquare2 className="h-4 w-4" />{lang === "zh" ? "选择当前结果" : "Select filtered"}
@@ -137,20 +146,20 @@ export function CreateDiseaseKnowledgeTaskModal({
 
               <div className="space-y-4">
                 <div>
-                  <label className={labelCls}>{lang === "zh" ? "批量任务名称（可选）" : "Batch task name (optional)"}</label>
-                  <input type="text" value={form.taskName} onChange={(e) => form.setTaskName(e.target.value)} className={inputCls} placeholder={lang === "zh" ? "例如：刷新重点疾病知识库" : "e.g. Refresh key disease knowledge"} />
+                  <label htmlFor="knowledge-task-name" className={labelCls}>{lang === "zh" ? "批量任务名称（可选）" : "Batch task name (optional)"}</label>
+                  <input id="knowledge-task-name" type="text" value={form.taskName} onChange={(e) => form.setTaskName(e.target.value)} className={inputCls} placeholder={lang === "zh" ? "例如：刷新重点疾病知识库" : "e.g. Refresh key disease knowledge"} />
                 </div>
                 <div>
-                  <label className={labelCls}>{lang === "zh" ? "任务说明（可选）" : "Description (optional)"}</label>
-                  <textarea value={form.description} onChange={(e) => form.setDescription(e.target.value)} rows={4} className={inputCls} placeholder={lang === "zh" ? "说明这批任务的范围或目标" : "Describe the purpose or scope of this batch"} />
+                  <label htmlFor="knowledge-task-description" className={labelCls}>{lang === "zh" ? "任务说明（可选）" : "Description (optional)"}</label>
+                  <textarea id="knowledge-task-description" value={form.description} onChange={(e) => form.setDescription(e.target.value)} rows={4} className={inputCls} placeholder={lang === "zh" ? "说明这批任务的范围或目标" : "Describe the purpose or scope of this batch"} />
                 </div>
                 <div>
-                  <label className={labelCls}>{lang === "zh" ? "生成器" : "Generator"}</label>
-                  <select value={form.generator} onChange={(e) => form.setGenerator(e.target.value as typeof form.generator)} className={inputCls}><option value="auto">auto</option><option value="ai">ai</option></select>
+                  <label htmlFor="knowledge-generator" className={labelCls}>{lang === "zh" ? "生成器" : "Generator"}</label>
+                  <select id="knowledge-generator" value={form.generator} onChange={(e) => form.setGenerator(e.target.value as typeof form.generator)} className={inputCls}><option value="auto">auto</option><option value="ai">ai</option></select>
                 </div>
                 <div>
-                  <label className={labelCls}>{t(lang, "priority")}</label>
-                  <select value={form.priority} onChange={(e) => form.setPriority(e.target.value as typeof form.priority)} className={inputCls}><option value="low">low</option><option value="normal">normal</option><option value="high">high</option><option value="urgent">urgent</option></select>
+                  <label htmlFor="knowledge-priority" className={labelCls}>{t(lang, "priority")}</label>
+                  <select id="knowledge-priority" value={form.priority} onChange={(e) => form.setPriority(e.target.value as typeof form.priority)} className={inputCls}><option value="low">low</option><option value="normal">normal</option><option value="high">high</option><option value="urgent">urgent</option></select>
                 </div>
                 <div className="space-y-2 rounded-tremor-default border border-tremor-border p-3 dark:border-dark-tremor-border">
                   <div className="flex items-center justify-between gap-2">

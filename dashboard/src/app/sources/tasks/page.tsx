@@ -1,3 +1,2 @@
-import CrawlTasksView from "@/features/operations/tasks/crawl/view";
-
-export default CrawlTasksView;
+import { permanentRedirect } from "next/navigation";
+export default function LegacyPage() { permanentRedirect("/operations/tasks"); }

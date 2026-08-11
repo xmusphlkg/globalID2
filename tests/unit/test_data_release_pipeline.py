@@ -118,6 +118,9 @@ async def test_pipeline_local_only_success_preserves_stage_order():
         def _generate_site_data_command(self, **_kwargs):
             return ["generate"]
 
+        def _update_situation_room_command(self, **_kwargs):
+            return ["update-situation-room"]
+
         def _publish_download_repo_command(self, **_kwargs):
             return ["publish-downloads"]
 
@@ -149,8 +152,8 @@ async def test_pipeline_local_only_success_preserves_stage_order():
 
     output = await pipeline.execute_release_task(Service(), task, runtime=runtime)
 
-    assert commands == ["Generate Site Data", "Build Astro Site"]
-    assert progress == [5, 15, 35, 60, 88, 100]
+    assert commands == ["Refresh Situation Room", "Generate Site Data", "Build Astro Site"]
+    assert progress == [5, 15, 22, 35, 60, 88, 100]
     assert output["direct_downloads_published"] is False
     assert output["raw_archive_published"] is False
     assert output["pages_deployed"] is False

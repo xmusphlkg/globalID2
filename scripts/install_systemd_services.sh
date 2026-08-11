@@ -18,6 +18,7 @@ UNIT_NAMES=(
   globalid-stack.target
   globalid-docker.service
   globalid-dashboard-api.service
+  globalid-dashboard-scheduler.service
   globalid-dashboard-worker.service
   globalid-dashboard-web.service
   globalid-site.service
@@ -189,4 +190,5 @@ echo "Installed GlobalID systemd units into $SYSTEMD_DIR"
 echo "Run these commands to inspect the stack:"
 echo "  systemctl status globalid-stack.target"
 echo "  journalctl -u globalid-dashboard-api.service -f"
+echo "  journalctl -u globalid-dashboard-scheduler.service -f"
 echo "  journalctl -u globalid-dashboard-web.service -f"

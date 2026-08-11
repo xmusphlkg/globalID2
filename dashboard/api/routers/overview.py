@@ -7,7 +7,7 @@ from collections import defaultdict
 from datetime import date, datetime, time, timedelta, timezone
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,6 +26,7 @@ from ..schemas.disease_record import (
 from ..services.disease_series_projection import load_series_first_records
 from src.domain.disease import Disease
 from src.domain.disease_record import DiseaseRecord
+from src.domain.country import Country
 from src.domain.standard_disease import StandardDisease
 
 router = APIRouter()
@@ -42,13 +43,26 @@ async def _country_has_total_disease(country_id: int, db: AsyncSession) -> bool:
     return bool(count)
 
 
-@router.get("/overview/summary", response_model=OverviewSummary)
+async def _resolve_country_id(country_code: str, db: AsyncSession) -> int:
+    country_id = (
+        await db.execute(
+            select(Country.id).where(func.upper(Country.code) == country_code.strip().upper())
+        )
+    ).scalar_one_or_none()
+    if country_id is None:
+        raise HTTPException(404, "Country not found")
+    return int(country_id)
+
+
+@router.get("/analytics/summary", response_model=OverviewSummary)
 async def overview_summary(
-    country_id: int = Query(..., ge=1),
+    country_code: str = Query(..., min_length=2, max_length=10),
     lang: str = Query("en"),
     db: AsyncSession = Depends(get_db),
 ):
     """Single aggregated call that powers the Overview page KPIs + top diseases."""
+
+    country_id = await _resolve_country_id(country_code, db)
 
     # --- KPI metrics (single query) ---
     kpi_q = select(
@@ -118,9 +132,9 @@ async def overview_summary(
     )
 
 
-@router.get("/overview/trend", response_model=List[TrendPoint])
+@router.get("/analytics/trends", response_model=List[TrendPoint])
 async def overview_trend(
-    country_id: int = Query(..., ge=1),
+    country_code: str = Query(..., min_length=2, max_length=10),
     disease_code: Optional[str] = Query(
         None, description="Disease code, e.g. D001. Omit for total (D999)."
     ),
@@ -136,6 +150,8 @@ async def overview_trend(
     db: AsyncSession = Depends(get_db),
 ):
     """Monthly trend data for a given country and (optional) disease."""
+
+    country_id = await _resolve_country_id(country_code, db)
 
     if disease_code:
         projected = await load_series_first_records(
@@ -229,9 +245,9 @@ async def overview_trend(
     ]
 
 
-@router.get("/overview/monthly-comparison", response_model=List[MonthlyComparisonPoint])
+@router.get("/analytics/monthly-comparison", response_model=List[MonthlyComparisonPoint])
 async def overview_monthly_comparison(
-    country_id: int = Query(..., ge=1),
+    country_code: str = Query(..., min_length=2, max_length=10),
     disease_code: Optional[str] = Query(
         None, description="Disease code, e.g. D001. Omit for total (D999)."
     ),
@@ -247,6 +263,8 @@ async def overview_monthly_comparison(
     db: AsyncSession = Depends(get_db),
 ):
     """Year-by-month comparison for seasonality and structural shifts."""
+
+    country_id = await _resolve_country_id(country_code, db)
 
     if disease_code:
         projected = await load_series_first_records(

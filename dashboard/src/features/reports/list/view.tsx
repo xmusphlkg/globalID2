@@ -777,12 +777,12 @@ function ReportDetailPanel({
 }
 
 export default function ReportsPage() {
-  const { lang, countryId } = useAppStore();
+  const { lang, countryCode } = useAppStore();
   const [selectedUuid, setSelectedUuid] = useState<string | null>(null);
   const [flowFilter, setFlowFilter] = useState<FlowGroupId | "all">("all");
   const [search, setSearch] = useState("");
 
-  const { data: reports, isLoading } = useReports(countryId);
+  const { data: reports, isLoading } = useReports(countryCode || null);
   const { data: detail, isFetching: detailLoading } = useReportDetail(selectedUuid);
   const list = reports ?? [];
 

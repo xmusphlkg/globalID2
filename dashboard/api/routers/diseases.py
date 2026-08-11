@@ -3,7 +3,7 @@
 from functools import lru_cache
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,6 +27,17 @@ from src.domain.standard_disease import StandardDisease
 from src.ontology import DiseaseOntology, load_disease_ontology
 
 router = APIRouter()
+
+
+async def _resolve_country(country_code: str, db: AsyncSession) -> Country:
+    country = (
+        await db.execute(
+            select(Country).where(func.upper(Country.code) == country_code.strip().upper())
+        )
+    ).scalar_one_or_none()
+    if country is None:
+        raise HTTPException(404, "Country not found")
+    return country
 
 
 @lru_cache(maxsize=1)
@@ -118,7 +129,9 @@ async def list_disease_ontology_availability(
 )
 async def list_disease_series_observations(
     series_code: str,
-    limit: int = Query(500, ge=1, le=5000),
+    response: Response,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(500, ge=1, le=5000),
     db: AsyncSession = Depends(get_db),
 ):
     """Read lossless source-series facts without projecting them into flat IDs."""
@@ -128,13 +141,28 @@ async def list_disease_series_observations(
     except KeyError as exc:
         raise HTTPException(404, "Disease surveillance series not found") from exc
 
+    total = int(
+        (
+            await db.execute(
+                select(func.count()).select_from(DiseaseSeriesObservation).where(
+                    DiseaseSeriesObservation.series_code == series_code
+                )
+            )
+        ).scalar_one()
+        or 0
+    )
+    offset = (page - 1) * page_size
     query = (
         select(DiseaseSeriesObservation)
         .where(DiseaseSeriesObservation.series_code == series_code)
         .order_by(DiseaseSeriesObservation.time)
-        .limit(limit)
+        .offset(offset)
+        .limit(page_size)
     )
     observations = (await db.execute(query)).scalars().all()
+    response.headers["X-Total-Count"] = str(total)
+    response.headers["X-Limit"] = str(page_size)
+    response.headers["X-Offset"] = str(offset)
     return [
         {
             "time": item.time.isoformat(),
@@ -155,11 +183,15 @@ async def list_disease_series_observations(
 
 @router.get("/diseases", response_model=List[DiseaseListItem])
 async def list_diseases(
-    country_id: int = Query(..., ge=1),
+    country_code: str = Query(..., min_length=2, max_length=COUNTRY_REGION_CODE_MAX_LENGTH),
     lang: str = Query("en"),
     db: AsyncSession = Depends(get_db),
 ):
     """Return diseases that have records for a country (excludes D999 total row)."""
+
+    country = await _resolve_country(country_code, db)
+    country_id = country.id
+    country_code = country.code
 
     if lang == "zh":
         display = func.coalesce(
@@ -178,9 +210,6 @@ async def list_diseases(
     )
     legacy_rows = (await db.execute(legacy_query)).all()
 
-    country_code = (
-        await db.execute(select(Country.code).where(Country.id == country_id))
-    ).scalar_one_or_none()
     series_rows = []
     if country_code:
         series_rows = (
@@ -246,27 +275,35 @@ async def get_disease(disease_code: str, db: AsyncSession = Depends(get_db)):
 @router.get("/diseases/{disease_code}/records", response_model=List[DiseaseRecordOut])
 async def get_disease_records(
     disease_code: str,
-    country_id: int = Query(..., ge=1),
-    limit: int = Query(500, ge=1, le=5000),
+    response: Response,
+    country_code: str = Query(..., min_length=2, max_length=COUNTRY_REGION_CODE_MAX_LENGTH),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(500, ge=1, le=5000),
     db: AsyncSession = Depends(get_db),
 ):
     """Series-first records with explicit, period-level legacy gap filling."""
+    country = await _resolve_country(country_code, db)
     result = await load_series_first_records(
         db,
         disease_code=disease_code,
-        country_id=country_id,
-        limit=limit,
+        country_id=country.id,
+        limit=None,
     )
-    return result.records
+    offset = (page - 1) * page_size
+    response.headers["X-Total-Count"] = str(len(result.records))
+    response.headers["X-Limit"] = str(page_size)
+    response.headers["X-Offset"] = str(offset)
+    return result.records[offset : offset + page_size]
 
 
-@router.get("/analysis/compare", response_model=dict)
+@router.get("/analytics/compare", response_model=dict)
 async def compare_diseases(
-    country_id: int = Query(..., ge=1),
+    country_code: str = Query(..., min_length=2, max_length=COUNTRY_REGION_CODE_MAX_LENGTH),
     diseases: str = Query(..., description="Comma-separated disease codes"),
     db: AsyncSession = Depends(get_db),
 ):
     """Monthly comparison built from safe series-first disease curves."""
+    country = await _resolve_country(country_code, db)
     codes = [c.strip() for c in diseases.split(",") if c.strip()]
     if not codes or len(codes) > 10:
         raise HTTPException(400, "Provide 1–10 comma-separated disease codes")
@@ -276,7 +313,7 @@ async def compare_diseases(
         result = await load_series_first_records(
             db,
             disease_code=code,
-            country_id=country_id,
+            country_id=country.id,
         )
         if not result.records:
             continue

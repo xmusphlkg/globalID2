@@ -61,7 +61,7 @@ class WorkbookEntryOut(BaseModel):
 class TaskCreateRequest(BaseModel):
     task_type: str
     task_name: str
-    country_id: Optional[int] = None
+    country_code: Optional[str] = Field(default=None, min_length=2, max_length=10)
     priority: str = "normal"
     description: Optional[str] = None
     input_data: Optional[Dict[str, Any]] = None

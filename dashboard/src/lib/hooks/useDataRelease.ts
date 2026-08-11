@@ -188,7 +188,7 @@ export function normalizeDataReleaseChecks(payload: DataReleaseChecksResponse): 
 export function useDataReleaseConfig() {
   return useQuery<DataReleaseConfig>({
     queryKey: ["data-release"],
-    queryFn: () => apiFetch("/release"),
+    queryFn: () => apiFetch("/releases/config"),
     staleTime: 10 * 1000,
   });
 }
@@ -196,7 +196,7 @@ export function useDataReleaseConfig() {
 export function useDataReleaseJobs() {
   return useQuery<DataReleaseJob[]>({
     queryKey: ["data-release-jobs"],
-    queryFn: () => apiFetch("/release/jobs"),
+    queryFn: () => apiFetch("/releases/jobs"),
     staleTime: 10 * 1000,
   });
 }
@@ -205,7 +205,7 @@ export function useDataReleaseChecks(jobId: string | null) {
   return useQuery<DataReleaseChecks>({
     queryKey: ["data-release-checks", jobId],
     queryFn: async () => {
-      const payload = await apiFetch<DataReleaseChecksResponse>(`/release/jobs/${jobId}/checks`, {
+      const payload = await apiFetch<DataReleaseChecksResponse>(`/releases/${jobId}/checks`, {
         timeoutMs: 60_000,
       });
       return normalizeDataReleaseChecks(payload);
@@ -219,7 +219,7 @@ export function useRunDataReleaseJob() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (jobId: string) =>
-      apiFetch<DataReleaseTriggerResult>(`/release/jobs/${jobId}/run`, {
+      apiFetch<DataReleaseTriggerResult>(`/releases/${jobId}/runs`, {
         method: "POST",
       }),
     onSuccess: () => {
@@ -235,7 +235,7 @@ export function useCreateDataReleaseJob() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: DataReleaseJobInput) =>
-      apiFetch<DataReleaseJob>("/release/jobs", {
+      apiFetch<DataReleaseJob>("/releases/jobs", {
         method: "POST",
         body: JSON.stringify(payload),
       }),
@@ -250,7 +250,7 @@ export function useUpdateDataReleaseJob() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ jobId, payload }: { jobId: string; payload: Partial<DataReleaseJobInput> }) =>
-      apiFetch<DataReleaseJob>(`/release/jobs/${jobId}`, {
+      apiFetch<DataReleaseJob>(`/releases/jobs/${jobId}`, {
         method: "PUT",
         body: JSON.stringify(payload),
       }),
@@ -266,7 +266,7 @@ export function useDeleteDataReleaseJob() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (jobId: string) =>
-      apiFetch(`/release/jobs/${jobId}`, {
+      apiFetch(`/releases/jobs/${jobId}`, {
         method: "DELETE",
       }),
     onSuccess: () => {

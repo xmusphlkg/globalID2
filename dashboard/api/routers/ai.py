@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
+from uuid import UUID
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,7 +28,7 @@ from src.core.db_schema import ensure_task_type_enum_schema
 from src.core.task_manager import task_manager
 from src.domain.ai_model_center import AIModelConfig, AIProviderConfig
 from src.domain.country import Country
-from src.domain.report import ReportType
+from src.domain.report import Report, ReportType
 from src.domain.task import Task, TaskPriority, TaskStatus, TaskType
 from src.services.disease_duplicate_audit_service import DiseaseDuplicateAuditService
 from src.services.disease_knowledge_service import DiseaseKnowledgeUpdateService, SOURCE_GROUPS, expand_sources
@@ -36,9 +37,9 @@ router = APIRouter()
 
 
 class AIStartRequest(BaseModel):
-    """Body for POST /ai/start."""
+    """Body for POST /reports/runs."""
 
-    country_id: int = Field(..., ge=1, description="Country DB id")
+    country_code: str = Field(..., min_length=2, max_length=10, description="Stable country code")
     report_type: str = Field("monthly", description="Report type: daily / weekly / monthly / special")
     period_start: Optional[str] = Field(None, description="ISO datetime, optional")
     period_end: Optional[str] = Field(None, description="ISO datetime, optional")
@@ -68,10 +69,9 @@ class AIStartRequest(BaseModel):
         "auto",
         description="Reuse strategy: auto | safe | resume | manual",
     )
-    reuse_report_id: Optional[int] = Field(
+    reuse_report_uuid: Optional[UUID] = Field(
         None,
-        ge=1,
-        description="Optional explicit report ID when reuse_strategy=manual",
+        description="Optional explicit report UUID when reuse_strategy=manual",
     )
     priority: str = Field("normal", description="Task priority")
     task_name: Optional[str] = Field(None, description="Optional custom task name")
@@ -212,7 +212,6 @@ class DiseaseKnowledgeDetail(BaseModel):
     sources: List[DiseaseKnowledgeSourceDetail] = Field(default_factory=list)
 
 
-@router.post("/ai/disease-duplicate-audit/run", response_model=Dict[str, Any])
 @router.post("/ai/disease-audit/run", response_model=Dict[str, Any])
 async def run_disease_duplicate_audit(body: DiseaseDuplicateAuditRequest):
     service = DiseaseDuplicateAuditService()
@@ -289,7 +288,6 @@ async def run_disease_duplicate_audit(body: DiseaseDuplicateAuditRequest):
     return audit
 
 
-@router.get("/ai/disease-duplicate-audit/status", response_model=Dict[str, Any])
 @router.get("/ai/disease-audit/status", response_model=Dict[str, Any])
 async def get_disease_duplicate_audit_status(include_new_disease_candidates: bool = True):
     service = DiseaseDuplicateAuditService()
@@ -298,13 +296,21 @@ async def get_disease_duplicate_audit_status(include_new_disease_candidates: boo
     )
 
 
-@router.get("/ai/disease-duplicate-audit/logs", response_model=List[Dict[str, Any]])
 @router.get("/ai/disease-audit/logs", response_model=List[Dict[str, Any]])
-async def list_disease_duplicate_audit_logs(limit: int = Query(100, ge=1, le=500)):
-    return DiseaseDuplicateAuditService.read_audit_logs(limit=limit)
+async def list_disease_duplicate_audit_logs(
+    response: Response,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(100, ge=1, le=500),
+):
+    rows = DiseaseDuplicateAuditService.read_audit_logs(limit=page * page_size)
+    offset = (page - 1) * page_size
+    response.headers["X-Total-Count"] = str(len(rows))
+    response.headers["X-Limit"] = str(page_size)
+    response.headers["X-Offset"] = str(offset)
+    return rows[offset : offset + page_size]
 
 
-@router.get("/ai/disease-knowledge/catalogue", response_model=List[DiseaseKnowledgeCatalogueItem])
+@router.get("/knowledge", response_model=List[DiseaseKnowledgeCatalogueItem])
 async def list_disease_knowledge_catalogue(
     search: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
@@ -313,7 +319,7 @@ async def list_disease_knowledge_catalogue(
     return await service.list_catalogue(db, search=search)
 
 
-@router.post("/ai/disease-knowledge/start", response_model=DiseaseKnowledgeStartResponse, status_code=201)
+@router.post("/knowledge/runs", response_model=DiseaseKnowledgeStartResponse, status_code=202)
 async def start_disease_knowledge_tasks(
     body: DiseaseKnowledgeStartRequest,
     db: AsyncSession = Depends(get_db),
@@ -417,7 +423,7 @@ async def start_disease_knowledge_tasks(
     )
 
 
-@router.get("/ai/disease-knowledge/diseases/{disease_id}", response_model=DiseaseKnowledgeDetail)
+@router.get("/knowledge/{disease_id}", response_model=DiseaseKnowledgeDetail)
 async def get_disease_knowledge_detail(
     disease_id: str,
     db: AsyncSession = Depends(get_db),
@@ -486,7 +492,7 @@ class ProviderOut(BaseModel):
 
 
 class ModelCreateRequest(BaseModel):
-    provider_id: int
+    provider_key: str = Field(..., min_length=2, max_length=120)
     model_name: str = Field(..., min_length=1, max_length=120)
     display_name: Optional[str] = None
     model_key: Optional[str] = None
@@ -561,17 +567,29 @@ class RuntimeRouteOut(BaseModel):
     last_rate_limit_at: Optional[str] = None
 
 
-@router.post("/ai/start", response_model=TaskOut, status_code=201)
+@router.post("/reports/runs", response_model=TaskOut, status_code=202)
 async def start_ai_task(
     body: AIStartRequest,
     db: AsyncSession = Depends(get_db),
 ):
     """Create a GENERATE_REPORT task and enqueue it for external worker execution."""
     country = (
-        await db.execute(select(Country).where(Country.id == body.country_id))
+        await db.execute(
+            select(Country).where(func.upper(Country.code) == body.country_code.strip().upper())
+        )
     ).scalar_one_or_none()
     if not country:
-        raise HTTPException(404, f"Country not found: {body.country_id}")
+        raise HTTPException(404, f"Country not found: {body.country_code}")
+
+    reuse_report_id = None
+    if body.reuse_report_uuid is not None:
+        reuse_report_id = (
+            await db.execute(
+                select(Report.id).where(Report.report_uuid == body.reuse_report_uuid)
+            )
+        ).scalar_one_or_none()
+        if reuse_report_id is None:
+            raise HTTPException(404, "Reuse report not found")
 
     report_type = _normalize_report_type(body.report_type)
     priority = _normalize_priority(body.priority)
@@ -581,7 +599,7 @@ async def start_ai_task(
 
     running_q = select(Task).where(
         Task.task_type == TaskType.GENERATE_REPORT,
-        Task.country_id == body.country_id,
+        Task.country_id == country.id,
         Task.status.in_([TaskStatus.RUNNING, TaskStatus.QUEUED]),
     )
     running = (await db.execute(running_q)).scalar_one_or_none()
@@ -603,7 +621,7 @@ async def start_ai_task(
         f"Email: {'Yes' if body.send_email else 'No'}, "
         f"Reuse Failed: {'Yes' if body.reuse_from_failed else 'No'}, "
         f"Reuse Strategy: {reuse_strategy}, "
-        f"Reuse Report ID: {body.reuse_report_id or 'Auto'}"
+        f"Reuse Report UUID: {body.reuse_report_uuid or 'Auto'}"
     )
 
     language = (body.language or "en").strip().lower()
@@ -613,7 +631,7 @@ async def start_ai_task(
     task = await task_manager.create_task(
         task_type=TaskType.GENERATE_REPORT,
         task_name=task_name,
-        country_id=body.country_id,
+        country_id=country.id,
         priority=priority,
         description=description,
         input_data={
@@ -631,7 +649,8 @@ async def start_ai_task(
             "send_email": body.send_email,
             "reuse_from_failed": body.reuse_from_failed,
             "reuse_strategy": reuse_strategy,
-            "reuse_report_id": body.reuse_report_id,
+            "reuse_report_id": reuse_report_id,
+            "reuse_report_uuid": str(body.reuse_report_uuid) if body.reuse_report_uuid else None,
         },
     )
 
@@ -680,11 +699,15 @@ async def create_provider(body: ProviderCreateRequest, db: AsyncSession = Depend
     return _provider_to_out(provider)
 
 
-@router.put("/ai/models/providers/{provider_id}", response_model=ProviderOut)
-async def update_provider(provider_id: int, body: ProviderUpdateRequest, db: AsyncSession = Depends(get_db)):
+@router.put("/ai/models/providers/{provider_key}", response_model=ProviderOut)
+async def update_provider(provider_key: str, body: ProviderUpdateRequest, db: AsyncSession = Depends(get_db)):
     await bootstrap_model_center_from_env(force=False)
 
-    provider = await db.get(AIProviderConfig, provider_id)
+    provider = (
+        await db.execute(
+            select(AIProviderConfig).where(AIProviderConfig.provider_key == provider_key)
+        )
+    ).scalar_one_or_none()
     if provider is None:
         raise HTTPException(404, "Provider not found")
 
@@ -720,18 +743,22 @@ async def bootstrap_providers(body: ProviderBootstrapRequest):
     return {"ok": True, "force": body.force}
 
 
-@router.delete("/ai/models/providers/{provider_id}")
-async def delete_provider(provider_id: int, db: AsyncSession = Depends(get_db)):
+@router.delete("/ai/models/providers/{provider_key}")
+async def delete_provider(provider_key: str, db: AsyncSession = Depends(get_db)):
     await bootstrap_model_center_from_env(force=False)
 
-    provider = await db.get(AIProviderConfig, provider_id)
+    provider = (
+        await db.execute(
+            select(AIProviderConfig).where(AIProviderConfig.provider_key == provider_key)
+        )
+    ).scalar_one_or_none()
     if provider is None:
         raise HTTPException(404, "Provider not found")
 
     models_to_delete = (
         await db.execute(
             select(AIModelConfig)
-            .where(AIModelConfig.provider_id == provider_id)
+            .where(AIModelConfig.provider_id == provider.id)
             .order_by(AIModelConfig.priority.asc(), AIModelConfig.id.asc())
         )
     ).scalars().all()
@@ -746,7 +773,7 @@ async def delete_provider(provider_id: int, db: AsyncSession = Depends(get_db)):
         replacement = (
             await db.execute(
                 select(AIModelConfig)
-                .where(AIModelConfig.provider_id != provider_id)
+                .where(AIModelConfig.provider_id != provider.id)
                 .where(AIModelConfig.is_enabled.is_(True))
                 .order_by(AIModelConfig.is_enabled.desc(), AIModelConfig.priority.asc(), AIModelConfig.id.asc())
             )
@@ -756,7 +783,7 @@ async def delete_provider(provider_id: int, db: AsyncSession = Depends(get_db)):
             replacement = (
                 await db.execute(
                     select(AIModelConfig)
-                    .where(AIModelConfig.provider_id != provider_id)
+                    .where(AIModelConfig.provider_id != provider.id)
                     .order_by(AIModelConfig.priority.asc(), AIModelConfig.id.asc())
                 )
             ).scalars().first()
@@ -769,15 +796,21 @@ async def delete_provider(provider_id: int, db: AsyncSession = Depends(get_db)):
         "ok": True,
         "provider_key": provider.provider_key,
         "removed_model_count": len(models_to_delete),
-        "default_promoted_model_id": replacement.id if replacement is not None else None,
         "default_promoted_model_key": replacement.model_key if replacement is not None else None,
     }
 
 
-@router.post("/ai/models/providers/{provider_id}/test")
-async def test_provider(provider_id: int):
+@router.post("/ai/models/providers/{provider_key}/test")
+async def test_provider(provider_key: str, db: AsyncSession = Depends(get_db)):
     await bootstrap_model_center_from_env(force=False)
-    return await check_provider_by_id(provider_id)
+    provider_id = (
+        await db.execute(
+            select(AIProviderConfig.id).where(AIProviderConfig.provider_key == provider_key)
+        )
+    ).scalar_one_or_none()
+    if provider_id is None:
+        raise HTTPException(404, "Provider not found")
+    return await check_provider_by_id(int(provider_id))
 
 
 @router.get("/ai/models", response_model=List[ModelOut])
@@ -797,7 +830,11 @@ async def list_models(db: AsyncSession = Depends(get_db)):
 async def create_model(body: ModelCreateRequest, db: AsyncSession = Depends(get_db)):
     await bootstrap_model_center_from_env(force=False)
 
-    provider = await db.get(AIProviderConfig, body.provider_id)
+    provider = (
+        await db.execute(
+            select(AIProviderConfig).where(AIProviderConfig.provider_key == body.provider_key)
+        )
+    ).scalar_one_or_none()
     if provider is None:
         raise HTTPException(404, "Provider not found")
 
@@ -840,15 +877,15 @@ async def create_model(body: ModelCreateRequest, db: AsyncSession = Depends(get_
     return _model_to_out(model)
 
 
-@router.put("/ai/models/{model_id}", response_model=ModelOut)
-async def update_model(model_id: int, body: ModelUpdateRequest, db: AsyncSession = Depends(get_db)):
+@router.put("/ai/models/{model_key}", response_model=ModelOut)
+async def update_model(model_key: str, body: ModelUpdateRequest, db: AsyncSession = Depends(get_db)):
     await bootstrap_model_center_from_env(force=False)
 
     model = (
         await db.execute(
             select(AIModelConfig)
             .options(selectinload(AIModelConfig.provider))
-            .where(AIModelConfig.id == model_id)
+            .where(AIModelConfig.model_key == model_key)
         )
     ).scalar_one_or_none()
     if model is None:
@@ -883,11 +920,15 @@ async def update_model(model_id: int, body: ModelUpdateRequest, db: AsyncSession
     return _model_to_out(model)
 
 
-@router.delete("/ai/models/{model_id}")
-async def delete_model(model_id: int, db: AsyncSession = Depends(get_db)):
+@router.delete("/ai/models/{model_key}")
+async def delete_model(model_key: str, db: AsyncSession = Depends(get_db)):
     await bootstrap_model_center_from_env(force=False)
 
-    model = await db.get(AIModelConfig, model_id)
+    model = (
+        await db.execute(
+            select(AIModelConfig).where(AIModelConfig.model_key == model_key)
+        )
+    ).scalar_one_or_none()
     if model is None:
         raise HTTPException(404, "Model not found")
 
@@ -902,7 +943,7 @@ async def delete_model(model_id: int, db: AsyncSession = Depends(get_db)):
         replacement = (
             await db.execute(
                 select(AIModelConfig)
-                .where(AIModelConfig.id != model_id)
+                .where(AIModelConfig.id != model.id)
                 .order_by(AIModelConfig.is_enabled.desc(), AIModelConfig.priority.asc(), AIModelConfig.id.asc())
             )
         ).scalars().first()
@@ -917,10 +958,17 @@ async def delete_model(model_id: int, db: AsyncSession = Depends(get_db)):
     }
 
 
-@router.post("/ai/models/{model_id}/test")
-async def test_model(model_id: int):
+@router.post("/ai/models/{model_key}/test")
+async def test_model(model_key: str, db: AsyncSession = Depends(get_db)):
     await bootstrap_model_center_from_env(force=False)
-    return await check_model_by_id(model_id)
+    model_id = (
+        await db.execute(
+            select(AIModelConfig.id).where(AIModelConfig.model_key == model_key)
+        )
+    ).scalar_one_or_none()
+    if model_id is None:
+        raise HTTPException(404, "Model not found")
+    return await check_model_by_id(int(model_id))
 
 
 @router.post("/ai/models/check-all")

@@ -246,8 +246,8 @@ function downloadCanvas(canvas: HTMLCanvasElement, filename: string) {
 }
 
 export default function DataDashboardPage() {
-  const { lang, countryId, countryName } = useAppStore();
-  const { data: summary, isLoading } = useOverviewSummary(countryId, lang);
+  const { lang, countryCode, countryName } = useAppStore();
+  const { data: summary, isLoading } = useOverviewSummary(countryCode || null, lang);
   const [interval, setInterval] = useState<number | null>(null);
   const [diseaseCode, setDiseaseCode] = useState<string | null>(null);
   const [startDate, setStartDate] = useState("");
@@ -260,23 +260,23 @@ export default function DataDashboardPage() {
   const [monthlyChart, setMonthlyChart] = useState<TrendChart | null>(null);
   const [fullscreenMonthlyChart, setFullscreenMonthlyChart] = useState<TrendChart | null>(null);
 
-  const { data: diseases } = useDiseases(countryId, lang);
+  const { data: diseases } = useDiseases(countryCode || null, lang);
   const hasCustomDateRange = Boolean(startDate || endDate);
   const { data: trend } = useOverviewTrend(
-    countryId,
+    countryCode || null,
     diseaseCode,
     hasCustomDateRange ? null : interval,
     startDate || null,
     endDate || null,
   );
   const { data: monthlyComparison } = useOverviewMonthlyComparison(
-    countryId,
+    countryCode || null,
     diseaseCode,
     hasCustomDateRange ? null : interval,
     startDate || null,
     endDate || null,
   );
-  const { data: releaseReports } = useReports(countryId, undefined, 8);
+  const { data: releaseReports } = useReports(countryCode || null, undefined, 8);
 
   const releaseStats = useMemo(() => {
     const rows = releaseReports ?? [];
@@ -528,7 +528,7 @@ export default function DataDashboardPage() {
     <div className="space-y-5">
       <PageHeader
         eyebrow={t(lang, "mod_database")}
-        title={t(lang, "dashboard")}
+        title={lang === "zh" ? t(lang, "dashboard") : "Country Analytics"}
         description={
           lang === "zh"
             ? "按当前国家汇总疾病指标、趋势和发布流转状态。"
@@ -566,17 +566,20 @@ export default function DataDashboardPage() {
           value={summary?.earliest_date ? formatDate(summary.earliest_date) : "-"}
           icon={<CalendarDays className="h-4 w-4" />}
           tone="neutral"
+          valueClassName="text-[17px] tracking-tight"
         />
         <MetricTile
           label={t(lang, "latest_date")}
           value={summary?.latest_date ? formatDate(summary.latest_date) : "-"}
           icon={<CalendarDays className="h-4 w-4" />}
           tone="success"
+          valueClassName="text-[17px] tracking-tight"
         />
       </div>
 
       <FilterToolbar>
         <select
+          aria-label={lang === "zh" ? "疾病筛选" : "Disease filter"}
           value={diseaseCode || "all"}
           onChange={(event) => setDiseaseCode(event.target.value === "all" ? null : event.target.value)}
           className="h-10 min-w-[220px] rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm text-tremor-content-strong outline-none transition focus:border-tremor-brand-subtle focus:ring-2 focus:ring-tremor-brand-muted dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong"
@@ -590,6 +593,7 @@ export default function DataDashboardPage() {
         </select>
 
         <select
+          aria-label={lang === "zh" ? "时间范围" : "Date range"}
           value={interval ? String(interval) : "all"}
           onChange={(event) => {
             setInterval(event.target.value === "all" ? null : Number(event.target.value));

@@ -28,6 +28,7 @@ interface MetricTileProps {
   hint?: ReactNode;
   tone?: MetricTone;
   className?: string;
+  valueClassName?: string;
 }
 
 export function MetricTile({
@@ -37,6 +38,7 @@ export function MetricTile({
   hint,
   tone = "neutral",
   className,
+  valueClassName,
 }: MetricTileProps) {
   return (
     <div
@@ -51,7 +53,12 @@ export function MetricTile({
           <p className="text-[11px] font-semibold uppercase text-tremor-content-subtle dark:text-dark-tremor-content-subtle">
             {label}
           </p>
-          <p className="mt-2 truncate text-[1.7rem] font-semibold leading-8 text-tremor-content-strong dark:text-dark-tremor-content-strong">
+          <p
+            className={cn(
+              "mt-2 truncate font-semibold leading-8 text-tremor-content-strong dark:text-dark-tremor-content-strong",
+              valueClassName ?? "text-[1.7rem]",
+            )}
+          >
             {value}
           </p>
         </div>
