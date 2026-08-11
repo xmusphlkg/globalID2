@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any, Optional
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import inspect, select, text
+from sqlalchemy import select
 
 from src.core import get_config, get_database, get_logger
 from src.core.source_scopes import canonicalize_task_source
@@ -19,6 +19,7 @@ from src.domain import AutomationJob, Country, Task, TaskType, TaskWorkbook
 from src.services.crawl_task_service import crawl_task_service
 from src.services.smtp_email_service import smtp_email_service
 from src.services.settings_service import system_settings_service
+from src.control_plane.schedule_state import schedule_state_repository
 
 logger = get_logger(__name__)
 
@@ -144,49 +145,24 @@ class AutomationService:
         raise RuntimeError("Use load_jobs() for async automation job access")
 
     async def ensure_storage(self) -> None:
+        """Verify managed storage and seed configuration without running DDL.
+
+        Schema changes are owned by Alembic. This guard deliberately fails fast
+        when the deployment preflight/upgrade step has not been run.
+        """
         if self._storage_ready:
             return
         async with self._storage_lock:
             if self._storage_ready:
                 return
-            from src.core.database import get_engine
-            from src.domain import Base
-
-            engine = get_engine()
-            async with engine.begin() as conn:
-                await conn.run_sync(Base.metadata.create_all, tables=[AutomationJob.__table__])
-                column_defs = await conn.run_sync(
-                    lambda sync_conn: {
-                        column["name"]: column
-                        for column in inspect(sync_conn).get_columns("automation_jobs")
-                    }
-                )
-                columns = set(column_defs)
-                country_code_column = column_defs.get("country_code") or {}
-                current_country_code_length = getattr(
-                    country_code_column.get("type"), "length", None
-                )
-                resize_sql = _country_code_resize_sql(
-                    conn.dialect.name, current_country_code_length
-                )
-                if resize_sql:
-                    await conn.execute(text(resize_sql))
-                if "include_current_month" not in columns:
-                    await conn.execute(
-                        text(
-                            "ALTER TABLE automation_jobs ADD COLUMN "
-                            "include_current_month BOOLEAN NOT NULL DEFAULT FALSE"
-                        )
-                    )
-                if "revision_window_months" not in columns:
-                    await conn.execute(
-                        text(
-                            "ALTER TABLE automation_jobs ADD COLUMN "
-                            "revision_window_months INTEGER NOT NULL DEFAULT 3"
-                        )
-                    )
-
-            await self._seed_jobs_from_env_if_needed()
+            try:
+                async with get_database() as db:
+                    await db.execute(select(AutomationJob.id).limit(1))
+                await self._seed_jobs_from_env_if_needed()
+            except Exception as exc:
+                raise RuntimeError(
+                    "automation_jobs storage is not ready; run the Alembic preflight and upgrade"
+                ) from exc
             self._storage_ready = True
 
     async def _seed_jobs_from_env_if_needed(self) -> None:
@@ -291,10 +267,12 @@ class AutomationService:
                 return
             state = self._states.setdefault(job.job_id, AutomationJobState())
             self._sync_state_schedule(job, state, reset=True)
+            await schedule_state_repository.save("ingestion", job.job_id, state)
 
     async def remove_job_state(self, job_id: str) -> None:
         async with self._lock:
             self._states.pop(job_id, None)
+            await schedule_state_repository.remove("ingestion", job_id)
 
     async def start(self) -> None:
         cfg = self._config()
@@ -305,9 +283,13 @@ class AutomationService:
         if self._task and not self._task.done():
             return
         self._stop_event = asyncio.Event()
+        persisted = await schedule_state_repository.load("ingestion")
         for job in await self.load_jobs():
             state = self._states.setdefault(job.job_id, AutomationJobState())
+            for field, value in persisted.get(job.job_id, {}).items():
+                setattr(state, field, value)
             self._sync_state_schedule(job, state, reset=state.next_run_at is None)
+            await schedule_state_repository.save("ingestion", job.job_id, state)
         loaded_jobs = await self.load_jobs()
         self._task = asyncio.create_task(self._run_loop(), name="globalid-automation-scheduler")
         logger.info("Automation scheduler started with %s configured job(s)", len(loaded_jobs))
@@ -407,6 +389,8 @@ class AutomationService:
                 state.next_run_at = self._compute_next_run(job, now=state.last_finished_at)
                 logger.error("Automation job %s failed: %s", job.job_id, exc)
                 raise
+            finally:
+                await schedule_state_repository.save("ingestion", job.job_id, state)
 
     def snapshot(self) -> dict[str, Any]:
         raise RuntimeError("Use snapshot_async() for automation config snapshots")

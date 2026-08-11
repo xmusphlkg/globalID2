@@ -1,0 +1,43 @@
+name: Control Center
+
+on:
+  pull_request:
+    paths:
+      - "dashboard/**"
+      - "src/control_plane/**"
+      - "src/services/task_worker.py"
+      - "src/services/automation_service.py"
+      - "src/services/data_release_service.py"
+      - "migrations/**"
+      - "scripts/export_dashboard_openapi.py"
+      - ".github/workflows/control-center.yml"
+  push:
+    branches: [master, development]
+
+jobs:
+  contract-and-ui:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+      - run: python -m venv venv
+      - run: venv/bin/pip install -r requirements.txt
+      - run: npm ci
+        working-directory: dashboard
+      - run: npm run openapi:check
+        working-directory: dashboard
+      - run: npm run lint
+        working-directory: dashboard
+      - run: npm test -- --run
+        working-directory: dashboard
+      - run: npm run build
+        working-directory: dashboard
+      - run: PYTHONPATH=. venv/bin/pytest -q tests/unit/test_control_plane_http_contract.py tests/unit/test_control_plane_runtime.py tests/unit/test_scheduler_shutdown.py

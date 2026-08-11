@@ -1,3 +1,2 @@
-import AutomationView from "@/features/operations/automation/view";
-
-export default AutomationView;
+import { permanentRedirect } from "next/navigation";
+export default function LegacyPage() { permanentRedirect("/operations/schedules/ingestion"); }

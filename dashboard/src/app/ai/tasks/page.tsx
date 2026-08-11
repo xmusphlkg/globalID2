@@ -1,3 +1,2 @@
-import AITasksView from "@/features/ai/tasks/view";
-
-export default AITasksView;
+import { permanentRedirect } from "next/navigation";
+export default function LegacyPage() { permanentRedirect("/production/ai"); }

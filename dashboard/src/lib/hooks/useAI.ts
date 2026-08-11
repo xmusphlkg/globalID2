@@ -3,7 +3,7 @@ import { apiFetch } from "@/lib/api";
 import type { TaskItem } from "@/lib/hooks/useTasks";
 
 export interface StartAITaskPayload {
-  country_id: number;
+  country_code: string;
   report_type?: "daily" | "weekly" | "monthly" | "special";
   language?: "zh" | "en";
   period_start?: string | null;
@@ -201,7 +201,7 @@ export function useDiseaseKnowledgeCatalogue(search?: string) {
       const params = new URLSearchParams();
       if (search) params.set("search", search);
       const suffix = params.toString() ? `?${params.toString()}` : "";
-      return apiFetch(`/ai/disease-knowledge/catalogue${suffix}`);
+      return apiFetch(`/knowledge${suffix}`);
     },
     staleTime: 30 * 1000,
   });
@@ -210,7 +210,7 @@ export function useDiseaseKnowledgeCatalogue(search?: string) {
 export function useDiseaseKnowledgeDetail(diseaseId: string | null) {
   return useQuery<DiseaseKnowledgeDetail>({
     queryKey: ["ai", "disease-knowledge", "detail", diseaseId],
-    queryFn: () => apiFetch(`/ai/disease-knowledge/diseases/${diseaseId}`),
+    queryFn: () => apiFetch(`/knowledge/${diseaseId}`),
     enabled: !!diseaseId,
     staleTime: 30 * 1000,
   });
@@ -221,7 +221,7 @@ export function useStartAITask() {
 
   return useMutation({
     mutationFn: (payload: StartAITaskPayload) =>
-      apiFetch("/ai/start", {
+      apiFetch("/reports/runs", {
         method: "POST",
         body: JSON.stringify(payload),
       }) as Promise<StartAITaskResult>,
@@ -238,7 +238,7 @@ export function useStartDiseaseKnowledgeTasks() {
 
   return useMutation({
     mutationFn: (payload: StartDiseaseKnowledgeTaskPayload) =>
-      apiFetch("/ai/disease-knowledge/start", {
+      apiFetch("/knowledge/runs", {
         method: "POST",
         body: JSON.stringify(payload),
       }) as Promise<StartDiseaseKnowledgeTaskResult>,

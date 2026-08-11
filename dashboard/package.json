@@ -6,7 +6,13 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "openapi:export": "cd .. && PYTHONPATH=. venv/bin/python scripts/export_dashboard_openapi.py",
+    "openapi:generate": "npm run openapi:export && openapi-typescript openapi.json --output src/generated/api.d.ts",
+    "openapi:check": "npm run openapi:generate && git diff --exit-code -- openapi.json src/generated/api.d.ts"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.9",
@@ -20,6 +26,7 @@
     "echarts-for-react": "^3.0.6",
     "lucide-react": "^1.28.0",
     "next": "^16.3.0",
+    "openapi-fetch": "^0.17.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-markdown": "^10.1.0",
@@ -27,12 +34,20 @@
     "zustand": "^5.0.11"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4.2.1",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.2",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
+    "jsdom": "^30.0.1",
+    "msw": "^2.15.0",
+    "openapi-typescript": "^7.13.0",
     "postcss": "^8.5.25",
     "tailwindcss": "^4.2.1",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.10"
   }
 }

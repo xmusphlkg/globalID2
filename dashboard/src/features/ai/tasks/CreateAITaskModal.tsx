@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { CheckCircle2, Loader2, X } from "lucide-react";
 import { Text, Title } from "@/components/ui/tremor";
 import { t } from "@/lib/i18n";
@@ -12,30 +13,41 @@ const labelCls =
 
 export function CreateAITaskModal({
   open,
-  countryId,
+  countryCode,
   lang,
   onClose,
 }: {
   open: boolean;
-  countryId: number;
+  countryCode: string;
   lang: Language;
   onClose: () => void;
 }) {
-  const form = useCreateAITaskForm({ countryId, onClose });
+  const form = useCreateAITaskForm({ countryCode, onClose });
+
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !form.isPending) onClose();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [form.isPending, onClose, open]);
 
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="relative w-full max-w-md rounded-tremor-default bg-tremor-background p-6 shadow-xl dark:bg-dark-tremor-background">
+      <div role="dialog" aria-modal="true" aria-labelledby="create-ai-task-title" className="relative w-full max-w-md rounded-tremor-default bg-tremor-background p-6 shadow-xl dark:bg-dark-tremor-background">
         <button
+          type="button"
+          aria-label={lang === "zh" ? "关闭" : "Close"}
           onClick={onClose}
           className="absolute right-4 top-4 text-tremor-content-subtle hover:text-tremor-content-strong dark:text-dark-tremor-content-subtle dark:hover:text-dark-tremor-content-strong"
         >
           <X className="h-5 w-5" />
         </button>
 
-        <Title className="mb-4">{lang === "zh" ? "新建 AI 任务" : "New AI Task"}</Title>
+        <Title id="create-ai-task-title" className="mb-4">{lang === "zh" ? "新建 AI 任务" : "New AI Task"}</Title>
 
         {form.isSuccess ? (
           <div className="flex flex-col items-center gap-2 py-4 text-emerald-600 dark:text-emerald-400">
@@ -56,8 +68,8 @@ export function CreateAITaskModal({
         ) : (
           <form onSubmit={form.handleSubmit} className="space-y-4">
             <div>
-              <label className={labelCls}>{lang === "zh" ? "报告类型" : "Report Type"}</label>
-              <select value={form.reportType} onChange={(e) => form.setReportType(e.target.value as typeof form.reportType)} className={inputCls}>
+              <label htmlFor="ai-report-type" className={labelCls}>{lang === "zh" ? "报告类型" : "Report Type"}</label>
+              <select id="ai-report-type" value={form.reportType} onChange={(e) => form.setReportType(e.target.value as typeof form.reportType)} className={inputCls}>
                 <option value="daily">daily</option>
                 <option value="weekly">weekly</option>
                 <option value="monthly">monthly</option>
@@ -66,8 +78,8 @@ export function CreateAITaskModal({
             </div>
 
             <div>
-              <label className={labelCls}>{lang === "zh" ? "报告语言" : "Report Language"}</label>
-              <select value={form.reportLanguage} onChange={(e) => form.setReportLanguage(e.target.value as Language)} className={inputCls}>
+              <label htmlFor="ai-report-language" className={labelCls}>{lang === "zh" ? "报告语言" : "Report Language"}</label>
+              <select id="ai-report-language" value={form.reportLanguage} onChange={(e) => form.setReportLanguage(e.target.value as Language)} className={inputCls}>
                 <option value="en">English</option>
                 <option value="zh">中文</option>
               </select>
@@ -75,16 +87,16 @@ export function CreateAITaskModal({
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
-                <label className={labelCls}>{lang === "zh" ? "报告布局" : "Report Layout"}</label>
-                <select value={form.reportLayout} onChange={(e) => form.setReportLayout(e.target.value as typeof form.reportLayout)} className={inputCls}>
+                <label htmlFor="ai-report-layout" className={labelCls}>{lang === "zh" ? "报告布局" : "Report Layout"}</label>
+                <select id="ai-report-layout" value={form.reportLayout} onChange={(e) => form.setReportLayout(e.target.value as typeof form.reportLayout)} className={inputCls}>
                   <option value="analytical_v3">analytical_v3</option>
                   <option value="structured">structured</option>
                   <option value="legacy">legacy</option>
                 </select>
               </div>
               <div>
-                <label className={labelCls}>{lang === "zh" ? "分析深度" : "Analysis Depth"}</label>
-                <select value={form.analysisDepth} onChange={(e) => form.setAnalysisDepth(e.target.value as typeof form.analysisDepth)} className={inputCls}>
+                <label htmlFor="ai-analysis-depth" className={labelCls}>{lang === "zh" ? "分析深度" : "Analysis Depth"}</label>
+                <select id="ai-analysis-depth" value={form.analysisDepth} onChange={(e) => form.setAnalysisDepth(e.target.value as typeof form.analysisDepth)} className={inputCls}>
                   <option value="deep">deep</option>
                   <option value="deterministic">deterministic</option>
                 </select>
@@ -92,8 +104,8 @@ export function CreateAITaskModal({
             </div>
 
             <div>
-              <label className={labelCls}>{t(lang, "priority")}</label>
-              <select value={form.priority} onChange={(e) => form.setPriority(e.target.value as typeof form.priority)} className={inputCls}>
+              <label htmlFor="ai-priority" className={labelCls}>{t(lang, "priority")}</label>
+              <select id="ai-priority" value={form.priority} onChange={(e) => form.setPriority(e.target.value as typeof form.priority)} className={inputCls}>
                 <option value="low">low</option>
                 <option value="normal">normal</option>
                 <option value="high">high</option>
@@ -102,13 +114,14 @@ export function CreateAITaskModal({
             </div>
 
             <div>
-              <label className={labelCls}>{lang === "zh" ? "回溯天数" : "Lookback Days"}</label>
-              <input type="number" min={1} max={3650} value={form.days} onChange={(e) => form.setDays(Math.max(1, Number(e.target.value) || 1))} className={inputCls} />
+              <label htmlFor="ai-lookback-days" className={labelCls}>{lang === "zh" ? "回溯天数" : "Lookback Days"}</label>
+              <input id="ai-lookback-days" type="number" min={1} max={3650} value={form.days} onChange={(e) => form.setDays(Math.max(1, Number(e.target.value) || 1))} className={inputCls} />
             </div>
 
             <div>
-              <label className={labelCls}>{lang === "zh" ? "质量阈值" : "Quality Threshold"}</label>
+              <label htmlFor="ai-quality-threshold" className={labelCls}>{lang === "zh" ? "质量阈值" : "Quality Threshold"}</label>
               <input
+                id="ai-quality-threshold"
                 type="number" min={0} max={1} step={0.01} value={form.qualityThreshold}
                 onChange={(e) => {
                   const next = Number(e.target.value);
@@ -119,13 +132,13 @@ export function CreateAITaskModal({
             </div>
 
             <div>
-              <label className={labelCls}>{lang === "zh" ? "任务名称（可选）" : "Task Name (optional)"}</label>
-              <input type="text" value={form.taskName} onChange={(e) => form.setTaskName(e.target.value)} placeholder={lang === "zh" ? "例如：生成中国月报" : "e.g. Generate CN monthly report"} className={inputCls} />
+              <label htmlFor="ai-task-name" className={labelCls}>{lang === "zh" ? "任务名称（可选）" : "Task Name (optional)"}</label>
+              <input id="ai-task-name" type="text" value={form.taskName} onChange={(e) => form.setTaskName(e.target.value)} placeholder={lang === "zh" ? "例如：生成中国月报" : "e.g. Generate CN monthly report"} className={inputCls} />
             </div>
 
             <div>
-              <label className={labelCls}>{lang === "zh" ? "描述（可选）" : "Description (optional)"}</label>
-              <textarea value={form.description} onChange={(e) => form.setDescription(e.target.value)} rows={3} className={inputCls} placeholder={lang === "zh" ? "输入任务说明" : "Describe this task"} />
+              <label htmlFor="ai-task-description" className={labelCls}>{lang === "zh" ? "描述（可选）" : "Description (optional)"}</label>
+              <textarea id="ai-task-description" value={form.description} onChange={(e) => form.setDescription(e.target.value)} rows={3} className={inputCls} placeholder={lang === "zh" ? "输入任务说明" : "Describe this task"} />
             </div>
 
             <div className="space-y-2.5">

@@ -3,7 +3,7 @@
 from collections import defaultdict
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,17 +18,30 @@ from ..frequency import (
 from ..schemas.quality import CompletenessItem, DataSourceDist, QualityStats, TimeGap
 from src.core.source_scopes import canonical_data_source_label
 from src.domain.disease import Disease
+from src.domain.country import Country
 from src.domain.disease_record import DiseaseRecord
 from src.domain.standard_disease import StandardDisease
 
 router = APIRouter()
 
 
+async def _country_id(country_code: str, db: AsyncSession) -> int:
+    country_id = (
+        await db.execute(
+            select(Country.id).where(func.upper(Country.code) == country_code.strip().upper())
+        )
+    ).scalar_one_or_none()
+    if country_id is None:
+        raise HTTPException(404, "Country not found")
+    return int(country_id)
+
+
 @router.get("/quality/stats", response_model=QualityStats)
 async def quality_stats(
-    country_id: int = Query(..., ge=1),
+    country_code: str = Query(..., min_length=2, max_length=10),
     db: AsyncSession = Depends(get_db),
 ):
+    country_id = await _country_id(country_code, db)
     q = select(
         func.count().label("total_records"),
         func.count(func.distinct(DiseaseRecord.disease_id)).label("unique_diseases"),
@@ -55,10 +68,11 @@ async def quality_stats(
 
 @router.get("/quality/gaps", response_model=List[TimeGap])
 async def quality_gaps(
-    country_id: int = Query(..., ge=1),
+    country_code: str = Query(..., min_length=2, max_length=10),
     db: AsyncSession = Depends(get_db),
 ):
     """Find gaps > 1 detected period in the country time-series."""
+    country_id = await _country_id(country_code, db)
     profile = await infer_country_frequency_profile(country_id, db)
     q = (
         select(DiseaseRecord.time)
@@ -85,9 +99,10 @@ async def quality_gaps(
 
 @router.get("/quality/sources", response_model=List[DataSourceDist])
 async def quality_sources(
-    country_id: Optional[int] = Query(None, ge=1),
+    country_code: Optional[str] = Query(None, min_length=2, max_length=10),
     db: AsyncSession = Depends(get_db),
 ):
+    country_id = await _country_id(country_code, db) if country_code else None
     q = select(
         DiseaseRecord.data_source,
         func.count().label("count"),
@@ -117,12 +132,13 @@ async def quality_sources(
 
 @router.get("/quality/completeness", response_model=List[CompletenessItem])
 async def quality_completeness(
-    country_id: int = Query(..., ge=1),
+    country_code: str = Query(..., min_length=2, max_length=10),
     start: Optional[str] = Query(None, description="Start date YYYY-MM-DD"),
     end: Optional[str] = Query(None, description="End date YYYY-MM-DD"),
     lang: str = Query("en"),
     db: AsyncSession = Depends(get_db),
 ):
+    country_id = await _country_id(country_code, db)
     if lang == "zh":
         name_col = func.coalesce(
             StandardDisease.standard_name_zh, Disease.name_en, Disease.name

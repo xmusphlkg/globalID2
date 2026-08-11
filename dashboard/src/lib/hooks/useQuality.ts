@@ -36,51 +36,51 @@ export interface CompletenessItem {
   period_unit: string;
 }
 
-export function useQualityStats(countryId: number | null) {
+export function useQualityStats(countryCode: string | null) {
   return useQuery<QualityStats>({
-    queryKey: ["quality", "stats", countryId],
-    queryFn: () => apiFetch(`/quality/stats?country_id=${countryId}`),
-    enabled: !!countryId,
+    queryKey: ["quality", "stats", countryCode],
+    queryFn: () => apiFetch(`/quality/stats?country_code=${encodeURIComponent(countryCode || "")}`),
+    enabled: !!countryCode,
     staleTime: 5 * 60 * 1000,
   });
 }
 
-export function useQualityGaps(countryId: number | null) {
+export function useQualityGaps(countryCode: string | null) {
   return useQuery<TimeGap[]>({
-    queryKey: ["quality", "gaps", countryId],
-    queryFn: () => apiFetch(`/quality/gaps?country_id=${countryId}`),
-    enabled: !!countryId,
+    queryKey: ["quality", "gaps", countryCode],
+    queryFn: () => apiFetch(`/quality/gaps?country_code=${encodeURIComponent(countryCode || "")}`),
+    enabled: !!countryCode,
     staleTime: 5 * 60 * 1000,
   });
 }
 
-export function useQualitySources(countryId: number | null) {
+export function useQualitySources(countryCode: string | null) {
   return useQuery<DataSourceDist[]>({
-    queryKey: ["quality", "sources", countryId],
+    queryKey: ["quality", "sources", countryCode],
     queryFn: () =>
-      apiFetch(countryId ? `/quality/sources?country_id=${countryId}` : "/quality/sources"),
+      apiFetch(countryCode ? `/quality/sources?country_code=${encodeURIComponent(countryCode)}` : "/quality/sources"),
     staleTime: 5 * 60 * 1000,
   });
 }
 
 export function useQualityCompleteness(
-  countryId: number | null,
+  countryCode: string | null,
   start?: string,
   end?: string,
   lang = "en",
 ) {
   return useQuery<CompletenessItem[]>({
-    queryKey: ["quality", "completeness", countryId, start, end, lang],
+    queryKey: ["quality", "completeness", countryCode, start, end, lang],
     queryFn: () => {
       const params = new URLSearchParams({
-        country_id: String(countryId),
+        country_code: countryCode || "",
         lang,
       });
       if (start) params.set("start", start);
       if (end) params.set("end", end);
       return apiFetch(`/quality/completeness?${params}`);
     },
-    enabled: !!countryId,
+    enabled: !!countryCode,
     staleTime: 5 * 60 * 1000,
   });
 }

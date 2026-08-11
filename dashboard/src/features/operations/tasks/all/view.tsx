@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Activity,
   AlertTriangle,
@@ -22,7 +23,7 @@ import { MetricTile } from "@/components/ui/MetricTile";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { CHART_TOKENS } from "@/lib/chart-theme";
-import { type TaskItem, useTaskDetail, useTasks, useTaskWebSocket } from "@/features/operations/tasks/api";
+import { type TaskItem, usePaginatedTasks, useTaskDetail, useTaskEventStream } from "@/features/operations/tasks/api";
 import { t } from "@/lib/i18n";
 import { formatDateTime } from "@/lib/utils";
 import { useAppStore } from "@/stores/app-store";
@@ -96,21 +97,39 @@ function TaskNameCell({ task }: { task: TaskItem }) {
 }
 
 export default function TasksPage() {
-  const { lang, countryId } = useAppStore();
-  const [statusFilter, setStatusFilter] = useState("");
-  const [typeFilter, setTypeFilter] = useState("");
-  const [search, setSearch] = useState("");
-  const [selectedUuid, setSelectedUuid] = useState<string | null>(null);
+  const { lang, countryCode } = useAppStore();
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const statusFilter = searchParams.get("status") ?? "";
+  const typeFilter = searchParams.get("task_type") ?? "";
+  const search = searchParams.get("search") ?? "";
+  const selectedUuid = searchParams.get("task");
+  const requestedPage = Number(searchParams.get("page") || "1");
+  const page = Number.isFinite(requestedPage) && requestedPage > 0 ? Math.floor(requestedPage) : 1;
+  const pageSize = 50;
 
-  useTaskWebSocket();
+  const setUrlState = (updates: Record<string, string | null>) => {
+    const params = new URLSearchParams(searchParams.toString());
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value) params.set(key, value); else params.delete(key);
+    });
+    router.replace(`${pathname}${params.size ? `?${params.toString()}` : ""}`, { scroll: false });
+  };
 
-  const { data: tasks, isLoading } = useTasks(
+  useTaskEventStream();
+
+  const taskQuery = usePaginatedTasks(
     statusFilter || undefined,
     typeFilter || undefined,
-    countryId,
+    countryCode || undefined,
     search || undefined,
-    100,
+    pageSize,
+    (page - 1) * pageSize,
   );
+  const tasks = taskQuery.data?.items;
+  const isLoading = taskQuery.isLoading;
+  const totalPages = Math.max(1, Math.ceil((taskQuery.data?.totalCount ?? 0) / pageSize));
 
   const selectedTask = useMemo(
     () => tasks?.find((task) => task.task_uuid === selectedUuid) ?? null,
@@ -143,7 +162,7 @@ export default function TasksPage() {
 
   const summary = useMemo(() => {
     const list = tasks ?? [];
-    const total = list.length;
+    const total = taskQuery.data?.totalCount ?? list.length;
     const running = list.filter((task) => task.status === "running").length;
     const failed = list.filter((task) => task.status === "failed").length;
     const completed = list.filter((task) => task.status === "completed").length;
@@ -152,7 +171,7 @@ export default function TasksPage() {
       : 0;
 
     return { total, running, failed, completed, avgProgress };
-  }, [tasks]);
+  }, [taskQuery.data?.totalCount, tasks]);
 
   const hasFilters = Boolean(statusFilter || typeFilter || search);
 
@@ -315,7 +334,7 @@ export default function TasksPage() {
             placeholder={lang === "zh" ? "搜索任务名称或 ID" : "Search task name or ID"}
             className="h-10 w-full rounded-tremor-default border border-tremor-border bg-tremor-background py-2 pl-9 pr-3 text-sm text-tremor-content-strong outline-none transition focus:border-tremor-brand-subtle focus:ring-2 focus:ring-tremor-brand-muted dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong"
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(event) => setUrlState({ search: event.target.value, page: null })}
           />
         </div>
 
@@ -324,7 +343,7 @@ export default function TasksPage() {
           <select
             className="h-10 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm text-tremor-content-strong outline-none transition focus:border-tremor-brand-subtle focus:ring-2 focus:ring-tremor-brand-muted dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong"
             value={statusFilter}
-            onChange={(event) => setStatusFilter(event.target.value)}
+            onChange={(event) => setUrlState({ status: event.target.value, page: null })}
             aria-label={lang === "zh" ? "按状态筛选" : "Filter by status"}
           >
             <option value="">{lang === "zh" ? "全部状态" : "All statuses"}</option>
@@ -339,7 +358,7 @@ export default function TasksPage() {
         <select
           className="h-10 min-w-[180px] rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm text-tremor-content-strong outline-none transition focus:border-tremor-brand-subtle focus:ring-2 focus:ring-tremor-brand-muted dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong"
           value={typeFilter}
-          onChange={(event) => setTypeFilter(event.target.value)}
+          onChange={(event) => setUrlState({ task_type: event.target.value, page: null })}
           aria-label={lang === "zh" ? "按任务类型筛选" : "Filter by task type"}
         >
           <option value="">{lang === "zh" ? "全部类型" : "All types"}</option>
@@ -355,9 +374,7 @@ export default function TasksPage() {
             type="button"
             className="inline-flex h-10 items-center gap-2 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm font-medium text-tremor-content-strong transition hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:hover:bg-dark-tremor-background-subtle"
             onClick={() => {
-              setSearch("");
-              setStatusFilter("");
-              setTypeFilter("");
+              setUrlState({ search: null, status: null, task_type: null, page: null });
             }}
           >
             <TimerReset className="h-4 w-4" />
@@ -450,7 +467,7 @@ export default function TasksPage() {
           rows={tasks ?? []}
           getRowKey={(task) => task.task_uuid}
           selectedRowKey={selectedUuid}
-          onRowClick={(task) => setSelectedUuid(task.task_uuid)}
+          onRowClick={(task) => setUrlState({ task: task.task_uuid })}
           emptyState={
             <EmptyState
               icon={<ListTodo className="h-10 w-10" />}
@@ -469,6 +486,13 @@ export default function TasksPage() {
         />
       )}
 
+      {!isLoading && (taskQuery.data?.totalCount ?? 0) > pageSize ? (
+        <div className="flex items-center justify-between rounded-md border border-[#D9D9D6] bg-white px-4 py-3 text-sm">
+          <span className="text-[#6B7280]">Page {page} of {totalPages} · {taskQuery.data?.totalCount ?? 0} tasks</span>
+          <div className="flex gap-2"><button type="button" disabled={page <= 1} onClick={() => setUrlState({ page: String(page - 1), task: null })} className="h-8 rounded-md border border-[#D9D9D6] px-3 font-semibold text-[#374151] disabled:opacity-40">Previous</button><button type="button" disabled={page >= totalPages} onClick={() => setUrlState({ page: String(page + 1), task: null })} className="h-8 rounded-md border border-[#D9D9D6] px-3 font-semibold text-[#374151] disabled:opacity-40">Next</button></div>
+        </div>
+      ) : null}
+
       <DetailDrawer
         open={Boolean(selectedUuid)}
         title={selectedTask?.task_name ?? (lang === "zh" ? "任务详情" : "Task Detail")}
@@ -481,7 +505,7 @@ export default function TasksPage() {
             </span>
           ) : null
         }
-        onClose={() => setSelectedUuid(null)}
+        onClose={() => setUrlState({ task: null })}
       >
         <TaskDetailPanel taskDetail={taskDetail} detailLoading={detailLoading} />
       </DetailDrawer>

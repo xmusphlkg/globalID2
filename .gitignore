@@ -51,6 +51,9 @@ dashboard/out/
 dashboard/.turbo/
 dashboard/.vercel/
 dashboard/coverage/
+dashboard/test-results/
+dashboard/playwright-report/
+dashboard/blob-report/
 dashboard/next-env.d.ts
 dashboard/tmp-app/
 **/.wrangler/

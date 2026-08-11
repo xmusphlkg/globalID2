@@ -6,8 +6,14 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import sys
+from pathlib import Path
 
-from src.services.situation_room import refresh_situation
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from src.services.situation_room import refresh_situation  # noqa: E402
 
 
 def main() -> None:

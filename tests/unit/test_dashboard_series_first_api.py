@@ -276,7 +276,7 @@ def test_records_endpoint_preserves_shape_and_adds_semantic_metadata(
     monkeypatch,
 ) -> None:
     async def fake_load(db, *, disease_code, country_id, limit=None):
-        assert limit == 500
+        assert limit is None
         return SeriesFirstResult(
             disease_code=disease_code,
             disease_name="Example",
@@ -296,8 +296,12 @@ def test_records_endpoint_preserves_shape_and_adds_semantic_metadata(
             metadata={},
         )
 
+    async def fake_country(_country_code, _db):
+        return SimpleNamespace(id=11, code="XX")
+
     monkeypatch.setattr(diseases, "load_series_first_records", fake_load)
-    response = TestClient(_app()).get("/diseases/D001/records?country_id=11")
+    monkeypatch.setattr(diseases, "_resolve_country", fake_country)
+    response = TestClient(_app()).get("/diseases/D001/records?country_code=XX")
 
     assert response.status_code == 200
     record = response.json()[0]
@@ -333,8 +337,12 @@ def test_compare_endpoint_aggregates_only_the_safe_projected_curve(monkeypatch) 
             },
         )
 
+    async def fake_country(_country_code, _db):
+        return SimpleNamespace(id=11, code="XX")
+
     monkeypatch.setattr(diseases, "load_series_first_records", fake_load)
-    response = TestClient(_app()).get("/analysis/compare?country_id=11&diseases=D001")
+    monkeypatch.setattr(diseases, "_resolve_country", fake_country)
+    response = TestClient(_app()).get("/analytics/compare?country_code=XX&diseases=D001")
 
     assert response.status_code == 200
     result = response.json()["diseases"][0]

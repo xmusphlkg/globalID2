@@ -5,13 +5,18 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Any, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from pydantic import BaseModel, Field
-from sqlalchemy import inspect as sa_inspect, select
+from sqlalchemy import func, inspect as sa_inspect, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from dashboard.api.deps import get_db
-from src.domain import DiseaseMappingRelease, MappingNotificationOutbox
+from src.domain import (
+    DiseaseMappingCandidate,
+    DiseaseMappingRelease,
+    MappingNotificationOutbox,
+    SourceDiseaseCategory,
+)
 from src.services.disease_mapping_ai_service import disease_mapping_ai_service
 from src.services.disease_mapping_audit_service import disease_mapping_audit_service
 from src.services.disease_mapping_automation_service import disease_mapping_automation_service
@@ -41,7 +46,7 @@ class ReleaseCreateRequest(BaseModel):
     description: str = Field("", max_length=8000)
 
 
-@router.get("/disease-mappings/v3/summary")
+@router.get("/mappings/summary")
 async def mapping_v3_summary(db: AsyncSession = Depends(get_db)):
     return {
         **(await disease_mapping_registry_service.stats(db)),
@@ -49,44 +54,64 @@ async def mapping_v3_summary(db: AsyncSession = Depends(get_db)):
     }
 
 
-@router.get("/disease-mappings/v3/categories")
+@router.get("/mappings/categories")
 async def list_mapping_v3_categories(
+    response: Response,
     country_code: Optional[str] = Query(None, min_length=2, max_length=10),
     status: Optional[str] = None,
     ai_status: Optional[str] = None,
-    limit: int = Query(200, ge=1, le=1000),
-    offset: int = Query(0, ge=0),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(200, ge=1, le=1000),
     db: AsyncSession = Depends(get_db),
 ):
-    return await disease_mapping_registry_service.list_categories(
+    result = await disease_mapping_registry_service.list_categories(
         db,
         country_code=country_code,
         status=status,
         ai_status=ai_status,
-        limit=limit,
-        offset=offset,
+        limit=page_size,
+        offset=(page - 1) * page_size,
     )
+    count_query = select(func.count()).select_from(SourceDiseaseCategory)
+    if country_code:
+        count_query = count_query.where(SourceDiseaseCategory.country_code == country_code)
+    if status:
+        count_query = count_query.where(SourceDiseaseCategory.status == status)
+    if ai_status:
+        count_query = count_query.where(SourceDiseaseCategory.ai_status == ai_status)
+    total = int((await db.execute(count_query)).scalar_one() or 0)
+    response.headers["X-Total-Count"] = str(total)
+    response.headers["X-Limit"] = str(page_size)
+    response.headers["X-Offset"] = str((page - 1) * page_size)
+    return result
 
 
-@router.get("/disease-mappings/v3/coverage")
+@router.get("/mappings/coverage")
 async def mapping_v3_coverage(db: AsyncSession = Depends(get_db)):
     return await disease_mapping_registry_service.effective_coverage(db)
 
 
-@router.get("/disease-mappings/v3/audit")
+@router.get("/mappings/audit")
 async def mapping_v3_audit(db: AsyncSession = Depends(get_db)):
     return await disease_mapping_audit_service.run(db)
 
 
-@router.post("/disease-mappings/v3/bootstrap")
+@router.post("/mappings/bootstrap", status_code=202)
 async def bootstrap_mapping_v3(db: AsyncSession = Depends(get_db)):
     result = await disease_mapping_registry_service.bootstrap_all_sources(db)
     await db.commit()
     return result
 
 
-@router.post("/disease-mappings/v3/categories/{category_id}/suggest")
-async def suggest_mapping_v3(category_id: int, db: AsyncSession = Depends(get_db)):
+@router.post("/mappings/categories/{category_key}/suggest", status_code=202)
+async def suggest_mapping_v3(category_key: str, db: AsyncSession = Depends(get_db)):
+    category_id = (
+        await db.execute(
+            select(SourceDiseaseCategory.id).where(SourceDiseaseCategory.category_key == category_key)
+        )
+    ).scalar_one_or_none()
+    if category_id is None:
+        raise HTTPException(404, "Mapping category not found")
     try:
         return await disease_mapping_ai_service.suggest_for_category(db, category_id)
     except ValueError as exc:
@@ -95,12 +120,21 @@ async def suggest_mapping_v3(category_id: int, db: AsyncSession = Depends(get_db
         raise HTTPException(502, f"AI mapping suggestion failed: {exc}") from exc
 
 
-@router.post("/disease-mappings/v3/candidates/{candidate_id}/accept")
+@router.post("/mappings/candidates/{candidate_key}/accept")
 async def accept_mapping_v3_candidate(
-    candidate_id: int,
+    candidate_key: str,
     body: CandidateReviewRequest,
     db: AsyncSession = Depends(get_db),
 ):
+    candidate_id = (
+        await db.execute(
+            select(DiseaseMappingCandidate.id).where(
+                DiseaseMappingCandidate.candidate_key == candidate_key
+            )
+        )
+    ).scalar_one_or_none()
+    if candidate_id is None:
+        raise HTTPException(404, "Mapping candidate not found")
     try:
         assertion = await disease_mapping_registry_service.accept_candidate(
             db, candidate_id=candidate_id, reviewer=body.reviewer, notes=body.notes
@@ -112,12 +146,21 @@ async def accept_mapping_v3_candidate(
         raise HTTPException(409, str(exc)) from exc
 
 
-@router.post("/disease-mappings/v3/candidates/{candidate_id}/reject")
+@router.post("/mappings/candidates/{candidate_key}/reject")
 async def reject_mapping_v3_candidate(
-    candidate_id: int,
+    candidate_key: str,
     body: CandidateReviewRequest,
     db: AsyncSession = Depends(get_db),
 ):
+    candidate_id = (
+        await db.execute(
+            select(DiseaseMappingCandidate.id).where(
+                DiseaseMappingCandidate.candidate_key == candidate_key
+            )
+        )
+    ).scalar_one_or_none()
+    if candidate_id is None:
+        raise HTTPException(404, "Mapping candidate not found")
     try:
         candidate = await disease_mapping_registry_service.reject_candidate(
             db, candidate_id=candidate_id, reviewer=body.reviewer, notes=body.notes
@@ -129,7 +172,7 @@ async def reject_mapping_v3_candidate(
         raise HTTPException(409, str(exc)) from exc
 
 
-@router.post("/disease-mappings/v3/releases")
+@router.post("/mappings/releases", status_code=201)
 async def create_mapping_v3_release(
     body: ReleaseCreateRequest,
     db: AsyncSession = Depends(get_db),
@@ -148,24 +191,44 @@ async def create_mapping_v3_release(
         raise HTTPException(409, str(exc)) from exc
 
 
-@router.get("/disease-mappings/v3/releases")
+@router.get("/mappings/releases")
 async def list_mapping_v3_releases(
-    limit: int = Query(50, ge=1, le=200),
+    response: Response,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
 ):
     await disease_mapping_registry_service.ensure_schema(db)
+    total = int(
+        (await db.execute(select(func.count()).select_from(DiseaseMappingRelease))).scalar_one()
+        or 0
+    )
+    offset = (page - 1) * page_size
     rows = (
         await db.execute(
             select(DiseaseMappingRelease)
             .order_by(DiseaseMappingRelease.created_at.desc())
-            .limit(limit)
+            .offset(offset)
+            .limit(page_size)
         )
     ).scalars().all()
+    response.headers["X-Total-Count"] = str(total)
+    response.headers["X-Limit"] = str(page_size)
+    response.headers["X-Offset"] = str(offset)
     return [_row(item) for item in rows]
 
 
-@router.post("/disease-mappings/v3/releases/{release_id}/activate")
-async def activate_mapping_v3_release(release_id: int, db: AsyncSession = Depends(get_db)):
+@router.post("/mappings/releases/{release_code}/activate")
+async def activate_mapping_v3_release(release_code: str, db: AsyncSession = Depends(get_db)):
+    release_id = (
+        await db.execute(
+            select(DiseaseMappingRelease.id).where(
+                DiseaseMappingRelease.release_code == release_code
+            )
+        )
+    ).scalar_one_or_none()
+    if release_id is None:
+        raise HTTPException(404, "Mapping release not found")
     try:
         release = await disease_mapping_registry_service.activate_release(db, release_id)
         await db.commit()
@@ -175,22 +238,35 @@ async def activate_mapping_v3_release(release_id: int, db: AsyncSession = Depend
         raise HTTPException(409, str(exc)) from exc
 
 
-@router.post("/disease-mappings/v3/automation/run")
+@router.post("/mappings/automation/runs", status_code=202)
 async def run_mapping_v3_automation():
     return await disease_mapping_automation_service.process_once()
 
 
-@router.get("/disease-mappings/v3/outbox")
+@router.get("/mappings/outbox")
 async def list_mapping_v3_outbox(
+    response: Response,
     status: Optional[str] = None,
-    limit: int = Query(100, ge=1, le=500),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(100, ge=1, le=500),
     db: AsyncSession = Depends(get_db),
 ):
     await disease_mapping_registry_service.ensure_schema(db)
     query = select(MappingNotificationOutbox)
+    count_query = select(func.count()).select_from(MappingNotificationOutbox)
     if status:
         query = query.where(MappingNotificationOutbox.status == status)
+        count_query = count_query.where(MappingNotificationOutbox.status == status)
+    total = int((await db.execute(count_query)).scalar_one() or 0)
+    offset = (page - 1) * page_size
     rows = (
-        await db.execute(query.order_by(MappingNotificationOutbox.created_at.desc()).limit(limit))
+        await db.execute(
+            query.order_by(MappingNotificationOutbox.created_at.desc())
+            .offset(offset)
+            .limit(page_size)
+        )
     ).scalars().all()
+    response.headers["X-Total-Count"] = str(total)
+    response.headers["X-Limit"] = str(page_size)
+    response.headers["X-Offset"] = str(offset)
     return [_row(item) for item in rows]

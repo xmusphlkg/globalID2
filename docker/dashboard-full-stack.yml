@@ -70,6 +70,52 @@ services:
     networks:
       - globalid-network
 
+  scheduler:
+    image: python:3.12-slim
+    working_dir: /app
+    command: >
+      bash -lc "
+      pip install --no-cache-dir -r requirements.txt &&
+      python -m src.control_plane.scheduler
+      "
+    env_file:
+      - ../.env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://globalid:globalid_dev_password@postgres:5432/globalid
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - ../:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - globalid-network
+
+  worker:
+    image: python:3.12-slim
+    working_dir: /app
+    command: >
+      bash -lc "
+      pip install --no-cache-dir -r requirements.txt &&
+      python -m src.services.task_worker
+      "
+    env_file:
+      - ../.env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://globalid:globalid_dev_password@postgres:5432/globalid
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - ../:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - globalid-network
+
   dashboard:
     image: node:22-alpine
     working_dir: /app/dashboard
@@ -79,8 +125,7 @@ services:
       npm run dev -- --hostname 0.0.0.0 --port 3000
       "
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:${API_PORT:-8000}/api/v1
-      NEXT_PUBLIC_WS_URL: ws://localhost:${API_PORT:-8000}/api/v1
+      API_PROXY_TARGET: http://api:8000
     volumes:
       - ../:/app
     ports:

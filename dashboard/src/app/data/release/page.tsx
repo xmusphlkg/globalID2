@@ -1,3 +1,2 @@
-import DataReleaseView from "@/features/data/release/view";
-
-export default DataReleaseView;
+import { permanentRedirect } from "next/navigation";
+export default function LegacyPage() { permanentRedirect("/production/releases"); }

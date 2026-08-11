@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import html
 import json
@@ -90,9 +91,23 @@ class DiseaseMappingRegistryService:
 
     _schema_ready = False
 
+    def __init__(self) -> None:
+        self._schema_ready = False
+        self._schema_lock = asyncio.Lock()
+
     async def ensure_schema(self, db: AsyncSession) -> None:
         if self._schema_ready:
             return
+        # The mapping page loads summary, coverage, audit, and releases in
+        # parallel. Only one request may run the legacy schema preflight;
+        # concurrent CREATE OR REPLACE VIEW statements can otherwise deadlock
+        # with the read queries that immediately follow them.
+        async with self._schema_lock:
+            if self._schema_ready:
+                return
+            await self._initialize_schema(db)
+
+    async def _initialize_schema(self, db: AsyncSession) -> None:
         tables = [
             SourceDiseaseCategory.__table__,
             SourceDiseaseCategoryAlias.__table__,

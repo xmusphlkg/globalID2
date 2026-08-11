@@ -13,7 +13,6 @@ from ..schemas.release import (
     DataReleaseJobCreate,
     DataReleaseJobOut,
     DataReleaseJobUpdate,
-    DataReleaseTriggerResult,
 )
 from src.domain import DataReleaseJob
 from src.services.data_release_service import data_release_service
@@ -21,19 +20,19 @@ from src.services.data_release_service import data_release_service
 router = APIRouter()
 
 
-@router.get("/release", response_model=DataReleaseConfigOut)
+@router.get("/releases/config", response_model=DataReleaseConfigOut)
 async def get_data_release_config():
     return DataReleaseConfigOut(**(await data_release_service.snapshot_async()))
 
 
-@router.get("/release/jobs", response_model=List[DataReleaseJobOut])
+@router.get("/releases/jobs", response_model=List[DataReleaseJobOut])
 async def list_data_release_jobs():
     await data_release_service.ensure_storage()
     snapshot = await data_release_service.snapshot_async()
     return [DataReleaseJobOut(**item) for item in snapshot["jobs"]]
 
 
-@router.post("/release/jobs", response_model=DataReleaseJobOut, status_code=201)
+@router.post("/releases/jobs", response_model=DataReleaseJobOut, status_code=201)
 async def create_data_release_job(body: DataReleaseJobCreate, db: AsyncSession = Depends(get_db)):
     await data_release_service.ensure_storage()
     _validate_release_schedule(body.interval_minutes, body.daily_time)
@@ -71,7 +70,7 @@ async def create_data_release_job(body: DataReleaseJobCreate, db: AsyncSession =
     return DataReleaseJobOut(**state_by_job[job.job_id])
 
 
-@router.put("/release/jobs/{job_id}", response_model=DataReleaseJobOut)
+@router.put("/releases/jobs/{job_id}", response_model=DataReleaseJobOut)
 async def update_data_release_job(job_id: str, body: DataReleaseJobUpdate, db: AsyncSession = Depends(get_db)):
     await data_release_service.ensure_storage()
     job = (
@@ -104,7 +103,7 @@ async def update_data_release_job(job_id: str, body: DataReleaseJobUpdate, db: A
     return DataReleaseJobOut(**state_by_job[job.job_id])
 
 
-@router.delete("/release/jobs/{job_id}")
+@router.delete("/releases/jobs/{job_id}")
 async def delete_data_release_job(job_id: str, db: AsyncSession = Depends(get_db)):
     await data_release_service.ensure_storage()
     job = (
@@ -118,16 +117,7 @@ async def delete_data_release_job(job_id: str, db: AsyncSession = Depends(get_db
     return {"ok": True, "job_id": job_id}
 
 
-@router.post("/release/jobs/{job_id}/run", response_model=DataReleaseTriggerResult, status_code=202)
-async def run_data_release_job(job_id: str):
-    try:
-        result = await data_release_service.trigger_job(job_id, manual=True, trigger="manual")
-    except ValueError as exc:
-        raise HTTPException(404, str(exc)) from exc
-    return DataReleaseTriggerResult(**result)
-
-
-@router.get("/release/jobs/{job_id}/checks", response_model=DataReleaseChecksOut)
+@router.get("/releases/{job_id}/checks", response_model=DataReleaseChecksOut)
 async def get_data_release_checks(job_id: str):
     try:
         result = await data_release_service.integration_checks(job_id)

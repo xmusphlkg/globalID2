@@ -9,6 +9,8 @@ import pytest
 from scripts.publish_download_repo import (
     ensure_commit_identity,
     ensure_repo,
+    push_branch,
+    run_git,
     sync_managed_assets,
     validate_source,
 )
@@ -186,3 +188,27 @@ def test_commit_identity_reuses_repository_author_for_fresh_worker(tmp_path, mon
         text=True,
         capture_output=True,
     ).stdout.strip() == "repository@example.test"
+
+
+def test_run_git_surfaces_stderr_for_control_plane_diagnostics(tmp_path):
+    with pytest.raises(RuntimeError, match=r"not a git repository"):
+        run_git(["status"], tmp_path)
+
+
+def test_push_branch_retries_transient_transport_failures(tmp_path, monkeypatch):
+    attempts = []
+    delays = []
+
+    def flaky_run_git(args, cwd):
+        attempts.append((args, cwd))
+        if len(attempts) < 3:
+            raise RuntimeError("transport unavailable")
+        return ""
+
+    monkeypatch.setattr("scripts.publish_download_repo.run_git", flaky_run_git)
+    monkeypatch.setattr("scripts.publish_download_repo.time.sleep", delays.append)
+
+    push_branch(tmp_path, "main", attempts=3, retry_delay_seconds=0.25)
+
+    assert attempts == [(["push", "origin", "main"], tmp_path)] * 3
+    assert delays == [0.25, 0.25]

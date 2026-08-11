@@ -49,6 +49,17 @@ def setup_logging() -> None:
         diagnose=True,
     )
 
+    # Machine-readable operational logs for request/task/resource correlation.
+    logger.add(
+        config.log_dir / "control-plane.jsonl",
+        level=config.log_level,
+        rotation="00:00",
+        retention="30 days",
+        compression="zip",
+        enqueue=True,
+        serialize=True,
+    )
+
     _logging_initialized = True
     logger.info(f"Logging initialized - Level: {config.log_level}")
 

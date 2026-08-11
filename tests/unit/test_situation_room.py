@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pandas as pd
 
+from src.domain.situation import PublicHealthEvent
 from src.services.situation_room import analyze_frame, build_snapshot, load_config
 
 
@@ -55,3 +56,18 @@ def test_snapshot_separates_statistical_and_official_event_evidence() -> None:
     assert snapshot["increasing"][0]["kind"] == "statistical_signal"
     assert snapshot["emerging"] == [event]
     assert snapshot["coverage"]["note_en"].startswith("Statistical signals cover")
+
+
+def test_public_health_event_serializes_mapped_metadata_column() -> None:
+    event = PublicHealthEvent(
+        source="who_don",
+        external_id="event-1",
+        source_url="https://example.test/event-1",
+        title="Example event",
+        content_hash="hash-1",
+        metadata_={"source_kind": "official"},
+    )
+
+    document = event.to_dict()
+
+    assert document["metadata"] == {"source_kind": "official"}

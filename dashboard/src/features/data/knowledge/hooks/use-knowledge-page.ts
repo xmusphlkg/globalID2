@@ -6,7 +6,7 @@ import {
   useDiseaseKnowledgeDetail,
   useStartDiseaseKnowledgeTasks,
 } from "@/features/ai/api";
-import { useTaskWebSocket } from "@/features/operations/tasks/api";
+import { useTaskEventStream } from "@/features/operations/tasks/api";
 
 export type KnowledgeStatusFilter = "all" | "published" | "requires_review" | "blocked";
 export type KnowledgeDisplayFilter = "all" | "full" | "partial" | "blocked";
@@ -46,7 +46,7 @@ export function useKnowledgePage(lang: "en" | "zh") {
   const [refreshError, setRefreshError] = useState<string | null>(null);
   const [refreshResult, setRefreshResult] = useState<StartDiseaseKnowledgeTaskResult | null>(null);
 
-  useTaskWebSocket({
+  useTaskEventStream({
     extraQueryKeys: [
       ["ai", "disease-knowledge", "catalogue"],
       ["ai", "disease-knowledge", "detail"],

@@ -685,7 +685,7 @@ async def test_sources_flow_includes_task_only_rows_without_disease_records(app_
         )
         await db.flush()
 
-        flows = await get_sources_flow(country_id=country.id, db=db)
+        flows = await get_sources_flow(country_code=code, db=db)
 
         assert len(flows) == 1
         assert flows[0].country_code == code
@@ -743,7 +743,7 @@ async def test_quality_sources_merges_canonical_labels(app_ready):
         )
         await db.flush()
 
-        rows = await quality_sources(country_id=country.id, db=db)
+        rows = await quality_sources(country_code=country.code, db=db)
 
         assert len(rows) == 1
         assert rows[0].data_source == "NHC"

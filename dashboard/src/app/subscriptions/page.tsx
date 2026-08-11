@@ -1,3 +1,2 @@
-import SubscriptionsView from "@/features/admin/subscriptions/view";
-
-export default SubscriptionsView;
+import { permanentRedirect } from "next/navigation";
+export default function LegacyPage() { permanentRedirect("/production/distribution"); }

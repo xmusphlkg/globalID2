@@ -17,7 +17,7 @@ import { CHART_TOKENS } from "@/lib/chart-theme";
 import { ApiError } from "@/lib/api";
 import { t } from "@/lib/i18n";
 import { formatDateTime } from "@/lib/utils";
-import { usePaginatedTasks, useTaskDetail, useTaskWebSocket } from "@/features/operations/tasks/api";
+import { usePaginatedTasks, useTaskDetail, useTaskEventStream } from "@/features/operations/tasks/api";
 import {
   useAIInteractions,
   useAIInteractionSummary,
@@ -440,7 +440,7 @@ function AIInteractionsPageContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { countryId, countryName, lang } = useAppStore();
+  const { countryCode, countryName, lang } = useAppStore();
   const labels = useMemo(() => uiText(lang), [lang]);
   const searchParamsString = searchParams.toString();
   const initialTaskUuid = (searchParams.get("task") ?? searchParams.get("task_uuid") ?? "").trim();
@@ -510,7 +510,7 @@ function AIInteractionsPageContent() {
 
   const interactionLimit = hasTaskScope ? 1000 : 200;
   const filters = {
-    countryId,
+    countryCode: countryCode || undefined,
     taskUuid: activeTaskUuid || undefined,
     agent: agentFilter || undefined,
     model: modelFilter || undefined,
@@ -519,7 +519,7 @@ function AIInteractionsPageContent() {
     limit: interactionLimit,
   };
 
-  useTaskWebSocket({
+  useTaskEventStream({
     extraQueryKeys: [["ai-interactions"], ["ai-interactions-summary"], ["reports"], ["report-runs"]],
   });
 
@@ -529,7 +529,7 @@ function AIInteractionsPageContent() {
   const { data: recentKnowledgeTaskPage } = usePaginatedTasks(
     undefined,
     "update_disease_knowledge",
-    countryId,
+    countryCode || undefined,
     diseaseFilter.trim() || undefined,
     8,
     0,
@@ -539,7 +539,7 @@ function AIInteractionsPageContent() {
     refetchIntervalMs: liveRefreshMs,
   });
   const { data: summary } = useAIInteractionSummary({
-    countryId,
+    countryCode: countryCode || undefined,
     taskUuid: activeTaskUuid || undefined,
     agent: agentFilter || undefined,
     model: modelFilter || undefined,
@@ -669,14 +669,14 @@ function AIInteractionsPageContent() {
         actions={
           <>
           <Link
-            href="/ai/tasks"
+            href="/production/ai"
             className="inline-flex h-10 items-center gap-2 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm font-medium text-tremor-content-strong transition hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong dark:hover:bg-dark-tremor-background-subtle"
           >
             <ListTodo className="h-4 w-4" />
             Open AI Tasks
           </Link>
           <Link
-            href="/ai/models"
+            href="/settings/models"
             className="inline-flex h-10 items-center gap-2 rounded-tremor-default border border-tremor-border bg-tremor-background px-3 text-sm font-medium text-tremor-content-strong transition hover:bg-tremor-background-subtle dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong dark:hover:bg-dark-tremor-background-subtle"
           >
             <Settings2 className="h-4 w-4" />
@@ -726,7 +726,7 @@ function AIInteractionsPageContent() {
               </Text>
             </div>
             <Link
-              href="/ai/tasks?task_type=update_disease_knowledge"
+              href="/production/ai?task_type=update_disease_knowledge"
               className="inline-flex items-center gap-1 rounded-tremor-default border border-emerald-300/70 bg-white px-3 py-1.5 text-xs font-medium text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-300"
             >
               <ListTodo className="h-3.5 w-3.5" />
@@ -737,7 +737,7 @@ function AIInteractionsPageContent() {
             {recentKnowledgeTasks.map((task) => (
               <Link
                 key={task.task_uuid}
-                href={`/ai/interactions?task=${encodeURIComponent(task.task_uuid)}`}
+                href={`/production/interactions?task=${encodeURIComponent(task.task_uuid)}`}
                 className="rounded-tremor-default border border-tremor-border/80 bg-white/90 p-3 transition hover:border-emerald-300 dark:border-dark-tremor-border/80 dark:bg-white/5"
               >
                 <div className="flex flex-wrap items-center gap-2">
@@ -848,6 +848,7 @@ function AIInteractionsPageContent() {
           )}
 
           <select
+            aria-label="Agent filter"
             value={agentFilter}
             onChange={(e) => setAgentFilter(e.target.value)}
             className="rounded-tremor-default border border-tremor-border bg-tremor-background px-3 py-2 text-sm text-tremor-content-strong shadow-tremor-input outline-none transition focus:border-tremor-brand-subtle focus:ring-2 focus:ring-tremor-brand-muted dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong"
@@ -859,6 +860,7 @@ function AIInteractionsPageContent() {
           </select>
 
           <select
+            aria-label="Model filter"
             value={modelFilter}
             onChange={(e) => setModelFilter(e.target.value)}
             className="rounded-tremor-default border border-tremor-border bg-tremor-background px-3 py-2 text-sm text-tremor-content-strong shadow-tremor-input outline-none transition focus:border-tremor-brand-subtle focus:ring-2 focus:ring-tremor-brand-muted dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong"
@@ -870,6 +872,7 @@ function AIInteractionsPageContent() {
           </select>
 
           <select
+            aria-label="Disease filter"
             value={diseaseFilter}
             onChange={(e) => setDiseaseFilter(e.target.value)}
             className="rounded-tremor-default border border-tremor-border bg-tremor-background px-3 py-2 text-sm text-tremor-content-strong shadow-tremor-input outline-none transition focus:border-tremor-brand-subtle focus:ring-2 focus:ring-tremor-brand-muted dark:border-dark-tremor-border dark:bg-dark-tremor-background dark:text-dark-tremor-content-strong"

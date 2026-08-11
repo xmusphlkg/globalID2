@@ -16,7 +16,7 @@ export function DetailPanel({ lang, state }: { lang: "en" | "zh"; state: Knowled
     handleSingleRefresh, taskLogsHref, detailTabs,
   } = state;
   return (
-          <div ref={detailPanelRef} className="space-y-5">
+          <div ref={detailPanelRef} className="min-w-0 space-y-5">
             <Panel className="overflow-hidden p-0 lg:sticky lg:top-5 lg:max-h-[calc(100vh-2.5rem)]">
               <div className="border-b border-tremor-border px-4 py-4 dark:border-dark-tremor-border">
                 <div className="flex flex-wrap items-start justify-between gap-3">

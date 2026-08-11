@@ -27,7 +27,7 @@ export function PageHeader({
     >
       <div className="min-w-0 space-y-2">
         {eyebrow ? (
-          <div className="inline-flex items-center rounded-tremor-default bg-tremor-background-muted px-2 py-1 text-[11px] font-semibold uppercase text-tremor-content-subtle dark:bg-dark-tremor-background-muted dark:text-dark-tremor-content-subtle">
+          <div className="inline-flex items-center rounded-tremor-default bg-tremor-background-muted px-2 py-1 text-[11px] font-semibold uppercase text-tremor-content-emphasis dark:bg-dark-tremor-background-muted dark:text-dark-tremor-content-emphasis">
             {eyebrow}
           </div>
         ) : null}
@@ -43,7 +43,11 @@ export function PageHeader({
         </div>
         {meta ? <div className="flex flex-wrap items-center gap-2">{meta}</div> : null}
       </div>
-      {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
+      {actions ? (
+        <div className="flex max-w-full min-w-0 flex-wrap items-center gap-2 lg:flex-1 lg:justify-end">
+          {actions}
+        </div>
+      ) : null}
     </div>
   );
 }
