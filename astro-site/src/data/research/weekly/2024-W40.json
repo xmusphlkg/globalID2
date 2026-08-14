@@ -1,0 +1,151 @@
+{
+  "week": "2024-W40",
+  "start_date": "2024-10-01",
+  "end_date": "2024-10-01",
+  "article_count": 1,
+  "disease_count": 1,
+  "country_count": 0,
+  "top_topics": [
+    "Surveillance",
+    "Vaccination",
+    "Antimicrobial resistance",
+    "Treatment"
+  ],
+  "articles": [
+    {
+      "article_id": "lit_3f0193ba01d87b9ab7114eb6",
+      "slug": "10-4081-ijfs-2024-12904-3f0193ba",
+      "title": "Comprehensive review of salmonellosis: current status of the disease and future perspectives",
+      "doi": "10.4081/ijfs.2024.12904",
+      "pmid": null,
+      "journal": "Italian Journal of Food Safety",
+      "publisher": "PAGEPress Publications",
+      "authors": [
+        "Ohoud S. Alhumaidan"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2024-10-01T00:00:00+00:00",
+      "indexed_at": "2026-08-07T04:58:56+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://www.pagepressjournals.org/ijfs/article/view/12904",
+      "license_url": "http://creativecommons.org/licenses/by-nc/4.0",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.608,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D114",
+          "slug": "salmonellosis",
+          "name_en": "Salmonellosis",
+          "name_zh": "沙门氏菌病",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Surveillance",
+          "confidence": 0.66
+        },
+        {
+          "name": "Vaccination",
+          "confidence": 0.66
+        },
+        {
+          "name": "Antimicrobial resistance",
+          "confidence": 0.66
+        },
+        {
+          "name": "Treatment",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {
+        "en": {
+          "research_question": "What are the prevailing epidemiological characteristics, diagnostic methodologies, and management frameworks for salmonellosis within Saudi Arabia?",
+          "study_design": "The publication functions as a peer-reviewed comprehensive review article that synthesizes existing literature on the topic.",
+          "population_setting": "The analysis focuses on the national population of Saudi Arabia, with particular attention to healthcare accessibility in remote districts.",
+          "main_findings": "Clinical presentations typically feature gastrointestinal distress alongside systemic fever, while pathogen identification depends on both conventional and genetic laboratory assays. Current mitigation strategies rely on immunization initiatives, dietary safety standards, and community awareness programs. Ongoing obstacles encompass drug-resistant bacterial strains, inadequate medical infrastructure in isolated regions, and incomplete case documentation, which collectively drive proposals for expanded monitoring networks and stricter regulatory oversight.",
+          "public_health_relevance": "The manuscript underscores the considerable disease burden in the region and delineates strategic interventions aimed at curbing transmission through coordinated policy adjustments and resource allocation.",
+          "limitations": "The authors explicitly note that fragmented case reporting and constrained medical facilities in peripheral areas impede effective disease management.",
+          "gids_interpretation": "This peer-reviewed synthesis was released in October 2024 and is indexed under food safety and infectious disease monitoring categories. It provides a consolidated overview of regional health priorities rather than generating new empirical datasets.",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.968,
+            "generated_at": "2026-08-14T03:08:57.189321+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        },
+        "zh": {
+          "research_question": "本文旨在系统梳理沙门氏菌病的当前流行与临床现状，并探讨未来的防控与管理策略。",
+          "study_design": "该文献属于针对特定传染病的综合性学术综述，未包含原始队列观察或实验干预设计。",
+          "population_setting": "研究内容主要围绕沙特阿拉伯地区的公共卫生环境与疾病分布展开。",
+          "main_findings": "文章概述了该病的典型临床症状与实验室结合分子技术的诊断流程，指出疫苗接种、食品安全规范及健康教育是现有防控核心。同时强调抗菌药物耐药性、基层医疗资源短缺及病例报告不全构成主要管理瓶颈，并建议通过强化监测网络与跨部门协作来缓解疾病负担。",
+          "public_health_relevance": "该综述直接回应区域传染病控制需求，为优化食品安全监管与公共卫生资源配置提供理论依据。",
+          "limitations": "受综述体裁限制，本研究缺乏一手流行病学数据支撑；文中亦明确指出抗菌药物耐药性、偏远地区医疗条件受限以及潜在病例漏报可能削弱整体评估的完整性。",
+          "gids_interpretation": "作为区域性疾病现状的学术梳理，该文献可为相关主题检索与背景知识构建提供参考，但不反映实时疫情监测动态。",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.949,
+            "generated_at": "2026-08-14T03:09:24.623581+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        }
+      },
+      "why_it_matters_en": "The manuscript underscores the considerable disease burden in the region and delineates strategic interventions aimed at curbing transmission through coordinated policy adjustments and resource allocation.",
+      "why_it_matters_zh": "该综述直接回应区域传染病控制需求，为优化食品安全监管与公共卫生资源配置提供理论依据。",
+      "source_urls": {
+        "doi": "https://doi.org/10.4081/ijfs.2024.12904",
+        "publisher": "https://www.pagepressjournals.org/ijfs/article/view/12904"
+      },
+      "updated_at": "2026-08-13T16:05:48.137668+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:ecdc9176fa7e1a17",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D114",
+          "disease_name_en": "Salmonellosis",
+          "disease_name_zh": "沙门氏菌病",
+          "geographies": [
+            {
+              "code": "IE",
+              "name_en": "Ireland"
+            }
+          ],
+          "data_through": "2026-07-27",
+          "window": {
+            "label": "Last 4 weeks",
+            "current": 54.0,
+            "previous": 38.0,
+            "absolute_change": 16.0,
+            "change_pct": 42.11
+          },
+          "risk": {
+            "score": 40.8,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    }
+  ],
+  "url": "/research/weekly/2024-W40/"
+}

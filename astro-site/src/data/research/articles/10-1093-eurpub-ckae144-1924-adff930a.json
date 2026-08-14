@@ -1,0 +1,220 @@
+{
+  "article_id": "lit_adff930a9d09fd168e7349b3",
+  "slug": "10-1093-eurpub-ckae144-1924-adff930a",
+  "title": "Influenza vaccine effectiveness in Ireland during two influenza seasons, 2022/23 and 2023/24",
+  "doi": "10.1093/eurpub/ckae144.1924",
+  "pmid": null,
+  "journal": "European Journal of Public Health",
+  "publisher": "Oxford University Press (OUP)",
+  "authors": [
+    "L Marron",
+    "A McKenna",
+    "J O’Donnell",
+    "L Domegan"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Case-control study",
+  "published_at": "2024-10-28T00:00:00+00:00",
+  "indexed_at": "2025-07-30T11:58:36+00:00",
+  "open_access_status": "open",
+  "open_access_url": "https://academic.oup.com/eurpub/article/doi/10.1093/eurpub/ckae144.1924/7844370",
+  "license_url": "https://creativecommons.org/licenses/by-nc/4.0/",
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.576,
+  "is_featured": false,
+  "diseases": [
+    {
+      "disease_id": "D038",
+      "slug": "influenza",
+      "name_en": "Influenza",
+      "name_zh": "流行性感冒",
+      "confidence": 0.82
+    }
+  ],
+  "countries": [
+    {
+      "code": "IE",
+      "name_en": "Ireland",
+      "name_zh": null,
+      "confidence": 0.78
+    }
+  ],
+  "topics": [
+    {
+      "name": "Vaccination",
+      "confidence": 0.7100000000000001
+    },
+    {
+      "name": "Surveillance",
+      "confidence": 0.66
+    },
+    {
+      "name": "Vaccine effectiveness",
+      "confidence": 0.66
+    }
+  ],
+  "related_surveillance": [],
+  "summary": {
+    "en": {
+      "research_question": "What is the protective capacity of seasonal immunization against primary care visits for laboratory-confirmed influenza-associated respiratory illness in Ireland across the 2022/23 and 2023/24 periods?",
+      "study_design": "Researchers applied a test-negative case-control framework operating inside a country-wide primary care monitoring system to contrast immunization records between PCR-positive patients and PCR-negative individuals presenting with comparable respiratory complaints.",
+      "population_setting": "The analysis focused on individuals seeking outpatient care for acute respiratory symptoms in Ireland, with specific attention to pediatric cohorts and adults meeting established age or clinical risk criteria.",
+      "main_findings": "Immunization showed moderate protection against clinic attendance for influenza-linked respiratory conditions, yielding point estimates between thirty-seven and forty-two percent for the broader group and climbing to sixty-seven percent among younger participants during the second evaluated period.",
+      "public_health_relevance": "Sustaining routine immunization initiatives appears capable of reducing outpatient utilization for influenza-related illnesses, with notably stronger protective signals observed when administering live attenuated formulations to school-aged youth.",
+      "limitations": "The reliance on a targeted primary care monitoring network may restrict broader demographic representation, while several subgroup confidence intervals displayed considerable width or included null values.",
+      "gids_interpretation": "This report supplies seasonal efficacy metrics that may function as contextual benchmarks for evaluating regional immunization programs, without establishing real-time detection thresholds or operational surveillance triggers.",
+      "provenance": {
+        "generated_by": "literature-evidence-agent",
+        "model": "qwen3.7-flash",
+        "provider": "qwenai",
+        "quality_score": 0.949,
+        "generated_at": "2026-08-14T07:08:01.252091+00:00",
+        "editorially_approved": false,
+        "automatically_approved": true,
+        "automation_policy_version": "research-radar-autopilot.v1",
+        "publication_gate": "automated-quality-gate"
+      }
+    }
+  },
+  "why_it_matters_en": "Sustaining routine immunization initiatives appears capable of reducing outpatient utilization for influenza-related illnesses, with notably stronger protective signals observed when administering live attenuated formulations to school-aged youth.",
+  "why_it_matters_zh": "这项近期Case-control study因与流行性感冒相关而被收录。应用其结论前请阅读原始文献。",
+  "source_urls": {
+    "doi": "https://doi.org/10.1093/eurpub/ckae144.1924",
+    "publisher": "https://academic.oup.com/eurpub/article/doi/10.1093/eurpub/ckae144.1924/7844370"
+  },
+  "updated_at": "2026-08-13T16:05:48.137412+00:00",
+  "related_signals": [
+    {
+      "signal_id": "signal:d4f34da837688d03",
+      "section": "increasing",
+      "kind": "statistical_signal",
+      "title": null,
+      "disease_id": "D038",
+      "disease_name_en": "Influenza",
+      "disease_name_zh": "流行性感冒",
+      "geographies": [
+        {
+          "code": "IE",
+          "name_en": "Ireland"
+        }
+      ],
+      "data_through": "2026-07-27",
+      "window": {
+        "label": "Last 4 weeks",
+        "current": 230.0,
+        "previous": 46.0,
+        "absolute_change": 184.0,
+        "change_pct": 400.0
+      },
+      "risk": {
+        "score": 65.5,
+        "level": "high",
+        "confidence": "low"
+      },
+      "relation_level": "exact_disease_geography",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-adff930a9d09fd168e7349b3",
+        "type": "article",
+        "label": "Influenza vaccine effectiveness in Ireland during two influenza seasons, 2022/23 and 2023/24",
+        "slug": "10-1093-eurpub-ckae144-1924-adff930a",
+        "url": "/research/articles/10-1093-eurpub-ckae144-1924-adff930a/",
+        "published_at": "2024-10-28T00:00:00+00:00",
+        "study_type": "Case-control study"
+      },
+      {
+        "id": "country:ie",
+        "type": "country",
+        "label": "Ireland",
+        "code": "IE",
+        "url": "/countries/ie/"
+      },
+      {
+        "id": "disease:d038",
+        "type": "disease",
+        "label": "Influenza",
+        "disease_id": "D038",
+        "name_zh": "流行性感冒",
+        "slug": "influenza",
+        "url": "/diseases/influenza/"
+      },
+      {
+        "id": "study-type:case-control-study",
+        "type": "study_type",
+        "label": "Case-control study"
+      },
+      {
+        "id": "topic:surveillance",
+        "type": "topic",
+        "label": "Surveillance"
+      },
+      {
+        "id": "topic:vaccination",
+        "type": "topic",
+        "label": "Vaccination"
+      },
+      {
+        "id": "topic:vaccine-effectiveness",
+        "type": "topic",
+        "label": "Vaccine effectiveness"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-adff930a9d09fd168e7349b3|ABOUT_DISEASE|disease:d038",
+        "source": "article:lit-adff930a9d09fd168e7349b3",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d038",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-adff930a9d09fd168e7349b3|ADDRESSES_TOPIC|topic:surveillance",
+        "source": "article:lit-adff930a9d09fd168e7349b3",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:surveillance",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-adff930a9d09fd168e7349b3|ADDRESSES_TOPIC|topic:vaccination",
+        "source": "article:lit-adff930a9d09fd168e7349b3",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccination",
+        "confidence": 0.7100000000000001
+      },
+      {
+        "id": "article:lit-adff930a9d09fd168e7349b3|ADDRESSES_TOPIC|topic:vaccine-effectiveness",
+        "source": "article:lit-adff930a9d09fd168e7349b3",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccine-effectiveness",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-adff930a9d09fd168e7349b3|STUDIED_IN|country:ie",
+        "source": "article:lit-adff930a9d09fd168e7349b3",
+        "relation": "STUDIED_IN",
+        "target": "country:ie",
+        "confidence": 0.78
+      },
+      {
+        "id": "article:lit-adff930a9d09fd168e7349b3|USES_STUDY_DESIGN|study-type:case-control-study",
+        "source": "article:lit-adff930a9d09fd168e7349b3",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:case-control-study"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 7,
+      "edges": 6,
+      "articles": 1
+    }
+  }
+}

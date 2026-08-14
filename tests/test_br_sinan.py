@@ -121,6 +121,51 @@ def test_ler_lerd_alias_deduplication_keeps_only_lerd_for_2019(tmp_path) -> None
     ]
 
 
+def test_normal_br_run_follows_new_prefix_from_official_file_index(
+    tmp_path, monkeypatch
+) -> None:
+    source_file = SINANFile(
+        prefix="NEWX",
+        disease_name="Newly listed surveillance condition",
+        year=2026,
+        filename="NEWXBR26.dbc",
+        url="ftp://example/NEWXBR26.dbc",
+        dataset_status="preliminary",
+        size_bytes=123,
+        modified_at=datetime(2026, 8, 1, tzinfo=timezone.utc),
+    )
+    inspected = []
+
+    def aggregate(item, **_kwargs):
+        inspected.append(item.prefix)
+        return [
+            {
+                "Date": "2026-07-01",
+                "RawDiseaseLabel": item.disease_name,
+                "DiseaseCode": item.prefix,
+                "Year": "2026",
+                "Month": "7",
+                "Cases": "3",
+                "DatasetStatus": item.dataset_status,
+                "SourceFile": item.filename,
+                "SourceURL": item.url,
+            }
+        ]
+
+    crawler = BrazilSINANCrawler(cache_dir=tmp_path / "cache")
+    monkeypatch.setattr(crawler, "aggregate_file", aggregate)
+
+    summary = crawler.crawl_monthly_national(
+        tmp_path / "br.csv",
+        months=[(2026, 7)],
+        file_index=[source_file],
+        write_csv=False,
+    )
+
+    assert inspected == ["NEWX"]
+    assert summary.rows[0]["DiseaseCode"] == "NEWX"
+
+
 def test_aggregate_file_counts_notification_months(tmp_path, monkeypatch) -> None:
     fake_dbf = tmp_path / "BOTUBR26.dbf"
     fake_dbc = tmp_path / "BOTUBR26.dbc"

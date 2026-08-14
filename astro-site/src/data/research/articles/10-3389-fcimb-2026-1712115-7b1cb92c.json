@@ -1,0 +1,188 @@
+{
+  "article_id": "lit_7b1cb92c73174ca4774455ab",
+  "slug": "10-3389-fcimb-2026-1712115-7b1cb92c",
+  "title": "Association between fatty liver and risk of liver failure in patients with acute hepatitis B: a retrospective cohort study.",
+  "doi": "10.3389/fcimb.2026.1712115",
+  "pmid": "41674703",
+  "journal": "Frontiers in cellular and infection microbiology",
+  "publisher": null,
+  "authors": [
+    "Wang XH",
+    "Chang YN",
+    "Zhang L",
+    "Yang YL",
+    "Liang LW",
+    "Zeng Y",
+    "Zhou Z",
+    "Zhong S",
+    "Li H"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Cohort study",
+  "published_at": "2026-01-27T00:00:00+00:00",
+  "indexed_at": "2026-02-12T00:00:00+00:00",
+  "open_access_status": "open",
+  "open_access_url": "https://europepmc.org/articles/PMC12886492",
+  "license_url": null,
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.5,
+  "is_featured": false,
+  "diseases": [
+    {
+      "disease_id": "D068",
+      "slug": "acute-hepatitis-b",
+      "name_en": "Acute hepatitis B",
+      "name_zh": "急性乙型肝炎",
+      "confidence": 0.82
+    },
+    {
+      "disease_id": "D008",
+      "slug": "hepatitis-b",
+      "name_en": "Hepatitis B",
+      "name_zh": "乙型肝炎",
+      "confidence": 0.82
+    }
+  ],
+  "countries": [],
+  "topics": [],
+  "related_surveillance": [],
+  "summary": {},
+  "why_it_matters_en": "This recent cohort study is indexed for its relevance to Acute hepatitis B. Read the original source before applying its findings.",
+  "why_it_matters_zh": "这项近期Cohort study因与急性乙型肝炎相关而被收录。应用其结论前请阅读原始文献。",
+  "source_urls": {
+    "doi": "https://doi.org/10.3389/fcimb.2026.1712115",
+    "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41674703/"
+  },
+  "updated_at": "2026-08-14T03:36:38.272158+00:00",
+  "related_signals": [
+    {
+      "signal_id": "signal:1bf4588c1a282aa8",
+      "section": "increasing",
+      "kind": "statistical_signal",
+      "title": null,
+      "disease_id": "D068",
+      "disease_name_en": "Acute hepatitis B",
+      "disease_name_zh": "急性乙型肝炎",
+      "geographies": [
+        {
+          "code": "US",
+          "name_en": "United States"
+        }
+      ],
+      "data_through": "2026-08-08",
+      "window": {
+        "label": "Last 4 weeks",
+        "current": 79.0,
+        "previous": 63.0,
+        "absolute_change": 16.0,
+        "change_pct": 25.4
+      },
+      "risk": {
+        "score": 38.5,
+        "level": "moderate",
+        "confidence": "low"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    },
+    {
+      "signal_id": "signal:4fc15ffc601fc568",
+      "section": "increasing",
+      "kind": "statistical_signal",
+      "title": null,
+      "disease_id": "D068",
+      "disease_name_en": "Acute hepatitis B",
+      "disease_name_zh": "急性乙型肝炎",
+      "geographies": [
+        {
+          "code": "US",
+          "name_en": "United States"
+        }
+      ],
+      "data_through": "2026-08-08",
+      "window": {
+        "label": "Last 4 weeks",
+        "current": 79.0,
+        "previous": 63.0,
+        "absolute_change": 16.0,
+        "change_pct": 25.4
+      },
+      "risk": {
+        "score": 38.5,
+        "level": "moderate",
+        "confidence": "low"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-7b1cb92c73174ca4774455ab",
+        "type": "article",
+        "label": "Association between fatty liver and risk of liver failure in patients with acute hepatitis B: a retrospective cohort study.",
+        "slug": "10-3389-fcimb-2026-1712115-7b1cb92c",
+        "url": "/research/articles/10-3389-fcimb-2026-1712115-7b1cb92c/",
+        "published_at": "2026-01-27T00:00:00+00:00",
+        "study_type": "Cohort study"
+      },
+      {
+        "id": "disease:d008",
+        "type": "disease",
+        "label": "Hepatitis B",
+        "disease_id": "D008",
+        "name_zh": "乙型肝炎",
+        "slug": "hepatitis-b",
+        "url": "/diseases/hepatitis-b/"
+      },
+      {
+        "id": "disease:d068",
+        "type": "disease",
+        "label": "Acute hepatitis B",
+        "disease_id": "D068",
+        "name_zh": "急性乙型肝炎",
+        "slug": "acute-hepatitis-b",
+        "url": "/diseases/acute-hepatitis-b/"
+      },
+      {
+        "id": "study-type:cohort-study",
+        "type": "study_type",
+        "label": "Cohort study"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-7b1cb92c73174ca4774455ab|ABOUT_DISEASE|disease:d008",
+        "source": "article:lit-7b1cb92c73174ca4774455ab",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d008",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-7b1cb92c73174ca4774455ab|ABOUT_DISEASE|disease:d068",
+        "source": "article:lit-7b1cb92c73174ca4774455ab",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d068",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-7b1cb92c73174ca4774455ab|USES_STUDY_DESIGN|study-type:cohort-study",
+        "source": "article:lit-7b1cb92c73174ca4774455ab",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:cohort-study"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 4,
+      "edges": 3,
+      "articles": 1
+    }
+  }
+}

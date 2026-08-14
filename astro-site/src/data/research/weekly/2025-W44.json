@@ -1,0 +1,362 @@
+{
+  "week": "2025-W44",
+  "start_date": "2025-10-27",
+  "end_date": "2025-11-02",
+  "article_count": 3,
+  "disease_count": 4,
+  "country_count": 3,
+  "top_topics": [
+    "Transmission dynamics",
+    "One Health",
+    "Surveillance",
+    "Diagnostics",
+    "Climate and environment"
+  ],
+  "articles": [
+    {
+      "article_id": "lit_3445a3defe3b26c305c1df38",
+      "slug": "10-1111-irv-70178-3445a3de",
+      "title": "A Systematic Review of New, Enhanced Surveillance Systems and Methodologies for Zoonotic Influenza Viruses in Animals and Human-Animal Interface.",
+      "doi": "10.1111/irv.70178",
+      "pmid": "41214450",
+      "journal": "Influenza and other respiratory viruses",
+      "publisher": null,
+      "authors": [
+        "Badra R",
+        "Zhang W",
+        "Tam JSL",
+        "Webby R",
+        "Van Der Werf S",
+        "Nikisins S",
+        "Cullinane A",
+        "Gharaibeh S",
+        "Njouom R",
+        "Peiris M",
+        "Kayali G",
+        "Heraud JM"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Systematic review",
+      "published_at": "2025-11-01T00:00:00+00:00",
+      "indexed_at": "2025-11-10T00:00:00+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC12602164",
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.712,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D038",
+          "slug": "influenza",
+          "name_en": "Influenza",
+          "name_zh": "流行性感冒",
+          "confidence": 0.86
+        },
+        {
+          "disease_id": "D004",
+          "slug": "covid-19",
+          "name_en": "COVID-19",
+          "name_zh": "新型冠状病毒感染",
+          "confidence": 0.62
+        },
+        {
+          "disease_id": "D014",
+          "slug": "h5n1",
+          "name_en": "H5N1",
+          "name_zh": "人感染高致病性禽流感",
+          "confidence": 0.62
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "One Health",
+          "confidence": 0.7100000000000001
+        },
+        {
+          "name": "Surveillance",
+          "confidence": 0.66
+        },
+        {
+          "name": "Transmission dynamics",
+          "confidence": 0.66
+        },
+        {
+          "name": "Diagnostics",
+          "confidence": 0.66
+        },
+        {
+          "name": "Climate and environment",
+          "confidence": 0.66
+        },
+        {
+          "name": "Health policy",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {
+        "en": {
+          "research_question": "The authors aimed to evaluate recent developments in monitoring techniques for animal and cross-species influenza viruses to determine which innovations warrant broader application and which areas require further investigation.",
+          "study_design": "This work follows a systematic review framework guided by PRISMA standards, synthesizing data from 164 selected publications out of an initial search yielding 7,490 records.",
+          "population_setting": "The scope encompasses global efforts to track influenza strains circulating among wildlife, livestock, and humans, with particular attention to interaction zones where spillover events occur.",
+          "main_findings": "The analysis identifies multiple technological improvements alongside persistent structural deficiencies in monitoring networks. Current documentation indicates that numerous regions operate without robust cross-sectoral tracking systems, resulting in incomplete estimates of infection prevalence. Priority actions emphasize integrating multi-sectoral datasets, standardizing new testing tools, scaling passive sampling strategies, and aligning technical upgrades with regulatory decision-making.",
+          "public_health_relevance": "Strengthening coordinated monitoring frameworks is presented as essential for reducing seasonal illness impacts and mitigating future outbreak threats through improved diagnostic readiness and targeted research funding.",
+          "limitations": "The evaluation relies exclusively on indexed academic publications, which may overlook operational field data or reflect uneven research investment across different geographic areas. Additionally, the focus on a seven-year window restricts historical context for long-term trend analysis.",
+          "gids_interpretation": "This publication offers a consolidated perspective on methodological evolution within cross-species pathogen tracking initiatives. It contextualizes recent scholarly contributions toward standardized data collection and policy alignment without referencing active epidemiological dashboards or real-time transmission metrics.",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.945,
+            "generated_at": "2026-08-13T16:15:46.349764+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        }
+      },
+      "why_it_matters_en": "Strengthening coordinated monitoring frameworks is presented as essential for reducing seasonal illness impacts and mitigating future outbreak threats through improved diagnostic readiness and targeted research funding.",
+      "why_it_matters_zh": "这项近期Systematic review因与流行性感冒相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1111/irv.70178",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41214450/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137438+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:d4f34da837688d03",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D038",
+          "disease_name_en": "Influenza",
+          "disease_name_zh": "流行性感冒",
+          "geographies": [
+            {
+              "code": "IE",
+              "name_en": "Ireland"
+            }
+          ],
+          "data_through": "2026-07-27",
+          "window": {
+            "label": "Last 4 weeks",
+            "current": 230.0,
+            "previous": 46.0,
+            "absolute_change": 184.0,
+            "change_pct": 400.0
+          },
+          "risk": {
+            "score": 65.5,
+            "level": "high",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_e49d98705da3340844d8ff7c",
+      "slug": "10-2903-j-efsa-2025-9702-e49d9870",
+      "title": "Avian influenza overview June-September 2025.",
+      "doi": "10.2903/j.efsa.2025.9702",
+      "pmid": "41158675",
+      "journal": "EFSA journal. European Food Safety Authority",
+      "publisher": null,
+      "authors": [
+        "Alexakis L",
+        "Buczkowski H",
+        "Ducatez M",
+        "Fusaro A",
+        "Gonzales JL",
+        "Kuiken T",
+        "Mirinavičiūtė G",
+        "Ståhl K",
+        "Staubach C",
+        "Svartström O",
+        "Terregino C",
+        "Willgert K",
+        "Melo M",
+        "Kohnle L"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2025-10-27T00:00:00+00:00",
+      "indexed_at": "2025-10-29T00:00:00+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC12558595",
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.578,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D038",
+          "slug": "influenza",
+          "name_en": "Influenza",
+          "name_zh": "流行性感冒",
+          "confidence": 0.94
+        },
+        {
+          "disease_id": "D014",
+          "slug": "h5n1",
+          "name_en": "H5N1",
+          "name_zh": "人感染高致病性禽流感",
+          "confidence": 0.62
+        }
+      ],
+      "countries": [
+        {
+          "code": "CN",
+          "name_en": "China",
+          "name_zh": null,
+          "confidence": 0.62
+        },
+        {
+          "code": "US",
+          "name_en": "United States",
+          "name_zh": null,
+          "confidence": 0.62
+        },
+        {
+          "code": "NO",
+          "name_en": "Norway",
+          "name_zh": null,
+          "confidence": 0.62
+        }
+      ],
+      "topics": [
+        {
+          "name": "Transmission dynamics",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Influenza. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与流行性感冒相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.2903/j.efsa.2025.9702",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41158675/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137444+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:d4f34da837688d03",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D038",
+          "disease_name_en": "Influenza",
+          "disease_name_zh": "流行性感冒",
+          "geographies": [
+            {
+              "code": "IE",
+              "name_en": "Ireland"
+            }
+          ],
+          "data_through": "2026-07-27",
+          "window": {
+            "label": "Last 4 weeks",
+            "current": 230.0,
+            "previous": 46.0,
+            "absolute_change": 184.0,
+            "change_pct": 400.0
+          },
+          "risk": {
+            "score": 65.5,
+            "level": "high",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_72ffd09eac38b2042738e939",
+      "slug": "10-1007-s00246-025-04068-0-72ffd09e",
+      "title": "Predictors of Resolution in Rheumatic Heart Disease: Application of the 2023 WHF Criteria in First-Episode Acute Rheumatic Fever",
+      "doi": "10.1007/s00246-025-04068-0",
+      "pmid": null,
+      "journal": "Pediatric Cardiology",
+      "publisher": "Springer Science and Business Media LLC",
+      "authors": [
+        "Javed Iqbal",
+        "Brijesh Sathian"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2025-11-02T00:00:00+00:00",
+      "indexed_at": "2026-04-01T09:25:47+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://link.springer.com/10.1007/s00246-025-04068-0",
+      "license_url": "https://www.springernature.com/gp/researchers/text-and-data-mining",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.465,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D158",
+          "slug": "rheumatic-fever",
+          "name_en": "Rheumatic fever",
+          "name_zh": "风湿热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Rheumatic fever. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与风湿热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1007/s00246-025-04068-0",
+        "publisher": "https://link.springer.com/10.1007/s00246-025-04068-0"
+      },
+      "updated_at": "2026-08-13T16:05:48.137505+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:f59d37329a1f6ece",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 28.0,
+            "previous": 18.0,
+            "absolute_change": 10.0,
+            "change_pct": 55.56
+          },
+          "risk": {
+            "score": 46.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    }
+  ],
+  "url": "/research/weekly/2025-W44/"
+}

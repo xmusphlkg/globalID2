@@ -1,0 +1,895 @@
+{
+  "articles": [
+    {
+      "article_id": "lit_46b92e7b4feb98f02ab32005",
+      "slug": "10-7759-cureus-111921-46b92e7b",
+      "title": "Closing Critical Gaps in the 2026 Bundibugyo Ebola Response: Five Actionable Priorities.",
+      "doi": "10.7759/cureus.111921",
+      "pmid": "42542607",
+      "journal": "Cureus",
+      "publisher": null,
+      "authors": [
+        "Mohapatra PR",
+        "Mishra B"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-07-01T00:00:00+00:00",
+      "indexed_at": "2026-08-02T00:00:00+00:00",
+      "open_access_status": "unknown",
+      "open_access_url": null,
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.712,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D050",
+          "slug": "ebola",
+          "name_en": "Ebola",
+          "name_zh": "埃博拉出血热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "One Health",
+          "confidence": 0.7100000000000001
+        },
+        {
+          "name": "Surveillance",
+          "confidence": 0.66
+        },
+        {
+          "name": "Outbreak investigation",
+          "confidence": 0.66
+        },
+        {
+          "name": "Transmission dynamics",
+          "confidence": 0.66
+        },
+        {
+          "name": "Vaccination",
+          "confidence": 0.66
+        },
+        {
+          "name": "Genomic epidemiology",
+          "confidence": 0.66
+        },
+        {
+          "name": "Diagnostics",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Ebola. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与埃博拉出血热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.7759/cureus.111921",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/42542607/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137389+00:00",
+      "related_signals": [
+        {
+          "signal_id": "event:36",
+          "section": "emerging",
+          "kind": "official_event",
+          "title": "Ebola disease caused by Bundibugyo virus - Democratic Republic of the Congo",
+          "disease_id": "D050",
+          "disease_name_en": "Ebola",
+          "disease_name_zh": "埃博拉出血热",
+          "geographies": [
+            {
+              "code": "CD",
+              "name_en": "Democratic Republic of the Congo"
+            }
+          ],
+          "data_through": "2026-08-01",
+          "window": {
+            "label": null,
+            "current": null,
+            "previous": null,
+            "absolute_change": null,
+            "change_pct": null
+          },
+          "risk": {
+            "score": null,
+            "level": null,
+            "confidence": "high"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        },
+        {
+          "signal_id": "event:37",
+          "section": "emerging",
+          "kind": "official_event",
+          "title": "Ebola disease caused by Bundibugyo virus, Democratic Republic of the Congo & Uganda",
+          "disease_id": "D050",
+          "disease_name_en": "Ebola",
+          "disease_name_zh": "埃博拉出血热",
+          "geographies": [
+            {
+              "code": "CD",
+              "name_en": "Democratic Republic of the Congo"
+            },
+            {
+              "code": "UG",
+              "name_en": "Uganda"
+            }
+          ],
+          "data_through": "2026-07-17",
+          "window": {
+            "label": null,
+            "current": null,
+            "previous": null,
+            "absolute_change": null,
+            "change_pct": null
+          },
+          "risk": {
+            "score": null,
+            "level": null,
+            "confidence": "high"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_1d327941c6c8f6f0d93de7e2",
+      "slug": "10-3390-ani15131963-1d327941",
+      "title": "Highly Pathogenic Avian Influenza (H5N1) Clade 2.3.4.4b in Cattle: A Rising One Health Concern.",
+      "doi": "10.3390/ani15131963",
+      "pmid": "40646862",
+      "journal": "Animals : an open access journal from MDPI",
+      "publisher": null,
+      "authors": [
+        "Sanchez-Rojas IC",
+        "Bonilla-Aldana DK",
+        "Solarte-Jimenez CL",
+        "Bonilla-Aldana JL",
+        "Acosta-España JD",
+        "Rodriguez-Morales AJ"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2025-07-03T00:00:00+00:00",
+      "indexed_at": "2025-07-12T00:00:00+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC12248869",
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.658,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D038",
+          "slug": "influenza",
+          "name_en": "Influenza",
+          "name_zh": "流行性感冒",
+          "confidence": 0.9
+        },
+        {
+          "disease_id": "D014",
+          "slug": "h5n1",
+          "name_en": "H5N1",
+          "name_zh": "人感染高致病性禽流感",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [
+        {
+          "code": "US",
+          "name_en": "United States",
+          "name_zh": null,
+          "confidence": 0.62
+        }
+      ],
+      "topics": [
+        {
+          "name": "One Health",
+          "confidence": 0.76
+        },
+        {
+          "name": "Surveillance",
+          "confidence": 0.66
+        },
+        {
+          "name": "Transmission dynamics",
+          "confidence": 0.66
+        },
+        {
+          "name": "Genomic epidemiology",
+          "confidence": 0.66
+        },
+        {
+          "name": "Diagnostics",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Influenza. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与流行性感冒相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.3390/ani15131963",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/40646862/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137455+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:d4f34da837688d03",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D038",
+          "disease_name_en": "Influenza",
+          "disease_name_zh": "流行性感冒",
+          "geographies": [
+            {
+              "code": "IE",
+              "name_en": "Ireland"
+            }
+          ],
+          "data_through": "2026-07-27",
+          "window": {
+            "label": "Last 4 weeks",
+            "current": 230.0,
+            "previous": 46.0,
+            "absolute_change": 184.0,
+            "change_pct": 400.0
+          },
+          "risk": {
+            "score": 65.5,
+            "level": "high",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_ffbb1adfd8052b1e85c2f086",
+      "slug": "10-1038-s41597-025-06451-1-ffbb1adf",
+      "title": "A taxonomically harmonized global dataset of wild bird hosts for avian influenza virus surveillance.",
+      "doi": "10.1038/s41597-025-06451-1",
+      "pmid": "41419742",
+      "journal": "Scientific data",
+      "publisher": null,
+      "authors": [
+        "Du F",
+        "Zhang Q",
+        "Cheng Y",
+        "Liu Y",
+        "Lei W",
+        "Wang L",
+        "Sun H",
+        "Sun Y",
+        "Liu J",
+        "Li Z",
+        "Pu J"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Genomic study",
+      "published_at": "2025-12-19T00:00:00+00:00",
+      "indexed_at": "2025-12-19T00:00:00+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC12859136",
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.657,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D038",
+          "slug": "influenza",
+          "name_en": "Influenza",
+          "name_zh": "流行性感冒",
+          "confidence": 0.9
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Surveillance",
+          "confidence": 0.66
+        },
+        {
+          "name": "Genomic epidemiology",
+          "confidence": 0.66
+        },
+        {
+          "name": "One Health",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent genomic study is indexed for its relevance to Influenza. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Genomic study因与流行性感冒相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1038/s41597-025-06451-1",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41419742/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137449+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:d4f34da837688d03",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D038",
+          "disease_name_en": "Influenza",
+          "disease_name_zh": "流行性感冒",
+          "geographies": [
+            {
+              "code": "IE",
+              "name_en": "Ireland"
+            }
+          ],
+          "data_through": "2026-07-27",
+          "window": {
+            "label": "Last 4 weeks",
+            "current": 230.0,
+            "previous": 46.0,
+            "absolute_change": 184.0,
+            "change_pct": 400.0
+          },
+          "risk": {
+            "score": 65.5,
+            "level": "high",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_4637b665330dddf88e6b843a",
+      "slug": "10-1016-j-jgar-2025-07-017-4637b665",
+      "title": "Whole genome sequencing reveals novel resistance-conferring mutations and large genome deletions in drug-resistant Mycobacterium tuberculosis isolates from Indonesia.",
+      "doi": "10.1016/j.jgar.2025.07.017",
+      "pmid": "40706998",
+      "journal": "Journal of global antimicrobial resistance",
+      "publisher": null,
+      "authors": [
+        "Aung HL",
+        "Chaidir L",
+        "Pitaloka DAE",
+        "Miyahara Y",
+        "Kumar N",
+        "Soeroto AY",
+        "Cook GM",
+        "van Crevel R",
+        "Alisjahbana B",
+        "Peacock SJ",
+        "Hill PC"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Genomic study",
+      "published_at": "2025-07-22T00:00:00+00:00",
+      "indexed_at": "2025-07-24T00:00:00+00:00",
+      "open_access_status": "unknown",
+      "open_access_url": null,
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.554,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D025",
+          "slug": "tuberculosis",
+          "name_en": "Tuberculosis",
+          "name_zh": "肺结核",
+          "confidence": 0.9
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Antimicrobial resistance",
+          "confidence": 0.66
+        },
+        {
+          "name": "Genomic epidemiology",
+          "confidence": 0.66
+        },
+        {
+          "name": "Treatment",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent genomic study is indexed for its relevance to Tuberculosis. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Genomic study因与肺结核相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1016/j.jgar.2025.07.017",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/40706998/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137636+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:cbe12a284bd5cd9b",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D025",
+          "disease_name_en": "Tuberculosis",
+          "disease_name_zh": "肺结核",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 43.0,
+            "previous": 32.0,
+            "absolute_change": 11.0,
+            "change_pct": 34.38
+          },
+          "risk": {
+            "score": 56.0,
+            "level": "high",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    }
+  ],
+  "count": 4,
+  "publication_timeline": [
+    {
+      "month": "2025-07",
+      "publication_count": 2
+    },
+    {
+      "month": "2025-12",
+      "publication_count": 1
+    },
+    {
+      "month": "2026-07",
+      "publication_count": 1
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-1d327941c6c8f6f0d93de7e2",
+        "type": "article",
+        "label": "Highly Pathogenic Avian Influenza (H5N1) Clade 2.3.4.4b in Cattle: A Rising One Health Concern.",
+        "slug": "10-3390-ani15131963-1d327941",
+        "url": "/research/articles/10-3390-ani15131963-1d327941/",
+        "published_at": "2025-07-03T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-4637b665330dddf88e6b843a",
+        "type": "article",
+        "label": "Whole genome sequencing reveals novel resistance-conferring mutations and large genome deletions in drug-resistant Mycobacterium tuberculosis isolates from Indonesia.",
+        "slug": "10-1016-j-jgar-2025-07-017-4637b665",
+        "url": "/research/articles/10-1016-j-jgar-2025-07-017-4637b665/",
+        "published_at": "2025-07-22T00:00:00+00:00",
+        "study_type": "Genomic study"
+      },
+      {
+        "id": "article:lit-46b92e7b4feb98f02ab32005",
+        "type": "article",
+        "label": "Closing Critical Gaps in the 2026 Bundibugyo Ebola Response: Five Actionable Priorities.",
+        "slug": "10-7759-cureus-111921-46b92e7b",
+        "url": "/research/articles/10-7759-cureus-111921-46b92e7b/",
+        "published_at": "2026-07-01T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-ffbb1adfd8052b1e85c2f086",
+        "type": "article",
+        "label": "A taxonomically harmonized global dataset of wild bird hosts for avian influenza virus surveillance.",
+        "slug": "10-1038-s41597-025-06451-1-ffbb1adf",
+        "url": "/research/articles/10-1038-s41597-025-06451-1-ffbb1adf/",
+        "published_at": "2025-12-19T00:00:00+00:00",
+        "study_type": "Genomic study"
+      },
+      {
+        "id": "country:us",
+        "type": "country",
+        "label": "United States",
+        "code": "US",
+        "url": "/countries/us/"
+      },
+      {
+        "id": "disease:d014",
+        "type": "disease",
+        "label": "H5N1",
+        "disease_id": "D014",
+        "name_zh": "人感染高致病性禽流感",
+        "slug": "h5n1",
+        "url": "/diseases/h5n1/"
+      },
+      {
+        "id": "disease:d025",
+        "type": "disease",
+        "label": "Tuberculosis",
+        "disease_id": "D025",
+        "name_zh": "肺结核",
+        "slug": "tuberculosis",
+        "url": "/diseases/tuberculosis/"
+      },
+      {
+        "id": "disease:d038",
+        "type": "disease",
+        "label": "Influenza",
+        "disease_id": "D038",
+        "name_zh": "流行性感冒",
+        "slug": "influenza",
+        "url": "/diseases/influenza/"
+      },
+      {
+        "id": "disease:d050",
+        "type": "disease",
+        "label": "Ebola",
+        "disease_id": "D050",
+        "name_zh": "埃博拉出血热",
+        "slug": "ebola",
+        "url": "/diseases/ebola/"
+      },
+      {
+        "id": "study-type:genomic-study",
+        "type": "study_type",
+        "label": "Genomic study"
+      },
+      {
+        "id": "study-type:journal-article",
+        "type": "study_type",
+        "label": "Journal article"
+      },
+      {
+        "id": "topic:antimicrobial-resistance",
+        "type": "topic",
+        "label": "Antimicrobial resistance"
+      },
+      {
+        "id": "topic:diagnostics",
+        "type": "topic",
+        "label": "Diagnostics"
+      },
+      {
+        "id": "topic:genomic-epidemiology",
+        "type": "topic",
+        "label": "Genomic epidemiology"
+      },
+      {
+        "id": "topic:one-health",
+        "type": "topic",
+        "label": "One Health"
+      },
+      {
+        "id": "topic:outbreak-investigation",
+        "type": "topic",
+        "label": "Outbreak investigation"
+      },
+      {
+        "id": "topic:surveillance",
+        "type": "topic",
+        "label": "Surveillance"
+      },
+      {
+        "id": "topic:transmission-dynamics",
+        "type": "topic",
+        "label": "Transmission dynamics"
+      },
+      {
+        "id": "topic:treatment",
+        "type": "topic",
+        "label": "Treatment"
+      },
+      {
+        "id": "topic:vaccination",
+        "type": "topic",
+        "label": "Vaccination"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-1d327941c6c8f6f0d93de7e2|ABOUT_DISEASE|disease:d014",
+        "source": "article:lit-1d327941c6c8f6f0d93de7e2",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d014",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-1d327941c6c8f6f0d93de7e2|ABOUT_DISEASE|disease:d038",
+        "source": "article:lit-1d327941c6c8f6f0d93de7e2",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d038",
+        "confidence": 0.9
+      },
+      {
+        "id": "article:lit-1d327941c6c8f6f0d93de7e2|ADDRESSES_TOPIC|topic:diagnostics",
+        "source": "article:lit-1d327941c6c8f6f0d93de7e2",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:diagnostics",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-1d327941c6c8f6f0d93de7e2|ADDRESSES_TOPIC|topic:genomic-epidemiology",
+        "source": "article:lit-1d327941c6c8f6f0d93de7e2",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:genomic-epidemiology",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-1d327941c6c8f6f0d93de7e2|ADDRESSES_TOPIC|topic:one-health",
+        "source": "article:lit-1d327941c6c8f6f0d93de7e2",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:one-health",
+        "confidence": 0.76
+      },
+      {
+        "id": "article:lit-1d327941c6c8f6f0d93de7e2|ADDRESSES_TOPIC|topic:surveillance",
+        "source": "article:lit-1d327941c6c8f6f0d93de7e2",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:surveillance",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-1d327941c6c8f6f0d93de7e2|ADDRESSES_TOPIC|topic:transmission-dynamics",
+        "source": "article:lit-1d327941c6c8f6f0d93de7e2",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:transmission-dynamics",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-1d327941c6c8f6f0d93de7e2|STUDIED_IN|country:us",
+        "source": "article:lit-1d327941c6c8f6f0d93de7e2",
+        "relation": "STUDIED_IN",
+        "target": "country:us",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-1d327941c6c8f6f0d93de7e2|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-1d327941c6c8f6f0d93de7e2",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-4637b665330dddf88e6b843a|ABOUT_DISEASE|disease:d025",
+        "source": "article:lit-4637b665330dddf88e6b843a",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d025",
+        "confidence": 0.9
+      },
+      {
+        "id": "article:lit-4637b665330dddf88e6b843a|ADDRESSES_TOPIC|topic:antimicrobial-resistance",
+        "source": "article:lit-4637b665330dddf88e6b843a",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:antimicrobial-resistance",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-4637b665330dddf88e6b843a|ADDRESSES_TOPIC|topic:genomic-epidemiology",
+        "source": "article:lit-4637b665330dddf88e6b843a",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:genomic-epidemiology",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-4637b665330dddf88e6b843a|ADDRESSES_TOPIC|topic:treatment",
+        "source": "article:lit-4637b665330dddf88e6b843a",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:treatment",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-4637b665330dddf88e6b843a|USES_STUDY_DESIGN|study-type:genomic-study",
+        "source": "article:lit-4637b665330dddf88e6b843a",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:genomic-study"
+      },
+      {
+        "id": "article:lit-46b92e7b4feb98f02ab32005|ABOUT_DISEASE|disease:d050",
+        "source": "article:lit-46b92e7b4feb98f02ab32005",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d050",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-46b92e7b4feb98f02ab32005|ADDRESSES_TOPIC|topic:diagnostics",
+        "source": "article:lit-46b92e7b4feb98f02ab32005",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:diagnostics",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-46b92e7b4feb98f02ab32005|ADDRESSES_TOPIC|topic:genomic-epidemiology",
+        "source": "article:lit-46b92e7b4feb98f02ab32005",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:genomic-epidemiology",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-46b92e7b4feb98f02ab32005|ADDRESSES_TOPIC|topic:one-health",
+        "source": "article:lit-46b92e7b4feb98f02ab32005",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:one-health",
+        "confidence": 0.7100000000000001
+      },
+      {
+        "id": "article:lit-46b92e7b4feb98f02ab32005|ADDRESSES_TOPIC|topic:outbreak-investigation",
+        "source": "article:lit-46b92e7b4feb98f02ab32005",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:outbreak-investigation",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-46b92e7b4feb98f02ab32005|ADDRESSES_TOPIC|topic:surveillance",
+        "source": "article:lit-46b92e7b4feb98f02ab32005",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:surveillance",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-46b92e7b4feb98f02ab32005|ADDRESSES_TOPIC|topic:transmission-dynamics",
+        "source": "article:lit-46b92e7b4feb98f02ab32005",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:transmission-dynamics",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-46b92e7b4feb98f02ab32005|ADDRESSES_TOPIC|topic:vaccination",
+        "source": "article:lit-46b92e7b4feb98f02ab32005",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccination",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-46b92e7b4feb98f02ab32005|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-46b92e7b4feb98f02ab32005",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-ffbb1adfd8052b1e85c2f086|ABOUT_DISEASE|disease:d038",
+        "source": "article:lit-ffbb1adfd8052b1e85c2f086",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d038",
+        "confidence": 0.9
+      },
+      {
+        "id": "article:lit-ffbb1adfd8052b1e85c2f086|ADDRESSES_TOPIC|topic:genomic-epidemiology",
+        "source": "article:lit-ffbb1adfd8052b1e85c2f086",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:genomic-epidemiology",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-ffbb1adfd8052b1e85c2f086|ADDRESSES_TOPIC|topic:one-health",
+        "source": "article:lit-ffbb1adfd8052b1e85c2f086",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:one-health",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-ffbb1adfd8052b1e85c2f086|ADDRESSES_TOPIC|topic:surveillance",
+        "source": "article:lit-ffbb1adfd8052b1e85c2f086",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:surveillance",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-ffbb1adfd8052b1e85c2f086|USES_STUDY_DESIGN|study-type:genomic-study",
+        "source": "article:lit-ffbb1adfd8052b1e85c2f086",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:genomic-study"
+      }
+    ],
+    "insights": [
+      {
+        "type": "topic_co_occurrence",
+        "left": "topic:genomic-epidemiology",
+        "right": "topic:one-health",
+        "left_label": "Genomic epidemiology",
+        "right_label": "One Health",
+        "article_count": 3
+      },
+      {
+        "type": "topic_co_occurrence",
+        "left": "topic:genomic-epidemiology",
+        "right": "topic:surveillance",
+        "left_label": "Genomic epidemiology",
+        "right_label": "Surveillance",
+        "article_count": 3
+      },
+      {
+        "type": "topic_co_occurrence",
+        "left": "topic:one-health",
+        "right": "topic:surveillance",
+        "left_label": "One Health",
+        "right_label": "Surveillance",
+        "article_count": 3
+      },
+      {
+        "type": "topic_co_occurrence",
+        "left": "topic:diagnostics",
+        "right": "topic:genomic-epidemiology",
+        "left_label": "Diagnostics",
+        "right_label": "Genomic epidemiology",
+        "article_count": 2
+      },
+      {
+        "type": "topic_co_occurrence",
+        "left": "topic:diagnostics",
+        "right": "topic:one-health",
+        "left_label": "Diagnostics",
+        "right_label": "One Health",
+        "article_count": 2
+      },
+      {
+        "type": "topic_co_occurrence",
+        "left": "topic:diagnostics",
+        "right": "topic:surveillance",
+        "left_label": "Diagnostics",
+        "right_label": "Surveillance",
+        "article_count": 2
+      },
+      {
+        "type": "topic_co_occurrence",
+        "left": "topic:diagnostics",
+        "right": "topic:transmission-dynamics",
+        "left_label": "Diagnostics",
+        "right_label": "Transmission dynamics",
+        "article_count": 2
+      },
+      {
+        "type": "topic_co_occurrence",
+        "left": "topic:genomic-epidemiology",
+        "right": "topic:transmission-dynamics",
+        "left_label": "Genomic epidemiology",
+        "right_label": "Transmission dynamics",
+        "article_count": 2
+      },
+      {
+        "type": "topic_co_occurrence",
+        "left": "topic:one-health",
+        "right": "topic:transmission-dynamics",
+        "left_label": "One Health",
+        "right_label": "Transmission dynamics",
+        "article_count": 2
+      },
+      {
+        "type": "topic_co_occurrence",
+        "left": "topic:surveillance",
+        "right": "topic:transmission-dynamics",
+        "left_label": "Surveillance",
+        "right_label": "Transmission dynamics",
+        "article_count": 2
+      }
+    ],
+    "stats": {
+      "nodes": 20,
+      "edges": 28,
+      "articles": 4
+    }
+  }
+}

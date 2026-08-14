@@ -1,0 +1,217 @@
+{
+  "article_id": "lit_90b6b044cbc266f85df97600",
+  "slug": "10-1136-bmjopen-2025-099827-90b6b044",
+  "title": "Diverse diagnostic and management approaches for acute rheumatic fever in Australia and New Zealand: findings of a prospective clinical study.",
+  "doi": "10.1136/bmjopen-2025-099827",
+  "pmid": "40675648",
+  "journal": "BMJ open",
+  "publisher": null,
+  "authors": [
+    "Peiris R",
+    "Webb R",
+    "Bennett J",
+    "Yan J",
+    "Francis JR",
+    "Remenyi B",
+    "Chan Mow F",
+    "Burgess R",
+    "Wilson NJ",
+    "Stanley A",
+    "Francis L",
+    "Holloway R",
+    "Westbury R",
+    "Lawrence S",
+    "Hernandez-Gomez Y",
+    "Broadhurst D",
+    "Moreland NJ",
+    "McGregor R",
+    "Motteram C",
+    "Pearson G",
+    "Mayo M",
+    "Ralph AP",
+    "Carapetis JR"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Cohort study",
+  "published_at": "2025-07-17T00:00:00+00:00",
+  "indexed_at": "2025-07-17T00:00:00+00:00",
+  "open_access_status": "open",
+  "open_access_url": "https://europepmc.org/articles/PMC12273072",
+  "license_url": null,
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.512,
+  "is_featured": false,
+  "diseases": [
+    {
+      "disease_id": "D158",
+      "slug": "rheumatic-fever",
+      "name_en": "Rheumatic fever",
+      "name_zh": "风湿热",
+      "confidence": 0.82
+    }
+  ],
+  "countries": [
+    {
+      "code": "AU",
+      "name_en": "Australia",
+      "name_zh": null,
+      "confidence": 0.78
+    },
+    {
+      "code": "NZ",
+      "name_en": "New Zealand",
+      "name_zh": null,
+      "confidence": 0.78
+    }
+  ],
+  "topics": [
+    {
+      "name": "Diagnostics",
+      "confidence": 0.66
+    }
+  ],
+  "related_surveillance": [
+    {
+      "disease_id": "D158",
+      "disease_name_en": "Rheumatic fever",
+      "disease_name_zh": "风湿热",
+      "disease_slug": "rheumatic-fever",
+      "country_code": "NZ",
+      "country_name_en": "New Zealand",
+      "url": "/diseases/rheumatic-fever/",
+      "method": "high-confidence article geography intersected with GIDS series coverage"
+    }
+  ],
+  "summary": {},
+  "why_it_matters_en": "This recent cohort study is indexed for its relevance to Rheumatic fever. Read the original source before applying its findings.",
+  "why_it_matters_zh": "这项近期Cohort study因与风湿热相关而被收录。应用其结论前请阅读原始文献。",
+  "source_urls": {
+    "doi": "https://doi.org/10.1136/bmjopen-2025-099827",
+    "pubmed": "https://pubmed.ncbi.nlm.nih.gov/40675648/"
+  },
+  "updated_at": "2026-08-13T16:05:48.137529+00:00",
+  "related_signals": [
+    {
+      "signal_id": "signal:f59d37329a1f6ece",
+      "section": "increasing",
+      "kind": "statistical_signal",
+      "title": null,
+      "disease_id": "D158",
+      "disease_name_en": "Rheumatic fever",
+      "disease_name_zh": "风湿热",
+      "geographies": [
+        {
+          "code": "NZ",
+          "name_en": "New Zealand"
+        }
+      ],
+      "data_through": "2026-06-01",
+      "window": {
+        "label": "Latest complete month",
+        "current": 28.0,
+        "previous": 18.0,
+        "absolute_change": 10.0,
+        "change_pct": 55.56
+      },
+      "risk": {
+        "score": 46.5,
+        "level": "moderate",
+        "confidence": "low"
+      },
+      "relation_level": "exact_disease_geography",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-90b6b044cbc266f85df97600",
+        "type": "article",
+        "label": "Diverse diagnostic and management approaches for acute rheumatic fever in Australia and New Zealand: findings of a prospective clinical study.",
+        "slug": "10-1136-bmjopen-2025-099827-90b6b044",
+        "url": "/research/articles/10-1136-bmjopen-2025-099827-90b6b044/",
+        "published_at": "2025-07-17T00:00:00+00:00",
+        "study_type": "Cohort study"
+      },
+      {
+        "id": "country:au",
+        "type": "country",
+        "label": "Australia",
+        "code": "AU",
+        "url": "/countries/au/"
+      },
+      {
+        "id": "country:nz",
+        "type": "country",
+        "label": "New Zealand",
+        "code": "NZ",
+        "url": "/countries/nz/"
+      },
+      {
+        "id": "disease:d158",
+        "type": "disease",
+        "label": "Rheumatic fever",
+        "disease_id": "D158",
+        "name_zh": "风湿热",
+        "slug": "rheumatic-fever",
+        "url": "/diseases/rheumatic-fever/"
+      },
+      {
+        "id": "study-type:cohort-study",
+        "type": "study_type",
+        "label": "Cohort study"
+      },
+      {
+        "id": "topic:diagnostics",
+        "type": "topic",
+        "label": "Diagnostics"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-90b6b044cbc266f85df97600|ABOUT_DISEASE|disease:d158",
+        "source": "article:lit-90b6b044cbc266f85df97600",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d158",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-90b6b044cbc266f85df97600|ADDRESSES_TOPIC|topic:diagnostics",
+        "source": "article:lit-90b6b044cbc266f85df97600",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:diagnostics",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-90b6b044cbc266f85df97600|STUDIED_IN|country:au",
+        "source": "article:lit-90b6b044cbc266f85df97600",
+        "relation": "STUDIED_IN",
+        "target": "country:au",
+        "confidence": 0.78
+      },
+      {
+        "id": "article:lit-90b6b044cbc266f85df97600|STUDIED_IN|country:nz",
+        "source": "article:lit-90b6b044cbc266f85df97600",
+        "relation": "STUDIED_IN",
+        "target": "country:nz",
+        "confidence": 0.78
+      },
+      {
+        "id": "article:lit-90b6b044cbc266f85df97600|USES_STUDY_DESIGN|study-type:cohort-study",
+        "source": "article:lit-90b6b044cbc266f85df97600",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:cohort-study"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 6,
+      "edges": 5,
+      "articles": 1
+    }
+  }
+}

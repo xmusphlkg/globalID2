@@ -1,0 +1,1014 @@
+{
+  "articles": [
+    {
+      "article_id": "lit_900f1df63b5358edac6c208e",
+      "slug": "10-1186-s41182-026-00942-6-900f1df6",
+      "title": "Sex-specific burdens of acute hepatitis B and C and their attributable risk factors in 204 countries and territories, 1990-2021.",
+      "doi": "10.1186/s41182-026-00942-6",
+      "pmid": "41882797",
+      "journal": "Tropical medicine and health",
+      "publisher": null,
+      "authors": [
+        "Sun Z",
+        "Xu Y",
+        "Xiao J",
+        "Liu X",
+        "Shangguan Y",
+        "Wang W",
+        "Chen S",
+        "Zhang W"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-03-25T00:00:00+00:00",
+      "indexed_at": "2026-03-26T00:00:00+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC13085372",
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.604,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D068",
+          "slug": "acute-hepatitis-b",
+          "name_en": "Acute hepatitis B",
+          "name_zh": "急性乙型肝炎",
+          "confidence": 0.82
+        },
+        {
+          "disease_id": "D008",
+          "slug": "hepatitis-b",
+          "name_en": "Hepatitis B",
+          "name_zh": "乙型肝炎",
+          "confidence": 0.82
+        },
+        {
+          "disease_id": "D004",
+          "slug": "covid-19",
+          "name_en": "COVID-19",
+          "name_zh": "新型冠状病毒感染",
+          "confidence": 0.62
+        },
+        {
+          "disease_id": "D006",
+          "slug": "viral-hepatitis",
+          "name_en": "Viral Hepatitis",
+          "name_zh": "病毒性肝炎",
+          "confidence": 0.62
+        },
+        {
+          "disease_id": "D009",
+          "slug": "hepatitis-c",
+          "name_en": "Hepatitis C",
+          "name_zh": "丙型肝炎",
+          "confidence": 0.62
+        },
+        {
+          "disease_id": "D210",
+          "slug": "acute-hepatitis-c",
+          "name_en": "Acute hepatitis C",
+          "name_zh": "急性丙型肝炎",
+          "confidence": 0.62
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Vaccination",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Acute hepatitis B. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与急性乙型肝炎相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1186/s41182-026-00942-6",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41882797/"
+      },
+      "updated_at": "2026-08-14T03:36:38.272150+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:1bf4588c1a282aa8",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D068",
+          "disease_name_en": "Acute hepatitis B",
+          "disease_name_zh": "急性乙型肝炎",
+          "geographies": [
+            {
+              "code": "US",
+              "name_en": "United States"
+            }
+          ],
+          "data_through": "2026-08-08",
+          "window": {
+            "label": "Last 4 weeks",
+            "current": 79.0,
+            "previous": 63.0,
+            "absolute_change": 16.0,
+            "change_pct": 25.4
+          },
+          "risk": {
+            "score": 38.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        },
+        {
+          "signal_id": "signal:4fc15ffc601fc568",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D068",
+          "disease_name_en": "Acute hepatitis B",
+          "disease_name_zh": "急性乙型肝炎",
+          "geographies": [
+            {
+              "code": "US",
+              "name_en": "United States"
+            }
+          ],
+          "data_through": "2026-08-08",
+          "window": {
+            "label": "Last 4 weeks",
+            "current": 79.0,
+            "previous": 63.0,
+            "absolute_change": 16.0,
+            "change_pct": 25.4
+          },
+          "risk": {
+            "score": 38.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_5a38d3b8994879a198fd4f6f",
+      "slug": "10-56786-phwr-2025-18-44-1-5a38d3b8",
+      "title": "[Trends and Epidemiological Characteristics of Acute Hepatitis B among Foreign Nationals in the Republic of Korea, 2014-2024].",
+      "doi": "10.56786/phwr.2025.18.44.1",
+      "pmid": "41334106",
+      "journal": "Jugan geon-gang gwa jilbyeong",
+      "publisher": null,
+      "authors": [
+        "Kang SK",
+        "Kwon SL",
+        "Koh D",
+        "Lee J",
+        "Kim MS",
+        "Kim Y",
+        "Lee A",
+        "Chae SH",
+        "Park YJ"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2025-10-20T00:00:00+00:00",
+      "indexed_at": "2025-12-03T00:00:00+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC12668277",
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.572,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D068",
+          "slug": "acute-hepatitis-b",
+          "name_en": "Acute hepatitis B",
+          "name_zh": "急性乙型肝炎",
+          "confidence": 0.82
+        },
+        {
+          "disease_id": "D008",
+          "slug": "hepatitis-b",
+          "name_en": "Hepatitis B",
+          "name_zh": "乙型肝炎",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [
+        {
+          "code": "CN",
+          "name_en": "China",
+          "name_zh": null,
+          "confidence": 0.62
+        }
+      ],
+      "topics": [
+        {
+          "name": "Surveillance",
+          "confidence": 0.66
+        },
+        {
+          "name": "Vaccination",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {
+        "en": {
+          "research_question": "The study investigates how acute hepatitis B reporting patterns and demographic profiles differ between Korean citizens and foreign residents within South Korea over an eleven-year period.",
+          "study_design": "This research utilizes retrospective analysis of national infectious disease surveillance records and epidemiological investigation data spanning from 2014 through 2024.",
+          "population_setting": "The analysis encompassed 3,591 confirmed acute hepatitis B cases reported across South Korea, specifically comparing domestic residents with international visitors and migrants.",
+          "main_findings": "While overall reporting rates and geographic spread mirrored each other, age distributions diverged significantly, with foreign nationals skewing younger than local patients. The majority of international cases originated from Asian nations with elevated baseline infection rates, and most individuals worked in manual labor sectors. Clinically, jaundice was the predominant presentation, though vaccination records were frequently unavailable and communication hurdles complicated field assessments.",
+          "public_health_relevance": "The rising influx of international residents highlights the necessity for targeted disease control initiatives within the host country. Identifying gaps in immunization documentation and addressing potential barriers to medical access can inform more effective community-based prevention programs.",
+          "limitations": "Administrative reporting mechanisms may yield incomplete case capture when individuals encounter restricted medical access. Furthermore, the frequent unavailability of verifiable immunization documentation and persistent communication hurdles during field assessments restrict comprehensive risk evaluation.",
+          "gids_interpretation": "This report offers longitudinal epidemiological tracking data concerning viral hepatitis patterns within a specific host nation. It establishes a foundational reference for analyzing demographic shifts in disease incidence and informs broader discussions on managing health metrics across transient populations.",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.945,
+            "generated_at": "2026-08-14T08:07:02.369692+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        },
+        "zh": {
+          "research_question": "本研究旨在对比2014至2024年韩国本土居民与外籍人士急性乙型肝炎的报告趋势及流行病学特征。",
+          "study_design": "研究基于国家传染病监测系统数据，采用描述性分析方法对十年间的确诊病例进行回顾性统计。",
+          "population_setting": "分析对象为韩国境内报告的急性乙型肝炎患者，核心关注点为外籍感染人群及其来源地分布。",
+          "main_findings": "外籍患者的发病年龄普遍早于本土居民，且主要来源于乙肝高流行率的亚洲地区。多数感染者处于非熟练劳动状态，黄疸为常见症状，但免疫接种记录普遍缺失，流调过程常遇语言沟通困难。",
+          "public_health_relevance": "鉴于外籍常住人口数量上升，该群体在传染病防控体系中占据重要位置。明确其免疫空白状况有助于规划定向的健康促进项目。",
+          "limitations": "文献明确指出外籍人员的疫苗接种史大多难以核实，且部分人群可能因就医渠道有限而未被完全纳入统计。现场调查阶段亦面临语言障碍制约。",
+          "gids_interpretation": "该文章记录了特定时间段内跨境人群的疾病谱系变化，为理解流动人口在区域卫生数据中的呈现方式提供了背景资料。其分类指标可辅助后续文献检索与主题聚类。",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.939,
+            "generated_at": "2026-08-14T08:07:33.504702+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        }
+      },
+      "why_it_matters_en": "The rising influx of international residents highlights the necessity for targeted disease control initiatives within the host country. Identifying gaps in immunization documentation and addressing potential barriers to medical access can inform more effective community-based prevention programs.",
+      "why_it_matters_zh": "鉴于外籍常住人口数量上升，该群体在传染病防控体系中占据重要位置。明确其免疫空白状况有助于规划定向的健康促进项目。",
+      "source_urls": {
+        "doi": "https://doi.org/10.56786/phwr.2025.18.44.1",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41334106/"
+      },
+      "updated_at": "2026-08-14T03:36:38.272156+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:1bf4588c1a282aa8",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D068",
+          "disease_name_en": "Acute hepatitis B",
+          "disease_name_zh": "急性乙型肝炎",
+          "geographies": [
+            {
+              "code": "US",
+              "name_en": "United States"
+            }
+          ],
+          "data_through": "2026-08-08",
+          "window": {
+            "label": "Last 4 weeks",
+            "current": 79.0,
+            "previous": 63.0,
+            "absolute_change": 16.0,
+            "change_pct": 25.4
+          },
+          "risk": {
+            "score": 38.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        },
+        {
+          "signal_id": "signal:4fc15ffc601fc568",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D068",
+          "disease_name_en": "Acute hepatitis B",
+          "disease_name_zh": "急性乙型肝炎",
+          "geographies": [
+            {
+              "code": "US",
+              "name_en": "United States"
+            }
+          ],
+          "data_through": "2026-08-08",
+          "window": {
+            "label": "Last 4 weeks",
+            "current": 79.0,
+            "previous": 63.0,
+            "absolute_change": 16.0,
+            "change_pct": 25.4
+          },
+          "risk": {
+            "score": 38.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_7b1cb92c73174ca4774455ab",
+      "slug": "10-3389-fcimb-2026-1712115-7b1cb92c",
+      "title": "Association between fatty liver and risk of liver failure in patients with acute hepatitis B: a retrospective cohort study.",
+      "doi": "10.3389/fcimb.2026.1712115",
+      "pmid": "41674703",
+      "journal": "Frontiers in cellular and infection microbiology",
+      "publisher": null,
+      "authors": [
+        "Wang XH",
+        "Chang YN",
+        "Zhang L",
+        "Yang YL",
+        "Liang LW",
+        "Zeng Y",
+        "Zhou Z",
+        "Zhong S",
+        "Li H"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Cohort study",
+      "published_at": "2026-01-27T00:00:00+00:00",
+      "indexed_at": "2026-02-12T00:00:00+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC12886492",
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.5,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D068",
+          "slug": "acute-hepatitis-b",
+          "name_en": "Acute hepatitis B",
+          "name_zh": "急性乙型肝炎",
+          "confidence": 0.82
+        },
+        {
+          "disease_id": "D008",
+          "slug": "hepatitis-b",
+          "name_en": "Hepatitis B",
+          "name_zh": "乙型肝炎",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent cohort study is indexed for its relevance to Acute hepatitis B. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Cohort study因与急性乙型肝炎相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.3389/fcimb.2026.1712115",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41674703/"
+      },
+      "updated_at": "2026-08-14T03:36:38.272158+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:1bf4588c1a282aa8",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D068",
+          "disease_name_en": "Acute hepatitis B",
+          "disease_name_zh": "急性乙型肝炎",
+          "geographies": [
+            {
+              "code": "US",
+              "name_en": "United States"
+            }
+          ],
+          "data_through": "2026-08-08",
+          "window": {
+            "label": "Last 4 weeks",
+            "current": 79.0,
+            "previous": 63.0,
+            "absolute_change": 16.0,
+            "change_pct": 25.4
+          },
+          "risk": {
+            "score": 38.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        },
+        {
+          "signal_id": "signal:4fc15ffc601fc568",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D068",
+          "disease_name_en": "Acute hepatitis B",
+          "disease_name_zh": "急性乙型肝炎",
+          "geographies": [
+            {
+              "code": "US",
+              "name_en": "United States"
+            }
+          ],
+          "data_through": "2026-08-08",
+          "window": {
+            "label": "Last 4 weeks",
+            "current": 79.0,
+            "previous": 63.0,
+            "absolute_change": 16.0,
+            "change_pct": 25.4
+          },
+          "risk": {
+            "score": 38.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_91c183b8229563e94d0195c1",
+      "slug": "10-2807-1560-7917-es-2024-29-33-2300655-91c183b8",
+      "title": "Differences between males and females in infectious diseases notifications in the EU/EEA, 2012 to 2021",
+      "doi": "10.2807/1560-7917.es.2024.29.33.2300655",
+      "pmid": "39149823",
+      "journal": "Eurosurveillance",
+      "publisher": "European Centre for Disease Control and Prevention (ECDC)",
+      "authors": [
+        "Julien Beauté",
+        "Francesco Innocenti"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2024-08-15T00:00:00+00:00",
+      "indexed_at": "2026-08-06T15:50:04+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC11328500",
+      "license_url": "http://creativecommons.org/licenses/by/4.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.474,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D068",
+          "slug": "acute-hepatitis-b",
+          "name_en": "Acute hepatitis B",
+          "name_zh": "急性乙型肝炎",
+          "confidence": 0.62
+        },
+        {
+          "disease_id": "D008",
+          "slug": "hepatitis-b",
+          "name_en": "Hepatitis B",
+          "name_zh": "乙型肝炎",
+          "confidence": 0.62
+        },
+        {
+          "disease_id": "D092",
+          "slug": "campylobacteriosis",
+          "name_en": "Campylobacteriosis",
+          "name_zh": "弯曲杆菌病",
+          "confidence": 0.62
+        },
+        {
+          "disease_id": "D094",
+          "slug": "chlamydia-trachomatis-infection",
+          "name_en": "Chlamydia trachomatis infection",
+          "name_zh": "沙眼衣原体感染",
+          "confidence": 0.62
+        },
+        {
+          "disease_id": "D108",
+          "slug": "listeriosis",
+          "name_en": "Listeriosis",
+          "name_zh": "李斯特菌病",
+          "confidence": 0.62
+        },
+        {
+          "disease_id": "D028",
+          "slug": "pertussis",
+          "name_en": "Pertussis",
+          "name_zh": "百日咳",
+          "confidence": 0.62
+        },
+        {
+          "disease_id": "D037",
+          "slug": "malaria",
+          "name_en": "Malaria",
+          "name_zh": "疟疾",
+          "confidence": 0.62
+        },
+        {
+          "disease_id": "D005",
+          "slug": "aids",
+          "name_en": "AIDS",
+          "name_zh": "艾滋病",
+          "confidence": 0.62
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Surveillance",
+          "confidence": 0.66
+        },
+        {
+          "name": "Transmission dynamics",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {
+        "zh": {
+          "research_question": "本研究旨在量化欧洲联盟及欧洲经济区各国传染病报告中的性别差异，并识别显著偏离区域平均水平的国家。",
+          "study_design": "该研究采用回顾性观察设计，分析了十年期的法定传染病监测数据。通过计算中位数与四分位距，并结合箱线图评估不同病原体、年份、国家及年龄组的分布特征。",
+          "population_setting": "研究对象涵盖欧盟及欧洲经济区成员国在二零一二至二零二一年间上报的法定传染病病例。纳入标准基于疾病负担阈值筛选出十六种特定感染性疾病。",
+          "main_findings": "不同传染病的报告比例呈现显著的性别分化。部分疾病在所有参与国均显示男性占比超过半数，而另一些疾病则以女性为主。特定感染的性别比例在不同年龄组间波动较大，且异常值多源于病例数较少的地区。",
+          "public_health_relevance": "明确此类人口统计学差异有助于优化公共卫生监测框架与资源分配策略。识别稳定的性别分布模式可为制定针对性筛查方案提供依据，并提示需关注检测可及性与行为因素对报告数据的影响。",
+          "limitations": "分析完全依赖常规报告系统数据，结果可能受各地检测习惯与医疗资源差异的干扰。部分统计异常由低发病率辖区的微小样本量导致，可能影响估计稳定性。研究未能将生物学因素与社会文化变量进行独立剥离。",
+          "gids_interpretation": "该文提供了区域内历史性别分布特征的描述性基线，为后续流行病学趋势对比建立参考坐标。内容仅用于界定监测语境，不指向实时疫情信号或动态风险预警。",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.945,
+            "generated_at": "2026-08-13T12:48:01.764918+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        },
+        "en": {
+          "research_question": "The investigation aims to measure sex-based disparities in reported infectious disease cases across European nations and identify jurisdictions that diverge from continental averages.",
+          "study_design": "This observational analysis processed routine surveillance records from a ten-year period to compute sex-specific case proportions and assess geographic variation using distributional statistics.",
+          "population_setting": "The dataset comprised notification records from European Union and European Economic Area member states between 2012 and 2021, narrowing the focus to sixteen pathogens that exceeded a defined disease burden threshold.",
+          "main_findings": "Notification records consistently indicated higher male proportions for infections such as HIV, hepatitis B, and malaria across all participating regions. In contrast, pathogens including pertussis and chlamydia exhibited female predominance in most areas. Age-stratified variability was most notable for chlamydia and listeriosis, while anomalous data points primarily originated from locations with limited case submissions.",
+          "public_health_relevance": "Tracking these consistent reporting patterns supports the characterization of epidemiological trends and may highlight how regional screening approaches or demographic factors intersect with disease surveillance.",
+          "limitations": "Anomalous statistical values were predominantly generated by jurisdictions with minimal case submissions. Furthermore, the evaluation depends on administrative notification records, which capture reporting and testing activities rather than direct measures of actual infection rates.",
+          "gids_interpretation": "This work supplies a decade-long reference framework for sex-disaggregated pathogen reporting within European public health systems. The documented patterns provide contextual benchmarks for interpreting future surveillance outputs and examining how demographic variables align with established reporting structures.",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.949,
+            "generated_at": "2026-08-13T12:47:32.712311+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        }
+      },
+      "why_it_matters_en": "Tracking these consistent reporting patterns supports the characterization of epidemiological trends and may highlight how regional screening approaches or demographic factors intersect with disease surveillance.",
+      "why_it_matters_zh": "明确此类人口统计学差异有助于优化公共卫生监测框架与资源分配策略。识别稳定的性别分布模式可为制定针对性筛查方案提供依据，并提示需关注检测可及性与行为因素对报告数据的影响。",
+      "source_urls": {
+        "doi": "https://doi.org/10.2807/1560-7917.es.2024.29.33.2300655",
+        "publisher": "https://www.eurosurveillance.org/content/10.2807/1560-7917.ES.2024.29.33.2300655",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/39149823/"
+      },
+      "updated_at": "2026-08-13T12:40:20.771725+00:00",
+      "related_signals": []
+    }
+  ],
+  "count": 4,
+  "publication_timeline": [
+    {
+      "month": "2024-08",
+      "publication_count": 1
+    },
+    {
+      "month": "2025-10",
+      "publication_count": 1
+    },
+    {
+      "month": "2026-01",
+      "publication_count": 1
+    },
+    {
+      "month": "2026-03",
+      "publication_count": 1
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-5a38d3b8994879a198fd4f6f",
+        "type": "article",
+        "label": "[Trends and Epidemiological Characteristics of Acute Hepatitis B among Foreign Nationals in the Republic of Korea, 2014-2024].",
+        "slug": "10-56786-phwr-2025-18-44-1-5a38d3b8",
+        "url": "/research/articles/10-56786-phwr-2025-18-44-1-5a38d3b8/",
+        "published_at": "2025-10-20T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-7b1cb92c73174ca4774455ab",
+        "type": "article",
+        "label": "Association between fatty liver and risk of liver failure in patients with acute hepatitis B: a retrospective cohort study.",
+        "slug": "10-3389-fcimb-2026-1712115-7b1cb92c",
+        "url": "/research/articles/10-3389-fcimb-2026-1712115-7b1cb92c/",
+        "published_at": "2026-01-27T00:00:00+00:00",
+        "study_type": "Cohort study"
+      },
+      {
+        "id": "article:lit-900f1df63b5358edac6c208e",
+        "type": "article",
+        "label": "Sex-specific burdens of acute hepatitis B and C and their attributable risk factors in 204 countries and territories, 1990-2021.",
+        "slug": "10-1186-s41182-026-00942-6-900f1df6",
+        "url": "/research/articles/10-1186-s41182-026-00942-6-900f1df6/",
+        "published_at": "2026-03-25T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-91c183b8229563e94d0195c1",
+        "type": "article",
+        "label": "Differences between males and females in infectious diseases notifications in the EU/EEA, 2012 to 2021",
+        "slug": "10-2807-1560-7917-es-2024-29-33-2300655-91c183b8",
+        "url": "/research/articles/10-2807-1560-7917-es-2024-29-33-2300655-91c183b8/",
+        "published_at": "2024-08-15T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "country:cn",
+        "type": "country",
+        "label": "China",
+        "code": "CN",
+        "url": "/countries/cn/"
+      },
+      {
+        "id": "disease:d004",
+        "type": "disease",
+        "label": "COVID-19",
+        "disease_id": "D004",
+        "name_zh": "新型冠状病毒感染",
+        "slug": "covid-19",
+        "url": "/diseases/covid-19/"
+      },
+      {
+        "id": "disease:d005",
+        "type": "disease",
+        "label": "AIDS",
+        "disease_id": "D005",
+        "name_zh": "艾滋病",
+        "slug": "aids",
+        "url": "/diseases/aids/"
+      },
+      {
+        "id": "disease:d006",
+        "type": "disease",
+        "label": "Viral Hepatitis",
+        "disease_id": "D006",
+        "name_zh": "病毒性肝炎",
+        "slug": "viral-hepatitis",
+        "url": "/diseases/viral-hepatitis/"
+      },
+      {
+        "id": "disease:d008",
+        "type": "disease",
+        "label": "Hepatitis B",
+        "disease_id": "D008",
+        "name_zh": "乙型肝炎",
+        "slug": "hepatitis-b",
+        "url": "/diseases/hepatitis-b/"
+      },
+      {
+        "id": "disease:d009",
+        "type": "disease",
+        "label": "Hepatitis C",
+        "disease_id": "D009",
+        "name_zh": "丙型肝炎",
+        "slug": "hepatitis-c",
+        "url": "/diseases/hepatitis-c/"
+      },
+      {
+        "id": "disease:d028",
+        "type": "disease",
+        "label": "Pertussis",
+        "disease_id": "D028",
+        "name_zh": "百日咳",
+        "slug": "pertussis",
+        "url": "/diseases/pertussis/"
+      },
+      {
+        "id": "disease:d037",
+        "type": "disease",
+        "label": "Malaria",
+        "disease_id": "D037",
+        "name_zh": "疟疾",
+        "slug": "malaria",
+        "url": "/diseases/malaria/"
+      },
+      {
+        "id": "disease:d068",
+        "type": "disease",
+        "label": "Acute hepatitis B",
+        "disease_id": "D068",
+        "name_zh": "急性乙型肝炎",
+        "slug": "acute-hepatitis-b",
+        "url": "/diseases/acute-hepatitis-b/"
+      },
+      {
+        "id": "disease:d092",
+        "type": "disease",
+        "label": "Campylobacteriosis",
+        "disease_id": "D092",
+        "name_zh": "弯曲杆菌病",
+        "slug": "campylobacteriosis",
+        "url": "/diseases/campylobacteriosis/"
+      },
+      {
+        "id": "disease:d094",
+        "type": "disease",
+        "label": "Chlamydia trachomatis infection",
+        "disease_id": "D094",
+        "name_zh": "沙眼衣原体感染",
+        "slug": "chlamydia-trachomatis-infection",
+        "url": "/diseases/chlamydia-trachomatis-infection/"
+      },
+      {
+        "id": "disease:d108",
+        "type": "disease",
+        "label": "Listeriosis",
+        "disease_id": "D108",
+        "name_zh": "李斯特菌病",
+        "slug": "listeriosis",
+        "url": "/diseases/listeriosis/"
+      },
+      {
+        "id": "disease:d210",
+        "type": "disease",
+        "label": "Acute hepatitis C",
+        "disease_id": "D210",
+        "name_zh": "急性丙型肝炎",
+        "slug": "acute-hepatitis-c",
+        "url": "/diseases/acute-hepatitis-c/"
+      },
+      {
+        "id": "study-type:cohort-study",
+        "type": "study_type",
+        "label": "Cohort study"
+      },
+      {
+        "id": "study-type:journal-article",
+        "type": "study_type",
+        "label": "Journal article"
+      },
+      {
+        "id": "topic:surveillance",
+        "type": "topic",
+        "label": "Surveillance"
+      },
+      {
+        "id": "topic:transmission-dynamics",
+        "type": "topic",
+        "label": "Transmission dynamics"
+      },
+      {
+        "id": "topic:vaccination",
+        "type": "topic",
+        "label": "Vaccination"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-5a38d3b8994879a198fd4f6f|ABOUT_DISEASE|disease:d008",
+        "source": "article:lit-5a38d3b8994879a198fd4f6f",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d008",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-5a38d3b8994879a198fd4f6f|ABOUT_DISEASE|disease:d068",
+        "source": "article:lit-5a38d3b8994879a198fd4f6f",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d068",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-5a38d3b8994879a198fd4f6f|ADDRESSES_TOPIC|topic:surveillance",
+        "source": "article:lit-5a38d3b8994879a198fd4f6f",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:surveillance",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-5a38d3b8994879a198fd4f6f|ADDRESSES_TOPIC|topic:vaccination",
+        "source": "article:lit-5a38d3b8994879a198fd4f6f",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccination",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-5a38d3b8994879a198fd4f6f|STUDIED_IN|country:cn",
+        "source": "article:lit-5a38d3b8994879a198fd4f6f",
+        "relation": "STUDIED_IN",
+        "target": "country:cn",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-5a38d3b8994879a198fd4f6f|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-5a38d3b8994879a198fd4f6f",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-7b1cb92c73174ca4774455ab|ABOUT_DISEASE|disease:d008",
+        "source": "article:lit-7b1cb92c73174ca4774455ab",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d008",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-7b1cb92c73174ca4774455ab|ABOUT_DISEASE|disease:d068",
+        "source": "article:lit-7b1cb92c73174ca4774455ab",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d068",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-7b1cb92c73174ca4774455ab|USES_STUDY_DESIGN|study-type:cohort-study",
+        "source": "article:lit-7b1cb92c73174ca4774455ab",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:cohort-study"
+      },
+      {
+        "id": "article:lit-900f1df63b5358edac6c208e|ABOUT_DISEASE|disease:d004",
+        "source": "article:lit-900f1df63b5358edac6c208e",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d004",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-900f1df63b5358edac6c208e|ABOUT_DISEASE|disease:d006",
+        "source": "article:lit-900f1df63b5358edac6c208e",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d006",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-900f1df63b5358edac6c208e|ABOUT_DISEASE|disease:d008",
+        "source": "article:lit-900f1df63b5358edac6c208e",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d008",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-900f1df63b5358edac6c208e|ABOUT_DISEASE|disease:d009",
+        "source": "article:lit-900f1df63b5358edac6c208e",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d009",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-900f1df63b5358edac6c208e|ABOUT_DISEASE|disease:d068",
+        "source": "article:lit-900f1df63b5358edac6c208e",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d068",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-900f1df63b5358edac6c208e|ABOUT_DISEASE|disease:d210",
+        "source": "article:lit-900f1df63b5358edac6c208e",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d210",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-900f1df63b5358edac6c208e|ADDRESSES_TOPIC|topic:vaccination",
+        "source": "article:lit-900f1df63b5358edac6c208e",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccination",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-900f1df63b5358edac6c208e|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-900f1df63b5358edac6c208e",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-91c183b8229563e94d0195c1|ABOUT_DISEASE|disease:d005",
+        "source": "article:lit-91c183b8229563e94d0195c1",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d005",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-91c183b8229563e94d0195c1|ABOUT_DISEASE|disease:d008",
+        "source": "article:lit-91c183b8229563e94d0195c1",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d008",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-91c183b8229563e94d0195c1|ABOUT_DISEASE|disease:d028",
+        "source": "article:lit-91c183b8229563e94d0195c1",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d028",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-91c183b8229563e94d0195c1|ABOUT_DISEASE|disease:d037",
+        "source": "article:lit-91c183b8229563e94d0195c1",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d037",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-91c183b8229563e94d0195c1|ABOUT_DISEASE|disease:d068",
+        "source": "article:lit-91c183b8229563e94d0195c1",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d068",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-91c183b8229563e94d0195c1|ABOUT_DISEASE|disease:d092",
+        "source": "article:lit-91c183b8229563e94d0195c1",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d092",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-91c183b8229563e94d0195c1|ABOUT_DISEASE|disease:d094",
+        "source": "article:lit-91c183b8229563e94d0195c1",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d094",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-91c183b8229563e94d0195c1|ABOUT_DISEASE|disease:d108",
+        "source": "article:lit-91c183b8229563e94d0195c1",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d108",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-91c183b8229563e94d0195c1|ADDRESSES_TOPIC|topic:surveillance",
+        "source": "article:lit-91c183b8229563e94d0195c1",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:surveillance",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-91c183b8229563e94d0195c1|ADDRESSES_TOPIC|topic:transmission-dynamics",
+        "source": "article:lit-91c183b8229563e94d0195c1",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:transmission-dynamics",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-91c183b8229563e94d0195c1|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-91c183b8229563e94d0195c1",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      }
+    ],
+    "insights": [
+      {
+        "type": "disease_co_occurrence",
+        "left": "disease:d008",
+        "right": "disease:d068",
+        "left_label": "Hepatitis B",
+        "right_label": "Acute hepatitis B",
+        "article_count": 4
+      }
+    ],
+    "stats": {
+      "nodes": 22,
+      "edges": 28,
+      "articles": 4
+    }
+  }
+}

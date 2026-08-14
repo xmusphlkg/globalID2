@@ -11,9 +11,10 @@ from collections import Counter
 from datetime import date, datetime, timezone
 from typing import Any, Iterable, Mapping, Optional
 
-from sqlalchemy import func, inspect as sa_inspect, select, text, update
+from sqlalchemy import and_, func, inspect as sa_inspect, select, text, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from src.core import get_logger
 from src.domain import (
@@ -28,6 +29,7 @@ from src.domain import (
     StandardDisease,
 )
 from src.ontology import load_disease_ontology
+from src.services.disease_mapping_config import load_reviewed_source_category_mappings
 from src.services.settings_service import system_settings_service
 
 logger = get_logger(__name__)
@@ -129,6 +131,34 @@ class DiseaseMappingRegistryService:
                 "ADD COLUMN IF NOT EXISTS ai_next_attempt_at TIMESTAMPTZ"
             )
         )
+        # Source categories already allow 120-character definition versions.
+        # Holding series must preserve that identity byte-for-byte so the
+        # effective release view can join facts after review. PostgreSQL will
+        # not alter a column referenced by a view, so recreate that view in the
+        # same transaction only while upgrading an older installation.
+        definition_version_length = (
+            await db.execute(
+                text(
+                    """
+                    SELECT character_maximum_length
+                    FROM information_schema.columns
+                    WHERE table_schema = current_schema()
+                      AND table_name = 'disease_surveillance_series'
+                      AND column_name = 'definition_version'
+                    """
+                )
+            )
+        ).scalar_one_or_none()
+        if definition_version_length is not None and definition_version_length < 120:
+            await db.execute(
+                text("DROP VIEW IF EXISTS effective_disease_series_observations_v3")
+            )
+            await db.execute(
+                text(
+                    "ALTER TABLE disease_surveillance_series "
+                    "ALTER COLUMN definition_version TYPE VARCHAR(120)"
+                )
+            )
         # Consumers query a release-pinned view instead of mutable crawler
         # labels or the legacy disease_id stored on a series definition.  A
         # release switch is therefore atomic and historical facts need no
@@ -173,15 +203,19 @@ class DiseaseMappingRegistryService:
                     ) AS is_canonical_projection
                 FROM disease_series_observations o
                 JOIN disease_surveillance_series s ON s.series_code = o.series_code
-                JOIN source_disease_categories c
-                  ON c.source_id = s.source_system
-                 AND c.definition_version = s.definition_version
-                 AND c.source_code = COALESCE(
-                        NULLIF(o.dimensions->>'source_disease_code', ''),
-                        NULLIF(o.metadata->>'local_code', ''),
-                        s.source_series_code
-                     )
-                 AND c.is_active = true
+                JOIN LATERAL (
+                    SELECT category.*
+                    FROM source_disease_categories category
+                    WHERE category.source_id = s.source_system
+                      AND category.definition_version = s.definition_version
+                      AND category.source_code = COALESCE(
+                            NULLIF(o.dimensions->>'source_disease_code', ''),
+                            NULLIF(o.metadata->>'local_code', ''),
+                            s.source_series_code
+                          )
+                      AND category.is_active = true
+                    LIMIT 1
+                ) c ON true
                 JOIN disease_mapping_releases_v3 r ON r.status = 'active'
                 JOIN disease_mapping_release_items_v3 ri ON ri.release_id = r.id
                 JOIN disease_mapping_assertions_v3 a
@@ -358,7 +392,8 @@ class DiseaseMappingRegistryService:
         """Import the complete current ontology and observed category inventory."""
 
         await self.ensure_schema(db)
-        ontology = load_disease_ontology().to_dict()
+        ontology_registry = load_disease_ontology()
+        ontology = ontology_registry.to_dict()
         sources = {item["id"]: item for item in ontology["sources"]}
         imported_categories = imported_assertions = 0
         persisted_series = (
@@ -469,6 +504,12 @@ class DiseaseMappingRegistryService:
             )
             observed_new += result["new_category_count"]
 
+        reviewed_mapping_config = await self._import_reviewed_source_category_mappings(db)
+        retired_synthetic_categories = await self._retire_synthetic_label_categories(
+            db,
+            ontology_registry=ontology_registry,
+            country_code="NZ",
+        )
         inherited_assertions, inheritance_conflicts = await self._inherit_unambiguous_series_mappings(db)
         outdated_ai_requeued = await self._requeue_outdated_ai_candidates(db)
 
@@ -478,8 +519,203 @@ class DiseaseMappingRegistryService:
             "approved_assertions_imported": imported_assertions,
             "series_assertions_inherited": inherited_assertions,
             "series_inheritance_conflicts": inheritance_conflicts,
+            "reviewed_mapping_config": reviewed_mapping_config,
+            "retired_synthetic_categories": retired_synthetic_categories,
             "outdated_ai_requeued": outdated_ai_requeued,
             **(await self.stats(db)),
+        }
+
+    async def _retire_synthetic_label_categories(
+        self,
+        db: AsyncSession,
+        *,
+        ontology_registry: Any,
+        country_code: str,
+    ) -> int:
+        """Retire pre-series label hashes after a stable source identity exists."""
+
+        categories = (
+            await db.execute(
+                select(SourceDiseaseCategory).where(
+                    SourceDiseaseCategory.country_code == country_code.upper(),
+                    SourceDiseaseCategory.source_code.like("label:%"),
+                    SourceDiseaseCategory.is_active.is_(True),
+                )
+            )
+        ).scalars().all()
+        retired = 0
+        for category in categories:
+            assertions = int(
+                (
+                    await db.execute(
+                        select(func.count(DiseaseMappingAssertion.id)).where(
+                            DiseaseMappingAssertion.category_id == category.id
+                        )
+                    )
+                ).scalar_one()
+                or 0
+            )
+            if assertions:
+                continue
+            matches = ontology_registry.series_lookup(
+                country_code=category.country_code,
+                source_id=category.source_id,
+                local_label=category.canonical_source_label,
+            )
+            if len(matches) != 1:
+                continue
+            series_code = str(matches[0]["id"])
+            category.status = "retired"
+            category.is_active = False
+            category.ai_status = "not_required"
+            category.ai_next_attempt_at = None
+            category.metadata_ = {
+                **(category.metadata_ or {}),
+                "retired_reason": "replaced_by_stable_source_series_identity",
+                "replacement_source_code": series_code,
+            }
+            await db.execute(
+                update(DiseaseMappingCandidate)
+                .where(
+                    DiseaseMappingCandidate.category_id == category.id,
+                    DiseaseMappingCandidate.status == "proposed",
+                )
+                .values(status="stale", updated_at=datetime.utcnow())
+            )
+            retired += 1
+        return retired
+
+    async def _import_reviewed_source_category_mappings(
+        self, db: AsyncSession
+    ) -> dict[str, Any]:
+        """Apply reviewed country manifests to matching discovered categories.
+
+        A ``definition_version`` of ``*`` deliberately applies the same source
+        semantic decision to every observed release of that official category.
+        Existing human-reviewed decisions are never overwritten.
+        """
+
+        configured = load_reviewed_source_category_mappings()
+        matched_categories = assertions_imported = already_present = 0
+        unmatched: list[dict[str, Any]] = []
+        conflicts: list[dict[str, Any]] = []
+
+        for mapping in configured:
+            query = select(SourceDiseaseCategory).where(
+                SourceDiseaseCategory.country_code == mapping.country_code,
+                SourceDiseaseCategory.source_id == mapping.source_id,
+                func.lower(SourceDiseaseCategory.source_code) == mapping.source_code.casefold(),
+            )
+            if mapping.definition_version != "*":
+                query = query.where(
+                    SourceDiseaseCategory.definition_version == mapping.definition_version
+                )
+            categories = (await db.execute(query)).scalars().all()
+            if not categories:
+                unmatched.append(mapping.evidence())
+                continue
+
+            matched_categories += len(categories)
+            for category in categories:
+                assertions = (
+                    await db.execute(
+                        select(DiseaseMappingAssertion).where(
+                            DiseaseMappingAssertion.category_id == category.id
+                        )
+                    )
+                ).scalars().all()
+                expected = (
+                    mapping.target_kind,
+                    mapping.target_code,
+                    mapping.mapping_relation,
+                    mapping.comparability,
+                    mapping.projection_policy,
+                    mapping.aggregation_policy,
+                )
+                approved = [
+                    assertion
+                    for assertion in assertions
+                    if assertion.assertion_status == "approved"
+                ]
+                matching = [
+                    assertion
+                    for assertion in approved
+                    if (
+                        assertion.target_kind,
+                        assertion.target_code,
+                        assertion.mapping_relation,
+                        assertion.comparability,
+                        assertion.projection_policy,
+                        assertion.aggregation_policy,
+                    )
+                    == expected
+                ]
+                if matching and len(approved) == 1:
+                    already_present += 1
+                    category.status = "active"
+                    category.ai_status = "not_required"
+                    category.ai_next_attempt_at = None
+                    await db.execute(
+                        update(DiseaseMappingCandidate)
+                        .where(
+                            DiseaseMappingCandidate.category_id == category.id,
+                            DiseaseMappingCandidate.status == "proposed",
+                        )
+                        .values(status="stale", updated_at=datetime.utcnow())
+                    )
+                    continue
+                if assertions:
+                    conflicts.append(
+                        {
+                            **mapping.evidence(),
+                            "category_id": category.id,
+                            "definition_version": category.definition_version,
+                            "existing_assertions": [
+                                {
+                                    "assertion_key": assertion.assertion_key,
+                                    "status": assertion.assertion_status,
+                                    "target_kind": assertion.target_kind,
+                                    "target_code": assertion.target_code,
+                                    "mapping_relation": assertion.mapping_relation,
+                                }
+                                for assertion in assertions
+                            ],
+                        }
+                    )
+                    continue
+
+                assertion = await self._upsert_imported_assertion(
+                    db,
+                    category_id=category.id,
+                    target_kind=mapping.target_kind,
+                    target_code=mapping.target_code,
+                    relation=mapping.mapping_relation,
+                    comparability=mapping.comparability,
+                    projection_policy=mapping.projection_policy,
+                    aggregation_policy=mapping.aggregation_policy,
+                    evidence=[mapping.evidence()],
+                    suggestion_method="reviewed_mapping_config",
+                    reasoning=(
+                        "Imported from a reviewed source-category mapping manifest."
+                        + (f" {mapping.notes}" if mapping.notes else "")
+                    ),
+                    metadata={
+                        "bootstrap": True,
+                        "reviewed_mapping_config": True,
+                        "source_path": mapping.source_path,
+                        "row_number": mapping.row_number,
+                    },
+                )
+                if assertion is not None:
+                    assertions_imported += 1
+
+        return {
+            "configured": len(configured),
+            "matched_categories": matched_categories,
+            "assertions_imported": assertions_imported,
+            "already_present": already_present,
+            "unmatched": unmatched,
+            "conflicts": conflicts,
         }
 
     async def _requeue_outdated_ai_candidates(self, db: AsyncSession) -> int:
@@ -632,6 +868,9 @@ class DiseaseMappingRegistryService:
         projection_policy: str,
         aggregation_policy: str,
         evidence: list[dict[str, Any]],
+        suggestion_method: str = "ontology_import",
+        reasoning: str = "Imported from the reviewed disease surveillance ontology.",
+        metadata: Optional[dict[str, Any]] = None,
     ) -> Optional[DiseaseMappingAssertion]:
         category = await db.get(SourceDiseaseCategory, category_id)
         if category is None:
@@ -658,12 +897,12 @@ class DiseaseMappingRegistryService:
             ),
             assertion_status="approved",
             confidence_score=1.0,
-            suggestion_method="ontology_import",
-            reasoning="Imported from the reviewed disease surveillance ontology.",
+            suggestion_method=suggestion_method,
+            reasoning=reasoning,
             evidence=evidence,
             reviewed_by="ontology_registry",
             reviewed_at=datetime.now(timezone.utc),
-            metadata_={"bootstrap": True},
+            metadata_=metadata or {"bootstrap": True},
         )
         db.add(assertion)
         category.status = "active"
@@ -723,6 +962,19 @@ class DiseaseMappingRegistryService:
             item = _model_dict(row)
             item["candidates"] = [_model_dict(candidate) for candidate in candidates]
             item["assertions"] = [_model_dict(assertion) for assertion in assertions]
+            has_approved_assertion = any(
+                assertion.assertion_status == "approved" for assertion in assertions
+            )
+            item["mapping_status"] = (
+                "reviewed"
+                if has_approved_assertion
+                else ("review_ready" if candidates else "awaiting_suggestion")
+            )
+            item["automation_failure_kind"] = (
+                "provider_unavailable"
+                if row.ai_status == "no_model"
+                else ("internal_processing_error" if row.ai_status == "failed" else None)
+            )
             output.append(item)
         return output
 
@@ -803,6 +1055,50 @@ class DiseaseMappingRegistryService:
         await db.flush()
         return candidate
 
+    async def accept_and_publish_candidate(
+        self,
+        db: AsyncSession,
+        *,
+        candidate_id: int,
+        reviewer: str,
+        notes: str = "",
+    ) -> tuple[DiseaseMappingAssertion, DiseaseMappingRelease]:
+        """Accept one reviewed candidate and atomically publish a new release.
+
+        Facts retained in dynamic holding series are not rewritten. Activating
+        the release makes the effective view interpret them immediately, which
+        is the replay step for observations collected before human approval.
+        """
+
+        await db.execute(
+            text("SELECT pg_advisory_xact_lock(hashtext(:lock_key))"),
+            {"lock_key": "globalid:disease_mapping_release:v1"},
+        )
+        assertion = await self.accept_candidate(
+            db,
+            candidate_id=candidate_id,
+            reviewer=reviewer,
+            notes=notes,
+        )
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+        release = await self.create_release(
+            db,
+            release_code=f"DMR-AUTO-{timestamp}-{candidate_id}",
+            created_by=reviewer,
+            description=(
+                "Automatically published after human acceptance of mapping "
+                f"candidate {candidate_id}."
+            ),
+        )
+        release.metadata_ = {
+            **(release.metadata_ or {}),
+            "publication_trigger": "candidate_acceptance",
+            "accepted_candidate_id": candidate_id,
+            "accepted_assertion_id": assertion.id,
+        }
+        await self.activate_release(db, release.id)
+        return assertion, release
+
     async def create_release(
         self, db: AsyncSession, *, release_code: str, created_by: str, description: str = ""
     ) -> DiseaseMappingRelease:
@@ -839,6 +1135,247 @@ class DiseaseMappingRegistryService:
             db.add(DiseaseMappingReleaseItem(release_id=release.id, assertion_id=assertion.id))
         await db.flush()
         return release
+
+    async def reconcile_placeholder_source_identities(
+        self,
+        db: AsyncSession,
+        *,
+        reviewed_by: str = "source_identity_reconciliation",
+    ) -> dict[str, Any]:
+        """Inherit one unambiguous reviewed decision onto placeholder twins.
+
+        This intentionally uses source identity only.  A normalized-label
+        match is insufficient because similarly named surveillance categories
+        can have different case definitions, populations, or aggregation
+        semantics.
+        """
+
+        await self.ensure_schema(db)
+        placeholder = aliased(SourceDiseaseCategory)
+        reviewed = aliased(SourceDiseaseCategory)
+        rows = (
+            await db.execute(
+                select(placeholder, reviewed, DiseaseMappingAssertion)
+                .join(
+                    reviewed,
+                    and_(
+                        reviewed.source_id == placeholder.source_id,
+                        reviewed.source_code == placeholder.source_code,
+                        reviewed.definition_version != placeholder.definition_version,
+                        reviewed.is_active.is_(True),
+                    ),
+                )
+                .join(
+                    DiseaseMappingAssertion,
+                    and_(
+                        DiseaseMappingAssertion.category_id == reviewed.id,
+                        DiseaseMappingAssertion.assertion_status == "approved",
+                    ),
+                )
+                .where(
+                    placeholder.definition_version == "source-current",
+                    placeholder.is_active.is_(True),
+                )
+                .order_by(placeholder.id, reviewed.id, DiseaseMappingAssertion.id)
+            )
+        ).all()
+        grouped: dict[
+            int,
+            tuple[
+                SourceDiseaseCategory,
+                list[tuple[SourceDiseaseCategory, DiseaseMappingAssertion]],
+            ],
+        ] = {}
+        for target, source_category, assertion in rows:
+            grouped.setdefault(target.id, (target, []))[1].append(
+                (source_category, assertion)
+            )
+
+        category_ids_with_assertions = set(
+            (
+                await db.execute(
+                    select(DiseaseMappingAssertion.category_id).where(
+                        DiseaseMappingAssertion.category_id.in_(list(grouped) or [-1])
+                    )
+                )
+            ).scalars()
+        )
+        now = datetime.now(timezone.utc)
+        reconciled_ids: list[int] = []
+        skipped_existing_assertion: list[int] = []
+        conflicts: list[dict[str, Any]] = []
+        stale_candidate_count = 0
+
+        for target_id, (target, source_rows) in grouped.items():
+            if target_id in category_ids_with_assertions:
+                skipped_existing_assertion.append(target_id)
+                continue
+
+            signatures: dict[
+                tuple[Any, ...],
+                list[tuple[SourceDiseaseCategory, DiseaseMappingAssertion]],
+            ] = {}
+            for source_category, assertion in source_rows:
+                signature = (
+                    assertion.target_kind,
+                    assertion.target_code,
+                    assertion.mapping_relation,
+                    assertion.comparability,
+                    assertion.projection_policy,
+                    assertion.aggregation_policy,
+                    assertion.valid_from,
+                    assertion.valid_to,
+                )
+                signatures.setdefault(signature, []).append(
+                    (source_category, assertion)
+                )
+            if len(signatures) != 1:
+                conflicts.append(
+                    {
+                        "category_id": target_id,
+                        "source_id": target.source_id,
+                        "source_code": target.source_code,
+                        "decision_count": len(signatures),
+                    }
+                )
+                continue
+
+            source_candidates = next(iter(signatures.values()))
+            source_category, source_assertion = min(
+                source_candidates,
+                key=lambda item: (item[1].id, item[0].id),
+            )
+            inherited_from_category_ids = sorted(
+                {item[0].id for item in source_candidates}
+            )
+            inherited_from_assertion_ids = sorted(
+                {item[1].id for item in source_candidates}
+            )
+            previous_ai_status = target.ai_status
+            previous_error = target.ai_last_error
+            assertion = DiseaseMappingAssertion(
+                assertion_key=_assertion_key(
+                    target.category_key,
+                    source_assertion.target_kind,
+                    source_assertion.target_code,
+                    source_assertion.mapping_relation,
+                ),
+                category_id=target.id,
+                target_kind=source_assertion.target_kind,
+                target_code=source_assertion.target_code,
+                mapping_relation=source_assertion.mapping_relation,
+                comparability=source_assertion.comparability,
+                projection_policy=source_assertion.projection_policy,
+                aggregation_policy=source_assertion.aggregation_policy,
+                assertion_status="approved",
+                confidence_score=source_assertion.confidence_score,
+                suggestion_method="source_identity_inheritance",
+                model_key=source_assertion.model_key,
+                model_version=source_assertion.model_version,
+                reasoning=(
+                    "Inherited from an unambiguous reviewed category with the "
+                    "same source ID and source code. "
+                    + str(source_assertion.reasoning or "")
+                ).strip(),
+                evidence=[
+                    *(source_assertion.evidence or []),
+                    {
+                        "type": "reviewed_source_identity_inheritance",
+                        "placeholder_definition_version": target.definition_version,
+                        "reviewed_definition_version": source_category.definition_version,
+                        "source_category_ids": inherited_from_category_ids,
+                        "source_assertion_ids": inherited_from_assertion_ids,
+                    },
+                ],
+                valid_from=source_assertion.valid_from,
+                valid_to=source_assertion.valid_to,
+                reviewed_by=reviewed_by,
+                reviewed_at=now,
+                review_notes=(
+                    "Automated repair of a source-current placeholder twin; "
+                    "the reviewed semantic decision was unique and identical."
+                ),
+                metadata_={
+                    "reconciliation": "source_current_placeholder_v1",
+                    "inherited_from_category_ids": inherited_from_category_ids,
+                    "inherited_from_assertion_ids": inherited_from_assertion_ids,
+                },
+            )
+            db.add(assertion)
+            target.status = "active"
+            target.ai_status = "not_required"
+            target.ai_last_error = None
+            target.ai_next_attempt_at = None
+            target.metadata_ = {
+                **(target.metadata_ or {}),
+                "source_identity_reconciliation": {
+                    "version": 1,
+                    "reconciled_at": now.isoformat(),
+                    "previous_ai_status": previous_ai_status,
+                    "previous_ai_error": previous_error,
+                    "inherited_from_category_ids": inherited_from_category_ids,
+                    "inherited_from_assertion_ids": inherited_from_assertion_ids,
+                },
+            }
+            stale_result = await db.execute(
+                update(DiseaseMappingCandidate)
+                .where(
+                    DiseaseMappingCandidate.category_id == target.id,
+                    DiseaseMappingCandidate.status == "proposed",
+                )
+                .values(status="stale", updated_at=datetime.utcnow())
+            )
+            stale_candidate_count += int(stale_result.rowcount or 0)
+            reconciled_ids.append(target.id)
+
+        await db.flush()
+        return {
+            "placeholder_with_reviewed_identity_count": len(grouped),
+            "reconciled_count": len(reconciled_ids),
+            "reconciled_category_id_sample": reconciled_ids[:25],
+            "conflict_count": len(conflicts),
+            "conflicts": conflicts,
+            "skipped_existing_assertion_count": len(skipped_existing_assertion),
+            "skipped_existing_assertion_id_sample": skipped_existing_assertion[:25],
+            "stale_candidate_count": stale_candidate_count,
+        }
+
+    async def reclassify_legacy_ai_provider_failures(
+        self,
+        db: AsyncSession,
+    ) -> dict[str, Any]:
+        """Move legacy provider outages out of the semantic failure bucket."""
+
+        await self.ensure_schema(db)
+        categories = (
+            await db.execute(
+                select(SourceDiseaseCategory).where(
+                    SourceDiseaseCategory.ai_status == "failed",
+                    SourceDiseaseCategory.ai_last_error.like(
+                        "All active AI model routes failed to produce mapping suggestions%"
+                    ),
+                )
+            )
+        ).scalars().all()
+        now = datetime.now(timezone.utc)
+        for category in categories:
+            category.ai_status = "no_model"
+            category.metadata_ = {
+                **(category.metadata_ or {}),
+                "ai_failure_classification": {
+                    "version": 1,
+                    "kind": "provider_unavailable",
+                    "original_status": "failed",
+                    "reclassified_at": now.isoformat(),
+                },
+            }
+        await db.flush()
+        return {
+            "provider_failure_reclassified_count": len(categories),
+            "provider_failure_reclassified_category_id_sample": [
+                category.id for category in categories[:25]
+            ],
+        }
 
     async def activate_release(self, db: AsyncSession, release_id: int) -> DiseaseMappingRelease:
         await self.ensure_schema(db)
@@ -886,6 +1423,9 @@ class DiseaseMappingRegistryService:
                     func.count(SourceDiseaseCategory.id),
                     func.count(SourceDiseaseCategory.id).filter(SourceDiseaseCategory.ai_status == "pending"),
                     func.count(SourceDiseaseCategory.id).filter(SourceDiseaseCategory.status == "active"),
+                    func.count(SourceDiseaseCategory.id).filter(SourceDiseaseCategory.ai_status == "failed"),
+                    func.count(SourceDiseaseCategory.id).filter(SourceDiseaseCategory.ai_status == "no_model"),
+                    func.count(SourceDiseaseCategory.id).filter(SourceDiseaseCategory.ai_status == "completed"),
                 ).group_by(SourceDiseaseCategory.country_code)
             )
         ).all()
@@ -912,11 +1452,31 @@ class DiseaseMappingRegistryService:
         ).scalar_one_or_none()
         return {
             "countries": [
-                {"country_code": code, "categories": total, "ai_pending": pending, "active": active}
-                for code, total, pending, active in category_rows
+                {
+                    "country_code": code,
+                    "categories": total,
+                    "ai_pending": pending,
+                    "active": active,
+                    "ai_failed": failed,
+                    "ai_provider_unavailable": provider_unavailable,
+                    "ai_review_ready": review_ready,
+                }
+                for (
+                    code,
+                    total,
+                    pending,
+                    active,
+                    failed,
+                    provider_unavailable,
+                    review_ready,
+                ) in category_rows
             ],
             "category_total": sum(row[1] for row in category_rows),
             "ai_pending_total": sum(row[2] for row in category_rows),
+            "ai_failed_total": sum(row[4] for row in category_rows),
+            "ai_internal_failed_total": sum(row[4] for row in category_rows),
+            "ai_provider_unavailable_total": sum(row[5] for row in category_rows),
+            "ai_review_ready_total": sum(row[6] for row in category_rows),
             "assertions": assertion_counts,
             "candidates": candidate_counts,
             "active_release": _model_dict(active_release) if active_release else None,
@@ -931,7 +1491,11 @@ class DiseaseMappingRegistryService:
                 text(
                     """
                     WITH totals AS (
-                        SELECT s.country_code, COUNT(*) AS observation_count
+                        SELECT s.country_code,
+                               COUNT(*) AS observation_count,
+                               COUNT(*) FILTER (
+                                   WHERE s.metadata->>'dynamic_holding' = 'true'
+                               ) AS holding_observation_count
                         FROM disease_series_observations o
                         JOIN disease_surveillance_series s ON s.series_code=o.series_code
                         GROUP BY s.country_code
@@ -940,14 +1504,40 @@ class DiseaseMappingRegistryService:
                                COUNT(DISTINCT observation_id) AS mapped_count,
                                COUNT(DISTINCT observation_id) FILTER (
                                    WHERE is_canonical_projection
-                               ) AS canonical_count
+                               ) AS canonical_count,
+                               COUNT(DISTINCT observation_id) FILTER (
+                                   WHERE projection_policy = 'no_projection'
+                               ) AS no_projection_count,
+                               COUNT(DISTINCT observation_id) FILTER (
+                                   WHERE projection_policy = 'discovery_only'
+                               ) AS discovery_only_count
                         FROM effective_disease_series_observations_v3
                         GROUP BY country_code
+                    ), series_stats AS (
+                        SELECT s.country_code,
+                               COUNT(DISTINCT s.series_code) AS registered_series_count,
+                               COUNT(DISTINCT s.series_code) FILTER (
+                                   WHERE o.id IS NOT NULL
+                               ) AS observed_series_count,
+                               COUNT(DISTINCT s.series_code) FILTER (
+                                   WHERE s.metadata->>'dynamic_holding' = 'true'
+                               ) AS holding_series_count
+                        FROM disease_surveillance_series s
+                        LEFT JOIN disease_series_observations o
+                          ON o.series_code = s.series_code
+                        GROUP BY s.country_code
                     )
                     SELECT t.country_code, t.observation_count,
+                           t.holding_observation_count,
                            COALESCE(m.mapped_count, 0) AS mapped_count,
-                           COALESCE(m.canonical_count, 0) AS canonical_count
+                           COALESCE(m.canonical_count, 0) AS canonical_count,
+                           COALESCE(m.no_projection_count, 0) AS no_projection_count,
+                           COALESCE(m.discovery_only_count, 0) AS discovery_only_count,
+                           COALESCE(ss.registered_series_count, 0) AS registered_series_count,
+                           COALESCE(ss.observed_series_count, 0) AS observed_series_count,
+                           COALESCE(ss.holding_series_count, 0) AS holding_series_count
                     FROM totals t LEFT JOIN mapped m USING (country_code)
+                    LEFT JOIN series_stats ss USING (country_code)
                     ORDER BY t.country_code
                     """
                 )
@@ -956,19 +1546,44 @@ class DiseaseMappingRegistryService:
         countries = []
         for row in rows:
             total = int(row["observation_count"] or 0)
+            mapped = int(row["mapped_count"] or 0)
             canonical = int(row["canonical_count"] or 0)
+            no_projection = int(row["no_projection_count"] or 0)
+            discovery_only = int(row["discovery_only_count"] or 0)
             countries.append(
                 {
                     **dict(row),
+                    "undecided_count": max(total - mapped, 0),
+                    "mapping_coverage": round(mapped / total, 6) if total else 0.0,
                     "canonical_coverage": round(canonical / total, 6) if total else 0.0,
+                    "source_only_count": no_projection + discovery_only,
                 }
             )
         total = sum(int(item["observation_count"]) for item in countries)
+        mapped = sum(int(item["mapped_count"]) for item in countries)
         canonical = sum(int(item["canonical_count"]) for item in countries)
+        no_projection = sum(int(item["no_projection_count"]) for item in countries)
+        discovery_only = sum(int(item["discovery_only_count"]) for item in countries)
+        registered_series = sum(int(item["registered_series_count"]) for item in countries)
+        observed_series = sum(int(item["observed_series_count"]) for item in countries)
+        holding_observations = sum(
+            int(item["holding_observation_count"]) for item in countries
+        )
+        holding_series = sum(int(item["holding_series_count"]) for item in countries)
         return {
             "observation_total": total,
+            "mapped_total": mapped,
+            "mapping_coverage": round(mapped / total, 6) if total else 0.0,
             "canonical_total": canonical,
             "canonical_coverage": round(canonical / total, 6) if total else 0.0,
+            "no_projection_total": no_projection,
+            "discovery_only_total": discovery_only,
+            "source_only_total": no_projection + discovery_only,
+            "undecided_total": max(total - mapped, 0),
+            "registered_series_total": registered_series,
+            "observed_series_total": observed_series,
+            "holding_observation_total": holding_observations,
+            "holding_series_total": holding_series,
             "countries": countries,
         }
 

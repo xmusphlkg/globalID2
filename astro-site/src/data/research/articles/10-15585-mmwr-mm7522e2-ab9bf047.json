@@ -1,0 +1,243 @@
+{
+  "article_id": "lit_ab9bf04752ca39a6c4a24c91",
+  "slug": "10-15585-mmwr-mm7522e2-ab9bf047",
+  "title": "Assessment of Risk to the U.S. Population from the Ebola Disease Outbreak Caused by Bundibugyo Virus, 2026.",
+  "doi": "10.15585/mmwr.mm7522e2",
+  "pmid": "42275278",
+  "journal": "MMWR. Morbidity and mortality weekly report",
+  "publisher": null,
+  "authors": [
+    "Richard DM",
+    "Routledge I",
+    "Koeller S",
+    "Ghinai I",
+    "Hsu CH",
+    "Chatham-Stephens K",
+    "Bruce BB",
+    "Kahn R",
+    "Holmdahl I"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Journal article",
+  "published_at": "2026-06-11T00:00:00+00:00",
+  "indexed_at": "2026-06-11T00:00:00+00:00",
+  "open_access_status": "open",
+  "open_access_url": "https://europepmc.org/articles/PMC13258049",
+  "license_url": null,
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.668,
+  "is_featured": false,
+  "diseases": [
+    {
+      "disease_id": "D050",
+      "slug": "ebola",
+      "name_en": "Ebola",
+      "name_zh": "埃博拉出血热",
+      "confidence": 0.82
+    }
+  ],
+  "countries": [],
+  "topics": [
+    {
+      "name": "Outbreak investigation",
+      "confidence": 0.66
+    },
+    {
+      "name": "Transmission dynamics",
+      "confidence": 0.66
+    }
+  ],
+  "related_surveillance": [],
+  "summary": {
+    "en": {
+      "research_question": "The analysis evaluates the probability of Bundibugyo virus transmission reaching American communities following recent Central African epidemic declarations.",
+      "study_design": "Researchers applied a standardized quantitative framework combining contemporary outbreak metrics with historical viral hemorrhagic fever data to project infection probability and severity.",
+      "population_setting": "The analytical scope targeted the general civilian demographic within the United States across a ninety-day projection window.",
+      "main_findings": "Analyses indicate a minimal probability of sustained community spread domestically during the evaluated period. This low transmission likelihood persists despite the acknowledged severe clinical consequences and extensive logistical demands associated with any potential case.",
+      "public_health_relevance": "The evaluation outlines domestic preparedness thresholds and clarifies resource requirements for managing imported viral hemorrhagic fever scenarios.",
+      "limitations": "The projection relies on incomplete knowledge regarding viral transmission patterns and cannot precisely forecast regional expansion trajectories.",
+      "gids_interpretation": "This publication serves as a static situational overview intended to frame academic and policy discussions regarding international pathogen threats. It operates independently of real-time detection systems or active monitoring feeds.",
+      "provenance": {
+        "generated_by": "literature-evidence-agent",
+        "model": "qwen3.7-flash",
+        "provider": "qwenai",
+        "quality_score": 0.936,
+        "generated_at": "2026-08-13T20:07:41.493176+00:00",
+        "editorially_approved": false,
+        "automatically_approved": true,
+        "automation_policy_version": "research-radar-autopilot.v1",
+        "publication_gate": "automated-quality-gate"
+      }
+    },
+    "zh": {
+      "research_question": "评估中非地区爆发的本迪布焦病毒疫情在未来三个月内对美国本土人群构成的潜在威胁程度。",
+      "study_design": "采用标准化风险评估模型，整合当前暴发疫情的实时流行病学参数与既往同类疾病的历史数据进行推演。",
+      "population_setting": "研究目标群体为可能受到境外疫情输入或局部传播影响的美国居民。",
+      "main_findings": "尽管潜在感染事件可能带来严重后果并消耗大量应对资源，但由于实际传播概率极低，美国人群在此期间面临的总体风险被判定为较低水平。",
+      "public_health_relevance": "文本指出应对此类疫情需调动相应资源，且相关机构将持续追踪可能改变风险等级的关键变量。",
+      "limitations": "分析过程受限于对该病毒流行病学规律认知的不足，同时疫情现有规模与未来地理蔓延趋势亦存在较大不确定性。",
+      "gids_interpretation": "该文献归类为针对特定高致病性病原体跨国传播的前瞻性风险研判报告，有助于梳理复杂疫情情境下的公共卫生评估框架与逻辑路径。",
+      "provenance": {
+        "generated_by": "literature-evidence-agent",
+        "model": "qwen3.7-flash",
+        "provider": "qwenai",
+        "quality_score": 0.945,
+        "generated_at": "2026-08-13T20:08:05.272078+00:00",
+        "editorially_approved": false,
+        "automatically_approved": true,
+        "automation_policy_version": "research-radar-autopilot.v1",
+        "publication_gate": "automated-quality-gate"
+      }
+    }
+  },
+  "why_it_matters_en": "The evaluation outlines domestic preparedness thresholds and clarifies resource requirements for managing imported viral hemorrhagic fever scenarios.",
+  "why_it_matters_zh": "文本指出应对此类疫情需调动相应资源，且相关机构将持续追踪可能改变风险等级的关键变量。",
+  "source_urls": {
+    "doi": "https://doi.org/10.15585/mmwr.mm7522e2",
+    "pubmed": "https://pubmed.ncbi.nlm.nih.gov/42275278/"
+  },
+  "updated_at": "2026-08-13T16:05:48.137373+00:00",
+  "related_signals": [
+    {
+      "signal_id": "event:36",
+      "section": "emerging",
+      "kind": "official_event",
+      "title": "Ebola disease caused by Bundibugyo virus - Democratic Republic of the Congo",
+      "disease_id": "D050",
+      "disease_name_en": "Ebola",
+      "disease_name_zh": "埃博拉出血热",
+      "geographies": [
+        {
+          "code": "CD",
+          "name_en": "Democratic Republic of the Congo"
+        }
+      ],
+      "data_through": "2026-08-01",
+      "window": {
+        "label": null,
+        "current": null,
+        "previous": null,
+        "absolute_change": null,
+        "change_pct": null
+      },
+      "risk": {
+        "score": null,
+        "level": null,
+        "confidence": "high"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    },
+    {
+      "signal_id": "event:37",
+      "section": "emerging",
+      "kind": "official_event",
+      "title": "Ebola disease caused by Bundibugyo virus, Democratic Republic of the Congo & Uganda",
+      "disease_id": "D050",
+      "disease_name_en": "Ebola",
+      "disease_name_zh": "埃博拉出血热",
+      "geographies": [
+        {
+          "code": "CD",
+          "name_en": "Democratic Republic of the Congo"
+        },
+        {
+          "code": "UG",
+          "name_en": "Uganda"
+        }
+      ],
+      "data_through": "2026-07-17",
+      "window": {
+        "label": null,
+        "current": null,
+        "previous": null,
+        "absolute_change": null,
+        "change_pct": null
+      },
+      "risk": {
+        "score": null,
+        "level": null,
+        "confidence": "high"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-ab9bf04752ca39a6c4a24c91",
+        "type": "article",
+        "label": "Assessment of Risk to the U.S. Population from the Ebola Disease Outbreak Caused by Bundibugyo Virus, 2026.",
+        "slug": "10-15585-mmwr-mm7522e2-ab9bf047",
+        "url": "/research/articles/10-15585-mmwr-mm7522e2-ab9bf047/",
+        "published_at": "2026-06-11T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "disease:d050",
+        "type": "disease",
+        "label": "Ebola",
+        "disease_id": "D050",
+        "name_zh": "埃博拉出血热",
+        "slug": "ebola",
+        "url": "/diseases/ebola/"
+      },
+      {
+        "id": "study-type:journal-article",
+        "type": "study_type",
+        "label": "Journal article"
+      },
+      {
+        "id": "topic:outbreak-investigation",
+        "type": "topic",
+        "label": "Outbreak investigation"
+      },
+      {
+        "id": "topic:transmission-dynamics",
+        "type": "topic",
+        "label": "Transmission dynamics"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-ab9bf04752ca39a6c4a24c91|ABOUT_DISEASE|disease:d050",
+        "source": "article:lit-ab9bf04752ca39a6c4a24c91",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d050",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-ab9bf04752ca39a6c4a24c91|ADDRESSES_TOPIC|topic:outbreak-investigation",
+        "source": "article:lit-ab9bf04752ca39a6c4a24c91",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:outbreak-investigation",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-ab9bf04752ca39a6c4a24c91|ADDRESSES_TOPIC|topic:transmission-dynamics",
+        "source": "article:lit-ab9bf04752ca39a6c4a24c91",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:transmission-dynamics",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-ab9bf04752ca39a6c4a24c91|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-ab9bf04752ca39a6c4a24c91",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 5,
+      "edges": 4,
+      "articles": 1
+    }
+  }
+}

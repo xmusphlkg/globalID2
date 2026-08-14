@@ -1,0 +1,915 @@
+{
+  "week": "2026-W26",
+  "start_date": "2026-06-22",
+  "end_date": "2026-06-26",
+  "article_count": 7,
+  "disease_count": 4,
+  "country_count": 1,
+  "top_topics": [
+    "Outbreak investigation",
+    "Treatment",
+    "Vaccination",
+    "Transmission dynamics",
+    "Travel medicine"
+  ],
+  "articles": [
+    {
+      "article_id": "lit_21e54eb9ba4943914b066934",
+      "slug": "10-1093-jtm-taag056-21e54eb9",
+      "title": "Strategic Preparedness for the FIFA World Cup 2026 in Response to the Bundibugoy Ebola Outbreak in the Democratic Republic of Congo",
+      "doi": "10.1093/jtm/taag056",
+      "pmid": null,
+      "journal": "Journal of Travel Medicine",
+      "publisher": "Oxford University Press (OUP)",
+      "authors": [
+        "Rigin Sebastian",
+        "Noufal Naheem Kottekkadan",
+        "Toney K Thomas",
+        "Muhammad Thalil"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-06-22T00:00:00+00:00",
+      "indexed_at": "2026-06-22T16:53:20+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://academic.oup.com/jtm/advance-article/doi/10.1093/jtm/taag056/8713269",
+      "license_url": "https://academic.oup.com/pages/standard-publication-reuse-rights",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.737,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D050",
+          "slug": "ebola",
+          "name_en": "Ebola",
+          "name_zh": "埃博拉出血热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Treatment",
+          "confidence": 0.7100000000000001
+        },
+        {
+          "name": "Outbreak investigation",
+          "confidence": 0.66
+        },
+        {
+          "name": "Vaccination",
+          "confidence": 0.66
+        },
+        {
+          "name": "Travel medicine",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {
+        "en": {
+          "research_question": "How should international health authorities and tournament hosts formulate travel health strategies when a major global sporting event coincides with an emerging viral crisis lacking approved medical countermeasures?",
+          "study_design": "This publication is a peer-reviewed journal article that presents a policy perspective and strategic recommendation rather than an empirical clinical or observational study.",
+          "population_setting": "The analysis targets international travelers and attendees participating in large-scale cross-border mass gatherings.",
+          "main_findings": "Existing host country measures, such as border restrictions and prolonged isolation mandates, lack strong epidemiological backing. The authors emphasize that standardized, risk-appropriate travel health frameworks are critically needed for future pandemic-era mega-events.",
+          "public_health_relevance": "The discussion identifies operational gaps in managing transmissible disease threats during high-density international tourism and sports tournaments.",
+          "limitations": "The manuscript relies on theoretical policy analysis without presenting original data collection or clinical trial results. Furthermore, the referenced viral pathogen currently lacks authorized prophylactic or therapeutic interventions.",
+          "gids_interpretation": "Within the GIDS analytical framework, this document serves as a situational awareness resource that flags regulatory inconsistencies and advocates for harmonized operational guidelines during transnational health emergencies.",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.926,
+            "generated_at": "2026-08-13T16:13:01.214554+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        }
+      },
+      "why_it_matters_en": "The discussion identifies operational gaps in managing transmissible disease threats during high-density international tourism and sports tournaments.",
+      "why_it_matters_zh": "这项近期Journal article因与埃博拉出血热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1093/jtm/taag056",
+        "publisher": "https://academic.oup.com/jtm/advance-article/doi/10.1093/jtm/taag056/8713269"
+      },
+      "updated_at": "2026-08-13T16:05:48.137347+00:00",
+      "related_signals": [
+        {
+          "signal_id": "event:36",
+          "section": "emerging",
+          "kind": "official_event",
+          "title": "Ebola disease caused by Bundibugyo virus - Democratic Republic of the Congo",
+          "disease_id": "D050",
+          "disease_name_en": "Ebola",
+          "disease_name_zh": "埃博拉出血热",
+          "geographies": [
+            {
+              "code": "CD",
+              "name_en": "Democratic Republic of the Congo"
+            }
+          ],
+          "data_through": "2026-08-01",
+          "window": {
+            "label": null,
+            "current": null,
+            "previous": null,
+            "absolute_change": null,
+            "change_pct": null
+          },
+          "risk": {
+            "score": null,
+            "level": null,
+            "confidence": "high"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        },
+        {
+          "signal_id": "event:37",
+          "section": "emerging",
+          "kind": "official_event",
+          "title": "Ebola disease caused by Bundibugyo virus, Democratic Republic of the Congo & Uganda",
+          "disease_id": "D050",
+          "disease_name_en": "Ebola",
+          "disease_name_zh": "埃博拉出血热",
+          "geographies": [
+            {
+              "code": "CD",
+              "name_en": "Democratic Republic of the Congo"
+            },
+            {
+              "code": "UG",
+              "name_en": "Uganda"
+            }
+          ],
+          "data_through": "2026-07-17",
+          "window": {
+            "label": null,
+            "current": null,
+            "previous": null,
+            "absolute_change": null,
+            "change_pct": null
+          },
+          "risk": {
+            "score": null,
+            "level": null,
+            "confidence": "high"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_c7594305a4cbeba01559ee78",
+      "slug": "10-1186-s13756-026-01779-8-c7594305",
+      "title": "Healthcare-associated transmission and early IPC system vulnerabilities during the 2026 Bundibugyo Ebola outbreak in eastern Democratic Republic of the Congo",
+      "doi": "10.1186/s13756-026-01779-8",
+      "pmid": "42337679",
+      "journal": "Antimicrobial Resistance & Infection Control",
+      "publisher": "Springer Science and Business Media LLC",
+      "authors": [
+        "Ben Bepouka",
+        "Mardoche Kafua"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Commentary",
+      "published_at": "2026-06-24T00:00:00+00:00",
+      "indexed_at": "2026-06-24T17:48:36+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC13292433",
+      "license_url": "https://creativecommons.org/licenses/by-nc-nd/4.0",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.705,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D050",
+          "slug": "ebola",
+          "name_en": "Ebola",
+          "name_zh": "埃博拉出血热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Outbreak investigation",
+          "confidence": 0.66
+        },
+        {
+          "name": "Transmission dynamics",
+          "confidence": 0.66
+        },
+        {
+          "name": "Diagnostics",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {
+        "en": {
+          "research_question": "The commentary investigates whether existing disease-specific preparedness measures adequately address operational gaps during outbreaks characterized by delayed laboratory results.",
+          "study_design": "This publication functions as a peer-reviewed commentary that synthesizes field observations to develop a conceptual management framework.",
+          "population_setting": "The discussion centers on medical facilities and clinical personnel managing patients in the Bundibugyo district of eastern Democratic Republic of the Congo during a 2026 viral outbreak.",
+          "main_findings": "Observational notes indicate that initial containment efforts encountered substantial barriers, including inadequate patient screening procedures, restricted quarantine areas, and insufficient protective equipment distribution.",
+          "public_health_relevance": "The authors suggest that immediate deployment of broad infection control protocols upon symptom onset could mitigate risks associated with diagnostic delays in resource-constrained environments.",
+          "limitations": "The manuscript operates as a theoretical discussion rather than an empirical investigation, meaning it lacks primary data collection or quantitative validation of the proposed intervention model.",
+          "gids_interpretation": "This article contributes contextual information regarding historical operational bottlenecks and offers a conceptual approach for future preparedness planning without referencing active monitoring networks.",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.945,
+            "generated_at": "2026-08-13T18:06:50.362670+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        },
+        "zh": {
+          "research_question": "探讨2026年刚果民主共和国本迪布约埃博拉疫情初期的感染防控薄弱环节，并评估现有应对策略的适用性。",
+          "study_design": "本文属于同行评议的评论性文章，侧重于对特定公共卫生事件的经验总结与框架推演。",
+          "population_setting": "研究场景聚焦于2026年刚果民主共和国东部本迪布约地区的医疗机构及基层筛查网络。",
+          "main_findings": "分析指出疫情早期存在院内交叉感染、医务人员暴露、分诊机制不完善、隔离床位紧张及防护物资匮乏等系统性短板。作者认为在病原学确诊延迟的背景下，单一针对特定传染病的准备工作可能存在局限，并倡导采用基于临床症状快速触发感染控制措施的响应模式。",
+          "public_health_relevance": "该观点提示在诊断条件受限的突发疫情中，优先部署通用型感染控制流程有助于降低早期传播风险。",
+          "limitations": "作为理论评述，文章未包含原始队列数据或统计学检验，缺乏对具体干预措施效果的量化评估。",
+          "gids_interpretation": "本文从系统脆弱性角度梳理了早期防控的关键节点，其提出的症状导向型启动逻辑可为相关监测框架的文献检索与背景定位提供参考，但内容本身不涉及实时信号关联或外部数据印证。",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.952,
+            "generated_at": "2026-08-13T18:07:23.628309+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        }
+      },
+      "why_it_matters_en": "The authors suggest that immediate deployment of broad infection control protocols upon symptom onset could mitigate risks associated with diagnostic delays in resource-constrained environments.",
+      "why_it_matters_zh": "该观点提示在诊断条件受限的突发疫情中，优先部署通用型感染控制流程有助于降低早期传播风险。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1186/s13756-026-01779-8",
+        "publisher": "https://link.springer.com/10.1186/s13756-026-01779-8",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/42337679/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137342+00:00",
+      "related_signals": [
+        {
+          "signal_id": "event:36",
+          "section": "emerging",
+          "kind": "official_event",
+          "title": "Ebola disease caused by Bundibugyo virus - Democratic Republic of the Congo",
+          "disease_id": "D050",
+          "disease_name_en": "Ebola",
+          "disease_name_zh": "埃博拉出血热",
+          "geographies": [
+            {
+              "code": "CD",
+              "name_en": "Democratic Republic of the Congo"
+            }
+          ],
+          "data_through": "2026-08-01",
+          "window": {
+            "label": null,
+            "current": null,
+            "previous": null,
+            "absolute_change": null,
+            "change_pct": null
+          },
+          "risk": {
+            "score": null,
+            "level": null,
+            "confidence": "high"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        },
+        {
+          "signal_id": "event:37",
+          "section": "emerging",
+          "kind": "official_event",
+          "title": "Ebola disease caused by Bundibugyo virus, Democratic Republic of the Congo & Uganda",
+          "disease_id": "D050",
+          "disease_name_en": "Ebola",
+          "disease_name_zh": "埃博拉出血热",
+          "geographies": [
+            {
+              "code": "CD",
+              "name_en": "Democratic Republic of the Congo"
+            },
+            {
+              "code": "UG",
+              "name_en": "Uganda"
+            }
+          ],
+          "data_through": "2026-07-17",
+          "window": {
+            "label": null,
+            "current": null,
+            "previous": null,
+            "absolute_change": null,
+            "change_pct": null
+          },
+          "risk": {
+            "score": null,
+            "level": null,
+            "confidence": "high"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_9b077036a87ebd24d6715ea9",
+      "slug": "10-1093-jtm-taag057-9b077036",
+      "title": "Estimating the introduction risk and sustained transmission of the Ebola Bundibugyo outbreak 2026 in the Democratic Republic of Congo",
+      "doi": "10.1093/jtm/taag057",
+      "pmid": null,
+      "journal": "Journal of Travel Medicine",
+      "publisher": "Oxford University Press (OUP)",
+      "authors": [
+        "Reagan Luvande Okingo",
+        "Berthe Amélie Iroungou",
+        "Eugenio Valdano"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-06-22T00:00:00+00:00",
+      "indexed_at": "2026-07-03T14:24:06+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://academic.oup.com/jtm/advance-article/doi/10.1093/jtm/taag057/8712847",
+      "license_url": "https://academic.oup.com/pages/standard-publication-reuse-rights",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.673,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D050",
+          "slug": "ebola",
+          "name_en": "Ebola",
+          "name_zh": "埃博拉出血热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Outbreak investigation",
+          "confidence": 0.66
+        },
+        {
+          "name": "Transmission dynamics",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Ebola. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与埃博拉出血热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1093/jtm/taag057",
+        "publisher": "https://academic.oup.com/jtm/advance-article/doi/10.1093/jtm/taag057/8712847"
+      },
+      "updated_at": "2026-08-13T16:05:48.137329+00:00",
+      "related_signals": [
+        {
+          "signal_id": "event:36",
+          "section": "emerging",
+          "kind": "official_event",
+          "title": "Ebola disease caused by Bundibugyo virus - Democratic Republic of the Congo",
+          "disease_id": "D050",
+          "disease_name_en": "Ebola",
+          "disease_name_zh": "埃博拉出血热",
+          "geographies": [
+            {
+              "code": "CD",
+              "name_en": "Democratic Republic of the Congo"
+            }
+          ],
+          "data_through": "2026-08-01",
+          "window": {
+            "label": null,
+            "current": null,
+            "previous": null,
+            "absolute_change": null,
+            "change_pct": null
+          },
+          "risk": {
+            "score": null,
+            "level": null,
+            "confidence": "high"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        },
+        {
+          "signal_id": "event:37",
+          "section": "emerging",
+          "kind": "official_event",
+          "title": "Ebola disease caused by Bundibugyo virus, Democratic Republic of the Congo & Uganda",
+          "disease_id": "D050",
+          "disease_name_en": "Ebola",
+          "disease_name_zh": "埃博拉出血热",
+          "geographies": [
+            {
+              "code": "CD",
+              "name_en": "Democratic Republic of the Congo"
+            },
+            {
+              "code": "UG",
+              "name_en": "Uganda"
+            }
+          ],
+          "data_through": "2026-07-17",
+          "window": {
+            "label": null,
+            "current": null,
+            "previous": null,
+            "absolute_change": null,
+            "change_pct": null
+          },
+          "risk": {
+            "score": null,
+            "level": null,
+            "confidence": "high"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_6e0a96bd89b74939ba461dcd",
+      "slug": "10-1111-irv-70287-6e0a96bd",
+      "title": "Influenza Antiviral Prescriptions in the US Inpatient and Outpatient Settings During the 2015–2022 Influenza Seasons",
+      "doi": "10.1111/irv.70287",
+      "pmid": null,
+      "journal": "Influenza and Other Respiratory Viruses",
+      "publisher": "Wiley",
+      "authors": [
+        "Kyueun Lee",
+        "Anirban Basu",
+        "Janet A. Englund"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-06-23T00:00:00+00:00",
+      "indexed_at": "2026-08-12T14:36:11+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://onlinelibrary.wiley.com/doi/10.1111/irv.70287",
+      "license_url": "http://creativecommons.org/licenses/by-nc-nd/4.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.641,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D038",
+          "slug": "influenza",
+          "name_en": "Influenza",
+          "name_zh": "流行性感冒",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Treatment",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Influenza. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与流行性感冒相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1111/irv.70287",
+        "publisher": "https://onlinelibrary.wiley.com/doi/10.1111/irv.70287"
+      },
+      "updated_at": "2026-08-13T16:05:48.137425+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:d4f34da837688d03",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D038",
+          "disease_name_en": "Influenza",
+          "disease_name_zh": "流行性感冒",
+          "geographies": [
+            {
+              "code": "IE",
+              "name_en": "Ireland"
+            }
+          ],
+          "data_through": "2026-07-27",
+          "window": {
+            "label": "Last 4 weeks",
+            "current": 230.0,
+            "previous": 46.0,
+            "absolute_change": 184.0,
+            "change_pct": 400.0
+          },
+          "risk": {
+            "score": 65.5,
+            "level": "high",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_c907806f89804bb13670c161",
+      "slug": "10-1016-s1473-3099-26-00315-4-c907806f",
+      "title": "Clinical trial priorities, adaptive strategies, and equitable partnerships for the Bundibugyo Ebola outbreak.",
+      "doi": "10.1016/s1473-3099(26)00315-4",
+      "pmid": "42341789",
+      "journal": "The Lancet. Infectious diseases",
+      "publisher": null,
+      "authors": [
+        "Nachega JB",
+        "Tshiani Mbaya O",
+        "Mulangu S",
+        "Folayan MO",
+        "Ndembi N",
+        "Ntoumi F",
+        "Mills EJ",
+        "Abdool Karim SS",
+        "Zumla A",
+        "Muyembe-Tamfum JJ"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-06-24T00:00:00+00:00",
+      "indexed_at": "2026-06-24T00:00:00+00:00",
+      "open_access_status": "unknown",
+      "open_access_url": null,
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.623,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D050",
+          "slug": "ebola",
+          "name_en": "Ebola",
+          "name_zh": "埃博拉出血热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Outbreak investigation",
+          "confidence": 0.66
+        },
+        {
+          "name": "Treatment",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Ebola. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与埃博拉出血热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1016/s1473-3099(26)00315-4",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/42341789/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137404+00:00",
+      "related_signals": [
+        {
+          "signal_id": "event:36",
+          "section": "emerging",
+          "kind": "official_event",
+          "title": "Ebola disease caused by Bundibugyo virus - Democratic Republic of the Congo",
+          "disease_id": "D050",
+          "disease_name_en": "Ebola",
+          "disease_name_zh": "埃博拉出血热",
+          "geographies": [
+            {
+              "code": "CD",
+              "name_en": "Democratic Republic of the Congo"
+            }
+          ],
+          "data_through": "2026-08-01",
+          "window": {
+            "label": null,
+            "current": null,
+            "previous": null,
+            "absolute_change": null,
+            "change_pct": null
+          },
+          "risk": {
+            "score": null,
+            "level": null,
+            "confidence": "high"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        },
+        {
+          "signal_id": "event:37",
+          "section": "emerging",
+          "kind": "official_event",
+          "title": "Ebola disease caused by Bundibugyo virus, Democratic Republic of the Congo & Uganda",
+          "disease_id": "D050",
+          "disease_name_en": "Ebola",
+          "disease_name_zh": "埃博拉出血热",
+          "geographies": [
+            {
+              "code": "CD",
+              "name_en": "Democratic Republic of the Congo"
+            },
+            {
+              "code": "UG",
+              "name_en": "Uganda"
+            }
+          ],
+          "data_through": "2026-07-17",
+          "window": {
+            "label": null,
+            "current": null,
+            "previous": null,
+            "absolute_change": null,
+            "change_pct": null
+          },
+          "risk": {
+            "score": null,
+            "level": null,
+            "confidence": "high"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_1732a9671dee7396e5f2038d",
+      "slug": "10-3201-eid3208-260948-1732a967",
+      "title": "Antibodies Cross-Reactive with Bundibugyo Virus in Ferrets Vaccinated with Ebola Virus Vaccine.",
+      "doi": "10.3201/eid3208.260948",
+      "pmid": "42342600",
+      "journal": "Emerging infectious diseases",
+      "publisher": null,
+      "authors": [
+        "Wight J",
+        "Schulz H",
+        "Banadyga L"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-06-24T00:00:00+00:00",
+      "indexed_at": "2026-06-24T00:00:00+00:00",
+      "open_access_status": "unknown",
+      "open_access_url": null,
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.623,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D050",
+          "slug": "ebola",
+          "name_en": "Ebola",
+          "name_zh": "埃博拉出血热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Outbreak investigation",
+          "confidence": 0.66
+        },
+        {
+          "name": "Vaccination",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Ebola. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与埃博拉出血热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.3201/eid3208.260948",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/42342600/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137405+00:00",
+      "related_signals": [
+        {
+          "signal_id": "event:36",
+          "section": "emerging",
+          "kind": "official_event",
+          "title": "Ebola disease caused by Bundibugyo virus - Democratic Republic of the Congo",
+          "disease_id": "D050",
+          "disease_name_en": "Ebola",
+          "disease_name_zh": "埃博拉出血热",
+          "geographies": [
+            {
+              "code": "CD",
+              "name_en": "Democratic Republic of the Congo"
+            }
+          ],
+          "data_through": "2026-08-01",
+          "window": {
+            "label": null,
+            "current": null,
+            "previous": null,
+            "absolute_change": null,
+            "change_pct": null
+          },
+          "risk": {
+            "score": null,
+            "level": null,
+            "confidence": "high"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        },
+        {
+          "signal_id": "event:37",
+          "section": "emerging",
+          "kind": "official_event",
+          "title": "Ebola disease caused by Bundibugyo virus, Democratic Republic of the Congo & Uganda",
+          "disease_id": "D050",
+          "disease_name_en": "Ebola",
+          "disease_name_zh": "埃博拉出血热",
+          "geographies": [
+            {
+              "code": "CD",
+              "name_en": "Democratic Republic of the Congo"
+            },
+            {
+              "code": "UG",
+              "name_en": "Uganda"
+            }
+          ],
+          "data_through": "2026-07-17",
+          "window": {
+            "label": null,
+            "current": null,
+            "previous": null,
+            "absolute_change": null,
+            "change_pct": null
+          },
+          "risk": {
+            "score": null,
+            "level": null,
+            "confidence": "high"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_c6aade5c926593091da529c0",
+      "slug": "10-26635-6965-7303-c6aade5c",
+      "title": "The COVID-19 pandemic and acute rheumatic fever inequities, Aotearoa New Zealand, 2020–2022",
+      "doi": "10.26635/6965.7303",
+      "pmid": "42348889",
+      "journal": "New Zealand Medical Journal",
+      "publisher": "Pasifika Medical Association Group",
+      "authors": [
+        "Karen Wright",
+        "Clair Mills",
+        "Bert van der Werf",
+        "Adam Dennison",
+        "Anneka Anderson",
+        "Michael Baker",
+        "Julie Bennett",
+        "Sainimere Boladuadua",
+        "Florina Chan Mow",
+        "Papaarangi Reid",
+        "Sarah-Jane Paine"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-06-26T00:00:00+00:00",
+      "indexed_at": "2026-06-22T23:47:02+00:00",
+      "open_access_status": "unknown",
+      "open_access_url": null,
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.512,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D004",
+          "slug": "covid-19",
+          "name_en": "COVID-19",
+          "name_zh": "新型冠状病毒感染",
+          "confidence": 0.82
+        },
+        {
+          "disease_id": "D158",
+          "slug": "rheumatic-fever",
+          "name_en": "Rheumatic fever",
+          "name_zh": "风湿热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [
+        {
+          "code": "NZ",
+          "name_en": "New Zealand",
+          "name_zh": null,
+          "confidence": 0.78
+        }
+      ],
+      "topics": [],
+      "related_surveillance": [
+        {
+          "disease_id": "D004",
+          "disease_name_en": "COVID-19",
+          "disease_name_zh": "新型冠状病毒感染",
+          "disease_slug": "covid-19",
+          "country_code": "NZ",
+          "country_name_en": "New Zealand",
+          "url": "/diseases/covid-19/",
+          "method": "high-confidence article geography intersected with GIDS series coverage"
+        },
+        {
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "disease_slug": "rheumatic-fever",
+          "country_code": "NZ",
+          "country_name_en": "New Zealand",
+          "url": "/diseases/rheumatic-fever/",
+          "method": "high-confidence article geography intersected with GIDS series coverage"
+        }
+      ],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to COVID-19. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与新型冠状病毒感染相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.26635/6965.7303",
+        "publisher": "https://nzmj.org.nz/journal/vol-139-no-1637/the-covid-19-pandemic-and-acute-rheumatic-fever-inequities-aotearoa-new-zealand-2020-2022",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/42348889/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137481+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:f59d37329a1f6ece",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 28.0,
+            "previous": 18.0,
+            "absolute_change": 10.0,
+            "change_pct": 55.56
+          },
+          "risk": {
+            "score": 46.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "exact_disease_geography",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    }
+  ],
+  "url": "/research/weekly/2026-W26/"
+}

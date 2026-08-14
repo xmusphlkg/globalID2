@@ -342,6 +342,7 @@ class AUMonthlyUpdater:
                 "Please run the AU crawler in globalID2 first."
             )
         rows: List[Dict[str, str]] = []
+        today = datetime.now(timezone.utc).date()
         with csv_path.open("r", encoding="utf-8-sig", newline="") as handle:
             reader = csv.DictReader(handle)
             for row in reader:
@@ -361,6 +362,20 @@ class AUMonthlyUpdater:
                         "Incidence": _norm_text(row.get("Incidence")),
                         "Population": _norm_text(row.get("Population")),
                         "Source": self.source_name,
+                        # NNDSS values can be retrospectively revised.  Only an
+                        # open calendar month is incomplete by construction.
+                        "DatasetStatus": (
+                            "provisional"
+                            if (report_date.year, report_date.month)
+                            == (today.year, today.month)
+                            else "closed_revisable"
+                        ),
+                        "IsProvisional": (
+                            "true"
+                            if (report_date.year, report_date.month)
+                            == (today.year, today.month)
+                            else "false"
+                        ),
                         "__source_file": csv_path.name,
                     }
                 )

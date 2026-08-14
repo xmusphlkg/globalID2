@@ -1,0 +1,256 @@
+{
+  "articles": [
+    {
+      "article_id": "lit_9804296112ae64bd7b10912e",
+      "slug": "10-1093-jtm-taaf115-98042961",
+      "title": "Tick-borne encephalitis in international travellers: a systematic review and vaccine recommendations.",
+      "doi": "10.1093/jtm/taaf115",
+      "pmid": "41206718",
+      "journal": "Journal of travel medicine",
+      "publisher": null,
+      "authors": [
+        "Srinivasan R",
+        "Angulo FJ",
+        "Duench S",
+        "Davidson A",
+        "Kelly PH",
+        "Riddle MS",
+        "Halsby K",
+        "Pilz A",
+        "Steffen R",
+        "Stark JH"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Systematic review",
+      "published_at": "2025-12-01T00:00:00+00:00",
+      "indexed_at": "2025-11-09T00:00:00+00:00",
+      "open_access_status": "unknown",
+      "open_access_url": null,
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.606,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D205",
+          "slug": "tick-borne-encephalitis",
+          "name_en": "Tick-borne encephalitis",
+          "name_zh": "蜱传脑炎",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [
+        {
+          "code": "AT",
+          "name_en": "Austria",
+          "name_zh": null,
+          "confidence": 0.62
+        },
+        {
+          "code": "SE",
+          "name_en": "Sweden",
+          "name_zh": null,
+          "confidence": 0.62
+        },
+        {
+          "code": "CH",
+          "name_en": "Switzerland",
+          "name_zh": null,
+          "confidence": 0.62
+        }
+      ],
+      "topics": [
+        {
+          "name": "Vaccination",
+          "confidence": 0.7100000000000001
+        },
+        {
+          "name": "Surveillance",
+          "confidence": 0.66
+        },
+        {
+          "name": "Travel medicine",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent systematic review is indexed for its relevance to Tick-borne encephalitis. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Systematic review因与蜱传脑炎相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1093/jtm/taaf115",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41206718/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137584+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:ab5fb8f49aaa0cf6",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D205",
+          "disease_name_en": "Tick-borne encephalitis",
+          "disease_name_zh": "蜱传脑炎",
+          "geographies": [
+            {
+              "code": "SE",
+              "name_en": "Sweden"
+            }
+          ],
+          "data_through": "2026-07-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 156.0,
+            "previous": 92.0,
+            "absolute_change": 64.0,
+            "change_pct": 69.57
+          },
+          "risk": {
+            "score": 46.1,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    }
+  ],
+  "count": 1,
+  "publication_timeline": [
+    {
+      "month": "2025-12",
+      "publication_count": 1
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-9804296112ae64bd7b10912e",
+        "type": "article",
+        "label": "Tick-borne encephalitis in international travellers: a systematic review and vaccine recommendations.",
+        "slug": "10-1093-jtm-taaf115-98042961",
+        "url": "/research/articles/10-1093-jtm-taaf115-98042961/",
+        "published_at": "2025-12-01T00:00:00+00:00",
+        "study_type": "Systematic review"
+      },
+      {
+        "id": "country:at",
+        "type": "country",
+        "label": "Austria",
+        "code": "AT",
+        "url": "/countries/at/"
+      },
+      {
+        "id": "country:ch",
+        "type": "country",
+        "label": "Switzerland",
+        "code": "CH",
+        "url": "/countries/ch/"
+      },
+      {
+        "id": "country:se",
+        "type": "country",
+        "label": "Sweden",
+        "code": "SE",
+        "url": "/countries/se/"
+      },
+      {
+        "id": "disease:d205",
+        "type": "disease",
+        "label": "Tick-borne encephalitis",
+        "disease_id": "D205",
+        "name_zh": "蜱传脑炎",
+        "slug": "tick-borne-encephalitis",
+        "url": "/diseases/tick-borne-encephalitis/"
+      },
+      {
+        "id": "study-type:systematic-review",
+        "type": "study_type",
+        "label": "Systematic review"
+      },
+      {
+        "id": "topic:surveillance",
+        "type": "topic",
+        "label": "Surveillance"
+      },
+      {
+        "id": "topic:travel-medicine",
+        "type": "topic",
+        "label": "Travel medicine"
+      },
+      {
+        "id": "topic:vaccination",
+        "type": "topic",
+        "label": "Vaccination"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-9804296112ae64bd7b10912e|ABOUT_DISEASE|disease:d205",
+        "source": "article:lit-9804296112ae64bd7b10912e",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d205",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-9804296112ae64bd7b10912e|ADDRESSES_TOPIC|topic:surveillance",
+        "source": "article:lit-9804296112ae64bd7b10912e",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:surveillance",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-9804296112ae64bd7b10912e|ADDRESSES_TOPIC|topic:travel-medicine",
+        "source": "article:lit-9804296112ae64bd7b10912e",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:travel-medicine",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-9804296112ae64bd7b10912e|ADDRESSES_TOPIC|topic:vaccination",
+        "source": "article:lit-9804296112ae64bd7b10912e",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccination",
+        "confidence": 0.7100000000000001
+      },
+      {
+        "id": "article:lit-9804296112ae64bd7b10912e|STUDIED_IN|country:at",
+        "source": "article:lit-9804296112ae64bd7b10912e",
+        "relation": "STUDIED_IN",
+        "target": "country:at",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-9804296112ae64bd7b10912e|STUDIED_IN|country:ch",
+        "source": "article:lit-9804296112ae64bd7b10912e",
+        "relation": "STUDIED_IN",
+        "target": "country:ch",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-9804296112ae64bd7b10912e|STUDIED_IN|country:se",
+        "source": "article:lit-9804296112ae64bd7b10912e",
+        "relation": "STUDIED_IN",
+        "target": "country:se",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-9804296112ae64bd7b10912e|USES_STUDY_DESIGN|study-type:systematic-review",
+        "source": "article:lit-9804296112ae64bd7b10912e",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:systematic-review"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 9,
+      "edges": 8,
+      "articles": 1
+    }
+  }
+}

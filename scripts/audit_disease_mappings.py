@@ -34,16 +34,20 @@ SEMANTIC_GOLDEN_CASE_MISMATCH = "SEMANTIC_GOLDEN_CASE_MISMATCH"
 # global alias-only guard would create false positives.  Adding a high-risk
 # correction here turns the reviewed source identity into a regression test.
 SEMANTIC_GOLDEN_CASES: tuple[dict[str, str], ...] = (
+    {"country_code": "AT", "data_source": "Austria AGES Radar for Infectious Diseases", "local_code": "fleckfieber-rickettsiose-durch-r-prowazekii", "local_name": "Fleckfieber (Rickettsiose durch R. prowazekii)", "expected_disease_id": "D183"},
+    {"country_code": "AT", "data_source": "Austria AGES Radar for Infectious Diseases", "local_code": "typhus", "local_name": "Typhus", "expected_disease_id": "D124"},
     {"country_code": "AU", "data_source": "AU NINDSS Monthly", "local_code": "", "local_name": "Australian bat lyssavirus infection", "expected_disease_id": "D214"},
     {"country_code": "AU", "data_source": "AU NINDSS Monthly", "local_code": "", "local_name": "Paratyphoid", "expected_disease_id": "D234"},
     {"country_code": "BR", "data_source": "Brazil DATASUS SINAN", "local_code": "MENI", "local_name": "Meningitis", "expected_disease_id": "D235"},
     {"country_code": "CH", "data_source": "Switzerland FOPH IDD", "local_code": "typhoidParatyphoidFever", "local_name": "Typhoid and paratyphoid fever", "expected_disease_id": "D026"},
     {"country_code": "CN", "data_source": "China CDC", "local_code": "Typhoid", "local_name": "伤寒和副伤寒", "expected_disease_id": "D026"},
+    {"country_code": "DE", "data_source": "Germany RKI SurvStat 2.0", "local_code": "fleckfieber", "local_name": "Fleckfieber", "expected_disease_id": "D183"},
+    {"country_code": "DE", "data_source": "Germany RKI SurvStat 2.0", "local_code": "typhus-abdominalis", "local_name": "Typhus abdominalis", "expected_disease_id": "D124"},
     {"country_code": "HK", "data_source": "Hong Kong, China CHP Notifiable Infectious Diseases", "local_code": "", "local_name": "Paratyphoid fever", "expected_disease_id": "D234"},
     {"country_code": "JP", "data_source": "JP NIID Weekly", "local_code": "", "local_name": "Paratyphoid fever", "expected_disease_id": "D234"},
     {"country_code": "KR", "data_source": "Korea KDCA EID", "local_code": "", "local_name": "파라티푸스", "expected_disease_id": "D234"},
-    {"country_code": "NZ", "data_source": "NZ Monthly Notifiable", "local_code": "", "local_name": "Paratyphoid fever", "expected_disease_id": "D234"},
-    {"country_code": "NZ", "data_source": "NZ Monthly Notifiable", "local_code": "", "local_name": "Viral Haemorrhagic Fever", "expected_disease_id": "D127"},
+    {"country_code": "NZ", "data_source": "NZ Monthly Notifiable", "local_code": "SER_NZ_PARATYPHOID_MONTHLY", "local_name": "Paratyphoid fever", "expected_disease_id": "D234"},
+    {"country_code": "NZ", "data_source": "NZ Monthly Notifiable", "local_code": "SER_NZ_VHF_MONTHLY", "local_name": "Viral Haemorrhagic Fever", "expected_disease_id": "D127"},
     {"country_code": "TW", "data_source": "Taiwan", "local_code": "002a", "local_name": "副傷寒", "expected_disease_id": "D234"},
     {"country_code": "TW", "data_source": "Taiwan", "local_code": "004", "local_name": "桿菌性痢疾", "expected_disease_id": "D105"},
     {"country_code": "US", "data_source": "US CDC NNDSS", "local_code": "Salmonella Paratyphi infection", "local_name": "Salmonella Paratyphi infection", "expected_disease_id": "D234"},

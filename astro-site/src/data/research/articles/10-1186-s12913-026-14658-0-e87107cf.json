@@ -1,0 +1,136 @@
+{
+  "article_id": "lit_e87107cf79fa59d0d19a1ef5",
+  "slug": "10-1186-s12913-026-14658-0-e87107cf",
+  "title": "Operational performance of GeneXpert for tuberculosis diagnosis in West Java province, Indonesia: a public health evaluation.",
+  "doi": "10.1186/s12913-026-14658-0",
+  "pmid": "42121171",
+  "journal": "BMC health services research",
+  "publisher": null,
+  "authors": [
+    "Nijman G",
+    "Alifia A",
+    "Annisa SN",
+    "Shurianto L",
+    "de Boer IE",
+    "Puspitasari I",
+    "Indriani S",
+    "Alisjahbana B",
+    "van Crevel R",
+    "Hill PC",
+    "Lestari BW"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Journal article",
+  "published_at": "2026-05-12T00:00:00+00:00",
+  "indexed_at": "2026-05-13T00:00:00+00:00",
+  "open_access_status": "unknown",
+  "open_access_url": null,
+  "license_url": null,
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.508,
+  "is_featured": false,
+  "diseases": [
+    {
+      "disease_id": "D025",
+      "slug": "tuberculosis",
+      "name_en": "Tuberculosis",
+      "name_zh": "肺结核",
+      "confidence": 0.86
+    }
+  ],
+  "countries": [],
+  "topics": [],
+  "related_surveillance": [],
+  "summary": {},
+  "why_it_matters_en": "This recent journal article is indexed for its relevance to Tuberculosis. Read the original source before applying its findings.",
+  "why_it_matters_zh": "这项近期Journal article因与肺结核相关而被收录。应用其结论前请阅读原始文献。",
+  "source_urls": {
+    "doi": "https://doi.org/10.1186/s12913-026-14658-0",
+    "pubmed": "https://pubmed.ncbi.nlm.nih.gov/42121171/"
+  },
+  "updated_at": "2026-08-13T16:05:48.137629+00:00",
+  "related_signals": [
+    {
+      "signal_id": "signal:cbe12a284bd5cd9b",
+      "section": "increasing",
+      "kind": "statistical_signal",
+      "title": null,
+      "disease_id": "D025",
+      "disease_name_en": "Tuberculosis",
+      "disease_name_zh": "肺结核",
+      "geographies": [
+        {
+          "code": "NZ",
+          "name_en": "New Zealand"
+        }
+      ],
+      "data_through": "2026-06-01",
+      "window": {
+        "label": "Latest complete month",
+        "current": 43.0,
+        "previous": 32.0,
+        "absolute_change": 11.0,
+        "change_pct": 34.38
+      },
+      "risk": {
+        "score": 56.0,
+        "level": "high",
+        "confidence": "low"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-e87107cf79fa59d0d19a1ef5",
+        "type": "article",
+        "label": "Operational performance of GeneXpert for tuberculosis diagnosis in West Java province, Indonesia: a public health evaluation.",
+        "slug": "10-1186-s12913-026-14658-0-e87107cf",
+        "url": "/research/articles/10-1186-s12913-026-14658-0-e87107cf/",
+        "published_at": "2026-05-12T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "disease:d025",
+        "type": "disease",
+        "label": "Tuberculosis",
+        "disease_id": "D025",
+        "name_zh": "肺结核",
+        "slug": "tuberculosis",
+        "url": "/diseases/tuberculosis/"
+      },
+      {
+        "id": "study-type:journal-article",
+        "type": "study_type",
+        "label": "Journal article"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-e87107cf79fa59d0d19a1ef5|ABOUT_DISEASE|disease:d025",
+        "source": "article:lit-e87107cf79fa59d0d19a1ef5",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d025",
+        "confidence": 0.86
+      },
+      {
+        "id": "article:lit-e87107cf79fa59d0d19a1ef5|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-e87107cf79fa59d0d19a1ef5",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 3,
+      "edges": 2,
+      "articles": 1
+    }
+  }
+}

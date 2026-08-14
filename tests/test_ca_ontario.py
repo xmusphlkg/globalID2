@@ -708,16 +708,15 @@ def test_reviewed_source_labels_partition_registered_and_excluded_diseases() -> 
     assert "Syphilis, Infectious" in registered
 
 
-def test_source_label_contract_rejects_unknown_and_incomplete_live_manifests() -> None:
-    with pytest.raises(ValueError, match="unreviewed disease labels: New Disease"):
-        CAOntarioMonthlyUpdater._validate_source_label_contract(
-            [
-                {
-                    "RawDiseaseLabel": "New Disease",
-                    "AcquisitionMode": "official_export_file",
-                }
-            ]
-        )
+def test_source_label_contract_retains_unknown_but_rejects_incomplete_live_manifests() -> None:
+    CAOntarioMonthlyUpdater._validate_source_label_contract(
+        [
+            {
+                "RawDiseaseLabel": "New Disease",
+                "AcquisitionMode": "official_export_file",
+            }
+        ]
+    )
 
     with pytest.raises(ValueError, match="live disease-label manifest changed"):
         CAOntarioMonthlyUpdater._validate_source_label_contract(

@@ -1,0 +1,3661 @@
+{
+  "articles": [
+    {
+      "article_id": "lit_ddb7856cf6a4d89e3e1f82d5",
+      "slug": "10-1186-s40249-026-01486-x-ddb7856c",
+      "title": "Phytochemical synergy in artemisia annua herbal tea against malaria: a systematic review of its efficacy and safety in the context of emerging Pfkelch13 resistance",
+      "doi": "10.1186/s40249-026-01486-x",
+      "pmid": null,
+      "journal": "Infectious Diseases of Poverty",
+      "publisher": "Springer Science and Business Media LLC",
+      "authors": [
+        "Jérôme Munyangi wa Nkola",
+        "Pierre Akilimali Zalagile",
+        "Hendrick Lukuke Mbutshu",
+        "Spartacus Kabala Munyemo",
+        "Imani Ramazani Bin Eradi",
+        "Alioune Camara"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Systematic review",
+      "published_at": "2026-08-13T00:00:00+00:00",
+      "indexed_at": "2026-08-13T09:28:25+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://link.springer.com/10.1186/s40249-026-01486-x",
+      "license_url": "https://creativecommons.org/licenses/by/4.0",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.743,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D037",
+          "slug": "malaria",
+          "name_en": "Malaria",
+          "name_zh": "疟疾",
+          "confidence": 0.86
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Treatment",
+          "confidence": 0.7100000000000001
+        },
+        {
+          "name": "Surveillance",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {
+        "en": {
+          "research_question": "This review evaluates how effectively whole-plant Artemisia annua herbal tea reduces Plasmodium falciparum infections compared to standard treatments, while assessing safety profiles and potential impacts on drug resistance patterns.",
+          "study_design": "The authors performed a PRISMA-compliant systematic review aggregating data from randomized controlled trials, quasi-experimental designs, laboratory synergy assays, and murine infection models published over a twenty-five-year span.",
+          "population_setting": "Included participants originated from human clinical trials, while experimental components utilized rodent models infected with diverse parasite strains, including those exhibiting multidrug resistance and specific genetic mutations.",
+          "main_findings": "Laboratory analyses revealed that the unrefined plant extract produced stronger synergistic inhibition and delayed resistance development relative to isolated artemisinin compounds. Clinical trial records indicated swift initial parasite reduction but consistently poor day-28 cure rates that remained substantially below established combination therapy thresholds. Documented adverse reactions were typically minor, though comprehensive safety metrics for pediatric, maternal, and medically complex cohorts were entirely absent.",
+          "public_health_relevance": "The pronounced difference between rapid initial clearance and prolonged parasitological failure positions the botanical infusion as a supplementary measure rather than a definitive monotherapy in endemic regions.",
+          "limitations": "The synthesis identifies a critical shortage of rigorous safety and efficacy documentation for vulnerable groups, including young children, pregnant individuals, and patients with organ impairment. Furthermore, observed delays in resistance emergence within animal models have not yet been replicated in actual clinical environments across Africa.",
+          "gids_interpretation": "This publication offers a consolidated assessment of botanical intervention outcomes and pharmacological interactions relevant to malaria management discourse. Its cataloging within literature tracking systems aids researchers in monitoring alternative therapeutic evaluations and resistance pattern discussions without implying alignment with active outbreak detection mechanisms.",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.945,
+            "generated_at": "2026-08-13T22:06:49.521849+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        },
+        "zh": {
+          "research_question": "在恶性疟原虫Pfkelch13基因突变引发青蒿素耐药性上升的背景下，评估全株黄花蒿草药茶的治疗效果与安全性。",
+          "study_design": "该研究遵循PRISMA 2020规范开展系统评价，检索了六项数据库截至2025年底的相关文献。研究纳入了随机对照试验、类实验设计、体外协同测定及啮齿动物模型，并采用多项标准进行独立质量评级与定性合成。",
+          "population_setting": "分析对象涵盖接受草药干预的临床患者群体以及携带特定耐药突变的实验动物模型。文献明确指出针对婴幼儿、孕产妇及合并肝肾疾病人群的用药安全记录存在显著缺口。",
+          "main_findings": "全株制剂包含四十余种活性成分，通过多靶点途径产生协同效应，其体外抑制浓度显著优于纯化单体。动物实验显示该复方延缓稳定耐药性形成的速度约为纯化药物的三倍。临床数据显示其可在短期内快速降低寄生虫载量，但二十八天治愈率普遍未达到现行联合疗法基准，且不良事件以轻度消化道反应为主。",
+          "public_health_relevance": "面对单一成分药物耐药压力，该植物的多组分特性为延缓抗性演化提供了理论依据，但临床治愈率的客观差距表明其现阶段仅宜作为辅助干预措施。相关结论有助于指导后续针对性临床试验的设计方向。",
+          "limitations": "部分临床试验未能提供完整的二十八天治愈率直接对比数据，影响了疗效基准的精确评估。此外，高危亚群的安全数据严重匮乏，且动物模型中观察到的耐药调控现象尚未在实地流行环境中获得临床复现。",
+          "gids_interpretation": "本条目聚焦于系统评价所呈现的植物药多靶点药理特征与实际临床转归之间的差异，旨在厘清该传统制剂在现代抗疟体系中的学术定位。内容仅用于说明文献的研究脉络与知识贡献，不涉及任何实时监测信号的关联或推断。",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.952,
+            "generated_at": "2026-08-13T22:07:17.001223+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        }
+      },
+      "why_it_matters_en": "The pronounced difference between rapid initial clearance and prolonged parasitological failure positions the botanical infusion as a supplementary measure rather than a definitive monotherapy in endemic regions.",
+      "why_it_matters_zh": "面对单一成分药物耐药压力，该植物的多组分特性为延缓抗性演化提供了理论依据，但临床治愈率的客观差距表明其现阶段仅宜作为辅助干预措施。相关结论有助于指导后续针对性临床试验的设计方向。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1186/s40249-026-01486-x",
+        "publisher": "https://link.springer.com/10.1186/s40249-026-01486-x"
+      },
+      "updated_at": "2026-08-14T03:36:57.710342+00:00",
+      "related_signals": []
+    },
+    {
+      "article_id": "lit_21e54eb9ba4943914b066934",
+      "slug": "10-1093-jtm-taag056-21e54eb9",
+      "title": "Strategic Preparedness for the FIFA World Cup 2026 in Response to the Bundibugoy Ebola Outbreak in the Democratic Republic of Congo",
+      "doi": "10.1093/jtm/taag056",
+      "pmid": null,
+      "journal": "Journal of Travel Medicine",
+      "publisher": "Oxford University Press (OUP)",
+      "authors": [
+        "Rigin Sebastian",
+        "Noufal Naheem Kottekkadan",
+        "Toney K Thomas",
+        "Muhammad Thalil"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-06-22T00:00:00+00:00",
+      "indexed_at": "2026-06-22T16:53:20+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://academic.oup.com/jtm/advance-article/doi/10.1093/jtm/taag056/8713269",
+      "license_url": "https://academic.oup.com/pages/standard-publication-reuse-rights",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.737,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D050",
+          "slug": "ebola",
+          "name_en": "Ebola",
+          "name_zh": "埃博拉出血热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Treatment",
+          "confidence": 0.7100000000000001
+        },
+        {
+          "name": "Outbreak investigation",
+          "confidence": 0.66
+        },
+        {
+          "name": "Vaccination",
+          "confidence": 0.66
+        },
+        {
+          "name": "Travel medicine",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {
+        "en": {
+          "research_question": "How should international health authorities and tournament hosts formulate travel health strategies when a major global sporting event coincides with an emerging viral crisis lacking approved medical countermeasures?",
+          "study_design": "This publication is a peer-reviewed journal article that presents a policy perspective and strategic recommendation rather than an empirical clinical or observational study.",
+          "population_setting": "The analysis targets international travelers and attendees participating in large-scale cross-border mass gatherings.",
+          "main_findings": "Existing host country measures, such as border restrictions and prolonged isolation mandates, lack strong epidemiological backing. The authors emphasize that standardized, risk-appropriate travel health frameworks are critically needed for future pandemic-era mega-events.",
+          "public_health_relevance": "The discussion identifies operational gaps in managing transmissible disease threats during high-density international tourism and sports tournaments.",
+          "limitations": "The manuscript relies on theoretical policy analysis without presenting original data collection or clinical trial results. Furthermore, the referenced viral pathogen currently lacks authorized prophylactic or therapeutic interventions.",
+          "gids_interpretation": "Within the GIDS analytical framework, this document serves as a situational awareness resource that flags regulatory inconsistencies and advocates for harmonized operational guidelines during transnational health emergencies.",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.926,
+            "generated_at": "2026-08-13T16:13:01.214554+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        }
+      },
+      "why_it_matters_en": "The discussion identifies operational gaps in managing transmissible disease threats during high-density international tourism and sports tournaments.",
+      "why_it_matters_zh": "这项近期Journal article因与埃博拉出血热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1093/jtm/taag056",
+        "publisher": "https://academic.oup.com/jtm/advance-article/doi/10.1093/jtm/taag056/8713269"
+      },
+      "updated_at": "2026-08-13T16:05:48.137347+00:00",
+      "related_signals": [
+        {
+          "signal_id": "event:36",
+          "section": "emerging",
+          "kind": "official_event",
+          "title": "Ebola disease caused by Bundibugyo virus - Democratic Republic of the Congo",
+          "disease_id": "D050",
+          "disease_name_en": "Ebola",
+          "disease_name_zh": "埃博拉出血热",
+          "geographies": [
+            {
+              "code": "CD",
+              "name_en": "Democratic Republic of the Congo"
+            }
+          ],
+          "data_through": "2026-08-01",
+          "window": {
+            "label": null,
+            "current": null,
+            "previous": null,
+            "absolute_change": null,
+            "change_pct": null
+          },
+          "risk": {
+            "score": null,
+            "level": null,
+            "confidence": "high"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        },
+        {
+          "signal_id": "event:37",
+          "section": "emerging",
+          "kind": "official_event",
+          "title": "Ebola disease caused by Bundibugyo virus, Democratic Republic of the Congo & Uganda",
+          "disease_id": "D050",
+          "disease_name_en": "Ebola",
+          "disease_name_zh": "埃博拉出血热",
+          "geographies": [
+            {
+              "code": "CD",
+              "name_en": "Democratic Republic of the Congo"
+            },
+            {
+              "code": "UG",
+              "name_en": "Uganda"
+            }
+          ],
+          "data_through": "2026-07-17",
+          "window": {
+            "label": null,
+            "current": null,
+            "previous": null,
+            "absolute_change": null,
+            "change_pct": null
+          },
+          "risk": {
+            "score": null,
+            "level": null,
+            "confidence": "high"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_e8c2aa385b1138f6e09c5986",
+      "slug": "10-15585-mmwr-mm7522e1-e8c2aa38",
+      "title": "Modeled Scenario Projections for the Ebola Disease Outbreak Caused by Bundibugyo Virus, 2026.",
+      "doi": "10.15585/mmwr.mm7522e1",
+      "pmid": "42275271",
+      "journal": "MMWR. Morbidity and mortality weekly report",
+      "publisher": null,
+      "authors": [
+        "Mooring EQ",
+        "Koval WT",
+        "Routledge I",
+        "Holmdahl I",
+        "Hudson K",
+        "España G",
+        "Kahn R",
+        "Bruce BB"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-06-11T00:00:00+00:00",
+      "indexed_at": "2026-06-11T00:00:00+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC13257927",
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.732,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D050",
+          "slug": "ebola",
+          "name_en": "Ebola",
+          "name_zh": "埃博拉出血热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Outbreak investigation",
+          "confidence": 0.66
+        },
+        {
+          "name": "Transmission dynamics",
+          "confidence": 0.66
+        },
+        {
+          "name": "Treatment",
+          "confidence": 0.66
+        },
+        {
+          "name": "One Health",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Ebola. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与埃博拉出血热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.15585/mmwr.mm7522e1",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/42275271/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137381+00:00",
+      "related_signals": [
+        {
+          "signal_id": "event:36",
+          "section": "emerging",
+          "kind": "official_event",
+          "title": "Ebola disease caused by Bundibugyo virus - Democratic Republic of the Congo",
+          "disease_id": "D050",
+          "disease_name_en": "Ebola",
+          "disease_name_zh": "埃博拉出血热",
+          "geographies": [
+            {
+              "code": "CD",
+              "name_en": "Democratic Republic of the Congo"
+            }
+          ],
+          "data_through": "2026-08-01",
+          "window": {
+            "label": null,
+            "current": null,
+            "previous": null,
+            "absolute_change": null,
+            "change_pct": null
+          },
+          "risk": {
+            "score": null,
+            "level": null,
+            "confidence": "high"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        },
+        {
+          "signal_id": "event:37",
+          "section": "emerging",
+          "kind": "official_event",
+          "title": "Ebola disease caused by Bundibugyo virus, Democratic Republic of the Congo & Uganda",
+          "disease_id": "D050",
+          "disease_name_en": "Ebola",
+          "disease_name_zh": "埃博拉出血热",
+          "geographies": [
+            {
+              "code": "CD",
+              "name_en": "Democratic Republic of the Congo"
+            },
+            {
+              "code": "UG",
+              "name_en": "Uganda"
+            }
+          ],
+          "data_through": "2026-07-17",
+          "window": {
+            "label": null,
+            "current": null,
+            "previous": null,
+            "absolute_change": null,
+            "change_pct": null
+          },
+          "risk": {
+            "score": null,
+            "level": null,
+            "confidence": "high"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_608dcc059be5b13e00fbf07e",
+      "slug": "10-5334-gh-1564-608dcc05",
+      "title": "<i>Streptococcus Pyogenes</i> and Acute Rheumatic Fever: How Strong are the Links in the Chain?",
+      "doi": "10.5334/gh.1564",
+      "pmid": "42327996",
+      "journal": "Global heart",
+      "publisher": null,
+      "authors": [
+        "Wirth SH",
+        "Beaton AZ",
+        "Steer A"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-06-19T00:00:00+00:00",
+      "indexed_at": "2026-06-22T00:00:00+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC13281730",
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.671,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D158",
+          "slug": "rheumatic-fever",
+          "name_en": "Rheumatic fever",
+          "name_zh": "风湿热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Treatment",
+          "confidence": 0.66
+        },
+        {
+          "name": "Health policy",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {
+        "en": {
+          "research_question": "The authors evaluate the historical and contemporary scientific basis connecting group A streptococcal infections to acute rheumatic fever and subsequent cardiac complications. They assess how well established epidemiological and biological frameworks explain this relationship.",
+          "study_design": "This publication operates as a narrative review that aggregates and evaluates literature spanning approximately two hundred years. It applies standardized causality assessment tools and evidence grading systems to synthesize past and recent publications.",
+          "population_setting": "The analysis references data collected across various global regions and demographic groups. However, the authors explicitly identify a shortage of modern cohort studies focusing on vulnerable communities.",
+          "main_findings": "Unmanaged bacterial infections correspond with elevated rheumatic fever rates, whereas antimicrobial therapy lowers these occurrences. The chronological progression from microbial exposure to clinical onset receives moderate validation, alongside claims about pathogen specificity. Proposed immunological explanations remain plausible but lack robust empirical confirmation. Significant uncertainties persist regarding contemporary trial requirements and cutaneous transmission pathways.",
+          "public_health_relevance": "The synthesized information supports ongoing discussions regarding prophylactic interventions and regulatory approvals for novel immunizations. Policy formulation benefits from understanding where current knowledge remains incomplete.",
+          "limitations": "The methodology depends entirely on secondary literature aggregation rather than original patient-level investigations. Modern prospective datasets are absent, and the impact of epidermal infections remains poorly quantified.",
+          "gids_interpretation": "This publication situates longstanding academic discourse on streptococcal complications within established evaluation frameworks. It provides background context for preventive initiatives without engaging with active monitoring networks or real-world detection metrics.",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.944,
+            "generated_at": "2026-08-13T20:06:54.102356+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        },
+        "zh": {
+          "research_question": "该文献旨在评估化脓性链球菌感染与急性风湿热及后续心脏病变之间关联的强度。",
+          "study_design": "本文采用叙事性综述方法，整合了跨越近两个世纪的历史与现代文献，并借助因果推断标准与循证医学分级工具进行批判性分析。",
+          "population_setting": "现有分析涵盖了不同地区与人群的数据，但作者强调目前在高危队列中开展的前瞻性观察仍较为匮乏。",
+          "main_findings": "未经处理的感染与急性风湿热发病率上升相关，而抗菌药物使用与该风险下降相关。中等质量证据支持感染至发病的时间顺序及病原体的特异性，同时存在提示感染后自身免疫机制的生物学线索。",
+          "public_health_relevance": "夯实该领域的科学基础对于推动相关疫苗审批以及明确公共卫生干预策略具有重要价值。",
+          "limitations": "当前知识体系仍存在明显缺口，主要集中在缺乏针对高风险群体的最新纵向数据，以及皮肤感染对该病程的具体贡献度尚未厘清。",
+          "gids_interpretation": "该综述系统梳理了长期积累的学术脉络，有助于厘清病原体暴露与临床表型之间的理论联系，可为未来监测框架或政策研讨提供背景支撑。",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.936,
+            "generated_at": "2026-08-13T20:07:19.715777+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        }
+      },
+      "why_it_matters_en": "The synthesized information supports ongoing discussions regarding prophylactic interventions and regulatory approvals for novel immunizations. Policy formulation benefits from understanding where current knowledge remains incomplete.",
+      "why_it_matters_zh": "夯实该领域的科学基础对于推动相关疫苗审批以及明确公共卫生干预策略具有重要价值。",
+      "source_urls": {
+        "doi": "https://doi.org/10.5334/gh.1564",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/42327996/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137507+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:f59d37329a1f6ece",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 28.0,
+            "previous": 18.0,
+            "absolute_change": 10.0,
+            "change_pct": 55.56
+          },
+          "risk": {
+            "score": 46.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_1b1b3b688dab9b824b93d818",
+      "slug": "10-1016-j-ijid-2025-107940-1b1b3b68",
+      "title": "Global dengue epidemic worsens with record 14 million cases and 9000 deaths reported in 2024",
+      "doi": "10.1016/j.ijid.2025.107940",
+      "pmid": "40449873",
+      "journal": "International Journal of Infectious Diseases",
+      "publisher": "Elsevier BV",
+      "authors": [
+        "Najmul Haider",
+        "Mohammad Nayeem Hasan",
+        "Joshua Onyango",
+        "Masum Billah",
+        "Sakirul Khan",
+        "Danai Papakonstantinou",
+        "Priyamvada Paudyal",
+        "Md Asaduzzaman"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2025-09-01T00:00:00+00:00",
+      "indexed_at": "2026-08-06T04:31:52+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://linkinghub.elsevier.com/retrieve/pii/S120197122500164X",
+      "license_url": "https://www.elsevier.com/tdm/userlicense/1.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.666,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D021",
+          "slug": "dengue",
+          "name_en": "Dengue",
+          "name_zh": "登革热",
+          "confidence": 0.9
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Surveillance",
+          "confidence": 0.66
+        },
+        {
+          "name": "Outbreak investigation",
+          "confidence": 0.66
+        },
+        {
+          "name": "Vaccination",
+          "confidence": 0.66
+        },
+        {
+          "name": "Treatment",
+          "confidence": 0.66
+        },
+        {
+          "name": "Climate and environment",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {
+        "zh": {
+          "research_question": "本研究旨在评估2024年全球登革热的整体疾病负担，并探讨影响各国登革热相关死亡率的潜在关联因素。",
+          "study_design": "该研究采用观察性生态分析设计，提取世界卫生组织全球监测系统提供的2024年1月至12月月度汇总数据，并应用广义线性回归模型进行多变量关联检验。",
+          "population_setting": "研究覆盖全球范围，主要依赖各国向国际机构上报的汇总数据，分析焦点涵盖南半球区域以及具有不同年龄结构与气候特征的国家群体。",
+          "main_findings": "2024年全球累计报告病例约一千四百一十万例，死亡九千五百零八例，总体病死率为百分之零点零七。回归分析表明，南半球地理位置、较高的人口老龄化水平以及较高的年均气温，均与国家层面每百万人口的登革热死亡率呈显著正相关。",
+          "public_health_relevance": "研究指出登革热传播规模持续扩大已构成严峻的公共卫生压力，呼吁国际社会加大对病毒学基础科研、疫苗与药物研发、病媒生物防控及临床干预方案的资源倾斜，并建议将其列入优先研发疾病清单。",
+          "limitations": "分析完全基于各国上报的宏观汇总数据，缺乏个体患者层面的临床信息，且未对各国监测报告体系的完整性与时效性差异进行量化校正。",
+          "gids_interpretation": "该文献通过历史年度数据的回顾性梳理，呈现了登革热流行规模的演变轨迹及其与地理、人口和气象指标的统计学联系，为后续趋势追踪提供基线参考，不涉及实时疫情预警或现场流调结论。",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.936,
+            "generated_at": "2026-08-13T12:48:35.481340+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        }
+      },
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Dengue. Read the original source before applying its findings.",
+      "why_it_matters_zh": "研究指出登革热传播规模持续扩大已构成严峻的公共卫生压力，呼吁国际社会加大对病毒学基础科研、疫苗与药物研发、病媒生物防控及临床干预方案的资源倾斜，并建议将其列入优先研发疾病清单。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1016/j.ijid.2025.107940",
+        "publisher": "https://linkinghub.elsevier.com/retrieve/pii/S120197122500164X",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/40449873/"
+      },
+      "updated_at": "2026-08-13T12:40:20.771728+00:00",
+      "related_signals": []
+    },
+    {
+      "article_id": "lit_3b97057c2bf0dc98de8dc646",
+      "slug": "10-3390-ani15213196-3b97057c",
+      "title": "Salmonellosis Outbreak in a Rottweiler Kennel Associated with Raw Meat-Based Diets",
+      "doi": "10.3390/ani15213196",
+      "pmid": null,
+      "journal": "Animals",
+      "publisher": "MDPI AG",
+      "authors": [
+        "Betina Boneva-Marutsova",
+        "Plamen Marutsov",
+        "Marie-Louise Geisler",
+        "Georgi Zhelev"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2025-11-03T00:00:00+00:00",
+      "indexed_at": "2025-11-03T15:25:26+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://www.mdpi.com/2076-2615/15/21/3196",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.664,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D114",
+          "slug": "salmonellosis",
+          "name_en": "Salmonellosis",
+          "name_zh": "沙门氏菌病",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Treatment",
+          "confidence": 0.7100000000000001
+        },
+        {
+          "name": "One Health",
+          "confidence": 0.7100000000000001
+        },
+        {
+          "name": "Outbreak investigation",
+          "confidence": 0.66
+        },
+        {
+          "name": "Diagnostics",
+          "confidence": 0.66
+        },
+        {
+          "name": "Climate and environment",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {
+        "en": {
+          "research_question": "To characterize the clinical presentation, microbiological profile, and environmental spread of a Salmonella infection within a canine breeding facility.",
+          "study_design": "A descriptive case report and outbreak investigation utilizing clinical observation, sample collection, and laboratory diagnostics.",
+          "population_setting": "A Bulgarian Rottweiler breeding kennel comprising adult and post-partum dogs.",
+          "main_findings": "Affected animals exhibited gastrointestinal symptoms and lethargy, with more severe presentations occurring in recently whelped females. Microbiological testing revealed extensive bacterial shedding among the dogs alongside contamination of their diet and surrounding surfaces. Full recovery followed the cessation of raw diet administration, implementation of targeted drug therapy, and thorough sanitation, while exposed humans remained uninfected.",
+          "public_health_relevance": "The report highlights the cross-species transmission potential of pathogens found in unregulated raw animal feed. It advocates for enhanced feed traceability and biosecurity standards to mitigate health threats under a collaborative veterinary-human health approach.",
+          "limitations": "The evaluation relies on observational data from a single facility without a comparative control cohort. Consequently, the observed outcomes may not reflect broader canine populations or different regional conditions.",
+          "gids_interpretation": "This article contributes to the academic record of veterinary infectious disease events and diagnostic methodologies. Its documentation aids scholarly monitoring of dietary-related microbial risks in domestic animal settings.",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.923,
+            "generated_at": "2026-08-13T20:10:14.095399+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        }
+      },
+      "why_it_matters_en": "The report highlights the cross-species transmission potential of pathogens found in unregulated raw animal feed. It advocates for enhanced feed traceability and biosecurity standards to mitigate health threats under a collaborative veterinary-human health approach.",
+      "why_it_matters_zh": "这项近期Journal article因与沙门氏菌病相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.3390/ani15213196",
+        "publisher": "https://www.mdpi.com/2076-2615/15/21/3196"
+      },
+      "updated_at": "2026-08-13T16:05:48.137677+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:ecdc9176fa7e1a17",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D114",
+          "disease_name_en": "Salmonellosis",
+          "disease_name_zh": "沙门氏菌病",
+          "geographies": [
+            {
+              "code": "IE",
+              "name_en": "Ireland"
+            }
+          ],
+          "data_through": "2026-07-27",
+          "window": {
+            "label": "Last 4 weeks",
+            "current": 54.0,
+            "previous": 38.0,
+            "absolute_change": 16.0,
+            "change_pct": 42.11
+          },
+          "risk": {
+            "score": 40.8,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_90443fa0ffa1d6a1e0a5d2d8",
+      "slug": "10-1016-j-nmni-2026-101720-90443fa0",
+      "title": "A rare case of breakthrough tick-borne encephalitis in early adolescence after vaccination with four doses of TBE vaccine.",
+      "doi": "10.1016/j.nmni.2026.101720",
+      "pmid": "41732518",
+      "journal": "New microbes and new infections",
+      "publisher": null,
+      "authors": [
+        "Morgardt S",
+        "Veje M",
+        "Bergström T",
+        "Ivarsson L",
+        "Studahl M"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-02-03T00:00:00+00:00",
+      "indexed_at": "2026-02-24T00:00:00+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC12924906",
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.648,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D205",
+          "slug": "tick-borne-encephalitis",
+          "name_en": "Tick-borne encephalitis",
+          "name_zh": "蜱传脑炎",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Vaccination",
+          "confidence": 0.7100000000000001
+        },
+        {
+          "name": "Diagnostics",
+          "confidence": 0.66
+        },
+        {
+          "name": "Treatment",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {
+        "zh": {
+          "research_question": "本文探讨了一名完成四剂疫苗接种的青少年在突破感染蜱传脑炎后的临床表现、诊断标志物特征及长期预后。",
+          "study_design": "该研究为单病例报告，详细记录了一名患者的临床病程、实验室检测数据及影像学随访结果。",
+          "population_setting": "研究对象为一名既往健康的早期青少年，已完成四剂蜱传脑炎疫苗接种。",
+          "main_findings": "尽管完成全程接种，患者仍发生重症突破感染并住院三个月。血清学显示典型IgM反应延迟，而脑脊液中针对非结构蛋白1的早期IgG应答具有较高诊断价值。初始治疗曾按自身免疫性脑炎进行免疫调节干预，多年随访的脑部影像学检查证实存在持续性病变，但导致严重预后的具体机制尚不明确。",
+          "public_health_relevance": "该案例提示在已接种疫苗人群中仍需警惕突破感染的可能，并强调了特定生物标志物在鉴别诊断中的潜在作用，对完善相关疾病的临床识别策略具有参考价值。",
+          "limitations": "作为单一病例报告，样本量极小且缺乏对照，难以推断普遍规律或明确致病机制。此外，免疫调节治疗的潜在影响及其他黄病毒交叉反应可能干扰临床判断。",
+          "gids_interpretation": "该文献属于个案报道范畴，主要提供特定人群下罕见突破感染的临床细节与实验室特征，有助于丰富现有疾病认知框架，但不涉及实时监测数据的关联分析。",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.952,
+            "generated_at": "2026-08-13T22:09:45.913153+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        },
+        "en": {
+          "research_question": "How can clinicians characterize the clinical trajectory and laboratory markers associated with a rare post-vaccination neurological complication?",
+          "study_design": "This investigation utilizes a descriptive case report format to document a single patient encounter.",
+          "population_setting": "The subject is a previously healthy adolescent who had received four prior vaccinations against the targeted pathogen.",
+          "main_findings": "The individual developed severe encephalitis requiring extended hospitalization despite complete immunization history. Laboratory analysis indicated a postponed IgM reaction but demonstrated early IgG production targeting the NS1 protein within cerebrospinal fluid. Longitudinal imaging confirmed enduring neurological alterations, while the precise drivers of the severe progression were not determined.",
+          "public_health_relevance": "The documentation emphasizes the continued possibility of serious neurological illness in fully immunized populations. It also suggests that medical professionals should maintain awareness of infectious triggers when evaluating acute inflammatory symptoms.",
+          "limitations": "The singular focus on one patient prevents generalization to wider demographic groups or definitive mechanistic conclusions. Authors explicitly acknowledge that the factors contributing to the severe clinical course remain unknown.",
+          "gids_interpretation": "This record offers background context on atypical immunological profiles and diagnostic methodologies following prophylactic administration. It functions as a reference resource for understanding complex clinical presentations without implying active monitoring activity.",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.936,
+            "generated_at": "2026-08-13T22:09:23.802468+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        }
+      },
+      "why_it_matters_en": "The documentation emphasizes the continued possibility of serious neurological illness in fully immunized populations. It also suggests that medical professionals should maintain awareness of infectious triggers when evaluating acute inflammatory symptoms.",
+      "why_it_matters_zh": "该案例提示在已接种疫苗人群中仍需警惕突破感染的可能，并强调了特定生物标志物在鉴别诊断中的潜在作用，对完善相关疾病的临床识别策略具有参考价值。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1016/j.nmni.2026.101720",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41732518/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137574+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:ab5fb8f49aaa0cf6",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D205",
+          "disease_name_en": "Tick-borne encephalitis",
+          "disease_name_zh": "蜱传脑炎",
+          "geographies": [
+            {
+              "code": "SE",
+              "name_en": "Sweden"
+            }
+          ],
+          "data_through": "2026-07-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 156.0,
+            "previous": 92.0,
+            "absolute_change": 64.0,
+            "change_pct": 69.57
+          },
+          "risk": {
+            "score": 46.1,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_6e0a96bd89b74939ba461dcd",
+      "slug": "10-1111-irv-70287-6e0a96bd",
+      "title": "Influenza Antiviral Prescriptions in the US Inpatient and Outpatient Settings During the 2015–2022 Influenza Seasons",
+      "doi": "10.1111/irv.70287",
+      "pmid": null,
+      "journal": "Influenza and Other Respiratory Viruses",
+      "publisher": "Wiley",
+      "authors": [
+        "Kyueun Lee",
+        "Anirban Basu",
+        "Janet A. Englund"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-06-23T00:00:00+00:00",
+      "indexed_at": "2026-08-12T14:36:11+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://onlinelibrary.wiley.com/doi/10.1111/irv.70287",
+      "license_url": "http://creativecommons.org/licenses/by-nc-nd/4.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.641,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D038",
+          "slug": "influenza",
+          "name_en": "Influenza",
+          "name_zh": "流行性感冒",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Treatment",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Influenza. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与流行性感冒相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1111/irv.70287",
+        "publisher": "https://onlinelibrary.wiley.com/doi/10.1111/irv.70287"
+      },
+      "updated_at": "2026-08-13T16:05:48.137425+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:d4f34da837688d03",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D038",
+          "disease_name_en": "Influenza",
+          "disease_name_zh": "流行性感冒",
+          "geographies": [
+            {
+              "code": "IE",
+              "name_en": "Ireland"
+            }
+          ],
+          "data_through": "2026-07-27",
+          "window": {
+            "label": "Last 4 weeks",
+            "current": 230.0,
+            "previous": 46.0,
+            "absolute_change": 184.0,
+            "change_pct": 400.0
+          },
+          "risk": {
+            "score": 65.5,
+            "level": "high",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_05ddb6de0d167e2fb1dc05eb",
+      "slug": "10-1099-mic-0-001697-05ddb6de",
+      "title": "Metabolic perturbation reduces antibiotic tolerance in <i>Mycobacterium tuberculosis</i>.",
+      "doi": "10.1099/mic.0.001697",
+      "pmid": "42018449",
+      "journal": "Microbiology (Reading, England)",
+      "publisher": null,
+      "authors": [
+        "Cheung CY",
+        "Samuels I",
+        "Klaus HR",
+        "Cook GM",
+        "McNeil MB"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-04-01T00:00:00+00:00",
+      "indexed_at": "2026-04-22T00:00:00+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC13102359",
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.635,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D025",
+          "slug": "tuberculosis",
+          "name_en": "Tuberculosis",
+          "name_zh": "肺结核",
+          "confidence": 0.9
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Treatment",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {
+        "en": {
+          "research_question": "The investigation aimed to identify metabolic pathways that enable Mycobacterium tuberculosis to withstand antibiotic exposure.",
+          "study_design": "Peer-reviewed laboratory research utilizing CRISPR interference to create genetically modified bacterial strains, followed by antimicrobial susceptibility testing in both planktonic cultures and human macrophage cell lines.",
+          "population_setting": "In vitro experiments conducted with engineered Mycobacterium tuberculosis isolates and cultured THP-1 human macrophage cells.",
+          "main_findings": "Genetic suppression of iron storage control, amino acid synthesis, and cellular redox balance increased the killing efficiency of multiple antimicrobial agents. These synergistic effects persisted when bacteria infected human macrophage models. The data suggest that bacterial metabolic activity plays a central role in mediating drug tolerance.",
+          "public_health_relevance": "Elucidating metabolic vulnerabilities may assist researchers in developing adjunctive approaches to enhance current tuberculosis treatment regimens.",
+          "limitations": "The experimental framework is restricted to controlled laboratory conditions and does not assess clinical patient outcomes or complex host-pathogen interactions in living organisms. Additional methodological details regarding specific compound concentrations are absent from the provided summary.",
+          "gids_interpretation": "This manuscript offers mechanistic insights into bacterial physiology that contextualize ongoing tuberculosis pharmacology research. It functions as preclinical background information rather than a source of operational surveillance data or outbreak detection.",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.936,
+            "generated_at": "2026-08-13T23:11:28.987264+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        }
+      },
+      "why_it_matters_en": "Elucidating metabolic vulnerabilities may assist researchers in developing adjunctive approaches to enhance current tuberculosis treatment regimens.",
+      "why_it_matters_zh": "这项近期Journal article因与肺结核相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1099/mic.0.001697",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/42018449/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137619+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:cbe12a284bd5cd9b",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D025",
+          "disease_name_en": "Tuberculosis",
+          "disease_name_zh": "肺结核",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 43.0,
+            "previous": 32.0,
+            "absolute_change": 11.0,
+            "change_pct": 34.38
+          },
+          "risk": {
+            "score": 56.0,
+            "level": "high",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_eda3407c07181df617cba6ec",
+      "slug": "10-1021-acs-jcim-6c00496-eda3407c",
+      "title": "Discovery and Mechanism of Action of a Novel Desloratadine Derivative Inhibiting <i>Mycobacterium tuberculosis</i> 3-Dehydroquinate Synthase.",
+      "doi": "10.1021/acs.jcim.6c00496",
+      "pmid": "42447414",
+      "journal": "Journal of chemical information and modeling",
+      "publisher": null,
+      "authors": [
+        "Belachew AM",
+        "Li H",
+        "Tian X",
+        "Liu Z",
+        "Fang C",
+        "Feng L",
+        "Liu S",
+        "Yusuf B",
+        "Hu J",
+        "Vatlin AA",
+        "Shchekotikhin AE",
+        "Wang S",
+        "Hameed HMA",
+        "Lin S",
+        "Zhang T"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-07-14T00:00:00+00:00",
+      "indexed_at": "2026-07-14T00:00:00+00:00",
+      "open_access_status": "unknown",
+      "open_access_url": null,
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.628,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D025",
+          "slug": "tuberculosis",
+          "name_en": "Tuberculosis",
+          "name_zh": "肺结核",
+          "confidence": 0.9
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Treatment",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Tuberculosis. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与肺结核相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1021/acs.jcim.6c00496",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/42447414/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137610+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:cbe12a284bd5cd9b",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D025",
+          "disease_name_en": "Tuberculosis",
+          "disease_name_zh": "肺结核",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 43.0,
+            "previous": 32.0,
+            "absolute_change": 11.0,
+            "change_pct": 34.38
+          },
+          "risk": {
+            "score": 56.0,
+            "level": "high",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_c907806f89804bb13670c161",
+      "slug": "10-1016-s1473-3099-26-00315-4-c907806f",
+      "title": "Clinical trial priorities, adaptive strategies, and equitable partnerships for the Bundibugyo Ebola outbreak.",
+      "doi": "10.1016/s1473-3099(26)00315-4",
+      "pmid": "42341789",
+      "journal": "The Lancet. Infectious diseases",
+      "publisher": null,
+      "authors": [
+        "Nachega JB",
+        "Tshiani Mbaya O",
+        "Mulangu S",
+        "Folayan MO",
+        "Ndembi N",
+        "Ntoumi F",
+        "Mills EJ",
+        "Abdool Karim SS",
+        "Zumla A",
+        "Muyembe-Tamfum JJ"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-06-24T00:00:00+00:00",
+      "indexed_at": "2026-06-24T00:00:00+00:00",
+      "open_access_status": "unknown",
+      "open_access_url": null,
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.623,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D050",
+          "slug": "ebola",
+          "name_en": "Ebola",
+          "name_zh": "埃博拉出血热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Outbreak investigation",
+          "confidence": 0.66
+        },
+        {
+          "name": "Treatment",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Ebola. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与埃博拉出血热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1016/s1473-3099(26)00315-4",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/42341789/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137404+00:00",
+      "related_signals": [
+        {
+          "signal_id": "event:36",
+          "section": "emerging",
+          "kind": "official_event",
+          "title": "Ebola disease caused by Bundibugyo virus - Democratic Republic of the Congo",
+          "disease_id": "D050",
+          "disease_name_en": "Ebola",
+          "disease_name_zh": "埃博拉出血热",
+          "geographies": [
+            {
+              "code": "CD",
+              "name_en": "Democratic Republic of the Congo"
+            }
+          ],
+          "data_through": "2026-08-01",
+          "window": {
+            "label": null,
+            "current": null,
+            "previous": null,
+            "absolute_change": null,
+            "change_pct": null
+          },
+          "risk": {
+            "score": null,
+            "level": null,
+            "confidence": "high"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        },
+        {
+          "signal_id": "event:37",
+          "section": "emerging",
+          "kind": "official_event",
+          "title": "Ebola disease caused by Bundibugyo virus, Democratic Republic of the Congo & Uganda",
+          "disease_id": "D050",
+          "disease_name_en": "Ebola",
+          "disease_name_zh": "埃博拉出血热",
+          "geographies": [
+            {
+              "code": "CD",
+              "name_en": "Democratic Republic of the Congo"
+            },
+            {
+              "code": "UG",
+              "name_en": "Uganda"
+            }
+          ],
+          "data_through": "2026-07-17",
+          "window": {
+            "label": null,
+            "current": null,
+            "previous": null,
+            "absolute_change": null,
+            "change_pct": null
+          },
+          "risk": {
+            "score": null,
+            "level": null,
+            "confidence": "high"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_df11fd1941815984e99cdff8",
+      "slug": "10-1016-j-jinf-2026-106778-df11fd19",
+      "title": "Incidence, risk factors and management of paradoxical reaction in central nervous system tuberculosis in the United Kingdom.",
+      "doi": "10.1016/j.jinf.2026.106778",
+      "pmid": "42242389",
+      "journal": "The Journal of infection",
+      "publisher": null,
+      "authors": [
+        "Carter EC",
+        "Fernandez C",
+        "Lim C",
+        "Bharucha T",
+        "Atomode A",
+        "Defres S",
+        "Brodsky M",
+        "Goodall J",
+        "Hall J",
+        "Lau E",
+        "Vail D",
+        "Francis R",
+        "Berry L",
+        "Malkawi K",
+        "Odone J",
+        "Richards A",
+        "Molai M",
+        "Seager E",
+        "Chan C",
+        "Farrukh S",
+        "Gurney R",
+        "Price A",
+        "Blackaby J",
+        "Maxwell A",
+        "Mooney C",
+        "Dayalan N",
+        "Bracchi M",
+        "Thompson JV",
+        "Upton R",
+        "Lawal A",
+        "MacFarlane L",
+        "Peel A",
+        "Olaifa A",
+        "Hale A",
+        "Reed T",
+        "Kunst H",
+        "Tiberi S",
+        "Hunter M",
+        "Dedicoat M",
+        "Sharrocks K",
+        "Cajic V",
+        "Wiselka M",
+        "Riste M",
+        "Barrera M",
+        "Papineni P",
+        "Brown J",
+        "Collini P",
+        "Backx M",
+        "Rosser A",
+        "Lillie P",
+        "McGann H",
+        "Morton B",
+        "Walsh C",
+        "McGill F"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Cohort study",
+      "published_at": "2026-06-03T00:00:00+00:00",
+      "indexed_at": "2026-06-04T00:00:00+00:00",
+      "open_access_status": "unknown",
+      "open_access_url": null,
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.611,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D025",
+          "slug": "tuberculosis",
+          "name_en": "Tuberculosis",
+          "name_zh": "肺结核",
+          "confidence": 0.9
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Treatment",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent cohort study is indexed for its relevance to Tuberculosis. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Cohort study因与肺结核相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1016/j.jinf.2026.106778",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/42242389/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137639+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:cbe12a284bd5cd9b",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D025",
+          "disease_name_en": "Tuberculosis",
+          "disease_name_zh": "肺结核",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 43.0,
+            "previous": 32.0,
+            "absolute_change": 11.0,
+            "change_pct": 34.38
+          },
+          "risk": {
+            "score": 56.0,
+            "level": "high",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_3f0193ba01d87b9ab7114eb6",
+      "slug": "10-4081-ijfs-2024-12904-3f0193ba",
+      "title": "Comprehensive review of salmonellosis: current status of the disease and future perspectives",
+      "doi": "10.4081/ijfs.2024.12904",
+      "pmid": null,
+      "journal": "Italian Journal of Food Safety",
+      "publisher": "PAGEPress Publications",
+      "authors": [
+        "Ohoud S. Alhumaidan"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2024-10-01T00:00:00+00:00",
+      "indexed_at": "2026-08-07T04:58:56+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://www.pagepressjournals.org/ijfs/article/view/12904",
+      "license_url": "http://creativecommons.org/licenses/by-nc/4.0",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.608,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D114",
+          "slug": "salmonellosis",
+          "name_en": "Salmonellosis",
+          "name_zh": "沙门氏菌病",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Surveillance",
+          "confidence": 0.66
+        },
+        {
+          "name": "Vaccination",
+          "confidence": 0.66
+        },
+        {
+          "name": "Antimicrobial resistance",
+          "confidence": 0.66
+        },
+        {
+          "name": "Treatment",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {
+        "en": {
+          "research_question": "What are the prevailing epidemiological characteristics, diagnostic methodologies, and management frameworks for salmonellosis within Saudi Arabia?",
+          "study_design": "The publication functions as a peer-reviewed comprehensive review article that synthesizes existing literature on the topic.",
+          "population_setting": "The analysis focuses on the national population of Saudi Arabia, with particular attention to healthcare accessibility in remote districts.",
+          "main_findings": "Clinical presentations typically feature gastrointestinal distress alongside systemic fever, while pathogen identification depends on both conventional and genetic laboratory assays. Current mitigation strategies rely on immunization initiatives, dietary safety standards, and community awareness programs. Ongoing obstacles encompass drug-resistant bacterial strains, inadequate medical infrastructure in isolated regions, and incomplete case documentation, which collectively drive proposals for expanded monitoring networks and stricter regulatory oversight.",
+          "public_health_relevance": "The manuscript underscores the considerable disease burden in the region and delineates strategic interventions aimed at curbing transmission through coordinated policy adjustments and resource allocation.",
+          "limitations": "The authors explicitly note that fragmented case reporting and constrained medical facilities in peripheral areas impede effective disease management.",
+          "gids_interpretation": "This peer-reviewed synthesis was released in October 2024 and is indexed under food safety and infectious disease monitoring categories. It provides a consolidated overview of regional health priorities rather than generating new empirical datasets.",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.968,
+            "generated_at": "2026-08-14T03:08:57.189321+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        },
+        "zh": {
+          "research_question": "本文旨在系统梳理沙门氏菌病的当前流行与临床现状，并探讨未来的防控与管理策略。",
+          "study_design": "该文献属于针对特定传染病的综合性学术综述，未包含原始队列观察或实验干预设计。",
+          "population_setting": "研究内容主要围绕沙特阿拉伯地区的公共卫生环境与疾病分布展开。",
+          "main_findings": "文章概述了该病的典型临床症状与实验室结合分子技术的诊断流程，指出疫苗接种、食品安全规范及健康教育是现有防控核心。同时强调抗菌药物耐药性、基层医疗资源短缺及病例报告不全构成主要管理瓶颈，并建议通过强化监测网络与跨部门协作来缓解疾病负担。",
+          "public_health_relevance": "该综述直接回应区域传染病控制需求，为优化食品安全监管与公共卫生资源配置提供理论依据。",
+          "limitations": "受综述体裁限制，本研究缺乏一手流行病学数据支撑；文中亦明确指出抗菌药物耐药性、偏远地区医疗条件受限以及潜在病例漏报可能削弱整体评估的完整性。",
+          "gids_interpretation": "作为区域性疾病现状的学术梳理，该文献可为相关主题检索与背景知识构建提供参考，但不反映实时疫情监测动态。",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.949,
+            "generated_at": "2026-08-14T03:09:24.623581+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        }
+      },
+      "why_it_matters_en": "The manuscript underscores the considerable disease burden in the region and delineates strategic interventions aimed at curbing transmission through coordinated policy adjustments and resource allocation.",
+      "why_it_matters_zh": "该综述直接回应区域传染病控制需求，为优化食品安全监管与公共卫生资源配置提供理论依据。",
+      "source_urls": {
+        "doi": "https://doi.org/10.4081/ijfs.2024.12904",
+        "publisher": "https://www.pagepressjournals.org/ijfs/article/view/12904"
+      },
+      "updated_at": "2026-08-13T16:05:48.137668+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:ecdc9176fa7e1a17",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D114",
+          "disease_name_en": "Salmonellosis",
+          "disease_name_zh": "沙门氏菌病",
+          "geographies": [
+            {
+              "code": "IE",
+              "name_en": "Ireland"
+            }
+          ],
+          "data_through": "2026-07-27",
+          "window": {
+            "label": "Last 4 weeks",
+            "current": 54.0,
+            "previous": 38.0,
+            "absolute_change": 16.0,
+            "change_pct": 42.11
+          },
+          "risk": {
+            "score": 40.8,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_63b70382078fe29c087368e1",
+      "slug": "10-1007-s10096-025-05389-x-63b70382",
+      "title": "Diagnostic value of RT-PCR for detection of tick-borne encephalitis virus RNA in cerebrospinal fluid.",
+      "doi": "10.1007/s10096-025-05389-x",
+      "pmid": "41526762",
+      "journal": "European journal of clinical microbiology & infectious diseases : official publication of the European Society of Clinical Microbiology",
+      "publisher": null,
+      "authors": [
+        "Glans H",
+        "Bartholdsson S",
+        "Lagerqvist N",
+        "Nord H",
+        "Blennow O",
+        "Morén J",
+        "Westman G",
+        "Valik JK",
+        "Klingström J",
+        "Gredmark-Russ S"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-01-12T00:00:00+00:00",
+      "indexed_at": "2026-01-12T00:00:00+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC13086654",
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.606,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D205",
+          "slug": "tick-borne-encephalitis",
+          "name_en": "Tick-borne encephalitis",
+          "name_zh": "蜱传脑炎",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [
+        {
+          "code": "SE",
+          "name_en": "Sweden",
+          "name_zh": null,
+          "confidence": 0.62
+        }
+      ],
+      "topics": [
+        {
+          "name": "Diagnostics",
+          "confidence": 0.66
+        },
+        {
+          "name": "Treatment",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {
+        "zh": {
+          "research_question": "本研究旨在评估脑脊液中蜱传脑炎病毒核酸的检测能力，并观察该指标与患者临床表现及疾病严重程度的对应关系。",
+          "study_design": "研究基于瑞典两地医疗机构的回顾性数据，对2015至2020年间的患者脑脊液样本进行逆转录聚合酶链反应分析，并调取电子病历记录进行对照。",
+          "population_setting": "纳入对象为瑞典斯德哥尔摩与乌普萨拉地区的蜱传脑炎确诊病例，共计三十六例接受脑脊液检测的患者，其中包含少数接受免疫抑制干预的个体。",
+          "main_findings": "检测结果显示半数以上样本呈核酸阳性。阳性病例表现出更高的重症监护比例与通气支持需求，且该组总体死亡率较高。在免疫抑制治疗亚组中，多数患者出现不良结局。",
+          "public_health_relevance": "分子检测手段可作为特定人群（如存在免疫功能低下或接受相关治疗者）的诊断补充工具，其阳性状态通常伴随较高的危重程度与死亡概率。",
+          "limitations": "研究受限于回顾性数据收集模式，样本规模较小且地域范围集中，可能限制结论的外推效力。",
+          "gids_interpretation": "该出版物属于临床微生物学与传染病诊断领域的学术文献，主要提供关于蜱传脑炎病毒核酸检测方法学的区域性应用背景信息。",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.952,
+            "generated_at": "2026-08-14T03:11:23.376006+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        }
+      },
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Tick-borne encephalitis. Read the original source before applying its findings.",
+      "why_it_matters_zh": "分子检测手段可作为特定人群（如存在免疫功能低下或接受相关治疗者）的诊断补充工具，其阳性状态通常伴随较高的危重程度与死亡概率。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1007/s10096-025-05389-x",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41526762/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137579+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:ab5fb8f49aaa0cf6",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D205",
+          "disease_name_en": "Tick-borne encephalitis",
+          "disease_name_zh": "蜱传脑炎",
+          "geographies": [
+            {
+              "code": "SE",
+              "name_en": "Sweden"
+            }
+          ],
+          "data_through": "2026-07-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 156.0,
+            "previous": 92.0,
+            "absolute_change": 64.0,
+            "change_pct": 69.57
+          },
+          "risk": {
+            "score": 46.1,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_0d7e23c48eb8ba19d443151f",
+      "slug": "10-1016-j-lfs-2026-124313-0d7e23c4",
+      "title": "Host-focused immunity, metabolism, and diagnostic innovation for precision control of tuberculosis globally.",
+      "doi": "10.1016/j.lfs.2026.124313",
+      "pmid": "41786285",
+      "journal": "Life sciences",
+      "publisher": null,
+      "authors": [
+        "Kurnaz IA",
+        "Sonmez E",
+        "Edegbene AO",
+        "Toldi G",
+        "Qasim M",
+        "Bhattarai S",
+        "Enany S"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-03-03T00:00:00+00:00",
+      "indexed_at": "2026-03-05T00:00:00+00:00",
+      "open_access_status": "unknown",
+      "open_access_url": null,
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.605,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D025",
+          "slug": "tuberculosis",
+          "name_en": "Tuberculosis",
+          "name_zh": "肺结核",
+          "confidence": 0.9
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Treatment",
+          "confidence": 0.7100000000000001
+        },
+        {
+          "name": "Diagnostics",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Tuberculosis. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与肺结核相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1016/j.lfs.2026.124313",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41786285/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137626+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:cbe12a284bd5cd9b",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D025",
+          "disease_name_en": "Tuberculosis",
+          "disease_name_zh": "肺结核",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 43.0,
+            "previous": 32.0,
+            "absolute_change": 11.0,
+            "change_pct": 34.38
+          },
+          "risk": {
+            "score": 56.0,
+            "level": "high",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_4637b665330dddf88e6b843a",
+      "slug": "10-1016-j-jgar-2025-07-017-4637b665",
+      "title": "Whole genome sequencing reveals novel resistance-conferring mutations and large genome deletions in drug-resistant Mycobacterium tuberculosis isolates from Indonesia.",
+      "doi": "10.1016/j.jgar.2025.07.017",
+      "pmid": "40706998",
+      "journal": "Journal of global antimicrobial resistance",
+      "publisher": null,
+      "authors": [
+        "Aung HL",
+        "Chaidir L",
+        "Pitaloka DAE",
+        "Miyahara Y",
+        "Kumar N",
+        "Soeroto AY",
+        "Cook GM",
+        "van Crevel R",
+        "Alisjahbana B",
+        "Peacock SJ",
+        "Hill PC"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Genomic study",
+      "published_at": "2025-07-22T00:00:00+00:00",
+      "indexed_at": "2025-07-24T00:00:00+00:00",
+      "open_access_status": "unknown",
+      "open_access_url": null,
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.554,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D025",
+          "slug": "tuberculosis",
+          "name_en": "Tuberculosis",
+          "name_zh": "肺结核",
+          "confidence": 0.9
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Antimicrobial resistance",
+          "confidence": 0.66
+        },
+        {
+          "name": "Genomic epidemiology",
+          "confidence": 0.66
+        },
+        {
+          "name": "Treatment",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent genomic study is indexed for its relevance to Tuberculosis. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Genomic study因与肺结核相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1016/j.jgar.2025.07.017",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/40706998/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137636+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:cbe12a284bd5cd9b",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D025",
+          "disease_name_en": "Tuberculosis",
+          "disease_name_zh": "肺结核",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 43.0,
+            "previous": 32.0,
+            "absolute_change": 11.0,
+            "change_pct": 34.38
+          },
+          "risk": {
+            "score": 56.0,
+            "level": "high",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_414150e9ce4fe57a5508ad7c",
+      "slug": "10-1038-s41572-026-00685-y-414150e9",
+      "title": "Acute rheumatic fever and rheumatic heart disease.",
+      "doi": "10.1038/s41572-026-00685-y",
+      "pmid": "41748639",
+      "journal": "Nature reviews. Disease primers",
+      "publisher": null,
+      "authors": [
+        "Zühlke L",
+        "Beaton A",
+        "Engel M",
+        "Gomanju A",
+        "Kumar RK",
+        "Marangou J",
+        "Minja N",
+        "Moreland NJ",
+        "Okello E",
+        "Pulle J",
+        "Rwebembera J",
+        "Watkins D",
+        "Yilgwan C",
+        "Carapetis J"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-02-26T00:00:00+00:00",
+      "indexed_at": "2026-02-26T00:00:00+00:00",
+      "open_access_status": "unknown",
+      "open_access_url": null,
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.543,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D158",
+          "slug": "rheumatic-fever",
+          "name_en": "Rheumatic fever",
+          "name_zh": "风湿热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Treatment",
+          "confidence": 0.7100000000000001
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Rheumatic fever. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与风湿热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1038/s41572-026-00685-y",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41748639/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137519+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:f59d37329a1f6ece",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 28.0,
+            "previous": 18.0,
+            "absolute_change": 10.0,
+            "change_pct": 55.56
+          },
+          "risk": {
+            "score": 46.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_283a778b841192ff09f3e7c0",
+      "slug": "10-1371-journal-pmed-1004452-283a778b",
+      "title": "HIV, malnutrition, and noncommunicable disease epidemics among tuberculosis-affected households in east and southern Africa: A cross-sectional analysis of the ERASE-TB cohort",
+      "doi": "10.1371/journal.pmed.1004452",
+      "pmid": "39283906",
+      "journal": "PLOS Medicine",
+      "publisher": "Public Library of Science (PLoS)",
+      "authors": [
+        "Claire Jacqueline Calderwood",
+        "Edson Tawanda Marambire",
+        "Leyla Larsson",
+        "Denise Banze",
+        "Alfred Mfinanga",
+        "Celina Nhamuave",
+        "Tejawsi Appalarowthu",
+        "Mishelle Mugava",
+        "Jorge Ribeiro",
+        "Peter Edwin Towo",
+        "Karlos Madziva",
+        "Justin Dixon",
+        "Kathrin Held",
+        "Lilian Tina Minja",
+        "Junior Mutsvangwa",
+        "Celso Khosa",
+        "Norbert Heinrich",
+        "Katherine Fielding",
+        "Katharina Kranzer"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Cohort study",
+      "published_at": "2024-09-16T00:00:00+00:00",
+      "indexed_at": "2026-08-06T04:24:45+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC11441706",
+      "license_url": "http://creativecommons.org/licenses/by/4.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.526,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D025",
+          "slug": "tuberculosis",
+          "name_en": "Tuberculosis",
+          "name_zh": "肺结核",
+          "confidence": 0.86
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Treatment",
+          "confidence": 0.7100000000000001
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {
+        "en": {
+          "research_question": "The investigation examines the frequency and clustering of HIV infection, nutritional deficits, and chronic noncommunicable conditions among relatives of individuals diagnosed with tuberculosis across three nations in eastern and southern Africa.",
+          "study_design": "Authors performed a cross-sectional evaluation drawing from a larger multicountry cohort to quantify disease occurrence and concurrent diagnoses within targeted family groups.",
+          "population_setting": "The analytical sample comprised 1,958 participants aged ten years or older, representing 786 distinct households located in Mozambique, Tanzania, and Zimbabwe.",
+          "main_findings": "Substantial portions of the cohort exhibited HIV infection, anemia, elevated blood pressure, and metabolic irregularities, with more than half of adults carrying at least one chronic illness and a quarter experiencing multiple simultaneous diagnoses. Antiretroviral therapy coverage was relatively established for those with HIV, whereas the majority of individuals with noncommunicable diseases remained unidentified and lacked medical management.",
+          "public_health_relevance": "These observations underscore the extensive comorbidity burden residing within tuberculosis-impacted families and indicate that standardized screening protocols could function as practical access points for detecting and addressing overlapping medical needs.",
+          "limitations": "Diagnostic criteria depended on rapid hemoglobin A1c assays for diabetes classification and utilized isolated daily blood pressure readings to establish hypertension status instead of serial assessments.",
+          "gids_interpretation": "This publication supplies foundational epidemiological metrics regarding disease co-occurrence within a defined geographic and familial demographic. It establishes a contextual reference for analyzing how infectious and chronic pathologies may intersect in resource-constrained environments, aiding future literature mapping and gap identification.",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.968,
+            "generated_at": "2026-08-13T12:46:19.623380+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        },
+        "zh": {
+          "research_question": "探讨东非与南部非洲地区结核病受影响家庭中人类免疫缺陷病毒、营养异常及非传染性疾病的流行状况及其共存模式。",
+          "study_design": "该工作依托多国联合队列项目开展横断面数据分析，在莫桑比克、坦桑尼亚及津巴布韦对年满十岁的结核病患者密切接触者实施同步筛查。",
+          "population_setting": "样本涵盖七百八十六个家庭的一千九百五十八名成员，参与者以女性为主，中位年龄二十七岁，其中极少数同时确诊活动性结核。",
+          "main_findings": "数据显示该群体中人类免疫缺陷病毒感染比例为百分之十五，高血压与糖尿病检出率分别达到百分之三十二和百分之九，贫血与体重不足各占百分之十八，超重或肥胖占比百分之二十九。成年人超六成携带至少一项慢性疾病，四分之一呈现多重共病特征，且多数非传染性疾病患者尚未获得规范诊疗。",
+          "public_health_relevance": "结果提示结核相关家庭承受着复合型健康压力，把常规慢病评估嵌入结核病排查流程，有望提升高危个体的早期识别率并优化预防性干预路径。",
+          "limitations": "研究在疾病界定方法上存在不足，具体表现为依赖床旁血糖化血红蛋白指标判定糖尿病，且高血压诊断仅基于单次门诊测量结果。",
+          "gids_interpretation": "该文献系统梳理了特定地理范围内结核关联家庭的慢性共病基线分布，可作为公共卫生文献检索与背景知识构建的参考资料，用于理解该人群的健康负担结构，但不涉及实时疫情追踪或信号验证。",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.945,
+            "generated_at": "2026-08-13T12:46:54.132462+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        }
+      },
+      "why_it_matters_en": "These observations underscore the extensive comorbidity burden residing within tuberculosis-impacted families and indicate that standardized screening protocols could function as practical access points for detecting and addressing overlapping medical needs.",
+      "why_it_matters_zh": "结果提示结核相关家庭承受着复合型健康压力，把常规慢病评估嵌入结核病排查流程，有望提升高危个体的早期识别率并优化预防性干预路径。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1371/journal.pmed.1004452",
+        "publisher": "https://dx.plos.org/10.1371/journal.pmed.1004452",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/39283906/"
+      },
+      "updated_at": "2026-08-13T12:40:20.771730+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:cbe12a284bd5cd9b",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D025",
+          "disease_name_en": "Tuberculosis",
+          "disease_name_zh": "肺结核",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 43.0,
+            "previous": 32.0,
+            "absolute_change": 11.0,
+            "change_pct": 34.38
+          },
+          "risk": {
+            "score": 56.0,
+            "level": "high",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_8476387eab6a557991a80d02",
+      "slug": "10-3390-ijerph22050686-8476387e",
+      "title": "Exploring How Rheumatic Fever Is Portrayed on TikTok: A Descriptive Content Analysis.",
+      "doi": "10.3390/ijerph22050686",
+      "pmid": "40427803",
+      "journal": "International journal of environmental research and public health",
+      "publisher": null,
+      "authors": [
+        "Tu'akoi S",
+        "Ofanoa M",
+        "Ofanoa S",
+        "Heather M",
+        "Lutui H",
+        "Goodyear-Smith F"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2025-04-26T00:00:00+00:00",
+      "indexed_at": "2025-05-28T00:00:00+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC12111628",
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.512,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D158",
+          "slug": "rheumatic-fever",
+          "name_en": "Rheumatic fever",
+          "name_zh": "风湿热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Treatment",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Rheumatic fever. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与风湿热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.3390/ijerph22050686",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/40427803/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137534+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:f59d37329a1f6ece",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 28.0,
+            "previous": 18.0,
+            "absolute_change": 10.0,
+            "change_pct": 55.56
+          },
+          "risk": {
+            "score": 46.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_7691e253810f8880deb56c7a",
+      "slug": "10-51731-cjht-2025-1153-7691e253",
+      "title": "Cost-Effectiveness of Antiviral Drugs to Prevent or Treat Influenza A, Influenza B, or Zoonotic Influenza",
+      "doi": "10.51731/cjht.2025.1153",
+      "pmid": null,
+      "journal": "Canadian Journal of Health Technologies",
+      "publisher": "Canadian Journal of Health Technologies, CADTH",
+      "authors": [
+        "Ilke Akpinar",
+        "Dagmara Chojecki"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2025-06-26T00:00:00+00:00",
+      "indexed_at": "2025-06-29T14:10:11+00:00",
+      "open_access_status": "unknown",
+      "open_access_url": null,
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.494,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D038",
+          "slug": "influenza",
+          "name_en": "Influenza",
+          "name_zh": "流行性感冒",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [
+        {
+          "code": "CA",
+          "name_en": "Canada",
+          "name_zh": null,
+          "confidence": 0.62
+        }
+      ],
+      "topics": [
+        {
+          "name": "Treatment",
+          "confidence": 0.66
+        },
+        {
+          "name": "One Health",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Influenza. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与流行性感冒相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.51731/cjht.2025.1153",
+        "publisher": "https://canjhealthtechnol.ca/index.php/cjht/article/view/RC1563"
+      },
+      "updated_at": "2026-08-13T16:05:48.137434+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:d4f34da837688d03",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D038",
+          "disease_name_en": "Influenza",
+          "disease_name_zh": "流行性感冒",
+          "geographies": [
+            {
+              "code": "IE",
+              "name_en": "Ireland"
+            }
+          ],
+          "data_through": "2026-07-27",
+          "window": {
+            "label": "Last 4 weeks",
+            "current": 230.0,
+            "previous": 46.0,
+            "absolute_change": 184.0,
+            "change_pct": 400.0
+          },
+          "risk": {
+            "score": 65.5,
+            "level": "high",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_640b2fbafd92d749353e5260",
+      "slug": "10-26635-6965-6593-640b2fba",
+      "title": "Acute rheumatic fever in Canterbury, Aotearoa New Zealand, 2012–2022",
+      "doi": "10.26635/6965.6593",
+      "pmid": null,
+      "journal": "New Zealand Medical Journal",
+      "publisher": "Pasifika Medical Association Group",
+      "authors": [
+        "Taliah Su’a",
+        "Allamanda Faa’toese",
+        "Andrew Anglemyer",
+        "Kiki Maoate",
+        "Tony Walls"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2025-02-14T00:00:00+00:00",
+      "indexed_at": "2025-02-12T05:31:27+00:00",
+      "open_access_status": "unknown",
+      "open_access_url": null,
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.494,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D158",
+          "slug": "rheumatic-fever",
+          "name_en": "Rheumatic fever",
+          "name_zh": "风湿热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [
+        {
+          "code": "NZ",
+          "name_en": "New Zealand",
+          "name_zh": null,
+          "confidence": 0.78
+        }
+      ],
+      "topics": [
+        {
+          "name": "Surveillance",
+          "confidence": 0.66
+        },
+        {
+          "name": "Treatment",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [
+        {
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "disease_slug": "rheumatic-fever",
+          "country_code": "NZ",
+          "country_name_en": "New Zealand",
+          "url": "/diseases/rheumatic-fever/",
+          "method": "high-confidence article geography intersected with GIDS series coverage"
+        }
+      ],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Rheumatic fever. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与风湿热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.26635/6965.6593",
+        "publisher": "https://nzmj.org.nz/journal/vol-138-no-1609/acute-rheumatic-fever-in-canterbury-aotearoa-new-zealand-2012-2022"
+      },
+      "updated_at": "2026-08-13T16:05:48.137476+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:f59d37329a1f6ece",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 28.0,
+            "previous": 18.0,
+            "absolute_change": 10.0,
+            "change_pct": 55.56
+          },
+          "risk": {
+            "score": 46.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "exact_disease_geography",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_d07dd8e8e5fef05b36677686",
+      "slug": "10-1021-acs-biochem-5c00089-d07dd8e8",
+      "title": "Mechanistic Insights into Homoserine <i>O</i>-Acetyltransferase from <i>Mycobacterium tuberculosis</i>.",
+      "doi": "10.1021/acs.biochem.5c00089",
+      "pmid": "40695725",
+      "journal": "Biochemistry",
+      "publisher": null,
+      "authors": [
+        "Jiao W",
+        "Mittelstädt G",
+        "Richardson AT",
+        "Allison TM",
+        "Berney M",
+        "Parker EJ"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2025-07-22T00:00:00+00:00",
+      "indexed_at": "2025-07-22T00:00:00+00:00",
+      "open_access_status": "unknown",
+      "open_access_url": null,
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.49,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D025",
+          "slug": "tuberculosis",
+          "name_en": "Tuberculosis",
+          "name_zh": "肺结核",
+          "confidence": 0.9
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Treatment",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Tuberculosis. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与肺结核相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1021/acs.biochem.5c00089",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/40695725/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137638+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:cbe12a284bd5cd9b",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D025",
+          "disease_name_en": "Tuberculosis",
+          "disease_name_zh": "肺结核",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 43.0,
+            "previous": 32.0,
+            "absolute_change": 11.0,
+            "change_pct": 34.38
+          },
+          "risk": {
+            "score": 56.0,
+            "level": "high",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    }
+  ],
+  "count": 22,
+  "publication_timeline": [
+    {
+      "month": "2024-09",
+      "publication_count": 1
+    },
+    {
+      "month": "2024-10",
+      "publication_count": 1
+    },
+    {
+      "month": "2025-02",
+      "publication_count": 1
+    },
+    {
+      "month": "2025-04",
+      "publication_count": 1
+    },
+    {
+      "month": "2025-06",
+      "publication_count": 1
+    },
+    {
+      "month": "2025-07",
+      "publication_count": 2
+    },
+    {
+      "month": "2025-09",
+      "publication_count": 1
+    },
+    {
+      "month": "2025-11",
+      "publication_count": 1
+    },
+    {
+      "month": "2026-01",
+      "publication_count": 1
+    },
+    {
+      "month": "2026-02",
+      "publication_count": 2
+    },
+    {
+      "month": "2026-03",
+      "publication_count": 1
+    },
+    {
+      "month": "2026-04",
+      "publication_count": 1
+    },
+    {
+      "month": "2026-06",
+      "publication_count": 6
+    },
+    {
+      "month": "2026-07",
+      "publication_count": 1
+    },
+    {
+      "month": "2026-08",
+      "publication_count": 1
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-05ddb6de0d167e2fb1dc05eb",
+        "type": "article",
+        "label": "Metabolic perturbation reduces antibiotic tolerance in <i>Mycobacterium tuberculosis</i>.",
+        "slug": "10-1099-mic-0-001697-05ddb6de",
+        "url": "/research/articles/10-1099-mic-0-001697-05ddb6de/",
+        "published_at": "2026-04-01T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-0d7e23c48eb8ba19d443151f",
+        "type": "article",
+        "label": "Host-focused immunity, metabolism, and diagnostic innovation for precision control of tuberculosis globally.",
+        "slug": "10-1016-j-lfs-2026-124313-0d7e23c4",
+        "url": "/research/articles/10-1016-j-lfs-2026-124313-0d7e23c4/",
+        "published_at": "2026-03-03T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-1b1b3b688dab9b824b93d818",
+        "type": "article",
+        "label": "Global dengue epidemic worsens with record 14 million cases and 9000 deaths reported in 2024",
+        "slug": "10-1016-j-ijid-2025-107940-1b1b3b68",
+        "url": "/research/articles/10-1016-j-ijid-2025-107940-1b1b3b68/",
+        "published_at": "2025-09-01T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-21e54eb9ba4943914b066934",
+        "type": "article",
+        "label": "Strategic Preparedness for the FIFA World Cup 2026 in Response to the Bundibugoy Ebola Outbreak in the Democratic Republic of Congo",
+        "slug": "10-1093-jtm-taag056-21e54eb9",
+        "url": "/research/articles/10-1093-jtm-taag056-21e54eb9/",
+        "published_at": "2026-06-22T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-283a778b841192ff09f3e7c0",
+        "type": "article",
+        "label": "HIV, malnutrition, and noncommunicable disease epidemics among tuberculosis-affected households in east and southern Africa: A cross-sectional analysis of the ERASE-TB cohort",
+        "slug": "10-1371-journal-pmed-1004452-283a778b",
+        "url": "/research/articles/10-1371-journal-pmed-1004452-283a778b/",
+        "published_at": "2024-09-16T00:00:00+00:00",
+        "study_type": "Cohort study"
+      },
+      {
+        "id": "article:lit-3b97057c2bf0dc98de8dc646",
+        "type": "article",
+        "label": "Salmonellosis Outbreak in a Rottweiler Kennel Associated with Raw Meat-Based Diets",
+        "slug": "10-3390-ani15213196-3b97057c",
+        "url": "/research/articles/10-3390-ani15213196-3b97057c/",
+        "published_at": "2025-11-03T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-3f0193ba01d87b9ab7114eb6",
+        "type": "article",
+        "label": "Comprehensive review of salmonellosis: current status of the disease and future perspectives",
+        "slug": "10-4081-ijfs-2024-12904-3f0193ba",
+        "url": "/research/articles/10-4081-ijfs-2024-12904-3f0193ba/",
+        "published_at": "2024-10-01T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-414150e9ce4fe57a5508ad7c",
+        "type": "article",
+        "label": "Acute rheumatic fever and rheumatic heart disease.",
+        "slug": "10-1038-s41572-026-00685-y-414150e9",
+        "url": "/research/articles/10-1038-s41572-026-00685-y-414150e9/",
+        "published_at": "2026-02-26T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-4637b665330dddf88e6b843a",
+        "type": "article",
+        "label": "Whole genome sequencing reveals novel resistance-conferring mutations and large genome deletions in drug-resistant Mycobacterium tuberculosis isolates from Indonesia.",
+        "slug": "10-1016-j-jgar-2025-07-017-4637b665",
+        "url": "/research/articles/10-1016-j-jgar-2025-07-017-4637b665/",
+        "published_at": "2025-07-22T00:00:00+00:00",
+        "study_type": "Genomic study"
+      },
+      {
+        "id": "article:lit-608dcc059be5b13e00fbf07e",
+        "type": "article",
+        "label": "<i>Streptococcus Pyogenes</i> and Acute Rheumatic Fever: How Strong are the Links in the Chain?",
+        "slug": "10-5334-gh-1564-608dcc05",
+        "url": "/research/articles/10-5334-gh-1564-608dcc05/",
+        "published_at": "2026-06-19T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-63b70382078fe29c087368e1",
+        "type": "article",
+        "label": "Diagnostic value of RT-PCR for detection of tick-borne encephalitis virus RNA in cerebrospinal fluid.",
+        "slug": "10-1007-s10096-025-05389-x-63b70382",
+        "url": "/research/articles/10-1007-s10096-025-05389-x-63b70382/",
+        "published_at": "2026-01-12T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-640b2fbafd92d749353e5260",
+        "type": "article",
+        "label": "Acute rheumatic fever in Canterbury, Aotearoa New Zealand, 2012–2022",
+        "slug": "10-26635-6965-6593-640b2fba",
+        "url": "/research/articles/10-26635-6965-6593-640b2fba/",
+        "published_at": "2025-02-14T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-6e0a96bd89b74939ba461dcd",
+        "type": "article",
+        "label": "Influenza Antiviral Prescriptions in the US Inpatient and Outpatient Settings During the 2015–2022 Influenza Seasons",
+        "slug": "10-1111-irv-70287-6e0a96bd",
+        "url": "/research/articles/10-1111-irv-70287-6e0a96bd/",
+        "published_at": "2026-06-23T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-7691e253810f8880deb56c7a",
+        "type": "article",
+        "label": "Cost-Effectiveness of Antiviral Drugs to Prevent or Treat Influenza A, Influenza B, or Zoonotic Influenza",
+        "slug": "10-51731-cjht-2025-1153-7691e253",
+        "url": "/research/articles/10-51731-cjht-2025-1153-7691e253/",
+        "published_at": "2025-06-26T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-8476387eab6a557991a80d02",
+        "type": "article",
+        "label": "Exploring How Rheumatic Fever Is Portrayed on TikTok: A Descriptive Content Analysis.",
+        "slug": "10-3390-ijerph22050686-8476387e",
+        "url": "/research/articles/10-3390-ijerph22050686-8476387e/",
+        "published_at": "2025-04-26T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-90443fa0ffa1d6a1e0a5d2d8",
+        "type": "article",
+        "label": "A rare case of breakthrough tick-borne encephalitis in early adolescence after vaccination with four doses of TBE vaccine.",
+        "slug": "10-1016-j-nmni-2026-101720-90443fa0",
+        "url": "/research/articles/10-1016-j-nmni-2026-101720-90443fa0/",
+        "published_at": "2026-02-03T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-c907806f89804bb13670c161",
+        "type": "article",
+        "label": "Clinical trial priorities, adaptive strategies, and equitable partnerships for the Bundibugyo Ebola outbreak.",
+        "slug": "10-1016-s1473-3099-26-00315-4-c907806f",
+        "url": "/research/articles/10-1016-s1473-3099-26-00315-4-c907806f/",
+        "published_at": "2026-06-24T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-d07dd8e8e5fef05b36677686",
+        "type": "article",
+        "label": "Mechanistic Insights into Homoserine <i>O</i>-Acetyltransferase from <i>Mycobacterium tuberculosis</i>.",
+        "slug": "10-1021-acs-biochem-5c00089-d07dd8e8",
+        "url": "/research/articles/10-1021-acs-biochem-5c00089-d07dd8e8/",
+        "published_at": "2025-07-22T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-ddb7856cf6a4d89e3e1f82d5",
+        "type": "article",
+        "label": "Phytochemical synergy in artemisia annua herbal tea against malaria: a systematic review of its efficacy and safety in the context of emerging Pfkelch13 resistance",
+        "slug": "10-1186-s40249-026-01486-x-ddb7856c",
+        "url": "/research/articles/10-1186-s40249-026-01486-x-ddb7856c/",
+        "published_at": "2026-08-13T00:00:00+00:00",
+        "study_type": "Systematic review"
+      },
+      {
+        "id": "article:lit-df11fd1941815984e99cdff8",
+        "type": "article",
+        "label": "Incidence, risk factors and management of paradoxical reaction in central nervous system tuberculosis in the United Kingdom.",
+        "slug": "10-1016-j-jinf-2026-106778-df11fd19",
+        "url": "/research/articles/10-1016-j-jinf-2026-106778-df11fd19/",
+        "published_at": "2026-06-03T00:00:00+00:00",
+        "study_type": "Cohort study"
+      },
+      {
+        "id": "article:lit-e8c2aa385b1138f6e09c5986",
+        "type": "article",
+        "label": "Modeled Scenario Projections for the Ebola Disease Outbreak Caused by Bundibugyo Virus, 2026.",
+        "slug": "10-15585-mmwr-mm7522e1-e8c2aa38",
+        "url": "/research/articles/10-15585-mmwr-mm7522e1-e8c2aa38/",
+        "published_at": "2026-06-11T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-eda3407c07181df617cba6ec",
+        "type": "article",
+        "label": "Discovery and Mechanism of Action of a Novel Desloratadine Derivative Inhibiting <i>Mycobacterium tuberculosis</i> 3-Dehydroquinate Synthase.",
+        "slug": "10-1021-acs-jcim-6c00496-eda3407c",
+        "url": "/research/articles/10-1021-acs-jcim-6c00496-eda3407c/",
+        "published_at": "2026-07-14T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "country:ca",
+        "type": "country",
+        "label": "Canada",
+        "code": "CA",
+        "url": "/countries/ca/"
+      },
+      {
+        "id": "country:nz",
+        "type": "country",
+        "label": "New Zealand",
+        "code": "NZ",
+        "url": "/countries/nz/"
+      },
+      {
+        "id": "country:se",
+        "type": "country",
+        "label": "Sweden",
+        "code": "SE",
+        "url": "/countries/se/"
+      },
+      {
+        "id": "disease:d021",
+        "type": "disease",
+        "label": "Dengue",
+        "disease_id": "D021",
+        "name_zh": "登革热",
+        "slug": "dengue",
+        "url": "/diseases/dengue/"
+      },
+      {
+        "id": "disease:d025",
+        "type": "disease",
+        "label": "Tuberculosis",
+        "disease_id": "D025",
+        "name_zh": "肺结核",
+        "slug": "tuberculosis",
+        "url": "/diseases/tuberculosis/"
+      },
+      {
+        "id": "disease:d037",
+        "type": "disease",
+        "label": "Malaria",
+        "disease_id": "D037",
+        "name_zh": "疟疾",
+        "slug": "malaria",
+        "url": "/diseases/malaria/"
+      },
+      {
+        "id": "disease:d038",
+        "type": "disease",
+        "label": "Influenza",
+        "disease_id": "D038",
+        "name_zh": "流行性感冒",
+        "slug": "influenza",
+        "url": "/diseases/influenza/"
+      },
+      {
+        "id": "disease:d050",
+        "type": "disease",
+        "label": "Ebola",
+        "disease_id": "D050",
+        "name_zh": "埃博拉出血热",
+        "slug": "ebola",
+        "url": "/diseases/ebola/"
+      },
+      {
+        "id": "disease:d114",
+        "type": "disease",
+        "label": "Salmonellosis",
+        "disease_id": "D114",
+        "name_zh": "沙门氏菌病",
+        "slug": "salmonellosis",
+        "url": "/diseases/salmonellosis/"
+      },
+      {
+        "id": "disease:d158",
+        "type": "disease",
+        "label": "Rheumatic fever",
+        "disease_id": "D158",
+        "name_zh": "风湿热",
+        "slug": "rheumatic-fever",
+        "url": "/diseases/rheumatic-fever/"
+      },
+      {
+        "id": "disease:d205",
+        "type": "disease",
+        "label": "Tick-borne encephalitis",
+        "disease_id": "D205",
+        "name_zh": "蜱传脑炎",
+        "slug": "tick-borne-encephalitis",
+        "url": "/diseases/tick-borne-encephalitis/"
+      },
+      {
+        "id": "study-type:cohort-study",
+        "type": "study_type",
+        "label": "Cohort study"
+      },
+      {
+        "id": "study-type:genomic-study",
+        "type": "study_type",
+        "label": "Genomic study"
+      },
+      {
+        "id": "study-type:journal-article",
+        "type": "study_type",
+        "label": "Journal article"
+      },
+      {
+        "id": "study-type:systematic-review",
+        "type": "study_type",
+        "label": "Systematic review"
+      },
+      {
+        "id": "topic:antimicrobial-resistance",
+        "type": "topic",
+        "label": "Antimicrobial resistance"
+      },
+      {
+        "id": "topic:climate-and-environment",
+        "type": "topic",
+        "label": "Climate and environment"
+      },
+      {
+        "id": "topic:diagnostics",
+        "type": "topic",
+        "label": "Diagnostics"
+      },
+      {
+        "id": "topic:genomic-epidemiology",
+        "type": "topic",
+        "label": "Genomic epidemiology"
+      },
+      {
+        "id": "topic:health-policy",
+        "type": "topic",
+        "label": "Health policy"
+      },
+      {
+        "id": "topic:one-health",
+        "type": "topic",
+        "label": "One Health"
+      },
+      {
+        "id": "topic:outbreak-investigation",
+        "type": "topic",
+        "label": "Outbreak investigation"
+      },
+      {
+        "id": "topic:surveillance",
+        "type": "topic",
+        "label": "Surveillance"
+      },
+      {
+        "id": "topic:transmission-dynamics",
+        "type": "topic",
+        "label": "Transmission dynamics"
+      },
+      {
+        "id": "topic:travel-medicine",
+        "type": "topic",
+        "label": "Travel medicine"
+      },
+      {
+        "id": "topic:treatment",
+        "type": "topic",
+        "label": "Treatment"
+      },
+      {
+        "id": "topic:vaccination",
+        "type": "topic",
+        "label": "Vaccination"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-05ddb6de0d167e2fb1dc05eb|ABOUT_DISEASE|disease:d025",
+        "source": "article:lit-05ddb6de0d167e2fb1dc05eb",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d025",
+        "confidence": 0.9
+      },
+      {
+        "id": "article:lit-05ddb6de0d167e2fb1dc05eb|ADDRESSES_TOPIC|topic:treatment",
+        "source": "article:lit-05ddb6de0d167e2fb1dc05eb",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:treatment",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-05ddb6de0d167e2fb1dc05eb|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-05ddb6de0d167e2fb1dc05eb",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-0d7e23c48eb8ba19d443151f|ABOUT_DISEASE|disease:d025",
+        "source": "article:lit-0d7e23c48eb8ba19d443151f",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d025",
+        "confidence": 0.9
+      },
+      {
+        "id": "article:lit-0d7e23c48eb8ba19d443151f|ADDRESSES_TOPIC|topic:diagnostics",
+        "source": "article:lit-0d7e23c48eb8ba19d443151f",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:diagnostics",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-0d7e23c48eb8ba19d443151f|ADDRESSES_TOPIC|topic:treatment",
+        "source": "article:lit-0d7e23c48eb8ba19d443151f",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:treatment",
+        "confidence": 0.7100000000000001
+      },
+      {
+        "id": "article:lit-0d7e23c48eb8ba19d443151f|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-0d7e23c48eb8ba19d443151f",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-1b1b3b688dab9b824b93d818|ABOUT_DISEASE|disease:d021",
+        "source": "article:lit-1b1b3b688dab9b824b93d818",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d021",
+        "confidence": 0.9
+      },
+      {
+        "id": "article:lit-1b1b3b688dab9b824b93d818|ADDRESSES_TOPIC|topic:climate-and-environment",
+        "source": "article:lit-1b1b3b688dab9b824b93d818",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:climate-and-environment",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-1b1b3b688dab9b824b93d818|ADDRESSES_TOPIC|topic:outbreak-investigation",
+        "source": "article:lit-1b1b3b688dab9b824b93d818",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:outbreak-investigation",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-1b1b3b688dab9b824b93d818|ADDRESSES_TOPIC|topic:surveillance",
+        "source": "article:lit-1b1b3b688dab9b824b93d818",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:surveillance",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-1b1b3b688dab9b824b93d818|ADDRESSES_TOPIC|topic:treatment",
+        "source": "article:lit-1b1b3b688dab9b824b93d818",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:treatment",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-1b1b3b688dab9b824b93d818|ADDRESSES_TOPIC|topic:vaccination",
+        "source": "article:lit-1b1b3b688dab9b824b93d818",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccination",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-1b1b3b688dab9b824b93d818|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-1b1b3b688dab9b824b93d818",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-21e54eb9ba4943914b066934|ABOUT_DISEASE|disease:d050",
+        "source": "article:lit-21e54eb9ba4943914b066934",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d050",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-21e54eb9ba4943914b066934|ADDRESSES_TOPIC|topic:outbreak-investigation",
+        "source": "article:lit-21e54eb9ba4943914b066934",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:outbreak-investigation",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-21e54eb9ba4943914b066934|ADDRESSES_TOPIC|topic:travel-medicine",
+        "source": "article:lit-21e54eb9ba4943914b066934",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:travel-medicine",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-21e54eb9ba4943914b066934|ADDRESSES_TOPIC|topic:treatment",
+        "source": "article:lit-21e54eb9ba4943914b066934",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:treatment",
+        "confidence": 0.7100000000000001
+      },
+      {
+        "id": "article:lit-21e54eb9ba4943914b066934|ADDRESSES_TOPIC|topic:vaccination",
+        "source": "article:lit-21e54eb9ba4943914b066934",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccination",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-21e54eb9ba4943914b066934|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-21e54eb9ba4943914b066934",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-283a778b841192ff09f3e7c0|ABOUT_DISEASE|disease:d025",
+        "source": "article:lit-283a778b841192ff09f3e7c0",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d025",
+        "confidence": 0.86
+      },
+      {
+        "id": "article:lit-283a778b841192ff09f3e7c0|ADDRESSES_TOPIC|topic:treatment",
+        "source": "article:lit-283a778b841192ff09f3e7c0",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:treatment",
+        "confidence": 0.7100000000000001
+      },
+      {
+        "id": "article:lit-283a778b841192ff09f3e7c0|USES_STUDY_DESIGN|study-type:cohort-study",
+        "source": "article:lit-283a778b841192ff09f3e7c0",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:cohort-study"
+      },
+      {
+        "id": "article:lit-3b97057c2bf0dc98de8dc646|ABOUT_DISEASE|disease:d114",
+        "source": "article:lit-3b97057c2bf0dc98de8dc646",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d114",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-3b97057c2bf0dc98de8dc646|ADDRESSES_TOPIC|topic:climate-and-environment",
+        "source": "article:lit-3b97057c2bf0dc98de8dc646",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:climate-and-environment",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-3b97057c2bf0dc98de8dc646|ADDRESSES_TOPIC|topic:diagnostics",
+        "source": "article:lit-3b97057c2bf0dc98de8dc646",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:diagnostics",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-3b97057c2bf0dc98de8dc646|ADDRESSES_TOPIC|topic:one-health",
+        "source": "article:lit-3b97057c2bf0dc98de8dc646",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:one-health",
+        "confidence": 0.7100000000000001
+      },
+      {
+        "id": "article:lit-3b97057c2bf0dc98de8dc646|ADDRESSES_TOPIC|topic:outbreak-investigation",
+        "source": "article:lit-3b97057c2bf0dc98de8dc646",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:outbreak-investigation",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-3b97057c2bf0dc98de8dc646|ADDRESSES_TOPIC|topic:treatment",
+        "source": "article:lit-3b97057c2bf0dc98de8dc646",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:treatment",
+        "confidence": 0.7100000000000001
+      },
+      {
+        "id": "article:lit-3b97057c2bf0dc98de8dc646|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-3b97057c2bf0dc98de8dc646",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-3f0193ba01d87b9ab7114eb6|ABOUT_DISEASE|disease:d114",
+        "source": "article:lit-3f0193ba01d87b9ab7114eb6",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d114",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-3f0193ba01d87b9ab7114eb6|ADDRESSES_TOPIC|topic:antimicrobial-resistance",
+        "source": "article:lit-3f0193ba01d87b9ab7114eb6",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:antimicrobial-resistance",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-3f0193ba01d87b9ab7114eb6|ADDRESSES_TOPIC|topic:surveillance",
+        "source": "article:lit-3f0193ba01d87b9ab7114eb6",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:surveillance",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-3f0193ba01d87b9ab7114eb6|ADDRESSES_TOPIC|topic:treatment",
+        "source": "article:lit-3f0193ba01d87b9ab7114eb6",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:treatment",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-3f0193ba01d87b9ab7114eb6|ADDRESSES_TOPIC|topic:vaccination",
+        "source": "article:lit-3f0193ba01d87b9ab7114eb6",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccination",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-3f0193ba01d87b9ab7114eb6|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-3f0193ba01d87b9ab7114eb6",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-414150e9ce4fe57a5508ad7c|ABOUT_DISEASE|disease:d158",
+        "source": "article:lit-414150e9ce4fe57a5508ad7c",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d158",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-414150e9ce4fe57a5508ad7c|ADDRESSES_TOPIC|topic:treatment",
+        "source": "article:lit-414150e9ce4fe57a5508ad7c",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:treatment",
+        "confidence": 0.7100000000000001
+      },
+      {
+        "id": "article:lit-414150e9ce4fe57a5508ad7c|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-414150e9ce4fe57a5508ad7c",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-4637b665330dddf88e6b843a|ABOUT_DISEASE|disease:d025",
+        "source": "article:lit-4637b665330dddf88e6b843a",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d025",
+        "confidence": 0.9
+      },
+      {
+        "id": "article:lit-4637b665330dddf88e6b843a|ADDRESSES_TOPIC|topic:antimicrobial-resistance",
+        "source": "article:lit-4637b665330dddf88e6b843a",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:antimicrobial-resistance",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-4637b665330dddf88e6b843a|ADDRESSES_TOPIC|topic:genomic-epidemiology",
+        "source": "article:lit-4637b665330dddf88e6b843a",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:genomic-epidemiology",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-4637b665330dddf88e6b843a|ADDRESSES_TOPIC|topic:treatment",
+        "source": "article:lit-4637b665330dddf88e6b843a",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:treatment",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-4637b665330dddf88e6b843a|USES_STUDY_DESIGN|study-type:genomic-study",
+        "source": "article:lit-4637b665330dddf88e6b843a",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:genomic-study"
+      },
+      {
+        "id": "article:lit-608dcc059be5b13e00fbf07e|ABOUT_DISEASE|disease:d158",
+        "source": "article:lit-608dcc059be5b13e00fbf07e",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d158",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-608dcc059be5b13e00fbf07e|ADDRESSES_TOPIC|topic:health-policy",
+        "source": "article:lit-608dcc059be5b13e00fbf07e",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:health-policy",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-608dcc059be5b13e00fbf07e|ADDRESSES_TOPIC|topic:treatment",
+        "source": "article:lit-608dcc059be5b13e00fbf07e",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:treatment",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-608dcc059be5b13e00fbf07e|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-608dcc059be5b13e00fbf07e",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-63b70382078fe29c087368e1|ABOUT_DISEASE|disease:d205",
+        "source": "article:lit-63b70382078fe29c087368e1",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d205",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-63b70382078fe29c087368e1|ADDRESSES_TOPIC|topic:diagnostics",
+        "source": "article:lit-63b70382078fe29c087368e1",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:diagnostics",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-63b70382078fe29c087368e1|ADDRESSES_TOPIC|topic:treatment",
+        "source": "article:lit-63b70382078fe29c087368e1",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:treatment",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-63b70382078fe29c087368e1|STUDIED_IN|country:se",
+        "source": "article:lit-63b70382078fe29c087368e1",
+        "relation": "STUDIED_IN",
+        "target": "country:se",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-63b70382078fe29c087368e1|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-63b70382078fe29c087368e1",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-640b2fbafd92d749353e5260|ABOUT_DISEASE|disease:d158",
+        "source": "article:lit-640b2fbafd92d749353e5260",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d158",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-640b2fbafd92d749353e5260|ADDRESSES_TOPIC|topic:surveillance",
+        "source": "article:lit-640b2fbafd92d749353e5260",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:surveillance",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-640b2fbafd92d749353e5260|ADDRESSES_TOPIC|topic:treatment",
+        "source": "article:lit-640b2fbafd92d749353e5260",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:treatment",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-640b2fbafd92d749353e5260|STUDIED_IN|country:nz",
+        "source": "article:lit-640b2fbafd92d749353e5260",
+        "relation": "STUDIED_IN",
+        "target": "country:nz",
+        "confidence": 0.78
+      },
+      {
+        "id": "article:lit-640b2fbafd92d749353e5260|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-640b2fbafd92d749353e5260",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-6e0a96bd89b74939ba461dcd|ABOUT_DISEASE|disease:d038",
+        "source": "article:lit-6e0a96bd89b74939ba461dcd",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d038",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-6e0a96bd89b74939ba461dcd|ADDRESSES_TOPIC|topic:treatment",
+        "source": "article:lit-6e0a96bd89b74939ba461dcd",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:treatment",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-6e0a96bd89b74939ba461dcd|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-6e0a96bd89b74939ba461dcd",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-7691e253810f8880deb56c7a|ABOUT_DISEASE|disease:d038",
+        "source": "article:lit-7691e253810f8880deb56c7a",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d038",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-7691e253810f8880deb56c7a|ADDRESSES_TOPIC|topic:one-health",
+        "source": "article:lit-7691e253810f8880deb56c7a",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:one-health",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-7691e253810f8880deb56c7a|ADDRESSES_TOPIC|topic:treatment",
+        "source": "article:lit-7691e253810f8880deb56c7a",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:treatment",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-7691e253810f8880deb56c7a|STUDIED_IN|country:ca",
+        "source": "article:lit-7691e253810f8880deb56c7a",
+        "relation": "STUDIED_IN",
+        "target": "country:ca",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-7691e253810f8880deb56c7a|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-7691e253810f8880deb56c7a",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-8476387eab6a557991a80d02|ABOUT_DISEASE|disease:d158",
+        "source": "article:lit-8476387eab6a557991a80d02",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d158",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-8476387eab6a557991a80d02|ADDRESSES_TOPIC|topic:treatment",
+        "source": "article:lit-8476387eab6a557991a80d02",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:treatment",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-8476387eab6a557991a80d02|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-8476387eab6a557991a80d02",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-90443fa0ffa1d6a1e0a5d2d8|ABOUT_DISEASE|disease:d205",
+        "source": "article:lit-90443fa0ffa1d6a1e0a5d2d8",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d205",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-90443fa0ffa1d6a1e0a5d2d8|ADDRESSES_TOPIC|topic:diagnostics",
+        "source": "article:lit-90443fa0ffa1d6a1e0a5d2d8",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:diagnostics",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-90443fa0ffa1d6a1e0a5d2d8|ADDRESSES_TOPIC|topic:treatment",
+        "source": "article:lit-90443fa0ffa1d6a1e0a5d2d8",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:treatment",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-90443fa0ffa1d6a1e0a5d2d8|ADDRESSES_TOPIC|topic:vaccination",
+        "source": "article:lit-90443fa0ffa1d6a1e0a5d2d8",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccination",
+        "confidence": 0.7100000000000001
+      },
+      {
+        "id": "article:lit-90443fa0ffa1d6a1e0a5d2d8|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-90443fa0ffa1d6a1e0a5d2d8",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-c907806f89804bb13670c161|ABOUT_DISEASE|disease:d050",
+        "source": "article:lit-c907806f89804bb13670c161",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d050",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-c907806f89804bb13670c161|ADDRESSES_TOPIC|topic:outbreak-investigation",
+        "source": "article:lit-c907806f89804bb13670c161",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:outbreak-investigation",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-c907806f89804bb13670c161|ADDRESSES_TOPIC|topic:treatment",
+        "source": "article:lit-c907806f89804bb13670c161",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:treatment",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-c907806f89804bb13670c161|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-c907806f89804bb13670c161",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-d07dd8e8e5fef05b36677686|ABOUT_DISEASE|disease:d025",
+        "source": "article:lit-d07dd8e8e5fef05b36677686",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d025",
+        "confidence": 0.9
+      },
+      {
+        "id": "article:lit-d07dd8e8e5fef05b36677686|ADDRESSES_TOPIC|topic:treatment",
+        "source": "article:lit-d07dd8e8e5fef05b36677686",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:treatment",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-d07dd8e8e5fef05b36677686|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-d07dd8e8e5fef05b36677686",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-ddb7856cf6a4d89e3e1f82d5|ABOUT_DISEASE|disease:d037",
+        "source": "article:lit-ddb7856cf6a4d89e3e1f82d5",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d037",
+        "confidence": 0.86
+      },
+      {
+        "id": "article:lit-ddb7856cf6a4d89e3e1f82d5|ADDRESSES_TOPIC|topic:surveillance",
+        "source": "article:lit-ddb7856cf6a4d89e3e1f82d5",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:surveillance",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-ddb7856cf6a4d89e3e1f82d5|ADDRESSES_TOPIC|topic:treatment",
+        "source": "article:lit-ddb7856cf6a4d89e3e1f82d5",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:treatment",
+        "confidence": 0.7100000000000001
+      },
+      {
+        "id": "article:lit-ddb7856cf6a4d89e3e1f82d5|USES_STUDY_DESIGN|study-type:systematic-review",
+        "source": "article:lit-ddb7856cf6a4d89e3e1f82d5",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:systematic-review"
+      },
+      {
+        "id": "article:lit-df11fd1941815984e99cdff8|ABOUT_DISEASE|disease:d025",
+        "source": "article:lit-df11fd1941815984e99cdff8",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d025",
+        "confidence": 0.9
+      },
+      {
+        "id": "article:lit-df11fd1941815984e99cdff8|ADDRESSES_TOPIC|topic:treatment",
+        "source": "article:lit-df11fd1941815984e99cdff8",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:treatment",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-df11fd1941815984e99cdff8|USES_STUDY_DESIGN|study-type:cohort-study",
+        "source": "article:lit-df11fd1941815984e99cdff8",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:cohort-study"
+      },
+      {
+        "id": "article:lit-e8c2aa385b1138f6e09c5986|ABOUT_DISEASE|disease:d050",
+        "source": "article:lit-e8c2aa385b1138f6e09c5986",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d050",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-e8c2aa385b1138f6e09c5986|ADDRESSES_TOPIC|topic:one-health",
+        "source": "article:lit-e8c2aa385b1138f6e09c5986",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:one-health",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-e8c2aa385b1138f6e09c5986|ADDRESSES_TOPIC|topic:outbreak-investigation",
+        "source": "article:lit-e8c2aa385b1138f6e09c5986",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:outbreak-investigation",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-e8c2aa385b1138f6e09c5986|ADDRESSES_TOPIC|topic:transmission-dynamics",
+        "source": "article:lit-e8c2aa385b1138f6e09c5986",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:transmission-dynamics",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-e8c2aa385b1138f6e09c5986|ADDRESSES_TOPIC|topic:treatment",
+        "source": "article:lit-e8c2aa385b1138f6e09c5986",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:treatment",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-e8c2aa385b1138f6e09c5986|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-e8c2aa385b1138f6e09c5986",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-eda3407c07181df617cba6ec|ABOUT_DISEASE|disease:d025",
+        "source": "article:lit-eda3407c07181df617cba6ec",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d025",
+        "confidence": 0.9
+      },
+      {
+        "id": "article:lit-eda3407c07181df617cba6ec|ADDRESSES_TOPIC|topic:treatment",
+        "source": "article:lit-eda3407c07181df617cba6ec",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:treatment",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-eda3407c07181df617cba6ec|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-eda3407c07181df617cba6ec",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      }
+    ],
+    "insights": [
+      {
+        "type": "topic_co_occurrence",
+        "left": "topic:outbreak-investigation",
+        "right": "topic:treatment",
+        "left_label": "Outbreak investigation",
+        "right_label": "Treatment",
+        "article_count": 5
+      },
+      {
+        "type": "topic_co_occurrence",
+        "left": "topic:surveillance",
+        "right": "topic:treatment",
+        "left_label": "Surveillance",
+        "right_label": "Treatment",
+        "article_count": 4
+      },
+      {
+        "type": "topic_co_occurrence",
+        "left": "topic:treatment",
+        "right": "topic:vaccination",
+        "left_label": "Treatment",
+        "right_label": "Vaccination",
+        "article_count": 4
+      },
+      {
+        "type": "topic_co_occurrence",
+        "left": "topic:diagnostics",
+        "right": "topic:treatment",
+        "left_label": "Diagnostics",
+        "right_label": "Treatment",
+        "article_count": 4
+      },
+      {
+        "type": "topic_co_occurrence",
+        "left": "topic:one-health",
+        "right": "topic:treatment",
+        "left_label": "One Health",
+        "right_label": "Treatment",
+        "article_count": 3
+      },
+      {
+        "type": "topic_co_occurrence",
+        "left": "topic:outbreak-investigation",
+        "right": "topic:vaccination",
+        "left_label": "Outbreak investigation",
+        "right_label": "Vaccination",
+        "article_count": 2
+      },
+      {
+        "type": "topic_co_occurrence",
+        "left": "topic:one-health",
+        "right": "topic:outbreak-investigation",
+        "left_label": "One Health",
+        "right_label": "Outbreak investigation",
+        "article_count": 2
+      },
+      {
+        "type": "topic_co_occurrence",
+        "left": "topic:climate-and-environment",
+        "right": "topic:outbreak-investigation",
+        "left_label": "Climate and environment",
+        "right_label": "Outbreak investigation",
+        "article_count": 2
+      },
+      {
+        "type": "topic_co_occurrence",
+        "left": "topic:climate-and-environment",
+        "right": "topic:treatment",
+        "left_label": "Climate and environment",
+        "right_label": "Treatment",
+        "article_count": 2
+      },
+      {
+        "type": "topic_co_occurrence",
+        "left": "topic:surveillance",
+        "right": "topic:vaccination",
+        "left_label": "Surveillance",
+        "right_label": "Vaccination",
+        "article_count": 2
+      },
+      {
+        "type": "topic_co_occurrence",
+        "left": "topic:antimicrobial-resistance",
+        "right": "topic:treatment",
+        "left_label": "Antimicrobial resistance",
+        "right_label": "Treatment",
+        "article_count": 2
+      }
+    ],
+    "stats": {
+      "nodes": 49,
+      "edges": 97,
+      "articles": 22
+    }
+  }
+}

@@ -1,0 +1,168 @@
+{
+  "article_id": "lit_05ddb6de0d167e2fb1dc05eb",
+  "slug": "10-1099-mic-0-001697-05ddb6de",
+  "title": "Metabolic perturbation reduces antibiotic tolerance in <i>Mycobacterium tuberculosis</i>.",
+  "doi": "10.1099/mic.0.001697",
+  "pmid": "42018449",
+  "journal": "Microbiology (Reading, England)",
+  "publisher": null,
+  "authors": [
+    "Cheung CY",
+    "Samuels I",
+    "Klaus HR",
+    "Cook GM",
+    "McNeil MB"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Journal article",
+  "published_at": "2026-04-01T00:00:00+00:00",
+  "indexed_at": "2026-04-22T00:00:00+00:00",
+  "open_access_status": "open",
+  "open_access_url": "https://europepmc.org/articles/PMC13102359",
+  "license_url": null,
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.635,
+  "is_featured": false,
+  "diseases": [
+    {
+      "disease_id": "D025",
+      "slug": "tuberculosis",
+      "name_en": "Tuberculosis",
+      "name_zh": "肺结核",
+      "confidence": 0.9
+    }
+  ],
+  "countries": [],
+  "topics": [
+    {
+      "name": "Treatment",
+      "confidence": 0.66
+    }
+  ],
+  "related_surveillance": [],
+  "summary": {
+    "en": {
+      "research_question": "The investigation aimed to identify metabolic pathways that enable Mycobacterium tuberculosis to withstand antibiotic exposure.",
+      "study_design": "Peer-reviewed laboratory research utilizing CRISPR interference to create genetically modified bacterial strains, followed by antimicrobial susceptibility testing in both planktonic cultures and human macrophage cell lines.",
+      "population_setting": "In vitro experiments conducted with engineered Mycobacterium tuberculosis isolates and cultured THP-1 human macrophage cells.",
+      "main_findings": "Genetic suppression of iron storage control, amino acid synthesis, and cellular redox balance increased the killing efficiency of multiple antimicrobial agents. These synergistic effects persisted when bacteria infected human macrophage models. The data suggest that bacterial metabolic activity plays a central role in mediating drug tolerance.",
+      "public_health_relevance": "Elucidating metabolic vulnerabilities may assist researchers in developing adjunctive approaches to enhance current tuberculosis treatment regimens.",
+      "limitations": "The experimental framework is restricted to controlled laboratory conditions and does not assess clinical patient outcomes or complex host-pathogen interactions in living organisms. Additional methodological details regarding specific compound concentrations are absent from the provided summary.",
+      "gids_interpretation": "This manuscript offers mechanistic insights into bacterial physiology that contextualize ongoing tuberculosis pharmacology research. It functions as preclinical background information rather than a source of operational surveillance data or outbreak detection.",
+      "provenance": {
+        "generated_by": "literature-evidence-agent",
+        "model": "qwen3.7-flash",
+        "provider": "qwenai",
+        "quality_score": 0.936,
+        "generated_at": "2026-08-13T23:11:28.987264+00:00",
+        "editorially_approved": false,
+        "automatically_approved": true,
+        "automation_policy_version": "research-radar-autopilot.v1",
+        "publication_gate": "automated-quality-gate"
+      }
+    }
+  },
+  "why_it_matters_en": "Elucidating metabolic vulnerabilities may assist researchers in developing adjunctive approaches to enhance current tuberculosis treatment regimens.",
+  "why_it_matters_zh": "这项近期Journal article因与肺结核相关而被收录。应用其结论前请阅读原始文献。",
+  "source_urls": {
+    "doi": "https://doi.org/10.1099/mic.0.001697",
+    "pubmed": "https://pubmed.ncbi.nlm.nih.gov/42018449/"
+  },
+  "updated_at": "2026-08-13T16:05:48.137619+00:00",
+  "related_signals": [
+    {
+      "signal_id": "signal:cbe12a284bd5cd9b",
+      "section": "increasing",
+      "kind": "statistical_signal",
+      "title": null,
+      "disease_id": "D025",
+      "disease_name_en": "Tuberculosis",
+      "disease_name_zh": "肺结核",
+      "geographies": [
+        {
+          "code": "NZ",
+          "name_en": "New Zealand"
+        }
+      ],
+      "data_through": "2026-06-01",
+      "window": {
+        "label": "Latest complete month",
+        "current": 43.0,
+        "previous": 32.0,
+        "absolute_change": 11.0,
+        "change_pct": 34.38
+      },
+      "risk": {
+        "score": 56.0,
+        "level": "high",
+        "confidence": "low"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-05ddb6de0d167e2fb1dc05eb",
+        "type": "article",
+        "label": "Metabolic perturbation reduces antibiotic tolerance in <i>Mycobacterium tuberculosis</i>.",
+        "slug": "10-1099-mic-0-001697-05ddb6de",
+        "url": "/research/articles/10-1099-mic-0-001697-05ddb6de/",
+        "published_at": "2026-04-01T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "disease:d025",
+        "type": "disease",
+        "label": "Tuberculosis",
+        "disease_id": "D025",
+        "name_zh": "肺结核",
+        "slug": "tuberculosis",
+        "url": "/diseases/tuberculosis/"
+      },
+      {
+        "id": "study-type:journal-article",
+        "type": "study_type",
+        "label": "Journal article"
+      },
+      {
+        "id": "topic:treatment",
+        "type": "topic",
+        "label": "Treatment"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-05ddb6de0d167e2fb1dc05eb|ABOUT_DISEASE|disease:d025",
+        "source": "article:lit-05ddb6de0d167e2fb1dc05eb",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d025",
+        "confidence": 0.9
+      },
+      {
+        "id": "article:lit-05ddb6de0d167e2fb1dc05eb|ADDRESSES_TOPIC|topic:treatment",
+        "source": "article:lit-05ddb6de0d167e2fb1dc05eb",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:treatment",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-05ddb6de0d167e2fb1dc05eb|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-05ddb6de0d167e2fb1dc05eb",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 4,
+      "edges": 3,
+      "articles": 1
+    }
+  }
+}

@@ -1,0 +1,108 @@
+{
+  "week": "2025-W26",
+  "start_date": "2025-06-26",
+  "end_date": "2025-06-26",
+  "article_count": 1,
+  "disease_count": 1,
+  "country_count": 1,
+  "top_topics": [
+    "Treatment",
+    "One Health"
+  ],
+  "articles": [
+    {
+      "article_id": "lit_7691e253810f8880deb56c7a",
+      "slug": "10-51731-cjht-2025-1153-7691e253",
+      "title": "Cost-Effectiveness of Antiviral Drugs to Prevent or Treat Influenza A, Influenza B, or Zoonotic Influenza",
+      "doi": "10.51731/cjht.2025.1153",
+      "pmid": null,
+      "journal": "Canadian Journal of Health Technologies",
+      "publisher": "Canadian Journal of Health Technologies, CADTH",
+      "authors": [
+        "Ilke Akpinar",
+        "Dagmara Chojecki"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2025-06-26T00:00:00+00:00",
+      "indexed_at": "2025-06-29T14:10:11+00:00",
+      "open_access_status": "unknown",
+      "open_access_url": null,
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.494,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D038",
+          "slug": "influenza",
+          "name_en": "Influenza",
+          "name_zh": "流行性感冒",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [
+        {
+          "code": "CA",
+          "name_en": "Canada",
+          "name_zh": null,
+          "confidence": 0.62
+        }
+      ],
+      "topics": [
+        {
+          "name": "Treatment",
+          "confidence": 0.66
+        },
+        {
+          "name": "One Health",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Influenza. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与流行性感冒相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.51731/cjht.2025.1153",
+        "publisher": "https://canjhealthtechnol.ca/index.php/cjht/article/view/RC1563"
+      },
+      "updated_at": "2026-08-13T16:05:48.137434+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:d4f34da837688d03",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D038",
+          "disease_name_en": "Influenza",
+          "disease_name_zh": "流行性感冒",
+          "geographies": [
+            {
+              "code": "IE",
+              "name_en": "Ireland"
+            }
+          ],
+          "data_through": "2026-07-27",
+          "window": {
+            "label": "Last 4 weeks",
+            "current": 230.0,
+            "previous": 46.0,
+            "absolute_change": 184.0,
+            "change_pct": 400.0
+          },
+          "risk": {
+            "score": 65.5,
+            "level": "high",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    }
+  ],
+  "url": "/research/weekly/2025-W26/"
+}

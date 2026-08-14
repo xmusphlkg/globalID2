@@ -1,0 +1,47 @@
+---
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import ResearchCollectionPage from '../../../components/research/ResearchCollectionPage.astro';
+import researchData from '../../../data/research/index.json';
+
+export function getStaticPaths() {
+  return ((researchData as any).facets?.weeks ?? []).map((facet: any) => ({ params: { week: facet.week }, props: { facet } }));
+}
+
+const { facet } = Astro.props as { facet: any };
+const file = resolve(`./src/data/research/weekly/${facet.week}.json`);
+const payload = existsSync(file) ? JSON.parse(readFileSync(file, 'utf-8')) : { articles: [], top_topics: [] };
+const description = `A factual weekly index of Research Radar publications dated ${payload.start_date ?? facet.start_date} through ${payload.end_date ?? facet.end_date}.`;
+const descriptionZh = `研究雷达在 ${payload.start_date ?? facet.start_date} 至 ${payload.end_date ?? facet.end_date} 期间发表文献的事实性周度索引。`;
+---
+
+<ResearchCollectionPage
+  eyebrow="Weekly evidence brief"
+  eyebrowZh="每周证据简报"
+  title={`Research week ${facet.week}`}
+  titleZh={`研究周报 ${facet.week}`}
+  description={description}
+  descriptionZh={descriptionZh}
+  canonicalPath={`/research/weekly/${facet.week}/`}
+  articles={payload.articles ?? []}
+  contextLabel="Papers this week"
+  contextLabelZh="本周论文"
+>
+  <section slot="context" class="card weekly-context">
+    <p class="academic-kicker" data-lang-en="Week at a glance" data-lang-zh="本周概览">Week at a glance</p>
+    <div class="weekly-grid"><div><strong>{payload.disease_count ?? 0}</strong><span data-lang-en="diseases" data-lang-zh="种疾病">diseases</span></div><div><strong>{payload.country_count ?? 0}</strong><span data-lang-en="countries & regions" data-lang-zh="个国家和地区">countries & regions</span></div><div class="weekly-topics"><span data-lang-en="Leading topics" data-lang-zh="主要主题">Leading topics</span><p>{(payload.top_topics ?? []).join(' · ') || '—'}</p></div></div>
+    <p class="weekly-note" data-lang-en="This brief summarizes publication metadata and classifier links. It is not a risk assessment or a claim about changes in disease incidence." data-lang-zh="本简报汇总发表元数据和分类关系，不是风险评估，也不代表疾病发病情况发生变化。">This brief summarizes publication metadata and classifier links. It is not a risk assessment or a claim about changes in disease incidence.</p>
+  </section>
+</ResearchCollectionPage>
+
+<style>
+  .weekly-context { margin-top: 1.5rem; padding: clamp(1.25rem, 3vw, 2rem); }
+  .weekly-grid { display: grid; grid-template-columns: 8rem 8rem minmax(0, 1fr); gap: 1rem; margin-top: 1rem; }
+  .weekly-grid > div { border-left: 1px solid rgb(var(--border)); padding-left: 1rem; }
+  .weekly-grid > div:first-child { padding-left: 0; border-left: 0; }
+  .weekly-grid strong { display: block; color: rgb(var(--text-strong)); font: 600 1.75rem/1 'Source Serif 4', serif; }
+  .weekly-grid span { display: block; margin-top: .35rem; color: rgb(var(--text-faint)); font-size: .65rem; }
+  .weekly-topics p { margin-top: .4rem; color: rgb(var(--text)); font-size: .78rem; line-height: 1.5; }
+  .weekly-note { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgb(var(--border) / .64); color: rgb(var(--text-faint)); font-size: .68rem; line-height: 1.55; }
+  @media (max-width: 620px) { .weekly-grid { grid-template-columns: 1fr 1fr; } .weekly-topics { grid-column: 1 / -1; padding-top: 1rem; border-top: 1px solid rgb(var(--border)); border-left: 0 !important; padding-left: 0 !important; } }
+</style>

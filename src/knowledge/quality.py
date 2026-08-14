@@ -8,8 +8,10 @@ it is not disease knowledge and must not be counted as a completed field.
 from __future__ import annotations
 
 import re
+import hashlib
 from dataclasses import dataclass
 from typing import Any, Iterable
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from src.knowledge.profile_schema import (
     SECTION_FIELDS,
@@ -29,6 +31,9 @@ KNOWLEDGE_TEXT_FIELDS = (
     "risk_groups",
 )
 PROFILE_SECTION_FIELDS = SECTION_FIELDS
+
+KNOWLEDGE_SCHEMA_VERSION = 4
+EVIDENCE_POLICY_VERSION = 2
 
 FIELD_STATUS_AVAILABLE = "available"
 FIELD_STATUS_MISSING = "missing"
@@ -382,7 +387,8 @@ def apply_knowledge_quality_gate(
     metadata = cleaned.get("metadata") if isinstance(cleaned.get("metadata"), dict) else {}
     cleaned["metadata"] = {
         **metadata,
-        "knowledge_schema_version": 3,
+        "knowledge_schema_version": KNOWLEDGE_SCHEMA_VERSION,
+        "evidence_policy_version": EVIDENCE_POLICY_VERSION,
         "quality": assessment.to_dict(),
     }
 
@@ -426,24 +432,7 @@ def has_grounding_content(source: Any, *, minimum_characters: int = 80) -> bool:
             return False
         return len(content_text) >= minimum_characters
 
-    parts: list[str] = []
-    for key in ("content_text", "raw_excerpt", "snippet", "description"):
-        value = normalize_knowledge_text(_raw_value(source, key))
-        if value:
-            parts.append(value)
-
-    sections = _raw_value(source, "content_sections")
-    if isinstance(sections, Iterable) and not isinstance(sections, (str, bytes, dict)):
-        for section in sections:
-            if not isinstance(section, dict):
-                continue
-            for key in ("text", "content", "body", "summary"):
-                value = normalize_knowledge_text(section.get(key))
-                if value:
-                    parts.append(value)
-
-    evidence = " ".join(parts)
-    return len(evidence) >= minimum_characters
+    return len(_unique_grounding_text(source)) >= minimum_characters
 
 
 def assess_knowledge_evidence(sources: Iterable[Any]) -> KnowledgeEvidenceAssessment:
@@ -470,6 +459,7 @@ def assess_knowledge_evidence(sources: Iterable[Any]) -> KnowledgeEvidenceAssess
         "canada.ca/",
         "gov.uk/",
     )
+    eligible_sources: list[tuple[int, Any, str, str]] = []
     for source in sources:
         if str(_raw_value(source, "status") or "active").strip().lower() != "active":
             continue
@@ -488,7 +478,38 @@ def assess_knowledge_evidence(sources: Iterable[Any]) -> KnowledgeEvidenceAssess
         if not has_grounding_content(source):
             continue
 
+        grounding_text = _unique_grounding_text(source)
+        eligible_sources.append(
+            (
+                len(grounding_text),
+                source,
+                _canonical_source_url(source),
+                hashlib.sha256(grounding_text.encode("utf-8")).hexdigest(),
+            )
+        )
+
+    # One page may be discovered through multiple adapters and each parsed page
+    # is stored as overlapping excerpt/text/section views. Count the underlying
+    # document once so duplicated storage cannot manufacture evidence volume or
+    # source diversity.
+    seen_urls: set[str] = set()
+    seen_content_hashes: set[str] = set()
+    for content_length, source, canonical_url, content_hash in sorted(
+        eligible_sources, key=lambda item: item[0], reverse=True
+    ):
+        if canonical_url and canonical_url in seen_urls:
+            continue
+        if content_hash in seen_content_hashes:
+            continue
+        if canonical_url:
+            seen_urls.add(canonical_url)
+        seen_content_hashes.add(content_hash)
+
         grounded_count += 1
+        metadata = _raw_value(source, "metadata")
+        if not isinstance(metadata, dict):
+            metadata = _raw_value(source, "metadata_")
+        metadata = metadata if isinstance(metadata, dict) else {}
         source_type = str(_raw_value(source, "source_type") or "").strip().lower()
         url = str(
             _raw_value(source, "resolved_url")
@@ -508,7 +529,7 @@ def assess_knowledge_evidence(sources: Iterable[Any]) -> KnowledgeEvidenceAssess
         if source_type == "pubmed" or str(metadata.get("content_kind") or "").lower() == "abstract":
             scholarly_count += 1
 
-        content_characters += _grounding_content_length(source)
+        content_characters += content_length
 
     has_evidence_class = authoritative_count > 0 or scholarly_count > 0
     sufficient = (
@@ -537,6 +558,10 @@ def assess_knowledge_evidence(sources: Iterable[Any]) -> KnowledgeEvidenceAssess
 
 
 def _grounding_content_length(source: Any) -> int:
+    return len(_unique_grounding_text(source))
+
+
+def _grounding_text_parts(source: Any) -> list[str]:
     parts: list[str] = []
     for key in ("content_text", "raw_excerpt", "snippet", "description"):
         value = normalize_knowledge_text(_raw_value(source, key))
@@ -552,7 +577,57 @@ def _grounding_content_length(source: Any) -> int:
             )
             if value:
                 parts.append(value)
-    return len(" ".join(parts))
+    return parts
+
+
+def _unique_grounding_text(source: Any) -> str:
+    """Collapse overlapping source representations into one evidence string."""
+    unique_parts: list[str] = []
+    seen: set[str] = set()
+    # Longest-first makes excerpts and section copies disappear when they are
+    # already contained in the parsed page body.
+    for part in sorted(_grounding_text_parts(source), key=len, reverse=True):
+        key = part.casefold()
+        if key in seen or any(key in existing for existing in seen):
+            continue
+        seen.add(key)
+        unique_parts.append(part)
+    return " ".join(unique_parts)
+
+
+def _canonical_source_url(source: Any) -> str:
+    metadata = _raw_value(source, "metadata")
+    if not isinstance(metadata, dict):
+        metadata = _raw_value(source, "metadata_")
+    metadata = metadata if isinstance(metadata, dict) else {}
+    raw = str(
+        metadata.get("canonical_url")
+        or _raw_value(source, "resolved_url")
+        or _raw_value(source, "url")
+        or ""
+    ).strip()
+    if not raw:
+        return ""
+    try:
+        parsed = urlsplit(raw)
+    except ValueError:
+        return raw.casefold()
+    filtered_query = [
+        (key, value)
+        for key, value in parse_qsl(parsed.query, keep_blank_values=True)
+        if not key.lower().startswith("utm_")
+        and key.lower() not in {"fbclid", "gclid", "mc_cid", "mc_eid"}
+    ]
+    path = parsed.path.rstrip("/") or "/"
+    return urlunsplit(
+        (
+            parsed.scheme.lower(),
+            parsed.netloc.lower(),
+            path,
+            urlencode(filtered_query),
+            "",
+        )
+    )
 
 
 def _raw_value(obj: Any, key: str) -> Any:

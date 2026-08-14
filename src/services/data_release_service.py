@@ -32,6 +32,7 @@ from src.services.data_release.commands import (
     build_publish_download_repo_command,
     build_publish_raw_archive_command,
     build_update_situation_room_command,
+    build_validate_situation_release_command,
 )
 from src.services.data_release.process_runner import (
     run_capture,
@@ -62,6 +63,7 @@ GENERATED_DATA_PATHS = (
     "astro-site/src/data/downloads.json",
     "astro-site/src/data/meta.json",
     "astro-site/src/data/reports",
+    "astro-site/src/data/research",
     "astro-site/src/data/situation",
     "data/current",
     "data/raw",
@@ -79,7 +81,15 @@ AUTO_RELEASE_TASK_TYPES = (
     TaskType.CRAWL_DATA,
     TaskType.PROCESS_DATA,
     TaskType.GENERATE_REPORT,
+    TaskType.SYNC_LITERATURE,
+    TaskType.ENRICH_LITERATURE,
+    TaskType.DISCOVER_LITERATURE_GAPS,
 )
+LITERATURE_RELEASE_TASK_TYPES = {
+    TaskType.SYNC_LITERATURE,
+    TaskType.ENRICH_LITERATURE,
+    TaskType.DISCOVER_LITERATURE_GAPS,
+}
 GITHUB_SSH_PREFIXES = ("git@github.com:", "ssh://git@github.com/")
 SUBSCRIPTION_SYNC_FALSE_VALUES = {"0", "false", "no", "off", "disabled"}
 SUBSCRIPTION_SYNC_STRICT_VALUES = {"1", "true", "yes", "on", "required", "strict", "force"}
@@ -120,14 +130,14 @@ class DataReleaseJobConfig:
     name: str
     enabled: bool = True
     priority: str = "high"
-    auto_after_crawls: bool = True
+    auto_after_crawls: bool = False
     # When enabled, publish the validated v2 snapshot after local generation.
     include_git_push: bool = True
     include_cloudflare_deploy: bool = True
     require_clean_worktree: bool = True
     interval_minutes: Optional[int] = None
-    daily_time: Optional[str] = None
-    timezone: Optional[str] = None
+    daily_time: Optional[str] = "02:00"
+    timezone: Optional[str] = "UTC"
     github_remote: str = "origin"
     github_branch: Optional[str] = None
     cloudflare_project_name: Optional[str] = None
@@ -194,18 +204,18 @@ class DataReleaseService:
                     name="Site Data Release",
                     enabled=True,
                     priority="high",
-                    auto_after_crawls=True,
+                    auto_after_crawls=False,
                     include_git_push=True,
                     include_cloudflare_deploy=True,
                     require_clean_worktree=True,
-                    daily_time="03:00",
+                    daily_time="02:00",
                     interval_minutes=None,
-                    timezone=cfg.timezone,
+                    timezone="UTC",
                     github_remote=github_settings["default_github_remote"] or "origin",
                     github_branch=get_data_share_repo_branch(),
                     cloudflare_project_name=cloudflare_settings["default_cloudflare_project_name"] or "globalid",
                     commit_message_template=cfg.default_commit_message_template,
-                    notes="Default 03:00 UTC release pipeline for generated site data, Situation Room refresh, and Cloudflare Pages deploy.",
+                    notes="Default 02:00 UTC release pipeline for one daily Situation Room refresh, static export, build, and Cloudflare Pages deploy.",
                 )
             )
             await db.commit()
@@ -391,6 +401,18 @@ class DataReleaseService:
             return
         if normalized_task_type not in AUTO_RELEASE_TASK_TYPES:
             return
+        if normalized_task_type in LITERATURE_RELEASE_TASK_TYPES:
+            async with get_database() as db:
+                trigger_task = (
+                    await db.execute(select(Task).where(Task.task_uuid == trigger_task_uuid))
+                ).scalar_one_or_none()
+            output = dict((trigger_task.output_data if trigger_task else None) or {})
+            automation = dict(output.get("automation") or {})
+            public_changes = int(automation.get("changed") or 0)
+            if normalized_task_type == TaskType.SYNC_LITERATURE:
+                public_changes += int(output.get("published") or 0)
+            if public_changes <= 0:
+                return
         enabled_jobs = [job for job in await self.load_jobs() if job.enabled and job.auto_after_crawls]
         if not enabled_jobs:
             return
@@ -950,6 +972,9 @@ class DataReleaseService:
 
     def _update_situation_room_command(self, *, python_path: Path) -> list[str]:
         return build_update_situation_room_command(python_path=python_path)
+
+    def _validate_situation_release_command(self, *, python_path: Path) -> list[str]:
+        return build_validate_situation_release_command(python_path=python_path)
 
     def _publish_download_repo_command(
         self,

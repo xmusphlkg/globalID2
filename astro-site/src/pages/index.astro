@@ -18,7 +18,14 @@ const meta = metaRaw as any;
 const diseases = diseasesRaw as any[];
 const reports = (reportsRaw as any[]).slice(0, 6);
 const situationPath = resolve('./src/data/situation/latest.json');
-const situation = existsSync(situationPath) ? JSON.parse(readFileSync(situationPath, 'utf-8')) : null;
+const situationShadowPath = resolve('./src/data/situation/shadow-latest.json');
+const situationPreviewEnabled = import.meta.env.DEV || process.env.SITUATION_SHADOW_PREVIEW === 'true';
+const situationReadPath = existsSync(situationPath)
+  ? situationPath
+  : situationPreviewEnabled && existsSync(situationShadowPath)
+    ? situationShadowPath
+    : null;
+const situation = situationReadPath ? JSON.parse(readFileSync(situationReadPath, 'utf-8')) : null;
 // Keep homepage cards aligned with the stat counter and generated country routes.
 // Metadata can include seeded jurisdictions that have no public data snapshot yet.
 const countries = (meta.countries ?? []).filter(hasCountryDataSnapshot);

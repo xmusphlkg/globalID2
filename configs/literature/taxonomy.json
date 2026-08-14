@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "topics": {
+    "Surveillance": ["surveillance", "notification system", "case reporting", "wastewater"],
+    "Outbreak investigation": ["outbreak", "cluster investigation", "contact tracing"],
+    "Transmission dynamics": ["transmission", "reproduction number", "mathematical model", "modelling"],
+    "Vaccination": ["vaccine", "vaccination", "immunisation", "immunization"],
+    "Vaccine effectiveness": ["vaccine effectiveness", "vaccine efficacy", "waning immunity"],
+    "Antimicrobial resistance": ["antimicrobial resistance", "antibiotic resistance", "drug-resistant", "multidrug resistant"],
+    "Genomic epidemiology": ["genomic surveillance", "genomic epidemiology", "whole genome sequencing", "phylogenetic"],
+    "Diagnostics": ["diagnostic", "screening test", "sensitivity and specificity"],
+    "Treatment": ["treatment", "therapy", "therapeutic", "clinical trial"],
+    "Climate and environment": ["climate", "temperature", "rainfall", "environmental"],
+    "Travel medicine": ["travel", "traveller", "traveler", "imported case"],
+    "One Health": ["one health", "zoonotic", "animal-human", "spillover"],
+    "Health policy": ["guideline", "policy", "practice guidance", "clinical guidance", "consensus statement"]
+  },
+  "study_types": {
+    "Systematic review": ["systematic review"],
+    "Meta-analysis": ["meta-analysis", "meta analysis"],
+    "Guideline": ["guideline", "practice guidance", "clinical guidance", "consensus statement"],
+    "Randomised controlled trial": ["randomized controlled trial", "randomised controlled trial", "phase 3 trial"],
+    "Cohort study": ["cohort study", "prospective cohort", "retrospective cohort"],
+    "Case-control study": ["case-control", "case control"],
+    "Cross-sectional study": ["cross-sectional", "cross sectional"],
+    "Mathematical modelling": ["mathematical model", "transmission model", "modelling study", "modeling study"],
+    "Genomic study": ["genomic epidemiology", "whole genome sequencing", "phylogenetic"],
+    "Outbreak investigation": ["outbreak investigation"],
+    "Commentary": ["commentary", "editorial", "perspective"]
+  }
+}

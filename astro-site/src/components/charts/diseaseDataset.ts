@@ -5,13 +5,19 @@ export interface DiseaseDatasetSeriesEntry {
   name_en: string;
   name_zh: string;
   dates: string[];
-  cases: number[];
-  weekly_equiv_cases: number[];
-  deaths: number[];
+  cases: (number | null)[];
+  weekly_equiv_cases: (number | null)[];
+  deaths: (number | null)[];
   incidence_rates: (number | null)[];
   incidence_sources?: (string | null)[];
   total_cases: number;
   total_deaths?: number;
+  provisional_from?: string | null;
+  metric_type?: string | null;
+  reporting_basis?: string | null;
+  time_basis?: string | null;
+  comparability?: string | null;
+  definition_version?: string | null;
   data_layer?: string;
   projection_policy?: string;
   loss_risk?: string | null;
@@ -41,9 +47,15 @@ interface CompactDiseaseDatasetSeriesEntry {
   tc?: number;
   td?: number;
   x: number[];
-  c: number[];
-  w: number[];
-  d: number[];
+  c: (number | null)[];
+  w: (number | null)[];
+  d: (number | null)[];
+  pf?: string | null;
+  mt?: string | null;
+  rb?: string | null;
+  tb?: string | null;
+  cmp?: string | null;
+  dv?: string | null;
   ri?: number[];
   rv?: number[];
   rs?: Array<number | null>;
@@ -107,6 +119,12 @@ function normalizeDiseaseDataset(raw: DiseaseDataset | CompactDiseaseDataset): D
           incidence_sources: incidenceSources,
           total_cases: entry.tc ?? 0,
           total_deaths: entry.td ?? 0,
+          provisional_from: entry.pf,
+          metric_type: entry.mt,
+          reporting_basis: entry.rb,
+          time_basis: entry.tb,
+          comparability: entry.cmp,
+          definition_version: entry.dv,
           data_layer: entry.data_layer,
           projection_policy: entry.projection_policy,
           loss_risk: entry.loss_risk,

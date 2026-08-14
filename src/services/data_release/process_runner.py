@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import os
 from pathlib import Path
+import re
 import signal
 import shlex
 from typing import Any, Awaitable, Callable, Optional, Protocol
@@ -19,6 +20,19 @@ class WorkbookTaskManager(Protocol):
 
 
 TerminateProcess = Callable[..., Awaitable[None]]
+
+OUTPUT_CHUNK_MAX_LINES = 40
+OUTPUT_CHUNK_MAX_CHARS = 4000
+MAX_PERSISTED_OUTPUT_CHUNKS = 2
+OUTPUT_TAIL_MAX_LINES = 120
+COMPLETION_TAIL_LINES = 12
+ANSI_ESCAPE_RE = re.compile(r"\x1b(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+
+
+def clean_output_line(value: str) -> str:
+    """Remove terminal control sequences before persisting command output."""
+
+    return ANSI_ESCAPE_RE.sub("", value).rstrip("\r\n")
 
 
 async def terminate_process_tree(
@@ -143,24 +157,34 @@ async def run_logged_command(
     chunk_lines: list[str] = []
     chunk_index = 1
     output_tail: list[str] = []
+    total_output_lines = 0
+    persisted_output_chunks = 0
+    suppressed_output_chunks = 0
+    suppressed_output_lines = 0
 
     async def flush_chunk(force: bool = False) -> None:
-        nonlocal chunk_lines, chunk_index
+        nonlocal chunk_lines, chunk_index, persisted_output_chunks
+        nonlocal suppressed_output_chunks, suppressed_output_lines
         if not chunk_lines and not force:
             return
         if chunk_lines:
-            await task_manager.add_workbook_entry(
-                task_uuid,
-                entry_type="info",
-                title=f"{title} Output #{chunk_index}",
-                content="\n".join(chunk_lines),
-                content_type="text",
-                metadata={
-                    **metadata,
-                    "chunk": chunk_index,
-                    "event": metadata.get("event", "command_output"),
-                },
-            )
+            if persisted_output_chunks < MAX_PERSISTED_OUTPUT_CHUNKS:
+                await task_manager.add_workbook_entry(
+                    task_uuid,
+                    entry_type="info",
+                    title=f"{title} Output #{chunk_index}",
+                    content="\n".join(chunk_lines),
+                    content_type="text",
+                    metadata={
+                        **metadata,
+                        "chunk": chunk_index,
+                        "event": metadata.get("event", "command_output"),
+                    },
+                )
+                persisted_output_chunks += 1
+            else:
+                suppressed_output_chunks += 1
+                suppressed_output_lines += len(chunk_lines)
             chunk_lines = []
             chunk_index += 1
 
@@ -205,12 +229,16 @@ async def run_logged_command(
             continue
         if not line:
             break
-        text = line.decode("utf-8", errors="replace").rstrip()
+        text = clean_output_line(line.decode("utf-8", errors="replace"))
         chunk_lines.append(text)
         output_tail.append(text)
-        if len(output_tail) > 120:
-            output_tail = output_tail[-120:]
-        if len(chunk_lines) >= 40 or sum(len(item) for item in chunk_lines) >= 4000:
+        total_output_lines += 1
+        if len(output_tail) > OUTPUT_TAIL_MAX_LINES:
+            output_tail = output_tail[-OUTPUT_TAIL_MAX_LINES:]
+        if (
+            len(chunk_lines) >= OUTPUT_CHUNK_MAX_LINES
+            or sum(len(item) for item in chunk_lines) >= OUTPUT_CHUNK_MAX_CHARS
+        ):
             await flush_chunk()
 
     if proc.returncode is None:
@@ -230,15 +258,31 @@ async def run_logged_command(
             f"{title} failed with exit code {returncode}.\n" + "\n".join(output_tail[-40:])
         )
 
+    completion_metadata = {
+        **metadata,
+        "total_output_lines": total_output_lines,
+        "stored_output_chunks": persisted_output_chunks,
+        "suppressed_output_chunks": suppressed_output_chunks,
+        "suppressed_output_lines": suppressed_output_lines,
+        "output_compacted": suppressed_output_chunks > 0,
+    }
+    completion_tail = "\n".join(output_tail[-COMPLETION_TAIL_LINES:])
+    if suppressed_output_chunks:
+        completion_content = (
+            "Command completed successfully.\n"
+            f"Output compacted: {total_output_lines} lines total; "
+            f"{suppressed_output_lines} lines omitted from chunk records; "
+            "the final output is retained below.\n"
+            + (f"Final output:\n{completion_tail}" if completion_tail else "")
+        ).rstrip()
+    else:
+        completion_content = completion_tail or "Command completed successfully."
+
     await task_manager.add_workbook_entry(
         task_uuid,
         entry_type="success",
         title=f"{title} Completed",
-        content=(
-            "\n".join(output_tail[-20:])
-            if output_tail
-            else "Command completed successfully."
-        ),
+        content=completion_content,
         content_type="text",
-        metadata=metadata,
+        metadata=completion_metadata,
     )

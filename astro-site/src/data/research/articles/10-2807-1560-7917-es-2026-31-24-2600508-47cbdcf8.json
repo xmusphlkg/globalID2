@@ -1,0 +1,198 @@
+{
+  "article_id": "lit_47cbdcf8749a6d2a48943790",
+  "slug": "10-2807-1560-7917-es-2026-31-24-2600508-47cbdcf8",
+  "title": "The risk of global Ebola virus spread is low: epidemiology of Ebola disease cases outside Africa, 1976 to May 2026.",
+  "doi": "10.2807/1560-7917.es.2026.31.24.2600508",
+  "pmid": "42318654",
+  "journal": "Euro surveillance : bulletin Europeen sur les maladies transmissibles = European communicable disease bulletin",
+  "publisher": null,
+  "authors": [
+    "van Zandvoort K",
+    "Procter SR",
+    "Azam JM",
+    "Sherratt K",
+    "Davies NG"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Journal article",
+  "published_at": "2026-06-01T00:00:00+00:00",
+  "indexed_at": "2026-06-19T00:00:00+00:00",
+  "open_access_status": "open",
+  "open_access_url": "https://europepmc.org/articles/PMC13282593",
+  "license_url": null,
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.664,
+  "is_featured": false,
+  "diseases": [
+    {
+      "disease_id": "D050",
+      "slug": "ebola",
+      "name_en": "Ebola",
+      "name_zh": "埃博拉出血热",
+      "confidence": 0.82
+    }
+  ],
+  "countries": [],
+  "topics": [
+    {
+      "name": "Outbreak investigation",
+      "confidence": 0.66
+    },
+    {
+      "name": "Transmission dynamics",
+      "confidence": 0.66
+    }
+  ],
+  "related_surveillance": [],
+  "summary": {},
+  "why_it_matters_en": "This recent journal article is indexed for its relevance to Ebola. Read the original source before applying its findings.",
+  "why_it_matters_zh": "这项近期Journal article因与埃博拉出血热相关而被收录。应用其结论前请阅读原始文献。",
+  "source_urls": {
+    "doi": "https://doi.org/10.2807/1560-7917.es.2026.31.24.2600508",
+    "pubmed": "https://pubmed.ncbi.nlm.nih.gov/42318654/"
+  },
+  "updated_at": "2026-08-13T16:05:48.137384+00:00",
+  "related_signals": [
+    {
+      "signal_id": "event:36",
+      "section": "emerging",
+      "kind": "official_event",
+      "title": "Ebola disease caused by Bundibugyo virus - Democratic Republic of the Congo",
+      "disease_id": "D050",
+      "disease_name_en": "Ebola",
+      "disease_name_zh": "埃博拉出血热",
+      "geographies": [
+        {
+          "code": "CD",
+          "name_en": "Democratic Republic of the Congo"
+        }
+      ],
+      "data_through": "2026-08-01",
+      "window": {
+        "label": null,
+        "current": null,
+        "previous": null,
+        "absolute_change": null,
+        "change_pct": null
+      },
+      "risk": {
+        "score": null,
+        "level": null,
+        "confidence": "high"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    },
+    {
+      "signal_id": "event:37",
+      "section": "emerging",
+      "kind": "official_event",
+      "title": "Ebola disease caused by Bundibugyo virus, Democratic Republic of the Congo & Uganda",
+      "disease_id": "D050",
+      "disease_name_en": "Ebola",
+      "disease_name_zh": "埃博拉出血热",
+      "geographies": [
+        {
+          "code": "CD",
+          "name_en": "Democratic Republic of the Congo"
+        },
+        {
+          "code": "UG",
+          "name_en": "Uganda"
+        }
+      ],
+      "data_through": "2026-07-17",
+      "window": {
+        "label": null,
+        "current": null,
+        "previous": null,
+        "absolute_change": null,
+        "change_pct": null
+      },
+      "risk": {
+        "score": null,
+        "level": null,
+        "confidence": "high"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-47cbdcf8749a6d2a48943790",
+        "type": "article",
+        "label": "The risk of global Ebola virus spread is low: epidemiology of Ebola disease cases outside Africa, 1976 to May 2026.",
+        "slug": "10-2807-1560-7917-es-2026-31-24-2600508-47cbdcf8",
+        "url": "/research/articles/10-2807-1560-7917-es-2026-31-24-2600508-47cbdcf8/",
+        "published_at": "2026-06-01T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "disease:d050",
+        "type": "disease",
+        "label": "Ebola",
+        "disease_id": "D050",
+        "name_zh": "埃博拉出血热",
+        "slug": "ebola",
+        "url": "/diseases/ebola/"
+      },
+      {
+        "id": "study-type:journal-article",
+        "type": "study_type",
+        "label": "Journal article"
+      },
+      {
+        "id": "topic:outbreak-investigation",
+        "type": "topic",
+        "label": "Outbreak investigation"
+      },
+      {
+        "id": "topic:transmission-dynamics",
+        "type": "topic",
+        "label": "Transmission dynamics"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-47cbdcf8749a6d2a48943790|ABOUT_DISEASE|disease:d050",
+        "source": "article:lit-47cbdcf8749a6d2a48943790",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d050",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-47cbdcf8749a6d2a48943790|ADDRESSES_TOPIC|topic:outbreak-investigation",
+        "source": "article:lit-47cbdcf8749a6d2a48943790",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:outbreak-investigation",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-47cbdcf8749a6d2a48943790|ADDRESSES_TOPIC|topic:transmission-dynamics",
+        "source": "article:lit-47cbdcf8749a6d2a48943790",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:transmission-dynamics",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-47cbdcf8749a6d2a48943790|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-47cbdcf8749a6d2a48943790",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 5,
+      "edges": 4,
+      "articles": 1
+    }
+  }
+}

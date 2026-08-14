@@ -228,6 +228,7 @@ class TWMonthlyUpdater:
             )
 
         rows: List[Dict[str, str]] = []
+        today = datetime.now(timezone.utc).date()
         with csv_path.open("r", encoding="utf-8-sig", newline="") as handle:
             reader = csv.DictReader(handle)
             for row in reader:
@@ -239,6 +240,10 @@ class TWMonthlyUpdater:
 
                 local_cases = _parse_int(row.get("LocalCases")) or 0
                 imported_cases = _parse_int(row.get("ImportedCases")) or 0
+                is_open_month = (report_date.year, report_date.month) == (
+                    today.year,
+                    today.month,
+                )
                 rows.append(
                     {
                         "Date": report_date.isoformat(),
@@ -251,6 +256,13 @@ class TWMonthlyUpdater:
                         "ImportedCases": str(max(0, imported_cases)),
                         "Source": _norm_text(row.get("Source")) or self.source_name,
                         "SourceURL": _norm_text(row.get("SourceURL")),
+                        # NIDSS warns that generated results can change after
+                        # later corrections.  That makes closed months
+                        # revisable; only the open month is also incomplete.
+                        "DatasetStatus": (
+                            "provisional" if is_open_month else "closed_revisable"
+                        ),
+                        "IsProvisional": "true" if is_open_month else "false",
                     }
                 )
 

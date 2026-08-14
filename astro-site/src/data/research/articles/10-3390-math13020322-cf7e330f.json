@@ -1,0 +1,198 @@
+{
+  "article_id": "lit_cf7e330f26abe93c1f9abe94",
+  "slug": "10-3390-math13020322-cf7e330f",
+  "title": "Seasonal Mathematical Model of Salmonellosis Transmission and the Role of Contaminated Environments and Food Products",
+  "doi": "10.3390/math13020322",
+  "pmid": null,
+  "journal": "Mathematics",
+  "publisher": "MDPI AG",
+  "authors": [
+    "Mohammed H. Alharbi",
+    "Fawaz K. Alalhareth",
+    "Mahmoud A. Ibrahim"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Mathematical modelling",
+  "published_at": "2025-01-20T00:00:00+00:00",
+  "indexed_at": "2026-02-21T05:41:50+00:00",
+  "open_access_status": "open",
+  "open_access_url": "https://www.mdpi.com/2227-7390/13/2/322",
+  "license_url": "https://creativecommons.org/licenses/by/4.0/",
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.576,
+  "is_featured": false,
+  "diseases": [
+    {
+      "disease_id": "D114",
+      "slug": "salmonellosis",
+      "name_en": "Salmonellosis",
+      "name_zh": "沙门氏菌病",
+      "confidence": 0.82
+    }
+  ],
+  "countries": [],
+  "topics": [
+    {
+      "name": "Transmission dynamics",
+      "confidence": 0.76
+    },
+    {
+      "name": "Outbreak investigation",
+      "confidence": 0.66
+    },
+    {
+      "name": "Climate and environment",
+      "confidence": 0.66
+    }
+  ],
+  "related_surveillance": [],
+  "summary": {
+    "zh": {
+      "research_question": "本研究旨在构建数学模型，以探究沙门氏菌在人类、牲畜及受污染环境中的季节性传播动态，并识别决定疾病持续或消亡的关键参数。",
+      "study_design": "该研究采用非自主数学建模方法，结合拉丁超立方抽样与最小二乘法对历史暴发数据进行参数校准，并利用谱半径理论推导基本再生数及阈值条件。",
+      "population_setting": "模型包含人类、牛群以及环境与食品源中的细菌群体，参数估计基于沙特阿拉伯2018至2021年间的沙门氏菌暴发记录。",
+      "main_findings": "估算的基本再生数为0.606，模型对累计与新发病例数据的拟合度较高，提示疾病具备可控潜力。模拟表明当再生数低于1时疾病趋于消亡，高于1时则呈现地方性流行特征。敏感性分析指出死亡率、感染率及衰减率对传播结果具有决定性影响。",
+      "public_health_relevance": "该计算框架通过量化不同传播路径与关键参数的作用，为解析沙门氏菌的传播机制提供了理论依据，有助于评估各类干预策略对改变传播阈值的潜在贡献。",
+      "limitations": "研究性质为理论推演与数值模拟，其结论高度依赖单一区域的历史数据输入及预设的种群假设，尚未纳入实地验证或复杂的社会行为变量。",
+      "gids_interpretation": "作为计算流行病学文献，该成果侧重于揭示季节波动与环境媒介对传播网络的结构化影响，可为相关监测体系的理论参数设定提供学术参考，但不构成对当前实时疫情态势的直接印证。",
+      "provenance": {
+        "generated_by": "literature-evidence-agent",
+        "model": "qwen3.7-flash",
+        "provider": "qwenai",
+        "quality_score": 0.942,
+        "generated_at": "2026-08-14T07:07:36.641744+00:00",
+        "editorially_approved": false,
+        "automatically_approved": true,
+        "automation_policy_version": "research-radar-autopilot.v1",
+        "publication_gate": "automated-quality-gate"
+      }
+    }
+  },
+  "why_it_matters_en": "This recent mathematical modelling is indexed for its relevance to Salmonellosis. Read the original source before applying its findings.",
+  "why_it_matters_zh": "该计算框架通过量化不同传播路径与关键参数的作用，为解析沙门氏菌的传播机制提供了理论依据，有助于评估各类干预策略对改变传播阈值的潜在贡献。",
+  "source_urls": {
+    "doi": "https://doi.org/10.3390/math13020322",
+    "publisher": "https://www.mdpi.com/2227-7390/13/2/322"
+  },
+  "updated_at": "2026-08-13T16:05:48.137681+00:00",
+  "related_signals": [
+    {
+      "signal_id": "signal:ecdc9176fa7e1a17",
+      "section": "increasing",
+      "kind": "statistical_signal",
+      "title": null,
+      "disease_id": "D114",
+      "disease_name_en": "Salmonellosis",
+      "disease_name_zh": "沙门氏菌病",
+      "geographies": [
+        {
+          "code": "IE",
+          "name_en": "Ireland"
+        }
+      ],
+      "data_through": "2026-07-27",
+      "window": {
+        "label": "Last 4 weeks",
+        "current": 54.0,
+        "previous": 38.0,
+        "absolute_change": 16.0,
+        "change_pct": 42.11
+      },
+      "risk": {
+        "score": 40.8,
+        "level": "moderate",
+        "confidence": "low"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-cf7e330f26abe93c1f9abe94",
+        "type": "article",
+        "label": "Seasonal Mathematical Model of Salmonellosis Transmission and the Role of Contaminated Environments and Food Products",
+        "slug": "10-3390-math13020322-cf7e330f",
+        "url": "/research/articles/10-3390-math13020322-cf7e330f/",
+        "published_at": "2025-01-20T00:00:00+00:00",
+        "study_type": "Mathematical modelling"
+      },
+      {
+        "id": "disease:d114",
+        "type": "disease",
+        "label": "Salmonellosis",
+        "disease_id": "D114",
+        "name_zh": "沙门氏菌病",
+        "slug": "salmonellosis",
+        "url": "/diseases/salmonellosis/"
+      },
+      {
+        "id": "study-type:mathematical-modelling",
+        "type": "study_type",
+        "label": "Mathematical modelling"
+      },
+      {
+        "id": "topic:climate-and-environment",
+        "type": "topic",
+        "label": "Climate and environment"
+      },
+      {
+        "id": "topic:outbreak-investigation",
+        "type": "topic",
+        "label": "Outbreak investigation"
+      },
+      {
+        "id": "topic:transmission-dynamics",
+        "type": "topic",
+        "label": "Transmission dynamics"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-cf7e330f26abe93c1f9abe94|ABOUT_DISEASE|disease:d114",
+        "source": "article:lit-cf7e330f26abe93c1f9abe94",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d114",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-cf7e330f26abe93c1f9abe94|ADDRESSES_TOPIC|topic:climate-and-environment",
+        "source": "article:lit-cf7e330f26abe93c1f9abe94",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:climate-and-environment",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-cf7e330f26abe93c1f9abe94|ADDRESSES_TOPIC|topic:outbreak-investigation",
+        "source": "article:lit-cf7e330f26abe93c1f9abe94",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:outbreak-investigation",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-cf7e330f26abe93c1f9abe94|ADDRESSES_TOPIC|topic:transmission-dynamics",
+        "source": "article:lit-cf7e330f26abe93c1f9abe94",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:transmission-dynamics",
+        "confidence": 0.76
+      },
+      {
+        "id": "article:lit-cf7e330f26abe93c1f9abe94|USES_STUDY_DESIGN|study-type:mathematical-modelling",
+        "source": "article:lit-cf7e330f26abe93c1f9abe94",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:mathematical-modelling"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 6,
+      "edges": 5,
+      "articles": 1
+    }
+  }
+}

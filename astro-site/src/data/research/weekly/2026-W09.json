@@ -1,0 +1,550 @@
+{
+  "week": "2026-W09",
+  "start_date": "2026-02-23",
+  "end_date": "2026-03-01",
+  "article_count": 5,
+  "disease_count": 6,
+  "country_count": 2,
+  "top_topics": [
+    "Surveillance",
+    "Climate and environment",
+    "Outbreak investigation",
+    "Transmission dynamics",
+    "Vaccination"
+  ],
+  "articles": [
+    {
+      "article_id": "lit_55800fc0e3a41288e1597bce",
+      "slug": "10-1371-journal-pntd-0013959-55800fc0",
+      "title": "Resurgent threat in a changing climate: A 20-year bibliometric analysis of global Chikungunya research evolution and pandemic preparedness",
+      "doi": "10.1371/journal.pntd.0013959",
+      "pmid": null,
+      "journal": "PLOS Neglected Tropical Diseases",
+      "publisher": "Public Library of Science (PLoS)",
+      "authors": [
+        "Xiaoyi Xu",
+        "Liming Ye",
+        "Yawei Liu",
+        "Xuetao Peng",
+        "Minyi He"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-02-23T00:00:00+00:00",
+      "indexed_at": "2026-08-05T11:43:21+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://dx.plos.org/10.1371/journal.pntd.0013959",
+      "license_url": "http://creativecommons.org/licenses/by/4.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.71,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D052",
+          "slug": "chikungunya",
+          "name_en": "Chikungunya",
+          "name_zh": "基孔肯雅热",
+          "confidence": 0.82
+        },
+        {
+          "disease_id": "D021",
+          "slug": "dengue",
+          "name_en": "Dengue",
+          "name_zh": "登革热",
+          "confidence": 0.62
+        }
+      ],
+      "countries": [
+        {
+          "code": "BR",
+          "name_en": "Brazil",
+          "name_zh": null,
+          "confidence": 0.62
+        }
+      ],
+      "topics": [
+        {
+          "name": "Climate and environment",
+          "confidence": 0.7100000000000001
+        },
+        {
+          "name": "Surveillance",
+          "confidence": 0.66
+        },
+        {
+          "name": "Outbreak investigation",
+          "confidence": 0.66
+        },
+        {
+          "name": "Transmission dynamics",
+          "confidence": 0.66
+        },
+        {
+          "name": "Vaccination",
+          "confidence": 0.66
+        },
+        {
+          "name": "Diagnostics",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {
+        "en": {
+          "research_question": "Maps two decades of global scientific output to determine current priorities and unmet needs in chikungunya pandemic readiness.",
+          "study_design": "Bibliometric evaluation of 8,125 indexed articles published between 2004 and 2025, utilizing software tools to track citation trends, author networks, and keyword co-occurrence patterns.",
+          "population_setting": "Global scientific literature and publishing records rather than a defined clinical or demographic cohort.",
+          "main_findings": "Article production expanded sevenfold following 2013, coinciding with major regional outbreaks. Research activity concentrated within four primary national hubs. Scholarly focus has progressively shifted toward immunization development and environmental transmission factors, while diagnostic differentiation and crisis management keywords have diminished in frequency.",
+          "public_health_relevance": "Highlights increasing academic investment in vaccine platforms and climate-linked transmission models. Identifies structural imbalances in multinational research partnerships and recommends aligning pathogen readiness initiatives with broader environmental health planning.",
+          "limitations": "Analysis depends entirely on database-indexed publications, potentially overlooking non-traditional or regionally restricted research outputs. The methodology quantifies scholarly productivity and thematic shifts rather than measuring actual disease incidence or intervention effectiveness.",
+          "gids_interpretation": "Functions as a retrospective mapping of academic publishing trends instead of an active monitoring report. Offers context on how research emphasis has evolved toward preventive technologies and ecological drivers without generating new empirical signal data.",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.965,
+            "generated_at": "2026-08-13T12:46:04.263817+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        }
+      },
+      "why_it_matters_en": "Highlights increasing academic investment in vaccine platforms and climate-linked transmission models. Identifies structural imbalances in multinational research partnerships and recommends aligning pathogen readiness initiatives with broader environmental health planning.",
+      "why_it_matters_zh": "这项近期Journal article因与基孔肯雅热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1371/journal.pntd.0013959",
+        "publisher": "https://dx.plos.org/10.1371/journal.pntd.0013959"
+      },
+      "updated_at": "2026-08-13T12:39:43.961591+00:00",
+      "related_signals": []
+    },
+    {
+      "article_id": "lit_190bdd1c67a41b48f1c6e15e",
+      "slug": "10-1099-jgv-0-002218-190bdd1c",
+      "title": "Avian influenza in Ireland: a spatiotemporal, subtype and host-based analysis (1983–2024)",
+      "doi": "10.1099/jgv.0.002218",
+      "pmid": "41739543",
+      "journal": "Journal of General Virology",
+      "publisher": "Microbiology Society",
+      "authors": [
+        "Maeve Louise Farrell",
+        "Guy McGrath",
+        "Laura Garza Cuartero",
+        "Gerald Barry"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-02-25T00:00:00+00:00",
+      "indexed_at": "2026-02-25T18:07:12+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC12935314",
+      "license_url": "http://creativecommons.org/licenses/by/4.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.66,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D038",
+          "slug": "influenza",
+          "name_en": "Influenza",
+          "name_zh": "流行性感冒",
+          "confidence": 0.94
+        },
+        {
+          "disease_id": "D014",
+          "slug": "h5n1",
+          "name_en": "H5N1",
+          "name_zh": "人感染高致病性禽流感",
+          "confidence": 0.62
+        }
+      ],
+      "countries": [
+        {
+          "code": "IE",
+          "name_en": "Ireland",
+          "name_zh": null,
+          "confidence": 0.78
+        }
+      ],
+      "topics": [
+        {
+          "name": "Surveillance",
+          "confidence": 0.66
+        },
+        {
+          "name": "Climate and environment",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Influenza. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与流行性感冒相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1099/jgv.0.002218",
+        "publisher": "https://www.microbiologyresearch.org/content/journal/jgv/10.1099/jgv.0.002218",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41739543/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137420+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:d4f34da837688d03",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D038",
+          "disease_name_en": "Influenza",
+          "disease_name_zh": "流行性感冒",
+          "geographies": [
+            {
+              "code": "IE",
+              "name_en": "Ireland"
+            }
+          ],
+          "data_through": "2026-07-27",
+          "window": {
+            "label": "Last 4 weeks",
+            "current": 230.0,
+            "previous": 46.0,
+            "absolute_change": 184.0,
+            "change_pct": 400.0
+          },
+          "risk": {
+            "score": 65.5,
+            "level": "high",
+            "confidence": "low"
+          },
+          "relation_level": "exact_disease_geography",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_1e0a83d45fa031e1d961cd5c",
+      "slug": "10-1128-mbio-02466-25-1e0a83d4",
+      "title": "Synergy between HA cleavage site sequence and NA-mediated plasminogen recruitment as a virulence mechanism for low-pathogenic avian influenza.",
+      "doi": "10.1128/mbio.02466-25",
+      "pmid": "41744684",
+      "journal": "mBio",
+      "publisher": null,
+      "authors": [
+        "Lee HM",
+        "Sutton K",
+        "Harvey W",
+        "Sives S",
+        "Pinto RM",
+        "Gaunt E",
+        "Lycett S",
+        "de Wit S",
+        "Vervelde L",
+        "Digard P"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-02-26T00:00:00+00:00",
+      "indexed_at": "2026-02-26T00:00:00+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC13059709",
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.653,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D038",
+          "slug": "influenza",
+          "name_en": "Influenza",
+          "name_zh": "流行性感冒",
+          "confidence": 0.9
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Surveillance",
+          "confidence": 0.66
+        },
+        {
+          "name": "Outbreak investigation",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {
+        "en": {
+          "research_question": "The investigation examines how specific amino acid variations in viral surface proteins influence the capacity of low-pathogenic avian influenza strains to trigger severe illness and disseminate within poultry hosts.",
+          "study_design": "Researchers employed a reverse genetics platform to engineer wild-type and modified viral isolates, then evaluated their behavior across multiple avian cell cultures and chicken organoid models. Experimental validation extended to embryonic infection assays and computational screening of publicly available viral sequences.",
+          "population_setting": "The primary isolate originated from poultry experiencing an unexplained mortality event in Belgium during 2019. Subsequent laboratory evaluations utilized diverse avian tissue lines, organotypic chicken models, and developing avian embryos.",
+          "main_findings": "A distinct neuraminidase residue enables binding to host plasminogen, which collaborates with an unconventional hemagglutinin cleavage region to permit enzyme-independent viral activation. Introducing standard consensus sequences at these positions substantially diminished proteolytic processing, replication efficiency, and systemic distribution in laboratory models. Computational mapping identified additional circulating lineages harboring similar molecular signatures, indicating a wider pattern of unexpected virulence among otherwise mild strains.",
+          "public_health_relevance": "Characterizing these protein interactions establishes a molecular baseline for evaluating the threat level of emerging avian influenza variants. Such insights may strengthen predictive modeling efforts aimed at safeguarding commercial poultry operations from sudden pathogenic shifts.",
+          "limitations": "The experimental framework relies on engineered mutations and controlled laboratory environments that may not capture the full complexity of natural host immunity or environmental transmission routes. Consequently, observed replication patterns require further validation under field conditions.",
+          "gids_interpretation": "The described molecular pathways highlight specific genetic markers that could theoretically inform future genomic tracking protocols. These findings offer a conceptual foundation for variant prioritization without implying integration into current operational monitoring systems.",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.933,
+            "generated_at": "2026-08-13T22:07:45.366228+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        },
+        "zh": {
+          "research_question": "探讨特定低致病性禽流感病毒引发非预期高致死率的分子机制，以及血凝素裂解位点序列与神经氨酸酶介导的纤溶酶原招募如何协同影响病毒扩散与毒力。",
+          "study_design": "采用反向遗传学技术构建单突变及双突变病毒株，结合多种禽类细胞系、鸡类类器官体外培养模型、鸡胚体内感染实验以及生物信息学序列分析进行综合验证。",
+          "population_setting": "研究聚焦于家禽（鸡）及相关禽类宿主，通过体外细胞模型、鸡胚系统及计算生物学方法模拟病毒在禽类群体中的潜在传播特征。",
+          "main_findings": "神经氨酸酶第122位氨基酸是决定纤溶酶原结合的关键因素，其与异常的血凝素裂解位点序列共同促进病毒的非胰蛋白酶依赖性裂解与全身性复制。破坏任一环节均显著削弱病毒在实验室模型中的扩散能力与致病性。生物信息学筛查还识别出其他具备相似纤溶酶原招募特征的禽流感毒株。",
+          "public_health_relevance": "明确该分子协同作用有助于利用基因序列数据更准确地评估循环中低致病性禽流感毒株的潜在严重性与公共卫生风险。",
+          "limitations": "研究主要依赖体外细胞实验、鸡胚模型及计算机预测，尚未在成年活体家禽种群或真实流行病学场景中进行直接验证。",
+          "gids_interpretation": "文中揭示的蛋白互作模式与序列特征可作为背景资料，用于理解病毒变异趋势，并为相关数据的检索与归类提供分类学参考。",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.939,
+            "generated_at": "2026-08-13T22:08:10.466642+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        }
+      },
+      "why_it_matters_en": "Characterizing these protein interactions establishes a molecular baseline for evaluating the threat level of emerging avian influenza variants. Such insights may strengthen predictive modeling efforts aimed at safeguarding commercial poultry operations from sudden pathogenic shifts.",
+      "why_it_matters_zh": "明确该分子协同作用有助于利用基因序列数据更准确地评估循环中低致病性禽流感毒株的潜在严重性与公共卫生风险。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1128/mbio.02466-25",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41744684/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137467+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:d4f34da837688d03",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D038",
+          "disease_name_en": "Influenza",
+          "disease_name_zh": "流行性感冒",
+          "geographies": [
+            {
+              "code": "IE",
+              "name_en": "Ireland"
+            }
+          ],
+          "data_through": "2026-07-27",
+          "window": {
+            "label": "Last 4 weeks",
+            "current": 230.0,
+            "previous": 46.0,
+            "absolute_change": 184.0,
+            "change_pct": 400.0
+          },
+          "risk": {
+            "score": 65.5,
+            "level": "high",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_bd0dcc9a72ca9698eeaa7f9f",
+      "slug": "10-1016-j-ttbdis-2026-102609-bd0dcc9a",
+      "title": "Experimental evidence for milk-borne transmission of tick-borne encephalitis virus to suckling lambs",
+      "doi": "10.1016/j.ttbdis.2026.102609",
+      "pmid": null,
+      "journal": "Ticks and Tick-borne Diseases",
+      "publisher": "Elsevier BV",
+      "authors": [
+        "Katrine M Paulsen",
+        "Maria J Diekmann",
+        "Malene S Dieseth",
+        "Arnulf Soleng",
+        "Petra Strakova",
+        "Jiří Salát",
+        "Daniel Růžek",
+        "Karen A Krogfelt",
+        "Erik G Granquist",
+        "Rose Vikse",
+        "Snorre Stuen",
+        "Åshild K Andreassen"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-03-01T00:00:00+00:00",
+      "indexed_at": "2026-05-04T11:55:53+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://linkinghub.elsevier.com/retrieve/pii/S1877959X26000075",
+      "license_url": "https://www.elsevier.com/tdm/userlicense/1.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.594,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D205",
+          "slug": "tick-borne-encephalitis",
+          "name_en": "Tick-borne encephalitis",
+          "name_zh": "蜱传脑炎",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Transmission dynamics",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Tick-borne encephalitis. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与蜱传脑炎相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1016/j.ttbdis.2026.102609",
+        "publisher": "https://linkinghub.elsevier.com/retrieve/pii/S1877959X26000075"
+      },
+      "updated_at": "2026-08-13T16:05:48.137561+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:ab5fb8f49aaa0cf6",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D205",
+          "disease_name_en": "Tick-borne encephalitis",
+          "disease_name_zh": "蜱传脑炎",
+          "geographies": [
+            {
+              "code": "SE",
+              "name_en": "Sweden"
+            }
+          ],
+          "data_through": "2026-07-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 156.0,
+            "previous": 92.0,
+            "absolute_change": 64.0,
+            "change_pct": 69.57
+          },
+          "risk": {
+            "score": 46.1,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_414150e9ce4fe57a5508ad7c",
+      "slug": "10-1038-s41572-026-00685-y-414150e9",
+      "title": "Acute rheumatic fever and rheumatic heart disease.",
+      "doi": "10.1038/s41572-026-00685-y",
+      "pmid": "41748639",
+      "journal": "Nature reviews. Disease primers",
+      "publisher": null,
+      "authors": [
+        "Zühlke L",
+        "Beaton A",
+        "Engel M",
+        "Gomanju A",
+        "Kumar RK",
+        "Marangou J",
+        "Minja N",
+        "Moreland NJ",
+        "Okello E",
+        "Pulle J",
+        "Rwebembera J",
+        "Watkins D",
+        "Yilgwan C",
+        "Carapetis J"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-02-26T00:00:00+00:00",
+      "indexed_at": "2026-02-26T00:00:00+00:00",
+      "open_access_status": "unknown",
+      "open_access_url": null,
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.543,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D158",
+          "slug": "rheumatic-fever",
+          "name_en": "Rheumatic fever",
+          "name_zh": "风湿热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Treatment",
+          "confidence": 0.7100000000000001
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Rheumatic fever. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与风湿热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1038/s41572-026-00685-y",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41748639/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137519+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:f59d37329a1f6ece",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 28.0,
+            "previous": 18.0,
+            "absolute_change": 10.0,
+            "change_pct": 55.56
+          },
+          "risk": {
+            "score": 46.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    }
+  ],
+  "url": "/research/weekly/2026-W09/"
+}

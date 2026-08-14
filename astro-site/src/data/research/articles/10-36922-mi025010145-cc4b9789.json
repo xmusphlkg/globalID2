@@ -1,0 +1,248 @@
+{
+  "article_id": "lit_cc4b9789ac278157c69bba8f",
+  "slug": "10-36922-mi025010145-cc4b9789",
+  "title": "Ebola outbreak in the Democratic Republic of the Congo: Lessons from Kasai (2025) and emerging challenges from the Bundibugyo resurgence",
+  "doi": "10.36922/mi025010145",
+  "pmid": null,
+  "journal": "Microbes & Immunity",
+  "publisher": "AccScience Publishing",
+  "authors": [
+    "Muhammed Muhsin Varikkodan",
+    "Faisal Kunnathodi"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Commentary",
+  "published_at": "2026-07-10T00:00:00+00:00",
+  "indexed_at": "2026-07-14T10:05:05+00:00",
+  "open_access_status": "open",
+  "open_access_url": "https://accscience.com/journal/MI/articles/online_first/8215",
+  "license_url": "https://creativecommons.org/licenses/",
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.744,
+  "is_featured": false,
+  "diseases": [
+    {
+      "disease_id": "D050",
+      "slug": "ebola",
+      "name_en": "Ebola",
+      "name_zh": "埃博拉出血热",
+      "confidence": 0.82
+    }
+  ],
+  "countries": [],
+  "topics": [
+    {
+      "name": "Vaccination",
+      "confidence": 0.7100000000000001
+    },
+    {
+      "name": "Surveillance",
+      "confidence": 0.66
+    },
+    {
+      "name": "Outbreak investigation",
+      "confidence": 0.66
+    },
+    {
+      "name": "Transmission dynamics",
+      "confidence": 0.66
+    }
+  ],
+  "related_surveillance": [],
+  "summary": {
+    "en": {
+      "research_question": "This commentary evaluates operational and epidemiological takeaways from a recent provincial Ebola response while assessing preparedness gaps linked to a subsequent viral variant resurgence.",
+      "study_design": "The manuscript functions as a peer-reviewed narrative synthesis that reviews reported outbreak metrics and public health protocols rather than conducting original primary research.",
+      "population_setting": "The analysis focuses on communities within the Democratic Republic of the Congo impacted by two distinct viral strains, specifically highlighting Kasai Province and regions experiencing later Bundibugyo variant circulation.",
+      "main_findings": "The authors summarize intervention outcomes including ring vaccination coverage, isolation practices, and therapeutic referrals that were associated with lower fatality rates in the initial province. They also document substantial case and mortality totals for the subsequent outbreak, noting the absence of approved immunizations for that specific strain and the presence of international border crossings.",
+      "public_health_relevance": "By contrasting successful containment tactics with unresolved logistical barriers, the text underscores the importance of adaptable monitoring networks and region-specific medical countermeasures for managing recurring viral threats.",
+      "limitations": "As a narrative synthesis, the work does not generate primary quantitative datasets and relies entirely on summarized administrative reports and declared outbreak endpoints.",
+      "gids_interpretation": "The publication situates historical response mechanisms alongside current strategic uncertainties, offering a reference point for literature mapping related to vaccine development timelines and cross-jurisdictional transmission monitoring.",
+      "provenance": {
+        "generated_by": "literature-evidence-agent",
+        "model": "qwen3.7-flash",
+        "provider": "qwenai",
+        "quality_score": 0.936,
+        "generated_at": "2026-08-13T16:12:10.948270+00:00",
+        "editorially_approved": false,
+        "automatically_approved": true,
+        "automation_policy_version": "research-radar-autopilot.v1",
+        "publication_gate": "automated-quality-gate"
+      }
+    }
+  },
+  "why_it_matters_en": "By contrasting successful containment tactics with unresolved logistical barriers, the text underscores the importance of adaptable monitoring networks and region-specific medical countermeasures for managing recurring viral threats.",
+  "why_it_matters_zh": "这项近期Commentary因与埃博拉出血热相关而被收录。应用其结论前请阅读原始文献。",
+  "source_urls": {
+    "doi": "https://doi.org/10.36922/mi025010145",
+    "publisher": "https://accscience.com/journal/MI/articles/online_first/8215"
+  },
+  "updated_at": "2026-08-13T16:05:48.137331+00:00",
+  "related_signals": [
+    {
+      "signal_id": "event:36",
+      "section": "emerging",
+      "kind": "official_event",
+      "title": "Ebola disease caused by Bundibugyo virus - Democratic Republic of the Congo",
+      "disease_id": "D050",
+      "disease_name_en": "Ebola",
+      "disease_name_zh": "埃博拉出血热",
+      "geographies": [
+        {
+          "code": "CD",
+          "name_en": "Democratic Republic of the Congo"
+        }
+      ],
+      "data_through": "2026-08-01",
+      "window": {
+        "label": null,
+        "current": null,
+        "previous": null,
+        "absolute_change": null,
+        "change_pct": null
+      },
+      "risk": {
+        "score": null,
+        "level": null,
+        "confidence": "high"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    },
+    {
+      "signal_id": "event:37",
+      "section": "emerging",
+      "kind": "official_event",
+      "title": "Ebola disease caused by Bundibugyo virus, Democratic Republic of the Congo & Uganda",
+      "disease_id": "D050",
+      "disease_name_en": "Ebola",
+      "disease_name_zh": "埃博拉出血热",
+      "geographies": [
+        {
+          "code": "CD",
+          "name_en": "Democratic Republic of the Congo"
+        },
+        {
+          "code": "UG",
+          "name_en": "Uganda"
+        }
+      ],
+      "data_through": "2026-07-17",
+      "window": {
+        "label": null,
+        "current": null,
+        "previous": null,
+        "absolute_change": null,
+        "change_pct": null
+      },
+      "risk": {
+        "score": null,
+        "level": null,
+        "confidence": "high"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-cc4b9789ac278157c69bba8f",
+        "type": "article",
+        "label": "Ebola outbreak in the Democratic Republic of the Congo: Lessons from Kasai (2025) and emerging challenges from the Bundibugyo resurgence",
+        "slug": "10-36922-mi025010145-cc4b9789",
+        "url": "/research/articles/10-36922-mi025010145-cc4b9789/",
+        "published_at": "2026-07-10T00:00:00+00:00",
+        "study_type": "Commentary"
+      },
+      {
+        "id": "disease:d050",
+        "type": "disease",
+        "label": "Ebola",
+        "disease_id": "D050",
+        "name_zh": "埃博拉出血热",
+        "slug": "ebola",
+        "url": "/diseases/ebola/"
+      },
+      {
+        "id": "study-type:commentary",
+        "type": "study_type",
+        "label": "Commentary"
+      },
+      {
+        "id": "topic:outbreak-investigation",
+        "type": "topic",
+        "label": "Outbreak investigation"
+      },
+      {
+        "id": "topic:surveillance",
+        "type": "topic",
+        "label": "Surveillance"
+      },
+      {
+        "id": "topic:transmission-dynamics",
+        "type": "topic",
+        "label": "Transmission dynamics"
+      },
+      {
+        "id": "topic:vaccination",
+        "type": "topic",
+        "label": "Vaccination"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-cc4b9789ac278157c69bba8f|ABOUT_DISEASE|disease:d050",
+        "source": "article:lit-cc4b9789ac278157c69bba8f",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d050",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-cc4b9789ac278157c69bba8f|ADDRESSES_TOPIC|topic:outbreak-investigation",
+        "source": "article:lit-cc4b9789ac278157c69bba8f",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:outbreak-investigation",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-cc4b9789ac278157c69bba8f|ADDRESSES_TOPIC|topic:surveillance",
+        "source": "article:lit-cc4b9789ac278157c69bba8f",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:surveillance",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-cc4b9789ac278157c69bba8f|ADDRESSES_TOPIC|topic:transmission-dynamics",
+        "source": "article:lit-cc4b9789ac278157c69bba8f",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:transmission-dynamics",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-cc4b9789ac278157c69bba8f|ADDRESSES_TOPIC|topic:vaccination",
+        "source": "article:lit-cc4b9789ac278157c69bba8f",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccination",
+        "confidence": 0.7100000000000001
+      },
+      {
+        "id": "article:lit-cc4b9789ac278157c69bba8f|USES_STUDY_DESIGN|study-type:commentary",
+        "source": "article:lit-cc4b9789ac278157c69bba8f",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:commentary"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 7,
+      "edges": 6,
+      "articles": 1
+    }
+  }
+}

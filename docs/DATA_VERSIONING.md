@@ -68,6 +68,23 @@ it has no `releases/` directory or GitHub Release dependency.
 Long-term source retention belongs in the dedicated raw archive or other
 approved versioned object storage.
 
+Both GitHub publishers are incremental and resumable. The download publisher
+copies only changed time partitions and removes partitions no longer declared
+by its manifest. The raw publisher hashes source files, commits only added,
+updated, or removed paths, and splits files near GitHub's per-file limit. A
+transient GitHub transport failure is retried with bounded exponential backoff;
+if every attempt fails, the local commit is retained and pushed before the next
+run scans for new changes. Authentication, authorization, and divergent-history
+errors fail immediately instead of being hidden by retries.
+
+After site-download generation, the raw-archive and partitioned-download
+publishers run as separate child processes in parallel. Each repository remains
+single-writer and keeps its own lock/working tree. The pipeline waits for both
+publishers and aggregates their errors before building or deploying the public
+site, so parallelism cannot expose a site that references unpublished files.
+GitHub SSH publication uses `ssh.github.com:443` to avoid networks that
+intermittently block port 22.
+
 ## Enforcement
 
 Run the boundary check directly or as part of the normal project checks:

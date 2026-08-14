@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://globalinfectiousdisease.com/schemas/situation-room-v2.json",
+  "title": "GIDS Situation Room v2 snapshot",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "method_version",
+    "snapshot_id",
+    "snapshot_kind",
+    "period_key",
+    "checked_at",
+    "content_updated_at",
+    "data_through",
+    "coverage",
+    "freshness",
+    "increasing",
+    "respiratory",
+    "emerging",
+    "unusual",
+    "quality_gate"
+  ],
+  "properties": {
+    "schema_version": {"const": "situation_room.v2"},
+    "snapshot_kind": {"enum": ["daily", "weekly", "monthly"]},
+    "period_key": {"type": "string"},
+    "checked_at": {"type": "string", "format": "date-time"},
+    "content_updated_at": {"type": "string", "format": "date-time"},
+    "data_through": {"type": ["string", "null"], "format": "date"},
+    "coverage": {
+      "type": "object",
+      "required": ["source_series_count", "analyzed_series_count", "candidate_signal_count"]
+    },
+    "increasing": {"type": "array", "items": {"$ref": "#/$defs/signal"}},
+    "respiratory": {"type": "array"},
+    "emerging": {"type": "array"},
+    "unusual": {"type": "array", "items": {"$ref": "#/$defs/signal"}},
+    "quality_gate": {
+      "type": "object",
+      "required": ["status", "passed", "checks"]
+    }
+  },
+  "$defs": {
+    "signal": {
+      "type": "object",
+      "required": ["disease_id", "series_code", "metric_type", "unit", "window", "statistics", "risk", "data_through"],
+      "properties": {
+        "risk": {
+          "type": "object",
+          "required": ["score", "level", "confidence", "dimensions", "missing_dimensions"]
+        }
+      }
+    }
+  }
+}

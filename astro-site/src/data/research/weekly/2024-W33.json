@@ -1,0 +1,160 @@
+{
+  "week": "2024-W33",
+  "start_date": "2024-08-15",
+  "end_date": "2024-08-15",
+  "article_count": 1,
+  "disease_count": 8,
+  "country_count": 0,
+  "top_topics": [
+    "Surveillance",
+    "Transmission dynamics"
+  ],
+  "articles": [
+    {
+      "article_id": "lit_91c183b8229563e94d0195c1",
+      "slug": "10-2807-1560-7917-es-2024-29-33-2300655-91c183b8",
+      "title": "Differences between males and females in infectious diseases notifications in the EU/EEA, 2012 to 2021",
+      "doi": "10.2807/1560-7917.es.2024.29.33.2300655",
+      "pmid": "39149823",
+      "journal": "Eurosurveillance",
+      "publisher": "European Centre for Disease Control and Prevention (ECDC)",
+      "authors": [
+        "Julien Beauté",
+        "Francesco Innocenti"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2024-08-15T00:00:00+00:00",
+      "indexed_at": "2026-08-06T15:50:04+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC11328500",
+      "license_url": "http://creativecommons.org/licenses/by/4.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.474,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D068",
+          "slug": "acute-hepatitis-b",
+          "name_en": "Acute hepatitis B",
+          "name_zh": "急性乙型肝炎",
+          "confidence": 0.62
+        },
+        {
+          "disease_id": "D008",
+          "slug": "hepatitis-b",
+          "name_en": "Hepatitis B",
+          "name_zh": "乙型肝炎",
+          "confidence": 0.62
+        },
+        {
+          "disease_id": "D092",
+          "slug": "campylobacteriosis",
+          "name_en": "Campylobacteriosis",
+          "name_zh": "弯曲杆菌病",
+          "confidence": 0.62
+        },
+        {
+          "disease_id": "D094",
+          "slug": "chlamydia-trachomatis-infection",
+          "name_en": "Chlamydia trachomatis infection",
+          "name_zh": "沙眼衣原体感染",
+          "confidence": 0.62
+        },
+        {
+          "disease_id": "D108",
+          "slug": "listeriosis",
+          "name_en": "Listeriosis",
+          "name_zh": "李斯特菌病",
+          "confidence": 0.62
+        },
+        {
+          "disease_id": "D028",
+          "slug": "pertussis",
+          "name_en": "Pertussis",
+          "name_zh": "百日咳",
+          "confidence": 0.62
+        },
+        {
+          "disease_id": "D037",
+          "slug": "malaria",
+          "name_en": "Malaria",
+          "name_zh": "疟疾",
+          "confidence": 0.62
+        },
+        {
+          "disease_id": "D005",
+          "slug": "aids",
+          "name_en": "AIDS",
+          "name_zh": "艾滋病",
+          "confidence": 0.62
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Surveillance",
+          "confidence": 0.66
+        },
+        {
+          "name": "Transmission dynamics",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {
+        "zh": {
+          "research_question": "本研究旨在量化欧洲联盟及欧洲经济区各国传染病报告中的性别差异，并识别显著偏离区域平均水平的国家。",
+          "study_design": "该研究采用回顾性观察设计，分析了十年期的法定传染病监测数据。通过计算中位数与四分位距，并结合箱线图评估不同病原体、年份、国家及年龄组的分布特征。",
+          "population_setting": "研究对象涵盖欧盟及欧洲经济区成员国在二零一二至二零二一年间上报的法定传染病病例。纳入标准基于疾病负担阈值筛选出十六种特定感染性疾病。",
+          "main_findings": "不同传染病的报告比例呈现显著的性别分化。部分疾病在所有参与国均显示男性占比超过半数，而另一些疾病则以女性为主。特定感染的性别比例在不同年龄组间波动较大，且异常值多源于病例数较少的地区。",
+          "public_health_relevance": "明确此类人口统计学差异有助于优化公共卫生监测框架与资源分配策略。识别稳定的性别分布模式可为制定针对性筛查方案提供依据，并提示需关注检测可及性与行为因素对报告数据的影响。",
+          "limitations": "分析完全依赖常规报告系统数据，结果可能受各地检测习惯与医疗资源差异的干扰。部分统计异常由低发病率辖区的微小样本量导致，可能影响估计稳定性。研究未能将生物学因素与社会文化变量进行独立剥离。",
+          "gids_interpretation": "该文提供了区域内历史性别分布特征的描述性基线，为后续流行病学趋势对比建立参考坐标。内容仅用于界定监测语境，不指向实时疫情信号或动态风险预警。",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.945,
+            "generated_at": "2026-08-13T12:48:01.764918+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        },
+        "en": {
+          "research_question": "The investigation aims to measure sex-based disparities in reported infectious disease cases across European nations and identify jurisdictions that diverge from continental averages.",
+          "study_design": "This observational analysis processed routine surveillance records from a ten-year period to compute sex-specific case proportions and assess geographic variation using distributional statistics.",
+          "population_setting": "The dataset comprised notification records from European Union and European Economic Area member states between 2012 and 2021, narrowing the focus to sixteen pathogens that exceeded a defined disease burden threshold.",
+          "main_findings": "Notification records consistently indicated higher male proportions for infections such as HIV, hepatitis B, and malaria across all participating regions. In contrast, pathogens including pertussis and chlamydia exhibited female predominance in most areas. Age-stratified variability was most notable for chlamydia and listeriosis, while anomalous data points primarily originated from locations with limited case submissions.",
+          "public_health_relevance": "Tracking these consistent reporting patterns supports the characterization of epidemiological trends and may highlight how regional screening approaches or demographic factors intersect with disease surveillance.",
+          "limitations": "Anomalous statistical values were predominantly generated by jurisdictions with minimal case submissions. Furthermore, the evaluation depends on administrative notification records, which capture reporting and testing activities rather than direct measures of actual infection rates.",
+          "gids_interpretation": "This work supplies a decade-long reference framework for sex-disaggregated pathogen reporting within European public health systems. The documented patterns provide contextual benchmarks for interpreting future surveillance outputs and examining how demographic variables align with established reporting structures.",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.949,
+            "generated_at": "2026-08-13T12:47:32.712311+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        }
+      },
+      "why_it_matters_en": "Tracking these consistent reporting patterns supports the characterization of epidemiological trends and may highlight how regional screening approaches or demographic factors intersect with disease surveillance.",
+      "why_it_matters_zh": "明确此类人口统计学差异有助于优化公共卫生监测框架与资源分配策略。识别稳定的性别分布模式可为制定针对性筛查方案提供依据，并提示需关注检测可及性与行为因素对报告数据的影响。",
+      "source_urls": {
+        "doi": "https://doi.org/10.2807/1560-7917.es.2024.29.33.2300655",
+        "publisher": "https://www.eurosurveillance.org/content/10.2807/1560-7917.ES.2024.29.33.2300655",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/39149823/"
+      },
+      "updated_at": "2026-08-13T12:40:20.771725+00:00",
+      "related_signals": []
+    }
+  ],
+  "url": "/research/weekly/2024-W33/"
+}

@@ -1,0 +1,194 @@
+{
+  "article_id": "lit_5942f2ce2e3904a144e227ef",
+  "slug": "10-1016-j-cmi-2022-12-006-5942f2ce",
+  "title": "Antibiotic resistance associated with the COVID-19 pandemic: a systematic review and meta-analysis",
+  "doi": "10.1016/j.cmi.2022.12.006",
+  "pmid": "36509377",
+  "journal": "Clinical Microbiology and Infection",
+  "publisher": "Elsevier BV",
+  "authors": [
+    "Bradley J. Langford",
+    "Jean-Paul R. Soucy",
+    "Valerie Leung",
+    "Miranda So",
+    "Angela T.H. Kwan",
+    "Jacob S. Portnoff",
+    "Silvia Bertagnolio",
+    "Sumit Raybardhan",
+    "Derek R. MacFadden",
+    "Nick Daneman"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Systematic review",
+  "published_at": "2023-03-01T00:00:00+00:00",
+  "indexed_at": "2026-08-12T20:17:11+00:00",
+  "open_access_status": "open",
+  "open_access_url": "https://europepmc.org/articles/PMC9733301",
+  "license_url": "https://www.elsevier.com/tdm/userlicense/1.0/",
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.611,
+  "is_featured": true,
+  "diseases": [
+    {
+      "disease_id": "D004",
+      "slug": "covid-19",
+      "name_en": "COVID-19",
+      "name_zh": "新型冠状病毒感染",
+      "confidence": 0.82
+    }
+  ],
+  "countries": [],
+  "topics": [
+    {
+      "name": "Antimicrobial resistance",
+      "confidence": 0.7100000000000001
+    },
+    {
+      "name": "Surveillance",
+      "confidence": 0.66
+    },
+    {
+      "name": "Transmission dynamics",
+      "confidence": 0.66
+    }
+  ],
+  "related_surveillance": [],
+  "summary": {
+    "en": {
+      "research_question": "The authors sought to characterize how the coronavirus outbreak influenced bacterial resistance patterns within medical environments.",
+      "study_design": "Researchers conducted a systematic review and random-effects meta-analysis of literature indexed through early 2022.",
+      "population_setting": "The pooled data primarily originated from inpatient wards and acute care facilities.",
+      "main_findings": "Statistical pooling revealed stable rates for methicillin-resistant Staphylococcus aureus and vancomycin-resistant enterococci throughout the crisis period. Resistant Gram-negative pathogens showed a non-significant upward trajectory, while facilities lacking documented infection control or antibiotic management initiatives demonstrated higher resistance proportions. Wide variability in reporting standards and metric definitions complicated cross-study comparisons.",
+      "public_health_relevance": "Monitoring pathogen adaptation during large-scale viral emergencies underscores the necessity of robust clinical oversight mechanisms. Maintaining rigorous hygiene protocols and drug management frameworks appears critical for containing resistant bacterial spread.",
+      "limitations": "Marked inconsistency in how resistance levels were quantified and documented across the reviewed papers reduces analytical precision. The heavy concentration of hospital-based reports may limit extrapolation to outpatient or community environments.",
+      "gids_interpretation": "This work functions as a retrospective synthesis of historical resistance trends tied to a recent global health emergency. Its methodological framework serves as an archival reference for tracking past epidemiological patterns rather than indicating active monitoring capacity.",
+      "provenance": {
+        "generated_by": "literature-evidence-agent",
+        "model": "qwen3.7-flash",
+        "provider": "qwenai",
+        "quality_score": 0.958,
+        "generated_at": "2026-08-13T12:45:17.094365+00:00",
+        "editorially_approved": true,
+        "automatically_approved": false,
+        "automation_policy_version": null,
+        "publication_gate": "human-review-required"
+      }
+    },
+    "zh": {
+      "research_question": "本研究旨在评估新冠疫情流行期间对各类医疗环境中抗菌药物耐药性产生的整体影响。",
+      "study_design": "该工作采用系统综述结合荟萃分析的方法，检索了指定医学数据库并纳入符合条件的观察性研究，随后运用随机效应模型进行数据合并。",
+      "population_setting": "纳入分析的原始文献主要来源于医院环境，且未对受试人群类型设定严格限制。",
+      "main_findings": "综合数据显示，疫情期间耐甲氧西林金黄色葡萄球菌与万古霉素肠球菌的相关指标未出现显著波动。耐药革兰阴性菌呈现非统计学意义的上升倾向，且缺乏强化感染控制或抗菌药物管理项目的研究与耐药率升高存在关联，但组间差异检验未达到统计显著水平。",
+      "public_health_relevance": "结果提示在应对重大公共卫生事件时，持续优化感染防控措施、规范抗菌药物使用流程以及完善耐药性监测网络具有现实意义。",
+      "limitations": "各纳入研究在耐药性评价标准的选择以及具体耐药率报告方面存在较大的方法学异质性。",
+      "gids_interpretation": "该文献作为系统性证据汇总，为理解重大传染病流行期与细菌耐药趋势之间的宏观联系提供了学术背景。其核心作用在于梳理不同机构间的监测数据差异，而非直接映射或确认实时流行病学信号。",
+      "provenance": {
+        "generated_by": "literature-evidence-agent",
+        "model": "qwen3.7-flash",
+        "provider": "qwenai",
+        "quality_score": 0.955,
+        "generated_at": "2026-08-13T12:45:45.056933+00:00",
+        "editorially_approved": true,
+        "automatically_approved": false,
+        "automation_policy_version": null,
+        "publication_gate": "human-review-required"
+      }
+    }
+  },
+  "why_it_matters_en": "Monitoring pathogen adaptation during large-scale viral emergencies underscores the necessity of robust clinical oversight mechanisms. Maintaining rigorous hygiene protocols and drug management frameworks appears critical for containing resistant bacterial spread.",
+  "why_it_matters_zh": "结果提示在应对重大公共卫生事件时，持续优化感染防控措施、规范抗菌药物使用流程以及完善耐药性监测网络具有现实意义。",
+  "source_urls": {
+    "doi": "https://doi.org/10.1016/j.cmi.2022.12.006",
+    "publisher": "https://linkinghub.elsevier.com/retrieve/pii/S1198743X22006103",
+    "pubmed": "https://pubmed.ncbi.nlm.nih.gov/36509377/"
+  },
+  "updated_at": "2026-08-13T21:36:49.407783+00:00",
+  "related_signals": [],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-5942f2ce2e3904a144e227ef",
+        "type": "article",
+        "label": "Antibiotic resistance associated with the COVID-19 pandemic: a systematic review and meta-analysis",
+        "slug": "10-1016-j-cmi-2022-12-006-5942f2ce",
+        "url": "/research/articles/10-1016-j-cmi-2022-12-006-5942f2ce/",
+        "published_at": "2023-03-01T00:00:00+00:00",
+        "study_type": "Systematic review"
+      },
+      {
+        "id": "disease:d004",
+        "type": "disease",
+        "label": "COVID-19",
+        "disease_id": "D004",
+        "name_zh": "新型冠状病毒感染",
+        "slug": "covid-19",
+        "url": "/diseases/covid-19/"
+      },
+      {
+        "id": "study-type:systematic-review",
+        "type": "study_type",
+        "label": "Systematic review"
+      },
+      {
+        "id": "topic:antimicrobial-resistance",
+        "type": "topic",
+        "label": "Antimicrobial resistance"
+      },
+      {
+        "id": "topic:surveillance",
+        "type": "topic",
+        "label": "Surveillance"
+      },
+      {
+        "id": "topic:transmission-dynamics",
+        "type": "topic",
+        "label": "Transmission dynamics"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-5942f2ce2e3904a144e227ef|ABOUT_DISEASE|disease:d004",
+        "source": "article:lit-5942f2ce2e3904a144e227ef",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d004",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-5942f2ce2e3904a144e227ef|ADDRESSES_TOPIC|topic:antimicrobial-resistance",
+        "source": "article:lit-5942f2ce2e3904a144e227ef",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:antimicrobial-resistance",
+        "confidence": 0.7100000000000001
+      },
+      {
+        "id": "article:lit-5942f2ce2e3904a144e227ef|ADDRESSES_TOPIC|topic:surveillance",
+        "source": "article:lit-5942f2ce2e3904a144e227ef",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:surveillance",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-5942f2ce2e3904a144e227ef|ADDRESSES_TOPIC|topic:transmission-dynamics",
+        "source": "article:lit-5942f2ce2e3904a144e227ef",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:transmission-dynamics",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-5942f2ce2e3904a144e227ef|USES_STUDY_DESIGN|study-type:systematic-review",
+        "source": "article:lit-5942f2ce2e3904a144e227ef",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:systematic-review"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 6,
+      "edges": 5,
+      "articles": 1
+    }
+  }
+}

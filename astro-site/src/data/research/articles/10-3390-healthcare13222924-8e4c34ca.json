@@ -1,0 +1,167 @@
+{
+  "article_id": "lit_8e4c34ca242427962dfa972b",
+  "slug": "10-3390-healthcare13222924-8e4c34ca",
+  "title": "“It Can Hurt Your Heart”: A Co-Designed Cross-Sectional Survey Exploring Pacific People’s Understanding of Rheumatic Fever in Auckland, New Zealand",
+  "doi": "10.3390/healthcare13222924",
+  "pmid": "41302313",
+  "journal": "Healthcare",
+  "publisher": "MDPI AG",
+  "authors": [
+    "Siobhan Tu’akoi",
+    "Malakai ‘Ofanoa",
+    "Samuela ‘Ofanoa",
+    "Melenaite Tohi",
+    "Maryann Heather",
+    "Hinamaha Lutui",
+    "Rose Lamont",
+    "Elizabeth Fanueli",
+    "Felicity Goodyear-Smith"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Cross-sectional study",
+  "published_at": "2025-11-15T00:00:00+00:00",
+  "indexed_at": "2026-07-22T20:51:18+00:00",
+  "open_access_status": "open",
+  "open_access_url": "https://europepmc.org/articles/PMC12652848",
+  "license_url": "https://creativecommons.org/licenses/by/4.0/",
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.471,
+  "is_featured": false,
+  "diseases": [
+    {
+      "disease_id": "D158",
+      "slug": "rheumatic-fever",
+      "name_en": "Rheumatic fever",
+      "name_zh": "风湿热",
+      "confidence": 0.82
+    }
+  ],
+  "countries": [
+    {
+      "code": "NZ",
+      "name_en": "New Zealand",
+      "name_zh": null,
+      "confidence": 0.78
+    }
+  ],
+  "topics": [],
+  "related_surveillance": [
+    {
+      "disease_id": "D158",
+      "disease_name_en": "Rheumatic fever",
+      "disease_name_zh": "风湿热",
+      "disease_slug": "rheumatic-fever",
+      "country_code": "NZ",
+      "country_name_en": "New Zealand",
+      "url": "/diseases/rheumatic-fever/",
+      "method": "high-confidence article geography intersected with GIDS series coverage"
+    }
+  ],
+  "summary": {},
+  "why_it_matters_en": "This recent cross-sectional study is indexed for its relevance to Rheumatic fever. Read the original source before applying its findings.",
+  "why_it_matters_zh": "这项近期Cross-sectional study因与风湿热相关而被收录。应用其结论前请阅读原始文献。",
+  "source_urls": {
+    "doi": "https://doi.org/10.3390/healthcare13222924",
+    "publisher": "https://www.mdpi.com/2227-9032/13/22/2924",
+    "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41302313/"
+  },
+  "updated_at": "2026-08-13T16:05:48.137484+00:00",
+  "related_signals": [
+    {
+      "signal_id": "signal:f59d37329a1f6ece",
+      "section": "increasing",
+      "kind": "statistical_signal",
+      "title": null,
+      "disease_id": "D158",
+      "disease_name_en": "Rheumatic fever",
+      "disease_name_zh": "风湿热",
+      "geographies": [
+        {
+          "code": "NZ",
+          "name_en": "New Zealand"
+        }
+      ],
+      "data_through": "2026-06-01",
+      "window": {
+        "label": "Latest complete month",
+        "current": 28.0,
+        "previous": 18.0,
+        "absolute_change": 10.0,
+        "change_pct": 55.56
+      },
+      "risk": {
+        "score": 46.5,
+        "level": "moderate",
+        "confidence": "low"
+      },
+      "relation_level": "exact_disease_geography",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-8e4c34ca242427962dfa972b",
+        "type": "article",
+        "label": "“It Can Hurt Your Heart”: A Co-Designed Cross-Sectional Survey Exploring Pacific People’s Understanding of Rheumatic Fever in Auckland, New Zealand",
+        "slug": "10-3390-healthcare13222924-8e4c34ca",
+        "url": "/research/articles/10-3390-healthcare13222924-8e4c34ca/",
+        "published_at": "2025-11-15T00:00:00+00:00",
+        "study_type": "Cross-sectional study"
+      },
+      {
+        "id": "country:nz",
+        "type": "country",
+        "label": "New Zealand",
+        "code": "NZ",
+        "url": "/countries/nz/"
+      },
+      {
+        "id": "disease:d158",
+        "type": "disease",
+        "label": "Rheumatic fever",
+        "disease_id": "D158",
+        "name_zh": "风湿热",
+        "slug": "rheumatic-fever",
+        "url": "/diseases/rheumatic-fever/"
+      },
+      {
+        "id": "study-type:cross-sectional-study",
+        "type": "study_type",
+        "label": "Cross-sectional study"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-8e4c34ca242427962dfa972b|ABOUT_DISEASE|disease:d158",
+        "source": "article:lit-8e4c34ca242427962dfa972b",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d158",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-8e4c34ca242427962dfa972b|STUDIED_IN|country:nz",
+        "source": "article:lit-8e4c34ca242427962dfa972b",
+        "relation": "STUDIED_IN",
+        "target": "country:nz",
+        "confidence": 0.78
+      },
+      {
+        "id": "article:lit-8e4c34ca242427962dfa972b|USES_STUDY_DESIGN|study-type:cross-sectional-study",
+        "source": "article:lit-8e4c34ca242427962dfa972b",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:cross-sectional-study"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 4,
+      "edges": 3,
+      "articles": 1
+    }
+  }
+}

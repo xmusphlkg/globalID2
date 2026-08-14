@@ -1,0 +1,189 @@
+{
+  "article_id": "lit_49548bf601373d3d1281a854",
+  "slug": "10-2903-j-efsa-2025-9761-49548bf6",
+  "title": "Avian Influenza annual report 2024.",
+  "doi": "10.2903/j.efsa.2025.9761",
+  "pmid": "41404625",
+  "journal": "EFSA journal. European Food Safety Authority",
+  "publisher": null,
+  "authors": [
+    "Abrahantes JC",
+    "Aznar I",
+    "Boom M",
+    "Catalin I",
+    "Dórea F",
+    "Grant M",
+    "Mulligan KF",
+    "Zancanaro G"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Journal article",
+  "published_at": "2025-12-15T00:00:00+00:00",
+  "indexed_at": "2025-12-17T00:00:00+00:00",
+  "open_access_status": "open",
+  "open_access_url": "https://europepmc.org/articles/PMC12703412",
+  "license_url": null,
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.623,
+  "is_featured": false,
+  "diseases": [
+    {
+      "disease_id": "D038",
+      "slug": "influenza",
+      "name_en": "Influenza",
+      "name_zh": "流行性感冒",
+      "confidence": 0.9
+    },
+    {
+      "disease_id": "D014",
+      "slug": "h5n1",
+      "name_en": "H5N1",
+      "name_zh": "人感染高致病性禽流感",
+      "confidence": 0.62
+    }
+  ],
+  "countries": [],
+  "topics": [
+    {
+      "name": "One Health",
+      "confidence": 0.7100000000000001
+    },
+    {
+      "name": "Surveillance",
+      "confidence": 0.66
+    }
+  ],
+  "related_surveillance": [],
+  "summary": {},
+  "why_it_matters_en": "This recent journal article is indexed for its relevance to Influenza. Read the original source before applying its findings.",
+  "why_it_matters_zh": "这项近期Journal article因与流行性感冒相关而被收录。应用其结论前请阅读原始文献。",
+  "source_urls": {
+    "doi": "https://doi.org/10.2903/j.efsa.2025.9761",
+    "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41404625/"
+  },
+  "updated_at": "2026-08-13T16:05:48.137457+00:00",
+  "related_signals": [
+    {
+      "signal_id": "signal:d4f34da837688d03",
+      "section": "increasing",
+      "kind": "statistical_signal",
+      "title": null,
+      "disease_id": "D038",
+      "disease_name_en": "Influenza",
+      "disease_name_zh": "流行性感冒",
+      "geographies": [
+        {
+          "code": "IE",
+          "name_en": "Ireland"
+        }
+      ],
+      "data_through": "2026-07-27",
+      "window": {
+        "label": "Last 4 weeks",
+        "current": 230.0,
+        "previous": 46.0,
+        "absolute_change": 184.0,
+        "change_pct": 400.0
+      },
+      "risk": {
+        "score": 65.5,
+        "level": "high",
+        "confidence": "low"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-49548bf601373d3d1281a854",
+        "type": "article",
+        "label": "Avian Influenza annual report 2024.",
+        "slug": "10-2903-j-efsa-2025-9761-49548bf6",
+        "url": "/research/articles/10-2903-j-efsa-2025-9761-49548bf6/",
+        "published_at": "2025-12-15T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "disease:d014",
+        "type": "disease",
+        "label": "H5N1",
+        "disease_id": "D014",
+        "name_zh": "人感染高致病性禽流感",
+        "slug": "h5n1",
+        "url": "/diseases/h5n1/"
+      },
+      {
+        "id": "disease:d038",
+        "type": "disease",
+        "label": "Influenza",
+        "disease_id": "D038",
+        "name_zh": "流行性感冒",
+        "slug": "influenza",
+        "url": "/diseases/influenza/"
+      },
+      {
+        "id": "study-type:journal-article",
+        "type": "study_type",
+        "label": "Journal article"
+      },
+      {
+        "id": "topic:one-health",
+        "type": "topic",
+        "label": "One Health"
+      },
+      {
+        "id": "topic:surveillance",
+        "type": "topic",
+        "label": "Surveillance"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-49548bf601373d3d1281a854|ABOUT_DISEASE|disease:d014",
+        "source": "article:lit-49548bf601373d3d1281a854",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d014",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-49548bf601373d3d1281a854|ABOUT_DISEASE|disease:d038",
+        "source": "article:lit-49548bf601373d3d1281a854",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d038",
+        "confidence": 0.9
+      },
+      {
+        "id": "article:lit-49548bf601373d3d1281a854|ADDRESSES_TOPIC|topic:one-health",
+        "source": "article:lit-49548bf601373d3d1281a854",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:one-health",
+        "confidence": 0.7100000000000001
+      },
+      {
+        "id": "article:lit-49548bf601373d3d1281a854|ADDRESSES_TOPIC|topic:surveillance",
+        "source": "article:lit-49548bf601373d3d1281a854",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:surveillance",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-49548bf601373d3d1281a854|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-49548bf601373d3d1281a854",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 6,
+      "edges": 5,
+      "articles": 1
+    }
+  }
+}

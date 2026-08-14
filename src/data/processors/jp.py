@@ -173,6 +173,10 @@ class JPWeeklyUpdater:
                         "Cases": str(max(0, cases)),
                         "CurrentWeekFlag": _norm_text(row.get("Current week, flag", "")),
                         "Source": self.source_name,
+                        # The JIHS endpoint is the IDWR preliminary/rapid table;
+                        # delayed reports and discarded cases revise prior weeks.
+                        "DatasetStatus": "provisional",
+                        "IsProvisional": "true",
                         "__source_file": csv_path.name,
                     }
                 )

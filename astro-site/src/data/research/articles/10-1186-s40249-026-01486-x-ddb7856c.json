@@ -1,0 +1,173 @@
+{
+  "article_id": "lit_ddb7856cf6a4d89e3e1f82d5",
+  "slug": "10-1186-s40249-026-01486-x-ddb7856c",
+  "title": "Phytochemical synergy in artemisia annua herbal tea against malaria: a systematic review of its efficacy and safety in the context of emerging Pfkelch13 resistance",
+  "doi": "10.1186/s40249-026-01486-x",
+  "pmid": null,
+  "journal": "Infectious Diseases of Poverty",
+  "publisher": "Springer Science and Business Media LLC",
+  "authors": [
+    "Jérôme Munyangi wa Nkola",
+    "Pierre Akilimali Zalagile",
+    "Hendrick Lukuke Mbutshu",
+    "Spartacus Kabala Munyemo",
+    "Imani Ramazani Bin Eradi",
+    "Alioune Camara"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Systematic review",
+  "published_at": "2026-08-13T00:00:00+00:00",
+  "indexed_at": "2026-08-13T09:28:25+00:00",
+  "open_access_status": "open",
+  "open_access_url": "https://link.springer.com/10.1186/s40249-026-01486-x",
+  "license_url": "https://creativecommons.org/licenses/by/4.0",
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.743,
+  "is_featured": false,
+  "diseases": [
+    {
+      "disease_id": "D037",
+      "slug": "malaria",
+      "name_en": "Malaria",
+      "name_zh": "疟疾",
+      "confidence": 0.86
+    }
+  ],
+  "countries": [],
+  "topics": [
+    {
+      "name": "Treatment",
+      "confidence": 0.7100000000000001
+    },
+    {
+      "name": "Surveillance",
+      "confidence": 0.66
+    }
+  ],
+  "related_surveillance": [],
+  "summary": {
+    "en": {
+      "research_question": "This review evaluates how effectively whole-plant Artemisia annua herbal tea reduces Plasmodium falciparum infections compared to standard treatments, while assessing safety profiles and potential impacts on drug resistance patterns.",
+      "study_design": "The authors performed a PRISMA-compliant systematic review aggregating data from randomized controlled trials, quasi-experimental designs, laboratory synergy assays, and murine infection models published over a twenty-five-year span.",
+      "population_setting": "Included participants originated from human clinical trials, while experimental components utilized rodent models infected with diverse parasite strains, including those exhibiting multidrug resistance and specific genetic mutations.",
+      "main_findings": "Laboratory analyses revealed that the unrefined plant extract produced stronger synergistic inhibition and delayed resistance development relative to isolated artemisinin compounds. Clinical trial records indicated swift initial parasite reduction but consistently poor day-28 cure rates that remained substantially below established combination therapy thresholds. Documented adverse reactions were typically minor, though comprehensive safety metrics for pediatric, maternal, and medically complex cohorts were entirely absent.",
+      "public_health_relevance": "The pronounced difference between rapid initial clearance and prolonged parasitological failure positions the botanical infusion as a supplementary measure rather than a definitive monotherapy in endemic regions.",
+      "limitations": "The synthesis identifies a critical shortage of rigorous safety and efficacy documentation for vulnerable groups, including young children, pregnant individuals, and patients with organ impairment. Furthermore, observed delays in resistance emergence within animal models have not yet been replicated in actual clinical environments across Africa.",
+      "gids_interpretation": "This publication offers a consolidated assessment of botanical intervention outcomes and pharmacological interactions relevant to malaria management discourse. Its cataloging within literature tracking systems aids researchers in monitoring alternative therapeutic evaluations and resistance pattern discussions without implying alignment with active outbreak detection mechanisms.",
+      "provenance": {
+        "generated_by": "literature-evidence-agent",
+        "model": "qwen3.7-flash",
+        "provider": "qwenai",
+        "quality_score": 0.945,
+        "generated_at": "2026-08-13T22:06:49.521849+00:00",
+        "editorially_approved": false,
+        "automatically_approved": true,
+        "automation_policy_version": "research-radar-autopilot.v1",
+        "publication_gate": "automated-quality-gate"
+      }
+    },
+    "zh": {
+      "research_question": "在恶性疟原虫Pfkelch13基因突变引发青蒿素耐药性上升的背景下，评估全株黄花蒿草药茶的治疗效果与安全性。",
+      "study_design": "该研究遵循PRISMA 2020规范开展系统评价，检索了六项数据库截至2025年底的相关文献。研究纳入了随机对照试验、类实验设计、体外协同测定及啮齿动物模型，并采用多项标准进行独立质量评级与定性合成。",
+      "population_setting": "分析对象涵盖接受草药干预的临床患者群体以及携带特定耐药突变的实验动物模型。文献明确指出针对婴幼儿、孕产妇及合并肝肾疾病人群的用药安全记录存在显著缺口。",
+      "main_findings": "全株制剂包含四十余种活性成分，通过多靶点途径产生协同效应，其体外抑制浓度显著优于纯化单体。动物实验显示该复方延缓稳定耐药性形成的速度约为纯化药物的三倍。临床数据显示其可在短期内快速降低寄生虫载量，但二十八天治愈率普遍未达到现行联合疗法基准，且不良事件以轻度消化道反应为主。",
+      "public_health_relevance": "面对单一成分药物耐药压力，该植物的多组分特性为延缓抗性演化提供了理论依据，但临床治愈率的客观差距表明其现阶段仅宜作为辅助干预措施。相关结论有助于指导后续针对性临床试验的设计方向。",
+      "limitations": "部分临床试验未能提供完整的二十八天治愈率直接对比数据，影响了疗效基准的精确评估。此外，高危亚群的安全数据严重匮乏，且动物模型中观察到的耐药调控现象尚未在实地流行环境中获得临床复现。",
+      "gids_interpretation": "本条目聚焦于系统评价所呈现的植物药多靶点药理特征与实际临床转归之间的差异，旨在厘清该传统制剂在现代抗疟体系中的学术定位。内容仅用于说明文献的研究脉络与知识贡献，不涉及任何实时监测信号的关联或推断。",
+      "provenance": {
+        "generated_by": "literature-evidence-agent",
+        "model": "qwen3.7-flash",
+        "provider": "qwenai",
+        "quality_score": 0.952,
+        "generated_at": "2026-08-13T22:07:17.001223+00:00",
+        "editorially_approved": false,
+        "automatically_approved": true,
+        "automation_policy_version": "research-radar-autopilot.v1",
+        "publication_gate": "automated-quality-gate"
+      }
+    }
+  },
+  "why_it_matters_en": "The pronounced difference between rapid initial clearance and prolonged parasitological failure positions the botanical infusion as a supplementary measure rather than a definitive monotherapy in endemic regions.",
+  "why_it_matters_zh": "面对单一成分药物耐药压力，该植物的多组分特性为延缓抗性演化提供了理论依据，但临床治愈率的客观差距表明其现阶段仅宜作为辅助干预措施。相关结论有助于指导后续针对性临床试验的设计方向。",
+  "source_urls": {
+    "doi": "https://doi.org/10.1186/s40249-026-01486-x",
+    "publisher": "https://link.springer.com/10.1186/s40249-026-01486-x"
+  },
+  "updated_at": "2026-08-14T03:36:57.710342+00:00",
+  "related_signals": [],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-ddb7856cf6a4d89e3e1f82d5",
+        "type": "article",
+        "label": "Phytochemical synergy in artemisia annua herbal tea against malaria: a systematic review of its efficacy and safety in the context of emerging Pfkelch13 resistance",
+        "slug": "10-1186-s40249-026-01486-x-ddb7856c",
+        "url": "/research/articles/10-1186-s40249-026-01486-x-ddb7856c/",
+        "published_at": "2026-08-13T00:00:00+00:00",
+        "study_type": "Systematic review"
+      },
+      {
+        "id": "disease:d037",
+        "type": "disease",
+        "label": "Malaria",
+        "disease_id": "D037",
+        "name_zh": "疟疾",
+        "slug": "malaria",
+        "url": "/diseases/malaria/"
+      },
+      {
+        "id": "study-type:systematic-review",
+        "type": "study_type",
+        "label": "Systematic review"
+      },
+      {
+        "id": "topic:surveillance",
+        "type": "topic",
+        "label": "Surveillance"
+      },
+      {
+        "id": "topic:treatment",
+        "type": "topic",
+        "label": "Treatment"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-ddb7856cf6a4d89e3e1f82d5|ABOUT_DISEASE|disease:d037",
+        "source": "article:lit-ddb7856cf6a4d89e3e1f82d5",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d037",
+        "confidence": 0.86
+      },
+      {
+        "id": "article:lit-ddb7856cf6a4d89e3e1f82d5|ADDRESSES_TOPIC|topic:surveillance",
+        "source": "article:lit-ddb7856cf6a4d89e3e1f82d5",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:surveillance",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-ddb7856cf6a4d89e3e1f82d5|ADDRESSES_TOPIC|topic:treatment",
+        "source": "article:lit-ddb7856cf6a4d89e3e1f82d5",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:treatment",
+        "confidence": 0.7100000000000001
+      },
+      {
+        "id": "article:lit-ddb7856cf6a4d89e3e1f82d5|USES_STUDY_DESIGN|study-type:systematic-review",
+        "source": "article:lit-ddb7856cf6a4d89e3e1f82d5",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:systematic-review"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 5,
+      "edges": 4,
+      "articles": 1
+    }
+  }
+}

@@ -1,0 +1,303 @@
+{
+  "week": "2026-W15",
+  "start_date": "2026-04-08",
+  "end_date": "2026-04-11",
+  "article_count": 3,
+  "disease_count": 3,
+  "country_count": 2,
+  "top_topics": [
+    "Vaccination",
+    "Diagnostics",
+    "Antimicrobial resistance"
+  ],
+  "articles": [
+    {
+      "article_id": "lit_257a6234ca29a1273b0be69a",
+      "slug": "10-1080-22221751-2026-2640705-257a6234",
+      "title": "Tick-borne encephalitis in the Åland Islands, Finland: incidence and disease course since the implementation of a general TBE vaccination programme.",
+      "doi": "10.1080/22221751.2026.2640705",
+      "pmid": "41778286",
+      "journal": "Emerging microbes & infections",
+      "publisher": null,
+      "authors": [
+        "Tikkala J",
+        "Jansson C",
+        "Häggblom G",
+        "Ringbom M",
+        "Grunér M",
+        "Nyman D",
+        "Pitkäpaasi M",
+        "Sjöwall J",
+        "Nordberg M"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-04-08T00:00:00+00:00",
+      "indexed_at": "2026-03-04T00:00:00+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC13063329",
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.642,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D205",
+          "slug": "tick-borne-encephalitis",
+          "name_en": "Tick-borne encephalitis",
+          "name_zh": "蜱传脑炎",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [
+        {
+          "code": "FI",
+          "name_en": "Finland",
+          "name_zh": null,
+          "confidence": 0.78
+        }
+      ],
+      "topics": [
+        {
+          "name": "Vaccination",
+          "confidence": 0.66
+        },
+        {
+          "name": "Diagnostics",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [
+        {
+          "disease_id": "D205",
+          "disease_name_en": "Tick-borne encephalitis",
+          "disease_name_zh": "蜱传脑炎",
+          "disease_slug": "tick-borne-encephalitis",
+          "country_code": "FI",
+          "country_name_en": "Finland",
+          "url": "/diseases/tick-borne-encephalitis/",
+          "method": "high-confidence article geography intersected with GIDS series coverage"
+        }
+      ],
+      "summary": {
+        "en": {
+          "research_question": "What are the epidemiological trends, clinical characteristics, and long-term prognoses of tick-borne encephalitis in an endemic Finnish archipelago after routine immunization began?",
+          "study_design": "A retrospective observational analysis examining medical records and laboratory results for confirmed cases spanning nearly two decades.",
+          "population_setting": "Individuals diagnosed with the viral infection in the Åland Islands, Finland, between 2006 and 2023 using standardized European diagnostic standards.",
+          "main_findings": "The analysis identified 145 cases with a median annual incidence of twenty-nine per one hundred thousand residents. Hospitalization was common, disease severity increased with patient age, and two deaths occurred. Most survivors regained clinical function within two years, though partial vaccination histories showed higher rates of breakthrough illness.",
+          "public_health_relevance": "Stable regional case counts contrast with rising trends elsewhere, suggesting potential benefits from sustained immunization efforts. Monitoring disease patterns across different vaccination statuses may help guide future preventive planning.",
+          "limitations": "The retrospective chart review design inherently limits causal inference and introduces potential documentation biases. The absence of a concurrent comparison group restricts the ability to isolate intervention effects from other epidemiological factors.",
+          "gids_interpretation": "This article documents longitudinal clinical and epidemiological observations for a specific arbovirus within a defined geographic area. The reported incidence figures and recovery rates offer contextual reference points for understanding regional disease dynamics.",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.952,
+            "generated_at": "2026-08-13T23:07:51.642008+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        }
+      },
+      "why_it_matters_en": "Stable regional case counts contrast with rising trends elsewhere, suggesting potential benefits from sustained immunization efforts. Monitoring disease patterns across different vaccination statuses may help guide future preventive planning.",
+      "why_it_matters_zh": "这项近期Journal article因与蜱传脑炎相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1080/22221751.2026.2640705",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41778286/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137590+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:ab5fb8f49aaa0cf6",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D205",
+          "disease_name_en": "Tick-borne encephalitis",
+          "disease_name_zh": "蜱传脑炎",
+          "geographies": [
+            {
+              "code": "SE",
+              "name_en": "Sweden"
+            }
+          ],
+          "data_through": "2026-07-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 156.0,
+            "previous": 92.0,
+            "absolute_change": 64.0,
+            "change_pct": 69.57
+          },
+          "risk": {
+            "score": 46.1,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_7542126aa5e935152360e09f",
+      "slug": "10-1016-j-bmc-2026-118663-7542126a",
+      "title": "Development of Thieno[2,3-b]pyridin-6(7H)-one derivatives against drug-resistant Mycobacterium tuberculosis.",
+      "doi": "10.1016/j.bmc.2026.118663",
+      "pmid": "41990416",
+      "journal": "Bioorganic & medicinal chemistry",
+      "publisher": null,
+      "authors": [
+        "Zha Q",
+        "Liu Z",
+        "Li W",
+        "Zhou Y",
+        "McNeil MB",
+        "Cook GM",
+        "Zhang T",
+        "Zhang N"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-04-11T00:00:00+00:00",
+      "indexed_at": "2026-04-16T00:00:00+00:00",
+      "open_access_status": "unknown",
+      "open_access_url": null,
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.589,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D025",
+          "slug": "tuberculosis",
+          "name_en": "Tuberculosis",
+          "name_zh": "肺结核",
+          "confidence": 0.9
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Antimicrobial resistance",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Tuberculosis. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与肺结核相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1016/j.bmc.2026.118663",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41990416/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137613+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:cbe12a284bd5cd9b",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D025",
+          "disease_name_en": "Tuberculosis",
+          "disease_name_zh": "肺结核",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 43.0,
+            "previous": 32.0,
+            "absolute_change": 11.0,
+            "change_pct": 34.38
+          },
+          "risk": {
+            "score": 56.0,
+            "level": "high",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_f5b697237b18fafc1e5e8125",
+      "slug": "10-1186-s12879-026-13158-0-f5b69723",
+      "title": "Rapid expansion of human brucellosis in Yunnan, China",
+      "doi": "10.1186/s12879-026-13158-0",
+      "pmid": null,
+      "journal": "BMC Infectious Diseases",
+      "publisher": "Springer Science and Business Media LLC",
+      "authors": [
+        "Zhiguo Liu",
+        "Binbin Yu",
+        "Lihua Yang",
+        "Mengyao Sun",
+        "Xinqi Wang",
+        "Peng Wang"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-04-10T00:00:00+00:00",
+      "indexed_at": "2026-08-05T17:42:09+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://link.springer.com/10.1186/s12879-026-13158-0",
+      "license_url": "https://creativecommons.org/licenses/by-nc-nd/4.0",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.531,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D032",
+          "slug": "brucellosis",
+          "name_en": "Brucellosis",
+          "name_zh": "布鲁氏菌病",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [
+        {
+          "code": "CN",
+          "name_en": "China",
+          "name_zh": null,
+          "confidence": 0.78
+        }
+      ],
+      "topics": [],
+      "related_surveillance": [
+        {
+          "disease_id": "D032",
+          "disease_name_en": "Brucellosis",
+          "disease_name_zh": "布鲁氏菌病",
+          "disease_slug": "brucellosis",
+          "country_code": "CN",
+          "country_name_en": "China",
+          "url": "/diseases/brucellosis/",
+          "method": "high-confidence article geography intersected with GIDS series coverage"
+        }
+      ],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Brucellosis. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与布鲁氏菌病相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1186/s12879-026-13158-0",
+        "publisher": "https://link.springer.com/10.1186/s12879-026-13158-0"
+      },
+      "updated_at": "2026-08-13T12:40:20.771732+00:00",
+      "related_signals": []
+    }
+  ],
+  "url": "/research/weekly/2026-W15/"
+}

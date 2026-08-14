@@ -1,0 +1,128 @@
+{
+  "article_id": "lit_7e590ddb5e0c82bfe130d720",
+  "slug": "10-1016-j-anzjph-2025-100285-7e590ddb",
+  "title": "Optimising tuberculosis screening in high-risk groups",
+  "doi": "10.1016/j.anzjph.2025.100285",
+  "pmid": null,
+  "journal": "Australian and New Zealand Journal of Public Health",
+  "publisher": "Elsevier BV",
+  "authors": [
+    "Tim Aung",
+    "Geoffrey Eather",
+    "Aleksandra Sasha Jaksic"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Journal article",
+  "published_at": "2025-12-01T00:00:00+00:00",
+  "indexed_at": "2025-12-11T05:59:32+00:00",
+  "open_access_status": "open",
+  "open_access_url": "https://linkinghub.elsevier.com/retrieve/pii/S1326020025000676",
+  "license_url": "https://www.elsevier.com/tdm/userlicense/1.0/",
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.491,
+  "is_featured": false,
+  "diseases": [
+    {
+      "disease_id": "D025",
+      "slug": "tuberculosis",
+      "name_en": "Tuberculosis",
+      "name_zh": "肺结核",
+      "confidence": 0.86
+    }
+  ],
+  "countries": [],
+  "topics": [],
+  "related_surveillance": [],
+  "summary": {},
+  "why_it_matters_en": "This recent journal article is indexed for its relevance to Tuberculosis. Read the original source before applying its findings.",
+  "why_it_matters_zh": "这项近期Journal article因与肺结核相关而被收录。应用其结论前请阅读原始文献。",
+  "source_urls": {
+    "doi": "https://doi.org/10.1016/j.anzjph.2025.100285",
+    "publisher": "https://linkinghub.elsevier.com/retrieve/pii/S1326020025000676"
+  },
+  "updated_at": "2026-08-13T16:05:48.137600+00:00",
+  "related_signals": [
+    {
+      "signal_id": "signal:cbe12a284bd5cd9b",
+      "section": "increasing",
+      "kind": "statistical_signal",
+      "title": null,
+      "disease_id": "D025",
+      "disease_name_en": "Tuberculosis",
+      "disease_name_zh": "肺结核",
+      "geographies": [
+        {
+          "code": "NZ",
+          "name_en": "New Zealand"
+        }
+      ],
+      "data_through": "2026-06-01",
+      "window": {
+        "label": "Latest complete month",
+        "current": 43.0,
+        "previous": 32.0,
+        "absolute_change": 11.0,
+        "change_pct": 34.38
+      },
+      "risk": {
+        "score": 56.0,
+        "level": "high",
+        "confidence": "low"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-7e590ddb5e0c82bfe130d720",
+        "type": "article",
+        "label": "Optimising tuberculosis screening in high-risk groups",
+        "slug": "10-1016-j-anzjph-2025-100285-7e590ddb",
+        "url": "/research/articles/10-1016-j-anzjph-2025-100285-7e590ddb/",
+        "published_at": "2025-12-01T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "disease:d025",
+        "type": "disease",
+        "label": "Tuberculosis",
+        "disease_id": "D025",
+        "name_zh": "肺结核",
+        "slug": "tuberculosis",
+        "url": "/diseases/tuberculosis/"
+      },
+      {
+        "id": "study-type:journal-article",
+        "type": "study_type",
+        "label": "Journal article"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-7e590ddb5e0c82bfe130d720|ABOUT_DISEASE|disease:d025",
+        "source": "article:lit-7e590ddb5e0c82bfe130d720",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d025",
+        "confidence": 0.86
+      },
+      {
+        "id": "article:lit-7e590ddb5e0c82bfe130d720|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-7e590ddb5e0c82bfe130d720",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 3,
+      "edges": 2,
+      "articles": 1
+    }
+  }
+}

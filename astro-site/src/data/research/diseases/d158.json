@@ -1,0 +1,3925 @@
+{
+  "articles": [
+    {
+      "article_id": "lit_798038bf07ace829ca9cc712",
+      "slug": "10-4103-ijoc-ijoc-14-26-798038bf",
+      "title": "Rheumatic fever/rheumatic heart disease, contemporary concepts, emerging paradigms and Indian perspective",
+      "doi": "10.4103/ijoc.ijoc_14_26",
+      "pmid": null,
+      "journal": "Indian Journal of Cardiology",
+      "publisher": "Ovid Technologies (Wolters Kluwer Health)",
+      "authors": [
+        "Anil Grover",
+        "K. Sudhakar Rao"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Commentary",
+      "published_at": "2026-08-08T00:00:00+00:00",
+      "indexed_at": "2026-08-11T11:34:52+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://www.ovid.com/10.4103/IJOC.IJOC_14_26",
+      "license_url": "http://creativecommons.org/licenses/by-nc-nd/4.0",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.692,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D158",
+          "slug": "rheumatic-fever",
+          "name_en": "Rheumatic fever",
+          "name_zh": "风湿热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Surveillance",
+          "confidence": 0.66
+        },
+        {
+          "name": "Diagnostics",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {
+        "en": {
+          "research_question": "The article examines current challenges and evolving approaches to managing rheumatic fever and heart disease in resource-limited environments.",
+          "study_design": "This work is classified as a peer-reviewed commentary that synthesizes existing literature without presenting original clinical trials or observational data.",
+          "population_setting": "The discussion centers on communities in India and other tropical or endemic regions where the condition remains prevalent.",
+          "main_findings": "Persistent disease rates are associated with socioeconomic hardship, diagnostic delays, and irregular medication distribution. Advanced imaging techniques uncover substantial undetected cases, while portable equipment offers potential for broader screening despite limited current deployment. Future control strategies emphasize combined public health initiatives alongside developing technologies such as immunizations and algorithmic tools.",
+          "public_health_relevance": "Strengthening regional health infrastructure through coordinated diagnostic expansion and reliable medication supply chains is highlighted as essential for reducing ongoing morbidity.",
+          "limitations": "The commentary format does not involve primary data collection, standardized methodological protocols, or quantitative outcome measurements.",
+          "gids_interpretation": "The document serves as a conceptual reference for tracking historical management patterns and evaluating policy frameworks related to infectious cardiovascular conditions. Its indexing under diagnostic and monitoring topics indicates relevance for academic reviews of regional health priorities.",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.958,
+            "generated_at": "2026-08-13T18:11:01.093856+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        },
+        "zh": {
+          "research_question": "本文旨在梳理风湿热与风湿性心脏病的最新理论框架与发展动向，并结合印度等地的实际情况进行分析。",
+          "study_design": "该文献属于同行评议的学术评论，主要基于既有文献进行综合论述，未开展独立的实证数据采集。",
+          "population_setting": "研究视角主要覆盖印度及其他该疾病呈地方性流行的区域。",
+          "main_findings": "摘要指出疾病负担的延续除链球菌感染外，还受社会经济条件、居住密度及医疗干预延迟等多重因素影响；热带环境下皮肤感染可能构成新的致病诱因。影像学检查发现了大量无症状病例，但便携式设备的筛查应用尚未普及。尽管长效青霉素仍是预防核心，但其实际效果受制于用药依从性与供应链稳定性，整体防控需依赖多学科协作模式及新兴技术的引入。",
+          "public_health_relevance": "文章强调了完善疾病监测网络、提升早期诊断可及性以及保障预防性药物稳定供应对于实现长期控制目标的重要性。",
+          "limitations": "作为一篇综述性评论，该文未包含原创性临床数据或前瞻性验证结果，结论主要依赖于对已有文献的归纳。",
+          "gids_interpretation": "该文献围绕风湿热的监测机制与诊断工具展开讨论，为评估相关公共卫生挑战提供了背景信息，有助于厘清该领域当前的研究焦点与政策讨论方向。",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.933,
+            "generated_at": "2026-08-13T18:11:34.006174+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        }
+      },
+      "why_it_matters_en": "Strengthening regional health infrastructure through coordinated diagnostic expansion and reliable medication supply chains is highlighted as essential for reducing ongoing morbidity.",
+      "why_it_matters_zh": "文章强调了完善疾病监测网络、提升早期诊断可及性以及保障预防性药物稳定供应对于实现长期控制目标的重要性。",
+      "source_urls": {
+        "doi": "https://doi.org/10.4103/ijoc.ijoc_14_26",
+        "publisher": "https://www.ovid.com/10.4103/IJOC.IJOC_14_26"
+      },
+      "updated_at": "2026-08-13T16:05:48.137502+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:f59d37329a1f6ece",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 28.0,
+            "previous": 18.0,
+            "absolute_change": 10.0,
+            "change_pct": 55.56
+          },
+          "risk": {
+            "score": 46.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_608dcc059be5b13e00fbf07e",
+      "slug": "10-5334-gh-1564-608dcc05",
+      "title": "<i>Streptococcus Pyogenes</i> and Acute Rheumatic Fever: How Strong are the Links in the Chain?",
+      "doi": "10.5334/gh.1564",
+      "pmid": "42327996",
+      "journal": "Global heart",
+      "publisher": null,
+      "authors": [
+        "Wirth SH",
+        "Beaton AZ",
+        "Steer A"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-06-19T00:00:00+00:00",
+      "indexed_at": "2026-06-22T00:00:00+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC13281730",
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.671,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D158",
+          "slug": "rheumatic-fever",
+          "name_en": "Rheumatic fever",
+          "name_zh": "风湿热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Treatment",
+          "confidence": 0.66
+        },
+        {
+          "name": "Health policy",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {
+        "en": {
+          "research_question": "The authors evaluate the historical and contemporary scientific basis connecting group A streptococcal infections to acute rheumatic fever and subsequent cardiac complications. They assess how well established epidemiological and biological frameworks explain this relationship.",
+          "study_design": "This publication operates as a narrative review that aggregates and evaluates literature spanning approximately two hundred years. It applies standardized causality assessment tools and evidence grading systems to synthesize past and recent publications.",
+          "population_setting": "The analysis references data collected across various global regions and demographic groups. However, the authors explicitly identify a shortage of modern cohort studies focusing on vulnerable communities.",
+          "main_findings": "Unmanaged bacterial infections correspond with elevated rheumatic fever rates, whereas antimicrobial therapy lowers these occurrences. The chronological progression from microbial exposure to clinical onset receives moderate validation, alongside claims about pathogen specificity. Proposed immunological explanations remain plausible but lack robust empirical confirmation. Significant uncertainties persist regarding contemporary trial requirements and cutaneous transmission pathways.",
+          "public_health_relevance": "The synthesized information supports ongoing discussions regarding prophylactic interventions and regulatory approvals for novel immunizations. Policy formulation benefits from understanding where current knowledge remains incomplete.",
+          "limitations": "The methodology depends entirely on secondary literature aggregation rather than original patient-level investigations. Modern prospective datasets are absent, and the impact of epidermal infections remains poorly quantified.",
+          "gids_interpretation": "This publication situates longstanding academic discourse on streptococcal complications within established evaluation frameworks. It provides background context for preventive initiatives without engaging with active monitoring networks or real-world detection metrics.",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.944,
+            "generated_at": "2026-08-13T20:06:54.102356+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        },
+        "zh": {
+          "research_question": "该文献旨在评估化脓性链球菌感染与急性风湿热及后续心脏病变之间关联的强度。",
+          "study_design": "本文采用叙事性综述方法，整合了跨越近两个世纪的历史与现代文献，并借助因果推断标准与循证医学分级工具进行批判性分析。",
+          "population_setting": "现有分析涵盖了不同地区与人群的数据，但作者强调目前在高危队列中开展的前瞻性观察仍较为匮乏。",
+          "main_findings": "未经处理的感染与急性风湿热发病率上升相关，而抗菌药物使用与该风险下降相关。中等质量证据支持感染至发病的时间顺序及病原体的特异性，同时存在提示感染后自身免疫机制的生物学线索。",
+          "public_health_relevance": "夯实该领域的科学基础对于推动相关疫苗审批以及明确公共卫生干预策略具有重要价值。",
+          "limitations": "当前知识体系仍存在明显缺口，主要集中在缺乏针对高风险群体的最新纵向数据，以及皮肤感染对该病程的具体贡献度尚未厘清。",
+          "gids_interpretation": "该综述系统梳理了长期积累的学术脉络，有助于厘清病原体暴露与临床表型之间的理论联系，可为未来监测框架或政策研讨提供背景支撑。",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.936,
+            "generated_at": "2026-08-13T20:07:19.715777+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        }
+      },
+      "why_it_matters_en": "The synthesized information supports ongoing discussions regarding prophylactic interventions and regulatory approvals for novel immunizations. Policy formulation benefits from understanding where current knowledge remains incomplete.",
+      "why_it_matters_zh": "夯实该领域的科学基础对于推动相关疫苗审批以及明确公共卫生干预策略具有重要价值。",
+      "source_urls": {
+        "doi": "https://doi.org/10.5334/gh.1564",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/42327996/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137507+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:f59d37329a1f6ece",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 28.0,
+            "previous": 18.0,
+            "absolute_change": 10.0,
+            "change_pct": 55.56
+          },
+          "risk": {
+            "score": 46.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_d7828ffc71896b245d8c2624",
+      "slug": "10-1016-j-anzjph-2025-100301-d7828ffc",
+      "title": "Resurgence of rheumatic fever among Pacific peoples in Aotearoa New Zealand: A 2010–2023 analysis of hospitalisation data with implications for equity policy",
+      "doi": "10.1016/j.anzjph.2025.100301",
+      "pmid": "41447834",
+      "journal": "Australian and New Zealand Journal of Public Health",
+      "publisher": "Elsevier BV",
+      "authors": [
+        "Gerard JB. Sonder",
+        "Megan Pledger",
+        "Philip C. Hill",
+        "Debbie Ryan"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-02-01T00:00:00+00:00",
+      "indexed_at": "2026-03-19T16:38:35+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://linkinghub.elsevier.com/retrieve/pii/S1326020025000834",
+      "license_url": "https://www.elsevier.com/tdm/userlicense/1.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.615,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D158",
+          "slug": "rheumatic-fever",
+          "name_en": "Rheumatic fever",
+          "name_zh": "风湿热",
+          "confidence": 0.82
+        },
+        {
+          "disease_id": "D004",
+          "slug": "covid-19",
+          "name_en": "COVID-19",
+          "name_zh": "新型冠状病毒感染",
+          "confidence": 0.62
+        }
+      ],
+      "countries": [
+        {
+          "code": "NZ",
+          "name_en": "New Zealand",
+          "name_zh": null,
+          "confidence": 0.78
+        }
+      ],
+      "topics": [
+        {
+          "name": "Surveillance",
+          "confidence": 0.66
+        },
+        {
+          "name": "Health policy",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [
+        {
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "disease_slug": "rheumatic-fever",
+          "country_code": "NZ",
+          "country_name_en": "New Zealand",
+          "url": "/diseases/rheumatic-fever/",
+          "method": "high-confidence article geography intersected with GIDS series coverage"
+        },
+        {
+          "disease_id": "D004",
+          "disease_name_en": "COVID-19",
+          "disease_name_zh": "新型冠状病毒感染",
+          "disease_slug": "covid-19",
+          "country_code": "NZ",
+          "country_name_en": "New Zealand",
+          "url": "/diseases/covid-19/",
+          "method": "high-confidence article geography intersected with GIDS series coverage"
+        }
+      ],
+      "summary": {
+        "en": {
+          "research_question": "The analysis investigates how ethnicity, residential location, and economic disadvantage shape admission rates for acute rheumatic fever and rheumatic heart disease across New Zealand over a thirteen-year period, while evaluating existing prevention strategies.",
+          "study_design": "Researchers conducted a retrospective evaluation of nationwide hospital and mortality records, applying statistical modeling to compare incidence shifts across distinct demographic and temporal segments.",
+          "population_setting": "The dataset encompasses the entire country, with particular emphasis on Indigenous and Pacific communities residing in highly disadvantaged urban zones such as Counties Manukau.",
+          "main_findings": "Hospital admissions were heavily concentrated among marginalized ethnic groups in impoverished neighborhoods. Case counts decreased for one demographic during a designated prevention initiative, whereas another demographic showed no corresponding reduction. Admission rates experienced a brief decline during a period of widespread public health restrictions, followed by a rapid increase by the final year of observation.",
+          "public_health_relevance": "Addressing persistent disparities requires improved monitoring infrastructure and targeted resource allocation to achieve established national health objectives.",
+          "limitations": "The exclusive reliance on hospital admission records limits capture of community-managed cases, while variable reporting standards and fragmented program delivery may influence observed trend accuracy.",
+          "gids_interpretation": "This publication establishes a historical baseline regarding disease distribution and policy effectiveness within a defined healthcare jurisdiction, supporting contextual understanding for future observational tracking without suggesting active outbreak detection.",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.939,
+            "generated_at": "2026-08-14T02:06:56.519380+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        },
+        "zh": {
+          "research_question": "本研究旨在评估新西兰急性风湿热与风湿性心脏病的住院分布特征，并考察公共卫生干预措施的实际效果及国家监测体系的不足。",
+          "study_design": "研究采用回顾性设计，利用负二项回归模型对2010至2023年间的全国住院与死亡数据进行多时段对比分析。",
+          "population_setting": "研究对象涵盖新西兰全体居民，重点聚焦毛利人与太平洋岛民群体，尤其关注社会经济劣势水平较高的地区如曼努考郡。",
+          "main_findings": "疾病负担显著集中于高劣势地区的原住民及太平洋裔人群。尽管毛利人病例数在专项预防计划实施后有所下降，但太平洋裔人群未见同等改善。疫情管控期间曾出现短暂就诊量锐减，随后于2023年迅速反弹。",
+          "public_health_relevance": "结果凸显建立标准化监测网络与推行公平导向干预策略的紧迫性，以缩小健康差距并达成国家防控目标。",
+          "limitations": "作者指出当前存在监测漏洞、报告标准不一以及干预措施落实不均等问题，这些因素限制了数据的完整性与政策评估的准确性。",
+          "gids_interpretation": "该文献提供了特定时期内疾病流行趋势的历史背景资料，可为后续数据收集框架的优化提供参考，但不代表实时预警信号。",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.949,
+            "generated_at": "2026-08-14T02:07:27.255033+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        }
+      },
+      "why_it_matters_en": "Addressing persistent disparities requires improved monitoring infrastructure and targeted resource allocation to achieve established national health objectives.",
+      "why_it_matters_zh": "结果凸显建立标准化监测网络与推行公平导向干预策略的紧迫性，以缩小健康差距并达成国家防控目标。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1016/j.anzjph.2025.100301",
+        "publisher": "https://linkinghub.elsevier.com/retrieve/pii/S1326020025000834",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41447834/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137478+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:f59d37329a1f6ece",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 28.0,
+            "previous": 18.0,
+            "absolute_change": 10.0,
+            "change_pct": 55.56
+          },
+          "risk": {
+            "score": 46.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "exact_disease_geography",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_88ac78c271afee201b087b0d",
+      "slug": "10-1136-bmjopen-2025-114968-88ac78c2",
+      "title": "Acute Rheumatic Fever Diagnostic Network (ARC Network) clinical recruitment protocol.",
+      "doi": "10.1136/bmjopen-2025-114968",
+      "pmid": "41881537",
+      "journal": "BMJ open",
+      "publisher": null,
+      "authors": [
+        "Fall N",
+        "Bowen AC",
+        "Buonfiglio S",
+        "Francis JR",
+        "Gorman C",
+        "Fonseca Mendoza R",
+        "Fernandes E",
+        "Moreland NJ",
+        "Pereira Nunes MC",
+        "Sable C",
+        "Sadiq M",
+        "Shannon CP",
+        "Parks T",
+        "Ralph A",
+        "Sanyahumbi A",
+        "Sarnacki R",
+        "Tebbutt S",
+        "Webb R",
+        "Carapetis J",
+        "Beaton AZ"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-03-25T00:00:00+00:00",
+      "indexed_at": "2026-03-25T00:00:00+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC13034315",
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.604,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D158",
+          "slug": "rheumatic-fever",
+          "name_en": "Rheumatic fever",
+          "name_zh": "风湿热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Diagnostics",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {
+        "en": {
+          "research_question": "The investigation seeks to establish a standardized multinational cohort to facilitate the identification of biomarkers for acute rheumatic fever diagnostics.",
+          "study_design": "The publication functions as a methodological protocol outlining a multicentre observational recruitment strategy.",
+          "population_setting": "Enrollment targets individuals aged three to eighteen years with suspected conditions alongside matched control participants across four participating nations.",
+          "main_findings": "The text details the operational architecture, including harmonized data collection, centralized specimen banking, and rigorous quality control measures.",
+          "public_health_relevance": "The project addresses a critical testing gap in regions experiencing substantial disease burden by constructing a platform for future diagnostic development.",
+          "limitations": "Being a procedural outline, the document lacks empirical results and does not yet evaluate diagnostic accuracy or clinical utility.",
+          "gids_interpretation": "This record establishes the methodological groundwork necessary for systematic exploratory research within the specified disease category.",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.955,
+            "generated_at": "2026-08-14T03:13:44.323315+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        },
+        "zh": {
+          "research_question": "该研究旨在建立一套招募全球代表性队列的方案，以支持急性风湿热新型诊断生物标志物的发现，弥补当前缺乏确诊检测手段的空白。",
+          "study_design": "本文属于多中心临床招募方案，详细规定了跨国界开展病例分类、数据采集及生物样本管理的标准化流程。",
+          "population_setting": "研究对象为三至十八岁疑似急性风湿热的儿童与青少年，并同步纳入匹配的健康对照人群。",
+          "main_findings": "摘要主要阐述方法学框架而非实证结果，重点在于规范数据采集流程、实施集中质量控制以及统一生物样本储存机制，从而为后续诊断工具研发奠定基础。",
+          "public_health_relevance": "该项目通过构建表型严谨的国际队列，致力于推动适用于资源匮乏地区的可及性诊断工具开发，以应对相关疾病带来的健康负担。",
+          "limitations": "作为侧重招募策略与操作规范的方案类文献，本文未提供临床结局数据或验证任何诊断性能指标。",
+          "gids_interpretation": "该文献为未来可能的生物标志物研究提供了基础方法学背景，但未包含实时流行病学信号或监测数据的验证内容。",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.929,
+            "generated_at": "2026-08-14T03:14:11.492556+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        }
+      },
+      "why_it_matters_en": "The project addresses a critical testing gap in regions experiencing substantial disease burden by constructing a platform for future diagnostic development.",
+      "why_it_matters_zh": "该项目通过构建表型严谨的国际队列，致力于推动适用于资源匮乏地区的可及性诊断工具开发，以应对相关疾病带来的健康负担。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1136/bmjopen-2025-114968",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41881537/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137513+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:f59d37329a1f6ece",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 28.0,
+            "previous": 18.0,
+            "absolute_change": 10.0,
+            "change_pct": 55.56
+          },
+          "risk": {
+            "score": 46.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_5c77103faa3b2a1a672b7ca2",
+      "slug": "10-1111-jpc-70509-5c77103f",
+      "title": "Te Maatai Manawa a Whaanau: Maaori and Pacific People's Experiences of Echocardiography in Rheumatic Fever Health Care in Auckland, New Zealand",
+      "doi": "10.1111/jpc.70509",
+      "pmid": "42483854",
+      "journal": "Journal of Paediatrics and Child Health",
+      "publisher": "Wiley",
+      "authors": [
+        "Anneka Anderson",
+        "Monleigh Muliaumasealii",
+        "Tira Phillipson‐Puna",
+        "Rachel Webb",
+        "Nigel Wilson",
+        "Shannon Leilua",
+        "Kim Arrowsmith",
+        "Rachel Brown",
+        "Florina Chan‐Mow",
+        "Adam Dennison"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-07-22T00:00:00+00:00",
+      "indexed_at": "2026-07-22T10:02:31+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://onlinelibrary.wiley.com/doi/10.1111/jpc.70509",
+      "license_url": "http://creativecommons.org/licenses/by-nc-nd/4.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.573,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D158",
+          "slug": "rheumatic-fever",
+          "name_en": "Rheumatic fever",
+          "name_zh": "风湿热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [
+        {
+          "code": "NZ",
+          "name_en": "New Zealand",
+          "name_zh": null,
+          "confidence": 0.78
+        }
+      ],
+      "topics": [],
+      "related_surveillance": [
+        {
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "disease_slug": "rheumatic-fever",
+          "country_code": "NZ",
+          "country_name_en": "New Zealand",
+          "url": "/diseases/rheumatic-fever/",
+          "method": "high-confidence article geography intersected with GIDS series coverage"
+        }
+      ],
+      "summary": {
+        "zh": {
+          "research_question": "本研究旨在了解新西兰奥克兰 Counties Manukau 地区毛利族与太平洋岛裔儿童、青少年及其家属在风湿热相关超声心动图检查中的实际体验。",
+          "study_design": "该研究采用定性研究框架，遵循毛利族 Kaupapa Māori 与 Kakala 方法论，通过访谈收集数据并运用归纳主题分析法进行整理。",
+          "population_setting": "研究对象为新西兰奥克兰 Counties Manukau 地区的十七名患有风湿热或风湿性心脏病的毛利族及太平洋岛裔儿童、青少年及其家庭成员。",
+          "main_findings": "分析结果提炼出沟通、参与、可及性以及文化支持四个核心主题，揭示了当前超声心动图服务中存在的障碍与促进因素。",
+          "public_health_relevance": "识别这些体验因素有助于构建以患者和家属为中心的服务模式，从而优化当地风湿热诊疗体系的运行效果与服务质量。",
+          "limitations": "样本量较小且仅基于单一地区的访谈数据，定性设计限制了研究结果的广泛推广性，未涵盖其他地理区域或不同医疗环境的情况。",
+          "gids_interpretation": "该文献主要提供特定人群在医疗服务过程中的背景信息与体验反馈，侧重于服务流程与文化适配性的探讨，属于学术背景资料而非实时监测指标。",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.955,
+            "generated_at": "2026-08-14T07:09:29.833018+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        }
+      },
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Rheumatic fever. Read the original source before applying its findings.",
+      "why_it_matters_zh": "识别这些体验因素有助于构建以患者和家属为中心的服务模式，从而优化当地风湿热诊疗体系的运行效果与服务质量。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1111/jpc.70509",
+        "publisher": "https://onlinelibrary.wiley.com/doi/10.1111/jpc.70509",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/42483854/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137494+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:f59d37329a1f6ece",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 28.0,
+            "previous": 18.0,
+            "absolute_change": 10.0,
+            "change_pct": 55.56
+          },
+          "risk": {
+            "score": 46.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "exact_disease_geography",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_a5134330079c829749685095",
+      "slug": "10-1016-j-ijregi-2026-100889-a5134330",
+      "title": "New Zealand rheumatic fever clinicians respond to Leung et al.",
+      "doi": "10.1016/j.ijregi.2026.100889",
+      "pmid": "42099662",
+      "journal": "IJID Regions",
+      "publisher": "Elsevier BV",
+      "authors": [
+        "Rachel H Webb",
+        "Catherine Jackson",
+        "Melissa Kerdemelidis",
+        "Philippa Anderson",
+        "Christopher Luey",
+        "Bridget Farrant"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-06-01T00:00:00+00:00",
+      "indexed_at": "2026-06-29T17:43:49+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC13146532",
+      "license_url": "https://www.elsevier.com/tdm/userlicense/1.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.552,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D158",
+          "slug": "rheumatic-fever",
+          "name_en": "Rheumatic fever",
+          "name_zh": "风湿热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [
+        {
+          "code": "NZ",
+          "name_en": "New Zealand",
+          "name_zh": null,
+          "confidence": 0.78
+        }
+      ],
+      "topics": [],
+      "related_surveillance": [
+        {
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "disease_slug": "rheumatic-fever",
+          "country_code": "NZ",
+          "country_name_en": "New Zealand",
+          "url": "/diseases/rheumatic-fever/",
+          "method": "high-confidence article geography intersected with GIDS series coverage"
+        }
+      ],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Rheumatic fever. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与风湿热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1016/j.ijregi.2026.100889",
+        "publisher": "https://linkinghub.elsevier.com/retrieve/pii/S2772707626000524",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/42099662/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137480+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:f59d37329a1f6ece",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 28.0,
+            "previous": 18.0,
+            "absolute_change": 10.0,
+            "change_pct": 55.56
+          },
+          "risk": {
+            "score": 46.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "exact_disease_geography",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_b79a90bec495b81f85aaca81",
+      "slug": "10-5334-gh-1555-b79a90be",
+      "title": "Stakeholders Want a Menu of Choices: Findings from a Consultation Workshop on Improving Access to Secondary Prophylaxis of Rheumatic Fever and Rheumatic Heart Disease.",
+      "doi": "10.5334/gh.1555",
+      "pmid": "42180795",
+      "journal": "Global heart",
+      "publisher": null,
+      "authors": [
+        "Hla TK",
+        "Enkel SL",
+        "Kado J",
+        "Eadie-Mirams E",
+        "Wyber R",
+        "Carapetis J",
+        "Manning L"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-05-18T00:00:00+00:00",
+      "indexed_at": "2026-05-25T00:00:00+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC13196686",
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.546,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D158",
+          "slug": "rheumatic-fever",
+          "name_en": "Rheumatic fever",
+          "name_zh": "风湿热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Rheumatic fever. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与风湿热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.5334/gh.1555",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/42180795/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137517+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:f59d37329a1f6ece",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 28.0,
+            "previous": 18.0,
+            "absolute_change": 10.0,
+            "change_pct": 55.56
+          },
+          "risk": {
+            "score": 46.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_467668f3d67c71b1047a140a",
+      "slug": "10-1111-jpc-70440-467668f3",
+      "title": "Group C/G Streptococcal Pharyngitis and Acute Rheumatic Fever in Auckland, New Zealand, 2010–2016",
+      "doi": "10.1111/jpc.70440",
+      "pmid": "42152461",
+      "journal": "Journal of Paediatrics and Child Health",
+      "publisher": "Wiley",
+      "authors": [
+        "Jane Oliver",
+        "Susan Jack",
+        "Julie Bennett",
+        "Michael G. Baker"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-05-18T00:00:00+00:00",
+      "indexed_at": "2026-06-11T04:57:43+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC13253995",
+      "license_url": "http://creativecommons.org/licenses/by/4.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.546,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D158",
+          "slug": "rheumatic-fever",
+          "name_en": "Rheumatic fever",
+          "name_zh": "风湿热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [
+        {
+          "code": "NZ",
+          "name_en": "New Zealand",
+          "name_zh": null,
+          "confidence": 0.78
+        }
+      ],
+      "topics": [],
+      "related_surveillance": [
+        {
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "disease_slug": "rheumatic-fever",
+          "country_code": "NZ",
+          "country_name_en": "New Zealand",
+          "url": "/diseases/rheumatic-fever/",
+          "method": "high-confidence article geography intersected with GIDS series coverage"
+        }
+      ],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Rheumatic fever. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与风湿热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1111/jpc.70440",
+        "publisher": "https://onlinelibrary.wiley.com/doi/10.1111/jpc.70440",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/42152461/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137483+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:f59d37329a1f6ece",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 28.0,
+            "previous": 18.0,
+            "absolute_change": 10.0,
+            "change_pct": 55.56
+          },
+          "risk": {
+            "score": 46.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "exact_disease_geography",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_414150e9ce4fe57a5508ad7c",
+      "slug": "10-1038-s41572-026-00685-y-414150e9",
+      "title": "Acute rheumatic fever and rheumatic heart disease.",
+      "doi": "10.1038/s41572-026-00685-y",
+      "pmid": "41748639",
+      "journal": "Nature reviews. Disease primers",
+      "publisher": null,
+      "authors": [
+        "Zühlke L",
+        "Beaton A",
+        "Engel M",
+        "Gomanju A",
+        "Kumar RK",
+        "Marangou J",
+        "Minja N",
+        "Moreland NJ",
+        "Okello E",
+        "Pulle J",
+        "Rwebembera J",
+        "Watkins D",
+        "Yilgwan C",
+        "Carapetis J"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-02-26T00:00:00+00:00",
+      "indexed_at": "2026-02-26T00:00:00+00:00",
+      "open_access_status": "unknown",
+      "open_access_url": null,
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.543,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D158",
+          "slug": "rheumatic-fever",
+          "name_en": "Rheumatic fever",
+          "name_zh": "风湿热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Treatment",
+          "confidence": 0.7100000000000001
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Rheumatic fever. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与风湿热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1038/s41572-026-00685-y",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41748639/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137519+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:f59d37329a1f6ece",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 28.0,
+            "previous": 18.0,
+            "absolute_change": 10.0,
+            "change_pct": 55.56
+          },
+          "risk": {
+            "score": 46.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_7f7211abffb162a0b358a56e",
+      "slug": "10-1016-j-ahjo-2025-100630-7f7211ab",
+      "title": "Circulating prothymosin alpha and immunoglobulin G3 in acute rheumatic fever and rheumatic heart disease: A case-control study.",
+      "doi": "10.1016/j.ahjo.2025.100630",
+      "pmid": "41126870",
+      "journal": "American heart journal plus : cardiology research and practice",
+      "publisher": null,
+      "authors": [
+        "Afshan G",
+        "Tsui N",
+        "Javed H",
+        "Kazmi T",
+        "Ndagire E",
+        "Pulle J",
+        "Huse K",
+        "Lias A",
+        "Talukder S",
+        "Lorenz N",
+        "McGregor R",
+        "Sable C",
+        "Beaton AZ",
+        "Moreland NJ",
+        "Okello E",
+        "Sadiq M",
+        "Parks T"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Case-control study",
+      "published_at": "2025-09-29T00:00:00+00:00",
+      "indexed_at": "2025-10-23T00:00:00+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC12537566",
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.531,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D158",
+          "slug": "rheumatic-fever",
+          "name_en": "Rheumatic fever",
+          "name_zh": "风湿热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Diagnostics",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent case-control study is indexed for its relevance to Rheumatic fever. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Case-control study因与风湿热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1016/j.ahjo.2025.100630",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41126870/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137526+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:f59d37329a1f6ece",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 28.0,
+            "previous": 18.0,
+            "absolute_change": 10.0,
+            "change_pct": 55.56
+          },
+          "risk": {
+            "score": 46.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_ab5b10852c1f8ecc36d9f6fd",
+      "slug": "10-1016-j-jacc-2026-02-3602-ab5b1085",
+      "title": "26-CCC-11339-ACC RHEUMATIC FEVER IS STILL HERE: A CASE OF ACUTE RHEUMATIC FEVER IN A YOUNG ADULT",
+      "doi": "10.1016/j.jacc.2026.02.3602",
+      "pmid": null,
+      "journal": "JACC",
+      "publisher": "Elsevier BV",
+      "authors": [
+        "Charissa Bloom",
+        "Joshua Eric Levenson"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-04-01T00:00:00+00:00",
+      "indexed_at": "2026-07-14T20:06:38+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://linkinghub.elsevier.com/retrieve/pii/S0735109726039331",
+      "license_url": "https://www.elsevier.com/tdm/userlicense/1.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.527,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D158",
+          "slug": "rheumatic-fever",
+          "name_en": "Rheumatic fever",
+          "name_zh": "风湿热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Rheumatic fever. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与风湿热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1016/j.jacc.2026.02.3602",
+        "publisher": "https://linkinghub.elsevier.com/retrieve/pii/S0735109726039331"
+      },
+      "updated_at": "2026-08-13T16:05:48.137489+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:f59d37329a1f6ece",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 28.0,
+            "previous": 18.0,
+            "absolute_change": 10.0,
+            "change_pct": 55.56
+          },
+          "risk": {
+            "score": 46.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_c913ca6c5b78848e5efeece2",
+      "slug": "10-1038-s41467-026-71094-8-c913ca6c",
+      "title": "CXCR3 is associated with T-cell-induced heart damage in acute rheumatic fever.",
+      "doi": "10.1038/s41467-026-71094-8",
+      "pmid": "41916981",
+      "journal": "Nature communications",
+      "publisher": null,
+      "authors": [
+        "Middleton FM",
+        "McGregor R",
+        "Lorenz N",
+        "Kilian S",
+        "Brooks AES",
+        "Park SM",
+        "Ramiah C",
+        "Tresidder J",
+        "Barnett TC",
+        "Serralha M",
+        "Martin WJ",
+        "Chan Mow F",
+        "Pearson G",
+        "Mayo M",
+        "Broadhurst DI",
+        "Bennett J",
+        "Brink J",
+        "Wilson NJ",
+        "Ralph AP",
+        "Webb RH",
+        "Dunbar PR",
+        "Carapetis J",
+        "Moreland NJ"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-03-31T00:00:00+00:00",
+      "indexed_at": "2026-03-31T00:00:00+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC13201666",
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.527,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D158",
+          "slug": "rheumatic-fever",
+          "name_en": "Rheumatic fever",
+          "name_zh": "风湿热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Rheumatic fever. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与风湿热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1038/s41467-026-71094-8",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41916981/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137511+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:f59d37329a1f6ece",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 28.0,
+            "previous": 18.0,
+            "absolute_change": 10.0,
+            "change_pct": 55.56
+          },
+          "risk": {
+            "score": 46.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_c6aade5c926593091da529c0",
+      "slug": "10-26635-6965-7303-c6aade5c",
+      "title": "The COVID-19 pandemic and acute rheumatic fever inequities, Aotearoa New Zealand, 2020–2022",
+      "doi": "10.26635/6965.7303",
+      "pmid": "42348889",
+      "journal": "New Zealand Medical Journal",
+      "publisher": "Pasifika Medical Association Group",
+      "authors": [
+        "Karen Wright",
+        "Clair Mills",
+        "Bert van der Werf",
+        "Adam Dennison",
+        "Anneka Anderson",
+        "Michael Baker",
+        "Julie Bennett",
+        "Sainimere Boladuadua",
+        "Florina Chan Mow",
+        "Papaarangi Reid",
+        "Sarah-Jane Paine"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-06-26T00:00:00+00:00",
+      "indexed_at": "2026-06-22T23:47:02+00:00",
+      "open_access_status": "unknown",
+      "open_access_url": null,
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.512,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D004",
+          "slug": "covid-19",
+          "name_en": "COVID-19",
+          "name_zh": "新型冠状病毒感染",
+          "confidence": 0.82
+        },
+        {
+          "disease_id": "D158",
+          "slug": "rheumatic-fever",
+          "name_en": "Rheumatic fever",
+          "name_zh": "风湿热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [
+        {
+          "code": "NZ",
+          "name_en": "New Zealand",
+          "name_zh": null,
+          "confidence": 0.78
+        }
+      ],
+      "topics": [],
+      "related_surveillance": [
+        {
+          "disease_id": "D004",
+          "disease_name_en": "COVID-19",
+          "disease_name_zh": "新型冠状病毒感染",
+          "disease_slug": "covid-19",
+          "country_code": "NZ",
+          "country_name_en": "New Zealand",
+          "url": "/diseases/covid-19/",
+          "method": "high-confidence article geography intersected with GIDS series coverage"
+        },
+        {
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "disease_slug": "rheumatic-fever",
+          "country_code": "NZ",
+          "country_name_en": "New Zealand",
+          "url": "/diseases/rheumatic-fever/",
+          "method": "high-confidence article geography intersected with GIDS series coverage"
+        }
+      ],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to COVID-19. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与新型冠状病毒感染相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.26635/6965.7303",
+        "publisher": "https://nzmj.org.nz/journal/vol-139-no-1637/the-covid-19-pandemic-and-acute-rheumatic-fever-inequities-aotearoa-new-zealand-2020-2022",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/42348889/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137481+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:f59d37329a1f6ece",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 28.0,
+            "previous": 18.0,
+            "absolute_change": 10.0,
+            "change_pct": 55.56
+          },
+          "risk": {
+            "score": 46.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "exact_disease_geography",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_90b6b044cbc266f85df97600",
+      "slug": "10-1136-bmjopen-2025-099827-90b6b044",
+      "title": "Diverse diagnostic and management approaches for acute rheumatic fever in Australia and New Zealand: findings of a prospective clinical study.",
+      "doi": "10.1136/bmjopen-2025-099827",
+      "pmid": "40675648",
+      "journal": "BMJ open",
+      "publisher": null,
+      "authors": [
+        "Peiris R",
+        "Webb R",
+        "Bennett J",
+        "Yan J",
+        "Francis JR",
+        "Remenyi B",
+        "Chan Mow F",
+        "Burgess R",
+        "Wilson NJ",
+        "Stanley A",
+        "Francis L",
+        "Holloway R",
+        "Westbury R",
+        "Lawrence S",
+        "Hernandez-Gomez Y",
+        "Broadhurst D",
+        "Moreland NJ",
+        "McGregor R",
+        "Motteram C",
+        "Pearson G",
+        "Mayo M",
+        "Ralph AP",
+        "Carapetis JR"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Cohort study",
+      "published_at": "2025-07-17T00:00:00+00:00",
+      "indexed_at": "2025-07-17T00:00:00+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC12273072",
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.512,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D158",
+          "slug": "rheumatic-fever",
+          "name_en": "Rheumatic fever",
+          "name_zh": "风湿热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [
+        {
+          "code": "AU",
+          "name_en": "Australia",
+          "name_zh": null,
+          "confidence": 0.78
+        },
+        {
+          "code": "NZ",
+          "name_en": "New Zealand",
+          "name_zh": null,
+          "confidence": 0.78
+        }
+      ],
+      "topics": [
+        {
+          "name": "Diagnostics",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [
+        {
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "disease_slug": "rheumatic-fever",
+          "country_code": "NZ",
+          "country_name_en": "New Zealand",
+          "url": "/diseases/rheumatic-fever/",
+          "method": "high-confidence article geography intersected with GIDS series coverage"
+        }
+      ],
+      "summary": {},
+      "why_it_matters_en": "This recent cohort study is indexed for its relevance to Rheumatic fever. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Cohort study因与风湿热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1136/bmjopen-2025-099827",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/40675648/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137529+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:f59d37329a1f6ece",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 28.0,
+            "previous": 18.0,
+            "absolute_change": 10.0,
+            "change_pct": 55.56
+          },
+          "risk": {
+            "score": 46.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "exact_disease_geography",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_8476387eab6a557991a80d02",
+      "slug": "10-3390-ijerph22050686-8476387e",
+      "title": "Exploring How Rheumatic Fever Is Portrayed on TikTok: A Descriptive Content Analysis.",
+      "doi": "10.3390/ijerph22050686",
+      "pmid": "40427803",
+      "journal": "International journal of environmental research and public health",
+      "publisher": null,
+      "authors": [
+        "Tu'akoi S",
+        "Ofanoa M",
+        "Ofanoa S",
+        "Heather M",
+        "Lutui H",
+        "Goodyear-Smith F"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2025-04-26T00:00:00+00:00",
+      "indexed_at": "2025-05-28T00:00:00+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC12111628",
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.512,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D158",
+          "slug": "rheumatic-fever",
+          "name_en": "Rheumatic fever",
+          "name_zh": "风湿热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Treatment",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Rheumatic fever. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与风湿热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.3390/ijerph22050686",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/40427803/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137534+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:f59d37329a1f6ece",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 28.0,
+            "previous": 18.0,
+            "absolute_change": 10.0,
+            "change_pct": 55.56
+          },
+          "risk": {
+            "score": 46.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_8b6a74dac9bd1c2c6c1f323a",
+      "slug": "10-1007-s44162-026-00154-w-8b6a74da",
+      "title": "Rheumatic heart disease in the setting of lupus anticoagulant antibodies without history of rheumatic fever",
+      "doi": "10.1007/s44162-026-00154-w",
+      "pmid": null,
+      "journal": "Journal of Rare Diseases",
+      "publisher": "Springer Science and Business Media LLC",
+      "authors": [
+        "Lauren Morrison",
+        "Thomas Moccia"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-02-02T00:00:00+00:00",
+      "indexed_at": "2026-06-16T18:01:11+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://link.springer.com/10.1007/s44162-026-00154-w",
+      "license_url": "https://creativecommons.org/licenses/by/4.0",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.503,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D158",
+          "slug": "rheumatic-fever",
+          "name_en": "Rheumatic fever",
+          "name_zh": "风湿热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Rheumatic fever. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与风湿热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1007/s44162-026-00154-w",
+        "publisher": "https://link.springer.com/10.1007/s44162-026-00154-w"
+      },
+      "updated_at": "2026-08-13T16:05:48.137504+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:f59d37329a1f6ece",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 28.0,
+            "previous": 18.0,
+            "absolute_change": 10.0,
+            "change_pct": 55.56
+          },
+          "risk": {
+            "score": 46.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_640b2fbafd92d749353e5260",
+      "slug": "10-26635-6965-6593-640b2fba",
+      "title": "Acute rheumatic fever in Canterbury, Aotearoa New Zealand, 2012–2022",
+      "doi": "10.26635/6965.6593",
+      "pmid": null,
+      "journal": "New Zealand Medical Journal",
+      "publisher": "Pasifika Medical Association Group",
+      "authors": [
+        "Taliah Su’a",
+        "Allamanda Faa’toese",
+        "Andrew Anglemyer",
+        "Kiki Maoate",
+        "Tony Walls"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2025-02-14T00:00:00+00:00",
+      "indexed_at": "2025-02-12T05:31:27+00:00",
+      "open_access_status": "unknown",
+      "open_access_url": null,
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.494,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D158",
+          "slug": "rheumatic-fever",
+          "name_en": "Rheumatic fever",
+          "name_zh": "风湿热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [
+        {
+          "code": "NZ",
+          "name_en": "New Zealand",
+          "name_zh": null,
+          "confidence": 0.78
+        }
+      ],
+      "topics": [
+        {
+          "name": "Surveillance",
+          "confidence": 0.66
+        },
+        {
+          "name": "Treatment",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [
+        {
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "disease_slug": "rheumatic-fever",
+          "country_code": "NZ",
+          "country_name_en": "New Zealand",
+          "url": "/diseases/rheumatic-fever/",
+          "method": "high-confidence article geography intersected with GIDS series coverage"
+        }
+      ],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Rheumatic fever. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与风湿热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.26635/6965.6593",
+        "publisher": "https://nzmj.org.nz/journal/vol-138-no-1609/acute-rheumatic-fever-in-canterbury-aotearoa-new-zealand-2012-2022"
+      },
+      "updated_at": "2026-08-13T16:05:48.137476+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:f59d37329a1f6ece",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 28.0,
+            "previous": 18.0,
+            "absolute_change": 10.0,
+            "change_pct": 55.56
+          },
+          "risk": {
+            "score": 46.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "exact_disease_geography",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_239b3a98538fada6e98b6d79",
+      "slug": "10-1016-j-anzjph-2026-100351-239b3a98",
+      "title": "Acute rheumatic fever and rheumatic heart disease epidemiology in Victoria",
+      "doi": "10.1016/j.anzjph.2026.100351",
+      "pmid": null,
+      "journal": "Australian and New Zealand Journal of Public Health",
+      "publisher": "Elsevier BV",
+      "authors": [
+        "Julia Maguire",
+        "Janet Strachan"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-01-01T00:00:00+00:00",
+      "indexed_at": "2026-06-14T18:54:09+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://linkinghub.elsevier.com/retrieve/pii/S1326020026000403",
+      "license_url": "https://www.elsevier.com/tdm/userlicense/1.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.49,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D158",
+          "slug": "rheumatic-fever",
+          "name_en": "Rheumatic fever",
+          "name_zh": "风湿热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Rheumatic fever. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与风湿热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1016/j.anzjph.2026.100351",
+        "publisher": "https://linkinghub.elsevier.com/retrieve/pii/S1326020026000403"
+      },
+      "updated_at": "2026-08-13T16:05:48.137475+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:f59d37329a1f6ece",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 28.0,
+            "previous": 18.0,
+            "absolute_change": 10.0,
+            "change_pct": 55.56
+          },
+          "risk": {
+            "score": 46.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_fc6254de9adc26bbe6598038",
+      "slug": "10-1172-jci-insight-196619-fc6254de",
+      "title": "PhIP-Seq uncovers marked heterogeneity in acute rheumatic fever autoantibodies.",
+      "doi": "10.1172/jci.insight.196619",
+      "pmid": "41252216",
+      "journal": "JCI insight",
+      "publisher": null,
+      "authors": [
+        "McGregor R",
+        "Carlton LH",
+        "O'Donnell TJ",
+        "Merritt E",
+        "Sheen CR",
+        "Chan Mow F",
+        "Martin WJ",
+        "Baker MG",
+        "Wilson N",
+        "Laserson U",
+        "Moreland NJ"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2025-11-18T00:00:00+00:00",
+      "indexed_at": "2025-11-18T00:00:00+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC12890473",
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.472,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D158",
+          "slug": "rheumatic-fever",
+          "name_en": "Rheumatic fever",
+          "name_zh": "风湿热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Rheumatic fever. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与风湿热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1172/jci.insight.196619",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41252216/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137524+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:f59d37329a1f6ece",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 28.0,
+            "previous": 18.0,
+            "absolute_change": 10.0,
+            "change_pct": 55.56
+          },
+          "risk": {
+            "score": 46.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_4053baf2a4d8cbc6a559c385",
+      "slug": "10-1161-jaha-125-043869-4053baf2",
+      "title": "Preliminary Cardiac Experience With Hydroxychloroquine in New Zealand Children With Acute Rheumatic Fever",
+      "doi": "10.1161/jaha.125.043869",
+      "pmid": "41220149",
+      "journal": "Journal of the American Heart Association",
+      "publisher": "Ovid Technologies (Wolters Kluwer Health)",
+      "authors": [
+        "Rachel Webb",
+        "Judith Tresidder",
+        "Dug Yeo Han",
+        "Shirley Lawrence",
+        "Florina Chan Mow",
+        "Rebecca Somerville",
+        "Fiona Perelini",
+        "Nicola Culliford‐Semmens",
+        "Zoe Vetten",
+        "Danny de Lore",
+        "Miriam Wheeler",
+        "Francis Middleton",
+        "Reuben McGregor",
+        "Nicole Moreland",
+        "Nigel Wilson"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2025-11-18T00:00:00+00:00",
+      "indexed_at": "2025-12-19T04:57:18+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC12887196",
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.472,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D158",
+          "slug": "rheumatic-fever",
+          "name_en": "Rheumatic fever",
+          "name_zh": "风湿热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [
+        {
+          "code": "NZ",
+          "name_en": "New Zealand",
+          "name_zh": null,
+          "confidence": 0.78
+        }
+      ],
+      "topics": [],
+      "related_surveillance": [
+        {
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "disease_slug": "rheumatic-fever",
+          "country_code": "NZ",
+          "country_name_en": "New Zealand",
+          "url": "/diseases/rheumatic-fever/",
+          "method": "high-confidence article geography intersected with GIDS series coverage"
+        }
+      ],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Rheumatic fever. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与风湿热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1161/jaha.125.043869",
+        "publisher": "https://www.ahajournals.org/doi/10.1161/JAHA.125.043869",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41220149/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137499+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:f59d37329a1f6ece",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 28.0,
+            "previous": 18.0,
+            "absolute_change": 10.0,
+            "change_pct": 55.56
+          },
+          "risk": {
+            "score": 46.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "exact_disease_geography",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_8e4c34ca242427962dfa972b",
+      "slug": "10-3390-healthcare13222924-8e4c34ca",
+      "title": "“It Can Hurt Your Heart”: A Co-Designed Cross-Sectional Survey Exploring Pacific People’s Understanding of Rheumatic Fever in Auckland, New Zealand",
+      "doi": "10.3390/healthcare13222924",
+      "pmid": "41302313",
+      "journal": "Healthcare",
+      "publisher": "MDPI AG",
+      "authors": [
+        "Siobhan Tu’akoi",
+        "Malakai ‘Ofanoa",
+        "Samuela ‘Ofanoa",
+        "Melenaite Tohi",
+        "Maryann Heather",
+        "Hinamaha Lutui",
+        "Rose Lamont",
+        "Elizabeth Fanueli",
+        "Felicity Goodyear-Smith"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Cross-sectional study",
+      "published_at": "2025-11-15T00:00:00+00:00",
+      "indexed_at": "2026-07-22T20:51:18+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC12652848",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.471,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D158",
+          "slug": "rheumatic-fever",
+          "name_en": "Rheumatic fever",
+          "name_zh": "风湿热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [
+        {
+          "code": "NZ",
+          "name_en": "New Zealand",
+          "name_zh": null,
+          "confidence": 0.78
+        }
+      ],
+      "topics": [],
+      "related_surveillance": [
+        {
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "disease_slug": "rheumatic-fever",
+          "country_code": "NZ",
+          "country_name_en": "New Zealand",
+          "url": "/diseases/rheumatic-fever/",
+          "method": "high-confidence article geography intersected with GIDS series coverage"
+        }
+      ],
+      "summary": {},
+      "why_it_matters_en": "This recent cross-sectional study is indexed for its relevance to Rheumatic fever. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Cross-sectional study因与风湿热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.3390/healthcare13222924",
+        "publisher": "https://www.mdpi.com/2227-9032/13/22/2924",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41302313/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137484+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:f59d37329a1f6ece",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 28.0,
+            "previous": 18.0,
+            "absolute_change": 10.0,
+            "change_pct": 55.56
+          },
+          "risk": {
+            "score": 46.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "exact_disease_geography",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_72ffd09eac38b2042738e939",
+      "slug": "10-1007-s00246-025-04068-0-72ffd09e",
+      "title": "Predictors of Resolution in Rheumatic Heart Disease: Application of the 2023 WHF Criteria in First-Episode Acute Rheumatic Fever",
+      "doi": "10.1007/s00246-025-04068-0",
+      "pmid": null,
+      "journal": "Pediatric Cardiology",
+      "publisher": "Springer Science and Business Media LLC",
+      "authors": [
+        "Javed Iqbal",
+        "Brijesh Sathian"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2025-11-02T00:00:00+00:00",
+      "indexed_at": "2026-04-01T09:25:47+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://link.springer.com/10.1007/s00246-025-04068-0",
+      "license_url": "https://www.springernature.com/gp/researchers/text-and-data-mining",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.465,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D158",
+          "slug": "rheumatic-fever",
+          "name_en": "Rheumatic fever",
+          "name_zh": "风湿热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Rheumatic fever. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与风湿热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1007/s00246-025-04068-0",
+        "publisher": "https://link.springer.com/10.1007/s00246-025-04068-0"
+      },
+      "updated_at": "2026-08-13T16:05:48.137505+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:f59d37329a1f6ece",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 28.0,
+            "previous": 18.0,
+            "absolute_change": 10.0,
+            "change_pct": 55.56
+          },
+          "risk": {
+            "score": 46.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_5a0114c34646b6031ba5880b",
+      "slug": "10-1080-22221751-2025-2532687-5a0114c3",
+      "title": "Pandemic mitigations reveal an association between superficial group A streptococcal infections and acute rheumatic fever incidence in Auckland New Zealand",
+      "doi": "10.1080/22221751.2025.2532687",
+      "pmid": "40704453",
+      "journal": "Emerging Microbes & Infections",
+      "publisher": "Informa UK Limited",
+      "authors": [
+        "Julie Bennett",
+        "Jane Zhang",
+        "Anneka Anderson",
+        "Matthew Blakiston",
+        "Michael G. Baker",
+        "Rachel Webb",
+        "Nicole J. Moreland"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2025-07-24T00:00:00+00:00",
+      "indexed_at": "2025-12-14T14:34:07+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC12551407",
+      "license_url": "http://creativecommons.org/licenses/by-nc/4.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.432,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D158",
+          "slug": "rheumatic-fever",
+          "name_en": "Rheumatic fever",
+          "name_zh": "风湿热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [
+        {
+          "code": "NZ",
+          "name_en": "New Zealand",
+          "name_zh": null,
+          "confidence": 0.78
+        }
+      ],
+      "topics": [],
+      "related_surveillance": [
+        {
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "disease_slug": "rheumatic-fever",
+          "country_code": "NZ",
+          "country_name_en": "New Zealand",
+          "url": "/diseases/rheumatic-fever/",
+          "method": "high-confidence article geography intersected with GIDS series coverage"
+        }
+      ],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Rheumatic fever. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与风湿热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1080/22221751.2025.2532687",
+        "publisher": "https://www.tandfonline.com/doi/full/10.1080/22221751.2025.2532687",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/40704453/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137486+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:f59d37329a1f6ece",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 28.0,
+            "previous": 18.0,
+            "absolute_change": 10.0,
+            "change_pct": 55.56
+          },
+          "risk": {
+            "score": 46.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "exact_disease_geography",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_e98d8e5b65fa5d6a3d6ecb17",
+      "slug": "10-5694-mja2-52708-e98d8e5b",
+      "title": "New evidence supports a greater focus on streptococcal skin infections to prevent rheumatic fever.",
+      "doi": "10.5694/mja2.52708",
+      "pmid": "40533426",
+      "journal": "The Medical journal of Australia",
+      "publisher": null,
+      "authors": [
+        "Baker MG",
+        "Bennett J",
+        "Percival T",
+        "Leversha A",
+        "Gurney J",
+        "Moreland NJ"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2025-06-18T00:00:00+00:00",
+      "indexed_at": "2025-06-18T00:00:00+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC12318488",
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.432,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D158",
+          "slug": "rheumatic-fever",
+          "name_en": "Rheumatic fever",
+          "name_zh": "风湿热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Rheumatic fever. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与风湿热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.5694/mja2.52708",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/40533426/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137530+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:f59d37329a1f6ece",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 28.0,
+            "previous": 18.0,
+            "absolute_change": 10.0,
+            "change_pct": 55.56
+          },
+          "risk": {
+            "score": 46.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_66f3b18a38944199a00632d9",
+      "slug": "10-1080-29944694-2024-2444001-66f3b18a",
+      "title": "‘Not a short fix’: a participatory approach to exploring challenges and opportunities for rheumatic fever prevention with Pacific people in South Auckland, New Zealand",
+      "doi": "10.1080/29944694.2024.2444001",
+      "pmid": null,
+      "journal": "Journal of Health Equity",
+      "publisher": "Informa UK Limited",
+      "authors": [
+        "Siobhan Tu’akoi",
+        "Malakai Ofanoa",
+        "Samuela Ofanoa",
+        "Hinamaha Lutui",
+        "Maryann Heather",
+        "Felicity Goodyear-Smith"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2025-01-22T00:00:00+00:00",
+      "indexed_at": "2025-12-11T15:48:15+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://www.tandfonline.com/doi/full/10.1080/29944694.2024.2444001",
+      "license_url": "http://creativecommons.org/licenses/by-nc/4.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.432,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D158",
+          "slug": "rheumatic-fever",
+          "name_en": "Rheumatic fever",
+          "name_zh": "风湿热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [
+        {
+          "code": "NZ",
+          "name_en": "New Zealand",
+          "name_zh": null,
+          "confidence": 0.78
+        }
+      ],
+      "topics": [],
+      "related_surveillance": [
+        {
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "disease_slug": "rheumatic-fever",
+          "country_code": "NZ",
+          "country_name_en": "New Zealand",
+          "url": "/diseases/rheumatic-fever/",
+          "method": "high-confidence article geography intersected with GIDS series coverage"
+        }
+      ],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Rheumatic fever. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与风湿热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1080/29944694.2024.2444001",
+        "publisher": "https://www.tandfonline.com/doi/full/10.1080/29944694.2024.2444001"
+      },
+      "updated_at": "2026-08-13T16:05:48.137488+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:f59d37329a1f6ece",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 28.0,
+            "previous": 18.0,
+            "absolute_change": 10.0,
+            "change_pct": 55.56
+          },
+          "risk": {
+            "score": 46.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "exact_disease_geography",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_6cb45b6bba20d65ff2c9af51",
+      "slug": "10-1007-s13312-024-3282-1-6cb45b6b",
+      "title": "Rheumatic Fever and Rheumatic Heart Disease: A 50-Year Perspective",
+      "doi": "10.1007/s13312-024-3282-1",
+      "pmid": null,
+      "journal": "Indian Pediatrics",
+      "publisher": "Springer Science and Business Media LLC",
+      "authors": [
+        "Sumaira Khalil"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Commentary",
+      "published_at": "2024-09-17T00:00:00+00:00",
+      "indexed_at": "2024-09-20T04:19:46+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://link.springer.com/10.1007/s13312-024-3282-1",
+      "license_url": "https://www.springernature.com/gp/researchers/text-and-data-mining",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.432,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D158",
+          "slug": "rheumatic-fever",
+          "name_en": "Rheumatic fever",
+          "name_zh": "风湿热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent commentary is indexed for its relevance to Rheumatic fever. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Commentary因与风湿热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1007/s13312-024-3282-1",
+        "publisher": "https://link.springer.com/10.1007/s13312-024-3282-1"
+      },
+      "updated_at": "2026-08-13T16:05:48.137497+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:f59d37329a1f6ece",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 28.0,
+            "previous": 18.0,
+            "absolute_change": 10.0,
+            "change_pct": 55.56
+          },
+          "risk": {
+            "score": 46.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_684c916bd87388b6fa81a816",
+      "slug": "10-7759-cureus-97424-684c916b",
+      "title": "Knowledge of Acute Rheumatic Fever and Rheumatic Heart Disease Prevention Among House Officers in Three Teaching Hospitals, Khartoum, Sudan",
+      "doi": "10.7759/cureus.97424",
+      "pmid": null,
+      "journal": "Cureus",
+      "publisher": "Springer Science and Business Media LLC",
+      "authors": [
+        "Hussein J Ahmed",
+        "Othman Abdelrahman"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2025-11-21T00:00:00+00:00",
+      "indexed_at": "2025-11-21T14:59:53+00:00",
+      "open_access_status": "unknown",
+      "open_access_url": null,
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.423,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D158",
+          "slug": "rheumatic-fever",
+          "name_en": "Rheumatic fever",
+          "name_zh": "风湿热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Rheumatic fever. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与风湿热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.7759/cureus.97424",
+        "publisher": "https://www.cureus.com/articles/409549-knowledge-of-acute-rheumatic-fever-and-rheumatic-heart-disease-prevention-among-house-officers-in-three-teaching-hospitals-khartoum-sudan"
+      },
+      "updated_at": "2026-08-13T16:05:48.137501+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:f59d37329a1f6ece",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 28.0,
+            "previous": 18.0,
+            "absolute_change": 10.0,
+            "change_pct": 55.56
+          },
+          "risk": {
+            "score": 46.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_60b0fc15ea422757590432e6",
+      "slug": "10-1016-j-jinf-2025-106506-60b0fc15",
+      "title": "High dose, subcutaneous injections of benzathine penicillin G (SCIP) to prevent rheumatic fever: A single arm, phase IIa trial of safety and pharmacokinetics.",
+      "doi": "10.1016/j.jinf.2025.106506",
+      "pmid": "40378963",
+      "journal": "The Journal of infection",
+      "publisher": null,
+      "authors": [
+        "Bennett J",
+        "Salman S",
+        "Moodley D",
+        "Dobinson H",
+        "Andersen E",
+        "Anderson A",
+        "Moore B",
+        "Page-Sharp M",
+        "Batty K",
+        "Carapetis J",
+        "Baker M",
+        "Kado J",
+        "Manning L"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2025-05-14T00:00:00+00:00",
+      "indexed_at": "2025-05-16T00:00:00+00:00",
+      "open_access_status": "unknown",
+      "open_access_url": null,
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.382,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D158",
+          "slug": "rheumatic-fever",
+          "name_en": "Rheumatic fever",
+          "name_zh": "风湿热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [
+        {
+          "code": "NZ",
+          "name_en": "New Zealand",
+          "name_zh": null,
+          "confidence": 0.62
+        }
+      ],
+      "topics": [],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Rheumatic fever. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与风湿热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1016/j.jinf.2025.106506",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/40378963/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137535+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:f59d37329a1f6ece",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 28.0,
+            "previous": 18.0,
+            "absolute_change": 10.0,
+            "change_pct": 55.56
+          },
+          "risk": {
+            "score": 46.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_994b556568405485abbf7ceb",
+      "slug": "10-26635-6965-6532-994b5565",
+      "title": "Rheumatic fever trends in the context of skin infection and Group A Streptococcal sore throat programmes in the Bay of Plenty: an observational study, 2000–2022",
+      "doi": "10.26635/6965.6532",
+      "pmid": null,
+      "journal": "New Zealand Medical Journal",
+      "publisher": "Pasifika Medical Association Group",
+      "authors": [
+        "John Malcolm",
+        "Lydia Snell",
+        "Kate Grimwade",
+        "Sandra Innes-Smith",
+        "Melissa Bennett",
+        "Lindsay Lowe",
+        "James Scarfe",
+        "Aroha Ruha-Hiraka",
+        "Liam Walsh"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2025-02-14T00:00:00+00:00",
+      "indexed_at": "2026-06-19T20:35:55+00:00",
+      "open_access_status": "unknown",
+      "open_access_url": null,
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.382,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D158",
+          "slug": "rheumatic-fever",
+          "name_en": "Rheumatic fever",
+          "name_zh": "风湿热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Rheumatic fever. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与风湿热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.26635/6965.6532",
+        "publisher": "https://nzmj.org.nz/journal/vol-138-no-1609/rheumatic-fever-trends-in-the-context-of-skin-infection-and-group-a-streptococcal-sore-throat-programmes-in-the-bay-of-plenty-an"
+      },
+      "updated_at": "2026-08-13T16:05:48.137493+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:f59d37329a1f6ece",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 28.0,
+            "previous": 18.0,
+            "absolute_change": 10.0,
+            "change_pct": 55.56
+          },
+          "risk": {
+            "score": 46.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    }
+  ],
+  "count": 29,
+  "publication_timeline": [
+    {
+      "month": "2024-09",
+      "publication_count": 1
+    },
+    {
+      "month": "2025-01",
+      "publication_count": 1
+    },
+    {
+      "month": "2025-02",
+      "publication_count": 2
+    },
+    {
+      "month": "2025-04",
+      "publication_count": 1
+    },
+    {
+      "month": "2025-05",
+      "publication_count": 1
+    },
+    {
+      "month": "2025-06",
+      "publication_count": 1
+    },
+    {
+      "month": "2025-07",
+      "publication_count": 2
+    },
+    {
+      "month": "2025-09",
+      "publication_count": 1
+    },
+    {
+      "month": "2025-11",
+      "publication_count": 5
+    },
+    {
+      "month": "2026-01",
+      "publication_count": 1
+    },
+    {
+      "month": "2026-02",
+      "publication_count": 3
+    },
+    {
+      "month": "2026-03",
+      "publication_count": 2
+    },
+    {
+      "month": "2026-04",
+      "publication_count": 1
+    },
+    {
+      "month": "2026-05",
+      "publication_count": 2
+    },
+    {
+      "month": "2026-06",
+      "publication_count": 3
+    },
+    {
+      "month": "2026-07",
+      "publication_count": 1
+    },
+    {
+      "month": "2026-08",
+      "publication_count": 1
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-239b3a98538fada6e98b6d79",
+        "type": "article",
+        "label": "Acute rheumatic fever and rheumatic heart disease epidemiology in Victoria",
+        "slug": "10-1016-j-anzjph-2026-100351-239b3a98",
+        "url": "/research/articles/10-1016-j-anzjph-2026-100351-239b3a98/",
+        "published_at": "2026-01-01T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-4053baf2a4d8cbc6a559c385",
+        "type": "article",
+        "label": "Preliminary Cardiac Experience With Hydroxychloroquine in New Zealand Children With Acute Rheumatic Fever",
+        "slug": "10-1161-jaha-125-043869-4053baf2",
+        "url": "/research/articles/10-1161-jaha-125-043869-4053baf2/",
+        "published_at": "2025-11-18T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-414150e9ce4fe57a5508ad7c",
+        "type": "article",
+        "label": "Acute rheumatic fever and rheumatic heart disease.",
+        "slug": "10-1038-s41572-026-00685-y-414150e9",
+        "url": "/research/articles/10-1038-s41572-026-00685-y-414150e9/",
+        "published_at": "2026-02-26T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-467668f3d67c71b1047a140a",
+        "type": "article",
+        "label": "Group C/G Streptococcal Pharyngitis and Acute Rheumatic Fever in Auckland, New Zealand, 2010–2016",
+        "slug": "10-1111-jpc-70440-467668f3",
+        "url": "/research/articles/10-1111-jpc-70440-467668f3/",
+        "published_at": "2026-05-18T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-5a0114c34646b6031ba5880b",
+        "type": "article",
+        "label": "Pandemic mitigations reveal an association between superficial group A streptococcal infections and acute rheumatic fever incidence in Auckland New Zealand",
+        "slug": "10-1080-22221751-2025-2532687-5a0114c3",
+        "url": "/research/articles/10-1080-22221751-2025-2532687-5a0114c3/",
+        "published_at": "2025-07-24T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-5c77103faa3b2a1a672b7ca2",
+        "type": "article",
+        "label": "Te Maatai Manawa a Whaanau: Maaori and Pacific People's Experiences of Echocardiography in Rheumatic Fever Health Care in Auckland, New Zealand",
+        "slug": "10-1111-jpc-70509-5c77103f",
+        "url": "/research/articles/10-1111-jpc-70509-5c77103f/",
+        "published_at": "2026-07-22T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-608dcc059be5b13e00fbf07e",
+        "type": "article",
+        "label": "<i>Streptococcus Pyogenes</i> and Acute Rheumatic Fever: How Strong are the Links in the Chain?",
+        "slug": "10-5334-gh-1564-608dcc05",
+        "url": "/research/articles/10-5334-gh-1564-608dcc05/",
+        "published_at": "2026-06-19T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-60b0fc15ea422757590432e6",
+        "type": "article",
+        "label": "High dose, subcutaneous injections of benzathine penicillin G (SCIP) to prevent rheumatic fever: A single arm, phase IIa trial of safety and pharmacokinetics.",
+        "slug": "10-1016-j-jinf-2025-106506-60b0fc15",
+        "url": "/research/articles/10-1016-j-jinf-2025-106506-60b0fc15/",
+        "published_at": "2025-05-14T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-640b2fbafd92d749353e5260",
+        "type": "article",
+        "label": "Acute rheumatic fever in Canterbury, Aotearoa New Zealand, 2012–2022",
+        "slug": "10-26635-6965-6593-640b2fba",
+        "url": "/research/articles/10-26635-6965-6593-640b2fba/",
+        "published_at": "2025-02-14T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-66f3b18a38944199a00632d9",
+        "type": "article",
+        "label": "‘Not a short fix’: a participatory approach to exploring challenges and opportunities for rheumatic fever prevention with Pacific people in South Auckland, New Zealand",
+        "slug": "10-1080-29944694-2024-2444001-66f3b18a",
+        "url": "/research/articles/10-1080-29944694-2024-2444001-66f3b18a/",
+        "published_at": "2025-01-22T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-684c916bd87388b6fa81a816",
+        "type": "article",
+        "label": "Knowledge of Acute Rheumatic Fever and Rheumatic Heart Disease Prevention Among House Officers in Three Teaching Hospitals, Khartoum, Sudan",
+        "slug": "10-7759-cureus-97424-684c916b",
+        "url": "/research/articles/10-7759-cureus-97424-684c916b/",
+        "published_at": "2025-11-21T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-6cb45b6bba20d65ff2c9af51",
+        "type": "article",
+        "label": "Rheumatic Fever and Rheumatic Heart Disease: A 50-Year Perspective",
+        "slug": "10-1007-s13312-024-3282-1-6cb45b6b",
+        "url": "/research/articles/10-1007-s13312-024-3282-1-6cb45b6b/",
+        "published_at": "2024-09-17T00:00:00+00:00",
+        "study_type": "Commentary"
+      },
+      {
+        "id": "article:lit-72ffd09eac38b2042738e939",
+        "type": "article",
+        "label": "Predictors of Resolution in Rheumatic Heart Disease: Application of the 2023 WHF Criteria in First-Episode Acute Rheumatic Fever",
+        "slug": "10-1007-s00246-025-04068-0-72ffd09e",
+        "url": "/research/articles/10-1007-s00246-025-04068-0-72ffd09e/",
+        "published_at": "2025-11-02T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-798038bf07ace829ca9cc712",
+        "type": "article",
+        "label": "Rheumatic fever/rheumatic heart disease, contemporary concepts, emerging paradigms and Indian perspective",
+        "slug": "10-4103-ijoc-ijoc-14-26-798038bf",
+        "url": "/research/articles/10-4103-ijoc-ijoc-14-26-798038bf/",
+        "published_at": "2026-08-08T00:00:00+00:00",
+        "study_type": "Commentary"
+      },
+      {
+        "id": "article:lit-7f7211abffb162a0b358a56e",
+        "type": "article",
+        "label": "Circulating prothymosin alpha and immunoglobulin G3 in acute rheumatic fever and rheumatic heart disease: A case-control study.",
+        "slug": "10-1016-j-ahjo-2025-100630-7f7211ab",
+        "url": "/research/articles/10-1016-j-ahjo-2025-100630-7f7211ab/",
+        "published_at": "2025-09-29T00:00:00+00:00",
+        "study_type": "Case-control study"
+      },
+      {
+        "id": "article:lit-8476387eab6a557991a80d02",
+        "type": "article",
+        "label": "Exploring How Rheumatic Fever Is Portrayed on TikTok: A Descriptive Content Analysis.",
+        "slug": "10-3390-ijerph22050686-8476387e",
+        "url": "/research/articles/10-3390-ijerph22050686-8476387e/",
+        "published_at": "2025-04-26T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-88ac78c271afee201b087b0d",
+        "type": "article",
+        "label": "Acute Rheumatic Fever Diagnostic Network (ARC Network) clinical recruitment protocol.",
+        "slug": "10-1136-bmjopen-2025-114968-88ac78c2",
+        "url": "/research/articles/10-1136-bmjopen-2025-114968-88ac78c2/",
+        "published_at": "2026-03-25T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-8b6a74dac9bd1c2c6c1f323a",
+        "type": "article",
+        "label": "Rheumatic heart disease in the setting of lupus anticoagulant antibodies without history of rheumatic fever",
+        "slug": "10-1007-s44162-026-00154-w-8b6a74da",
+        "url": "/research/articles/10-1007-s44162-026-00154-w-8b6a74da/",
+        "published_at": "2026-02-02T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-8e4c34ca242427962dfa972b",
+        "type": "article",
+        "label": "“It Can Hurt Your Heart”: A Co-Designed Cross-Sectional Survey Exploring Pacific People’s Understanding of Rheumatic Fever in Auckland, New Zealand",
+        "slug": "10-3390-healthcare13222924-8e4c34ca",
+        "url": "/research/articles/10-3390-healthcare13222924-8e4c34ca/",
+        "published_at": "2025-11-15T00:00:00+00:00",
+        "study_type": "Cross-sectional study"
+      },
+      {
+        "id": "article:lit-90b6b044cbc266f85df97600",
+        "type": "article",
+        "label": "Diverse diagnostic and management approaches for acute rheumatic fever in Australia and New Zealand: findings of a prospective clinical study.",
+        "slug": "10-1136-bmjopen-2025-099827-90b6b044",
+        "url": "/research/articles/10-1136-bmjopen-2025-099827-90b6b044/",
+        "published_at": "2025-07-17T00:00:00+00:00",
+        "study_type": "Cohort study"
+      },
+      {
+        "id": "article:lit-994b556568405485abbf7ceb",
+        "type": "article",
+        "label": "Rheumatic fever trends in the context of skin infection and Group A Streptococcal sore throat programmes in the Bay of Plenty: an observational study, 2000–2022",
+        "slug": "10-26635-6965-6532-994b5565",
+        "url": "/research/articles/10-26635-6965-6532-994b5565/",
+        "published_at": "2025-02-14T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-a5134330079c829749685095",
+        "type": "article",
+        "label": "New Zealand rheumatic fever clinicians respond to Leung et al.",
+        "slug": "10-1016-j-ijregi-2026-100889-a5134330",
+        "url": "/research/articles/10-1016-j-ijregi-2026-100889-a5134330/",
+        "published_at": "2026-06-01T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-ab5b10852c1f8ecc36d9f6fd",
+        "type": "article",
+        "label": "26-CCC-11339-ACC RHEUMATIC FEVER IS STILL HERE: A CASE OF ACUTE RHEUMATIC FEVER IN A YOUNG ADULT",
+        "slug": "10-1016-j-jacc-2026-02-3602-ab5b1085",
+        "url": "/research/articles/10-1016-j-jacc-2026-02-3602-ab5b1085/",
+        "published_at": "2026-04-01T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-b79a90bec495b81f85aaca81",
+        "type": "article",
+        "label": "Stakeholders Want a Menu of Choices: Findings from a Consultation Workshop on Improving Access to Secondary Prophylaxis of Rheumatic Fever and Rheumatic Heart Disease.",
+        "slug": "10-5334-gh-1555-b79a90be",
+        "url": "/research/articles/10-5334-gh-1555-b79a90be/",
+        "published_at": "2026-05-18T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-c6aade5c926593091da529c0",
+        "type": "article",
+        "label": "The COVID-19 pandemic and acute rheumatic fever inequities, Aotearoa New Zealand, 2020–2022",
+        "slug": "10-26635-6965-7303-c6aade5c",
+        "url": "/research/articles/10-26635-6965-7303-c6aade5c/",
+        "published_at": "2026-06-26T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-c913ca6c5b78848e5efeece2",
+        "type": "article",
+        "label": "CXCR3 is associated with T-cell-induced heart damage in acute rheumatic fever.",
+        "slug": "10-1038-s41467-026-71094-8-c913ca6c",
+        "url": "/research/articles/10-1038-s41467-026-71094-8-c913ca6c/",
+        "published_at": "2026-03-31T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-d7828ffc71896b245d8c2624",
+        "type": "article",
+        "label": "Resurgence of rheumatic fever among Pacific peoples in Aotearoa New Zealand: A 2010–2023 analysis of hospitalisation data with implications for equity policy",
+        "slug": "10-1016-j-anzjph-2025-100301-d7828ffc",
+        "url": "/research/articles/10-1016-j-anzjph-2025-100301-d7828ffc/",
+        "published_at": "2026-02-01T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-e98d8e5b65fa5d6a3d6ecb17",
+        "type": "article",
+        "label": "New evidence supports a greater focus on streptococcal skin infections to prevent rheumatic fever.",
+        "slug": "10-5694-mja2-52708-e98d8e5b",
+        "url": "/research/articles/10-5694-mja2-52708-e98d8e5b/",
+        "published_at": "2025-06-18T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-fc6254de9adc26bbe6598038",
+        "type": "article",
+        "label": "PhIP-Seq uncovers marked heterogeneity in acute rheumatic fever autoantibodies.",
+        "slug": "10-1172-jci-insight-196619-fc6254de",
+        "url": "/research/articles/10-1172-jci-insight-196619-fc6254de/",
+        "published_at": "2025-11-18T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "country:au",
+        "type": "country",
+        "label": "Australia",
+        "code": "AU",
+        "url": "/countries/au/"
+      },
+      {
+        "id": "country:nz",
+        "type": "country",
+        "label": "New Zealand",
+        "code": "NZ",
+        "url": "/countries/nz/"
+      },
+      {
+        "id": "disease:d004",
+        "type": "disease",
+        "label": "COVID-19",
+        "disease_id": "D004",
+        "name_zh": "新型冠状病毒感染",
+        "slug": "covid-19",
+        "url": "/diseases/covid-19/"
+      },
+      {
+        "id": "disease:d158",
+        "type": "disease",
+        "label": "Rheumatic fever",
+        "disease_id": "D158",
+        "name_zh": "风湿热",
+        "slug": "rheumatic-fever",
+        "url": "/diseases/rheumatic-fever/"
+      },
+      {
+        "id": "study-type:case-control-study",
+        "type": "study_type",
+        "label": "Case-control study"
+      },
+      {
+        "id": "study-type:cohort-study",
+        "type": "study_type",
+        "label": "Cohort study"
+      },
+      {
+        "id": "study-type:commentary",
+        "type": "study_type",
+        "label": "Commentary"
+      },
+      {
+        "id": "study-type:cross-sectional-study",
+        "type": "study_type",
+        "label": "Cross-sectional study"
+      },
+      {
+        "id": "study-type:journal-article",
+        "type": "study_type",
+        "label": "Journal article"
+      },
+      {
+        "id": "topic:diagnostics",
+        "type": "topic",
+        "label": "Diagnostics"
+      },
+      {
+        "id": "topic:health-policy",
+        "type": "topic",
+        "label": "Health policy"
+      },
+      {
+        "id": "topic:surveillance",
+        "type": "topic",
+        "label": "Surveillance"
+      },
+      {
+        "id": "topic:treatment",
+        "type": "topic",
+        "label": "Treatment"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-239b3a98538fada6e98b6d79|ABOUT_DISEASE|disease:d158",
+        "source": "article:lit-239b3a98538fada6e98b6d79",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d158",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-239b3a98538fada6e98b6d79|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-239b3a98538fada6e98b6d79",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-4053baf2a4d8cbc6a559c385|ABOUT_DISEASE|disease:d158",
+        "source": "article:lit-4053baf2a4d8cbc6a559c385",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d158",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-4053baf2a4d8cbc6a559c385|STUDIED_IN|country:nz",
+        "source": "article:lit-4053baf2a4d8cbc6a559c385",
+        "relation": "STUDIED_IN",
+        "target": "country:nz",
+        "confidence": 0.78
+      },
+      {
+        "id": "article:lit-4053baf2a4d8cbc6a559c385|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-4053baf2a4d8cbc6a559c385",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-414150e9ce4fe57a5508ad7c|ABOUT_DISEASE|disease:d158",
+        "source": "article:lit-414150e9ce4fe57a5508ad7c",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d158",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-414150e9ce4fe57a5508ad7c|ADDRESSES_TOPIC|topic:treatment",
+        "source": "article:lit-414150e9ce4fe57a5508ad7c",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:treatment",
+        "confidence": 0.7100000000000001
+      },
+      {
+        "id": "article:lit-414150e9ce4fe57a5508ad7c|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-414150e9ce4fe57a5508ad7c",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-467668f3d67c71b1047a140a|ABOUT_DISEASE|disease:d158",
+        "source": "article:lit-467668f3d67c71b1047a140a",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d158",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-467668f3d67c71b1047a140a|STUDIED_IN|country:nz",
+        "source": "article:lit-467668f3d67c71b1047a140a",
+        "relation": "STUDIED_IN",
+        "target": "country:nz",
+        "confidence": 0.78
+      },
+      {
+        "id": "article:lit-467668f3d67c71b1047a140a|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-467668f3d67c71b1047a140a",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-5a0114c34646b6031ba5880b|ABOUT_DISEASE|disease:d158",
+        "source": "article:lit-5a0114c34646b6031ba5880b",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d158",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-5a0114c34646b6031ba5880b|STUDIED_IN|country:nz",
+        "source": "article:lit-5a0114c34646b6031ba5880b",
+        "relation": "STUDIED_IN",
+        "target": "country:nz",
+        "confidence": 0.78
+      },
+      {
+        "id": "article:lit-5a0114c34646b6031ba5880b|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-5a0114c34646b6031ba5880b",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-5c77103faa3b2a1a672b7ca2|ABOUT_DISEASE|disease:d158",
+        "source": "article:lit-5c77103faa3b2a1a672b7ca2",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d158",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-5c77103faa3b2a1a672b7ca2|STUDIED_IN|country:nz",
+        "source": "article:lit-5c77103faa3b2a1a672b7ca2",
+        "relation": "STUDIED_IN",
+        "target": "country:nz",
+        "confidence": 0.78
+      },
+      {
+        "id": "article:lit-5c77103faa3b2a1a672b7ca2|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-5c77103faa3b2a1a672b7ca2",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-608dcc059be5b13e00fbf07e|ABOUT_DISEASE|disease:d158",
+        "source": "article:lit-608dcc059be5b13e00fbf07e",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d158",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-608dcc059be5b13e00fbf07e|ADDRESSES_TOPIC|topic:health-policy",
+        "source": "article:lit-608dcc059be5b13e00fbf07e",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:health-policy",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-608dcc059be5b13e00fbf07e|ADDRESSES_TOPIC|topic:treatment",
+        "source": "article:lit-608dcc059be5b13e00fbf07e",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:treatment",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-608dcc059be5b13e00fbf07e|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-608dcc059be5b13e00fbf07e",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-60b0fc15ea422757590432e6|ABOUT_DISEASE|disease:d158",
+        "source": "article:lit-60b0fc15ea422757590432e6",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d158",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-60b0fc15ea422757590432e6|STUDIED_IN|country:nz",
+        "source": "article:lit-60b0fc15ea422757590432e6",
+        "relation": "STUDIED_IN",
+        "target": "country:nz",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-60b0fc15ea422757590432e6|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-60b0fc15ea422757590432e6",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-640b2fbafd92d749353e5260|ABOUT_DISEASE|disease:d158",
+        "source": "article:lit-640b2fbafd92d749353e5260",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d158",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-640b2fbafd92d749353e5260|ADDRESSES_TOPIC|topic:surveillance",
+        "source": "article:lit-640b2fbafd92d749353e5260",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:surveillance",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-640b2fbafd92d749353e5260|ADDRESSES_TOPIC|topic:treatment",
+        "source": "article:lit-640b2fbafd92d749353e5260",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:treatment",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-640b2fbafd92d749353e5260|STUDIED_IN|country:nz",
+        "source": "article:lit-640b2fbafd92d749353e5260",
+        "relation": "STUDIED_IN",
+        "target": "country:nz",
+        "confidence": 0.78
+      },
+      {
+        "id": "article:lit-640b2fbafd92d749353e5260|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-640b2fbafd92d749353e5260",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-66f3b18a38944199a00632d9|ABOUT_DISEASE|disease:d158",
+        "source": "article:lit-66f3b18a38944199a00632d9",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d158",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-66f3b18a38944199a00632d9|STUDIED_IN|country:nz",
+        "source": "article:lit-66f3b18a38944199a00632d9",
+        "relation": "STUDIED_IN",
+        "target": "country:nz",
+        "confidence": 0.78
+      },
+      {
+        "id": "article:lit-66f3b18a38944199a00632d9|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-66f3b18a38944199a00632d9",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-684c916bd87388b6fa81a816|ABOUT_DISEASE|disease:d158",
+        "source": "article:lit-684c916bd87388b6fa81a816",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d158",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-684c916bd87388b6fa81a816|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-684c916bd87388b6fa81a816",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-6cb45b6bba20d65ff2c9af51|ABOUT_DISEASE|disease:d158",
+        "source": "article:lit-6cb45b6bba20d65ff2c9af51",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d158",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-6cb45b6bba20d65ff2c9af51|USES_STUDY_DESIGN|study-type:commentary",
+        "source": "article:lit-6cb45b6bba20d65ff2c9af51",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:commentary"
+      },
+      {
+        "id": "article:lit-72ffd09eac38b2042738e939|ABOUT_DISEASE|disease:d158",
+        "source": "article:lit-72ffd09eac38b2042738e939",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d158",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-72ffd09eac38b2042738e939|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-72ffd09eac38b2042738e939",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-798038bf07ace829ca9cc712|ABOUT_DISEASE|disease:d158",
+        "source": "article:lit-798038bf07ace829ca9cc712",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d158",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-798038bf07ace829ca9cc712|ADDRESSES_TOPIC|topic:diagnostics",
+        "source": "article:lit-798038bf07ace829ca9cc712",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:diagnostics",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-798038bf07ace829ca9cc712|ADDRESSES_TOPIC|topic:surveillance",
+        "source": "article:lit-798038bf07ace829ca9cc712",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:surveillance",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-798038bf07ace829ca9cc712|USES_STUDY_DESIGN|study-type:commentary",
+        "source": "article:lit-798038bf07ace829ca9cc712",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:commentary"
+      },
+      {
+        "id": "article:lit-7f7211abffb162a0b358a56e|ABOUT_DISEASE|disease:d158",
+        "source": "article:lit-7f7211abffb162a0b358a56e",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d158",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-7f7211abffb162a0b358a56e|ADDRESSES_TOPIC|topic:diagnostics",
+        "source": "article:lit-7f7211abffb162a0b358a56e",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:diagnostics",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-7f7211abffb162a0b358a56e|USES_STUDY_DESIGN|study-type:case-control-study",
+        "source": "article:lit-7f7211abffb162a0b358a56e",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:case-control-study"
+      },
+      {
+        "id": "article:lit-8476387eab6a557991a80d02|ABOUT_DISEASE|disease:d158",
+        "source": "article:lit-8476387eab6a557991a80d02",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d158",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-8476387eab6a557991a80d02|ADDRESSES_TOPIC|topic:treatment",
+        "source": "article:lit-8476387eab6a557991a80d02",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:treatment",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-8476387eab6a557991a80d02|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-8476387eab6a557991a80d02",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-88ac78c271afee201b087b0d|ABOUT_DISEASE|disease:d158",
+        "source": "article:lit-88ac78c271afee201b087b0d",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d158",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-88ac78c271afee201b087b0d|ADDRESSES_TOPIC|topic:diagnostics",
+        "source": "article:lit-88ac78c271afee201b087b0d",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:diagnostics",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-88ac78c271afee201b087b0d|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-88ac78c271afee201b087b0d",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-8b6a74dac9bd1c2c6c1f323a|ABOUT_DISEASE|disease:d158",
+        "source": "article:lit-8b6a74dac9bd1c2c6c1f323a",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d158",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-8b6a74dac9bd1c2c6c1f323a|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-8b6a74dac9bd1c2c6c1f323a",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-8e4c34ca242427962dfa972b|ABOUT_DISEASE|disease:d158",
+        "source": "article:lit-8e4c34ca242427962dfa972b",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d158",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-8e4c34ca242427962dfa972b|STUDIED_IN|country:nz",
+        "source": "article:lit-8e4c34ca242427962dfa972b",
+        "relation": "STUDIED_IN",
+        "target": "country:nz",
+        "confidence": 0.78
+      },
+      {
+        "id": "article:lit-8e4c34ca242427962dfa972b|USES_STUDY_DESIGN|study-type:cross-sectional-study",
+        "source": "article:lit-8e4c34ca242427962dfa972b",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:cross-sectional-study"
+      },
+      {
+        "id": "article:lit-90b6b044cbc266f85df97600|ABOUT_DISEASE|disease:d158",
+        "source": "article:lit-90b6b044cbc266f85df97600",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d158",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-90b6b044cbc266f85df97600|ADDRESSES_TOPIC|topic:diagnostics",
+        "source": "article:lit-90b6b044cbc266f85df97600",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:diagnostics",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-90b6b044cbc266f85df97600|STUDIED_IN|country:au",
+        "source": "article:lit-90b6b044cbc266f85df97600",
+        "relation": "STUDIED_IN",
+        "target": "country:au",
+        "confidence": 0.78
+      },
+      {
+        "id": "article:lit-90b6b044cbc266f85df97600|STUDIED_IN|country:nz",
+        "source": "article:lit-90b6b044cbc266f85df97600",
+        "relation": "STUDIED_IN",
+        "target": "country:nz",
+        "confidence": 0.78
+      },
+      {
+        "id": "article:lit-90b6b044cbc266f85df97600|USES_STUDY_DESIGN|study-type:cohort-study",
+        "source": "article:lit-90b6b044cbc266f85df97600",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:cohort-study"
+      },
+      {
+        "id": "article:lit-994b556568405485abbf7ceb|ABOUT_DISEASE|disease:d158",
+        "source": "article:lit-994b556568405485abbf7ceb",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d158",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-994b556568405485abbf7ceb|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-994b556568405485abbf7ceb",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-a5134330079c829749685095|ABOUT_DISEASE|disease:d158",
+        "source": "article:lit-a5134330079c829749685095",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d158",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-a5134330079c829749685095|STUDIED_IN|country:nz",
+        "source": "article:lit-a5134330079c829749685095",
+        "relation": "STUDIED_IN",
+        "target": "country:nz",
+        "confidence": 0.78
+      },
+      {
+        "id": "article:lit-a5134330079c829749685095|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-a5134330079c829749685095",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-ab5b10852c1f8ecc36d9f6fd|ABOUT_DISEASE|disease:d158",
+        "source": "article:lit-ab5b10852c1f8ecc36d9f6fd",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d158",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-ab5b10852c1f8ecc36d9f6fd|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-ab5b10852c1f8ecc36d9f6fd",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-b79a90bec495b81f85aaca81|ABOUT_DISEASE|disease:d158",
+        "source": "article:lit-b79a90bec495b81f85aaca81",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d158",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-b79a90bec495b81f85aaca81|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-b79a90bec495b81f85aaca81",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-c6aade5c926593091da529c0|ABOUT_DISEASE|disease:d004",
+        "source": "article:lit-c6aade5c926593091da529c0",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d004",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-c6aade5c926593091da529c0|ABOUT_DISEASE|disease:d158",
+        "source": "article:lit-c6aade5c926593091da529c0",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d158",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-c6aade5c926593091da529c0|STUDIED_IN|country:nz",
+        "source": "article:lit-c6aade5c926593091da529c0",
+        "relation": "STUDIED_IN",
+        "target": "country:nz",
+        "confidence": 0.78
+      },
+      {
+        "id": "article:lit-c6aade5c926593091da529c0|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-c6aade5c926593091da529c0",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-c913ca6c5b78848e5efeece2|ABOUT_DISEASE|disease:d158",
+        "source": "article:lit-c913ca6c5b78848e5efeece2",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d158",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-c913ca6c5b78848e5efeece2|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-c913ca6c5b78848e5efeece2",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-d7828ffc71896b245d8c2624|ABOUT_DISEASE|disease:d004",
+        "source": "article:lit-d7828ffc71896b245d8c2624",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d004",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-d7828ffc71896b245d8c2624|ABOUT_DISEASE|disease:d158",
+        "source": "article:lit-d7828ffc71896b245d8c2624",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d158",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-d7828ffc71896b245d8c2624|ADDRESSES_TOPIC|topic:health-policy",
+        "source": "article:lit-d7828ffc71896b245d8c2624",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:health-policy",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-d7828ffc71896b245d8c2624|ADDRESSES_TOPIC|topic:surveillance",
+        "source": "article:lit-d7828ffc71896b245d8c2624",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:surveillance",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-d7828ffc71896b245d8c2624|STUDIED_IN|country:nz",
+        "source": "article:lit-d7828ffc71896b245d8c2624",
+        "relation": "STUDIED_IN",
+        "target": "country:nz",
+        "confidence": 0.78
+      },
+      {
+        "id": "article:lit-d7828ffc71896b245d8c2624|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-d7828ffc71896b245d8c2624",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-e98d8e5b65fa5d6a3d6ecb17|ABOUT_DISEASE|disease:d158",
+        "source": "article:lit-e98d8e5b65fa5d6a3d6ecb17",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d158",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-e98d8e5b65fa5d6a3d6ecb17|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-e98d8e5b65fa5d6a3d6ecb17",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-fc6254de9adc26bbe6598038|ABOUT_DISEASE|disease:d158",
+        "source": "article:lit-fc6254de9adc26bbe6598038",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d158",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-fc6254de9adc26bbe6598038|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-fc6254de9adc26bbe6598038",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      }
+    ],
+    "insights": [
+      {
+        "type": "disease_co_occurrence",
+        "left": "disease:d004",
+        "right": "disease:d158",
+        "left_label": "COVID-19",
+        "right_label": "Rheumatic fever",
+        "article_count": 2
+      }
+    ],
+    "stats": {
+      "nodes": 42,
+      "edges": 86,
+      "articles": 29
+    }
+  }
+}

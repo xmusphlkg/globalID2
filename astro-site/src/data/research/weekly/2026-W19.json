@@ -1,0 +1,133 @@
+{
+  "week": "2026-W19",
+  "start_date": "2026-05-07",
+  "end_date": "2026-05-07",
+  "article_count": 1,
+  "disease_count": 1,
+  "country_count": 0,
+  "top_topics": [
+    "Vaccination",
+    "Surveillance",
+    "Vaccine effectiveness"
+  ],
+  "articles": [
+    {
+      "article_id": "lit_22c8f2aaf6c29bea8d5704b5",
+      "slug": "10-3390-pathogens15050503-22c8f2aa",
+      "title": "Tick-Borne Encephalitis Vaccine Effectiveness and Impact in Slovenia, 2019-2024.",
+      "doi": "10.3390/pathogens15050503",
+      "pmid": "42198629",
+      "journal": "Pathogens (Basel, Switzerland)",
+      "publisher": null,
+      "authors": [
+        "Kordež J",
+        "Angulo FJ",
+        "Zhang P",
+        "Davidson A",
+        "Edwards J",
+        "Harper LR",
+        "Pilz A",
+        "Gould H"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-05-07T00:00:00+00:00",
+      "indexed_at": "2026-05-27T00:00:00+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC13209445",
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.686,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D205",
+          "slug": "tick-borne-encephalitis",
+          "name_en": "Tick-borne encephalitis",
+          "name_zh": "蜱传脑炎",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Vaccination",
+          "confidence": 0.7100000000000001
+        },
+        {
+          "name": "Surveillance",
+          "confidence": 0.66
+        },
+        {
+          "name": "Vaccine effectiveness",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {
+        "en": {
+          "research_question": "What is the estimated protective efficacy and population-level impact of tick-borne encephalitis immunization among Slovenian residents?",
+          "study_design": "An observational evaluation utilizing a screening methodology to compare vaccination proportions between confirmed infection cases and a broader survey cohort across a five-year interval.",
+          "population_setting": "Individuals residing in Slovenia, specifically analyzing patients with documented tick-borne encephalitis diagnoses and a separate sample of surveyed adults regarding their immunization status.",
+          "main_findings": "The analysis determined a ninety-three point four percent protection rate for recipients completing three or more scheduled doses. This coverage level resulted in an estimated four hundred twenty-six avoided infections during the study period, while hypothetical universal adoption projected nearly one thousand additional prevented cases.",
+          "public_health_relevance": "The data demonstrate significant disease reduction potential through routine immunization, though they simultaneously reveal substantial gaps in current community participation that warrant expanded promotional strategies.",
+          "limitations": "The evaluation is constrained by incomplete immunization documentation for nearly half of the reported infections and utilizes survey-derived denominators rather than exhaustive demographic tracking.",
+          "gids_interpretation": "This record supplies historical performance metrics and regional coverage estimates that can inform trend analysis and program planning, serving as a static reference point for epidemiological context.",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.945,
+            "generated_at": "2026-08-13T19:06:47.994171+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        }
+      },
+      "why_it_matters_en": "The data demonstrate significant disease reduction potential through routine immunization, though they simultaneously reveal substantial gaps in current community participation that warrant expanded promotional strategies.",
+      "why_it_matters_zh": "这项近期Journal article因与蜱传脑炎相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.3390/pathogens15050503",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/42198629/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137577+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:ab5fb8f49aaa0cf6",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D205",
+          "disease_name_en": "Tick-borne encephalitis",
+          "disease_name_zh": "蜱传脑炎",
+          "geographies": [
+            {
+              "code": "SE",
+              "name_en": "Sweden"
+            }
+          ],
+          "data_through": "2026-07-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 156.0,
+            "previous": 92.0,
+            "absolute_change": 64.0,
+            "change_pct": 69.57
+          },
+          "risk": {
+            "score": 46.1,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    }
+  ],
+  "url": "/research/weekly/2026-W19/"
+}

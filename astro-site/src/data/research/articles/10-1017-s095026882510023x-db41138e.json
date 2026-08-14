@@ -1,0 +1,262 @@
+{
+  "article_id": "lit_db41138e96979347b9fc243f",
+  "slug": "10-1017-s095026882510023x-db41138e",
+  "title": "Transmission pathways and risk factors for sporadic salmonellosis and campylobacteriosis: a source attribution meta-analysis of European case-control studies.",
+  "doi": "10.1017/s095026882510023x",
+  "pmid": "40589406",
+  "journal": "Epidemiology and infection",
+  "publisher": null,
+  "authors": [
+    "Mughini-Gras L",
+    "Wijnen L",
+    "Pires SM",
+    "Benincà E",
+    "Onstwedder C",
+    "Hald T",
+    "Franz E",
+    "Bonacic Marinovic A"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Meta-analysis",
+  "published_at": "2025-07-01T00:00:00+00:00",
+  "indexed_at": "2025-07-01T00:00:00+00:00",
+  "open_access_status": "open",
+  "open_access_url": "https://europepmc.org/articles/PMC12247009",
+  "license_url": null,
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.643,
+  "is_featured": false,
+  "diseases": [
+    {
+      "disease_id": "D092",
+      "slug": "campylobacteriosis",
+      "name_en": "Campylobacteriosis",
+      "name_zh": "弯曲杆菌病",
+      "confidence": 0.82
+    },
+    {
+      "disease_id": "D114",
+      "slug": "salmonellosis",
+      "name_en": "Salmonellosis",
+      "name_zh": "沙门氏菌病",
+      "confidence": 0.82
+    }
+  ],
+  "countries": [],
+  "topics": [
+    {
+      "name": "Transmission dynamics",
+      "confidence": 0.66
+    },
+    {
+      "name": "Climate and environment",
+      "confidence": 0.66
+    },
+    {
+      "name": "Travel medicine",
+      "confidence": 0.66
+    },
+    {
+      "name": "One Health",
+      "confidence": 0.66
+    }
+  ],
+  "related_surveillance": [],
+  "summary": {
+    "en": {
+      "research_question": "What are the primary transmission routes and attributable sources for sporadic campylobacteriosis and salmonellosis across European populations?",
+      "study_design": "A Bayesian meta-analytical framework was utilized to combine population attributable fractions extracted from multiple European case-control investigations spanning two decades.",
+      "population_setting": "Participants comprised individuals diagnosed with sporadic infections alongside matched controls recruited from Western and Northern European healthcare settings.",
+      "main_findings": "Dietary and aquatic exposures accounted for nearly fifty percent of infections, with poultry products representing the dominant reservoir for Campylobacter and both poultry and pork contributing substantially to Salmonella cases. Incorporating direct animal interactions raised the zoonotic contribution to approximately sixty percent, while environmental factors explained roughly ten percent. The remaining portion of cases correlated with international travel, preexisting medical conditions, pharmaceutical interventions, interpersonal contact, and workplace activities.",
+      "public_health_relevance": "Identifying dominant reservoirs and exposure routes supports targeted prevention strategies and resource allocation for enteric pathogen control across European health systems.",
+      "limitations": "The synthesis relies exclusively on aggregated data from previously published case-control investigations, which may introduce variability in how exposure categories were defined and reported across different regions.",
+      "gids_interpretation": "This publication offers a synthesized overview of historical attribution patterns for two major bacterial enteritides, serving as a reference point for transmission ecology rather than reflecting active outbreak detection or real-time epidemiological tracking.",
+      "provenance": {
+        "generated_by": "literature-evidence-agent",
+        "model": "qwen3.7-flash",
+        "provider": "qwenai",
+        "quality_score": 0.939,
+        "generated_at": "2026-08-13T23:06:55.856903+00:00",
+        "editorially_approved": false,
+        "automatically_approved": true,
+        "automation_policy_version": "research-radar-autopilot.v1",
+        "publication_gate": "automated-quality-gate"
+      }
+    },
+    "zh": {
+      "research_question": "欧洲散发性空肠弯曲菌病与沙门氏菌病的主要传播途径及危险因素是什么？",
+      "study_design": "该研究采用贝叶斯框架下的荟萃分析方法，整合了多项欧洲病例对照研究的归因分数数据。",
+      "population_setting": "研究对象涵盖西欧与北欧国家在二零零零年至二零二一年间开展的病例对照试验中的患者与健康对照者。",
+      "main_findings": "食物与水源传播约占病例总数的一半，其中家禽产品是主要传染源。结合动物接触因素后，约六成感染可归因于人畜共患途径。其余四分之一病例则与旅行史、基础疾病用药、人际传播及职业暴露相关。",
+      "public_health_relevance": "该分析通过量化不同传播途径的贡献比例，为区域性疾病防控重点提供依据。",
+      "limitations": "数据仅来源于西欧和北欧地区，可能无法代表其他地理区域的流行特征。此外，纳入的研究时间跨度较长，可能难以反映近期的流行病学变化。",
+      "gids_interpretation": "该文献提供了特定区域内历史病原体归因模式的背景信息，侧重于学术综述而非实时监测信号评估。",
+      "provenance": {
+        "generated_by": "literature-evidence-agent",
+        "model": "qwen3.7-flash",
+        "provider": "qwenai",
+        "quality_score": 0.958,
+        "generated_at": "2026-08-13T23:07:25.380243+00:00",
+        "editorially_approved": false,
+        "automatically_approved": true,
+        "automation_policy_version": "research-radar-autopilot.v1",
+        "publication_gate": "automated-quality-gate"
+      }
+    }
+  },
+  "why_it_matters_en": "Identifying dominant reservoirs and exposure routes supports targeted prevention strategies and resource allocation for enteric pathogen control across European health systems.",
+  "why_it_matters_zh": "该分析通过量化不同传播途径的贡献比例，为区域性疾病防控重点提供依据。",
+  "source_urls": {
+    "doi": "https://doi.org/10.1017/s095026882510023x",
+    "pubmed": "https://pubmed.ncbi.nlm.nih.gov/40589406/"
+  },
+  "updated_at": "2026-08-13T16:05:48.137692+00:00",
+  "related_signals": [
+    {
+      "signal_id": "signal:ecdc9176fa7e1a17",
+      "section": "increasing",
+      "kind": "statistical_signal",
+      "title": null,
+      "disease_id": "D114",
+      "disease_name_en": "Salmonellosis",
+      "disease_name_zh": "沙门氏菌病",
+      "geographies": [
+        {
+          "code": "IE",
+          "name_en": "Ireland"
+        }
+      ],
+      "data_through": "2026-07-27",
+      "window": {
+        "label": "Last 4 weeks",
+        "current": 54.0,
+        "previous": 38.0,
+        "absolute_change": 16.0,
+        "change_pct": 42.11
+      },
+      "risk": {
+        "score": 40.8,
+        "level": "moderate",
+        "confidence": "low"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-db41138e96979347b9fc243f",
+        "type": "article",
+        "label": "Transmission pathways and risk factors for sporadic salmonellosis and campylobacteriosis: a source attribution meta-analysis of European case-control studies.",
+        "slug": "10-1017-s095026882510023x-db41138e",
+        "url": "/research/articles/10-1017-s095026882510023x-db41138e/",
+        "published_at": "2025-07-01T00:00:00+00:00",
+        "study_type": "Meta-analysis"
+      },
+      {
+        "id": "disease:d092",
+        "type": "disease",
+        "label": "Campylobacteriosis",
+        "disease_id": "D092",
+        "name_zh": "弯曲杆菌病",
+        "slug": "campylobacteriosis",
+        "url": "/diseases/campylobacteriosis/"
+      },
+      {
+        "id": "disease:d114",
+        "type": "disease",
+        "label": "Salmonellosis",
+        "disease_id": "D114",
+        "name_zh": "沙门氏菌病",
+        "slug": "salmonellosis",
+        "url": "/diseases/salmonellosis/"
+      },
+      {
+        "id": "study-type:meta-analysis",
+        "type": "study_type",
+        "label": "Meta-analysis"
+      },
+      {
+        "id": "topic:climate-and-environment",
+        "type": "topic",
+        "label": "Climate and environment"
+      },
+      {
+        "id": "topic:one-health",
+        "type": "topic",
+        "label": "One Health"
+      },
+      {
+        "id": "topic:transmission-dynamics",
+        "type": "topic",
+        "label": "Transmission dynamics"
+      },
+      {
+        "id": "topic:travel-medicine",
+        "type": "topic",
+        "label": "Travel medicine"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-db41138e96979347b9fc243f|ABOUT_DISEASE|disease:d092",
+        "source": "article:lit-db41138e96979347b9fc243f",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d092",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-db41138e96979347b9fc243f|ABOUT_DISEASE|disease:d114",
+        "source": "article:lit-db41138e96979347b9fc243f",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d114",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-db41138e96979347b9fc243f|ADDRESSES_TOPIC|topic:climate-and-environment",
+        "source": "article:lit-db41138e96979347b9fc243f",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:climate-and-environment",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-db41138e96979347b9fc243f|ADDRESSES_TOPIC|topic:one-health",
+        "source": "article:lit-db41138e96979347b9fc243f",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:one-health",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-db41138e96979347b9fc243f|ADDRESSES_TOPIC|topic:transmission-dynamics",
+        "source": "article:lit-db41138e96979347b9fc243f",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:transmission-dynamics",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-db41138e96979347b9fc243f|ADDRESSES_TOPIC|topic:travel-medicine",
+        "source": "article:lit-db41138e96979347b9fc243f",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:travel-medicine",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-db41138e96979347b9fc243f|USES_STUDY_DESIGN|study-type:meta-analysis",
+        "source": "article:lit-db41138e96979347b9fc243f",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:meta-analysis"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 8,
+      "edges": 7,
+      "articles": 1
+    }
+  }
+}

@@ -3,25 +3,34 @@ export interface SourceSeriesMetadata {
   source_series_code?: string;
   source_system?: string;
   source_label?: string;
-  metric_type?: string;
-  reporting_basis?: string;
+  metric_type?: string | null;
+  reporting_basis?: string | null;
+  time_basis?: string | null;
   temporal_granularity?: string;
   unit?: string;
   geography_key?: string;
   dimension_key?: string;
   mapping_relation?: string;
-  comparability?: string;
+  comparability?: string | null;
   aggregation_policy?: string;
   availability_status?: string;
   missing_value_policy?: string;
-  definition_version?: string;
+  definition_version?: string | null;
   case_definition?: string;
   case_definition_uri?: string;
+  valid_from?: string | null;
+  valid_to?: string | null;
+  definition_effective_from?: string | null;
+  definition_effective_to?: string | null;
+  comparability_break?: unknown;
   observation_count?: number;
   total_value?: number;
   dates?: string[];
-  values?: number[];
+  values?: (number | null)[];
   quality_statuses?: string[];
+  point_quality_statuses?: string[];
+  provisional_from?: string | null;
+  latest_quality_status?: string | null;
 }
 
 export interface CountryDatasetSeriesEntry {
@@ -31,15 +40,21 @@ export interface CountryDatasetSeriesEntry {
   category?: string;
   slug?: string;
   dates: string[];
-  cases: number[];
-  weekly_equiv_cases: number[];
-  deaths: number[];
+  cases: (number | null)[];
+  weekly_equiv_cases: (number | null)[];
+  deaths: (number | null)[];
   incidence_rates: (number | null)[];
   incidence_sources?: (string | null)[];
   total_cases: number;
   total_deaths?: number;
-  latest_cases?: number;
-  latest_deaths?: number;
+  latest_cases?: number | null;
+  latest_deaths?: number | null;
+  provisional_from?: string | null;
+  metric_type?: string | null;
+  reporting_basis?: string | null;
+  time_basis?: string | null;
+  comparability?: string | null;
+  definition_version?: string | null;
   incidence_rate?: number | null;
   mortality_rate?: number | null;
   data_layer?: string;
@@ -83,9 +98,15 @@ interface CompactCountryDatasetSeriesEntry {
   lc?: number;
   ld?: number;
   x: number[];
-  c: number[];
-  w: number[];
-  d: number[];
+  c: (number | null)[];
+  w: (number | null)[];
+  d: (number | null)[];
+  pf?: string | null;
+  mt?: string | null;
+  rb?: string | null;
+  tb?: string | null;
+  cmp?: string | null;
+  dv?: string | null;
   ri?: number[];
   rv?: number[];
   rs?: Array<number | null>;
@@ -159,6 +180,12 @@ function normalizeCountryDataset(raw: CountryDataset | CompactCountryDataset): C
           total_deaths: entry.td ?? 0,
           latest_cases: entry.lc ?? 0,
           latest_deaths: entry.ld ?? 0,
+          provisional_from: entry.pf,
+          metric_type: entry.mt,
+          reporting_basis: entry.rb,
+          time_basis: entry.tb,
+          comparability: entry.cmp,
+          definition_version: entry.dv,
           data_layer: entry.data_layer,
           projection_policy: entry.projection_policy,
           loss_risk: entry.loss_risk,

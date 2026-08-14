@@ -1,0 +1,131 @@
+{
+  "article_id": "lit_e98d8e5b65fa5d6a3d6ecb17",
+  "slug": "10-5694-mja2-52708-e98d8e5b",
+  "title": "New evidence supports a greater focus on streptococcal skin infections to prevent rheumatic fever.",
+  "doi": "10.5694/mja2.52708",
+  "pmid": "40533426",
+  "journal": "The Medical journal of Australia",
+  "publisher": null,
+  "authors": [
+    "Baker MG",
+    "Bennett J",
+    "Percival T",
+    "Leversha A",
+    "Gurney J",
+    "Moreland NJ"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Journal article",
+  "published_at": "2025-06-18T00:00:00+00:00",
+  "indexed_at": "2025-06-18T00:00:00+00:00",
+  "open_access_status": "open",
+  "open_access_url": "https://europepmc.org/articles/PMC12318488",
+  "license_url": null,
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.432,
+  "is_featured": false,
+  "diseases": [
+    {
+      "disease_id": "D158",
+      "slug": "rheumatic-fever",
+      "name_en": "Rheumatic fever",
+      "name_zh": "风湿热",
+      "confidence": 0.82
+    }
+  ],
+  "countries": [],
+  "topics": [],
+  "related_surveillance": [],
+  "summary": {},
+  "why_it_matters_en": "This recent journal article is indexed for its relevance to Rheumatic fever. Read the original source before applying its findings.",
+  "why_it_matters_zh": "这项近期Journal article因与风湿热相关而被收录。应用其结论前请阅读原始文献。",
+  "source_urls": {
+    "doi": "https://doi.org/10.5694/mja2.52708",
+    "pubmed": "https://pubmed.ncbi.nlm.nih.gov/40533426/"
+  },
+  "updated_at": "2026-08-13T16:05:48.137530+00:00",
+  "related_signals": [
+    {
+      "signal_id": "signal:f59d37329a1f6ece",
+      "section": "increasing",
+      "kind": "statistical_signal",
+      "title": null,
+      "disease_id": "D158",
+      "disease_name_en": "Rheumatic fever",
+      "disease_name_zh": "风湿热",
+      "geographies": [
+        {
+          "code": "NZ",
+          "name_en": "New Zealand"
+        }
+      ],
+      "data_through": "2026-06-01",
+      "window": {
+        "label": "Latest complete month",
+        "current": 28.0,
+        "previous": 18.0,
+        "absolute_change": 10.0,
+        "change_pct": 55.56
+      },
+      "risk": {
+        "score": 46.5,
+        "level": "moderate",
+        "confidence": "low"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-e98d8e5b65fa5d6a3d6ecb17",
+        "type": "article",
+        "label": "New evidence supports a greater focus on streptococcal skin infections to prevent rheumatic fever.",
+        "slug": "10-5694-mja2-52708-e98d8e5b",
+        "url": "/research/articles/10-5694-mja2-52708-e98d8e5b/",
+        "published_at": "2025-06-18T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "disease:d158",
+        "type": "disease",
+        "label": "Rheumatic fever",
+        "disease_id": "D158",
+        "name_zh": "风湿热",
+        "slug": "rheumatic-fever",
+        "url": "/diseases/rheumatic-fever/"
+      },
+      {
+        "id": "study-type:journal-article",
+        "type": "study_type",
+        "label": "Journal article"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-e98d8e5b65fa5d6a3d6ecb17|ABOUT_DISEASE|disease:d158",
+        "source": "article:lit-e98d8e5b65fa5d6a3d6ecb17",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d158",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-e98d8e5b65fa5d6a3d6ecb17|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-e98d8e5b65fa5d6a3d6ecb17",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 3,
+      "edges": 2,
+      "articles": 1
+    }
+  }
+}

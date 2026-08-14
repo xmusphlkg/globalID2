@@ -1,0 +1,220 @@
+{
+  "article_id": "lit_90443fa0ffa1d6a1e0a5d2d8",
+  "slug": "10-1016-j-nmni-2026-101720-90443fa0",
+  "title": "A rare case of breakthrough tick-borne encephalitis in early adolescence after vaccination with four doses of TBE vaccine.",
+  "doi": "10.1016/j.nmni.2026.101720",
+  "pmid": "41732518",
+  "journal": "New microbes and new infections",
+  "publisher": null,
+  "authors": [
+    "Morgardt S",
+    "Veje M",
+    "Bergström T",
+    "Ivarsson L",
+    "Studahl M"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Journal article",
+  "published_at": "2026-02-03T00:00:00+00:00",
+  "indexed_at": "2026-02-24T00:00:00+00:00",
+  "open_access_status": "open",
+  "open_access_url": "https://europepmc.org/articles/PMC12924906",
+  "license_url": null,
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.648,
+  "is_featured": false,
+  "diseases": [
+    {
+      "disease_id": "D205",
+      "slug": "tick-borne-encephalitis",
+      "name_en": "Tick-borne encephalitis",
+      "name_zh": "蜱传脑炎",
+      "confidence": 0.82
+    }
+  ],
+  "countries": [],
+  "topics": [
+    {
+      "name": "Vaccination",
+      "confidence": 0.7100000000000001
+    },
+    {
+      "name": "Diagnostics",
+      "confidence": 0.66
+    },
+    {
+      "name": "Treatment",
+      "confidence": 0.66
+    }
+  ],
+  "related_surveillance": [],
+  "summary": {
+    "zh": {
+      "research_question": "本文探讨了一名完成四剂疫苗接种的青少年在突破感染蜱传脑炎后的临床表现、诊断标志物特征及长期预后。",
+      "study_design": "该研究为单病例报告，详细记录了一名患者的临床病程、实验室检测数据及影像学随访结果。",
+      "population_setting": "研究对象为一名既往健康的早期青少年，已完成四剂蜱传脑炎疫苗接种。",
+      "main_findings": "尽管完成全程接种，患者仍发生重症突破感染并住院三个月。血清学显示典型IgM反应延迟，而脑脊液中针对非结构蛋白1的早期IgG应答具有较高诊断价值。初始治疗曾按自身免疫性脑炎进行免疫调节干预，多年随访的脑部影像学检查证实存在持续性病变，但导致严重预后的具体机制尚不明确。",
+      "public_health_relevance": "该案例提示在已接种疫苗人群中仍需警惕突破感染的可能，并强调了特定生物标志物在鉴别诊断中的潜在作用，对完善相关疾病的临床识别策略具有参考价值。",
+      "limitations": "作为单一病例报告，样本量极小且缺乏对照，难以推断普遍规律或明确致病机制。此外，免疫调节治疗的潜在影响及其他黄病毒交叉反应可能干扰临床判断。",
+      "gids_interpretation": "该文献属于个案报道范畴，主要提供特定人群下罕见突破感染的临床细节与实验室特征，有助于丰富现有疾病认知框架，但不涉及实时监测数据的关联分析。",
+      "provenance": {
+        "generated_by": "literature-evidence-agent",
+        "model": "qwen3.7-flash",
+        "provider": "qwenai",
+        "quality_score": 0.952,
+        "generated_at": "2026-08-13T22:09:45.913153+00:00",
+        "editorially_approved": false,
+        "automatically_approved": true,
+        "automation_policy_version": "research-radar-autopilot.v1",
+        "publication_gate": "automated-quality-gate"
+      }
+    },
+    "en": {
+      "research_question": "How can clinicians characterize the clinical trajectory and laboratory markers associated with a rare post-vaccination neurological complication?",
+      "study_design": "This investigation utilizes a descriptive case report format to document a single patient encounter.",
+      "population_setting": "The subject is a previously healthy adolescent who had received four prior vaccinations against the targeted pathogen.",
+      "main_findings": "The individual developed severe encephalitis requiring extended hospitalization despite complete immunization history. Laboratory analysis indicated a postponed IgM reaction but demonstrated early IgG production targeting the NS1 protein within cerebrospinal fluid. Longitudinal imaging confirmed enduring neurological alterations, while the precise drivers of the severe progression were not determined.",
+      "public_health_relevance": "The documentation emphasizes the continued possibility of serious neurological illness in fully immunized populations. It also suggests that medical professionals should maintain awareness of infectious triggers when evaluating acute inflammatory symptoms.",
+      "limitations": "The singular focus on one patient prevents generalization to wider demographic groups or definitive mechanistic conclusions. Authors explicitly acknowledge that the factors contributing to the severe clinical course remain unknown.",
+      "gids_interpretation": "This record offers background context on atypical immunological profiles and diagnostic methodologies following prophylactic administration. It functions as a reference resource for understanding complex clinical presentations without implying active monitoring activity.",
+      "provenance": {
+        "generated_by": "literature-evidence-agent",
+        "model": "qwen3.7-flash",
+        "provider": "qwenai",
+        "quality_score": 0.936,
+        "generated_at": "2026-08-13T22:09:23.802468+00:00",
+        "editorially_approved": false,
+        "automatically_approved": true,
+        "automation_policy_version": "research-radar-autopilot.v1",
+        "publication_gate": "automated-quality-gate"
+      }
+    }
+  },
+  "why_it_matters_en": "The documentation emphasizes the continued possibility of serious neurological illness in fully immunized populations. It also suggests that medical professionals should maintain awareness of infectious triggers when evaluating acute inflammatory symptoms.",
+  "why_it_matters_zh": "该案例提示在已接种疫苗人群中仍需警惕突破感染的可能，并强调了特定生物标志物在鉴别诊断中的潜在作用，对完善相关疾病的临床识别策略具有参考价值。",
+  "source_urls": {
+    "doi": "https://doi.org/10.1016/j.nmni.2026.101720",
+    "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41732518/"
+  },
+  "updated_at": "2026-08-13T16:05:48.137574+00:00",
+  "related_signals": [
+    {
+      "signal_id": "signal:ab5fb8f49aaa0cf6",
+      "section": "increasing",
+      "kind": "statistical_signal",
+      "title": null,
+      "disease_id": "D205",
+      "disease_name_en": "Tick-borne encephalitis",
+      "disease_name_zh": "蜱传脑炎",
+      "geographies": [
+        {
+          "code": "SE",
+          "name_en": "Sweden"
+        }
+      ],
+      "data_through": "2026-07-01",
+      "window": {
+        "label": "Latest complete month",
+        "current": 156.0,
+        "previous": 92.0,
+        "absolute_change": 64.0,
+        "change_pct": 69.57
+      },
+      "risk": {
+        "score": 46.1,
+        "level": "moderate",
+        "confidence": "low"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-90443fa0ffa1d6a1e0a5d2d8",
+        "type": "article",
+        "label": "A rare case of breakthrough tick-borne encephalitis in early adolescence after vaccination with four doses of TBE vaccine.",
+        "slug": "10-1016-j-nmni-2026-101720-90443fa0",
+        "url": "/research/articles/10-1016-j-nmni-2026-101720-90443fa0/",
+        "published_at": "2026-02-03T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "disease:d205",
+        "type": "disease",
+        "label": "Tick-borne encephalitis",
+        "disease_id": "D205",
+        "name_zh": "蜱传脑炎",
+        "slug": "tick-borne-encephalitis",
+        "url": "/diseases/tick-borne-encephalitis/"
+      },
+      {
+        "id": "study-type:journal-article",
+        "type": "study_type",
+        "label": "Journal article"
+      },
+      {
+        "id": "topic:diagnostics",
+        "type": "topic",
+        "label": "Diagnostics"
+      },
+      {
+        "id": "topic:treatment",
+        "type": "topic",
+        "label": "Treatment"
+      },
+      {
+        "id": "topic:vaccination",
+        "type": "topic",
+        "label": "Vaccination"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-90443fa0ffa1d6a1e0a5d2d8|ABOUT_DISEASE|disease:d205",
+        "source": "article:lit-90443fa0ffa1d6a1e0a5d2d8",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d205",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-90443fa0ffa1d6a1e0a5d2d8|ADDRESSES_TOPIC|topic:diagnostics",
+        "source": "article:lit-90443fa0ffa1d6a1e0a5d2d8",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:diagnostics",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-90443fa0ffa1d6a1e0a5d2d8|ADDRESSES_TOPIC|topic:treatment",
+        "source": "article:lit-90443fa0ffa1d6a1e0a5d2d8",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:treatment",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-90443fa0ffa1d6a1e0a5d2d8|ADDRESSES_TOPIC|topic:vaccination",
+        "source": "article:lit-90443fa0ffa1d6a1e0a5d2d8",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccination",
+        "confidence": 0.7100000000000001
+      },
+      {
+        "id": "article:lit-90443fa0ffa1d6a1e0a5d2d8|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-90443fa0ffa1d6a1e0a5d2d8",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 6,
+      "edges": 5,
+      "articles": 1
+    }
+  }
+}

@@ -1,0 +1,188 @@
+{
+  "article_id": "lit_196618cabf72e603537eb105",
+  "slug": "10-1186-s12879-026-13657-0-196618ca",
+  "title": "Fatal European subtype tick-borne encephalitis in a fully vaccinated immunocompetent child: a case report with viral sequencing.",
+  "doi": "10.1186/s12879-026-13657-0",
+  "pmid": "42215968",
+  "journal": "BMC infectious diseases",
+  "publisher": null,
+  "authors": [
+    "Sondén K",
+    "Lindsjö OK",
+    "Vonlanthen S",
+    "Gisslén M",
+    "Kinch A"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Journal article",
+  "published_at": "2026-05-29T00:00:00+00:00",
+  "indexed_at": "2026-05-29T00:00:00+00:00",
+  "open_access_status": "open",
+  "open_access_url": "https://europepmc.org/articles/PMC13221759",
+  "license_url": null,
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.631,
+  "is_featured": false,
+  "diseases": [
+    {
+      "disease_id": "D205",
+      "slug": "tick-borne-encephalitis",
+      "name_en": "Tick-borne encephalitis",
+      "name_zh": "蜱传脑炎",
+      "confidence": 0.82
+    }
+  ],
+  "countries": [],
+  "topics": [
+    {
+      "name": "Vaccination",
+      "confidence": 0.7100000000000001
+    }
+  ],
+  "related_surveillance": [],
+  "summary": {
+    "en": {
+      "research_question": "The report examines the clinical progression and diagnostic challenges encountered during a fatal tick-borne encephalitis infection in a fully immunized child.",
+      "study_design": "The investigation employs a single-patient case report methodology to document clinical observations and laboratory analyses.",
+      "population_setting": "The subject was a nine-year-old previously healthy individual assessed within an emergency department framework located in a region with known pathogen circulation.",
+      "main_findings": "The patient experienced rapid neurological deterioration without characteristic febrile phases, culminating in fatal intracranial complications. Genomic sequencing identified the vaccine-matched European viral strain. Definitive diagnosis relied on detecting immunoglobulin G against the NS1 protein alongside post-mortem tissue amplification.",
+      "public_health_relevance": "The documentation underscores the continued importance of pediatric immunization protocols and maintaining clinical suspicion in geographically susceptible zones. It further suggests that monitoring NS1-specific antibodies could enhance detection accuracy within vaccinated cohorts.",
+      "limitations": "The singular observational structure prevents statistical generalization and limits the identification of broader demographic risk factors.",
+      "gids_interpretation": "This publication contributes a documented instance of severe pediatric disease that occurred despite standard immunization, offering additional clinical context for symptom variability and serological markers. The record serves as a reference point for understanding atypical presentations and diagnostic pathways within the existing medical literature.",
+      "provenance": {
+        "generated_by": "literature-evidence-agent",
+        "model": "qwen3.7-flash",
+        "provider": "qwenai",
+        "quality_score": 0.952,
+        "generated_at": "2026-08-14T00:07:01.710090+00:00",
+        "editorially_approved": false,
+        "automatically_approved": true,
+        "automation_policy_version": "research-radar-autopilot.v1",
+        "publication_gate": "automated-quality-gate"
+      }
+    },
+    "zh": {
+      "research_question": "探讨在完全接种疫苗且免疫功能正常的儿童中，致死性蜱传脑炎的临床表现、诊断难点及疾病转归。",
+      "study_design": "本研究为单例病例报告，整合了临床病程追踪、实验室指标检测及死后病毒基因组测序分析。",
+      "population_setting": "研究对象为一名居住于蜱传脑炎高度流行区的九岁既往健康儿童。",
+      "main_findings": "患儿在完整接种后仍出现无发热特征的急性神经系统恶化与脑水肿，最终死亡。基因测序证实感染的是疫苗覆盖的欧洲亚型，确诊依赖于针对NS1抗原的抗体检测及死后组织核酸分析。",
+      "public_health_relevance": "该案例提示在高发地区需将蜱传脑炎纳入非典型头痛或神经症状的鉴别范围，并强调维持儿童常规疫苗接种计划的必要性。",
+      "limitations": "作为单一病例报告，样本量有限且无法推断普遍发病规律或排除个体罕见的生物学差异。",
+      "gids_interpretation": "该文献补充了特定病毒亚型在免疫人群中的临床记录，可为学术检索、文献归类及相关病原学背景研究提供参考。",
+      "provenance": {
+        "generated_by": "literature-evidence-agent",
+        "model": "qwen3.7-flash",
+        "provider": "qwenai",
+        "quality_score": 0.952,
+        "generated_at": "2026-08-14T00:07:28.859078+00:00",
+        "editorially_approved": false,
+        "automatically_approved": true,
+        "automation_policy_version": "research-radar-autopilot.v1",
+        "publication_gate": "automated-quality-gate"
+      }
+    }
+  },
+  "why_it_matters_en": "The documentation underscores the continued importance of pediatric immunization protocols and maintaining clinical suspicion in geographically susceptible zones. It further suggests that monitoring NS1-specific antibodies could enhance detection accuracy within vaccinated cohorts.",
+  "why_it_matters_zh": "该案例提示在高发地区需将蜱传脑炎纳入非典型头痛或神经症状的鉴别范围，并强调维持儿童常规疫苗接种计划的必要性。",
+  "source_urls": {
+    "doi": "https://doi.org/10.1186/s12879-026-13657-0",
+    "pubmed": "https://pubmed.ncbi.nlm.nih.gov/42215968/"
+  },
+  "updated_at": "2026-08-13T16:05:48.137573+00:00",
+  "related_signals": [
+    {
+      "signal_id": "signal:ab5fb8f49aaa0cf6",
+      "section": "increasing",
+      "kind": "statistical_signal",
+      "title": null,
+      "disease_id": "D205",
+      "disease_name_en": "Tick-borne encephalitis",
+      "disease_name_zh": "蜱传脑炎",
+      "geographies": [
+        {
+          "code": "SE",
+          "name_en": "Sweden"
+        }
+      ],
+      "data_through": "2026-07-01",
+      "window": {
+        "label": "Latest complete month",
+        "current": 156.0,
+        "previous": 92.0,
+        "absolute_change": 64.0,
+        "change_pct": 69.57
+      },
+      "risk": {
+        "score": 46.1,
+        "level": "moderate",
+        "confidence": "low"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-196618cabf72e603537eb105",
+        "type": "article",
+        "label": "Fatal European subtype tick-borne encephalitis in a fully vaccinated immunocompetent child: a case report with viral sequencing.",
+        "slug": "10-1186-s12879-026-13657-0-196618ca",
+        "url": "/research/articles/10-1186-s12879-026-13657-0-196618ca/",
+        "published_at": "2026-05-29T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "disease:d205",
+        "type": "disease",
+        "label": "Tick-borne encephalitis",
+        "disease_id": "D205",
+        "name_zh": "蜱传脑炎",
+        "slug": "tick-borne-encephalitis",
+        "url": "/diseases/tick-borne-encephalitis/"
+      },
+      {
+        "id": "study-type:journal-article",
+        "type": "study_type",
+        "label": "Journal article"
+      },
+      {
+        "id": "topic:vaccination",
+        "type": "topic",
+        "label": "Vaccination"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-196618cabf72e603537eb105|ABOUT_DISEASE|disease:d205",
+        "source": "article:lit-196618cabf72e603537eb105",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d205",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-196618cabf72e603537eb105|ADDRESSES_TOPIC|topic:vaccination",
+        "source": "article:lit-196618cabf72e603537eb105",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccination",
+        "confidence": 0.7100000000000001
+      },
+      {
+        "id": "article:lit-196618cabf72e603537eb105|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-196618cabf72e603537eb105",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 4,
+      "edges": 3,
+      "articles": 1
+    }
+  }
+}

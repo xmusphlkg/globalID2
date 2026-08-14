@@ -1,0 +1,127 @@
+{
+  "article_id": "lit_d6276faf8e26ad1d872f597a",
+  "slug": "10-37547-ijmsphr-volume07issue02-10-d6276faf",
+  "title": "Features of Some Markers of The Inflammatory Response in Patients with Salmonellosis",
+  "doi": "10.37547/ijmsphr/volume07issue02-10",
+  "pmid": null,
+  "journal": "International Journal of Medical Science and Public Health Research",
+  "publisher": "The USA Journals",
+  "authors": [
+    "Nijazova Tajigul Axmetovna",
+    "Imamova Ilmira Abdullaevna"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Journal article",
+  "published_at": "2026-02-01T00:00:00+00:00",
+  "indexed_at": "2026-03-08T04:13:40+00:00",
+  "open_access_status": "unknown",
+  "open_access_url": null,
+  "license_url": null,
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.453,
+  "is_featured": false,
+  "diseases": [
+    {
+      "disease_id": "D114",
+      "slug": "salmonellosis",
+      "name_en": "Salmonellosis",
+      "name_zh": "沙门氏菌病",
+      "confidence": 0.82
+    }
+  ],
+  "countries": [],
+  "topics": [],
+  "related_surveillance": [],
+  "summary": {},
+  "why_it_matters_en": "This recent journal article is indexed for its relevance to Salmonellosis. Read the original source before applying its findings.",
+  "why_it_matters_zh": "这项近期Journal article因与沙门氏菌病相关而被收录。应用其结论前请阅读原始文献。",
+  "source_urls": {
+    "doi": "https://doi.org/10.37547/ijmsphr/volume07issue02-10",
+    "publisher": "https://ijmsphr.com/index.php/ijmsphr/article/view/267/239"
+  },
+  "updated_at": "2026-08-13T16:05:48.137647+00:00",
+  "related_signals": [
+    {
+      "signal_id": "signal:ecdc9176fa7e1a17",
+      "section": "increasing",
+      "kind": "statistical_signal",
+      "title": null,
+      "disease_id": "D114",
+      "disease_name_en": "Salmonellosis",
+      "disease_name_zh": "沙门氏菌病",
+      "geographies": [
+        {
+          "code": "IE",
+          "name_en": "Ireland"
+        }
+      ],
+      "data_through": "2026-07-27",
+      "window": {
+        "label": "Last 4 weeks",
+        "current": 54.0,
+        "previous": 38.0,
+        "absolute_change": 16.0,
+        "change_pct": 42.11
+      },
+      "risk": {
+        "score": 40.8,
+        "level": "moderate",
+        "confidence": "low"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-d6276faf8e26ad1d872f597a",
+        "type": "article",
+        "label": "Features of Some Markers of The Inflammatory Response in Patients with Salmonellosis",
+        "slug": "10-37547-ijmsphr-volume07issue02-10-d6276faf",
+        "url": "/research/articles/10-37547-ijmsphr-volume07issue02-10-d6276faf/",
+        "published_at": "2026-02-01T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "disease:d114",
+        "type": "disease",
+        "label": "Salmonellosis",
+        "disease_id": "D114",
+        "name_zh": "沙门氏菌病",
+        "slug": "salmonellosis",
+        "url": "/diseases/salmonellosis/"
+      },
+      {
+        "id": "study-type:journal-article",
+        "type": "study_type",
+        "label": "Journal article"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-d6276faf8e26ad1d872f597a|ABOUT_DISEASE|disease:d114",
+        "source": "article:lit-d6276faf8e26ad1d872f597a",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d114",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-d6276faf8e26ad1d872f597a|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-d6276faf8e26ad1d872f597a",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 3,
+      "edges": 2,
+      "articles": 1
+    }
+  }
+}

@@ -120,6 +120,66 @@ def test_country_builders_preserve_schema_sorting_and_compaction() -> None:
     ]
 
 
+def test_country_curve_preserves_missing_counts_and_provisional_boundary() -> None:
+    records = [
+        {
+            **_record("2024-01-01", 10),
+            "data_quality": "validated",
+            "time_basis": "report date",
+            "comparability": "conditional",
+        },
+        {
+            **_record("2024-02-01", 0),
+            "cases": None,
+            "deaths": None,
+            "data_quality": "provisional",
+            "time_basis": "report date",
+            "comparability": "conditional",
+        },
+        {
+            **_record("2024-03-01", 4),
+            "data_quality": "provisional",
+            "time_basis": "report date",
+            "comparability": "conditional",
+        },
+    ]
+    country = views.build_country_data(
+        "XX",
+        "Testland",
+        records,
+        {"D_TEST": {"name_en": "Test", "name_zh": "测试"}},
+    )
+
+    series = country["disease_series"]["D_TEST"]
+    assert series["cases"] == [10, None, 4]
+    assert series["deaths"] == [0, None, 0]
+    assert series["total_cases"] == 14
+    assert series["latest_cases"] == 4
+    assert series["provisional_from"] == "2024-02-01"
+    assert series["time_basis"] == "report date"
+    compact_series = views.build_country_site_data(country)["series"][0]
+    assert compact_series["pf"] == "2024-02-01"
+    assert compact_series["tb"] == "report date"
+    assert compact_series["cmp"] == "conditional"
+
+
+def test_country_curve_does_not_treat_raw_as_provisional() -> None:
+    records = [
+        {**_record("2024-01-01", 10), "data_quality": "raw"},
+        {**_record("2024-02-01", 11), "data_quality": "raw"},
+        {**_record("2024-03-01", 12), "data_quality": "provisional"},
+    ]
+
+    country = views.build_country_data(
+        "XX",
+        "Testland",
+        records,
+        {"D_TEST": {"name_en": "Test", "name_zh": "测试"}},
+    )
+
+    assert country["disease_series"]["D_TEST"]["provisional_from"] == "2024-03-01"
+
+
 def test_country_builder_preserves_annual_and_weekly_period_semantics() -> None:
     records = [
         _record("2023-01-01", 120, disease_id="D_ANNUAL", granularity="annual"),

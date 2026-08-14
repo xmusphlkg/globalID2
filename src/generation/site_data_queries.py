@@ -258,9 +258,9 @@ async def fetch_disease_records_direct(
                 timezone('UTC', dr.time)::date AS "date",
                 to_char(timezone('UTC', dr.time), 'YYYY-MM') AS year_month,
                 d.name                 AS disease_id,
-                COALESCE(dr.cases, 0)::bigint AS cases,
-                COALESCE(dr.deaths, 0)::bigint AS deaths,
-                COALESCE(dr.recoveries, 0)::bigint AS recoveries,
+                dr.cases::bigint AS cases,
+                dr.deaths::bigint AS deaths,
+                dr.recoveries::bigint AS recoveries,
                 {incidence_expr} AS incidence_rate,
                 {incidence_source_expr} AS incidence_rate_source,
                 dr.mortality_rate AS mortality_rate,
@@ -289,6 +289,11 @@ async def fetch_disease_records_direct(
                         THEN 'national_registry_notifications'
                     END
                 ) AS reporting_basis,
+                COALESCE(
+                    NULLIF(dr.metadata::jsonb ->> 'time_basis', ''),
+                    NULLIF(dr.raw_data::jsonb ->> 'TimeBasis', '')
+                ) AS time_basis,
+                NULLIF(dr.metadata::jsonb ->> 'definition_version', '') AS definition_version,
                 NULLIF(dr.metadata::jsonb ->> 'comparability', '') AS comparability,
                 COALESCE(
                     NULLIF(dr.metadata::jsonb ->> 'source_series_code', ''),
@@ -307,8 +312,9 @@ async def fetch_disease_records_direct(
     for row in rows:
         record = dict(row._mapping)
         record["date"] = record["date"].isoformat() if record["date"] else None
-        record["cases"] = record["cases"] or 0
-        record["deaths"] = record["deaths"] or 0
+        record["cases"] = safe_int(record.get("cases"))
+        record["deaths"] = safe_int(record.get("deaths"))
+        record["recoveries"] = safe_int(record.get("recoveries"))
         record["incidence_rate"] = safe_float(record["incidence_rate"])
         record["incidence_rate_source"] = (
             record.get("incidence_rate_source") or "missing_population"
@@ -352,8 +358,8 @@ async def fetch_disease_series_records(
                 to_char(timezone('UTC', dso.time), 'YYYY-MM') AS year_month,
                 dss.disease_id,
                 dso.value::double precision AS cases,
-                0::bigint AS deaths,
-                0::bigint AS recoveries,
+                NULL::bigint AS deaths,
+                NULL::bigint AS recoveries,
                 {incidence_expr} AS incidence_rate,
                 {incidence_source_expr} AS incidence_rate_source,
                 NULL::double precision AS mortality_rate,
@@ -367,6 +373,7 @@ async def fetch_disease_series_records(
                 dss.case_definition_uri,
                 dss.metric_type,
                 dss.reporting_basis,
+                NULLIF(dss.metadata::jsonb ->> 'time_basis', '') AS time_basis,
                 dss.temporal_granularity,
                 dss.unit AS series_unit,
                 dso.unit AS observation_unit,
@@ -377,6 +384,13 @@ async def fetch_disease_series_records(
                 dss.missing_value_policy,
                 dss.valid_from,
                 dss.valid_to,
+                NULLIF(
+                    dss.metadata::jsonb ->> 'definition_effective_from', ''
+                ) AS definition_effective_from,
+                NULLIF(
+                    dss.metadata::jsonb ->> 'definition_effective_to', ''
+                ) AS definition_effective_to,
+                dss.metadata::jsonb -> 'comparability_break' AS comparability_break,
                 dss.is_active AS series_is_active,
                 dso.quality_status,
                 dso.geography_key,
@@ -407,7 +421,8 @@ async def fetch_disease_series_records(
         record = dict(row._mapping)
         record["date"] = record["date"].isoformat() if record.get("date") else None
         record["cases"] = _normalise_count(record.get("cases"))
-        record["deaths"] = record.get("deaths") or 0
+        record["deaths"] = safe_int(record.get("deaths"))
+        record["recoveries"] = safe_int(record.get("recoveries"))
         record["incidence_rate"] = safe_float(record.get("incidence_rate"))
         record["incidence_rate_source"] = (
             record.get("incidence_rate_source") or "missing_population"

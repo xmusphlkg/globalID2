@@ -152,5 +152,7 @@ def test_ch_monthly_updater_loads_idd_csv_shape(tmp_path):
             "Version": "20260520",
             "Source": "Switzerland FOPH IDD Mandatory Reporting System",
             "SourceURL": "https://example.test/api",
+            "DatasetStatus": "closed_revisable",
+            "IsProvisional": "false",
         }
     ]

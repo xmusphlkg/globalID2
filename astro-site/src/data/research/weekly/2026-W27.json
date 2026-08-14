@@ -1,0 +1,727 @@
+{
+  "week": "2026-W27",
+  "start_date": "2026-07-01",
+  "end_date": "2026-07-01",
+  "article_count": 6,
+  "disease_count": 2,
+  "country_count": 1,
+  "top_topics": [
+    "Outbreak investigation",
+    "Surveillance",
+    "Transmission dynamics",
+    "Vaccination",
+    "One Health"
+  ],
+  "articles": [
+    {
+      "article_id": "lit_46b92e7b4feb98f02ab32005",
+      "slug": "10-7759-cureus-111921-46b92e7b",
+      "title": "Closing Critical Gaps in the 2026 Bundibugyo Ebola Response: Five Actionable Priorities.",
+      "doi": "10.7759/cureus.111921",
+      "pmid": "42542607",
+      "journal": "Cureus",
+      "publisher": null,
+      "authors": [
+        "Mohapatra PR",
+        "Mishra B"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-07-01T00:00:00+00:00",
+      "indexed_at": "2026-08-02T00:00:00+00:00",
+      "open_access_status": "unknown",
+      "open_access_url": null,
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.712,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D050",
+          "slug": "ebola",
+          "name_en": "Ebola",
+          "name_zh": "埃博拉出血热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "One Health",
+          "confidence": 0.7100000000000001
+        },
+        {
+          "name": "Surveillance",
+          "confidence": 0.66
+        },
+        {
+          "name": "Outbreak investigation",
+          "confidence": 0.66
+        },
+        {
+          "name": "Transmission dynamics",
+          "confidence": 0.66
+        },
+        {
+          "name": "Vaccination",
+          "confidence": 0.66
+        },
+        {
+          "name": "Genomic epidemiology",
+          "confidence": 0.66
+        },
+        {
+          "name": "Diagnostics",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Ebola. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与埃博拉出血热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.7759/cureus.111921",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/42542607/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137389+00:00",
+      "related_signals": [
+        {
+          "signal_id": "event:36",
+          "section": "emerging",
+          "kind": "official_event",
+          "title": "Ebola disease caused by Bundibugyo virus - Democratic Republic of the Congo",
+          "disease_id": "D050",
+          "disease_name_en": "Ebola",
+          "disease_name_zh": "埃博拉出血热",
+          "geographies": [
+            {
+              "code": "CD",
+              "name_en": "Democratic Republic of the Congo"
+            }
+          ],
+          "data_through": "2026-08-01",
+          "window": {
+            "label": null,
+            "current": null,
+            "previous": null,
+            "absolute_change": null,
+            "change_pct": null
+          },
+          "risk": {
+            "score": null,
+            "level": null,
+            "confidence": "high"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        },
+        {
+          "signal_id": "event:37",
+          "section": "emerging",
+          "kind": "official_event",
+          "title": "Ebola disease caused by Bundibugyo virus, Democratic Republic of the Congo & Uganda",
+          "disease_id": "D050",
+          "disease_name_en": "Ebola",
+          "disease_name_zh": "埃博拉出血热",
+          "geographies": [
+            {
+              "code": "CD",
+              "name_en": "Democratic Republic of the Congo"
+            },
+            {
+              "code": "UG",
+              "name_en": "Uganda"
+            }
+          ],
+          "data_through": "2026-07-17",
+          "window": {
+            "label": null,
+            "current": null,
+            "previous": null,
+            "absolute_change": null,
+            "change_pct": null
+          },
+          "risk": {
+            "score": null,
+            "level": null,
+            "confidence": "high"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_50afd35edd680ed3f5200de6",
+      "slug": "10-1016-j-diagmicrobio-2026-117365-50afd35e",
+      "title": "A call for strengthening surveillance and preventive efforts for Ebola virus disease outbreak in the Democratic Republic of Congo",
+      "doi": "10.1016/j.diagmicrobio.2026.117365",
+      "pmid": null,
+      "journal": "Diagnostic Microbiology and Infectious Disease",
+      "publisher": "Elsevier BV",
+      "authors": [
+        "Aymar Akilimali"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-07-01T00:00:00+00:00",
+      "indexed_at": "2026-04-07T03:25:41+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://linkinghub.elsevier.com/retrieve/pii/S073288932600115X",
+      "license_url": "https://www.elsevier.com/tdm/userlicense/1.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.676,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D050",
+          "slug": "ebola",
+          "name_en": "Ebola",
+          "name_zh": "埃博拉出血热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Surveillance",
+          "confidence": 0.66
+        },
+        {
+          "name": "Outbreak investigation",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Ebola. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与埃博拉出血热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1016/j.diagmicrobio.2026.117365",
+        "publisher": "https://linkinghub.elsevier.com/retrieve/pii/S073288932600115X"
+      },
+      "updated_at": "2026-08-13T16:05:48.137334+00:00",
+      "related_signals": [
+        {
+          "signal_id": "event:36",
+          "section": "emerging",
+          "kind": "official_event",
+          "title": "Ebola disease caused by Bundibugyo virus - Democratic Republic of the Congo",
+          "disease_id": "D050",
+          "disease_name_en": "Ebola",
+          "disease_name_zh": "埃博拉出血热",
+          "geographies": [
+            {
+              "code": "CD",
+              "name_en": "Democratic Republic of the Congo"
+            }
+          ],
+          "data_through": "2026-08-01",
+          "window": {
+            "label": null,
+            "current": null,
+            "previous": null,
+            "absolute_change": null,
+            "change_pct": null
+          },
+          "risk": {
+            "score": null,
+            "level": null,
+            "confidence": "high"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        },
+        {
+          "signal_id": "event:37",
+          "section": "emerging",
+          "kind": "official_event",
+          "title": "Ebola disease caused by Bundibugyo virus, Democratic Republic of the Congo & Uganda",
+          "disease_id": "D050",
+          "disease_name_en": "Ebola",
+          "disease_name_zh": "埃博拉出血热",
+          "geographies": [
+            {
+              "code": "CD",
+              "name_en": "Democratic Republic of the Congo"
+            },
+            {
+              "code": "UG",
+              "name_en": "Uganda"
+            }
+          ],
+          "data_through": "2026-07-17",
+          "window": {
+            "label": null,
+            "current": null,
+            "previous": null,
+            "absolute_change": null,
+            "change_pct": null
+          },
+          "risk": {
+            "score": null,
+            "level": null,
+            "confidence": "high"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_55727a361bf7dc22075ad14d",
+      "slug": "10-12659-msm-954627-55727a36",
+      "title": "Editorial: The WHO Identifies Ebola Disease Due to Bundibugyo Virus as a Public Health Emergency of International Concern (PHEIC) as Vaccine Development Accelerates.",
+      "doi": "10.12659/msm.954627",
+      "pmid": "42383297",
+      "journal": "Medical science monitor : international medical journal of experimental and clinical research",
+      "publisher": null,
+      "authors": [
+        "Parums DV"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Commentary",
+      "published_at": "2026-07-01T00:00:00+00:00",
+      "indexed_at": "2026-07-01T00:00:00+00:00",
+      "open_access_status": "unknown",
+      "open_access_url": null,
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.658,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D050",
+          "slug": "ebola",
+          "name_en": "Ebola",
+          "name_zh": "埃博拉出血热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Outbreak investigation",
+          "confidence": 0.66
+        },
+        {
+          "name": "Transmission dynamics",
+          "confidence": 0.66
+        },
+        {
+          "name": "Vaccination",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent commentary is indexed for its relevance to Ebola. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Commentary因与埃博拉出血热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.12659/msm.954627",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/42383297/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137383+00:00",
+      "related_signals": [
+        {
+          "signal_id": "event:36",
+          "section": "emerging",
+          "kind": "official_event",
+          "title": "Ebola disease caused by Bundibugyo virus - Democratic Republic of the Congo",
+          "disease_id": "D050",
+          "disease_name_en": "Ebola",
+          "disease_name_zh": "埃博拉出血热",
+          "geographies": [
+            {
+              "code": "CD",
+              "name_en": "Democratic Republic of the Congo"
+            }
+          ],
+          "data_through": "2026-08-01",
+          "window": {
+            "label": null,
+            "current": null,
+            "previous": null,
+            "absolute_change": null,
+            "change_pct": null
+          },
+          "risk": {
+            "score": null,
+            "level": null,
+            "confidence": "high"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        },
+        {
+          "signal_id": "event:37",
+          "section": "emerging",
+          "kind": "official_event",
+          "title": "Ebola disease caused by Bundibugyo virus, Democratic Republic of the Congo & Uganda",
+          "disease_id": "D050",
+          "disease_name_en": "Ebola",
+          "disease_name_zh": "埃博拉出血热",
+          "geographies": [
+            {
+              "code": "CD",
+              "name_en": "Democratic Republic of the Congo"
+            },
+            {
+              "code": "UG",
+              "name_en": "Uganda"
+            }
+          ],
+          "data_through": "2026-07-17",
+          "window": {
+            "label": null,
+            "current": null,
+            "previous": null,
+            "absolute_change": null,
+            "change_pct": null
+          },
+          "risk": {
+            "score": null,
+            "level": null,
+            "confidence": "high"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_3cdaa5c3f25fba81b4b9c1ba",
+      "slug": "10-29063-ajrh2026-v30i13-1-3cdaa5c3",
+      "title": "It's not just virology: The Bundibugyo Ebola outbreak in the Democratic Republic of the Congo and Uganda demands a wider public health response.",
+      "doi": "10.29063/ajrh2026/v30i13.1",
+      "pmid": "42453043",
+      "journal": "African journal of reproductive health",
+      "publisher": null,
+      "authors": [
+        "Wallis AB",
+        "Okonofua F"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-07-01T00:00:00+00:00",
+      "indexed_at": "2026-07-15T00:00:00+00:00",
+      "open_access_status": "unknown",
+      "open_access_url": null,
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.626,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D050",
+          "slug": "ebola",
+          "name_en": "Ebola",
+          "name_zh": "埃博拉出血热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Outbreak investigation",
+          "confidence": 0.66
+        },
+        {
+          "name": "Climate and environment",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Ebola. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与埃博拉出血热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.29063/ajrh2026/v30i13.1",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/42453043/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137352+00:00",
+      "related_signals": [
+        {
+          "signal_id": "event:36",
+          "section": "emerging",
+          "kind": "official_event",
+          "title": "Ebola disease caused by Bundibugyo virus - Democratic Republic of the Congo",
+          "disease_id": "D050",
+          "disease_name_en": "Ebola",
+          "disease_name_zh": "埃博拉出血热",
+          "geographies": [
+            {
+              "code": "CD",
+              "name_en": "Democratic Republic of the Congo"
+            }
+          ],
+          "data_through": "2026-08-01",
+          "window": {
+            "label": null,
+            "current": null,
+            "previous": null,
+            "absolute_change": null,
+            "change_pct": null
+          },
+          "risk": {
+            "score": null,
+            "level": null,
+            "confidence": "high"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        },
+        {
+          "signal_id": "event:37",
+          "section": "emerging",
+          "kind": "official_event",
+          "title": "Ebola disease caused by Bundibugyo virus, Democratic Republic of the Congo & Uganda",
+          "disease_id": "D050",
+          "disease_name_en": "Ebola",
+          "disease_name_zh": "埃博拉出血热",
+          "geographies": [
+            {
+              "code": "CD",
+              "name_en": "Democratic Republic of the Congo"
+            },
+            {
+              "code": "UG",
+              "name_en": "Uganda"
+            }
+          ],
+          "data_through": "2026-07-17",
+          "window": {
+            "label": null,
+            "current": null,
+            "previous": null,
+            "absolute_change": null,
+            "change_pct": null
+          },
+          "risk": {
+            "score": null,
+            "level": null,
+            "confidence": "high"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_8ec99408e7ac7b7dc3d2f3b2",
+      "slug": "10-1016-j-ttbdis-2026-102672-8ec99408",
+      "title": "Long-term sequelae after tick-borne encephalitis in Germany: a nationwide claims-based matched cohort study",
+      "doi": "10.1016/j.ttbdis.2026.102672",
+      "pmid": null,
+      "journal": "Ticks and Tick-borne Diseases",
+      "publisher": "Elsevier BV",
+      "authors": [
+        "Guy Levy",
+        "Daniel Gensorowsky",
+        "Jana Diekmannshemke",
+        "Julia Schiffner-Rohe",
+        "Uta Meyding-Lamadé",
+        "Florian Reis",
+        "Christof von Eiff",
+        "Julian Witte",
+        "Claudius Malerczyk"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Cohort study",
+      "published_at": "2026-07-01T00:00:00+00:00",
+      "indexed_at": "2026-08-05T06:45:21+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://linkinghub.elsevier.com/retrieve/pii/S1877959X26000701",
+      "license_url": "https://www.elsevier.com/tdm/userlicense/1.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.564,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D205",
+          "slug": "tick-borne-encephalitis",
+          "name_en": "Tick-borne encephalitis",
+          "name_zh": "蜱传脑炎",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [
+        {
+          "code": "DE",
+          "name_en": "Germany",
+          "name_zh": null,
+          "confidence": 0.78
+        }
+      ],
+      "topics": [],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent cohort study is indexed for its relevance to Tick-borne encephalitis. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Cohort study因与蜱传脑炎相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1016/j.ttbdis.2026.102672",
+        "publisher": "https://linkinghub.elsevier.com/retrieve/pii/S1877959X26000701"
+      },
+      "updated_at": "2026-08-13T16:05:48.137560+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:ab5fb8f49aaa0cf6",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D205",
+          "disease_name_en": "Tick-borne encephalitis",
+          "disease_name_zh": "蜱传脑炎",
+          "geographies": [
+            {
+              "code": "SE",
+              "name_en": "Sweden"
+            }
+          ],
+          "data_through": "2026-07-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 156.0,
+            "previous": 92.0,
+            "absolute_change": 64.0,
+            "change_pct": 69.57
+          },
+          "risk": {
+            "score": 46.1,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_22698ade3f31be95b36c1970",
+      "slug": "10-1016-j-ajt-2026-07-001-22698ade",
+      "title": "Ebola disease caused by Bundibugyo virus, Democratic Republic of the Congo and Uganda",
+      "doi": "10.1016/j.ajt.2026.07.001",
+      "pmid": "42398918",
+      "journal": "American Journal of Transplantation",
+      "publisher": "Elsevier BV",
+      "authors": [
+        "Marcus R. Pereira"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-07-01T00:00:00+00:00",
+      "indexed_at": "2026-07-16T13:14:14+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://linkinghub.elsevier.com/retrieve/pii/S1600613526026390",
+      "license_url": "https://www.elsevier.com/tdm/userlicense/1.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.564,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D050",
+          "slug": "ebola",
+          "name_en": "Ebola",
+          "name_zh": "埃博拉出血热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Ebola. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与埃博拉出血热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1016/j.ajt.2026.07.001",
+        "publisher": "https://linkinghub.elsevier.com/retrieve/pii/S1600613526026390",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/42398918/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137319+00:00",
+      "related_signals": [
+        {
+          "signal_id": "event:36",
+          "section": "emerging",
+          "kind": "official_event",
+          "title": "Ebola disease caused by Bundibugyo virus - Democratic Republic of the Congo",
+          "disease_id": "D050",
+          "disease_name_en": "Ebola",
+          "disease_name_zh": "埃博拉出血热",
+          "geographies": [
+            {
+              "code": "CD",
+              "name_en": "Democratic Republic of the Congo"
+            }
+          ],
+          "data_through": "2026-08-01",
+          "window": {
+            "label": null,
+            "current": null,
+            "previous": null,
+            "absolute_change": null,
+            "change_pct": null
+          },
+          "risk": {
+            "score": null,
+            "level": null,
+            "confidence": "high"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        },
+        {
+          "signal_id": "event:37",
+          "section": "emerging",
+          "kind": "official_event",
+          "title": "Ebola disease caused by Bundibugyo virus, Democratic Republic of the Congo & Uganda",
+          "disease_id": "D050",
+          "disease_name_en": "Ebola",
+          "disease_name_zh": "埃博拉出血热",
+          "geographies": [
+            {
+              "code": "CD",
+              "name_en": "Democratic Republic of the Congo"
+            },
+            {
+              "code": "UG",
+              "name_en": "Uganda"
+            }
+          ],
+          "data_through": "2026-07-17",
+          "window": {
+            "label": null,
+            "current": null,
+            "previous": null,
+            "absolute_change": null,
+            "change_pct": null
+          },
+          "risk": {
+            "score": null,
+            "level": null,
+            "confidence": "high"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    }
+  ],
+  "url": "/research/weekly/2026-W27/"
+}

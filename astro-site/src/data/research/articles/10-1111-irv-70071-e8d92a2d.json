@@ -1,0 +1,143 @@
+{
+  "article_id": "lit_e8d92a2d9e3596df571576fc",
+  "slug": "10-1111-irv-70071-e8d92a2d",
+  "title": "Neurologic Complications of Influenza and Potential Protective Vaccine Effects",
+  "doi": "10.1111/irv.70071",
+  "pmid": null,
+  "journal": "Influenza and Other Respiratory Viruses",
+  "publisher": "Wiley",
+  "authors": [
+    "Ann R. Falsey"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Journal article",
+  "published_at": "2025-03-06T00:00:00+00:00",
+  "indexed_at": "2026-07-29T18:28:12+00:00",
+  "open_access_status": "open",
+  "open_access_url": "https://onlinelibrary.wiley.com/doi/10.1111/irv.70071",
+  "license_url": "http://creativecommons.org/licenses/by/4.0/",
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.512,
+  "is_featured": false,
+  "diseases": [
+    {
+      "disease_id": "D038",
+      "slug": "influenza",
+      "name_en": "Influenza",
+      "name_zh": "流行性感冒",
+      "confidence": 0.82
+    }
+  ],
+  "countries": [],
+  "topics": [
+    {
+      "name": "Vaccination",
+      "confidence": 0.66
+    }
+  ],
+  "related_surveillance": [],
+  "summary": {},
+  "why_it_matters_en": "This recent journal article is indexed for its relevance to Influenza. Read the original source before applying its findings.",
+  "why_it_matters_zh": "这项近期Journal article因与流行性感冒相关而被收录。应用其结论前请阅读原始文献。",
+  "source_urls": {
+    "doi": "https://doi.org/10.1111/irv.70071",
+    "publisher": "https://onlinelibrary.wiley.com/doi/10.1111/irv.70071"
+  },
+  "updated_at": "2026-08-13T16:05:48.137426+00:00",
+  "related_signals": [
+    {
+      "signal_id": "signal:d4f34da837688d03",
+      "section": "increasing",
+      "kind": "statistical_signal",
+      "title": null,
+      "disease_id": "D038",
+      "disease_name_en": "Influenza",
+      "disease_name_zh": "流行性感冒",
+      "geographies": [
+        {
+          "code": "IE",
+          "name_en": "Ireland"
+        }
+      ],
+      "data_through": "2026-07-27",
+      "window": {
+        "label": "Last 4 weeks",
+        "current": 230.0,
+        "previous": 46.0,
+        "absolute_change": 184.0,
+        "change_pct": 400.0
+      },
+      "risk": {
+        "score": 65.5,
+        "level": "high",
+        "confidence": "low"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-e8d92a2d9e3596df571576fc",
+        "type": "article",
+        "label": "Neurologic Complications of Influenza and Potential Protective Vaccine Effects",
+        "slug": "10-1111-irv-70071-e8d92a2d",
+        "url": "/research/articles/10-1111-irv-70071-e8d92a2d/",
+        "published_at": "2025-03-06T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "disease:d038",
+        "type": "disease",
+        "label": "Influenza",
+        "disease_id": "D038",
+        "name_zh": "流行性感冒",
+        "slug": "influenza",
+        "url": "/diseases/influenza/"
+      },
+      {
+        "id": "study-type:journal-article",
+        "type": "study_type",
+        "label": "Journal article"
+      },
+      {
+        "id": "topic:vaccination",
+        "type": "topic",
+        "label": "Vaccination"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-e8d92a2d9e3596df571576fc|ABOUT_DISEASE|disease:d038",
+        "source": "article:lit-e8d92a2d9e3596df571576fc",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d038",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-e8d92a2d9e3596df571576fc|ADDRESSES_TOPIC|topic:vaccination",
+        "source": "article:lit-e8d92a2d9e3596df571576fc",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccination",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-e8d92a2d9e3596df571576fc|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-e8d92a2d9e3596df571576fc",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 4,
+      "edges": 3,
+      "articles": 1
+    }
+  }
+}

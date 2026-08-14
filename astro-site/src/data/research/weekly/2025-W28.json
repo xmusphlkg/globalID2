@@ -1,0 +1,107 @@
+{
+  "week": "2025-W28",
+  "start_date": "2025-07-07",
+  "end_date": "2025-07-07",
+  "article_count": 1,
+  "disease_count": 1,
+  "country_count": 0,
+  "top_topics": [
+    "Surveillance"
+  ],
+  "articles": [
+    {
+      "article_id": "lit_aef136a753cabd3bdd4dfcf4",
+      "slug": "10-3390-v17070955-aef136a7",
+      "title": "Detection of a Novel Gull-like Clade of Newcastle Disease Virus and H3N8 Avian Influenza Virus in the Arctic Region of Russia (Taimyr Peninsula).",
+      "doi": "10.3390/v17070955",
+      "pmid": "40733572",
+      "journal": "Viruses",
+      "publisher": null,
+      "authors": [
+        "Derko A",
+        "Dubovitskiy N",
+        "Prokudin A",
+        "Mine J",
+        "Tsunekuni R",
+        "Uchida Y",
+        "Saito T",
+        "Kasianov N",
+        "Loginova A",
+        "Sobolev I",
+        "Kumar S",
+        "Shestopalov A",
+        "Sharshov K"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2025-07-07T00:00:00+00:00",
+      "indexed_at": "2025-07-30T00:00:00+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC12300997",
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.54,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D038",
+          "slug": "influenza",
+          "name_en": "Influenza",
+          "name_zh": "流行性感冒",
+          "confidence": 0.9
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Surveillance",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Influenza. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与流行性感冒相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.3390/v17070955",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/40733572/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137472+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:d4f34da837688d03",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D038",
+          "disease_name_en": "Influenza",
+          "disease_name_zh": "流行性感冒",
+          "geographies": [
+            {
+              "code": "IE",
+              "name_en": "Ireland"
+            }
+          ],
+          "data_through": "2026-07-27",
+          "window": {
+            "label": "Last 4 weeks",
+            "current": 230.0,
+            "previous": 46.0,
+            "absolute_change": 184.0,
+            "change_pct": 400.0
+          },
+          "risk": {
+            "score": 65.5,
+            "level": "high",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    }
+  ],
+  "url": "/research/weekly/2025-W28/"
+}

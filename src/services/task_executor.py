@@ -232,6 +232,16 @@ async def _dispatch(task: Task) -> Dict[str, Any]:
         return await _run_export(task)
     elif task_type == TaskType.AGENT_WORKFLOW:
         return await _run_agent_workflow(task)
+    elif task_type == TaskType.SYNC_SITUATION_HISTORY:
+        return await _run_situation_history_sync(task)
+    elif task_type == TaskType.REFRESH_SITUATION_SOURCES:
+        return await _run_situation_sources_refresh(task)
+    elif task_type == TaskType.SYNC_LITERATURE:
+        return await _run_literature_sync(task)
+    elif task_type == TaskType.ENRICH_LITERATURE:
+        return await _run_literature_enrichment(task)
+    elif task_type == TaskType.DISCOVER_LITERATURE_GAPS:
+        return await _run_literature_gap_discovery(task)
     else:
         raise ValueError(f"Unsupported task type for execution: {task_type}")
 
@@ -355,6 +365,92 @@ async def _run_export(task: Task) -> Dict[str, Any]:
 
     async with task_lifecycle(task, exit_on_cancel=False):
         return await data_release_service.execute_release_task(task)
+
+
+async def _run_situation_history_sync(task: Task) -> Dict[str, Any]:
+    """Reconcile primary Situation snapshots into the history database."""
+    from src.services.situation_history_service import sync_history
+
+    async with task_lifecycle(task, exit_on_cancel=False):
+        await task_manager.update_task_progress(task.task_uuid, 10)
+        result = await sync_history(mode=str((task.input_data or {}).get("mode") or "reconcile"))
+        await task_manager.update_task_progress(task.task_uuid, 100)
+        async with get_database() as db:
+            task_obj = await db.get(Task, task.id)
+            if task_obj:
+                task_obj.output_data = result
+                await db.commit()
+        return result
+
+
+async def _run_situation_sources_refresh(task: Task) -> Dict[str, Any]:
+    """Fetch configured Situation adapters and recalculate all snapshot kinds."""
+    from src.services.situation_room import refresh_situation
+
+    async with task_lifecycle(task, exit_on_cancel=False):
+        fetch_events = bool((task.input_data or {}).get("fetch_events", True))
+        await task_manager.update_task_progress(task.task_uuid, 10)
+        payload = await refresh_situation(fetch_events=fetch_events)
+        await task_manager.update_task_progress(task.task_uuid, 100)
+        result = {
+            "snapshot_id": payload.get("snapshot_id"),
+            "checked_at": payload.get("checked_at"),
+            "content_updated_at": payload.get("content_updated_at"),
+            "data_through": payload.get("data_through"),
+            "revision": payload.get("revision"),
+            "quality_gate_status": payload.get("quality_gate_status"),
+            "source_health": payload.get("freshness") or {},
+            "coverage": payload.get("coverage") or {},
+            "fetch_events": fetch_events,
+        }
+        async with get_database() as db:
+            task_obj = await db.get(Task, task.id)
+            if task_obj:
+                task_obj.output_data = result
+                await db.commit()
+        return result
+
+
+async def _run_literature_sync(task: Task) -> Dict[str, Any]:
+    """Incrementally update the Research Radar literature catalogue."""
+    from src.services.literature_service import literature_service
+
+    async with task_lifecycle(task, exit_on_cancel=False):
+        result = await literature_service.execute_task(task)
+        async with get_database() as db:
+            task_obj = await db.get(Task, task.id)
+            if task_obj:
+                task_obj.output_data = result
+                await db.commit()
+        return result
+
+
+async def _run_literature_enrichment(task: Task) -> Dict[str, Any]:
+    """Generate review-only Research Radar evidence drafts via the model center."""
+    from src.services.literature_service import literature_service
+
+    async with task_lifecycle(task, exit_on_cancel=False):
+        result = await literature_service.execute_enrichment_task(task)
+        async with get_database() as db:
+            task_obj = await db.get(Task, task.id)
+            if task_obj:
+                task_obj.output_data = result
+                await db.commit()
+        return result
+
+
+async def _run_literature_gap_discovery(task: Task) -> Dict[str, Any]:
+    """Discover review-only literature candidates for active evidence gaps."""
+    from src.services.literature_service import literature_service
+
+    async with task_lifecycle(task, exit_on_cancel=False):
+        result = await literature_service.execute_gap_discovery_task(task)
+        async with get_database() as db:
+            task_obj = await db.get(Task, task.id)
+            if task_obj:
+                task_obj.output_data = result
+                await db.commit()
+        return result
 
 
 # ── Agent workflow handler ───────────────────────────────────────────────────

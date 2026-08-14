@@ -1,0 +1,284 @@
+{
+  "article_id": "lit_76958ac10aab64bd703ae2c1",
+  "slug": "10-3389-fcimb-2024-1496991-76958ac1",
+  "title": "Based on the MaxEnt model the analysis of influencing factors and simulation of potential risk areas of human infection with avian influenza A (H7N9) in China.",
+  "doi": "10.3389/fcimb.2024.1496991",
+  "pmid": "39831108",
+  "journal": "Frontiers in cellular and infection microbiology",
+  "publisher": null,
+  "authors": [
+    "Yang Z",
+    "Ren ZD",
+    "Wang J",
+    "Dong W"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Journal article",
+  "published_at": "2025-01-03T00:00:00+00:00",
+  "indexed_at": "2025-01-20T00:00:00+00:00",
+  "open_access_status": "open",
+  "open_access_url": "https://europepmc.org/articles/PMC11739160",
+  "license_url": null,
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.611,
+  "is_featured": false,
+  "diseases": [
+    {
+      "disease_id": "D038",
+      "slug": "influenza",
+      "name_en": "Influenza",
+      "name_zh": "流行性感冒",
+      "confidence": 0.94
+    },
+    {
+      "disease_id": "D015",
+      "slug": "h7n9",
+      "name_en": "H7N9",
+      "name_zh": "人感染H7N9禽流感",
+      "confidence": 0.82
+    }
+  ],
+  "countries": [
+    {
+      "code": "CN",
+      "name_en": "China",
+      "name_zh": null,
+      "confidence": 0.78
+    }
+  ],
+  "topics": [
+    {
+      "name": "Outbreak investigation",
+      "confidence": 0.66
+    },
+    {
+      "name": "Transmission dynamics",
+      "confidence": 0.66
+    },
+    {
+      "name": "Climate and environment",
+      "confidence": 0.66
+    }
+  ],
+  "related_surveillance": [
+    {
+      "disease_id": "D038",
+      "disease_name_en": "Influenza",
+      "disease_name_zh": "流行性感冒",
+      "disease_slug": "influenza",
+      "country_code": "CN",
+      "country_name_en": "China",
+      "url": "/diseases/influenza/",
+      "method": "high-confidence article geography intersected with GIDS series coverage"
+    },
+    {
+      "disease_id": "D015",
+      "disease_name_en": "H7N9",
+      "disease_name_zh": "人感染H7N9禽流感",
+      "disease_slug": "h7n9",
+      "country_code": "CN",
+      "country_name_en": "China",
+      "url": "/diseases/h7n9/",
+      "method": "high-confidence article geography intersected with GIDS series coverage"
+    }
+  ],
+  "summary": {
+    "en": {
+      "research_question": "The study seeks to identify environmental and demographic drivers associated with human H7N9 infections and to map historical risk zones across China.",
+      "study_design": "Researchers applied a MaxEnt computational framework to analyze case locations alongside environmental and socioeconomic datasets spanning five years.",
+      "population_setting": "The analysis focused on human cases reported throughout China, with particular attention to coastal provinces during the 2013 through 2017 timeframe.",
+      "main_findings": "Model outputs indicate a steady annual escalation in infection probability, consistently highlighting eastern and southeastern coastal regions as persistent hotspots. Demographic concentration served as the strongest predictor, while ecological and agricultural metrics provided secondary explanatory power. Simulated risk distributions demonstrated strong agreement with documented outbreak locations.",
+      "public_health_relevance": "Mapping these spatial trends and variable contributions may help guide resource allocation for targeted monitoring and intervention planning.",
+      "limitations": "The authors acknowledge that expanding the dataset with additional variables is necessary to enhance predictive precision and strengthen policy guidance.",
+      "gids_interpretation": "This work functions as a retrospective geospatial assessment that contextualizes historical H7N9 distribution patterns and their associated correlates, rather than providing an active monitoring mechanism.",
+      "provenance": {
+        "generated_by": "literature-evidence-agent",
+        "model": "qwen3.7-flash",
+        "provider": "qwenai",
+        "quality_score": 0.942,
+        "generated_at": "2026-08-14T03:06:54.676078+00:00",
+        "editorially_approved": false,
+        "automatically_approved": true,
+        "automation_policy_version": "research-radar-autopilot.v1",
+        "publication_gate": "automated-quality-gate"
+      }
+    },
+    "zh": {
+      "research_question": "本研究旨在探讨中国人群感染禽流感A(H7N9)病毒的相关影响因素及其传播特征，并评估潜在的高风险地理区域。",
+      "study_design": "该研究采用MaxEnt算法进行回顾性空间建模，利用2013至2017年的病例点位与环境及社会经济数据进行相关性检验。",
+      "population_setting": "研究聚焦于中国境内报告过H7N9确诊病例的地理范围，时间跨度覆盖2013年至2017年。",
+      "main_findings": "模型模拟显示疫情风险呈逐年上升态势，东部与东南部沿海地带持续处于高风险区间。人口密度被识别为核心关联变量，植被覆盖、降水、海拔、家禽屠宰规模、产值及气温等亦为次要相关因素。模拟生成的风险分布图与实际疫情记录高度吻合。",
+      "public_health_relevance": "明确关键关联变量与高风险地理分布可为公共卫生部门优化监测网络布局及资源配置提供科学参考。",
+      "limitations": "作者明确指出当前模型纳入的变量集较为有限，未来需补充更多参数以提升预测精度并增强对防控策略的指导价值。",
+      "gids_interpretation": "该文提供的是基于历史数据的回顾性空间风险评估背景信息，侧重于环境与社会经济变量的关联性分析，未涉及实时监测信号的直接验证或前瞻性预警。",
+      "provenance": {
+        "generated_by": "literature-evidence-agent",
+        "model": "qwen3.7-flash",
+        "provider": "qwenai",
+        "quality_score": 0.942,
+        "generated_at": "2026-08-14T03:07:28.912100+00:00",
+        "editorially_approved": false,
+        "automatically_approved": true,
+        "automation_policy_version": "research-radar-autopilot.v1",
+        "publication_gate": "automated-quality-gate"
+      }
+    }
+  },
+  "why_it_matters_en": "Mapping these spatial trends and variable contributions may help guide resource allocation for targeted monitoring and intervention planning.",
+  "why_it_matters_zh": "明确关键关联变量与高风险地理分布可为公共卫生部门优化监测网络布局及资源配置提供科学参考。",
+  "source_urls": {
+    "doi": "https://doi.org/10.3389/fcimb.2024.1496991",
+    "pubmed": "https://pubmed.ncbi.nlm.nih.gov/39831108/"
+  },
+  "updated_at": "2026-08-13T16:05:48.137459+00:00",
+  "related_signals": [
+    {
+      "signal_id": "signal:d4f34da837688d03",
+      "section": "increasing",
+      "kind": "statistical_signal",
+      "title": null,
+      "disease_id": "D038",
+      "disease_name_en": "Influenza",
+      "disease_name_zh": "流行性感冒",
+      "geographies": [
+        {
+          "code": "IE",
+          "name_en": "Ireland"
+        }
+      ],
+      "data_through": "2026-07-27",
+      "window": {
+        "label": "Last 4 weeks",
+        "current": 230.0,
+        "previous": 46.0,
+        "absolute_change": 184.0,
+        "change_pct": 400.0
+      },
+      "risk": {
+        "score": 65.5,
+        "level": "high",
+        "confidence": "low"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-76958ac10aab64bd703ae2c1",
+        "type": "article",
+        "label": "Based on the MaxEnt model the analysis of influencing factors and simulation of potential risk areas of human infection with avian influenza A (H7N9) in China.",
+        "slug": "10-3389-fcimb-2024-1496991-76958ac1",
+        "url": "/research/articles/10-3389-fcimb-2024-1496991-76958ac1/",
+        "published_at": "2025-01-03T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "country:cn",
+        "type": "country",
+        "label": "China",
+        "code": "CN",
+        "url": "/countries/cn/"
+      },
+      {
+        "id": "disease:d015",
+        "type": "disease",
+        "label": "H7N9",
+        "disease_id": "D015",
+        "name_zh": "人感染H7N9禽流感",
+        "slug": "h7n9",
+        "url": "/diseases/h7n9/"
+      },
+      {
+        "id": "disease:d038",
+        "type": "disease",
+        "label": "Influenza",
+        "disease_id": "D038",
+        "name_zh": "流行性感冒",
+        "slug": "influenza",
+        "url": "/diseases/influenza/"
+      },
+      {
+        "id": "study-type:journal-article",
+        "type": "study_type",
+        "label": "Journal article"
+      },
+      {
+        "id": "topic:climate-and-environment",
+        "type": "topic",
+        "label": "Climate and environment"
+      },
+      {
+        "id": "topic:outbreak-investigation",
+        "type": "topic",
+        "label": "Outbreak investigation"
+      },
+      {
+        "id": "topic:transmission-dynamics",
+        "type": "topic",
+        "label": "Transmission dynamics"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-76958ac10aab64bd703ae2c1|ABOUT_DISEASE|disease:d015",
+        "source": "article:lit-76958ac10aab64bd703ae2c1",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d015",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-76958ac10aab64bd703ae2c1|ABOUT_DISEASE|disease:d038",
+        "source": "article:lit-76958ac10aab64bd703ae2c1",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d038",
+        "confidence": 0.94
+      },
+      {
+        "id": "article:lit-76958ac10aab64bd703ae2c1|ADDRESSES_TOPIC|topic:climate-and-environment",
+        "source": "article:lit-76958ac10aab64bd703ae2c1",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:climate-and-environment",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-76958ac10aab64bd703ae2c1|ADDRESSES_TOPIC|topic:outbreak-investigation",
+        "source": "article:lit-76958ac10aab64bd703ae2c1",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:outbreak-investigation",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-76958ac10aab64bd703ae2c1|ADDRESSES_TOPIC|topic:transmission-dynamics",
+        "source": "article:lit-76958ac10aab64bd703ae2c1",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:transmission-dynamics",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-76958ac10aab64bd703ae2c1|STUDIED_IN|country:cn",
+        "source": "article:lit-76958ac10aab64bd703ae2c1",
+        "relation": "STUDIED_IN",
+        "target": "country:cn",
+        "confidence": 0.78
+      },
+      {
+        "id": "article:lit-76958ac10aab64bd703ae2c1|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-76958ac10aab64bd703ae2c1",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 8,
+      "edges": 7,
+      "articles": 1
+    }
+  }
+}

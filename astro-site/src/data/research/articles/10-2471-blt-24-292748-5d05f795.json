@@ -1,0 +1,287 @@
+{
+  "article_id": "lit_5d05f7957c9e37cd6551c071",
+  "slug": "10-2471-blt-24-292748-5d05f795",
+  "title": "Responding to avian influenza in poultry farms in Victoria, Australia.",
+  "doi": "10.2471/blt.24.292748",
+  "pmid": "40630150",
+  "journal": "Bulletin of the World Health Organization",
+  "publisher": null,
+  "authors": [
+    "Blaney K",
+    "Cardamone L",
+    "Clarke NE",
+    "Hayes MJ",
+    "Muleme M",
+    "McNamara BJ",
+    "Jalil E",
+    "Holwill S",
+    "Lim CK",
+    "O'Brien H",
+    "Layton E",
+    "Fidao A",
+    "Salmon S",
+    "Kinnear R",
+    "Ford M",
+    "Hussain MA",
+    "Athan E"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Journal article",
+  "published_at": "2025-05-27T00:00:00+00:00",
+  "indexed_at": "2025-07-09T00:00:00+00:00",
+  "open_access_status": "open",
+  "open_access_url": "https://europepmc.org/articles/PMC12231074",
+  "license_url": null,
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.611,
+  "is_featured": false,
+  "diseases": [
+    {
+      "disease_id": "D038",
+      "slug": "influenza",
+      "name_en": "Influenza",
+      "name_zh": "流行性感冒",
+      "confidence": 0.94
+    },
+    {
+      "disease_id": "D015",
+      "slug": "h7n9",
+      "name_en": "H7N9",
+      "name_zh": "人感染H7N9禽流感",
+      "confidence": 0.62
+    }
+  ],
+  "countries": [
+    {
+      "code": "AU",
+      "name_en": "Australia",
+      "name_zh": null,
+      "confidence": 0.78
+    }
+  ],
+  "topics": [
+    {
+      "name": "Vaccination",
+      "confidence": 0.7100000000000001
+    },
+    {
+      "name": "Surveillance",
+      "confidence": 0.66
+    },
+    {
+      "name": "Outbreak investigation",
+      "confidence": 0.66
+    }
+  ],
+  "related_surveillance": [
+    {
+      "disease_id": "D038",
+      "disease_name_en": "Influenza",
+      "disease_name_zh": "流行性感冒",
+      "disease_slug": "influenza",
+      "country_code": "AU",
+      "country_name_en": "Australia",
+      "url": "/diseases/influenza/",
+      "method": "high-confidence article geography intersected with GIDS series coverage"
+    }
+  ],
+  "summary": {
+    "en": {
+      "research_question": "The article investigates how coordinated public health agencies addressed human exposure risks following an avian influenza outbreak in Australian poultry operations.",
+      "study_design": "This publication presents an observational outbreak investigation that utilized contact tracing, laboratory diagnostics, and public health intervention monitoring across multiple agricultural sites.",
+      "population_setting": "The analysis centers on human associates linked to eight commercial poultry facilities situated within two shires in Victoria, Australia.",
+      "main_findings": "Investigators documented 212 distinct individuals connected to the affected farms, spanning twenty-five municipalities. Laboratory screening revealed that none of the twenty evaluated suspected infections harbored influenza A. Administrative records indicated that roughly one-fifth of at-risk persons obtained antiviral treatment while slightly over a quarter received routine immunization.",
+      "public_health_relevance": "The publication underscores the necessity for enhanced interagency cooperation and expanded preventive healthcare access to manage future zoonotic spillover events effectively.",
+      "limitations": "The authors acknowledge existing deficiencies in preventive healthcare delivery and recommend broader systemic improvements across governmental tiers. Furthermore, the descriptive methodology restricts the evaluation of specific intervention outcomes.",
+      "gids_interpretation": "This document offers historical context regarding coordinated veterinary and medical interventions during a specific regional poultry pathogen event. It functions as an archival reference for past operational frameworks without suggesting current epidemiological activity.",
+      "provenance": {
+        "generated_by": "literature-evidence-agent",
+        "model": "qwen3.7-flash",
+        "provider": "qwenai",
+        "quality_score": 0.961,
+        "generated_at": "2026-08-14T02:07:56.990021+00:00",
+        "editorially_approved": false,
+        "automatically_approved": true,
+        "automation_policy_version": "research-radar-autopilot.v1",
+        "publication_gate": "automated-quality-gate"
+      }
+    },
+    "zh": {
+      "research_question": "探讨澳大利亚维多利亚州禽类养殖场发生高致病性禽流感疫情时的多部门公共卫生应急响应模式。",
+      "study_design": "本研究采用描述性方法，对单次禽流感暴发事件的追踪监测与联合处置流程进行回顾性总结。",
+      "population_setting": "研究对象涵盖澳大利亚维多利亚州八个感染场所周边的二百一十二名人类接触者，其居住地分散于二十五个地方政府辖区。",
+      "main_findings": "经实验室检测，二十名疑似病例均未检出甲型流感病毒。公共卫生团队实施了疫苗接种、抗病毒药物预防及主动监测等措施，整体响应被视为有效，但预防保健环节仍有改进空间。",
+      "public_health_relevance": "该报告强调了跨层级政府、农业部门与卫生机构协同作战的重要性，为完善区域传染病预警机制及优化预防性资源配置提供了实践依据。",
+      "limitations": "研究仅基于单一疫情事件展开描述，未设置对照比较；同时明确指出当前各级别间的应急准备策略尚存短板，且基层预防性医疗服务覆盖不足。",
+      "gids_interpretation": "本文聚焦于动物源性传染病的现场调查与多机构联动响应，可作为理解特定地理区域内公共卫生危机管理框架的背景文献，有助于拓展相关主题的知识检索语境。",
+      "provenance": {
+        "generated_by": "literature-evidence-agent",
+        "model": "qwen3.7-flash",
+        "provider": "qwenai",
+        "quality_score": 0.939,
+        "generated_at": "2026-08-14T02:08:22.849949+00:00",
+        "editorially_approved": false,
+        "automatically_approved": true,
+        "automation_policy_version": "research-radar-autopilot.v1",
+        "publication_gate": "automated-quality-gate"
+      }
+    }
+  },
+  "why_it_matters_en": "The publication underscores the necessity for enhanced interagency cooperation and expanded preventive healthcare access to manage future zoonotic spillover events effectively.",
+  "why_it_matters_zh": "该报告强调了跨层级政府、农业部门与卫生机构协同作战的重要性，为完善区域传染病预警机制及优化预防性资源配置提供了实践依据。",
+  "source_urls": {
+    "doi": "https://doi.org/10.2471/blt.24.292748",
+    "pubmed": "https://pubmed.ncbi.nlm.nih.gov/40630150/"
+  },
+  "updated_at": "2026-08-13T16:05:48.137450+00:00",
+  "related_signals": [
+    {
+      "signal_id": "signal:d4f34da837688d03",
+      "section": "increasing",
+      "kind": "statistical_signal",
+      "title": null,
+      "disease_id": "D038",
+      "disease_name_en": "Influenza",
+      "disease_name_zh": "流行性感冒",
+      "geographies": [
+        {
+          "code": "IE",
+          "name_en": "Ireland"
+        }
+      ],
+      "data_through": "2026-07-27",
+      "window": {
+        "label": "Last 4 weeks",
+        "current": 230.0,
+        "previous": 46.0,
+        "absolute_change": 184.0,
+        "change_pct": 400.0
+      },
+      "risk": {
+        "score": 65.5,
+        "level": "high",
+        "confidence": "low"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-5d05f7957c9e37cd6551c071",
+        "type": "article",
+        "label": "Responding to avian influenza in poultry farms in Victoria, Australia.",
+        "slug": "10-2471-blt-24-292748-5d05f795",
+        "url": "/research/articles/10-2471-blt-24-292748-5d05f795/",
+        "published_at": "2025-05-27T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "country:au",
+        "type": "country",
+        "label": "Australia",
+        "code": "AU",
+        "url": "/countries/au/"
+      },
+      {
+        "id": "disease:d015",
+        "type": "disease",
+        "label": "H7N9",
+        "disease_id": "D015",
+        "name_zh": "人感染H7N9禽流感",
+        "slug": "h7n9",
+        "url": "/diseases/h7n9/"
+      },
+      {
+        "id": "disease:d038",
+        "type": "disease",
+        "label": "Influenza",
+        "disease_id": "D038",
+        "name_zh": "流行性感冒",
+        "slug": "influenza",
+        "url": "/diseases/influenza/"
+      },
+      {
+        "id": "study-type:journal-article",
+        "type": "study_type",
+        "label": "Journal article"
+      },
+      {
+        "id": "topic:outbreak-investigation",
+        "type": "topic",
+        "label": "Outbreak investigation"
+      },
+      {
+        "id": "topic:surveillance",
+        "type": "topic",
+        "label": "Surveillance"
+      },
+      {
+        "id": "topic:vaccination",
+        "type": "topic",
+        "label": "Vaccination"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-5d05f7957c9e37cd6551c071|ABOUT_DISEASE|disease:d015",
+        "source": "article:lit-5d05f7957c9e37cd6551c071",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d015",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-5d05f7957c9e37cd6551c071|ABOUT_DISEASE|disease:d038",
+        "source": "article:lit-5d05f7957c9e37cd6551c071",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d038",
+        "confidence": 0.94
+      },
+      {
+        "id": "article:lit-5d05f7957c9e37cd6551c071|ADDRESSES_TOPIC|topic:outbreak-investigation",
+        "source": "article:lit-5d05f7957c9e37cd6551c071",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:outbreak-investigation",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-5d05f7957c9e37cd6551c071|ADDRESSES_TOPIC|topic:surveillance",
+        "source": "article:lit-5d05f7957c9e37cd6551c071",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:surveillance",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-5d05f7957c9e37cd6551c071|ADDRESSES_TOPIC|topic:vaccination",
+        "source": "article:lit-5d05f7957c9e37cd6551c071",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccination",
+        "confidence": 0.7100000000000001
+      },
+      {
+        "id": "article:lit-5d05f7957c9e37cd6551c071|STUDIED_IN|country:au",
+        "source": "article:lit-5d05f7957c9e37cd6551c071",
+        "relation": "STUDIED_IN",
+        "target": "country:au",
+        "confidence": 0.78
+      },
+      {
+        "id": "article:lit-5d05f7957c9e37cd6551c071|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-5d05f7957c9e37cd6551c071",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 8,
+      "edges": 7,
+      "articles": 1
+    }
+  }
+}

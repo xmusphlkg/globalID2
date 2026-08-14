@@ -23,6 +23,8 @@ const statusToneMap: Record<string, StatusTone> = {
   generating: "info",
   reviewing: "info",
   pending: "neutral",
+  no_model: "warning",
+  not_required: "success",
   skipped: "neutral",
   cancelled: "neutral",
   failed: "danger",

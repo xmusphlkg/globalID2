@@ -1,0 +1,269 @@
+{
+  "article_id": "lit_d7828ffc71896b245d8c2624",
+  "slug": "10-1016-j-anzjph-2025-100301-d7828ffc",
+  "title": "Resurgence of rheumatic fever among Pacific peoples in Aotearoa New Zealand: A 2010–2023 analysis of hospitalisation data with implications for equity policy",
+  "doi": "10.1016/j.anzjph.2025.100301",
+  "pmid": "41447834",
+  "journal": "Australian and New Zealand Journal of Public Health",
+  "publisher": "Elsevier BV",
+  "authors": [
+    "Gerard JB. Sonder",
+    "Megan Pledger",
+    "Philip C. Hill",
+    "Debbie Ryan"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Journal article",
+  "published_at": "2026-02-01T00:00:00+00:00",
+  "indexed_at": "2026-03-19T16:38:35+00:00",
+  "open_access_status": "open",
+  "open_access_url": "https://linkinghub.elsevier.com/retrieve/pii/S1326020025000834",
+  "license_url": "https://www.elsevier.com/tdm/userlicense/1.0/",
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.615,
+  "is_featured": false,
+  "diseases": [
+    {
+      "disease_id": "D158",
+      "slug": "rheumatic-fever",
+      "name_en": "Rheumatic fever",
+      "name_zh": "风湿热",
+      "confidence": 0.82
+    },
+    {
+      "disease_id": "D004",
+      "slug": "covid-19",
+      "name_en": "COVID-19",
+      "name_zh": "新型冠状病毒感染",
+      "confidence": 0.62
+    }
+  ],
+  "countries": [
+    {
+      "code": "NZ",
+      "name_en": "New Zealand",
+      "name_zh": null,
+      "confidence": 0.78
+    }
+  ],
+  "topics": [
+    {
+      "name": "Surveillance",
+      "confidence": 0.66
+    },
+    {
+      "name": "Health policy",
+      "confidence": 0.66
+    }
+  ],
+  "related_surveillance": [
+    {
+      "disease_id": "D158",
+      "disease_name_en": "Rheumatic fever",
+      "disease_name_zh": "风湿热",
+      "disease_slug": "rheumatic-fever",
+      "country_code": "NZ",
+      "country_name_en": "New Zealand",
+      "url": "/diseases/rheumatic-fever/",
+      "method": "high-confidence article geography intersected with GIDS series coverage"
+    },
+    {
+      "disease_id": "D004",
+      "disease_name_en": "COVID-19",
+      "disease_name_zh": "新型冠状病毒感染",
+      "disease_slug": "covid-19",
+      "country_code": "NZ",
+      "country_name_en": "New Zealand",
+      "url": "/diseases/covid-19/",
+      "method": "high-confidence article geography intersected with GIDS series coverage"
+    }
+  ],
+  "summary": {
+    "en": {
+      "research_question": "The analysis investigates how ethnicity, residential location, and economic disadvantage shape admission rates for acute rheumatic fever and rheumatic heart disease across New Zealand over a thirteen-year period, while evaluating existing prevention strategies.",
+      "study_design": "Researchers conducted a retrospective evaluation of nationwide hospital and mortality records, applying statistical modeling to compare incidence shifts across distinct demographic and temporal segments.",
+      "population_setting": "The dataset encompasses the entire country, with particular emphasis on Indigenous and Pacific communities residing in highly disadvantaged urban zones such as Counties Manukau.",
+      "main_findings": "Hospital admissions were heavily concentrated among marginalized ethnic groups in impoverished neighborhoods. Case counts decreased for one demographic during a designated prevention initiative, whereas another demographic showed no corresponding reduction. Admission rates experienced a brief decline during a period of widespread public health restrictions, followed by a rapid increase by the final year of observation.",
+      "public_health_relevance": "Addressing persistent disparities requires improved monitoring infrastructure and targeted resource allocation to achieve established national health objectives.",
+      "limitations": "The exclusive reliance on hospital admission records limits capture of community-managed cases, while variable reporting standards and fragmented program delivery may influence observed trend accuracy.",
+      "gids_interpretation": "This publication establishes a historical baseline regarding disease distribution and policy effectiveness within a defined healthcare jurisdiction, supporting contextual understanding for future observational tracking without suggesting active outbreak detection.",
+      "provenance": {
+        "generated_by": "literature-evidence-agent",
+        "model": "qwen3.7-flash",
+        "provider": "qwenai",
+        "quality_score": 0.939,
+        "generated_at": "2026-08-14T02:06:56.519380+00:00",
+        "editorially_approved": false,
+        "automatically_approved": true,
+        "automation_policy_version": "research-radar-autopilot.v1",
+        "publication_gate": "automated-quality-gate"
+      }
+    },
+    "zh": {
+      "research_question": "本研究旨在评估新西兰急性风湿热与风湿性心脏病的住院分布特征，并考察公共卫生干预措施的实际效果及国家监测体系的不足。",
+      "study_design": "研究采用回顾性设计，利用负二项回归模型对2010至2023年间的全国住院与死亡数据进行多时段对比分析。",
+      "population_setting": "研究对象涵盖新西兰全体居民，重点聚焦毛利人与太平洋岛民群体，尤其关注社会经济劣势水平较高的地区如曼努考郡。",
+      "main_findings": "疾病负担显著集中于高劣势地区的原住民及太平洋裔人群。尽管毛利人病例数在专项预防计划实施后有所下降，但太平洋裔人群未见同等改善。疫情管控期间曾出现短暂就诊量锐减，随后于2023年迅速反弹。",
+      "public_health_relevance": "结果凸显建立标准化监测网络与推行公平导向干预策略的紧迫性，以缩小健康差距并达成国家防控目标。",
+      "limitations": "作者指出当前存在监测漏洞、报告标准不一以及干预措施落实不均等问题，这些因素限制了数据的完整性与政策评估的准确性。",
+      "gids_interpretation": "该文献提供了特定时期内疾病流行趋势的历史背景资料，可为后续数据收集框架的优化提供参考，但不代表实时预警信号。",
+      "provenance": {
+        "generated_by": "literature-evidence-agent",
+        "model": "qwen3.7-flash",
+        "provider": "qwenai",
+        "quality_score": 0.949,
+        "generated_at": "2026-08-14T02:07:27.255033+00:00",
+        "editorially_approved": false,
+        "automatically_approved": true,
+        "automation_policy_version": "research-radar-autopilot.v1",
+        "publication_gate": "automated-quality-gate"
+      }
+    }
+  },
+  "why_it_matters_en": "Addressing persistent disparities requires improved monitoring infrastructure and targeted resource allocation to achieve established national health objectives.",
+  "why_it_matters_zh": "结果凸显建立标准化监测网络与推行公平导向干预策略的紧迫性，以缩小健康差距并达成国家防控目标。",
+  "source_urls": {
+    "doi": "https://doi.org/10.1016/j.anzjph.2025.100301",
+    "publisher": "https://linkinghub.elsevier.com/retrieve/pii/S1326020025000834",
+    "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41447834/"
+  },
+  "updated_at": "2026-08-13T16:05:48.137478+00:00",
+  "related_signals": [
+    {
+      "signal_id": "signal:f59d37329a1f6ece",
+      "section": "increasing",
+      "kind": "statistical_signal",
+      "title": null,
+      "disease_id": "D158",
+      "disease_name_en": "Rheumatic fever",
+      "disease_name_zh": "风湿热",
+      "geographies": [
+        {
+          "code": "NZ",
+          "name_en": "New Zealand"
+        }
+      ],
+      "data_through": "2026-06-01",
+      "window": {
+        "label": "Latest complete month",
+        "current": 28.0,
+        "previous": 18.0,
+        "absolute_change": 10.0,
+        "change_pct": 55.56
+      },
+      "risk": {
+        "score": 46.5,
+        "level": "moderate",
+        "confidence": "low"
+      },
+      "relation_level": "exact_disease_geography",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-d7828ffc71896b245d8c2624",
+        "type": "article",
+        "label": "Resurgence of rheumatic fever among Pacific peoples in Aotearoa New Zealand: A 2010–2023 analysis of hospitalisation data with implications for equity policy",
+        "slug": "10-1016-j-anzjph-2025-100301-d7828ffc",
+        "url": "/research/articles/10-1016-j-anzjph-2025-100301-d7828ffc/",
+        "published_at": "2026-02-01T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "country:nz",
+        "type": "country",
+        "label": "New Zealand",
+        "code": "NZ",
+        "url": "/countries/nz/"
+      },
+      {
+        "id": "disease:d004",
+        "type": "disease",
+        "label": "COVID-19",
+        "disease_id": "D004",
+        "name_zh": "新型冠状病毒感染",
+        "slug": "covid-19",
+        "url": "/diseases/covid-19/"
+      },
+      {
+        "id": "disease:d158",
+        "type": "disease",
+        "label": "Rheumatic fever",
+        "disease_id": "D158",
+        "name_zh": "风湿热",
+        "slug": "rheumatic-fever",
+        "url": "/diseases/rheumatic-fever/"
+      },
+      {
+        "id": "study-type:journal-article",
+        "type": "study_type",
+        "label": "Journal article"
+      },
+      {
+        "id": "topic:health-policy",
+        "type": "topic",
+        "label": "Health policy"
+      },
+      {
+        "id": "topic:surveillance",
+        "type": "topic",
+        "label": "Surveillance"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-d7828ffc71896b245d8c2624|ABOUT_DISEASE|disease:d004",
+        "source": "article:lit-d7828ffc71896b245d8c2624",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d004",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-d7828ffc71896b245d8c2624|ABOUT_DISEASE|disease:d158",
+        "source": "article:lit-d7828ffc71896b245d8c2624",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d158",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-d7828ffc71896b245d8c2624|ADDRESSES_TOPIC|topic:health-policy",
+        "source": "article:lit-d7828ffc71896b245d8c2624",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:health-policy",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-d7828ffc71896b245d8c2624|ADDRESSES_TOPIC|topic:surveillance",
+        "source": "article:lit-d7828ffc71896b245d8c2624",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:surveillance",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-d7828ffc71896b245d8c2624|STUDIED_IN|country:nz",
+        "source": "article:lit-d7828ffc71896b245d8c2624",
+        "relation": "STUDIED_IN",
+        "target": "country:nz",
+        "confidence": 0.78
+      },
+      {
+        "id": "article:lit-d7828ffc71896b245d8c2624|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-d7828ffc71896b245d8c2624",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 7,
+      "edges": 6,
+      "articles": 1
+    }
+  }
+}

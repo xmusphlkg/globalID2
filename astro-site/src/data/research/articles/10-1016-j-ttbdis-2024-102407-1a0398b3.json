@@ -1,0 +1,135 @@
+{
+  "article_id": "lit_1a0398b361129ed7dd183df0",
+  "slug": "10-1016-j-ttbdis-2024-102407-1a0398b3",
+  "title": "Clinical manifestations and outcomes of Tick-borne encephalitis: A systematic literature review",
+  "doi": "10.1016/j.ttbdis.2024.102407",
+  "pmid": null,
+  "journal": "Ticks and Tick-borne Diseases",
+  "publisher": "Elsevier BV",
+  "authors": [
+    "Kate Halsby",
+    "Liesl Gildea",
+    "Harish Madhava",
+    "Frederick J. Angulo",
+    "Andreas Pilz",
+    "Wilhelm Erber",
+    "Jennifer Moisi",
+    "Katharina Schley",
+    "Ann Colosia",
+    "Johann Sellner"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Journal article",
+  "published_at": "2024-11-01T00:00:00+00:00",
+  "indexed_at": "2026-07-04T04:54:23+00:00",
+  "open_access_status": "open",
+  "open_access_url": "https://linkinghub.elsevier.com/retrieve/pii/S1877959X24001006",
+  "license_url": "https://www.elsevier.com/tdm/userlicense/1.0/",
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.432,
+  "is_featured": false,
+  "diseases": [
+    {
+      "disease_id": "D205",
+      "slug": "tick-borne-encephalitis",
+      "name_en": "Tick-borne encephalitis",
+      "name_zh": "蜱传脑炎",
+      "confidence": 0.82
+    }
+  ],
+  "countries": [],
+  "topics": [],
+  "related_surveillance": [],
+  "summary": {},
+  "why_it_matters_en": "This recent journal article is indexed for its relevance to Tick-borne encephalitis. Read the original source before applying its findings.",
+  "why_it_matters_zh": "这项近期Journal article因与蜱传脑炎相关而被收录。应用其结论前请阅读原始文献。",
+  "source_urls": {
+    "doi": "https://doi.org/10.1016/j.ttbdis.2024.102407",
+    "publisher": "https://linkinghub.elsevier.com/retrieve/pii/S1877959X24001006"
+  },
+  "updated_at": "2026-08-13T16:05:48.137550+00:00",
+  "related_signals": [
+    {
+      "signal_id": "signal:ab5fb8f49aaa0cf6",
+      "section": "increasing",
+      "kind": "statistical_signal",
+      "title": null,
+      "disease_id": "D205",
+      "disease_name_en": "Tick-borne encephalitis",
+      "disease_name_zh": "蜱传脑炎",
+      "geographies": [
+        {
+          "code": "SE",
+          "name_en": "Sweden"
+        }
+      ],
+      "data_through": "2026-07-01",
+      "window": {
+        "label": "Latest complete month",
+        "current": 156.0,
+        "previous": 92.0,
+        "absolute_change": 64.0,
+        "change_pct": 69.57
+      },
+      "risk": {
+        "score": 46.1,
+        "level": "moderate",
+        "confidence": "low"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-1a0398b361129ed7dd183df0",
+        "type": "article",
+        "label": "Clinical manifestations and outcomes of Tick-borne encephalitis: A systematic literature review",
+        "slug": "10-1016-j-ttbdis-2024-102407-1a0398b3",
+        "url": "/research/articles/10-1016-j-ttbdis-2024-102407-1a0398b3/",
+        "published_at": "2024-11-01T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "disease:d205",
+        "type": "disease",
+        "label": "Tick-borne encephalitis",
+        "disease_id": "D205",
+        "name_zh": "蜱传脑炎",
+        "slug": "tick-borne-encephalitis",
+        "url": "/diseases/tick-borne-encephalitis/"
+      },
+      {
+        "id": "study-type:journal-article",
+        "type": "study_type",
+        "label": "Journal article"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-1a0398b361129ed7dd183df0|ABOUT_DISEASE|disease:d205",
+        "source": "article:lit-1a0398b361129ed7dd183df0",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d205",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-1a0398b361129ed7dd183df0|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-1a0398b361129ed7dd183df0",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 3,
+      "edges": 2,
+      "articles": 1
+    }
+  }
+}

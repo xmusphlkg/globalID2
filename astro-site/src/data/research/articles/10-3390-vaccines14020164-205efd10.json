@@ -1,0 +1,217 @@
+{
+  "article_id": "lit_205efd103f9b2cb5abcb135d",
+  "slug": "10-3390-vaccines14020164-205efd10",
+  "title": "A Case-Control Study on the Effectiveness of Tick-Borne Encephalitis Vaccination Against Hospitalizations in an Endemic Area in Northeastern Italy.",
+  "doi": "10.3390/vaccines14020164",
+  "pmid": "41746084",
+  "journal": "Vaccines",
+  "publisher": null,
+  "authors": [
+    "Valent F",
+    "Degani G"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Case-control study",
+  "published_at": "2026-02-10T00:00:00+00:00",
+  "indexed_at": "2026-02-26T00:00:00+00:00",
+  "open_access_status": "open",
+  "open_access_url": "https://europepmc.org/articles/PMC12944975",
+  "license_url": null,
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.65,
+  "is_featured": false,
+  "diseases": [
+    {
+      "disease_id": "D205",
+      "slug": "tick-borne-encephalitis",
+      "name_en": "Tick-borne encephalitis",
+      "name_zh": "蜱传脑炎",
+      "confidence": 0.82
+    }
+  ],
+  "countries": [],
+  "topics": [
+    {
+      "name": "Vaccination",
+      "confidence": 0.7100000000000001
+    },
+    {
+      "name": "Vaccine effectiveness",
+      "confidence": 0.66
+    },
+    {
+      "name": "Climate and environment",
+      "confidence": 0.66
+    }
+  ],
+  "related_surveillance": [],
+  "summary": {
+    "en": {
+      "research_question": "What is the protective impact of the tick-borne encephalitis immunization regimen in preventing severe disease requiring medical admission among residents of a recognized endemic zone in northeastern Italy?",
+      "study_design": "The investigation employed a case-control methodology utilizing linked regional health records spanning seven years. Participants were stratified based on hospitalization status following laboratory confirmation of infection.",
+      "population_setting": "The analysis focused on inhabitants of the Udine province within the Friuli Venezia Giulia region, which is classified as an endemic zone for the pathogen.",
+      "main_findings": "Individuals receiving three or more vaccine doses demonstrated a substantially reduced likelihood of hospital admission compared to those without immunization. Provincial coverage reached approximately ten percent, with notably higher rates recorded in elevated geographic districts.",
+      "public_health_relevance": "The documentation underscores the value of immunization strategies in reducing severe disease outcomes within affected communities. Regional variations in coverage indicate opportunities for targeted outreach initiatives to improve community protection.",
+      "limitations": "The evaluation was constrained by a limited number of confirmed hospitalization events.",
+      "gids_interpretation": "This publication offers background information on regional immunization practices and documented protection levels against severe neurological infections. It serves as a reference point for understanding historical prevention efforts rather than indicating current outbreak dynamics.",
+      "provenance": {
+        "generated_by": "literature-evidence-agent",
+        "model": "qwen3.7-flash",
+        "provider": "qwenai",
+        "quality_score": 0.945,
+        "generated_at": "2026-08-13T22:08:38.000701+00:00",
+        "editorially_approved": false,
+        "automatically_approved": true,
+        "automation_policy_version": "research-radar-autopilot.v1",
+        "publication_gate": "automated-quality-gate"
+      }
+    },
+    "zh": {
+      "research_question": "评估特定流行区蜱传脑炎疫苗的免疫保护效果及人群接种覆盖率。",
+      "study_design": "采用基于区域健康数据库的病例对照设计，整合了疫苗接种登记、实验室血清学检测与住院记录。",
+      "population_setting": "研究对象限定于意大利东北部乌迪内省居民，涵盖确诊住院患者及同期接受抗体筛查但未住院的对照个体。",
+      "main_findings": "研究周期内共记录二十余例确诊住院病例。完成三剂及以上接种者相较于未接种者的住院几率呈现显著下降。全省接种率约为百分之十，且山区明显高于平原地带。",
+      "public_health_relevance": "该结果证实了免疫预防在降低严重神经系统感染风险中的实际价值。数据提示需结合当地生态变化趋势，进一步提升重点区域的接种水平与健康宣教。",
+      "limitations": "作者明确指出分析受限于确诊病例数量较少。",
+      "gids_interpretation": "此项观察性研究提供了特定地理范围内的疫苗表现基线信息。其内容仅用于说明文献背景与学术可发现性，不关联实时监测信号。",
+      "provenance": {
+        "generated_by": "literature-evidence-agent",
+        "model": "qwen3.7-flash",
+        "provider": "qwenai",
+        "quality_score": 0.952,
+        "generated_at": "2026-08-13T22:09:01.107961+00:00",
+        "editorially_approved": false,
+        "automatically_approved": true,
+        "automation_policy_version": "research-radar-autopilot.v1",
+        "publication_gate": "automated-quality-gate"
+      }
+    }
+  },
+  "why_it_matters_en": "The documentation underscores the value of immunization strategies in reducing severe disease outcomes within affected communities. Regional variations in coverage indicate opportunities for targeted outreach initiatives to improve community protection.",
+  "why_it_matters_zh": "该结果证实了免疫预防在降低严重神经系统感染风险中的实际价值。数据提示需结合当地生态变化趋势，进一步提升重点区域的接种水平与健康宣教。",
+  "source_urls": {
+    "doi": "https://doi.org/10.3390/vaccines14020164",
+    "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41746084/"
+  },
+  "updated_at": "2026-08-13T16:05:48.137597+00:00",
+  "related_signals": [
+    {
+      "signal_id": "signal:ab5fb8f49aaa0cf6",
+      "section": "increasing",
+      "kind": "statistical_signal",
+      "title": null,
+      "disease_id": "D205",
+      "disease_name_en": "Tick-borne encephalitis",
+      "disease_name_zh": "蜱传脑炎",
+      "geographies": [
+        {
+          "code": "SE",
+          "name_en": "Sweden"
+        }
+      ],
+      "data_through": "2026-07-01",
+      "window": {
+        "label": "Latest complete month",
+        "current": 156.0,
+        "previous": 92.0,
+        "absolute_change": 64.0,
+        "change_pct": 69.57
+      },
+      "risk": {
+        "score": 46.1,
+        "level": "moderate",
+        "confidence": "low"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-205efd103f9b2cb5abcb135d",
+        "type": "article",
+        "label": "A Case-Control Study on the Effectiveness of Tick-Borne Encephalitis Vaccination Against Hospitalizations in an Endemic Area in Northeastern Italy.",
+        "slug": "10-3390-vaccines14020164-205efd10",
+        "url": "/research/articles/10-3390-vaccines14020164-205efd10/",
+        "published_at": "2026-02-10T00:00:00+00:00",
+        "study_type": "Case-control study"
+      },
+      {
+        "id": "disease:d205",
+        "type": "disease",
+        "label": "Tick-borne encephalitis",
+        "disease_id": "D205",
+        "name_zh": "蜱传脑炎",
+        "slug": "tick-borne-encephalitis",
+        "url": "/diseases/tick-borne-encephalitis/"
+      },
+      {
+        "id": "study-type:case-control-study",
+        "type": "study_type",
+        "label": "Case-control study"
+      },
+      {
+        "id": "topic:climate-and-environment",
+        "type": "topic",
+        "label": "Climate and environment"
+      },
+      {
+        "id": "topic:vaccination",
+        "type": "topic",
+        "label": "Vaccination"
+      },
+      {
+        "id": "topic:vaccine-effectiveness",
+        "type": "topic",
+        "label": "Vaccine effectiveness"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-205efd103f9b2cb5abcb135d|ABOUT_DISEASE|disease:d205",
+        "source": "article:lit-205efd103f9b2cb5abcb135d",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d205",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-205efd103f9b2cb5abcb135d|ADDRESSES_TOPIC|topic:climate-and-environment",
+        "source": "article:lit-205efd103f9b2cb5abcb135d",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:climate-and-environment",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-205efd103f9b2cb5abcb135d|ADDRESSES_TOPIC|topic:vaccination",
+        "source": "article:lit-205efd103f9b2cb5abcb135d",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccination",
+        "confidence": 0.7100000000000001
+      },
+      {
+        "id": "article:lit-205efd103f9b2cb5abcb135d|ADDRESSES_TOPIC|topic:vaccine-effectiveness",
+        "source": "article:lit-205efd103f9b2cb5abcb135d",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccine-effectiveness",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-205efd103f9b2cb5abcb135d|USES_STUDY_DESIGN|study-type:case-control-study",
+        "source": "article:lit-205efd103f9b2cb5abcb135d",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:case-control-study"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 6,
+      "edges": 5,
+      "articles": 1
+    }
+  }
+}
