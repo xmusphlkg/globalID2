@@ -1,0 +1,147 @@
+---
+import {
+  currentMetric,
+  detectorSummary,
+  evidenceLinks,
+  formatNumber,
+  label,
+  placeLine,
+  riskScore,
+  riskTone,
+  rows,
+  sortSignals,
+  unitSuffix,
+} from '../utils/situation';
+
+interface Props { snapshot: any; limit?: number; }
+
+const { snapshot, limit = 6 } = Astro.props;
+const allSignals = sortSignals([
+  ...rows(snapshot?.increasing),
+  ...rows(snapshot?.unusual),
+  ...rows(snapshot?.respiratory).filter((row: any) => row?.statistics),
+]);
+const signals = allSignals.slice(0, limit);
+const dimensionEntries = (signal: any) => Object.entries(signal?.risk?.dimensions ?? {});
+const detectorEntries = (signal: any) => Object.entries(signal?.statistics?.detectors ?? {});
+---
+
+<section class="signal-review" aria-labelledby="signal-review-title">
+  <header class="review-heading">
+    <div>
+      <p data-lang-en="Review layer" data-lang-zh="复核层">Review layer</p>
+      <h2 id="signal-review-title" data-lang-en="Why these signals surfaced" data-lang-zh="这些信号为何被提出">Why these signals surfaced</h2>
+    </div>
+    <a href="/situation/methodology/" data-lang-en="Methodology" data-lang-zh="方法说明">Methodology</a>
+  </header>
+
+  {signals.length ? (
+    <div class="review-list">
+      {signals.map((signal: any) => (
+        <details class="review-item" style={`--score:${Math.max(5, Math.min(100, riskScore(signal))).toFixed(1)}%`}>
+          <summary>
+            <span class="summary-copy">
+              <b>{signal.disease_name}</b>
+              <small>{placeLine(signal)} · {signal.metric_label}</small>
+            </span>
+            <span class:list={['summary-risk', riskTone(signal.risk?.level)]}>{label(signal.risk?.level)} · {formatNumber(signal.risk?.score, 1)}</span>
+          </summary>
+
+          <div class="review-body">
+            <dl class="review-facts">
+              <div><dt>Current</dt><dd>{currentMetric(signal)}</dd></div>
+              <div><dt>Previous</dt><dd>{formatNumber(signal.window?.previous)}{unitSuffix(signal.unit)}</dd></div>
+              <div><dt>Seasonal baseline</dt><dd>{formatNumber(signal.baseline?.same_season_median)} · {signal.baseline?.sample_size ?? 0} seasons</dd></div>
+              <div><dt>Detector vote</dt><dd>{detectorSummary(signal).label}</dd></div>
+            </dl>
+
+            {dimensionEntries(signal).length > 0 && (
+              <div class="risk-bars" aria-label="Risk dimensions">
+                {dimensionEntries(signal).map(([name, score]) => (
+                  <div style={`--dimension:${typeof score === 'number' ? Math.max(3, Math.min(100, score)).toFixed(1) : 0}%`}>
+                    <span>{label(name)}</span>
+                    <b>{score == null ? 'missing' : `${formatNumber(score, 1)} / 100`}</b>
+                    <i aria-hidden="true"></i>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <details class="audit-details">
+              <summary data-lang-en="Show audit fields" data-lang-zh="显示审计字段">Show audit fields</summary>
+              <div>
+                {detectorEntries(signal).length > 0 && (
+                  <p class="detectors">
+                    {detectorEntries(signal).map(([name, passed]) => <span class:list={[passed && 'passed']}>{passed ? 'pass' : 'hold'} · {label(name)}</span>)}
+                  </p>
+                )}
+                <p class="provenance">Series <code>{signal.series_code}</code> · geography <code>{signal.geography_key}</code> · data through {signal.data_through} · quality {signal.quality?.status ?? 'unreported'}</p>
+                {evidenceLinks(signal).length > 0 && (
+                  <ul>
+                    {evidenceLinks(signal).map((link: any) => <li><a href={link.url} target="_blank" rel="noreferrer">{link.title ?? link.source ?? 'Evidence source'}</a></li>)}
+                  </ul>
+                )}
+              </div>
+            </details>
+          </div>
+        </details>
+      ))}
+    </div>
+  ) : (
+    <p class="empty">No eligible numerical series is available in this snapshot.</p>
+  )}
+</section>
+
+<style>
+  .signal-review { display: grid; gap: 1rem; }
+  .review-heading { align-items: end; border-bottom: 1px solid rgb(var(--border)); display: flex; gap: 1rem; justify-content: space-between; padding-bottom: .9rem; }
+  .review-heading p { color: rgb(var(--color-teal)); font-size: .66rem; font-weight: 700; letter-spacing: .12em; margin: 0 0 .2rem; text-transform: uppercase; }
+  h2 { color: rgb(var(--text-strong)); font-family: 'Source Serif 4', serif; font-size: 1.65rem; letter-spacing: 0; line-height: 1.12; margin: 0; }
+  .review-heading a { color: rgb(var(--color-teal)); font-size: .78rem; font-weight: 700; text-decoration: none; }
+  .review-heading a:hover { text-decoration: underline; }
+  .review-list { display: grid; gap: .65rem; }
+  .review-item { background: rgb(var(--surface) / .72); border: 1px solid rgb(var(--border) / .78); }
+  .review-item[open] { background: linear-gradient(180deg, rgb(var(--surface-raised) / .72), rgb(var(--surface) / .86)); }
+  summary { align-items: center; cursor: pointer; display: grid; gap: .85rem; grid-template-columns: minmax(0, 1fr) auto; list-style: none; padding: .9rem 1rem; }
+  summary::-webkit-details-marker { display: none; }
+  summary::before { background: linear-gradient(90deg, rgb(var(--color-teal)), rgb(var(--color-accent))); content: ''; grid-column: 1 / -1; height: .2rem; order: 3; width: var(--score); }
+  .summary-copy { display: grid; gap: .16rem; min-width: 0; }
+  .summary-copy b { color: rgb(var(--text-strong)); font-size: .94rem; line-height: 1.22; overflow-wrap: anywhere; }
+  .summary-copy small { color: rgb(var(--text-faint)); font-size: .7rem; line-height: 1.35; }
+  .summary-risk { border: 1px solid currentColor; font-family: 'JetBrains Mono', monospace; font-size: .68rem; font-weight: 700; padding: .25rem .45rem; text-transform: capitalize; white-space: nowrap; }
+  .risk-elevated { color: rgb(218 96 75); }
+  .risk-watch { color: rgb(205 138 38); }
+  .risk-low { color: rgb(63 157 126); }
+  .risk-unknown { color: rgb(var(--text-faint)); }
+  .review-body { border-top: 1px solid rgb(var(--border)); display: grid; gap: 1rem; padding: 1rem; }
+  .review-facts { display: grid; gap: .65rem; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0; }
+  .review-facts div { border-left: 2px solid rgb(var(--border)); min-width: 0; padding-left: .6rem; }
+  dt { color: rgb(var(--text-faint)); font-size: .62rem; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; }
+  dd { color: rgb(var(--text)); font-family: 'JetBrains Mono', monospace; font-size: .73rem; margin: .18rem 0 0; overflow-wrap: anywhere; }
+  .risk-bars { display: grid; gap: .55rem; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .risk-bars div { display: grid; gap: .22rem; min-width: 0; }
+  .risk-bars span { color: rgb(var(--text-faint)); font-size: .68rem; text-transform: capitalize; }
+  .risk-bars b { color: rgb(var(--text)); font-family: 'JetBrains Mono', monospace; font-size: .68rem; font-weight: 600; }
+  .risk-bars i { background: rgb(var(--border) / .48); display: block; height: .28rem; overflow: hidden; position: relative; }
+  .risk-bars i::after { background: rgb(var(--color-accent)); content: ''; display: block; height: 100%; width: var(--dimension); }
+  .audit-details { border-top: 1px solid rgb(var(--border) / .72); padding-top: .8rem; }
+  .audit-details > summary { color: rgb(var(--color-teal)); display: inline-flex; font-size: .72rem; font-weight: 700; padding: 0; }
+  .audit-details > summary::before { display: none; }
+  .audit-details > div { display: grid; gap: .55rem; padding-top: .7rem; }
+  .detectors { display: flex; flex-wrap: wrap; gap: .35rem; margin: 0; }
+  .detectors span { border: 1px solid rgb(var(--border)); color: rgb(var(--text-faint)); font-size: .66rem; padding: .18rem .4rem; text-transform: capitalize; }
+  .detectors .passed { border-color: rgb(24 128 99 / .5); color: rgb(63 157 126); }
+  .provenance, .empty { color: rgb(var(--text-faint)); font-size: .72rem; line-height: 1.5; margin: 0; }
+  code { font-family: 'JetBrains Mono', monospace; font-size: .66rem; }
+  ul { display: flex; flex-wrap: wrap; gap: .6rem; list-style: none; margin: 0; padding: 0; }
+  li a { color: rgb(var(--color-teal)); font-size: .7rem; }
+  @media (max-width: 900px) {
+    .review-facts, .risk-bars { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (max-width: 640px) {
+    .review-heading { align-items: start; display: grid; }
+    summary { align-items: start; grid-template-columns: 1fr; }
+    .summary-risk { justify-self: start; }
+    .review-facts, .risk-bars { grid-template-columns: 1fr; }
+  }
+</style>

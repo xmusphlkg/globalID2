@@ -1,0 +1,36 @@
+---
+import ReportLayout from '../../layouts/ReportLayout.astro';
+import { buildAlternatePaths, type SeoDocument } from '../../lib/seo';
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+const situationPublic = existsSync(resolve('./src/data/situation/latest.json'));
+
+const seo: SeoDocument = {
+  title: 'Situation Room Methodology | GIDS',
+  description: 'Data contracts, frequency-aware baselines, anomaly detectors, epidemiological risk scoring, quality gates, revisions, and limitations for the GIDS Situation Room.',
+  canonicalPath: '/situation/methodology/',
+  alternatePaths: buildAlternatePaths('/situation/methodology/', 'en'),
+  noindex: !situationPublic,
+};
+---
+
+<ReportLayout title="Situation Room Methodology" description={seo.description} seo={seo} breadcrumbs={[{ label: 'Situation Room', labelZh: '全球态势室', href: '/situation/' }, { label: 'Methodology', labelZh: '方法' }]}>
+  <article class="methodology max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <header><p class="eyebrow">Version 2.0</p><h1>How GIDS screens infectious-disease signals</h1><p>Situation Room results are reproducible statistical screens over GIDS-covered jurisdictions. They are not outbreak declarations and do not replace WHO, CDC, regional, or national public-health advice.</p></header>
+    <section><h2>Source-native data contract</h2><p>Each exact disease, source, metric, geography, and dimension series is analyzed separately. Case notifications, laboratory diagnoses, reported diagnoses, sentinel activity, and hospital admissions are never summed across incompatible metrics or sources. Missing values remain unknown; they are not converted to zero.</p></section>
+    <section><h2>Frequency-aware comparison windows</h2><ul><li><b>Daily:</b> latest 28 days versus the preceding 28 days.</li><li><b>Weekly:</b> latest 4 reported weeks versus the preceding 4 weeks.</li><li><b>Monthly:</b> latest complete month versus the preceding month.</li></ul><p>Annual and unknown-frequency series are excluded. Comparison completeness must be at least 80%, at least three prior seasons must be available, and the latest observation must satisfy its cadence-specific freshness SLA.</p></section>
+    <section><h2>Five statistical views</h2><ol><li>A same-calendar-position baseline from up to five prior seasons and its 95% band.</li><li>A standard z-score against historical seasonal window totals.</li><li>A robust z-score based on the median absolute deviation.</li><li>An EWMA with λ = 0.3 and a 3σ limit, calculated on log-transformed season-adjusted residuals.</li><li>Pure NumPy Bayesian Online Change Point Detection with a Student-t predictive distribution, an expected annual hazard, and a two-year maximum run length.</li></ol><p>An increasing candidate requires at least 20 current observations, an absolute increase of 10, a relative increase of 25%, and two detector votes. Low-base percentage artifacts are suppressed. Unusual signals require three votes, or a strong z-score confirmed by EWMA or change-point evidence.</p></section>
+    <section><h2>Composite epidemiological risk</h2><p>The four dimensions are trend anomaly (40%), severity (25%), geographic spread (20%), and official concern (15%). Missing dimensions are not scored as zero: available dimensions are reweighted, while confidence reflects the original available weight. Less than 60% is low confidence, 60–84% is medium, and at least 85% is high.</p><p>Risk levels are Low 0–24, Moderate 25–49, High 50–74, and Very high 75–100. A trend-only score can appear, but it is explicitly low confidence and lists the missing dimensions.</p></section>
+    <section><h2>Official events and respiratory status</h2><p>WHO Disease Outbreak News uses the official hub API and stores only attributable metadata, not article bodies. ECDC, Africa CDC, and PAHO use separate contracted adapters; a blocked or failed source is reported as failed rather than bypassed. High-confidence auto-publication requires a stable ID, title, date, URL, and exact disease and geography mapping.</p><p>Influenza, RSV, and COVID-19 status can include separate CDC positivity, hospital-admission, and acute-respiratory-illness activity indicators. These different metrics remain separately labelled and are not merged into a synthetic count.</p></section>
+    <section><h2>Quality gates and revisions</h2><p>A snapshot must conform to the v2 schema, analyze at least one eligible series, carry a valid data-through date, and avoid an unexplained drop greater than 20% from the recent seven-run median. The static page and sitemap must also build before deployment. A failed run does not replace the last good public version.</p><p>Checks run daily. The content-updated timestamp changes only when inputs change; a no-change run updates only the checked timestamp. Weekly and monthly records display their latest revision and may be corrected when upstream sources revise data.</p></section>
+  </article>
+</ReportLayout>
+
+<style>
+  .methodology { color: rgb(var(--text-muted)); }
+  header { border-bottom: 2px solid rgb(var(--text-strong)); margin-bottom: 2rem; padding-bottom: 1.5rem; }
+  .eyebrow { color: rgb(var(--color-teal)); font-size: .68rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+  h1, h2 { color: rgb(var(--text-strong)); font-family: 'Source Serif 4', serif; } h1 { font-size: clamp(2rem, 5vw, 3.2rem); line-height: 1.05; } h2 { font-size: 1.45rem; margin-top: 0; }
+  section { border-top: 1px solid rgb(var(--border)); padding: 1.4rem 0; } p, li { line-height: 1.75; } ul, ol { padding-left: 1.25rem; }
+</style>

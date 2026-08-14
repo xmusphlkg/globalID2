@@ -1,16 +1,22 @@
 ---
 // src/components/Header.astro
 import BrandLogo from './BrandLogo.astro';
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 interface Props {
   initialLanguage?: 'en' | 'zh';
 }
 
+const situationPublic = existsSync(resolve('./src/data/situation/latest.json'));
+const situationPreviewEnabled = import.meta.env.DEV || process.env.SITUATION_SHADOW_PREVIEW === 'true';
+const situationDevPreview = situationPreviewEnabled && existsSync(resolve('./src/data/situation/shadow-latest.json'));
 const navLinks = [
   { href: '/', label: 'Home', labelZh: '首页' },
-  { href: '/situation/', label: 'Situation', labelZh: '全球态势' },
+  ...(situationPublic || situationDevPreview ? [{ href: '/situation/', label: 'Situation', labelZh: '全球态势' }] : []),
   { href: '/countries/', label: 'Countries', labelZh: '国家' },
   { href: '/diseases/', label: 'Diseases', labelZh: '疾病' },
+  { href: '/research/', label: 'Research', labelZh: '研究' },
 ];
 
 const { initialLanguage = 'en' } = Astro.props;

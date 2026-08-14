@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 import json
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Awaitable, Callable
 from zoneinfo import ZoneInfo
 
 
@@ -25,6 +26,33 @@ class ReleasePipelineRuntime:
     astro_build_timeout_seconds: float
     download_publish_timeout_seconds: float
     cloudflare_deploy_timeout_seconds: float
+
+
+async def _run_repository_publications(
+    publications: list[tuple[str, Awaitable[None]]],
+) -> set[str]:
+    """Run isolated repository publishers concurrently and aggregate failures."""
+
+    if not publications:
+        return set()
+    results = await asyncio.gather(
+        *(publication for _name, publication in publications),
+        return_exceptions=True,
+    )
+    completed: set[str] = set()
+    failures: list[str] = []
+    for (name, _publication), result in zip(publications, results):
+        if isinstance(result, asyncio.CancelledError):
+            raise result
+        if isinstance(result, BaseException):
+            failures.append(f"{name}: {result}")
+        else:
+            completed.add(name)
+    if failures:
+        raise RuntimeError(
+            "Parallel repository publication failed:\n" + "\n".join(failures)
+        )
+    return completed
 
 
 async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipelineRuntime) -> dict[str, Any]:
@@ -77,33 +105,7 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
     raw_archive_branch = str(
         getattr(raw_archive_cfg, "branch", runtime.raw_archive_branch) or runtime.raw_archive_branch
     )
-    raw_archive_published = False
-    if raw_archive_cfg.enabled:
-        raw_git_transport = str(
-            (checks.get("raw_archive") or {}).get("ssh_transport") or "default"
-        )
-        raw_git_env = service._build_git_env(
-            raw_archive_cfg.repo_url,
-            use_github_ssh_over_443=(raw_git_transport == "github-ssh-over-443"),
-        )
-        await service._run_logged_command(
-            task.task_uuid,
-            title="Archive Raw Crawler Data",
-            cmd=service._publish_raw_archive_command(
-                python_path=python_path,
-                archive=raw_archive_cfg,
-            ),
-            cwd=runtime.root_dir,
-            env={**raw_git_env, "RAW_ARCHIVE__BRANCH": raw_archive_branch},
-            metadata={
-                "event": "raw_git_archive_publish",
-                "release_job_id": job.job_id,
-                "branch": raw_archive_branch,
-            },
-            timeout_seconds=float(raw_archive_cfg.git_timeout_seconds) + 60 * 60,
-        )
-        raw_archive_published = True
-    else:
+    if not raw_archive_cfg.enabled:
         await runtime.task_manager.add_workbook_entry(
             task.task_uuid,
             entry_type="info",
@@ -144,29 +146,65 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
     await runtime.task_manager.update_task_progress(task.task_uuid, 35)
 
     downloads_published = False
+    raw_archive_published = False
     pages_deployed = False
     cloudflare_deployment = None
+    repository_publications: list[tuple[str, Awaitable[None]]] = []
+
+    if raw_archive_cfg.enabled:
+        raw_git_transport = str(
+            (checks.get("raw_archive") or {}).get("ssh_transport") or "default"
+        )
+        raw_git_env = service._build_git_env(
+            raw_archive_cfg.repo_url,
+            use_github_ssh_over_443=(raw_git_transport == "github-ssh-over-443"),
+        )
+        repository_publications.append(
+            (
+                "raw_archive",
+                service._run_logged_command(
+                    task.task_uuid,
+                    title="Archive Raw Crawler Data",
+                    cmd=service._publish_raw_archive_command(
+                        python_path=python_path,
+                        archive=raw_archive_cfg,
+                    ),
+                    cwd=runtime.root_dir,
+                    env={**raw_git_env, "RAW_ARCHIVE__BRANCH": raw_archive_branch},
+                    metadata={
+                        "event": "raw_git_archive_publish",
+                        "release_job_id": job.job_id,
+                        "branch": raw_archive_branch,
+                    },
+                    timeout_seconds=float(raw_archive_cfg.git_timeout_seconds) + 60 * 60,
+                ),
+            )
+        )
 
     if job.include_git_push:
-        await service._run_logged_command(
-            task.task_uuid,
-            title="Publish Partitioned Data Downloads",
-            cmd=service._publish_download_repo_command(
-                python_path=python_path,
-                repo_url=download_repo_url,
-                commit_message=publish_commit_message,
-                branch=branch,
-            ),
-            cwd=runtime.root_dir,
-            env=git_env,
-            metadata={
-                "event": "github_direct_download_publish",
-                "release_job_id": job.job_id,
-                "branch": branch,
-            },
-            timeout_seconds=runtime.download_publish_timeout_seconds,
+        repository_publications.append(
+            (
+                "direct_downloads",
+                service._run_logged_command(
+                    task.task_uuid,
+                    title="Publish Partitioned Data Downloads",
+                    cmd=service._publish_download_repo_command(
+                        python_path=python_path,
+                        repo_url=download_repo_url,
+                        commit_message=publish_commit_message,
+                        branch=branch,
+                    ),
+                    cwd=runtime.root_dir,
+                    env=git_env,
+                    metadata={
+                        "event": "github_direct_download_publish",
+                        "release_job_id": job.job_id,
+                        "branch": branch,
+                    },
+                    timeout_seconds=runtime.download_publish_timeout_seconds,
+                ),
+            )
         )
-        downloads_published = True
     else:
         await runtime.task_manager.add_workbook_entry(
             task.task_uuid,
@@ -179,6 +217,12 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
                 "release_job_id": job.job_id,
             },
         )
+
+    completed_publications = await _run_repository_publications(
+        repository_publications
+    )
+    raw_archive_published = "raw_archive" in completed_publications
+    downloads_published = "direct_downloads" in completed_publications
 
     # The site only goes live after its direct public file links exist.  This
     # prevents a newly deployed page from pointing at a package that failed to
@@ -199,6 +243,15 @@ async def execute_release_task(service: Any, task: Any, *, runtime: ReleasePipel
         },
         metadata={"event": "astro_build", "release_job_id": job.job_id},
         timeout_seconds=runtime.astro_build_timeout_seconds,
+    )
+    await service._run_logged_command(
+        task.task_uuid,
+        title="Validate Situation Release Gate",
+        cmd=service._validate_situation_release_command(python_path=python_path),
+        cwd=runtime.root_dir,
+        env=git_env,
+        metadata={"event": "situation_release_gate", "release_job_id": job.job_id},
+        timeout_seconds=120,
     )
     release_manifest = service._write_site_release_manifest(release_identity)
     await runtime.task_manager.add_workbook_entry(

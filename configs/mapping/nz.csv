@@ -1,37 +1,37 @@
-disease_id,local_name,local_code,category,aliases,notes,data_source
-D092,Campylobacteriosis,,Bacterial,,NZ PHF Science mapping,NZ Monthly Notifiable
-D004,COVID-19,,Viral,COVID-1,NZ PHF Science mapping,NZ Monthly Notifiable
-D096,Cryptosporidiosis,,Parasitic,,NZ PHF Science mapping,NZ Monthly Notifiable
-D021,Dengue fever,,Viral,Dengue,NZ PHF Science mapping,NZ Monthly Notifiable
-D156,Gastroenteritis,,Bacterial,Gastroenteritis³,NZ PHF Science mapping,NZ Monthly Notifiable
-D099,Giardiasis,,Parasitic,,NZ PHF Science mapping,NZ Monthly Notifiable
-D100,Haemophilus influenzae type b,,Bacterial,Haemophilus influenzae,NZ PHF Science mapping,NZ Monthly Notifiable
-D007,Hepatitis A,,Viral,,NZ PHF Science mapping,NZ Monthly Notifiable
-D008,Hepatitis B,,Viral,Hepatitis B⁴,NZ PHF Science mapping,NZ Monthly Notifiable
-D009,Hepatitis C,,Viral,Hepatitis C⁴,NZ PHF Science mapping,NZ Monthly Notifiable
-D157,Invasive group A streptococcal infection,,Bacterial,iGAS|Invasive Group A Streptococcal,NZ PHF Science mapping,NZ Monthly Notifiable
-D106,Invasive pneumococcal disease,,Bacterial,IPD,NZ PHF Science mapping,NZ Monthly Notifiable
-D107,Legionellosis,,Bacterial,,NZ PHF Science mapping,NZ Monthly Notifiable
-D035,Leptospirosis,,Bacterial,,NZ PHF Science mapping,NZ Monthly Notifiable
-D108,Listeriosis,,Bacterial,,NZ PHF Science mapping,NZ Monthly Notifiable
-D037,Malaria,,Parasitic,,NZ PHF Science mapping,NZ Monthly Notifiable
-D017,Measles,,Viral,,NZ PHF Science mapping,NZ Monthly Notifiable
-D110,Meningococcal disease,,Bacterial,,NZ PHF Science mapping,NZ Monthly Notifiable
-D065,Mpox,,Viral,Monkeypox,NZ PHF Science mapping,NZ Monthly Notifiable
-D039,Mumps,,Viral,,NZ PHF Science mapping,NZ Monthly Notifiable
-D016,Non seasonal influenza A (H1N1),,Viral,Novel influenza A|H1N1,NZ PHF Science mapping,NZ Monthly Notifiable
-D234,Paratyphoid fever,,Bacterial,,NZ PHF Science mapping; paratyphoid-only source category,NZ Monthly Notifiable
-D028,Pertussis,,Bacterial,Whooping cough,NZ PHF Science mapping,NZ Monthly Notifiable
-D158,Rheumatic fever,,Bacterial,Rheumatic fever⁵|Rheumatic fever⁴,NZ PHF Science mapping,NZ Monthly Notifiable
-D159,Rickettsial disease,,Bacterial,,NZ PHF Science mapping,NZ Monthly Notifiable
-D114,Salmonellosis,,Bacterial,,NZ PHF Science mapping,NZ Monthly Notifiable
-D105,Shigellosis,,Bacterial,,NZ PHF Science mapping,NZ Monthly Notifiable
-D025,Tuberculosis disease,,Bacterial,Tuberculosis,NZ PHF Science mapping,NZ Monthly Notifiable
-D124,Typhoid fever,,Bacterial,,NZ PHF Science mapping,NZ Monthly Notifiable
-D127,Viral Haemorrhagic Fever,,Viral,Viral Hemorrhagic Fever|VHF,NZ PHF Science mapping; broad VHF source category rather than HFRS,NZ Monthly Notifiable
-D115,VTEC/STEC infection,,Bacterial,Verotoxin-producing E. coli|Shiga toxin-producing Escherichia coli infection|Shiga toxin-producing Escherichia coli (STEC)|STEC|VTEC,NZ PHF Science mapping,NZ Monthly Notifiable
-D155,Yersiniosis,,Bacterial,,NZ PHF Science mapping,NZ Monthly Notifiable
-D052,Chikungunya fever,,Viral,Chikungunya,NZ PHF Science mapping,NZ Monthly Notifiable
-D161,Decompression sickness,,Other,,NZ PHF Science mapping,NZ Monthly Notifiable
-D113,Q fever,,Bacterial,,NZ PHF Science mapping,NZ Monthly Notifiable
-D040,Rubella,,Viral,,NZ PHF Science mapping,NZ Monthly Notifiable
+disease_id,local_name,local_code,category,aliases,notes,data_source,source_id,series_id,mapping_scope,target_kind,target_code,mapping_relation,comparability,projection_policy,aggregation_policy,definition_version
+D092,Campylobacteriosis,SER_NZ_CAMPYLOBACTERIOSIS_MONTHLY,Bacterial,,Reviewed NZ PHF Science monthly source category,NZ Monthly Notifiable,SRC_NZ_PHS,SER_NZ_CAMPYLOBACTERIOSIS_MONTHLY,source_category_dimension,concept,D092,exact,conditional,canonical,non_additive,NZ_PHS_current
+D004,COVID-19,SER_NZ_COVID19_MONTHLY,Viral,COVID-1,Reviewed NZ PHF Science monthly source category,NZ Monthly Notifiable,SRC_NZ_PHS,SER_NZ_COVID19_MONTHLY,source_category_dimension,concept,D004,exact,conditional,canonical,non_additive,NZ_PHS_current
+D096,Cryptosporidiosis,SER_NZ_CRYPTOSPORIDIOSIS_MONTHLY,Parasitic,,Reviewed NZ PHF Science monthly source category,NZ Monthly Notifiable,SRC_NZ_PHS,SER_NZ_CRYPTOSPORIDIOSIS_MONTHLY,source_category_dimension,concept,D096,exact,conditional,canonical,non_additive,NZ_PHS_current
+D021,Dengue fever,SER_NZ_DENGUE_MONTHLY,Viral,Dengue,Reviewed NZ PHF Science monthly source category,NZ Monthly Notifiable,SRC_NZ_PHS,SER_NZ_DENGUE_MONTHLY,source_category_dimension,concept,D021,exact,conditional,canonical,non_additive,NZ_PHS_current
+D156,Gastroenteritis,SER_NZ_GASTROENTERITIS_MONTHLY,Bacterial,Gastroenteritis³,Reviewed source-defined gastroenteritis category,NZ Monthly Notifiable,SRC_NZ_PHS,SER_NZ_GASTROENTERITIS_MONTHLY,source_category_dimension,concept,D156,exact,conditional,canonical,non_additive,NZ_PHS_current
+D099,Giardiasis,SER_NZ_GIARDIASIS_MONTHLY,Parasitic,,Reviewed NZ PHF Science monthly source category,NZ Monthly Notifiable,SRC_NZ_PHS,SER_NZ_GIARDIASIS_MONTHLY,source_category_dimension,concept,D099,exact,conditional,canonical,non_additive,NZ_PHS_current
+D100,Haemophilus influenzae type b,SER_NZ_HAEMOPHILUS_INFLUENZAE_TYPE_B_MONTHLY,Bacterial,Haemophilus influenzae,Serotype-qualified source series is narrower than unqualified D100,NZ Monthly Notifiable,SRC_NZ_PHS,SER_NZ_HAEMOPHILUS_INFLUENZAE_TYPE_B_MONTHLY,source_category_dimension,concept,D100,narrower,conditional,canonical,non_additive,NZ_PHS_current
+D007,Hepatitis A,SER_NZ_HEPATITIS_A_MONTHLY,Viral,,Reviewed NZ PHF Science monthly source category,NZ Monthly Notifiable,SRC_NZ_PHS,SER_NZ_HEPATITIS_A_MONTHLY,source_category_dimension,concept,D007,exact,conditional,canonical,non_additive,NZ_PHS_current
+D008,Hepatitis B,SER_NZ_HEPATITIS_B_MONTHLY,Viral,Hepatitis B⁴,Source does not report a clinical-course split,NZ Monthly Notifiable,SRC_NZ_PHS,SER_NZ_HEPATITIS_B_MONTHLY,source_category_dimension,concept,D008,exact,conditional,canonical,non_additive,NZ_PHS_current
+D009,Hepatitis C,SER_NZ_HEPATITIS_C_MONTHLY,Viral,Hepatitis C⁴,Source does not report a clinical-course split,NZ Monthly Notifiable,SRC_NZ_PHS,SER_NZ_HEPATITIS_C_MONTHLY,source_category_dimension,concept,D009,exact,conditional,canonical,non_additive,NZ_PHS_current
+D157,Invasive group A streptococcal infection,SER_NZ_INVASIVE_GROUP_A_STREPTOCOCCAL_MONTHLY,Bacterial,iGAS|Invasive Group A Streptococcal,Reviewed invasive GAS source category,NZ Monthly Notifiable,SRC_NZ_PHS,SER_NZ_INVASIVE_GROUP_A_STREPTOCOCCAL_MONTHLY,source_category_dimension,concept,D157,exact,conditional,canonical,non_additive,NZ_PHS_current
+D106,Invasive pneumococcal disease,SER_NZ_INVASIVE_PNEUMOCOCCAL_MONTHLY,Bacterial,IPD,Reviewed invasive pneumococcal source category,NZ Monthly Notifiable,SRC_NZ_PHS,SER_NZ_INVASIVE_PNEUMOCOCCAL_MONTHLY,source_category_dimension,concept,D106,exact,conditional,canonical,non_additive,NZ_PHS_current
+D107,Legionellosis,SER_NZ_LEGIONELLOSIS_MONTHLY,Bacterial,,Reviewed NZ PHF Science monthly source category,NZ Monthly Notifiable,SRC_NZ_PHS,SER_NZ_LEGIONELLOSIS_MONTHLY,source_category_dimension,concept,D107,exact,conditional,canonical,non_additive,NZ_PHS_current
+D035,Leptospirosis,SER_NZ_LEPTOSPIROSIS_MONTHLY,Bacterial,,Reviewed NZ PHF Science monthly source category,NZ Monthly Notifiable,SRC_NZ_PHS,SER_NZ_LEPTOSPIROSIS_MONTHLY,source_category_dimension,concept,D035,exact,conditional,canonical,non_additive,NZ_PHS_current
+D108,Listeriosis,SER_NZ_LISTERIOSIS_MONTHLY,Bacterial,,Reviewed NZ PHF Science monthly source category,NZ Monthly Notifiable,SRC_NZ_PHS,SER_NZ_LISTERIOSIS_MONTHLY,source_category_dimension,concept,D108,exact,conditional,canonical,non_additive,NZ_PHS_current
+D037,Malaria,SER_NZ_MALARIA_MONTHLY,Parasitic,,Reviewed NZ PHF Science monthly source category,NZ Monthly Notifiable,SRC_NZ_PHS,SER_NZ_MALARIA_MONTHLY,source_category_dimension,concept,D037,exact,conditional,canonical,non_additive,NZ_PHS_current
+D017,Measles,SER_NZ_MEASLES_MONTHLY,Viral,,Reviewed NZ PHF Science monthly source category,NZ Monthly Notifiable,SRC_NZ_PHS,SER_NZ_MEASLES_MONTHLY,source_category_dimension,concept,D017,exact,conditional,canonical,non_additive,NZ_PHS_current
+D110,Meningococcal disease,SER_NZ_MENINGOCOCCAL_MONTHLY,Bacterial,,Reviewed NZ PHF Science monthly source category,NZ Monthly Notifiable,SRC_NZ_PHS,SER_NZ_MENINGOCOCCAL_MONTHLY,source_category_dimension,concept,D110,exact,conditional,canonical,non_additive,NZ_PHS_current
+D065,Mpox,SER_NZ_MPOX_MONTHLY,Viral,Monkeypox,Reviewed NZ PHF Science monthly source category,NZ Monthly Notifiable,SRC_NZ_PHS,SER_NZ_MPOX_MONTHLY,source_category_dimension,concept,D065,exact,conditional,canonical,non_additive,NZ_PHS_current
+D039,Mumps,SER_NZ_MUMPS_MONTHLY,Viral,,Reviewed NZ PHF Science monthly source category,NZ Monthly Notifiable,SRC_NZ_PHS,SER_NZ_MUMPS_MONTHLY,source_category_dimension,concept,D039,exact,conditional,canonical,non_additive,NZ_PHS_current
+D016,Non seasonal influenza A (H1N1),SER_NZ_NON_SEASONAL_INFLUENZA_A_H1N1_MONTHLY,Viral,Novel influenza A|H1N1,Subtype-qualified source series is narrower than unqualified novel influenza A,NZ Monthly Notifiable,SRC_NZ_PHS,SER_NZ_NON_SEASONAL_INFLUENZA_A_H1N1_MONTHLY,source_category_dimension,concept,D016,narrower,conditional,canonical,non_additive,NZ_PHS_current
+D234,Paratyphoid fever,SER_NZ_PARATYPHOID_MONTHLY,Bacterial,,Paratyphoid-only source category; never combine with typhoid,NZ Monthly Notifiable,SRC_NZ_PHS,SER_NZ_PARATYPHOID_MONTHLY,source_category_dimension,concept,D234,exact,conditional,canonical,non_additive,NZ_PHS_current
+D028,Pertussis,SER_NZ_PERTUSSIS_MONTHLY,Bacterial,Whooping cough,Reviewed NZ PHF Science monthly source category,NZ Monthly Notifiable,SRC_NZ_PHS,SER_NZ_PERTUSSIS_MONTHLY,source_category_dimension,concept,D028,exact,conditional,canonical,non_additive,NZ_PHS_current
+D158,Rheumatic fever,SER_NZ_RHEUMATIC_FEVER_MONTHLY,Bacterial,Rheumatic fever⁵|Rheumatic fever⁴,Reviewed NZ PHF Science monthly source category,NZ Monthly Notifiable,SRC_NZ_PHS,SER_NZ_RHEUMATIC_FEVER_MONTHLY,source_category_dimension,concept,D158,exact,conditional,canonical,non_additive,NZ_PHS_current
+D159,Rickettsial disease,SER_NZ_RICKETTSIAL_DISEASE_MONTHLY,Bacterial,,Source-defined rickettsial disease category,NZ Monthly Notifiable,SRC_NZ_PHS,SER_NZ_RICKETTSIAL_DISEASE_MONTHLY,source_category_dimension,concept,D159,exact,conditional,canonical,non_additive,NZ_PHS_current
+D114,Salmonellosis,SER_NZ_SALMONELLOSIS_MONTHLY,Bacterial,,Reviewed NZ PHF Science monthly source category,NZ Monthly Notifiable,SRC_NZ_PHS,SER_NZ_SALMONELLOSIS_MONTHLY,source_category_dimension,concept,D114,exact,conditional,canonical,non_additive,NZ_PHS_current
+D105,Shigellosis,SER_NZ_SHIGELLOSIS_MONTHLY,Bacterial,,Reviewed NZ PHF Science monthly source category,NZ Monthly Notifiable,SRC_NZ_PHS,SER_NZ_SHIGELLOSIS_MONTHLY,source_category_dimension,concept,D105,exact,conditional,canonical,non_additive,NZ_PHS_current
+D025,Tuberculosis disease,SER_NZ_TUBERCULOSIS_MONTHLY,Bacterial,Tuberculosis,Reviewed NZ PHF Science monthly source category,NZ Monthly Notifiable,SRC_NZ_PHS,SER_NZ_TUBERCULOSIS_MONTHLY,source_category_dimension,concept,D025,exact,conditional,canonical,non_additive,NZ_PHS_current
+D124,Typhoid fever,SER_NZ_TYPHOID_MONTHLY,Bacterial,,Typhoid-only source category; never combine with paratyphoid,NZ Monthly Notifiable,SRC_NZ_PHS,SER_NZ_TYPHOID_MONTHLY,source_category_dimension,concept,D124,exact,conditional,canonical,non_additive,NZ_PHS_current
+D127,Viral Haemorrhagic Fever,SER_NZ_VHF_MONTHLY,Viral,Viral Hemorrhagic Fever|VHF,Broad source-reported VHF category rather than hantavirus HFRS,NZ Monthly Notifiable,SRC_NZ_PHS,SER_NZ_VHF_MONTHLY,source_category_dimension,concept,D127,exact,conditional,canonical,non_additive,NZ_PHS_current
+D115,VTEC/STEC infection,SER_NZ_VTEC_STEC_MONTHLY,Bacterial,Verotoxin-producing E. coli|Shiga toxin-producing Escherichia coli infection|Shiga toxin-producing Escherichia coli (STEC)|STEC|VTEC,Reviewed VTEC/STEC source category,NZ Monthly Notifiable,SRC_NZ_PHS,SER_NZ_VTEC_STEC_MONTHLY,source_category_dimension,concept,D115,exact,conditional,canonical,non_additive,NZ_PHS_current
+D155,Yersiniosis,SER_NZ_YERSINIOSIS_MONTHLY,Bacterial,,Reviewed NZ PHF Science monthly source category,NZ Monthly Notifiable,SRC_NZ_PHS,SER_NZ_YERSINIOSIS_MONTHLY,source_category_dimension,concept,D155,exact,conditional,canonical,non_additive,NZ_PHS_current
+D052,Chikungunya fever,SER_NZ_CHIKUNGUNYA_MONTHLY,Viral,Chikungunya,Registered NZ source category with no historical observation in the current database,NZ Monthly Notifiable,SRC_NZ_PHS,SER_NZ_CHIKUNGUNYA_MONTHLY,source_category_dimension,concept,D052,exact,conditional,canonical,non_additive,NZ_PHS_current
+D161,Decompression sickness,SER_NZ_DECOMPRESSION_SICKNESS_MONTHLY,Other,,Registered NZ source category with no historical observation in the current database,NZ Monthly Notifiable,SRC_NZ_PHS,SER_NZ_DECOMPRESSION_SICKNESS_MONTHLY,source_category_dimension,concept,D161,exact,conditional,canonical,non_additive,NZ_PHS_current
+D113,Q fever,SER_NZ_Q_FEVER_MONTHLY,Bacterial,,Reviewed historical NZ PHF Science source series,NZ Monthly Notifiable,SRC_NZ_PHS,SER_NZ_Q_FEVER_MONTHLY,source_category_dimension,concept,D113,exact,conditional,canonical,non_additive,NZ_PHS_current
+D040,Rubella,SER_NZ_RUBELLA_MONTHLY,Viral,,Reviewed historical rubella series excluding congenital rubella syndrome,NZ Monthly Notifiable,SRC_NZ_PHS,SER_NZ_RUBELLA_MONTHLY,source_category_dimension,concept,D040,exact,conditional,canonical,non_additive,NZ_PHS_current

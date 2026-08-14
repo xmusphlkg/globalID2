@@ -2,15 +2,19 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import subprocess
 
 import pytest
 
 from scripts.publish_download_repo import (
+    configure_github_ssh_transport,
     ensure_commit_identity,
     ensure_repo,
     push_branch,
     run_git,
+    run_git_with_retry,
+    summarize_git_status,
     sync_managed_assets,
     validate_source,
 )
@@ -195,6 +199,18 @@ def test_run_git_surfaces_stderr_for_control_plane_diagnostics(tmp_path):
         run_git(["status"], tmp_path)
 
 
+def test_git_status_summary_limits_displayed_paths():
+    status = "\n".join(f" M diseases/d007/part-{index}.csv" for index in range(20))
+
+    summary = summarize_git_status(status, max_paths=3)
+
+    assert "Git changes ready: 20 paths (M: 20)" in summary
+    assert "part-0.csv" in summary
+    assert "part-2.csv" in summary
+    assert "part-3.csv" not in summary
+    assert "17 additional paths omitted" in summary
+
+
 def test_push_branch_retries_transient_transport_failures(tmp_path, monkeypatch):
     attempts = []
     delays = []
@@ -202,7 +218,7 @@ def test_push_branch_retries_transient_transport_failures(tmp_path, monkeypatch)
     def flaky_run_git(args, cwd):
         attempts.append((args, cwd))
         if len(attempts) < 3:
-            raise RuntimeError("transport unavailable")
+            raise RuntimeError("ssh: connect to host github.com port 22: Connection timed out")
         return ""
 
     monkeypatch.setattr("scripts.publish_download_repo.run_git", flaky_run_git)
@@ -211,4 +227,33 @@ def test_push_branch_retries_transient_transport_failures(tmp_path, monkeypatch)
     push_branch(tmp_path, "main", attempts=3, retry_delay_seconds=0.25)
 
     assert attempts == [(["push", "origin", "main"], tmp_path)] * 3
-    assert delays == [0.25, 0.25]
+    assert delays == [0.25, 0.5]
+
+
+def test_git_network_retry_does_not_hide_permanent_failure(tmp_path, monkeypatch):
+    attempts = []
+
+    def rejected_run_git(args, cwd):
+        attempts.append((args, cwd))
+        raise RuntimeError("remote rejected: non-fast-forward")
+
+    monkeypatch.setattr("scripts.publish_download_repo.run_git", rejected_run_git)
+
+    with pytest.raises(RuntimeError, match="non-fast-forward"):
+        run_git_with_retry(["fetch", "origin", "main"], tmp_path)
+
+    assert len(attempts) == 1
+
+
+def test_github_ssh_transport_uses_port_443_and_preserves_options(monkeypatch):
+    monkeypatch.setenv("GIT_SSH_COMMAND", "ssh -o BatchMode=yes -i /tmp/release-key")
+
+    configured = configure_github_ssh_transport(
+        "git@github.com:example/download-data.git"
+    )
+
+    assert configured is True
+    command = os.environ["GIT_SSH_COMMAND"]
+    assert "-i /tmp/release-key" in command
+    assert "Hostname=ssh.github.com" in command
+    assert "-p 443" in command

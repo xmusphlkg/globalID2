@@ -12,13 +12,22 @@ import {
 import { buildAlternatePaths, formatYearRange, toSeoSlug } from '../../lib/seo';
 
 type ZhPage = { path?: string; kind: string; code?: string; slug?: string; id?: string };
+const situationPublic = existsSync(resolve('./src/data/situation/latest.json'));
 
 export function getStaticPaths() {
-  const situationArchiveDir = resolve('./src/data/situation/archive');
-  const situationPaths = existsSync(situationArchiveDir)
-    ? readdirSync(situationArchiveDir)
-      .filter(name => /^\d{4}-W\d{2}\.json$/.test(name))
-      .map(name => ({ path: `situation/${name.replace(/\.json$/, '')}`, kind: 'situation', slug: name.replace(/\.json$/, '') }))
+  const publicSnapshotExists = existsSync(resolve('./src/data/situation/latest.json'));
+  const situationPaths = publicSnapshotExists
+    ? [
+        ['weeks', /^\d{4}-W\d{2}\.json$/],
+        ['months', /^\d{4}-\d{2}\.json$/],
+      ].flatMap(([directoryName, pattern]) => {
+        const directory = resolve(`./src/data/situation/${directoryName}`);
+        return existsSync(directory)
+          ? readdirSync(directory)
+            .filter(name => (pattern as RegExp).test(name))
+            .map(name => ({ path: `situation/${name.replace(/\.json$/, '')}`, kind: 'situation', slug: name.replace(/\.json$/, '') }))
+          : [];
+      })
     : [];
   const pages: ZhPage[] = [
     { kind: 'static' },
@@ -34,6 +43,7 @@ export function getStaticPaths() {
     ]),
     ...countryDiseaseCandidates().map(item => ({ path: `countries/${item.code}/diseases/${item.slug}`, kind: 'country-disease', code: item.code, slug: item.slug })),
     { path: 'situation', kind: 'situation' },
+    ...(publicSnapshotExists ? [{ path: 'situation/methodology', kind: 'situation-methodology' }] : []),
     ...situationPaths,
   ];
   return pages.map(({ path, ...props }) => ({ params: { path }, props }));
@@ -104,7 +114,12 @@ if (page.kind === 'static') {
   title = page.slug ? `全球传染病态势快照 ${page.slug} | 全球传染病监测` : '全球传染病态势 | 全球传染病监测';
   heading = page.slug ? `全球传染病态势快照 ${page.slug}` : '全球传染病态势';
   description = 'GIDS 汇总各覆盖地区的传染病监测信号、官方事件来源、方法和数据限制。';
-  facts = [['快照类型', page.slug ? '历史周度快照' : '最新态势快照']];
+  facts = [['快照类型', page.slug ? (/^\d{4}-W/.test(page.slug) ? '周度可复核快照' : '月度趋势记录') : '最新态势快照']];
+} else if (page.kind === 'situation-methodology') {
+  title = '全球传染病态势室方法 | 全球传染病监测';
+  heading = '全球传染病态势室方法';
+  description = '了解 GIDS 的来源原生数据契约、季节基线、z-score、EWMA、贝叶斯变点、综合风险、质量门和修订规则。';
+  facts = [['方法版本', 'Situation Room v2.0']];
 }
 
 const seo = {
@@ -114,6 +129,7 @@ const seo = {
   canonicalPath,
   alternatePaths: buildAlternatePaths(englishPath, 'zh'),
   pageType: page.kind === 'disease' || page.kind === 'report' ? 'MedicalWebPage' : 'WebPage',
+  noindex: (page.kind === 'situation' || page.kind === 'situation-methodology') && !situationPublic,
 };
 ---
 

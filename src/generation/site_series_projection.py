@@ -48,13 +48,21 @@ def _dominant_value(values: list[str | None]) -> str | None:
     return max(counts.items(), key=lambda item: item[1])[0] if counts else None
 
 
-def _normalise_count(value) -> int | float:
+def _normalise_count(value) -> int | float | None:
     """Keep integer counts compact without discarding valid fractional values."""
 
     numeric = _safe_float(value)
     if numeric is None:
-        return 0
+        return None
     return int(numeric) if numeric.is_integer() else numeric
+
+
+def _sum_counts(values: list[object]) -> int | float | None:
+    """Sum observed counts while preserving an entirely missing period."""
+
+    numbers = [_safe_float(value) for value in values]
+    observed = [value for value in numbers if value is not None]
+    return _normalise_count(sum(observed)) if observed else None
 
 
 def _series_is_case_count(record: dict) -> bool:
@@ -73,9 +81,11 @@ def _source_series_details(records: list[dict]) -> list[dict]:
     metadata_fields = (
         "source_system", "source_series_code", "source_label",
         "definition_version", "case_definition", "case_definition_uri",
-        "metric_type", "reporting_basis", "temporal_granularity",
+        "metric_type", "reporting_basis", "time_basis", "temporal_granularity",
         "mapping_relation", "comparability", "aggregation_policy",
         "availability_status", "missing_value_policy", "valid_from", "valid_to",
+        "definition_effective_from", "definition_effective_to",
+        "comparability_break",
         "series_is_active",
     )
     details: list[dict] = []
@@ -85,7 +95,12 @@ def _source_series_details(records: list[dict]) -> list[dict]:
         )
         first = series_records[0]
         dates = [item.get("date") for item in series_records if item.get("date")]
-        values = [item.get("cases") or 0 for item in series_records if item.get("date")]
+        dated_records = [item for item in series_records if item.get("date")]
+        values = [_normalise_count(item.get("cases")) for item in dated_records]
+        point_quality_statuses = [
+            str(item.get("quality_status") or item.get("data_quality") or "unknown")
+            for item in dated_records
+        ]
         quality_statuses = sorted(
             {
                 str(item.get("quality_status") or item.get("data_quality") or "")
@@ -102,12 +117,39 @@ def _source_series_details(records: list[dict]) -> list[dict]:
                 "dimension_key": first.get("dimension_key"),
                 "dates": dates,
                 "values": values,
-                "total_value": sum(values),
+                "total_value": sum(value for value in values if value is not None),
                 "observation_count": len(values),
                 "quality_statuses": quality_statuses,
+                "point_quality_statuses": point_quality_statuses,
+                "provisional_from": _trailing_provisional_from(
+                    dates, point_quality_statuses
+                ),
+                "latest_quality_status": (
+                    point_quality_statuses[-1] if point_quality_statuses else None
+                ),
             }
         )
     return details
+
+
+def _trailing_provisional_from(
+    dates: list[str], quality_statuses: list[str]
+) -> str | None:
+    """Return the start of a trailing source-declared provisional run.
+
+    ``raw`` is an internal validation state, not evidence that the publisher
+    considers an observation preliminary.  Treating it as provisional made a
+    single open period pull the boundary back across an otherwise unclassified
+    historical series.
+    """
+
+    provisional = {"provisional", "preliminary"}
+    start: str | None = None
+    for date, status in reversed(list(zip(dates, quality_statuses))):
+        if str(status or "").strip().lower() not in provisional:
+            break
+        start = date
+    return start
 
 
 def _representative_series_code(source_series: list[dict]) -> str:
@@ -205,11 +247,9 @@ def _collapse_selected_series_records(records: list[dict], context: dict) -> lis
                 "date": report_date,
                 "year_month": first.get("year_month") or report_date[:7],
                 "disease_id": first.get("disease_id"),
-                "cases": _normalise_count(
-                    sum(_safe_float(r.get("cases")) or 0 for r in date_records)
-                ),
-                "deaths": 0,
-                "recoveries": 0,
+                "cases": _sum_counts([r.get("cases") for r in date_records]),
+                "deaths": None,
+                "recoveries": None,
                 "incidence_rate": sum(incidence_values) if incidence_values else None,
                 "incidence_rate_source": _dominant_value(
                     [r.get("incidence_rate_source") for r in date_records]
@@ -218,6 +258,11 @@ def _collapse_selected_series_records(records: list[dict], context: dict) -> lis
                 "data_quality": _dominant_value(
                     [r.get("quality_status") or r.get("data_quality") for r in date_records]
                 ),
+                "metric_type": first.get("metric_type"),
+                "reporting_basis": first.get("reporting_basis"),
+                "time_basis": first.get("time_basis"),
+                "comparability": first.get("comparability"),
+                "definition_version": first.get("definition_version"),
                 "data_layer": SERIES_DATA_LAYER,
                 "series_code": first.get("series_code") if len(selected_codes) == 1 else None,
                 "_series_context": context,
@@ -278,8 +323,10 @@ def _attach_legacy_supplemental_metrics(
                     max(candidates, key=lambda item: str(item.get("date") or "")),
                 )
             ] if candidates else []
-            record["deaths"] = sum(item.get("deaths") or 0 for item in legacy)
-            record["recoveries"] = sum(item.get("recoveries") or 0 for item in legacy)
+            record["deaths"] = _sum_counts([item.get("deaths") for item in legacy])
+            record["recoveries"] = _sum_counts(
+                [item.get("recoveries") for item in legacy]
+            )
             record["mortality_rate"] = _avg_or_none([item.get("mortality_rate") for item in legacy])
     return context
 

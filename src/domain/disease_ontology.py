@@ -362,7 +362,7 @@ class DiseaseSurveillanceSeries(BaseModel):
     source_series_code: Mapped[str] = mapped_column(String(240), nullable=False)
     source_label: Mapped[str] = mapped_column(String(500), nullable=False)
     definition_version: Mapped[str] = mapped_column(
-        String(80), nullable=False, default="1"
+        String(120), nullable=False, default="1"
     )
     case_definition: Mapped[Optional[str]] = mapped_column(Text)
     case_definition_uri: Mapped[Optional[str]] = mapped_column(String(1000))

@@ -12,6 +12,8 @@ import {
   useSourceConfigs,
   useSourcesFlow,
   useStartCrawl,
+  useSituationSources,
+  useRefreshSituationSources,
 } from "@/features/operations/sources/api";
 import { useTaskEventStream } from "@/features/operations/tasks/api";
 import { formatDate } from "@/lib/utils";
@@ -40,6 +42,9 @@ import {
   Circle,
   AlertCircle,
   Loader2,
+  ExternalLink,
+  RadioTower,
+  RefreshCw,
 } from "lucide-react";
 
 // ── Colour mapping ──────────────────────────────────────────────────────────
@@ -863,6 +868,8 @@ export default function SourcesFlowPage() {
 
   const { data: flows, isLoading, error } = useSourcesFlow(effectiveCountryCode);
   const { data: sourceConfigs } = useSourceConfigs(lang);
+  const { data: situationSources, isLoading: situationSourcesLoading, error: situationSourcesError } = useSituationSources();
+  const refreshSituationSources = useRefreshSituationSources();
   const { data: ontologySeries } = useOntologySeries(
     scopeMode === "selected" ? countryCode : null,
   );
@@ -878,7 +885,7 @@ export default function SourcesFlowPage() {
 
   const [modalOpen, setModalOpen] = useState(false);
 
-  useTaskEventStream({ extraQueryKeys: [["sources-flow"]] });
+  useTaskEventStream({ extraQueryKeys: [["sources-flow"], ["situation-sources"]] });
 
   const openModal = () => setModalOpen(true);
   const closeModal = () => setModalOpen(false);
@@ -959,6 +966,28 @@ export default function SourcesFlowPage() {
           ) : null
         }
       />
+
+      <section className="app-panel overflow-hidden">
+        <div className="flex flex-col gap-3 border-b border-tremor-border p-4 dark:border-dark-tremor-border lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <Title className="flex items-center gap-2"><RadioTower className="h-5 w-5 text-tremor-brand" />{lang === "zh" ? "全球态势数据获取" : "Global Situation acquisition"}</Title>
+            <Text className="mt-1">{lang === "zh" ? "WHO、ECDC、Africa CDC、PAHO 与 CDC 适配器在这里采集；计算、质量门和历史归档随后自动执行。" : "WHO, ECDC, Africa CDC, PAHO, and CDC adapters are acquired here; calculation, quality gates, and history archival follow automatically."}</Text>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button disabled={refreshSituationSources.isPending} onClick={() => refreshSituationSources.mutate("numeric_only")} className="inline-flex h-9 items-center gap-2 rounded-tremor-default border border-tremor-border px-3 text-sm font-medium disabled:opacity-50 dark:border-dark-tremor-border"><RefreshCw className={`h-4 w-4 ${refreshSituationSources.isPending ? "animate-spin" : ""}`} />{lang === "zh" ? "仅重算数值" : "Recalculate only"}</button>
+            <button disabled={refreshSituationSources.isPending} onClick={() => refreshSituationSources.mutate("full")} className="inline-flex h-9 items-center gap-2 rounded-tremor-default bg-tremor-brand px-3 text-sm font-medium text-tremor-brand-inverted disabled:opacity-50 dark:bg-dark-tremor-brand dark:text-dark-tremor-brand-inverted"><Download className="h-4 w-4" />{lang === "zh" ? "采集全部态势来源" : "Acquire all Situation sources"}</button>
+          </div>
+        </div>
+        {refreshSituationSources.isSuccess ? <p className="border-b border-emerald-200 bg-emerald-50 px-4 py-2 text-xs text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300">{lang === "zh" ? `任务已进入队列：${refreshSituationSources.data.task_uuid}` : `Task queued: ${refreshSituationSources.data.task_uuid}`}</p> : null}
+        {refreshSituationSources.error || situationSourcesError ? <p className="border-b border-rose-200 bg-rose-50 px-4 py-2 text-xs text-rose-800 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-300">{String((refreshSituationSources.error || situationSourcesError) instanceof Error ? (refreshSituationSources.error || situationSourcesError)?.message : (refreshSituationSources.error || situationSourcesError))}</p> : null}
+        <div className="grid gap-0 md:grid-cols-2 xl:grid-cols-3">
+          {situationSourcesLoading ? <div className="col-span-full p-6 text-sm text-tremor-content-subtle"><Loader2 className="mr-2 inline h-4 w-4 animate-spin" />{lang === "zh" ? "加载适配器状态…" : "Loading adapter status…"}</div> : situationSources?.map((source) => {
+            const status = source.health?.status || "not_checked";
+            const statusTone = status === "fresh" ? "success" : status === "failed" ? "danger" : status === "stale" ? "warning" : "neutral";
+            return <article key={source.source_id} className="border-b border-r border-tremor-border p-4 dark:border-dark-tremor-border"><div className="flex items-start justify-between gap-3"><div><p className="text-sm font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">{source.label}</p><p className="mt-1 text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{source.transport} · {source.source_kind.replaceAll("_", " ")}</p></div><div className="text-right"><StatusBadge tone={statusTone}>{status.replaceAll("_", " ")}</StatusBadge>{source.health.from_history ? <p className="mt-1 text-[10px] text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{lang === "zh" ? "历史库最近状态" : "Last known from history"}</p> : null}</div></div><div className="mt-3 flex flex-wrap gap-1">{source.contract.map((field) => <span key={field} className="rounded border border-tremor-border px-1.5 py-0.5 font-mono text-[10px] text-tremor-content dark:border-dark-tremor-border dark:text-dark-tremor-content">{field}</span>)}</div><p className="mt-3 text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{lang === "zh" ? "本次检查" : "Checked"}: {source.health.checked_at ? formatDate(source.health.checked_at) : "—"} · {source.health.item_count ?? 0} {lang === "zh" ? "项" : "items"}</p><div className="mt-2 rounded border border-tremor-border bg-tremor-background-subtle p-2 text-xs dark:border-dark-tremor-border dark:bg-dark-tremor-background-subtle">{source.usage?.mode === "official_event" ? <><p className="font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">{lang === "zh" ? "事件使用" : "Event use"}: {source.usage.in_latest_emerging ?? 0} emerging · {source.usage.used_in_composite_risk ?? 0} risk</p><p className="mt-1 text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{Object.entries(source.usage.persisted ?? {}).map(([key, value]) => `${key} ${value}`).join(" · ") || (lang === "zh" ? "尚无入库事件" : "No persisted events")}</p></> : source.usage?.mode === "numeric_series" ? <><p className="font-semibold text-tremor-content-strong dark:text-dark-tremor-content-strong">{source.usage.analyzed_count ?? 0}/{source.usage.series_count ?? 0} {lang === "zh" ? "序列已完成五类计算" : "series ran all five methods"}</p><p className="mt-1 text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{source.health.normalized_observation_count ?? 0} {lang === "zh" ? "条规范化观测" : "normalized observations"} · {source.usage.rejected_count ?? 0} rejected</p></> : <p className="text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{lang === "zh" ? "仅作背景指标：" : "Context only: "}{source.usage?.not_analyzed_reason ?? "—"}</p>}</div><p className="mt-2 text-xs text-tremor-content-subtle dark:text-dark-tremor-content-subtle">{lang === "zh" ? "最后成功" : "Last success"}: {source.last_success_at ? formatDate(source.last_success_at) : "—"} · stale ≤ {source.stale_policy_hours}h</p>{source.health.error ? <p className="mt-2 line-clamp-2 text-xs text-rose-700 dark:text-rose-300" title={source.health.error}>{source.health.error}</p> : null}<a href={source.url} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-tremor-brand hover:underline dark:text-dark-tremor-brand">{lang === "zh" ? "官方端点" : "Official endpoint"}<ExternalLink className="h-3 w-3" /></a></article>;
+          })}
+        </div>
+      </section>
 
       <FilterToolbar>
         <div className="flex items-center gap-1 rounded-tremor-default border border-tremor-border bg-tremor-background-subtle p-1 dark:border-dark-tremor-border dark:bg-dark-tremor-background-subtle">

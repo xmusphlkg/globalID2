@@ -1,0 +1,605 @@
+{
+  "schema_version": 1,
+  "source": "historical_literature_seed.v1",
+  "curated_at": "2026-08-14T00:00:00+00:00",
+  "description": "Curated historical baseline publications for the public Research Radar catalogue. These records supplement recent synchronization and are not treated as newly indexed papers.",
+  "articles": [
+    {
+      "title": "Studies on an attenuated measles-virus vaccine. VI. Clinical, antigenic and prophylactic effects of vaccine in institutionalized children.",
+      "doi": "10.1056/NEJM196007282630406",
+      "pmid": "14412241",
+      "journal": "The New England journal of medicine",
+      "authors": ["Krugman S", "Giles JP", "Jacobs AM"],
+      "published_at": "1960-07-28",
+      "publication_date_precision": "day",
+      "curated_at": "2026-08-14T00:00:00+00:00",
+      "study_type": "Journal article",
+      "discovery_score": 0.82,
+      "diseases": [{"disease_id": "D017", "confidence": 0.95}],
+      "countries": [{"code": "US", "name_en": "United States", "confidence": 0.78}],
+      "topics": [
+        {"name": "Vaccination", "confidence": 0.9},
+        {"name": "Vaccine effectiveness", "confidence": 0.82}
+      ],
+      "why_it_matters_en": "A pre-MMR measles vaccine study that anchors long-run vaccine-preventable disease context.",
+      "why_it_matters_zh": "这项 MMR 疫苗之前的麻疹疫苗研究，为疫苗可预防疾病的长期背景提供基线。",
+      "summary": {
+        "en": {
+          "research_question": "How did an attenuated measles-virus vaccine perform clinically and immunologically in children?",
+          "study_design": "Early clinical vaccine study.",
+          "population_setting": "Institutionalized children in the United States.",
+          "public_health_relevance": "Provides historical context for measles vaccination evidence before modern elimination programs.",
+          "gids_interpretation": "Use as background for vaccine-era measles surveillance, not as current clinical guidance."
+        },
+        "zh": {
+          "research_question": "减毒麻疹病毒疫苗在儿童中的临床和免疫学表现如何？",
+          "study_design": "早期临床疫苗研究。",
+          "population_setting": "美国机构照护儿童。",
+          "public_health_relevance": "为现代消除计划之前的麻疹疫苗证据提供历史背景。",
+          "gids_interpretation": "适合作为疫苗时代麻疹监测背景，不作为当前临床指南。"
+        }
+      }
+    },
+    {
+      "title": "Ebola haemorrhagic fever in Zaire, 1976.",
+      "pmid": "307456",
+      "pmcid": "PMC2395567",
+      "journal": "Bulletin of the World Health Organization",
+      "authors": ["Report of an International Commission"],
+      "published_at": "1978",
+      "publication_date_precision": "year",
+      "curated_at": "2026-08-14T00:00:00+00:00",
+      "study_type": "Outbreak investigation",
+      "open_access_status": "open",
+      "discovery_score": 0.9,
+      "diseases": [
+        {"disease_id": "D050", "confidence": 0.98},
+        {"disease_id": "D127", "confidence": 0.84}
+      ],
+      "countries": [{"code": "CD", "name_en": "Democratic Republic of the Congo", "confidence": 0.86}],
+      "topics": [
+        {"name": "Outbreak investigation", "confidence": 0.94},
+        {"name": "Surveillance", "confidence": 0.82}
+      ],
+      "why_it_matters_en": "A foundational outbreak investigation for Ebola surveillance and response history.",
+      "why_it_matters_zh": "埃博拉监测与响应史上的基础性暴发调查。",
+      "summary": {
+        "en": {
+          "research_question": "What epidemiologic features characterized the 1976 Ebola outbreak in Zaire?",
+          "study_design": "International outbreak investigation report.",
+          "population_setting": "Affected communities and health-care settings in Zaire, now the Democratic Republic of the Congo.",
+          "public_health_relevance": "Establishes baseline context for Ebola case investigation, transmission chains, and infection-control concerns.",
+          "gids_interpretation": "Use as historical outbreak context when comparing later Ebola events."
+        },
+        "zh": {
+          "research_question": "1976 年扎伊尔埃博拉暴发呈现哪些流行病学特征？",
+          "study_design": "国际暴发调查报告。",
+          "population_setting": "扎伊尔（今刚果民主共和国）的受影响社区和医疗场所。",
+          "public_health_relevance": "为埃博拉病例调查、传播链和感染控制问题建立历史基线。",
+          "gids_interpretation": "适合作为比较后续埃博拉事件的历史暴发背景。"
+        }
+      }
+    },
+    {
+      "title": "The confirmation and maintenance of smallpox eradication.",
+      "doi": "10.1056/NEJM198011273032204",
+      "pmid": "6252467",
+      "journal": "The New England journal of medicine",
+      "authors": ["Breman JG", "Arita I"],
+      "published_at": "1980-11-27",
+      "publication_date_precision": "day",
+      "curated_at": "2026-08-14T00:00:00+00:00",
+      "study_type": "Journal article",
+      "discovery_score": 0.88,
+      "diseases": [{"disease_id": "D064", "confidence": 0.98}],
+      "countries": [],
+      "topics": [
+        {"name": "Surveillance", "confidence": 0.88},
+        {"name": "Vaccination", "confidence": 0.84},
+        {"name": "Health policy", "confidence": 0.8}
+      ],
+      "why_it_matters_en": "A key post-certification account of how eradication status was confirmed and guarded.",
+      "why_it_matters_zh": "关于如何确认并维护天花根除状态的重要历史文献。",
+      "summary": {
+        "en": {
+          "research_question": "How was smallpox eradication confirmed and what maintenance measures were needed afterward?",
+          "study_design": "Historical public-health review.",
+          "public_health_relevance": "Connects surveillance verification, vaccination history, and post-eradication policy.",
+          "gids_interpretation": "Useful as a benchmark for eradication and elimination concepts across infectious diseases."
+        },
+        "zh": {
+          "research_question": "天花根除如何得到确认，之后需要哪些维护措施？",
+          "study_design": "历史公共卫生综述。",
+          "public_health_relevance": "连接了监测验证、疫苗接种历史和根除后政策。",
+          "gids_interpretation": "可作为理解其他传染病根除和消除概念的参照。"
+        }
+      }
+    },
+    {
+      "title": "Isolation of a T-lymphotropic retrovirus from a patient at risk for acquired immune deficiency syndrome (AIDS).",
+      "doi": "10.1126/science.6189183",
+      "pmid": "6189183",
+      "journal": "Science (New York, N.Y.)",
+      "authors": ["Barre-Sinoussi F", "Chermann JC", "Rey F", "Nugeyre MT", "Chamaret S", "Gruest J", "Dauguet C", "Axler-Blin C"],
+      "published_at": "1983-05-20",
+      "publication_date_precision": "day",
+      "curated_at": "2026-08-14T00:00:00+00:00",
+      "study_type": "Journal article",
+      "discovery_score": 0.92,
+      "diseases": [
+        {"disease_id": "D005", "confidence": 0.98},
+        {"disease_id": "D162", "confidence": 0.96}
+      ],
+      "countries": [],
+      "topics": [
+        {"name": "Diagnostics", "confidence": 0.86},
+        {"name": "Transmission dynamics", "confidence": 0.74}
+      ],
+      "why_it_matters_en": "A landmark paper in the identification of the retrovirus later central to HIV/AIDS surveillance and diagnostics.",
+      "why_it_matters_zh": "识别后来成为 HIV/AIDS 监测与诊断核心对象的逆转录病毒的里程碑论文。",
+      "summary": {
+        "en": {
+          "research_question": "Could a retrovirus be isolated from a patient at risk for AIDS?",
+          "study_design": "Laboratory investigation.",
+          "public_health_relevance": "Anchors the historical shift from syndrome-based AIDS reporting toward pathogen-specific HIV diagnostics.",
+          "gids_interpretation": "Use as historical context for HIV/AIDS surveillance definitions and laboratory confirmation."
+        },
+        "zh": {
+          "research_question": "能否从 AIDS 风险患者中分离出逆转录病毒？",
+          "study_design": "实验室研究。",
+          "public_health_relevance": "标志着 AIDS 报告从综合征导向转向 HIV 病原学诊断的历史转变。",
+          "gids_interpretation": "适合作为理解 HIV/AIDS 监测定义和实验室确证的历史背景。"
+        }
+      }
+    },
+    {
+      "title": "Dengue and dengue hemorrhagic fever.",
+      "doi": "10.1128/CMR.11.3.480",
+      "pmid": "9665979",
+      "pmcid": "PMC88892",
+      "journal": "Clinical microbiology reviews",
+      "authors": ["Gubler DJ"],
+      "published_at": "1998-07",
+      "publication_date_precision": "month",
+      "curated_at": "2026-08-14T00:00:00+00:00",
+      "study_type": "Journal article",
+      "open_access_status": "open",
+      "discovery_score": 0.88,
+      "diseases": [{"disease_id": "D021", "confidence": 0.98}],
+      "countries": [],
+      "topics": [
+        {"name": "Surveillance", "confidence": 0.88},
+        {"name": "Transmission dynamics", "confidence": 0.8},
+        {"name": "Diagnostics", "confidence": 0.74}
+      ],
+      "why_it_matters_en": "A widely cited historical review of dengue resurgence, surveillance, diagnosis, prevention, and control.",
+      "why_it_matters_zh": "关于登革热再兴、监测、诊断、预防和控制的经典历史综述。",
+      "summary": {
+        "en": {
+          "research_question": "How had dengue and dengue hemorrhagic fever reemerged globally by the late twentieth century?",
+          "study_design": "Narrative review.",
+          "public_health_relevance": "Frames dengue as a long-running vector-borne surveillance challenge rather than only a recent signal.",
+          "gids_interpretation": "Use as baseline context for dengue evidence hubs and long-term geographic spread."
+        },
+        "zh": {
+          "research_question": "到 20 世纪末，登革热和登革出血热如何在全球再兴？",
+          "study_design": "叙述性综述。",
+          "public_health_relevance": "将登革热定位为长期虫媒监测挑战，而不只是近期信号。",
+          "gids_interpretation": "适合作为登革热证据枢纽和长期地理扩散的基线背景。"
+        }
+      }
+    },
+    {
+      "title": "Dengue and dengue haemorrhagic fever.",
+      "doi": "10.1016/s0140-6736(97)12483-7",
+      "pmid": "9752834",
+      "journal": "Lancet (London, England)",
+      "authors": ["Rigau-Perez JG", "Clark GG", "Gubler DJ", "Reiter P", "Sanders EJ", "Vorndam AV"],
+      "published_at": "1998-09-19",
+      "publication_date_precision": "day",
+      "curated_at": "2026-08-14T00:00:00+00:00",
+      "study_type": "Journal article",
+      "discovery_score": 0.86,
+      "diseases": [{"disease_id": "D021", "confidence": 0.98}],
+      "countries": [],
+      "topics": [
+        {"name": "Diagnostics", "confidence": 0.82},
+        {"name": "Surveillance", "confidence": 0.82},
+        {"name": "Treatment", "confidence": 0.7}
+      ],
+      "why_it_matters_en": "A Lancet-era clinical and public-health synthesis for dengue and severe dengue.",
+      "why_it_matters_zh": "Lancet 上关于登革热及重症登革热的临床与公共卫生综合文献。",
+      "summary": {
+        "en": {
+          "research_question": "What clinical and public-health features defined dengue and dengue haemorrhagic fever?",
+          "study_design": "Clinical and epidemiologic review.",
+          "public_health_relevance": "Supports historical interpretation of dengue case definitions, clinical severity, and surveillance priorities.",
+          "gids_interpretation": "Use as historical clinical context alongside modern dengue guidance."
+        },
+        "zh": {
+          "research_question": "登革热和登革出血热的临床与公共卫生特征是什么？",
+          "study_design": "临床与流行病学综述。",
+          "public_health_relevance": "支持对登革热病例定义、临床严重程度和监测重点的历史理解。",
+          "gids_interpretation": "适合作为现代登革热指南之外的历史临床背景。"
+        }
+      }
+    },
+    {
+      "title": "Characterization of a novel coronavirus associated with severe acute respiratory syndrome.",
+      "doi": "10.1126/science.1085952",
+      "pmid": "12730500",
+      "journal": "Science (New York, N.Y.)",
+      "authors": ["Rota PA", "Oberste MS", "Monroe SS", "Nix WA", "Campagnoli R", "Icenogle JP", "Penaranda S", "Bankamp B"],
+      "published_at": "2003-05-30",
+      "publication_date_precision": "day",
+      "curated_at": "2026-08-14T00:00:00+00:00",
+      "study_type": "Genomic study",
+      "discovery_score": 0.9,
+      "diseases": [{"disease_id": "D003", "confidence": 0.98}],
+      "countries": [],
+      "topics": [
+        {"name": "Genomic epidemiology", "confidence": 0.9},
+        {"name": "Diagnostics", "confidence": 0.82},
+        {"name": "Outbreak investigation", "confidence": 0.78}
+      ],
+      "why_it_matters_en": "A foundational SARS coronavirus characterization record for coronavirus outbreak intelligence.",
+      "why_it_matters_zh": "SARS 冠状病毒表征的基础文献，为冠状病毒暴发情报提供历史锚点。",
+      "summary": {
+        "en": {
+          "research_question": "What novel coronavirus was associated with SARS?",
+          "study_design": "Laboratory and genomic characterization study.",
+          "public_health_relevance": "Provides historical basis for pathogen characterization during novel respiratory outbreaks.",
+          "gids_interpretation": "Use as SARS baseline context when reviewing coronavirus evidence streams."
+        },
+        "zh": {
+          "research_question": "与 SARS 相关的新型冠状病毒是什么？",
+          "study_design": "实验室和基因组表征研究。",
+          "public_health_relevance": "为新发呼吸道暴发中的病原体表征提供历史基础。",
+          "gids_interpretation": "适合作为审阅冠状病毒证据流时的 SARS 基线背景。"
+        }
+      }
+    },
+    {
+      "title": "The Genome sequence of the SARS-associated coronavirus.",
+      "doi": "10.1126/science.1085953",
+      "pmid": "12730501",
+      "journal": "Science (New York, N.Y.)",
+      "authors": ["Marra MA", "Jones SJ", "Astell CR", "Holt RA", "Brooks-Wilson A", "Butterfield YS", "Khattra J", "Asano JK"],
+      "published_at": "2003-05-30",
+      "publication_date_precision": "day",
+      "curated_at": "2026-08-14T00:00:00+00:00",
+      "study_type": "Genomic study",
+      "discovery_score": 0.88,
+      "diseases": [{"disease_id": "D003", "confidence": 0.98}],
+      "countries": [],
+      "topics": [
+        {"name": "Genomic epidemiology", "confidence": 0.94},
+        {"name": "Diagnostics", "confidence": 0.78}
+      ],
+      "why_it_matters_en": "A SARS genome sequence paper that anchors genomic surveillance history for coronaviruses.",
+      "why_it_matters_zh": "SARS 基因组序列论文，为冠状病毒基因组监测史提供锚点。",
+      "summary": {
+        "en": {
+          "research_question": "What was the genome sequence of the SARS-associated coronavirus?",
+          "study_design": "Genome sequencing study.",
+          "public_health_relevance": "Connects early SARS response to the later role of rapid sequencing in outbreak surveillance.",
+          "gids_interpretation": "Use as historical genomic baseline, not as a current SARS risk assessment."
+        },
+        "zh": {
+          "research_question": "SARS 相关冠状病毒的基因组序列是什么？",
+          "study_design": "基因组测序研究。",
+          "public_health_relevance": "连接早期 SARS 响应与后来快速测序在暴发监测中的作用。",
+          "gids_interpretation": "适合作为历史基因组基线，不用于当前 SARS 风险评估。"
+        }
+      }
+    },
+    {
+      "title": "Avian influenza A (H5N1) infection in humans.",
+      "doi": "10.1056/NEJMra052211",
+      "pmid": "16192482",
+      "journal": "The New England journal of medicine",
+      "authors": ["Beigel JH", "Farrar J", "Han AM", "Hayden FG", "Hyer R", "de Jong MD", "Lochindarat S", "Nguyen TK"],
+      "published_at": "2005-09-29",
+      "publication_date_precision": "day",
+      "curated_at": "2026-08-14T00:00:00+00:00",
+      "study_type": "Journal article",
+      "discovery_score": 0.86,
+      "diseases": [
+        {"disease_id": "D014", "confidence": 0.98},
+        {"disease_id": "D038", "confidence": 0.84}
+      ],
+      "countries": [],
+      "topics": [
+        {"name": "One Health", "confidence": 0.86},
+        {"name": "Surveillance", "confidence": 0.82},
+        {"name": "Diagnostics", "confidence": 0.74}
+      ],
+      "why_it_matters_en": "A historical review of human H5N1 infection that links animal-human spillover and surveillance readiness.",
+      "why_it_matters_zh": "关于人感染 H5N1 的历史综述，连接动物-人溢出和监测准备。",
+      "summary": {
+        "en": {
+          "research_question": "What was known about avian influenza A(H5N1) infection in humans by 2005?",
+          "study_design": "Clinical and public-health review.",
+          "public_health_relevance": "Provides historical context for zoonotic influenza monitoring and preparedness.",
+          "gids_interpretation": "Use as a baseline for H5N1 literature collections and One Health framing."
+        },
+        "zh": {
+          "research_question": "截至 2005 年，对人感染 H5N1 禽流感已有怎样的认识？",
+          "study_design": "临床与公共卫生综述。",
+          "public_health_relevance": "为人畜共患流感监测和准备提供历史背景。",
+          "gids_interpretation": "适合作为 H5N1 文献集合和 One Health 叙事的基线。"
+        }
+      }
+    },
+    {
+      "title": "First results of phase 3 trial of RTS,S/AS01 malaria vaccine in African children.",
+      "doi": "10.1056/NEJMoa1102287",
+      "pmid": "22007715",
+      "journal": "The New England journal of medicine",
+      "authors": ["RTS,S Clinical Trials Partnership", "Agnandji ST", "Lell B", "Soulanoudjingar SS", "Fernandes JF", "Abossolo BP", "Conzelmann C", "Methogo BG"],
+      "published_at": "2011-11-17",
+      "publication_date_precision": "day",
+      "curated_at": "2026-08-14T00:00:00+00:00",
+      "study_type": "Randomised controlled trial",
+      "discovery_score": 0.87,
+      "diseases": [{"disease_id": "D037", "confidence": 0.98}],
+      "countries": [],
+      "topics": [
+        {"name": "Vaccination", "confidence": 0.92},
+        {"name": "Vaccine effectiveness", "confidence": 0.88},
+        {"name": "Treatment", "confidence": 0.7}
+      ],
+      "why_it_matters_en": "A phase 3 malaria vaccine milestone that helps connect current malaria surveillance with prevention evidence.",
+      "why_it_matters_zh": "疟疾疫苗 III 期试验里程碑，帮助将当前疟疾监测与预防证据连接起来。",
+      "summary": {
+        "en": {
+          "research_question": "What early phase 3 efficacy and safety findings were observed for RTS,S/AS01 in African children?",
+          "study_design": "Phase 3 vaccine trial.",
+          "population_setting": "African children enrolled in a multicountry trial network.",
+          "public_health_relevance": "Anchors malaria vaccine evidence for interpreting prevention-oriented literature.",
+          "gids_interpretation": "Use as a historical vaccine milestone, not as the full current evidence base."
+        },
+        "zh": {
+          "research_question": "RTS,S/AS01 在非洲儿童中的早期 III 期疗效和安全性结果如何？",
+          "study_design": "III 期疫苗试验。",
+          "population_setting": "多国试验网络中的非洲儿童。",
+          "public_health_relevance": "为理解疟疾预防文献中的疫苗证据提供锚点。",
+          "gids_interpretation": "适合作为历史疫苗里程碑，不代表完整的当前证据基础。"
+        }
+      }
+    },
+    {
+      "title": "Isolation of a novel coronavirus from a man with pneumonia in Saudi Arabia.",
+      "doi": "10.1056/NEJMoa1211721",
+      "pmid": "23075143",
+      "journal": "The New England journal of medicine",
+      "authors": ["Zaki AM", "van Boheemen S", "Bestebroer TM", "Osterhaus AD", "Fouchier RA"],
+      "published_at": "2012-11-08",
+      "publication_date_precision": "day",
+      "curated_at": "2026-08-14T00:00:00+00:00",
+      "study_type": "Journal article",
+      "discovery_score": 0.9,
+      "diseases": [{"disease_id": "D049", "confidence": 0.98}],
+      "countries": [{"code": "SA", "name_en": "Saudi Arabia", "confidence": 0.86}],
+      "topics": [
+        {"name": "Diagnostics", "confidence": 0.84},
+        {"name": "Genomic epidemiology", "confidence": 0.82},
+        {"name": "One Health", "confidence": 0.74}
+      ],
+      "why_it_matters_en": "The original MERS-CoV isolation record for linking later MERS surveillance to its pathogen-discovery context.",
+      "why_it_matters_zh": "MERS-CoV 原始分离文献，用于把后续 MERS 监测与病原发现背景连接起来。",
+      "summary": {
+        "en": {
+          "research_question": "What novel coronavirus was isolated from a severe pneumonia case in Saudi Arabia?",
+          "study_design": "Pathogen isolation and characterization study.",
+          "population_setting": "A pneumonia case in Saudi Arabia.",
+          "public_health_relevance": "Provides the historical pathogen-discovery anchor for MERS surveillance.",
+          "gids_interpretation": "Use as MERS baseline context for later outbreak and surveillance records."
+        },
+        "zh": {
+          "research_question": "从沙特阿拉伯一例重症肺炎病例中分离出了什么新型冠状病毒？",
+          "study_design": "病原分离与表征研究。",
+          "population_setting": "沙特阿拉伯肺炎病例。",
+          "public_health_relevance": "为 MERS 监测提供病原发现的历史锚点。",
+          "gids_interpretation": "适合作为后续 MERS 暴发和监测记录的基线背景。"
+        }
+      }
+    },
+    {
+      "title": "Human infection with a novel avian-origin influenza A (H7N9) virus.",
+      "doi": "10.1056/NEJMoa1304459",
+      "pmid": "23577628",
+      "journal": "The New England journal of medicine",
+      "authors": ["Gao R", "Cao B", "Hu Y", "Feng Z", "Wang D", "Hu W", "Chen J", "Jie Z"],
+      "published_at": "2013-05-16",
+      "publication_date_precision": "day",
+      "curated_at": "2026-08-14T00:00:00+00:00",
+      "study_type": "Outbreak investigation",
+      "discovery_score": 0.9,
+      "diseases": [
+        {"disease_id": "D015", "confidence": 0.98},
+        {"disease_id": "D038", "confidence": 0.84}
+      ],
+      "countries": [{"code": "CN", "name_en": "China", "name_zh": "中国", "confidence": 0.88}],
+      "topics": [
+        {"name": "Outbreak investigation", "confidence": 0.9},
+        {"name": "One Health", "confidence": 0.84},
+        {"name": "Diagnostics", "confidence": 0.8}
+      ],
+      "why_it_matters_en": "A first-wave H7N9 human infection report linking clinical detection, avian-origin risk, and China surveillance.",
+      "why_it_matters_zh": "H7N9 首批人感染报告，连接临床发现、禽源风险和中国监测背景。",
+      "summary": {
+        "en": {
+          "research_question": "What characterized early human infections with avian-origin influenza A(H7N9)?",
+          "study_design": "Outbreak and clinical investigation.",
+          "population_setting": "Human H7N9 cases in China.",
+          "public_health_relevance": "Anchors H7N9 as a zoonotic influenza surveillance concern.",
+          "gids_interpretation": "Use as historical baseline for H7N9 evidence and China-linked avian influenza collections."
+        },
+        "zh": {
+          "research_question": "早期人感染禽源 H7N9 流感有哪些特征？",
+          "study_design": "暴发与临床调查。",
+          "population_setting": "中国 H7N9 人感染病例。",
+          "public_health_relevance": "将 H7N9 作为人畜共患流感监测问题建立历史锚点。",
+          "gids_interpretation": "适合作为 H7N9 证据和中国相关禽流感集合的历史基线。"
+        }
+      }
+    },
+    {
+      "title": "Ebola virus disease in West Africa--the first 9 months of the epidemic and forward projections.",
+      "doi": "10.1056/NEJMoa1411100",
+      "pmid": "25244186",
+      "pmcid": "PMC4235004",
+      "journal": "The New England journal of medicine",
+      "authors": ["WHO Ebola Response Team", "Aylward B", "Barboza P", "Bawo L", "Bertherat E", "Bilivogui P", "Blake I", "Brennan R"],
+      "published_at": "2014-10-16",
+      "publication_date_precision": "day",
+      "curated_at": "2026-08-14T00:00:00+00:00",
+      "study_type": "Mathematical modelling",
+      "open_access_status": "open",
+      "discovery_score": 0.9,
+      "diseases": [{"disease_id": "D050", "confidence": 0.98}],
+      "countries": [
+        {"code": "GN", "name_en": "Guinea", "confidence": 0.86},
+        {"code": "LR", "name_en": "Liberia", "confidence": 0.86},
+        {"code": "SL", "name_en": "Sierra Leone", "confidence": 0.86}
+      ],
+      "topics": [
+        {"name": "Outbreak investigation", "confidence": 0.92},
+        {"name": "Transmission dynamics", "confidence": 0.9},
+        {"name": "Surveillance", "confidence": 0.86}
+      ],
+      "why_it_matters_en": "A central West Africa Ebola epidemic analysis connecting case surveillance with forward projections.",
+      "why_it_matters_zh": "西非埃博拉疫情核心分析，连接病例监测和前向预测。",
+      "summary": {
+        "en": {
+          "research_question": "What did the first nine months of the West Africa Ebola epidemic imply for future epidemic trajectory?",
+          "study_design": "Epidemic analysis with forward projections.",
+          "population_setting": "Guinea, Liberia, and Sierra Leone during the 2014 Ebola epidemic.",
+          "public_health_relevance": "Shows how surveillance data can support epidemic projection and response planning.",
+          "gids_interpretation": "Use as historical context for signal-to-literature links during Ebola events."
+        },
+        "zh": {
+          "research_question": "西非埃博拉疫情最初九个月对后续走势意味着什么？",
+          "study_design": "带前向预测的疫情分析。",
+          "population_setting": "2014 年埃博拉疫情期间的几内亚、利比里亚和塞拉利昂。",
+          "public_health_relevance": "展示监测数据如何支持疫情预测和响应规划。",
+          "gids_interpretation": "适合作为埃博拉事件中信号与文献关联的历史背景。"
+        }
+      }
+    },
+    {
+      "title": "Zika Virus and Birth Defects--Reviewing the Evidence for Causality.",
+      "doi": "10.1056/NEJMsr1604338",
+      "pmid": "27074377",
+      "journal": "The New England journal of medicine",
+      "authors": ["Rasmussen SA", "Jamieson DJ", "Honein MA", "Petersen LR"],
+      "published_at": "2016-05-19",
+      "publication_date_precision": "day",
+      "curated_at": "2026-08-14T00:00:00+00:00",
+      "study_type": "Journal article",
+      "discovery_score": 0.86,
+      "diseases": [{"disease_id": "D051", "confidence": 0.98}],
+      "countries": [],
+      "topics": [
+        {"name": "Surveillance", "confidence": 0.82},
+        {"name": "Health policy", "confidence": 0.78},
+        {"name": "Diagnostics", "confidence": 0.7}
+      ],
+      "why_it_matters_en": "A key causality review for Zika-associated birth defects and public-health decision making.",
+      "why_it_matters_zh": "关于寨卡相关出生缺陷因果性和公共卫生决策的重要综述。",
+      "summary": {
+        "en": {
+          "research_question": "How strong was the evidence that Zika virus infection could cause birth defects?",
+          "study_design": "Causality evidence review.",
+          "public_health_relevance": "Links surveillance signals, pregnancy outcomes, and public-health guidance during the Zika emergency.",
+          "gids_interpretation": "Use as historical context for congenital-outcome evidence around arboviral threats."
+        },
+        "zh": {
+          "research_question": "寨卡病毒感染导致出生缺陷的证据有多强？",
+          "study_design": "因果性证据综述。",
+          "public_health_relevance": "连接寨卡紧急事件中的监测信号、妊娠结局和公共卫生指导。",
+          "gids_interpretation": "适合作为虫媒病毒威胁相关先天结局证据的历史背景。"
+        }
+      }
+    },
+    {
+      "title": "Clinical features of patients infected with 2019 novel coronavirus in Wuhan, China.",
+      "doi": "10.1016/S0140-6736(20)30183-5",
+      "pmid": "31986264",
+      "pmcid": "PMC7159299",
+      "journal": "Lancet (London, England)",
+      "authors": ["Huang C", "Wang Y", "Li X", "Ren L", "Zhao J", "Hu Y", "Zhang L", "Fan G"],
+      "published_at": "2020-02-15",
+      "publication_date_precision": "day",
+      "curated_at": "2026-08-14T00:00:00+00:00",
+      "study_type": "Cohort study",
+      "open_access_status": "open",
+      "discovery_score": 0.9,
+      "diseases": [{"disease_id": "D004", "confidence": 0.98}],
+      "countries": [{"code": "CN", "name_en": "China", "name_zh": "中国", "confidence": 0.9}],
+      "topics": [
+        {"name": "Outbreak investigation", "confidence": 0.88},
+        {"name": "Diagnostics", "confidence": 0.8},
+        {"name": "Treatment", "confidence": 0.7}
+      ],
+      "why_it_matters_en": "An early clinical cohort paper from Wuhan that anchors COVID-19 clinical surveillance history.",
+      "why_it_matters_zh": "武汉早期临床队列论文，为 COVID-19 临床监测史提供锚点。",
+      "summary": {
+        "en": {
+          "research_question": "What clinical features were observed among early 2019 novel coronavirus patients in Wuhan?",
+          "study_design": "Early clinical cohort study.",
+          "population_setting": "Hospitalized patients in Wuhan, China.",
+          "public_health_relevance": "Provides historical clinical context for COVID-19 case recognition and severity monitoring.",
+          "gids_interpretation": "Use as early-pandemic baseline context, not as a current clinical profile."
+        },
+        "zh": {
+          "research_question": "武汉早期 2019 新型冠状病毒患者有哪些临床特征？",
+          "study_design": "早期临床队列研究。",
+          "population_setting": "中国武汉住院患者。",
+          "public_health_relevance": "为 COVID-19 病例识别和严重程度监测提供早期临床背景。",
+          "gids_interpretation": "适合作为疫情早期基线背景，不代表当前临床画像。"
+        }
+      }
+    },
+    {
+      "title": "A pneumonia outbreak associated with a new coronavirus of probable bat origin.",
+      "doi": "10.1038/s41586-020-2012-7",
+      "pmid": "32015507",
+      "pmcid": "PMC7095418",
+      "journal": "Nature",
+      "authors": ["Zhou P", "Yang XL", "Wang XG", "Hu B", "Zhang L", "Zhang W", "Si HR", "Zhu Y"],
+      "published_at": "2020-02-03",
+      "publication_date_precision": "day",
+      "curated_at": "2026-08-14T00:00:00+00:00",
+      "study_type": "Genomic study",
+      "open_access_status": "open",
+      "discovery_score": 0.9,
+      "diseases": [{"disease_id": "D004", "confidence": 0.98}],
+      "countries": [{"code": "CN", "name_en": "China", "name_zh": "中国", "confidence": 0.88}],
+      "topics": [
+        {"name": "Genomic epidemiology", "confidence": 0.94},
+        {"name": "One Health", "confidence": 0.82},
+        {"name": "Diagnostics", "confidence": 0.78}
+      ],
+      "why_it_matters_en": "An early SARS-CoV-2 genomic characterization paper connecting COVID-19 detection with zoonotic-origin investigation.",
+      "why_it_matters_zh": "早期 SARS-CoV-2 基因组表征论文，连接 COVID-19 发现与动物源调查。",
+      "summary": {
+        "en": {
+          "research_question": "What coronavirus was associated with the early pneumonia outbreak and what origin clues were identified?",
+          "study_design": "Genomic and virologic characterization study.",
+          "population_setting": "Early pneumonia outbreak investigation in China.",
+          "public_health_relevance": "Anchors COVID-19 genomic surveillance and source-investigation literature.",
+          "gids_interpretation": "Use as early-pandemic genomic baseline in COVID-19 evidence collections."
+        },
+        "zh": {
+          "research_question": "早期肺炎暴发与哪种冠状病毒相关，研究发现了哪些来源线索？",
+          "study_design": "基因组与病毒学表征研究。",
+          "population_setting": "中国早期肺炎暴发调查。",
+          "public_health_relevance": "为 COVID-19 基因组监测和来源调查文献提供锚点。",
+          "gids_interpretation": "适合作为 COVID-19 证据集合中的疫情早期基因组基线。"
+        }
+      }
+    }
+  ]
+}

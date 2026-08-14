@@ -99,6 +99,63 @@ test('renders absolute XML URLs and escapes XML-sensitive characters', () => {
   assert.match(xml, /<loc>https:\/\/example\.com\/diseases\/a&amp;b\/<\/loc>/);
 });
 
+test('publishes latest, methodology, weekly and monthly situation URLs only after the switch', () => {
+  const base = {
+    meta: { generated_at: '2026-08-13T00:00:00Z', countries: [] },
+    diseases: [], reports: [], loadReport: () => null,
+  };
+  const hidden = buildSitemapEntries({
+    ...base,
+    situation: { latest: { public_enabled: false, content_updated_at: '2026-08-13T02:00:00Z' } },
+  });
+  assert.equal(hidden.some(entry => entry.path.startsWith('/situation/')), false);
+
+  const visible = buildSitemapEntries({
+    ...base,
+    situation: {
+      latest: { public_enabled: true, content_updated_at: '2026-08-13T02:00:00Z' },
+      weeks: [{ period_key: '2026-W33', content_updated_at: '2026-08-13T02:00:00Z' }],
+      months: [{ period_key: '2026-08', content_updated_at: '2026-08-13T02:00:00Z' }],
+    },
+  });
+  const paths = new Set(visible.map(entry => entry.path));
+  for (const path of ['/situation/', '/situation/methodology/', '/situation/2026-W33/', '/situation/2026-08/']) {
+    assert.equal(paths.has(path), true);
+    assert.equal(paths.has(`/zh${path}`), true);
+  }
+  assert.equal(visible.find(entry => entry.path === '/situation/2026-08/')?.lastmod, '2026-08-13T02:00:00.000Z');
+});
+
+test('publishes Research Radar articles, collections, weekly briefs, and RSS', () => {
+  const entries = buildSitemapEntries({
+    meta: { generated_at: '2026-08-13T00:00:00Z', countries: [] },
+    diseases: [],
+    reports: [],
+    loadReport: () => null,
+    research: {
+      last_updated: '2026-08-13T01:00:00Z',
+      articles: [{ slug: 'dengue-study', updated_at: '2026-08-12T00:00:00Z' }],
+      facets: {
+        diseases: [{ slug: 'dengue' }],
+        countries: [{ slug: 'br' }],
+        topics: [{ slug: 'vaccination' }],
+        weeks: [{ week: '2026-W33' }, { week: 'bad-week' }],
+      },
+    },
+  });
+  const paths = new Set(entries.map(entry => entry.path));
+  for (const path of [
+    '/research/',
+    '/research/rss.xml',
+    '/research/articles/dengue-study/',
+    '/research/diseases/dengue/',
+    '/research/countries/br/',
+    '/research/topics/vaccination/',
+    '/research/weekly/2026-W33/',
+  ]) assert.equal(paths.has(path), true);
+  assert.equal(paths.has('/research/weekly/bad-week/'), false);
+});
+
 test('current generated data matches the Astro static-route intent', () => {
   const dataDirectory = fileURLToPath(new URL('../data/', import.meta.url));
   const readJson = (relativePath: string): any => JSON.parse(

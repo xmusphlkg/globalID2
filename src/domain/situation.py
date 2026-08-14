@@ -44,24 +44,30 @@ class PublicHealthEvent(BaseModel):
 
 
 class SituationSnapshot(BaseModel):
-    """A versioned public payload; weekly rows are immutable archives."""
+    """A revision-aware daily, weekly, or monthly public payload."""
 
     __tablename__ = "situation_snapshots"
 
     snapshot_id: Mapped[str] = mapped_column(String(120), nullable=False, unique=True)
     snapshot_kind: Mapped[str] = mapped_column(String(20), nullable=False, default="daily")
-    iso_week: Mapped[str] = mapped_column(String(12), nullable=False)
+    period_key: Mapped[str] = mapped_column(String(20), nullable=False)
+    iso_week: Mapped[Optional[str]] = mapped_column(String(12))
     generated_at: Mapped[str] = mapped_column(String(40), nullable=False)
+    checked_at: Mapped[str] = mapped_column(String(40), nullable=False)
+    content_updated_at: Mapped[str] = mapped_column(String(40), nullable=False)
     data_through: Mapped[Optional[str]] = mapped_column(String(40))
     method_version: Mapped[str] = mapped_column(String(80), nullable=False)
     input_hash: Mapped[str] = mapped_column(String(128), nullable=False)
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="published")
+    quality_gate_status: Mapped[str] = mapped_column(String(30), nullable=False, default="pending")
+    quality_gate = mapped_column(JSON, nullable=False, default=dict)
     revision: Mapped[int] = mapped_column(nullable=False, default=1)
     supersedes_snapshot_id: Mapped[Optional[str]] = mapped_column(String(120))
     payload = mapped_column(JSON, nullable=False, default=dict)
 
     __table_args__ = (
-        Index("idx_situation_snapshot_kind_week", "snapshot_kind", "iso_week"),
+        Index("idx_situation_snapshot_kind_period", "snapshot_kind", "period_key"),
+        Index("uq_situation_snapshot_period_revision", "snapshot_kind", "period_key", "revision", unique=True),
         Index("idx_situation_snapshot_status_created", "status", "created_at"),
     )
 

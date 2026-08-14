@@ -1,0 +1,2 @@
+disease_id,local_name,local_code,category,aliases,notes,data_source,source_id,series_id,mapping_scope,target_kind,target_code,mapping_relation,comparability,projection_policy,aggregation_policy,definition_version
+D006,病毒性肝炎,病毒性肝炎,National monthly,肝炎|Hepatitis|Viral hepatitis,China CDC source-reported viral hepatitis aggregate; retain the reported total and never derive it by summing subtype series,China CDC,SRC_CN_CDC,SER_CN_VIRAL_HEPATITIS,source_category_dimension,concept,D006,exact,conditional,canonical,reported_total,*

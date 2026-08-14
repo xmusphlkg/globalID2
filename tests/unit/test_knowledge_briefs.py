@@ -2,6 +2,7 @@ import asyncio
 import hashlib
 import json
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
@@ -14,7 +15,15 @@ if str(ROOT) not in sys.path:
 
 from src.core.config import AISettings
 from src.generation.report_v4.composer import compose_report_document
-from src.knowledge.evidence import build_evidence_manifest
+from src.knowledge.evidence import (
+    MAX_EVIDENCE_MANIFEST_CHARACTERS,
+    build_evidence_manifest,
+    prepare_evidence_packet,
+)
+from src.knowledge.citations import (
+    normalize_knowledge_citations,
+    validate_knowledge_citations,
+)
 from src.knowledge.catalogue import (
     LEGACY_CATALOGUE_BRIEF_TIER,
     public_disease_page_exclusion_reason,
@@ -32,12 +41,15 @@ from src.knowledge.quality import (
     assess_knowledge_brief,
     assess_knowledge_evidence,
     assess_knowledge_field,
+    EVIDENCE_POLICY_VERSION,
     has_grounding_content,
+    KNOWLEDGE_SCHEMA_VERSION,
     strip_unavailable_knowledge_sentences,
 )
 from src.knowledge.sources import DiseaseKnowledgeFetcher, SourceCandidate
 from src.services.disease_knowledge_service import (
     DiseaseKnowledgeUpdateService,
+    KNOWLEDGE_PIPELINE_VERSION,
     _generated_profile_failures,
     _merge_repair_payload,
     _profile_repair_sections,
@@ -66,6 +78,50 @@ def test_fetcher_deduplicates_by_disease_source_and_url() -> None:
     )
 
     assert DiseaseKnowledgeFetcher._dedupe([first, duplicate]) == [first]
+
+
+def test_source_adapters_run_in_parallel_and_report_duration() -> None:
+    fetcher = DiseaseKnowledgeFetcher(
+        min_interval_seconds=0,
+        source_hints_path=None,
+    )
+
+    def authority_source(_disease):
+        time.sleep(0.2)
+        return [
+            SourceCandidate(
+                disease_id="ANY",
+                source_type="who",
+                source_name="WHO",
+                url="https://www.who.int/example",
+                status="active",
+                review_status="approved",
+                content_text=(
+                    "This authoritative disease profile describes infection, clinical illness, "
+                    "transmission, epidemiology, prevention and surveillance. " * 12
+                ),
+                metadata={"relevance_score": 1.0},
+            )
+        ]
+
+    def empty_scholarly_source(_disease):
+        time.sleep(0.2)
+        return []
+
+    fetcher._fetch_who_pages = authority_source  # type: ignore[method-assign]
+    fetcher._fetch_pubmed = empty_scholarly_source  # type: ignore[method-assign]
+    started_at = time.monotonic()
+    report = fetcher.fetch_with_report(
+        {"disease_id": "ANY", "name_en": "Example infection"},
+        enabled_sources=["who", "pubmed"],
+        target_sections=["brief", "prevention"],
+    )
+    elapsed = time.monotonic() - started_at
+
+    assert elapsed < 0.35
+    assert report.adapter_outcomes == {"who": "success", "pubmed": "success_empty"}
+    assert report.adapter_durations["who"] >= 0.19
+    assert report.adapter_durations["pubmed"] >= 0.19
 
 
 def test_fetcher_caches_repeated_get_requests() -> None:
@@ -104,6 +160,13 @@ def test_cre_knowledge_uses_ontology_aliases_and_reviewed_source_hints() -> None
         "US CDC",
         "World Health Organization",
     }
+
+
+def test_registry_codes_do_not_pollute_public_knowledge_query_aliases() -> None:
+    disease = DiseaseKnowledgeUpdateService()._find_disease("D230")
+
+    assert "HIVE" not in disease["query_aliases"]
+    assert "Crianca exposta ao HIV" in disease["query_aliases"]
 
 
 def test_cre_reviewed_source_summaries_survive_remote_fetch_failure() -> None:
@@ -289,7 +352,66 @@ def test_ai_brief_user_prompt_uses_shared_manifest_as_only_content_boundary() ->
     assert '"evidence_manifest"' in prompt
     assert '"supported_sections"' in prompt
     assert '"content_sections"' not in prompt
-    assert '"resolved_url"' in prompt
+    assert '"resolved_url"' not in prompt
+    assert '"source_id"' not in prompt
+
+
+def test_ai_prompt_is_stable_across_database_source_id_changes() -> None:
+    disease = {"disease_id": "ANY", "name_en": "Example infection"}
+    source = {
+        "id": 10,
+        "source_type": "who",
+        "source_name": "WHO",
+        "title": "Example infection",
+        "url": "https://www.who.int/example",
+        "content_text": (
+            "This infection has clinical, epidemiologic, transmission and prevention evidence. " * 6
+        ),
+    }
+
+    first = AIDiseaseBriefGenerator._user_prompt(
+        disease=disease,
+        sources=[source],
+        language="en",
+    )
+    second = AIDiseaseBriefGenerator._user_prompt(
+        disease=disease,
+        sources=[{**source, "id": 9999, "source_id": 9999}],
+        language="en",
+    )
+
+    assert first == second
+    assert len(first) < 5_000
+
+    chinese = AIDiseaseBriefGenerator._user_prompt(
+        disease=disease,
+        sources=[source],
+        language="zh",
+    )
+    assert AIDiseaseBriefGenerator._system_prompt("en") == (
+        AIDiseaseBriefGenerator._system_prompt("zh")
+    )
+    assert first.rsplit('"output_language":', 1)[0] == chinese.rsplit(
+        '"output_language":', 1
+    )[0]
+
+    partial_budget = AIDiseaseBriefGenerator._output_token_budget(
+        ["brief", "prevention"]
+    )
+    full_budget = AIDiseaseBriefGenerator._output_token_budget(
+        [
+            "brief",
+            "definition",
+            "clinical_features",
+            "epidemiology",
+            "transmission",
+            "prevention",
+            "surveillance_note",
+            "risk_groups",
+        ]
+    )
+    assert 800 <= partial_budget < full_budget
+    assert full_budget <= AISettings().knowledge_max_output_tokens
 
 
 def test_ai_brief_prompt_requires_null_for_unsupported_fields() -> None:
@@ -331,6 +453,249 @@ def test_ai_generator_does_not_create_content_fallback_without_evidence() -> Non
         assert result["payload"][field] is None
 
 
+def test_ai_generator_repairs_invalid_section_citations_once() -> None:
+    class RepairingAgent:
+        def __init__(self) -> None:
+            self.calls = 0
+            self.latest = {}
+
+        def clear_conversation_history(self) -> None:
+            self.latest = {}
+
+        async def complete(self, **_kwargs) -> str:
+            self.calls += 1
+            self.latest = {
+                "model": "test-model",
+                "provider": "test-provider",
+                "tokens": {"total": 10},
+                "duration": 0.01,
+                "metadata": {"cache_hit": False},
+            }
+            if self.calls == 1:
+                return json.dumps(
+                    {
+                        "brief": "A substantive evidence-grounded overview of this infection [1].",
+                        "definition": None,
+                        "clinical_features": None,
+                        "epidemiology": None,
+                        "transmission": None,
+                        "prevention": "A substantive prevention paragraph with an invalid citation [2].",
+                        "surveillance_note": None,
+                        "risk_groups": None,
+                    }
+                )
+            return json.dumps(
+                {
+                    "brief": "A substantive evidence-grounded overview of this infection [1].",
+                    "definition": None,
+                    "clinical_features": None,
+                    "epidemiology": None,
+                    "transmission": None,
+                    "prevention": "Vaccination and hygiene are supported prevention measures [1].",
+                    "surveillance_note": None,
+                    "risk_groups": None,
+                }
+            )
+
+        def get_latest_conversation(self) -> dict:
+            return self.latest
+
+    disease = attach_profile_schema(
+        {
+            "disease_id": "ANY",
+            "name_en": "Example infection",
+            "target_sections": ["brief", "prevention"],
+            "evidence_target_sections": ["brief", "prevention"],
+            "_evidence_packet_prepared": True,
+        }
+    )
+    source = {
+        "id": 10,
+        "source_type": "who",
+        "source_name": "WHO",
+        "url": "https://example.org/source",
+        "status": "active",
+        "review_status": "approved",
+        "content_text": (
+            "Prevention and control include vaccination and hygiene measures. "
+            "This infection is addressed through public-health prevention programmes."
+        ),
+        "metadata": {"relevance_score": 1.0},
+    }
+    agent = RepairingAgent()
+
+    result = asyncio.run(
+        AIDiseaseBriefGenerator(agent=agent).generate_with_trace(
+            disease=disease,
+            sources=[source],
+            language="en",
+        )
+    )
+
+    assert agent.calls == 2
+    assert result["payload"]["metadata"]["citation_repair"]["attempted"] is True
+    assert result["payload"]["metadata"]["citation_repair"]["final_failures"] == []
+    assert result["payload"]["prevention"].endswith("[1].")
+
+
+def test_ai_generator_evicts_completions_when_citation_repair_is_rejected() -> None:
+    class RejectedRepairAgent:
+        def __init__(self) -> None:
+            self.calls = 0
+            self.latest = {}
+            self.invalidated = []
+
+        def clear_conversation_history(self) -> None:
+            self.latest = {}
+
+        async def complete(self, **_kwargs) -> str:
+            self.calls += 1
+            self.latest = {
+                "model": "test-model",
+                "provider": "test-provider",
+                "tokens": {"total": 10},
+                "metadata": {"cache_hit": False},
+            }
+            return json.dumps(
+                {
+                    "brief": "A substantive evidence-grounded overview [2].",
+                    "definition": None,
+                    "clinical_features": None,
+                    "epidemiology": None,
+                    "transmission": None,
+                    "prevention": "An unsupported prevention claim [2].",
+                    "surveillance_note": None,
+                    "risk_groups": None,
+                }
+            )
+
+        def get_latest_conversation(self) -> dict:
+            return self.latest
+
+        async def invalidate_completion_cache(self, **kwargs) -> bool:
+            self.invalidated.append(kwargs)
+            return True
+
+    disease = attach_profile_schema(
+        {
+            "disease_id": "ANY",
+            "name_en": "Example infection",
+            "target_sections": ["brief", "prevention"],
+            "evidence_target_sections": ["brief", "prevention"],
+            "_evidence_packet_prepared": True,
+        }
+    )
+    source = {
+        "id": 10,
+        "source_type": "who",
+        "source_name": "WHO",
+        "url": "https://example.org/source",
+        "status": "active",
+        "review_status": "approved",
+        "content_text": "A general source-grounded overview without prevention detail. " * 4,
+        "metadata": {"relevance_score": 1.0},
+    }
+    agent = RejectedRepairAgent()
+
+    result = asyncio.run(
+        AIDiseaseBriefGenerator(agent=agent).generate_with_trace(
+            disease=disease,
+            sources=[source],
+            language="en",
+        )
+    )
+
+    assert agent.calls == 2
+    assert result["payload"]["status"] == "requires_review"
+    assert result["payload"]["metadata"]["citation_repair"]["fallback_fields"] == [
+        "brief",
+        "prevention",
+    ]
+    assert len(agent.invalidated) == 2
+
+
+def test_ai_generator_uses_one_compact_retry_for_invalid_json() -> None:
+    class FormattingAgent:
+        def __init__(self) -> None:
+            self.calls = 0
+            self.history = []
+
+        def clear_conversation_history(self) -> None:
+            self.history = []
+
+        async def complete(self, **kwargs) -> str:
+            self.calls += 1
+            response = (
+                "brief: malformed response"
+                if self.calls == 1
+                else json.dumps(
+                    {
+                        "brief": "A substantive source-grounded overview of this infection [1].",
+                        "definition": None,
+                        "clinical_features": None,
+                        "epidemiology": None,
+                        "transmission": None,
+                        "prevention": "Vaccination and hygiene are supported prevention measures [1].",
+                        "surveillance_note": None,
+                        "risk_groups": None,
+                    }
+                )
+            )
+            self.history.append(
+                {
+                    "model": "test-model",
+                    "provider": "test-provider",
+                    "tokens": {"prompt": 5, "completion": 5, "total": 10},
+                    "duration": 0.01,
+                    "metadata": {"cache_hit": False},
+                    "prompt": kwargs["prompt"],
+                    "response": response,
+                }
+            )
+            return response
+
+        def get_latest_conversation(self) -> dict:
+            return self.history[-1]
+
+        def get_conversation_history(self) -> list[dict]:
+            return list(self.history)
+
+    disease = attach_profile_schema(
+        {
+            "disease_id": "ANY",
+            "name_en": "Example infection",
+            "target_sections": ["brief", "prevention"],
+            "evidence_target_sections": ["brief", "prevention"],
+            "_evidence_packet_prepared": True,
+        }
+    )
+    source = {
+        "id": 10,
+        "source_type": "who",
+        "source_name": "WHO",
+        "url": "https://example.org/source",
+        "status": "active",
+        "review_status": "approved",
+        "content_text": "Prevention and control include vaccination and hygiene measures. " * 4,
+        "metadata": {"relevance_score": 1.0},
+    }
+    agent = FormattingAgent()
+
+    result = asyncio.run(
+        AIDiseaseBriefGenerator(agent=agent).generate_with_trace(
+            disease=disease,
+            sources=[source],
+            language="en",
+        )
+    )
+
+    assert agent.calls == 2
+    assert result["trace"]["format_repair_attempted"] is True
+    assert result["trace"]["citation_repair_attempted"] is False
+    assert result["trace"]["interaction_metrics"]["token_usage"]["total"] == 20
+    assert len(result["trace"]["format_repair_prompt"]) < len(result["trace"]["prompt"])
+
+
 def test_quality_gate_rejects_metadata_and_absence_prose() -> None:
     payload = {
         "language": "en",
@@ -358,7 +723,7 @@ def test_quality_gate_rejects_metadata_and_absence_prose() -> None:
     assert cleaned["status"] == "requires_review"
     assert cleaned["definition"] is None
     assert cleaned["clinical_features"] is None
-    assert cleaned["metadata"]["knowledge_schema_version"] == 3
+    assert cleaned["metadata"]["knowledge_schema_version"] == KNOWLEDGE_SCHEMA_VERSION
 
 
 def test_quality_cleanup_keeps_supported_sentence_and_removes_dominant_limitations() -> None:
@@ -465,6 +830,103 @@ def test_evidence_gate_rejects_low_relevance_historical_sources() -> None:
     assert assessment.grounded_source_count == 0
 
 
+def test_evidence_gate_does_not_count_overlapping_storage_views_three_times() -> None:
+    text = "Authoritative disease facts covering definition and prevention. " * 7
+    source = {
+        "source_type": "who",
+        "status": "active",
+        "review_status": "approved",
+        "url": "https://www.who.int/example",
+        "content_text": text,
+        "raw_excerpt": text,
+        "content_sections": [{"heading": "Overview", "text": text}],
+    }
+
+    assessment = assess_knowledge_evidence([source])
+
+    assert assessment.content_characters == len(text.strip())
+    assert assessment.sufficient is False
+
+
+def test_evidence_manifest_budget_is_balanced_and_id_stable() -> None:
+    schema = resolve_knowledge_profile_schema({"name_en": "Example infection"})
+    sources = []
+    for index in range(1, 9):
+        sources.append(
+            {
+                "id": index,
+                "content_text": (
+                    f"Source {index} definition, symptoms, epidemiology, transmission, prevention, "
+                    "surveillance and risk population evidence. " * 24
+                ),
+                "content_sections": [
+                    {
+                        "heading": f"Prevention {section_index}",
+                        "text": (
+                            f"Source {index} unique prevention and surveillance section {section_index}. "
+                            * 35
+                        ),
+                    }
+                    for section_index in range(4)
+                ],
+            }
+        )
+    targets = ["brief", *schema.applicable_fields]
+
+    manifest = build_evidence_manifest(
+        sources,
+        schema,
+        target_sections=targets,
+    )
+    changed_ids = build_evidence_manifest(
+        [{**source, "id": source["id"] + 10_000} for source in sources],
+        schema,
+        target_sections=targets,
+    )
+
+    assert sum(len(fragment.text) for fragment in manifest.fragments) <= (
+        MAX_EVIDENCE_MANIFEST_CHARACTERS
+    )
+    assert {fragment.citation_ref for fragment in manifest.fragments} == set(range(1, 9))
+    assert manifest.manifest_id == changed_ids.manifest_id
+
+
+def test_evidence_packet_deduplicates_canonical_pages_and_preserves_authority() -> None:
+    disease = attach_profile_schema({"disease_id": "ANY", "name_en": "Example infection"})
+    schema = resolve_knowledge_profile_schema(disease)
+    content = "Definition, clinical features, epidemiology, transmission, prevention, surveillance and risk groups. " * 12
+    sources = [
+        {
+            "id": 1,
+            "source_type": "web_search",
+            "status": "active",
+            "review_status": "approved",
+            "url": "https://www.who.int/fact/example?utm_source=search",
+            "resolved_url": "https://www.who.int/fact/example",
+            "content_text": content,
+            "metadata": {"relevance_score": 0.9},
+        },
+        {
+            "id": 2,
+            "source_type": "who",
+            "status": "active",
+            "review_status": "approved",
+            "url": "https://www.who.int/fact/example",
+            "content_text": content,
+            "metadata": {"relevance_score": 1.0},
+        },
+    ]
+
+    packet = prepare_evidence_packet(
+        sources,
+        schema,
+        target_sections=["brief", *schema.required_fields],
+    )
+
+    assert [source["id"] for source in packet.sources] == [2]
+    assert packet.assessment.grounded_source_count == 1
+
+
 def test_profile_schema_resolution_is_entity_semantic_not_disease_id_specific() -> None:
     assert resolve_knowledge_profile_schema(
         {"disease_id": "ANY", "name_en": "Unspecified viral condition"}
@@ -499,7 +961,25 @@ def test_profile_schema_resolution_is_entity_semantic_not_disease_id_specific() 
         {"disease_id": "ANY", "name_en": "Foodborne disease outbreak", "category": "Bacterial"}
     ).profile_type == "outbreak_event"
     assert resolve_knowledge_profile_schema(
+        {
+            "disease_id": "ANY",
+            "name_en": "Child exposed to HIV",
+            "description": "Perinatal HIV exposure notification; not an infection diagnosis",
+        }
+    ).profile_type == "surveillance_event"
+    assert resolve_knowledge_profile_schema(
+        {
+            "disease_id": "ANY",
+            "name_en": "MRSA surveillance",
+            "category": "Bacterial",
+            "description": "Source-defined surveillance reports that may include colonization",
+        }
+    ).profile_type == "surveillance_event"
+    assert resolve_knowledge_profile_schema(
         {"disease_id": "ANY", "name_en": "Exanthematous diseases", "description": "Aggregate national surveillance concept"}
+    ).profile_type == "classification_scope"
+    assert resolve_knowledge_profile_schema(
+        {"disease_id": "ANY", "name_en": "Meningitis (all reported etiologies)"}
     ).profile_type == "classification_scope"
 
 
@@ -573,7 +1053,12 @@ def test_repair_planner_targets_required_gaps_and_preserves_citation_identity() 
         risk_groups="Existing risk groups remain source grounded [1].",
         source_ids=[101],
         source_attribution=[{"source_id": 101, "citation_index": 1, "url": "https://example.org/old"}],
-        metadata_={},
+        metadata_={
+            "pipeline_version": KNOWLEDGE_PIPELINE_VERSION,
+            "knowledge_schema_version": KNOWLEDGE_SCHEMA_VERSION,
+            "evidence_policy_version": EVIDENCE_POLICY_VERSION,
+            "citation_version": 2,
+        },
     )
     zh_existing = SimpleNamespace(
         **{
@@ -617,6 +1102,42 @@ def test_repair_planner_targets_required_gaps_and_preserves_citation_identity() 
     assert merged["status"] == "published"
 
 
+def test_repair_planner_invalidates_profiles_from_old_pipeline_versions() -> None:
+    disease = attach_profile_schema({"disease_id": "ANY", "name_en": "Example infection"})
+    complete = SimpleNamespace(
+        language="en",
+        brief="Existing overview [1].",
+        definition="Existing definition remains source grounded [1].",
+        clinical_features="Existing clinical features remain source grounded [1].",
+        epidemiology="Existing epidemiology remains source grounded [1].",
+        transmission="Existing transmission remains source grounded [1].",
+        prevention="Existing prevention remains source grounded [1].",
+        surveillance_note="Existing surveillance interpretation remains source grounded [1].",
+        risk_groups="Existing risk groups remain source grounded [1].",
+        source_ids=[101],
+        source_attribution=[{"source_id": 101, "citation_index": 1}],
+        metadata_={"pipeline_version": 1},
+    )
+    zh_complete = SimpleNamespace(
+        **{
+            **vars(complete),
+            "language": "zh",
+            "brief": "现有疾病概述具有来源支持[1]。",
+        }
+    )
+
+    targets = _profile_repair_sections_by_language(
+        [complete, zh_complete], disease
+    )
+
+    expected = [
+        "brief",
+        *disease["profile_schema"]["required_fields"],
+        *disease["profile_schema"]["optional_fields"],
+    ]
+    assert targets == {"en": expected, "zh": expected}
+
+
 def test_ontology_context_exposes_scoped_parent_for_course_variant() -> None:
     disease = DiseaseKnowledgeUpdateService()._find_disease("D208")
     related = disease["ontology_context"]["related_entities"]
@@ -638,6 +1159,45 @@ def test_numbered_pathogen_aliases_are_generic_and_pubmed_excludes_non_latin_ter
     assert "Enterovirus 68" in candidates
     assert "EV68" in candidates
     assert "EV-68" in candidates
+
+    exposure_candidates = fetcher._query_candidates(
+        {"disease_id": "DTEST", "name_en": "Child exposed to HIV"}
+    )
+    assert "HIV-exposed Child" in exposure_candidates
+
+    pubmed_candidates = fetcher._pubmed_query_candidates(
+        {
+            "disease_id": "DTEST",
+            "name_en": "Child exposed to HIV",
+            "name_zh": "儿童HIV暴露",
+            "description": "A long catalogue boundary that must not become a PubMed term",
+        }
+    )
+    assert "HIV-exposed Child" in pubmed_candidates
+    assert "儿童HIV暴露" not in pubmed_candidates
+    assert not any("catalogue boundary" in item for item in pubmed_candidates)
+    assert fetcher._relevance_score(
+        pubmed_candidates,
+        "",
+        "The HIV-exposed, uninfected African child",
+        "",
+    ) >= 0.5
+    assert fetcher._relevance_score(
+        pubmed_candidates,
+        "",
+        "Canadian guideline on HIV postexposure prophylaxis",
+        "Adult prevention recommendations",
+    ) < 0.5
+
+    assert "HTLV-1" in fetcher._query_candidates(
+        {"disease_id": "DTEST", "name_en": "Human T-lymphotropic virus 1 or 2 infection"}
+    )
+    assert "penicillin-resistant Streptococcus pneumoniae" in fetcher._query_candidates(
+        {
+            "disease_id": "DTEST",
+            "name_en": "Penicillin-non-susceptible/resistant pneumococcal surveillance",
+        }
+    )
     assert "Enterovirus A68" not in candidates
     search_terms = fetcher._pubmed_search_terms(candidates)
     assert search_terms
@@ -660,6 +1220,109 @@ def test_generation_completion_gate_rejects_failed_or_missing_language() -> None
     assert any("generator error" in failure for failure in failures)
     assert any("status is not published" in failure for failure in failures)
     assert any("zh: profile was not generated" == failure for failure in failures)
+
+
+def test_generation_completion_gate_requires_non_null_brief() -> None:
+    disease = attach_profile_schema({"disease_id": "ANY", "name_en": "Example infection"})
+    payload = {
+        "disease_id": "ANY",
+        "language": "en",
+        "status": "published",
+        "brief": None,
+        "source_ids": [1],
+        "source_attribution": [{"source_id": 1, "citation_index": 1}],
+        "metadata": {"profile_schema": disease["profile_schema"]},
+    }
+    for field in disease["profile_schema"]["required_fields"]:
+        payload[field] = f"Substantive source-grounded {field} content [1]."
+    zh_payload = {
+        **payload,
+        "language": "zh",
+        **{
+            field: "这是具有来源支持且内容充分的字段说明[1]。"
+            for field in disease["profile_schema"]["required_fields"]
+        },
+    }
+
+    failures = _generated_profile_failures(
+        [
+            {"payload": payload, "trace": {"error": None}},
+            {"payload": zh_payload, "trace": {"error": None}},
+        ]
+    )
+
+    assert "en: substantive brief is required" in failures
+    assert "zh: substantive brief is required" in failures
+
+
+def test_generation_completion_gate_accepts_grounded_bilingual_partial_profiles() -> None:
+    disease = attach_profile_schema({"disease_id": "ANY", "name_en": "Example infection"})
+    shared = {
+        "disease_id": "ANY",
+        "status": "published",
+        "source_ids": [1],
+        "source_attribution": [
+            {"source_id": 1, "citation_index": 1, "url": "https://example.org/source"}
+        ],
+        "metadata": {
+            "profile_schema": disease["profile_schema"],
+            "citation_validation": {"failures": []},
+        },
+    }
+    en_payload = {
+        **shared,
+        "language": "en",
+        "brief": "This is a substantive source-grounded overview of the condition [1].",
+        "definition": "This is a substantive source-grounded definition of the condition [1].",
+    }
+    zh_payload = {
+        **shared,
+        "language": "zh",
+        "brief": "这是对该疾病具有实质内容且可追溯来源的概述[1]。",
+        "definition": "这是对该疾病具有实质内容且可追溯来源的定义[1]。",
+    }
+
+    assert assess_knowledge_brief(en_payload, "en").display_mode == "partial"
+    assert assess_knowledge_brief(zh_payload, "zh").display_mode == "partial"
+    assert _generated_profile_failures(
+        [
+            {"payload": en_payload, "trace": {"error": None}},
+            {"payload": zh_payload, "trace": {"error": None}},
+        ]
+    ) == []
+
+
+def test_citation_validation_requires_inline_and_section_supported_sources() -> None:
+    payload = normalize_knowledge_citations(
+        {
+            "brief": "Grounded overview [1].",
+            "transmission": "Unsupported transmission claim [1].",
+            "prevention": "Prevention claim without a marker.",
+            "source_attribution": [
+                {"source_id": 10, "citation_index": 1, "url": "https://example.org"}
+            ],
+            "metadata": {
+                "evidence_manifest": {
+                    "fragments": [
+                        {
+                            "source_id": 10,
+                            "supported_sections": ["brief", "definition"],
+                        }
+                    ]
+                }
+            },
+        },
+        marker_mode="position",
+        prune_uncited_sources=True,
+    )
+
+    failures = validate_knowledge_citations(
+        payload,
+        fields=["brief", "transmission", "prevention"],
+    )
+
+    assert "transmission: citation [1] does not support this section" in failures
+    assert "prevention: missing inline citation" in failures
 
 
 def test_site_disease_knowledge_fields_inject_bilingual_brief_and_sources() -> None:

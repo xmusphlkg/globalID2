@@ -171,6 +171,47 @@ export interface AutomationTriggerResult {
   reason?: string | null;
 }
 
+export interface SituationSourceAdapter {
+  source_id: string;
+  health_key: string;
+  label: string;
+  source_kind: "official_event" | "respiratory_metric";
+  transport: string;
+  url: string;
+  stale_policy_hours: number;
+  automatic_publication: boolean;
+  analysis_source_system?: string | null;
+  contract: string[];
+  health: { status?: string; checked_at?: string; item_count?: number; normalized_observation_count?: number; normalized_series_count?: number; data_through?: string | null; error?: string; stale_after_hours?: number; from_history?: boolean };
+  usage?: { mode?: "official_event" | "numeric_series" | "context_only"; persisted?: Record<string, number>; in_latest_emerging?: number; used_in_composite_risk?: number; series_count?: number; analyzed_count?: number; rejected_count?: number; candidate_count?: number; rejection_reasons?: Record<string, number>; not_analyzed_reason?: string | null };
+  last_success_at?: string | null;
+  latest_snapshot_id?: string | null;
+}
+
+export function useSituationSources() {
+  return useQuery<SituationSourceAdapter[]>({
+    queryKey: ["situation-sources"],
+    queryFn: () => apiFetch("/overview/events/sources"),
+    staleTime: 15 * 1000,
+    refetchInterval: 30 * 1000,
+  });
+}
+
+export function useRefreshSituationSources() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (mode: "full" | "numeric_only") =>
+      apiFetch<{ task_uuid: string; status: string }>("/overview/events/sources/refresh", {
+        method: "POST",
+        body: JSON.stringify({ mode }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["situation-sources"] });
+      queryClient.invalidateQueries({ queryKey: ["tasks"] });
+    },
+  });
+}
+
 export function useSourcesFlow(countryCode: string | null) {
   return useQuery<DataSourceFlow[]>({
     queryKey: ["sources-flow", countryCode],

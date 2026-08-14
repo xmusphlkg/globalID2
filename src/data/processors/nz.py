@@ -14,6 +14,7 @@ import csv
 import json
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
+from functools import lru_cache
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
@@ -26,6 +27,7 @@ from src.data.processors.mapping_lookup import (
     normalize_mapping_key,
 )
 from src.data.crawlers.nz import NewZealandPHFCrawler
+from src.ontology import load_disease_ontology
 
 logger = get_logger(__name__)
 
@@ -83,6 +85,18 @@ def _parse_date(row: Dict[str, str]) -> Optional[date]:
     if year is not None and month is not None and 1 <= month <= 12:
         return date(year, month, 1)
     return None
+
+
+@lru_cache(maxsize=256)
+def _registry_series_code(label: str) -> str:
+    """Resolve a stable NZ source identity for Mapping Registry discovery."""
+
+    matches = load_disease_ontology().series_lookup(
+        country_code="NZ",
+        source_id=MAPPING_SOURCE_ID,
+        local_label=label,
+    )
+    return str(matches[0]["id"]) if len(matches) == 1 else ""
 
 
 class NZMonthlyUpdater:
@@ -219,7 +233,8 @@ class NZMonthlyUpdater:
                 if not disease or report_date is None or cases is None:
                     continue
 
-                rows.append({
+                source_series_code = _registry_series_code(disease)
+                normalized_row = {
                     "Date": report_date.isoformat(),
                     "RawDiseaseLabel": disease,
                     "Cases": str(max(0, cases)),
@@ -228,7 +243,14 @@ class NZMonthlyUpdater:
                     "Year": str(report_date.year),
                     "Month": str(report_date.month),
                     "Source": _norm_text(row.get("Source")) or self.source_name,
-                })
+                    # PHF Science states that monthly EpiSurv reports are
+                    # provisional and may include cases still under review.
+                    "DatasetStatus": "provisional",
+                    "IsProvisional": "true",
+                }
+                if source_series_code:
+                    normalized_row["SourceDiseaseCode"] = source_series_code
+                rows.append(normalized_row)
 
         rows.sort(key=lambda r: (r["Date"], r["RawDiseaseLabel"]))
         return rows

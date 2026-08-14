@@ -1,3 +1,4 @@
+import asyncio
 import time
 
 import pytest
@@ -11,6 +12,7 @@ class DummyCache:
         self.last_set_key = None
         self.last_set_value = None
         self.last_set_ttl = None
+        self.deleted_keys = []
 
     async def get(self, key: str):
         return self.cached_value
@@ -19,6 +21,10 @@ class DummyCache:
         self.last_set_key = key
         self.last_set_value = value
         self.last_set_ttl = ttl
+        return True
+
+    async def delete(self, key: str):
+        self.deleted_keys.append(key)
         return True
 
 
@@ -87,6 +93,21 @@ class ProbeFallbackAgent(BaseAgent):
         return "glm-ok", {"prompt": 1, "completion": 1, "total": 2}
 
 
+class TimeoutFallbackAgent(BaseAgent):
+    def __init__(self):
+        super().__init__(name="TimeoutFallback", model="slow-model", provider="dummy-provider")
+        self.call_models = []
+
+    async def process(self, **kwargs):
+        return {}
+
+    async def _complete_with_provider(self, provider: str, prompt: str, system: str | None, **kwargs):
+        self.call_models.append(self.model)
+        if self.model == "slow-model":
+            await asyncio.Event().wait()
+        return "fast-response", {"prompt": 1, "completion": 1, "total": 2}
+
+
 def test_runtime_candidates_include_configured_model_failover(monkeypatch):
     monkeypatch.setattr(BaseAgent, "_init_clients", lambda self: None)
     monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_CHAIN", ["configured-model"], raising=False)
@@ -112,6 +133,26 @@ def test_runtime_candidates_include_configured_model_failover(monkeypatch):
     ]
     assert candidates[1]["route"] is None
     assert chain == ["configured-model"]
+
+
+def test_preferred_direct_fallback_does_not_jump_ahead_of_healthy_runtime_route() -> None:
+    runtime_route = {
+        "route_key": "runtime:healthy-model",
+        "model_name": "healthy-model",
+        "route": {"model_name": "healthy-model"},
+    }
+    direct_fallback = {
+        "route_key": "configured-model",
+        "model_name": "configured-model",
+        "route": None,
+    }
+
+    ordered = BaseAgent._prioritize_candidates(
+        [runtime_route, direct_fallback],
+        ["configured-model"],
+    )
+
+    assert ordered == [runtime_route, direct_fallback]
 
 
 @pytest.mark.asyncio
@@ -174,6 +215,19 @@ async def test_live_completion_caches_structured_payload(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_completion_cache_can_be_invalidated_after_post_generation_rejection(monkeypatch):
+    monkeypatch.setattr(BaseAgent, "_init_clients", lambda self: None)
+    agent = DummyAgent()
+    monkeypatch.setattr(agent.config.ai, "enable_cache", True, raising=False)
+    agent.cache = DummyCache()
+
+    deleted = await agent.invalidate_completion_cache(prompt="hello", system="system")
+
+    assert deleted is True
+    assert agent.cache.deleted_keys == [agent._make_cache_key("hello", "system")]
+
+
+@pytest.mark.asyncio
 async def test_empty_candidates_wait_then_probe(monkeypatch):
     monkeypatch.setattr(BaseAgent, "_init_clients", lambda self: None)
     monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_ROUTES", [], raising=False)
@@ -208,6 +262,40 @@ async def test_empty_candidates_wait_then_probe(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_empty_candidates_can_fail_without_waiting_for_recovery(monkeypatch):
+    monkeypatch.setattr(BaseAgent, "_init_clients", lambda self: None)
+    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_ROUTES", [], raising=False)
+    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_ROUTES_LOADED_AT", time.time(), raising=False)
+    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_CHAIN", ["dummy-model"], raising=False)
+    monkeypatch.setattr(
+        BaseAgent,
+        "MODEL_COOLDOWNS",
+        {"dummy-model": time.time() + 30},
+        raising=False,
+    )
+    monkeypatch.setattr(BaseAgent, "ROUTE_COOLDOWNS", {}, raising=False)
+
+    async def _unexpected_sleep(_seconds):
+        raise AssertionError("recovery wait must be skipped")
+
+    monkeypatch.setattr("src.ai.agents.base.asyncio.sleep", _unexpected_sleep)
+
+    agent = DummyAgent()
+    monkeypatch.setattr(agent.config.ai, "enable_cache", False, raising=False)
+    monkeypatch.setattr(agent.config.ai, "enable_rate_limiting", False, raising=False)
+
+    with pytest.raises(Exception, match="Agent completion failed"):
+        await agent.complete(
+            prompt="hello",
+            system="system",
+            max_quota_recovery_rounds=0,
+            wait_for_model_recovery=False,
+        )
+
+    assert agent.provider_calls == 0
+
+
+@pytest.mark.asyncio
 async def test_model_not_found_fast_falls_through_to_next_model(monkeypatch):
     monkeypatch.setattr(BaseAgent, "_init_clients", lambda self: None)
     monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_ROUTES", [], raising=False)
@@ -239,6 +327,68 @@ async def test_model_not_found_fast_falls_through_to_next_model(monkeypatch):
     assert agent.call_models == ["bad-model", "good-model"]
     assert persisted
     assert persisted[0][0] == "bad-model"
+
+
+@pytest.mark.asyncio
+async def test_per_route_timeout_falls_through_to_next_model(monkeypatch):
+    monkeypatch.setattr(BaseAgent, "_init_clients", lambda self: None)
+    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_ROUTES", [], raising=False)
+    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_ROUTES_LOADED_AT", time.time(), raising=False)
+    monkeypatch.setattr(
+        BaseAgent,
+        "AVAILABLE_MODEL_CHAIN",
+        ["slow-model", "fast-model"],
+        raising=False,
+    )
+    monkeypatch.setattr(BaseAgent, "MODEL_COOLDOWNS", {}, raising=False)
+    monkeypatch.setattr(BaseAgent, "ROUTE_COOLDOWNS", {}, raising=False)
+
+    agent = TimeoutFallbackAgent()
+    monkeypatch.setattr(agent.config.ai, "enable_cache", False, raising=False)
+    monkeypatch.setattr(agent.config.ai, "enable_rate_limiting", False, raising=False)
+
+    result = await agent.complete(
+        prompt="hello",
+        system="system",
+        model_request_timeout_seconds=0.01,
+        timeout_cooldown_seconds=30,
+    )
+
+    assert result == "fast-response"
+    assert agent.call_models == ["slow-model", "fast-model"]
+    assert BaseAgent._is_model_cooling_down("slow-model") is True
+
+
+@pytest.mark.asyncio
+async def test_per_model_attempt_limit_avoids_blind_transient_retries(monkeypatch):
+    monkeypatch.setattr(BaseAgent, "_init_clients", lambda self: None)
+    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_ROUTES", [], raising=False)
+    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_ROUTES_LOADED_AT", time.time(), raising=False)
+    monkeypatch.setattr(BaseAgent, "AVAILABLE_MODEL_CHAIN", ["dummy-model"], raising=False)
+    monkeypatch.setattr(BaseAgent, "MODEL_COOLDOWNS", {}, raising=False)
+    monkeypatch.setattr(BaseAgent, "ROUTE_COOLDOWNS", {}, raising=False)
+
+    calls = []
+
+    async def fail_once(provider, prompt, system, **kwargs):
+        calls.append((provider, prompt, system, kwargs))
+        raise RuntimeError("temporary upstream failure")
+
+    agent = DummyAgent()
+    monkeypatch.setattr(agent, "_complete_with_provider", fail_once)
+    monkeypatch.setattr(agent.config.ai, "enable_cache", False, raising=False)
+    monkeypatch.setattr(agent.config.ai, "enable_rate_limiting", False, raising=False)
+
+    with pytest.raises(Exception, match="Agent completion failed"):
+        await agent.complete(
+            prompt="hello",
+            system="system",
+            max_attempts_per_model=1,
+            max_quota_recovery_rounds=0,
+            wait_for_model_recovery=False,
+        )
+
+    assert len(calls) == 1
 
 
 @pytest.mark.asyncio

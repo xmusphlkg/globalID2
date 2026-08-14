@@ -134,8 +134,17 @@ class DiseaseMapper:
             df = pd.read_csv(self.mapping_file)
             
             for _, row in df.iterrows():
-                disease_id = str(row['disease_id']).strip()
-                local_name = str(row['local_name']).strip()
+                raw_disease_id = row.get('disease_id')
+                raw_local_name = row.get('local_name')
+                # Blank disease IDs are reviewed Registry no-projection rows.
+                # They must remain queryable by source category without
+                # leaking a fake "nan" identifier into the legacy mapper.
+                if pd.isna(raw_disease_id) or pd.isna(raw_local_name):
+                    continue
+                disease_id = str(raw_disease_id).strip()
+                local_name = str(raw_local_name).strip()
+                if not disease_id or not local_name:
+                    continue
                 
                 # Parse aliases
                 aliases_str = str(row.get('aliases', ''))
