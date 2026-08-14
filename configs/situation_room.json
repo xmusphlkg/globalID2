@@ -1,7 +1,7 @@
 {
   "schema_version": "situation_room.v2",
   "method_version": "situation_room_v2.0",
-  "public_enabled": false,
+  "public_enabled": true,
   "daily_retention_days": 90,
   "event_stale_hours": 72,
   "signal_limits": {
