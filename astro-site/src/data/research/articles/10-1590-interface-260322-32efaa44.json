@@ -1,0 +1,220 @@
+{
+  "article_id": "lit_32efaa4463ed2093a37f63a3",
+  "slug": "10-1590-interface-260322-32efaa44",
+  "title": "Negligence and global health: the case of the 2018 ebola outbreak in the Democratic Republic of the Congo",
+  "doi": "10.1590/interface.260322",
+  "pmid": null,
+  "journal": "Interface - Comunicação, Saúde, Educação",
+  "publisher": "FapUNIFESP (SciELO)",
+  "authors": [
+    "Ramiro Januário dos Santos Neto",
+    "Deisy de Freitas Lima Ventura"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Commentary",
+  "published_at": "2026-01-01T00:00:00+00:00",
+  "indexed_at": "2026-07-20T12:02:21+00:00",
+  "open_access_status": "open",
+  "open_access_url": "http://www.scielo.br/scielo.php?script=sci_arttext&pid=S1414-32832026000101825&tlng=en",
+  "license_url": "http://creativecommons.org/licenses/by/4.0/",
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.57,
+  "is_featured": false,
+  "diseases": [
+    {
+      "disease_id": "D050",
+      "slug": "ebola",
+      "name_en": "Ebola",
+      "name_zh": "埃博拉出血热",
+      "confidence": 0.82
+    }
+  ],
+  "countries": [],
+  "topics": [
+    {
+      "name": "Outbreak investigation",
+      "confidence": 0.66
+    }
+  ],
+  "related_surveillance": [],
+  "summary": {
+    "en": {
+      "research_question": "The authors investigate the reasons behind the United Nations Security Council's decision to classify the 2018 Democratic Republic of the Congo Ebola epidemic as a domestic health crisis rather than an international security threat, particularly when compared to the 2014 West African epidemic.",
+      "study_design": "This work functions as a peer-reviewed commentary that employs a qualitative approach combining a literature review and document analysis to examine a specific historical case.",
+      "population_setting": "The analysis centers on the 2018 Ebola epidemic affecting the North Kivu and Ituri provinces within the Democratic Republic of the Congo.",
+      "main_findings": "The authors determine that the failure to elevate the crisis to a global security agenda primarily stemmed from its geographic confinement to the African continent. They note that while framing health emergencies as security matters can mobilize additional funding and personnel, the current approach highlights a persistent pattern of international disregard for regional medical needs.",
+      "public_health_relevance": "Understanding the political mechanisms that influence emergency classification helps explain disparities in international aid distribution and response scaling during cross-border epidemics.",
+      "limitations": "The evaluation is restricted to a single historical instance and depends entirely on secondary documentary sources rather than primary empirical collection.",
+      "gids_interpretation": "This publication provides a conceptual framework for analyzing how geopolitical perceptions shape the classification of infectious disease crises, offering contextual background for understanding historical response patterns rather than generating real-time epidemiological metrics.",
+      "provenance": {
+        "generated_by": "literature-evidence-agent",
+        "model": "qwen3.7-flash",
+        "provider": "qwenai",
+        "quality_score": 0.939,
+        "generated_at": "2026-08-14T08:08:04.114840+00:00",
+        "editorially_approved": false,
+        "automatically_approved": true,
+        "automation_policy_version": "research-radar-autopilot.v1",
+        "publication_gate": "automated-quality-gate"
+      }
+    },
+    "zh": {
+      "research_question": "探讨2018年刚果民主共和国埃博拉疫情为何未被联合国安理会视为威胁国际和平与安全的议题。",
+      "study_design": "本文属于评论性文章，采用批判性安全研究与全球健康理论框架，结合文献回顾与文件分析展开论述。",
+      "population_setting": "研究对象为2018年在刚果民主共和国北基伍省和伊图里省爆发的埃博拉疫情，以及联合国安理会的决策反应。",
+      "main_findings": "分析表明，该次疫情未能实现安全化转型的主要原因在于其地理范围始终局限在非洲境内。这一现象折射出国际社会对当地公共卫生问题存在长期且系统性的忽视。",
+      "public_health_relevance": "研究指出将健康问题上升为安全议题可能带来额外的人力与资金支持。同时，文章也揭示了此类框架在不同地域间应用时存在明显的不均衡性。",
+      "limitations": "作为基于二手文献与政策文件的评论性研究，其结论侧重于宏观政策与理论解读。该方法设计缺乏一线实地调查或量化流行病学数据的直接支撑。",
+      "gids_interpretation": "该文献从历史与政策角度梳理了非洲疫情在国际议程中的定位演变。内容为区域卫生危机的响应模式提供背景参考，不涉及实时监测信号的验证或推断。",
+      "provenance": {
+        "generated_by": "literature-evidence-agent",
+        "model": "qwen3.7-flash",
+        "provider": "qwenai",
+        "quality_score": 0.945,
+        "generated_at": "2026-08-14T08:08:42.715095+00:00",
+        "editorially_approved": false,
+        "automatically_approved": true,
+        "automation_policy_version": "research-radar-autopilot.v1",
+        "publication_gate": "automated-quality-gate"
+      }
+    }
+  },
+  "why_it_matters_en": "Understanding the political mechanisms that influence emergency classification helps explain disparities in international aid distribution and response scaling during cross-border epidemics.",
+  "why_it_matters_zh": "研究指出将健康问题上升为安全议题可能带来额外的人力与资金支持。同时，文章也揭示了此类框架在不同地域间应用时存在明显的不均衡性。",
+  "source_urls": {
+    "doi": "https://doi.org/10.1590/interface.260322",
+    "publisher": "http://www.scielo.br/scielo.php?script=sci_arttext&pid=S1414-32832026000101825&tlng=en"
+  },
+  "updated_at": "2026-08-13T16:05:48.137326+00:00",
+  "related_signals": [
+    {
+      "signal_id": "event:36",
+      "section": "emerging",
+      "kind": "official_event",
+      "title": "Ebola disease caused by Bundibugyo virus - Democratic Republic of the Congo",
+      "disease_id": "D050",
+      "disease_name_en": "Ebola",
+      "disease_name_zh": "埃博拉出血热",
+      "geographies": [
+        {
+          "code": "CD",
+          "name_en": "Democratic Republic of the Congo"
+        }
+      ],
+      "data_through": "2026-08-01",
+      "window": {
+        "label": null,
+        "current": null,
+        "previous": null,
+        "absolute_change": null,
+        "change_pct": null
+      },
+      "risk": {
+        "score": null,
+        "level": null,
+        "confidence": "high"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    },
+    {
+      "signal_id": "event:37",
+      "section": "emerging",
+      "kind": "official_event",
+      "title": "Ebola disease caused by Bundibugyo virus, Democratic Republic of the Congo & Uganda",
+      "disease_id": "D050",
+      "disease_name_en": "Ebola",
+      "disease_name_zh": "埃博拉出血热",
+      "geographies": [
+        {
+          "code": "CD",
+          "name_en": "Democratic Republic of the Congo"
+        },
+        {
+          "code": "UG",
+          "name_en": "Uganda"
+        }
+      ],
+      "data_through": "2026-07-17",
+      "window": {
+        "label": null,
+        "current": null,
+        "previous": null,
+        "absolute_change": null,
+        "change_pct": null
+      },
+      "risk": {
+        "score": null,
+        "level": null,
+        "confidence": "high"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-32efaa4463ed2093a37f63a3",
+        "type": "article",
+        "label": "Negligence and global health: the case of the 2018 ebola outbreak in the Democratic Republic of the Congo",
+        "slug": "10-1590-interface-260322-32efaa44",
+        "url": "/research/articles/10-1590-interface-260322-32efaa44/",
+        "published_at": "2026-01-01T00:00:00+00:00",
+        "study_type": "Commentary"
+      },
+      {
+        "id": "disease:d050",
+        "type": "disease",
+        "label": "Ebola",
+        "disease_id": "D050",
+        "name_zh": "埃博拉出血热",
+        "slug": "ebola",
+        "url": "/diseases/ebola/"
+      },
+      {
+        "id": "study-type:commentary",
+        "type": "study_type",
+        "label": "Commentary"
+      },
+      {
+        "id": "topic:outbreak-investigation",
+        "type": "topic",
+        "label": "Outbreak investigation"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-32efaa4463ed2093a37f63a3|ABOUT_DISEASE|disease:d050",
+        "source": "article:lit-32efaa4463ed2093a37f63a3",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d050",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-32efaa4463ed2093a37f63a3|ADDRESSES_TOPIC|topic:outbreak-investigation",
+        "source": "article:lit-32efaa4463ed2093a37f63a3",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:outbreak-investigation",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-32efaa4463ed2093a37f63a3|USES_STUDY_DESIGN|study-type:commentary",
+        "source": "article:lit-32efaa4463ed2093a37f63a3",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:commentary"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 4,
+      "edges": 3,
+      "articles": 1
+    }
+  }
+}

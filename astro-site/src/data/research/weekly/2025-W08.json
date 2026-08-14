@@ -1,0 +1,69 @@
+{
+  "week": "2025-W08",
+  "start_date": "2025-02-20",
+  "end_date": "2025-02-20",
+  "article_count": 1,
+  "disease_count": 1,
+  "country_count": 0,
+  "top_topics": [
+    "Vaccination"
+  ],
+  "articles": [
+    {
+      "article_id": "lit_2a6ce1683f0822b4a1a4bedb",
+      "slug": "10-1038-s41541-025-01088-y-2a6ce168",
+      "title": "Impact of genotypic variability of measles virus T-cell epitopes on vaccine-induced T-cell immunity",
+      "doi": "10.1038/s41541-025-01088-y",
+      "pmid": "39979288",
+      "journal": "npj Vaccines",
+      "publisher": "Springer Science and Business Media LLC",
+      "authors": [
+        "Maarten E. Emmelot",
+        "Rogier Bodewes",
+        "Cyril Maissan",
+        "Martijn Vos",
+        "Rik L. de Swart",
+        "Cécile A.C.M. van Els",
+        "Patricia Kaaijk"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2025-02-20T00:00:00+00:00",
+      "indexed_at": "2026-08-12T12:59:46+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://www.nature.com/articles/s41541-025-01088-y",
+      "license_url": "https://creativecommons.org/licenses/by-nc-nd/4.0",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.526,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D017",
+          "slug": "measles",
+          "name_en": "Measles",
+          "name_zh": "麻疹",
+          "confidence": 0.86
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Vaccination",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Measles. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与麻疹相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1038/s41541-025-01088-y",
+        "publisher": "https://www.nature.com/articles/s41541-025-01088-y"
+      },
+      "updated_at": "2026-08-13T21:36:52.839448+00:00",
+      "related_signals": []
+    }
+  ],
+  "url": "/research/weekly/2025-W08/"
+}

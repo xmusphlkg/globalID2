@@ -249,6 +249,31 @@ def test_multiple_country_source_series_mapped_to_one_id_is_an_error():
     }
 
 
+def test_registry_dimension_mappings_are_not_flat_source_series() -> None:
+    rows = [
+        {
+            "country_code": "AT",
+            "disease_id": "D045",
+            "local_name": "Echinokokkose durch Fuchsbandwurm",
+            "local_code": "fox",
+            "data_source": "AGES",
+            "mapping_scope": "source_category_dimension",
+        },
+        {
+            "country_code": "AT",
+            "disease_id": "D045",
+            "local_name": "Echinokokkose durch Hundebandwurm",
+            "local_code": "dog",
+            "data_source": "AGES",
+            "mapping_scope": "source_category_dimension",
+        },
+    ]
+
+    report = DiseaseMappingQualityService().run_audit(rows)
+
+    assert _findings(report, MULTIPLE_SOURCE_SERIES_ONE_DISEASE_ID) == []
+
+
 def test_aliases_on_one_mapping_row_are_not_counted_as_independent_series():
     rows = [
         {

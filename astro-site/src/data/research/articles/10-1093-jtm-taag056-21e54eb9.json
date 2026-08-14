@@ -1,0 +1,250 @@
+{
+  "article_id": "lit_21e54eb9ba4943914b066934",
+  "slug": "10-1093-jtm-taag056-21e54eb9",
+  "title": "Strategic Preparedness for the FIFA World Cup 2026 in Response to the Bundibugoy Ebola Outbreak in the Democratic Republic of Congo",
+  "doi": "10.1093/jtm/taag056",
+  "pmid": null,
+  "journal": "Journal of Travel Medicine",
+  "publisher": "Oxford University Press (OUP)",
+  "authors": [
+    "Rigin Sebastian",
+    "Noufal Naheem Kottekkadan",
+    "Toney K Thomas",
+    "Muhammad Thalil"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Journal article",
+  "published_at": "2026-06-22T00:00:00+00:00",
+  "indexed_at": "2026-06-22T16:53:20+00:00",
+  "open_access_status": "open",
+  "open_access_url": "https://academic.oup.com/jtm/advance-article/doi/10.1093/jtm/taag056/8713269",
+  "license_url": "https://academic.oup.com/pages/standard-publication-reuse-rights",
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.737,
+  "is_featured": false,
+  "diseases": [
+    {
+      "disease_id": "D050",
+      "slug": "ebola",
+      "name_en": "Ebola",
+      "name_zh": "埃博拉出血热",
+      "confidence": 0.82
+    }
+  ],
+  "countries": [],
+  "topics": [
+    {
+      "name": "Treatment",
+      "confidence": 0.7100000000000001
+    },
+    {
+      "name": "Outbreak investigation",
+      "confidence": 0.66
+    },
+    {
+      "name": "Vaccination",
+      "confidence": 0.66
+    },
+    {
+      "name": "Travel medicine",
+      "confidence": 0.66
+    }
+  ],
+  "related_surveillance": [],
+  "summary": {
+    "en": {
+      "research_question": "How should international health authorities and tournament hosts formulate travel health strategies when a major global sporting event coincides with an emerging viral crisis lacking approved medical countermeasures?",
+      "study_design": "This publication is a peer-reviewed journal article that presents a policy perspective and strategic recommendation rather than an empirical clinical or observational study.",
+      "population_setting": "The analysis targets international travelers and attendees participating in large-scale cross-border mass gatherings.",
+      "main_findings": "Existing host country measures, such as border restrictions and prolonged isolation mandates, lack strong epidemiological backing. The authors emphasize that standardized, risk-appropriate travel health frameworks are critically needed for future pandemic-era mega-events.",
+      "public_health_relevance": "The discussion identifies operational gaps in managing transmissible disease threats during high-density international tourism and sports tournaments.",
+      "limitations": "The manuscript relies on theoretical policy analysis without presenting original data collection or clinical trial results. Furthermore, the referenced viral pathogen currently lacks authorized prophylactic or therapeutic interventions.",
+      "gids_interpretation": "Within the GIDS analytical framework, this document serves as a situational awareness resource that flags regulatory inconsistencies and advocates for harmonized operational guidelines during transnational health emergencies.",
+      "provenance": {
+        "generated_by": "literature-evidence-agent",
+        "model": "qwen3.7-flash",
+        "provider": "qwenai",
+        "quality_score": 0.926,
+        "generated_at": "2026-08-13T16:13:01.214554+00:00",
+        "editorially_approved": false,
+        "automatically_approved": true,
+        "automation_policy_version": "research-radar-autopilot.v1",
+        "publication_gate": "automated-quality-gate"
+      }
+    }
+  },
+  "why_it_matters_en": "The discussion identifies operational gaps in managing transmissible disease threats during high-density international tourism and sports tournaments.",
+  "why_it_matters_zh": "这项近期Journal article因与埃博拉出血热相关而被收录。应用其结论前请阅读原始文献。",
+  "source_urls": {
+    "doi": "https://doi.org/10.1093/jtm/taag056",
+    "publisher": "https://academic.oup.com/jtm/advance-article/doi/10.1093/jtm/taag056/8713269"
+  },
+  "updated_at": "2026-08-13T16:05:48.137347+00:00",
+  "related_signals": [
+    {
+      "signal_id": "event:36",
+      "section": "emerging",
+      "kind": "official_event",
+      "title": "Ebola disease caused by Bundibugyo virus - Democratic Republic of the Congo",
+      "disease_id": "D050",
+      "disease_name_en": "Ebola",
+      "disease_name_zh": "埃博拉出血热",
+      "geographies": [
+        {
+          "code": "CD",
+          "name_en": "Democratic Republic of the Congo"
+        }
+      ],
+      "data_through": "2026-08-01",
+      "window": {
+        "label": null,
+        "current": null,
+        "previous": null,
+        "absolute_change": null,
+        "change_pct": null
+      },
+      "risk": {
+        "score": null,
+        "level": null,
+        "confidence": "high"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    },
+    {
+      "signal_id": "event:37",
+      "section": "emerging",
+      "kind": "official_event",
+      "title": "Ebola disease caused by Bundibugyo virus, Democratic Republic of the Congo & Uganda",
+      "disease_id": "D050",
+      "disease_name_en": "Ebola",
+      "disease_name_zh": "埃博拉出血热",
+      "geographies": [
+        {
+          "code": "CD",
+          "name_en": "Democratic Republic of the Congo"
+        },
+        {
+          "code": "UG",
+          "name_en": "Uganda"
+        }
+      ],
+      "data_through": "2026-07-17",
+      "window": {
+        "label": null,
+        "current": null,
+        "previous": null,
+        "absolute_change": null,
+        "change_pct": null
+      },
+      "risk": {
+        "score": null,
+        "level": null,
+        "confidence": "high"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-21e54eb9ba4943914b066934",
+        "type": "article",
+        "label": "Strategic Preparedness for the FIFA World Cup 2026 in Response to the Bundibugoy Ebola Outbreak in the Democratic Republic of Congo",
+        "slug": "10-1093-jtm-taag056-21e54eb9",
+        "url": "/research/articles/10-1093-jtm-taag056-21e54eb9/",
+        "published_at": "2026-06-22T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "disease:d050",
+        "type": "disease",
+        "label": "Ebola",
+        "disease_id": "D050",
+        "name_zh": "埃博拉出血热",
+        "slug": "ebola",
+        "url": "/diseases/ebola/"
+      },
+      {
+        "id": "study-type:journal-article",
+        "type": "study_type",
+        "label": "Journal article"
+      },
+      {
+        "id": "topic:outbreak-investigation",
+        "type": "topic",
+        "label": "Outbreak investigation"
+      },
+      {
+        "id": "topic:travel-medicine",
+        "type": "topic",
+        "label": "Travel medicine"
+      },
+      {
+        "id": "topic:treatment",
+        "type": "topic",
+        "label": "Treatment"
+      },
+      {
+        "id": "topic:vaccination",
+        "type": "topic",
+        "label": "Vaccination"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-21e54eb9ba4943914b066934|ABOUT_DISEASE|disease:d050",
+        "source": "article:lit-21e54eb9ba4943914b066934",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d050",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-21e54eb9ba4943914b066934|ADDRESSES_TOPIC|topic:outbreak-investigation",
+        "source": "article:lit-21e54eb9ba4943914b066934",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:outbreak-investigation",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-21e54eb9ba4943914b066934|ADDRESSES_TOPIC|topic:travel-medicine",
+        "source": "article:lit-21e54eb9ba4943914b066934",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:travel-medicine",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-21e54eb9ba4943914b066934|ADDRESSES_TOPIC|topic:treatment",
+        "source": "article:lit-21e54eb9ba4943914b066934",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:treatment",
+        "confidence": 0.7100000000000001
+      },
+      {
+        "id": "article:lit-21e54eb9ba4943914b066934|ADDRESSES_TOPIC|topic:vaccination",
+        "source": "article:lit-21e54eb9ba4943914b066934",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccination",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-21e54eb9ba4943914b066934|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-21e54eb9ba4943914b066934",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 7,
+      "edges": 6,
+      "articles": 1
+    }
+  }
+}

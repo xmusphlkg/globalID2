@@ -46,8 +46,8 @@ function Badge({ category }: { category: string }) {
   );
 }
 
-function fmtNum(n: number) {
-  return n.toLocaleString('en-US');
+function fmtNum(n: number | null | undefined) {
+  return n == null || !Number.isFinite(n) ? '—' : n.toLocaleString('en-US');
 }
 
 function Sparkline({
@@ -64,26 +64,39 @@ function Sparkline({
   const record = series?.[diseaseId];
   const values = record?.cases ?? [];
   const trendValues = values.slice(-24);
+  const observedValues = trendValues.filter(
+    (value): value is number => value != null && Number.isFinite(value)
+  );
 
-  if (trendValues.length === 0) {
+  if (observedValues.length === 0) {
     return <span className="comparison-empty">—</span>;
   }
 
   const width = 120;
   const height = 30;
   const innerWidth = width - 4;
-  const min = Math.min(...trendValues);
-  const max = Math.max(...trendValues);
+  const min = Math.min(...observedValues);
+  const max = Math.max(...observedValues);
   const range = Math.max(1, max - min);
   const denominator = Math.max(trendValues.length - 1, 1);
-  const points = trendValues
-    .map((value, index) => {
+  const pointValues = trendValues.map((value, index) => {
+      if (value == null || !Number.isFinite(value)) return null;
       const x = 2 + (index / denominator) * innerWidth;
       const y = height - 3 - ((value - min) / range) * (height - 8);
       return `${x},${y}`;
-    })
-    .join(' ');
-  const areaPoints = `2,${height - 2} ${points} ${width - 2},${height - 2}`;
+    });
+  const segments: string[] = [];
+  let currentSegment: string[] = [];
+  pointValues.forEach((point) => {
+    if (point) {
+      currentSegment.push(point);
+      return;
+    }
+    if (currentSegment.length > 0) segments.push(currentSegment.join(' '));
+    currentSegment = [];
+  });
+  if (currentSegment.length > 0) segments.push(currentSegment.join(' '));
+  const latestPoint = [...pointValues].reverse().find(Boolean);
 
   return (
     <svg
@@ -97,14 +110,17 @@ function Sparkline({
       }
     >
       <line x1="2" y1={height - 2} x2={width - 2} y2={height - 2} className="comparison-sparkline-track" />
-      <polygon points={areaPoints} className="comparison-sparkline-fill" />
-      <polyline points={points} className="comparison-sparkline-line" />
-      <circle
-        cx={points.split(' ').at(-1)?.split(',')[0]}
-        cy={points.split(' ').at(-1)?.split(',')[1]}
-        r="2.8"
-        className="comparison-sparkline-dot"
-      />
+      {segments.map((points, index) => (
+        <polyline key={`${points}-${index}`} points={points} className="comparison-sparkline-line" />
+      ))}
+      {latestPoint && (
+        <circle
+          cx={latestPoint.split(',')[0]}
+          cy={latestPoint.split(',')[1]}
+          r="2.8"
+          className="comparison-sparkline-dot"
+        />
+      )}
     </svg>
   );
 }

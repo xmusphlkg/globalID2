@@ -1,0 +1,291 @@
+{
+  "week": "2024-W34",
+  "start_date": "2024-08-22",
+  "end_date": "2024-08-23",
+  "article_count": 3,
+  "disease_count": 5,
+  "country_count": 1,
+  "top_topics": [
+    "Vaccination",
+    "Surveillance",
+    "Diagnostics"
+  ],
+  "articles": [
+    {
+      "article_id": "lit_ac1c4c839d573dfc8377ad80",
+      "slug": "10-1186-s44364-024-00001-y-ac1c4c83",
+      "title": "Salmonella and the chicken: reflections on salmonellosis and its control in the United Kingdom",
+      "doi": "10.1186/s44364-024-00001-y",
+      "pmid": null,
+      "journal": "Poultry Science and Management",
+      "publisher": "Springer Science and Business Media LLC",
+      "authors": [
+        "Paul Wigley"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2024-08-23T00:00:00+00:00",
+      "indexed_at": "2026-07-21T15:15:18+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://poultrysciencemanagement.biomedcentral.com/articles/10.1186/s44364-024-00001-y",
+      "license_url": "https://creativecommons.org/licenses/by/4.0",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.544,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D114",
+          "slug": "salmonellosis",
+          "name_en": "Salmonellosis",
+          "name_zh": "沙门氏菌病",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Surveillance",
+          "confidence": 0.66
+        },
+        {
+          "name": "Vaccination",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Salmonellosis. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与沙门氏菌病相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1186/s44364-024-00001-y",
+        "publisher": "https://poultrysciencemanagement.biomedcentral.com/articles/10.1186/s44364-024-00001-y"
+      },
+      "updated_at": "2026-08-13T16:05:48.137669+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:ecdc9176fa7e1a17",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D114",
+          "disease_name_en": "Salmonellosis",
+          "disease_name_zh": "沙门氏菌病",
+          "geographies": [
+            {
+              "code": "IE",
+              "name_en": "Ireland"
+            }
+          ],
+          "data_through": "2026-07-27",
+          "window": {
+            "label": "Last 4 weeks",
+            "current": 54.0,
+            "previous": 38.0,
+            "absolute_change": 16.0,
+            "change_pct": 42.11
+          },
+          "risk": {
+            "score": 40.8,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_a706e479cadc6ed329eedd3a",
+      "slug": "10-32634-0869-8155-2024-385-8-46-50-a706e479",
+      "title": "Diagnosis of avian salmonellosis using PCR kits of different manufacturers",
+      "doi": "10.32634/0869-8155-2024-385-8-46-50",
+      "pmid": null,
+      "journal": "Agrarian science",
+      "publisher": "Agrarian Science",
+      "authors": [
+        "A. V. Ruzina"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2024-08-22T00:00:00+00:00",
+      "indexed_at": "2025-02-21T23:32:20+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://www.vetpress.ru/jour/article/view/3211",
+      "license_url": "https://www.vetpress.ru/jour/about/editorialPolicies#openAccessPolicy",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.512,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D114",
+          "slug": "salmonellosis",
+          "name_en": "Salmonellosis",
+          "name_zh": "沙门氏菌病",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Diagnostics",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Salmonellosis. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与沙门氏菌病相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.32634/0869-8155-2024-385-8-46-50",
+        "publisher": "https://www.vetpress.ru/jour/article/view/3211"
+      },
+      "updated_at": "2026-08-13T16:05:48.137661+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:ecdc9176fa7e1a17",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D114",
+          "disease_name_en": "Salmonellosis",
+          "disease_name_zh": "沙门氏菌病",
+          "geographies": [
+            {
+              "code": "IE",
+              "name_en": "Ireland"
+            }
+          ],
+          "data_through": "2026-07-27",
+          "window": {
+            "label": "Last 4 weeks",
+            "current": 54.0,
+            "previous": 38.0,
+            "absolute_change": 16.0,
+            "change_pct": 42.11
+          },
+          "risk": {
+            "score": 40.8,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_f30b4d9a036cf960380b1f9d",
+      "slug": "10-15585-mmwr-mm7333a1-f30b4d9a",
+      "title": "National Vaccination Coverage Among Adolescents Aged 13–17 Years — National Immunization Survey-Teen, United States, 2023",
+      "doi": "10.15585/mmwr.mm7333a1",
+      "pmid": "39173168",
+      "journal": "MMWR. Morbidity and Mortality Weekly Report",
+      "publisher": "Centers for Disease Control MMWR Office",
+      "authors": [
+        "Cassandra Pingali",
+        "David Yankey",
+        "Michael Chen",
+        "Laurie D. Elam-Evans",
+        "Lauri E. Markowitz",
+        "Carla L. DeSisto",
+        "Sarah F. Schillie",
+        "Michelle Hughes",
+        "Madeleine R. Valier",
+        "Shannon Stokley",
+        "James A. Singleton"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2024-08-22T00:00:00+00:00",
+      "indexed_at": "2026-08-06T20:28:50+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC11349384",
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.442,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D004",
+          "slug": "covid-19",
+          "name_en": "COVID-19",
+          "name_zh": "新型冠状病毒感染",
+          "confidence": 0.62
+        },
+        {
+          "disease_id": "D028",
+          "slug": "pertussis",
+          "name_en": "Pertussis",
+          "name_zh": "百日咳",
+          "confidence": 0.62
+        },
+        {
+          "disease_id": "D029",
+          "slug": "diphtheria",
+          "name_en": "Diphtheria",
+          "name_zh": "白喉",
+          "confidence": 0.62
+        },
+        {
+          "disease_id": "D120",
+          "slug": "tetanus",
+          "name_en": "Tetanus",
+          "name_zh": "破伤风",
+          "confidence": 0.62
+        }
+      ],
+      "countries": [
+        {
+          "code": "US",
+          "name_en": "United States",
+          "name_zh": null,
+          "confidence": 0.78
+        }
+      ],
+      "topics": [
+        {
+          "name": "Vaccination",
+          "confidence": 0.76
+        }
+      ],
+      "related_surveillance": [
+        {
+          "disease_id": "D028",
+          "disease_name_en": "Pertussis",
+          "disease_name_zh": "百日咳",
+          "disease_slug": "pertussis",
+          "country_code": "US",
+          "country_name_en": "United States",
+          "url": "/diseases/pertussis/",
+          "method": "high-confidence article geography intersected with GIDS series coverage"
+        },
+        {
+          "disease_id": "D120",
+          "disease_name_en": "Tetanus",
+          "disease_name_zh": "破伤风",
+          "disease_slug": "tetanus",
+          "country_code": "US",
+          "country_name_en": "United States",
+          "url": "/diseases/tetanus/",
+          "method": "high-confidence article geography intersected with GIDS series coverage"
+        }
+      ],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to COVID-19. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与新型冠状病毒感染相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.15585/mmwr.mm7333a1",
+        "publisher": "http://www.cdc.gov/mmwr/volumes/73/wr/mm7333a1.htm?s_cid=mm7333a1_w",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/39173168/"
+      },
+      "updated_at": "2026-08-13T12:40:20.771722+00:00",
+      "related_signals": []
+    }
+  ],
+  "url": "/research/weekly/2024-W34/"
+}

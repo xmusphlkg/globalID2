@@ -129,7 +129,8 @@ cp .env.example .env
 The shipped example includes these categories:
 
 - application settings: `APP_ENV`, `APP_NAME`, `DEBUG`, `LOG_LEVEL`
-- database: `DATABASE_URL`, `DATABASE_URL_SYNC`
+- runtime database: `DATABASE_URL`, `DATABASE_URL_SYNC`
+- Situation history database: `SITUATION_HISTORY_DATABASE_ENABLED`, `SITUATION_HISTORY_DATABASE_NAME`, `SITUATION_HISTORY_DATABASE_URL`
 - performance: `MAX_PARALLEL_TASKS`, `MAX_CRAWLER_CONCURRENT`, `TASK_WORKER_CONCURRENCY`
 - AI defaults: `DEFAULT_AI_PROVIDER`, `DEFAULT_MODEL`, `AI__MODEL_CHAIN_RAW`, `AI__KNOWLEDGE_MODEL_SHARDS_RAW`
 - paths: `DATA_DIR`, `LOG_DIR`, `CONFIG_DIR`
@@ -142,6 +143,16 @@ For disease knowledge building, `AI__KNOWLEDGE_MODEL_SHARDS_RAW` lets us distrib
 tasks across multiple preferred models. The worker deterministically rotates the preferred
 model order per disease/language and still falls back to the rest of `AI__MODEL_CHAIN_RAW`
 if the first choice is rate-limited or unavailable.
+
+Situation Room revisions, detector evidence, source checks, synchronization runs, and
+operator audit actions are retained in a dedicated database. When
+`SITUATION_HISTORY_DATABASE_URL` is blank, the service derives a connection from
+`DATABASE_URL` and replaces only the database name (default: `globalid_history`). Create
+the schema and reconcile existing snapshots idempotently with:
+
+```bash
+venv/bin/python scripts/init_situation_history_database.py --backfill
+```
 
 The Python configuration layer also supports provider-specific credentials such as:
 

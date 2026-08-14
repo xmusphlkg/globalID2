@@ -1,0 +1,146 @@
+{
+  "article_id": "lit_1b0a2e78be35bca34c586c97",
+  "slug": "10-1111-irv-70024-1b0a2e78",
+  "title": "A Rapid Virus‐Free Method for Producing Influenza HA Immunogen Needed for Preparation of Influenza Vaccine Potency Antisera Reagents",
+  "doi": "10.1111/irv.70024",
+  "pmid": null,
+  "journal": "Influenza and Other Respiratory Viruses",
+  "publisher": "Wiley",
+  "authors": [
+    "Marcus Odin",
+    "Falko Schmeisser",
+    "Jackeline Soto",
+    "Jerry P. Weir"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Journal article",
+  "published_at": "2024-10-23T00:00:00+00:00",
+  "indexed_at": "2026-08-07T01:49:58+00:00",
+  "open_access_status": "open",
+  "open_access_url": "https://onlinelibrary.wiley.com/doi/10.1111/irv.70024",
+  "license_url": "http://creativecommons.org/licenses/by/4.0/",
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.526,
+  "is_featured": false,
+  "diseases": [
+    {
+      "disease_id": "D038",
+      "slug": "influenza",
+      "name_en": "Influenza",
+      "name_zh": "流行性感冒",
+      "confidence": 0.86
+    }
+  ],
+  "countries": [],
+  "topics": [
+    {
+      "name": "Vaccination",
+      "confidence": 0.66
+    }
+  ],
+  "related_surveillance": [],
+  "summary": {},
+  "why_it_matters_en": "This recent journal article is indexed for its relevance to Influenza. Read the original source before applying its findings.",
+  "why_it_matters_zh": "这项近期Journal article因与流行性感冒相关而被收录。应用其结论前请阅读原始文献。",
+  "source_urls": {
+    "doi": "https://doi.org/10.1111/irv.70024",
+    "publisher": "https://onlinelibrary.wiley.com/doi/10.1111/irv.70024"
+  },
+  "updated_at": "2026-08-13T16:05:48.137428+00:00",
+  "related_signals": [
+    {
+      "signal_id": "signal:d4f34da837688d03",
+      "section": "increasing",
+      "kind": "statistical_signal",
+      "title": null,
+      "disease_id": "D038",
+      "disease_name_en": "Influenza",
+      "disease_name_zh": "流行性感冒",
+      "geographies": [
+        {
+          "code": "IE",
+          "name_en": "Ireland"
+        }
+      ],
+      "data_through": "2026-07-27",
+      "window": {
+        "label": "Last 4 weeks",
+        "current": 230.0,
+        "previous": 46.0,
+        "absolute_change": 184.0,
+        "change_pct": 400.0
+      },
+      "risk": {
+        "score": 65.5,
+        "level": "high",
+        "confidence": "low"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-1b0a2e78be35bca34c586c97",
+        "type": "article",
+        "label": "A Rapid Virus‐Free Method for Producing Influenza HA Immunogen Needed for Preparation of Influenza Vaccine Potency Antisera Reagents",
+        "slug": "10-1111-irv-70024-1b0a2e78",
+        "url": "/research/articles/10-1111-irv-70024-1b0a2e78/",
+        "published_at": "2024-10-23T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "disease:d038",
+        "type": "disease",
+        "label": "Influenza",
+        "disease_id": "D038",
+        "name_zh": "流行性感冒",
+        "slug": "influenza",
+        "url": "/diseases/influenza/"
+      },
+      {
+        "id": "study-type:journal-article",
+        "type": "study_type",
+        "label": "Journal article"
+      },
+      {
+        "id": "topic:vaccination",
+        "type": "topic",
+        "label": "Vaccination"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-1b0a2e78be35bca34c586c97|ABOUT_DISEASE|disease:d038",
+        "source": "article:lit-1b0a2e78be35bca34c586c97",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d038",
+        "confidence": 0.86
+      },
+      {
+        "id": "article:lit-1b0a2e78be35bca34c586c97|ADDRESSES_TOPIC|topic:vaccination",
+        "source": "article:lit-1b0a2e78be35bca34c586c97",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccination",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-1b0a2e78be35bca34c586c97|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-1b0a2e78be35bca34c586c97",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 4,
+      "edges": 3,
+      "articles": 1
+    }
+  }
+}

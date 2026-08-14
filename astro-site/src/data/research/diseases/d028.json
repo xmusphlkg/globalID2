@@ -1,0 +1,547 @@
+{
+  "articles": [
+    {
+      "article_id": "lit_91c183b8229563e94d0195c1",
+      "slug": "10-2807-1560-7917-es-2024-29-33-2300655-91c183b8",
+      "title": "Differences between males and females in infectious diseases notifications in the EU/EEA, 2012 to 2021",
+      "doi": "10.2807/1560-7917.es.2024.29.33.2300655",
+      "pmid": "39149823",
+      "journal": "Eurosurveillance",
+      "publisher": "European Centre for Disease Control and Prevention (ECDC)",
+      "authors": [
+        "Julien Beauté",
+        "Francesco Innocenti"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2024-08-15T00:00:00+00:00",
+      "indexed_at": "2026-08-06T15:50:04+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC11328500",
+      "license_url": "http://creativecommons.org/licenses/by/4.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.474,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D068",
+          "slug": "acute-hepatitis-b",
+          "name_en": "Acute hepatitis B",
+          "name_zh": "急性乙型肝炎",
+          "confidence": 0.62
+        },
+        {
+          "disease_id": "D008",
+          "slug": "hepatitis-b",
+          "name_en": "Hepatitis B",
+          "name_zh": "乙型肝炎",
+          "confidence": 0.62
+        },
+        {
+          "disease_id": "D092",
+          "slug": "campylobacteriosis",
+          "name_en": "Campylobacteriosis",
+          "name_zh": "弯曲杆菌病",
+          "confidence": 0.62
+        },
+        {
+          "disease_id": "D094",
+          "slug": "chlamydia-trachomatis-infection",
+          "name_en": "Chlamydia trachomatis infection",
+          "name_zh": "沙眼衣原体感染",
+          "confidence": 0.62
+        },
+        {
+          "disease_id": "D108",
+          "slug": "listeriosis",
+          "name_en": "Listeriosis",
+          "name_zh": "李斯特菌病",
+          "confidence": 0.62
+        },
+        {
+          "disease_id": "D028",
+          "slug": "pertussis",
+          "name_en": "Pertussis",
+          "name_zh": "百日咳",
+          "confidence": 0.62
+        },
+        {
+          "disease_id": "D037",
+          "slug": "malaria",
+          "name_en": "Malaria",
+          "name_zh": "疟疾",
+          "confidence": 0.62
+        },
+        {
+          "disease_id": "D005",
+          "slug": "aids",
+          "name_en": "AIDS",
+          "name_zh": "艾滋病",
+          "confidence": 0.62
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Surveillance",
+          "confidence": 0.66
+        },
+        {
+          "name": "Transmission dynamics",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {
+        "zh": {
+          "research_question": "本研究旨在量化欧洲联盟及欧洲经济区各国传染病报告中的性别差异，并识别显著偏离区域平均水平的国家。",
+          "study_design": "该研究采用回顾性观察设计，分析了十年期的法定传染病监测数据。通过计算中位数与四分位距，并结合箱线图评估不同病原体、年份、国家及年龄组的分布特征。",
+          "population_setting": "研究对象涵盖欧盟及欧洲经济区成员国在二零一二至二零二一年间上报的法定传染病病例。纳入标准基于疾病负担阈值筛选出十六种特定感染性疾病。",
+          "main_findings": "不同传染病的报告比例呈现显著的性别分化。部分疾病在所有参与国均显示男性占比超过半数，而另一些疾病则以女性为主。特定感染的性别比例在不同年龄组间波动较大，且异常值多源于病例数较少的地区。",
+          "public_health_relevance": "明确此类人口统计学差异有助于优化公共卫生监测框架与资源分配策略。识别稳定的性别分布模式可为制定针对性筛查方案提供依据，并提示需关注检测可及性与行为因素对报告数据的影响。",
+          "limitations": "分析完全依赖常规报告系统数据，结果可能受各地检测习惯与医疗资源差异的干扰。部分统计异常由低发病率辖区的微小样本量导致，可能影响估计稳定性。研究未能将生物学因素与社会文化变量进行独立剥离。",
+          "gids_interpretation": "该文提供了区域内历史性别分布特征的描述性基线，为后续流行病学趋势对比建立参考坐标。内容仅用于界定监测语境，不指向实时疫情信号或动态风险预警。",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.945,
+            "generated_at": "2026-08-13T12:48:01.764918+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        },
+        "en": {
+          "research_question": "The investigation aims to measure sex-based disparities in reported infectious disease cases across European nations and identify jurisdictions that diverge from continental averages.",
+          "study_design": "This observational analysis processed routine surveillance records from a ten-year period to compute sex-specific case proportions and assess geographic variation using distributional statistics.",
+          "population_setting": "The dataset comprised notification records from European Union and European Economic Area member states between 2012 and 2021, narrowing the focus to sixteen pathogens that exceeded a defined disease burden threshold.",
+          "main_findings": "Notification records consistently indicated higher male proportions for infections such as HIV, hepatitis B, and malaria across all participating regions. In contrast, pathogens including pertussis and chlamydia exhibited female predominance in most areas. Age-stratified variability was most notable for chlamydia and listeriosis, while anomalous data points primarily originated from locations with limited case submissions.",
+          "public_health_relevance": "Tracking these consistent reporting patterns supports the characterization of epidemiological trends and may highlight how regional screening approaches or demographic factors intersect with disease surveillance.",
+          "limitations": "Anomalous statistical values were predominantly generated by jurisdictions with minimal case submissions. Furthermore, the evaluation depends on administrative notification records, which capture reporting and testing activities rather than direct measures of actual infection rates.",
+          "gids_interpretation": "This work supplies a decade-long reference framework for sex-disaggregated pathogen reporting within European public health systems. The documented patterns provide contextual benchmarks for interpreting future surveillance outputs and examining how demographic variables align with established reporting structures.",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.949,
+            "generated_at": "2026-08-13T12:47:32.712311+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        }
+      },
+      "why_it_matters_en": "Tracking these consistent reporting patterns supports the characterization of epidemiological trends and may highlight how regional screening approaches or demographic factors intersect with disease surveillance.",
+      "why_it_matters_zh": "明确此类人口统计学差异有助于优化公共卫生监测框架与资源分配策略。识别稳定的性别分布模式可为制定针对性筛查方案提供依据，并提示需关注检测可及性与行为因素对报告数据的影响。",
+      "source_urls": {
+        "doi": "https://doi.org/10.2807/1560-7917.es.2024.29.33.2300655",
+        "publisher": "https://www.eurosurveillance.org/content/10.2807/1560-7917.ES.2024.29.33.2300655",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/39149823/"
+      },
+      "updated_at": "2026-08-13T12:40:20.771725+00:00",
+      "related_signals": []
+    },
+    {
+      "article_id": "lit_f30b4d9a036cf960380b1f9d",
+      "slug": "10-15585-mmwr-mm7333a1-f30b4d9a",
+      "title": "National Vaccination Coverage Among Adolescents Aged 13–17 Years — National Immunization Survey-Teen, United States, 2023",
+      "doi": "10.15585/mmwr.mm7333a1",
+      "pmid": "39173168",
+      "journal": "MMWR. Morbidity and Mortality Weekly Report",
+      "publisher": "Centers for Disease Control MMWR Office",
+      "authors": [
+        "Cassandra Pingali",
+        "David Yankey",
+        "Michael Chen",
+        "Laurie D. Elam-Evans",
+        "Lauri E. Markowitz",
+        "Carla L. DeSisto",
+        "Sarah F. Schillie",
+        "Michelle Hughes",
+        "Madeleine R. Valier",
+        "Shannon Stokley",
+        "James A. Singleton"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2024-08-22T00:00:00+00:00",
+      "indexed_at": "2026-08-06T20:28:50+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC11349384",
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.442,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D004",
+          "slug": "covid-19",
+          "name_en": "COVID-19",
+          "name_zh": "新型冠状病毒感染",
+          "confidence": 0.62
+        },
+        {
+          "disease_id": "D028",
+          "slug": "pertussis",
+          "name_en": "Pertussis",
+          "name_zh": "百日咳",
+          "confidence": 0.62
+        },
+        {
+          "disease_id": "D029",
+          "slug": "diphtheria",
+          "name_en": "Diphtheria",
+          "name_zh": "白喉",
+          "confidence": 0.62
+        },
+        {
+          "disease_id": "D120",
+          "slug": "tetanus",
+          "name_en": "Tetanus",
+          "name_zh": "破伤风",
+          "confidence": 0.62
+        }
+      ],
+      "countries": [
+        {
+          "code": "US",
+          "name_en": "United States",
+          "name_zh": null,
+          "confidence": 0.78
+        }
+      ],
+      "topics": [
+        {
+          "name": "Vaccination",
+          "confidence": 0.76
+        }
+      ],
+      "related_surveillance": [
+        {
+          "disease_id": "D028",
+          "disease_name_en": "Pertussis",
+          "disease_name_zh": "百日咳",
+          "disease_slug": "pertussis",
+          "country_code": "US",
+          "country_name_en": "United States",
+          "url": "/diseases/pertussis/",
+          "method": "high-confidence article geography intersected with GIDS series coverage"
+        },
+        {
+          "disease_id": "D120",
+          "disease_name_en": "Tetanus",
+          "disease_name_zh": "破伤风",
+          "disease_slug": "tetanus",
+          "country_code": "US",
+          "country_name_en": "United States",
+          "url": "/diseases/tetanus/",
+          "method": "high-confidence article geography intersected with GIDS series coverage"
+        }
+      ],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to COVID-19. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与新型冠状病毒感染相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.15585/mmwr.mm7333a1",
+        "publisher": "http://www.cdc.gov/mmwr/volumes/73/wr/mm7333a1.htm?s_cid=mm7333a1_w",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/39173168/"
+      },
+      "updated_at": "2026-08-13T12:40:20.771722+00:00",
+      "related_signals": []
+    }
+  ],
+  "count": 2,
+  "publication_timeline": [
+    {
+      "month": "2024-08",
+      "publication_count": 2
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-91c183b8229563e94d0195c1",
+        "type": "article",
+        "label": "Differences between males and females in infectious diseases notifications in the EU/EEA, 2012 to 2021",
+        "slug": "10-2807-1560-7917-es-2024-29-33-2300655-91c183b8",
+        "url": "/research/articles/10-2807-1560-7917-es-2024-29-33-2300655-91c183b8/",
+        "published_at": "2024-08-15T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-f30b4d9a036cf960380b1f9d",
+        "type": "article",
+        "label": "National Vaccination Coverage Among Adolescents Aged 13–17 Years — National Immunization Survey-Teen, United States, 2023",
+        "slug": "10-15585-mmwr-mm7333a1-f30b4d9a",
+        "url": "/research/articles/10-15585-mmwr-mm7333a1-f30b4d9a/",
+        "published_at": "2024-08-22T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "country:us",
+        "type": "country",
+        "label": "United States",
+        "code": "US",
+        "url": "/countries/us/"
+      },
+      {
+        "id": "disease:d004",
+        "type": "disease",
+        "label": "COVID-19",
+        "disease_id": "D004",
+        "name_zh": "新型冠状病毒感染",
+        "slug": "covid-19",
+        "url": "/diseases/covid-19/"
+      },
+      {
+        "id": "disease:d005",
+        "type": "disease",
+        "label": "AIDS",
+        "disease_id": "D005",
+        "name_zh": "艾滋病",
+        "slug": "aids",
+        "url": "/diseases/aids/"
+      },
+      {
+        "id": "disease:d008",
+        "type": "disease",
+        "label": "Hepatitis B",
+        "disease_id": "D008",
+        "name_zh": "乙型肝炎",
+        "slug": "hepatitis-b",
+        "url": "/diseases/hepatitis-b/"
+      },
+      {
+        "id": "disease:d028",
+        "type": "disease",
+        "label": "Pertussis",
+        "disease_id": "D028",
+        "name_zh": "百日咳",
+        "slug": "pertussis",
+        "url": "/diseases/pertussis/"
+      },
+      {
+        "id": "disease:d029",
+        "type": "disease",
+        "label": "Diphtheria",
+        "disease_id": "D029",
+        "name_zh": "白喉",
+        "slug": "diphtheria",
+        "url": "/diseases/diphtheria/"
+      },
+      {
+        "id": "disease:d037",
+        "type": "disease",
+        "label": "Malaria",
+        "disease_id": "D037",
+        "name_zh": "疟疾",
+        "slug": "malaria",
+        "url": "/diseases/malaria/"
+      },
+      {
+        "id": "disease:d068",
+        "type": "disease",
+        "label": "Acute hepatitis B",
+        "disease_id": "D068",
+        "name_zh": "急性乙型肝炎",
+        "slug": "acute-hepatitis-b",
+        "url": "/diseases/acute-hepatitis-b/"
+      },
+      {
+        "id": "disease:d092",
+        "type": "disease",
+        "label": "Campylobacteriosis",
+        "disease_id": "D092",
+        "name_zh": "弯曲杆菌病",
+        "slug": "campylobacteriosis",
+        "url": "/diseases/campylobacteriosis/"
+      },
+      {
+        "id": "disease:d094",
+        "type": "disease",
+        "label": "Chlamydia trachomatis infection",
+        "disease_id": "D094",
+        "name_zh": "沙眼衣原体感染",
+        "slug": "chlamydia-trachomatis-infection",
+        "url": "/diseases/chlamydia-trachomatis-infection/"
+      },
+      {
+        "id": "disease:d108",
+        "type": "disease",
+        "label": "Listeriosis",
+        "disease_id": "D108",
+        "name_zh": "李斯特菌病",
+        "slug": "listeriosis",
+        "url": "/diseases/listeriosis/"
+      },
+      {
+        "id": "disease:d120",
+        "type": "disease",
+        "label": "Tetanus",
+        "disease_id": "D120",
+        "name_zh": "破伤风",
+        "slug": "tetanus",
+        "url": "/diseases/tetanus/"
+      },
+      {
+        "id": "study-type:journal-article",
+        "type": "study_type",
+        "label": "Journal article"
+      },
+      {
+        "id": "topic:surveillance",
+        "type": "topic",
+        "label": "Surveillance"
+      },
+      {
+        "id": "topic:transmission-dynamics",
+        "type": "topic",
+        "label": "Transmission dynamics"
+      },
+      {
+        "id": "topic:vaccination",
+        "type": "topic",
+        "label": "Vaccination"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-91c183b8229563e94d0195c1|ABOUT_DISEASE|disease:d005",
+        "source": "article:lit-91c183b8229563e94d0195c1",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d005",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-91c183b8229563e94d0195c1|ABOUT_DISEASE|disease:d008",
+        "source": "article:lit-91c183b8229563e94d0195c1",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d008",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-91c183b8229563e94d0195c1|ABOUT_DISEASE|disease:d028",
+        "source": "article:lit-91c183b8229563e94d0195c1",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d028",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-91c183b8229563e94d0195c1|ABOUT_DISEASE|disease:d037",
+        "source": "article:lit-91c183b8229563e94d0195c1",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d037",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-91c183b8229563e94d0195c1|ABOUT_DISEASE|disease:d068",
+        "source": "article:lit-91c183b8229563e94d0195c1",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d068",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-91c183b8229563e94d0195c1|ABOUT_DISEASE|disease:d092",
+        "source": "article:lit-91c183b8229563e94d0195c1",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d092",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-91c183b8229563e94d0195c1|ABOUT_DISEASE|disease:d094",
+        "source": "article:lit-91c183b8229563e94d0195c1",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d094",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-91c183b8229563e94d0195c1|ABOUT_DISEASE|disease:d108",
+        "source": "article:lit-91c183b8229563e94d0195c1",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d108",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-91c183b8229563e94d0195c1|ADDRESSES_TOPIC|topic:surveillance",
+        "source": "article:lit-91c183b8229563e94d0195c1",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:surveillance",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-91c183b8229563e94d0195c1|ADDRESSES_TOPIC|topic:transmission-dynamics",
+        "source": "article:lit-91c183b8229563e94d0195c1",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:transmission-dynamics",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-91c183b8229563e94d0195c1|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-91c183b8229563e94d0195c1",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-f30b4d9a036cf960380b1f9d|ABOUT_DISEASE|disease:d004",
+        "source": "article:lit-f30b4d9a036cf960380b1f9d",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d004",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-f30b4d9a036cf960380b1f9d|ABOUT_DISEASE|disease:d028",
+        "source": "article:lit-f30b4d9a036cf960380b1f9d",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d028",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-f30b4d9a036cf960380b1f9d|ABOUT_DISEASE|disease:d029",
+        "source": "article:lit-f30b4d9a036cf960380b1f9d",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d029",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-f30b4d9a036cf960380b1f9d|ABOUT_DISEASE|disease:d120",
+        "source": "article:lit-f30b4d9a036cf960380b1f9d",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d120",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-f30b4d9a036cf960380b1f9d|ADDRESSES_TOPIC|topic:vaccination",
+        "source": "article:lit-f30b4d9a036cf960380b1f9d",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccination",
+        "confidence": 0.76
+      },
+      {
+        "id": "article:lit-f30b4d9a036cf960380b1f9d|STUDIED_IN|country:us",
+        "source": "article:lit-f30b4d9a036cf960380b1f9d",
+        "relation": "STUDIED_IN",
+        "target": "country:us",
+        "confidence": 0.78
+      },
+      {
+        "id": "article:lit-f30b4d9a036cf960380b1f9d|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-f30b4d9a036cf960380b1f9d",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 18,
+      "edges": 18,
+      "articles": 2
+    }
+  }
+}

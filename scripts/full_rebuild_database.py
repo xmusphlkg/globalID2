@@ -651,8 +651,21 @@ class DatabaseRebuilder:
         
         inserted = 0
         for _, row in df.iterrows():
-            disease_id = row['disease_id']
-            local_name = row['local_name']
+            raw_disease_id = row.get('disease_id')
+            raw_local_name = row.get('local_name')
+            disease_id = (
+                '' if pd.isna(raw_disease_id)
+                else str(raw_disease_id or '').strip().upper()
+            )
+            local_name = (
+                '' if pd.isna(raw_local_name)
+                else str(raw_local_name or '').strip()
+            )
+            # Registry-only source categories may intentionally have no
+            # canonical disease target.  They are explicit no-projection
+            # decisions, not legacy disease_mappings rows.
+            if not disease_id or not local_name:
+                continue
             source_id = str(row.get('source_id') or '').strip().upper() or '*'
             series_id = str(row.get('series_id') or '').strip() or None
             

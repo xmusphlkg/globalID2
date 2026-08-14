@@ -45,6 +45,36 @@ class DatabaseSettings(_BaseEnvSettings):
     max_overflow: int = Field(default=20, description="最大溢出连接数")
 
 
+class SituationHistoryDatabaseSettings(_BaseEnvSettings):
+    """Dedicated durable store for Situation Room revisions and audit data.
+
+    When ``url`` is empty, the connection details are inherited from the main
+    database and only the database name is replaced.  This keeps local and
+    self-hosted installs simple while still allowing an isolated cluster in
+    production.
+    """
+
+    enabled: bool = Field(
+        default=True,
+        validation_alias="SITUATION_HISTORY_DATABASE_ENABLED",
+        description="Enable the dedicated Situation Room history store",
+    )
+    url: str = Field(
+        default="",
+        validation_alias="SITUATION_HISTORY_DATABASE_URL",
+        description="Optional async URL for the Situation Room history database",
+    )
+    database_name: str = Field(
+        default="globalid_history",
+        validation_alias="SITUATION_HISTORY_DATABASE_NAME",
+        pattern=r"^[A-Za-z_][A-Za-z0-9_]{0,62}$",
+        description="Database name used when URL is derived from the main database",
+    )
+    echo: bool = Field(default=False, description="Whether to log history database SQL")
+    pool_size: int = Field(default=5, ge=1, description="History database connection-pool size")
+    max_overflow: int = Field(default=5, ge=0, description="History database pool overflow")
+
+
 class RedisSettings(_BaseEnvSettings):
     """Redis配置"""
 
@@ -102,6 +132,42 @@ class AISettings(_BaseEnvSettings):
     knowledge_model_shards_raw: str = Field(
         default="",
         description="知识库任务的模型分流列表，逗号分隔；为空时回退到 model_chain",
+    )
+    knowledge_generation_timeout_seconds: int = Field(
+        default=300,
+        ge=30,
+        le=900,
+        description="单个知识库语言版本生成的总超时秒数",
+    )
+    knowledge_model_request_timeout_seconds: int = Field(
+        default=120,
+        ge=10,
+        le=600,
+        description="知识库生成中单条模型路由请求的超时秒数",
+    )
+    knowledge_model_attempts_per_route: int = Field(
+        default=2,
+        ge=1,
+        le=3,
+        description="知识库生成中单条模型路由的最大尝试次数；额度和超时错误仍立即切换",
+    )
+    knowledge_timeout_cooldown_seconds: int = Field(
+        default=60,
+        ge=0,
+        le=600,
+        description="知识模型超时后的进程内冷却秒数，避免双语连续撞击同一路由",
+    )
+    knowledge_output_repair_attempts: int = Field(
+        default=1,
+        ge=0,
+        le=2,
+        description="知识模型输出格式或引用失败时允许的低成本修复次数",
+    )
+    knowledge_max_output_tokens: int = Field(
+        default=3600,
+        ge=800,
+        le=8000,
+        description="完整知识画像的最大输出 token，上限会按目标字段数自动下调",
     )
     agent_role_models_raw: str = Field(
         default="",
@@ -313,6 +379,91 @@ class RawArchiveSettings(_BaseEnvSettings):
     )
     git_timeout_seconds: int = Field(default=1800, ge=60, le=7200, description="单次 Git 网络操作超时秒数")
 
+
+class LiteratureSettings(_BaseEnvSettings):
+    """Research Radar source, classification, and scheduling settings."""
+
+    enabled: bool = Field(default=True, description="Enable Research Radar APIs and manual synchronization")
+    schedule_enabled: bool = Field(default=False, description="Run literature synchronization on the scheduler")
+    interval_minutes: int = Field(default=360, ge=30, le=10080)
+    poll_interval_seconds: int = Field(default=30, ge=5, le=300)
+    timezone: str = Field(default="UTC")
+    contact_email: str = Field(default="research-radar@globalinfectiousdisease.com")
+    journals_path: Path = Field(default=Path("configs/literature/journals.json"))
+    taxonomy_path: Path = Field(default=Path("configs/literature/taxonomy.json"))
+    disease_aliases_path: Path = Field(default=Path("configs/literature/disease_aliases.json"))
+    initial_lookback_days: int = Field(default=14, ge=1, le=365)
+    index_overlap_days: int = Field(default=2, ge=0, le=30)
+    max_records_per_run: int = Field(default=300, ge=1, le=5000)
+    max_europe_pmc_records: int = Field(default=200, ge=0, le=2000)
+    europe_pmc_enabled: bool = Field(default=True)
+    source_concurrency: int = Field(default=4, ge=1, le=12)
+    request_timeout_seconds: int = Field(default=30, ge=5, le=120)
+    max_retries: int = Field(default=3, ge=1, le=5)
+    auto_publish_min_score: float = Field(default=0.72, ge=0.0, le=1.0)
+    public_article_limit: int = Field(default=500, ge=20, le=5000)
+    ai_enrichment_enabled: bool = Field(
+        default=False,
+        description="Allow model-backed, evidence-grounded literature summary tasks",
+    )
+    ai_enrichment_schedule_enabled: bool = Field(
+        default=False,
+        description="Continuously process the next eligible summary batch on the scheduler",
+    )
+    ai_enrichment_interval_minutes: int = Field(default=60, ge=15, le=10080)
+    ai_enrichment_batch_size: int = Field(default=8, ge=1, le=50)
+    ai_max_quality_attempts: int = Field(
+        default=2,
+        ge=1,
+        le=5,
+        description="Maximum automatic generations per unchanged article/language before exception review",
+    )
+    ai_enrichment_languages_raw: str = Field(default="en,zh")
+    ai_min_abstract_characters: int = Field(default=180, ge=80, le=2000)
+    ai_require_open_access: bool = Field(
+        default=True,
+        description="Only send abstracts from records identified as open access to an external model route",
+    )
+    ai_model_request_timeout_seconds: int = Field(default=120, ge=10, le=600)
+    gap_discovery_enabled: bool = Field(
+        default=True,
+        description="Enable review-only targeted literature discovery for Situation Room evidence gaps",
+    )
+    gap_discovery_schedule_enabled: bool = Field(default=False)
+    gap_discovery_interval_minutes: int = Field(default=720, ge=60, le=10080)
+    gap_discovery_max_gaps_per_run: int = Field(default=8, ge=1, le=50)
+    gap_discovery_records_per_gap: int = Field(default=25, ge=5, le=100)
+    gap_discovery_candidate_limit: int = Field(
+        default=12,
+        ge=1,
+        le=50,
+        description="Maximum ranked review relationships retained per evidence gap and discovery run",
+    )
+    gap_discovery_lookback_days: int = Field(default=730, ge=30, le=3650)
+    gap_discovery_retry_hours: int = Field(default=24, ge=1, le=720)
+    autopilot_enabled: bool = Field(
+        default=False,
+        description="Apply versioned quality gates and leave only exceptions for editorial review",
+    )
+    autopilot_article_min_score: float = Field(default=0.70, ge=0.0, le=1.0)
+    autopilot_article_exclude_below_score: float = Field(default=0.60, ge=0.0, le=1.0)
+    autopilot_disease_min_confidence: float = Field(default=0.82, ge=0.0, le=1.0)
+    autopilot_exact_relation_min_confidence: float = Field(default=0.78, ge=0.0, le=1.0)
+    autopilot_context_relation_min_confidence: float = Field(default=0.82, ge=0.0, le=1.0)
+    autopilot_summary_min_quality: float = Field(default=0.90, ge=0.0, le=1.0)
+    autopilot_auto_reject_weak_links: bool = Field(default=True)
+    autopilot_auto_exclude_incomplete: bool = Field(default=True)
+    autopilot_auto_exclude_preprints: bool = Field(default=True)
+    autopilot_export_on_change: bool = Field(
+        default=True,
+        description="Refresh local public Research Radar artifacts after an automated decision",
+    )
+
+    @property
+    def ai_enrichment_languages(self) -> list[str]:
+        languages = [value.strip().lower() for value in self.ai_enrichment_languages_raw.split(",")]
+        return [value for value in dict.fromkeys(languages) if value in {"en", "zh"}] or ["en"]
+
 class AppSettingsConfig(BaseSettings):
     """应用基础配置"""
 
@@ -419,12 +570,16 @@ class AppSettings(BaseSettings):
     
     # 子配置
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)
+    situation_history_database: SituationHistoryDatabaseSettings = Field(
+        default_factory=SituationHistoryDatabaseSettings
+    )
     redis: RedisSettings = Field(default_factory=RedisSettings)
     qdrant: QdrantSettings = Field(default_factory=QdrantSettings)
     ai: AISettings = Field(default_factory=AISettings)
     automation: AutomationSettings = Field(default_factory=AutomationSettings)
     data_release: DataReleaseSettings = Field(default_factory=DataReleaseSettings)
     raw_archive: RawArchiveSettings = Field(default_factory=RawArchiveSettings)
+    literature: LiteratureSettings = Field(default_factory=LiteratureSettings)
     app: AppSettingsConfig = Field(default_factory=AppSettingsConfig)
     report: ReportSettings = Field(default_factory=ReportSettings)
     crawler: CrawlerSettings = Field(default_factory=CrawlerSettings)

@@ -1,0 +1,3629 @@
+{
+  "schema_version": "research_hotspots.v1",
+  "generated_at": "2026-08-14T06:50:32.699089+00:00",
+  "grain": {
+    "streamgraph": "month",
+    "heatmap": "month",
+    "burst_timeline": "month",
+    "alluvial": "quarter"
+  },
+  "streamgraph": {
+    "periods": [
+      {
+        "period": "2025-03",
+        "label": "Mar '25",
+        "start_date": "2025-03-01",
+        "end_date": "2025-03-31",
+        "article_count": 3,
+        "topic_mentions": 3
+      },
+      {
+        "period": "2025-04",
+        "label": "Apr '25",
+        "start_date": "2025-04-01",
+        "end_date": "2025-04-30",
+        "article_count": 3,
+        "topic_mentions": 3
+      },
+      {
+        "period": "2025-05",
+        "label": "May '25",
+        "start_date": "2025-05-01",
+        "end_date": "2025-05-31",
+        "article_count": 2,
+        "topic_mentions": 4
+      },
+      {
+        "period": "2025-06",
+        "label": "Jun '25",
+        "start_date": "2025-06-01",
+        "end_date": "2025-06-30",
+        "article_count": 4,
+        "topic_mentions": 7
+      },
+      {
+        "period": "2025-07",
+        "label": "Jul '25",
+        "start_date": "2025-07-01",
+        "end_date": "2025-07-31",
+        "article_count": 8,
+        "topic_mentions": 15
+      },
+      {
+        "period": "2025-08",
+        "label": "Aug '25",
+        "start_date": "2025-08-01",
+        "end_date": "2025-08-31",
+        "article_count": 2,
+        "topic_mentions": 5
+      },
+      {
+        "period": "2025-09",
+        "label": "Sep '25",
+        "start_date": "2025-09-01",
+        "end_date": "2025-09-30",
+        "article_count": 3,
+        "topic_mentions": 7
+      },
+      {
+        "period": "2025-10",
+        "label": "Oct '25",
+        "start_date": "2025-10-01",
+        "end_date": "2025-10-31",
+        "article_count": 4,
+        "topic_mentions": 5
+      },
+      {
+        "period": "2025-11",
+        "label": "Nov '25",
+        "start_date": "2025-11-01",
+        "end_date": "2025-11-30",
+        "article_count": 5,
+        "topic_mentions": 15
+      },
+      {
+        "period": "2025-12",
+        "label": "Dec '25",
+        "start_date": "2025-12-01",
+        "end_date": "2025-12-31",
+        "article_count": 8,
+        "topic_mentions": 13
+      },
+      {
+        "period": "2026-01",
+        "label": "Jan '26",
+        "start_date": "2026-01-01",
+        "end_date": "2026-01-31",
+        "article_count": 7,
+        "topic_mentions": 13
+      },
+      {
+        "period": "2026-02",
+        "label": "Feb '26",
+        "start_date": "2026-02-01",
+        "end_date": "2026-02-28",
+        "article_count": 9,
+        "topic_mentions": 19
+      },
+      {
+        "period": "2026-03",
+        "label": "Mar '26",
+        "start_date": "2026-03-01",
+        "end_date": "2026-03-31",
+        "article_count": 10,
+        "topic_mentions": 16
+      },
+      {
+        "period": "2026-04",
+        "label": "Apr '26",
+        "start_date": "2026-04-01",
+        "end_date": "2026-04-30",
+        "article_count": 5,
+        "topic_mentions": 8
+      },
+      {
+        "period": "2026-05",
+        "label": "May '26",
+        "start_date": "2026-05-01",
+        "end_date": "2026-05-31",
+        "article_count": 4,
+        "topic_mentions": 5
+      },
+      {
+        "period": "2026-06",
+        "label": "Jun '26",
+        "start_date": "2026-06-01",
+        "end_date": "2026-06-30",
+        "article_count": 18,
+        "topic_mentions": 29
+      },
+      {
+        "period": "2026-07",
+        "label": "Jul '26",
+        "start_date": "2026-07-01",
+        "end_date": "2026-07-31",
+        "article_count": 17,
+        "topic_mentions": 39
+      },
+      {
+        "period": "2026-08",
+        "label": "Aug '26",
+        "start_date": "2026-08-01",
+        "end_date": "2026-08-31",
+        "article_count": 7,
+        "topic_mentions": 13
+      }
+    ],
+    "series": [
+      {
+        "topic": "Outbreak investigation",
+        "slug": "outbreak-investigation",
+        "count_total": 40,
+        "points": [
+          {
+            "period": "2025-03",
+            "count": 0,
+            "share_of_articles": 0.0,
+            "y0": 0.4615,
+            "y1": 0.4615
+          },
+          {
+            "period": "2025-04",
+            "count": 0,
+            "share_of_articles": 0.0,
+            "y0": 0.4615,
+            "y1": 0.4615
+          },
+          {
+            "period": "2025-05",
+            "count": 2,
+            "share_of_articles": 1.0,
+            "y0": 0.4487,
+            "y1": 0.5
+          },
+          {
+            "period": "2025-06",
+            "count": 1,
+            "share_of_articles": 0.25,
+            "y0": 0.4103,
+            "y1": 0.4359
+          },
+          {
+            "period": "2025-07",
+            "count": 0,
+            "share_of_articles": 0.0,
+            "y0": 0.3077,
+            "y1": 0.3077
+          },
+          {
+            "period": "2025-08",
+            "count": 0,
+            "share_of_articles": 0.0,
+            "y0": 0.4359,
+            "y1": 0.4359
+          },
+          {
+            "period": "2025-09",
+            "count": 1,
+            "share_of_articles": 0.3333,
+            "y0": 0.4103,
+            "y1": 0.4359
+          },
+          {
+            "period": "2025-10",
+            "count": 0,
+            "share_of_articles": 0.0,
+            "y0": 0.4359,
+            "y1": 0.4359
+          },
+          {
+            "period": "2025-11",
+            "count": 1,
+            "share_of_articles": 0.2,
+            "y0": 0.3077,
+            "y1": 0.3333
+          },
+          {
+            "period": "2025-12",
+            "count": 0,
+            "share_of_articles": 0.0,
+            "y0": 0.3333,
+            "y1": 0.3333
+          },
+          {
+            "period": "2026-01",
+            "count": 3,
+            "share_of_articles": 0.4286,
+            "y0": 0.3333,
+            "y1": 0.4103
+          },
+          {
+            "period": "2026-02",
+            "count": 3,
+            "share_of_articles": 0.3333,
+            "y0": 0.2564,
+            "y1": 0.3333
+          },
+          {
+            "period": "2026-03",
+            "count": 0,
+            "share_of_articles": 0.0,
+            "y0": 0.2949,
+            "y1": 0.2949
+          },
+          {
+            "period": "2026-04",
+            "count": 2,
+            "share_of_articles": 0.4,
+            "y0": 0.3974,
+            "y1": 0.4487
+          },
+          {
+            "period": "2026-05",
+            "count": 0,
+            "share_of_articles": 0.0,
+            "y0": 0.4359,
+            "y1": 0.4359
+          },
+          {
+            "period": "2026-06",
+            "count": 13,
+            "share_of_articles": 0.7222,
+            "y0": 0.1282,
+            "y1": 0.4615
+          },
+          {
+            "period": "2026-07",
+            "count": 12,
+            "share_of_articles": 0.7059,
+            "y0": 0.0,
+            "y1": 0.3077
+          },
+          {
+            "period": "2026-08",
+            "count": 2,
+            "share_of_articles": 0.2857,
+            "y0": 0.3333,
+            "y1": 0.3846
+          }
+        ]
+      },
+      {
+        "topic": "Surveillance",
+        "slug": "surveillance",
+        "count_total": 37,
+        "points": [
+          {
+            "period": "2025-03",
+            "count": 1,
+            "share_of_articles": 0.3333,
+            "y0": 0.4615,
+            "y1": 0.4872
+          },
+          {
+            "period": "2025-04",
+            "count": 0,
+            "share_of_articles": 0.0,
+            "y0": 0.4615,
+            "y1": 0.4615
+          },
+          {
+            "period": "2025-05",
+            "count": 1,
+            "share_of_articles": 0.5,
+            "y0": 0.5,
+            "y1": 0.5256
+          },
+          {
+            "period": "2025-06",
+            "count": 0,
+            "share_of_articles": 0.0,
+            "y0": 0.4359,
+            "y1": 0.4359
+          },
+          {
+            "period": "2025-07",
+            "count": 3,
+            "share_of_articles": 0.375,
+            "y0": 0.3077,
+            "y1": 0.3846
+          },
+          {
+            "period": "2025-08",
+            "count": 1,
+            "share_of_articles": 0.5,
+            "y0": 0.4359,
+            "y1": 0.4615
+          },
+          {
+            "period": "2025-09",
+            "count": 1,
+            "share_of_articles": 0.3333,
+            "y0": 0.4359,
+            "y1": 0.4615
+          },
+          {
+            "period": "2025-10",
+            "count": 1,
+            "share_of_articles": 0.25,
+            "y0": 0.4359,
+            "y1": 0.4615
+          },
+          {
+            "period": "2025-11",
+            "count": 2,
+            "share_of_articles": 0.4,
+            "y0": 0.3333,
+            "y1": 0.3846
+          },
+          {
+            "period": "2025-12",
+            "count": 3,
+            "share_of_articles": 0.375,
+            "y0": 0.3333,
+            "y1": 0.4103
+          },
+          {
+            "period": "2026-01",
+            "count": 1,
+            "share_of_articles": 0.1429,
+            "y0": 0.4103,
+            "y1": 0.4359
+          },
+          {
+            "period": "2026-02",
+            "count": 5,
+            "share_of_articles": 0.5556,
+            "y0": 0.3333,
+            "y1": 0.4615
+          },
+          {
+            "period": "2026-03",
+            "count": 3,
+            "share_of_articles": 0.3,
+            "y0": 0.2949,
+            "y1": 0.3718
+          },
+          {
+            "period": "2026-04",
+            "count": 1,
+            "share_of_articles": 0.2,
+            "y0": 0.4487,
+            "y1": 0.4744
+          },
+          {
+            "period": "2026-05",
+            "count": 1,
+            "share_of_articles": 0.25,
+            "y0": 0.4359,
+            "y1": 0.4615
+          },
+          {
+            "period": "2026-06",
+            "count": 0,
+            "share_of_articles": 0.0,
+            "y0": 0.4615,
+            "y1": 0.4615
+          },
+          {
+            "period": "2026-07",
+            "count": 8,
+            "share_of_articles": 0.4706,
+            "y0": 0.3077,
+            "y1": 0.5128
+          },
+          {
+            "period": "2026-08",
+            "count": 5,
+            "share_of_articles": 0.7143,
+            "y0": 0.3846,
+            "y1": 0.5128
+          }
+        ]
+      },
+      {
+        "topic": "Vaccination",
+        "slug": "vaccination",
+        "count_total": 37,
+        "points": [
+          {
+            "period": "2025-03",
+            "count": 2,
+            "share_of_articles": 0.6667,
+            "y0": 0.4872,
+            "y1": 0.5385
+          },
+          {
+            "period": "2025-04",
+            "count": 0,
+            "share_of_articles": 0.0,
+            "y0": 0.4615,
+            "y1": 0.4615
+          },
+          {
+            "period": "2025-05",
+            "count": 1,
+            "share_of_articles": 0.5,
+            "y0": 0.5256,
+            "y1": 0.5513
+          },
+          {
+            "period": "2025-06",
+            "count": 1,
+            "share_of_articles": 0.25,
+            "y0": 0.4359,
+            "y1": 0.4615
+          },
+          {
+            "period": "2025-07",
+            "count": 0,
+            "share_of_articles": 0.0,
+            "y0": 0.3846,
+            "y1": 0.3846
+          },
+          {
+            "period": "2025-08",
+            "count": 2,
+            "share_of_articles": 1.0,
+            "y0": 0.4615,
+            "y1": 0.5128
+          },
+          {
+            "period": "2025-09",
+            "count": 2,
+            "share_of_articles": 0.6667,
+            "y0": 0.4615,
+            "y1": 0.5128
+          },
+          {
+            "period": "2025-10",
+            "count": 2,
+            "share_of_articles": 0.5,
+            "y0": 0.4615,
+            "y1": 0.5128
+          },
+          {
+            "period": "2025-11",
+            "count": 1,
+            "share_of_articles": 0.2,
+            "y0": 0.3846,
+            "y1": 0.4103
+          },
+          {
+            "period": "2025-12",
+            "count": 4,
+            "share_of_articles": 0.5,
+            "y0": 0.4103,
+            "y1": 0.5128
+          },
+          {
+            "period": "2026-01",
+            "count": 1,
+            "share_of_articles": 0.1429,
+            "y0": 0.4359,
+            "y1": 0.4615
+          },
+          {
+            "period": "2026-02",
+            "count": 3,
+            "share_of_articles": 0.3333,
+            "y0": 0.4615,
+            "y1": 0.5385
+          },
+          {
+            "period": "2026-03",
+            "count": 4,
+            "share_of_articles": 0.4,
+            "y0": 0.3718,
+            "y1": 0.4744
+          },
+          {
+            "period": "2026-04",
+            "count": 1,
+            "share_of_articles": 0.2,
+            "y0": 0.4744,
+            "y1": 0.5
+          },
+          {
+            "period": "2026-05",
+            "count": 3,
+            "share_of_articles": 0.75,
+            "y0": 0.4615,
+            "y1": 0.5385
+          },
+          {
+            "period": "2026-06",
+            "count": 3,
+            "share_of_articles": 0.1667,
+            "y0": 0.4615,
+            "y1": 0.5385
+          },
+          {
+            "period": "2026-07",
+            "count": 6,
+            "share_of_articles": 0.3529,
+            "y0": 0.5128,
+            "y1": 0.6667
+          },
+          {
+            "period": "2026-08",
+            "count": 1,
+            "share_of_articles": 0.1429,
+            "y0": 0.5128,
+            "y1": 0.5385
+          }
+        ]
+      },
+      {
+        "topic": "Transmission dynamics",
+        "slug": "transmission-dynamics",
+        "count_total": 27,
+        "points": [
+          {
+            "period": "2025-03",
+            "count": 0,
+            "share_of_articles": 0.0,
+            "y0": 0.5385,
+            "y1": 0.5385
+          },
+          {
+            "period": "2025-04",
+            "count": 1,
+            "share_of_articles": 0.3333,
+            "y0": 0.4615,
+            "y1": 0.4872
+          },
+          {
+            "period": "2025-05",
+            "count": 0,
+            "share_of_articles": 0.0,
+            "y0": 0.5513,
+            "y1": 0.5513
+          },
+          {
+            "period": "2025-06",
+            "count": 1,
+            "share_of_articles": 0.25,
+            "y0": 0.4615,
+            "y1": 0.4872
+          },
+          {
+            "period": "2025-07",
+            "count": 4,
+            "share_of_articles": 0.5,
+            "y0": 0.3846,
+            "y1": 0.4872
+          },
+          {
+            "period": "2025-08",
+            "count": 1,
+            "share_of_articles": 0.5,
+            "y0": 0.5128,
+            "y1": 0.5385
+          },
+          {
+            "period": "2025-09",
+            "count": 0,
+            "share_of_articles": 0.0,
+            "y0": 0.5128,
+            "y1": 0.5128
+          },
+          {
+            "period": "2025-10",
+            "count": 1,
+            "share_of_articles": 0.25,
+            "y0": 0.5128,
+            "y1": 0.5385
+          },
+          {
+            "period": "2025-11",
+            "count": 2,
+            "share_of_articles": 0.4,
+            "y0": 0.4103,
+            "y1": 0.4615
+          },
+          {
+            "period": "2025-12",
+            "count": 1,
+            "share_of_articles": 0.125,
+            "y0": 0.5128,
+            "y1": 0.5385
+          },
+          {
+            "period": "2026-01",
+            "count": 1,
+            "share_of_articles": 0.1429,
+            "y0": 0.4615,
+            "y1": 0.4872
+          },
+          {
+            "period": "2026-02",
+            "count": 1,
+            "share_of_articles": 0.1111,
+            "y0": 0.5385,
+            "y1": 0.5641
+          },
+          {
+            "period": "2026-03",
+            "count": 3,
+            "share_of_articles": 0.3,
+            "y0": 0.4744,
+            "y1": 0.5513
+          },
+          {
+            "period": "2026-04",
+            "count": 1,
+            "share_of_articles": 0.2,
+            "y0": 0.5,
+            "y1": 0.5256
+          },
+          {
+            "period": "2026-05",
+            "count": 0,
+            "share_of_articles": 0.0,
+            "y0": 0.5385,
+            "y1": 0.5385
+          },
+          {
+            "period": "2026-06",
+            "count": 5,
+            "share_of_articles": 0.2778,
+            "y0": 0.5385,
+            "y1": 0.6667
+          },
+          {
+            "period": "2026-07",
+            "count": 5,
+            "share_of_articles": 0.2941,
+            "y0": 0.6667,
+            "y1": 0.7949
+          },
+          {
+            "period": "2026-08",
+            "count": 0,
+            "share_of_articles": 0.0,
+            "y0": 0.5385,
+            "y1": 0.5385
+          }
+        ]
+      },
+      {
+        "topic": "Climate and environment",
+        "slug": "climate-and-environment",
+        "count_total": 22,
+        "points": [
+          {
+            "period": "2025-03",
+            "count": 0,
+            "share_of_articles": 0.0,
+            "y0": 0.5385,
+            "y1": 0.5385
+          },
+          {
+            "period": "2025-04",
+            "count": 0,
+            "share_of_articles": 0.0,
+            "y0": 0.4872,
+            "y1": 0.4872
+          },
+          {
+            "period": "2025-05",
+            "count": 0,
+            "share_of_articles": 0.0,
+            "y0": 0.5513,
+            "y1": 0.5513
+          },
+          {
+            "period": "2025-06",
+            "count": 1,
+            "share_of_articles": 0.25,
+            "y0": 0.4872,
+            "y1": 0.5128
+          },
+          {
+            "period": "2025-07",
+            "count": 1,
+            "share_of_articles": 0.125,
+            "y0": 0.4872,
+            "y1": 0.5128
+          },
+          {
+            "period": "2025-08",
+            "count": 1,
+            "share_of_articles": 0.5,
+            "y0": 0.5385,
+            "y1": 0.5641
+          },
+          {
+            "period": "2025-09",
+            "count": 1,
+            "share_of_articles": 0.3333,
+            "y0": 0.5128,
+            "y1": 0.5385
+          },
+          {
+            "period": "2025-10",
+            "count": 1,
+            "share_of_articles": 0.25,
+            "y0": 0.5385,
+            "y1": 0.5641
+          },
+          {
+            "period": "2025-11",
+            "count": 3,
+            "share_of_articles": 0.6,
+            "y0": 0.4615,
+            "y1": 0.5385
+          },
+          {
+            "period": "2025-12",
+            "count": 2,
+            "share_of_articles": 0.25,
+            "y0": 0.5385,
+            "y1": 0.5897
+          },
+          {
+            "period": "2026-01",
+            "count": 2,
+            "share_of_articles": 0.2857,
+            "y0": 0.4872,
+            "y1": 0.5385
+          },
+          {
+            "period": "2026-02",
+            "count": 3,
+            "share_of_articles": 0.3333,
+            "y0": 0.5641,
+            "y1": 0.641
+          },
+          {
+            "period": "2026-03",
+            "count": 1,
+            "share_of_articles": 0.1,
+            "y0": 0.5513,
+            "y1": 0.5769
+          },
+          {
+            "period": "2026-04",
+            "count": 1,
+            "share_of_articles": 0.2,
+            "y0": 0.5256,
+            "y1": 0.5513
+          },
+          {
+            "period": "2026-05",
+            "count": 1,
+            "share_of_articles": 0.25,
+            "y0": 0.5385,
+            "y1": 0.5641
+          },
+          {
+            "period": "2026-06",
+            "count": 0,
+            "share_of_articles": 0.0,
+            "y0": 0.6667,
+            "y1": 0.6667
+          },
+          {
+            "period": "2026-07",
+            "count": 2,
+            "share_of_articles": 0.1176,
+            "y0": 0.7949,
+            "y1": 0.8462
+          },
+          {
+            "period": "2026-08",
+            "count": 2,
+            "share_of_articles": 0.2857,
+            "y0": 0.5385,
+            "y1": 0.5897
+          }
+        ]
+      },
+      {
+        "topic": "Diagnostics",
+        "slug": "diagnostics",
+        "count_total": 20,
+        "points": [
+          {
+            "period": "2025-03",
+            "count": 0,
+            "share_of_articles": 0.0,
+            "y0": 0.5385,
+            "y1": 0.5385
+          },
+          {
+            "period": "2025-04",
+            "count": 1,
+            "share_of_articles": 0.3333,
+            "y0": 0.4872,
+            "y1": 0.5128
+          },
+          {
+            "period": "2025-05",
+            "count": 0,
+            "share_of_articles": 0.0,
+            "y0": 0.5513,
+            "y1": 0.5513
+          },
+          {
+            "period": "2025-06",
+            "count": 0,
+            "share_of_articles": 0.0,
+            "y0": 0.5128,
+            "y1": 0.5128
+          },
+          {
+            "period": "2025-07",
+            "count": 2,
+            "share_of_articles": 0.25,
+            "y0": 0.5128,
+            "y1": 0.5641
+          },
+          {
+            "period": "2025-08",
+            "count": 0,
+            "share_of_articles": 0.0,
+            "y0": 0.5641,
+            "y1": 0.5641
+          },
+          {
+            "period": "2025-09",
+            "count": 1,
+            "share_of_articles": 0.3333,
+            "y0": 0.5385,
+            "y1": 0.5641
+          },
+          {
+            "period": "2025-10",
+            "count": 0,
+            "share_of_articles": 0.0,
+            "y0": 0.5641,
+            "y1": 0.5641
+          },
+          {
+            "period": "2025-11",
+            "count": 2,
+            "share_of_articles": 0.4,
+            "y0": 0.5385,
+            "y1": 0.5897
+          },
+          {
+            "period": "2025-12",
+            "count": 1,
+            "share_of_articles": 0.125,
+            "y0": 0.5897,
+            "y1": 0.6154
+          },
+          {
+            "period": "2026-01",
+            "count": 2,
+            "share_of_articles": 0.2857,
+            "y0": 0.5385,
+            "y1": 0.5897
+          },
+          {
+            "period": "2026-02",
+            "count": 2,
+            "share_of_articles": 0.2222,
+            "y0": 0.641,
+            "y1": 0.6923
+          },
+          {
+            "period": "2026-03",
+            "count": 2,
+            "share_of_articles": 0.2,
+            "y0": 0.5769,
+            "y1": 0.6282
+          },
+          {
+            "period": "2026-04",
+            "count": 1,
+            "share_of_articles": 0.2,
+            "y0": 0.5513,
+            "y1": 0.5769
+          },
+          {
+            "period": "2026-05",
+            "count": 0,
+            "share_of_articles": 0.0,
+            "y0": 0.5641,
+            "y1": 0.5641
+          },
+          {
+            "period": "2026-06",
+            "count": 1,
+            "share_of_articles": 0.0556,
+            "y0": 0.6667,
+            "y1": 0.6923
+          },
+          {
+            "period": "2026-07",
+            "count": 3,
+            "share_of_articles": 0.1765,
+            "y0": 0.8462,
+            "y1": 0.9231
+          },
+          {
+            "period": "2026-08",
+            "count": 2,
+            "share_of_articles": 0.2857,
+            "y0": 0.5897,
+            "y1": 0.641
+          }
+        ]
+      },
+      {
+        "topic": "Treatment",
+        "slug": "treatment",
+        "count_total": 19,
+        "points": [
+          {
+            "period": "2025-03",
+            "count": 0,
+            "share_of_articles": 0.0,
+            "y0": 0.5385,
+            "y1": 0.5385
+          },
+          {
+            "period": "2025-04",
+            "count": 1,
+            "share_of_articles": 0.3333,
+            "y0": 0.5128,
+            "y1": 0.5385
+          },
+          {
+            "period": "2025-05",
+            "count": 0,
+            "share_of_articles": 0.0,
+            "y0": 0.5513,
+            "y1": 0.5513
+          },
+          {
+            "period": "2025-06",
+            "count": 1,
+            "share_of_articles": 0.25,
+            "y0": 0.5128,
+            "y1": 0.5385
+          },
+          {
+            "period": "2025-07",
+            "count": 2,
+            "share_of_articles": 0.25,
+            "y0": 0.5641,
+            "y1": 0.6154
+          },
+          {
+            "period": "2025-08",
+            "count": 0,
+            "share_of_articles": 0.0,
+            "y0": 0.5641,
+            "y1": 0.5641
+          },
+          {
+            "period": "2025-09",
+            "count": 1,
+            "share_of_articles": 0.3333,
+            "y0": 0.5641,
+            "y1": 0.5897
+          },
+          {
+            "period": "2025-10",
+            "count": 0,
+            "share_of_articles": 0.0,
+            "y0": 0.5641,
+            "y1": 0.5641
+          },
+          {
+            "period": "2025-11",
+            "count": 1,
+            "share_of_articles": 0.2,
+            "y0": 0.5897,
+            "y1": 0.6154
+          },
+          {
+            "period": "2025-12",
+            "count": 0,
+            "share_of_articles": 0.0,
+            "y0": 0.6154,
+            "y1": 0.6154
+          },
+          {
+            "period": "2026-01",
+            "count": 1,
+            "share_of_articles": 0.1429,
+            "y0": 0.5897,
+            "y1": 0.6154
+          },
+          {
+            "period": "2026-02",
+            "count": 2,
+            "share_of_articles": 0.2222,
+            "y0": 0.6923,
+            "y1": 0.7436
+          },
+          {
+            "period": "2026-03",
+            "count": 1,
+            "share_of_articles": 0.1,
+            "y0": 0.6282,
+            "y1": 0.6538
+          },
+          {
+            "period": "2026-04",
+            "count": 1,
+            "share_of_articles": 0.2,
+            "y0": 0.5769,
+            "y1": 0.6026
+          },
+          {
+            "period": "2026-05",
+            "count": 0,
+            "share_of_articles": 0.0,
+            "y0": 0.5641,
+            "y1": 0.5641
+          },
+          {
+            "period": "2026-06",
+            "count": 6,
+            "share_of_articles": 0.3333,
+            "y0": 0.6923,
+            "y1": 0.8462
+          },
+          {
+            "period": "2026-07",
+            "count": 1,
+            "share_of_articles": 0.0588,
+            "y0": 0.9231,
+            "y1": 0.9487
+          },
+          {
+            "period": "2026-08",
+            "count": 1,
+            "share_of_articles": 0.1429,
+            "y0": 0.641,
+            "y1": 0.6667
+          }
+        ]
+      },
+      {
+        "topic": "One Health",
+        "slug": "one-health",
+        "count_total": 17,
+        "points": [
+          {
+            "period": "2025-03",
+            "count": 0,
+            "share_of_articles": 0.0,
+            "y0": 0.5385,
+            "y1": 0.5385
+          },
+          {
+            "period": "2025-04",
+            "count": 0,
+            "share_of_articles": 0.0,
+            "y0": 0.5385,
+            "y1": 0.5385
+          },
+          {
+            "period": "2025-05",
+            "count": 0,
+            "share_of_articles": 0.0,
+            "y0": 0.5513,
+            "y1": 0.5513
+          },
+          {
+            "period": "2025-06",
+            "count": 2,
+            "share_of_articles": 0.5,
+            "y0": 0.5385,
+            "y1": 0.5897
+          },
+          {
+            "period": "2025-07",
+            "count": 3,
+            "share_of_articles": 0.375,
+            "y0": 0.6154,
+            "y1": 0.6923
+          },
+          {
+            "period": "2025-08",
+            "count": 0,
+            "share_of_articles": 0.0,
+            "y0": 0.5641,
+            "y1": 0.5641
+          },
+          {
+            "period": "2025-09",
+            "count": 0,
+            "share_of_articles": 0.0,
+            "y0": 0.5897,
+            "y1": 0.5897
+          },
+          {
+            "period": "2025-10",
+            "count": 0,
+            "share_of_articles": 0.0,
+            "y0": 0.5641,
+            "y1": 0.5641
+          },
+          {
+            "period": "2025-11",
+            "count": 3,
+            "share_of_articles": 0.6,
+            "y0": 0.6154,
+            "y1": 0.6923
+          },
+          {
+            "period": "2025-12",
+            "count": 2,
+            "share_of_articles": 0.25,
+            "y0": 0.6154,
+            "y1": 0.6667
+          },
+          {
+            "period": "2026-01",
+            "count": 2,
+            "share_of_articles": 0.2857,
+            "y0": 0.6154,
+            "y1": 0.6667
+          },
+          {
+            "period": "2026-02",
+            "count": 0,
+            "share_of_articles": 0.0,
+            "y0": 0.7436,
+            "y1": 0.7436
+          },
+          {
+            "period": "2026-03",
+            "count": 2,
+            "share_of_articles": 0.2,
+            "y0": 0.6538,
+            "y1": 0.7051
+          },
+          {
+            "period": "2026-04",
+            "count": 0,
+            "share_of_articles": 0.0,
+            "y0": 0.6026,
+            "y1": 0.6026
+          },
+          {
+            "period": "2026-05",
+            "count": 0,
+            "share_of_articles": 0.0,
+            "y0": 0.5641,
+            "y1": 0.5641
+          },
+          {
+            "period": "2026-06",
+            "count": 1,
+            "share_of_articles": 0.0556,
+            "y0": 0.8462,
+            "y1": 0.8718
+          },
+          {
+            "period": "2026-07",
+            "count": 2,
+            "share_of_articles": 0.1176,
+            "y0": 0.9487,
+            "y1": 1.0
+          },
+          {
+            "period": "2026-08",
+            "count": 0,
+            "share_of_articles": 0.0,
+            "y0": 0.6667,
+            "y1": 0.6667
+          }
+        ]
+      }
+    ],
+    "method": "monthly public article topic mentions, scaled by selected-topic volume"
+  },
+  "heatmap": {
+    "periods": [
+      {
+        "period": "2025-03",
+        "label": "Mar '25",
+        "start_date": "2025-03-01",
+        "end_date": "2025-03-31"
+      },
+      {
+        "period": "2025-04",
+        "label": "Apr '25",
+        "start_date": "2025-04-01",
+        "end_date": "2025-04-30"
+      },
+      {
+        "period": "2025-05",
+        "label": "May '25",
+        "start_date": "2025-05-01",
+        "end_date": "2025-05-31"
+      },
+      {
+        "period": "2025-06",
+        "label": "Jun '25",
+        "start_date": "2025-06-01",
+        "end_date": "2025-06-30"
+      },
+      {
+        "period": "2025-07",
+        "label": "Jul '25",
+        "start_date": "2025-07-01",
+        "end_date": "2025-07-31"
+      },
+      {
+        "period": "2025-08",
+        "label": "Aug '25",
+        "start_date": "2025-08-01",
+        "end_date": "2025-08-31"
+      },
+      {
+        "period": "2025-09",
+        "label": "Sep '25",
+        "start_date": "2025-09-01",
+        "end_date": "2025-09-30"
+      },
+      {
+        "period": "2025-10",
+        "label": "Oct '25",
+        "start_date": "2025-10-01",
+        "end_date": "2025-10-31"
+      },
+      {
+        "period": "2025-11",
+        "label": "Nov '25",
+        "start_date": "2025-11-01",
+        "end_date": "2025-11-30"
+      },
+      {
+        "period": "2025-12",
+        "label": "Dec '25",
+        "start_date": "2025-12-01",
+        "end_date": "2025-12-31"
+      },
+      {
+        "period": "2026-01",
+        "label": "Jan '26",
+        "start_date": "2026-01-01",
+        "end_date": "2026-01-31"
+      },
+      {
+        "period": "2026-02",
+        "label": "Feb '26",
+        "start_date": "2026-02-01",
+        "end_date": "2026-02-28"
+      },
+      {
+        "period": "2026-03",
+        "label": "Mar '26",
+        "start_date": "2026-03-01",
+        "end_date": "2026-03-31"
+      },
+      {
+        "period": "2026-04",
+        "label": "Apr '26",
+        "start_date": "2026-04-01",
+        "end_date": "2026-04-30"
+      },
+      {
+        "period": "2026-05",
+        "label": "May '26",
+        "start_date": "2026-05-01",
+        "end_date": "2026-05-31"
+      },
+      {
+        "period": "2026-06",
+        "label": "Jun '26",
+        "start_date": "2026-06-01",
+        "end_date": "2026-06-30"
+      },
+      {
+        "period": "2026-07",
+        "label": "Jul '26",
+        "start_date": "2026-07-01",
+        "end_date": "2026-07-31"
+      },
+      {
+        "period": "2026-08",
+        "label": "Aug '26",
+        "start_date": "2026-08-01",
+        "end_date": "2026-08-31"
+      }
+    ],
+    "rows": [
+      {
+        "disease_id": "D050",
+        "disease_slug": "ebola",
+        "disease_name_en": "Ebola",
+        "disease_name_zh": "埃博拉出血热",
+        "topic": "Outbreak investigation",
+        "key": "D050::outbreak-investigation",
+        "count_total": 32,
+        "cells": [
+          {
+            "period": "2025-03",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-04",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-05",
+            "count": 1,
+            "intensity": 0.0769
+          },
+          {
+            "period": "2025-06",
+            "count": 1,
+            "intensity": 0.0769
+          },
+          {
+            "period": "2025-07",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-08",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-09",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-10",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-11",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-12",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-01",
+            "count": 2,
+            "intensity": 0.1538
+          },
+          {
+            "period": "2026-02",
+            "count": 1,
+            "intensity": 0.0769
+          },
+          {
+            "period": "2026-03",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-04",
+            "count": 1,
+            "intensity": 0.0769
+          },
+          {
+            "period": "2026-05",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-06",
+            "count": 13,
+            "intensity": 1.0
+          },
+          {
+            "period": "2026-07",
+            "count": 11,
+            "intensity": 0.8462
+          },
+          {
+            "period": "2026-08",
+            "count": 2,
+            "intensity": 0.1538
+          }
+        ]
+      },
+      {
+        "disease_id": "D205",
+        "disease_slug": "tick-borne-encephalitis",
+        "disease_name_en": "Tick-borne encephalitis",
+        "disease_name_zh": "蜱传脑炎",
+        "topic": "Vaccination",
+        "key": "D205::vaccination",
+        "count_total": 14,
+        "cells": [
+          {
+            "period": "2025-03",
+            "count": 1,
+            "intensity": 0.0769
+          },
+          {
+            "period": "2025-04",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-05",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-06",
+            "count": 1,
+            "intensity": 0.0769
+          },
+          {
+            "period": "2025-07",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-08",
+            "count": 1,
+            "intensity": 0.0769
+          },
+          {
+            "period": "2025-09",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-10",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-11",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-12",
+            "count": 1,
+            "intensity": 0.0769
+          },
+          {
+            "period": "2026-01",
+            "count": 1,
+            "intensity": 0.0769
+          },
+          {
+            "period": "2026-02",
+            "count": 2,
+            "intensity": 0.1538
+          },
+          {
+            "period": "2026-03",
+            "count": 3,
+            "intensity": 0.2308
+          },
+          {
+            "period": "2026-04",
+            "count": 1,
+            "intensity": 0.0769
+          },
+          {
+            "period": "2026-05",
+            "count": 3,
+            "intensity": 0.2308
+          },
+          {
+            "period": "2026-06",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-07",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-08",
+            "count": 0,
+            "intensity": 0.0
+          }
+        ]
+      },
+      {
+        "disease_id": "D038",
+        "disease_slug": "influenza",
+        "disease_name_en": "Influenza",
+        "disease_name_zh": "流行性感冒",
+        "topic": "Surveillance",
+        "key": "D038::surveillance",
+        "count_total": 13,
+        "cells": [
+          {
+            "period": "2025-03",
+            "count": 1,
+            "intensity": 0.0769
+          },
+          {
+            "period": "2025-04",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-05",
+            "count": 1,
+            "intensity": 0.0769
+          },
+          {
+            "period": "2025-06",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-07",
+            "count": 3,
+            "intensity": 0.2308
+          },
+          {
+            "period": "2025-08",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-09",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-10",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-11",
+            "count": 2,
+            "intensity": 0.1538
+          },
+          {
+            "period": "2025-12",
+            "count": 2,
+            "intensity": 0.1538
+          },
+          {
+            "period": "2026-01",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-02",
+            "count": 2,
+            "intensity": 0.1538
+          },
+          {
+            "period": "2026-03",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-04",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-05",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-06",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-07",
+            "count": 1,
+            "intensity": 0.0769
+          },
+          {
+            "period": "2026-08",
+            "count": 1,
+            "intensity": 0.0769
+          }
+        ]
+      },
+      {
+        "disease_id": "D038",
+        "disease_slug": "influenza",
+        "disease_name_en": "Influenza",
+        "disease_name_zh": "流行性感冒",
+        "topic": "Transmission dynamics",
+        "key": "D038::transmission-dynamics",
+        "count_total": 11,
+        "cells": [
+          {
+            "period": "2025-03",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-04",
+            "count": 1,
+            "intensity": 0.0769
+          },
+          {
+            "period": "2025-05",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-06",
+            "count": 1,
+            "intensity": 0.0769
+          },
+          {
+            "period": "2025-07",
+            "count": 3,
+            "intensity": 0.2308
+          },
+          {
+            "period": "2025-08",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-09",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-10",
+            "count": 1,
+            "intensity": 0.0769
+          },
+          {
+            "period": "2025-11",
+            "count": 2,
+            "intensity": 0.1538
+          },
+          {
+            "period": "2025-12",
+            "count": 1,
+            "intensity": 0.0769
+          },
+          {
+            "period": "2026-01",
+            "count": 1,
+            "intensity": 0.0769
+          },
+          {
+            "period": "2026-02",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-03",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-04",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-05",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-06",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-07",
+            "count": 1,
+            "intensity": 0.0769
+          },
+          {
+            "period": "2026-08",
+            "count": 0,
+            "intensity": 0.0
+          }
+        ]
+      },
+      {
+        "disease_id": "D038",
+        "disease_slug": "influenza",
+        "disease_name_en": "Influenza",
+        "disease_name_zh": "流行性感冒",
+        "topic": "Vaccination",
+        "key": "D038::vaccination",
+        "count_total": 9,
+        "cells": [
+          {
+            "period": "2025-03",
+            "count": 1,
+            "intensity": 0.0769
+          },
+          {
+            "period": "2025-04",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-05",
+            "count": 1,
+            "intensity": 0.0769
+          },
+          {
+            "period": "2025-06",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-07",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-08",
+            "count": 1,
+            "intensity": 0.0769
+          },
+          {
+            "period": "2025-09",
+            "count": 1,
+            "intensity": 0.0769
+          },
+          {
+            "period": "2025-10",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-11",
+            "count": 1,
+            "intensity": 0.0769
+          },
+          {
+            "period": "2025-12",
+            "count": 1,
+            "intensity": 0.0769
+          },
+          {
+            "period": "2026-01",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-02",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-03",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-04",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-05",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-06",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-07",
+            "count": 2,
+            "intensity": 0.1538
+          },
+          {
+            "period": "2026-08",
+            "count": 1,
+            "intensity": 0.0769
+          }
+        ]
+      },
+      {
+        "disease_id": "D038",
+        "disease_slug": "influenza",
+        "disease_name_en": "Influenza",
+        "disease_name_zh": "流行性感冒",
+        "topic": "One Health",
+        "key": "D038::one-health",
+        "count_total": 9,
+        "cells": [
+          {
+            "period": "2025-03",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-04",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-05",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-06",
+            "count": 2,
+            "intensity": 0.1538
+          },
+          {
+            "period": "2025-07",
+            "count": 2,
+            "intensity": 0.1538
+          },
+          {
+            "period": "2025-08",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-09",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-10",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-11",
+            "count": 2,
+            "intensity": 0.1538
+          },
+          {
+            "period": "2025-12",
+            "count": 2,
+            "intensity": 0.1538
+          },
+          {
+            "period": "2026-01",
+            "count": 1,
+            "intensity": 0.0769
+          },
+          {
+            "period": "2026-02",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-03",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-04",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-05",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-06",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-07",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-08",
+            "count": 0,
+            "intensity": 0.0
+          }
+        ]
+      },
+      {
+        "disease_id": "D050",
+        "disease_slug": "ebola",
+        "disease_name_en": "Ebola",
+        "disease_name_zh": "埃博拉出血热",
+        "topic": "Surveillance",
+        "key": "D050::surveillance",
+        "count_total": 8,
+        "cells": [
+          {
+            "period": "2025-03",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-04",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-05",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-06",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-07",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-08",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-09",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-10",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-11",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-12",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-01",
+            "count": 1,
+            "intensity": 0.0769
+          },
+          {
+            "period": "2026-02",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-03",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-04",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-05",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-06",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-07",
+            "count": 6,
+            "intensity": 0.4615
+          },
+          {
+            "period": "2026-08",
+            "count": 1,
+            "intensity": 0.0769
+          }
+        ]
+      },
+      {
+        "disease_id": "D050",
+        "disease_slug": "ebola",
+        "disease_name_en": "Ebola",
+        "disease_name_zh": "埃博拉出血热",
+        "topic": "Transmission dynamics",
+        "key": "D050::transmission-dynamics",
+        "count_total": 8,
+        "cells": [
+          {
+            "period": "2025-03",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-04",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-05",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-06",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-07",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-08",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-09",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-10",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-11",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-12",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-01",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-02",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-03",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-04",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-05",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-06",
+            "count": 5,
+            "intensity": 0.3846
+          },
+          {
+            "period": "2026-07",
+            "count": 3,
+            "intensity": 0.2308
+          },
+          {
+            "period": "2026-08",
+            "count": 0,
+            "intensity": 0.0
+          }
+        ]
+      },
+      {
+        "disease_id": "D050",
+        "disease_slug": "ebola",
+        "disease_name_en": "Ebola",
+        "disease_name_zh": "埃博拉出血热",
+        "topic": "Vaccination",
+        "key": "D050::vaccination",
+        "count_total": 6,
+        "cells": [
+          {
+            "period": "2025-03",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-04",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-05",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-06",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-07",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-08",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-09",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-10",
+            "count": 1,
+            "intensity": 0.0769
+          },
+          {
+            "period": "2025-11",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-12",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-01",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-02",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-03",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-04",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-05",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-06",
+            "count": 2,
+            "intensity": 0.1538
+          },
+          {
+            "period": "2026-07",
+            "count": 3,
+            "intensity": 0.2308
+          },
+          {
+            "period": "2026-08",
+            "count": 0,
+            "intensity": 0.0
+          }
+        ]
+      },
+      {
+        "disease_id": "D205",
+        "disease_slug": "tick-borne-encephalitis",
+        "disease_name_en": "Tick-borne encephalitis",
+        "disease_name_zh": "蜱传脑炎",
+        "topic": "Climate and environment",
+        "key": "D205::climate-and-environment",
+        "count_total": 6,
+        "cells": [
+          {
+            "period": "2025-03",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-04",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-05",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-06",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-07",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-08",
+            "count": 1,
+            "intensity": 0.0769
+          },
+          {
+            "period": "2025-09",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-10",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-11",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2025-12",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-01",
+            "count": 1,
+            "intensity": 0.0769
+          },
+          {
+            "period": "2026-02",
+            "count": 1,
+            "intensity": 0.0769
+          },
+          {
+            "period": "2026-03",
+            "count": 1,
+            "intensity": 0.0769
+          },
+          {
+            "period": "2026-04",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-05",
+            "count": 1,
+            "intensity": 0.0769
+          },
+          {
+            "period": "2026-06",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-07",
+            "count": 0,
+            "intensity": 0.0
+          },
+          {
+            "period": "2026-08",
+            "count": 1,
+            "intensity": 0.0769
+          }
+        ]
+      }
+    ],
+    "method": "high-confidence disease links crossed with public-health topic mentions"
+  },
+  "burst_timeline": {
+    "bursts": [
+      {
+        "period": "2026-07",
+        "label": "Jul '26",
+        "topic": "Surveillance",
+        "slug": "surveillance",
+        "count": 8,
+        "previous_count": 0,
+        "growth": 8,
+        "share": 0.4706,
+        "share_delta": 0.4706,
+        "burst_score": 8.98,
+        "articles": [
+          {
+            "article_id": "lit_cc4b9789ac278157c69bba8f",
+            "slug": "10-36922-mi025010145-cc4b9789",
+            "title": "Ebola outbreak in the Democratic Republic of the Congo: Lessons from Kasai (2025) and emerging challenges from the Bundibugyo resurgence",
+            "journal": "Microbes & Immunity",
+            "published_at": "2026-07-10T00:00:00+00:00",
+            "discovery_score": 0.744
+          },
+          {
+            "article_id": "lit_3f9e0b9af0cec8022a9c8574",
+            "slug": "10-3390-v18070782-3f9e0b9a",
+            "title": "Exploring the Potential Contribution of Climate-Informed Research to Future Ebola Preparedness in Central Africa.",
+            "journal": "Viruses",
+            "published_at": "2026-07-16T00:00:00+00:00",
+            "discovery_score": 0.718
+          },
+          {
+            "article_id": "lit_46b92e7b4feb98f02ab32005",
+            "slug": "10-7759-cureus-111921-46b92e7b",
+            "title": "Closing Critical Gaps in the 2026 Bundibugyo Ebola Response: Five Actionable Priorities.",
+            "journal": "Cureus",
+            "published_at": "2026-07-01T00:00:00+00:00",
+            "discovery_score": 0.712
+          }
+        ]
+      },
+      {
+        "period": "2026-07",
+        "label": "Jul '26",
+        "topic": "Diagnostics",
+        "slug": "diagnostics",
+        "count": 3,
+        "previous_count": 1,
+        "growth": 2,
+        "share": 0.1765,
+        "share_delta": 0.1209,
+        "burst_score": 2.86,
+        "articles": [
+          {
+            "article_id": "lit_3f9e0b9af0cec8022a9c8574",
+            "slug": "10-3390-v18070782-3f9e0b9a",
+            "title": "Exploring the Potential Contribution of Climate-Informed Research to Future Ebola Preparedness in Central Africa.",
+            "journal": "Viruses",
+            "published_at": "2026-07-16T00:00:00+00:00",
+            "discovery_score": 0.718
+          },
+          {
+            "article_id": "lit_46b92e7b4feb98f02ab32005",
+            "slug": "10-7759-cureus-111921-46b92e7b",
+            "title": "Closing Critical Gaps in the 2026 Bundibugyo Ebola Response: Five Actionable Priorities.",
+            "journal": "Cureus",
+            "published_at": "2026-07-01T00:00:00+00:00",
+            "discovery_score": 0.712
+          },
+          {
+            "article_id": "lit_1e848a43f98bddc06f217415",
+            "slug": "10-1186-s41182-026-01015-4-1e848a43",
+            "title": "Bundibugyo virus detection during an Ebola virus disease outbreak in the democratic Republic of the Congo: an urgent call for action.",
+            "journal": "Tropical medicine and health",
+            "published_at": "2026-07-06T00:00:00+00:00",
+            "discovery_score": 0.695
+          }
+        ]
+      },
+      {
+        "period": "2026-07",
+        "label": "Jul '26",
+        "topic": "Vaccination",
+        "slug": "vaccination",
+        "count": 6,
+        "previous_count": 3,
+        "growth": 3,
+        "share": 0.3529,
+        "share_delta": 0.1863,
+        "burst_score": 2.4,
+        "articles": [
+          {
+            "article_id": "lit_cc4b9789ac278157c69bba8f",
+            "slug": "10-36922-mi025010145-cc4b9789",
+            "title": "Ebola outbreak in the Democratic Republic of the Congo: Lessons from Kasai (2025) and emerging challenges from the Bundibugyo resurgence",
+            "journal": "Microbes & Immunity",
+            "published_at": "2026-07-10T00:00:00+00:00",
+            "discovery_score": 0.744
+          },
+          {
+            "article_id": "lit_7be8baca2912577c36110fea",
+            "slug": "10-1093-jtm-taag065-7be8baca",
+            "title": "Shared evidence, different recommendations: a comparative analysis of Qdenga (TAK-003) dengue vaccine guidance for travellers across countries",
+            "journal": "Journal of Travel Medicine",
+            "published_at": "2026-07-22T00:00:00+00:00",
+            "discovery_score": 0.717
+          },
+          {
+            "article_id": "lit_46b92e7b4feb98f02ab32005",
+            "slug": "10-7759-cureus-111921-46b92e7b",
+            "title": "Closing Critical Gaps in the 2026 Bundibugyo Ebola Response: Five Actionable Priorities.",
+            "journal": "Cureus",
+            "published_at": "2026-07-01T00:00:00+00:00",
+            "discovery_score": 0.712
+          }
+        ]
+      },
+      {
+        "period": "2026-07",
+        "label": "Jul '26",
+        "topic": "One Health",
+        "slug": "one-health",
+        "count": 2,
+        "previous_count": 1,
+        "growth": 1,
+        "share": 0.1176,
+        "share_delta": 0.0621,
+        "burst_score": 2.36,
+        "articles": [
+          {
+            "article_id": "lit_3f9e0b9af0cec8022a9c8574",
+            "slug": "10-3390-v18070782-3f9e0b9a",
+            "title": "Exploring the Potential Contribution of Climate-Informed Research to Future Ebola Preparedness in Central Africa.",
+            "journal": "Viruses",
+            "published_at": "2026-07-16T00:00:00+00:00",
+            "discovery_score": 0.718
+          },
+          {
+            "article_id": "lit_46b92e7b4feb98f02ab32005",
+            "slug": "10-7759-cureus-111921-46b92e7b",
+            "title": "Closing Critical Gaps in the 2026 Bundibugyo Ebola Response: Five Actionable Priorities.",
+            "journal": "Cureus",
+            "published_at": "2026-07-01T00:00:00+00:00",
+            "discovery_score": 0.712
+          }
+        ]
+      },
+      {
+        "period": "2026-07",
+        "label": "Jul '26",
+        "topic": "Climate and environment",
+        "slug": "climate-and-environment",
+        "count": 2,
+        "previous_count": 0,
+        "growth": 2,
+        "share": 0.1176,
+        "share_delta": 0.1176,
+        "burst_score": 1.63,
+        "articles": [
+          {
+            "article_id": "lit_3f9e0b9af0cec8022a9c8574",
+            "slug": "10-3390-v18070782-3f9e0b9a",
+            "title": "Exploring the Potential Contribution of Climate-Informed Research to Future Ebola Preparedness in Central Africa.",
+            "journal": "Viruses",
+            "published_at": "2026-07-16T00:00:00+00:00",
+            "discovery_score": 0.718
+          },
+          {
+            "article_id": "lit_3cdaa5c3f25fba81b4b9c1ba",
+            "slug": "10-29063-ajrh2026-v30i13-1-3cdaa5c3",
+            "title": "It's not just virology: The Bundibugyo Ebola outbreak in the Democratic Republic of the Congo and Uganda demands a wider public health response.",
+            "journal": "African journal of reproductive health",
+            "published_at": "2026-07-01T00:00:00+00:00",
+            "discovery_score": 0.626
+          }
+        ]
+      },
+      {
+        "period": "2026-06",
+        "label": "Jun '26",
+        "topic": "Outbreak investigation",
+        "slug": "outbreak-investigation",
+        "count": 13,
+        "previous_count": 0,
+        "growth": 13,
+        "share": 0.7222,
+        "share_delta": 0.7222,
+        "burst_score": 15.11,
+        "articles": [
+          {
+            "article_id": "lit_21e54eb9ba4943914b066934",
+            "slug": "10-1093-jtm-taag056-21e54eb9",
+            "title": "Strategic Preparedness for the FIFA World Cup 2026 in Response to the Bundibugoy Ebola Outbreak in the Democratic Republic of Congo",
+            "journal": "Journal of Travel Medicine",
+            "published_at": "2026-06-22T00:00:00+00:00",
+            "discovery_score": 0.737
+          },
+          {
+            "article_id": "lit_e8c2aa385b1138f6e09c5986",
+            "slug": "10-15585-mmwr-mm7522e1-e8c2aa38",
+            "title": "Modeled Scenario Projections for the Ebola Disease Outbreak Caused by Bundibugyo Virus, 2026.",
+            "journal": "MMWR. Morbidity and mortality weekly report",
+            "published_at": "2026-06-11T00:00:00+00:00",
+            "discovery_score": 0.732
+          },
+          {
+            "article_id": "lit_c7594305a4cbeba01559ee78",
+            "slug": "10-1186-s13756-026-01779-8-c7594305",
+            "title": "Healthcare-associated transmission and early IPC system vulnerabilities during the 2026 Bundibugyo Ebola outbreak in eastern Democratic Republic of the Congo",
+            "journal": "Antimicrobial Resistance & Infection Control",
+            "published_at": "2026-06-24T00:00:00+00:00",
+            "discovery_score": 0.705
+          }
+        ]
+      },
+      {
+        "period": "2026-06",
+        "label": "Jun '26",
+        "topic": "Treatment",
+        "slug": "treatment",
+        "count": 6,
+        "previous_count": 0,
+        "growth": 6,
+        "share": 0.3333,
+        "share_delta": 0.3333,
+        "burst_score": 6.53,
+        "articles": [
+          {
+            "article_id": "lit_21e54eb9ba4943914b066934",
+            "slug": "10-1093-jtm-taag056-21e54eb9",
+            "title": "Strategic Preparedness for the FIFA World Cup 2026 in Response to the Bundibugoy Ebola Outbreak in the Democratic Republic of Congo",
+            "journal": "Journal of Travel Medicine",
+            "published_at": "2026-06-22T00:00:00+00:00",
+            "discovery_score": 0.737
+          },
+          {
+            "article_id": "lit_e8c2aa385b1138f6e09c5986",
+            "slug": "10-15585-mmwr-mm7522e1-e8c2aa38",
+            "title": "Modeled Scenario Projections for the Ebola Disease Outbreak Caused by Bundibugyo Virus, 2026.",
+            "journal": "MMWR. Morbidity and mortality weekly report",
+            "published_at": "2026-06-11T00:00:00+00:00",
+            "discovery_score": 0.732
+          },
+          {
+            "article_id": "lit_608dcc059be5b13e00fbf07e",
+            "slug": "10-5334-gh-1564-608dcc05",
+            "title": "<i>Streptococcus Pyogenes</i> and Acute Rheumatic Fever: How Strong are the Links in the Chain?",
+            "journal": "Global heart",
+            "published_at": "2026-06-19T00:00:00+00:00",
+            "discovery_score": 0.671
+          }
+        ]
+      },
+      {
+        "period": "2026-06",
+        "label": "Jun '26",
+        "topic": "Transmission dynamics",
+        "slug": "transmission-dynamics",
+        "count": 5,
+        "previous_count": 0,
+        "growth": 5,
+        "share": 0.2778,
+        "share_delta": 0.2778,
+        "burst_score": 3.18,
+        "articles": [
+          {
+            "article_id": "lit_e8c2aa385b1138f6e09c5986",
+            "slug": "10-15585-mmwr-mm7522e1-e8c2aa38",
+            "title": "Modeled Scenario Projections for the Ebola Disease Outbreak Caused by Bundibugyo Virus, 2026.",
+            "journal": "MMWR. Morbidity and mortality weekly report",
+            "published_at": "2026-06-11T00:00:00+00:00",
+            "discovery_score": 0.732
+          },
+          {
+            "article_id": "lit_c7594305a4cbeba01559ee78",
+            "slug": "10-1186-s13756-026-01779-8-c7594305",
+            "title": "Healthcare-associated transmission and early IPC system vulnerabilities during the 2026 Bundibugyo Ebola outbreak in eastern Democratic Republic of the Congo",
+            "journal": "Antimicrobial Resistance & Infection Control",
+            "published_at": "2026-06-24T00:00:00+00:00",
+            "discovery_score": 0.705
+          },
+          {
+            "article_id": "lit_9b077036a87ebd24d6715ea9",
+            "slug": "10-1093-jtm-taag057-9b077036",
+            "title": "Estimating the introduction risk and sustained transmission of the Ebola Bundibugyo outbreak 2026 in the Democratic Republic of Congo",
+            "journal": "Journal of Travel Medicine",
+            "published_at": "2026-06-22T00:00:00+00:00",
+            "discovery_score": 0.673
+          }
+        ]
+      },
+      {
+        "period": "2026-05",
+        "label": "May '26",
+        "topic": "Vaccination",
+        "slug": "vaccination",
+        "count": 3,
+        "previous_count": 1,
+        "growth": 2,
+        "share": 0.75,
+        "share_delta": 0.55,
+        "burst_score": 0.2,
+        "articles": [
+          {
+            "article_id": "lit_22c8f2aaf6c29bea8d5704b5",
+            "slug": "10-3390-pathogens15050503-22c8f2aa",
+            "title": "Tick-Borne Encephalitis Vaccine Effectiveness and Impact in Slovenia, 2019-2024.",
+            "journal": "Pathogens (Basel, Switzerland)",
+            "published_at": "2026-05-07T00:00:00+00:00",
+            "discovery_score": 0.686
+          },
+          {
+            "article_id": "lit_9785ac97977da4f1324efeee",
+            "slug": "10-1016-j-vaccine-2026-128593-9785ac97",
+            "title": "Tick-borne encephalitis vaccination coverage among outdoor workers in Sweden: a nationwide survey",
+            "journal": "Vaccine",
+            "published_at": "2026-05-01T00:00:00+00:00",
+            "discovery_score": 0.683
+          },
+          {
+            "article_id": "lit_196618cabf72e603537eb105",
+            "slug": "10-1186-s12879-026-13657-0-196618ca",
+            "title": "Fatal European subtype tick-borne encephalitis in a fully vaccinated immunocompetent child: a case report with viral sequencing.",
+            "journal": "BMC infectious diseases",
+            "published_at": "2026-05-29T00:00:00+00:00",
+            "discovery_score": 0.631
+          }
+        ]
+      },
+      {
+        "period": "2026-04",
+        "label": "Apr '26",
+        "topic": "Outbreak investigation",
+        "slug": "outbreak-investigation",
+        "count": 2,
+        "previous_count": 0,
+        "growth": 2,
+        "share": 0.4,
+        "share_delta": 0.4,
+        "burst_score": 0.0,
+        "articles": [
+          {
+            "article_id": "lit_3645e0a45d24397b1cf3043c",
+            "slug": "10-1371-journal-pntd-0014184-3645e0a4",
+            "title": "Surveillance and control efficacy of the Bergerac, France, 2025 chikungunya outbreak",
+            "journal": "PLOS Neglected Tropical Diseases",
+            "published_at": "2026-04-20T00:00:00+00:00",
+            "discovery_score": 0.733
+          },
+          {
+            "article_id": "lit_27ce4306d049681082db487f",
+            "slug": "10-1136-medhum-2025-013586-27ce4306",
+            "title": "‘Our problem here is the pig Ebola’: local accounts of epizootics preceding Ebola outbreaks in north-eastern Democratic Republic of the Congo",
+            "journal": "Medical Humanities",
+            "published_at": "2026-04-01T00:00:00+00:00",
+            "discovery_score": 0.557
+          }
+        ]
+      },
+      {
+        "period": "2026-03",
+        "label": "Mar '26",
+        "topic": "Transmission dynamics",
+        "slug": "transmission-dynamics",
+        "count": 3,
+        "previous_count": 1,
+        "growth": 2,
+        "share": 0.3,
+        "share_delta": 0.1889,
+        "burst_score": 2.0,
+        "articles": [
+          {
+            "article_id": "lit_53345908bb8d2f88c9fd0b5b",
+            "slug": "10-1186-s12940-026-01278-8-53345908",
+            "title": "Projecting tick-borne encephalitis risk in Sweden under climate change scenarios: a high-resolution spatio-temporal modeling approach",
+            "journal": "Environmental Health",
+            "published_at": "2026-03-23T00:00:00+00:00",
+            "discovery_score": 0.699
+          },
+          {
+            "article_id": "lit_ce85973c0685edbd50bf2cab",
+            "slug": "10-1186-s13028-026-00863-8-ce85973c",
+            "title": "Antibodies against tick-borne pathogens in domestic dogs in Norway: Borrelia burgdorferi sensu lato, tick-borne encephalitis virus, and Anaplasma phagocytophilum.",
+            "journal": "Acta veterinaria Scandinavica",
+            "published_at": "2026-03-15T00:00:00+00:00",
+            "discovery_score": 0.664
+          },
+          {
+            "article_id": "lit_bd0dcc9a72ca9698eeaa7f9f",
+            "slug": "10-1016-j-ttbdis-2026-102609-bd0dcc9a",
+            "title": "Experimental evidence for milk-borne transmission of tick-borne encephalitis virus to suckling lambs",
+            "journal": "Ticks and Tick-borne Diseases",
+            "published_at": "2026-03-01T00:00:00+00:00",
+            "discovery_score": 0.594
+          }
+        ]
+      },
+      {
+        "period": "2026-03",
+        "label": "Mar '26",
+        "topic": "Vaccination",
+        "slug": "vaccination",
+        "count": 4,
+        "previous_count": 3,
+        "growth": 1,
+        "share": 0.4,
+        "share_delta": 0.0667,
+        "burst_score": 0.82,
+        "articles": [
+          {
+            "article_id": "lit_53345908bb8d2f88c9fd0b5b",
+            "slug": "10-1186-s12940-026-01278-8-53345908",
+            "title": "Projecting tick-borne encephalitis risk in Sweden under climate change scenarios: a high-resolution spatio-temporal modeling approach",
+            "journal": "Environmental Health",
+            "published_at": "2026-03-23T00:00:00+00:00",
+            "discovery_score": 0.699
+          },
+          {
+            "article_id": "lit_900f1df63b5358edac6c208e",
+            "slug": "10-1186-s41182-026-00942-6-900f1df6",
+            "title": "Sex-specific burdens of acute hepatitis B and C and their attributable risk factors in 204 countries and territories, 1990-2021.",
+            "journal": "Tropical medicine and health",
+            "published_at": "2026-03-25T00:00:00+00:00",
+            "discovery_score": 0.604
+          },
+          {
+            "article_id": "lit_e839d973ab668cf9547762cc",
+            "slug": "10-3390-vaccines14030254-e839d973",
+            "title": "Correction: Müller et al. Does the Vaccination Against Tick-Borne Encephalitis Offer Good Value for Money for Incidence Rates Below the WHO Threshold for Endemicity? A Case Study for Germany. <i>Vaccines</i> 2024, <i>12</i>, 1165.",
+            "journal": "Vaccines",
+            "published_at": "2026-03-10T00:00:00+00:00",
+            "discovery_score": 0.598
+          }
+        ]
+      }
+    ],
+    "method": "monthly topic bursts using count growth, share movement, and recent baseline deviation"
+  },
+  "alluvial": {
+    "periods": [
+      {
+        "period": "2025-Q2",
+        "label": "Q2 '25",
+        "start_date": "2025-04-01",
+        "end_date": "2025-06-30"
+      },
+      {
+        "period": "2025-Q3",
+        "label": "Q3 '25",
+        "start_date": "2025-07-01",
+        "end_date": "2025-09-30"
+      },
+      {
+        "period": "2025-Q4",
+        "label": "Q4 '25",
+        "start_date": "2025-10-01",
+        "end_date": "2025-12-31"
+      },
+      {
+        "period": "2026-Q1",
+        "label": "Q1 '26",
+        "start_date": "2026-01-01",
+        "end_date": "2026-03-31"
+      },
+      {
+        "period": "2026-Q2",
+        "label": "Q2 '26",
+        "start_date": "2026-04-01",
+        "end_date": "2026-06-30"
+      },
+      {
+        "period": "2026-Q3",
+        "label": "Q3 '26",
+        "start_date": "2026-07-01",
+        "end_date": "2026-09-30"
+      }
+    ],
+    "topics": [
+      {
+        "topic": "Outbreak investigation",
+        "slug": "outbreak-investigation"
+      },
+      {
+        "topic": "Surveillance",
+        "slug": "surveillance"
+      },
+      {
+        "topic": "Vaccination",
+        "slug": "vaccination"
+      },
+      {
+        "topic": "Transmission dynamics",
+        "slug": "transmission-dynamics"
+      },
+      {
+        "topic": "Climate and environment",
+        "slug": "climate-and-environment"
+      },
+      {
+        "topic": "Diagnostics",
+        "slug": "diagnostics"
+      },
+      {
+        "topic": "Treatment",
+        "slug": "treatment"
+      }
+    ],
+    "nodes": [
+      {
+        "period": "2025-Q2",
+        "topic": "Outbreak investigation",
+        "slug": "outbreak-investigation",
+        "count": 3,
+        "rank": 1,
+        "y0": 0.38,
+        "y1": 0.44
+      },
+      {
+        "period": "2025-Q2",
+        "topic": "Vaccination",
+        "slug": "vaccination",
+        "count": 2,
+        "rank": 2,
+        "y0": 0.44,
+        "y1": 0.48
+      },
+      {
+        "period": "2025-Q2",
+        "topic": "Transmission dynamics",
+        "slug": "transmission-dynamics",
+        "count": 2,
+        "rank": 3,
+        "y0": 0.48,
+        "y1": 0.52
+      },
+      {
+        "period": "2025-Q2",
+        "topic": "Treatment",
+        "slug": "treatment",
+        "count": 2,
+        "rank": 4,
+        "y0": 0.52,
+        "y1": 0.56
+      },
+      {
+        "period": "2025-Q2",
+        "topic": "Surveillance",
+        "slug": "surveillance",
+        "count": 1,
+        "rank": 5,
+        "y0": 0.56,
+        "y1": 0.58
+      },
+      {
+        "period": "2025-Q2",
+        "topic": "Climate and environment",
+        "slug": "climate-and-environment",
+        "count": 1,
+        "rank": 6,
+        "y0": 0.58,
+        "y1": 0.6
+      },
+      {
+        "period": "2025-Q2",
+        "topic": "Diagnostics",
+        "slug": "diagnostics",
+        "count": 1,
+        "rank": 7,
+        "y0": 0.6,
+        "y1": 0.62
+      },
+      {
+        "period": "2025-Q3",
+        "topic": "Surveillance",
+        "slug": "surveillance",
+        "count": 5,
+        "rank": 1,
+        "y0": 0.26,
+        "y1": 0.36
+      },
+      {
+        "period": "2025-Q3",
+        "topic": "Transmission dynamics",
+        "slug": "transmission-dynamics",
+        "count": 5,
+        "rank": 2,
+        "y0": 0.36,
+        "y1": 0.46
+      },
+      {
+        "period": "2025-Q3",
+        "topic": "Vaccination",
+        "slug": "vaccination",
+        "count": 4,
+        "rank": 3,
+        "y0": 0.46,
+        "y1": 0.54
+      },
+      {
+        "period": "2025-Q3",
+        "topic": "Climate and environment",
+        "slug": "climate-and-environment",
+        "count": 3,
+        "rank": 4,
+        "y0": 0.54,
+        "y1": 0.6
+      },
+      {
+        "period": "2025-Q3",
+        "topic": "Diagnostics",
+        "slug": "diagnostics",
+        "count": 3,
+        "rank": 5,
+        "y0": 0.6,
+        "y1": 0.66
+      },
+      {
+        "period": "2025-Q3",
+        "topic": "Treatment",
+        "slug": "treatment",
+        "count": 3,
+        "rank": 6,
+        "y0": 0.66,
+        "y1": 0.72
+      },
+      {
+        "period": "2025-Q3",
+        "topic": "Outbreak investigation",
+        "slug": "outbreak-investigation",
+        "count": 1,
+        "rank": 7,
+        "y0": 0.72,
+        "y1": 0.74
+      },
+      {
+        "period": "2025-Q4",
+        "topic": "Vaccination",
+        "slug": "vaccination",
+        "count": 7,
+        "rank": 1,
+        "y0": 0.22,
+        "y1": 0.36
+      },
+      {
+        "period": "2025-Q4",
+        "topic": "Surveillance",
+        "slug": "surveillance",
+        "count": 6,
+        "rank": 2,
+        "y0": 0.36,
+        "y1": 0.48
+      },
+      {
+        "period": "2025-Q4",
+        "topic": "Climate and environment",
+        "slug": "climate-and-environment",
+        "count": 6,
+        "rank": 3,
+        "y0": 0.48,
+        "y1": 0.6
+      },
+      {
+        "period": "2025-Q4",
+        "topic": "Transmission dynamics",
+        "slug": "transmission-dynamics",
+        "count": 4,
+        "rank": 4,
+        "y0": 0.6,
+        "y1": 0.68
+      },
+      {
+        "period": "2025-Q4",
+        "topic": "Diagnostics",
+        "slug": "diagnostics",
+        "count": 3,
+        "rank": 5,
+        "y0": 0.68,
+        "y1": 0.74
+      },
+      {
+        "period": "2025-Q4",
+        "topic": "Outbreak investigation",
+        "slug": "outbreak-investigation",
+        "count": 1,
+        "rank": 6,
+        "y0": 0.74,
+        "y1": 0.76
+      },
+      {
+        "period": "2025-Q4",
+        "topic": "Treatment",
+        "slug": "treatment",
+        "count": 1,
+        "rank": 7,
+        "y0": 0.76,
+        "y1": 0.78
+      },
+      {
+        "period": "2026-Q1",
+        "topic": "Surveillance",
+        "slug": "surveillance",
+        "count": 9,
+        "rank": 1,
+        "y0": 0.06,
+        "y1": 0.24
+      },
+      {
+        "period": "2026-Q1",
+        "topic": "Vaccination",
+        "slug": "vaccination",
+        "count": 8,
+        "rank": 2,
+        "y0": 0.24,
+        "y1": 0.4
+      },
+      {
+        "period": "2026-Q1",
+        "topic": "Outbreak investigation",
+        "slug": "outbreak-investigation",
+        "count": 6,
+        "rank": 3,
+        "y0": 0.4,
+        "y1": 0.52
+      },
+      {
+        "period": "2026-Q1",
+        "topic": "Climate and environment",
+        "slug": "climate-and-environment",
+        "count": 6,
+        "rank": 4,
+        "y0": 0.52,
+        "y1": 0.64
+      },
+      {
+        "period": "2026-Q1",
+        "topic": "Diagnostics",
+        "slug": "diagnostics",
+        "count": 6,
+        "rank": 5,
+        "y0": 0.64,
+        "y1": 0.76
+      },
+      {
+        "period": "2026-Q1",
+        "topic": "Transmission dynamics",
+        "slug": "transmission-dynamics",
+        "count": 5,
+        "rank": 6,
+        "y0": 0.76,
+        "y1": 0.86
+      },
+      {
+        "period": "2026-Q1",
+        "topic": "Treatment",
+        "slug": "treatment",
+        "count": 4,
+        "rank": 7,
+        "y0": 0.86,
+        "y1": 0.94
+      },
+      {
+        "period": "2026-Q2",
+        "topic": "Outbreak investigation",
+        "slug": "outbreak-investigation",
+        "count": 15,
+        "rank": 1,
+        "y0": 0.09,
+        "y1": 0.39
+      },
+      {
+        "period": "2026-Q2",
+        "topic": "Vaccination",
+        "slug": "vaccination",
+        "count": 7,
+        "rank": 2,
+        "y0": 0.39,
+        "y1": 0.53
+      },
+      {
+        "period": "2026-Q2",
+        "topic": "Treatment",
+        "slug": "treatment",
+        "count": 7,
+        "rank": 3,
+        "y0": 0.53,
+        "y1": 0.67
+      },
+      {
+        "period": "2026-Q2",
+        "topic": "Transmission dynamics",
+        "slug": "transmission-dynamics",
+        "count": 6,
+        "rank": 4,
+        "y0": 0.67,
+        "y1": 0.79
+      },
+      {
+        "period": "2026-Q2",
+        "topic": "Surveillance",
+        "slug": "surveillance",
+        "count": 2,
+        "rank": 5,
+        "y0": 0.79,
+        "y1": 0.83
+      },
+      {
+        "period": "2026-Q2",
+        "topic": "Climate and environment",
+        "slug": "climate-and-environment",
+        "count": 2,
+        "rank": 6,
+        "y0": 0.83,
+        "y1": 0.87
+      },
+      {
+        "period": "2026-Q2",
+        "topic": "Diagnostics",
+        "slug": "diagnostics",
+        "count": 2,
+        "rank": 7,
+        "y0": 0.87,
+        "y1": 0.91
+      },
+      {
+        "period": "2026-Q3",
+        "topic": "Outbreak investigation",
+        "slug": "outbreak-investigation",
+        "count": 14,
+        "rank": 1,
+        "y0": 0.0,
+        "y1": 0.28
+      },
+      {
+        "period": "2026-Q3",
+        "topic": "Surveillance",
+        "slug": "surveillance",
+        "count": 13,
+        "rank": 2,
+        "y0": 0.28,
+        "y1": 0.54
+      },
+      {
+        "period": "2026-Q3",
+        "topic": "Vaccination",
+        "slug": "vaccination",
+        "count": 7,
+        "rank": 3,
+        "y0": 0.54,
+        "y1": 0.68
+      },
+      {
+        "period": "2026-Q3",
+        "topic": "Transmission dynamics",
+        "slug": "transmission-dynamics",
+        "count": 5,
+        "rank": 4,
+        "y0": 0.68,
+        "y1": 0.78
+      },
+      {
+        "period": "2026-Q3",
+        "topic": "Diagnostics",
+        "slug": "diagnostics",
+        "count": 5,
+        "rank": 5,
+        "y0": 0.78,
+        "y1": 0.88
+      },
+      {
+        "period": "2026-Q3",
+        "topic": "Climate and environment",
+        "slug": "climate-and-environment",
+        "count": 4,
+        "rank": 6,
+        "y0": 0.88,
+        "y1": 0.96
+      },
+      {
+        "period": "2026-Q3",
+        "topic": "Treatment",
+        "slug": "treatment",
+        "count": 2,
+        "rank": 7,
+        "y0": 0.96,
+        "y1": 1.0
+      }
+    ],
+    "links": [
+      {
+        "topic": "Outbreak investigation",
+        "slug": "outbreak-investigation",
+        "source_period": "2025-Q2",
+        "target_period": "2025-Q3",
+        "source_count": 3,
+        "target_count": 1,
+        "value": 3,
+        "source_y": 0.41,
+        "target_y": 0.73
+      },
+      {
+        "topic": "Surveillance",
+        "slug": "surveillance",
+        "source_period": "2025-Q2",
+        "target_period": "2025-Q3",
+        "source_count": 1,
+        "target_count": 5,
+        "value": 5,
+        "source_y": 0.57,
+        "target_y": 0.31
+      },
+      {
+        "topic": "Vaccination",
+        "slug": "vaccination",
+        "source_period": "2025-Q2",
+        "target_period": "2025-Q3",
+        "source_count": 2,
+        "target_count": 4,
+        "value": 4,
+        "source_y": 0.46,
+        "target_y": 0.5
+      },
+      {
+        "topic": "Transmission dynamics",
+        "slug": "transmission-dynamics",
+        "source_period": "2025-Q2",
+        "target_period": "2025-Q3",
+        "source_count": 2,
+        "target_count": 5,
+        "value": 5,
+        "source_y": 0.5,
+        "target_y": 0.41
+      },
+      {
+        "topic": "Climate and environment",
+        "slug": "climate-and-environment",
+        "source_period": "2025-Q2",
+        "target_period": "2025-Q3",
+        "source_count": 1,
+        "target_count": 3,
+        "value": 3,
+        "source_y": 0.59,
+        "target_y": 0.57
+      },
+      {
+        "topic": "Diagnostics",
+        "slug": "diagnostics",
+        "source_period": "2025-Q2",
+        "target_period": "2025-Q3",
+        "source_count": 1,
+        "target_count": 3,
+        "value": 3,
+        "source_y": 0.61,
+        "target_y": 0.63
+      },
+      {
+        "topic": "Treatment",
+        "slug": "treatment",
+        "source_period": "2025-Q2",
+        "target_period": "2025-Q3",
+        "source_count": 2,
+        "target_count": 3,
+        "value": 3,
+        "source_y": 0.54,
+        "target_y": 0.69
+      },
+      {
+        "topic": "Outbreak investigation",
+        "slug": "outbreak-investigation",
+        "source_period": "2025-Q3",
+        "target_period": "2025-Q4",
+        "source_count": 1,
+        "target_count": 1,
+        "value": 1,
+        "source_y": 0.73,
+        "target_y": 0.75
+      },
+      {
+        "topic": "Surveillance",
+        "slug": "surveillance",
+        "source_period": "2025-Q3",
+        "target_period": "2025-Q4",
+        "source_count": 5,
+        "target_count": 6,
+        "value": 6,
+        "source_y": 0.31,
+        "target_y": 0.42
+      },
+      {
+        "topic": "Vaccination",
+        "slug": "vaccination",
+        "source_period": "2025-Q3",
+        "target_period": "2025-Q4",
+        "source_count": 4,
+        "target_count": 7,
+        "value": 7,
+        "source_y": 0.5,
+        "target_y": 0.29
+      },
+      {
+        "topic": "Transmission dynamics",
+        "slug": "transmission-dynamics",
+        "source_period": "2025-Q3",
+        "target_period": "2025-Q4",
+        "source_count": 5,
+        "target_count": 4,
+        "value": 5,
+        "source_y": 0.41,
+        "target_y": 0.64
+      },
+      {
+        "topic": "Climate and environment",
+        "slug": "climate-and-environment",
+        "source_period": "2025-Q3",
+        "target_period": "2025-Q4",
+        "source_count": 3,
+        "target_count": 6,
+        "value": 6,
+        "source_y": 0.57,
+        "target_y": 0.54
+      },
+      {
+        "topic": "Diagnostics",
+        "slug": "diagnostics",
+        "source_period": "2025-Q3",
+        "target_period": "2025-Q4",
+        "source_count": 3,
+        "target_count": 3,
+        "value": 3,
+        "source_y": 0.63,
+        "target_y": 0.71
+      },
+      {
+        "topic": "Treatment",
+        "slug": "treatment",
+        "source_period": "2025-Q3",
+        "target_period": "2025-Q4",
+        "source_count": 3,
+        "target_count": 1,
+        "value": 3,
+        "source_y": 0.69,
+        "target_y": 0.77
+      },
+      {
+        "topic": "Outbreak investigation",
+        "slug": "outbreak-investigation",
+        "source_period": "2025-Q4",
+        "target_period": "2026-Q1",
+        "source_count": 1,
+        "target_count": 6,
+        "value": 6,
+        "source_y": 0.75,
+        "target_y": 0.46
+      },
+      {
+        "topic": "Surveillance",
+        "slug": "surveillance",
+        "source_period": "2025-Q4",
+        "target_period": "2026-Q1",
+        "source_count": 6,
+        "target_count": 9,
+        "value": 9,
+        "source_y": 0.42,
+        "target_y": 0.15
+      },
+      {
+        "topic": "Vaccination",
+        "slug": "vaccination",
+        "source_period": "2025-Q4",
+        "target_period": "2026-Q1",
+        "source_count": 7,
+        "target_count": 8,
+        "value": 8,
+        "source_y": 0.29,
+        "target_y": 0.32
+      },
+      {
+        "topic": "Transmission dynamics",
+        "slug": "transmission-dynamics",
+        "source_period": "2025-Q4",
+        "target_period": "2026-Q1",
+        "source_count": 4,
+        "target_count": 5,
+        "value": 5,
+        "source_y": 0.64,
+        "target_y": 0.81
+      },
+      {
+        "topic": "Climate and environment",
+        "slug": "climate-and-environment",
+        "source_period": "2025-Q4",
+        "target_period": "2026-Q1",
+        "source_count": 6,
+        "target_count": 6,
+        "value": 6,
+        "source_y": 0.54,
+        "target_y": 0.58
+      },
+      {
+        "topic": "Diagnostics",
+        "slug": "diagnostics",
+        "source_period": "2025-Q4",
+        "target_period": "2026-Q1",
+        "source_count": 3,
+        "target_count": 6,
+        "value": 6,
+        "source_y": 0.71,
+        "target_y": 0.7
+      },
+      {
+        "topic": "Treatment",
+        "slug": "treatment",
+        "source_period": "2025-Q4",
+        "target_period": "2026-Q1",
+        "source_count": 1,
+        "target_count": 4,
+        "value": 4,
+        "source_y": 0.77,
+        "target_y": 0.9
+      },
+      {
+        "topic": "Outbreak investigation",
+        "slug": "outbreak-investigation",
+        "source_period": "2026-Q1",
+        "target_period": "2026-Q2",
+        "source_count": 6,
+        "target_count": 15,
+        "value": 15,
+        "source_y": 0.46,
+        "target_y": 0.24
+      },
+      {
+        "topic": "Surveillance",
+        "slug": "surveillance",
+        "source_period": "2026-Q1",
+        "target_period": "2026-Q2",
+        "source_count": 9,
+        "target_count": 2,
+        "value": 9,
+        "source_y": 0.15,
+        "target_y": 0.81
+      },
+      {
+        "topic": "Vaccination",
+        "slug": "vaccination",
+        "source_period": "2026-Q1",
+        "target_period": "2026-Q2",
+        "source_count": 8,
+        "target_count": 7,
+        "value": 8,
+        "source_y": 0.32,
+        "target_y": 0.46
+      },
+      {
+        "topic": "Transmission dynamics",
+        "slug": "transmission-dynamics",
+        "source_period": "2026-Q1",
+        "target_period": "2026-Q2",
+        "source_count": 5,
+        "target_count": 6,
+        "value": 6,
+        "source_y": 0.81,
+        "target_y": 0.73
+      },
+      {
+        "topic": "Climate and environment",
+        "slug": "climate-and-environment",
+        "source_period": "2026-Q1",
+        "target_period": "2026-Q2",
+        "source_count": 6,
+        "target_count": 2,
+        "value": 6,
+        "source_y": 0.58,
+        "target_y": 0.85
+      },
+      {
+        "topic": "Diagnostics",
+        "slug": "diagnostics",
+        "source_period": "2026-Q1",
+        "target_period": "2026-Q2",
+        "source_count": 6,
+        "target_count": 2,
+        "value": 6,
+        "source_y": 0.7,
+        "target_y": 0.89
+      },
+      {
+        "topic": "Treatment",
+        "slug": "treatment",
+        "source_period": "2026-Q1",
+        "target_period": "2026-Q2",
+        "source_count": 4,
+        "target_count": 7,
+        "value": 7,
+        "source_y": 0.9,
+        "target_y": 0.6
+      },
+      {
+        "topic": "Outbreak investigation",
+        "slug": "outbreak-investigation",
+        "source_period": "2026-Q2",
+        "target_period": "2026-Q3",
+        "source_count": 15,
+        "target_count": 14,
+        "value": 15,
+        "source_y": 0.24,
+        "target_y": 0.14
+      },
+      {
+        "topic": "Surveillance",
+        "slug": "surveillance",
+        "source_period": "2026-Q2",
+        "target_period": "2026-Q3",
+        "source_count": 2,
+        "target_count": 13,
+        "value": 13,
+        "source_y": 0.81,
+        "target_y": 0.41
+      },
+      {
+        "topic": "Vaccination",
+        "slug": "vaccination",
+        "source_period": "2026-Q2",
+        "target_period": "2026-Q3",
+        "source_count": 7,
+        "target_count": 7,
+        "value": 7,
+        "source_y": 0.46,
+        "target_y": 0.61
+      },
+      {
+        "topic": "Transmission dynamics",
+        "slug": "transmission-dynamics",
+        "source_period": "2026-Q2",
+        "target_period": "2026-Q3",
+        "source_count": 6,
+        "target_count": 5,
+        "value": 6,
+        "source_y": 0.73,
+        "target_y": 0.73
+      },
+      {
+        "topic": "Climate and environment",
+        "slug": "climate-and-environment",
+        "source_period": "2026-Q2",
+        "target_period": "2026-Q3",
+        "source_count": 2,
+        "target_count": 4,
+        "value": 4,
+        "source_y": 0.85,
+        "target_y": 0.92
+      },
+      {
+        "topic": "Diagnostics",
+        "slug": "diagnostics",
+        "source_period": "2026-Q2",
+        "target_period": "2026-Q3",
+        "source_count": 2,
+        "target_count": 5,
+        "value": 5,
+        "source_y": 0.89,
+        "target_y": 0.83
+      },
+      {
+        "topic": "Treatment",
+        "slug": "treatment",
+        "source_period": "2026-Q2",
+        "target_period": "2026-Q3",
+        "source_count": 7,
+        "target_count": 2,
+        "value": 7,
+        "source_y": 0.6,
+        "target_y": 0.98
+      }
+    ],
+    "method": "quarterly topic attention flow among top public-health topics"
+  },
+  "interpretation_note": {
+    "en": "Hotspots show Research Radar literature attention, not disease risk or incidence.",
+    "zh": "热点图展示的是 Research Radar 文献关注度，不代表疾病风险或发病水平。"
+  }
+}

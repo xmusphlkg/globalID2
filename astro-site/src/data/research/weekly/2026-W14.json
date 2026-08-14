@@ -1,0 +1,618 @@
+{
+  "week": "2026-W14",
+  "start_date": "2026-03-30",
+  "end_date": "2026-04-01",
+  "article_count": 6,
+  "disease_count": 3,
+  "country_count": 0,
+  "top_topics": [
+    "Treatment",
+    "One Health",
+    "Surveillance",
+    "Outbreak investigation"
+  ],
+  "articles": [
+    {
+      "article_id": "lit_05ddb6de0d167e2fb1dc05eb",
+      "slug": "10-1099-mic-0-001697-05ddb6de",
+      "title": "Metabolic perturbation reduces antibiotic tolerance in <i>Mycobacterium tuberculosis</i>.",
+      "doi": "10.1099/mic.0.001697",
+      "pmid": "42018449",
+      "journal": "Microbiology (Reading, England)",
+      "publisher": null,
+      "authors": [
+        "Cheung CY",
+        "Samuels I",
+        "Klaus HR",
+        "Cook GM",
+        "McNeil MB"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-04-01T00:00:00+00:00",
+      "indexed_at": "2026-04-22T00:00:00+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC13102359",
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.635,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D025",
+          "slug": "tuberculosis",
+          "name_en": "Tuberculosis",
+          "name_zh": "肺结核",
+          "confidence": 0.9
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Treatment",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {
+        "en": {
+          "research_question": "The investigation aimed to identify metabolic pathways that enable Mycobacterium tuberculosis to withstand antibiotic exposure.",
+          "study_design": "Peer-reviewed laboratory research utilizing CRISPR interference to create genetically modified bacterial strains, followed by antimicrobial susceptibility testing in both planktonic cultures and human macrophage cell lines.",
+          "population_setting": "In vitro experiments conducted with engineered Mycobacterium tuberculosis isolates and cultured THP-1 human macrophage cells.",
+          "main_findings": "Genetic suppression of iron storage control, amino acid synthesis, and cellular redox balance increased the killing efficiency of multiple antimicrobial agents. These synergistic effects persisted when bacteria infected human macrophage models. The data suggest that bacterial metabolic activity plays a central role in mediating drug tolerance.",
+          "public_health_relevance": "Elucidating metabolic vulnerabilities may assist researchers in developing adjunctive approaches to enhance current tuberculosis treatment regimens.",
+          "limitations": "The experimental framework is restricted to controlled laboratory conditions and does not assess clinical patient outcomes or complex host-pathogen interactions in living organisms. Additional methodological details regarding specific compound concentrations are absent from the provided summary.",
+          "gids_interpretation": "This manuscript offers mechanistic insights into bacterial physiology that contextualize ongoing tuberculosis pharmacology research. It functions as preclinical background information rather than a source of operational surveillance data or outbreak detection.",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.936,
+            "generated_at": "2026-08-13T23:11:28.987264+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        }
+      },
+      "why_it_matters_en": "Elucidating metabolic vulnerabilities may assist researchers in developing adjunctive approaches to enhance current tuberculosis treatment regimens.",
+      "why_it_matters_zh": "这项近期Journal article因与肺结核相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1099/mic.0.001697",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/42018449/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137619+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:cbe12a284bd5cd9b",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D025",
+          "disease_name_en": "Tuberculosis",
+          "disease_name_zh": "肺结核",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 43.0,
+            "previous": 32.0,
+            "absolute_change": 11.0,
+            "change_pct": 34.38
+          },
+          "risk": {
+            "score": 56.0,
+            "level": "high",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_f9a593801261bab87f3a96ac",
+      "slug": "10-1007-s11250-026-04949-3-f9a59380",
+      "title": "First isolation of Mycobacterium tuberculosis from suspected cases of bovine tuberculosis in rural abattoirs in Chad.",
+      "doi": "10.1007/s11250-026-04949-3",
+      "pmid": "41917553",
+      "journal": "Tropical animal health and production",
+      "publisher": null,
+      "authors": [
+        "Lamireou D",
+        "Ngandolo BN",
+        "Koné P",
+        "Tadio S",
+        "Diguimbaye C",
+        "Alambédji R",
+        "Zinsstag J",
+        "Bonfoh B"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Cross-sectional study",
+      "published_at": "2026-03-31T00:00:00+00:00",
+      "indexed_at": "2026-04-01T00:00:00+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC13038451",
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.635,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D025",
+          "slug": "tuberculosis",
+          "name_en": "Tuberculosis",
+          "name_zh": "肺结核",
+          "confidence": 0.9
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "One Health",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {
+        "zh": {
+          "research_question": "评估乍得境内供人类消费的本地家畜中结核分枝杆菌复合群不同物种的分布特征。",
+          "study_design": "该研究采用横断面设计，于2012年在乍得南部七家屠宰场开展，对采集的病变组织进行细菌学与分子分型检测。",
+          "population_setting": "研究对象为乍得南部农村屠宰场待宰的本地牛种，样本主要集中于三至十二岁龄段。",
+          "main_findings": "在疑似病变牛只中检出牛分枝杆菌四十二株，并首次从一头六岁雌性富拉尼牛体内分离出人型分枝杆菌。统计显示性别与感染风险显著相关，雌性患病几率约为雄性的两倍。此外发现部分病例由非结核分枝杆菌引起，表明致病原具有多样性。",
+          "public_health_relevance": "该结果提示屠宰环节可能存在人畜共患结核病的传播隐患，强调了对食用动物源性食品进行微生物监测的重要性。",
+          "limitations": "研究仅涵盖2012年乍得南部的七处屠宰点，地理范围与时间跨度较为局限，可能无法全面反映全国其他区域的流行状况。",
+          "gids_interpretation": "本文提供了乍得地区家畜结核病病原谱的基线数据，补充了非洲相关区域人畜共患病原体多样性的文献记录，有助于理解当地畜牧业中的微生物生态背景。",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.945,
+            "generated_at": "2026-08-13T23:12:50.196609+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        }
+      },
+      "why_it_matters_en": "This recent cross-sectional study is indexed for its relevance to Tuberculosis. Read the original source before applying its findings.",
+      "why_it_matters_zh": "该结果提示屠宰环节可能存在人畜共患结核病的传播隐患，强调了对食用动物源性食品进行微生物监测的重要性。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1007/s11250-026-04949-3",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41917553/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137634+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:cbe12a284bd5cd9b",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D025",
+          "disease_name_en": "Tuberculosis",
+          "disease_name_zh": "肺结核",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 43.0,
+            "previous": 32.0,
+            "absolute_change": 11.0,
+            "change_pct": 34.38
+          },
+          "risk": {
+            "score": 56.0,
+            "level": "high",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_41e495a47e697636d510a3c0",
+      "slug": "10-1007-s11259-026-11168-6-41e495a4",
+      "title": "Seroprevalence of tuberculosis and hematological variations in captive and orphaned wild elephants (Elephas maximus maximus) in Sri Lanka.",
+      "doi": "10.1007/s11259-026-11168-6",
+      "pmid": "41910806",
+      "journal": "Veterinary research communications",
+      "publisher": null,
+      "authors": [
+        "Piyadasa SK",
+        "Bandara B",
+        "Abeywardana MK",
+        "Mikota SK",
+        "Lakmal S",
+        "Aberathne N",
+        "Dangolla A",
+        "Ariyarathna H",
+        "Kumara SN",
+        "Ratnatunga CN",
+        "Shimozuru M",
+        "Thapa J",
+        "Nakajima C",
+        "Suzuki Y",
+        "Tsubota T"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-03-30T00:00:00+00:00",
+      "indexed_at": "2026-03-30T00:00:00+00:00",
+      "open_access_status": "unknown",
+      "open_access_url": null,
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.584,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D025",
+          "slug": "tuberculosis",
+          "name_en": "Tuberculosis",
+          "name_zh": "肺结核",
+          "confidence": 0.9
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Surveillance",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Tuberculosis. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与肺结核相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1007/s11259-026-11168-6",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41910806/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137631+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:cbe12a284bd5cd9b",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D025",
+          "disease_name_en": "Tuberculosis",
+          "disease_name_zh": "肺结核",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 43.0,
+            "previous": 32.0,
+            "absolute_change": 11.0,
+            "change_pct": 34.38
+          },
+          "risk": {
+            "score": 56.0,
+            "level": "high",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_27ce4306d049681082db487f",
+      "slug": "10-1136-medhum-2025-013586-27ce4306",
+      "title": "‘Our problem here is the pig Ebola’: local accounts of epizootics preceding Ebola outbreaks in north-eastern Democratic Republic of the Congo",
+      "doi": "10.1136/medhum-2025-013586",
+      "pmid": null,
+      "journal": "Medical Humanities",
+      "publisher": "BMJ",
+      "authors": [
+        "Jules Villa"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-04-01T00:00:00+00:00",
+      "indexed_at": "2026-04-01T18:40:04+00:00",
+      "open_access_status": "unknown",
+      "open_access_url": null,
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.557,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D050",
+          "slug": "ebola",
+          "name_en": "Ebola",
+          "name_zh": "埃博拉出血热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Outbreak investigation",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Ebola. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与埃博拉出血热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1136/medhum-2025-013586",
+        "publisher": "https://mh.bmj.com/lookup/doi/10.1136/medhum-2025-013586"
+      },
+      "updated_at": "2026-08-13T16:05:48.137318+00:00",
+      "related_signals": [
+        {
+          "signal_id": "event:36",
+          "section": "emerging",
+          "kind": "official_event",
+          "title": "Ebola disease caused by Bundibugyo virus - Democratic Republic of the Congo",
+          "disease_id": "D050",
+          "disease_name_en": "Ebola",
+          "disease_name_zh": "埃博拉出血热",
+          "geographies": [
+            {
+              "code": "CD",
+              "name_en": "Democratic Republic of the Congo"
+            }
+          ],
+          "data_through": "2026-08-01",
+          "window": {
+            "label": null,
+            "current": null,
+            "previous": null,
+            "absolute_change": null,
+            "change_pct": null
+          },
+          "risk": {
+            "score": null,
+            "level": null,
+            "confidence": "high"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        },
+        {
+          "signal_id": "event:37",
+          "section": "emerging",
+          "kind": "official_event",
+          "title": "Ebola disease caused by Bundibugyo virus, Democratic Republic of the Congo & Uganda",
+          "disease_id": "D050",
+          "disease_name_en": "Ebola",
+          "disease_name_zh": "埃博拉出血热",
+          "geographies": [
+            {
+              "code": "CD",
+              "name_en": "Democratic Republic of the Congo"
+            },
+            {
+              "code": "UG",
+              "name_en": "Uganda"
+            }
+          ],
+          "data_through": "2026-07-17",
+          "window": {
+            "label": null,
+            "current": null,
+            "previous": null,
+            "absolute_change": null,
+            "change_pct": null
+          },
+          "risk": {
+            "score": null,
+            "level": null,
+            "confidence": "high"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_ab5b10852c1f8ecc36d9f6fd",
+      "slug": "10-1016-j-jacc-2026-02-3602-ab5b1085",
+      "title": "26-CCC-11339-ACC RHEUMATIC FEVER IS STILL HERE: A CASE OF ACUTE RHEUMATIC FEVER IN A YOUNG ADULT",
+      "doi": "10.1016/j.jacc.2026.02.3602",
+      "pmid": null,
+      "journal": "JACC",
+      "publisher": "Elsevier BV",
+      "authors": [
+        "Charissa Bloom",
+        "Joshua Eric Levenson"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-04-01T00:00:00+00:00",
+      "indexed_at": "2026-07-14T20:06:38+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://linkinghub.elsevier.com/retrieve/pii/S0735109726039331",
+      "license_url": "https://www.elsevier.com/tdm/userlicense/1.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.527,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D158",
+          "slug": "rheumatic-fever",
+          "name_en": "Rheumatic fever",
+          "name_zh": "风湿热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Rheumatic fever. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与风湿热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1016/j.jacc.2026.02.3602",
+        "publisher": "https://linkinghub.elsevier.com/retrieve/pii/S0735109726039331"
+      },
+      "updated_at": "2026-08-13T16:05:48.137489+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:f59d37329a1f6ece",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 28.0,
+            "previous": 18.0,
+            "absolute_change": 10.0,
+            "change_pct": 55.56
+          },
+          "risk": {
+            "score": 46.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_c913ca6c5b78848e5efeece2",
+      "slug": "10-1038-s41467-026-71094-8-c913ca6c",
+      "title": "CXCR3 is associated with T-cell-induced heart damage in acute rheumatic fever.",
+      "doi": "10.1038/s41467-026-71094-8",
+      "pmid": "41916981",
+      "journal": "Nature communications",
+      "publisher": null,
+      "authors": [
+        "Middleton FM",
+        "McGregor R",
+        "Lorenz N",
+        "Kilian S",
+        "Brooks AES",
+        "Park SM",
+        "Ramiah C",
+        "Tresidder J",
+        "Barnett TC",
+        "Serralha M",
+        "Martin WJ",
+        "Chan Mow F",
+        "Pearson G",
+        "Mayo M",
+        "Broadhurst DI",
+        "Bennett J",
+        "Brink J",
+        "Wilson NJ",
+        "Ralph AP",
+        "Webb RH",
+        "Dunbar PR",
+        "Carapetis J",
+        "Moreland NJ"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-03-31T00:00:00+00:00",
+      "indexed_at": "2026-03-31T00:00:00+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC13201666",
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.527,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D158",
+          "slug": "rheumatic-fever",
+          "name_en": "Rheumatic fever",
+          "name_zh": "风湿热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Rheumatic fever. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与风湿热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1038/s41467-026-71094-8",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41916981/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137511+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:f59d37329a1f6ece",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 28.0,
+            "previous": 18.0,
+            "absolute_change": 10.0,
+            "change_pct": 55.56
+          },
+          "risk": {
+            "score": 46.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    }
+  ],
+  "url": "/research/weekly/2026-W14/"
+}

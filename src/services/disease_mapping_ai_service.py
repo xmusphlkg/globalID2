@@ -7,6 +7,7 @@ import difflib
 import hashlib
 import html
 import json
+import os
 import re
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
@@ -66,6 +67,20 @@ def _response_text(response: Any) -> str:
     return str(getattr(response, "output_text", None) or response)
 
 
+def _env_int(name: str, default: int, *, minimum: int, maximum: int) -> int:
+    try:
+        value = int(os.getenv(name, str(default)))
+    except (TypeError, ValueError):
+        value = default
+    return max(minimum, min(maximum, value))
+
+
+def _is_all_model_routes_unavailable(error: object) -> bool:
+    return str(error).startswith(
+        "All active AI model routes failed to produce mapping suggestions"
+    )
+
+
 class DiseaseMappingAIService:
     async def suggest_for_category(self, db: AsyncSession, category_id: int) -> dict[str, Any]:
         category = await db.get(SourceDiseaseCategory, category_id)
@@ -78,6 +93,27 @@ class DiseaseMappingAIService:
         category.ai_attempts = int(category.ai_attempts or 0) + 1
         category.ai_last_error = None
         await db.commit()
+
+        approved_assertion_id = (
+            await db.execute(
+                select(DiseaseMappingAssertion.id)
+                .where(
+                    DiseaseMappingAssertion.category_id == category.id,
+                    DiseaseMappingAssertion.assertion_status == "approved",
+                )
+                .limit(1)
+            )
+        ).scalar_one_or_none()
+        if approved_assertion_id is not None:
+            category.ai_status = "not_required"
+            category.ai_next_attempt_at = None
+            await db.commit()
+            return {
+                "category_id": category.id,
+                "status": "not_required",
+                "created": 0,
+                "reason": "Category already has a reviewed assertion",
+            }
 
         standards = (
             await db.execute(
@@ -102,6 +138,29 @@ class DiseaseMappingAIService:
         ).scalar_one_or_none()
         source_language = str(getattr(country, "language", None) or "unknown")
         deterministic = self._deterministic_shortlist(category, standards)
+        exact_match = self._unique_exact_match(deterministic)
+        if exact_match is not None:
+            created = await self._save_deterministic(
+                db,
+                category,
+                [exact_match],
+                minimum_score=1.0,
+                maximum_candidates=1,
+            )
+            if created:
+                category.ai_status = "completed"
+                category.ai_last_model = "deterministic-exact"
+                category.ai_suggested_at = datetime.now(timezone.utc)
+                category.ai_last_error = None
+                category.ai_next_attempt_at = None
+                await self._queue_suggestion_notification(db, category, created)
+                await db.commit()
+                return {
+                    "category_id": category.id,
+                    "status": "completed",
+                    "created": created,
+                    "model_key": category.ai_last_model,
+                }
         routes = await get_active_model_routes()
         if not routes:
             created = await self._save_deterministic(db, category, deterministic)
@@ -115,23 +174,37 @@ class DiseaseMappingAIService:
             used_routes = routes[:2]
             outputs: list[dict[str, Any]] = []
             successful_routes: list[dict[str, Any]] = []
+            request_timeout = _env_int(
+                "MAPPING_AI_REQUEST_TIMEOUT_SECONDS",
+                90,
+                minimum=30,
+                maximum=300,
+            )
             route_results = await asyncio.gather(
                 *[
-                    self._call_model(
-                        route,
-                        category,
-                        standards,
-                        relations,
-                        deterministic,
-                        source_language=source_language,
-                        prior_suggestions=None,
+                    asyncio.wait_for(
+                        self._call_model(
+                            route,
+                            category,
+                            standards,
+                            relations,
+                            deterministic,
+                            source_language=source_language,
+                            prior_suggestions=None,
+                        ),
+                        timeout=request_timeout,
                     )
                     for route in used_routes
                 ],
                 return_exceptions=True,
             )
+            route_errors: list[str] = []
             for route, route_result in zip(used_routes, route_results):
                 if isinstance(route_result, Exception):
+                    route_errors.append(
+                        f"{route.get('model_key') or route.get('model_name')}:"
+                        f"{type(route_result).__name__}:{str(route_result)[:500]}"
+                    )
                     logger.warning(
                         "Mapping suggestion route failed | category={} model={} error={}",
                         category.id,
@@ -142,7 +215,10 @@ class DiseaseMappingAIService:
                 outputs.append(route_result)
                 successful_routes.append(route)
             if not outputs:
-                raise RuntimeError("All active AI model routes failed to produce mapping suggestions")
+                raise RuntimeError(
+                    "All active AI model routes failed to produce mapping suggestions; "
+                    + " | ".join(route_errors)
+                )
             output = self._apply_concept_relation_guardrail(
                 self._apply_interpreted_name_guardrail(
                     self._reconcile_outputs(outputs), standards
@@ -212,12 +288,41 @@ class DiseaseMappingAIService:
             raise
         except Exception as exc:
             logger.exception("AI disease mapping suggestion failed for category {}: {}", category.id, exc)
-            category.ai_status = "failed"
-            category.ai_last_error = str(exc)[:4000]
-            category.ai_next_attempt_at = datetime.now(timezone.utc) + timedelta(
-                minutes=min(60, 2 ** min(int(category.ai_attempts or 1), 6))
+            max_attempts = _env_int(
+                "MAPPING_AI_MAX_ATTEMPTS", 5, minimum=1, maximum=100
             )
+            exhausted_hours = _env_int(
+                "MAPPING_AI_EXHAUSTED_RETRY_HOURS",
+                6,
+                minimum=1,
+                maximum=168,
+            )
+            retry_delay = (
+                timedelta(hours=exhausted_hours)
+                if int(category.ai_attempts or 1) >= max_attempts
+                else timedelta(minutes=min(60, 2 ** min(int(category.ai_attempts or 1), 6)))
+            )
+            provider_unavailable = _is_all_model_routes_unavailable(exc)
+            created = 0
+            if provider_unavailable:
+                created = await self._save_deterministic(db, category, deterministic)
+                category.ai_status = "no_model"
+                category.ai_last_model = "deterministic-fallback" if created else None
+                if created:
+                    await self._queue_suggestion_notification(db, category, created)
+            else:
+                category.ai_status = "failed"
+            category.ai_last_error = str(exc)[:4000]
+            category.ai_next_attempt_at = datetime.now(timezone.utc) + retry_delay
             await db.commit()
+            if provider_unavailable:
+                return {
+                    "category_id": category.id,
+                    "status": "no_model",
+                    "created": created,
+                    "reason": "AI model routes are temporarily unavailable",
+                    "provider_error": str(exc)[:4000],
+                }
             raise
 
     @staticmethod
@@ -263,6 +368,13 @@ class DiseaseMappingAIService:
                 }
             )
         return sorted(scored, key=lambda item: (-item["score"], item["disease_id"]))[:12]
+
+    @staticmethod
+    def _unique_exact_match(shortlist: list[dict[str, Any]]) -> dict[str, Any] | None:
+        exact_matches = [
+            item for item in shortlist if float(item.get("score") or 0) == 1.0
+        ]
+        return exact_matches[0] if len(exact_matches) == 1 else None
 
     async def _call_model(
         self,
@@ -611,17 +723,30 @@ class DiseaseMappingAIService:
         return {**output, "candidates": normalized}
 
     async def _save_deterministic(
-        self, db: AsyncSession, category: SourceDiseaseCategory, shortlist: list[dict[str, Any]]
+        self,
+        db: AsyncSession,
+        category: SourceDiseaseCategory,
+        shortlist: list[dict[str, Any]],
+        *,
+        minimum_score: float = 0.6,
+        maximum_candidates: int = 3,
     ) -> int:
-        created = 0
-        for rank, item in enumerate(shortlist[:3], start=1):
-            if float(item["score"]) < 0.6:
+        candidate_keys: list[str] = []
+        for rank, item in enumerate(shortlist[:maximum_candidates], start=1):
+            if float(item["score"]) < minimum_score:
                 continue
             relation = "exact" if item["score"] == 1.0 else "ambiguous"
+            candidate_key = _candidate_key(
+                category.category_key,
+                "deterministic",
+                item["disease_id"],
+                rank,
+            )
+            candidate_keys.append(candidate_key)
             await db.execute(
                 pg_insert(DiseaseMappingCandidate)
                 .values(
-                    candidate_key=_candidate_key(category.category_key, "deterministic", item["disease_id"], rank),
+                    candidate_key=candidate_key,
                     category_id=category.id,
                     rank=rank,
                     candidate_kind="existing_concept",
@@ -641,8 +766,18 @@ class DiseaseMappingAIService:
                 )
                 .on_conflict_do_nothing(index_elements=[DiseaseMappingCandidate.candidate_key])
             )
-            created += 1
-        return created
+        if not candidate_keys:
+            return 0
+        return int(
+            (
+                await db.execute(
+                    select(func.count(DiseaseMappingCandidate.id)).where(
+                        DiseaseMappingCandidate.candidate_key.in_(candidate_keys),
+                        DiseaseMappingCandidate.status == "proposed",
+                    )
+                )
+            ).scalar_one()
+        )
 
     async def _queue_suggestion_notification(
         self, db: AsyncSession, category: SourceDiseaseCategory, created: int

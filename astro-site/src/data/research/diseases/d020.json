@@ -1,0 +1,189 @@
+{
+  "articles": [
+    {
+      "article_id": "lit_1e257657e59b38706174a6bc",
+      "slug": "10-1371-journal-pone-0334438-1e257657",
+      "title": "Low frequency of N-methyl-D-aspartate receptor autoimmunity in tick-borne encephalitis.",
+      "doi": "10.1371/journal.pone.0334438",
+      "pmid": "41082510",
+      "journal": "PloS one",
+      "publisher": null,
+      "authors": [
+        "Morén J",
+        "Persson B",
+        "Sörman A",
+        "Lundkvist Å",
+        "Shihab H",
+        "Studahl M",
+        "Veje M",
+        "Günther G",
+        "Westman G"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2025-10-13T00:00:00+00:00",
+      "indexed_at": "2025-10-13T00:00:00+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC12517480",
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.457,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D205",
+          "slug": "tick-borne-encephalitis",
+          "name_en": "Tick-borne encephalitis",
+          "name_zh": "蜱传脑炎",
+          "confidence": 0.82
+        },
+        {
+          "disease_id": "D020",
+          "slug": "japanese-encephalitis",
+          "name_en": "Japanese Encephalitis",
+          "name_zh": "流行性乙型脑炎",
+          "confidence": 0.62
+        }
+      ],
+      "countries": [
+        {
+          "code": "DE",
+          "name_en": "Germany",
+          "name_zh": null,
+          "confidence": 0.62
+        }
+      ],
+      "topics": [],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Tick-borne encephalitis. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与蜱传脑炎相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1371/journal.pone.0334438",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41082510/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137585+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:ab5fb8f49aaa0cf6",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D205",
+          "disease_name_en": "Tick-borne encephalitis",
+          "disease_name_zh": "蜱传脑炎",
+          "geographies": [
+            {
+              "code": "SE",
+              "name_en": "Sweden"
+            }
+          ],
+          "data_through": "2026-07-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 156.0,
+            "previous": 92.0,
+            "absolute_change": 64.0,
+            "change_pct": 69.57
+          },
+          "risk": {
+            "score": 46.1,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    }
+  ],
+  "count": 1,
+  "publication_timeline": [
+    {
+      "month": "2025-10",
+      "publication_count": 1
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-1e257657e59b38706174a6bc",
+        "type": "article",
+        "label": "Low frequency of N-methyl-D-aspartate receptor autoimmunity in tick-borne encephalitis.",
+        "slug": "10-1371-journal-pone-0334438-1e257657",
+        "url": "/research/articles/10-1371-journal-pone-0334438-1e257657/",
+        "published_at": "2025-10-13T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "country:de",
+        "type": "country",
+        "label": "Germany",
+        "code": "DE",
+        "url": "/countries/de/"
+      },
+      {
+        "id": "disease:d020",
+        "type": "disease",
+        "label": "Japanese Encephalitis",
+        "disease_id": "D020",
+        "name_zh": "流行性乙型脑炎",
+        "slug": "japanese-encephalitis",
+        "url": "/diseases/japanese-encephalitis/"
+      },
+      {
+        "id": "disease:d205",
+        "type": "disease",
+        "label": "Tick-borne encephalitis",
+        "disease_id": "D205",
+        "name_zh": "蜱传脑炎",
+        "slug": "tick-borne-encephalitis",
+        "url": "/diseases/tick-borne-encephalitis/"
+      },
+      {
+        "id": "study-type:journal-article",
+        "type": "study_type",
+        "label": "Journal article"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-1e257657e59b38706174a6bc|ABOUT_DISEASE|disease:d020",
+        "source": "article:lit-1e257657e59b38706174a6bc",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d020",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-1e257657e59b38706174a6bc|ABOUT_DISEASE|disease:d205",
+        "source": "article:lit-1e257657e59b38706174a6bc",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d205",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-1e257657e59b38706174a6bc|STUDIED_IN|country:de",
+        "source": "article:lit-1e257657e59b38706174a6bc",
+        "relation": "STUDIED_IN",
+        "target": "country:de",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-1e257657e59b38706174a6bc|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-1e257657e59b38706174a6bc",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 5,
+      "edges": 4,
+      "articles": 1
+    }
+  }
+}

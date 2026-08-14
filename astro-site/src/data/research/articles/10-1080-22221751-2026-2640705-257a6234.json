@@ -1,0 +1,220 @@
+{
+  "article_id": "lit_257a6234ca29a1273b0be69a",
+  "slug": "10-1080-22221751-2026-2640705-257a6234",
+  "title": "Tick-borne encephalitis in the Åland Islands, Finland: incidence and disease course since the implementation of a general TBE vaccination programme.",
+  "doi": "10.1080/22221751.2026.2640705",
+  "pmid": "41778286",
+  "journal": "Emerging microbes & infections",
+  "publisher": null,
+  "authors": [
+    "Tikkala J",
+    "Jansson C",
+    "Häggblom G",
+    "Ringbom M",
+    "Grunér M",
+    "Nyman D",
+    "Pitkäpaasi M",
+    "Sjöwall J",
+    "Nordberg M"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Journal article",
+  "published_at": "2026-04-08T00:00:00+00:00",
+  "indexed_at": "2026-03-04T00:00:00+00:00",
+  "open_access_status": "open",
+  "open_access_url": "https://europepmc.org/articles/PMC13063329",
+  "license_url": null,
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.642,
+  "is_featured": false,
+  "diseases": [
+    {
+      "disease_id": "D205",
+      "slug": "tick-borne-encephalitis",
+      "name_en": "Tick-borne encephalitis",
+      "name_zh": "蜱传脑炎",
+      "confidence": 0.82
+    }
+  ],
+  "countries": [
+    {
+      "code": "FI",
+      "name_en": "Finland",
+      "name_zh": null,
+      "confidence": 0.78
+    }
+  ],
+  "topics": [
+    {
+      "name": "Vaccination",
+      "confidence": 0.66
+    },
+    {
+      "name": "Diagnostics",
+      "confidence": 0.66
+    }
+  ],
+  "related_surveillance": [
+    {
+      "disease_id": "D205",
+      "disease_name_en": "Tick-borne encephalitis",
+      "disease_name_zh": "蜱传脑炎",
+      "disease_slug": "tick-borne-encephalitis",
+      "country_code": "FI",
+      "country_name_en": "Finland",
+      "url": "/diseases/tick-borne-encephalitis/",
+      "method": "high-confidence article geography intersected with GIDS series coverage"
+    }
+  ],
+  "summary": {
+    "en": {
+      "research_question": "What are the epidemiological trends, clinical characteristics, and long-term prognoses of tick-borne encephalitis in an endemic Finnish archipelago after routine immunization began?",
+      "study_design": "A retrospective observational analysis examining medical records and laboratory results for confirmed cases spanning nearly two decades.",
+      "population_setting": "Individuals diagnosed with the viral infection in the Åland Islands, Finland, between 2006 and 2023 using standardized European diagnostic standards.",
+      "main_findings": "The analysis identified 145 cases with a median annual incidence of twenty-nine per one hundred thousand residents. Hospitalization was common, disease severity increased with patient age, and two deaths occurred. Most survivors regained clinical function within two years, though partial vaccination histories showed higher rates of breakthrough illness.",
+      "public_health_relevance": "Stable regional case counts contrast with rising trends elsewhere, suggesting potential benefits from sustained immunization efforts. Monitoring disease patterns across different vaccination statuses may help guide future preventive planning.",
+      "limitations": "The retrospective chart review design inherently limits causal inference and introduces potential documentation biases. The absence of a concurrent comparison group restricts the ability to isolate intervention effects from other epidemiological factors.",
+      "gids_interpretation": "This article documents longitudinal clinical and epidemiological observations for a specific arbovirus within a defined geographic area. The reported incidence figures and recovery rates offer contextual reference points for understanding regional disease dynamics.",
+      "provenance": {
+        "generated_by": "literature-evidence-agent",
+        "model": "qwen3.7-flash",
+        "provider": "qwenai",
+        "quality_score": 0.952,
+        "generated_at": "2026-08-13T23:07:51.642008+00:00",
+        "editorially_approved": false,
+        "automatically_approved": true,
+        "automation_policy_version": "research-radar-autopilot.v1",
+        "publication_gate": "automated-quality-gate"
+      }
+    }
+  },
+  "why_it_matters_en": "Stable regional case counts contrast with rising trends elsewhere, suggesting potential benefits from sustained immunization efforts. Monitoring disease patterns across different vaccination statuses may help guide future preventive planning.",
+  "why_it_matters_zh": "这项近期Journal article因与蜱传脑炎相关而被收录。应用其结论前请阅读原始文献。",
+  "source_urls": {
+    "doi": "https://doi.org/10.1080/22221751.2026.2640705",
+    "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41778286/"
+  },
+  "updated_at": "2026-08-13T16:05:48.137590+00:00",
+  "related_signals": [
+    {
+      "signal_id": "signal:ab5fb8f49aaa0cf6",
+      "section": "increasing",
+      "kind": "statistical_signal",
+      "title": null,
+      "disease_id": "D205",
+      "disease_name_en": "Tick-borne encephalitis",
+      "disease_name_zh": "蜱传脑炎",
+      "geographies": [
+        {
+          "code": "SE",
+          "name_en": "Sweden"
+        }
+      ],
+      "data_through": "2026-07-01",
+      "window": {
+        "label": "Latest complete month",
+        "current": 156.0,
+        "previous": 92.0,
+        "absolute_change": 64.0,
+        "change_pct": 69.57
+      },
+      "risk": {
+        "score": 46.1,
+        "level": "moderate",
+        "confidence": "low"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-257a6234ca29a1273b0be69a",
+        "type": "article",
+        "label": "Tick-borne encephalitis in the Åland Islands, Finland: incidence and disease course since the implementation of a general TBE vaccination programme.",
+        "slug": "10-1080-22221751-2026-2640705-257a6234",
+        "url": "/research/articles/10-1080-22221751-2026-2640705-257a6234/",
+        "published_at": "2026-04-08T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "country:fi",
+        "type": "country",
+        "label": "Finland",
+        "code": "FI",
+        "url": "/countries/fi/"
+      },
+      {
+        "id": "disease:d205",
+        "type": "disease",
+        "label": "Tick-borne encephalitis",
+        "disease_id": "D205",
+        "name_zh": "蜱传脑炎",
+        "slug": "tick-borne-encephalitis",
+        "url": "/diseases/tick-borne-encephalitis/"
+      },
+      {
+        "id": "study-type:journal-article",
+        "type": "study_type",
+        "label": "Journal article"
+      },
+      {
+        "id": "topic:diagnostics",
+        "type": "topic",
+        "label": "Diagnostics"
+      },
+      {
+        "id": "topic:vaccination",
+        "type": "topic",
+        "label": "Vaccination"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-257a6234ca29a1273b0be69a|ABOUT_DISEASE|disease:d205",
+        "source": "article:lit-257a6234ca29a1273b0be69a",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d205",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-257a6234ca29a1273b0be69a|ADDRESSES_TOPIC|topic:diagnostics",
+        "source": "article:lit-257a6234ca29a1273b0be69a",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:diagnostics",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-257a6234ca29a1273b0be69a|ADDRESSES_TOPIC|topic:vaccination",
+        "source": "article:lit-257a6234ca29a1273b0be69a",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccination",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-257a6234ca29a1273b0be69a|STUDIED_IN|country:fi",
+        "source": "article:lit-257a6234ca29a1273b0be69a",
+        "relation": "STUDIED_IN",
+        "target": "country:fi",
+        "confidence": 0.78
+      },
+      {
+        "id": "article:lit-257a6234ca29a1273b0be69a|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-257a6234ca29a1273b0be69a",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 6,
+      "edges": 5,
+      "articles": 1
+    }
+  }
+}

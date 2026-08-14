@@ -7,6 +7,7 @@ import type { TaskDetail } from "@/lib/hooks/useTasks";
 import { useReportRuns } from "@/lib/hooks/useReports";
 import { getSourceDisplayLabel } from "@/lib/source-labels";
 import { formatDateTime } from "@/lib/utils";
+import { compactTaskLogEntries } from "./task-log-compaction";
 
 interface TaskDetailPanelProps {
   taskDetail?: TaskDetail;
@@ -164,12 +165,14 @@ export function TaskDetailPanel({
   rawLogLabel = "View raw log",
 }: TaskDetailPanelProps) {
   const outputData = (taskDetail?.output_data as Record<string, unknown> | null) ?? null;
-  const timelineEntries = useMemo(() => {
-    if (!taskDetail) return [];
-    return [...taskDetail.workbook_entries].sort(
+  const compactedTimeline = useMemo(() => {
+    if (!taskDetail) return { entries: [], hiddenCount: 0 };
+    const sortedEntries = [...taskDetail.workbook_entries].sort(
       (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
     );
+    return compactTaskLogEntries(sortedEntries);
   }, [taskDetail]);
+  const timelineEntries = compactedTimeline.entries;
 
   const timelineStats = useMemo(() => {
     if (!taskDetail) {
@@ -375,6 +378,9 @@ export function TaskDetailPanel({
         <Badge color="slate">AI Steps: {timelineStats.aiSteps}</Badge>
         <Badge color="slate">Tokens: {timelineStats.totalTokens}</Badge>
         <Badge color="slate">Duration: {timelineStats.totalDuration.toFixed(1)}s</Badge>
+        {compactedTimeline.hiddenCount > 0 && (
+          <Badge color="slate">Verbose logs folded: {compactedTimeline.hiddenCount}</Badge>
+        )}
         {reportRuns && reportRuns.length > 0 && <Badge color="violet">Section Runs: {runSummary.total}</Badge>}
       </div>
 

@@ -1,0 +1,1679 @@
+{
+  "articles": [
+    {
+      "article_id": "lit_53345908bb8d2f88c9fd0b5b",
+      "slug": "10-1186-s12940-026-01278-8-53345908",
+      "title": "Projecting tick-borne encephalitis risk in Sweden under climate change scenarios: a high-resolution spatio-temporal modeling approach",
+      "doi": "10.1186/s12940-026-01278-8",
+      "pmid": "41872906",
+      "journal": "Environmental Health",
+      "publisher": "Springer Science and Business Media LLC",
+      "authors": [
+        "Maquins Odhiambo Sewe",
+        "Jonas Wallin",
+        "Joacim Rocklöv",
+        "Shiyu Wang",
+        "Torben Koenigk",
+        "Jan C. Semenza"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-03-23T00:00:00+00:00",
+      "indexed_at": "2026-06-16T20:58:25+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC13020375",
+      "license_url": "https://creativecommons.org/licenses/by/4.0",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.699,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D205",
+          "slug": "tick-borne-encephalitis",
+          "name_en": "Tick-borne encephalitis",
+          "name_zh": "蜱传脑炎",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [
+        {
+          "code": "SE",
+          "name_en": "Sweden",
+          "name_zh": null,
+          "confidence": 0.78
+        }
+      ],
+      "topics": [
+        {
+          "name": "Climate and environment",
+          "confidence": 0.76
+        },
+        {
+          "name": "Surveillance",
+          "confidence": 0.66
+        },
+        {
+          "name": "Transmission dynamics",
+          "confidence": 0.66
+        },
+        {
+          "name": "Vaccination",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [
+        {
+          "disease_id": "D205",
+          "disease_name_en": "Tick-borne encephalitis",
+          "disease_name_zh": "蜱传脑炎",
+          "disease_slug": "tick-borne-encephalitis",
+          "country_code": "SE",
+          "country_name_en": "Sweden",
+          "url": "/diseases/tick-borne-encephalitis/",
+          "method": "high-confidence article geography intersected with GIDS series coverage"
+        }
+      ],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Tick-borne encephalitis. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与蜱传脑炎相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1186/s12940-026-01278-8",
+        "publisher": "https://link.springer.com/10.1186/s12940-026-01278-8",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41872906/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137555+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:ab5fb8f49aaa0cf6",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D205",
+          "disease_name_en": "Tick-borne encephalitis",
+          "disease_name_zh": "蜱传脑炎",
+          "geographies": [
+            {
+              "code": "SE",
+              "name_en": "Sweden"
+            }
+          ],
+          "data_through": "2026-07-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 156.0,
+            "previous": 92.0,
+            "absolute_change": 64.0,
+            "change_pct": 69.57
+          },
+          "risk": {
+            "score": 46.1,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "exact_disease_geography",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_5df4173f98a1fce207c592be",
+      "slug": "10-1016-j-isci-2026-116879-5df4173f",
+      "title": "Exploring prediction of tick and tick-borne encephalitis cases in Sweden using citizen science data",
+      "doi": "10.1016/j.isci.2026.116879",
+      "pmid": "42495530",
+      "journal": "iScience",
+      "publisher": "Elsevier BV",
+      "authors": [
+        "Yichao Liu",
+        "Junwen Guo",
+        "Peter Fransson",
+        "Stefan Widgren",
+        "Anna Omazic",
+        "Joacim Rocklöv"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-08-01T00:00:00+00:00",
+      "indexed_at": "2026-08-09T06:42:03+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://linkinghub.elsevier.com/retrieve/pii/S2589004226022571",
+      "license_url": "https://www.elsevier.com/tdm/userlicense/1.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.689,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D205",
+          "slug": "tick-borne-encephalitis",
+          "name_en": "Tick-borne encephalitis",
+          "name_zh": "蜱传脑炎",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [
+        {
+          "code": "SE",
+          "name_en": "Sweden",
+          "name_zh": null,
+          "confidence": 0.78
+        }
+      ],
+      "topics": [
+        {
+          "name": "Climate and environment",
+          "confidence": 0.7100000000000001
+        },
+        {
+          "name": "Surveillance",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [
+        {
+          "disease_id": "D205",
+          "disease_name_en": "Tick-borne encephalitis",
+          "disease_name_zh": "蜱传脑炎",
+          "disease_slug": "tick-borne-encephalitis",
+          "country_code": "SE",
+          "country_name_en": "Sweden",
+          "url": "/diseases/tick-borne-encephalitis/",
+          "method": "high-confidence article geography intersected with GIDS series coverage"
+        }
+      ],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Tick-borne encephalitis. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与蜱传脑炎相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1016/j.isci.2026.116879",
+        "publisher": "https://linkinghub.elsevier.com/retrieve/pii/S2589004226022571",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/42495530/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137540+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:ab5fb8f49aaa0cf6",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D205",
+          "disease_name_en": "Tick-borne encephalitis",
+          "disease_name_zh": "蜱传脑炎",
+          "geographies": [
+            {
+              "code": "SE",
+              "name_en": "Sweden"
+            }
+          ],
+          "data_through": "2026-07-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 156.0,
+            "previous": 92.0,
+            "absolute_change": 64.0,
+            "change_pct": 69.57
+          },
+          "risk": {
+            "score": 46.1,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "exact_disease_geography",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_9785ac97977da4f1324efeee",
+      "slug": "10-1016-j-vaccine-2026-128593-9785ac97",
+      "title": "Tick-borne encephalitis vaccination coverage among outdoor workers in Sweden: a nationwide survey",
+      "doi": "10.1016/j.vaccine.2026.128593",
+      "pmid": "42001738",
+      "journal": "Vaccine",
+      "publisher": "Elsevier BV",
+      "authors": [
+        "Anna Omazic",
+        "Junwen Guo"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Cross-sectional study",
+      "published_at": "2026-05-01T00:00:00+00:00",
+      "indexed_at": "2026-06-23T21:47:22+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://linkinghub.elsevier.com/retrieve/pii/S0264410X26004019",
+      "license_url": "https://www.elsevier.com/tdm/userlicense/1.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.683,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D205",
+          "slug": "tick-borne-encephalitis",
+          "name_en": "Tick-borne encephalitis",
+          "name_zh": "蜱传脑炎",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [
+        {
+          "code": "SE",
+          "name_en": "Sweden",
+          "name_zh": null,
+          "confidence": 0.78
+        }
+      ],
+      "topics": [
+        {
+          "name": "Vaccination",
+          "confidence": 0.76
+        },
+        {
+          "name": "Climate and environment",
+          "confidence": 0.66
+        },
+        {
+          "name": "Health policy",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [
+        {
+          "disease_id": "D205",
+          "disease_name_en": "Tick-borne encephalitis",
+          "disease_name_zh": "蜱传脑炎",
+          "disease_slug": "tick-borne-encephalitis",
+          "country_code": "SE",
+          "country_name_en": "Sweden",
+          "url": "/diseases/tick-borne-encephalitis/",
+          "method": "high-confidence article geography intersected with GIDS series coverage"
+        }
+      ],
+      "summary": {
+        "zh": {
+          "research_question": "瑞典户外职业人群对蜱传脑炎的疫苗接种覆盖率及其相关知识、态度与行为现状如何？",
+          "study_design": "该研究采用全国性横断面调查设计，于二零二四年收集数据以评估目标人群的免疫实践状况。",
+          "population_setting": "研究对象为瑞典从事农业、林业、狩猎、科研及自然导览等户外作业成年人员。",
+          "main_findings": "受访者对疫苗的认知与态度整体处于中等偏上水平，但实际接种率未能同步提升且存在显著差异。女性群体及南部和中部地区居民的参与比例较高，约七成报告已完成至少三剂接种，但部分细分人群中仍存在未接种现象。",
+          "public_health_relevance": "尽管高危职业群体具备一定疾病防范意识，但免疫屏障尚未完全建立，提示需通过定向干预与政策优化来缩小接种缺口。",
+          "limitations": "作为基于单一时间点的横断面自我报告调查，该设计难以确立变量间的时序关系，且可能受到回忆偏差的影响。",
+          "gids_interpretation": "本文提供了瑞典特定职业暴露背景下的免疫模式基线信息，可作为区域健康监测框架的背景参考，不涉及实时疫情信号关联。",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.952,
+            "generated_at": "2026-08-13T19:08:03.866572+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        },
+        "en": {
+          "research_question": "The investigation aimed to quantify tick-borne encephalitis immunization rates among Swedish individuals employed in outdoor occupations, addressing a documented gap in existing epidemiological data.",
+          "study_design": "Researchers utilized a nationwide cross-sectional survey methodology to collect self-reported knowledge, attitudes, and practice data during 2024.",
+          "population_setting": "The analytical sample comprised 1006 consenting adults working in outdoor sectors such as agriculture, forestry, hunting, scientific research, and wildlife guiding across Sweden.",
+          "main_findings": "Participants exhibited moderate awareness and positive views regarding immunization, yet actual uptake rates fell short of these metrics and differed markedly across demographics. Female respondents achieved higher assessment scores and vaccination rates than males, while geographic analysis revealed superior coverage in southern and central counties relative to northern areas. Roughly seventy percent indicated completion of a three-dose regimen, although distinct demographic clusters remained largely unprotected.",
+          "public_health_relevance": "Rising regional disease incidence contrasts with the exclusion of the prophylactic agent from official immunization schedules, highlighting the need for occupational-specific interventions and financial support mechanisms to mitigate transmission risk.",
+          "limitations": "The cross-sectional framework restricts temporal analysis of behavioral shifts, and reliance on self-reported immunization records introduces potential recall inaccuracies.",
+          "gids_interpretation": "This publication establishes a descriptive baseline for occupational immunization patterns, offering contextual reference points for literature mapping and regional health strategy discussions without implying real-time outbreak tracking.",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.933,
+            "generated_at": "2026-08-13T19:07:37.228957+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        }
+      },
+      "why_it_matters_en": "Rising regional disease incidence contrasts with the exclusion of the prophylactic agent from official immunization schedules, highlighting the need for occupational-specific interventions and financial support mechanisms to mitigate transmission risk.",
+      "why_it_matters_zh": "尽管高危职业群体具备一定疾病防范意识，但免疫屏障尚未完全建立，提示需通过定向干预与政策优化来缩小接种缺口。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1016/j.vaccine.2026.128593",
+        "publisher": "https://linkinghub.elsevier.com/retrieve/pii/S0264410X26004019",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/42001738/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137537+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:ab5fb8f49aaa0cf6",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D205",
+          "disease_name_en": "Tick-borne encephalitis",
+          "disease_name_zh": "蜱传脑炎",
+          "geographies": [
+            {
+              "code": "SE",
+              "name_en": "Sweden"
+            }
+          ],
+          "data_through": "2026-07-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 156.0,
+            "previous": 92.0,
+            "absolute_change": 64.0,
+            "change_pct": 69.57
+          },
+          "risk": {
+            "score": 46.1,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "exact_disease_geography",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_63b70382078fe29c087368e1",
+      "slug": "10-1007-s10096-025-05389-x-63b70382",
+      "title": "Diagnostic value of RT-PCR for detection of tick-borne encephalitis virus RNA in cerebrospinal fluid.",
+      "doi": "10.1007/s10096-025-05389-x",
+      "pmid": "41526762",
+      "journal": "European journal of clinical microbiology & infectious diseases : official publication of the European Society of Clinical Microbiology",
+      "publisher": null,
+      "authors": [
+        "Glans H",
+        "Bartholdsson S",
+        "Lagerqvist N",
+        "Nord H",
+        "Blennow O",
+        "Morén J",
+        "Westman G",
+        "Valik JK",
+        "Klingström J",
+        "Gredmark-Russ S"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-01-12T00:00:00+00:00",
+      "indexed_at": "2026-01-12T00:00:00+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC13086654",
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.606,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D205",
+          "slug": "tick-borne-encephalitis",
+          "name_en": "Tick-borne encephalitis",
+          "name_zh": "蜱传脑炎",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [
+        {
+          "code": "SE",
+          "name_en": "Sweden",
+          "name_zh": null,
+          "confidence": 0.62
+        }
+      ],
+      "topics": [
+        {
+          "name": "Diagnostics",
+          "confidence": 0.66
+        },
+        {
+          "name": "Treatment",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {
+        "zh": {
+          "research_question": "本研究旨在评估脑脊液中蜱传脑炎病毒核酸的检测能力，并观察该指标与患者临床表现及疾病严重程度的对应关系。",
+          "study_design": "研究基于瑞典两地医疗机构的回顾性数据，对2015至2020年间的患者脑脊液样本进行逆转录聚合酶链反应分析，并调取电子病历记录进行对照。",
+          "population_setting": "纳入对象为瑞典斯德哥尔摩与乌普萨拉地区的蜱传脑炎确诊病例，共计三十六例接受脑脊液检测的患者，其中包含少数接受免疫抑制干预的个体。",
+          "main_findings": "检测结果显示半数以上样本呈核酸阳性。阳性病例表现出更高的重症监护比例与通气支持需求，且该组总体死亡率较高。在免疫抑制治疗亚组中，多数患者出现不良结局。",
+          "public_health_relevance": "分子检测手段可作为特定人群（如存在免疫功能低下或接受相关治疗者）的诊断补充工具，其阳性状态通常伴随较高的危重程度与死亡概率。",
+          "limitations": "研究受限于回顾性数据收集模式，样本规模较小且地域范围集中，可能限制结论的外推效力。",
+          "gids_interpretation": "该出版物属于临床微生物学与传染病诊断领域的学术文献，主要提供关于蜱传脑炎病毒核酸检测方法学的区域性应用背景信息。",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.952,
+            "generated_at": "2026-08-14T03:11:23.376006+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        }
+      },
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Tick-borne encephalitis. Read the original source before applying its findings.",
+      "why_it_matters_zh": "分子检测手段可作为特定人群（如存在免疫功能低下或接受相关治疗者）的诊断补充工具，其阳性状态通常伴随较高的危重程度与死亡概率。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1007/s10096-025-05389-x",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41526762/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137579+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:ab5fb8f49aaa0cf6",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D205",
+          "disease_name_en": "Tick-borne encephalitis",
+          "disease_name_zh": "蜱传脑炎",
+          "geographies": [
+            {
+              "code": "SE",
+              "name_en": "Sweden"
+            }
+          ],
+          "data_through": "2026-07-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 156.0,
+            "previous": 92.0,
+            "absolute_change": 64.0,
+            "change_pct": 69.57
+          },
+          "risk": {
+            "score": 46.1,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_9804296112ae64bd7b10912e",
+      "slug": "10-1093-jtm-taaf115-98042961",
+      "title": "Tick-borne encephalitis in international travellers: a systematic review and vaccine recommendations.",
+      "doi": "10.1093/jtm/taaf115",
+      "pmid": "41206718",
+      "journal": "Journal of travel medicine",
+      "publisher": null,
+      "authors": [
+        "Srinivasan R",
+        "Angulo FJ",
+        "Duench S",
+        "Davidson A",
+        "Kelly PH",
+        "Riddle MS",
+        "Halsby K",
+        "Pilz A",
+        "Steffen R",
+        "Stark JH"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Systematic review",
+      "published_at": "2025-12-01T00:00:00+00:00",
+      "indexed_at": "2025-11-09T00:00:00+00:00",
+      "open_access_status": "unknown",
+      "open_access_url": null,
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.606,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D205",
+          "slug": "tick-borne-encephalitis",
+          "name_en": "Tick-borne encephalitis",
+          "name_zh": "蜱传脑炎",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [
+        {
+          "code": "AT",
+          "name_en": "Austria",
+          "name_zh": null,
+          "confidence": 0.62
+        },
+        {
+          "code": "SE",
+          "name_en": "Sweden",
+          "name_zh": null,
+          "confidence": 0.62
+        },
+        {
+          "code": "CH",
+          "name_en": "Switzerland",
+          "name_zh": null,
+          "confidence": 0.62
+        }
+      ],
+      "topics": [
+        {
+          "name": "Vaccination",
+          "confidence": 0.7100000000000001
+        },
+        {
+          "name": "Surveillance",
+          "confidence": 0.66
+        },
+        {
+          "name": "Travel medicine",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent systematic review is indexed for its relevance to Tick-borne encephalitis. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Systematic review因与蜱传脑炎相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1093/jtm/taaf115",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41206718/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137584+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:ab5fb8f49aaa0cf6",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D205",
+          "disease_name_en": "Tick-borne encephalitis",
+          "disease_name_zh": "蜱传脑炎",
+          "geographies": [
+            {
+              "code": "SE",
+              "name_en": "Sweden"
+            }
+          ],
+          "data_through": "2026-07-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 156.0,
+            "previous": 92.0,
+            "absolute_change": 64.0,
+            "change_pct": 69.57
+          },
+          "risk": {
+            "score": 46.1,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_2f6f97a86f504547574b3e0f",
+      "slug": "10-1111-apa-70280-2f6f97a8",
+      "title": "Tick-Borne Encephalitis (TBE) Vaccine in the National Immunisation Programme-For Whom, When and Where?",
+      "doi": "10.1111/apa.70280",
+      "pmid": "40856098",
+      "journal": "Acta paediatrica (Oslo, Norway : 1992)",
+      "publisher": null,
+      "authors": [
+        "Askling HH",
+        "Zavadska D"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2025-08-26T00:00:00+00:00",
+      "indexed_at": "2025-08-26T00:00:00+00:00",
+      "open_access_status": "unknown",
+      "open_access_url": null,
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.563,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D205",
+          "slug": "tick-borne-encephalitis",
+          "name_en": "Tick-borne encephalitis",
+          "name_zh": "蜱传脑炎",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [
+        {
+          "code": "SE",
+          "name_en": "Sweden",
+          "name_zh": null,
+          "confidence": 0.62
+        },
+        {
+          "code": "NO",
+          "name_en": "Norway",
+          "name_zh": null,
+          "confidence": 0.62
+        },
+        {
+          "code": "FI",
+          "name_en": "Finland",
+          "name_zh": null,
+          "confidence": 0.62
+        }
+      ],
+      "topics": [
+        {
+          "name": "Vaccination",
+          "confidence": 0.7100000000000001
+        },
+        {
+          "name": "Surveillance",
+          "confidence": 0.66
+        },
+        {
+          "name": "Transmission dynamics",
+          "confidence": 0.66
+        },
+        {
+          "name": "Climate and environment",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Tick-borne encephalitis. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与蜱传脑炎相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1111/apa.70280",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/40856098/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137589+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:ab5fb8f49aaa0cf6",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D205",
+          "disease_name_en": "Tick-borne encephalitis",
+          "disease_name_zh": "蜱传脑炎",
+          "geographies": [
+            {
+              "code": "SE",
+              "name_en": "Sweden"
+            }
+          ],
+          "data_through": "2026-07-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 156.0,
+            "previous": 92.0,
+            "absolute_change": 64.0,
+            "change_pct": 69.57
+          },
+          "risk": {
+            "score": 46.1,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_6c59cd8bbe6395f3452e4423",
+      "slug": "10-1016-j-jvacx-2025-100625-6c59cd8b",
+      "title": "Vaccination against tick-borne encephalitis virus in Denmark, Norway and Sweden",
+      "doi": "10.1016/j.jvacx.2025.100625",
+      "pmid": null,
+      "journal": "Vaccine: X",
+      "publisher": "Elsevier BV",
+      "authors": [
+        "Mette F. Hansen",
+        "John Shorter",
+        "Martin T. Jepsen",
+        "Anders Boman",
+        "Pikka Jokelainen",
+        "Solveig Jore",
+        "Daniel Slunge",
+        "Karen A. Krogfelt"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2025-06-01T00:00:00+00:00",
+      "indexed_at": "2025-11-08T20:46:48+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://linkinghub.elsevier.com/retrieve/pii/S2590136225000191",
+      "license_url": "https://www.elsevier.com/tdm/userlicense/1.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.512,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D205",
+          "slug": "tick-borne-encephalitis",
+          "name_en": "Tick-borne encephalitis",
+          "name_zh": "蜱传脑炎",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [
+        {
+          "code": "SE",
+          "name_en": "Sweden",
+          "name_zh": null,
+          "confidence": 0.78
+        },
+        {
+          "code": "NO",
+          "name_en": "Norway",
+          "name_zh": null,
+          "confidence": 0.78
+        }
+      ],
+      "topics": [
+        {
+          "name": "Vaccination",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [
+        {
+          "disease_id": "D205",
+          "disease_name_en": "Tick-borne encephalitis",
+          "disease_name_zh": "蜱传脑炎",
+          "disease_slug": "tick-borne-encephalitis",
+          "country_code": "SE",
+          "country_name_en": "Sweden",
+          "url": "/diseases/tick-borne-encephalitis/",
+          "method": "high-confidence article geography intersected with GIDS series coverage"
+        }
+      ],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Tick-borne encephalitis. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与蜱传脑炎相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1016/j.jvacx.2025.100625",
+        "publisher": "https://linkinghub.elsevier.com/retrieve/pii/S2590136225000191"
+      },
+      "updated_at": "2026-08-13T16:05:48.137556+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:ab5fb8f49aaa0cf6",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D205",
+          "disease_name_en": "Tick-borne encephalitis",
+          "disease_name_zh": "蜱传脑炎",
+          "geographies": [
+            {
+              "code": "SE",
+              "name_en": "Sweden"
+            }
+          ],
+          "data_through": "2026-07-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 156.0,
+            "previous": 92.0,
+            "absolute_change": 64.0,
+            "change_pct": 69.57
+          },
+          "risk": {
+            "score": 46.1,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "exact_disease_geography",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_6630ba206cf5249f963c3fc9",
+      "slug": "10-1038-s41598-025-86968-y-6630ba20",
+      "title": "Tick-borne encephalitis vaccine uptake, effectiveness, and impact in Sweden from 2018 to 2022",
+      "doi": "10.1038/s41598-025-86968-y",
+      "pmid": null,
+      "journal": "Scientific Reports",
+      "publisher": "Springer Science and Business Media LLC",
+      "authors": [
+        "Andreas Palmborg",
+        "Frederick J. Angulo",
+        "Pingping Zhang",
+        "Andreas Pilz",
+        "James Stark",
+        "Jennifer C. Moïsi",
+        "Luis Jodar"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2025-01-23T00:00:00+00:00",
+      "indexed_at": "2026-06-08T17:19:30+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://www.nature.com/articles/s41598-025-86968-y",
+      "license_url": "https://creativecommons.org/licenses/by-nc-nd/4.0",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.512,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D205",
+          "slug": "tick-borne-encephalitis",
+          "name_en": "Tick-borne encephalitis",
+          "name_zh": "蜱传脑炎",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [
+        {
+          "code": "SE",
+          "name_en": "Sweden",
+          "name_zh": null,
+          "confidence": 0.78
+        }
+      ],
+      "topics": [
+        {
+          "name": "Vaccination",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [
+        {
+          "disease_id": "D205",
+          "disease_name_en": "Tick-borne encephalitis",
+          "disease_name_zh": "蜱传脑炎",
+          "disease_slug": "tick-borne-encephalitis",
+          "country_code": "SE",
+          "country_name_en": "Sweden",
+          "url": "/diseases/tick-borne-encephalitis/",
+          "method": "high-confidence article geography intersected with GIDS series coverage"
+        }
+      ],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Tick-borne encephalitis. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与蜱传脑炎相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1038/s41598-025-86968-y",
+        "publisher": "https://www.nature.com/articles/s41598-025-86968-y"
+      },
+      "updated_at": "2026-08-13T16:05:48.137551+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:ab5fb8f49aaa0cf6",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D205",
+          "disease_name_en": "Tick-borne encephalitis",
+          "disease_name_zh": "蜱传脑炎",
+          "geographies": [
+            {
+              "code": "SE",
+              "name_en": "Sweden"
+            }
+          ],
+          "data_through": "2026-07-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 156.0,
+            "previous": 92.0,
+            "absolute_change": 64.0,
+            "change_pct": 69.57
+          },
+          "risk": {
+            "score": 46.1,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "exact_disease_geography",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_9fdde80599dc4767663697cd",
+      "slug": "10-1016-j-ttbdis-2026-102673-9fdde805",
+      "title": "Cognitive outcome in relation to cerebrospinal fluid markers of neuronal and glial cell damage: A prospective study of tick-borne encephalitis.",
+      "doi": "10.1016/j.ttbdis.2026.102673",
+      "pmid": "42314471",
+      "journal": "Ticks and tick-borne diseases",
+      "publisher": null,
+      "authors": [
+        "Eckerström M",
+        "Veje M",
+        "Eckerström C",
+        "Mickienė A",
+        "Griška V",
+        "Pranckevičienė A",
+        "Pakalnienė J",
+        "Gabrijolavičiūtė D",
+        "Zetterberg H",
+        "Blennow K",
+        "Studahl M"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-06-18T00:00:00+00:00",
+      "indexed_at": "2026-06-18T00:00:00+00:00",
+      "open_access_status": "unknown",
+      "open_access_url": null,
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.509,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D205",
+          "slug": "tick-borne-encephalitis",
+          "name_en": "Tick-borne encephalitis",
+          "name_zh": "蜱传脑炎",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [
+        {
+          "code": "SE",
+          "name_en": "Sweden",
+          "name_zh": null,
+          "confidence": 0.62
+        }
+      ],
+      "topics": [],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Tick-borne encephalitis. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与蜱传脑炎相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1016/j.ttbdis.2026.102673",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/42314471/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137568+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:ab5fb8f49aaa0cf6",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D205",
+          "disease_name_en": "Tick-borne encephalitis",
+          "disease_name_zh": "蜱传脑炎",
+          "geographies": [
+            {
+              "code": "SE",
+              "name_en": "Sweden"
+            }
+          ],
+          "data_through": "2026-07-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 156.0,
+            "previous": 92.0,
+            "absolute_change": 64.0,
+            "change_pct": 69.57
+          },
+          "risk": {
+            "score": 46.1,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    }
+  ],
+  "count": 9,
+  "publication_timeline": [
+    {
+      "month": "2025-01",
+      "publication_count": 1
+    },
+    {
+      "month": "2025-06",
+      "publication_count": 1
+    },
+    {
+      "month": "2025-08",
+      "publication_count": 1
+    },
+    {
+      "month": "2025-12",
+      "publication_count": 1
+    },
+    {
+      "month": "2026-01",
+      "publication_count": 1
+    },
+    {
+      "month": "2026-03",
+      "publication_count": 1
+    },
+    {
+      "month": "2026-05",
+      "publication_count": 1
+    },
+    {
+      "month": "2026-06",
+      "publication_count": 1
+    },
+    {
+      "month": "2026-08",
+      "publication_count": 1
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-2f6f97a86f504547574b3e0f",
+        "type": "article",
+        "label": "Tick-Borne Encephalitis (TBE) Vaccine in the National Immunisation Programme-For Whom, When and Where?",
+        "slug": "10-1111-apa-70280-2f6f97a8",
+        "url": "/research/articles/10-1111-apa-70280-2f6f97a8/",
+        "published_at": "2025-08-26T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-53345908bb8d2f88c9fd0b5b",
+        "type": "article",
+        "label": "Projecting tick-borne encephalitis risk in Sweden under climate change scenarios: a high-resolution spatio-temporal modeling approach",
+        "slug": "10-1186-s12940-026-01278-8-53345908",
+        "url": "/research/articles/10-1186-s12940-026-01278-8-53345908/",
+        "published_at": "2026-03-23T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-5df4173f98a1fce207c592be",
+        "type": "article",
+        "label": "Exploring prediction of tick and tick-borne encephalitis cases in Sweden using citizen science data",
+        "slug": "10-1016-j-isci-2026-116879-5df4173f",
+        "url": "/research/articles/10-1016-j-isci-2026-116879-5df4173f/",
+        "published_at": "2026-08-01T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-63b70382078fe29c087368e1",
+        "type": "article",
+        "label": "Diagnostic value of RT-PCR for detection of tick-borne encephalitis virus RNA in cerebrospinal fluid.",
+        "slug": "10-1007-s10096-025-05389-x-63b70382",
+        "url": "/research/articles/10-1007-s10096-025-05389-x-63b70382/",
+        "published_at": "2026-01-12T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-6630ba206cf5249f963c3fc9",
+        "type": "article",
+        "label": "Tick-borne encephalitis vaccine uptake, effectiveness, and impact in Sweden from 2018 to 2022",
+        "slug": "10-1038-s41598-025-86968-y-6630ba20",
+        "url": "/research/articles/10-1038-s41598-025-86968-y-6630ba20/",
+        "published_at": "2025-01-23T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-6c59cd8bbe6395f3452e4423",
+        "type": "article",
+        "label": "Vaccination against tick-borne encephalitis virus in Denmark, Norway and Sweden",
+        "slug": "10-1016-j-jvacx-2025-100625-6c59cd8b",
+        "url": "/research/articles/10-1016-j-jvacx-2025-100625-6c59cd8b/",
+        "published_at": "2025-06-01T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-9785ac97977da4f1324efeee",
+        "type": "article",
+        "label": "Tick-borne encephalitis vaccination coverage among outdoor workers in Sweden: a nationwide survey",
+        "slug": "10-1016-j-vaccine-2026-128593-9785ac97",
+        "url": "/research/articles/10-1016-j-vaccine-2026-128593-9785ac97/",
+        "published_at": "2026-05-01T00:00:00+00:00",
+        "study_type": "Cross-sectional study"
+      },
+      {
+        "id": "article:lit-9804296112ae64bd7b10912e",
+        "type": "article",
+        "label": "Tick-borne encephalitis in international travellers: a systematic review and vaccine recommendations.",
+        "slug": "10-1093-jtm-taaf115-98042961",
+        "url": "/research/articles/10-1093-jtm-taaf115-98042961/",
+        "published_at": "2025-12-01T00:00:00+00:00",
+        "study_type": "Systematic review"
+      },
+      {
+        "id": "article:lit-9fdde80599dc4767663697cd",
+        "type": "article",
+        "label": "Cognitive outcome in relation to cerebrospinal fluid markers of neuronal and glial cell damage: A prospective study of tick-borne encephalitis.",
+        "slug": "10-1016-j-ttbdis-2026-102673-9fdde805",
+        "url": "/research/articles/10-1016-j-ttbdis-2026-102673-9fdde805/",
+        "published_at": "2026-06-18T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "country:at",
+        "type": "country",
+        "label": "Austria",
+        "code": "AT",
+        "url": "/countries/at/"
+      },
+      {
+        "id": "country:ch",
+        "type": "country",
+        "label": "Switzerland",
+        "code": "CH",
+        "url": "/countries/ch/"
+      },
+      {
+        "id": "country:fi",
+        "type": "country",
+        "label": "Finland",
+        "code": "FI",
+        "url": "/countries/fi/"
+      },
+      {
+        "id": "country:no",
+        "type": "country",
+        "label": "Norway",
+        "code": "NO",
+        "url": "/countries/no/"
+      },
+      {
+        "id": "country:se",
+        "type": "country",
+        "label": "Sweden",
+        "code": "SE",
+        "url": "/countries/se/"
+      },
+      {
+        "id": "disease:d205",
+        "type": "disease",
+        "label": "Tick-borne encephalitis",
+        "disease_id": "D205",
+        "name_zh": "蜱传脑炎",
+        "slug": "tick-borne-encephalitis",
+        "url": "/diseases/tick-borne-encephalitis/"
+      },
+      {
+        "id": "study-type:cross-sectional-study",
+        "type": "study_type",
+        "label": "Cross-sectional study"
+      },
+      {
+        "id": "study-type:journal-article",
+        "type": "study_type",
+        "label": "Journal article"
+      },
+      {
+        "id": "study-type:systematic-review",
+        "type": "study_type",
+        "label": "Systematic review"
+      },
+      {
+        "id": "topic:climate-and-environment",
+        "type": "topic",
+        "label": "Climate and environment"
+      },
+      {
+        "id": "topic:diagnostics",
+        "type": "topic",
+        "label": "Diagnostics"
+      },
+      {
+        "id": "topic:health-policy",
+        "type": "topic",
+        "label": "Health policy"
+      },
+      {
+        "id": "topic:surveillance",
+        "type": "topic",
+        "label": "Surveillance"
+      },
+      {
+        "id": "topic:transmission-dynamics",
+        "type": "topic",
+        "label": "Transmission dynamics"
+      },
+      {
+        "id": "topic:travel-medicine",
+        "type": "topic",
+        "label": "Travel medicine"
+      },
+      {
+        "id": "topic:treatment",
+        "type": "topic",
+        "label": "Treatment"
+      },
+      {
+        "id": "topic:vaccination",
+        "type": "topic",
+        "label": "Vaccination"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-2f6f97a86f504547574b3e0f|ABOUT_DISEASE|disease:d205",
+        "source": "article:lit-2f6f97a86f504547574b3e0f",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d205",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-2f6f97a86f504547574b3e0f|ADDRESSES_TOPIC|topic:climate-and-environment",
+        "source": "article:lit-2f6f97a86f504547574b3e0f",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:climate-and-environment",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-2f6f97a86f504547574b3e0f|ADDRESSES_TOPIC|topic:surveillance",
+        "source": "article:lit-2f6f97a86f504547574b3e0f",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:surveillance",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-2f6f97a86f504547574b3e0f|ADDRESSES_TOPIC|topic:transmission-dynamics",
+        "source": "article:lit-2f6f97a86f504547574b3e0f",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:transmission-dynamics",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-2f6f97a86f504547574b3e0f|ADDRESSES_TOPIC|topic:vaccination",
+        "source": "article:lit-2f6f97a86f504547574b3e0f",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccination",
+        "confidence": 0.7100000000000001
+      },
+      {
+        "id": "article:lit-2f6f97a86f504547574b3e0f|STUDIED_IN|country:fi",
+        "source": "article:lit-2f6f97a86f504547574b3e0f",
+        "relation": "STUDIED_IN",
+        "target": "country:fi",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-2f6f97a86f504547574b3e0f|STUDIED_IN|country:no",
+        "source": "article:lit-2f6f97a86f504547574b3e0f",
+        "relation": "STUDIED_IN",
+        "target": "country:no",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-2f6f97a86f504547574b3e0f|STUDIED_IN|country:se",
+        "source": "article:lit-2f6f97a86f504547574b3e0f",
+        "relation": "STUDIED_IN",
+        "target": "country:se",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-2f6f97a86f504547574b3e0f|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-2f6f97a86f504547574b3e0f",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-53345908bb8d2f88c9fd0b5b|ABOUT_DISEASE|disease:d205",
+        "source": "article:lit-53345908bb8d2f88c9fd0b5b",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d205",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-53345908bb8d2f88c9fd0b5b|ADDRESSES_TOPIC|topic:climate-and-environment",
+        "source": "article:lit-53345908bb8d2f88c9fd0b5b",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:climate-and-environment",
+        "confidence": 0.76
+      },
+      {
+        "id": "article:lit-53345908bb8d2f88c9fd0b5b|ADDRESSES_TOPIC|topic:surveillance",
+        "source": "article:lit-53345908bb8d2f88c9fd0b5b",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:surveillance",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-53345908bb8d2f88c9fd0b5b|ADDRESSES_TOPIC|topic:transmission-dynamics",
+        "source": "article:lit-53345908bb8d2f88c9fd0b5b",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:transmission-dynamics",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-53345908bb8d2f88c9fd0b5b|ADDRESSES_TOPIC|topic:vaccination",
+        "source": "article:lit-53345908bb8d2f88c9fd0b5b",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccination",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-53345908bb8d2f88c9fd0b5b|STUDIED_IN|country:se",
+        "source": "article:lit-53345908bb8d2f88c9fd0b5b",
+        "relation": "STUDIED_IN",
+        "target": "country:se",
+        "confidence": 0.78
+      },
+      {
+        "id": "article:lit-53345908bb8d2f88c9fd0b5b|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-53345908bb8d2f88c9fd0b5b",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-5df4173f98a1fce207c592be|ABOUT_DISEASE|disease:d205",
+        "source": "article:lit-5df4173f98a1fce207c592be",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d205",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-5df4173f98a1fce207c592be|ADDRESSES_TOPIC|topic:climate-and-environment",
+        "source": "article:lit-5df4173f98a1fce207c592be",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:climate-and-environment",
+        "confidence": 0.7100000000000001
+      },
+      {
+        "id": "article:lit-5df4173f98a1fce207c592be|ADDRESSES_TOPIC|topic:surveillance",
+        "source": "article:lit-5df4173f98a1fce207c592be",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:surveillance",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-5df4173f98a1fce207c592be|STUDIED_IN|country:se",
+        "source": "article:lit-5df4173f98a1fce207c592be",
+        "relation": "STUDIED_IN",
+        "target": "country:se",
+        "confidence": 0.78
+      },
+      {
+        "id": "article:lit-5df4173f98a1fce207c592be|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-5df4173f98a1fce207c592be",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-63b70382078fe29c087368e1|ABOUT_DISEASE|disease:d205",
+        "source": "article:lit-63b70382078fe29c087368e1",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d205",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-63b70382078fe29c087368e1|ADDRESSES_TOPIC|topic:diagnostics",
+        "source": "article:lit-63b70382078fe29c087368e1",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:diagnostics",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-63b70382078fe29c087368e1|ADDRESSES_TOPIC|topic:treatment",
+        "source": "article:lit-63b70382078fe29c087368e1",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:treatment",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-63b70382078fe29c087368e1|STUDIED_IN|country:se",
+        "source": "article:lit-63b70382078fe29c087368e1",
+        "relation": "STUDIED_IN",
+        "target": "country:se",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-63b70382078fe29c087368e1|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-63b70382078fe29c087368e1",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-6630ba206cf5249f963c3fc9|ABOUT_DISEASE|disease:d205",
+        "source": "article:lit-6630ba206cf5249f963c3fc9",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d205",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-6630ba206cf5249f963c3fc9|ADDRESSES_TOPIC|topic:vaccination",
+        "source": "article:lit-6630ba206cf5249f963c3fc9",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccination",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-6630ba206cf5249f963c3fc9|STUDIED_IN|country:se",
+        "source": "article:lit-6630ba206cf5249f963c3fc9",
+        "relation": "STUDIED_IN",
+        "target": "country:se",
+        "confidence": 0.78
+      },
+      {
+        "id": "article:lit-6630ba206cf5249f963c3fc9|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-6630ba206cf5249f963c3fc9",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-6c59cd8bbe6395f3452e4423|ABOUT_DISEASE|disease:d205",
+        "source": "article:lit-6c59cd8bbe6395f3452e4423",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d205",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-6c59cd8bbe6395f3452e4423|ADDRESSES_TOPIC|topic:vaccination",
+        "source": "article:lit-6c59cd8bbe6395f3452e4423",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccination",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-6c59cd8bbe6395f3452e4423|STUDIED_IN|country:no",
+        "source": "article:lit-6c59cd8bbe6395f3452e4423",
+        "relation": "STUDIED_IN",
+        "target": "country:no",
+        "confidence": 0.78
+      },
+      {
+        "id": "article:lit-6c59cd8bbe6395f3452e4423|STUDIED_IN|country:se",
+        "source": "article:lit-6c59cd8bbe6395f3452e4423",
+        "relation": "STUDIED_IN",
+        "target": "country:se",
+        "confidence": 0.78
+      },
+      {
+        "id": "article:lit-6c59cd8bbe6395f3452e4423|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-6c59cd8bbe6395f3452e4423",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-9785ac97977da4f1324efeee|ABOUT_DISEASE|disease:d205",
+        "source": "article:lit-9785ac97977da4f1324efeee",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d205",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-9785ac97977da4f1324efeee|ADDRESSES_TOPIC|topic:climate-and-environment",
+        "source": "article:lit-9785ac97977da4f1324efeee",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:climate-and-environment",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-9785ac97977da4f1324efeee|ADDRESSES_TOPIC|topic:health-policy",
+        "source": "article:lit-9785ac97977da4f1324efeee",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:health-policy",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-9785ac97977da4f1324efeee|ADDRESSES_TOPIC|topic:vaccination",
+        "source": "article:lit-9785ac97977da4f1324efeee",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccination",
+        "confidence": 0.76
+      },
+      {
+        "id": "article:lit-9785ac97977da4f1324efeee|STUDIED_IN|country:se",
+        "source": "article:lit-9785ac97977da4f1324efeee",
+        "relation": "STUDIED_IN",
+        "target": "country:se",
+        "confidence": 0.78
+      },
+      {
+        "id": "article:lit-9785ac97977da4f1324efeee|USES_STUDY_DESIGN|study-type:cross-sectional-study",
+        "source": "article:lit-9785ac97977da4f1324efeee",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:cross-sectional-study"
+      },
+      {
+        "id": "article:lit-9804296112ae64bd7b10912e|ABOUT_DISEASE|disease:d205",
+        "source": "article:lit-9804296112ae64bd7b10912e",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d205",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-9804296112ae64bd7b10912e|ADDRESSES_TOPIC|topic:surveillance",
+        "source": "article:lit-9804296112ae64bd7b10912e",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:surveillance",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-9804296112ae64bd7b10912e|ADDRESSES_TOPIC|topic:travel-medicine",
+        "source": "article:lit-9804296112ae64bd7b10912e",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:travel-medicine",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-9804296112ae64bd7b10912e|ADDRESSES_TOPIC|topic:vaccination",
+        "source": "article:lit-9804296112ae64bd7b10912e",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccination",
+        "confidence": 0.7100000000000001
+      },
+      {
+        "id": "article:lit-9804296112ae64bd7b10912e|STUDIED_IN|country:at",
+        "source": "article:lit-9804296112ae64bd7b10912e",
+        "relation": "STUDIED_IN",
+        "target": "country:at",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-9804296112ae64bd7b10912e|STUDIED_IN|country:ch",
+        "source": "article:lit-9804296112ae64bd7b10912e",
+        "relation": "STUDIED_IN",
+        "target": "country:ch",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-9804296112ae64bd7b10912e|STUDIED_IN|country:se",
+        "source": "article:lit-9804296112ae64bd7b10912e",
+        "relation": "STUDIED_IN",
+        "target": "country:se",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-9804296112ae64bd7b10912e|USES_STUDY_DESIGN|study-type:systematic-review",
+        "source": "article:lit-9804296112ae64bd7b10912e",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:systematic-review"
+      },
+      {
+        "id": "article:lit-9fdde80599dc4767663697cd|ABOUT_DISEASE|disease:d205",
+        "source": "article:lit-9fdde80599dc4767663697cd",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d205",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-9fdde80599dc4767663697cd|STUDIED_IN|country:se",
+        "source": "article:lit-9fdde80599dc4767663697cd",
+        "relation": "STUDIED_IN",
+        "target": "country:se",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-9fdde80599dc4767663697cd|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-9fdde80599dc4767663697cd",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      }
+    ],
+    "insights": [
+      {
+        "type": "topic_co_occurrence",
+        "left": "topic:climate-and-environment",
+        "right": "topic:surveillance",
+        "left_label": "Climate and environment",
+        "right_label": "Surveillance",
+        "article_count": 3
+      },
+      {
+        "type": "topic_co_occurrence",
+        "left": "topic:climate-and-environment",
+        "right": "topic:vaccination",
+        "left_label": "Climate and environment",
+        "right_label": "Vaccination",
+        "article_count": 3
+      },
+      {
+        "type": "topic_co_occurrence",
+        "left": "topic:surveillance",
+        "right": "topic:vaccination",
+        "left_label": "Surveillance",
+        "right_label": "Vaccination",
+        "article_count": 3
+      },
+      {
+        "type": "topic_co_occurrence",
+        "left": "topic:climate-and-environment",
+        "right": "topic:transmission-dynamics",
+        "left_label": "Climate and environment",
+        "right_label": "Transmission dynamics",
+        "article_count": 2
+      },
+      {
+        "type": "topic_co_occurrence",
+        "left": "topic:surveillance",
+        "right": "topic:transmission-dynamics",
+        "left_label": "Surveillance",
+        "right_label": "Transmission dynamics",
+        "article_count": 2
+      },
+      {
+        "type": "topic_co_occurrence",
+        "left": "topic:transmission-dynamics",
+        "right": "topic:vaccination",
+        "left_label": "Transmission dynamics",
+        "right_label": "Vaccination",
+        "article_count": 2
+      }
+    ],
+    "stats": {
+      "nodes": 26,
+      "edges": 52,
+      "articles": 9
+    }
+  }
+}

@@ -1,0 +1,78 @@
+---
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import ResearchCollectionPage from '../../../components/research/ResearchCollectionPage.astro';
+import researchData from '../../../data/research/index.json';
+
+export function getStaticPaths() {
+  return ((researchData as any).facets?.diseases ?? []).map((facet: any) => ({
+    params: { slug: facet.slug },
+    props: { facet },
+  }));
+}
+
+const { facet } = Astro.props as { facet: any };
+const researchFile = resolve(`./src/data/research/diseases/${String(facet.disease_id).toLowerCase()}.json`);
+const research = existsSync(researchFile) ? JSON.parse(readFileSync(researchFile, 'utf-8')) : { articles: [], publication_timeline: [] };
+const surveillanceFile = resolve(`./src/data/diseases/${String(facet.disease_id).toLowerCase()}.json`);
+const surveillance = existsSync(surveillanceFile) ? JSON.parse(readFileSync(surveillanceFile, 'utf-8')) : null;
+const publications = new Map((research.publication_timeline ?? []).map((item: any) => [item.month, Number(item.publication_count ?? 0)]));
+const months: string[] = surveillance?.global_monthly?.months ?? [];
+const cases: Array<number | null> = surveillance?.global_monthly?.cases ?? [];
+const timeline = months.slice(-24).map((month, offset) => {
+  const index = months.length - Math.min(24, months.length) + offset;
+  return { month, cases: Number(cases[index] ?? 0), publications: Number(publications.get(month) ?? 0) };
+});
+const maxCases = Math.max(1, ...timeline.map((item) => item.cases));
+const maxPublications = Math.max(1, ...timeline.map((item) => item.publications));
+const description = `A curated view of published ${facet.name_en} research, auditable classifier relationships, and the available GIDS surveillance timeline.`;
+const descriptionZh = `${facet.name_zh ?? facet.name_en}已发布研究、可审计分类关系与可用 GIDS 监测时间线的专题视图。`;
+---
+
+<ResearchCollectionPage
+  eyebrow="Disease evidence hub"
+  eyebrowZh="疾病证据专题"
+  title={facet.name_en}
+  titleZh={facet.name_zh ?? facet.name_en}
+  description={description}
+  descriptionZh={descriptionZh}
+  canonicalPath={`/research/diseases/${facet.slug}/`}
+  articles={research.articles ?? []}
+>
+  <section slot="context" class="card evidence-timeline">
+    <div class="timeline-heading">
+      <div><p class="academic-kicker" data-lang-en="Evidence timeline" data-lang-zh="证据时间线">Evidence timeline</p><h2 data-lang-en="Surveillance activity and publication volume" data-lang-zh="监测活动与发表数量">Surveillance activity and publication volume</h2></div>
+      <a href={`/diseases/${facet.slug}/`} data-lang-en="Open disease surveillance →" data-lang-zh="查看疾病监测 →">Open disease surveillance →</a>
+    </div>
+    {timeline.length > 0 ? <div class="timeline-table" role="table" aria-label="Monthly surveillance cases and publication volume">
+      {timeline.map((item) => <div class="timeline-row" role="row">
+        <time role="cell" datetime={`${item.month}-01`}>{item.month}</time>
+        <div class="bar-cell" role="cell"><span class="cases-bar" style={`width:${Math.max(item.cases ? 3 : 0, item.cases / maxCases * 100)}%`}></span><strong>{item.cases.toLocaleString()}</strong></div>
+        <div class="bar-cell" role="cell"><span class="papers-bar" style={`width:${Math.max(item.publications ? 8 : 0, item.publications / maxPublications * 100)}%`}></span><strong>{item.publications}</strong></div>
+      </div>)}
+      <div class="timeline-legend"><span><i class="cases-dot"></i><b data-lang-en="GIDS reported records" data-lang-zh="GIDS 报告记录">GIDS reported records</b></span><span><i class="papers-dot"></i><b data-lang-en="Research Radar publications" data-lang-zh="研究雷达发表数量">Research Radar publications</b></span></div>
+    </div> : <p class="timeline-empty" data-lang-en="No monthly GIDS series is available for this disease; the literature collection remains usable independently." data-lang-zh="该疾病暂无 GIDS 月度序列；文献集合仍可独立使用。">No monthly GIDS series is available for this disease; the literature collection remains usable independently.</p>}
+    <p class="timeline-note" data-lang-en="The two bars use independent scales. Their alignment supports navigation and comparison only; it does not claim that publication activity explains surveillance activity." data-lang-zh="两组条形使用独立刻度。并列展示仅用于导航和比较，并不表示发表活动能够解释监测活动。">The two bars use independent scales. Their alignment supports navigation and comparison only; it does not claim that publication activity explains surveillance activity.</p>
+  </section>
+</ResearchCollectionPage>
+
+<style>
+  .evidence-timeline { margin-top: 1.5rem; padding: clamp(1.25rem, 3vw, 2rem); }
+  .timeline-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; padding-bottom: 1rem; border-bottom: 1px solid rgb(var(--border) / .72); }
+  .timeline-heading h2 { margin-top: .3rem; color: rgb(var(--text-strong)); font: 600 clamp(1.3rem, 3vw, 1.8rem)/1.1 'Source Serif 4', serif; }
+  .timeline-heading a { flex: none; color: rgb(var(--color-brand)); font-size: .72rem; font-weight: 650; }
+  .timeline-table { margin-top: 1rem; }
+  .timeline-row { display: grid; grid-template-columns: 4.5rem minmax(0, 1.35fr) minmax(0, .65fr); gap: .75rem; align-items: center; min-height: 1.45rem; }
+  .timeline-row time { color: rgb(var(--text-faint)); font: 500 .58rem/1 'JetBrains Mono', monospace; }
+  .bar-cell { position: relative; height: .72rem; background: rgb(var(--surface-raised) / .7); }
+  .bar-cell span { display: block; height: 100%; }
+  .bar-cell strong { position: absolute; right: .25rem; top: 50%; color: rgb(var(--text)); font: 600 .52rem/1 'JetBrains Mono', monospace; transform: translateY(-50%); }
+  .cases-bar, .cases-dot { background: rgb(var(--color-teal) / .54); }
+  .papers-bar, .papers-dot { background: rgb(var(--color-accent) / .7); }
+  .timeline-legend { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1rem; color: rgb(var(--text-muted)); font-size: .64rem; }
+  .timeline-legend span { display: inline-flex; align-items: center; gap: .4rem; }
+  .timeline-legend i { width: .48rem; height: .48rem; }
+  .timeline-legend b { font-weight: 550; }
+  .timeline-note, .timeline-empty { margin-top: 1rem; color: rgb(var(--text-faint)); font-size: .68rem; line-height: 1.55; }
+  @media (max-width: 640px) { .timeline-heading { align-items: start; flex-direction: column; } .timeline-row { grid-template-columns: 3.8rem 1fr; } .timeline-row .bar-cell:last-child { grid-column: 2; } }
+</style>

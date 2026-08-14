@@ -434,14 +434,15 @@ class CAOntarioMonthlyUpdater:
         source_labels.discard("")
         unknown = source_labels - reviewed
         if unknown:
-            raise ValueError(
-                "Ontario IDTO source contains unreviewed disease labels: "
-                + ", ".join(sorted(unknown))
+            logger.warning(
+                "Ontario IDTO source contains newly discovered disease labels; "
+                "retaining them in unmapped holding series | labels={}",
+                sorted(unknown),
             )
         acquisition_modes = {
             str(row.get("AcquisitionMode") or "").strip() for row in rows
         }
-        if acquisition_modes == {"powerbi_read_only"} and source_labels != reviewed:
+        if acquisition_modes == {"powerbi_read_only"} and not reviewed.issubset(source_labels):
             missing = reviewed - source_labels
             raise ValueError(
                 "Ontario IDTO live disease-label manifest changed; missing reviewed "

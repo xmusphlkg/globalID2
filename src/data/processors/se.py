@@ -42,6 +42,7 @@ MAPPING_SOURCE_ID = ONTOLOGY_SOURCE_ID
 
 ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_OUTPUT_CSV = ROOT / "data/current/se/sweden_sminet_monthly.csv"
+DEFAULT_CATALOG_SCAN_STATE = ROOT / "data/cache/se/catalog_scan.json"
 
 
 @dataclass(frozen=True)
@@ -117,11 +118,48 @@ class SEMonthlyUpdater:
         output_csv: Path = DEFAULT_OUTPUT_CSV,
         refresh_recent_months: int = 3,
         include_current_month: bool = False,
+        catalog_rescan_interval_days: int = 7,
+        catalog_scan_state: Optional[Path] = None,
     ) -> None:
         self.source_name = source_name
         self.output_csv = Path(output_csv)
         self.refresh_recent_months = max(1, min(24, int(refresh_recent_months)))
         self.include_current_month = bool(include_current_month)
+        self.catalog_rescan_interval_days = max(
+            1, min(31, int(catalog_rescan_interval_days))
+        )
+        self.catalog_scan_state = Path(
+            catalog_scan_state
+            or (
+                DEFAULT_CATALOG_SCAN_STATE
+                if self.output_csv == DEFAULT_OUTPUT_CSV
+                else self.output_csv.with_suffix(".catalog_scan.json")
+            )
+        )
+
+    def _catalog_rescan_due(self, *, today: date, force: bool) -> bool:
+        if force or not self.catalog_scan_state.exists():
+            return True
+        try:
+            payload = json.loads(self.catalog_scan_state.read_text(encoding="utf-8"))
+            last_scan = date.fromisoformat(str(payload.get("last_scan_date") or ""))
+        except (OSError, ValueError, TypeError, json.JSONDecodeError):
+            return True
+        return (today - last_scan).days >= self.catalog_rescan_interval_days
+
+    def _record_catalog_scan(self, *, today: date, disease_count: int) -> None:
+        self.catalog_scan_state.parent.mkdir(parents=True, exist_ok=True)
+        self.catalog_scan_state.write_text(
+            json.dumps(
+                {
+                    "last_scan_date": today.isoformat(),
+                    "disease_count": int(disease_count),
+                },
+                ensure_ascii=False,
+                sort_keys=True,
+            ),
+            encoding="utf-8",
+        )
 
     def _resolve_requested_months(
         self,
@@ -253,8 +291,8 @@ class SEMonthlyUpdater:
                 )
 
         # A validated snapshot is also a bounded catalog of known SmiNet pages.
-        # Daily runs reuse it; force runs deliberately rescan the source index
-        # so newly added disease pages can be discovered.
+        # Daily runs reuse it, while a stateful weekly rescan discovers newly
+        # added disease pages without forcing a historical refresh.
         known_disease_codes = sorted(
             {
                 _norm_text(row.get("DiseaseCode"))
@@ -262,10 +300,14 @@ class SEMonthlyUpdater:
                 if _norm_text(row.get("DiseaseCode"))
             }
         )
-        if known_disease_codes and not force:
+        scan_date = today or datetime.now(timezone.utc).date()
+        full_catalog_scan = self._catalog_rescan_due(today=scan_date, force=force)
+        if known_disease_codes and not full_catalog_scan:
             logs.append(
                 f"[planner] reusing {len(known_disease_codes)} known SmiNet disease pages"
             )
+        elif full_catalog_scan:
+            logs.append("[planner] rescanning the complete SmiNet disease-page catalog")
 
         crawler = SwedenSmiNetCrawler(save_raw=save_raw, raw_dir=actual_raw_dir)
         live_rows: List[Dict[str, str]] = []
@@ -275,7 +317,11 @@ class SEMonthlyUpdater:
             fetch_summary = crawler.crawl_monthly_national(
                 self.output_csv,
                 months=requested_months,
-                disease_codes=(known_disease_codes if known_disease_codes and not force else None),
+                disease_codes=(
+                    known_disease_codes
+                    if known_disease_codes and not full_catalog_scan
+                    else None
+                ),
                 today=today,
                 include_current_month=include_open,
             )
@@ -289,6 +335,11 @@ class SEMonthlyUpdater:
                 f"csv_pages={fetch_summary.csv_pages}; "
                 f"html_fallback_pages={fetch_summary.html_fallback_pages}"
             )
+            if full_catalog_scan:
+                self._record_catalog_scan(
+                    today=scan_date,
+                    disease_count=fetch_summary.diseases_fetched,
+                )
             if save_raw:
                 logs.append(f"[crawler] raw artifacts archived under {actual_raw_dir}")
         except Exception as exc:

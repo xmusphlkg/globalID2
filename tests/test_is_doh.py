@@ -343,6 +343,24 @@ def test_iceland_series_contract_is_complete_unique_and_projectable():
     ) == 5
 
 
+def test_iceland_new_source_label_gets_stable_source_native_identity():
+    first = IcelandDOHCrawler._definition(
+        "is_doh_respiratory",
+        "Sýkingar",
+        "New respiratory condition",
+    )
+    second = IcelandDOHCrawler._definition(
+        "is_doh_respiratory",
+        "Sýkingar",
+        "New respiratory condition",
+    )
+
+    assert first.disease_code == second.disease_code
+    assert first.disease_code.startswith("source-native:")
+    assert first.frequency == "weekly"
+    assert first.period_type == "iso_week"
+
+
 def test_iceland_series_contract_resolves_every_registered_source_row():
     definitions = __import__(
         "src.data.processors.is", fromlist=["SERIES_DEFINITIONS"]

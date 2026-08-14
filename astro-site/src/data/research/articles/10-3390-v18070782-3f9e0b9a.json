@@ -1,0 +1,243 @@
+{
+  "article_id": "lit_3f9e0b9af0cec8022a9c8574",
+  "slug": "10-3390-v18070782-3f9e0b9a",
+  "title": "Exploring the Potential Contribution of Climate-Informed Research to Future Ebola Preparedness in Central Africa.",
+  "doi": "10.3390/v18070782",
+  "pmid": "42515634",
+  "journal": "Viruses",
+  "publisher": null,
+  "authors": [
+    "Sumbu SN",
+    "Bepouka B"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Commentary",
+  "published_at": "2026-07-16T00:00:00+00:00",
+  "indexed_at": "2026-07-28T00:00:00+00:00",
+  "open_access_status": "unknown",
+  "open_access_url": null,
+  "license_url": null,
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.718,
+  "is_featured": false,
+  "diseases": [
+    {
+      "disease_id": "D050",
+      "slug": "ebola",
+      "name_en": "Ebola",
+      "name_zh": "埃博拉出血热",
+      "confidence": 0.82
+    }
+  ],
+  "countries": [],
+  "topics": [
+    {
+      "name": "One Health",
+      "confidence": 0.76
+    },
+    {
+      "name": "Climate and environment",
+      "confidence": 0.7100000000000001
+    },
+    {
+      "name": "Surveillance",
+      "confidence": 0.66
+    },
+    {
+      "name": "Outbreak investigation",
+      "confidence": 0.66
+    },
+    {
+      "name": "Diagnostics",
+      "confidence": 0.66
+    }
+  ],
+  "related_surveillance": [],
+  "summary": {},
+  "why_it_matters_en": "This recent commentary is indexed for its relevance to Ebola. Read the original source before applying its findings.",
+  "why_it_matters_zh": "这项近期Commentary因与埃博拉出血热相关而被收录。应用其结论前请阅读原始文献。",
+  "source_urls": {
+    "doi": "https://doi.org/10.3390/v18070782",
+    "pubmed": "https://pubmed.ncbi.nlm.nih.gov/42515634/"
+  },
+  "updated_at": "2026-08-13T16:05:48.137391+00:00",
+  "related_signals": [
+    {
+      "signal_id": "event:36",
+      "section": "emerging",
+      "kind": "official_event",
+      "title": "Ebola disease caused by Bundibugyo virus - Democratic Republic of the Congo",
+      "disease_id": "D050",
+      "disease_name_en": "Ebola",
+      "disease_name_zh": "埃博拉出血热",
+      "geographies": [
+        {
+          "code": "CD",
+          "name_en": "Democratic Republic of the Congo"
+        }
+      ],
+      "data_through": "2026-08-01",
+      "window": {
+        "label": null,
+        "current": null,
+        "previous": null,
+        "absolute_change": null,
+        "change_pct": null
+      },
+      "risk": {
+        "score": null,
+        "level": null,
+        "confidence": "high"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    },
+    {
+      "signal_id": "event:37",
+      "section": "emerging",
+      "kind": "official_event",
+      "title": "Ebola disease caused by Bundibugyo virus, Democratic Republic of the Congo & Uganda",
+      "disease_id": "D050",
+      "disease_name_en": "Ebola",
+      "disease_name_zh": "埃博拉出血热",
+      "geographies": [
+        {
+          "code": "CD",
+          "name_en": "Democratic Republic of the Congo"
+        },
+        {
+          "code": "UG",
+          "name_en": "Uganda"
+        }
+      ],
+      "data_through": "2026-07-17",
+      "window": {
+        "label": null,
+        "current": null,
+        "previous": null,
+        "absolute_change": null,
+        "change_pct": null
+      },
+      "risk": {
+        "score": null,
+        "level": null,
+        "confidence": "high"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-3f9e0b9af0cec8022a9c8574",
+        "type": "article",
+        "label": "Exploring the Potential Contribution of Climate-Informed Research to Future Ebola Preparedness in Central Africa.",
+        "slug": "10-3390-v18070782-3f9e0b9a",
+        "url": "/research/articles/10-3390-v18070782-3f9e0b9a/",
+        "published_at": "2026-07-16T00:00:00+00:00",
+        "study_type": "Commentary"
+      },
+      {
+        "id": "disease:d050",
+        "type": "disease",
+        "label": "Ebola",
+        "disease_id": "D050",
+        "name_zh": "埃博拉出血热",
+        "slug": "ebola",
+        "url": "/diseases/ebola/"
+      },
+      {
+        "id": "study-type:commentary",
+        "type": "study_type",
+        "label": "Commentary"
+      },
+      {
+        "id": "topic:climate-and-environment",
+        "type": "topic",
+        "label": "Climate and environment"
+      },
+      {
+        "id": "topic:diagnostics",
+        "type": "topic",
+        "label": "Diagnostics"
+      },
+      {
+        "id": "topic:one-health",
+        "type": "topic",
+        "label": "One Health"
+      },
+      {
+        "id": "topic:outbreak-investigation",
+        "type": "topic",
+        "label": "Outbreak investigation"
+      },
+      {
+        "id": "topic:surveillance",
+        "type": "topic",
+        "label": "Surveillance"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-3f9e0b9af0cec8022a9c8574|ABOUT_DISEASE|disease:d050",
+        "source": "article:lit-3f9e0b9af0cec8022a9c8574",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d050",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-3f9e0b9af0cec8022a9c8574|ADDRESSES_TOPIC|topic:climate-and-environment",
+        "source": "article:lit-3f9e0b9af0cec8022a9c8574",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:climate-and-environment",
+        "confidence": 0.7100000000000001
+      },
+      {
+        "id": "article:lit-3f9e0b9af0cec8022a9c8574|ADDRESSES_TOPIC|topic:diagnostics",
+        "source": "article:lit-3f9e0b9af0cec8022a9c8574",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:diagnostics",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-3f9e0b9af0cec8022a9c8574|ADDRESSES_TOPIC|topic:one-health",
+        "source": "article:lit-3f9e0b9af0cec8022a9c8574",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:one-health",
+        "confidence": 0.76
+      },
+      {
+        "id": "article:lit-3f9e0b9af0cec8022a9c8574|ADDRESSES_TOPIC|topic:outbreak-investigation",
+        "source": "article:lit-3f9e0b9af0cec8022a9c8574",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:outbreak-investigation",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-3f9e0b9af0cec8022a9c8574|ADDRESSES_TOPIC|topic:surveillance",
+        "source": "article:lit-3f9e0b9af0cec8022a9c8574",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:surveillance",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-3f9e0b9af0cec8022a9c8574|USES_STUDY_DESIGN|study-type:commentary",
+        "source": "article:lit-3f9e0b9af0cec8022a9c8574",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:commentary"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 8,
+      "edges": 7,
+      "articles": 1
+    }
+  }
+}

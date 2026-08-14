@@ -1,0 +1,224 @@
+{
+  "article_id": "lit_8c34e3e4468dfd94ecc611fb",
+  "slug": "10-4314-aamed-v19i1-1-8c34e3e4",
+  "title": "The sixteenth Ebola virus disease in Bulape, Democratic Republic of the Congo: Is there something new there?",
+  "doi": "10.4314/aamed.v19i1.1",
+  "pmid": null,
+  "journal": "Annales Africaines de Medecine",
+  "publisher": "African Journals Online (AJOL)",
+  "authors": [
+    "Daniel Mukadi-Bamuleka"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Journal article",
+  "published_at": "2026-02-01T00:00:00+00:00",
+  "indexed_at": "2026-03-04T16:10:52+00:00",
+  "open_access_status": "unknown",
+  "open_access_url": null,
+  "license_url": null,
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.533,
+  "is_featured": false,
+  "diseases": [
+    {
+      "disease_id": "D050",
+      "slug": "ebola",
+      "name_en": "Ebola",
+      "name_zh": "埃博拉出血热",
+      "confidence": 0.82
+    },
+    {
+      "disease_id": "D004",
+      "slug": "covid-19",
+      "name_en": "COVID-19",
+      "name_zh": "新型冠状病毒感染",
+      "confidence": 0.62
+    },
+    {
+      "disease_id": "D065",
+      "slug": "monkeypox",
+      "name_en": "Monkeypox",
+      "name_zh": "猴痘",
+      "confidence": 0.62
+    }
+  ],
+  "countries": [],
+  "topics": [
+    {
+      "name": "Outbreak investigation",
+      "confidence": 0.66
+    }
+  ],
+  "related_surveillance": [],
+  "summary": {},
+  "why_it_matters_en": "This recent journal article is indexed for its relevance to Ebola. Read the original source before applying its findings.",
+  "why_it_matters_zh": "这项近期Journal article因与埃博拉出血热相关而被收录。应用其结论前请阅读原始文献。",
+  "source_urls": {
+    "doi": "https://doi.org/10.4314/aamed.v19i1.1",
+    "publisher": "https://www.ajol.info/index.php/aamed/article/view/313862"
+  },
+  "updated_at": "2026-08-13T16:05:48.137327+00:00",
+  "related_signals": [
+    {
+      "signal_id": "event:36",
+      "section": "emerging",
+      "kind": "official_event",
+      "title": "Ebola disease caused by Bundibugyo virus - Democratic Republic of the Congo",
+      "disease_id": "D050",
+      "disease_name_en": "Ebola",
+      "disease_name_zh": "埃博拉出血热",
+      "geographies": [
+        {
+          "code": "CD",
+          "name_en": "Democratic Republic of the Congo"
+        }
+      ],
+      "data_through": "2026-08-01",
+      "window": {
+        "label": null,
+        "current": null,
+        "previous": null,
+        "absolute_change": null,
+        "change_pct": null
+      },
+      "risk": {
+        "score": null,
+        "level": null,
+        "confidence": "high"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    },
+    {
+      "signal_id": "event:37",
+      "section": "emerging",
+      "kind": "official_event",
+      "title": "Ebola disease caused by Bundibugyo virus, Democratic Republic of the Congo & Uganda",
+      "disease_id": "D050",
+      "disease_name_en": "Ebola",
+      "disease_name_zh": "埃博拉出血热",
+      "geographies": [
+        {
+          "code": "CD",
+          "name_en": "Democratic Republic of the Congo"
+        },
+        {
+          "code": "UG",
+          "name_en": "Uganda"
+        }
+      ],
+      "data_through": "2026-07-17",
+      "window": {
+        "label": null,
+        "current": null,
+        "previous": null,
+        "absolute_change": null,
+        "change_pct": null
+      },
+      "risk": {
+        "score": null,
+        "level": null,
+        "confidence": "high"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-8c34e3e4468dfd94ecc611fb",
+        "type": "article",
+        "label": "The sixteenth Ebola virus disease in Bulape, Democratic Republic of the Congo: Is there something new there?",
+        "slug": "10-4314-aamed-v19i1-1-8c34e3e4",
+        "url": "/research/articles/10-4314-aamed-v19i1-1-8c34e3e4/",
+        "published_at": "2026-02-01T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "disease:d004",
+        "type": "disease",
+        "label": "COVID-19",
+        "disease_id": "D004",
+        "name_zh": "新型冠状病毒感染",
+        "slug": "covid-19",
+        "url": "/diseases/covid-19/"
+      },
+      {
+        "id": "disease:d050",
+        "type": "disease",
+        "label": "Ebola",
+        "disease_id": "D050",
+        "name_zh": "埃博拉出血热",
+        "slug": "ebola",
+        "url": "/diseases/ebola/"
+      },
+      {
+        "id": "disease:d065",
+        "type": "disease",
+        "label": "Monkeypox",
+        "disease_id": "D065",
+        "name_zh": "猴痘",
+        "slug": "monkeypox",
+        "url": "/diseases/monkeypox/"
+      },
+      {
+        "id": "study-type:journal-article",
+        "type": "study_type",
+        "label": "Journal article"
+      },
+      {
+        "id": "topic:outbreak-investigation",
+        "type": "topic",
+        "label": "Outbreak investigation"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-8c34e3e4468dfd94ecc611fb|ABOUT_DISEASE|disease:d004",
+        "source": "article:lit-8c34e3e4468dfd94ecc611fb",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d004",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-8c34e3e4468dfd94ecc611fb|ABOUT_DISEASE|disease:d050",
+        "source": "article:lit-8c34e3e4468dfd94ecc611fb",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d050",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-8c34e3e4468dfd94ecc611fb|ABOUT_DISEASE|disease:d065",
+        "source": "article:lit-8c34e3e4468dfd94ecc611fb",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d065",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-8c34e3e4468dfd94ecc611fb|ADDRESSES_TOPIC|topic:outbreak-investigation",
+        "source": "article:lit-8c34e3e4468dfd94ecc611fb",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:outbreak-investigation",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-8c34e3e4468dfd94ecc611fb|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-8c34e3e4468dfd94ecc611fb",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 6,
+      "edges": 5,
+      "articles": 1
+    }
+  }
+}

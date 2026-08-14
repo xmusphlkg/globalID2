@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+from collections import Counter
+import html
 import os
 import smtplib
 from dataclasses import dataclass
@@ -10,14 +12,56 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import httpx
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 
 from src.core import get_database, get_logger
-from src.domain import MappingNotificationOutbox
+from src.domain import (
+    DiseaseMappingCandidate,
+    MappingNotificationOutbox,
+    SourceDiseaseCategory,
+)
 from src.services.settings_service import system_settings_service
 from src.services.smtp_email_service import smtp_email_service
 
 logger = get_logger(__name__)
+
+
+def _env_bool(name: str, default: bool) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return raw.strip().casefold() in {"1", "true", "yes", "on"}
+
+
+def _env_int(name: str, default: int, *, minimum: int, maximum: int) -> int:
+    try:
+        value = int(os.getenv(name, str(default)))
+    except (TypeError, ValueError):
+        value = default
+    return max(minimum, min(maximum, value))
+
+
+def _aware(value: datetime | None) -> datetime | None:
+    if value is None or value.tzinfo is not None:
+        return value
+    return value.replace(tzinfo=timezone.utc)
+
+
+def _next_digest_at(
+    now: datetime,
+    latest_sent_at: datetime | None,
+    *,
+    hour_utc: int,
+) -> datetime:
+    """Return now when today's digest is due, otherwise its next UTC slot."""
+
+    today_slot = now.replace(hour=hour_utc, minute=0, second=0, microsecond=0)
+    latest = _aware(latest_sent_at)
+    if now < today_slot:
+        return today_slot
+    if latest is None or latest < today_slot:
+        return now
+    return today_slot + timedelta(days=1)
 
 
 @dataclass(frozen=True)
@@ -166,8 +210,36 @@ class MappingNotificationService:
     def __init__(self) -> None:
         self.transport = MappingEmailTransport()
 
-    async def process_once(self, limit: int = 50) -> dict[str, int]:
+    async def process_once(
+        self,
+        limit: int | None = None,
+        *,
+        force: bool = False,
+    ) -> dict[str, Any]:
+        """Deliver one readable digest instead of one email per mapping event."""
+
         now = datetime.now(timezone.utc)
+        if not _env_bool("MAPPING_EMAIL_DIGEST_ENABLED", True):
+            return {
+                "claimed": 0,
+                "sent": 0,
+                "retry": 0,
+                "dead": 0,
+                "messages_sent": 0,
+                "digest_disabled": True,
+            }
+        hour_utc = _env_int(
+            "MAPPING_EMAIL_DIGEST_HOUR_UTC", 1, minimum=0, maximum=23
+        )
+        effective_limit = min(
+            max(1, int(limit or 2000)),
+            _env_int(
+                "MAPPING_EMAIL_DIGEST_MAX_EVENTS",
+                2000,
+                minimum=1,
+                maximum=10000,
+            ),
+        )
         async with get_database() as db:
             stale_sends = (
                 await db.execute(
@@ -209,6 +281,36 @@ class MappingNotificationService:
                     row.metadata_ = {**(row.metadata_ or {}), "recovered_transient_dead_letter": True}
             if legacy_dead or stale_sends:
                 await db.commit()
+            latest_sent_at = (
+                await db.execute(select(func.max(MappingNotificationOutbox.sent_at)))
+            ).scalar_one_or_none()
+            next_digest_at = _next_digest_at(
+                now,
+                latest_sent_at,
+                hour_utc=hour_utc,
+            )
+            if not force and next_digest_at > now:
+                pending = int(
+                    (
+                        await db.execute(
+                            select(func.count())
+                            .select_from(MappingNotificationOutbox)
+                            .where(
+                                MappingNotificationOutbox.status.in_(["pending", "retry"])
+                            )
+                        )
+                    ).scalar_one()
+                    or 0
+                )
+                return {
+                    "claimed": 0,
+                    "sent": 0,
+                    "retry": 0,
+                    "dead": 0,
+                    "messages_sent": 0,
+                    "deferred_events": pending,
+                    "next_digest_at": next_digest_at.isoformat(),
+                }
             rows = (
                 await db.execute(
                     select(MappingNotificationOutbox)
@@ -221,31 +323,50 @@ class MappingNotificationService:
                     )
                     .order_by(MappingNotificationOutbox.created_at)
                     .with_for_update(skip_locked=True)
-                    .limit(limit)
+                    .limit(effective_limit)
                 )
             ).scalars().all()
             if not rows:
-                return {"claimed": 0, "sent": 0, "retry": 0, "dead": 0}
+                return {
+                    "claimed": 0,
+                    "sent": 0,
+                    "retry": 0,
+                    "dead": 0,
+                    "messages_sent": 0,
+                    "next_digest_at": (
+                        now.replace(
+                            hour=hour_utc,
+                            minute=0,
+                            second=0,
+                            microsecond=0,
+                        )
+                        + timedelta(days=1)
+                    ).isoformat(),
+                }
             for row in rows:
                 row.status = "sending"
                 row.attempts = int(row.attempts or 0) + 1
             await db.commit()
             claimed_ids = [row.id for row in rows]
 
-        groups: dict[tuple[str, str, tuple[str, ...]], list[MappingNotificationOutbox]] = {}
+        groups: dict[tuple[str, tuple[str, ...]], list[MappingNotificationOutbox]] = {}
         for row in rows:
             recipients = tuple(sorted({str(item).strip() for item in (row.recipients or []) if str(item).strip()}))
-            groups.setdefault((row.aggregate_key, row.provider, recipients), []).append(row)
+            groups.setdefault((row.provider, recipients), []).append(row)
 
-        counters = {"claimed": len(rows), "sent": 0, "retry": 0, "dead": 0}
-        for (_aggregate, provider, recipient_tuple), items in groups.items():
+        counters = {
+            "claimed": len(rows),
+            "sent": 0,
+            "retry": 0,
+            "dead": 0,
+            "messages_sent": 0,
+        }
+        for (provider, recipient_tuple), items in groups.items():
             recipients = list(recipient_tuple)
             if not recipients:
                 result = DeliveryResult(False, False, provider, {}, "No recipients configured")
             else:
-                subject = items[0].subject if len(items) == 1 else f"{items[0].subject} (+{len(items) - 1} more)"
-                body_text = "\n\n---\n\n".join(item.body_text for item in items)
-                body_html = "<hr>".join(item.body_html for item in items)
+                subject, body_text, body_html = await self._digest_content(items)
                 result = await self.transport.send(
                     provider=provider,
                     recipients=recipients,
@@ -253,6 +374,8 @@ class MappingNotificationService:
                     body_text=body_text,
                     body_html=body_html,
                 )
+                if result.success:
+                    counters["messages_sent"] += 1
 
             async with get_database() as db:
                 persisted = (
@@ -280,7 +403,171 @@ class MappingNotificationService:
                         row.status = "dead"
                         counters["dead"] += 1
                 await db.commit()
+        counters["next_digest_at"] = (
+            now.replace(hour=hour_utc, minute=0, second=0, microsecond=0)
+            + timedelta(days=1)
+        ).isoformat()
         return counters
+
+    @staticmethod
+    async def _digest_content(
+        items: list[MappingNotificationOutbox],
+    ) -> tuple[str, str, str]:
+        category_ids = sorted(
+            {
+                int((item.metadata_ or {}).get("category_id"))
+                for item in items
+                if (item.metadata_ or {}).get("category_id") is not None
+            }
+        )
+        async with get_database() as db:
+            categories = (
+                (
+                    await db.execute(
+                        select(SourceDiseaseCategory).where(
+                            SourceDiseaseCategory.id.in_(category_ids)
+                        )
+                    )
+                ).scalars().all()
+                if category_ids
+                else []
+            )
+            status_counts = dict(
+                (
+                    await db.execute(
+                        select(
+                            SourceDiseaseCategory.ai_status,
+                            func.count(SourceDiseaseCategory.id),
+                        ).group_by(SourceDiseaseCategory.ai_status)
+                    )
+                ).all()
+            )
+            proposed_candidates = int(
+                (
+                    await db.execute(
+                        select(func.count())
+                        .select_from(DiseaseMappingCandidate)
+                        .where(DiseaseMappingCandidate.status == "proposed")
+                    )
+                ).scalar_one()
+                or 0
+            )
+
+        by_id = {category.id: category for category in categories}
+        event_counts = Counter(item.event_type for item in items)
+        country_counts: Counter[str] = Counter()
+        detail_rows: list[tuple[str, str, str, int]] = []
+        for item in items:
+            category_id = (item.metadata_ or {}).get("category_id")
+            category = by_id.get(int(category_id)) if category_id is not None else None
+            country = str(getattr(category, "country_code", None) or "—")
+            label = str(
+                getattr(category, "canonical_source_label", None)
+                or item.subject
+                or "未命名来源项"
+            )
+            event_label = (
+                "AI 候选已生成"
+                if item.event_type == "ai_mapping_suggestion_ready"
+                else "发现新来源疾病项"
+            )
+            candidates = int((item.metadata_ or {}).get("candidate_count") or 0)
+            country_counts[country] += 1
+            detail_rows.append((country, label, event_label, candidates))
+
+        new_count = int(event_counts.get("new_source_category", 0))
+        ready_count = int(event_counts.get("ai_mapping_suggestion_ready", 0))
+        subject = (
+            f"[GIDS] 疾病映射每日摘要：{ready_count} 条候选可审核，"
+            f"{new_count} 个新来源项"
+        )
+        dashboard_url = os.getenv("MAPPING_REVIEW_DASHBOARD_URL", "").strip()
+        review_location = dashboard_url or "控制面板 → 数据治理 → 疾病映射（/ai/disease-mapping）"
+        country_summary = "、".join(
+            f"{country} {count}"
+            for country, count in country_counts.most_common()
+        ) or "无"
+        current_summary = (
+            f"失败待重试 {int(status_counts.get('failed', 0))}；"
+            f"处理中 {int(status_counts.get('processing', 0))}；"
+            f"AI 已完成 {int(status_counts.get('completed', 0))}；"
+            f"待人工审核候选 {proposed_candidates}"
+        )
+        visible_rows = detail_rows[:30]
+        text_lines = [
+            "GIDS 疾病映射审核摘要",
+            "",
+            "这是一封定时汇总邮件，不需要逐条处理通知。",
+            f"本期事件：AI 候选已生成 {ready_count} 条；新来源项 {new_count} 个。",
+            f"国家/地区分布：{country_summary}",
+            f"当前队列：{current_summary}",
+            "",
+            "建议操作：",
+            f"1. 打开 {review_location}",
+            "2. 优先查看高置信度候选和失败重试项。",
+            "3. 只有人工确认后再点击“接受并发布”；不确定的项目可以继续保留在隔离区。",
+            "",
+            "本期明细（最多 30 条）：",
+        ]
+        text_lines.extend(
+            f"- [{country}] {label}｜{event_label}｜候选 {candidates}"
+            for country, label, event_label, candidates in visible_rows
+        )
+        if len(detail_rows) > len(visible_rows):
+            text_lines.append(
+                f"- 另有 {len(detail_rows) - len(visible_rows)} 条，请在控制面板查看。"
+            )
+
+        country_html = "".join(
+            f"<tr><td>{html.escape(country)}</td><td style='text-align:right'>{count}</td></tr>"
+            for country, count in country_counts.most_common()
+        )
+        detail_html = "".join(
+            "<tr>"
+            f"<td>{html.escape(country)}</td>"
+            f"<td>{html.escape(label)}</td>"
+            f"<td>{html.escape(event_label)}</td>"
+            f"<td style='text-align:right'>{candidates}</td>"
+            "</tr>"
+            for country, label, event_label, candidates in visible_rows
+        )
+        link_html = (
+            f"<a href='{html.escape(dashboard_url, quote=True)}'>打开疾病映射控制面板</a>"
+            if dashboard_url
+            else html.escape(review_location)
+        )
+        body_html = f"""
+        <div style="font-family:Arial,sans-serif;max-width:900px;color:#172033;line-height:1.55">
+          <h1 style="font-size:22px">GIDS 疾病映射审核摘要</h1>
+          <p style="background:#eef6ff;padding:12px;border-radius:8px">
+            这是一封定时汇总邮件，不需要逐条处理通知。
+          </p>
+          <h2 style="font-size:17px">本期概览</h2>
+          <ul>
+            <li>AI 候选已生成：<b>{ready_count}</b></li>
+            <li>新来源疾病项：<b>{new_count}</b></li>
+            <li>当前队列：{html.escape(current_summary)}</li>
+          </ul>
+          <h2 style="font-size:17px">应该怎么处理</h2>
+          <ol>
+            <li>{link_html}</li>
+            <li>优先检查高置信度候选和失败重试项。</li>
+            <li>人工确认后再“接受并发布”；不确定项继续留在隔离区。</li>
+          </ol>
+          <h2 style="font-size:17px">国家/地区分布</h2>
+          <table style="border-collapse:collapse;width:360px" border="1" cellpadding="6">
+            <thead><tr><th>国家/地区</th><th>事件数</th></tr></thead>
+            <tbody>{country_html}</tbody>
+          </table>
+          <h2 style="font-size:17px">本期明细（最多 30 条）</h2>
+          <table style="border-collapse:collapse;width:100%" border="1" cellpadding="6">
+            <thead><tr><th>国家/地区</th><th>来源疾病项</th><th>状态</th><th>候选数</th></tr></thead>
+            <tbody>{detail_html}</tbody>
+          </table>
+          {f'<p>另有 {len(detail_rows) - len(visible_rows)} 条，请在控制面板查看。</p>' if len(detail_rows) > len(visible_rows) else ''}
+        </div>
+        """
+        return subject, "\n".join(text_lines), body_html
 
 
 mapping_notification_service = MappingNotificationService()

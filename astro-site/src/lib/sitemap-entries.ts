@@ -44,8 +44,20 @@ export interface BuildSitemapEntriesOptions {
   loadCountry?: (code: string) => unknown | null;
   countryDiseaseLimit?: number;
   situation?: {
-    latest?: { public_enabled?: unknown; generated_at?: unknown } | null;
-    archives?: Array<{ iso_week?: unknown; generated_at?: unknown }>;
+    latest?: { public_enabled?: unknown; generated_at?: unknown; content_updated_at?: unknown } | null;
+    weeks?: Array<{ period_key?: unknown; iso_week?: unknown; generated_at?: unknown; content_updated_at?: unknown }>;
+    months?: Array<{ period_key?: unknown; generated_at?: unknown; content_updated_at?: unknown }>;
+    archives?: Array<{ period_key?: unknown; iso_week?: unknown; generated_at?: unknown; content_updated_at?: unknown }>;
+  };
+  research?: {
+    last_updated?: unknown;
+    articles?: Array<{ slug?: unknown; updated_at?: unknown; published_at?: unknown }>;
+    facets?: {
+      diseases?: Array<{ slug?: unknown }>;
+      countries?: Array<{ slug?: unknown; code?: unknown }>;
+      topics?: Array<{ slug?: unknown }>;
+      weeks?: Array<{ week?: unknown }>;
+    };
   };
 }
 
@@ -66,6 +78,7 @@ export const SITEMAP_GROUPS = [
   'reports',
   'country-diseases',
   'situation',
+  'research',
 ] as const;
 
 export type SitemapGroup = typeof SITEMAP_GROUPS[number];
@@ -165,6 +178,7 @@ export function buildSitemapGroups({
   loadCountry,
   countryDiseaseLimit = 50,
   situation,
+  research,
 }: BuildSitemapEntriesOptions): Record<SitemapGroup, SitemapEntry[]> {
   const siteLastmod = normalizeSitemapDate(meta.generated_at);
   const groups: Record<SitemapGroup, SitemapEntry[]> = {
@@ -174,16 +188,55 @@ export function buildSitemapGroups({
     reports: [],
     'country-diseases': countryDiseaseEntries(meta, loadCountry, countryDiseaseLimit),
     situation: [],
+    research: [],
   };
 
+  if (research) {
+    const researchLastmod = normalizeSitemapDate(research.last_updated) ?? siteLastmod;
+    groups.research.push({ path: '/research/', lastmod: researchLastmod });
+    groups.research.push({ path: '/research/rss.xml', lastmod: researchLastmod });
+    for (const article of research.articles ?? []) {
+      const slug = pathSegment(article.slug, true);
+      if (!slug) continue;
+      groups.research.push({
+        path: `/research/articles/${slug}/`,
+        lastmod: normalizeSitemapDate(article.updated_at ?? article.published_at) ?? researchLastmod,
+      });
+    }
+    for (const disease of research.facets?.diseases ?? []) {
+      const slug = pathSegment(disease.slug, true);
+      if (slug) groups.research.push({ path: `/research/diseases/${slug}/`, lastmod: researchLastmod });
+    }
+    for (const country of research.facets?.countries ?? []) {
+      const slug = pathSegment(country.slug ?? country.code, true);
+      if (slug) groups.research.push({ path: `/research/countries/${slug}/`, lastmod: researchLastmod });
+    }
+    for (const topic of research.facets?.topics ?? []) {
+      const slug = pathSegment(topic.slug, true);
+      if (slug) groups.research.push({ path: `/research/topics/${slug}/`, lastmod: researchLastmod });
+    }
+    for (const brief of research.facets?.weeks ?? []) {
+      const week = typeof brief.week === 'string' && /^\d{4}-W\d{2}$/.test(brief.week) ? brief.week : null;
+      if (week) groups.research.push({ path: `/research/weekly/${week}/`, lastmod: researchLastmod });
+    }
+  }
+
   if (situation?.latest?.public_enabled === true) {
-    const lastmod = normalizeSitemapDate(situation.latest.generated_at) ?? siteLastmod;
+    const lastmod = normalizeSitemapDate(situation.latest.content_updated_at ?? situation.latest.generated_at) ?? siteLastmod;
     groups.situation.push(...localizedEntry('/situation/', lastmod));
-    for (const archive of situation.archives ?? []) {
-      const week = typeof archive.iso_week === 'string' && /^\d{4}-W\d{2}$/.test(archive.iso_week)
-        ? archive.iso_week
+    groups.situation.push(...localizedEntry('/situation/methodology/', lastmod));
+    for (const archive of situation.weeks ?? situation.archives ?? []) {
+      const rawWeek = archive.period_key ?? archive.iso_week;
+      const week = typeof rawWeek === 'string' && /^\d{4}-W\d{2}$/.test(rawWeek)
+        ? rawWeek
         : null;
-      if (week) groups.situation.push(...localizedEntry(`/situation/${week}/`, normalizeSitemapDate(archive.generated_at) ?? lastmod));
+      if (week) groups.situation.push(...localizedEntry(`/situation/${week}/`, normalizeSitemapDate(archive.content_updated_at ?? archive.generated_at) ?? lastmod));
+    }
+    for (const archive of situation.months ?? []) {
+      const month = typeof archive.period_key === 'string' && /^\d{4}-\d{2}$/.test(archive.period_key)
+        ? archive.period_key
+        : null;
+      if (month) groups.situation.push(...localizedEntry(`/situation/${month}/`, normalizeSitemapDate(archive.content_updated_at ?? archive.generated_at) ?? lastmod));
     }
   }
 

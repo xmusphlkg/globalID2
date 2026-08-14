@@ -193,6 +193,11 @@ class CrawlService:
                 disease_mapping_registry_service,
             )
 
+            source_series_rows = series_store.enrich_registry_identities(
+                source_series_rows,
+                country_code,
+                source_id=source_id,
+            )
             discovery = await disease_mapping_registry_service.discover_rows(
                 db,
                 country_code=country_code,
@@ -214,19 +219,27 @@ class CrawlService:
                 updater.country_code,
                 source_id=source_id,
             )
-            if source_series_rows and not selection.rows:
+            holding_rows = list(getattr(selection, "unregistered_rows", ()) or ())
+            if source_series_rows and not selection.rows and not holding_rows:
                 raise ValueError(
                     "Registry-scoped dual write selected no non-missing source rows"
                 )
-            source_series_rows = selection.rows
-            skipped_unregistered = selection.skipped_unregistered
+            source_series_rows = [*selection.rows, *holding_rows]
+            # Older/test selection adapters do not expose the retained rows. In
+            # that compatibility case the count still means rows were omitted;
+            # the production selector forwards them into dynamic holding series.
+            skipped_unregistered = (
+                0 if holding_rows else selection.skipped_unregistered
+            )
             skipped_missing = selection.skipped_missing
             logger.info(
                 "Disease source-series Registry selection | country={} "
-                "selected={} omitted_unregistered={} omitted_missing={}",
+                "selected={} retained_unmapped={} omitted_unregistered={} "
+                "omitted_missing={}",
                 updater.country_code,
                 len(selection.rows),
-                selection.skipped_unregistered,
+                len(holding_rows),
+                skipped_unregistered,
                 selection.skipped_missing,
             )
 
@@ -289,7 +302,7 @@ class CrawlService:
         logger.info(
             "Disease source-series dual write complete | country={} upserted={} "
             "unregistered={} missing={} unmatched={} ambiguous={} invalid={} "
-            "registry_not_synced={} "
+            "registry_not_synced={} holding={} "
             "quality_mode={} quality_issues={} quality_highest={}",
             updater.country_code,
             series_result.upserted,
@@ -299,6 +312,7 @@ class CrawlService:
             series_result.skipped_ambiguous,
             series_result.skipped_invalid,
             series_result.skipped_registry_not_synced,
+            getattr(series_result, "holding_observations", 0),
             quality_policy.mode,
             len(quality_report.issues),
             quality_report.highest_severity or "none",

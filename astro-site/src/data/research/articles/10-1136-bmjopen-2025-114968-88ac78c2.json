@@ -1,0 +1,203 @@
+{
+  "article_id": "lit_88ac78c271afee201b087b0d",
+  "slug": "10-1136-bmjopen-2025-114968-88ac78c2",
+  "title": "Acute Rheumatic Fever Diagnostic Network (ARC Network) clinical recruitment protocol.",
+  "doi": "10.1136/bmjopen-2025-114968",
+  "pmid": "41881537",
+  "journal": "BMJ open",
+  "publisher": null,
+  "authors": [
+    "Fall N",
+    "Bowen AC",
+    "Buonfiglio S",
+    "Francis JR",
+    "Gorman C",
+    "Fonseca Mendoza R",
+    "Fernandes E",
+    "Moreland NJ",
+    "Pereira Nunes MC",
+    "Sable C",
+    "Sadiq M",
+    "Shannon CP",
+    "Parks T",
+    "Ralph A",
+    "Sanyahumbi A",
+    "Sarnacki R",
+    "Tebbutt S",
+    "Webb R",
+    "Carapetis J",
+    "Beaton AZ"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Journal article",
+  "published_at": "2026-03-25T00:00:00+00:00",
+  "indexed_at": "2026-03-25T00:00:00+00:00",
+  "open_access_status": "open",
+  "open_access_url": "https://europepmc.org/articles/PMC13034315",
+  "license_url": null,
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.604,
+  "is_featured": false,
+  "diseases": [
+    {
+      "disease_id": "D158",
+      "slug": "rheumatic-fever",
+      "name_en": "Rheumatic fever",
+      "name_zh": "风湿热",
+      "confidence": 0.82
+    }
+  ],
+  "countries": [],
+  "topics": [
+    {
+      "name": "Diagnostics",
+      "confidence": 0.66
+    }
+  ],
+  "related_surveillance": [],
+  "summary": {
+    "en": {
+      "research_question": "The investigation seeks to establish a standardized multinational cohort to facilitate the identification of biomarkers for acute rheumatic fever diagnostics.",
+      "study_design": "The publication functions as a methodological protocol outlining a multicentre observational recruitment strategy.",
+      "population_setting": "Enrollment targets individuals aged three to eighteen years with suspected conditions alongside matched control participants across four participating nations.",
+      "main_findings": "The text details the operational architecture, including harmonized data collection, centralized specimen banking, and rigorous quality control measures.",
+      "public_health_relevance": "The project addresses a critical testing gap in regions experiencing substantial disease burden by constructing a platform for future diagnostic development.",
+      "limitations": "Being a procedural outline, the document lacks empirical results and does not yet evaluate diagnostic accuracy or clinical utility.",
+      "gids_interpretation": "This record establishes the methodological groundwork necessary for systematic exploratory research within the specified disease category.",
+      "provenance": {
+        "generated_by": "literature-evidence-agent",
+        "model": "qwen3.7-flash",
+        "provider": "qwenai",
+        "quality_score": 0.955,
+        "generated_at": "2026-08-14T03:13:44.323315+00:00",
+        "editorially_approved": false,
+        "automatically_approved": true,
+        "automation_policy_version": "research-radar-autopilot.v1",
+        "publication_gate": "automated-quality-gate"
+      }
+    },
+    "zh": {
+      "research_question": "该研究旨在建立一套招募全球代表性队列的方案，以支持急性风湿热新型诊断生物标志物的发现，弥补当前缺乏确诊检测手段的空白。",
+      "study_design": "本文属于多中心临床招募方案，详细规定了跨国界开展病例分类、数据采集及生物样本管理的标准化流程。",
+      "population_setting": "研究对象为三至十八岁疑似急性风湿热的儿童与青少年，并同步纳入匹配的健康对照人群。",
+      "main_findings": "摘要主要阐述方法学框架而非实证结果，重点在于规范数据采集流程、实施集中质量控制以及统一生物样本储存机制，从而为后续诊断工具研发奠定基础。",
+      "public_health_relevance": "该项目通过构建表型严谨的国际队列，致力于推动适用于资源匮乏地区的可及性诊断工具开发，以应对相关疾病带来的健康负担。",
+      "limitations": "作为侧重招募策略与操作规范的方案类文献，本文未提供临床结局数据或验证任何诊断性能指标。",
+      "gids_interpretation": "该文献为未来可能的生物标志物研究提供了基础方法学背景，但未包含实时流行病学信号或监测数据的验证内容。",
+      "provenance": {
+        "generated_by": "literature-evidence-agent",
+        "model": "qwen3.7-flash",
+        "provider": "qwenai",
+        "quality_score": 0.929,
+        "generated_at": "2026-08-14T03:14:11.492556+00:00",
+        "editorially_approved": false,
+        "automatically_approved": true,
+        "automation_policy_version": "research-radar-autopilot.v1",
+        "publication_gate": "automated-quality-gate"
+      }
+    }
+  },
+  "why_it_matters_en": "The project addresses a critical testing gap in regions experiencing substantial disease burden by constructing a platform for future diagnostic development.",
+  "why_it_matters_zh": "该项目通过构建表型严谨的国际队列，致力于推动适用于资源匮乏地区的可及性诊断工具开发，以应对相关疾病带来的健康负担。",
+  "source_urls": {
+    "doi": "https://doi.org/10.1136/bmjopen-2025-114968",
+    "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41881537/"
+  },
+  "updated_at": "2026-08-13T16:05:48.137513+00:00",
+  "related_signals": [
+    {
+      "signal_id": "signal:f59d37329a1f6ece",
+      "section": "increasing",
+      "kind": "statistical_signal",
+      "title": null,
+      "disease_id": "D158",
+      "disease_name_en": "Rheumatic fever",
+      "disease_name_zh": "风湿热",
+      "geographies": [
+        {
+          "code": "NZ",
+          "name_en": "New Zealand"
+        }
+      ],
+      "data_through": "2026-06-01",
+      "window": {
+        "label": "Latest complete month",
+        "current": 28.0,
+        "previous": 18.0,
+        "absolute_change": 10.0,
+        "change_pct": 55.56
+      },
+      "risk": {
+        "score": 46.5,
+        "level": "moderate",
+        "confidence": "low"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-88ac78c271afee201b087b0d",
+        "type": "article",
+        "label": "Acute Rheumatic Fever Diagnostic Network (ARC Network) clinical recruitment protocol.",
+        "slug": "10-1136-bmjopen-2025-114968-88ac78c2",
+        "url": "/research/articles/10-1136-bmjopen-2025-114968-88ac78c2/",
+        "published_at": "2026-03-25T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "disease:d158",
+        "type": "disease",
+        "label": "Rheumatic fever",
+        "disease_id": "D158",
+        "name_zh": "风湿热",
+        "slug": "rheumatic-fever",
+        "url": "/diseases/rheumatic-fever/"
+      },
+      {
+        "id": "study-type:journal-article",
+        "type": "study_type",
+        "label": "Journal article"
+      },
+      {
+        "id": "topic:diagnostics",
+        "type": "topic",
+        "label": "Diagnostics"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-88ac78c271afee201b087b0d|ABOUT_DISEASE|disease:d158",
+        "source": "article:lit-88ac78c271afee201b087b0d",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d158",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-88ac78c271afee201b087b0d|ADDRESSES_TOPIC|topic:diagnostics",
+        "source": "article:lit-88ac78c271afee201b087b0d",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:diagnostics",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-88ac78c271afee201b087b0d|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-88ac78c271afee201b087b0d",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 4,
+      "edges": 3,
+      "articles": 1
+    }
+  }
+}

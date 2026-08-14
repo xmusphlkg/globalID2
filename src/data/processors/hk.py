@@ -258,6 +258,16 @@ class HKMonthlyUpdater:
                 )
 
         rows.sort(key=lambda r: (r["Date"], r["RawDiseaseLabel"]))
+        # CHP explicitly describes the most recent months as provisional.  The
+        # connector refreshes three source months, matching that published
+        # caveat; older rows remain closed but revisable.
+        recent_dates = set(sorted({row["Date"] for row in rows})[-3:])
+        for row in rows:
+            is_provisional = row["Date"] in recent_dates
+            row["DatasetStatus"] = (
+                "provisional" if is_provisional else "closed_revisable"
+            )
+            row["IsProvisional"] = "true" if is_provisional else "false"
         return rows
 
     @staticmethod

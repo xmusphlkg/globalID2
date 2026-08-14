@@ -1,0 +1,196 @@
+{
+  "article_id": "lit_9b077036a87ebd24d6715ea9",
+  "slug": "10-1093-jtm-taag057-9b077036",
+  "title": "Estimating the introduction risk and sustained transmission of the Ebola Bundibugyo outbreak 2026 in the Democratic Republic of Congo",
+  "doi": "10.1093/jtm/taag057",
+  "pmid": null,
+  "journal": "Journal of Travel Medicine",
+  "publisher": "Oxford University Press (OUP)",
+  "authors": [
+    "Reagan Luvande Okingo",
+    "Berthe Amélie Iroungou",
+    "Eugenio Valdano"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Journal article",
+  "published_at": "2026-06-22T00:00:00+00:00",
+  "indexed_at": "2026-07-03T14:24:06+00:00",
+  "open_access_status": "open",
+  "open_access_url": "https://academic.oup.com/jtm/advance-article/doi/10.1093/jtm/taag057/8712847",
+  "license_url": "https://academic.oup.com/pages/standard-publication-reuse-rights",
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.673,
+  "is_featured": false,
+  "diseases": [
+    {
+      "disease_id": "D050",
+      "slug": "ebola",
+      "name_en": "Ebola",
+      "name_zh": "埃博拉出血热",
+      "confidence": 0.82
+    }
+  ],
+  "countries": [],
+  "topics": [
+    {
+      "name": "Outbreak investigation",
+      "confidence": 0.66
+    },
+    {
+      "name": "Transmission dynamics",
+      "confidence": 0.66
+    }
+  ],
+  "related_surveillance": [],
+  "summary": {},
+  "why_it_matters_en": "This recent journal article is indexed for its relevance to Ebola. Read the original source before applying its findings.",
+  "why_it_matters_zh": "这项近期Journal article因与埃博拉出血热相关而被收录。应用其结论前请阅读原始文献。",
+  "source_urls": {
+    "doi": "https://doi.org/10.1093/jtm/taag057",
+    "publisher": "https://academic.oup.com/jtm/advance-article/doi/10.1093/jtm/taag057/8712847"
+  },
+  "updated_at": "2026-08-13T16:05:48.137329+00:00",
+  "related_signals": [
+    {
+      "signal_id": "event:36",
+      "section": "emerging",
+      "kind": "official_event",
+      "title": "Ebola disease caused by Bundibugyo virus - Democratic Republic of the Congo",
+      "disease_id": "D050",
+      "disease_name_en": "Ebola",
+      "disease_name_zh": "埃博拉出血热",
+      "geographies": [
+        {
+          "code": "CD",
+          "name_en": "Democratic Republic of the Congo"
+        }
+      ],
+      "data_through": "2026-08-01",
+      "window": {
+        "label": null,
+        "current": null,
+        "previous": null,
+        "absolute_change": null,
+        "change_pct": null
+      },
+      "risk": {
+        "score": null,
+        "level": null,
+        "confidence": "high"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    },
+    {
+      "signal_id": "event:37",
+      "section": "emerging",
+      "kind": "official_event",
+      "title": "Ebola disease caused by Bundibugyo virus, Democratic Republic of the Congo & Uganda",
+      "disease_id": "D050",
+      "disease_name_en": "Ebola",
+      "disease_name_zh": "埃博拉出血热",
+      "geographies": [
+        {
+          "code": "CD",
+          "name_en": "Democratic Republic of the Congo"
+        },
+        {
+          "code": "UG",
+          "name_en": "Uganda"
+        }
+      ],
+      "data_through": "2026-07-17",
+      "window": {
+        "label": null,
+        "current": null,
+        "previous": null,
+        "absolute_change": null,
+        "change_pct": null
+      },
+      "risk": {
+        "score": null,
+        "level": null,
+        "confidence": "high"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-9b077036a87ebd24d6715ea9",
+        "type": "article",
+        "label": "Estimating the introduction risk and sustained transmission of the Ebola Bundibugyo outbreak 2026 in the Democratic Republic of Congo",
+        "slug": "10-1093-jtm-taag057-9b077036",
+        "url": "/research/articles/10-1093-jtm-taag057-9b077036/",
+        "published_at": "2026-06-22T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "disease:d050",
+        "type": "disease",
+        "label": "Ebola",
+        "disease_id": "D050",
+        "name_zh": "埃博拉出血热",
+        "slug": "ebola",
+        "url": "/diseases/ebola/"
+      },
+      {
+        "id": "study-type:journal-article",
+        "type": "study_type",
+        "label": "Journal article"
+      },
+      {
+        "id": "topic:outbreak-investigation",
+        "type": "topic",
+        "label": "Outbreak investigation"
+      },
+      {
+        "id": "topic:transmission-dynamics",
+        "type": "topic",
+        "label": "Transmission dynamics"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-9b077036a87ebd24d6715ea9|ABOUT_DISEASE|disease:d050",
+        "source": "article:lit-9b077036a87ebd24d6715ea9",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d050",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-9b077036a87ebd24d6715ea9|ADDRESSES_TOPIC|topic:outbreak-investigation",
+        "source": "article:lit-9b077036a87ebd24d6715ea9",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:outbreak-investigation",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-9b077036a87ebd24d6715ea9|ADDRESSES_TOPIC|topic:transmission-dynamics",
+        "source": "article:lit-9b077036a87ebd24d6715ea9",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:transmission-dynamics",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-9b077036a87ebd24d6715ea9|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-9b077036a87ebd24d6715ea9",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 5,
+      "edges": 4,
+      "articles": 1
+    }
+  }
+}

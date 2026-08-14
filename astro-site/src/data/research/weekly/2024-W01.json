@@ -1,0 +1,149 @@
+{
+  "week": "2024-W01",
+  "start_date": "2024-01-01",
+  "end_date": "2024-01-01",
+  "article_count": 1,
+  "disease_count": 2,
+  "country_count": 0,
+  "top_topics": [
+    "Vaccination",
+    "Outbreak investigation"
+  ],
+  "articles": [
+    {
+      "article_id": "lit_83571f46c01c3443443a26be",
+      "slug": "10-1016-s1473-3099-23-00492-9-83571f46",
+      "title": "Mpox in people with past infection or a complete vaccination course: a global case series",
+      "doi": "10.1016/s1473-3099(23)00492-9",
+      "pmid": "37678309",
+      "journal": "The Lancet Infectious Diseases",
+      "publisher": "Elsevier BV",
+      "authors": [
+        "Aniruddha Hazra",
+        "Jason Zucker",
+        "Elizabeth Bell",
+        "John Flores",
+        "Leanna Gordon",
+        "Oriol Mitjà",
+        "Clara Suñer",
+        "Adrien Lemaignen",
+        "Simon Jamard",
+        "Silvia Nozza",
+        "Achyuta V Nori",
+        "Edgar Pérez-Barragán",
+        "Juan Carlos Rodríguez-Aldama",
+        "Jose Louis Blanco",
+        "Constance Delaugerre",
+        "Dan Turner",
+        "Irene Fuertes",
+        "Viviana Leiro",
+        "Sharon L Walmsley",
+        "Chloe M Orkin",
+        "Catherine Creticos",
+        "Patrick Gibbons",
+        "Zoha Maakaroun-Vermesse",
+        "Cathie Faussat",
+        "Lynda Handala",
+        "Jeremy Zeggagh",
+        "Andrea Alemany",
+        "Cristina Galvan",
+        "Antonella Castagna",
+        "Angelo Roberto Raccagni",
+        "Raul Adrián Cruz-Flores",
+        "Patricia Fernandez Pardal",
+        "Lucila Marchetta"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2024-01-01T00:00:00+00:00",
+      "indexed_at": "2026-08-07T19:00:13+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://linkinghub.elsevier.com/retrieve/pii/S1473309923004929",
+      "license_url": "https://www.elsevier.com/tdm/userlicense/1.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.572,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D065",
+          "slug": "monkeypox",
+          "name_en": "Monkeypox",
+          "name_zh": "猴痘",
+          "confidence": 0.9
+        },
+        {
+          "disease_id": "D064",
+          "slug": "smallpox",
+          "name_en": "Smallpox",
+          "name_zh": "天花",
+          "confidence": 0.62
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Vaccination",
+          "confidence": 0.76
+        },
+        {
+          "name": "Outbreak investigation",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {
+        "en": {
+          "research_question": "The investigation examines clinical manifestations and disease progression among individuals who have previously contracted the virus or finished a full immunization schedule.",
+          "study_design": "Authors performed a descriptive global case series by compiling retrospective information from partner organizations spanning nine nations.",
+          "population_setting": "The cohort comprised gay and bisexual men who have sex with men distributed internationally, specifically filtering for participants with verified prior infection or two-dose vaccination protocols initiated after the 2022 outbreak began.",
+          "main_findings": "Within the tracked group of thirty-seven cases, individuals relying on natural immunity experienced condensed illness timelines and reduced mucosal symptoms during subsequent exposures. Patients completing vaccination regimens displayed minimal lesion counts, low analgesic dependence, and primarily outpatient care without fatalities. Observational comparisons indicated attenuated clinical severity relative to earlier outbreak records.",
+          "public_health_relevance": "Cataloging symptom profiles in previously immune populations aids researchers in understanding how prior exposure modifies disease presentation within affected networks.",
+          "limitations": "The analysis relies on a restricted cohort of thirty-seven participants and employs a purely observational framework without comparative control groups. Dependence on standardized reporting templates from external collaborators may introduce variability in data consistency.",
+          "gids_interpretation": "This manuscript serves as an academic reference documenting clinical outcomes within a defined immunological subgroup during a specific temporal window. It provides historical context for scholarly discourse on orthopoxvirus behavior rather than indicating ongoing monitoring activities.",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.952,
+            "generated_at": "2026-08-13T12:47:13.654871+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        },
+        "zh": {
+          "research_question": "探讨既往感染或完成全程疫苗接种者再次感染猴痘的流行病学与临床特征。",
+          "study_design": "本研究为跨国病例系列观察，收集了2022年5月至2023年6月期间九个国家提供的描述性数据。",
+          "population_setting": "研究对象为37名有性行为史的男同性恋及双性恋男性，中位年龄36岁，均经实验室确诊且具备明确既往感染史或完整疫苗接种记录。",
+          "main_findings": "既往感染复发及接种后发病者的临床表现较早期报告更为轻微，具体表现为病程缩短、皮损与黏膜病变减少以及镇痛药物需求降低。研究期间未出现死亡病例，绝大多数患者接受门诊管理。",
+          "public_health_relevance": "该研究通过记录既往免疫人群的发病情况，为理解该病原体在已有保护力背景下的流行规律提供了基础资料。",
+          "limitations": "样本量较小且仅采用描述性统计方法，缺乏对照组比较，可能限制结论的外推性。",
+          "gids_interpretation": "该文献属于针对特定免疫状态人群的病例系列报道，其内容可纳入现有猴痘临床特征的知识库中进行交叉比对。",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.936,
+            "generated_at": "2026-08-13T12:47:48.210647+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        }
+      },
+      "why_it_matters_en": "Cataloging symptom profiles in previously immune populations aids researchers in understanding how prior exposure modifies disease presentation within affected networks.",
+      "why_it_matters_zh": "该研究通过记录既往免疫人群的发病情况，为理解该病原体在已有保护力背景下的流行规律提供了基础资料。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1016/s1473-3099(23)00492-9",
+        "publisher": "https://linkinghub.elsevier.com/retrieve/pii/S1473309923004929",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/37678309/"
+      },
+      "updated_at": "2026-08-13T12:40:20.771717+00:00",
+      "related_signals": []
+    }
+  ],
+  "url": "/research/weekly/2024-W01/"
+}

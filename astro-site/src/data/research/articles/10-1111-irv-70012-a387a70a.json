@@ -1,0 +1,133 @@
+{
+  "article_id": "lit_a387a70a601fad555208a0ec",
+  "slug": "10-1111-irv-70012-a387a70a",
+  "title": "Detection of H1N1 Influenza Virus in the Bile of a Severe Influenza Mouse Model",
+  "doi": "10.1111/irv.70012",
+  "pmid": null,
+  "journal": "Influenza and Other Respiratory Viruses",
+  "publisher": "Wiley",
+  "authors": [
+    "Yan Liu",
+    "Jiuyang Xu",
+    "Cheng Wei",
+    "Yitian Xu",
+    "Chen Lyu",
+    "Mingzhi Sun",
+    "Ying Zheng",
+    "Bin Cao"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Journal article",
+  "published_at": "2024-10-25T00:00:00+00:00",
+  "indexed_at": "2026-04-08T01:44:53+00:00",
+  "open_access_status": "open",
+  "open_access_url": "https://onlinelibrary.wiley.com/doi/10.1111/irv.70012",
+  "license_url": "http://creativecommons.org/licenses/by/4.0/",
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.446,
+  "is_featured": false,
+  "diseases": [
+    {
+      "disease_id": "D038",
+      "slug": "influenza",
+      "name_en": "Influenza",
+      "name_zh": "流行性感冒",
+      "confidence": 0.86
+    }
+  ],
+  "countries": [],
+  "topics": [],
+  "related_surveillance": [],
+  "summary": {},
+  "why_it_matters_en": "This recent journal article is indexed for its relevance to Influenza. Read the original source before applying its findings.",
+  "why_it_matters_zh": "这项近期Journal article因与流行性感冒相关而被收录。应用其结论前请阅读原始文献。",
+  "source_urls": {
+    "doi": "https://doi.org/10.1111/irv.70012",
+    "publisher": "https://onlinelibrary.wiley.com/doi/10.1111/irv.70012"
+  },
+  "updated_at": "2026-08-13T16:05:48.137430+00:00",
+  "related_signals": [
+    {
+      "signal_id": "signal:d4f34da837688d03",
+      "section": "increasing",
+      "kind": "statistical_signal",
+      "title": null,
+      "disease_id": "D038",
+      "disease_name_en": "Influenza",
+      "disease_name_zh": "流行性感冒",
+      "geographies": [
+        {
+          "code": "IE",
+          "name_en": "Ireland"
+        }
+      ],
+      "data_through": "2026-07-27",
+      "window": {
+        "label": "Last 4 weeks",
+        "current": 230.0,
+        "previous": 46.0,
+        "absolute_change": 184.0,
+        "change_pct": 400.0
+      },
+      "risk": {
+        "score": 65.5,
+        "level": "high",
+        "confidence": "low"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-a387a70a601fad555208a0ec",
+        "type": "article",
+        "label": "Detection of H1N1 Influenza Virus in the Bile of a Severe Influenza Mouse Model",
+        "slug": "10-1111-irv-70012-a387a70a",
+        "url": "/research/articles/10-1111-irv-70012-a387a70a/",
+        "published_at": "2024-10-25T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "disease:d038",
+        "type": "disease",
+        "label": "Influenza",
+        "disease_id": "D038",
+        "name_zh": "流行性感冒",
+        "slug": "influenza",
+        "url": "/diseases/influenza/"
+      },
+      {
+        "id": "study-type:journal-article",
+        "type": "study_type",
+        "label": "Journal article"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-a387a70a601fad555208a0ec|ABOUT_DISEASE|disease:d038",
+        "source": "article:lit-a387a70a601fad555208a0ec",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d038",
+        "confidence": 0.86
+      },
+      {
+        "id": "article:lit-a387a70a601fad555208a0ec|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-a387a70a601fad555208a0ec",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 3,
+      "edges": 2,
+      "articles": 1
+    }
+  }
+}

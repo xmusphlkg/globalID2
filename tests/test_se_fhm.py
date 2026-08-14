@@ -328,6 +328,27 @@ def test_se_updater_adds_revision_window_and_keeps_public_release_enabled(tmp_pa
     assert callable(updater.import_rows)
 
 
+def test_se_catalog_rescan_is_due_weekly_and_survives_process_restart(tmp_path):
+    state = tmp_path / "catalog_scan.json"
+    updater = SEMonthlyUpdater(
+        output_csv=tmp_path / "se.csv",
+        catalog_rescan_interval_days=7,
+        catalog_scan_state=state,
+    )
+
+    assert updater._catalog_rescan_due(today=date(2026, 8, 1), force=False)
+    updater._record_catalog_scan(today=date(2026, 8, 1), disease_count=52)
+
+    restarted = SEMonthlyUpdater(
+        output_csv=tmp_path / "se.csv",
+        catalog_rescan_interval_days=7,
+        catalog_scan_state=state,
+    )
+    assert not restarted._catalog_rescan_due(today=date(2026, 8, 7), force=False)
+    assert restarted._catalog_rescan_due(today=date(2026, 8, 8), force=False)
+    assert restarted._catalog_rescan_due(today=date(2026, 8, 2), force=True)
+
+
 def test_se_updater_load_rows_uses_reviewed_public_release_gate(tmp_path):
     output = tmp_path / "se.csv"
     output.write_text(

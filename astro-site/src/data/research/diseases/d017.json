@@ -1,0 +1,215 @@
+{
+  "articles": [
+    {
+      "article_id": "lit_2a6ce1683f0822b4a1a4bedb",
+      "slug": "10-1038-s41541-025-01088-y-2a6ce168",
+      "title": "Impact of genotypic variability of measles virus T-cell epitopes on vaccine-induced T-cell immunity",
+      "doi": "10.1038/s41541-025-01088-y",
+      "pmid": "39979288",
+      "journal": "npj Vaccines",
+      "publisher": "Springer Science and Business Media LLC",
+      "authors": [
+        "Maarten E. Emmelot",
+        "Rogier Bodewes",
+        "Cyril Maissan",
+        "Martijn Vos",
+        "Rik L. de Swart",
+        "Cécile A.C.M. van Els",
+        "Patricia Kaaijk"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2025-02-20T00:00:00+00:00",
+      "indexed_at": "2026-08-12T12:59:46+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://www.nature.com/articles/s41541-025-01088-y",
+      "license_url": "https://creativecommons.org/licenses/by-nc-nd/4.0",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.526,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D017",
+          "slug": "measles",
+          "name_en": "Measles",
+          "name_zh": "麻疹",
+          "confidence": 0.86
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Vaccination",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Measles. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与麻疹相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1038/s41541-025-01088-y",
+        "publisher": "https://www.nature.com/articles/s41541-025-01088-y"
+      },
+      "updated_at": "2026-08-13T21:36:52.839448+00:00",
+      "related_signals": []
+    },
+    {
+      "article_id": "lit_2b4edf1d1e157d22674ec6bb",
+      "slug": "10-1186-s12879-024-10088-7-2b4edf1d",
+      "title": "Inequalities in measles immunization coverage among two-year-olds in Sierra Leone, 2008–2019",
+      "doi": "10.1186/s12879-024-10088-7",
+      "pmid": null,
+      "journal": "BMC Infectious Diseases",
+      "publisher": "Springer Science and Business Media LLC",
+      "authors": [
+        "Augustus Osborne",
+        "Alpha Umaru Bai-Sesay",
+        "Umaru Sesay",
+        "Alieu Tommy",
+        "Camilla Bangura",
+        "Bright Opoku Ahinkorah"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2024-11-11T00:00:00+00:00",
+      "indexed_at": "2026-08-05T10:37:50+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://bmcinfectdis.biomedcentral.com/articles/10.1186/s12879-024-10088-7",
+      "license_url": "https://creativecommons.org/licenses/by-nc-nd/4.0",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.512,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D017",
+          "slug": "measles",
+          "name_en": "Measles",
+          "name_zh": "麻疹",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Vaccination",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Measles. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与麻疹相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1186/s12879-024-10088-7",
+        "publisher": "https://bmcinfectdis.biomedcentral.com/articles/10.1186/s12879-024-10088-7"
+      },
+      "updated_at": "2026-08-13T12:40:20.771733+00:00",
+      "related_signals": []
+    }
+  ],
+  "count": 2,
+  "publication_timeline": [
+    {
+      "month": "2024-11",
+      "publication_count": 1
+    },
+    {
+      "month": "2025-02",
+      "publication_count": 1
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-2a6ce1683f0822b4a1a4bedb",
+        "type": "article",
+        "label": "Impact of genotypic variability of measles virus T-cell epitopes on vaccine-induced T-cell immunity",
+        "slug": "10-1038-s41541-025-01088-y-2a6ce168",
+        "url": "/research/articles/10-1038-s41541-025-01088-y-2a6ce168/",
+        "published_at": "2025-02-20T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-2b4edf1d1e157d22674ec6bb",
+        "type": "article",
+        "label": "Inequalities in measles immunization coverage among two-year-olds in Sierra Leone, 2008–2019",
+        "slug": "10-1186-s12879-024-10088-7-2b4edf1d",
+        "url": "/research/articles/10-1186-s12879-024-10088-7-2b4edf1d/",
+        "published_at": "2024-11-11T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "disease:d017",
+        "type": "disease",
+        "label": "Measles",
+        "disease_id": "D017",
+        "name_zh": "麻疹",
+        "slug": "measles",
+        "url": "/diseases/measles/"
+      },
+      {
+        "id": "study-type:journal-article",
+        "type": "study_type",
+        "label": "Journal article"
+      },
+      {
+        "id": "topic:vaccination",
+        "type": "topic",
+        "label": "Vaccination"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-2a6ce1683f0822b4a1a4bedb|ABOUT_DISEASE|disease:d017",
+        "source": "article:lit-2a6ce1683f0822b4a1a4bedb",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d017",
+        "confidence": 0.86
+      },
+      {
+        "id": "article:lit-2a6ce1683f0822b4a1a4bedb|ADDRESSES_TOPIC|topic:vaccination",
+        "source": "article:lit-2a6ce1683f0822b4a1a4bedb",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccination",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-2a6ce1683f0822b4a1a4bedb|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-2a6ce1683f0822b4a1a4bedb",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-2b4edf1d1e157d22674ec6bb|ABOUT_DISEASE|disease:d017",
+        "source": "article:lit-2b4edf1d1e157d22674ec6bb",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d017",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-2b4edf1d1e157d22674ec6bb|ADDRESSES_TOPIC|topic:vaccination",
+        "source": "article:lit-2b4edf1d1e157d22674ec6bb",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccination",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-2b4edf1d1e157d22674ec6bb|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-2b4edf1d1e157d22674ec6bb",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 5,
+      "edges": 6,
+      "articles": 2
+    }
+  }
+}

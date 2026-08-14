@@ -1,0 +1,165 @@
+{
+  "article_id": "lit_15282287a092c6d8b7fc4f8f",
+  "slug": "10-1016-j-ijid-2026-108949-15282287",
+  "title": "Interferon-gamma release assays versus tuberculin skin test for latent tuberculosis infection positivity among healthcare workers and first responders: a systematic review and meta-analysis",
+  "doi": "10.1016/j.ijid.2026.108949",
+  "pmid": "42398701",
+  "journal": "International Journal of Infectious Diseases",
+  "publisher": "Elsevier BV",
+  "authors": [
+    "Hamoud Alahmari",
+    "Lisa Hanson",
+    "Peter G. Kelley",
+    "Jo Spong",
+    "Adriana Milazzo",
+    "George Mnatzaganian"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Systematic review",
+  "published_at": "2026-09-01T00:00:00+00:00",
+  "indexed_at": "2026-08-08T14:45:20+00:00",
+  "open_access_status": "open",
+  "open_access_url": "https://linkinghub.elsevier.com/retrieve/pii/S1201971226005849",
+  "license_url": "https://www.elsevier.com/tdm/userlicense/1.0/",
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.743,
+  "is_featured": false,
+  "diseases": [
+    {
+      "disease_id": "D025",
+      "slug": "tuberculosis",
+      "name_en": "Tuberculosis",
+      "name_zh": "肺结核",
+      "confidence": 0.86
+    }
+  ],
+  "countries": [],
+  "topics": [
+    {
+      "name": "Vaccination",
+      "confidence": 0.66
+    },
+    {
+      "name": "Diagnostics",
+      "confidence": 0.66
+    }
+  ],
+  "related_surveillance": [],
+  "summary": {},
+  "why_it_matters_en": "This recent systematic review is indexed for its relevance to Tuberculosis. Read the original source before applying its findings.",
+  "why_it_matters_zh": "这项近期Systematic review因与肺结核相关而被收录。应用其结论前请阅读原始文献。",
+  "source_urls": {
+    "doi": "https://doi.org/10.1016/j.ijid.2026.108949",
+    "publisher": "https://linkinghub.elsevier.com/retrieve/pii/S1201971226005849",
+    "pubmed": "https://pubmed.ncbi.nlm.nih.gov/42398701/"
+  },
+  "updated_at": "2026-08-13T12:39:33.373856+00:00",
+  "related_signals": [
+    {
+      "signal_id": "signal:cbe12a284bd5cd9b",
+      "section": "increasing",
+      "kind": "statistical_signal",
+      "title": null,
+      "disease_id": "D025",
+      "disease_name_en": "Tuberculosis",
+      "disease_name_zh": "肺结核",
+      "geographies": [
+        {
+          "code": "NZ",
+          "name_en": "New Zealand"
+        }
+      ],
+      "data_through": "2026-06-01",
+      "window": {
+        "label": "Latest complete month",
+        "current": 43.0,
+        "previous": 32.0,
+        "absolute_change": 11.0,
+        "change_pct": 34.38
+      },
+      "risk": {
+        "score": 56.0,
+        "level": "high",
+        "confidence": "low"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-15282287a092c6d8b7fc4f8f",
+        "type": "article",
+        "label": "Interferon-gamma release assays versus tuberculin skin test for latent tuberculosis infection positivity among healthcare workers and first responders: a systematic review and meta-analysis",
+        "slug": "10-1016-j-ijid-2026-108949-15282287",
+        "url": "/research/articles/10-1016-j-ijid-2026-108949-15282287/",
+        "published_at": "2026-09-01T00:00:00+00:00",
+        "study_type": "Systematic review"
+      },
+      {
+        "id": "disease:d025",
+        "type": "disease",
+        "label": "Tuberculosis",
+        "disease_id": "D025",
+        "name_zh": "肺结核",
+        "slug": "tuberculosis",
+        "url": "/diseases/tuberculosis/"
+      },
+      {
+        "id": "study-type:systematic-review",
+        "type": "study_type",
+        "label": "Systematic review"
+      },
+      {
+        "id": "topic:diagnostics",
+        "type": "topic",
+        "label": "Diagnostics"
+      },
+      {
+        "id": "topic:vaccination",
+        "type": "topic",
+        "label": "Vaccination"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-15282287a092c6d8b7fc4f8f|ABOUT_DISEASE|disease:d025",
+        "source": "article:lit-15282287a092c6d8b7fc4f8f",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d025",
+        "confidence": 0.86
+      },
+      {
+        "id": "article:lit-15282287a092c6d8b7fc4f8f|ADDRESSES_TOPIC|topic:diagnostics",
+        "source": "article:lit-15282287a092c6d8b7fc4f8f",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:diagnostics",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-15282287a092c6d8b7fc4f8f|ADDRESSES_TOPIC|topic:vaccination",
+        "source": "article:lit-15282287a092c6d8b7fc4f8f",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccination",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-15282287a092c6d8b7fc4f8f|USES_STUDY_DESIGN|study-type:systematic-review",
+        "source": "article:lit-15282287a092c6d8b7fc4f8f",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:systematic-review"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 5,
+      "edges": 4,
+      "articles": 1
+    }
+  }
+}

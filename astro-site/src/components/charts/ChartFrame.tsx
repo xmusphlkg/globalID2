@@ -88,6 +88,9 @@ export default function ChartFrame({
   const renderPanel = (panel: RenderablePanel) => (
     typeof panel === 'function' ? panel({ isFullscreen }) : panel
   );
+  const fullscreenLabel = isFullscreen
+    ? (lang === 'zh' ? '退出全屏' : 'Exit full-screen')
+    : (lang === 'zh' ? '进入全屏' : 'Enter full-screen');
 
   return (
     <div ref={shellRef} className={`chart-shell panel-fullscreen ${isFullscreen ? 'chart-shell-fullscreen' : ''}`}>
@@ -117,10 +120,24 @@ export default function ChartFrame({
         </div>
         <div className="chart-frame-actions">
           {canFullscreen && (
-            <button type="button" onClick={toggleFullscreen} className="chart-link-btn">
-              {isFullscreen
-                ? (lang === 'zh' ? '退出全屏' : 'Exit full-screen')
-                : (lang === 'zh' ? '进入全屏' : 'Enter full-screen')}
+            <button
+              type="button"
+              onClick={toggleFullscreen}
+              className="chart-link-btn chart-fullscreen-btn"
+              aria-label={fullscreenLabel}
+              aria-pressed={isFullscreen}
+              title={fullscreenLabel}
+            >
+              {isFullscreen ? (
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                  <path d="M7.25 3.5v3.75H3.5M12.75 3.5v3.75h3.75M7.25 16.5v-3.75H3.5M12.75 16.5v-3.75h3.75" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                  <path d="M7.25 3.5H3.5v3.75M12.75 3.5h3.75v3.75M7.25 16.5H3.5v-3.75M12.75 16.5h3.75v-3.75" />
+                </svg>
+              )}
+              <span>{fullscreenLabel}</span>
             </button>
           )}
         </div>

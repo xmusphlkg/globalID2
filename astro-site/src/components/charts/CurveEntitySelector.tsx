@@ -1,10 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import type { CSSProperties } from 'react';
 import {
-  MAX_ACTIVE_SERIES,
   findLatestValue,
   getMetricValues,
   type CurveEntityType,
+  type CurveSelectionMode,
   type CurveSeries,
   type EpidemicMetric,
 } from './epidemicCurveModel';
@@ -21,12 +21,10 @@ interface Props {
   entityType: CurveEntityType;
   lang: 'en' | 'zh';
   query: string;
+  selectionMode: CurveSelectionMode;
   onQueryChange: (query: string) => void;
   onToggle: (id: string) => void;
   onReset: () => void;
-  onSelectVisible: () => void;
-  defaultCount: number;
-  selectionLimitHit: boolean;
 }
 
 function formatValue(value: number | null | undefined, digits = 0) {
@@ -46,15 +44,12 @@ export default function CurveEntitySelector({
   entityType,
   lang,
   query,
+  selectionMode,
   onQueryChange,
   onToggle,
   onReset,
-  onSelectVisible,
-  defaultCount,
-  selectionLimitHit,
 }: Props) {
   const isCompact = density === 'compact';
-  const [showSelectedOnly, setShowSelectedOnly] = useState(false);
   const totalCasesRange = useMemo(() => {
     if (eligibleIds.length === 0) return { min: 0, max: 0 };
     return eligibleIds.reduce(
@@ -72,9 +67,7 @@ export default function CurveEntitySelector({
   const entityName = entityType === 'country'
     ? { en: 'country', enPlural: 'countries', zh: '国家' }
     : { en: 'disease', enPlural: 'diseases', zh: '疾病' };
-  const displayedIds = isCompact && showSelectedOnly
-    ? visibleIds.filter((id) => activeIdSet.has(id))
-    : visibleIds;
+  const displayedIds = visibleIds;
 
   return (
     <div className={`chart-sidebar ${isCompact ? 'chart-sidebar-compact' : ''}`}>
@@ -86,8 +79,12 @@ export default function CurveEntitySelector({
           {!isCompact && (
             <div className="chart-sidebar-copy">
               {lang === 'zh'
-                ? `可搜索并勾选${entityName.zh}；最多同时显示 ${MAX_ACTIVE_SERIES} 条序列。`
-                : `Search and select ${entityName.enPlural}; up to ${MAX_ACTIVE_SERIES} series can be shown at once.`}
+                ? selectionMode === 'single'
+                  ? `搜索并选择一个${entityName.zh}查看。`
+                  : `可搜索并勾选多个${entityName.zh}进行比较。`
+                : selectionMode === 'single'
+                  ? `Search and select one ${entityName.en} to inspect.`
+                  : `Search and select multiple ${entityName.enPlural} to compare.`}
             </div>
           )}
         </div>
@@ -110,64 +107,19 @@ export default function CurveEntitySelector({
       />
 
       <div className="chart-toolbar">
-        <button type="button" onClick={onReset} className="chart-toggle">
-          {lang === 'zh'
-            ? `回到前 ${defaultCount}`
-            : `Reset to top ${defaultCount}`}
-        </button>
-        {isCompact && (
-          <button
-            type="button"
-            onClick={() => setShowSelectedOnly((current) => !current)}
-            aria-pressed={showSelectedOnly}
-            className={`chart-toggle ${showSelectedOnly ? 'chart-toggle-active' : ''}`}
-          >
-            {showSelectedOnly
-              ? (lang === 'zh' ? '显示全部' : 'Show all')
-              : (lang === 'zh' ? '仅看已选' : 'Selected only')}
-          </button>
-        )}
-        {isCompact && query.trim() && (
-          <button
-            type="button"
-            onClick={() => onQueryChange('')}
-            className="chart-toggle"
-          >
-            {lang === 'zh' ? '清除搜索' : 'Clear search'}
-          </button>
-        )}
-        {!isCompact && (
-          <button
-            type="button"
-            onClick={onSelectVisible}
-            className="chart-toggle"
-            disabled={visibleIds.length === 0}
-          >
-            {lang === 'zh'
-              ? `选择当前结果（最多 ${MAX_ACTIVE_SERIES}）`
-              : `Select visible (max ${MAX_ACTIVE_SERIES})`}
+        {selectionMode === 'multiple' && activeIds.length > 1 && (
+          <button type="button" onClick={onReset} className="chart-toggle">
+            {lang === 'zh' ? '清除比较' : 'Clear comparison'}
           </button>
         )}
       </div>
 
-      {selectionLimitHit && (
-        <div className="chart-sidebar-warning" role="status">
-          {lang === 'zh'
-            ? `已保留前 ${MAX_ACTIVE_SERIES} 条结果；请取消一条已选${entityName.zh}后再添加。`
-            : `The first ${MAX_ACTIVE_SERIES} results are selected; deselect one ${entityName.en} before adding another.`}
-        </div>
-      )}
-
       <div className={`chart-sidebar-list ${isCompact ? 'chart-sidebar-list-compact' : ''}`}>
         {displayedIds.length === 0 ? (
           <div className="chart-sidebar-empty">
-            {showSelectedOnly
-              ? (lang === 'zh'
-                  ? `当前搜索中没有已选${entityName.zh}。`
-                  : `No selected ${entityName.enPlural} match the current search.`)
-              : (lang === 'zh'
-                  ? `没有匹配的${entityName.zh}。`
-                  : `No ${entityName.enPlural} matched your search.`)}
+            {lang === 'zh'
+              ? `没有匹配的${entityName.zh}。`
+              : `No ${entityName.enPlural} matched your search.`}
           </div>
         ) : (
           displayedIds.map((id) => {
@@ -195,10 +147,9 @@ export default function CurveEntitySelector({
               >
                 <div className="chart-sidebar-item-inner flex items-start gap-3">
                   <input
-                    type="checkbox"
+                    type={selectionMode === 'single' ? 'radio' : 'checkbox'}
                     checked={isActive}
                     onChange={() => onToggle(id)}
-                    disabled={!isActive && activeIds.length >= MAX_ACTIVE_SERIES}
                     className="chart-sidebar-checkbox mt-1"
                     style={color ? { accentColor: color } : undefined}
                   />
@@ -218,7 +169,7 @@ export default function CurveEntitySelector({
                     </div>
                     {!isCompact && (
                       <div className="chart-sidebar-meta">
-                        {lang === 'zh' ? '最新值' : 'Latest'} {formatValue(latestValue, metric === 'incidence_rates' ? 2 : 0)}
+                        {lang === 'zh' ? '最新值' : 'Latest'} {formatValue(latestValue, ['incidence_rates', 'trend_index'].includes(metric) ? 2 : 0)}
                         {' · '}
                         {lang === 'zh' ? '累计' : 'Total'} {totalCases.toLocaleString()}
                       </div>

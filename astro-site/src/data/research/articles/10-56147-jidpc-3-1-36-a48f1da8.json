@@ -1,0 +1,251 @@
+{
+  "article_id": "lit_a48f1da89c52943be4e4b6eb",
+  "slug": "10-56147-jidpc-3-1-36-a48f1da8",
+  "title": "Assessment of Epidemic Preparedness for Ebola Virus Disease and Hantavirus in the Kokolo Military Health Zone, Democratic Republic of the Congo",
+  "doi": "10.56147/jidpc.3.1.36",
+  "pmid": null,
+  "journal": "Journal of Infectious Diseases and Patient Care",
+  "publisher": "Wren Research Journals",
+  "authors": [
+    "Amisi Kengea Levis",
+    "Masamba Bikoki Winnie",
+    "Kiula Ntete Eloi"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Journal article",
+  "published_at": "2026-01-01T00:00:00+00:00",
+  "indexed_at": "2026-06-12T13:56:52+00:00",
+  "open_access_status": "unknown",
+  "open_access_url": null,
+  "license_url": null,
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.616,
+  "is_featured": false,
+  "diseases": [
+    {
+      "disease_id": "D050",
+      "slug": "ebola",
+      "name_en": "Ebola",
+      "name_zh": "埃博拉出血热",
+      "confidence": 0.82
+    },
+    {
+      "disease_id": "D065",
+      "slug": "monkeypox",
+      "name_en": "Monkeypox",
+      "name_zh": "猴痘",
+      "confidence": 0.62
+    }
+  ],
+  "countries": [],
+  "topics": [
+    {
+      "name": "Surveillance",
+      "confidence": 0.66
+    },
+    {
+      "name": "Outbreak investigation",
+      "confidence": 0.66
+    },
+    {
+      "name": "Diagnostics",
+      "confidence": 0.66
+    },
+    {
+      "name": "Climate and environment",
+      "confidence": 0.66
+    }
+  ],
+  "related_surveillance": [],
+  "summary": {},
+  "why_it_matters_en": "This recent journal article is indexed for its relevance to Ebola. Read the original source before applying its findings.",
+  "why_it_matters_zh": "这项近期Journal article因与埃博拉出血热相关而被收录。应用其结论前请阅读原始文献。",
+  "source_urls": {
+    "doi": "https://doi.org/10.56147/jidpc.3.1.36",
+    "publisher": "https://infectiousdiseases-patientcare.wren-research-journals.com/1/article/view/36"
+  },
+  "updated_at": "2026-08-13T16:05:48.137350+00:00",
+  "related_signals": [
+    {
+      "signal_id": "event:36",
+      "section": "emerging",
+      "kind": "official_event",
+      "title": "Ebola disease caused by Bundibugyo virus - Democratic Republic of the Congo",
+      "disease_id": "D050",
+      "disease_name_en": "Ebola",
+      "disease_name_zh": "埃博拉出血热",
+      "geographies": [
+        {
+          "code": "CD",
+          "name_en": "Democratic Republic of the Congo"
+        }
+      ],
+      "data_through": "2026-08-01",
+      "window": {
+        "label": null,
+        "current": null,
+        "previous": null,
+        "absolute_change": null,
+        "change_pct": null
+      },
+      "risk": {
+        "score": null,
+        "level": null,
+        "confidence": "high"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    },
+    {
+      "signal_id": "event:37",
+      "section": "emerging",
+      "kind": "official_event",
+      "title": "Ebola disease caused by Bundibugyo virus, Democratic Republic of the Congo & Uganda",
+      "disease_id": "D050",
+      "disease_name_en": "Ebola",
+      "disease_name_zh": "埃博拉出血热",
+      "geographies": [
+        {
+          "code": "CD",
+          "name_en": "Democratic Republic of the Congo"
+        },
+        {
+          "code": "UG",
+          "name_en": "Uganda"
+        }
+      ],
+      "data_through": "2026-07-17",
+      "window": {
+        "label": null,
+        "current": null,
+        "previous": null,
+        "absolute_change": null,
+        "change_pct": null
+      },
+      "risk": {
+        "score": null,
+        "level": null,
+        "confidence": "high"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-a48f1da89c52943be4e4b6eb",
+        "type": "article",
+        "label": "Assessment of Epidemic Preparedness for Ebola Virus Disease and Hantavirus in the Kokolo Military Health Zone, Democratic Republic of the Congo",
+        "slug": "10-56147-jidpc-3-1-36-a48f1da8",
+        "url": "/research/articles/10-56147-jidpc-3-1-36-a48f1da8/",
+        "published_at": "2026-01-01T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "disease:d050",
+        "type": "disease",
+        "label": "Ebola",
+        "disease_id": "D050",
+        "name_zh": "埃博拉出血热",
+        "slug": "ebola",
+        "url": "/diseases/ebola/"
+      },
+      {
+        "id": "disease:d065",
+        "type": "disease",
+        "label": "Monkeypox",
+        "disease_id": "D065",
+        "name_zh": "猴痘",
+        "slug": "monkeypox",
+        "url": "/diseases/monkeypox/"
+      },
+      {
+        "id": "study-type:journal-article",
+        "type": "study_type",
+        "label": "Journal article"
+      },
+      {
+        "id": "topic:climate-and-environment",
+        "type": "topic",
+        "label": "Climate and environment"
+      },
+      {
+        "id": "topic:diagnostics",
+        "type": "topic",
+        "label": "Diagnostics"
+      },
+      {
+        "id": "topic:outbreak-investigation",
+        "type": "topic",
+        "label": "Outbreak investigation"
+      },
+      {
+        "id": "topic:surveillance",
+        "type": "topic",
+        "label": "Surveillance"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-a48f1da89c52943be4e4b6eb|ABOUT_DISEASE|disease:d050",
+        "source": "article:lit-a48f1da89c52943be4e4b6eb",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d050",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-a48f1da89c52943be4e4b6eb|ABOUT_DISEASE|disease:d065",
+        "source": "article:lit-a48f1da89c52943be4e4b6eb",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d065",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-a48f1da89c52943be4e4b6eb|ADDRESSES_TOPIC|topic:climate-and-environment",
+        "source": "article:lit-a48f1da89c52943be4e4b6eb",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:climate-and-environment",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-a48f1da89c52943be4e4b6eb|ADDRESSES_TOPIC|topic:diagnostics",
+        "source": "article:lit-a48f1da89c52943be4e4b6eb",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:diagnostics",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-a48f1da89c52943be4e4b6eb|ADDRESSES_TOPIC|topic:outbreak-investigation",
+        "source": "article:lit-a48f1da89c52943be4e4b6eb",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:outbreak-investigation",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-a48f1da89c52943be4e4b6eb|ADDRESSES_TOPIC|topic:surveillance",
+        "source": "article:lit-a48f1da89c52943be4e4b6eb",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:surveillance",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-a48f1da89c52943be4e4b6eb|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-a48f1da89c52943be4e4b6eb",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 8,
+      "edges": 7,
+      "articles": 1
+    }
+  }
+}

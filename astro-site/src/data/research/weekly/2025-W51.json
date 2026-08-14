@@ -1,0 +1,333 @@
+{
+  "week": "2025-W51",
+  "start_date": "2025-12-15",
+  "end_date": "2025-12-19",
+  "article_count": 3,
+  "disease_count": 2,
+  "country_count": 2,
+  "top_topics": [
+    "Surveillance",
+    "One Health",
+    "Genomic epidemiology",
+    "Transmission dynamics",
+    "Climate and environment"
+  ],
+  "articles": [
+    {
+      "article_id": "lit_ffbb1adfd8052b1e85c2f086",
+      "slug": "10-1038-s41597-025-06451-1-ffbb1adf",
+      "title": "A taxonomically harmonized global dataset of wild bird hosts for avian influenza virus surveillance.",
+      "doi": "10.1038/s41597-025-06451-1",
+      "pmid": "41419742",
+      "journal": "Scientific data",
+      "publisher": null,
+      "authors": [
+        "Du F",
+        "Zhang Q",
+        "Cheng Y",
+        "Liu Y",
+        "Lei W",
+        "Wang L",
+        "Sun H",
+        "Sun Y",
+        "Liu J",
+        "Li Z",
+        "Pu J"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Genomic study",
+      "published_at": "2025-12-19T00:00:00+00:00",
+      "indexed_at": "2025-12-19T00:00:00+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC12859136",
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.657,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D038",
+          "slug": "influenza",
+          "name_en": "Influenza",
+          "name_zh": "流行性感冒",
+          "confidence": 0.9
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Surveillance",
+          "confidence": 0.66
+        },
+        {
+          "name": "Genomic epidemiology",
+          "confidence": 0.66
+        },
+        {
+          "name": "One Health",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent genomic study is indexed for its relevance to Influenza. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Genomic study因与流行性感冒相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1038/s41597-025-06451-1",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41419742/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137449+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:d4f34da837688d03",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D038",
+          "disease_name_en": "Influenza",
+          "disease_name_zh": "流行性感冒",
+          "geographies": [
+            {
+              "code": "IE",
+              "name_en": "Ireland"
+            }
+          ],
+          "data_through": "2026-07-27",
+          "window": {
+            "label": "Last 4 weeks",
+            "current": 230.0,
+            "previous": 46.0,
+            "absolute_change": 184.0,
+            "change_pct": 400.0
+          },
+          "risk": {
+            "score": 65.5,
+            "level": "high",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_d135ff51e3739ad15a999738",
+      "slug": "10-2903-j-efsa-2025-9834-d135ff51",
+      "title": "Avian influenza overview September-November 2025.",
+      "doi": "10.2903/j.efsa.2025.9834",
+      "pmid": "41425765",
+      "journal": "EFSA journal. European Food Safety Authority",
+      "publisher": null,
+      "authors": [
+        "Buczkowski H",
+        "Ducatez M",
+        "Fusaro A",
+        "Gonzales JL",
+        "Kuiken T",
+        "Mirinavičiūtė G",
+        "Ståhl K",
+        "Staubach C",
+        "Svartström O",
+        "Terregino C",
+        "Willgert K",
+        "Alarcón E",
+        "Kohnle L"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2025-12-18T00:00:00+00:00",
+      "indexed_at": "2025-12-22T00:00:00+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC12712863",
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.631,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D038",
+          "slug": "influenza",
+          "name_en": "Influenza",
+          "name_zh": "流行性感冒",
+          "confidence": 0.94
+        },
+        {
+          "disease_id": "D014",
+          "slug": "h5n1",
+          "name_en": "H5N1",
+          "name_zh": "人感染高致病性禽流感",
+          "confidence": 0.62
+        }
+      ],
+      "countries": [
+        {
+          "code": "CN",
+          "name_en": "China",
+          "name_zh": null,
+          "confidence": 0.62
+        },
+        {
+          "code": "US",
+          "name_en": "United States",
+          "name_zh": null,
+          "confidence": 0.62
+        }
+      ],
+      "topics": [
+        {
+          "name": "Transmission dynamics",
+          "confidence": 0.66
+        },
+        {
+          "name": "Climate and environment",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Influenza. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与流行性感冒相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.2903/j.efsa.2025.9834",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41425765/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137442+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:d4f34da837688d03",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D038",
+          "disease_name_en": "Influenza",
+          "disease_name_zh": "流行性感冒",
+          "geographies": [
+            {
+              "code": "IE",
+              "name_en": "Ireland"
+            }
+          ],
+          "data_through": "2026-07-27",
+          "window": {
+            "label": "Last 4 weeks",
+            "current": 230.0,
+            "previous": 46.0,
+            "absolute_change": 184.0,
+            "change_pct": 400.0
+          },
+          "risk": {
+            "score": 65.5,
+            "level": "high",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_49548bf601373d3d1281a854",
+      "slug": "10-2903-j-efsa-2025-9761-49548bf6",
+      "title": "Avian Influenza annual report 2024.",
+      "doi": "10.2903/j.efsa.2025.9761",
+      "pmid": "41404625",
+      "journal": "EFSA journal. European Food Safety Authority",
+      "publisher": null,
+      "authors": [
+        "Abrahantes JC",
+        "Aznar I",
+        "Boom M",
+        "Catalin I",
+        "Dórea F",
+        "Grant M",
+        "Mulligan KF",
+        "Zancanaro G"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2025-12-15T00:00:00+00:00",
+      "indexed_at": "2025-12-17T00:00:00+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC12703412",
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.623,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D038",
+          "slug": "influenza",
+          "name_en": "Influenza",
+          "name_zh": "流行性感冒",
+          "confidence": 0.9
+        },
+        {
+          "disease_id": "D014",
+          "slug": "h5n1",
+          "name_en": "H5N1",
+          "name_zh": "人感染高致病性禽流感",
+          "confidence": 0.62
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "One Health",
+          "confidence": 0.7100000000000001
+        },
+        {
+          "name": "Surveillance",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Influenza. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与流行性感冒相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.2903/j.efsa.2025.9761",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41404625/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137457+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:d4f34da837688d03",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D038",
+          "disease_name_en": "Influenza",
+          "disease_name_zh": "流行性感冒",
+          "geographies": [
+            {
+              "code": "IE",
+              "name_en": "Ireland"
+            }
+          ],
+          "data_through": "2026-07-27",
+          "window": {
+            "label": "Last 4 weeks",
+            "current": 230.0,
+            "previous": 46.0,
+            "absolute_change": 184.0,
+            "change_pct": 400.0
+          },
+          "risk": {
+            "score": 65.5,
+            "level": "high",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    }
+  ],
+  "url": "/research/weekly/2025-W51/"
+}

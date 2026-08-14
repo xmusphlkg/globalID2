@@ -26,6 +26,9 @@ export interface SourceCategory {
   status: string;
   ai_status: string;
   ai_last_error?: string | null;
+  definition_version: string;
+  mapping_status: "reviewed" | "review_ready" | "awaiting_suggestion";
+  automation_failure_kind?: "provider_unavailable" | "internal_processing_error" | null;
   candidates: MappingCandidate[];
   assertions: Array<{ id: number; target_code: string; mapping_relation: string; projection_policy: string }>;
 }
@@ -33,18 +36,47 @@ export interface SourceCategory {
 export interface MappingSummary {
   category_total: number;
   ai_pending_total: number;
+  ai_failed_total: number;
+  ai_internal_failed_total: number;
+  ai_provider_unavailable_total: number;
+  ai_review_ready_total: number;
   assertions: Record<string, number>;
   candidates: Record<string, number>;
-  countries: Array<{ country_code: string; categories: number; ai_pending: number; active: number }>;
+  countries: Array<{ country_code: string; categories: number; ai_pending: number; ai_failed: number; ai_provider_unavailable: number; ai_review_ready: number; active: number }>;
   active_release?: { id: number; release_code: string; activated_at?: string | null } | null;
-  automation: { enabled: boolean; running: boolean; email_provider: string; last_cycle?: Record<string, unknown> };
+  automation: { enabled: boolean; running: boolean; email_provider: string; ai_circuit_open: boolean; ai_circuit_until?: string | null; last_cycle?: Record<string, unknown> };
 }
 
 export interface MappingCoverage {
   observation_total: number;
+  mapped_total: number;
+  mapping_coverage: number;
   canonical_total: number;
   canonical_coverage: number;
-  countries: Array<{ country_code: string; observation_count: number; mapped_count: number; canonical_count: number; canonical_coverage: number }>;
+  no_projection_total: number;
+  discovery_only_total: number;
+  source_only_total: number;
+  undecided_total: number;
+  registered_series_total: number;
+  observed_series_total: number;
+  holding_observation_total: number;
+  holding_series_total: number;
+  countries: Array<{
+    country_code: string;
+    observation_count: number;
+    mapped_count: number;
+    mapping_coverage: number;
+    canonical_count: number;
+    canonical_coverage: number;
+    no_projection_count: number;
+    discovery_only_count: number;
+    source_only_count: number;
+    undecided_count: number;
+    registered_series_count: number;
+    observed_series_count: number;
+    holding_observation_count: number;
+    holding_series_count: number;
+  }>;
 }
 
 export interface MappingRelease {
@@ -57,25 +89,6 @@ export interface MappingRelease {
   metadata?: { assertion_count?: number };
 }
 
-export interface MappingAudit {
-  generated_at: string;
-  totals: {
-    observations: number; old_mapped: number; v3_mapped: number; same_target: number;
-    old_only: number; v3_only: number; changed_target: number;
-    exact_migration_gap: number; semantic_safety_exclusion: number;
-    source_native_unreviewed: number; old_coverage: number; v3_coverage: number;
-  };
-  quality_gates: {
-    active_release: string; orphan_observations: number; active_release_conflicts: number;
-    no_unreviewed_target_changes: boolean; no_orphan_observations: boolean;
-    single_mapping_per_category: boolean;
-  };
-  top_gaps: Array<{
-    country_code: string; series_code: string; source_label: string; old_target: string;
-    mapping_relation: string; comparability: string; observations: number; root_cause: string;
-  }>;
-}
-
 const root = "/mappings";
 
 export function useMappingSummary() {
@@ -84,10 +97,6 @@ export function useMappingSummary() {
 
 export function useMappingCoverage() {
   return useQuery({ queryKey: ["mapping-v3-coverage"], queryFn: () => apiFetch<MappingCoverage>(`${root}/coverage`, { timeoutMs: 60_000 }) });
-}
-
-export function useMappingAudit() {
-  return useQuery({ queryKey: ["mapping-v3-audit"], queryFn: () => apiFetch<MappingAudit>(`${root}/audit`, { timeoutMs: 60_000 }) });
 }
 
 export function useMappingCategories(countryCode: string, aiStatus: string) {
@@ -118,6 +127,13 @@ export function useRunMappingAutomation() {
     mutationFn: () => apiFetch(`${root}/automation/runs`, { method: "POST", timeoutMs: 180_000 }),
     onSuccess: () => client.invalidateQueries(),
   });
+}
+
+export function useSyncReviewedMappings() {
+  return useMappingMutation<void>(() => apiFetch(`${root}/bootstrap`, {
+    method: "POST",
+    timeoutMs: 180_000,
+  }));
 }
 
 export function useSuggestCategory() {

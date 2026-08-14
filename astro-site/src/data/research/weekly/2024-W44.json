@@ -1,0 +1,486 @@
+{
+  "week": "2024-W44",
+  "start_date": "2024-10-28",
+  "end_date": "2024-11-01",
+  "article_count": 5,
+  "disease_count": 3,
+  "country_count": 1,
+  "top_topics": [
+    "Surveillance",
+    "Vaccination",
+    "Vaccine effectiveness"
+  ],
+  "articles": [
+    {
+      "article_id": "lit_adff930a9d09fd168e7349b3",
+      "slug": "10-1093-eurpub-ckae144-1924-adff930a",
+      "title": "Influenza vaccine effectiveness in Ireland during two influenza seasons, 2022/23 and 2023/24",
+      "doi": "10.1093/eurpub/ckae144.1924",
+      "pmid": null,
+      "journal": "European Journal of Public Health",
+      "publisher": "Oxford University Press (OUP)",
+      "authors": [
+        "L Marron",
+        "A McKenna",
+        "J O’Donnell",
+        "L Domegan"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Case-control study",
+      "published_at": "2024-10-28T00:00:00+00:00",
+      "indexed_at": "2025-07-30T11:58:36+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://academic.oup.com/eurpub/article/doi/10.1093/eurpub/ckae144.1924/7844370",
+      "license_url": "https://creativecommons.org/licenses/by-nc/4.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.576,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D038",
+          "slug": "influenza",
+          "name_en": "Influenza",
+          "name_zh": "流行性感冒",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [
+        {
+          "code": "IE",
+          "name_en": "Ireland",
+          "name_zh": null,
+          "confidence": 0.78
+        }
+      ],
+      "topics": [
+        {
+          "name": "Vaccination",
+          "confidence": 0.7100000000000001
+        },
+        {
+          "name": "Surveillance",
+          "confidence": 0.66
+        },
+        {
+          "name": "Vaccine effectiveness",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {
+        "en": {
+          "research_question": "What is the protective capacity of seasonal immunization against primary care visits for laboratory-confirmed influenza-associated respiratory illness in Ireland across the 2022/23 and 2023/24 periods?",
+          "study_design": "Researchers applied a test-negative case-control framework operating inside a country-wide primary care monitoring system to contrast immunization records between PCR-positive patients and PCR-negative individuals presenting with comparable respiratory complaints.",
+          "population_setting": "The analysis focused on individuals seeking outpatient care for acute respiratory symptoms in Ireland, with specific attention to pediatric cohorts and adults meeting established age or clinical risk criteria.",
+          "main_findings": "Immunization showed moderate protection against clinic attendance for influenza-linked respiratory conditions, yielding point estimates between thirty-seven and forty-two percent for the broader group and climbing to sixty-seven percent among younger participants during the second evaluated period.",
+          "public_health_relevance": "Sustaining routine immunization initiatives appears capable of reducing outpatient utilization for influenza-related illnesses, with notably stronger protective signals observed when administering live attenuated formulations to school-aged youth.",
+          "limitations": "The reliance on a targeted primary care monitoring network may restrict broader demographic representation, while several subgroup confidence intervals displayed considerable width or included null values.",
+          "gids_interpretation": "This report supplies seasonal efficacy metrics that may function as contextual benchmarks for evaluating regional immunization programs, without establishing real-time detection thresholds or operational surveillance triggers.",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.949,
+            "generated_at": "2026-08-14T07:08:01.252091+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        }
+      },
+      "why_it_matters_en": "Sustaining routine immunization initiatives appears capable of reducing outpatient utilization for influenza-related illnesses, with notably stronger protective signals observed when administering live attenuated formulations to school-aged youth.",
+      "why_it_matters_zh": "这项近期Case-control study因与流行性感冒相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1093/eurpub/ckae144.1924",
+        "publisher": "https://academic.oup.com/eurpub/article/doi/10.1093/eurpub/ckae144.1924/7844370"
+      },
+      "updated_at": "2026-08-13T16:05:48.137412+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:d4f34da837688d03",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D038",
+          "disease_name_en": "Influenza",
+          "disease_name_zh": "流行性感冒",
+          "geographies": [
+            {
+              "code": "IE",
+              "name_en": "Ireland"
+            }
+          ],
+          "data_through": "2026-07-27",
+          "window": {
+            "label": "Last 4 weeks",
+            "current": 230.0,
+            "previous": 46.0,
+            "absolute_change": 184.0,
+            "change_pct": 400.0
+          },
+          "risk": {
+            "score": 65.5,
+            "level": "high",
+            "confidence": "low"
+          },
+          "relation_level": "exact_disease_geography",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_9ed11988a0a9e49836b3524b",
+      "slug": "10-1016-j-ttbdis-2024-102388-9ed11988",
+      "title": "Publicly available surveillance data on tick-borne encephalitis in Europe, 2023",
+      "doi": "10.1016/j.ttbdis.2024.102388",
+      "pmid": null,
+      "journal": "Ticks and Tick-borne Diseases",
+      "publisher": "Elsevier BV",
+      "authors": [
+        "Frederick J․ Angulo",
+        "Kate Halsby",
+        "Alexander Davidson",
+        "Saiganesh Ravikumar",
+        "Andreas Pilz",
+        "James H. Stark",
+        "Jennifer C. Moïsi"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2024-11-01T00:00:00+00:00",
+      "indexed_at": "2026-07-03T03:57:02+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://linkinghub.elsevier.com/retrieve/pii/S1877959X24000815",
+      "license_url": "https://www.elsevier.com/tdm/userlicense/1.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.512,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D205",
+          "slug": "tick-borne-encephalitis",
+          "name_en": "Tick-borne encephalitis",
+          "name_zh": "蜱传脑炎",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Surveillance",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Tick-borne encephalitis. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与蜱传脑炎相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1016/j.ttbdis.2024.102388",
+        "publisher": "https://linkinghub.elsevier.com/retrieve/pii/S1877959X24000815"
+      },
+      "updated_at": "2026-08-13T16:05:48.137545+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:ab5fb8f49aaa0cf6",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D205",
+          "disease_name_en": "Tick-borne encephalitis",
+          "disease_name_zh": "蜱传脑炎",
+          "geographies": [
+            {
+              "code": "SE",
+              "name_en": "Sweden"
+            }
+          ],
+          "data_through": "2026-07-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 156.0,
+            "previous": 92.0,
+            "absolute_change": 64.0,
+            "change_pct": 69.57
+          },
+          "risk": {
+            "score": 46.1,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_333c02b6f1cec45b52755ea6",
+      "slug": "10-1016-j-ttbdis-2024-102372-333c02b6",
+      "title": "Incidence, healthcare resource utilization and costs of hospitalized patients with tick-borne encephalitis (TBE) in Italy",
+      "doi": "10.1016/j.ttbdis.2024.102372",
+      "pmid": null,
+      "journal": "Ticks and Tick-borne Diseases",
+      "publisher": "Elsevier BV",
+      "authors": [
+        "Renzo Scaggiante",
+        "Liliana Guadagni",
+        "Massimiliano Orso",
+        "Daniela d’Angela",
+        "Ciro Carrieri",
+        "Barbara Polistena",
+        "Federico Spandonaro",
+        "Ilaria Bertoldi",
+        "Andreas Pilz",
+        "Katharina Schley",
+        "Raffaella Iantomasi"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2024-11-01T00:00:00+00:00",
+      "indexed_at": "2026-06-20T01:56:52+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://linkinghub.elsevier.com/retrieve/pii/S1877959X24000657",
+      "license_url": "https://www.elsevier.com/tdm/userlicense/1.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.432,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D205",
+          "slug": "tick-borne-encephalitis",
+          "name_en": "Tick-borne encephalitis",
+          "name_zh": "蜱传脑炎",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Tick-borne encephalitis. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与蜱传脑炎相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1016/j.ttbdis.2024.102372",
+        "publisher": "https://linkinghub.elsevier.com/retrieve/pii/S1877959X24000657"
+      },
+      "updated_at": "2026-08-13T16:05:48.137565+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:ab5fb8f49aaa0cf6",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D205",
+          "disease_name_en": "Tick-borne encephalitis",
+          "disease_name_zh": "蜱传脑炎",
+          "geographies": [
+            {
+              "code": "SE",
+              "name_en": "Sweden"
+            }
+          ],
+          "data_through": "2026-07-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 156.0,
+            "previous": 92.0,
+            "absolute_change": 64.0,
+            "change_pct": 69.57
+          },
+          "risk": {
+            "score": 46.1,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_111350bb477fc4cd751a82bf",
+      "slug": "10-1016-j-puhe-2024-07-010-111350bb",
+      "title": "Is COVID-19 finally just a bad flu? Follow-up study comparing disease severity among COVID-19 and seasonal influenza hospital in-patients across pandemic waves in Ireland",
+      "doi": "10.1016/j.puhe.2024.07.010",
+      "pmid": null,
+      "journal": "Public Health",
+      "publisher": "Elsevier BV",
+      "authors": [
+        "A. O'Farrell",
+        "P. Naughton",
+        "P. Kavanagh"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2024-11-01T00:00:00+00:00",
+      "indexed_at": "2026-07-10T08:16:57+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://linkinghub.elsevier.com/retrieve/pii/S0033350624002993",
+      "license_url": "https://www.elsevier.com/tdm/userlicense/1.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.432,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D004",
+          "slug": "covid-19",
+          "name_en": "COVID-19",
+          "name_zh": "新型冠状病毒感染",
+          "confidence": 0.82
+        },
+        {
+          "disease_id": "D038",
+          "slug": "influenza",
+          "name_en": "Influenza",
+          "name_zh": "流行性感冒",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [
+        {
+          "code": "IE",
+          "name_en": "Ireland",
+          "name_zh": null,
+          "confidence": 0.78
+        }
+      ],
+      "topics": [],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to COVID-19. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与新型冠状病毒感染相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1016/j.puhe.2024.07.010",
+        "publisher": "https://linkinghub.elsevier.com/retrieve/pii/S0033350624002993"
+      },
+      "updated_at": "2026-08-13T16:05:48.137423+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:d4f34da837688d03",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D038",
+          "disease_name_en": "Influenza",
+          "disease_name_zh": "流行性感冒",
+          "geographies": [
+            {
+              "code": "IE",
+              "name_en": "Ireland"
+            }
+          ],
+          "data_through": "2026-07-27",
+          "window": {
+            "label": "Last 4 weeks",
+            "current": 230.0,
+            "previous": 46.0,
+            "absolute_change": 184.0,
+            "change_pct": 400.0
+          },
+          "risk": {
+            "score": 65.5,
+            "level": "high",
+            "confidence": "low"
+          },
+          "relation_level": "exact_disease_geography",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_1a0398b361129ed7dd183df0",
+      "slug": "10-1016-j-ttbdis-2024-102407-1a0398b3",
+      "title": "Clinical manifestations and outcomes of Tick-borne encephalitis: A systematic literature review",
+      "doi": "10.1016/j.ttbdis.2024.102407",
+      "pmid": null,
+      "journal": "Ticks and Tick-borne Diseases",
+      "publisher": "Elsevier BV",
+      "authors": [
+        "Kate Halsby",
+        "Liesl Gildea",
+        "Harish Madhava",
+        "Frederick J. Angulo",
+        "Andreas Pilz",
+        "Wilhelm Erber",
+        "Jennifer Moisi",
+        "Katharina Schley",
+        "Ann Colosia",
+        "Johann Sellner"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2024-11-01T00:00:00+00:00",
+      "indexed_at": "2026-07-04T04:54:23+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://linkinghub.elsevier.com/retrieve/pii/S1877959X24001006",
+      "license_url": "https://www.elsevier.com/tdm/userlicense/1.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.432,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D205",
+          "slug": "tick-borne-encephalitis",
+          "name_en": "Tick-borne encephalitis",
+          "name_zh": "蜱传脑炎",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Tick-borne encephalitis. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与蜱传脑炎相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1016/j.ttbdis.2024.102407",
+        "publisher": "https://linkinghub.elsevier.com/retrieve/pii/S1877959X24001006"
+      },
+      "updated_at": "2026-08-13T16:05:48.137550+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:ab5fb8f49aaa0cf6",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D205",
+          "disease_name_en": "Tick-borne encephalitis",
+          "disease_name_zh": "蜱传脑炎",
+          "geographies": [
+            {
+              "code": "SE",
+              "name_en": "Sweden"
+            }
+          ],
+          "data_through": "2026-07-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 156.0,
+            "previous": 92.0,
+            "absolute_change": 64.0,
+            "change_pct": 69.57
+          },
+          "risk": {
+            "score": 46.1,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    }
+  ],
+  "url": "/research/weekly/2024-W44/"
+}

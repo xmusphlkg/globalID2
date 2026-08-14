@@ -1,0 +1,179 @@
+{
+  "article_id": "lit_29f8de0b4b89ee7716637004",
+  "slug": "10-3390-idr17030071-29f8de0b",
+  "title": "Clinical and Occupational Predictors of Mortality in Ebola Virus Disease: A Commentary from the Democratic Republic of Congo (2018–2020)",
+  "doi": "10.3390/idr17030071",
+  "pmid": null,
+  "journal": "Infectious Disease Reports",
+  "publisher": "MDPI AG",
+  "authors": [
+    "Jean Paul Muambangu Milambo",
+    "Charles Bitamazire Businge"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Commentary",
+  "published_at": "2025-06-18T00:00:00+00:00",
+  "indexed_at": "2026-06-19T14:44:32+00:00",
+  "open_access_status": "open",
+  "open_access_url": "https://www.mdpi.com/2036-7449/17/3/71",
+  "license_url": "https://creativecommons.org/licenses/by/4.0/",
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.512,
+  "is_featured": false,
+  "diseases": [
+    {
+      "disease_id": "D050",
+      "slug": "ebola",
+      "name_en": "Ebola",
+      "name_zh": "埃博拉出血热",
+      "confidence": 0.82
+    }
+  ],
+  "countries": [],
+  "topics": [
+    {
+      "name": "Outbreak investigation",
+      "confidence": 0.66
+    }
+  ],
+  "related_surveillance": [],
+  "summary": {},
+  "why_it_matters_en": "This recent commentary is indexed for its relevance to Ebola. Read the original source before applying its findings.",
+  "why_it_matters_zh": "这项近期Commentary因与埃博拉出血热相关而被收录。应用其结论前请阅读原始文献。",
+  "source_urls": {
+    "doi": "https://doi.org/10.3390/idr17030071",
+    "publisher": "https://www.mdpi.com/2036-7449/17/3/71"
+  },
+  "updated_at": "2026-08-13T16:05:48.137341+00:00",
+  "related_signals": [
+    {
+      "signal_id": "event:36",
+      "section": "emerging",
+      "kind": "official_event",
+      "title": "Ebola disease caused by Bundibugyo virus - Democratic Republic of the Congo",
+      "disease_id": "D050",
+      "disease_name_en": "Ebola",
+      "disease_name_zh": "埃博拉出血热",
+      "geographies": [
+        {
+          "code": "CD",
+          "name_en": "Democratic Republic of the Congo"
+        }
+      ],
+      "data_through": "2026-08-01",
+      "window": {
+        "label": null,
+        "current": null,
+        "previous": null,
+        "absolute_change": null,
+        "change_pct": null
+      },
+      "risk": {
+        "score": null,
+        "level": null,
+        "confidence": "high"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    },
+    {
+      "signal_id": "event:37",
+      "section": "emerging",
+      "kind": "official_event",
+      "title": "Ebola disease caused by Bundibugyo virus, Democratic Republic of the Congo & Uganda",
+      "disease_id": "D050",
+      "disease_name_en": "Ebola",
+      "disease_name_zh": "埃博拉出血热",
+      "geographies": [
+        {
+          "code": "CD",
+          "name_en": "Democratic Republic of the Congo"
+        },
+        {
+          "code": "UG",
+          "name_en": "Uganda"
+        }
+      ],
+      "data_through": "2026-07-17",
+      "window": {
+        "label": null,
+        "current": null,
+        "previous": null,
+        "absolute_change": null,
+        "change_pct": null
+      },
+      "risk": {
+        "score": null,
+        "level": null,
+        "confidence": "high"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-29f8de0b4b89ee7716637004",
+        "type": "article",
+        "label": "Clinical and Occupational Predictors of Mortality in Ebola Virus Disease: A Commentary from the Democratic Republic of Congo (2018–2020)",
+        "slug": "10-3390-idr17030071-29f8de0b",
+        "url": "/research/articles/10-3390-idr17030071-29f8de0b/",
+        "published_at": "2025-06-18T00:00:00+00:00",
+        "study_type": "Commentary"
+      },
+      {
+        "id": "disease:d050",
+        "type": "disease",
+        "label": "Ebola",
+        "disease_id": "D050",
+        "name_zh": "埃博拉出血热",
+        "slug": "ebola",
+        "url": "/diseases/ebola/"
+      },
+      {
+        "id": "study-type:commentary",
+        "type": "study_type",
+        "label": "Commentary"
+      },
+      {
+        "id": "topic:outbreak-investigation",
+        "type": "topic",
+        "label": "Outbreak investigation"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-29f8de0b4b89ee7716637004|ABOUT_DISEASE|disease:d050",
+        "source": "article:lit-29f8de0b4b89ee7716637004",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d050",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-29f8de0b4b89ee7716637004|ADDRESSES_TOPIC|topic:outbreak-investigation",
+        "source": "article:lit-29f8de0b4b89ee7716637004",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:outbreak-investigation",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-29f8de0b4b89ee7716637004|USES_STUDY_DESIGN|study-type:commentary",
+        "source": "article:lit-29f8de0b4b89ee7716637004",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:commentary"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 4,
+      "edges": 3,
+      "articles": 1
+    }
+  }
+}

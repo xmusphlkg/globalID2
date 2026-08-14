@@ -1,0 +1,210 @@
+{
+  "article_id": "lit_55727a361bf7dc22075ad14d",
+  "slug": "10-12659-msm-954627-55727a36",
+  "title": "Editorial: The WHO Identifies Ebola Disease Due to Bundibugyo Virus as a Public Health Emergency of International Concern (PHEIC) as Vaccine Development Accelerates.",
+  "doi": "10.12659/msm.954627",
+  "pmid": "42383297",
+  "journal": "Medical science monitor : international medical journal of experimental and clinical research",
+  "publisher": null,
+  "authors": [
+    "Parums DV"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Commentary",
+  "published_at": "2026-07-01T00:00:00+00:00",
+  "indexed_at": "2026-07-01T00:00:00+00:00",
+  "open_access_status": "unknown",
+  "open_access_url": null,
+  "license_url": null,
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.658,
+  "is_featured": false,
+  "diseases": [
+    {
+      "disease_id": "D050",
+      "slug": "ebola",
+      "name_en": "Ebola",
+      "name_zh": "埃博拉出血热",
+      "confidence": 0.82
+    }
+  ],
+  "countries": [],
+  "topics": [
+    {
+      "name": "Outbreak investigation",
+      "confidence": 0.66
+    },
+    {
+      "name": "Transmission dynamics",
+      "confidence": 0.66
+    },
+    {
+      "name": "Vaccination",
+      "confidence": 0.66
+    }
+  ],
+  "related_surveillance": [],
+  "summary": {},
+  "why_it_matters_en": "This recent commentary is indexed for its relevance to Ebola. Read the original source before applying its findings.",
+  "why_it_matters_zh": "这项近期Commentary因与埃博拉出血热相关而被收录。应用其结论前请阅读原始文献。",
+  "source_urls": {
+    "doi": "https://doi.org/10.12659/msm.954627",
+    "pubmed": "https://pubmed.ncbi.nlm.nih.gov/42383297/"
+  },
+  "updated_at": "2026-08-13T16:05:48.137383+00:00",
+  "related_signals": [
+    {
+      "signal_id": "event:36",
+      "section": "emerging",
+      "kind": "official_event",
+      "title": "Ebola disease caused by Bundibugyo virus - Democratic Republic of the Congo",
+      "disease_id": "D050",
+      "disease_name_en": "Ebola",
+      "disease_name_zh": "埃博拉出血热",
+      "geographies": [
+        {
+          "code": "CD",
+          "name_en": "Democratic Republic of the Congo"
+        }
+      ],
+      "data_through": "2026-08-01",
+      "window": {
+        "label": null,
+        "current": null,
+        "previous": null,
+        "absolute_change": null,
+        "change_pct": null
+      },
+      "risk": {
+        "score": null,
+        "level": null,
+        "confidence": "high"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    },
+    {
+      "signal_id": "event:37",
+      "section": "emerging",
+      "kind": "official_event",
+      "title": "Ebola disease caused by Bundibugyo virus, Democratic Republic of the Congo & Uganda",
+      "disease_id": "D050",
+      "disease_name_en": "Ebola",
+      "disease_name_zh": "埃博拉出血热",
+      "geographies": [
+        {
+          "code": "CD",
+          "name_en": "Democratic Republic of the Congo"
+        },
+        {
+          "code": "UG",
+          "name_en": "Uganda"
+        }
+      ],
+      "data_through": "2026-07-17",
+      "window": {
+        "label": null,
+        "current": null,
+        "previous": null,
+        "absolute_change": null,
+        "change_pct": null
+      },
+      "risk": {
+        "score": null,
+        "level": null,
+        "confidence": "high"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-55727a361bf7dc22075ad14d",
+        "type": "article",
+        "label": "Editorial: The WHO Identifies Ebola Disease Due to Bundibugyo Virus as a Public Health Emergency of International Concern (PHEIC) as Vaccine Development Accelerates.",
+        "slug": "10-12659-msm-954627-55727a36",
+        "url": "/research/articles/10-12659-msm-954627-55727a36/",
+        "published_at": "2026-07-01T00:00:00+00:00",
+        "study_type": "Commentary"
+      },
+      {
+        "id": "disease:d050",
+        "type": "disease",
+        "label": "Ebola",
+        "disease_id": "D050",
+        "name_zh": "埃博拉出血热",
+        "slug": "ebola",
+        "url": "/diseases/ebola/"
+      },
+      {
+        "id": "study-type:commentary",
+        "type": "study_type",
+        "label": "Commentary"
+      },
+      {
+        "id": "topic:outbreak-investigation",
+        "type": "topic",
+        "label": "Outbreak investigation"
+      },
+      {
+        "id": "topic:transmission-dynamics",
+        "type": "topic",
+        "label": "Transmission dynamics"
+      },
+      {
+        "id": "topic:vaccination",
+        "type": "topic",
+        "label": "Vaccination"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-55727a361bf7dc22075ad14d|ABOUT_DISEASE|disease:d050",
+        "source": "article:lit-55727a361bf7dc22075ad14d",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d050",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-55727a361bf7dc22075ad14d|ADDRESSES_TOPIC|topic:outbreak-investigation",
+        "source": "article:lit-55727a361bf7dc22075ad14d",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:outbreak-investigation",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-55727a361bf7dc22075ad14d|ADDRESSES_TOPIC|topic:transmission-dynamics",
+        "source": "article:lit-55727a361bf7dc22075ad14d",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:transmission-dynamics",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-55727a361bf7dc22075ad14d|ADDRESSES_TOPIC|topic:vaccination",
+        "source": "article:lit-55727a361bf7dc22075ad14d",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccination",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-55727a361bf7dc22075ad14d|USES_STUDY_DESIGN|study-type:commentary",
+        "source": "article:lit-55727a361bf7dc22075ad14d",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:commentary"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 6,
+      "edges": 5,
+      "articles": 1
+    }
+  }
+}

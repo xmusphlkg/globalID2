@@ -1,0 +1,1707 @@
+{
+  "articles": [
+    {
+      "article_id": "lit_7be8baca2912577c36110fea",
+      "slug": "10-1093-jtm-taag065-7be8baca",
+      "title": "Shared evidence, different recommendations: a comparative analysis of Qdenga (TAK-003) dengue vaccine guidance for travellers across countries",
+      "doi": "10.1093/jtm/taag065",
+      "pmid": "42485451",
+      "journal": "Journal of Travel Medicine",
+      "publisher": "Oxford University Press (OUP)",
+      "authors": [
+        "Sarah L McGuinness",
+        "Dipti Patel",
+        "Helena H Askling",
+        "Camilla Rothe",
+        "Steven Schofield",
+        "Robert Steffen",
+        "Leo G Visser",
+        "Lin H Chen"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-07-22T00:00:00+00:00",
+      "indexed_at": "2026-08-08T18:42:46+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://academic.oup.com/jtm/advance-article/doi/10.1093/jtm/taag065/8739998",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.717,
+      "is_featured": true,
+      "diseases": [
+        {
+          "disease_id": "D021",
+          "slug": "dengue",
+          "name_en": "Dengue",
+          "name_zh": "登革热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Vaccination",
+          "confidence": 0.7100000000000001
+        },
+        {
+          "name": "Travel medicine",
+          "confidence": 0.7100000000000001
+        },
+        {
+          "name": "Vaccine effectiveness",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {
+        "en": {
+          "research_question": "How do national advisory organizations differ in their policy recommendations for administering the Qdenga dengue vaccine to international travelers?",
+          "study_design": "A comparative policy analysis that evaluated publicly accessible national guidelines alongside survey responses from health advisory committees.",
+          "population_setting": "Public health advisory bodies representing seventeen nations, primarily non-endemic regions where the vaccine holds formal licensing approval.",
+          "main_findings": "National directives consistently exceeded regulatory permissions in restrictiveness while demonstrating uniform support for individuals with confirmed past infections. Eligibility criteria for travelers lacking documented infection history showed substantial cross-border variation based on inconsistent application of exposure metrics and host susceptibility factors. Protocols also diverged regarding infection verification methods and pre-departure dosing schedules.",
+          "public_health_relevance": "Inconsistent international protocols complicate clinical counseling and traveler preparedness for dengue-endemic destinations. Harmonizing future advisories will likely depend on supplementary effectiveness data targeting specific demographic groups currently underrepresented in clinical trials. Maintaining transparent dialogue between providers and patients remains critical amid these policy discrepancies.",
+          "limitations": "The investigation synthesizes existing policy documents and committee surveys rather than measuring direct clinical outcomes or population-level vaccination coverage. Interpretive disparities stem from inherent differences between controlled trial cohorts and real-world travel demographics.",
+          "gids_interpretation": "The manuscript demonstrates how identical foundational research can produce divergent regulatory pathways when expert panels navigate evidentiary gaps differently. It provides context for understanding guideline heterogeneity without implying changes in underlying pathogen circulation or novel safety signals.",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.936,
+            "generated_at": "2026-08-13T12:41:39.630422+00:00",
+            "editorially_approved": true,
+            "automatically_approved": false,
+            "automation_policy_version": null,
+            "publication_gate": "human-review-required"
+          }
+        },
+        "zh": {
+          "research_question": "该研究旨在系统对比不同国家针对旅行者使用Qdenga（TAK-003）疫苗的官方指导原则，并剖析各国咨询机构在推荐标准上的异同。",
+          "study_design": "本研究采用横向比较设计，整合问卷调查结果与公开指南的结构化审查，对多国发布的旅行者疫苗接种建议进行政策比对。",
+          "population_setting": "研究覆盖来自17个国家的18个公共卫生咨询机构，重点聚焦具有或无实验室确诊既往登革热感染史的旅行者群体。",
+          "main_findings": "各国指导原则整体较监管授权更为保守。针对已确诊既往感染的旅行者，各机构推荐高度一致；但未明确感染史人群的推荐分歧较大。决策过程中对旅行时长、重复暴露及宿主因素的应用方式不一，部分机构仅限既往感染者接种，另一些则依据暴露风险放宽条件或强制要求出行前完成全程免疫。",
+          "public_health_relevance": "研究凸显了跨国疫苗政策碎片化现状，强调在标准不一时应优先保障决策透明度并推行医患共同决策。同时指出需积累阴性旅行者及老年群体的有效性与安全性数据，以推动未来指南趋同。",
+          "limitations": "现有资料存在数据空白，且临床试验受试者特征与实际旅行者群体存在差异。研究主要基于公开文本与问卷反馈，未能直接验证实际接种后的临床转归，各机构对证据不确定性的管理策略差异可能限制结论的广泛适用性。",
+          "gids_interpretation": "该文献为公共卫生监测网络提供了关于登革热疫苗跨境政策协调性的背景参考。其内容有助于梳理各国在共享科学证据基础上形成差异化建议的内在逻辑，可为后续指南动态调整与资源配置提供结构化信息支撑。",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.942,
+            "generated_at": "2026-08-13T12:45:30.851163+00:00",
+            "editorially_approved": true,
+            "automatically_approved": false,
+            "automation_policy_version": null,
+            "publication_gate": "human-review-required"
+          }
+        }
+      },
+      "why_it_matters_en": "Inconsistent international protocols complicate clinical counseling and traveler preparedness for dengue-endemic destinations. Harmonizing future advisories will likely depend on supplementary effectiveness data targeting specific demographic groups currently underrepresented in clinical trials. Maintaining transparent dialogue between providers and patients remains critical amid these policy discrepancies.",
+      "why_it_matters_zh": "研究凸显了跨国疫苗政策碎片化现状，强调在标准不一时应优先保障决策透明度并推行医患共同决策。同时指出需积累阴性旅行者及老年群体的有效性与安全性数据，以推动未来指南趋同。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1093/jtm/taag065",
+        "publisher": "https://academic.oup.com/jtm/advance-article/doi/10.1093/jtm/taag065/8739998",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/42485451/"
+      },
+      "updated_at": "2026-08-13T12:40:20.785718+00:00",
+      "related_signals": []
+    },
+    {
+      "article_id": "lit_d7a345bfcab354ff9606223c",
+      "slug": "10-1111-irv-70303-d7a345bf",
+      "title": "Effectiveness of Influenza Vaccines and Duration of Protection Against Hospitalisation During the 2024/25 Season in Northern Ireland, UK",
+      "doi": "10.1111/irv.70303",
+      "pmid": null,
+      "journal": "Influenza and Other Respiratory Viruses",
+      "publisher": "Wiley",
+      "authors": [
+        "Magda Bucholc",
+        "Siobhán Murphy",
+        "Mark G. O'Doherty",
+        "Suzanne Wilton",
+        "Emma Dickson",
+        "Declan T. Bradley"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-08-06T00:00:00+00:00",
+      "indexed_at": "2026-08-06T12:52:04+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://onlinelibrary.wiley.com/doi/10.1111/irv.70303",
+      "license_url": "http://creativecommons.org/licenses/by/4.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.723,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D038",
+          "slug": "influenza",
+          "name_en": "Influenza",
+          "name_zh": "流行性感冒",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [
+        {
+          "code": "IE",
+          "name_en": "Ireland",
+          "name_zh": null,
+          "confidence": 0.78
+        }
+      ],
+      "topics": [
+        {
+          "name": "Vaccination",
+          "confidence": 0.7100000000000001
+        },
+        {
+          "name": "Surveillance",
+          "confidence": 0.66
+        },
+        {
+          "name": "Vaccine effectiveness",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Influenza. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与流行性感冒相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1111/irv.70303",
+        "publisher": "https://onlinelibrary.wiley.com/doi/10.1111/irv.70303"
+      },
+      "updated_at": "2026-08-13T16:05:48.137415+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:d4f34da837688d03",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D038",
+          "disease_name_en": "Influenza",
+          "disease_name_zh": "流行性感冒",
+          "geographies": [
+            {
+              "code": "IE",
+              "name_en": "Ireland"
+            }
+          ],
+          "data_through": "2026-07-27",
+          "window": {
+            "label": "Last 4 weeks",
+            "current": 230.0,
+            "previous": 46.0,
+            "absolute_change": 184.0,
+            "change_pct": 400.0
+          },
+          "risk": {
+            "score": 65.5,
+            "level": "high",
+            "confidence": "low"
+          },
+          "relation_level": "exact_disease_geography",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_22c8f2aaf6c29bea8d5704b5",
+      "slug": "10-3390-pathogens15050503-22c8f2aa",
+      "title": "Tick-Borne Encephalitis Vaccine Effectiveness and Impact in Slovenia, 2019-2024.",
+      "doi": "10.3390/pathogens15050503",
+      "pmid": "42198629",
+      "journal": "Pathogens (Basel, Switzerland)",
+      "publisher": null,
+      "authors": [
+        "Kordež J",
+        "Angulo FJ",
+        "Zhang P",
+        "Davidson A",
+        "Edwards J",
+        "Harper LR",
+        "Pilz A",
+        "Gould H"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-05-07T00:00:00+00:00",
+      "indexed_at": "2026-05-27T00:00:00+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC13209445",
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.686,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D205",
+          "slug": "tick-borne-encephalitis",
+          "name_en": "Tick-borne encephalitis",
+          "name_zh": "蜱传脑炎",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Vaccination",
+          "confidence": 0.7100000000000001
+        },
+        {
+          "name": "Surveillance",
+          "confidence": 0.66
+        },
+        {
+          "name": "Vaccine effectiveness",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {
+        "en": {
+          "research_question": "What is the estimated protective efficacy and population-level impact of tick-borne encephalitis immunization among Slovenian residents?",
+          "study_design": "An observational evaluation utilizing a screening methodology to compare vaccination proportions between confirmed infection cases and a broader survey cohort across a five-year interval.",
+          "population_setting": "Individuals residing in Slovenia, specifically analyzing patients with documented tick-borne encephalitis diagnoses and a separate sample of surveyed adults regarding their immunization status.",
+          "main_findings": "The analysis determined a ninety-three point four percent protection rate for recipients completing three or more scheduled doses. This coverage level resulted in an estimated four hundred twenty-six avoided infections during the study period, while hypothetical universal adoption projected nearly one thousand additional prevented cases.",
+          "public_health_relevance": "The data demonstrate significant disease reduction potential through routine immunization, though they simultaneously reveal substantial gaps in current community participation that warrant expanded promotional strategies.",
+          "limitations": "The evaluation is constrained by incomplete immunization documentation for nearly half of the reported infections and utilizes survey-derived denominators rather than exhaustive demographic tracking.",
+          "gids_interpretation": "This record supplies historical performance metrics and regional coverage estimates that can inform trend analysis and program planning, serving as a static reference point for epidemiological context.",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.945,
+            "generated_at": "2026-08-13T19:06:47.994171+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        }
+      },
+      "why_it_matters_en": "The data demonstrate significant disease reduction potential through routine immunization, though they simultaneously reveal substantial gaps in current community participation that warrant expanded promotional strategies.",
+      "why_it_matters_zh": "这项近期Journal article因与蜱传脑炎相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.3390/pathogens15050503",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/42198629/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137577+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:ab5fb8f49aaa0cf6",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D205",
+          "disease_name_en": "Tick-borne encephalitis",
+          "disease_name_zh": "蜱传脑炎",
+          "geographies": [
+            {
+              "code": "SE",
+              "name_en": "Sweden"
+            }
+          ],
+          "data_through": "2026-07-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 156.0,
+            "previous": 92.0,
+            "absolute_change": 64.0,
+            "change_pct": 69.57
+          },
+          "risk": {
+            "score": 46.1,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_75b4e89a421c45430d423cbc",
+      "slug": "10-1016-s2214-109x-26-00017-3-75b4e89a",
+      "title": "Inclusion of young adolescents in policy development for new tuberculosis vaccines.",
+      "doi": "10.1016/s2214-109x(26)00017-3",
+      "pmid": "42259345",
+      "journal": "The Lancet. Global health",
+      "publisher": null,
+      "authors": [
+        "Hatherill M",
+        "Clark RA",
+        "Martinez L",
+        "Fiore-Gartland AL",
+        "Garcia-Basteiro AL",
+        "Churchyard GJ",
+        "Rangaka MX",
+        "Behr MA",
+        "Evans T",
+        "Mave V",
+        "Hill PC",
+        "Hanekom WA",
+        "Cobelens F",
+        "White RG"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-06-08T00:00:00+00:00",
+      "indexed_at": "2026-06-08T00:00:00+00:00",
+      "open_access_status": "unknown",
+      "open_access_url": null,
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.677,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D025",
+          "slug": "tuberculosis",
+          "name_en": "Tuberculosis",
+          "name_zh": "肺结核",
+          "confidence": 0.9
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Vaccination",
+          "confidence": 0.7100000000000001
+        },
+        {
+          "name": "Vaccine effectiveness",
+          "confidence": 0.66
+        },
+        {
+          "name": "Health policy",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Tuberculosis. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与肺结核相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1016/s2214-109x(26)00017-3",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/42259345/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137621+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:cbe12a284bd5cd9b",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D025",
+          "disease_name_en": "Tuberculosis",
+          "disease_name_zh": "肺结核",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 43.0,
+            "previous": 32.0,
+            "absolute_change": 11.0,
+            "change_pct": 34.38
+          },
+          "risk": {
+            "score": 56.0,
+            "level": "high",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_205efd103f9b2cb5abcb135d",
+      "slug": "10-3390-vaccines14020164-205efd10",
+      "title": "A Case-Control Study on the Effectiveness of Tick-Borne Encephalitis Vaccination Against Hospitalizations in an Endemic Area in Northeastern Italy.",
+      "doi": "10.3390/vaccines14020164",
+      "pmid": "41746084",
+      "journal": "Vaccines",
+      "publisher": null,
+      "authors": [
+        "Valent F",
+        "Degani G"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Case-control study",
+      "published_at": "2026-02-10T00:00:00+00:00",
+      "indexed_at": "2026-02-26T00:00:00+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC12944975",
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.65,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D205",
+          "slug": "tick-borne-encephalitis",
+          "name_en": "Tick-borne encephalitis",
+          "name_zh": "蜱传脑炎",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Vaccination",
+          "confidence": 0.7100000000000001
+        },
+        {
+          "name": "Vaccine effectiveness",
+          "confidence": 0.66
+        },
+        {
+          "name": "Climate and environment",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {
+        "en": {
+          "research_question": "What is the protective impact of the tick-borne encephalitis immunization regimen in preventing severe disease requiring medical admission among residents of a recognized endemic zone in northeastern Italy?",
+          "study_design": "The investigation employed a case-control methodology utilizing linked regional health records spanning seven years. Participants were stratified based on hospitalization status following laboratory confirmation of infection.",
+          "population_setting": "The analysis focused on inhabitants of the Udine province within the Friuli Venezia Giulia region, which is classified as an endemic zone for the pathogen.",
+          "main_findings": "Individuals receiving three or more vaccine doses demonstrated a substantially reduced likelihood of hospital admission compared to those without immunization. Provincial coverage reached approximately ten percent, with notably higher rates recorded in elevated geographic districts.",
+          "public_health_relevance": "The documentation underscores the value of immunization strategies in reducing severe disease outcomes within affected communities. Regional variations in coverage indicate opportunities for targeted outreach initiatives to improve community protection.",
+          "limitations": "The evaluation was constrained by a limited number of confirmed hospitalization events.",
+          "gids_interpretation": "This publication offers background information on regional immunization practices and documented protection levels against severe neurological infections. It serves as a reference point for understanding historical prevention efforts rather than indicating current outbreak dynamics.",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.945,
+            "generated_at": "2026-08-13T22:08:38.000701+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        },
+        "zh": {
+          "research_question": "评估特定流行区蜱传脑炎疫苗的免疫保护效果及人群接种覆盖率。",
+          "study_design": "采用基于区域健康数据库的病例对照设计，整合了疫苗接种登记、实验室血清学检测与住院记录。",
+          "population_setting": "研究对象限定于意大利东北部乌迪内省居民，涵盖确诊住院患者及同期接受抗体筛查但未住院的对照个体。",
+          "main_findings": "研究周期内共记录二十余例确诊住院病例。完成三剂及以上接种者相较于未接种者的住院几率呈现显著下降。全省接种率约为百分之十，且山区明显高于平原地带。",
+          "public_health_relevance": "该结果证实了免疫预防在降低严重神经系统感染风险中的实际价值。数据提示需结合当地生态变化趋势，进一步提升重点区域的接种水平与健康宣教。",
+          "limitations": "作者明确指出分析受限于确诊病例数量较少。",
+          "gids_interpretation": "此项观察性研究提供了特定地理范围内的疫苗表现基线信息。其内容仅用于说明文献背景与学术可发现性，不关联实时监测信号。",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.952,
+            "generated_at": "2026-08-13T22:09:01.107961+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        }
+      },
+      "why_it_matters_en": "The documentation underscores the value of immunization strategies in reducing severe disease outcomes within affected communities. Regional variations in coverage indicate opportunities for targeted outreach initiatives to improve community protection.",
+      "why_it_matters_zh": "该结果证实了免疫预防在降低严重神经系统感染风险中的实际价值。数据提示需结合当地生态变化趋势，进一步提升重点区域的接种水平与健康宣教。",
+      "source_urls": {
+        "doi": "https://doi.org/10.3390/vaccines14020164",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41746084/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137597+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:ab5fb8f49aaa0cf6",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D205",
+          "disease_name_en": "Tick-borne encephalitis",
+          "disease_name_zh": "蜱传脑炎",
+          "geographies": [
+            {
+              "code": "SE",
+              "name_en": "Sweden"
+            }
+          ],
+          "data_through": "2026-07-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 156.0,
+            "previous": 92.0,
+            "absolute_change": 64.0,
+            "change_pct": 69.57
+          },
+          "risk": {
+            "score": 46.1,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_cd6bca7818ee5821e4ff6379",
+      "slug": "10-2807-1560-7917-es-2025-30-46-2500854-cd6bca78",
+      "title": "Early influenza virus characterisation and vaccine effectiveness in England in autumn 2025, a period dominated by influenza A(H3N2) subclade K",
+      "doi": "10.2807/1560-7917.es.2025.30.46.2500854",
+      "pmid": "41267661",
+      "journal": "Eurosurveillance",
+      "publisher": "European Centre for Disease Control and Prevention (ECDC)",
+      "authors": [
+        "Freja CM Kirsebom",
+        "Catherine Thompson",
+        "Tiina Talts",
+        "Beatrix Kele",
+        "Heather J Whitaker",
+        "Nick Andrews",
+        "Nurin Abdul Aziz",
+        "Christopher Rawlinson",
+        "Rebecca E Green",
+        "Catherine Quinot",
+        "Nicholas Gardner",
+        "Elizabeth Waller",
+        "Alex Allen",
+        "Conall H Watson",
+        "Suzanna LR McDonald",
+        "Maria Zambon",
+        "Richard Pebody",
+        "Mary Ramsay",
+        "Katja Hoschler",
+        "Anika Singanayagam",
+        "Jamie Lopez Bernal"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2025-11-20T00:00:00+00:00",
+      "indexed_at": "2026-08-08T22:54:52+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC12639273",
+      "license_url": "http://creativecommons.org/licenses/by/4.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.599,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D038",
+          "slug": "influenza",
+          "name_en": "Influenza",
+          "name_zh": "流行性感冒",
+          "confidence": 0.86
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Vaccination",
+          "confidence": 0.7100000000000001
+        },
+        {
+          "name": "Vaccine effectiveness",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Influenza. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与流行性感冒相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.2807/1560-7917.es.2025.30.46.2500854",
+        "publisher": "https://www.eurosurveillance.org/content/10.2807/1560-7917.ES.2025.30.46.2500854",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41267661/"
+      },
+      "updated_at": "2026-08-13T12:40:20.771712+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:d4f34da837688d03",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D038",
+          "disease_name_en": "Influenza",
+          "disease_name_zh": "流行性感冒",
+          "geographies": [
+            {
+              "code": "IE",
+              "name_en": "Ireland"
+            }
+          ],
+          "data_through": "2026-07-27",
+          "window": {
+            "label": "Last 4 weeks",
+            "current": 230.0,
+            "previous": 46.0,
+            "absolute_change": 184.0,
+            "change_pct": 400.0
+          },
+          "risk": {
+            "score": 65.5,
+            "level": "high",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_87fbe51bb440cc21235542d7",
+      "slug": "10-1111-irv-70023-87fbe51b",
+      "title": "Influenza Vaccine Effectiveness Against Symptomatic Influenza in Primary Care: A Test Negative Case Control Study Over Two Influenza Seasons 2022/2023 and 2023/2024 in Ireland",
+      "doi": "10.1111/irv.70023",
+      "pmid": null,
+      "journal": "Influenza and Other Respiratory Viruses",
+      "publisher": "Wiley",
+      "authors": [
+        "Louise Marron",
+        "Adele McKenna",
+        "Joan O'Donnell",
+        "Michael Joyce",
+        "Charlene Bennett",
+        "Jeff Connell",
+        "Lisa Domegan"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Case-control study",
+      "published_at": "2024-12-02T00:00:00+00:00",
+      "indexed_at": "2026-07-22T17:58:54+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://onlinelibrary.wiley.com/doi/10.1111/irv.70023",
+      "license_url": "http://creativecommons.org/licenses/by/4.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.576,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D038",
+          "slug": "influenza",
+          "name_en": "Influenza",
+          "name_zh": "流行性感冒",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [
+        {
+          "code": "IE",
+          "name_en": "Ireland",
+          "name_zh": null,
+          "confidence": 0.78
+        }
+      ],
+      "topics": [
+        {
+          "name": "Vaccination",
+          "confidence": 0.7100000000000001
+        },
+        {
+          "name": "Surveillance",
+          "confidence": 0.66
+        },
+        {
+          "name": "Vaccine effectiveness",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent case-control study is indexed for its relevance to Influenza. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Case-control study因与流行性感冒相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1111/irv.70023",
+        "publisher": "https://onlinelibrary.wiley.com/doi/10.1111/irv.70023"
+      },
+      "updated_at": "2026-08-13T16:05:48.137409+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:d4f34da837688d03",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D038",
+          "disease_name_en": "Influenza",
+          "disease_name_zh": "流行性感冒",
+          "geographies": [
+            {
+              "code": "IE",
+              "name_en": "Ireland"
+            }
+          ],
+          "data_through": "2026-07-27",
+          "window": {
+            "label": "Last 4 weeks",
+            "current": 230.0,
+            "previous": 46.0,
+            "absolute_change": 184.0,
+            "change_pct": 400.0
+          },
+          "risk": {
+            "score": 65.5,
+            "level": "high",
+            "confidence": "low"
+          },
+          "relation_level": "exact_disease_geography",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_adff930a9d09fd168e7349b3",
+      "slug": "10-1093-eurpub-ckae144-1924-adff930a",
+      "title": "Influenza vaccine effectiveness in Ireland during two influenza seasons, 2022/23 and 2023/24",
+      "doi": "10.1093/eurpub/ckae144.1924",
+      "pmid": null,
+      "journal": "European Journal of Public Health",
+      "publisher": "Oxford University Press (OUP)",
+      "authors": [
+        "L Marron",
+        "A McKenna",
+        "J O’Donnell",
+        "L Domegan"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Case-control study",
+      "published_at": "2024-10-28T00:00:00+00:00",
+      "indexed_at": "2025-07-30T11:58:36+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://academic.oup.com/eurpub/article/doi/10.1093/eurpub/ckae144.1924/7844370",
+      "license_url": "https://creativecommons.org/licenses/by-nc/4.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.576,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D038",
+          "slug": "influenza",
+          "name_en": "Influenza",
+          "name_zh": "流行性感冒",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [
+        {
+          "code": "IE",
+          "name_en": "Ireland",
+          "name_zh": null,
+          "confidence": 0.78
+        }
+      ],
+      "topics": [
+        {
+          "name": "Vaccination",
+          "confidence": 0.7100000000000001
+        },
+        {
+          "name": "Surveillance",
+          "confidence": 0.66
+        },
+        {
+          "name": "Vaccine effectiveness",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {
+        "en": {
+          "research_question": "What is the protective capacity of seasonal immunization against primary care visits for laboratory-confirmed influenza-associated respiratory illness in Ireland across the 2022/23 and 2023/24 periods?",
+          "study_design": "Researchers applied a test-negative case-control framework operating inside a country-wide primary care monitoring system to contrast immunization records between PCR-positive patients and PCR-negative individuals presenting with comparable respiratory complaints.",
+          "population_setting": "The analysis focused on individuals seeking outpatient care for acute respiratory symptoms in Ireland, with specific attention to pediatric cohorts and adults meeting established age or clinical risk criteria.",
+          "main_findings": "Immunization showed moderate protection against clinic attendance for influenza-linked respiratory conditions, yielding point estimates between thirty-seven and forty-two percent for the broader group and climbing to sixty-seven percent among younger participants during the second evaluated period.",
+          "public_health_relevance": "Sustaining routine immunization initiatives appears capable of reducing outpatient utilization for influenza-related illnesses, with notably stronger protective signals observed when administering live attenuated formulations to school-aged youth.",
+          "limitations": "The reliance on a targeted primary care monitoring network may restrict broader demographic representation, while several subgroup confidence intervals displayed considerable width or included null values.",
+          "gids_interpretation": "This report supplies seasonal efficacy metrics that may function as contextual benchmarks for evaluating regional immunization programs, without establishing real-time detection thresholds or operational surveillance triggers.",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.949,
+            "generated_at": "2026-08-14T07:08:01.252091+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        }
+      },
+      "why_it_matters_en": "Sustaining routine immunization initiatives appears capable of reducing outpatient utilization for influenza-related illnesses, with notably stronger protective signals observed when administering live attenuated formulations to school-aged youth.",
+      "why_it_matters_zh": "这项近期Case-control study因与流行性感冒相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1093/eurpub/ckae144.1924",
+        "publisher": "https://academic.oup.com/eurpub/article/doi/10.1093/eurpub/ckae144.1924/7844370"
+      },
+      "updated_at": "2026-08-13T16:05:48.137412+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:d4f34da837688d03",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D038",
+          "disease_name_en": "Influenza",
+          "disease_name_zh": "流行性感冒",
+          "geographies": [
+            {
+              "code": "IE",
+              "name_en": "Ireland"
+            }
+          ],
+          "data_through": "2026-07-27",
+          "window": {
+            "label": "Last 4 weeks",
+            "current": 230.0,
+            "previous": 46.0,
+            "absolute_change": 184.0,
+            "change_pct": 400.0
+          },
+          "risk": {
+            "score": 65.5,
+            "level": "high",
+            "confidence": "low"
+          },
+          "relation_level": "exact_disease_geography",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_8eb09af571aa65ace5796cda",
+      "slug": "10-1111-irv-70149-8eb09af5",
+      "title": "Influenza Vaccine Effectiveness During the 2023/2024 Season: A Test‐Negative Case–Control Study Among Emergency Hospital Admissions With Respiratory Conditions in Northern Ireland",
+      "doi": "10.1111/irv.70149",
+      "pmid": null,
+      "journal": "Influenza and Other Respiratory Viruses",
+      "publisher": "Wiley",
+      "authors": [
+        "Magda Bucholc",
+        "Mark G. O'Doherty",
+        "Declan T. Bradley"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2025-09-10T00:00:00+00:00",
+      "indexed_at": "2026-08-07T00:55:15+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://onlinelibrary.wiley.com/doi/10.1111/irv.70149",
+      "license_url": "http://creativecommons.org/licenses/by/4.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.556,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D038",
+          "slug": "influenza",
+          "name_en": "Influenza",
+          "name_zh": "流行性感冒",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [
+        {
+          "code": "IE",
+          "name_en": "Ireland",
+          "name_zh": null,
+          "confidence": 0.78
+        }
+      ],
+      "topics": [
+        {
+          "name": "Vaccination",
+          "confidence": 0.7100000000000001
+        },
+        {
+          "name": "Vaccine effectiveness",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Influenza. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与流行性感冒相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1111/irv.70149",
+        "publisher": "https://onlinelibrary.wiley.com/doi/10.1111/irv.70149"
+      },
+      "updated_at": "2026-08-13T16:05:48.137413+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:d4f34da837688d03",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D038",
+          "disease_name_en": "Influenza",
+          "disease_name_zh": "流行性感冒",
+          "geographies": [
+            {
+              "code": "IE",
+              "name_en": "Ireland"
+            }
+          ],
+          "data_through": "2026-07-27",
+          "window": {
+            "label": "Last 4 weeks",
+            "current": 230.0,
+            "previous": 46.0,
+            "absolute_change": 184.0,
+            "change_pct": 400.0
+          },
+          "risk": {
+            "score": 65.5,
+            "level": "high",
+            "confidence": "low"
+          },
+          "relation_level": "exact_disease_geography",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_01fcf411e8d82a36c15dae1c",
+      "slug": "10-1111-irv-70007-01fcf411",
+      "title": "Influenza Epidemiology and Vaccine Effectiveness Following Funded Influenza Vaccine in Queensland, Australia, 2022",
+      "doi": "10.1111/irv.70007",
+      "pmid": null,
+      "journal": "Influenza and Other Respiratory Viruses",
+      "publisher": "Wiley",
+      "authors": [
+        "Ashish C. Shrestha",
+        "Emma Field",
+        "Dharshi Thangarajah",
+        "Ross Andrews",
+        "Robert S. Ware",
+        "Stephen B. Lambert"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2024-09-25T00:00:00+00:00",
+      "indexed_at": "2026-02-27T02:47:04+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://onlinelibrary.wiley.com/doi/10.1111/irv.70007",
+      "license_url": "http://creativecommons.org/licenses/by/4.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.544,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D038",
+          "slug": "influenza",
+          "name_en": "Influenza",
+          "name_zh": "流行性感冒",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [
+        {
+          "code": "AU",
+          "name_en": "Australia",
+          "name_zh": null,
+          "confidence": 0.78
+        }
+      ],
+      "topics": [
+        {
+          "name": "Vaccination",
+          "confidence": 0.66
+        },
+        {
+          "name": "Vaccine effectiveness",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [
+        {
+          "disease_id": "D038",
+          "disease_name_en": "Influenza",
+          "disease_name_zh": "流行性感冒",
+          "disease_slug": "influenza",
+          "country_code": "AU",
+          "country_name_en": "Australia",
+          "url": "/diseases/influenza/",
+          "method": "high-confidence article geography intersected with GIDS series coverage"
+        }
+      ],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Influenza. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与流行性感冒相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1111/irv.70007",
+        "publisher": "https://onlinelibrary.wiley.com/doi/10.1111/irv.70007"
+      },
+      "updated_at": "2026-08-13T16:05:48.137431+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:d4f34da837688d03",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D038",
+          "disease_name_en": "Influenza",
+          "disease_name_zh": "流行性感冒",
+          "geographies": [
+            {
+              "code": "IE",
+              "name_en": "Ireland"
+            }
+          ],
+          "data_through": "2026-07-27",
+          "window": {
+            "label": "Last 4 weeks",
+            "current": 230.0,
+            "previous": 46.0,
+            "absolute_change": 184.0,
+            "change_pct": 400.0
+          },
+          "risk": {
+            "score": 65.5,
+            "level": "high",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    }
+  ],
+  "count": 10,
+  "publication_timeline": [
+    {
+      "month": "2024-09",
+      "publication_count": 1
+    },
+    {
+      "month": "2024-10",
+      "publication_count": 1
+    },
+    {
+      "month": "2024-12",
+      "publication_count": 1
+    },
+    {
+      "month": "2025-09",
+      "publication_count": 1
+    },
+    {
+      "month": "2025-11",
+      "publication_count": 1
+    },
+    {
+      "month": "2026-02",
+      "publication_count": 1
+    },
+    {
+      "month": "2026-05",
+      "publication_count": 1
+    },
+    {
+      "month": "2026-06",
+      "publication_count": 1
+    },
+    {
+      "month": "2026-07",
+      "publication_count": 1
+    },
+    {
+      "month": "2026-08",
+      "publication_count": 1
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-01fcf411e8d82a36c15dae1c",
+        "type": "article",
+        "label": "Influenza Epidemiology and Vaccine Effectiveness Following Funded Influenza Vaccine in Queensland, Australia, 2022",
+        "slug": "10-1111-irv-70007-01fcf411",
+        "url": "/research/articles/10-1111-irv-70007-01fcf411/",
+        "published_at": "2024-09-25T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-205efd103f9b2cb5abcb135d",
+        "type": "article",
+        "label": "A Case-Control Study on the Effectiveness of Tick-Borne Encephalitis Vaccination Against Hospitalizations in an Endemic Area in Northeastern Italy.",
+        "slug": "10-3390-vaccines14020164-205efd10",
+        "url": "/research/articles/10-3390-vaccines14020164-205efd10/",
+        "published_at": "2026-02-10T00:00:00+00:00",
+        "study_type": "Case-control study"
+      },
+      {
+        "id": "article:lit-22c8f2aaf6c29bea8d5704b5",
+        "type": "article",
+        "label": "Tick-Borne Encephalitis Vaccine Effectiveness and Impact in Slovenia, 2019-2024.",
+        "slug": "10-3390-pathogens15050503-22c8f2aa",
+        "url": "/research/articles/10-3390-pathogens15050503-22c8f2aa/",
+        "published_at": "2026-05-07T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-75b4e89a421c45430d423cbc",
+        "type": "article",
+        "label": "Inclusion of young adolescents in policy development for new tuberculosis vaccines.",
+        "slug": "10-1016-s2214-109x-26-00017-3-75b4e89a",
+        "url": "/research/articles/10-1016-s2214-109x-26-00017-3-75b4e89a/",
+        "published_at": "2026-06-08T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-7be8baca2912577c36110fea",
+        "type": "article",
+        "label": "Shared evidence, different recommendations: a comparative analysis of Qdenga (TAK-003) dengue vaccine guidance for travellers across countries",
+        "slug": "10-1093-jtm-taag065-7be8baca",
+        "url": "/research/articles/10-1093-jtm-taag065-7be8baca/",
+        "published_at": "2026-07-22T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-87fbe51bb440cc21235542d7",
+        "type": "article",
+        "label": "Influenza Vaccine Effectiveness Against Symptomatic Influenza in Primary Care: A Test Negative Case Control Study Over Two Influenza Seasons 2022/2023 and 2023/2024 in Ireland",
+        "slug": "10-1111-irv-70023-87fbe51b",
+        "url": "/research/articles/10-1111-irv-70023-87fbe51b/",
+        "published_at": "2024-12-02T00:00:00+00:00",
+        "study_type": "Case-control study"
+      },
+      {
+        "id": "article:lit-8eb09af571aa65ace5796cda",
+        "type": "article",
+        "label": "Influenza Vaccine Effectiveness During the 2023/2024 Season: A Test‐Negative Case–Control Study Among Emergency Hospital Admissions With Respiratory Conditions in Northern Ireland",
+        "slug": "10-1111-irv-70149-8eb09af5",
+        "url": "/research/articles/10-1111-irv-70149-8eb09af5/",
+        "published_at": "2025-09-10T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-adff930a9d09fd168e7349b3",
+        "type": "article",
+        "label": "Influenza vaccine effectiveness in Ireland during two influenza seasons, 2022/23 and 2023/24",
+        "slug": "10-1093-eurpub-ckae144-1924-adff930a",
+        "url": "/research/articles/10-1093-eurpub-ckae144-1924-adff930a/",
+        "published_at": "2024-10-28T00:00:00+00:00",
+        "study_type": "Case-control study"
+      },
+      {
+        "id": "article:lit-cd6bca7818ee5821e4ff6379",
+        "type": "article",
+        "label": "Early influenza virus characterisation and vaccine effectiveness in England in autumn 2025, a period dominated by influenza A(H3N2) subclade K",
+        "slug": "10-2807-1560-7917-es-2025-30-46-2500854-cd6bca78",
+        "url": "/research/articles/10-2807-1560-7917-es-2025-30-46-2500854-cd6bca78/",
+        "published_at": "2025-11-20T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-d7a345bfcab354ff9606223c",
+        "type": "article",
+        "label": "Effectiveness of Influenza Vaccines and Duration of Protection Against Hospitalisation During the 2024/25 Season in Northern Ireland, UK",
+        "slug": "10-1111-irv-70303-d7a345bf",
+        "url": "/research/articles/10-1111-irv-70303-d7a345bf/",
+        "published_at": "2026-08-06T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "country:au",
+        "type": "country",
+        "label": "Australia",
+        "code": "AU",
+        "url": "/countries/au/"
+      },
+      {
+        "id": "country:ie",
+        "type": "country",
+        "label": "Ireland",
+        "code": "IE",
+        "url": "/countries/ie/"
+      },
+      {
+        "id": "disease:d021",
+        "type": "disease",
+        "label": "Dengue",
+        "disease_id": "D021",
+        "name_zh": "登革热",
+        "slug": "dengue",
+        "url": "/diseases/dengue/"
+      },
+      {
+        "id": "disease:d025",
+        "type": "disease",
+        "label": "Tuberculosis",
+        "disease_id": "D025",
+        "name_zh": "肺结核",
+        "slug": "tuberculosis",
+        "url": "/diseases/tuberculosis/"
+      },
+      {
+        "id": "disease:d038",
+        "type": "disease",
+        "label": "Influenza",
+        "disease_id": "D038",
+        "name_zh": "流行性感冒",
+        "slug": "influenza",
+        "url": "/diseases/influenza/"
+      },
+      {
+        "id": "disease:d205",
+        "type": "disease",
+        "label": "Tick-borne encephalitis",
+        "disease_id": "D205",
+        "name_zh": "蜱传脑炎",
+        "slug": "tick-borne-encephalitis",
+        "url": "/diseases/tick-borne-encephalitis/"
+      },
+      {
+        "id": "study-type:case-control-study",
+        "type": "study_type",
+        "label": "Case-control study"
+      },
+      {
+        "id": "study-type:journal-article",
+        "type": "study_type",
+        "label": "Journal article"
+      },
+      {
+        "id": "topic:climate-and-environment",
+        "type": "topic",
+        "label": "Climate and environment"
+      },
+      {
+        "id": "topic:health-policy",
+        "type": "topic",
+        "label": "Health policy"
+      },
+      {
+        "id": "topic:surveillance",
+        "type": "topic",
+        "label": "Surveillance"
+      },
+      {
+        "id": "topic:travel-medicine",
+        "type": "topic",
+        "label": "Travel medicine"
+      },
+      {
+        "id": "topic:vaccination",
+        "type": "topic",
+        "label": "Vaccination"
+      },
+      {
+        "id": "topic:vaccine-effectiveness",
+        "type": "topic",
+        "label": "Vaccine effectiveness"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-01fcf411e8d82a36c15dae1c|ABOUT_DISEASE|disease:d038",
+        "source": "article:lit-01fcf411e8d82a36c15dae1c",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d038",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-01fcf411e8d82a36c15dae1c|ADDRESSES_TOPIC|topic:vaccination",
+        "source": "article:lit-01fcf411e8d82a36c15dae1c",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccination",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-01fcf411e8d82a36c15dae1c|ADDRESSES_TOPIC|topic:vaccine-effectiveness",
+        "source": "article:lit-01fcf411e8d82a36c15dae1c",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccine-effectiveness",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-01fcf411e8d82a36c15dae1c|STUDIED_IN|country:au",
+        "source": "article:lit-01fcf411e8d82a36c15dae1c",
+        "relation": "STUDIED_IN",
+        "target": "country:au",
+        "confidence": 0.78
+      },
+      {
+        "id": "article:lit-01fcf411e8d82a36c15dae1c|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-01fcf411e8d82a36c15dae1c",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-205efd103f9b2cb5abcb135d|ABOUT_DISEASE|disease:d205",
+        "source": "article:lit-205efd103f9b2cb5abcb135d",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d205",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-205efd103f9b2cb5abcb135d|ADDRESSES_TOPIC|topic:climate-and-environment",
+        "source": "article:lit-205efd103f9b2cb5abcb135d",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:climate-and-environment",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-205efd103f9b2cb5abcb135d|ADDRESSES_TOPIC|topic:vaccination",
+        "source": "article:lit-205efd103f9b2cb5abcb135d",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccination",
+        "confidence": 0.7100000000000001
+      },
+      {
+        "id": "article:lit-205efd103f9b2cb5abcb135d|ADDRESSES_TOPIC|topic:vaccine-effectiveness",
+        "source": "article:lit-205efd103f9b2cb5abcb135d",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccine-effectiveness",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-205efd103f9b2cb5abcb135d|USES_STUDY_DESIGN|study-type:case-control-study",
+        "source": "article:lit-205efd103f9b2cb5abcb135d",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:case-control-study"
+      },
+      {
+        "id": "article:lit-22c8f2aaf6c29bea8d5704b5|ABOUT_DISEASE|disease:d205",
+        "source": "article:lit-22c8f2aaf6c29bea8d5704b5",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d205",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-22c8f2aaf6c29bea8d5704b5|ADDRESSES_TOPIC|topic:surveillance",
+        "source": "article:lit-22c8f2aaf6c29bea8d5704b5",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:surveillance",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-22c8f2aaf6c29bea8d5704b5|ADDRESSES_TOPIC|topic:vaccination",
+        "source": "article:lit-22c8f2aaf6c29bea8d5704b5",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccination",
+        "confidence": 0.7100000000000001
+      },
+      {
+        "id": "article:lit-22c8f2aaf6c29bea8d5704b5|ADDRESSES_TOPIC|topic:vaccine-effectiveness",
+        "source": "article:lit-22c8f2aaf6c29bea8d5704b5",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccine-effectiveness",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-22c8f2aaf6c29bea8d5704b5|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-22c8f2aaf6c29bea8d5704b5",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-75b4e89a421c45430d423cbc|ABOUT_DISEASE|disease:d025",
+        "source": "article:lit-75b4e89a421c45430d423cbc",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d025",
+        "confidence": 0.9
+      },
+      {
+        "id": "article:lit-75b4e89a421c45430d423cbc|ADDRESSES_TOPIC|topic:health-policy",
+        "source": "article:lit-75b4e89a421c45430d423cbc",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:health-policy",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-75b4e89a421c45430d423cbc|ADDRESSES_TOPIC|topic:vaccination",
+        "source": "article:lit-75b4e89a421c45430d423cbc",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccination",
+        "confidence": 0.7100000000000001
+      },
+      {
+        "id": "article:lit-75b4e89a421c45430d423cbc|ADDRESSES_TOPIC|topic:vaccine-effectiveness",
+        "source": "article:lit-75b4e89a421c45430d423cbc",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccine-effectiveness",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-75b4e89a421c45430d423cbc|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-75b4e89a421c45430d423cbc",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-7be8baca2912577c36110fea|ABOUT_DISEASE|disease:d021",
+        "source": "article:lit-7be8baca2912577c36110fea",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d021",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-7be8baca2912577c36110fea|ADDRESSES_TOPIC|topic:travel-medicine",
+        "source": "article:lit-7be8baca2912577c36110fea",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:travel-medicine",
+        "confidence": 0.7100000000000001
+      },
+      {
+        "id": "article:lit-7be8baca2912577c36110fea|ADDRESSES_TOPIC|topic:vaccination",
+        "source": "article:lit-7be8baca2912577c36110fea",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccination",
+        "confidence": 0.7100000000000001
+      },
+      {
+        "id": "article:lit-7be8baca2912577c36110fea|ADDRESSES_TOPIC|topic:vaccine-effectiveness",
+        "source": "article:lit-7be8baca2912577c36110fea",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccine-effectiveness",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-7be8baca2912577c36110fea|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-7be8baca2912577c36110fea",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-87fbe51bb440cc21235542d7|ABOUT_DISEASE|disease:d038",
+        "source": "article:lit-87fbe51bb440cc21235542d7",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d038",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-87fbe51bb440cc21235542d7|ADDRESSES_TOPIC|topic:surveillance",
+        "source": "article:lit-87fbe51bb440cc21235542d7",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:surveillance",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-87fbe51bb440cc21235542d7|ADDRESSES_TOPIC|topic:vaccination",
+        "source": "article:lit-87fbe51bb440cc21235542d7",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccination",
+        "confidence": 0.7100000000000001
+      },
+      {
+        "id": "article:lit-87fbe51bb440cc21235542d7|ADDRESSES_TOPIC|topic:vaccine-effectiveness",
+        "source": "article:lit-87fbe51bb440cc21235542d7",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccine-effectiveness",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-87fbe51bb440cc21235542d7|STUDIED_IN|country:ie",
+        "source": "article:lit-87fbe51bb440cc21235542d7",
+        "relation": "STUDIED_IN",
+        "target": "country:ie",
+        "confidence": 0.78
+      },
+      {
+        "id": "article:lit-87fbe51bb440cc21235542d7|USES_STUDY_DESIGN|study-type:case-control-study",
+        "source": "article:lit-87fbe51bb440cc21235542d7",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:case-control-study"
+      },
+      {
+        "id": "article:lit-8eb09af571aa65ace5796cda|ABOUT_DISEASE|disease:d038",
+        "source": "article:lit-8eb09af571aa65ace5796cda",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d038",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-8eb09af571aa65ace5796cda|ADDRESSES_TOPIC|topic:vaccination",
+        "source": "article:lit-8eb09af571aa65ace5796cda",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccination",
+        "confidence": 0.7100000000000001
+      },
+      {
+        "id": "article:lit-8eb09af571aa65ace5796cda|ADDRESSES_TOPIC|topic:vaccine-effectiveness",
+        "source": "article:lit-8eb09af571aa65ace5796cda",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccine-effectiveness",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-8eb09af571aa65ace5796cda|STUDIED_IN|country:ie",
+        "source": "article:lit-8eb09af571aa65ace5796cda",
+        "relation": "STUDIED_IN",
+        "target": "country:ie",
+        "confidence": 0.78
+      },
+      {
+        "id": "article:lit-8eb09af571aa65ace5796cda|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-8eb09af571aa65ace5796cda",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-adff930a9d09fd168e7349b3|ABOUT_DISEASE|disease:d038",
+        "source": "article:lit-adff930a9d09fd168e7349b3",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d038",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-adff930a9d09fd168e7349b3|ADDRESSES_TOPIC|topic:surveillance",
+        "source": "article:lit-adff930a9d09fd168e7349b3",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:surveillance",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-adff930a9d09fd168e7349b3|ADDRESSES_TOPIC|topic:vaccination",
+        "source": "article:lit-adff930a9d09fd168e7349b3",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccination",
+        "confidence": 0.7100000000000001
+      },
+      {
+        "id": "article:lit-adff930a9d09fd168e7349b3|ADDRESSES_TOPIC|topic:vaccine-effectiveness",
+        "source": "article:lit-adff930a9d09fd168e7349b3",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccine-effectiveness",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-adff930a9d09fd168e7349b3|STUDIED_IN|country:ie",
+        "source": "article:lit-adff930a9d09fd168e7349b3",
+        "relation": "STUDIED_IN",
+        "target": "country:ie",
+        "confidence": 0.78
+      },
+      {
+        "id": "article:lit-adff930a9d09fd168e7349b3|USES_STUDY_DESIGN|study-type:case-control-study",
+        "source": "article:lit-adff930a9d09fd168e7349b3",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:case-control-study"
+      },
+      {
+        "id": "article:lit-cd6bca7818ee5821e4ff6379|ABOUT_DISEASE|disease:d038",
+        "source": "article:lit-cd6bca7818ee5821e4ff6379",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d038",
+        "confidence": 0.86
+      },
+      {
+        "id": "article:lit-cd6bca7818ee5821e4ff6379|ADDRESSES_TOPIC|topic:vaccination",
+        "source": "article:lit-cd6bca7818ee5821e4ff6379",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccination",
+        "confidence": 0.7100000000000001
+      },
+      {
+        "id": "article:lit-cd6bca7818ee5821e4ff6379|ADDRESSES_TOPIC|topic:vaccine-effectiveness",
+        "source": "article:lit-cd6bca7818ee5821e4ff6379",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccine-effectiveness",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-cd6bca7818ee5821e4ff6379|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-cd6bca7818ee5821e4ff6379",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-d7a345bfcab354ff9606223c|ABOUT_DISEASE|disease:d038",
+        "source": "article:lit-d7a345bfcab354ff9606223c",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d038",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-d7a345bfcab354ff9606223c|ADDRESSES_TOPIC|topic:surveillance",
+        "source": "article:lit-d7a345bfcab354ff9606223c",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:surveillance",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-d7a345bfcab354ff9606223c|ADDRESSES_TOPIC|topic:vaccination",
+        "source": "article:lit-d7a345bfcab354ff9606223c",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccination",
+        "confidence": 0.7100000000000001
+      },
+      {
+        "id": "article:lit-d7a345bfcab354ff9606223c|ADDRESSES_TOPIC|topic:vaccine-effectiveness",
+        "source": "article:lit-d7a345bfcab354ff9606223c",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccine-effectiveness",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-d7a345bfcab354ff9606223c|STUDIED_IN|country:ie",
+        "source": "article:lit-d7a345bfcab354ff9606223c",
+        "relation": "STUDIED_IN",
+        "target": "country:ie",
+        "confidence": 0.78
+      },
+      {
+        "id": "article:lit-d7a345bfcab354ff9606223c|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-d7a345bfcab354ff9606223c",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      }
+    ],
+    "insights": [
+      {
+        "type": "topic_co_occurrence",
+        "left": "topic:vaccination",
+        "right": "topic:vaccine-effectiveness",
+        "left_label": "Vaccination",
+        "right_label": "Vaccine effectiveness",
+        "article_count": 10
+      },
+      {
+        "type": "topic_co_occurrence",
+        "left": "topic:surveillance",
+        "right": "topic:vaccination",
+        "left_label": "Surveillance",
+        "right_label": "Vaccination",
+        "article_count": 4
+      },
+      {
+        "type": "topic_co_occurrence",
+        "left": "topic:surveillance",
+        "right": "topic:vaccine-effectiveness",
+        "left_label": "Surveillance",
+        "right_label": "Vaccine effectiveness",
+        "article_count": 4
+      }
+    ],
+    "stats": {
+      "nodes": 24,
+      "edges": 52,
+      "articles": 10
+    }
+  }
+}

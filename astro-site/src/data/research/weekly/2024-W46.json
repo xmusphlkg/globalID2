@@ -1,0 +1,68 @@
+{
+  "week": "2024-W46",
+  "start_date": "2024-11-11",
+  "end_date": "2024-11-11",
+  "article_count": 1,
+  "disease_count": 1,
+  "country_count": 0,
+  "top_topics": [
+    "Vaccination"
+  ],
+  "articles": [
+    {
+      "article_id": "lit_2b4edf1d1e157d22674ec6bb",
+      "slug": "10-1186-s12879-024-10088-7-2b4edf1d",
+      "title": "Inequalities in measles immunization coverage among two-year-olds in Sierra Leone, 2008–2019",
+      "doi": "10.1186/s12879-024-10088-7",
+      "pmid": null,
+      "journal": "BMC Infectious Diseases",
+      "publisher": "Springer Science and Business Media LLC",
+      "authors": [
+        "Augustus Osborne",
+        "Alpha Umaru Bai-Sesay",
+        "Umaru Sesay",
+        "Alieu Tommy",
+        "Camilla Bangura",
+        "Bright Opoku Ahinkorah"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2024-11-11T00:00:00+00:00",
+      "indexed_at": "2026-08-05T10:37:50+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://bmcinfectdis.biomedcentral.com/articles/10.1186/s12879-024-10088-7",
+      "license_url": "https://creativecommons.org/licenses/by-nc-nd/4.0",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.512,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D017",
+          "slug": "measles",
+          "name_en": "Measles",
+          "name_zh": "麻疹",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Vaccination",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Measles. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与麻疹相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1186/s12879-024-10088-7",
+        "publisher": "https://bmcinfectdis.biomedcentral.com/articles/10.1186/s12879-024-10088-7"
+      },
+      "updated_at": "2026-08-13T12:40:20.771733+00:00",
+      "related_signals": []
+    }
+  ],
+  "url": "/research/weekly/2024-W46/"
+}

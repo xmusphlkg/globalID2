@@ -31,6 +31,7 @@ from .routers import (
     tasks,
     control_plane,
     operations,
+    literature,
 )
 from src.control_plane.events import control_plane_events
 from src.control_plane.health import readiness_payload
@@ -138,6 +139,7 @@ def create_app() -> FastAPI:
     app.include_router(explorer.router, prefix=prefix, tags=["Explorer"])
     app.include_router(control_plane.router, prefix=prefix, tags=["Control Plane"])
     app.include_router(operations.router, prefix=prefix, tags=["Operations"])
+    app.include_router(literature.router, prefix=prefix, tags=["Research Radar"])
 
     @app.get("/health/live", tags=["Health"])
     async def liveness():

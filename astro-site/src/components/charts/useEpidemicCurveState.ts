@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
 import {
   INITIAL_CURVE_VIEW_STATE,
-  MAX_ACTIVE_SERIES,
   collectDates,
   epidemicCurveViewReducer,
+  getMetricValues,
   reconcileDateWindow,
   supportsWeeklyEquivalent,
+  type CurveSelectionMode,
   type CurveSeries,
   type DateWindow,
   type EpidemicMetric,
@@ -16,6 +17,7 @@ interface Options {
   entityIds?: string[];
   topN: number;
   caseOnlyEntityIds?: string[];
+  initialSelectionMode?: CurveSelectionMode;
 }
 
 export function useEpidemicCurveState({
@@ -23,14 +25,15 @@ export function useEpidemicCurveState({
   entityIds,
   topN,
   caseOnlyEntityIds = [],
+  initialSelectionMode = 'single',
 }: Options) {
   const [viewState, dispatchView] = useReducer(
     epidemicCurveViewReducer,
     INITIAL_CURVE_VIEW_STATE
   );
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [selectionMode, setSelectionModeState] = useState<CurveSelectionMode>(initialSelectionMode);
   const [query, setQuery] = useState('');
-  const [selectionLimitHit, setSelectionLimitHit] = useState(false);
 
   const eligibleIds = useMemo(() => {
     const ids = Array.from(new Set(entityIds ?? Object.keys(series)));
@@ -43,24 +46,23 @@ export function useEpidemicCurveState({
     [eligibleIds]
   );
   const defaultIds = useMemo(
-    () => eligibleIds.slice(0, Math.max(1, Math.min(topN, MAX_ACTIVE_SERIES))),
+    () => eligibleIds.slice(0, Math.max(1, topN)),
     [eligibleIds, topN]
   );
 
   useEffect(() => {
     setSelectedIds((current) => {
       const retained = current
-        .filter((id) => eligibleRank.has(id))
-        .slice(0, MAX_ACTIVE_SERIES);
-      return retained.length > 0 ? retained : defaultIds;
+        .filter((id) => eligibleRank.has(id));
+      const next = retained.length > 0 ? retained : defaultIds;
+      return selectionMode === 'single' ? next.slice(0, 1) : next;
     });
-  }, [defaultIds, eligibleRank]);
+  }, [defaultIds, eligibleRank, selectionMode]);
 
   const activeIds = useMemo(() => {
     const source = selectedIds.length > 0 ? selectedIds : defaultIds;
     return source
       .filter((id) => eligibleRank.has(id))
-      .slice(0, MAX_ACTIVE_SERIES)
       .sort((a, b) => (eligibleRank.get(a) ?? 0) - (eligibleRank.get(b) ?? 0));
   }, [defaultIds, eligibleRank, selectedIds]);
   const activeIdSet = useMemo(() => new Set(activeIds), [activeIds]);
@@ -69,8 +71,15 @@ export function useEpidemicCurveState({
     [caseOnlyEntityIds]
   );
   const activeDates = useMemo(
-    () => collectDates(series, activeIds),
-    [activeIds, series]
+    () => collectDates(
+      series,
+      activeIds.filter((id) => {
+        const values = getMetricValues(series[id], viewState.metric);
+        return values.length === (series[id]?.dates ?? []).length
+          && values.some((value) => value != null);
+      })
+    ),
+    [activeIds, series, viewState.metric]
   );
   const dateWindow = useMemo(
     () => reconcileDateWindow(viewState.dateWindow, activeDates),
@@ -83,11 +92,16 @@ export function useEpidemicCurveState({
 
   const availableMetrics = useMemo(() => {
     const metrics: EpidemicMetric[] = ['cases'];
-    if (activeIds.some((id) => caseOnlyEntityIdSet.has(id))) return metrics;
-    const hasCompatibleWeeklyValues = activeIds.length > 0 && activeIds.every((id) => (
+    const hasHistoricalReference = activeIds.some((id) => (
+      getMetricValues(series[id], 'historical_index').some((value) => value != null)
+    ));
+    if (hasHistoricalReference) metrics.push('historical_index');
+    metrics.push('trend_index');
+    const hasCompatibleWeeklyValues = activeIds.some((id) => (
       supportsWeeklyEquivalent(series[id])
     ));
     if (hasCompatibleWeeklyValues) metrics.push('weekly_equiv_cases');
+    if (activeIds.some((id) => caseOnlyEntityIdSet.has(id))) return metrics;
     const hasDeaths = activeIds.some((id) => (
       (series[id]?.deaths ?? []).some((value) => (value ?? 0) > 0)
     ));
@@ -123,10 +137,28 @@ export function useEpidemicCurveState({
     dispatchView({ type: 'dateWindowChanged', dateWindow: nextDateWindow });
   }, []);
 
+  const setSelectionMode = useCallback((mode: CurveSelectionMode) => {
+    setSelectionModeState(mode);
+    if (mode === 'single') {
+      setSelectedIds((current) => {
+        const source = current.length > 0 ? current : defaultIds;
+        return source.length > 0 ? [source[0]] : [];
+      });
+    }
+  }, [defaultIds]);
+
+  const selectOnly = useCallback((id: string) => {
+    if (!eligibleRank.has(id)) return;
+    setSelectedIds([id]);
+  }, [eligibleRank]);
+
   const toggleSelection = useCallback((id: string) => {
+    if (selectionMode === 'single') {
+      selectOnly(id);
+      return;
+    }
     if (activeIdSet.has(id)) {
       if (activeIds.length === 1) return;
-      setSelectionLimitHit(false);
       setSelectedIds((current) => {
         const source = current.length > 0 ? current : defaultIds;
         return source.filter((currentId) => currentId !== id);
@@ -134,29 +166,16 @@ export function useEpidemicCurveState({
       return;
     }
 
-    if (activeIds.length >= MAX_ACTIVE_SERIES) {
-      setSelectionLimitHit(true);
-      return;
-    }
-
-    setSelectionLimitHit(false);
     setSelectedIds((current) => {
       const source = current.length > 0 ? current : defaultIds;
       return [...source, id]
         .sort((a, b) => (eligibleRank.get(a) ?? 0) - (eligibleRank.get(b) ?? 0));
     });
-  }, [activeIdSet, activeIds.length, defaultIds, eligibleRank]);
+  }, [activeIdSet, activeIds.length, defaultIds, eligibleRank, selectOnly, selectionMode]);
 
   const resetSelection = useCallback(() => {
-    setSelectionLimitHit(false);
-    setSelectedIds(defaultIds);
+    setSelectedIds(defaultIds.slice(0, 1));
   }, [defaultIds]);
-
-  const selectVisible = useCallback(() => {
-    if (visibleIds.length === 0) return;
-    setSelectionLimitHit(visibleIds.length > MAX_ACTIVE_SERIES);
-    setSelectedIds(visibleIds.slice(0, MAX_ACTIVE_SERIES));
-  }, [visibleIds]);
 
   return {
     metric: viewState.metric,
@@ -172,9 +191,10 @@ export function useEpidemicCurveState({
     visibleIds,
     query,
     setQuery,
-    selectionLimitHit,
+    selectionMode,
+    setSelectionMode,
     toggleSelection,
+    selectOnly,
     resetSelection,
-    selectVisible,
   };
 }

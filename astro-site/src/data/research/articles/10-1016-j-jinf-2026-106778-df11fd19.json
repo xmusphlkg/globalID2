@@ -1,0 +1,196 @@
+{
+  "article_id": "lit_df11fd1941815984e99cdff8",
+  "slug": "10-1016-j-jinf-2026-106778-df11fd19",
+  "title": "Incidence, risk factors and management of paradoxical reaction in central nervous system tuberculosis in the United Kingdom.",
+  "doi": "10.1016/j.jinf.2026.106778",
+  "pmid": "42242389",
+  "journal": "The Journal of infection",
+  "publisher": null,
+  "authors": [
+    "Carter EC",
+    "Fernandez C",
+    "Lim C",
+    "Bharucha T",
+    "Atomode A",
+    "Defres S",
+    "Brodsky M",
+    "Goodall J",
+    "Hall J",
+    "Lau E",
+    "Vail D",
+    "Francis R",
+    "Berry L",
+    "Malkawi K",
+    "Odone J",
+    "Richards A",
+    "Molai M",
+    "Seager E",
+    "Chan C",
+    "Farrukh S",
+    "Gurney R",
+    "Price A",
+    "Blackaby J",
+    "Maxwell A",
+    "Mooney C",
+    "Dayalan N",
+    "Bracchi M",
+    "Thompson JV",
+    "Upton R",
+    "Lawal A",
+    "MacFarlane L",
+    "Peel A",
+    "Olaifa A",
+    "Hale A",
+    "Reed T",
+    "Kunst H",
+    "Tiberi S",
+    "Hunter M",
+    "Dedicoat M",
+    "Sharrocks K",
+    "Cajic V",
+    "Wiselka M",
+    "Riste M",
+    "Barrera M",
+    "Papineni P",
+    "Brown J",
+    "Collini P",
+    "Backx M",
+    "Rosser A",
+    "Lillie P",
+    "McGann H",
+    "Morton B",
+    "Walsh C",
+    "McGill F"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Cohort study",
+  "published_at": "2026-06-03T00:00:00+00:00",
+  "indexed_at": "2026-06-04T00:00:00+00:00",
+  "open_access_status": "unknown",
+  "open_access_url": null,
+  "license_url": null,
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.611,
+  "is_featured": false,
+  "diseases": [
+    {
+      "disease_id": "D025",
+      "slug": "tuberculosis",
+      "name_en": "Tuberculosis",
+      "name_zh": "肺结核",
+      "confidence": 0.9
+    }
+  ],
+  "countries": [],
+  "topics": [
+    {
+      "name": "Treatment",
+      "confidence": 0.66
+    }
+  ],
+  "related_surveillance": [],
+  "summary": {},
+  "why_it_matters_en": "This recent cohort study is indexed for its relevance to Tuberculosis. Read the original source before applying its findings.",
+  "why_it_matters_zh": "这项近期Cohort study因与肺结核相关而被收录。应用其结论前请阅读原始文献。",
+  "source_urls": {
+    "doi": "https://doi.org/10.1016/j.jinf.2026.106778",
+    "pubmed": "https://pubmed.ncbi.nlm.nih.gov/42242389/"
+  },
+  "updated_at": "2026-08-13T16:05:48.137639+00:00",
+  "related_signals": [
+    {
+      "signal_id": "signal:cbe12a284bd5cd9b",
+      "section": "increasing",
+      "kind": "statistical_signal",
+      "title": null,
+      "disease_id": "D025",
+      "disease_name_en": "Tuberculosis",
+      "disease_name_zh": "肺结核",
+      "geographies": [
+        {
+          "code": "NZ",
+          "name_en": "New Zealand"
+        }
+      ],
+      "data_through": "2026-06-01",
+      "window": {
+        "label": "Latest complete month",
+        "current": 43.0,
+        "previous": 32.0,
+        "absolute_change": 11.0,
+        "change_pct": 34.38
+      },
+      "risk": {
+        "score": 56.0,
+        "level": "high",
+        "confidence": "low"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-df11fd1941815984e99cdff8",
+        "type": "article",
+        "label": "Incidence, risk factors and management of paradoxical reaction in central nervous system tuberculosis in the United Kingdom.",
+        "slug": "10-1016-j-jinf-2026-106778-df11fd19",
+        "url": "/research/articles/10-1016-j-jinf-2026-106778-df11fd19/",
+        "published_at": "2026-06-03T00:00:00+00:00",
+        "study_type": "Cohort study"
+      },
+      {
+        "id": "disease:d025",
+        "type": "disease",
+        "label": "Tuberculosis",
+        "disease_id": "D025",
+        "name_zh": "肺结核",
+        "slug": "tuberculosis",
+        "url": "/diseases/tuberculosis/"
+      },
+      {
+        "id": "study-type:cohort-study",
+        "type": "study_type",
+        "label": "Cohort study"
+      },
+      {
+        "id": "topic:treatment",
+        "type": "topic",
+        "label": "Treatment"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-df11fd1941815984e99cdff8|ABOUT_DISEASE|disease:d025",
+        "source": "article:lit-df11fd1941815984e99cdff8",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d025",
+        "confidence": 0.9
+      },
+      {
+        "id": "article:lit-df11fd1941815984e99cdff8|ADDRESSES_TOPIC|topic:treatment",
+        "source": "article:lit-df11fd1941815984e99cdff8",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:treatment",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-df11fd1941815984e99cdff8|USES_STUDY_DESIGN|study-type:cohort-study",
+        "source": "article:lit-df11fd1941815984e99cdff8",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:cohort-study"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 4,
+      "edges": 3,
+      "articles": 1
+    }
+  }
+}

@@ -1,0 +1,213 @@
+---
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import ReportLayout from '../../../layouts/ReportLayout.astro';
+import researchData from '../../../data/research/index.json';
+
+export function getStaticPaths() {
+  return (researchData.articles ?? []).map((article: any) => ({ params: { slug: article.slug } }));
+}
+
+const { slug } = Astro.params;
+const file = resolve(`./src/data/research/articles/${slug}.json`);
+const article: any = existsSync(file)
+  ? JSON.parse(readFileSync(file, 'utf-8'))
+  : (researchData.articles ?? []).find((item: any) => item.slug === slug);
+if (!article) return Astro.redirect('/research/');
+const summaryEn = article.summary?.en ?? {};
+const summaryZh = article.summary?.zh ?? {};
+const evidenceSections = [
+  ['Research question', '研究问题', 'research_question'],
+  ['Study design', '研究设计', 'study_design'],
+  ['Population and setting', '人群与场景', 'population_setting'],
+  ['Main findings', '主要发现', 'main_findings'],
+  ['Public-health relevance', '公共卫生意义', 'public_health_relevance'],
+  ['Important limitations', '重要局限', 'limitations'],
+  ['GIDS interpretation', 'GIDS 解读', 'gids_interpretation'],
+] as const;
+const publicationDateEn = article.publication_date_label_en ?? (article.published_at
+  ? new Date(article.published_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' })
+  : 'Date unavailable');
+const publicationDateZh = article.publication_date_label_zh ?? (article.published_at
+  ? new Date(article.published_at).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' })
+  : '日期暂缺');
+const authorLine = (article.authors ?? []).join(', ');
+const originalUrl = article.source_urls?.doi ?? article.source_urls?.publisher;
+const isHistoricalBaseline = article.source_kind === 'historical_seed' || article.historical_baseline;
+const structuredArticle = {
+  '@type': 'ScholarlyArticle',
+  headline: article.title,
+  datePublished: article.published_at,
+  dateModified: article.updated_at,
+  author: (article.authors ?? []).map((name: string) => ({ '@type': 'Person', name })),
+  isPartOf: article.journal ? { '@type': 'Periodical', name: article.journal } : undefined,
+  identifier: article.doi ? `https://doi.org/${article.doi}` : article.pmid ? `PMID:${article.pmid}` : article.article_id,
+  sameAs: originalUrl,
+  about: (article.diseases ?? []).map((disease: any) => ({ '@type': 'MedicalCondition', name: disease.name_en })),
+};
+const graph = article.knowledge_graph ?? { stats: {}, edges: [] };
+const summaryProvenance = summaryEn.provenance ?? summaryZh.provenance ?? null;
+const relatedSurveillance = article.related_surveillance ?? [];
+const relatedSignals = (article.related_signals ?? []).filter((signal: any) => signal.visibility === 'public' || import.meta.env.DEV);
+---
+
+<ReportLayout
+  title={article.title}
+  description={article.why_it_matters_en}
+  seo={{
+    title: `${article.title} | GIDS`,
+    description: article.why_it_matters_en,
+    locale: 'en',
+    canonicalPath: `/research/articles/${article.slug}/`,
+    alternatePaths: { en: `/research/articles/${article.slug}/` },
+    pageType: 'MedicalWebPage',
+    datePublished: article.published_at,
+    dateModified: article.updated_at,
+  }}
+  structuredData={structuredArticle}
+  breadcrumbs={[
+    { label: 'Research Radar', labelZh: '研究雷达', href: '/research/' },
+    { label: 'Evidence summary', labelZh: '证据摘要' },
+  ]}
+>
+  <article class="evidence-page">
+    <header class="academic-hero evidence-header">
+      <div class="evidence-badges">
+        <span data-lang-en={article.peer_review_status === 'peer_reviewed' ? 'Peer reviewed' : 'Preprint'} data-lang-zh={article.peer_review_status === 'peer_reviewed' ? '同行评议' : '预印本'}>{article.peer_review_status === 'peer_reviewed' ? 'Peer reviewed' : 'Preprint'}</span>
+        {isHistoricalBaseline && <span class="history" data-lang-en="Historical baseline" data-lang-zh="历史基线">Historical baseline</span>}
+        {article.open_access_status === 'open' && <span class="oa" data-lang-en="Open access" data-lang-zh="开放获取">Open access</span>}
+        {(article.diseases ?? []).map((disease: any) => <span data-lang-en={disease.name_en} data-lang-zh={disease.name_zh ?? disease.name_en}>{disease.name_en}</span>)}
+      </div>
+      <h1>{article.title}</h1>
+      <p class="evidence-citation"><span>{article.journal ?? 'Journal unavailable'}</span><span>·</span><time datetime={article.published_at} data-lang-en={publicationDateEn} data-lang-zh={publicationDateZh}>{publicationDateEn}</time></p>
+      {authorLine && <p class="evidence-authors">{authorLine}</p>}
+      <dl class="evidence-register">
+        <div><dt>DOI</dt><dd>{article.doi ?? '—'}</dd></div>
+        <div><dt>PMID</dt><dd>{article.pmid ?? '—'}</dd></div>
+        <div><dt data-lang-en="Study type" data-lang-zh="研究类型">Study type</dt><dd>{article.study_type ?? 'Journal article'}</dd></div>
+        <div><dt data-lang-en="Integrity" data-lang-zh="完整性状态">Integrity</dt><dd>{article.integrity_status}</dd></div>
+      </dl>
+    </header>
+
+    <div class="evidence-layout">
+      <main>
+        <section class="evidence-context">
+          <p class="evidence-kicker" data-lang-en="Why this research matters now" data-lang-zh="为何这项研究现在值得关注">Why this research matters now</p>
+          <p data-lang-en={article.why_it_matters_en} data-lang-zh={article.why_it_matters_zh}>{article.why_it_matters_en}</p>
+        </section>
+        <section class="evidence-sections">
+          <div class="section-title"><span>01</span><h2 data-lang-en="Structured evidence summary" data-lang-zh="结构化证据摘要">Structured evidence summary</h2></div>
+          {evidenceSections.map(([labelEn, labelZh, key]) => {
+            const valueEn = summaryEn[key];
+            const valueZh = summaryZh[key];
+            const fallbackEn = key === 'limitations'
+              ? 'Limitations could not be fully assessed from the available metadata.'
+              : 'This field has not yet received a quality-gated evidence summary. Consult the original article.';
+            const fallbackZh = key === 'limitations'
+              ? '根据现有元数据，尚无法充分评估研究局限。'
+              : '该字段尚无通过质量门控的证据摘要，请查阅原始文献。';
+            return <div class:list={['evidence-section', !valueEn && !valueZh && 'evidence-section-pending']}><h3 data-lang-en={labelEn} data-lang-zh={labelZh}>{labelEn}</h3><p data-lang-en={valueEn ?? fallbackEn} data-lang-zh={valueZh ?? fallbackZh}>{valueEn ?? fallbackEn}</p></div>;
+          })}
+        </section>
+
+        {(article.diseases ?? []).length > 0 && (
+          <section class="evidence-surveillance">
+            <div class="section-title"><span>02</span><h2 data-lang-en="Related GIDS surveillance" data-lang-zh="相关 GIDS 监测">Related GIDS surveillance</h2></div>
+            {relatedSignals.length > 0 && <div class="related-signal-context">
+              <p class="evidence-kicker" data-lang-en="Active Situation Room context" data-lang-zh="当前全球态势室背景">Active Situation Room context</p>
+              <div class="related-signal-list">{relatedSignals.map((signal: any) => {
+                const places = (signal.geographies ?? []).map((item: any) => item.name_en).join(' · ') || 'Geography unavailable';
+                const relationEn = signal.relation_level === 'exact_disease_geography' ? 'Exact disease + geography match' : 'Disease context only';
+                const relationZh = signal.relation_level === 'exact_disease_geography' ? '疾病 + 地区精确匹配' : '仅疾病背景';
+                return <a href={signal.situation_url}>
+                  <div><span data-lang-en={signal.disease_name_en} data-lang-zh={signal.disease_name_zh ?? signal.disease_name_en}>{signal.disease_name_en}</span><small>{places} · {signal.data_through ?? '—'}</small></div>
+                  {signal.window?.change_pct != null && <strong>{signal.window.change_pct > 0 ? '+' : ''}{signal.window.change_pct}%</strong>}
+                  <em data-lang-en={relationEn} data-lang-zh={relationZh}>{relationEn}</em>
+                </a>;
+              })}</div>
+              <p class="signal-context-note" data-lang-en="A disease-only match provides background reading; it is not evidence about the signal geography or cause." data-lang-zh="仅疾病匹配只提供背景阅读，并不是关于信号地区或成因的证据。">A disease-only match provides background reading; it is not evidence about the signal geography or cause.</p>
+            </div>}
+            <div class="surveillance-links">
+              {relatedSurveillance.length > 0
+                ? relatedSurveillance.map((link: any) => <a href={link.url}><span data-lang-en={`${link.disease_name_en} · ${link.country_name_en}`} data-lang-zh={`${link.disease_name_zh ?? link.disease_name_en} · ${link.country_name_en}`}>{link.disease_name_en} · {link.country_name_en}</span><small data-lang-en="High-confidence geography · GIDS series available" data-lang-zh="高置信度地理关联 · GIDS 有监测序列">High-confidence geography · GIDS series available</small><i>→</i></a>)
+                : article.diseases.map((disease: any) => <a href={`/diseases/${disease.slug}/`}><span data-lang-en={disease.name_en} data-lang-zh={disease.name_zh ?? disease.name_en}>{disease.name_en}</span><small data-lang-en="View available GIDS surveillance" data-lang-zh="查看可用的 GIDS 监测">View available GIDS surveillance</small><i>→</i></a>)}
+            </div>
+            <p class="evidence-disclaimer" data-lang-en="Literature context does not validate, explain, or change a surveillance signal. Exact and contextual relationships are shown separately." data-lang-zh="文献背景不会验证、解释或改变监测信号；精确关系与背景关系会分开展示。">Literature context does not validate, explain, or change a surveillance signal. Exact and contextual relationships are shown separately.</p>
+          </section>
+        )}
+        <section class="evidence-surveillance evidence-graph">
+          <div class="section-title"><span>03</span><h2 data-lang-en="Evidence relationships" data-lang-zh="证据关系">Evidence relationships</h2></div>
+          <p data-lang-en={`This article has ${graph.stats?.edges ?? 0} auditable classifier relationships to diseases, places, topics, and study design.`} data-lang-zh={`本文与疾病、地区、主题及研究设计之间有 ${graph.stats?.edges ?? 0} 条可审计分类关系。`}>This article has {graph.stats?.edges ?? 0} auditable classifier relationships to diseases, places, topics, and study design.</p>
+          <div class="relationship-list">{(graph.edges ?? []).map((edge: any) => <span>{String(edge.relation).replaceAll('_', ' ').toLowerCase()}</span>)}</div>
+        </section>
+      </main>
+
+      <aside>
+        <div class="evidence-aside-block"><p class="evidence-kicker" data-lang-en="Topics" data-lang-zh="主题">Topics</p><div class="topic-tags">{(article.topics ?? []).map((topic: any) => <a href={`/research/topics/${String(topic.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}/`}>{topic.name}</a>)}</div></div>
+        {(article.countries ?? []).length > 0 && <div class="evidence-aside-block"><p class="evidence-kicker" data-lang-en="Geographic scope" data-lang-zh="地理范围">Geographic scope</p><ul>{article.countries.map((country: any) => <li><a href={`/research/countries/${country.code.toLowerCase()}/`}>{country.name_en} <span>→</span></a></li>)}</ul></div>}
+        <div class="evidence-aside-block"><p class="evidence-kicker" data-lang-en="Original sources" data-lang-zh="原始来源">Original sources</p><div class="source-links">{article.doi && <a href={`https://doi.org/${article.doi}`} target="_blank" rel="noopener noreferrer">DOI record ↗</a>}{article.source_urls?.pubmed && <a href={article.source_urls.pubmed} target="_blank" rel="noopener noreferrer">PubMed ↗</a>}{article.open_access_url && <a href={article.open_access_url} target="_blank" rel="noopener noreferrer">Open access ↗</a>}</div></div>
+        <div class="evidence-aside-block evidence-score"><p class="evidence-kicker">GIDS Discovery Score</p><strong>{Math.round((article.discovery_score ?? 0) * 100)}</strong><p data-lang-en="A transparent discovery ranking, not a scientific quality or credibility score." data-lang-zh="这是透明的发现排序，并非科学质量或可信度评分。">A transparent discovery ranking, not a scientific quality or credibility score.</p></div>
+        {summaryProvenance && <div class="evidence-aside-block"><p class="evidence-kicker" data-lang-en="Summary provenance" data-lang-zh="摘要来源">Summary provenance</p><ul><li data-lang-en={summaryProvenance.automatically_approved ? 'Automatically quality gated' : 'Editorially approved'} data-lang-zh={summaryProvenance.automatically_approved ? '已通过自动质量门控' : '已通过编辑审核'}>{summaryProvenance.automatically_approved ? 'Automatically quality gated' : 'Editorially approved'}</li>{summaryProvenance.model && <li>{summaryProvenance.model}</li>}{summaryProvenance.quality_score != null && <li>{Math.round(summaryProvenance.quality_score * 100)} / 100</li>}{summaryProvenance.automation_policy_version && <li>{summaryProvenance.automation_policy_version}</li>}</ul></div>}
+      </aside>
+    </div>
+  </article>
+</ReportLayout>
+
+<style>
+  .evidence-page { width: min(1120px, calc(100% - 2rem)); margin: 0 auto; padding: 2rem 0 3rem; }
+  .evidence-header { padding: clamp(1.5rem, 4vw, 3rem); }
+  .evidence-badges { display: flex; flex-wrap: wrap; gap: .4rem; }
+  .evidence-badges span { border: 1px solid rgb(var(--border)); padding: .2rem .5rem; color: rgb(var(--text-muted)); font-size: .67rem; font-weight: 650; }
+  .evidence-badges .history { border-color: rgb(var(--color-accent) / .58); color: rgb(var(--color-accent)); background: rgb(var(--color-accent) / .08); }
+  .evidence-badges .oa { border-color: rgb(var(--color-teal) / .55); color: rgb(var(--color-teal)); }
+  .evidence-header h1 { max-width: 55rem; margin-top: 1.2rem; font: 600 clamp(2rem, 5vw, 3.9rem)/1.04 'Source Serif 4', serif; letter-spacing: -.035em; color: rgb(var(--text-strong)); }
+  .evidence-citation { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1.15rem; color: rgb(var(--text-muted)); font-size: .85rem; }
+  .evidence-authors { max-width: 52rem; margin-top: .8rem; color: rgb(var(--text-faint)); font-size: .76rem; line-height: 1.6; }
+  .evidence-register { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-top: 2rem; padding-top: 1.2rem; border-top: 1px solid rgb(var(--border) / .72); }
+  .evidence-register dt, .evidence-kicker { color: rgb(var(--color-accent)); font-size: .64rem; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; }
+  .evidence-register dd { margin-top: .32rem; overflow-wrap: anywhere; color: rgb(var(--text)); font: 500 .72rem/1.4 'JetBrains Mono', monospace; }
+  .evidence-layout { display: grid; grid-template-columns: minmax(0, 1fr) 18rem; gap: 1.5rem; margin-top: 1.5rem; }
+  .evidence-layout main, .evidence-layout aside { min-width: 0; }
+  .evidence-context, .evidence-sections, .evidence-surveillance, .evidence-aside-block { border: 1px solid rgb(var(--border) / .72); background: rgb(var(--surface)); }
+  .evidence-context { padding: 1.5rem; border-left: 3px solid rgb(var(--color-accent)); }
+  .evidence-context > p:last-child { margin-top: .65rem; color: rgb(var(--text)); font-size: .94rem; line-height: 1.7; }
+  .evidence-sections, .evidence-surveillance { margin-top: 1.5rem; padding: clamp(1.35rem, 3vw, 2.2rem); }
+  .section-title { display: flex; align-items: baseline; gap: .9rem; padding-bottom: 1rem; border-bottom: 1px solid rgb(var(--border) / .7); }
+  .section-title span { color: rgb(var(--color-accent)); font: 500 .65rem/1 'JetBrains Mono', monospace; }
+  .section-title h2 { font: 600 1.6rem/1.1 'Source Serif 4', serif; color: rgb(var(--text-strong)); }
+  .evidence-section { display: grid; grid-template-columns: 12rem 1fr; gap: 1.4rem; padding: 1.25rem 0; border-top: 1px solid rgb(var(--border) / .55); }
+  .section-title + .evidence-section { border-top: 0; }
+  .evidence-section h3 { color: rgb(var(--text-strong)); font: 600 .95rem/1.3 'Source Serif 4', serif; }
+  .evidence-section p { color: rgb(var(--text-muted)); font-size: .86rem; line-height: 1.68; }
+  .evidence-section-pending p { color: rgb(var(--text-faint)); font-style: italic; }
+  .surveillance-links { display: grid; grid-template-columns: repeat(2, 1fr); gap: .75rem; margin-top: 1.2rem; }
+  .related-signal-context { margin-top: 1.1rem; padding: 1rem; border: 1px solid rgb(var(--border) / .7); background: rgb(var(--surface-raised) / .34); }
+  .related-signal-list { display: grid; gap: .5rem; margin-top: .7rem; }
+  .related-signal-list a { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: .75rem; align-items: center; padding: .75rem; border: 1px solid rgb(var(--border) / .58); background: rgb(var(--surface)); }
+  .related-signal-list a:hover { border-color: rgb(var(--color-brand) / .6); }
+  .related-signal-list span { display: block; color: rgb(var(--text-strong)); font: 600 .95rem/1.2 'Source Serif 4', serif; }
+  .related-signal-list small { display: block; margin-top: .25rem; color: rgb(var(--text-faint)); font-size: .64rem; }
+  .related-signal-list strong { color: rgb(var(--color-accent)); font: 600 .78rem/1 'JetBrains Mono', monospace; }
+  .related-signal-list em { border: 1px solid rgb(var(--border)); padding: .22rem .45rem; color: rgb(var(--text-muted)); font-size: .62rem; font-style: normal; }
+  .signal-context-note { margin-top: .7rem; color: rgb(var(--text-faint)); font-size: .68rem; line-height: 1.5; }
+  .surveillance-links a { position: relative; padding: 1rem 2.4rem 1rem 1rem; border: 1px solid rgb(var(--border) / .68); }
+  .surveillance-links a:hover { border-color: rgb(var(--color-brand) / .7); }
+  .surveillance-links span { display: block; color: rgb(var(--text-strong)); font: 600 1rem/1.2 'Source Serif 4', serif; }
+  .surveillance-links small { display: block; margin-top: .35rem; color: rgb(var(--text-faint)); font-size: .68rem; }
+  .surveillance-links i { position: absolute; right: 1rem; top: 50%; color: rgb(var(--color-brand)); transform: translateY(-50%); }
+  .evidence-disclaimer { margin-top: 1rem; color: rgb(var(--text-faint)); font-size: .7rem; line-height: 1.5; }
+  .evidence-graph > p { margin-top: 1rem; color: rgb(var(--text-muted)); font-size: .82rem; line-height: 1.65; }
+  .relationship-list { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .9rem; }
+  .relationship-list span { border: 1px solid rgb(var(--border) / .72); background: rgb(var(--surface-raised) / .48); padding: .25rem .5rem; color: rgb(var(--text-muted)); font-size: .66rem; }
+  .evidence-layout aside { display: flex; flex-direction: column; gap: 1rem; }
+  .evidence-aside-block { padding: 1.2rem; }
+  .topic-tags { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .7rem; }
+  .topic-tags a { border: 1px solid rgb(var(--border)); padding: .2rem .45rem; color: rgb(var(--text-muted)); font-size: .67rem; }
+  .evidence-aside-block ul, .source-links { display: grid; gap: .55rem; margin-top: .75rem; }
+  .evidence-aside-block li a, .source-links a { color: rgb(var(--text)); font-size: .75rem; }
+  .evidence-aside-block a:hover { color: rgb(var(--color-brand)); }
+  .evidence-score strong { display: block; margin-top: .65rem; font: 600 3rem/1 'Source Serif 4', serif; color: rgb(var(--text-strong)); }
+  .evidence-score > p:last-child { margin-top: .65rem; color: rgb(var(--text-faint)); font-size: .68rem; line-height: 1.55; }
+  @media (max-width: 820px) { .evidence-layout { grid-template-columns: 1fr; } .evidence-register { grid-template-columns: repeat(2, 1fr); } .evidence-layout aside { display: grid; grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 560px) { .evidence-page { width: min(100% - 1rem, 1120px); } .evidence-header h1 { font-size: 2rem; } .evidence-section { grid-template-columns: 1fr; gap: .45rem; } .surveillance-links, .evidence-layout aside { grid-template-columns: 1fr; } .related-signal-list a { grid-template-columns: 1fr auto; } .related-signal-list em { grid-column: 1 / -1; justify-self: start; } }
+</style>

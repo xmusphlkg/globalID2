@@ -1,0 +1,148 @@
+{
+  "week": "2021-W09",
+  "start_date": "2021-03-01",
+  "end_date": "2021-03-01",
+  "article_count": 1,
+  "disease_count": 1,
+  "country_count": 0,
+  "top_topics": [
+    "Diagnostics"
+  ],
+  "articles": [
+    {
+      "article_id": "lit_ca9d25ea2873d046f20fea92",
+      "slug": "10-1016-s1473-3099-20-30928-2-ca9d25ea",
+      "title": "Transcriptomic signatures for diagnosing tuberculosis in clinical practice: a prospective, multicentre cohort study",
+      "doi": "10.1016/s1473-3099(20)30928-2",
+      "pmid": "33508221",
+      "journal": "The Lancet Infectious Diseases",
+      "publisher": "Elsevier BV",
+      "authors": [
+        "Long T Hoang",
+        "Pooja Jain",
+        "Timesh D Pillay",
+        "Mica Tolosa-Wright",
+        "Umar Niazi",
+        "Yemisi Takwoingi",
+        "Alice Halliday",
+        "Luis C Berrocal-Almanza",
+        "Jonathan J Deeks",
+        "Peter Beverley",
+        "Onn Min Kon",
+        "Ajit Lalvani"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Cohort study",
+      "published_at": "2021-03-01T00:00:00+00:00",
+      "indexed_at": "2026-08-07T02:22:11+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC7907671",
+      "license_url": "https://www.elsevier.com/tdm/userlicense/1.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.526,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D025",
+          "slug": "tuberculosis",
+          "name_en": "Tuberculosis",
+          "name_zh": "肺结核",
+          "confidence": 0.86
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Diagnostics",
+          "confidence": 0.7100000000000001
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {
+        "en": {
+          "research_question": "Assess whether blood-based gene expression profiles can accurately identify tuberculosis among individuals presenting with clinically suspected disease in everyday medical practice.",
+          "study_design": "A prospective, multicentre cohort investigation conducted across ten secondary care facilities in England.",
+          "population_setting": "Individuals aged sixteen years and older seeking inpatient or outpatient care for suspected tuberculosis within a low-incidence national health system.",
+          "main_findings": "Analysis of six hundred twenty-eight participants revealed that the top-performing novel molecular profile achieved an area under the receiver-operating characteristic curve of zero point eight seven, alongside seventy-seven percent sensitivity and eighty-four percent specificity for active infection. The strongest previously reported profile demonstrated similar metrics, yet neither category fulfilled World Health Organization benchmarks for paired sensitivity and specificity required by non-sputum assays. Diagnostic performance remained inadequate even when focusing exclusively on cases classified as highly probable tuberculosis.",
+          "public_health_relevance": "Molecular blood testing represents an evolving diagnostic avenue that warrants continued methodological refinement before widespread implementation in routine infectious disease management.",
+          "limitations": "Final disease classification relied on retrospective application of predefined criteria following a six-to-twelve-month observation period rather than immediate confirmatory testing. Enrollment was confined to a single nation with established hospital networks, which may constrain broader applicability.",
+          "gids_interpretation": "This record documents baseline performance metrics for transcriptomic diagnostic tools within a structured observational framework. The information establishes reference points for technical validation efforts without suggesting alignment with ongoing epidemiological tracking initiatives.",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.968,
+            "generated_at": "2026-08-13T12:45:19.419741+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        },
+        "zh": {
+          "research_question": "评估血液转录组特征在常规临床实践中对疑似结核病患者的诊断准确性。",
+          "study_design": "本研究为嵌套于大型验证项目中的前瞻性多中心队列研究，在英国十家二级医疗机构同步开展。",
+          "population_setting": "纳入对象为十六岁及以上、在常规门诊或住院环境中因临床表现怀疑感染结核病的成年患者。",
+          "main_findings": "在六百二十八名完成分析的患者中，表现最优的新型与既往发表的特征集曲线下面积分别达到零点八七与零点八三。尽管各项指标显示一定区分能力，但所有测试模型均未达到世界卫生组织规定的非痰液检测敏感性特异性配对目标。",
+          "public_health_relevance": "现有基于全血基因表达谱的分子工具在当前低流行地区的常规诊疗流程中可能缺乏足够的临床应用价值。",
+          "limitations": "研究样本仅来源于低发病率国家的特定医疗体系，且最终确诊需依赖长达数月的后续追踪与预设标准，这可能限制结论向其他流行病学背景的推广。",
+          "gids_interpretation": "该文献记录了前瞻性队列中分子标志物的实际诊断效能数据，可为相关技术的可发现性与临床转化背景提供信息参考，不涉及任何实时监测信号的推断。",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.963,
+            "generated_at": "2026-08-13T12:45:55.284962+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        }
+      },
+      "why_it_matters_en": "Molecular blood testing represents an evolving diagnostic avenue that warrants continued methodological refinement before widespread implementation in routine infectious disease management.",
+      "why_it_matters_zh": "现有基于全血基因表达谱的分子工具在当前低流行地区的常规诊疗流程中可能缺乏足够的临床应用价值。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1016/s1473-3099(20)30928-2",
+        "publisher": "https://linkinghub.elsevier.com/retrieve/pii/S1473309920309282",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/33508221/"
+      },
+      "updated_at": "2026-08-13T12:40:20.771719+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:cbe12a284bd5cd9b",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D025",
+          "disease_name_en": "Tuberculosis",
+          "disease_name_zh": "肺结核",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 43.0,
+            "previous": 32.0,
+            "absolute_change": 11.0,
+            "change_pct": 34.38
+          },
+          "risk": {
+            "score": 56.0,
+            "level": "high",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    }
+  ],
+  "url": "/research/weekly/2021-W09/"
+}

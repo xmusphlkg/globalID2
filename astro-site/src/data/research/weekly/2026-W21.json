@@ -1,0 +1,288 @@
+{
+  "week": "2026-W21",
+  "start_date": "2026-05-18",
+  "end_date": "2026-05-21",
+  "article_count": 3,
+  "disease_count": 2,
+  "country_count": 1,
+  "top_topics": [],
+  "articles": [
+    {
+      "article_id": "lit_b79a90bec495b81f85aaca81",
+      "slug": "10-5334-gh-1555-b79a90be",
+      "title": "Stakeholders Want a Menu of Choices: Findings from a Consultation Workshop on Improving Access to Secondary Prophylaxis of Rheumatic Fever and Rheumatic Heart Disease.",
+      "doi": "10.5334/gh.1555",
+      "pmid": "42180795",
+      "journal": "Global heart",
+      "publisher": null,
+      "authors": [
+        "Hla TK",
+        "Enkel SL",
+        "Kado J",
+        "Eadie-Mirams E",
+        "Wyber R",
+        "Carapetis J",
+        "Manning L"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-05-18T00:00:00+00:00",
+      "indexed_at": "2026-05-25T00:00:00+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC13196686",
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.546,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D158",
+          "slug": "rheumatic-fever",
+          "name_en": "Rheumatic fever",
+          "name_zh": "风湿热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Rheumatic fever. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与风湿热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.5334/gh.1555",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/42180795/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137517+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:f59d37329a1f6ece",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 28.0,
+            "previous": 18.0,
+            "absolute_change": 10.0,
+            "change_pct": 55.56
+          },
+          "risk": {
+            "score": 46.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_467668f3d67c71b1047a140a",
+      "slug": "10-1111-jpc-70440-467668f3",
+      "title": "Group C/G Streptococcal Pharyngitis and Acute Rheumatic Fever in Auckland, New Zealand, 2010–2016",
+      "doi": "10.1111/jpc.70440",
+      "pmid": "42152461",
+      "journal": "Journal of Paediatrics and Child Health",
+      "publisher": "Wiley",
+      "authors": [
+        "Jane Oliver",
+        "Susan Jack",
+        "Julie Bennett",
+        "Michael G. Baker"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-05-18T00:00:00+00:00",
+      "indexed_at": "2026-06-11T04:57:43+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://europepmc.org/articles/PMC13253995",
+      "license_url": "http://creativecommons.org/licenses/by/4.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.546,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D158",
+          "slug": "rheumatic-fever",
+          "name_en": "Rheumatic fever",
+          "name_zh": "风湿热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [
+        {
+          "code": "NZ",
+          "name_en": "New Zealand",
+          "name_zh": null,
+          "confidence": 0.78
+        }
+      ],
+      "topics": [],
+      "related_surveillance": [
+        {
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "disease_slug": "rheumatic-fever",
+          "country_code": "NZ",
+          "country_name_en": "New Zealand",
+          "url": "/diseases/rheumatic-fever/",
+          "method": "high-confidence article geography intersected with GIDS series coverage"
+        }
+      ],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Rheumatic fever. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与风湿热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1111/jpc.70440",
+        "publisher": "https://onlinelibrary.wiley.com/doi/10.1111/jpc.70440",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/42152461/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137483+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:f59d37329a1f6ece",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 28.0,
+            "previous": 18.0,
+            "absolute_change": 10.0,
+            "change_pct": 55.56
+          },
+          "risk": {
+            "score": 46.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "exact_disease_geography",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_27a0fca571dde9e985e53882",
+      "slug": "10-1038-s42003-026-10241-9-27a0fca5",
+      "title": "Circulating metabolites associated with protection against Mycobacterium tuberculosis infection and inhibition of mycobacterial growth.",
+      "doi": "10.1038/s42003-026-10241-9",
+      "pmid": "42162225",
+      "journal": "Communications biology",
+      "publisher": null,
+      "authors": [
+        "Setiabudiawan TP",
+        "Apriani L",
+        "Avila-Pacheco J",
+        "Ardiansyah E",
+        "Kumar V",
+        "Alisjahbana B",
+        "Verrall AJ",
+        "DiNardo AR",
+        "Indrati AR",
+        "Mourits VP",
+        "de Bree LCJ",
+        "Moorlag SJCFM",
+        "Clish CB",
+        "Joosten LAB",
+        "van Laarhoven A",
+        "van Meijgaarden KE",
+        "Netea MG",
+        "Joosten SA",
+        "Koeken VACM",
+        "Hill PC",
+        "van Crevel R"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-05-21T00:00:00+00:00",
+      "indexed_at": "2026-05-20T00:00:00+00:00",
+      "open_access_status": "unknown",
+      "open_access_url": null,
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.525,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D025",
+          "slug": "tuberculosis",
+          "name_en": "Tuberculosis",
+          "name_zh": "肺结核",
+          "confidence": 0.9
+        }
+      ],
+      "countries": [],
+      "topics": [],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Tuberculosis. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与肺结核相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1038/s42003-026-10241-9",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/42162225/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137616+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:cbe12a284bd5cd9b",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D025",
+          "disease_name_en": "Tuberculosis",
+          "disease_name_zh": "肺结核",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 43.0,
+            "previous": 32.0,
+            "absolute_change": 11.0,
+            "change_pct": 34.38
+          },
+          "risk": {
+            "score": 56.0,
+            "level": "high",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    }
+  ],
+  "url": "/research/weekly/2026-W21/"
+}

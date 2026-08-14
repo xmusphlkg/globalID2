@@ -1,0 +1,235 @@
+{
+  "article_id": "lit_c73d79cd9e3f5818ec19d79b",
+  "slug": "10-1111-zph-70034-c73d79cd",
+  "title": "Biosecurity Uptake and Perceived Risk of Avian Influenza Among People in Contact With Birds.",
+  "doi": "10.1111/zph.70034",
+  "pmid": "41495977",
+  "journal": "Zoonoses and public health",
+  "publisher": null,
+  "authors": [
+    "Whitlow H",
+    "Gokool S",
+    "Clapp G",
+    "Bueno I",
+    "Logunleko M",
+    "Moore P",
+    "Masterton S",
+    "Taylor-Egbeyemi J",
+    "Brown I",
+    "Pae R",
+    "Smith LE",
+    "Brooks-Pollock E",
+    "Thomas AC"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Journal article",
+  "published_at": "2026-01-06T00:00:00+00:00",
+  "indexed_at": "2026-01-07T00:00:00+00:00",
+  "open_access_status": "open",
+  "open_access_url": "https://europepmc.org/articles/PMC12865334",
+  "license_url": null,
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.639,
+  "is_featured": false,
+  "diseases": [
+    {
+      "disease_id": "D038",
+      "slug": "influenza",
+      "name_en": "Influenza",
+      "name_zh": "流行性感冒",
+      "confidence": 0.94
+    },
+    {
+      "disease_id": "D014",
+      "slug": "h5n1",
+      "name_en": "H5N1",
+      "name_zh": "人感染高致病性禽流感",
+      "confidence": 0.62
+    }
+  ],
+  "countries": [],
+  "topics": [
+    {
+      "name": "Transmission dynamics",
+      "confidence": 0.66
+    },
+    {
+      "name": "One Health",
+      "confidence": 0.66
+    }
+  ],
+  "related_surveillance": [],
+  "summary": {
+    "en": {
+      "research_question": "What are the current adoption rates of protective practices and how do individuals involved in avian husbandry perceive zoonotic disease threats?",
+      "study_design": "A cross-sectional survey utilizing standardized questionnaires administered over a three-month period.",
+      "population_setting": "Two hundred twenty-five respondents located in the United Kingdom who maintain regular contact with poultry or other avian species.",
+      "main_findings": "Post-contact hand cleaning emerged as the predominant safety protocol, followed by the use of chemical footbaths. Daily interactions with larger bird counts increased the likelihood of employing various protective gear categories. While concerns regarding viral impacts on animal welfare were pronounced, especially among large-scale operators, apprehension about personal infection remained uniformly low across all participant groups.",
+      "public_health_relevance": "The observed gap between routine animal-focused protocols and human-directed precautions suggests opportunities for targeted educational outreach. Understanding these behavioral patterns can help shape communication strategies that address specific compliance obstacles within high-exposure demographics.",
+      "limitations": "Reliance on self-reported survey responses from a single geographic region may introduce reporting bias and limit broader applicability.",
+      "gids_interpretation": "This publication supplies foundational behavioral metrics and awareness benchmarks useful for contextualizing avian influenza preparedness discussions within academic and policy literature. It functions as a static reference point for tracking historical compliance trends rather than indicating active epidemiological monitoring or real-time threat escalation.",
+      "provenance": {
+        "generated_by": "literature-evidence-agent",
+        "model": "qwen3.7-flash",
+        "provider": "qwenai",
+        "quality_score": 0.949,
+        "generated_at": "2026-08-13T23:09:47.755216+00:00",
+        "editorially_approved": false,
+        "automatically_approved": true,
+        "automation_policy_version": "research-radar-autopilot.v1",
+        "publication_gate": "automated-quality-gate"
+      }
+    },
+    "zh": {
+      "research_question": "本研究旨在调查英国接触鸟类人群的生物安全措施采用情况及其对禽流感的风险认知，重点关注预防跨物种传播的相关实践。",
+      "study_design": "该研究采用横断面问卷调查设计，于2024年5月至7月期间收集数据。",
+      "population_setting": "研究对象为英国境内225名日常与鸟类存在接触的人员。",
+      "main_findings": "接触鸟类后洗手是最普遍的措施，其次为鞋底消毒。接触鸟类数量越多，使用个人防护装备的概率越高。受访者普遍认为禽流感对禽类健康威胁较大，但对其自身健康风险认知较低，表明现有措施主要侧重于控制禽间传播而非人畜共患。",
+      "public_health_relevance": "结果揭示了当前生物安全实践在阻断人畜共患传播方面的局限性，提示公共卫生部门需针对特定人群制定干预策略，以改善防护措施的实际应用效果。",
+      "limitations": "研究依赖自我报告问卷且样本局限于单一国家，横断面设计难以确立因果关系或评估行为的长期演变。",
+      "gids_interpretation": "该文献从同一健康视角补充了禽流感人畜共患传播链中的人类行为学数据，有助于完善相关疾病传播动力学模型中的风险认知维度。",
+      "provenance": {
+        "generated_by": "literature-evidence-agent",
+        "model": "qwen3.7-flash",
+        "provider": "qwenai",
+        "quality_score": 0.949,
+        "generated_at": "2026-08-13T23:10:09.137915+00:00",
+        "editorially_approved": false,
+        "automatically_approved": true,
+        "automation_policy_version": "research-radar-autopilot.v1",
+        "publication_gate": "automated-quality-gate"
+      }
+    }
+  },
+  "why_it_matters_en": "The observed gap between routine animal-focused protocols and human-directed precautions suggests opportunities for targeted educational outreach. Understanding these behavioral patterns can help shape communication strategies that address specific compliance obstacles within high-exposure demographics.",
+  "why_it_matters_zh": "结果揭示了当前生物安全实践在阻断人畜共患传播方面的局限性，提示公共卫生部门需针对特定人群制定干预策略，以改善防护措施的实际应用效果。",
+  "source_urls": {
+    "doi": "https://doi.org/10.1111/zph.70034",
+    "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41495977/"
+  },
+  "updated_at": "2026-08-13T16:05:48.137454+00:00",
+  "related_signals": [
+    {
+      "signal_id": "signal:d4f34da837688d03",
+      "section": "increasing",
+      "kind": "statistical_signal",
+      "title": null,
+      "disease_id": "D038",
+      "disease_name_en": "Influenza",
+      "disease_name_zh": "流行性感冒",
+      "geographies": [
+        {
+          "code": "IE",
+          "name_en": "Ireland"
+        }
+      ],
+      "data_through": "2026-07-27",
+      "window": {
+        "label": "Last 4 weeks",
+        "current": 230.0,
+        "previous": 46.0,
+        "absolute_change": 184.0,
+        "change_pct": 400.0
+      },
+      "risk": {
+        "score": 65.5,
+        "level": "high",
+        "confidence": "low"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-c73d79cd9e3f5818ec19d79b",
+        "type": "article",
+        "label": "Biosecurity Uptake and Perceived Risk of Avian Influenza Among People in Contact With Birds.",
+        "slug": "10-1111-zph-70034-c73d79cd",
+        "url": "/research/articles/10-1111-zph-70034-c73d79cd/",
+        "published_at": "2026-01-06T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "disease:d014",
+        "type": "disease",
+        "label": "H5N1",
+        "disease_id": "D014",
+        "name_zh": "人感染高致病性禽流感",
+        "slug": "h5n1",
+        "url": "/diseases/h5n1/"
+      },
+      {
+        "id": "disease:d038",
+        "type": "disease",
+        "label": "Influenza",
+        "disease_id": "D038",
+        "name_zh": "流行性感冒",
+        "slug": "influenza",
+        "url": "/diseases/influenza/"
+      },
+      {
+        "id": "study-type:journal-article",
+        "type": "study_type",
+        "label": "Journal article"
+      },
+      {
+        "id": "topic:one-health",
+        "type": "topic",
+        "label": "One Health"
+      },
+      {
+        "id": "topic:transmission-dynamics",
+        "type": "topic",
+        "label": "Transmission dynamics"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-c73d79cd9e3f5818ec19d79b|ABOUT_DISEASE|disease:d014",
+        "source": "article:lit-c73d79cd9e3f5818ec19d79b",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d014",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-c73d79cd9e3f5818ec19d79b|ABOUT_DISEASE|disease:d038",
+        "source": "article:lit-c73d79cd9e3f5818ec19d79b",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d038",
+        "confidence": 0.94
+      },
+      {
+        "id": "article:lit-c73d79cd9e3f5818ec19d79b|ADDRESSES_TOPIC|topic:one-health",
+        "source": "article:lit-c73d79cd9e3f5818ec19d79b",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:one-health",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-c73d79cd9e3f5818ec19d79b|ADDRESSES_TOPIC|topic:transmission-dynamics",
+        "source": "article:lit-c73d79cd9e3f5818ec19d79b",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:transmission-dynamics",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-c73d79cd9e3f5818ec19d79b|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-c73d79cd9e3f5818ec19d79b",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 6,
+      "edges": 5,
+      "articles": 1
+    }
+  }
+}

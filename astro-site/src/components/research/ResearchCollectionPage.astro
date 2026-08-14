@@ -1,0 +1,177 @@
+---
+import ReportLayout from '../../layouts/ReportLayout.astro';
+import ResearchArticleCard from './ResearchArticleCard.astro';
+
+interface Props {
+  eyebrow: string;
+  eyebrowZh: string;
+  title: string;
+  titleZh: string;
+  description: string;
+  descriptionZh: string;
+  canonicalPath: string;
+  articles: any[];
+  contextLabel?: string;
+  contextLabelZh?: string;
+}
+
+const {
+  eyebrow,
+  eyebrowZh,
+  title,
+  titleZh,
+  description,
+  descriptionZh,
+  canonicalPath,
+  articles,
+  contextLabel = 'Published evidence',
+  contextLabelZh = '已发布证据',
+} = Astro.props;
+const initialVisibleArticles = 30;
+const initialResultCount = articles.length > initialVisibleArticles
+  ? `${initialVisibleArticles} of ${articles.length} publications shown`
+  : `${articles.length} ${articles.length === 1 ? 'publication' : 'publications'}`;
+const diseaseCount = new Set(articles.flatMap((article: any) => (article.diseases ?? []).map((item: any) => item.disease_id))).size;
+const countryCount = new Set(articles.flatMap((article: any) => (article.countries ?? []).map((item: any) => item.code))).size;
+const topicCount = new Set(articles.flatMap((article: any) => (article.topics ?? []).map((item: any) => item.name))).size;
+const structuredData = {
+  '@type': 'CollectionPage',
+  name: title,
+  description,
+  mainEntity: {
+    '@type': 'ItemList',
+    numberOfItems: articles.length,
+    itemListElement: articles.slice(0, 100).map((article: any, index: number) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      name: article.title,
+      url: new URL(`/research/articles/${article.slug}/`, Astro.site ?? Astro.url.origin).toString(),
+    })),
+  },
+};
+---
+
+<ReportLayout
+  title={`${title} | Research Radar`}
+  description={description}
+  seo={{
+    title: `${title} | Research Radar | GIDS`,
+    description,
+    locale: 'en',
+    canonicalPath,
+    alternatePaths: { en: canonicalPath },
+    pageType: 'CollectionPage',
+  }}
+  structuredData={structuredData}
+  breadcrumbs={[
+    { label: 'Research Radar', labelZh: '研究雷达', href: '/research/' },
+    { label: title, labelZh: titleZh },
+  ]}
+>
+  <main class="research-collection">
+    <header class="academic-hero collection-hero">
+      <div class="collection-topline">
+        <p class="academic-kicker" data-lang-en={eyebrow} data-lang-zh={eyebrowZh}>{eyebrow}</p>
+        <div class="collection-actions">
+          <a href="/research/" data-lang-en="Research home" data-lang-zh="研究首页">Research home</a>
+          <a href="/research/rss.xml" data-lang-en="RSS feed" data-lang-zh="RSS 订阅">RSS feed</a>
+        </div>
+      </div>
+      <h1 data-lang-en={title} data-lang-zh={titleZh}>{title}</h1>
+      <p class="collection-lede" data-lang-en={description} data-lang-zh={descriptionZh}>{description}</p>
+      <dl class="collection-metrics">
+        <div><dt data-lang-en={contextLabel} data-lang-zh={contextLabelZh}>{contextLabel}</dt><dd>{articles.length}</dd></div>
+        <div><dt data-lang-en="Diseases" data-lang-zh="疾病">Diseases</dt><dd>{diseaseCount}</dd></div>
+        <div><dt data-lang-en="Countries" data-lang-zh="国家和地区">Countries</dt><dd>{countryCount}</dd></div>
+        <div><dt data-lang-en="Topics" data-lang-zh="主题">Topics</dt><dd>{topicCount}</dd></div>
+      </dl>
+    </header>
+
+    <slot name="context" />
+
+    <section class="card collection-results">
+      <div class="collection-heading">
+        <div><p class="academic-kicker" data-lang-en="Evidence stream" data-lang-zh="证据流">Evidence stream</p><h2 data-lang-en="Published literature" data-lang-zh="已发布文献">Published literature</h2></div>
+        <span>{String(articles.length).padStart(2, '0')}</span>
+      </div>
+      {articles.length > 0
+        ? (
+          <>
+            <p id="collection-result-count" class="collection-result-count" aria-live="polite">{initialResultCount}</p>
+            <div id="collection-list" class="collection-list" data-initial-visible={initialVisibleArticles}>
+              {articles.map((article: any, index: number) => (
+                <ResearchArticleCard article={article} index={index} initialVisible={initialVisibleArticles} />
+              ))}
+            </div>
+            {articles.length > initialVisibleArticles && (
+              <button
+                id="collection-load-more"
+                class="collection-load-more"
+                type="button"
+                aria-controls="collection-list"
+                data-load-more-collection
+                data-lang-en="Load more publications"
+                data-lang-zh="加载更多论文"
+              >
+                Load more publications
+              </button>
+            )}
+          </>
+        )
+        : <div class="collection-empty"><h3 data-lang-en="No published records" data-lang-zh="暂无已发布记录">No published records</h3><p data-lang-en="This collection is ready and will populate through the automatic quality-gated release workflow." data-lang-zh="该集合已就绪，将通过自动质量门控发布流程填充。">This collection is ready and will populate through the automatic quality-gated release workflow.</p></div>}
+    </section>
+  </main>
+</ReportLayout>
+
+<script>
+  const list = document.querySelector<HTMLElement>('#collection-list');
+  const cards = [...document.querySelectorAll<HTMLElement>('[data-research-card]')].filter(card => card.closest('#collection-list'));
+  const count = document.querySelector<HTMLElement>('#collection-result-count');
+  const loadMore = document.querySelector<HTMLButtonElement>('#collection-load-more');
+  const initialVisible = Number(list?.dataset.initialVisible ?? 30);
+  let visibleLimit = initialVisible;
+  const render = () => {
+    cards.forEach((card, index) => {
+      card.hidden = index >= visibleLimit;
+    });
+    if (count) {
+      count.textContent = cards.length > visibleLimit
+        ? `${Math.min(visibleLimit, cards.length)} of ${cards.length} publications shown`
+        : `${cards.length} ${cards.length === 1 ? 'publication' : 'publications'}`;
+    }
+    if (loadMore) loadMore.hidden = cards.length <= visibleLimit;
+  };
+  loadMore?.addEventListener('click', () => {
+    visibleLimit += initialVisible;
+    render();
+  });
+  render();
+</script>
+
+<style>
+  .research-collection { width: min(74rem, calc(100% - 2rem)); margin: 0 auto; padding: 2.5rem 0 3rem; }
+  .collection-hero { padding: clamp(1.5rem, 4vw, 2.75rem); }
+  .collection-topline { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+  .collection-actions { display: flex; flex-wrap: wrap; gap: .45rem; }
+  .collection-actions a { border: 1px solid rgb(var(--border)); padding: .35rem .6rem; color: rgb(var(--text-muted)); font-size: .68rem; font-weight: 650; }
+  .collection-actions a:hover { border-color: rgb(var(--color-brand) / .55); color: rgb(var(--color-brand)); }
+  .collection-hero h1 { max-width: 56rem; margin-top: .75rem; color: rgb(var(--text-strong)); font: 600 clamp(2.15rem, 6vw, 4.4rem)/1 'Source Serif 4', serif; letter-spacing: -.04em; }
+  .collection-lede { max-width: 50rem; margin-top: 1rem; color: rgb(var(--text-muted)); font-size: clamp(.9rem, 1.7vw, 1.05rem); line-height: 1.7; }
+  .collection-metrics { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: 2rem; border-top: 1px solid rgb(var(--border) / .72); }
+  .collection-metrics div { padding: 1rem 1rem 0; border-left: 1px solid rgb(var(--border) / .58); }
+  .collection-metrics div:first-child { padding-left: 0; border-left: 0; }
+  .collection-metrics dt { color: rgb(var(--text-faint)); font-size: .6rem; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; }
+  .collection-metrics dd { margin-top: .35rem; color: rgb(var(--text-strong)); font: 600 1.5rem/1 'Source Serif 4', serif; }
+  .collection-results { margin-top: 1.5rem; padding: clamp(1.25rem, 3vw, 2rem); }
+  .collection-heading { display: flex; align-items: start; justify-content: space-between; gap: 1rem; padding-bottom: 1rem; border-bottom: 1px solid rgb(var(--border) / .72); }
+  .collection-heading h2 { margin-top: .3rem; color: rgb(var(--text-strong)); font: 600 clamp(1.4rem, 3vw, 2rem)/1.1 'Source Serif 4', serif; }
+  .collection-heading > span { color: rgb(var(--border-soft)); font: 500 .75rem/1 'JetBrains Mono', monospace; }
+  .collection-result-count { margin-top: 1rem; color: rgb(var(--text-faint)); font: 500 .67rem/1 'JetBrains Mono', monospace; }
+  .collection-list { margin-top: .35rem; }
+  .collection-load-more { display: inline-flex; align-items: center; justify-content: center; min-height: 2.5rem; margin-top: 1rem; border: 1px solid rgb(var(--border)); background: rgb(var(--surface-raised) / .48); padding: 0 1rem; color: rgb(var(--color-brand)); font-size: .74rem; font-weight: 650; }
+  .collection-load-more[hidden] { display: none; }
+  .collection-empty { display: grid; place-items: center; min-height: 15rem; text-align: center; }
+  .collection-empty h3 { color: rgb(var(--text-strong)); font: 600 1.25rem/1.2 'Source Serif 4', serif; }
+  .collection-empty p { max-width: 32rem; margin-top: .55rem; color: rgb(var(--text-muted)); font-size: .8rem; line-height: 1.6; }
+  @media (max-width: 640px) { .research-collection { width: min(100% - 1rem, 74rem); padding-top: 1rem; } .collection-topline { align-items: start; flex-direction: column; } .collection-metrics { grid-template-columns: repeat(2, 1fr); } .collection-metrics div:nth-child(3) { padding-left: 0; border-left: 0; } }
+</style>

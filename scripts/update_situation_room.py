@@ -21,7 +21,25 @@ def main() -> None:
     parser.add_argument("--no-fetch-events", action="store_true", help="Recalculate signals without network access")
     args = parser.parse_args()
     payload = asyncio.run(refresh_situation(fetch_events=not args.no_fetch_events))
-    print(json.dumps({key: payload.get(key) for key in ("snapshot_id", "generated_at", "data_through", "iso_week")}, ensure_ascii=False))
+    print(
+        json.dumps(
+            {
+                key: payload.get(key)
+                for key in (
+                    "snapshot_id",
+                    "checked_at",
+                    "content_updated_at",
+                    "data_through",
+                    "iso_week",
+                    "revision",
+                    "quality_gate_status",
+                )
+            },
+            ensure_ascii=False,
+        )
+    )
+    if not (payload.get("quality_gate") or {}).get("passed"):
+        raise SystemExit(2)
 
 
 if __name__ == "__main__":

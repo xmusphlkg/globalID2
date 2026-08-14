@@ -1,0 +1,131 @@
+{
+  "week": "2024-W35",
+  "start_date": "2024-09-01",
+  "end_date": "2024-09-01",
+  "article_count": 1,
+  "disease_count": 1,
+  "country_count": 0,
+  "top_topics": [
+    "Surveillance",
+    "Vaccination"
+  ],
+  "articles": [
+    {
+      "article_id": "lit_f6683eaeaf6504650c582bc6",
+      "slug": "10-1016-j-ijid-2024-107132-f6683eae",
+      "title": "Potential determinants of the decline in mpox cases in Belgium: A behavioral, epidemiological and seroprevalence study",
+      "doi": "10.1016/j.ijid.2024.107132",
+      "pmid": "38942168",
+      "journal": "International Journal of Infectious Diseases",
+      "publisher": "Elsevier BV",
+      "authors": [
+        "Elise De Vos",
+        "Liesbeth Van Gestel",
+        "Isabel Brosius",
+        "Chris Kenyon",
+        "Bea Vuylsteke",
+        "Irith De Baetselier",
+        "Joachim Mariën",
+        "Eugene Bangwen",
+        "Simon Couvreur",
+        "Amaryl Lecompte",
+        "Dominique Van Beckhoven",
+        "Bart Hoorelbeke",
+        "Babs E. Verstrepen",
+        "Luca M. Zaeck",
+        "Rory D. de Vries",
+        "Corine H. Geurts van Kessel",
+        "Niel Hens",
+        "Kevin K. Ariën",
+        "Koen Vercauteren",
+        "Marjan Van Esbroek",
+        "Christophe Van Dijck",
+        "Laurens Liesenborghs"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2024-09-01T00:00:00+00:00",
+      "indexed_at": "2026-08-07T22:10:23+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://linkinghub.elsevier.com/retrieve/pii/S1201971224002030",
+      "license_url": "https://www.elsevier.com/tdm/userlicense/1.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.544,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D065",
+          "slug": "monkeypox",
+          "name_en": "Monkeypox",
+          "name_zh": "猴痘",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Surveillance",
+          "confidence": 0.66
+        },
+        {
+          "name": "Vaccination",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {
+        "en": {
+          "research_question": "What epidemiological, behavioral, and immunological factors influenced the reduction of mpox infections in Belgium during 2022?",
+          "study_design": "Researchers combined national surveillance records, a prospective clinical registry, a survey of HIV pre-exposure prophylaxis recipients, and serial antibody testing across four 2022 intervals to assess changing trends.",
+          "population_setting": "The analysis examined Belgian mpox cases alongside a cohort of individuals receiving HIV pre-exposure prophylaxis to evaluate risk profiles and immune status.",
+          "main_findings": "Individuals diagnosed later in the period exhibited lower engagement in high-risk sexual activities compared to those identified initially. Antibody levels remained stable prior to vaccine distribution, and surveyed prophylaxis users reported consistent sexual habits. These observations suggest that shifts in immunity or reported conduct do not fully account for the declining case counts.",
+          "public_health_relevance": "Documenting how case demographics and risk behaviors evolve during an outbreak assists public health planning by clarifying which factors may or may not drive epidemic resolution.",
+          "limitations": "The investigators state that documented shifts in population immunity and self-reported conduct appear inadequate to account for the epidemic's decline. The reliance on registry records and survey responses may also limit comprehensive assessment of broader community transmission patterns.",
+          "gids_interpretation": "This article offers historical context regarding mpox trend fluctuations in a European region, detailing how patient characteristics shifted over time. It functions as archival reference material for understanding previous outbreak phases rather than reflecting active monitoring efforts.",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.936,
+            "generated_at": "2026-08-13T12:43:07.659085+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        },
+        "zh": {
+          "research_question": "本研究旨在探讨导致比利时2022年猴痘疫情在夏季达峰后意外消退的流行病学、行为学与免疫学相关因素。",
+          "study_design": "该研究采用观察性设计，整合了国家监测记录与单中心前瞻性队列数据，并结合针对特定人群的横断面问卷调查与多时间点血清学检测。",
+          "population_setting": "研究样本主要来源于2022年比利时境内的确诊病例登记档案，并额外纳入了接受艾滋病暴露前预防药物治疗的个体作为行为与免疫指标的观察对象。",
+          "main_findings": "疫情后期确诊者的性行为风险特征较早期病例有所降低，但目标预防用药人群的行为模式保持稳定。疫苗接种推广前抗体阳性率未见显著攀升，研究认为就诊人群特征的转变可能是推动病例数下降的因素之一。",
+          "public_health_relevance": "厘清既往流行期规模缩减的潜在机制，可为评估公共卫生干预措施的长期影响及优化未来传染病响应策略提供参考维度。",
+          "limitations": "研究明确指出，所观测到的免疫状态改善与行为调整幅度不足以完全解释疫情的自然回落。此外，数据主要依托特定医疗机构登记系统与自我报告问卷，可能存在样本代表性局限与信息偏差。",
+          "gids_interpretation": "该文献属于回顾性观察分析，主要用于梳理历史流行阶段的特征演变规律。其内容侧重于既往数据的归纳，不用于触发实时预警或佐证当前监测网络的运行状态。",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.942,
+            "generated_at": "2026-08-13T12:43:41.189590+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        }
+      },
+      "why_it_matters_en": "Documenting how case demographics and risk behaviors evolve during an outbreak assists public health planning by clarifying which factors may or may not drive epidemic resolution.",
+      "why_it_matters_zh": "厘清既往流行期规模缩减的潜在机制，可为评估公共卫生干预措施的长期影响及优化未来传染病响应策略提供参考维度。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1016/j.ijid.2024.107132",
+        "publisher": "https://linkinghub.elsevier.com/retrieve/pii/S1201971224002030",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/38942168/"
+      },
+      "updated_at": "2026-08-13T12:40:20.771715+00:00",
+      "related_signals": []
+    }
+  ],
+  "url": "/research/weekly/2024-W35/"
+}

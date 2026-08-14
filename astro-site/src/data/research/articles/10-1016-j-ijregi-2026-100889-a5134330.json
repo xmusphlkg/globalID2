@@ -1,0 +1,164 @@
+{
+  "article_id": "lit_a5134330079c829749685095",
+  "slug": "10-1016-j-ijregi-2026-100889-a5134330",
+  "title": "New Zealand rheumatic fever clinicians respond to Leung et al.",
+  "doi": "10.1016/j.ijregi.2026.100889",
+  "pmid": "42099662",
+  "journal": "IJID Regions",
+  "publisher": "Elsevier BV",
+  "authors": [
+    "Rachel H Webb",
+    "Catherine Jackson",
+    "Melissa Kerdemelidis",
+    "Philippa Anderson",
+    "Christopher Luey",
+    "Bridget Farrant"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Journal article",
+  "published_at": "2026-06-01T00:00:00+00:00",
+  "indexed_at": "2026-06-29T17:43:49+00:00",
+  "open_access_status": "open",
+  "open_access_url": "https://europepmc.org/articles/PMC13146532",
+  "license_url": "https://www.elsevier.com/tdm/userlicense/1.0/",
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.552,
+  "is_featured": false,
+  "diseases": [
+    {
+      "disease_id": "D158",
+      "slug": "rheumatic-fever",
+      "name_en": "Rheumatic fever",
+      "name_zh": "风湿热",
+      "confidence": 0.82
+    }
+  ],
+  "countries": [
+    {
+      "code": "NZ",
+      "name_en": "New Zealand",
+      "name_zh": null,
+      "confidence": 0.78
+    }
+  ],
+  "topics": [],
+  "related_surveillance": [
+    {
+      "disease_id": "D158",
+      "disease_name_en": "Rheumatic fever",
+      "disease_name_zh": "风湿热",
+      "disease_slug": "rheumatic-fever",
+      "country_code": "NZ",
+      "country_name_en": "New Zealand",
+      "url": "/diseases/rheumatic-fever/",
+      "method": "high-confidence article geography intersected with GIDS series coverage"
+    }
+  ],
+  "summary": {},
+  "why_it_matters_en": "This recent journal article is indexed for its relevance to Rheumatic fever. Read the original source before applying its findings.",
+  "why_it_matters_zh": "这项近期Journal article因与风湿热相关而被收录。应用其结论前请阅读原始文献。",
+  "source_urls": {
+    "doi": "https://doi.org/10.1016/j.ijregi.2026.100889",
+    "publisher": "https://linkinghub.elsevier.com/retrieve/pii/S2772707626000524",
+    "pubmed": "https://pubmed.ncbi.nlm.nih.gov/42099662/"
+  },
+  "updated_at": "2026-08-13T16:05:48.137480+00:00",
+  "related_signals": [
+    {
+      "signal_id": "signal:f59d37329a1f6ece",
+      "section": "increasing",
+      "kind": "statistical_signal",
+      "title": null,
+      "disease_id": "D158",
+      "disease_name_en": "Rheumatic fever",
+      "disease_name_zh": "风湿热",
+      "geographies": [
+        {
+          "code": "NZ",
+          "name_en": "New Zealand"
+        }
+      ],
+      "data_through": "2026-06-01",
+      "window": {
+        "label": "Latest complete month",
+        "current": 28.0,
+        "previous": 18.0,
+        "absolute_change": 10.0,
+        "change_pct": 55.56
+      },
+      "risk": {
+        "score": 46.5,
+        "level": "moderate",
+        "confidence": "low"
+      },
+      "relation_level": "exact_disease_geography",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-a5134330079c829749685095",
+        "type": "article",
+        "label": "New Zealand rheumatic fever clinicians respond to Leung et al.",
+        "slug": "10-1016-j-ijregi-2026-100889-a5134330",
+        "url": "/research/articles/10-1016-j-ijregi-2026-100889-a5134330/",
+        "published_at": "2026-06-01T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "country:nz",
+        "type": "country",
+        "label": "New Zealand",
+        "code": "NZ",
+        "url": "/countries/nz/"
+      },
+      {
+        "id": "disease:d158",
+        "type": "disease",
+        "label": "Rheumatic fever",
+        "disease_id": "D158",
+        "name_zh": "风湿热",
+        "slug": "rheumatic-fever",
+        "url": "/diseases/rheumatic-fever/"
+      },
+      {
+        "id": "study-type:journal-article",
+        "type": "study_type",
+        "label": "Journal article"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-a5134330079c829749685095|ABOUT_DISEASE|disease:d158",
+        "source": "article:lit-a5134330079c829749685095",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d158",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-a5134330079c829749685095|STUDIED_IN|country:nz",
+        "source": "article:lit-a5134330079c829749685095",
+        "relation": "STUDIED_IN",
+        "target": "country:nz",
+        "confidence": 0.78
+      },
+      {
+        "id": "article:lit-a5134330079c829749685095|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-a5134330079c829749685095",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 4,
+      "edges": 3,
+      "articles": 1
+    }
+  }
+}

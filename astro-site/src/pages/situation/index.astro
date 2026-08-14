@@ -1,35 +1,171 @@
 ---
-import { existsSync, readFileSync } from 'fs';
-import { resolve } from 'path';
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import ReportLayout from '../../layouts/ReportLayout.astro';
 import SituationSummary from '../../components/SituationSummary.astro';
+import SituationDetails from '../../components/SituationDetails.astro';
+import { buildAlternatePaths, type SeoDocument } from '../../lib/seo';
+import { formatDate, formatNumber, rows, signalCount } from '../../utils/situation';
 
 const latestPath = resolve('./src/data/situation/latest.json');
-const snapshot = existsSync(latestPath) ? JSON.parse(readFileSync(latestPath, 'utf-8')) : null;
-const titleDate = snapshot?.generated_at ? new Date(snapshot.generated_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Latest';
+const shadowPath = resolve('./src/data/situation/shadow-latest.json');
+const publicSnapshot = existsSync(latestPath);
+const situationPreviewEnabled = import.meta.env.DEV || process.env.SITUATION_SHADOW_PREVIEW === 'true';
+const snapshotPath = publicSnapshot
+  ? latestPath
+  : situationPreviewEnabled && existsSync(shadowPath)
+    ? shadowPath
+    : null;
+const snapshot = snapshotPath ? JSON.parse(readFileSync(snapshotPath, 'utf-8')) : null;
+const titleDate = snapshot?.data_through ? new Date(`${snapshot.data_through}T00:00:00Z`).toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' }) : 'Latest';
+const title = `Global Infectious Disease Trends — ${titleDate}`;
+const description = snapshot?.narrative?.en ?? 'Current infectious-disease signals across GIDS-covered jurisdictions, with official-source evidence and reproducible statistical methods.';
 const sourceUrls = (snapshot?.event_sources ?? []).map((source: any) => source.url).filter(Boolean);
-const structuredData = snapshot ? [{
-  '@type': 'Report', '@id': `${Astro.url.toString()}#report`, name: `Global Infectious Disease Trends – ${titleDate}`,
-  dateModified: snapshot.generated_at, temporalCoverage: snapshot.data_through ? `/${snapshot.data_through}` : undefined,
-  isBasedOn: sourceUrls, mainEntity: { '@type': 'ItemList', numberOfItems: (snapshot.increasing?.length ?? 0) + (snapshot.emerging?.length ?? 0) },
-}] : [];
+const siteOrigin = Astro.site ? new URL(Astro.site).origin : Astro.url.origin;
+const jsonUrl = new URL('/site-data/situation/latest.json', siteOrigin).toString();
+const structuredData = snapshot ? [
+  {
+    '@type': 'Report', '@id': `${Astro.url.toString()}#report`, name: title,
+    datePublished: snapshot.content_updated_at, dateModified: snapshot.content_updated_at,
+    temporalCoverage: snapshot.data_through ? `/${snapshot.data_through}` : undefined,
+    isBasedOn: sourceUrls, mainEntity: { '@id': `${Astro.url.toString()}#dataset` },
+  },
+  {
+    '@type': 'Dataset', '@id': `${Astro.url.toString()}#dataset`, name: `${title} data`, description,
+    dateModified: snapshot.content_updated_at, temporalCoverage: snapshot.data_through ? `/${snapshot.data_through}` : undefined,
+    isBasedOn: sourceUrls, distribution: [{ '@type': 'DataDownload', encodingFormat: 'application/json', contentUrl: jsonUrl }],
+  },
+] : [];
+const executionMethods = Object.entries(snapshot?.analysis_execution?.methods ?? {});
+const officialEventExecution = snapshot?.analysis_execution?.official_events ?? {};
+const methodAlertCount = executionMethods.reduce((total, [, result]: [string, any]) => total + (result?.alert_count ?? 0), 0);
+const eventSourceCount = rows(snapshot?.event_sources).length;
+const seo: SeoDocument = {
+  title: snapshot ? `${title} | GIDS` : 'Global Infectious Disease Situation Room | GIDS',
+  description,
+  canonicalPath: '/situation/',
+  alternatePaths: buildAlternatePaths('/situation/', 'en'),
+  noindex: !publicSnapshot,
+  pageType: 'Report',
+  datePublished: snapshot?.content_updated_at ?? null,
+  dateModified: snapshot?.content_updated_at ?? null,
+};
 ---
 
-<ReportLayout title={`Global Infectious Disease Trends – ${titleDate}`} description="Current infectious-disease surveillance signals across GIDS-covered jurisdictions and attributed official event notices." structuredData={structuredData} breadcrumbs={[{ label: 'Situation Room', labelZh: '全球态势室' }]}>
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+<ReportLayout title={title} description={description} structuredData={structuredData} seo={seo} breadcrumbs={[{ label: 'Situation Room', labelZh: '全球态势室' }]}>
+  <div class="situation-page max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     {snapshot ? <>
-      <SituationSummary snapshot={snapshot} />
-      <section class="situation-detail-grid">
-        <article class="card p-6"><h2 data-lang-en="Respiratory Watch" data-lang-zh="呼吸道监测">Respiratory Watch</h2>
-          {(snapshot.respiratory ?? []).length ? <ul>{snapshot.respiratory.map((signal: any) => <li><a href={`/diseases/${signal.disease_slug}/`}>{signal.disease_name}</a><span>{signal.country_name} · {signal.window.current_cases.toLocaleString()} cases in latest window</span></li>)}</ul> : <p data-lang-en="No respiratory series met the signal threshold this period." data-lang-zh="本期没有呼吸道序列达到信号阈值。">No respiratory series met the signal threshold this period.</p>}</article>
-        <article class="card p-6"><h2 data-lang-en="Unusual Signals" data-lang-zh="异常信号">Unusual Signals</h2>
-          {(snapshot.unusual ?? []).length ? <ul>{snapshot.unusual.map((signal: any) => <li><a href={`/diseases/${signal.disease_slug}/`}>{signal.disease_name}</a><span>{signal.country_name} · robust z {signal.statistics.robust_z ?? '—'}</span></li>)}</ul> : <p data-lang-en="No statistical signal met the unusual-signal rule." data-lang-zh="没有统计信号达到异常信号规则。">No statistical signal met the unusual-signal rule.</p>}</article>
+      <section class="situation-hero-panel" aria-labelledby="situation-page-title">
+        <div class="hero-copy">
+          <p class="eyebrow" data-lang-en="Situation Room" data-lang-zh="全球态势室">Situation Room</p>
+          <h1 id="situation-page-title">{title}</h1>
+          <p data-lang-en="A concise watch list from official-source signals. Use it to decide what deserves human review, not as an outbreak declaration." data-lang-zh="基于官方来源信号生成的精简观察清单，用于判断哪些内容值得人工复核，并非疫情暴发定性。">A concise watch list from official-source signals. Use it to decide what deserves human review, not as an outbreak declaration.</p>
+        </div>
+        <div class="hero-visual">
+          <div class="signal-matrix" aria-hidden="true">
+            <span style={`--level:${Math.min(100, Math.max(8, signalCount(snapshot) * 12))}%`}></span>
+            <span style={`--level:${Math.min(100, Math.max(8, rows(snapshot?.respiratory).length * 22))}%`}></span>
+            <span style={`--level:${Math.min(100, Math.max(8, rows(snapshot?.emerging).length * 28))}%`}></span>
+            <span style={`--level:${Math.min(100, Math.max(8, methodAlertCount * 6))}%`}></span>
+          </div>
+          <dl>
+            <div><dt>Signals</dt><dd>{signalCount(snapshot)}</dd></div>
+            <div><dt>Methods</dt><dd>{executionMethods.length}</dd></div>
+            <div><dt>Sources</dt><dd>{eventSourceCount}</dd></div>
+          </dl>
+        </div>
       </section>
-      <section class="card p-6 space-y-4"><h2 data-lang-en="Coverage & Method" data-lang-zh="覆盖范围与方法">Coverage & Method</h2><p data-lang-en={snapshot.coverage.note_en} data-lang-zh={snapshot.coverage.note_zh}>{snapshot.coverage.note_en}</p><p data-lang-en={snapshot.methodology.en} data-lang-zh={snapshot.methodology.zh}>{snapshot.methodology.en}</p><p class="situation-note" data-lang-en={snapshot.limitations.en} data-lang-zh={snapshot.limitations.zh}>{snapshot.limitations.en}</p></section>
-    </> : <section class="card p-10 text-center"><h1 data-lang-en="Situation Room is preparing its first snapshot" data-lang-zh="态势室正在生成首个快照">Situation Room is preparing its first snapshot</h1><p data-lang-en="No published snapshot is available yet. Existing country and disease datasets remain available." data-lang-zh="尚无已发布快照；现有国家和疾病数据仍可正常使用。">No published snapshot is available yet. Existing country and disease datasets remain available.</p></section>}
+
+      <SituationSummary snapshot={snapshot} />
+
+      <section class="coverage-brief" aria-labelledby="coverage-brief-title">
+        <div>
+          <p class="eyebrow" data-lang-en="Coverage note" data-lang-zh="覆盖说明">Coverage note</p>
+          <h2 id="coverage-brief-title" data-lang-en="What is in scope" data-lang-zh="本快照覆盖范围">What is in scope</h2>
+        </div>
+        <p data-lang-en={snapshot.coverage?.note_en} data-lang-zh={snapshot.coverage?.note_zh}>{snapshot.coverage?.note_en}</p>
+        <dl>
+          <div><dt>Analyzed</dt><dd>{formatNumber(snapshot.coverage?.analyzed_series_count ?? 0, 0)}</dd></div>
+          <div><dt>Jurisdictions</dt><dd>{formatNumber(snapshot.coverage?.jurisdiction_count ?? 0, 0)}</dd></div>
+          <div><dt>Diseases</dt><dd>{formatNumber(snapshot.coverage?.disease_count ?? 0, 0)}</dd></div>
+          <div><dt>Revision</dt><dd>{snapshot.revision ?? 1}</dd></div>
+        </dl>
+      </section>
+
+      <SituationDetails snapshot={snapshot} />
+
+      <section class="method-brief" aria-labelledby="method-brief-title">
+        <div class="method-copy">
+          <p class="eyebrow" data-lang-en="Release checks" data-lang-zh="发布校验">Release checks</p>
+          <h2 id="method-brief-title" data-lang-en="Method and audit details stay available" data-lang-zh="方法与审计细节仍可查看">Method and audit details stay available</h2>
+          <p data-lang-en={snapshot.limitations?.en} data-lang-zh={snapshot.limitations?.zh}>{snapshot.limitations?.en}</p>
+        </div>
+        <div class="method-actions">
+          <a href="/situation/methodology/" data-lang-en="Full methodology" data-lang-zh="完整方法">Full methodology</a>
+          {publicSnapshot && <a href="/site-data/situation/latest.json" download data-lang-en="Download JSON" data-lang-zh="下载 JSON">Download JSON</a>}
+        </div>
+        <details class="execution-details">
+          <summary data-lang-en="Show calculation run details" data-lang-zh="显示计算运行细节">Show calculation run details</summary>
+          <div class="execution-grid">
+            {executionMethods.map(([name, result]: [string, any]) => (
+              <div>
+                <dt>{name.replaceAll('_', ' ')}</dt>
+                <dd>{result.executed_count ?? 0}</dd>
+                <small>{result.alert_count ?? 0} alerts · {result.unavailable_count ?? 0} unavailable</small>
+              </div>
+            ))}
+          </div>
+          <p class="execution-note">Official event evidence: {officialEventExecution.available_count ?? 0} eligible · {officialEventExecution.used_in_composite_risk_count ?? 0} matched a numerical series · {officialEventExecution.event_evidence_only_count ?? 0} event-only.</p>
+          <p class="execution-note">Last content update: {formatDate(snapshot?.content_updated_at)}.</p>
+        </details>
+      </section>
+    </> : <section class="placeholder"><p class="eyebrow">Pre-publication</p><h1>Situation Room is completing its shadow run</h1><p>No public snapshot is available yet. This page is excluded from search indexing until the statistical, source-health, and build quality gates have passed for 14 consecutive days.</p><a href="/diseases/">Browse existing disease datasets</a></section>}
   </div>
 </ReportLayout>
 
 <style>
-  h2 { color: rgb(var(--text-strong)); font-family: 'Source Serif 4', serif; font-size: 1.45rem; margin: 0 0 .8rem; } p { color: rgb(var(--text-muted)); line-height: 1.7; } .situation-detail-grid { display: grid; gap: 1.5rem; grid-template-columns: repeat(2, minmax(0, 1fr)); } ul { display: grid; gap: .7rem; list-style: none; margin: 0; padding: 0; } li { border-top: 1px solid rgb(var(--border)); display: grid; gap: .2rem; padding-top: .7rem; } li a { color: rgb(var(--text-strong)); font-weight: 600; } li span, .situation-note { color: rgb(var(--text-faint)); font-size: .85rem; } @media (max-width: 640px) { .situation-detail-grid { grid-template-columns: 1fr; } }
+  .situation-page { display: grid; gap: 1.8rem; padding-bottom: 4rem; padding-top: 2.5rem; }
+  .situation-hero-panel { align-items: stretch; border-bottom: 1px solid rgb(var(--border)); display: grid; gap: 1.5rem; grid-template-columns: minmax(0, 1fr) minmax(18rem, .36fr); padding-bottom: 1.7rem; }
+  .hero-copy { align-self: end; max-width: 55rem; }
+  .eyebrow { color: rgb(var(--color-teal)) !important; font-size: .68rem !important; font-weight: 700; letter-spacing: .12em; margin: 0 0 .3rem !important; text-transform: uppercase; }
+  h1, h2 { color: rgb(var(--text-strong)); font-family: 'Source Serif 4', serif; letter-spacing: 0; margin: 0; }
+  h1 { font-size: 2.45rem; line-height: 1.05; }
+  h2 { font-size: 1.55rem; line-height: 1.12; }
+  p { color: rgb(var(--text-muted)); line-height: 1.7; margin: .65rem 0 0; }
+  .hero-visual { background: linear-gradient(135deg, rgb(var(--surface) / .9), rgb(var(--surface-raised) / .72)); border: 1px solid rgb(var(--border) / .76); display: grid; gap: 1rem; min-height: 12rem; padding: 1rem; }
+  .signal-matrix { align-items: end; display: grid; gap: .5rem; grid-template-columns: repeat(4, minmax(0, 1fr)); min-height: 7rem; }
+  .signal-matrix span { background: linear-gradient(180deg, rgb(var(--color-accent)), rgb(var(--color-teal))); display: block; height: var(--level); min-height: .6rem; }
+  .hero-visual dl, .coverage-brief dl { display: grid; gap: .6rem; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 0; }
+  .hero-visual dl div, .coverage-brief dl div { border-left: 2px solid rgb(var(--border)); min-width: 0; padding-left: .65rem; }
+  dt { color: rgb(var(--text-faint)); font-size: .62rem; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; }
+  dd { color: rgb(var(--text-strong)); font-family: 'JetBrains Mono', monospace; font-size: 1rem; margin: .2rem 0 0; }
+  .coverage-brief, .method-brief { border-bottom: 1px solid rgb(var(--border)); border-top: 1px solid rgb(var(--border)); display: grid; gap: 1rem; padding: 1.1rem 0; }
+  .coverage-brief { align-items: end; grid-template-columns: minmax(12rem, .28fr) minmax(0, 1fr) minmax(21rem, .36fr); }
+  .coverage-brief p { margin: 0; }
+  .coverage-brief dl { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .method-brief { grid-template-columns: minmax(0, 1fr) auto; }
+  .method-copy { max-width: 60rem; }
+  .method-actions { align-items: start; display: flex; flex-wrap: wrap; gap: .7rem; justify-content: end; }
+  a { color: rgb(var(--color-teal)); font-size: .8rem; font-weight: 700; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .method-actions a { border: 1px solid rgb(var(--border)); padding: .48rem .7rem; }
+  .execution-details { grid-column: 1 / -1; }
+  .execution-details > summary { color: rgb(var(--color-teal)); cursor: pointer; display: inline-flex; font-size: .76rem; font-weight: 800; margin-top: .2rem; }
+  .execution-grid { display: grid; gap: .6rem; grid-template-columns: repeat(5, minmax(0, 1fr)); margin-top: 1rem; }
+  .execution-grid div { background: rgb(var(--surface) / .62); border: 1px solid rgb(var(--border)); padding: .7rem; }
+  .execution-grid dt { min-height: 2.2em; }
+  .execution-grid dd { font-size: 1.25rem; }
+  .execution-grid small, .execution-note { color: rgb(var(--text-faint)); font-size: .66rem; }
+  .execution-note { margin-bottom: 0; }
+  .placeholder { border: 1px solid rgb(var(--border)); background: rgb(var(--surface)); margin: 2rem auto; max-width: 48rem; padding: 2rem; text-align: center; }
+  @media (max-width: 1060px) {
+    .situation-hero-panel, .coverage-brief, .method-brief { grid-template-columns: 1fr; }
+    .method-actions { justify-content: start; }
+    .execution-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (max-width: 700px) {
+    .situation-page { padding-top: 1.5rem; }
+    h1 { font-size: 1.9rem; }
+    .hero-visual dl, .coverage-brief dl, .execution-grid { grid-template-columns: 1fr; }
+  }
 </style>

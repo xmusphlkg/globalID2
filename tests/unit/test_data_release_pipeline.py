@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -25,6 +26,45 @@ def _runtime(manager) -> pipeline.ReleasePipelineRuntime:
         download_publish_timeout_seconds=900,
         cloudflare_deploy_timeout_seconds=900,
     )
+
+
+@pytest.mark.asyncio
+async def test_repository_publishers_run_concurrently():
+    started: set[str] = set()
+    both_started = asyncio.Event()
+
+    async def publish(name: str) -> None:
+        started.add(name)
+        if len(started) == 2:
+            both_started.set()
+        await asyncio.wait_for(both_started.wait(), timeout=0.2)
+
+    completed = await pipeline._run_repository_publications(
+        [
+            ("raw_archive", publish("raw_archive")),
+            ("direct_downloads", publish("direct_downloads")),
+        ]
+    )
+
+    assert completed == {"raw_archive", "direct_downloads"}
+
+
+@pytest.mark.asyncio
+async def test_repository_publisher_failures_are_aggregated_after_all_finish():
+    completed = []
+
+    async def fail() -> None:
+        raise RuntimeError("raw transport failed")
+
+    async def succeed() -> None:
+        completed.append("downloads")
+
+    with pytest.raises(RuntimeError, match="raw_archive: raw transport failed"):
+        await pipeline._run_repository_publications(
+            [("raw_archive", fail()), ("direct_downloads", succeed())]
+        )
+
+    assert completed == ["downloads"]
 
 
 @pytest.mark.asyncio
@@ -121,6 +161,9 @@ async def test_pipeline_local_only_success_preserves_stage_order():
         def _update_situation_room_command(self, **_kwargs):
             return ["update-situation-room"]
 
+        def _validate_situation_release_command(self, **_kwargs):
+            return ["validate-situation-release"]
+
         def _publish_download_repo_command(self, **_kwargs):
             return ["publish-downloads"]
 
@@ -152,7 +195,7 @@ async def test_pipeline_local_only_success_preserves_stage_order():
 
     output = await pipeline.execute_release_task(Service(), task, runtime=runtime)
 
-    assert commands == ["Refresh Situation Room", "Generate Site Data", "Build Astro Site"]
+    assert commands == ["Refresh Situation Room", "Generate Site Data", "Build Astro Site", "Validate Situation Release Gate"]
     assert progress == [5, 15, 22, 35, 60, 88, 100]
     assert output["direct_downloads_published"] is False
     assert output["raw_archive_published"] is False

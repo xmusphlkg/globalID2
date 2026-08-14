@@ -1,0 +1,83 @@
+---
+interface Props {
+  article: any;
+  compact?: boolean;
+  featured?: boolean;
+  stream?: boolean;
+  index?: number;
+  initialVisible?: number;
+}
+
+const { article, compact = false, featured = false, stream = false, index, initialVisible } = Astro.props;
+const initiallyHidden = typeof index === 'number' && typeof initialVisible === 'number' && index >= initialVisible;
+const publicationDate = article.publication_date_label_en ?? (article.published_at
+  ? new Date(article.published_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' })
+  : 'Date unavailable');
+const publicationDateZh = article.publication_date_label_zh ?? (article.published_at
+  ? new Date(article.published_at).toLocaleDateString('zh-CN', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'UTC' })
+  : '日期暂缺');
+const isHistoricalBaseline = article.source_kind === 'historical_seed' || article.historical_baseline;
+const diseaseText = (article.diseases ?? []).map((item: any) => `${item.disease_id} ${item.name_en} ${item.name_zh ?? ''}`).join(' ').toLowerCase();
+const countryText = (article.countries ?? []).map((item: any) => `${item.code} ${item.name_en}`).join(' ').toLowerCase();
+const topicText = (article.topics ?? []).map((item: any) => item.name).join(' ').toLowerCase();
+const filterText = `${article.title} ${article.journal ?? ''} ${diseaseText} ${countryText} ${topicText}`.toLowerCase();
+const diseaseIds = (article.diseases ?? []).map((item: any) => String(item.disease_id ?? '').toLowerCase()).filter(Boolean);
+const countryCodes = (article.countries ?? []).map((item: any) => String(item.code ?? '').toLowerCase()).filter(Boolean);
+const topicSlugs = (article.topics ?? []).map((item: any) => String(item.name ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')).filter(Boolean);
+---
+
+<article
+  class:list={[
+    'research-card',
+    compact && 'research-card-compact',
+    featured && 'research-card-featured',
+    stream && 'research-card-stream',
+  ]}
+  hidden={initiallyHidden}
+  data-research-card
+  data-card-index={index}
+  data-search={filterText}
+  data-disease={diseaseText}
+  data-disease-ids={diseaseIds.join(' ')}
+  data-country={countryText}
+  data-country-codes={countryCodes.join(' ')}
+  data-topic={topicText}
+  data-topic-slugs={topicSlugs.join(' ')}
+  data-study={(article.study_type ?? '').toLowerCase()}
+  data-journal={(article.journal ?? '').toLowerCase()}
+  data-open-access={article.open_access_status === 'open' ? 'true' : 'false'}
+>
+  <div class="research-card-topline">
+    <div class="research-card-badges">
+      <span class="research-badge research-badge-peer" data-lang-en={article.peer_review_status === 'peer_reviewed' ? 'Peer reviewed' : 'Preprint'} data-lang-zh={article.peer_review_status === 'peer_reviewed' ? '同行评议' : '预印本'}>
+        {article.peer_review_status === 'peer_reviewed' ? 'Peer reviewed' : 'Preprint'}
+      </span>
+      {isHistoricalBaseline && <span class="research-badge research-badge-history" data-lang-en="Historical baseline" data-lang-zh="历史基线">Historical baseline</span>}
+      {article.open_access_status === 'open' && <span class="research-badge research-badge-oa" data-lang-en="Open access" data-lang-zh="开放获取">Open access</span>}
+      {(article.diseases ?? []).slice(0, compact ? 1 : 2).map((disease: any) => (
+        <span class="research-badge" data-lang-en={disease.name_en} data-lang-zh={disease.name_zh ?? disease.name_en}>{disease.name_en}</span>
+      ))}
+    </div>
+    {article.doi && <a class="research-card-doi" href={`https://doi.org/${article.doi}`} target="_blank" rel="noopener noreferrer">DOI {article.doi} ↗</a>}
+  </div>
+
+  <h3 class="research-card-title"><a href={`/research/articles/${article.slug}/`}>{article.title}</a></h3>
+  <p class="research-card-source">
+    <span>{article.journal ?? 'Journal unavailable'}</span>
+    <span aria-hidden="true">·</span>
+    <time datetime={article.published_at} data-lang-en={publicationDate} data-lang-zh={publicationDateZh}>{publicationDate}</time>
+  </p>
+
+  {!compact && (
+    <>
+      <dl class="research-card-facts">
+        <div><dt data-lang-en="Type" data-lang-zh="类型">Type</dt><dd>{article.study_type ?? 'Journal article'}</dd></div>
+        <div><dt data-lang-en="Scope" data-lang-zh="范围">Scope</dt><dd>{(article.countries ?? []).length > 0 ? article.countries.slice(0, 3).map((item: any) => item.name_en).join(', ') : 'Not classified'}</dd></div>
+      </dl>
+      <p class="research-context">
+        <strong data-lang-en="Why it matters now" data-lang-zh="为何现在值得关注">Why it matters now</strong>
+        <span data-lang-en={article.why_it_matters_en} data-lang-zh={article.why_it_matters_zh}>{article.why_it_matters_en}</span>
+      </p>
+    </>
+  )}
+</article>

@@ -1,0 +1,78 @@
+---
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { resolve } from 'node:path';
+import ReportLayout from '../../layouts/ReportLayout.astro';
+import SituationSummary from '../../components/SituationSummary.astro';
+import SituationDetails from '../../components/SituationDetails.astro';
+import { buildAlternatePaths, type SeoDocument } from '../../lib/seo';
+
+export function getStaticPaths() {
+  const definitions = [
+    { directory: 'weeks', pattern: /^\d{4}-W\d{2}\.json$/, kind: 'weekly' },
+    { directory: 'months', pattern: /^\d{4}-\d{2}\.json$/, kind: 'monthly' },
+  ];
+  return definitions.flatMap(definition => {
+    const directory = resolve(`./src/data/situation/${definition.directory}`);
+    if (!existsSync(directory)) return [];
+    return readdirSync(directory)
+      .filter(name => definition.pattern.test(name))
+      .map(name => ({ params: { period: name.replace(/\.json$/, '') }, props: { directory: definition.directory, kind: definition.kind } }));
+  });
+}
+
+const { period } = Astro.params;
+const { directory, kind } = Astro.props as { directory: 'weeks' | 'months'; kind: 'weekly' | 'monthly' };
+const file = resolve(`./src/data/situation/${directory}/${period}.json`);
+const snapshot = existsSync(file) ? JSON.parse(readFileSync(file, 'utf-8')) : null;
+const displayPeriod = kind === 'monthly' && period
+  ? new Date(`${period}-01T00:00:00Z`).toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+  : period;
+const title = kind === 'monthly' ? `Global Infectious Disease Trends — ${displayPeriod}` : `Global Infectious Disease Situation — ${displayPeriod}`;
+const description = snapshot?.narrative?.en ?? `Reproducible GIDS infectious-disease situation snapshot for ${displayPeriod}.`;
+const canonicalPath = `/situation/${period}/`;
+const siteOrigin = Astro.site ? new URL(Astro.site).origin : Astro.url.origin;
+const jsonPath = `/site-data/situation/${directory}/${period}.json`;
+const sourceUrls = (snapshot?.event_sources ?? []).map((source: any) => source.url).filter(Boolean);
+const structuredData = snapshot ? [
+  {
+    '@type': 'Report', '@id': `${new URL(canonicalPath, siteOrigin)}#report`, name: title,
+    datePublished: snapshot.content_updated_at, dateModified: snapshot.content_updated_at,
+    temporalCoverage: snapshot.data_through ? `/${snapshot.data_through}` : undefined,
+    isBasedOn: sourceUrls, mainEntity: { '@id': `${new URL(canonicalPath, siteOrigin)}#dataset` },
+  },
+  {
+    '@type': 'Dataset', '@id': `${new URL(canonicalPath, siteOrigin)}#dataset`, name: `${title} data`, description,
+    dateModified: snapshot.content_updated_at, temporalCoverage: snapshot.data_through ? `/${snapshot.data_through}` : undefined,
+    isBasedOn: sourceUrls,
+    distribution: [{ '@type': 'DataDownload', encodingFormat: 'application/json', contentUrl: new URL(jsonPath, siteOrigin).toString() }],
+  },
+] : [];
+const seo: SeoDocument = {
+  title: `${title} | GIDS`, description, canonicalPath,
+  alternatePaths: buildAlternatePaths(canonicalPath, 'en'), noindex: !snapshot,
+  pageType: 'Report', datePublished: snapshot?.content_updated_at ?? null, dateModified: snapshot?.content_updated_at ?? null,
+};
+---
+
+<ReportLayout title={title} description={description} structuredData={structuredData} seo={seo} breadcrumbs={[{ label: 'Situation Room', labelZh: '全球态势室', href: '/situation/' }, { label: displayPeriod ?? 'Snapshot', labelZh: displayPeriod }]}>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-7">
+    {snapshot ? <>
+      <header class="archive-header"><div><p>{kind === 'monthly' ? 'Monthly trend record' : 'Weekly evidence snapshot'}</p><h1>{title}</h1></div><a href={jsonPath} download>Download JSON</a></header>
+      <p class="revision-note">This page shows revision {snapshot.revision ?? 1}, the latest revision for {period}. Source corrections may produce a later revision; changes are recorded instead of claiming the snapshot can never be revised.</p>
+      {snapshot.narrative?.en && <section class="narrative"><p data-lang-en={snapshot.narrative.en} data-lang-zh={snapshot.narrative.zh}>{snapshot.narrative.en}</p></section>}
+      <SituationSummary snapshot={snapshot} />
+      <SituationDetails snapshot={snapshot} />
+    </> : <p>Snapshot not found.</p>}
+  </div>
+</ReportLayout>
+
+<style>
+  .archive-header { align-items: end; display: flex; gap: 1rem; justify-content: space-between; }
+  .archive-header p { color: rgb(var(--color-teal)); font-size: .68rem; font-weight: 700; letter-spacing: .12em; margin: 0 0 .3rem; text-transform: uppercase; }
+  h1 { color: rgb(var(--text-strong)); font-family: 'Source Serif 4', serif; font-size: clamp(1.7rem, 3vw, 2.4rem); line-height: 1.08; margin: 0; }
+  a { color: rgb(var(--color-teal)); font-size: .8rem; font-weight: 700; }
+  .revision-note, .narrative { border: 1px solid rgb(var(--border)); background: rgb(var(--surface)); color: rgb(var(--text-faint)); font-size: .8rem; line-height: 1.6; margin: 0; padding: .8rem 1rem; }
+  .narrative { color: rgb(var(--text-muted)); font-size: .94rem; }
+  .narrative p { margin: 0; }
+  @media (max-width: 640px) { .archive-header { align-items: start; display: grid; } }
+</style>

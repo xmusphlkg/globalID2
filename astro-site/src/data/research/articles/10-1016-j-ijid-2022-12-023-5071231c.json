@@ -1,0 +1,185 @@
+{
+  "article_id": "lit_5071231ca01de1aaab670a04",
+  "slug": "10-1016-j-ijid-2022-12-023-5071231c",
+  "title": "Monkeypox outbreak in the Tel Aviv District, Israel, 2022",
+  "doi": "10.1016/j.ijid.2022.12.023",
+  "pmid": "36566775",
+  "journal": "International Journal of Infectious Diseases",
+  "publisher": "Elsevier BV",
+  "authors": [
+    "Rivka Sheffer",
+    "Michal Savion",
+    "Naama Nuss",
+    "Ziva Amitai",
+    "Matanelle Salama"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Journal article",
+  "published_at": "2023-03-01T00:00:00+00:00",
+  "indexed_at": "2026-08-06T06:05:38+00:00",
+  "open_access_status": "open",
+  "open_access_url": "https://europepmc.org/articles/PMC9773787",
+  "license_url": "https://www.elsevier.com/tdm/userlicense/1.0/",
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.622,
+  "is_featured": false,
+  "diseases": [
+    {
+      "disease_id": "D065",
+      "slug": "monkeypox",
+      "name_en": "Monkeypox",
+      "name_zh": "猴痘",
+      "confidence": 0.86
+    }
+  ],
+  "countries": [],
+  "topics": [
+    {
+      "name": "Surveillance",
+      "confidence": 0.66
+    },
+    {
+      "name": "Outbreak investigation",
+      "confidence": 0.66
+    },
+    {
+      "name": "Transmission dynamics",
+      "confidence": 0.66
+    },
+    {
+      "name": "Vaccination",
+      "confidence": 0.66
+    }
+  ],
+  "related_surveillance": [],
+  "summary": {
+    "zh": {
+      "research_question": "本文旨在梳理并报告以色列境内首次发生的猴痘本地持续传播事件的基本概况。",
+      "study_design": "研究基于描述性流行病学方法，系统收集并分析了上报病例的临床与流行病学资料，同时通过定向联系核实感染途径。",
+      "population_setting": "样本涵盖2022年5月至9月间以色列特拉维夫地区的全部确诊患者，群体特征显示均为男性，中位年龄35岁，且绝大多数属于男男性行为者。",
+      "main_findings": "累计纳入203例病例，病情均表现为自限性过程。作者指出，针对高危群体开展疫苗接种等综合公共卫生举措后，当地疫情规模有所缩减。",
+      "public_health_relevance": "研究强调应持续关注易感群体的感染风险，并建议完善相关监测网络与预防策略以应对未来可能的疫情波动。",
+      "limitations": "该描述性分析仅依赖已上报的个案数据，缺乏对照比较，且受限于主动报告机制，可能存在漏报或信息偏差。",
+      "gids_interpretation": "该记录提供了特定地理与时间窗口内猴痘传播模式的背景资料，有助于理解该类传染病在局部区域的流行特征与防控需求。",
+      "provenance": {
+        "generated_by": "literature-evidence-agent",
+        "model": "qwen3.7-flash",
+        "provider": "qwenai",
+        "quality_score": 0.923,
+        "generated_at": "2026-08-13T12:44:44.085851+00:00",
+        "editorially_approved": false,
+        "automatically_approved": true,
+        "automation_policy_version": "research-radar-autopilot.v1",
+        "publication_gate": "automated-quality-gate"
+      }
+    }
+  },
+  "why_it_matters_en": "This recent journal article is indexed for its relevance to Monkeypox. Read the original source before applying its findings.",
+  "why_it_matters_zh": "研究强调应持续关注易感群体的感染风险，并建议完善相关监测网络与预防策略以应对未来可能的疫情波动。",
+  "source_urls": {
+    "doi": "https://doi.org/10.1016/j.ijid.2022.12.023",
+    "publisher": "https://linkinghub.elsevier.com/retrieve/pii/S1201971222006610",
+    "pubmed": "https://pubmed.ncbi.nlm.nih.gov/36566775/"
+  },
+  "updated_at": "2026-08-13T12:40:20.771727+00:00",
+  "related_signals": [],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-5071231ca01de1aaab670a04",
+        "type": "article",
+        "label": "Monkeypox outbreak in the Tel Aviv District, Israel, 2022",
+        "slug": "10-1016-j-ijid-2022-12-023-5071231c",
+        "url": "/research/articles/10-1016-j-ijid-2022-12-023-5071231c/",
+        "published_at": "2023-03-01T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "disease:d065",
+        "type": "disease",
+        "label": "Monkeypox",
+        "disease_id": "D065",
+        "name_zh": "猴痘",
+        "slug": "monkeypox",
+        "url": "/diseases/monkeypox/"
+      },
+      {
+        "id": "study-type:journal-article",
+        "type": "study_type",
+        "label": "Journal article"
+      },
+      {
+        "id": "topic:outbreak-investigation",
+        "type": "topic",
+        "label": "Outbreak investigation"
+      },
+      {
+        "id": "topic:surveillance",
+        "type": "topic",
+        "label": "Surveillance"
+      },
+      {
+        "id": "topic:transmission-dynamics",
+        "type": "topic",
+        "label": "Transmission dynamics"
+      },
+      {
+        "id": "topic:vaccination",
+        "type": "topic",
+        "label": "Vaccination"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-5071231ca01de1aaab670a04|ABOUT_DISEASE|disease:d065",
+        "source": "article:lit-5071231ca01de1aaab670a04",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d065",
+        "confidence": 0.86
+      },
+      {
+        "id": "article:lit-5071231ca01de1aaab670a04|ADDRESSES_TOPIC|topic:outbreak-investigation",
+        "source": "article:lit-5071231ca01de1aaab670a04",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:outbreak-investigation",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-5071231ca01de1aaab670a04|ADDRESSES_TOPIC|topic:surveillance",
+        "source": "article:lit-5071231ca01de1aaab670a04",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:surveillance",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-5071231ca01de1aaab670a04|ADDRESSES_TOPIC|topic:transmission-dynamics",
+        "source": "article:lit-5071231ca01de1aaab670a04",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:transmission-dynamics",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-5071231ca01de1aaab670a04|ADDRESSES_TOPIC|topic:vaccination",
+        "source": "article:lit-5071231ca01de1aaab670a04",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccination",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-5071231ca01de1aaab670a04|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-5071231ca01de1aaab670a04",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 7,
+      "edges": 6,
+      "articles": 1
+    }
+  }
+}

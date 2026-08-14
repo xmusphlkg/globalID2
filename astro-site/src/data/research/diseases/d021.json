@@ -1,0 +1,1063 @@
+{
+  "articles": [
+    {
+      "article_id": "lit_3645e0a45d24397b1cf3043c",
+      "slug": "10-1371-journal-pntd-0014184-3645e0a4",
+      "title": "Surveillance and control efficacy of the Bergerac, France, 2025 chikungunya outbreak",
+      "doi": "10.1371/journal.pntd.0014184",
+      "pmid": null,
+      "journal": "PLOS Neglected Tropical Diseases",
+      "publisher": "Public Library of Science (PLoS)",
+      "authors": [
+        "Sandeep Tegar",
+        "Guillaume Lacour",
+        "Antoine Mignotte",
+        "Bethan V. Purse",
+        "Christina A. Cobbold",
+        "Dominic P. Brass",
+        "Steven M. White"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Mathematical modelling",
+      "published_at": "2026-04-20T00:00:00+00:00",
+      "indexed_at": "2026-08-04T05:22:15+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://dx.plos.org/10.1371/journal.pntd.0014184",
+      "license_url": "http://creativecommons.org/licenses/by/4.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.733,
+      "is_featured": true,
+      "diseases": [
+        {
+          "disease_id": "D052",
+          "slug": "chikungunya",
+          "name_en": "Chikungunya",
+          "name_zh": "基孔肯雅热",
+          "confidence": 0.82
+        },
+        {
+          "disease_id": "D021",
+          "slug": "dengue",
+          "name_en": "Dengue",
+          "name_zh": "登革热",
+          "confidence": 0.62
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Transmission dynamics",
+          "confidence": 0.7100000000000001
+        },
+        {
+          "name": "Surveillance",
+          "confidence": 0.66
+        },
+        {
+          "name": "Outbreak investigation",
+          "confidence": 0.66
+        },
+        {
+          "name": "Climate and environment",
+          "confidence": 0.66
+        },
+        {
+          "name": "Travel medicine",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {
+        "en": {
+          "research_question": "How effectively did varying intensities and geographic scopes of vector control interventions influence the trajectory of a chikungunya outbreak in a French municipality?",
+          "study_design": "The investigation utilized a climate-informed mathematical framework to simulate mosquito-borne virus transmission and compared simulated outputs against observed epidemiological records.",
+          "population_setting": "The analysis focused on a 2025 chikungunya cluster in Bergerac, France, which emerged following introductions linked to international travel from an affected overseas territory.",
+          "main_findings": "Early interventions restricted in scope and intensity demonstrated minimal capacity to curb transmission during periods of rapid viral spread. Conversely, expanded operational efforts alongside heightened community vigilance corresponded with a marked decline in reported infections.",
+          "public_health_relevance": "The results indicate that aligning intervention magnitude with transmission severity and sustaining continuous monitoring are essential strategies for managing emerging arboviral threats in temperate regions.",
+          "limitations": null,
+          "gids_interpretation": "This work contributes to the literature on computational approaches for forecasting arbovirus dynamics under changing environmental conditions. It provides methodological context for evaluating how response timing and resource allocation influence outbreak trajectories without implying current real-time monitoring status.",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.846,
+            "generated_at": "2026-08-13T12:44:19.909735+00:00",
+            "editorially_approved": true,
+            "automatically_approved": false,
+            "automation_policy_version": null,
+            "publication_gate": "human-review-required"
+          }
+        },
+        "zh": {
+          "research_question": "本研究基于数学建模方法，旨在量化评估法国贝热拉克市2025年基孔肯雅病毒疫情期间的监测网络与防控策略的实际作用。",
+          "study_design": "研究采用气候驱动数学模型模拟伊蚊活动与病毒传播路径，并将模拟输出数据与实地报告的病例统计进行对照验证。",
+          "population_setting": "研究场景位于法国多尔多涅省贝热拉克市，主要关注由海外领地旅客输入所触发的本地聚集性感染事件。",
+          "main_findings": "模型推演表明，疫情首四周受限于干预半径与强度的早期措施未能有效压低发病规模；后期实施的广覆盖高强度管控配合公众认知提升，则促使感染人数大幅下降。",
+          "public_health_relevance": "研究强调防控资源分配应与病毒扩散的地理广度及流行强度相匹配，并指出化学灭蚊与社区宣教协同应用可作为降低媒介传播疾病风险的有效途径。",
+          "limitations": null,
+          "gids_interpretation": "该成果为区域卫生部门优化气候相关虫媒传染病预警机制提供了理论依据，其模型构建逻辑可辅助后续同类突发疫情的响应规划。",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.865,
+            "generated_at": "2026-08-13T12:44:54.569584+00:00",
+            "editorially_approved": true,
+            "automatically_approved": false,
+            "automation_policy_version": null,
+            "publication_gate": "human-review-required"
+          }
+        }
+      },
+      "why_it_matters_en": "The results indicate that aligning intervention magnitude with transmission severity and sustaining continuous monitoring are essential strategies for managing emerging arboviral threats in temperate regions.",
+      "why_it_matters_zh": "研究强调防控资源分配应与病毒扩散的地理广度及流行强度相匹配，并指出化学灭蚊与社区宣教协同应用可作为降低媒介传播疾病风险的有效途径。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1371/journal.pntd.0014184",
+        "publisher": "https://dx.plos.org/10.1371/journal.pntd.0014184"
+      },
+      "updated_at": "2026-08-13T12:40:20.785720+00:00",
+      "related_signals": []
+    },
+    {
+      "article_id": "lit_7be8baca2912577c36110fea",
+      "slug": "10-1093-jtm-taag065-7be8baca",
+      "title": "Shared evidence, different recommendations: a comparative analysis of Qdenga (TAK-003) dengue vaccine guidance for travellers across countries",
+      "doi": "10.1093/jtm/taag065",
+      "pmid": "42485451",
+      "journal": "Journal of Travel Medicine",
+      "publisher": "Oxford University Press (OUP)",
+      "authors": [
+        "Sarah L McGuinness",
+        "Dipti Patel",
+        "Helena H Askling",
+        "Camilla Rothe",
+        "Steven Schofield",
+        "Robert Steffen",
+        "Leo G Visser",
+        "Lin H Chen"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-07-22T00:00:00+00:00",
+      "indexed_at": "2026-08-08T18:42:46+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://academic.oup.com/jtm/advance-article/doi/10.1093/jtm/taag065/8739998",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.717,
+      "is_featured": true,
+      "diseases": [
+        {
+          "disease_id": "D021",
+          "slug": "dengue",
+          "name_en": "Dengue",
+          "name_zh": "登革热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Vaccination",
+          "confidence": 0.7100000000000001
+        },
+        {
+          "name": "Travel medicine",
+          "confidence": 0.7100000000000001
+        },
+        {
+          "name": "Vaccine effectiveness",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {
+        "en": {
+          "research_question": "How do national advisory organizations differ in their policy recommendations for administering the Qdenga dengue vaccine to international travelers?",
+          "study_design": "A comparative policy analysis that evaluated publicly accessible national guidelines alongside survey responses from health advisory committees.",
+          "population_setting": "Public health advisory bodies representing seventeen nations, primarily non-endemic regions where the vaccine holds formal licensing approval.",
+          "main_findings": "National directives consistently exceeded regulatory permissions in restrictiveness while demonstrating uniform support for individuals with confirmed past infections. Eligibility criteria for travelers lacking documented infection history showed substantial cross-border variation based on inconsistent application of exposure metrics and host susceptibility factors. Protocols also diverged regarding infection verification methods and pre-departure dosing schedules.",
+          "public_health_relevance": "Inconsistent international protocols complicate clinical counseling and traveler preparedness for dengue-endemic destinations. Harmonizing future advisories will likely depend on supplementary effectiveness data targeting specific demographic groups currently underrepresented in clinical trials. Maintaining transparent dialogue between providers and patients remains critical amid these policy discrepancies.",
+          "limitations": "The investigation synthesizes existing policy documents and committee surveys rather than measuring direct clinical outcomes or population-level vaccination coverage. Interpretive disparities stem from inherent differences between controlled trial cohorts and real-world travel demographics.",
+          "gids_interpretation": "The manuscript demonstrates how identical foundational research can produce divergent regulatory pathways when expert panels navigate evidentiary gaps differently. It provides context for understanding guideline heterogeneity without implying changes in underlying pathogen circulation or novel safety signals.",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.936,
+            "generated_at": "2026-08-13T12:41:39.630422+00:00",
+            "editorially_approved": true,
+            "automatically_approved": false,
+            "automation_policy_version": null,
+            "publication_gate": "human-review-required"
+          }
+        },
+        "zh": {
+          "research_question": "该研究旨在系统对比不同国家针对旅行者使用Qdenga（TAK-003）疫苗的官方指导原则，并剖析各国咨询机构在推荐标准上的异同。",
+          "study_design": "本研究采用横向比较设计，整合问卷调查结果与公开指南的结构化审查，对多国发布的旅行者疫苗接种建议进行政策比对。",
+          "population_setting": "研究覆盖来自17个国家的18个公共卫生咨询机构，重点聚焦具有或无实验室确诊既往登革热感染史的旅行者群体。",
+          "main_findings": "各国指导原则整体较监管授权更为保守。针对已确诊既往感染的旅行者，各机构推荐高度一致；但未明确感染史人群的推荐分歧较大。决策过程中对旅行时长、重复暴露及宿主因素的应用方式不一，部分机构仅限既往感染者接种，另一些则依据暴露风险放宽条件或强制要求出行前完成全程免疫。",
+          "public_health_relevance": "研究凸显了跨国疫苗政策碎片化现状，强调在标准不一时应优先保障决策透明度并推行医患共同决策。同时指出需积累阴性旅行者及老年群体的有效性与安全性数据，以推动未来指南趋同。",
+          "limitations": "现有资料存在数据空白，且临床试验受试者特征与实际旅行者群体存在差异。研究主要基于公开文本与问卷反馈，未能直接验证实际接种后的临床转归，各机构对证据不确定性的管理策略差异可能限制结论的广泛适用性。",
+          "gids_interpretation": "该文献为公共卫生监测网络提供了关于登革热疫苗跨境政策协调性的背景参考。其内容有助于梳理各国在共享科学证据基础上形成差异化建议的内在逻辑，可为后续指南动态调整与资源配置提供结构化信息支撑。",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.942,
+            "generated_at": "2026-08-13T12:45:30.851163+00:00",
+            "editorially_approved": true,
+            "automatically_approved": false,
+            "automation_policy_version": null,
+            "publication_gate": "human-review-required"
+          }
+        }
+      },
+      "why_it_matters_en": "Inconsistent international protocols complicate clinical counseling and traveler preparedness for dengue-endemic destinations. Harmonizing future advisories will likely depend on supplementary effectiveness data targeting specific demographic groups currently underrepresented in clinical trials. Maintaining transparent dialogue between providers and patients remains critical amid these policy discrepancies.",
+      "why_it_matters_zh": "研究凸显了跨国疫苗政策碎片化现状，强调在标准不一时应优先保障决策透明度并推行医患共同决策。同时指出需积累阴性旅行者及老年群体的有效性与安全性数据，以推动未来指南趋同。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1093/jtm/taag065",
+        "publisher": "https://academic.oup.com/jtm/advance-article/doi/10.1093/jtm/taag065/8739998",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/42485451/"
+      },
+      "updated_at": "2026-08-13T12:40:20.785718+00:00",
+      "related_signals": []
+    },
+    {
+      "article_id": "lit_55800fc0e3a41288e1597bce",
+      "slug": "10-1371-journal-pntd-0013959-55800fc0",
+      "title": "Resurgent threat in a changing climate: A 20-year bibliometric analysis of global Chikungunya research evolution and pandemic preparedness",
+      "doi": "10.1371/journal.pntd.0013959",
+      "pmid": null,
+      "journal": "PLOS Neglected Tropical Diseases",
+      "publisher": "Public Library of Science (PLoS)",
+      "authors": [
+        "Xiaoyi Xu",
+        "Liming Ye",
+        "Yawei Liu",
+        "Xuetao Peng",
+        "Minyi He"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-02-23T00:00:00+00:00",
+      "indexed_at": "2026-08-05T11:43:21+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://dx.plos.org/10.1371/journal.pntd.0013959",
+      "license_url": "http://creativecommons.org/licenses/by/4.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.71,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D052",
+          "slug": "chikungunya",
+          "name_en": "Chikungunya",
+          "name_zh": "基孔肯雅热",
+          "confidence": 0.82
+        },
+        {
+          "disease_id": "D021",
+          "slug": "dengue",
+          "name_en": "Dengue",
+          "name_zh": "登革热",
+          "confidence": 0.62
+        }
+      ],
+      "countries": [
+        {
+          "code": "BR",
+          "name_en": "Brazil",
+          "name_zh": null,
+          "confidence": 0.62
+        }
+      ],
+      "topics": [
+        {
+          "name": "Climate and environment",
+          "confidence": 0.7100000000000001
+        },
+        {
+          "name": "Surveillance",
+          "confidence": 0.66
+        },
+        {
+          "name": "Outbreak investigation",
+          "confidence": 0.66
+        },
+        {
+          "name": "Transmission dynamics",
+          "confidence": 0.66
+        },
+        {
+          "name": "Vaccination",
+          "confidence": 0.66
+        },
+        {
+          "name": "Diagnostics",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {
+        "en": {
+          "research_question": "Maps two decades of global scientific output to determine current priorities and unmet needs in chikungunya pandemic readiness.",
+          "study_design": "Bibliometric evaluation of 8,125 indexed articles published between 2004 and 2025, utilizing software tools to track citation trends, author networks, and keyword co-occurrence patterns.",
+          "population_setting": "Global scientific literature and publishing records rather than a defined clinical or demographic cohort.",
+          "main_findings": "Article production expanded sevenfold following 2013, coinciding with major regional outbreaks. Research activity concentrated within four primary national hubs. Scholarly focus has progressively shifted toward immunization development and environmental transmission factors, while diagnostic differentiation and crisis management keywords have diminished in frequency.",
+          "public_health_relevance": "Highlights increasing academic investment in vaccine platforms and climate-linked transmission models. Identifies structural imbalances in multinational research partnerships and recommends aligning pathogen readiness initiatives with broader environmental health planning.",
+          "limitations": "Analysis depends entirely on database-indexed publications, potentially overlooking non-traditional or regionally restricted research outputs. The methodology quantifies scholarly productivity and thematic shifts rather than measuring actual disease incidence or intervention effectiveness.",
+          "gids_interpretation": "Functions as a retrospective mapping of academic publishing trends instead of an active monitoring report. Offers context on how research emphasis has evolved toward preventive technologies and ecological drivers without generating new empirical signal data.",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.965,
+            "generated_at": "2026-08-13T12:46:04.263817+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        }
+      },
+      "why_it_matters_en": "Highlights increasing academic investment in vaccine platforms and climate-linked transmission models. Identifies structural imbalances in multinational research partnerships and recommends aligning pathogen readiness initiatives with broader environmental health planning.",
+      "why_it_matters_zh": "这项近期Journal article因与基孔肯雅热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1371/journal.pntd.0013959",
+        "publisher": "https://dx.plos.org/10.1371/journal.pntd.0013959"
+      },
+      "updated_at": "2026-08-13T12:39:43.961591+00:00",
+      "related_signals": []
+    },
+    {
+      "article_id": "lit_1b1b3b688dab9b824b93d818",
+      "slug": "10-1016-j-ijid-2025-107940-1b1b3b68",
+      "title": "Global dengue epidemic worsens with record 14 million cases and 9000 deaths reported in 2024",
+      "doi": "10.1016/j.ijid.2025.107940",
+      "pmid": "40449873",
+      "journal": "International Journal of Infectious Diseases",
+      "publisher": "Elsevier BV",
+      "authors": [
+        "Najmul Haider",
+        "Mohammad Nayeem Hasan",
+        "Joshua Onyango",
+        "Masum Billah",
+        "Sakirul Khan",
+        "Danai Papakonstantinou",
+        "Priyamvada Paudyal",
+        "Md Asaduzzaman"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2025-09-01T00:00:00+00:00",
+      "indexed_at": "2026-08-06T04:31:52+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://linkinghub.elsevier.com/retrieve/pii/S120197122500164X",
+      "license_url": "https://www.elsevier.com/tdm/userlicense/1.0/",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.666,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D021",
+          "slug": "dengue",
+          "name_en": "Dengue",
+          "name_zh": "登革热",
+          "confidence": 0.9
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Surveillance",
+          "confidence": 0.66
+        },
+        {
+          "name": "Outbreak investigation",
+          "confidence": 0.66
+        },
+        {
+          "name": "Vaccination",
+          "confidence": 0.66
+        },
+        {
+          "name": "Treatment",
+          "confidence": 0.66
+        },
+        {
+          "name": "Climate and environment",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {
+        "zh": {
+          "research_question": "本研究旨在评估2024年全球登革热的整体疾病负担，并探讨影响各国登革热相关死亡率的潜在关联因素。",
+          "study_design": "该研究采用观察性生态分析设计，提取世界卫生组织全球监测系统提供的2024年1月至12月月度汇总数据，并应用广义线性回归模型进行多变量关联检验。",
+          "population_setting": "研究覆盖全球范围，主要依赖各国向国际机构上报的汇总数据，分析焦点涵盖南半球区域以及具有不同年龄结构与气候特征的国家群体。",
+          "main_findings": "2024年全球累计报告病例约一千四百一十万例，死亡九千五百零八例，总体病死率为百分之零点零七。回归分析表明，南半球地理位置、较高的人口老龄化水平以及较高的年均气温，均与国家层面每百万人口的登革热死亡率呈显著正相关。",
+          "public_health_relevance": "研究指出登革热传播规模持续扩大已构成严峻的公共卫生压力，呼吁国际社会加大对病毒学基础科研、疫苗与药物研发、病媒生物防控及临床干预方案的资源倾斜，并建议将其列入优先研发疾病清单。",
+          "limitations": "分析完全基于各国上报的宏观汇总数据，缺乏个体患者层面的临床信息，且未对各国监测报告体系的完整性与时效性差异进行量化校正。",
+          "gids_interpretation": "该文献通过历史年度数据的回顾性梳理，呈现了登革热流行规模的演变轨迹及其与地理、人口和气象指标的统计学联系，为后续趋势追踪提供基线参考，不涉及实时疫情预警或现场流调结论。",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.936,
+            "generated_at": "2026-08-13T12:48:35.481340+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        }
+      },
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Dengue. Read the original source before applying its findings.",
+      "why_it_matters_zh": "研究指出登革热传播规模持续扩大已构成严峻的公共卫生压力，呼吁国际社会加大对病毒学基础科研、疫苗与药物研发、病媒生物防控及临床干预方案的资源倾斜，并建议将其列入优先研发疾病清单。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1016/j.ijid.2025.107940",
+        "publisher": "https://linkinghub.elsevier.com/retrieve/pii/S120197122500164X",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/40449873/"
+      },
+      "updated_at": "2026-08-13T12:40:20.771728+00:00",
+      "related_signals": []
+    },
+    {
+      "article_id": "lit_a743ae7c6d470318cbf25eeb",
+      "slug": "10-1093-jtm-taag064-a743ae7c",
+      "title": "Arboviral risk at Brazilian tourist destinations",
+      "doi": "10.1093/jtm/taag064",
+      "pmid": "42472466",
+      "journal": "Journal of Travel Medicine",
+      "publisher": "Oxford University Press (OUP)",
+      "authors": [
+        "Sebastian Vernal",
+        "Eloise Skinner",
+        "Beatris M Martin",
+        "Sheng-hsun Lee",
+        "Expedito J A Luna",
+        "Ester C Sabino",
+        "Benn Sartorius",
+        "Luis Furuya-Kanamori"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2026-07-19T00:00:00+00:00",
+      "indexed_at": "2026-08-06T15:58:57+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://academic.oup.com/jtm/advance-article/doi/10.1093/jtm/taag064/8737300",
+      "license_url": "https://academic.oup.com/pages/standard-publication-reuse-rights",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.646,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D052",
+          "slug": "chikungunya",
+          "name_en": "Chikungunya",
+          "name_zh": "基孔肯雅热",
+          "confidence": 0.62
+        },
+        {
+          "disease_id": "D021",
+          "slug": "dengue",
+          "name_en": "Dengue",
+          "name_zh": "登革热",
+          "confidence": 0.62
+        },
+        {
+          "disease_id": "D059",
+          "slug": "yellow-fever",
+          "name_en": "Yellow fever",
+          "name_zh": "黄热病",
+          "confidence": 0.62
+        }
+      ],
+      "countries": [
+        {
+          "code": "BR",
+          "name_en": "Brazil",
+          "name_zh": null,
+          "confidence": 0.62
+        }
+      ],
+      "topics": [
+        {
+          "name": "Surveillance",
+          "confidence": 0.66
+        },
+        {
+          "name": "Transmission dynamics",
+          "confidence": 0.66
+        },
+        {
+          "name": "Travel medicine",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {
+        "zh": {
+          "research_question": "本研究旨在明确登革热、基孔肯雅热和黄热病在巴西不同地理区域的分布特征与相对风险，并评估这些高风险地带与热门旅游目的地的空间重叠程度。",
+          "study_design": "采用基于国家公共卫生监测系统的回顾性生态学研究设计。研究将实验室确诊的病例与死亡数据按中等地理区域进行汇总，并通过整合传播持续时间与发病率及死亡率四分位数构建综合风险评分模型。",
+          "population_setting": "数据覆盖巴西全国范围内的中等地理区域，重点聚焦于本国常住居民及国际游客频繁往行的行政与自然地理单元。",
+          "main_findings": "登革热在全国各区域均有检出，高风险区集中于中西部潘塔纳尔地带。基孔肯雅热同样广泛分布，但最高风险带与东北部如累西腓等海滨旅游热点高度重合。黄热病仅在三成余的区域出现，主要局限于东南部包括圣保罗州在内的地带。综合评分体系成功绘制出三种病毒差异化的空间风险图谱。",
+          "public_health_relevance": "该空间整合评估工具可为旅行医学从业者提供直观的参考依据，辅助制定个性化的行前健康咨询与免疫规划。它揭示了不同旅游目的地所面临的虫媒病毒感染威胁存在显著的地域异质性。",
+          "limitations": "摘要未直接声明具体局限性，但研究完全依赖上报的监测数据，可能受各地诊断能力差异或潜在漏报因素影响。综合风险指标为宏观聚合结果，未纳入个体出行行为或微观环境暴露变量。",
+          "gids_interpretation": "本文属于描述性地理信息整理工作，侧重于将历史病例与死亡统计转化为可视化框架。其定位为建立区域性病毒活动基线参考，而非生成实时预警信号或验证现行监测网络的运行状态。",
+          "provenance": {
+            "generated_by": "literature-evidence-agent",
+            "model": "qwen3.7-flash",
+            "provider": "qwenai",
+            "quality_score": 0.945,
+            "generated_at": "2026-08-13T12:43:46.759398+00:00",
+            "editorially_approved": false,
+            "automatically_approved": true,
+            "automation_policy_version": "research-radar-autopilot.v1",
+            "publication_gate": "automated-quality-gate"
+          }
+        }
+      },
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Chikungunya. Read the original source before applying its findings.",
+      "why_it_matters_zh": "该空间整合评估工具可为旅行医学从业者提供直观的参考依据，辅助制定个性化的行前健康咨询与免疫规划。它揭示了不同旅游目的地所面临的虫媒病毒感染威胁存在显著的地域异质性。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1093/jtm/taag064",
+        "publisher": "https://academic.oup.com/jtm/advance-article/doi/10.1093/jtm/taag064/8737300",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/42472466/"
+      },
+      "updated_at": "2026-08-13T12:40:20.771724+00:00",
+      "related_signals": []
+    }
+  ],
+  "count": 5,
+  "publication_timeline": [
+    {
+      "month": "2025-09",
+      "publication_count": 1
+    },
+    {
+      "month": "2026-02",
+      "publication_count": 1
+    },
+    {
+      "month": "2026-04",
+      "publication_count": 1
+    },
+    {
+      "month": "2026-07",
+      "publication_count": 2
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-1b1b3b688dab9b824b93d818",
+        "type": "article",
+        "label": "Global dengue epidemic worsens with record 14 million cases and 9000 deaths reported in 2024",
+        "slug": "10-1016-j-ijid-2025-107940-1b1b3b68",
+        "url": "/research/articles/10-1016-j-ijid-2025-107940-1b1b3b68/",
+        "published_at": "2025-09-01T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-3645e0a45d24397b1cf3043c",
+        "type": "article",
+        "label": "Surveillance and control efficacy of the Bergerac, France, 2025 chikungunya outbreak",
+        "slug": "10-1371-journal-pntd-0014184-3645e0a4",
+        "url": "/research/articles/10-1371-journal-pntd-0014184-3645e0a4/",
+        "published_at": "2026-04-20T00:00:00+00:00",
+        "study_type": "Mathematical modelling"
+      },
+      {
+        "id": "article:lit-55800fc0e3a41288e1597bce",
+        "type": "article",
+        "label": "Resurgent threat in a changing climate: A 20-year bibliometric analysis of global Chikungunya research evolution and pandemic preparedness",
+        "slug": "10-1371-journal-pntd-0013959-55800fc0",
+        "url": "/research/articles/10-1371-journal-pntd-0013959-55800fc0/",
+        "published_at": "2026-02-23T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-7be8baca2912577c36110fea",
+        "type": "article",
+        "label": "Shared evidence, different recommendations: a comparative analysis of Qdenga (TAK-003) dengue vaccine guidance for travellers across countries",
+        "slug": "10-1093-jtm-taag065-7be8baca",
+        "url": "/research/articles/10-1093-jtm-taag065-7be8baca/",
+        "published_at": "2026-07-22T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "article:lit-a743ae7c6d470318cbf25eeb",
+        "type": "article",
+        "label": "Arboviral risk at Brazilian tourist destinations",
+        "slug": "10-1093-jtm-taag064-a743ae7c",
+        "url": "/research/articles/10-1093-jtm-taag064-a743ae7c/",
+        "published_at": "2026-07-19T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "country:br",
+        "type": "country",
+        "label": "Brazil",
+        "code": "BR",
+        "url": "/countries/br/"
+      },
+      {
+        "id": "disease:d021",
+        "type": "disease",
+        "label": "Dengue",
+        "disease_id": "D021",
+        "name_zh": "登革热",
+        "slug": "dengue",
+        "url": "/diseases/dengue/"
+      },
+      {
+        "id": "disease:d052",
+        "type": "disease",
+        "label": "Chikungunya",
+        "disease_id": "D052",
+        "name_zh": "基孔肯雅热",
+        "slug": "chikungunya",
+        "url": "/diseases/chikungunya/"
+      },
+      {
+        "id": "disease:d059",
+        "type": "disease",
+        "label": "Yellow fever",
+        "disease_id": "D059",
+        "name_zh": "黄热病",
+        "slug": "yellow-fever",
+        "url": "/diseases/yellow-fever/"
+      },
+      {
+        "id": "study-type:journal-article",
+        "type": "study_type",
+        "label": "Journal article"
+      },
+      {
+        "id": "study-type:mathematical-modelling",
+        "type": "study_type",
+        "label": "Mathematical modelling"
+      },
+      {
+        "id": "topic:climate-and-environment",
+        "type": "topic",
+        "label": "Climate and environment"
+      },
+      {
+        "id": "topic:diagnostics",
+        "type": "topic",
+        "label": "Diagnostics"
+      },
+      {
+        "id": "topic:outbreak-investigation",
+        "type": "topic",
+        "label": "Outbreak investigation"
+      },
+      {
+        "id": "topic:surveillance",
+        "type": "topic",
+        "label": "Surveillance"
+      },
+      {
+        "id": "topic:transmission-dynamics",
+        "type": "topic",
+        "label": "Transmission dynamics"
+      },
+      {
+        "id": "topic:travel-medicine",
+        "type": "topic",
+        "label": "Travel medicine"
+      },
+      {
+        "id": "topic:treatment",
+        "type": "topic",
+        "label": "Treatment"
+      },
+      {
+        "id": "topic:vaccination",
+        "type": "topic",
+        "label": "Vaccination"
+      },
+      {
+        "id": "topic:vaccine-effectiveness",
+        "type": "topic",
+        "label": "Vaccine effectiveness"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-1b1b3b688dab9b824b93d818|ABOUT_DISEASE|disease:d021",
+        "source": "article:lit-1b1b3b688dab9b824b93d818",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d021",
+        "confidence": 0.9
+      },
+      {
+        "id": "article:lit-1b1b3b688dab9b824b93d818|ADDRESSES_TOPIC|topic:climate-and-environment",
+        "source": "article:lit-1b1b3b688dab9b824b93d818",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:climate-and-environment",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-1b1b3b688dab9b824b93d818|ADDRESSES_TOPIC|topic:outbreak-investigation",
+        "source": "article:lit-1b1b3b688dab9b824b93d818",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:outbreak-investigation",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-1b1b3b688dab9b824b93d818|ADDRESSES_TOPIC|topic:surveillance",
+        "source": "article:lit-1b1b3b688dab9b824b93d818",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:surveillance",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-1b1b3b688dab9b824b93d818|ADDRESSES_TOPIC|topic:treatment",
+        "source": "article:lit-1b1b3b688dab9b824b93d818",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:treatment",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-1b1b3b688dab9b824b93d818|ADDRESSES_TOPIC|topic:vaccination",
+        "source": "article:lit-1b1b3b688dab9b824b93d818",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccination",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-1b1b3b688dab9b824b93d818|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-1b1b3b688dab9b824b93d818",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-3645e0a45d24397b1cf3043c|ABOUT_DISEASE|disease:d021",
+        "source": "article:lit-3645e0a45d24397b1cf3043c",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d021",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-3645e0a45d24397b1cf3043c|ABOUT_DISEASE|disease:d052",
+        "source": "article:lit-3645e0a45d24397b1cf3043c",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d052",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-3645e0a45d24397b1cf3043c|ADDRESSES_TOPIC|topic:climate-and-environment",
+        "source": "article:lit-3645e0a45d24397b1cf3043c",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:climate-and-environment",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-3645e0a45d24397b1cf3043c|ADDRESSES_TOPIC|topic:outbreak-investigation",
+        "source": "article:lit-3645e0a45d24397b1cf3043c",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:outbreak-investigation",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-3645e0a45d24397b1cf3043c|ADDRESSES_TOPIC|topic:surveillance",
+        "source": "article:lit-3645e0a45d24397b1cf3043c",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:surveillance",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-3645e0a45d24397b1cf3043c|ADDRESSES_TOPIC|topic:transmission-dynamics",
+        "source": "article:lit-3645e0a45d24397b1cf3043c",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:transmission-dynamics",
+        "confidence": 0.7100000000000001
+      },
+      {
+        "id": "article:lit-3645e0a45d24397b1cf3043c|ADDRESSES_TOPIC|topic:travel-medicine",
+        "source": "article:lit-3645e0a45d24397b1cf3043c",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:travel-medicine",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-3645e0a45d24397b1cf3043c|USES_STUDY_DESIGN|study-type:mathematical-modelling",
+        "source": "article:lit-3645e0a45d24397b1cf3043c",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:mathematical-modelling"
+      },
+      {
+        "id": "article:lit-55800fc0e3a41288e1597bce|ABOUT_DISEASE|disease:d021",
+        "source": "article:lit-55800fc0e3a41288e1597bce",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d021",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-55800fc0e3a41288e1597bce|ABOUT_DISEASE|disease:d052",
+        "source": "article:lit-55800fc0e3a41288e1597bce",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d052",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-55800fc0e3a41288e1597bce|ADDRESSES_TOPIC|topic:climate-and-environment",
+        "source": "article:lit-55800fc0e3a41288e1597bce",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:climate-and-environment",
+        "confidence": 0.7100000000000001
+      },
+      {
+        "id": "article:lit-55800fc0e3a41288e1597bce|ADDRESSES_TOPIC|topic:diagnostics",
+        "source": "article:lit-55800fc0e3a41288e1597bce",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:diagnostics",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-55800fc0e3a41288e1597bce|ADDRESSES_TOPIC|topic:outbreak-investigation",
+        "source": "article:lit-55800fc0e3a41288e1597bce",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:outbreak-investigation",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-55800fc0e3a41288e1597bce|ADDRESSES_TOPIC|topic:surveillance",
+        "source": "article:lit-55800fc0e3a41288e1597bce",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:surveillance",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-55800fc0e3a41288e1597bce|ADDRESSES_TOPIC|topic:transmission-dynamics",
+        "source": "article:lit-55800fc0e3a41288e1597bce",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:transmission-dynamics",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-55800fc0e3a41288e1597bce|ADDRESSES_TOPIC|topic:vaccination",
+        "source": "article:lit-55800fc0e3a41288e1597bce",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccination",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-55800fc0e3a41288e1597bce|STUDIED_IN|country:br",
+        "source": "article:lit-55800fc0e3a41288e1597bce",
+        "relation": "STUDIED_IN",
+        "target": "country:br",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-55800fc0e3a41288e1597bce|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-55800fc0e3a41288e1597bce",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-7be8baca2912577c36110fea|ABOUT_DISEASE|disease:d021",
+        "source": "article:lit-7be8baca2912577c36110fea",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d021",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-7be8baca2912577c36110fea|ADDRESSES_TOPIC|topic:travel-medicine",
+        "source": "article:lit-7be8baca2912577c36110fea",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:travel-medicine",
+        "confidence": 0.7100000000000001
+      },
+      {
+        "id": "article:lit-7be8baca2912577c36110fea|ADDRESSES_TOPIC|topic:vaccination",
+        "source": "article:lit-7be8baca2912577c36110fea",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccination",
+        "confidence": 0.7100000000000001
+      },
+      {
+        "id": "article:lit-7be8baca2912577c36110fea|ADDRESSES_TOPIC|topic:vaccine-effectiveness",
+        "source": "article:lit-7be8baca2912577c36110fea",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:vaccine-effectiveness",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-7be8baca2912577c36110fea|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-7be8baca2912577c36110fea",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      },
+      {
+        "id": "article:lit-a743ae7c6d470318cbf25eeb|ABOUT_DISEASE|disease:d021",
+        "source": "article:lit-a743ae7c6d470318cbf25eeb",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d021",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-a743ae7c6d470318cbf25eeb|ABOUT_DISEASE|disease:d052",
+        "source": "article:lit-a743ae7c6d470318cbf25eeb",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d052",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-a743ae7c6d470318cbf25eeb|ABOUT_DISEASE|disease:d059",
+        "source": "article:lit-a743ae7c6d470318cbf25eeb",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d059",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-a743ae7c6d470318cbf25eeb|ADDRESSES_TOPIC|topic:surveillance",
+        "source": "article:lit-a743ae7c6d470318cbf25eeb",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:surveillance",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-a743ae7c6d470318cbf25eeb|ADDRESSES_TOPIC|topic:transmission-dynamics",
+        "source": "article:lit-a743ae7c6d470318cbf25eeb",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:transmission-dynamics",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-a743ae7c6d470318cbf25eeb|ADDRESSES_TOPIC|topic:travel-medicine",
+        "source": "article:lit-a743ae7c6d470318cbf25eeb",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:travel-medicine",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-a743ae7c6d470318cbf25eeb|STUDIED_IN|country:br",
+        "source": "article:lit-a743ae7c6d470318cbf25eeb",
+        "relation": "STUDIED_IN",
+        "target": "country:br",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-a743ae7c6d470318cbf25eeb|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-a743ae7c6d470318cbf25eeb",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      }
+    ],
+    "insights": [
+      {
+        "type": "disease_co_occurrence",
+        "left": "disease:d021",
+        "right": "disease:d052",
+        "left_label": "Dengue",
+        "right_label": "Chikungunya",
+        "article_count": 3
+      },
+      {
+        "type": "topic_co_occurrence",
+        "left": "topic:climate-and-environment",
+        "right": "topic:outbreak-investigation",
+        "left_label": "Climate and environment",
+        "right_label": "Outbreak investigation",
+        "article_count": 3
+      },
+      {
+        "type": "topic_co_occurrence",
+        "left": "topic:climate-and-environment",
+        "right": "topic:surveillance",
+        "left_label": "Climate and environment",
+        "right_label": "Surveillance",
+        "article_count": 3
+      },
+      {
+        "type": "topic_co_occurrence",
+        "left": "topic:outbreak-investigation",
+        "right": "topic:surveillance",
+        "left_label": "Outbreak investigation",
+        "right_label": "Surveillance",
+        "article_count": 3
+      },
+      {
+        "type": "topic_co_occurrence",
+        "left": "topic:surveillance",
+        "right": "topic:transmission-dynamics",
+        "left_label": "Surveillance",
+        "right_label": "Transmission dynamics",
+        "article_count": 3
+      },
+      {
+        "type": "topic_co_occurrence",
+        "left": "topic:climate-and-environment",
+        "right": "topic:transmission-dynamics",
+        "left_label": "Climate and environment",
+        "right_label": "Transmission dynamics",
+        "article_count": 2
+      },
+      {
+        "type": "topic_co_occurrence",
+        "left": "topic:outbreak-investigation",
+        "right": "topic:transmission-dynamics",
+        "left_label": "Outbreak investigation",
+        "right_label": "Transmission dynamics",
+        "article_count": 2
+      },
+      {
+        "type": "topic_co_occurrence",
+        "left": "topic:surveillance",
+        "right": "topic:travel-medicine",
+        "left_label": "Surveillance",
+        "right_label": "Travel medicine",
+        "article_count": 2
+      },
+      {
+        "type": "topic_co_occurrence",
+        "left": "topic:transmission-dynamics",
+        "right": "topic:travel-medicine",
+        "left_label": "Transmission dynamics",
+        "right_label": "Travel medicine",
+        "article_count": 2
+      },
+      {
+        "type": "topic_co_occurrence",
+        "left": "topic:climate-and-environment",
+        "right": "topic:vaccination",
+        "left_label": "Climate and environment",
+        "right_label": "Vaccination",
+        "article_count": 2
+      },
+      {
+        "type": "topic_co_occurrence",
+        "left": "topic:outbreak-investigation",
+        "right": "topic:vaccination",
+        "left_label": "Outbreak investigation",
+        "right_label": "Vaccination",
+        "article_count": 2
+      },
+      {
+        "type": "topic_co_occurrence",
+        "left": "topic:surveillance",
+        "right": "topic:vaccination",
+        "left_label": "Surveillance",
+        "right_label": "Vaccination",
+        "article_count": 2
+      }
+    ],
+    "stats": {
+      "nodes": 20,
+      "edges": 38,
+      "articles": 5
+    }
+  }
+}

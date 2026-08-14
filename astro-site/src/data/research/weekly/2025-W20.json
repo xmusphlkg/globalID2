@@ -1,0 +1,227 @@
+{
+  "week": "2025-W20",
+  "start_date": "2025-05-14",
+  "end_date": "2025-05-15",
+  "article_count": 2,
+  "disease_count": 2,
+  "country_count": 1,
+  "top_topics": [
+    "Outbreak investigation"
+  ],
+  "articles": [
+    {
+      "article_id": "lit_de0444d67c5168c907cf3cb9",
+      "slug": "10-1186-s12985-025-02766-y-de0444d6",
+      "title": "Impact of most promising Ebola therapies on survival: a secondary analysis during the tenth outbreak in the Democratic Republic of Congo",
+      "doi": "10.1186/s12985-025-02766-y",
+      "pmid": null,
+      "journal": "Virology Journal",
+      "publisher": "Springer Science and Business Media LLC",
+      "authors": [
+        "Esther Mamu Kikwango",
+        "Pierre Z. Akilimali",
+        "Nguyen Toan Tran"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2025-05-15T00:00:00+00:00",
+      "indexed_at": "2026-07-10T18:48:50+00:00",
+      "open_access_status": "open",
+      "open_access_url": "https://virologyj.biomedcentral.com/articles/10.1186/s12985-025-02766-y",
+      "license_url": "https://creativecommons.org/licenses/by-nc-nd/4.0",
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.512,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D050",
+          "slug": "ebola",
+          "name_en": "Ebola",
+          "name_zh": "埃博拉出血热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [],
+      "topics": [
+        {
+          "name": "Outbreak investigation",
+          "confidence": 0.66
+        }
+      ],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Ebola. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与埃博拉出血热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1186/s12985-025-02766-y",
+        "publisher": "https://virologyj.biomedcentral.com/articles/10.1186/s12985-025-02766-y"
+      },
+      "updated_at": "2026-08-13T16:05:48.137339+00:00",
+      "related_signals": [
+        {
+          "signal_id": "event:36",
+          "section": "emerging",
+          "kind": "official_event",
+          "title": "Ebola disease caused by Bundibugyo virus - Democratic Republic of the Congo",
+          "disease_id": "D050",
+          "disease_name_en": "Ebola",
+          "disease_name_zh": "埃博拉出血热",
+          "geographies": [
+            {
+              "code": "CD",
+              "name_en": "Democratic Republic of the Congo"
+            }
+          ],
+          "data_through": "2026-08-01",
+          "window": {
+            "label": null,
+            "current": null,
+            "previous": null,
+            "absolute_change": null,
+            "change_pct": null
+          },
+          "risk": {
+            "score": null,
+            "level": null,
+            "confidence": "high"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        },
+        {
+          "signal_id": "event:37",
+          "section": "emerging",
+          "kind": "official_event",
+          "title": "Ebola disease caused by Bundibugyo virus, Democratic Republic of the Congo & Uganda",
+          "disease_id": "D050",
+          "disease_name_en": "Ebola",
+          "disease_name_zh": "埃博拉出血热",
+          "geographies": [
+            {
+              "code": "CD",
+              "name_en": "Democratic Republic of the Congo"
+            },
+            {
+              "code": "UG",
+              "name_en": "Uganda"
+            }
+          ],
+          "data_through": "2026-07-17",
+          "window": {
+            "label": null,
+            "current": null,
+            "previous": null,
+            "absolute_change": null,
+            "change_pct": null
+          },
+          "risk": {
+            "score": null,
+            "level": null,
+            "confidence": "high"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    },
+    {
+      "article_id": "lit_60b0fc15ea422757590432e6",
+      "slug": "10-1016-j-jinf-2025-106506-60b0fc15",
+      "title": "High dose, subcutaneous injections of benzathine penicillin G (SCIP) to prevent rheumatic fever: A single arm, phase IIa trial of safety and pharmacokinetics.",
+      "doi": "10.1016/j.jinf.2025.106506",
+      "pmid": "40378963",
+      "journal": "The Journal of infection",
+      "publisher": null,
+      "authors": [
+        "Bennett J",
+        "Salman S",
+        "Moodley D",
+        "Dobinson H",
+        "Andersen E",
+        "Anderson A",
+        "Moore B",
+        "Page-Sharp M",
+        "Batty K",
+        "Carapetis J",
+        "Baker M",
+        "Kado J",
+        "Manning L"
+      ],
+      "article_type": "journal-article",
+      "study_type": "Journal article",
+      "published_at": "2025-05-14T00:00:00+00:00",
+      "indexed_at": "2025-05-16T00:00:00+00:00",
+      "open_access_status": "unknown",
+      "open_access_url": null,
+      "license_url": null,
+      "peer_review_status": "peer_reviewed",
+      "integrity_status": "current",
+      "discovery_score": 0.382,
+      "is_featured": false,
+      "diseases": [
+        {
+          "disease_id": "D158",
+          "slug": "rheumatic-fever",
+          "name_en": "Rheumatic fever",
+          "name_zh": "风湿热",
+          "confidence": 0.82
+        }
+      ],
+      "countries": [
+        {
+          "code": "NZ",
+          "name_en": "New Zealand",
+          "name_zh": null,
+          "confidence": 0.62
+        }
+      ],
+      "topics": [],
+      "related_surveillance": [],
+      "summary": {},
+      "why_it_matters_en": "This recent journal article is indexed for its relevance to Rheumatic fever. Read the original source before applying its findings.",
+      "why_it_matters_zh": "这项近期Journal article因与风湿热相关而被收录。应用其结论前请阅读原始文献。",
+      "source_urls": {
+        "doi": "https://doi.org/10.1016/j.jinf.2025.106506",
+        "pubmed": "https://pubmed.ncbi.nlm.nih.gov/40378963/"
+      },
+      "updated_at": "2026-08-13T16:05:48.137535+00:00",
+      "related_signals": [
+        {
+          "signal_id": "signal:f59d37329a1f6ece",
+          "section": "increasing",
+          "kind": "statistical_signal",
+          "title": null,
+          "disease_id": "D158",
+          "disease_name_en": "Rheumatic fever",
+          "disease_name_zh": "风湿热",
+          "geographies": [
+            {
+              "code": "NZ",
+              "name_en": "New Zealand"
+            }
+          ],
+          "data_through": "2026-06-01",
+          "window": {
+            "label": "Latest complete month",
+            "current": 28.0,
+            "previous": 18.0,
+            "absolute_change": 10.0,
+            "change_pct": 55.56
+          },
+          "risk": {
+            "score": 46.5,
+            "level": "moderate",
+            "confidence": "low"
+          },
+          "relation_level": "disease_context",
+          "situation_url": "/situation/",
+          "visibility": "shadow"
+        }
+      ]
+    }
+  ],
+  "url": "/research/weekly/2025-W20/"
+}

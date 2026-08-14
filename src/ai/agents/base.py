@@ -295,17 +295,29 @@ class BaseAgent(ABC):
         if not preferred_order:
             return candidates
 
-        prioritized: list[Dict[str, Any]] = []
-        deferred: list[Dict[str, Any]] = []
-        for candidate in candidates:
-            model_name = str(candidate.get("model_name") or "").strip()
-            if model_name in preferred_order:
-                prioritized.append(candidate)
-            else:
-                deferred.append(candidate)
+        def order_group(group: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+            prioritized: list[Dict[str, Any]] = []
+            deferred: list[Dict[str, Any]] = []
+            for candidate in group:
+                model_name = str(candidate.get("model_name") or "").strip()
+                if model_name in preferred_order:
+                    prioritized.append(candidate)
+                else:
+                    deferred.append(candidate)
+            prioritized.sort(
+                key=lambda candidate: preferred_order.get(
+                    str(candidate.get("model_name") or "").strip(),
+                    10**6,
+                )
+            )
+            return prioritized + deferred
 
-        prioritized.sort(key=lambda candidate: preferred_order.get(str(candidate.get("model_name") or "").strip(), 10**6))
-        return prioritized + deferred
+        # A preferred shard may also exist only in the direct environment
+        # fallback. It must not jump ahead of model-center routes that have a
+        # current healthy status; preference reorders within each route class.
+        runtime = [candidate for candidate in candidates if candidate.get("route") is not None]
+        direct = [candidate for candidate in candidates if candidate.get("route") is None]
+        return order_group(runtime) + order_group(direct)
     
     def _init_clients(self):
         """Initialize clients for supported AI providers."""
@@ -564,6 +576,18 @@ class BaseAgent(ABC):
         quota_recovery_attempted = bool(kwargs.pop("_quota_recovery_attempted", False))
         quota_recovery_round = int(kwargs.pop("_quota_recovery_round", 0) or 0)
         recovery_round_override = kwargs.pop("max_quota_recovery_rounds", None)
+        wait_for_model_recovery = bool(kwargs.pop("wait_for_model_recovery", True))
+        model_request_timeout_seconds = kwargs.pop("model_request_timeout_seconds", None)
+        max_attempts_per_model = kwargs.pop("max_attempts_per_model", None)
+        timeout_cooldown_seconds = max(
+            0,
+            int(kwargs.pop("timeout_cooldown_seconds", 0) or 0),
+        )
+        attempt_limit = (
+            self.max_retries
+            if max_attempts_per_model is None
+            else max(1, min(self.max_retries, int(max_attempts_per_model)))
+        )
         preferred_models_raw = kwargs.pop("preferred_models", None)
         preferred_models = (
             [item for item in preferred_models_raw if isinstance(item, str)]
@@ -629,7 +653,7 @@ class BaseAgent(ABC):
         candidates, chain_used = self._build_candidates(runtime_routes, ignore_local_cooldowns=False)
         candidates = self._prioritize_candidates(candidates, preferred_models)
 
-        if not candidates:
+        if not candidates and wait_for_model_recovery:
             wait_cap_seconds = max(
                 3,
                 int(
@@ -679,6 +703,11 @@ class BaseAgent(ABC):
                         f"Candidate list still empty after wait/refresh. "
                         f"Will probe {len(candidates)} model(s) by ignoring local cooldown markers."
                     )
+        elif not candidates:
+            logger.warning(
+                f"No candidate model available for agent '{self.name}'; "
+                "model recovery waiting is disabled for this request."
+            )
 
         last_error = None
         saw_quota_failure = False
@@ -693,26 +722,36 @@ class BaseAgent(ABC):
             retry_count = 0
             start_time = time.time()
 
-            while retry_count < self.max_retries:
+            while retry_count < attempt_limit:
                 try:
                     if route:
                         provider = str(route.get("provider_key") or route.get("provider_name") or "runtime")
-                        response_text, token_usage = await self._complete_with_runtime_route(
+                        request = self._complete_with_runtime_route(
                             route, prompt, system, **kwargs
                         )
-                        if route.get("rate_limit_count") or route.get("last_check_status") == "rate_limited":
-                            try:
-                                await clear_route_rate_limit(route, "Connection recovered after cooldown")
-                                BaseAgent.AVAILABLE_MODEL_ROUTES = None
-                                BaseAgent.AVAILABLE_MODEL_ROUTES_LOADED_AT = None
-                            except Exception as clear_exc:
-                                logger.warning(f"Failed to clear route cooldown for '{route_key}': {clear_exc}")
                     else:
                         # Determine which provider to use for this model
                         provider = self.get_provider_for_model(self.model)
-                        response_text, token_usage = await self._complete_with_provider(
+                        request = self._complete_with_provider(
                             provider, prompt, system, **kwargs
                         )
+                    if model_request_timeout_seconds is not None:
+                        response_text, token_usage = await asyncio.wait_for(
+                            request,
+                            timeout=max(0.01, float(model_request_timeout_seconds)),
+                        )
+                    else:
+                        response_text, token_usage = await request
+                    if route and (
+                        route.get("rate_limit_count")
+                        or route.get("last_check_status") == "rate_limited"
+                    ):
+                        try:
+                            await clear_route_rate_limit(route, "Connection recovered after cooldown")
+                            BaseAgent.AVAILABLE_MODEL_ROUTES = None
+                            BaseAgent.AVAILABLE_MODEL_ROUTES_LOADED_AT = None
+                        except Exception as clear_exc:
+                            logger.warning(f"Failed to clear route cooldown for '{route_key}': {clear_exc}")
 
                     # Success means local cooldown markers should no longer block this model/route.
                     BaseAgent.MODEL_COOLDOWNS.pop(model_name, None)
@@ -761,8 +800,24 @@ class BaseAgent(ABC):
 
                     logger.warning(
                         f"Agent '{self.name}' error with model '{self.model}' "
-                        f"(attempt {retry_count}/{self.max_retries}): {e}"
+                        f"(attempt {retry_count}/{attempt_limit}): {e}"
                     )
+
+                    if isinstance(e, TimeoutError):
+                        if timeout_cooldown_seconds:
+                            BaseAgent._mark_model_cooling_down(
+                                self.model,
+                                timeout_cooldown_seconds,
+                            )
+                            BaseAgent._mark_route_cooling_down(
+                                route_key,
+                                timeout_cooldown_seconds,
+                            )
+                        logger.warning(
+                            f"Model '{self.model}' exceeded its per-route request timeout; "
+                            "switching to the next candidate."
+                        )
+                        break
 
                     if quota_related:
                         saw_quota_failure = True
@@ -819,12 +874,12 @@ class BaseAgent(ABC):
                         BaseAgent.AVAILABLE_MODEL_ROUTES_LOADED_AT = None
                         break
 
-                    if retry_count < self.max_retries:
+                    if retry_count < attempt_limit:
                         await asyncio.sleep(2 ** retry_count)  # exponential backoff
 
             # 当前模型用尽重试仍失败，尝试下一个模型
             logger.error(
-                f"Model '{self.model}' failed after {self.max_retries} retries for agent '{self.name}'."
+                f"Model '{self.model}' failed after {retry_count} attempt(s) for agent '{self.name}'."
             )
 
         # 所有模型都失败
@@ -862,6 +917,10 @@ class BaseAgent(ABC):
                 use_cache=use_cache,
                 preferred_models=preferred_models,
                 max_quota_recovery_rounds=max_recovery_rounds,
+                wait_for_model_recovery=wait_for_model_recovery,
+                model_request_timeout_seconds=model_request_timeout_seconds,
+                max_attempts_per_model=attempt_limit,
+                timeout_cooldown_seconds=timeout_cooldown_seconds,
                 _quota_recovery_attempted=True,
                 _quota_recovery_round=quota_recovery_round + 1,
                 **kwargs,
@@ -888,7 +947,11 @@ class BaseAgent(ABC):
         route_temperature = route.get("temperature")
         route_max_tokens = route.get("max_tokens")
         temperature = self.temperature if route_temperature is None else float(route_temperature)
-        max_tokens = self.max_tokens if route_max_tokens is None else int(route_max_tokens)
+        max_tokens = (
+            self.max_tokens
+            if route_max_tokens is None
+            else min(self.max_tokens, int(route_max_tokens))
+        )
         sanitized_kwargs = self._sanitize_completion_params(dict(kwargs))
 
         if style == "anthropic":
@@ -1071,6 +1134,21 @@ class BaseAgent(ABC):
         import hashlib
         content = f"{self.name}:{self.model}:{system or ''}:{prompt}"
         return f"agent:{hashlib.md5(content.encode()).hexdigest()}"
+
+    async def invalidate_completion_cache(
+        self,
+        *,
+        prompt: str,
+        system: Optional[str] = None,
+    ) -> bool:
+        """Discard a completion that failed a caller's post-generation checks."""
+        if not self.config.ai.enable_cache:
+            return False
+        try:
+            return bool(await self.cache.delete(self._make_cache_key(prompt, system)))
+        except Exception as exc:
+            logger.warning("Failed to invalidate AI completion cache: %s", exc)
+            return False
     
     def get_conversation_history(self) -> List[Dict[str, Any]]:
         """获取对话历史记录"""

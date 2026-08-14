@@ -1,0 +1,194 @@
+{
+  "article_id": "lit_50afd35edd680ed3f5200de6",
+  "slug": "10-1016-j-diagmicrobio-2026-117365-50afd35e",
+  "title": "A call for strengthening surveillance and preventive efforts for Ebola virus disease outbreak in the Democratic Republic of Congo",
+  "doi": "10.1016/j.diagmicrobio.2026.117365",
+  "pmid": null,
+  "journal": "Diagnostic Microbiology and Infectious Disease",
+  "publisher": "Elsevier BV",
+  "authors": [
+    "Aymar Akilimali"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Journal article",
+  "published_at": "2026-07-01T00:00:00+00:00",
+  "indexed_at": "2026-04-07T03:25:41+00:00",
+  "open_access_status": "open",
+  "open_access_url": "https://linkinghub.elsevier.com/retrieve/pii/S073288932600115X",
+  "license_url": "https://www.elsevier.com/tdm/userlicense/1.0/",
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.676,
+  "is_featured": false,
+  "diseases": [
+    {
+      "disease_id": "D050",
+      "slug": "ebola",
+      "name_en": "Ebola",
+      "name_zh": "埃博拉出血热",
+      "confidence": 0.82
+    }
+  ],
+  "countries": [],
+  "topics": [
+    {
+      "name": "Surveillance",
+      "confidence": 0.66
+    },
+    {
+      "name": "Outbreak investigation",
+      "confidence": 0.66
+    }
+  ],
+  "related_surveillance": [],
+  "summary": {},
+  "why_it_matters_en": "This recent journal article is indexed for its relevance to Ebola. Read the original source before applying its findings.",
+  "why_it_matters_zh": "这项近期Journal article因与埃博拉出血热相关而被收录。应用其结论前请阅读原始文献。",
+  "source_urls": {
+    "doi": "https://doi.org/10.1016/j.diagmicrobio.2026.117365",
+    "publisher": "https://linkinghub.elsevier.com/retrieve/pii/S073288932600115X"
+  },
+  "updated_at": "2026-08-13T16:05:48.137334+00:00",
+  "related_signals": [
+    {
+      "signal_id": "event:36",
+      "section": "emerging",
+      "kind": "official_event",
+      "title": "Ebola disease caused by Bundibugyo virus - Democratic Republic of the Congo",
+      "disease_id": "D050",
+      "disease_name_en": "Ebola",
+      "disease_name_zh": "埃博拉出血热",
+      "geographies": [
+        {
+          "code": "CD",
+          "name_en": "Democratic Republic of the Congo"
+        }
+      ],
+      "data_through": "2026-08-01",
+      "window": {
+        "label": null,
+        "current": null,
+        "previous": null,
+        "absolute_change": null,
+        "change_pct": null
+      },
+      "risk": {
+        "score": null,
+        "level": null,
+        "confidence": "high"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    },
+    {
+      "signal_id": "event:37",
+      "section": "emerging",
+      "kind": "official_event",
+      "title": "Ebola disease caused by Bundibugyo virus, Democratic Republic of the Congo & Uganda",
+      "disease_id": "D050",
+      "disease_name_en": "Ebola",
+      "disease_name_zh": "埃博拉出血热",
+      "geographies": [
+        {
+          "code": "CD",
+          "name_en": "Democratic Republic of the Congo"
+        },
+        {
+          "code": "UG",
+          "name_en": "Uganda"
+        }
+      ],
+      "data_through": "2026-07-17",
+      "window": {
+        "label": null,
+        "current": null,
+        "previous": null,
+        "absolute_change": null,
+        "change_pct": null
+      },
+      "risk": {
+        "score": null,
+        "level": null,
+        "confidence": "high"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-50afd35edd680ed3f5200de6",
+        "type": "article",
+        "label": "A call for strengthening surveillance and preventive efforts for Ebola virus disease outbreak in the Democratic Republic of Congo",
+        "slug": "10-1016-j-diagmicrobio-2026-117365-50afd35e",
+        "url": "/research/articles/10-1016-j-diagmicrobio-2026-117365-50afd35e/",
+        "published_at": "2026-07-01T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "disease:d050",
+        "type": "disease",
+        "label": "Ebola",
+        "disease_id": "D050",
+        "name_zh": "埃博拉出血热",
+        "slug": "ebola",
+        "url": "/diseases/ebola/"
+      },
+      {
+        "id": "study-type:journal-article",
+        "type": "study_type",
+        "label": "Journal article"
+      },
+      {
+        "id": "topic:outbreak-investigation",
+        "type": "topic",
+        "label": "Outbreak investigation"
+      },
+      {
+        "id": "topic:surveillance",
+        "type": "topic",
+        "label": "Surveillance"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-50afd35edd680ed3f5200de6|ABOUT_DISEASE|disease:d050",
+        "source": "article:lit-50afd35edd680ed3f5200de6",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d050",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-50afd35edd680ed3f5200de6|ADDRESSES_TOPIC|topic:outbreak-investigation",
+        "source": "article:lit-50afd35edd680ed3f5200de6",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:outbreak-investigation",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-50afd35edd680ed3f5200de6|ADDRESSES_TOPIC|topic:surveillance",
+        "source": "article:lit-50afd35edd680ed3f5200de6",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:surveillance",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-50afd35edd680ed3f5200de6|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-50afd35edd680ed3f5200de6",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 5,
+      "edges": 4,
+      "articles": 1
+    }
+  }
+}

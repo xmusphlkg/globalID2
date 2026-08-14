@@ -54,6 +54,12 @@ def build_update_situation_room_command(*, python_path: Path) -> list[str]:
 
     return [str(python_path), "scripts/update_situation_room.py"]
 
+
+def build_validate_situation_release_command(*, python_path: Path) -> list[str]:
+    """Validate built Situation HTML, JSON downloads, and sitemap gating."""
+
+    return [str(python_path), "scripts/validate_situation_release.py"]
+
 def build_publish_download_repo_command(
     *,
     python_path: Path,

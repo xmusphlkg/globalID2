@@ -1,0 +1,202 @@
+{
+  "article_id": "lit_ce85973c0685edbd50bf2cab",
+  "slug": "10-1186-s13028-026-00863-8-ce85973c",
+  "title": "Antibodies against tick-borne pathogens in domestic dogs in Norway: Borrelia burgdorferi sensu lato, tick-borne encephalitis virus, and Anaplasma phagocytophilum.",
+  "doi": "10.1186/s13028-026-00863-8",
+  "pmid": "41834032",
+  "journal": "Acta veterinaria Scandinavica",
+  "publisher": null,
+  "authors": [
+    "Kloster H",
+    "Stormo C",
+    "Haaland AH",
+    "Okstad W",
+    "Andreassen ÅK",
+    "Stuen S",
+    "Kjelland V"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Journal article",
+  "published_at": "2026-03-15T00:00:00+00:00",
+  "indexed_at": "2026-03-16T00:00:00+00:00",
+  "open_access_status": "open",
+  "open_access_url": "https://europepmc.org/articles/PMC13104503",
+  "license_url": null,
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.664,
+  "is_featured": false,
+  "diseases": [
+    {
+      "disease_id": "D205",
+      "slug": "tick-borne-encephalitis",
+      "name_en": "Tick-borne encephalitis",
+      "name_zh": "蜱传脑炎",
+      "confidence": 0.82
+    }
+  ],
+  "countries": [
+    {
+      "code": "NO",
+      "name_en": "Norway",
+      "name_zh": null,
+      "confidence": 0.78
+    }
+  ],
+  "topics": [
+    {
+      "name": "Surveillance",
+      "confidence": 0.66
+    },
+    {
+      "name": "Transmission dynamics",
+      "confidence": 0.66
+    },
+    {
+      "name": "One Health",
+      "confidence": 0.66
+    }
+  ],
+  "related_surveillance": [],
+  "summary": {},
+  "why_it_matters_en": "This recent journal article is indexed for its relevance to Tick-borne encephalitis. Read the original source before applying its findings.",
+  "why_it_matters_zh": "这项近期Journal article因与蜱传脑炎相关而被收录。应用其结论前请阅读原始文献。",
+  "source_urls": {
+    "doi": "https://doi.org/10.1186/s13028-026-00863-8",
+    "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41834032/"
+  },
+  "updated_at": "2026-08-13T16:05:48.137592+00:00",
+  "related_signals": [
+    {
+      "signal_id": "signal:ab5fb8f49aaa0cf6",
+      "section": "increasing",
+      "kind": "statistical_signal",
+      "title": null,
+      "disease_id": "D205",
+      "disease_name_en": "Tick-borne encephalitis",
+      "disease_name_zh": "蜱传脑炎",
+      "geographies": [
+        {
+          "code": "SE",
+          "name_en": "Sweden"
+        }
+      ],
+      "data_through": "2026-07-01",
+      "window": {
+        "label": "Latest complete month",
+        "current": 156.0,
+        "previous": 92.0,
+        "absolute_change": 64.0,
+        "change_pct": 69.57
+      },
+      "risk": {
+        "score": 46.1,
+        "level": "moderate",
+        "confidence": "low"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-ce85973c0685edbd50bf2cab",
+        "type": "article",
+        "label": "Antibodies against tick-borne pathogens in domestic dogs in Norway: Borrelia burgdorferi sensu lato, tick-borne encephalitis virus, and Anaplasma phagocytophilum.",
+        "slug": "10-1186-s13028-026-00863-8-ce85973c",
+        "url": "/research/articles/10-1186-s13028-026-00863-8-ce85973c/",
+        "published_at": "2026-03-15T00:00:00+00:00",
+        "study_type": "Journal article"
+      },
+      {
+        "id": "country:no",
+        "type": "country",
+        "label": "Norway",
+        "code": "NO",
+        "url": "/countries/no/"
+      },
+      {
+        "id": "disease:d205",
+        "type": "disease",
+        "label": "Tick-borne encephalitis",
+        "disease_id": "D205",
+        "name_zh": "蜱传脑炎",
+        "slug": "tick-borne-encephalitis",
+        "url": "/diseases/tick-borne-encephalitis/"
+      },
+      {
+        "id": "study-type:journal-article",
+        "type": "study_type",
+        "label": "Journal article"
+      },
+      {
+        "id": "topic:one-health",
+        "type": "topic",
+        "label": "One Health"
+      },
+      {
+        "id": "topic:surveillance",
+        "type": "topic",
+        "label": "Surveillance"
+      },
+      {
+        "id": "topic:transmission-dynamics",
+        "type": "topic",
+        "label": "Transmission dynamics"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-ce85973c0685edbd50bf2cab|ABOUT_DISEASE|disease:d205",
+        "source": "article:lit-ce85973c0685edbd50bf2cab",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d205",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-ce85973c0685edbd50bf2cab|ADDRESSES_TOPIC|topic:one-health",
+        "source": "article:lit-ce85973c0685edbd50bf2cab",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:one-health",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-ce85973c0685edbd50bf2cab|ADDRESSES_TOPIC|topic:surveillance",
+        "source": "article:lit-ce85973c0685edbd50bf2cab",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:surveillance",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-ce85973c0685edbd50bf2cab|ADDRESSES_TOPIC|topic:transmission-dynamics",
+        "source": "article:lit-ce85973c0685edbd50bf2cab",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:transmission-dynamics",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-ce85973c0685edbd50bf2cab|STUDIED_IN|country:no",
+        "source": "article:lit-ce85973c0685edbd50bf2cab",
+        "relation": "STUDIED_IN",
+        "target": "country:no",
+        "confidence": 0.78
+      },
+      {
+        "id": "article:lit-ce85973c0685edbd50bf2cab|USES_STUDY_DESIGN|study-type:journal-article",
+        "source": "article:lit-ce85973c0685edbd50bf2cab",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:journal-article"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 7,
+      "edges": 6,
+      "articles": 1
+    }
+  }
+}

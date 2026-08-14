@@ -1,0 +1,301 @@
+{
+  "article_id": "lit_3445a3defe3b26c305c1df38",
+  "slug": "10-1111-irv-70178-3445a3de",
+  "title": "A Systematic Review of New, Enhanced Surveillance Systems and Methodologies for Zoonotic Influenza Viruses in Animals and Human-Animal Interface.",
+  "doi": "10.1111/irv.70178",
+  "pmid": "41214450",
+  "journal": "Influenza and other respiratory viruses",
+  "publisher": null,
+  "authors": [
+    "Badra R",
+    "Zhang W",
+    "Tam JSL",
+    "Webby R",
+    "Van Der Werf S",
+    "Nikisins S",
+    "Cullinane A",
+    "Gharaibeh S",
+    "Njouom R",
+    "Peiris M",
+    "Kayali G",
+    "Heraud JM"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Systematic review",
+  "published_at": "2025-11-01T00:00:00+00:00",
+  "indexed_at": "2025-11-10T00:00:00+00:00",
+  "open_access_status": "open",
+  "open_access_url": "https://europepmc.org/articles/PMC12602164",
+  "license_url": null,
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.712,
+  "is_featured": false,
+  "diseases": [
+    {
+      "disease_id": "D038",
+      "slug": "influenza",
+      "name_en": "Influenza",
+      "name_zh": "流行性感冒",
+      "confidence": 0.86
+    },
+    {
+      "disease_id": "D004",
+      "slug": "covid-19",
+      "name_en": "COVID-19",
+      "name_zh": "新型冠状病毒感染",
+      "confidence": 0.62
+    },
+    {
+      "disease_id": "D014",
+      "slug": "h5n1",
+      "name_en": "H5N1",
+      "name_zh": "人感染高致病性禽流感",
+      "confidence": 0.62
+    }
+  ],
+  "countries": [],
+  "topics": [
+    {
+      "name": "One Health",
+      "confidence": 0.7100000000000001
+    },
+    {
+      "name": "Surveillance",
+      "confidence": 0.66
+    },
+    {
+      "name": "Transmission dynamics",
+      "confidence": 0.66
+    },
+    {
+      "name": "Diagnostics",
+      "confidence": 0.66
+    },
+    {
+      "name": "Climate and environment",
+      "confidence": 0.66
+    },
+    {
+      "name": "Health policy",
+      "confidence": 0.66
+    }
+  ],
+  "related_surveillance": [],
+  "summary": {
+    "en": {
+      "research_question": "The authors aimed to evaluate recent developments in monitoring techniques for animal and cross-species influenza viruses to determine which innovations warrant broader application and which areas require further investigation.",
+      "study_design": "This work follows a systematic review framework guided by PRISMA standards, synthesizing data from 164 selected publications out of an initial search yielding 7,490 records.",
+      "population_setting": "The scope encompasses global efforts to track influenza strains circulating among wildlife, livestock, and humans, with particular attention to interaction zones where spillover events occur.",
+      "main_findings": "The analysis identifies multiple technological improvements alongside persistent structural deficiencies in monitoring networks. Current documentation indicates that numerous regions operate without robust cross-sectoral tracking systems, resulting in incomplete estimates of infection prevalence. Priority actions emphasize integrating multi-sectoral datasets, standardizing new testing tools, scaling passive sampling strategies, and aligning technical upgrades with regulatory decision-making.",
+      "public_health_relevance": "Strengthening coordinated monitoring frameworks is presented as essential for reducing seasonal illness impacts and mitigating future outbreak threats through improved diagnostic readiness and targeted research funding.",
+      "limitations": "The evaluation relies exclusively on indexed academic publications, which may overlook operational field data or reflect uneven research investment across different geographic areas. Additionally, the focus on a seven-year window restricts historical context for long-term trend analysis.",
+      "gids_interpretation": "This publication offers a consolidated perspective on methodological evolution within cross-species pathogen tracking initiatives. It contextualizes recent scholarly contributions toward standardized data collection and policy alignment without referencing active epidemiological dashboards or real-time transmission metrics.",
+      "provenance": {
+        "generated_by": "literature-evidence-agent",
+        "model": "qwen3.7-flash",
+        "provider": "qwenai",
+        "quality_score": 0.945,
+        "generated_at": "2026-08-13T16:15:46.349764+00:00",
+        "editorially_approved": false,
+        "automatically_approved": true,
+        "automation_policy_version": "research-radar-autopilot.v1",
+        "publication_gate": "automated-quality-gate"
+      }
+    }
+  },
+  "why_it_matters_en": "Strengthening coordinated monitoring frameworks is presented as essential for reducing seasonal illness impacts and mitigating future outbreak threats through improved diagnostic readiness and targeted research funding.",
+  "why_it_matters_zh": "这项近期Systematic review因与流行性感冒相关而被收录。应用其结论前请阅读原始文献。",
+  "source_urls": {
+    "doi": "https://doi.org/10.1111/irv.70178",
+    "pubmed": "https://pubmed.ncbi.nlm.nih.gov/41214450/"
+  },
+  "updated_at": "2026-08-13T16:05:48.137438+00:00",
+  "related_signals": [
+    {
+      "signal_id": "signal:d4f34da837688d03",
+      "section": "increasing",
+      "kind": "statistical_signal",
+      "title": null,
+      "disease_id": "D038",
+      "disease_name_en": "Influenza",
+      "disease_name_zh": "流行性感冒",
+      "geographies": [
+        {
+          "code": "IE",
+          "name_en": "Ireland"
+        }
+      ],
+      "data_through": "2026-07-27",
+      "window": {
+        "label": "Last 4 weeks",
+        "current": 230.0,
+        "previous": 46.0,
+        "absolute_change": 184.0,
+        "change_pct": 400.0
+      },
+      "risk": {
+        "score": 65.5,
+        "level": "high",
+        "confidence": "low"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-3445a3defe3b26c305c1df38",
+        "type": "article",
+        "label": "A Systematic Review of New, Enhanced Surveillance Systems and Methodologies for Zoonotic Influenza Viruses in Animals and Human-Animal Interface.",
+        "slug": "10-1111-irv-70178-3445a3de",
+        "url": "/research/articles/10-1111-irv-70178-3445a3de/",
+        "published_at": "2025-11-01T00:00:00+00:00",
+        "study_type": "Systematic review"
+      },
+      {
+        "id": "disease:d004",
+        "type": "disease",
+        "label": "COVID-19",
+        "disease_id": "D004",
+        "name_zh": "新型冠状病毒感染",
+        "slug": "covid-19",
+        "url": "/diseases/covid-19/"
+      },
+      {
+        "id": "disease:d014",
+        "type": "disease",
+        "label": "H5N1",
+        "disease_id": "D014",
+        "name_zh": "人感染高致病性禽流感",
+        "slug": "h5n1",
+        "url": "/diseases/h5n1/"
+      },
+      {
+        "id": "disease:d038",
+        "type": "disease",
+        "label": "Influenza",
+        "disease_id": "D038",
+        "name_zh": "流行性感冒",
+        "slug": "influenza",
+        "url": "/diseases/influenza/"
+      },
+      {
+        "id": "study-type:systematic-review",
+        "type": "study_type",
+        "label": "Systematic review"
+      },
+      {
+        "id": "topic:climate-and-environment",
+        "type": "topic",
+        "label": "Climate and environment"
+      },
+      {
+        "id": "topic:diagnostics",
+        "type": "topic",
+        "label": "Diagnostics"
+      },
+      {
+        "id": "topic:health-policy",
+        "type": "topic",
+        "label": "Health policy"
+      },
+      {
+        "id": "topic:one-health",
+        "type": "topic",
+        "label": "One Health"
+      },
+      {
+        "id": "topic:surveillance",
+        "type": "topic",
+        "label": "Surveillance"
+      },
+      {
+        "id": "topic:transmission-dynamics",
+        "type": "topic",
+        "label": "Transmission dynamics"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-3445a3defe3b26c305c1df38|ABOUT_DISEASE|disease:d004",
+        "source": "article:lit-3445a3defe3b26c305c1df38",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d004",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-3445a3defe3b26c305c1df38|ABOUT_DISEASE|disease:d014",
+        "source": "article:lit-3445a3defe3b26c305c1df38",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d014",
+        "confidence": 0.62
+      },
+      {
+        "id": "article:lit-3445a3defe3b26c305c1df38|ABOUT_DISEASE|disease:d038",
+        "source": "article:lit-3445a3defe3b26c305c1df38",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d038",
+        "confidence": 0.86
+      },
+      {
+        "id": "article:lit-3445a3defe3b26c305c1df38|ADDRESSES_TOPIC|topic:climate-and-environment",
+        "source": "article:lit-3445a3defe3b26c305c1df38",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:climate-and-environment",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-3445a3defe3b26c305c1df38|ADDRESSES_TOPIC|topic:diagnostics",
+        "source": "article:lit-3445a3defe3b26c305c1df38",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:diagnostics",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-3445a3defe3b26c305c1df38|ADDRESSES_TOPIC|topic:health-policy",
+        "source": "article:lit-3445a3defe3b26c305c1df38",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:health-policy",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-3445a3defe3b26c305c1df38|ADDRESSES_TOPIC|topic:one-health",
+        "source": "article:lit-3445a3defe3b26c305c1df38",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:one-health",
+        "confidence": 0.7100000000000001
+      },
+      {
+        "id": "article:lit-3445a3defe3b26c305c1df38|ADDRESSES_TOPIC|topic:surveillance",
+        "source": "article:lit-3445a3defe3b26c305c1df38",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:surveillance",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-3445a3defe3b26c305c1df38|ADDRESSES_TOPIC|topic:transmission-dynamics",
+        "source": "article:lit-3445a3defe3b26c305c1df38",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:transmission-dynamics",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-3445a3defe3b26c305c1df38|USES_STUDY_DESIGN|study-type:systematic-review",
+        "source": "article:lit-3445a3defe3b26c305c1df38",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:systematic-review"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 11,
+      "edges": 10,
+      "articles": 1
+    }
+  }
+}

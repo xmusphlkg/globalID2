@@ -1,0 +1,188 @@
+{
+  "article_id": "lit_1107525d465e0a9d8e9724f1",
+  "slug": "10-1093-ofid-ofag397-1107525d",
+  "title": "Identification of Contacts With High Rates of Missed and Asymptomatic Infection Following an Outbreak of Ebola Virus Disease: A Seroepidemiological Study in Likati Health Zone, Democratic Republic of the Congo.",
+  "doi": "10.1093/ofid/ofag397",
+  "pmid": "42460397",
+  "journal": "Open forum infectious diseases",
+  "publisher": null,
+  "authors": [
+    "Tshiani Mbaya O",
+    "Ariyoshi K",
+    "Skrip L",
+    "Kahusu CM",
+    "Suangi A",
+    "Mubiala A",
+    "Tshomba A",
+    "Yoshinao K",
+    "Mumbere G",
+    "Muyembe JJ",
+    "Mulangu S"
+  ],
+  "article_type": "journal-article",
+  "study_type": "Cross-sectional study",
+  "published_at": "2026-07-07T00:00:00+00:00",
+  "indexed_at": "2026-07-16T00:00:00+00:00",
+  "open_access_status": "unknown",
+  "open_access_url": null,
+  "license_url": null,
+  "peer_review_status": "peer_reviewed",
+  "integrity_status": "current",
+  "discovery_score": 0.597,
+  "is_featured": false,
+  "diseases": [
+    {
+      "disease_id": "D050",
+      "slug": "ebola",
+      "name_en": "Ebola",
+      "name_zh": "埃博拉出血热",
+      "confidence": 0.82
+    }
+  ],
+  "countries": [],
+  "topics": [
+    {
+      "name": "Outbreak investigation",
+      "confidence": 0.66
+    }
+  ],
+  "related_surveillance": [],
+  "summary": {},
+  "why_it_matters_en": "This recent cross-sectional study is indexed for its relevance to Ebola. Read the original source before applying its findings.",
+  "why_it_matters_zh": "这项近期Cross-sectional study因与埃博拉出血热相关而被收录。应用其结论前请阅读原始文献。",
+  "source_urls": {
+    "doi": "https://doi.org/10.1093/ofid/ofag397",
+    "pubmed": "https://pubmed.ncbi.nlm.nih.gov/42460397/"
+  },
+  "updated_at": "2026-08-13T16:05:48.137392+00:00",
+  "related_signals": [
+    {
+      "signal_id": "event:36",
+      "section": "emerging",
+      "kind": "official_event",
+      "title": "Ebola disease caused by Bundibugyo virus - Democratic Republic of the Congo",
+      "disease_id": "D050",
+      "disease_name_en": "Ebola",
+      "disease_name_zh": "埃博拉出血热",
+      "geographies": [
+        {
+          "code": "CD",
+          "name_en": "Democratic Republic of the Congo"
+        }
+      ],
+      "data_through": "2026-08-01",
+      "window": {
+        "label": null,
+        "current": null,
+        "previous": null,
+        "absolute_change": null,
+        "change_pct": null
+      },
+      "risk": {
+        "score": null,
+        "level": null,
+        "confidence": "high"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    },
+    {
+      "signal_id": "event:37",
+      "section": "emerging",
+      "kind": "official_event",
+      "title": "Ebola disease caused by Bundibugyo virus, Democratic Republic of the Congo & Uganda",
+      "disease_id": "D050",
+      "disease_name_en": "Ebola",
+      "disease_name_zh": "埃博拉出血热",
+      "geographies": [
+        {
+          "code": "CD",
+          "name_en": "Democratic Republic of the Congo"
+        },
+        {
+          "code": "UG",
+          "name_en": "Uganda"
+        }
+      ],
+      "data_through": "2026-07-17",
+      "window": {
+        "label": null,
+        "current": null,
+        "previous": null,
+        "absolute_change": null,
+        "change_pct": null
+      },
+      "risk": {
+        "score": null,
+        "level": null,
+        "confidence": "high"
+      },
+      "relation_level": "disease_context",
+      "situation_url": "/situation/",
+      "visibility": "shadow"
+    }
+  ],
+  "knowledge_graph": {
+    "schema_version": 1,
+    "method": "deterministic-classifier-relations",
+    "nodes": [
+      {
+        "id": "article:lit-1107525d465e0a9d8e9724f1",
+        "type": "article",
+        "label": "Identification of Contacts With High Rates of Missed and Asymptomatic Infection Following an Outbreak of Ebola Virus Disease: A Seroepidemiological Study in Likati Health Zone, Democratic Republic of the Congo.",
+        "slug": "10-1093-ofid-ofag397-1107525d",
+        "url": "/research/articles/10-1093-ofid-ofag397-1107525d/",
+        "published_at": "2026-07-07T00:00:00+00:00",
+        "study_type": "Cross-sectional study"
+      },
+      {
+        "id": "disease:d050",
+        "type": "disease",
+        "label": "Ebola",
+        "disease_id": "D050",
+        "name_zh": "埃博拉出血热",
+        "slug": "ebola",
+        "url": "/diseases/ebola/"
+      },
+      {
+        "id": "study-type:cross-sectional-study",
+        "type": "study_type",
+        "label": "Cross-sectional study"
+      },
+      {
+        "id": "topic:outbreak-investigation",
+        "type": "topic",
+        "label": "Outbreak investigation"
+      }
+    ],
+    "edges": [
+      {
+        "id": "article:lit-1107525d465e0a9d8e9724f1|ABOUT_DISEASE|disease:d050",
+        "source": "article:lit-1107525d465e0a9d8e9724f1",
+        "relation": "ABOUT_DISEASE",
+        "target": "disease:d050",
+        "confidence": 0.82
+      },
+      {
+        "id": "article:lit-1107525d465e0a9d8e9724f1|ADDRESSES_TOPIC|topic:outbreak-investigation",
+        "source": "article:lit-1107525d465e0a9d8e9724f1",
+        "relation": "ADDRESSES_TOPIC",
+        "target": "topic:outbreak-investigation",
+        "confidence": 0.66
+      },
+      {
+        "id": "article:lit-1107525d465e0a9d8e9724f1|USES_STUDY_DESIGN|study-type:cross-sectional-study",
+        "source": "article:lit-1107525d465e0a9d8e9724f1",
+        "relation": "USES_STUDY_DESIGN",
+        "target": "study-type:cross-sectional-study"
+      }
+    ],
+    "insights": [],
+    "stats": {
+      "nodes": 4,
+      "edges": 3,
+      "articles": 1
+    }
+  }
+}
