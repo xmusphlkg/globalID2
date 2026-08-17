@@ -235,6 +235,158 @@ async def test_pipeline_preflight_failure_stops_before_release_commands():
 
 
 @pytest.mark.asyncio
+async def test_retry_reuses_completed_cloudflare_deploy_and_only_verifies():
+    commands = []
+    entries = []
+    stored_task = SimpleNamespace(output_data=None)
+
+    class Manager:
+        async def add_workbook_entry(self, _task_uuid, **kwargs):
+            entries.append(kwargs)
+
+        async def update_task_progress(self, *_args):
+            return None
+
+    class Database:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_args):
+            return None
+
+        async def get(self, _model, _task_id):
+            return stored_task
+
+        async def commit(self):
+            return None
+
+    identity = {
+        "release_id": "release-retry-1",
+        "source_commit": "abc123",
+        "source_branch": "main",
+        "deployment_branch": "main",
+        "built_at": "2026-08-05T00:00:00+00:00",
+        "commit_dirty": False,
+    }
+
+    class Service:
+        def _config(self):
+            return SimpleNamespace(timezone="UTC")
+
+        async def load_jobs(self):
+            return [
+                SimpleNamespace(
+                    job_id="site-release",
+                    name="Site Release",
+                    timezone="UTC",
+                    cloudflare_project_name="globalid",
+                    github_branch="main",
+                    include_git_push=False,
+                    include_cloudflare_deploy=True,
+                    commit_message_template="publish {branch}",
+                )
+            ]
+
+        async def integration_checks(self, _job_id):
+            return {
+                "overall_ready": True,
+                "blockers": [],
+                "git": {"ssh_transport": "default"},
+                "cloudflare": {
+                    "production_branch": "main",
+                    "subdomain": "globalid.example",
+                },
+                "raw_archive": {},
+            }
+
+        def _cloudflare_project_name(self, value):
+            return value
+
+        def _download_repo_url(self):
+            return "git@example/snapshot.git"
+
+        def _build_git_env(self, *_args, **_kwargs):
+            return {}
+
+        def _download_repo_raw_base(self, _job):
+            return "https://raw.example/data/main"
+
+        def _download_repo_branch(self, _job):
+            return "main"
+
+        def _render_commit_message(self, *_args, **_kwargs):
+            return "publish main"
+
+        def _python_executable(self):
+            return Path("/venv/python")
+
+        async def _current_git_branch(self):
+            return "main"
+
+        async def _release_identity_for_task(self, *_args):
+            return identity, {
+                "cloudflare_deploy": {"release_id": "release-retry-1"}
+            }
+
+        def _generate_site_data_command(self, **_kwargs):
+            return ["generate"]
+
+        def _update_situation_room_command(self, **_kwargs):
+            return ["update"]
+
+        def _validate_situation_release_command(self, **_kwargs):
+            return ["validate"]
+
+        async def _run_logged_command(self, _task_uuid, *, title, **_kwargs):
+            commands.append(title)
+
+        def _write_site_release_manifest(self, value):
+            return value
+
+        async def _sync_subscription_options_if_needed(self, *_args, **_kwargs):
+            return False
+
+        def _cloudflare_deploy_command(self, **_kwargs):
+            raise AssertionError("a checkpointed deploy must not run twice")
+
+        def _cloudflare_api_token(self):
+            return "token"
+
+        def _cloudflare_account_id(self):
+            return "account"
+
+        async def _record_release_checkpoint(self, *_args, **_kwargs):
+            raise AssertionError("an existing checkpoint must not be rewritten")
+
+        async def _verify_cloudflare_production_release(self, **_kwargs):
+            return {"verified": True, "production_url": "https://globalid.example"}
+
+    runtime = _runtime(Manager())
+    runtime = pipeline.ReleasePipelineRuntime(
+        **{
+            **runtime.__dict__,
+            "get_config": lambda: SimpleNamespace(
+                raw_archive=SimpleNamespace(enabled=False, repo_url="")
+            ),
+            "get_database": Database,
+        }
+    )
+    task = SimpleNamespace(
+        id=8,
+        task_uuid="retry-task",
+        input_data={"release_job_id": "site-release"},
+    )
+
+    output = await pipeline.execute_release_task(Service(), task, runtime=runtime)
+
+    assert "Deploy Cloudflare Pages" not in commands
+    assert "Dispatch Reviewed Situation Alerts" in commands
+    assert output["pages_deployed"] is True
+    assert output["situation_alert_dispatch_attempted"] is True
+    assert any(entry["title"] == "Cloudflare Deploy Reused" for entry in entries)
+
+
+@pytest.mark.asyncio
 async def test_service_execute_release_task_is_compatibility_facade(monkeypatch):
     captured = {}
 

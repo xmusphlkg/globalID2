@@ -30,11 +30,12 @@ from src.domain import (
     Task,
 )
 from src.generation.site_data_literature import build_surveillance_evidence
-from src.literature.classification import classify_candidate
+from src.literature.classification import apply_surveillance_relation, classify_candidate
 from src.literature.clients import CrossrefClient, EuropePmcClient
 from src.literature.normalization import apply_europe_pmc, normalize_crossref, normalize_europe_pmc
+from src.literature.pipeline import _global_country_catalogue
 from src.literature.repository import LiteratureRepository
-from src.services.situation_room import latest_snapshot
+from src.services.situation_v3.persistence import latest_report_v3
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -150,6 +151,7 @@ class LiteratureGapService:
         cfg = get_config().literature
         alias_payload = _load_json(ROOT / cfg.disease_aliases_path)
         aliases_by_id = alias_payload.get("aliases") or {}
+        taxonomy = _load_json(ROOT / cfg.taxonomy_path)
         async with get_db() as db:
             diseases = (
                 await db.execute(select(StandardDisease).where(StandardDisease.is_active.is_(True)))
@@ -170,15 +172,7 @@ class LiteratureGapService:
             }
             for row in diseases
         ]
-        country_catalogue = [
-            {
-                "code": row.code,
-                "name": row.name,
-                "name_en": row.name_en or row.name,
-                "name_zh": str((row.metadata_ or {}).get("name_zh") or ""),
-            }
-            for row in countries
-        ]
+        country_catalogue = _global_country_catalogue(countries, taxonomy)
         return disease_catalogue, country_catalogue, {
             item["disease_id"]: item for item in disease_catalogue
         }
@@ -234,7 +228,7 @@ class LiteratureGapService:
 
     async def refresh_from_snapshot(self) -> dict[str, Any]:
         """Reconcile durable gap state with the latest eligible snapshot."""
-        snapshot = await latest_snapshot()
+        snapshot = await latest_report_v3()
         if not snapshot:
             return {"available": False, "gaps_created": 0, "gaps_updated": 0, "gaps_inactivated": 0}
         disease_catalogue, _, diseases_by_id = await self._catalogues()
@@ -580,6 +574,7 @@ class LiteratureGapService:
                 else:
                     relation_level = "candidate"
                     confidence = disease_match.confidence
+                apply_surveillance_relation(classification, relation_level)
                 ranked_candidates.append({
                     "candidate": candidate,
                     "classification": classification,

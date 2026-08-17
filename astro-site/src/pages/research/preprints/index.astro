@@ -1,0 +1,39 @@
+---
+import ResearchCollectionPage from '../../../components/research/ResearchCollectionPage.astro';
+import researchData from '../../../data/research/index.json';
+import { filterResearchFeedArticles, type ResearchFeedData } from '../../../lib/research-feed';
+
+const data = researchData as ResearchFeedData;
+const preprints = filterResearchFeedArticles(data, 'peer-review', 'preprint');
+---
+
+<ResearchCollectionPage
+  eyebrow="Separate evidence stream"
+  eyebrowZh="独立证据流"
+  title="Published preprints"
+  titleZh="已公开预印本"
+  description="Editorially published infectious-disease preprints, kept separate from the peer-reviewed Research Radar catalogue."
+  descriptionZh="经编辑发布的传染病预印本，与研究雷达同行评议文献目录严格分开。"
+  canonicalPath="/research/preprints/"
+  articles={preprints}
+  contextLabel="Published preprints"
+  contextLabelZh="已公开预印本"
+  feedPath="/research/rss/peer-review/preprint.xml"
+  feedLabel="Preprint RSS feed"
+  feedLabelZh="预印本 RSS 订阅"
+>
+  <section slot="context" class="preprint-notice" aria-labelledby="preprint-notice-title">
+    <div>
+      <p class="academic-kicker" data-lang-en="Publication status" data-lang-zh="发表状态">Publication status</p>
+      <h2 id="preprint-notice-title" data-lang-en="Preprints have not completed peer review" data-lang-zh="预印本尚未完成同行评议">Preprints have not completed peer review</h2>
+    </div>
+    <p data-lang-en="Only records with an editorial status of published appear here. Editorial publication makes the record publicly discoverable; it does not validate the findings or make the manuscript peer reviewed." data-lang-zh="此处仅展示编辑状态为“已发布”的记录。编辑发布仅表示该记录可供公众发现，并不验证研究结论，也不代表稿件已经完成同行评议。">Only records with an editorial status of published appear here. Editorial publication makes the record publicly discoverable; it does not validate the findings or make the manuscript peer reviewed.</p>
+  </section>
+</ResearchCollectionPage>
+
+<style>
+  .preprint-notice { width: min(74rem, calc(100% - 2rem)); display: grid; grid-template-columns: minmax(14rem, .55fr) minmax(0, 1fr); gap: 1.5rem; margin: 1.5rem auto 0; border: 1px solid rgb(var(--color-accent) / .35); border-left: 3px solid rgb(var(--color-accent)); background: rgb(var(--color-accent) / .045); padding: 1.1rem 1.25rem; }
+  .preprint-notice h2 { margin-top: .3rem; color: rgb(var(--text-strong)); font: 600 1.15rem/1.2 'Source Serif 4', serif; }
+  .preprint-notice > p { color: rgb(var(--text-muted)); font-size: .78rem; line-height: 1.65; }
+  @media (max-width: 640px) { .preprint-notice { width: min(100% - 1rem, 74rem); grid-template-columns: 1fr; gap: .7rem; } }
+</style>

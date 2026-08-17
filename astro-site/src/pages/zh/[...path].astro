@@ -1,7 +1,10 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
+import SituationDetails from '../../components/SituationDetails.astro';
+import SituationReadiness from '../../components/SituationReadiness.astro';
+import SituationSummary from '../../components/SituationSummary.astro';
 import {
   countryDiseaseCandidates,
   indexableDiseases,
@@ -10,22 +13,23 @@ import {
   siteMeta,
 } from '../../lib/seo-page-data';
 import { buildAlternatePaths, formatYearRange, toSeoSlug } from '../../lib/seo';
+import { isSituationReportV3, type SituationReportV3 } from '../../utils/situation';
 
 type ZhPage = { path?: string; kind: string; code?: string; slug?: string; id?: string };
-const situationPublic = existsSync(resolve('./src/data/situation/latest.json'));
+const situationPublic = existsSync(resolve('./src/data/situation/v3/latest.json'));
 
 export function getStaticPaths() {
-  const publicSnapshotExists = existsSync(resolve('./src/data/situation/latest.json'));
+  const publicSnapshotExists = existsSync(resolve('./src/data/situation/v3/latest.json'));
   const situationPaths = publicSnapshotExists
     ? [
-        ['weeks', /^\d{4}-W\d{2}\.json$/],
-        ['months', /^\d{4}-\d{2}\.json$/],
+        ['weekly', /^\d{4}-W\d{2}\.json$/],
+        ['monthly', /^\d{4}-\d{2}\.json$/],
       ].flatMap(([directoryName, pattern]) => {
-        const directory = resolve(`./src/data/situation/${directoryName}`);
+        const directory = resolve(`./src/data/situation/v3/${directoryName}`);
         return existsSync(directory)
           ? readdirSync(directory)
             .filter(name => (pattern as RegExp).test(name))
-            .map(name => ({ path: `situation/${name.replace(/\.json$/, '')}`, kind: 'situation', slug: name.replace(/\.json$/, '') }))
+            .map(name => ({ path: `situation/${directoryName}/${name.replace(/\.json$/, '')}`, kind: 'situation', slug: name.replace(/\.json$/, '') }))
           : [];
       })
     : [];
@@ -43,6 +47,10 @@ export function getStaticPaths() {
     ]),
     ...countryDiseaseCandidates().map(item => ({ path: `countries/${item.code}/diseases/${item.slug}`, kind: 'country-disease', code: item.code, slug: item.slug })),
     { path: 'situation', kind: 'situation' },
+    ...(publicSnapshotExists ? [
+      { path: 'situation/weekly', kind: 'situation', slug: 'weekly' },
+      { path: 'situation/monthly', kind: 'situation', slug: 'monthly' },
+    ] : []),
     ...(publicSnapshotExists ? [{ path: 'situation/methodology', kind: 'situation-methodology' }] : []),
     ...situationPaths,
   ];
@@ -50,6 +58,25 @@ export function getStaticPaths() {
 }
 
 const page = Astro.props as ZhPage;
+const pathParts = String(Astro.params.path ?? '').split('/').filter(Boolean);
+let situationReport: SituationReportV3 | null = null;
+let situationJsonHref = '/site-data/situation/v3/latest.json';
+if (page.kind === 'situation') {
+  let reportFile: string | null = null;
+  if (pathParts.length === 1) {
+    reportFile = resolve('./src/data/situation/v3/latest.json');
+  } else if (
+    pathParts.length === 3
+    && ['weekly', 'monthly'].includes(pathParts[1])
+  ) {
+    reportFile = resolve(`./src/data/situation/v3/${pathParts[1]}/${pathParts[2]}.json`);
+    situationJsonHref = `/site-data/situation/v3/${pathParts[1]}/${pathParts[2]}.json`;
+  }
+  if (reportFile && existsSync(reportFile)) {
+    const candidate: unknown = JSON.parse(readFileSync(reportFile, 'utf-8'));
+    situationReport = isSituationReportV3(candidate) ? candidate : null;
+  }
+}
 const path = Astro.params.path ? `/${Astro.params.path}/` : '/zh/';
 const englishPath = path === '/zh/' ? '/' : path.replace(/^\/zh/, '');
 const canonicalPath = path;
@@ -118,8 +145,8 @@ if (page.kind === 'static') {
 } else if (page.kind === 'situation-methodology') {
   title = '全球传染病态势室方法 | 全球传染病监测';
   heading = '全球传染病态势室方法';
-  description = '了解 GIDS 的来源原生数据契约、季节基线、z-score、EWMA、贝叶斯变点、综合风险、质量门和修订规则。';
-  facts = [['方法版本', 'Situation Room v2.0']];
+  description = '了解 GIDS 的来源原生数据契约、稳健准泊松模型、FDR 控制、可归因风险、质量门和修订规则。';
+  facts = [['方法版本', 'Situation Room v3.1']];
 }
 
 const seo = {
@@ -134,7 +161,18 @@ const seo = {
 ---
 
 <BaseLayout title={title} description={description} initialLanguage="zh" seo={seo}>
-  <article class="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
+  {situationReport ? <main class="mx-auto grid max-w-7xl gap-6 px-4 py-10 sm:px-6 lg:px-8">
+    <header class="rounded-lg bg-slate-900 p-6 text-white shadow-sm">
+      <p class="text-sm font-semibold tracking-wide text-cyan-300">全球监测复核队列</p>
+      <h1 class="mt-2 text-3xl font-bold tracking-tight">{heading}</h1>
+      <p class="mt-3 max-w-4xl text-slate-300">仅分析达到成熟度要求的来源原生周期。采集、建模、去重和队列分流自动运行；统计候选在独立验证前保持非公开，稀有计数与回退模型候选始终进入复核。统计信号与公共卫生风险分开记录。</p>
+      <nav class="mt-5 flex flex-wrap gap-3 text-sm"><a class="font-semibold text-cyan-300 hover:underline" href="/zh/situation/weekly/">周报归档</a><a class="font-semibold text-cyan-300 hover:underline" href="/zh/situation/monthly/">月报归档</a><a class="font-semibold text-cyan-300 hover:underline" href="/zh/situation/methodology/">方法说明</a><a class="font-semibold text-cyan-300 hover:underline" href={situationJsonHref}>下载 JSON</a></nav>
+    </header>
+    <SituationSummary snapshot={situationReport} />
+    <SituationReadiness snapshot={situationReport} />
+    <SituationDetails snapshot={situationReport} />
+    <footer class="border-t border-slate-200 pt-4 text-sm text-slate-600"><p>{situationReport.limitations.zh}</p><p class="mt-2 font-mono text-xs">{situationReport.report.report_id} · config {situationReport.method.config_hash.slice(0, 12)}</p></footer>
+  </main> : <article class="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
     <nav aria-label="面包屑" class="mb-6 text-sm text-slate-500"><a href="/zh/">首页</a> / {heading}</nav>
     <header class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
       <p class="text-sm font-semibold tracking-wide text-sky-700">GIDS 数据档案</p>
@@ -148,5 +186,5 @@ const seo = {
       {sources.length > 0 && <ul class="mt-4 list-disc space-y-2 pl-5 text-sky-700">{sources.slice(0, 4).map(url => <li><a href={url} target="_blank" rel="nofollow noopener" class="hover:underline">{url}</a></li>)}</ul>}
       <a href={englishPath} class="mt-5 inline-flex font-semibold text-sky-700 hover:underline">查看英文完整数据页 →</a>
     </section>
-  </article>
+  </article>}
 </BaseLayout>

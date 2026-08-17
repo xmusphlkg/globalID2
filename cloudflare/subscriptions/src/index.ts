@@ -53,7 +53,15 @@ import {
   listSubscriptionsAdmin,
   subscriptionStats,
 } from "./handlers/subscriptions.ts";
+import {
+  consumeSituationAlertBatch,
+  createSituationAlertHandlers,
+  maintainSituationAlerts,
+  processSituationAlertOutbox,
+  skipPendingSituationAlertsForSubscription,
+} from "./handlers/situation-alerts.ts";
 import type { Env, Payload } from "./types.ts";
+import type { SituationAlertJob } from "./lib/situation-alert.ts";
 interface EmailDeliveryResult extends Record<string, JsonValue | undefined> {
   status: "sent" | "failed" | "skipped";
   provider: "smtp";
@@ -71,9 +79,14 @@ const campaignHandlers = createCampaignHandlers({
   sendSmtpEmail,
 });
 const subscriptionHandlerDependencies = { readPayload, createSignedToken };
+const situationAlertHandlers = createSituationAlertHandlers({
+  createSignedToken,
+  smtpConfig,
+  sendSmtpEmail,
+});
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, _ctx: ExecutionContext): Promise<Response> {
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: corsHeaders(request, env) });
     }
@@ -92,6 +105,8 @@ export default {
           return confirmSubscription(request, env);
         case "unsubscribe":
           return unsubscribe(request, env);
+        case "situation_alert_ingest":
+          return situationAlertHandlers.ingest(request, env);
         case "admin_audience":
           return listAudience(request, env, subscriptionHandlerDependencies);
         case "admin_stats":
@@ -106,6 +121,10 @@ export default {
           return route.operation === "get"
             ? campaignHandlers.get(request, env, route.campaignId)
             : campaignHandlers.process(request, env, route.campaignId);
+        case "admin_situation_alerts":
+          return route.operation === "list"
+            ? situationAlertHandlers.list(request, env)
+            : situationAlertHandlers.process(request, env);
         case "admin_maintenance":
           requireAdmin(request, env);
           return json(await runMaintenance(env), request, env);
@@ -115,14 +134,55 @@ export default {
     } catch (error) {
       const message = error instanceof HttpError ? error.message : "internal_error";
       const status = error instanceof HttpError ? error.status : 500;
+      if (!(error instanceof HttpError) || status >= 500) {
+        console.error(JSON.stringify({
+          message: "subscription_worker_request_failed",
+          path: new URL(request.url).pathname,
+          status,
+          error: error instanceof Error ? error.message : String(error),
+        }));
+      }
       return json({ error: message }, request, env, status);
     }
   },
 
-  async scheduled(_controller: unknown, env: Env): Promise<void> {
-    await runMaintenance(env);
+  async scheduled(_controller: ScheduledController, env: Env, _ctx: ExecutionContext): Promise<void> {
+    const tasks = [
+      { name: "maintenance", run: () => runMaintenance(env) },
+      {
+        name: "situation_alert_outbox",
+        run: () => processSituationAlertOutbox(env, {
+          createSignedToken,
+          smtpConfig,
+          sendSmtpEmail,
+        }),
+      },
+    ];
+    for (const task of tasks) {
+      try {
+        await task.run();
+      } catch (error) {
+        console.error(JSON.stringify({
+          message: "subscription_worker_scheduled_task_failed",
+          task: task.name,
+          error: error instanceof Error ? error.message : String(error),
+        }));
+      }
+    }
   },
-};
+
+  async queue(
+    batch: MessageBatch<SituationAlertJob>,
+    env: Env,
+    _ctx: ExecutionContext,
+  ): Promise<void> {
+    await consumeSituationAlertBatch(batch, env, {
+      createSignedToken,
+      smtpConfig,
+      sendSmtpEmail,
+    });
+  },
+} satisfies ExportedHandler<Env, SituationAlertJob>;
 
 async function createSubscription(request: Request, env: Env): Promise<Response> {
   const payload = await readPayload(request);
@@ -475,6 +535,7 @@ async function unsubscribe(request: Request, env: Env): Promise<Response> {
   await env.DB.prepare(
     "UPDATE subscriptions SET status = 'unsubscribed', updated_at = ? WHERE id = ?"
   ).bind(now, subscription.id).run();
+  await skipPendingSituationAlertsForSubscription(env, subscription.id);
   await recordEvent(env, {
     subscriberId: subscription.subscriber_id,
     subscriptionId: subscription.id,
@@ -520,12 +581,15 @@ async function runMaintenance(env: Env): Promise<JsonValue> {
        )`
   ).bind(now, cutoff).run();
 
+  const situationAlerts = await maintainSituationAlerts(env);
+
   return {
     ok: true,
     ran_at: now,
     cutoff,
     expired_subscriptions: Number(pendingSubscriptions?.count || 0),
     expired_contacts: Number(pendingContacts?.count || 0),
+    situation_alerts: situationAlerts,
   };
 }
 

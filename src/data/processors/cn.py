@@ -119,6 +119,14 @@ class DataProcessor:
         if errors:
             logger.warning(f"[DataProcessor][{self.country_code}] Processing finished with errors | errors={len(errors)}")
 
+        if results and not processed_data:
+            details = "; ".join(str(error) for error in errors[:3] if str(error))
+            suffix = f" First errors: {details}" if details else ""
+            raise RuntimeError(
+                f"{self.country_code} processing produced no usable datasets from "
+                f"{len(results)} selected report(s).{suffix}"
+            )
+
         logger.info(f"[DataProcessor][{self.country_code}] Done | processed={len(processed_data)} total={len(results)}")
         return processed_data
     
@@ -255,7 +263,7 @@ class DataProcessor:
                 
             except Exception as e:
                 logger.error(f"[DataProcessor][{self.country_code}] [{index}/{total}] Failed | error={e}")
-                return None
+                raise
 
     async def save_raw_pages(
         self,

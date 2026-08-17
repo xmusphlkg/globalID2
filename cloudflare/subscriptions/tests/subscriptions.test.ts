@@ -19,11 +19,17 @@ test("normalizes subscription lists and filters with stable defaults and order",
     disease: " Influenza ",
     report_types: "Weekly,weekly",
     severities: [" HIGH "],
+    research_topics: [" Vaccination ", "vaccination"],
+    study_types: [" Systematic-Review "],
+    peer_review_statuses: [" Peer-Reviewed "],
   }), [
     { type: "country", value: "CN" },
     { type: "disease", value: "influenza" },
     { type: "report_type", value: "weekly" },
     { type: "severity", value: "high" },
+    { type: "research_topic", value: "vaccination" },
+    { type: "study_type", value: "systematic-review" },
+    { type: "peer_review_status", value: "peer-reviewed" },
   ]);
 });
 

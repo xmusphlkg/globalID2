@@ -6,7 +6,7 @@ import re
 from datetime import datetime
 from typing import Any
 
-from .models import DiseaseDirectoryItem, LocalizedText, ReportDocument, Section
+from .models import METHOD_VERSION, DiseaseDirectoryItem, LocalizedText, ReportDocument, Section
 
 
 def compose_report_document(
@@ -18,9 +18,9 @@ def compose_report_document(
 ) -> ReportDocument:
     summary = evidence_packet.get("summary_metrics") or {}
     death_reporting = evidence_packet.get("death_reporting") or {}
-    risk_ranking = evidence_packet.get("risk_ranking") or []
+    attention_ranking = evidence_packet.get("attention_ranking") or evidence_packet.get("risk_ranking") or []
     disease_cards = evidence_packet.get("diseases") or []
-    disease_directory = _disease_directory(disease_cards, risk_ranking, death_reporting)
+    disease_directory = _disease_directory(disease_cards, attention_ranking, death_reporting)
     data_quality = evidence_packet.get("data_quality") or {}
     evidence_index = evidence_packet.get("evidence_index") or {}
 
@@ -28,12 +28,12 @@ def compose_report_document(
     country_en = country.get("name_en") or country.get("name") or country_zh
     period_zh = f"{period_start:%Y-%m-%d} 至 {period_end:%Y-%m-%d}"
     period_en = f"{period_start:%Y-%m-%d} to {period_end:%Y-%m-%d}"
-    lead = risk_ranking[0] if risk_ranking else {}
+    lead = attention_ranking[0] if attention_ranking else {}
     lead_zh = lead.get("name_zh") or lead.get("name_en") or "暂无首要信号"
     lead_en = lead.get("name_en") or lead.get("name_zh") or "No lead signal"
     total_cases = int(summary.get("total_cases") or 0)
     latest_cases = int(summary.get("latest_cases") or 0)
-    high_risk = int(summary.get("high_risk_diseases") or 0)
+    high_attention = int(summary.get("high_attention_diseases", summary.get("high_risk_diseases")) or 0)
     disease_count = int(summary.get("disease_count") or 0)
 
     title = LocalizedText(
@@ -69,7 +69,7 @@ def compose_report_document(
     sections = [
         _decision_summary(summary, death_reporting, lead, country_zh, country_en),
         _priority_actions(summary, death_reporting, lead),
-        _signal_evidence(risk_ranking, summary),
+        _signal_evidence(attention_ranking, summary),
         _disease_context(disease_cards),
         _data_notes(evidence_packet, death_reporting),
         _method_appendix(evidence_packet),
@@ -80,7 +80,8 @@ def compose_report_document(
         "disease_count": disease_count,
         "total_cases": total_cases,
         "latest_cases": latest_cases,
-        "high_risk_diseases": high_risk,
+        "high_attention_diseases": high_attention,
+        "high_risk_diseases": high_attention,
         "total_deaths": death_reporting.get("total_deaths"),
         "reporting_cadence": evidence_packet.get("reporting_cadence"),
         "data_signature": evidence_packet.get("data_signature"),
@@ -95,7 +96,9 @@ def compose_report_document(
         death_reporting=_death_reporting_from_dict(death_reporting),
         data_quality=data_quality,
         disease_directory=disease_directory,
-        risk_ranking=risk_ranking[:20],
+        attention_ranking=attention_ranking[:20],
+        score_semantics=evidence_packet.get("score_semantics") or {},
+        risk_ranking=attention_ranking[:20],
         figures=[],
         references=evidence_packet.get("references") or [],
         evidence_index=evidence_index,
@@ -116,7 +119,7 @@ def _death_reporting_from_dict(value: dict[str, Any]):
     )
 
 
-def _risk_label(level: Any, lang: str) -> str:
+def _attention_label(level: Any, lang: str) -> str:
     key = str(level or "low").lower()
     if lang == "en":
         return key
@@ -456,8 +459,8 @@ def _disease_analysis_sections(
     recent_change_pct: float | None,
     long_window_change_pct: float | None,
     trend_signal: dict[str, Any],
-    risk_level: Any,
-    risk_score: Any,
+    attention_level: Any,
+    attention_score: Any,
     death_reporting: dict[str, Any],
 ) -> list[dict[str, Any]]:
     trend = trend_signal.get("trend") or {}
@@ -510,9 +513,9 @@ def _disease_analysis_sections(
     current_en = current.get("en") or trend_en
     seasonal_zh = seasonal.get("zh") or "暂无同期基线"
     seasonal_en = seasonal.get("en") or "No same-season baseline"
-    risk_zh = _risk_label(risk_level, "zh")
-    risk_en = _risk_label(risk_level, "en")
-    score = _fmt_number(risk_score)
+    attention_zh = _attention_label(attention_level, "zh")
+    attention_en = _attention_label(attention_level, "en")
+    score = _fmt_number(attention_score)
     death_note_zh = (death_reporting.get("display_note") or {}).get("zh") or "死亡数据按来源口径解释。"
     death_note_en = (death_reporting.get("display_note") or {}).get("en") or "Death data are interpreted under the source scope."
     source_note_zh = _source_scope_note(death_reporting, "zh")
@@ -533,11 +536,11 @@ def _disease_analysis_sections(
         {
             "section_type": "summary",
             "title": "摘要",
-            "content": f"{name_zh} 在本报告窗口累计 {total} 例，最新一期报告 {latest} 例；较上一期的 {previous} 例增加 {delta_zh}，环比 {mom_zh}。综合判定为{trend_zh}，风险等级为{risk_zh}（{score}）。",
+            "content": f"{name_zh} 在本报告窗口累计 {total} 例，最新一期报告 {latest} 例；较上一期的 {previous} 例增加 {delta_zh}，环比 {mom_zh}。综合判定为{trend_zh}，监测关注优先级为{attention_zh}（{score}）。该分数只用于安排复核顺序，不代表公共卫生风险。",
             "title_i18n": {"zh": "摘要", "en": "Summary"},
             "content_i18n": {
-                "zh": f"{name_zh} 在本报告窗口累计 {total} 例，最新一期报告 {latest} 例；较上一期的 {previous} 例增加 {delta_zh}，环比 {mom_zh}。{recent_summary_zh}综合判定为{trend_zh}，风险等级为{risk_zh}（{score}）。",
-                "en": f"{name_en} recorded {total} cases in this reporting window. The latest observation reported {latest} cases, {delta_en} versus {previous} in the previous observation ({mom_en}). {recent_summary_en} The combined judgement is {trend_en}, with {risk_en} risk ({score}).",
+                "zh": f"{name_zh} 在本报告窗口累计 {total} 例，最新一期报告 {latest} 例；较上一期的 {previous} 例增加 {delta_zh}，环比 {mom_zh}。{recent_summary_zh}综合判定为{trend_zh}，监测关注优先级为{attention_zh}（{score}）。该分数只用于安排复核顺序，不代表公共卫生风险。",
+                "en": f"{name_en} recorded {total} cases in this reporting window. The latest observation reported {latest} cases, {delta_en} versus {previous} in the previous observation ({mom_en}). {recent_summary_en} The combined judgement is {trend_en}, with {attention_en} surveillance attention priority ({score}). This score only orders review and is not a public-health risk estimate.",
             },
             "evidence_refs": [f"disease:{disease_id}.latest_cases", f"disease:{disease_id}.change_pct"],
         },
@@ -583,7 +586,7 @@ def _disease_analysis_sections(
                 [
                     f"- 短期上升有实际病例量支撑：最新一期比上一期多 {delta_zh}，不是低基数百分比造成的假信号。",
                     f"- 同期背景提示{seasonal_zh}，同比 {yoy_zh}、同期中位数比 {same_season_zh}；{historical_zh}",
-                    f"- 风险等级为{risk_zh}，但不应仅凭该信号直接按事件暴发定性；建议进入连续复核队列。",
+                    f"- 监测关注优先级为{attention_zh}；该分值未经风险校准，不能据此判定暴发、严重程度或人群风险，建议进入连续复核队列。",
                     f"- {source_note_zh}",
                 ]
             ),
@@ -593,7 +596,7 @@ def _disease_analysis_sections(
                     [
                         f"- 短期上升有实际病例量支撑：最新一期比上一期多 {delta_zh}，不是低基数百分比造成的假信号。",
                         f"- 同期背景提示{seasonal_zh}，同比 {yoy_zh}、同期中位数比 {same_season_zh}；{historical_zh}",
-                        f"- 风险等级为{risk_zh}，但不应仅凭该信号直接按事件暴发定性；建议进入连续复核队列。",
+                        f"- 监测关注优先级为{attention_zh}；该分值未经风险校准，不能据此判定暴发、严重程度或人群风险，建议进入连续复核队列。",
                         f"- {source_note_zh}",
                     ]
                 ),
@@ -601,7 +604,7 @@ def _disease_analysis_sections(
                     [
                         f"- The short-term rise has case-volume support: the latest observation is {delta_en} above the previous observation, not merely a low-denominator percentage artifact.",
                         f"- Seasonal context is {seasonal_en}: YoY {yoy_en}, same-season median ratio {same_season_en}. {historical_en}",
-                        f"- Risk is {risk_en}, but this signal alone should not be classified as an event-level outbreak; keep it in active review.",
+                        f"- Surveillance attention priority is {attention_en}; the uncalibrated score does not establish outbreak status, severity, or population risk. Keep it in active review.",
                         f"- {source_note_en}",
                     ]
                 ),
@@ -632,7 +635,7 @@ def _disease_directory(diseases: list[dict[str, Any]], ranking: list[dict[str, A
         metrics = item.get("metrics") or {}
         visual = item.get("visual_diagnostics") or {}
         history = item.get("historical_context") or {}
-        risk = item.get("risk") or {}
+        attention = item.get("attention") or item.get("risk") or {}
         ranked = ranked_by_id.get(disease_id) or {}
 
         change_pct = _num(metrics.get("change_pct"))
@@ -642,8 +645,8 @@ def _disease_directory(diseases: list[dict[str, Any]], ranking: list[dict[str, A
         latest_cases = _int_or_none(metrics.get("latest_cases")) or 0
         previous_cases = _int_or_none(metrics.get("previous_cases"))
         total_cases = _int_or_none(metrics.get("total_cases")) or 0
-        risk_score = risk.get("score", ranked.get("risk_score"))
-        risk_level = risk.get("level", ranked.get("risk_level"))
+        attention_score = attention.get("score", ranked.get("attention_score", ranked.get("risk_score")))
+        attention_level = attention.get("level", ranked.get("attention_level", ranked.get("risk_level")))
         name_en = str(item.get("name_en") or disease_id)
         name_zh = str(item.get("name_zh") or name_en)
         trend_signal = _trend_signal(
@@ -671,8 +674,10 @@ def _disease_directory(diseases: list[dict[str, Any]], ranking: list[dict[str, A
                 recent_change_pct=recent_change_pct,
                 long_window_change_pct=long_window_change_pct,
                 trend=trend_signal["trend"],
-                risk_score=risk_score,
-                risk_level=risk_level,
+                attention_score=attention_score,
+                attention_level=attention_level,
+                risk_score=attention_score,
+                risk_level=attention_level,
                 current_movement=trend_signal["current_movement"],
                 seasonal_position=trend_signal["seasonal_position"],
                 trend_basis=trend_signal["trend_basis"],
@@ -688,8 +693,8 @@ def _disease_directory(diseases: list[dict[str, Any]], ranking: list[dict[str, A
                     recent_change_pct=recent_change_pct,
                     long_window_change_pct=long_window_change_pct,
                     trend_signal=trend_signal,
-                    risk_level=risk_level,
-                    risk_score=risk_score,
+                    attention_level=attention_level,
+                    attention_score=attention_score,
                     death_reporting=death_reporting,
                 ),
                 evidence_refs=[
@@ -703,7 +708,7 @@ def _disease_directory(diseases: list[dict[str, Any]], ranking: list[dict[str, A
 
     return sorted(
         rows,
-        key=lambda row: (float(row.risk_score or 0), row.latest_cases, row.total_cases),
+        key=lambda row: (float(row.attention_score or 0), row.latest_cases, row.total_cases),
         reverse=True,
     )
 
@@ -748,7 +753,7 @@ def _priority_actions(summary: dict[str, Any], death_reporting: dict[str, Any], 
             f"- Death data: {(death_reporting.get('display_note') or {}).get('en', 'Death data require separate verification.')}",
         ]
     )
-    return Section("priority_actions", "priority_actions", 2, LocalizedText("建议动作", "Priority Actions"), LocalizedText(zh, en), ["summary:high_risk_diseases"])
+    return Section("priority_actions", "priority_actions", 2, LocalizedText("建议动作", "Priority Actions"), LocalizedText(zh, en), ["summary:high_attention_diseases"])
 
 
 def _signal_evidence(ranking: list[dict[str, Any]], summary: dict[str, Any]) -> Section:
@@ -758,15 +763,23 @@ def _signal_evidence(ranking: list[dict[str, Any]], summary: dict[str, Any]) -> 
         en_rows = ["- No rankable disease signal is available in this reporting window."]
     else:
         zh_rows = [
-            f"- {row.get('name_zh') or row.get('name_en')}: 最新病例 {int(row.get('latest_cases') or 0):,} 例，风险等级 {_risk_label(row.get('risk_level'), 'zh')}。"
+            f"- {row.get('name_zh') or row.get('name_en')}: 最新病例 {int(row.get('latest_cases') or 0):,} 例，监测关注优先级 {_attention_label(row.get('attention_level', row.get('risk_level')), 'zh')}。"
             for row in top_rows
         ]
         en_rows = [
-            f"- {row.get('name_en') or row.get('name_zh')}: {int(row.get('latest_cases') or 0):,} latest cases, {_risk_label(row.get('risk_level'), 'en')} priority."
+            f"- {row.get('name_en') or row.get('name_zh')}: {int(row.get('latest_cases') or 0):,} latest cases, {_attention_label(row.get('attention_level', row.get('risk_level')), 'en')} surveillance attention priority."
             for row in top_rows
         ]
-    zh = "\n".join([f"- 最新一期总病例 {int(summary.get('latest_cases') or 0):,} 例。", *zh_rows])
-    en = "\n".join([f"- The latest observation contains {int(summary.get('latest_cases') or 0):,} cases.", *en_rows])
+    zh = "\n".join([
+        f"- 最新一期总病例 {int(summary.get('latest_cases') or 0):,} 例。",
+        *zh_rows,
+        "- 关注优先级是确定性分诊排序，不是感染、重症、死亡或暴发概率。",
+    ])
+    en = "\n".join([
+        f"- The latest observation contains {int(summary.get('latest_cases') or 0):,} cases.",
+        *en_rows,
+        "- Attention priority is a deterministic triage order, not a probability of infection, severe disease, death, or an outbreak.",
+    ])
     refs = ["summary:latest_cases", *[f"disease:{row.get('disease_id')}.latest_cases" for row in top_rows if row.get("disease_id")]]
     return Section("signal_evidence", "signal_evidence", 3, LocalizedText("关键证据", "Signal Evidence"), LocalizedText(zh, en), refs)
 
@@ -829,16 +842,18 @@ def _method_appendix(packet: dict[str, Any]) -> Section:
         [
             "- 本附录用于审计追溯，不作为主阅读路径。",
             f"- 数据签名：`{signature}`",
-            "- 计算版本：第四版报告引擎",
+            f"- 计算版本：第四版报告引擎（{METHOD_VERSION} 语义修订）",
             f"- 报告频率：{cadence_zh}",
+            "- 关注优先级由病例负担、短期变化、可用死亡线索、异常标记、历史位置和数据质量惩罚组成；未经概率校准，不是公共卫生风险分。",
         ]
     )
     en = "\n".join(
         [
             "- This appendix supports audit tracing and is not the primary reading path.",
             f"- Data signature: `{signature}`",
-            f"- Calculation version: `report_v4.0`",
+            f"- Calculation version: `{METHOD_VERSION}`",
             f"- Reporting cadence: {cadence_en}",
+            "- Attention priority combines reported burden, short-term change, mortality signals when available, anomaly markers, historical position, and a data-quality penalty. It is uncalibrated and is not a public-health risk score.",
         ]
     )
     return Section("method_appendix", "method_appendix", 6, LocalizedText("方法附录", "Method Appendix"), LocalizedText(zh, en), ["summary:record_count"])

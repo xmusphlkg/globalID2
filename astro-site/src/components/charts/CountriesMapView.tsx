@@ -6,7 +6,7 @@ import React, {
   useRef, useState, useEffect, useCallback, useMemo,
 } from 'react';
 import ReactEChartsCore from '../../lib/echartsReact';
-import echarts from '../../lib/echarts';
+import echarts from '../../lib/echartsMap';
 import { resolveFlagIso2 } from '../../lib/country-flag';
 import {
   COUNTRY_COVERAGE,

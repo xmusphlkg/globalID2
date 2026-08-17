@@ -295,6 +295,12 @@ def test_series_observation_identity_preserves_series_and_strata() -> None:
         "geography_key",
         "time",
     )
+    assert index_columns["idx_disease_series_observation_identity_time"] == (
+        "series_code",
+        "geography_key",
+        "dimension_key",
+        "time",
+    )
 
 
 def test_all_ontology_tables_compile_for_postgresql() -> None:

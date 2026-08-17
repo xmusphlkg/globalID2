@@ -190,3 +190,56 @@ class SituationHistorySyncRun(HistoryBase):
     details: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
 
     __table_args__ = (Index("idx_history_sync_started", "started_at", "status"),)
+
+
+class SituationHistoryReportV3(HistoryBase, HistoryTimestampMixin):
+    """Immutable v3 public report archived before publication is advanced."""
+
+    __tablename__ = "situation_history_reports_v3"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    report_id: Mapped[str] = mapped_column(String(140), nullable=False, unique=True)
+    report_kind: Mapped[str] = mapped_column(String(20), nullable=False)
+    period_key: Mapped[str] = mapped_column(String(20), nullable=False)
+    revision: Mapped[int] = mapped_column(Integer, nullable=False)
+    as_of: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    input_hash: Mapped[str] = mapped_column(String(128), nullable=False)
+    status: Mapped[str] = mapped_column(String(30), nullable=False)
+    quality_gate: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    payload: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    archived_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utc_now, nullable=False)
+
+    signals: Mapped[list["SituationHistorySignalV3"]] = relationship(
+        back_populates="report", cascade="all, delete-orphan"
+    )
+
+    __table_args__ = (
+        UniqueConstraint("report_kind", "period_key", "revision", name="uq_history_v3_report_revision"),
+        Index("idx_history_v3_report_period", "report_kind", "period_key", "revision"),
+        Index("idx_history_v3_report_as_of", "as_of"),
+    )
+
+
+class SituationHistorySignalV3(HistoryBase, HistoryTimestampMixin):
+    __tablename__ = "situation_history_signals_v3"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    history_report_id: Mapped[int] = mapped_column(
+        ForeignKey("situation_history_reports_v3.id", ondelete="CASCADE"), nullable=False
+    )
+    signal_id: Mapped[str] = mapped_column(String(180), nullable=False)
+    disease_id: Mapped[str] = mapped_column(String(100), nullable=False)
+    country_code: Mapped[Optional[str]] = mapped_column(String(20))
+    series_code: Mapped[str] = mapped_column(String(240), nullable=False)
+    anomaly_state: Mapped[str] = mapped_column(String(30), nullable=False)
+    q_value: Mapped[Optional[float]] = mapped_column(Float)
+    review_priority: Mapped[str] = mapped_column(String(30), nullable=False)
+    payload: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+
+    report: Mapped[SituationHistoryReportV3] = relationship(back_populates="signals")
+
+    __table_args__ = (
+        UniqueConstraint("history_report_id", "signal_id", name="uq_history_v3_report_signal"),
+        Index("idx_history_v3_signal_identity", "disease_id", "country_code", "series_code"),
+        Index("idx_history_v3_signal_state", "anomaly_state", "q_value"),
+    )

@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass
 from datetime import datetime, timezone
+import re
 from typing import Any, Literal
 import uuid
 
@@ -37,8 +38,12 @@ _RUN_LOCK = asyncio.Lock()
 
 @dataclass(frozen=True, slots=True)
 class AutomationDecision:
-    action: Literal["publish", "exclude", "confirm", "reject", "hold"]
+    action: Literal["publish", "exclude", "confirm", "reject", "hold", "defer", "archive"]
     reasons: tuple[str, ...]
+
+
+_CORRECTION_TITLE = re.compile(r"^\s*(?:correction|corrigendum|erratum)\s*(?::|to\b)", re.IGNORECASE)
+_STRICT_ANIMAL_ONLY_MAX_SCORE = 0.20
 
 
 def _now() -> datetime:
@@ -71,6 +76,37 @@ def _article_hold_reasons(article: Any, *, now: datetime) -> list[str]:
     if not (article.authors or []):
         reasons.append("authors are missing")
     return reasons
+
+
+def _research_domain(article: Any) -> str:
+    evidence = ((article.metadata_ or {}).get("classification_evidence") or {}).get("research_domain") or {}
+    return str(evidence.get("value") or "not_determined")
+
+
+def _has_explicit_correction_parent(article: Any) -> bool:
+    """Recognize a correction notice only when Crossref names its parent.
+
+    A normal article can carry a ``relation.correction`` edge pointing to a
+    later notice, so integrity status or a relation key alone is insufficient.
+    The correction/corrigendum/erratum title and a non-self DOI in ``update-to``
+    are both required before the notice is excluded as an independent study.
+    """
+    if not _CORRECTION_TITLE.search(str(article.title or "")):
+        return False
+    source_payload = getattr(article, "source_payload", None)
+    payload = source_payload if isinstance(source_payload, dict) else {}
+    updates = payload.get("update-to")
+    if not isinstance(updates, list):
+        return False
+    own_doi = str(article.doi or "").strip().lower()
+    for item in updates:
+        if not isinstance(item, dict):
+            continue
+        update_type = str(item.get("type") or "").strip().lower()
+        parent_doi = str(item.get("DOI") or item.get("doi") or "").strip().lower()
+        if ("correct" in update_type or "errat" in update_type) and parent_doi and parent_doi != own_doi:
+            return True
+    return False
 
 
 def decide_evidence_link(link: Any, article: Any, config: Any, *, now: datetime) -> AutomationDecision:
@@ -137,6 +173,21 @@ def decide_article(
         return AutomationDecision("hold", ("explicit editorial decision is locked",))
     if str(article.integrity_status) in {"retracted", "expression_of_concern"}:
         return AutomationDecision("exclude", (f"integrity status is {article.integrity_status}",))
+    if _has_explicit_correction_parent(article):
+        return AutomationDecision(
+            "exclude",
+            ("correction/corrigendum record has an explicit parent DOI",),
+        )
+    score = float(article.discovery_score or 0.0)
+    if (
+        _research_domain(article) == "animal_only"
+        and max_disease_confidence <= 0.0
+        and score <= min(float(config.autopilot_article_exclude_below_score), _STRICT_ANIMAL_ONLY_MAX_SCORE)
+    ):
+        return AutomationDecision(
+            "exclude",
+            ("strict animal-only record has no disease link and extremely low discovery score",),
+        )
     hold_reasons = _article_hold_reasons(article, now=now)
     if hold_reasons:
         incomplete_markers = {
@@ -152,8 +203,12 @@ def decide_article(
         )
         if deterministic_exclusion:
             return AutomationDecision("exclude", tuple(hold_reasons))
+        if hold_reasons == ["publication date is in the future"]:
+            return AutomationDecision(
+                "defer",
+                ("publication date is in the future; scheduled for automatic re-evaluation",),
+            )
         return AutomationDecision("hold", tuple(hold_reasons))
-    score = float(article.discovery_score or 0.0)
     exact = "exact_disease_geography" in confirmed_relation_levels
     strong_context = "disease_context" in confirmed_relation_levels
     catalogue_gate = (
@@ -189,8 +244,10 @@ def decide_summary(summary: Any, article: Any, config: Any) -> AutomationDecisio
         or (summary.generation_metadata or {}).get("editorial_reviewed_at")
     ):
         return AutomationDecision("hold", ("summary is already published",))
+    if article.publication_status == "excluded" and summary.status in {"review", "archived"}:
+        return AutomationDecision("archive", ("parent article is excluded",))
     if article.publication_status != "published":
-        return AutomationDecision("hold", ("article is not public",))
+        return AutomationDecision("defer", ("article decision is not final for public release",))
     if summary.generated_by != "literature-evidence-agent":
         return AutomationDecision("hold", ("summary was not produced by the evidence agent",))
     quality = float(summary.quality_score or 0.0)
@@ -264,11 +321,15 @@ class LiteratureAutomationService:
         counts = {
             "articles_published": 0,
             "articles_excluded": 0,
+            "articles_deferred": 0,
             "article_exceptions": 0,
             "links_confirmed": 0,
             "links_rejected": 0,
             "link_exceptions": 0,
             "summaries_published": 0,
+            "summaries_archived": 0,
+            "summaries_deferred": 0,
+            "summaries_restored": 0,
             "summaries_reopened": 0,
             "summary_exceptions": 0,
             "gaps_covered": 0,
@@ -346,15 +407,27 @@ class LiteratureAutomationService:
                 elif decision.action == "exclude":
                     desired = "excluded"
                     counts["articles_excluded"] += 1
+                elif decision.action == "defer":
+                    desired = "review"
+                    counts["articles_deferred"] += 1
                 else:
                     desired = "review"
                     counts["article_exceptions"] += 1
                 effective_article_status[article.article_id] = desired
-                if dry_run or desired == article.publication_status:
+                if dry_run:
+                    continue
+                # Refresh the final evaluated decision even when status remains
+                # review. This replaces stale exclude metadata after a newer
+                # classification legitimately reopens the record.
+                if not (article.metadata_ or {}).get("editorial_locked"):
+                    article.metadata_ = {
+                        **(article.metadata_ or {}),
+                        "autopilot": _audit_payload(decision, at=at, config=config),
+                    }
+                if desired == article.publication_status:
                     continue
                 previous = article.publication_status
                 article.publication_status = desired
-                article.metadata_ = {**(article.metadata_ or {}), "autopilot": _audit_payload(decision, at=at, config=config)}
                 db.add(LiteratureStatusEvent(
                     article_id=article.article_id,
                     event_type="publication_status_changed",
@@ -367,7 +440,9 @@ class LiteratureAutomationService:
 
             summaries = (
                 await db.execute(
-                    select(LiteratureSummary).where(LiteratureSummary.status.in_(("review", "published")))
+                    select(LiteratureSummary).where(
+                        LiteratureSummary.status.in_(("review", "published", "archived"))
+                    )
                 )
             ).scalars().all()
             for summary in summaries:
@@ -394,6 +469,28 @@ class LiteratureAutomationService:
                         summary.review_notes = (
                             f"{summary.review_notes or ''} Automatically published by {POLICY_VERSION}."
                         ).strip()
+                elif decision.action == "archive":
+                    if summary.status != "archived":
+                        counts["summaries_archived"] += 1
+                    if not dry_run and summary.status != "archived":
+                        summary.status = "archived"
+                        summary.generation_metadata = {
+                            **(summary.generation_metadata or {}),
+                            "publication_gate": "parent-article-excluded",
+                            "autopilot": _audit_payload(decision, at=at, config=config),
+                        }
+                elif decision.action == "defer":
+                    counts["summaries_deferred"] += 1
+                    if summary.status == "archived":
+                        counts["summaries_restored"] += 1
+                    if not dry_run:
+                        if summary.status == "archived":
+                            summary.status = "review"
+                        summary.generation_metadata = {
+                            **(summary.generation_metadata or {}),
+                            "publication_gate": "awaiting-article-decision",
+                            "autopilot": _audit_payload(decision, at=at, config=config),
+                        }
                 elif summary.status == "review":
                     counts["summary_exceptions"] += 1
                 elif (summary.generation_metadata or {}).get("autopilot"):
@@ -457,7 +554,9 @@ class LiteratureAutomationService:
                 counts[key]
                 for key in (
                     "articles_published", "articles_excluded", "links_confirmed", "links_rejected",
-                    "summaries_published", "summaries_reopened", "gaps_covered", "gaps_reopened",
+                    "summaries_published", "summaries_archived", "summaries_restored",
+                    "summaries_reopened",
+                    "gaps_covered", "gaps_reopened",
                 )
             )
             if not dry_run and changed:
@@ -509,16 +608,33 @@ class LiteratureAutomationService:
                 1 for summary in summaries
                 if (summary.generation_metadata or {}).get("autopilot", {}).get("policy_version") == POLICY_VERSION
             )
-            exception_articles = int((await db.execute(
-                select(func.count()).select_from(LiteratureArticle).where(LiteratureArticle.publication_status == "review")
-            )).scalar_one() or 0)
+            review_articles = (
+                await db.execute(
+                    select(LiteratureArticle).where(LiteratureArticle.publication_status == "review")
+                )
+            ).scalars().all()
+            deferred_articles = sum(
+                1 for article in review_articles
+                if (article.metadata_ or {}).get("autopilot", {}).get("decision") == "defer"
+            )
+            exception_articles = len(review_articles) - deferred_articles
             exception_links = int((await db.execute(
                 select(func.count()).select_from(LiteratureSignalArticleLink).where(
                     LiteratureSignalArticleLink.status == "review"
                 )
             )).scalar_one() or 0)
-            exception_summaries = int((await db.execute(
-                select(func.count()).select_from(LiteratureSummary).where(LiteratureSummary.status == "review")
+            review_summaries = (
+                await db.execute(
+                    select(LiteratureSummary).where(LiteratureSummary.status == "review")
+                )
+            ).scalars().all()
+            deferred_summaries = sum(
+                1 for summary in review_summaries
+                if (summary.generation_metadata or {}).get("autopilot", {}).get("decision") == "defer"
+            )
+            exception_summaries = len(review_summaries) - deferred_summaries
+            archived_summaries = int((await db.execute(
+                select(func.count()).select_from(LiteratureSummary).where(LiteratureSummary.status == "archived")
             )).scalar_one() or 0)
             latest_run = (
                 await db.execute(
@@ -551,6 +667,12 @@ class LiteratureAutomationService:
                 "summaries": exception_summaries,
                 "total": exception_articles + exception_links + exception_summaries,
             },
+            "deferred": {
+                "articles": deferred_articles,
+                "summaries": deferred_summaries,
+                "total": deferred_articles + deferred_summaries,
+            },
+            "archived": {"summaries": archived_summaries},
             "last_run": (
                 {
                     "run_uuid": latest_run.run_uuid,

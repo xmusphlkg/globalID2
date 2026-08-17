@@ -23,12 +23,15 @@ from src.domain import (
     LiteratureCountryLink,
     LiteratureDiseaseLink,
     LiteratureSignalArticleLink,
+    LiteratureStatusEvent,
     LiteratureSummary,
     LiteratureTopicLink,
 )
 from src.generation.site_data_queries import has_table
 from src.generation.site_data_writer import remove_stale_json_files, write_compact_json, write_pretty_json
 from src.literature.knowledge_graph import build_knowledge_graph
+from src.literature.recommendations import attach_related_research
+from src.literature.weekly_briefs import enrich_weekly_briefs, load_weekly_review_registry
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -176,6 +179,7 @@ def _project_historical_seed_article(
         "doi": doi,
         "pmid": pmid,
         "pmcid": pmcid,
+        "openalex_id": item.get("openalex_id"),
         "journal": item.get("journal"),
         "publisher": item.get("publisher"),
         "authors": authors,
@@ -198,6 +202,10 @@ def _project_historical_seed_article(
         "diseases": article_diseases,
         "countries": article_countries,
         "topics": sorted(topic_rows, key=lambda row: row["confidence"], reverse=True),
+        "pathogens": [item for item in item.get("pathogens") or [] if isinstance(item, dict)],
+        "pathogen_types": [item for item in item.get("pathogen_types") or [] if isinstance(item, dict)],
+        "populations": [item for item in item.get("populations") or [] if isinstance(item, dict)],
+        "research_domain": "curated_historical",
         "related_surveillance": build_related_surveillance(
             article_diseases,
             article_countries,
@@ -212,7 +220,10 @@ def _project_historical_seed_article(
         or "该文献作为历史基线纳入，用于理解长期传染病监测背景。",
         "why_it_matters_source": "historical_seed",
         "source_kind": "historical_seed",
+        "classification_version": "curated-historical-v1",
         "historical_baseline": True,
+        "content_tier": "curated_bilingual_evidence",
+        "indexable": True,
         "source_urls": {key: value for key, value in source_urls.items() if key in {"doi", "publisher", "pubmed", "pmc"}},
         "updated_at": _seed_datetime(item.get("curated_at")).isoformat()
         if _seed_datetime(item.get("curated_at"))
@@ -262,6 +273,39 @@ def build_publication_timeline(articles: list[dict[str, Any]]) -> list[dict[str,
         {"month": month, "publication_count": count}
         for month, count in sorted(counts.items())
     ]
+
+
+def build_disease_evidence_events(articles: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Project dated guidance and vaccine-policy evidence without claiming causality."""
+
+    events: list[dict[str, Any]] = []
+    for item in articles:
+        if not item.get("published_at"):
+            continue
+        study_type = str(item.get("study_type") or "")
+        title = str(item.get("title") or "")
+        title_text = title.casefold()
+        topics = {str(topic.get("name") or "").casefold() for topic in item.get("topics") or []}
+        event_type: str | None = None
+        if study_type == "Guideline" or any(term in title_text for term in ("guideline", "guidance", "consensus statement")):
+            event_type = "guideline_publication"
+        elif (
+            "vaccination" in topics
+            and ("health policy" in topics or any(term in title_text for term in ("vaccine policy", "vaccination policy", "recommendation")))
+        ):
+            event_type = "vaccine_policy_evidence"
+        if event_type is None:
+            continue
+        events.append({
+            "event_type": event_type,
+            "date": _parse_public_datetime(item["published_at"]).date().isoformat(),
+            "title": title,
+            "slug": item.get("slug"),
+            "study_type": study_type,
+            "publisher": item.get("publisher"),
+            "source_kind": item.get("source_kind"),
+        })
+    return sorted(events, key=lambda event: (event["date"], event["title"]), reverse=True)
 
 
 def _iso_week(value: datetime) -> tuple[str, str]:
@@ -832,7 +876,13 @@ def build_related_surveillance(
     return links
 
 
-def _article_reference(article: dict[str, Any], relation_level: str) -> dict[str, Any]:
+def _article_reference(
+    article: dict[str, Any],
+    relation_level: str,
+    *,
+    evidence_age_days: int | None = None,
+    recency_status: str = "current_window",
+) -> dict[str, Any]:
     return {
         "article_id": article.get("article_id"),
         "slug": article.get("slug"),
@@ -841,7 +891,39 @@ def _article_reference(article: dict[str, Any], relation_level: str) -> dict[str
         "study_type": article.get("study_type"),
         "published_at": article.get("published_at"),
         "relation_level": relation_level,
+        "recency_status": recency_status,
+        "evidence_age_days": evidence_age_days,
     }
+
+
+def _optional_public_datetime(value: Any) -> datetime | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        try:
+            parsed = datetime.fromisoformat(f"{text}-01" if re.fullmatch(r"\d{4}-\d{2}", text) else f"{text}-01-01")
+        except ValueError:
+            return None
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+
+
+def _signal_evidence_anchor(
+    item: dict[str, Any],
+    snapshot: dict[str, Any],
+) -> datetime | None:
+    """Return the release-time anchor used for the exact-evidence recency gate."""
+
+    candidates = (
+        snapshot.get("generated_at"),
+        (snapshot.get("report") or {}).get("as_of"),
+        item.get("data_through"),
+        item.get("published_at"),
+        snapshot.get("data_through"),
+    )
+    return next((parsed for value in candidates if (parsed := _optional_public_datetime(value))), None)
 
 
 def _signal_geographies(item: dict[str, Any]) -> list[dict[str, str]]:
@@ -861,18 +943,91 @@ def _signal_geographies(item: dict[str, Any]) -> list[dict[str, str]]:
     return geographies
 
 
+def _situation_evidence_items(
+    snapshot: dict[str, Any],
+) -> list[tuple[str, dict[str, Any]]]:
+    """Project v3 signals/events into the stable literature-linking shape."""
+
+    if snapshot.get("schema_version") != "situation_room.v3":
+        return [
+            (section, item)
+            for section in ("increasing", "emerging", "unusual")
+            for item in snapshot.get(section) or []
+        ]
+    output: list[tuple[str, dict[str, Any]]] = []
+    for signal in snapshot.get("signals") or []:
+        identity = signal.get("identity") or {}
+        observation = signal.get("observation") or {}
+        anomaly = signal.get("anomaly") or {}
+        assessment = signal.get("assessment") or {}
+        risk = assessment.get("public_health_risk") or {}
+        tags = set(signal.get("tags") or [])
+        section = "unusual" if "unusual" in tags else "increasing"
+        output.append(
+            (
+                section,
+                {
+                    "id": identity.get("signal_id"),
+                    "kind": "statistical_signal",
+                    "title": identity.get("disease_name"),
+                    "disease_id": identity.get("disease_id"),
+                    "disease_name": identity.get("disease_name"),
+                    "country_code": identity.get("country_code"),
+                    "country_name": identity.get("country_name"),
+                    "data_through": observation.get("data_through"),
+                    "source_label": identity.get("source_label") or identity.get("source_system"),
+                    "window": {
+                        "label": observation.get("window_label"),
+                        "current": observation.get("current"),
+                        "previous": observation.get("previous"),
+                        "absolute_change": observation.get("absolute_change"),
+                        "change_pct": observation.get("relative_change_pct"),
+                    },
+                    "risk": {
+                        "score": None,
+                        "level": risk.get("level") if risk.get("status") == "assessed" else None,
+                        "confidence": None,
+                    },
+                    "signal_level": anomaly.get("state"),
+                },
+            )
+        )
+    for event in snapshot.get("events") or []:
+        updates = event.get("updates") or []
+        latest = updates[-1] if updates else {}
+        output.append(
+            (
+                "emerging",
+                {
+                    "id": event.get("cluster_id"),
+                    "kind": "official_event",
+                    "title": latest.get("title") or event.get("disease_name"),
+                    "disease_id": event.get("disease_id"),
+                    "disease_name": event.get("disease_name"),
+                    "geographies": event.get("geographies") or [],
+                    "published_at": event.get("last_published_at"),
+                    "source": latest.get("source"),
+                },
+            )
+        )
+    return output
+
+
 def build_surveillance_evidence(
     articles: list[dict[str, Any]],
     situation_snapshot: dict[str, Any] | None,
     *,
     diseases_by_id: dict[str, dict[str, Any]] | None = None,
     relation_decisions: list[dict[str, Any]] | None = None,
+    max_exact_evidence_age_days: int = 730,
 ) -> dict[str, Any]:
     """Connect a Situation Room snapshot to published literature conservatively.
 
-    Exact evidence requires both disease and geography classifier confidence of
-    at least 0.78. Disease-only matches remain contextual and never validate or
-    explain the surveillance signal. The projection does not invoke a model.
+    Exact evidence requires disease and geography classifier confidence of at
+    least 0.78 and a publication date within the configured recency window.
+    Older records remain historical context and never close a current evidence
+    gap. Disease-only matches are also contextual. The projection does not
+    invoke a model.
     """
     diseases_by_id = diseases_by_id or {}
     visibility = (
@@ -904,6 +1059,7 @@ def build_surveillance_evidence(
             "en": "No eligible Situation Room snapshot is available.",
             "zh": "当前没有可用的全球态势室快照。",
         },
+        "exact_evidence_max_age_days": max_exact_evidence_age_days,
     }
     if not situation_snapshot:
         return empty
@@ -933,8 +1089,7 @@ def build_surveillance_evidence(
     gaps: list[dict[str, Any]] = []
     related_by_article: dict[str, list[dict[str, Any]]] = defaultdict(list)
     seen_signal_ids: set[str] = set()
-    for section in ("increasing", "emerging", "unusual"):
-        for item in situation_snapshot.get(section) or []:
+    for section, item in _situation_evidence_items(situation_snapshot):
             signal_id = str(item.get("id") or "")
             disease_id = str(item.get("disease_id") or "")
             if not signal_id or not disease_id or signal_id in seen_signal_ids:
@@ -956,23 +1111,60 @@ def build_surveillance_evidence(
             )
             exact_articles: list[dict[str, Any]] = []
             context_articles: list[dict[str, Any]] = []
+            evidence_anchor = _signal_evidence_anchor(item, situation_snapshot)
             for article in articles:
                 article_id = str(article.get("article_id") or "")
                 decision = decisions.get((signal_id, article_id))
                 if decision and decision.get("status") == "rejected":
                     continue
+                article_published = _optional_public_datetime(article.get("published_at"))
+                evidence_age_days = (
+                    max(0, (evidence_anchor.date() - article_published.date()).days)
+                    if evidence_anchor and article_published
+                    else None
+                )
+                outside_exact_window = bool(
+                    evidence_age_days is not None
+                    and evidence_age_days > max_exact_evidence_age_days
+                )
+                date_unverifiable = evidence_anchor is not None and article_published is None
                 if decision and decision.get("status") == "confirmed":
                     relation_level = str(decision.get("relation_level") or "disease_context")
-                    is_exact = relation_level == "exact_disease_geography"
+                    requested_exact = relation_level == "exact_disease_geography"
+                    is_exact = requested_exact and not outside_exact_window and not date_unverifiable
+                    if requested_exact and outside_exact_window:
+                        relation_level = "historical_disease_geography_context"
+                    elif requested_exact and date_unverifiable:
+                        relation_level = "disease_context"
                 else:
                     if disease_id not in article_disease_ids.get(article_id, set()):
                         continue
-                    is_exact = bool(
+                    geographic_match = bool(
                         signal_country_codes
                         and signal_country_codes.intersection(article_country_codes.get(article_id, set()))
                     )
-                    relation_level = "exact_disease_geography" if is_exact else "disease_context"
-                reference = _article_reference(article, relation_level)
+                    # A classifier-only record without a publication date cannot
+                    # demonstrate that it is current enough to close a signal gap.
+                    is_exact = geographic_match and not outside_exact_window and not date_unverifiable
+                    relation_level = (
+                        "exact_disease_geography"
+                        if is_exact
+                        else "historical_disease_geography_context"
+                        if geographic_match and outside_exact_window
+                        else "disease_context"
+                    )
+                reference = _article_reference(
+                    article,
+                    relation_level,
+                    evidence_age_days=evidence_age_days,
+                    recency_status=(
+                        "outside_exact_window"
+                        if outside_exact_window
+                        else "date_unverifiable"
+                        if evidence_anchor is not None and article_published is None
+                        else "current_window"
+                    ),
+                )
                 (exact_articles if is_exact else context_articles).append(reference)
             exact_articles.sort(key=lambda article: article.get("published_at") or "", reverse=True)
             context_articles.sort(key=lambda article: article.get("published_at") or "", reverse=True)
@@ -1015,6 +1207,10 @@ def build_surveillance_evidence(
                 ),
                 "exact_article_count": len(exact_articles),
                 "context_article_count": len(context_articles),
+                "historical_context_article_count": sum(
+                    article.get("recency_status") == "outside_exact_window"
+                    for article in context_articles
+                ),
                 "exact_articles": exact_articles[:4],
                 "context_articles": context_articles[:4],
             }
@@ -1033,12 +1229,12 @@ def build_surveillance_evidence(
                     "risk": signal["risk"],
                     "context_article_count": len(context_articles),
                     "note_en": (
-                        "Disease-level literature is available, but no published article has a high-confidence match to the signal geography."
+                        "Disease-level literature is available, but no recent published article has a high-confidence match to the signal geography."
                         if context_articles
                         else "No high-confidence disease-and-geography match exists in the current published Research Radar catalogue."
                     ),
                     "note_zh": (
-                        "已有疾病层面的文献背景，但尚无已发布文献与该信号地区形成高置信度匹配。"
+                        "已有疾病层面的文献背景，但尚无近期已发布文献与该信号地区形成高置信度匹配。"
                         if context_articles
                         else "当前研究雷达公开目录中没有与该疾病及地区形成高置信度匹配的文献。"
                     ),
@@ -1067,10 +1263,14 @@ def build_surveillance_evidence(
     return {
         **empty,
         "available": True,
-        "snapshot_id": situation_snapshot.get("snapshot_id"),
-        "generated_at": situation_snapshot.get("generated_at"),
-        "data_through": situation_snapshot.get("data_through"),
-        "method_version": situation_snapshot.get("method_version"),
+        "snapshot_id": situation_snapshot.get("snapshot_id")
+        or (situation_snapshot.get("report") or {}).get("report_id"),
+        "generated_at": situation_snapshot.get("generated_at")
+        or (situation_snapshot.get("report") or {}).get("as_of"),
+        "data_through": situation_snapshot.get("data_through")
+        or (situation_snapshot.get("data_currency") or {}).get("latest_data_through"),
+        "method_version": situation_snapshot.get("method_version")
+        or (situation_snapshot.get("method") or {}).get("version"),
         "metrics": {
             "active_signals": len(signals),
             "signals_with_exact_evidence": sum(bool(signal["exact_article_count"]) for signal in signals),
@@ -1083,8 +1283,8 @@ def build_surveillance_evidence(
         "evidence_gaps": gaps,
         "related_by_article": dict(related_by_article),
         "methodology": {
-            "en": "Signals come unchanged from the Situation Room snapshot. Exact links require classifier confidence of at least 0.78 for both disease and geography; disease-only links are contextual. Gaps describe this catalogue's coverage, not the absence of research.",
-            "zh": "信号原样来自全球态势室快照。精确关联要求疾病和地区分类置信度均不低于 0.78；仅疾病匹配只作为背景。缺口描述的是本目录覆盖情况，并不表示相关研究不存在。",
+            "en": f"Signals come unchanged from the Situation Room snapshot. Exact links require classifier confidence of at least 0.78 for both disease and geography and publication within {max_exact_evidence_age_days} days of the signal release anchor; older or disease-only links are contextual. Gaps describe this catalogue's coverage, not the absence of research.",
+            "zh": f"信号原样来自全球态势室快照。精确关联要求疾病和地区分类置信度均不低于 0.78，且论文发表于信号发布锚点前 {max_exact_evidence_age_days} 天内；更早或仅疾病匹配的文献只作为背景。缺口描述的是本目录覆盖情况，并不表示相关研究不存在。",
         },
     }
 
@@ -1103,19 +1303,26 @@ def attach_surveillance_evidence(
         relation_decisions=payload.get("_signal_article_links") or [],
     )
     related_by_article = projection.pop("related_by_article", {})
-    projected_articles = [
+    projected_articles = attach_related_research([
         {
             **article,
             "related_signals": related_by_article.get(str(article.get("article_id") or ""), []),
         }
         for article in payload.get("articles") or []
-    ]
+    ])
     by_id = {article["article_id"]: article for article in projected_articles}
     public_payload = {key: value for key, value in payload.items() if not key.startswith("_")}
     visualizations = {
         **(public_payload.get("visualizations") or {}),
         "coverage_matrix": build_surveillance_coverage_matrix(projection),
     }
+    projected_weekly_briefs = [
+        {
+            **brief,
+            "articles": [by_id.get(article.get("article_id"), article) for article in brief.get("articles") or []],
+        }
+        for brief in payload.get("weekly_briefs") or []
+    ]
     return {
         **public_payload,
         "articles": projected_articles,
@@ -1136,13 +1343,10 @@ def attach_surveillance_evidence(
             topic_slug: [by_id.get(article.get("article_id"), article) for article in articles]
             for topic_slug, articles in (payload.get("topic_articles") or {}).items()
         },
-        "weekly_briefs": [
-            {
-                **brief,
-                "articles": [by_id.get(article.get("article_id"), article) for article in brief.get("articles") or []],
-            }
-            for brief in payload.get("weekly_briefs") or []
-        ],
+        "weekly_briefs": enrich_weekly_briefs(
+            projected_weekly_briefs,
+            surveillance_evidence=projection,
+        ),
         "surveillance_evidence": projection,
         "visualizations": visualizations,
     }
@@ -1154,6 +1358,9 @@ def empty_literature_export() -> dict[str, Any]:
         "last_updated": None,
         "metrics": {
             "total_public_articles": 0,
+            "preprints_total": 0,
+            "integrity_alerts_total": 0,
+            "withheld_metadata_only": 0,
             "public_article_limit": None,
             "historical_baseline_articles": 0,
             "diseases_total": 0,
@@ -1165,6 +1372,8 @@ def empty_literature_export() -> dict[str, Any]:
         },
         "featured": [],
         "articles": [],
+        "preprints": [],
+        "integrity_alerts": [],
         "historical_baseline": [],
         "reviews_and_guidelines": [],
         "emerging_topics": [],
@@ -1189,6 +1398,167 @@ def empty_literature_export() -> dict[str, Any]:
         "surveillance_evidence": build_surveillance_evidence([], None),
         "_signal_article_links": [],
     }
+
+
+def partition_public_literature_articles(
+    articles: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Keep peer-reviewed research and preprints in separate public streams.
+
+    ``publication_status`` is the persisted editorial gate.  The public
+    projection exposes it as ``editorial_status`` so downstream consumers can
+    enforce the same boundary without depending on the database model name.
+    """
+
+    published = [
+        article
+        for article in articles
+        if str(article.get("editorial_status") or "").lower() == "published"
+    ]
+    peer_reviewed = [
+        article
+        for article in published
+        if str(article.get("peer_review_status") or "").lower() == "peer_reviewed"
+    ]
+    preprints = [
+        article
+        for article in published
+        if str(article.get("peer_review_status") or "").lower() == "preprint"
+    ]
+    return peer_reviewed, preprints
+
+
+def apply_public_summary_gate(
+    peer_reviewed: list[dict[str, Any]],
+    preprints: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], int]:
+    """Withhold records until both published language summaries are present."""
+    withheld = sum(
+        article.get("indexable") is not True
+        for article in [*peer_reviewed, *preprints]
+    )
+    return (
+        [article for article in peer_reviewed if article.get("indexable") is True],
+        [article for article in preprints if article.get("indexable") is True],
+        withheld,
+    )
+
+
+_PUBLIC_INTEGRITY_STATUSES = {
+    "retracted": "retraction",
+    "retraction": "retraction",
+    "expression_of_concern": "expression_of_concern",
+    "corrected": "correction",
+    "correction": "correction",
+}
+
+
+def _record_value(record: Any, field: str, default: Any = None) -> Any:
+    if isinstance(record, dict):
+        return record.get(field, default)
+    return getattr(record, field, default)
+
+
+def _public_event_datetime(value: Any) -> str | None:
+    if isinstance(value, datetime):
+        aware = value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+        return aware.isoformat()
+    text = str(value or "").strip()
+    return text or None
+
+
+def _public_integrity_source_url(article: Any) -> str | None:
+    source_urls = _record_value(article, "source_urls", {}) or {}
+    candidates = [
+        source_urls.get("doi") if isinstance(source_urls, dict) else None,
+        source_urls.get("publisher") if isinstance(source_urls, dict) else None,
+        source_urls.get("pubmed") if isinstance(source_urls, dict) else None,
+    ]
+    doi = str(_record_value(article, "doi") or "").strip()
+    if doi:
+        candidates.append(f"https://doi.org/{doi}")
+    for candidate in candidates:
+        value = str(candidate or "").strip()
+        if value.startswith(("https://", "http://")):
+            return value
+    return None
+
+
+def project_public_integrity_alerts(
+    events: list[Any],
+    articles: list[Any],
+    *,
+    ever_public_article_ids: set[str] | None = None,
+    currently_public_article_ids: set[str] | None = None,
+) -> list[dict[str, Any]]:
+    """Project a metadata-only integrity history for articles once made public.
+
+    Event ``metadata`` and article abstracts/source payloads are deliberately
+    never read here, so they cannot accidentally cross the static-site export
+    boundary.
+    """
+
+    article_by_id = {
+        str(_record_value(article, "article_id") or ""): article
+        for article in articles
+        if _record_value(article, "article_id")
+    }
+    ever_public = {str(value) for value in (ever_public_article_ids or set()) if value}
+    ever_public.update(
+        article_id
+        for article_id, article in article_by_id.items()
+        if str(_record_value(article, "publication_status") or "").lower() == "published"
+    )
+    currently_public = {
+        str(value) for value in (currently_public_article_ids or set()) if value
+    }
+    alerts: list[dict[str, Any]] = []
+    for event in events:
+        article_id = str(_record_value(event, "article_id") or "")
+        article = article_by_id.get(article_id)
+        normalized_status = re.sub(
+            r"[\s-]+", "_", str(_record_value(event, "current_status") or "").strip().lower()
+        )
+        public_event_type = _PUBLIC_INTEGRITY_STATUSES.get(normalized_status)
+        if article is None or article_id not in ever_public or public_event_type is None:
+            continue
+        effective_at = _public_event_datetime(
+            _record_value(event, "effective_at") or _record_value(event, "created_at")
+        )
+        event_id = _record_value(event, "id")
+        if event_id is None:
+            fingerprint = "|".join((
+                article_id,
+                public_event_type,
+                effective_at or "unknown",
+                str(_record_value(event, "source") or "unknown"),
+            ))
+            event_id = hashlib.sha256(fingerprint.encode("utf-8")).hexdigest()[:16]
+        is_currently_public = article_id in currently_public
+        slug = str(_record_value(article, "slug") or "").strip()
+        alerts.append({
+            "alert_id": f"integrity-{event_id}",
+            "article_id": article_id,
+            "article_slug": slug,
+            "article_title": str(_record_value(article, "title") or "Literature record"),
+            "doi": _record_value(article, "doi"),
+            "journal": _record_value(article, "journal"),
+            "published_at": _public_event_datetime(_record_value(article, "published_at")),
+            "event_type": public_event_type,
+            "previous_status": _record_value(event, "previous_status"),
+            "current_status": normalized_status,
+            "effective_at": effective_at,
+            "recorded_at": _public_event_datetime(_record_value(event, "created_at")),
+            "source": str(_record_value(event, "source") or "source record"),
+            "source_url": _public_integrity_source_url(article),
+            "is_currently_public": is_currently_public,
+            "article_url": f"/research/articles/{slug}/" if is_currently_public and slug else None,
+        })
+    return sorted(
+        alerts,
+        key=lambda item: (item.get("effective_at") or item.get("recorded_at") or "", item["alert_id"]),
+        reverse=True,
+    )
 
 
 async def collect_literature_export(
@@ -1217,7 +1587,7 @@ async def collect_literature_export(
             .where(
                 LiteratureArticle.publication_status == "published",
                 LiteratureArticle.integrity_status.notin_(("retracted", "expression_of_concern")),
-                LiteratureArticle.peer_review_status == "peer_reviewed",
+                LiteratureArticle.peer_review_status.in_(("peer_reviewed", "preprint")),
                 LiteratureArticle.published_at.is_not(None),
                 LiteratureArticle.published_at <= now,
             )
@@ -1225,6 +1595,46 @@ async def collect_literature_export(
         )
     ).scalars().all()
     article_ids = [article.article_id for article in articles]
+    peer_reviewed_article_ids = [
+        article.article_id for article in articles if article.peer_review_status == "peer_reviewed"
+    ]
+    integrity_event_rows: list[Any] = []
+    integrity_article_rows: list[Any] = []
+    ever_public_article_ids: set[str] = set()
+    if await has_table(session, "literature_status_events"):
+        integrity_event_rows = (
+            await session.execute(
+                select(LiteratureStatusEvent)
+                .where(LiteratureStatusEvent.current_status.in_(tuple(_PUBLIC_INTEGRITY_STATUSES)))
+                .order_by(
+                    LiteratureStatusEvent.effective_at.desc(),
+                    LiteratureStatusEvent.created_at.desc(),
+                )
+            )
+        ).scalars().all()
+        integrity_article_ids = {
+            event.article_id for event in integrity_event_rows if event.article_id
+        }
+        if integrity_article_ids:
+            ever_public_article_ids = {
+                str(article_id)
+                for article_id in (
+                    await session.execute(
+                        select(LiteratureStatusEvent.article_id)
+                        .where(
+                            LiteratureStatusEvent.article_id.in_(integrity_article_ids),
+                            LiteratureStatusEvent.event_type == "publication_status_changed",
+                            LiteratureStatusEvent.current_status == "published",
+                        )
+                        .distinct()
+                    )
+                ).scalars().all()
+            }
+            integrity_article_rows = (
+                await session.execute(
+                    select(LiteratureArticle).where(LiteratureArticle.article_id.in_(integrity_article_ids))
+                )
+            ).scalars().all()
     disease_links = (
         await session.execute(select(LiteratureDiseaseLink).where(LiteratureDiseaseLink.article_id.in_(article_ids)))
     ).scalars().all() if article_ids else []
@@ -1246,22 +1656,14 @@ async def collect_literature_export(
         (
             await session.execute(
                 select(LiteratureSignalArticleLink).where(
-                    LiteratureSignalArticleLink.article_id.in_(article_ids),
+                    LiteratureSignalArticleLink.article_id.in_(peer_reviewed_article_ids),
                     LiteratureSignalArticleLink.status.in_(("confirmed", "rejected")),
                 )
             )
         ).scalars().all()
-        if article_ids and await has_table(session, "literature_signal_article_links")
+        if peer_reviewed_article_ids and await has_table(session, "literature_signal_article_links")
         else []
     )
-    published_summary_article_count = int((
-        await session.execute(
-            select(func.count(func.distinct(LiteratureSummary.article_id))).where(
-                LiteratureSummary.status == "published",
-                LiteratureSummary.article_id.in_(article_ids),
-            )
-        )
-    ).scalar_one() or 0) if article_ids else 0
     diseases: dict[str, list[dict[str, Any]]] = defaultdict(list)
     countries: dict[str, list[dict[str, Any]]] = defaultdict(list)
     topics: dict[str, list[dict[str, Any]]] = defaultdict(list)
@@ -1339,12 +1741,57 @@ async def collect_literature_export(
             article_countries,
             surveillance_coverage,
         )
+        classification_evidence = (article.metadata_ or {}).get("classification_evidence") or {}
+
+        def controlled_entities(section: str, *, name_key: str = "name") -> list[dict[str, Any]]:
+            values = classification_evidence.get(section) or {}
+            if not isinstance(values, dict):
+                return []
+            return sorted(
+                [
+                    {
+                        "id": str(key),
+                        name_key: str((evidence or {}).get("label") or key),
+                        "confidence": float((evidence or {}).get("confidence") or 0.0),
+                    }
+                    for key, evidence in values.items()
+                    if isinstance(evidence, dict)
+                ],
+                key=lambda item: item["confidence"],
+                reverse=True,
+            )
+
+        research_domain_evidence = classification_evidence.get("research_domain") or {}
+        version_relations = []
+        for relation in (article.metadata_ or {}).get("version_relations") or []:
+            if not isinstance(relation, dict):
+                continue
+            preprint_doi = str(relation.get("preprint_doi") or "").strip().lower()
+            peer_reviewed_doi = str(relation.get("peer_reviewed_doi") or "").strip().lower()
+            if not preprint_doi or not peer_reviewed_doi:
+                continue
+            version_relations.append({
+                "preprint_doi": preprint_doi,
+                "peer_reviewed_doi": peer_reviewed_doi,
+                **(
+                    {"preprint_article_id": str(relation["preprint_article_id"])}
+                    if relation.get("preprint_article_id") else {}
+                ),
+                **(
+                    {"peer_reviewed_article_id": str(relation["peer_reviewed_article_id"])}
+                    if relation.get("peer_reviewed_article_id") else {}
+                ),
+            })
+            if len(version_relations) == 10:
+                break
         projected.append({
             "article_id": article.article_id,
             "slug": article.slug,
             "title": article.title,
             "doi": article.doi,
             "pmid": article.pmid,
+            "pmcid": article.pmcid,
+            "openalex_id": article.openalex_id,
             "journal": article.journal,
             "publisher": article.publisher,
             "authors": [str(item.get("name")) for item in (article.authors or []) if item.get("name")],
@@ -1356,14 +1803,27 @@ async def collect_literature_export(
             "open_access_url": article.open_access_url,
             "license_url": article.license_url,
             "peer_review_status": article.peer_review_status,
+            "editorial_status": article.publication_status,
             "integrity_status": article.integrity_status,
+            "version_relations": version_relations,
             "discovery_score": article.discovery_score,
             "is_featured": article.is_featured,
+            "classification_version": int((article.metadata_ or {}).get("classification_version") or 0),
+            "research_domain": str(research_domain_evidence.get("value") or "not_determined"),
             "diseases": article_diseases,
             "countries": article_countries,
             "topics": article_topics,
+            "pathogens": controlled_entities("pathogens"),
+            "pathogen_types": controlled_entities("pathogen_types"),
+            "populations": controlled_entities("populations"),
             "related_surveillance": related_surveillance,
             "summary": summary,
+            "content_tier": (
+                "quality_gated_bilingual_evidence"
+                if summary.get("en") and summary.get("zh")
+                else "metadata_only"
+            ),
+            "indexable": bool(summary.get("en") and summary.get("zh")),
             "why_it_matters_en": context_en,
             "why_it_matters_zh": context_zh,
             "why_it_matters_source": "published_summary" if summary_relevance_en or summary_relevance_zh else "classifier_metadata",
@@ -1375,12 +1835,50 @@ async def collect_literature_export(
             "updated_at": article.updated_at.isoformat() if article.updated_at else None,
         })
 
+    projected, preprints = partition_public_literature_articles(projected)
+    # A published editorial state is necessary but not sufficient for a
+    # public evidence page. Legacy metadata-only records remain in the control
+    # plane until both published language summaries pass their quality gates.
+    projected, preprints, withheld_metadata_only = apply_public_summary_gate(projected, preprints)
+    quality_gated_db_article_count = len(projected) + len(preprints)
+    preprints.sort(key=lambda item: item.get("published_at") or "", reverse=True)
     historical_seed_count = append_historical_seed_articles(
         projected,
         diseases_by_id=diseases_by_id,
         surveillance_coverage=surveillance_coverage,
     )
-    projected.sort(key=lambda item: int(item.get("source_kind") == "historical_seed"))
+    currently_public_article_ids = {
+        item["article_id"]
+        for item in [*projected, *preprints]
+        if item.get("indexable") is True
+    }
+    public_slugs_by_id = {
+        item["article_id"]: item["slug"]
+        for item in [*projected, *preprints]
+        if item.get("indexable") is True
+    }
+    for item in [*projected, *preprints]:
+        for relation in item.get("version_relations") or []:
+            preprint_id = relation.get("preprint_article_id")
+            peer_reviewed_id = relation.get("peer_reviewed_article_id")
+            if preprint_id in public_slugs_by_id:
+                relation["preprint_url"] = f"/research/articles/{public_slugs_by_id[preprint_id]}/"
+            if peer_reviewed_id in public_slugs_by_id:
+                relation["peer_reviewed_url"] = f"/research/articles/{public_slugs_by_id[peer_reviewed_id]}/"
+    integrity_alerts = project_public_integrity_alerts(
+        integrity_event_rows,
+        integrity_article_rows,
+        ever_public_article_ids=ever_public_article_ids,
+        currently_public_article_ids=currently_public_article_ids,
+    )
+    integrity_events_by_article: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for alert in integrity_alerts:
+        integrity_events_by_article[alert["article_id"]].append(alert)
+    for item in [*projected, *preprints]:
+        item["integrity_events"] = integrity_events_by_article.get(item["article_id"], [])
+    # Public streams and every facet labelled "latest" are chronological.
+    # Editorial picks remain independently ordered through the featured list.
+    projected.sort(key=lambda item: item.get("published_at") or "", reverse=True)
     recent_cutoff = now - timedelta(days=7)
     recent = [
         item
@@ -1439,6 +1937,7 @@ async def collect_literature_export(
         for key, items in sorted(topic_articles.items(), key=lambda pair: (-len(pair[1]), pair[0]))
     ]
     weekly_briefs = []
+    weekly_reviews = load_weekly_review_registry()
     for week, items in sorted(weekly_articles.items(), reverse=True):
         published_dates = sorted(_parse_public_datetime(item["published_at"]) for item in items)
         weekly_briefs.append({
@@ -1451,6 +1950,9 @@ async def collect_literature_export(
             "top_topics": [name for name, _ in Counter(t["name"] for item in items for t in item["topics"]).most_common(5)],
             "articles": items,
             "url": f"/research/weekly/{week}/",
+            # Registry records remain private generation metadata until the
+            # final weekly-brief projector validates and allowlists them.
+            "_editorial_review": weekly_reviews.get(week),
         })
     latest_updated_values = [
         article.updated_at
@@ -1462,11 +1964,19 @@ async def collect_literature_export(
         for item in projected
         if item.get("source_kind") == "historical_seed" and item.get("updated_at")
     )
+    latest_updated_values.extend(
+        _parse_public_datetime(value)
+        for alert in integrity_alerts
+        if (value := alert.get("effective_at") or alert.get("recorded_at"))
+    )
     latest_updated = max(latest_updated_values, default=None)
+    public_article_ids = {item["article_id"] for item in projected}
     exact_linked_public_articles = len({
         link.article_id
         for link in signal_article_links
-        if link.status == "confirmed" and link.relation_level == "exact_disease_geography"
+        if link.status == "confirmed"
+        and link.relation_level == "exact_disease_geography"
+        and link.article_id in public_article_ids
     })
     pipeline_funnel = build_pipeline_funnel(
         total=int(status_counts.total or 0),
@@ -1474,14 +1984,14 @@ async def collect_literature_export(
         published=int(status_counts.published or 0),
         public_catalogue=len(projected),
         excluded=int(status_counts.excluded or 0),
-        summarized=published_summary_article_count,
+        summarized=quality_gated_db_article_count,
         exact_linked=exact_linked_public_articles,
     )
     completeness = [
         {"metric": "Disease classified", "count": sum(bool(item["diseases"]) for item in projected), "total": len(projected)},
         {"metric": "Geography classified", "count": sum(bool(item["countries"]) for item in projected), "total": len(projected)},
         {"metric": "Topic classified", "count": sum(bool(item["topics"]) for item in projected), "total": len(projected)},
-        {"metric": "Published summary", "count": published_summary_article_count, "total": len(projected)},
+        {"metric": "Bilingual published summary", "count": len(projected), "total": len(projected)},
         {"metric": "Open access", "count": sum(item["open_access_status"] == "open" for item in projected), "total": len(projected)},
     ]
     return {
@@ -1489,6 +1999,9 @@ async def collect_literature_export(
         "last_updated": latest_updated.isoformat() if latest_updated else None,
         "metrics": {
             "total_public_articles": len(projected),
+            "preprints_total": len(preprints),
+            "integrity_alerts_total": len(integrity_alerts),
+            "withheld_metadata_only": withheld_metadata_only,
             "public_article_limit": None,
             "historical_baseline_articles": historical_seed_count,
             "diseases_total": len({d["disease_id"] for item in projected for d in item["diseases"]}),
@@ -1498,8 +2011,14 @@ async def collect_literature_export(
             "countries_last_7_days": len({c["code"] for item in recent for c in item["countries"]}),
             "reviews_and_guidelines_last_7_days": sum(item["study_type"] in review_types for item in recent),
         },
-        "featured": [item for item in projected if item["is_featured"]][:6],
+        "featured": sorted(
+            [item for item in projected if item["is_featured"]],
+            key=lambda item: (float(item.get("discovery_score") or 0), item.get("published_at") or ""),
+            reverse=True,
+        )[:6],
         "articles": projected,
+        "preprints": preprints,
+        "integrity_alerts": integrity_alerts,
         "historical_baseline": sorted(
             [item for item in projected if item.get("source_kind") == "historical_seed"],
             key=lambda item: item.get("published_at") or "",
@@ -1578,7 +2097,11 @@ def write_literature_artifacts(payload: dict[str, Any], output_dir: Path) -> Non
             "articles": payload.get("articles") or [],
         },
     )
-    for article in payload.get("articles") or []:
+    public_article_details = [
+        *(payload.get("articles") or []),
+        *(payload.get("preprints") or []),
+    ]
+    for article in public_article_details:
         write_pretty_json(
             article_dir / f"{article['slug']}.json",
             {**article, "knowledge_graph": build_knowledge_graph([article])},
@@ -1590,6 +2113,7 @@ def write_literature_artifacts(payload: dict[str, Any], output_dir: Path) -> Non
                 "articles": articles,
                 "count": len(articles),
                 "publication_timeline": build_publication_timeline(articles),
+                "evidence_events": build_disease_evidence_events(articles),
                 "knowledge_graph": build_knowledge_graph(articles),
             },
         )
@@ -1615,7 +2139,7 @@ def write_literature_artifacts(payload: dict[str, Any], output_dir: Path) -> Non
         )
     for brief in payload.get("weekly_briefs") or []:
         write_pretty_json(weekly_dir / f"{brief['week']}.json", brief)
-    remove_stale_json_files(article_dir, {f"{item['slug']}.json" for item in payload.get("articles") or []})
+    remove_stale_json_files(article_dir, {f"{item['slug']}.json" for item in public_article_details})
     remove_stale_json_files(disease_dir, {f"{key}.json" for key in (payload.get("disease_articles") or {})})
     remove_stale_json_files(country_dir, {f"{key}.json" for key in (payload.get("country_articles") or {})})
     remove_stale_json_files(topic_dir, {f"{key}.json" for key in (payload.get("topic_articles") or {})})
@@ -1625,6 +2149,7 @@ def write_literature_artifacts(payload: dict[str, Any], output_dir: Path) -> Non
 __all__ = [
     "attach_surveillance_evidence",
     "build_emerging_topics",
+    "build_disease_evidence_events",
     "build_hotspot_visualizations",
     "build_pipeline_funnel",
     "build_publication_pulse",
@@ -1635,6 +2160,9 @@ __all__ = [
     "collect_literature_export",
     "empty_literature_export",
     "append_historical_seed_articles",
+    "apply_public_summary_gate",
     "load_historical_seed_articles",
+    "partition_public_literature_articles",
+    "project_public_integrity_alerts",
     "write_literature_artifacts",
 ]

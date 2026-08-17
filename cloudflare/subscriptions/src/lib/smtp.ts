@@ -16,8 +16,8 @@ export async function sendSmtpEmail(
 
   const implicitTls = !config.useTls || config.port === 465 || config.port === 2465;
   const socketOptions = implicitTls
-    ? { secureTransport: "on" as const }
-    : { secureTransport: "starttls" as const };
+    ? { secureTransport: "on" as const, allowHalfOpen: false }
+    : { secureTransport: "starttls" as const, allowHalfOpen: false };
   let socket = connect({ hostname: config.host, port: config.port }, socketOptions);
   let session = createSmtpSession(socket);
 

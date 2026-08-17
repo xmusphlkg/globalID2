@@ -13,6 +13,9 @@ interface Props {
   articles: any[];
   contextLabel?: string;
   contextLabelZh?: string;
+  feedPath?: string;
+  feedLabel?: string;
+  feedLabelZh?: string;
 }
 
 const {
@@ -26,6 +29,9 @@ const {
   articles,
   contextLabel = 'Published evidence',
   contextLabelZh = '已发布证据',
+  feedPath = '/research/rss.xml',
+  feedLabel = 'RSS feed',
+  feedLabelZh = 'RSS 订阅',
 } = Astro.props;
 const initialVisibleArticles = 30;
 const initialResultCount = articles.length > initialVisibleArticles
@@ -74,7 +80,7 @@ const structuredData = {
         <p class="academic-kicker" data-lang-en={eyebrow} data-lang-zh={eyebrowZh}>{eyebrow}</p>
         <div class="collection-actions">
           <a href="/research/" data-lang-en="Research home" data-lang-zh="研究首页">Research home</a>
-          <a href="/research/rss.xml" data-lang-en="RSS feed" data-lang-zh="RSS 订阅">RSS feed</a>
+          <a href={feedPath} type="application/rss+xml" data-lang-en={feedLabel} data-lang-zh={feedLabelZh}>{feedLabel}</a>
         </div>
       </div>
       <h1 data-lang-en={title} data-lang-zh={titleZh}>{title}</h1>

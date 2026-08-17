@@ -3,7 +3,11 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import httpx
+
 from src.services.situation_events import (
+    _event_source_error_summary,
+    _retryable_event_source_error,
     load_disease_catalogue,
     map_event,
     normalize_event,
@@ -18,6 +22,28 @@ from src.services.situation_events import (
 
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "situation"
+
+
+def test_event_source_retry_classifier_is_allow_listed_and_diagnostic() -> None:
+    request = httpx.Request("GET", "https://official.example/events")
+    unavailable = httpx.HTTPStatusError(
+        "upstream unavailable",
+        request=request,
+        response=httpx.Response(503, request=request),
+    )
+    not_found = httpx.HTTPStatusError(
+        "not found",
+        request=request,
+        response=httpx.Response(404, request=request),
+    )
+
+    assert _retryable_event_source_error(httpx.ReadTimeout("", request=request))
+    assert _retryable_event_source_error(unavailable)
+    assert not _retryable_event_source_error(not_found)
+    assert not _retryable_event_source_error(ValueError("schema changed"))
+    assert _event_source_error_summary(
+        httpx.ReadTimeout("", request=request)
+    ) == "ReadTimeout"
 
 
 def test_who_official_api_contract_keeps_metadata_not_body() -> None:
@@ -39,6 +65,29 @@ def test_official_html_adapters_are_separate_and_stable() -> None:
     assert ecdc[0]["source"] == "ecdc_cdtr"
     assert africa[0]["source"] == "africa_cdc_ebs"
     assert paho[0]["source"] == "paho_alerts"
+
+
+def test_paho_official_documents_archive_extracts_only_alerts_and_updates() -> None:
+    records = parse_paho_alerts(
+        """
+        <div class="grid views-view-grid horizontal">
+          <div class="col col-xs-12 col-md-3">
+            <span class="views-field-created">7 Aug 2026</span>
+            <span class="views-field-title"><a href="/en/documents/epidemiological-alert-measles-americas-region-7-august-2026">Epidemiological Alert Measles in the Americas Region - 7 August 2026</a></span>
+            <span>Epidemiological alerts and updates</span>
+          </div>
+          <div class="col col-xs-12 col-md-3">
+            <span class="views-field-created">5 Aug 2026</span>
+            <span class="views-field-title"><a href="/en/documents/public-health-risk-assessment-measles">Public Health Risk Assessment Related to Measles</a></span>
+          </div>
+        </div>
+        """,
+        "https://www.paho.org/en/documents/subsite/detection-verification-and-risk-assessment-dva",
+    )
+
+    assert len(records) == 1
+    assert records[0]["published_at"] == "2026-08-07"
+    assert records[0]["source_url"].startswith("https://www.paho.org/en/documents/")
 
 
 def test_exact_disease_and_geography_mapping_auto_publishes() -> None:

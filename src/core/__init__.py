@@ -2,7 +2,14 @@
 
 from .config import AppSettings, get_config
 from .logging import setup_logging, get_logger
-from .database import Base, get_engine, get_session_maker, get_db, init_database
+from .database import (
+    Base,
+    dispose_database,
+    get_engine,
+    get_session_maker,
+    get_db,
+    init_database,
+)
 from .cache import CacheService, get_cache
 from .missing_values import normalize_rate_columns, normalize_rate_value
 from .rate_limiter import RateLimiter
@@ -27,6 +34,7 @@ __all__ = [
     "get_session_maker",
     "get_db",
     "get_database",
+    "dispose_database",
     "init_database",
     "init_app",
     "CacheService",

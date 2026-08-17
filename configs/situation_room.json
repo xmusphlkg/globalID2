@@ -2,6 +2,50 @@
   "schema_version": "situation_room.v2",
   "method_version": "situation_room_v2.0",
   "public_enabled": true,
+  "v3": {
+    "method_version": "situation_room_v3.1",
+    "model": "robust_quasi_poisson_v1",
+    "alert_q": 0.05,
+    "strong_q": 0.01,
+    "predictive_variance_inflation": 2.0,
+    "fdr_method": "benjamini_hochberg",
+    "fdr_family": "detector_tier_metric_type_cadence",
+    "maximum_analysis_workers": 4,
+    "detector_tiers": {
+      "rare_expected_max": 20,
+      "enable_empirical_fallback": true,
+      "rare_count_effect": {
+        "minimum_current_cases": 5,
+        "minimum_absolute_increase": 3,
+        "minimum_relative_increase_pct": 100
+      },
+      "cusum_reference": 0.5
+    }
+  },
+  "publication": {
+    "mode": "exception_review",
+    "require_verified_signals": true,
+    "auto_verification": {
+      "enabled": false,
+      "policy_version": "guarded_auto_v1",
+      "calibration_decision": "not_yet_supported",
+      "maximum_q": 0.01,
+      "minimum_completeness": 0.95,
+      "require_current": true,
+      "require_evidence_link": true,
+      "allowed_fit_statuses": ["completed"],
+      "allowed_detector_tiers": ["common_count", "rare_count"]
+    },
+    "automatic_triage": {
+      "enabled": true,
+      "policy_version": "exception_review_v1",
+      "queue_states": ["alert", "strong"],
+      "rare_count_requires_analyst": true,
+      "fallback_requires_analyst": true,
+      "rare_count_requires_official_match_for_queue": true,
+      "fallback_requires_official_match_for_queue": true
+    }
+  },
   "daily_retention_days": 90,
   "event_stale_hours": 72,
   "signal_limits": {
@@ -45,14 +89,33 @@
       "label": "Latest complete month"
     }
   },
+  "data_latency": {
+    "minimum_source_period_coverage": 0.8,
+    "minimum_maturity_days": {
+      "daily": 2,
+      "weekly": 7,
+      "monthly": 21
+    },
+    "delay_warning_days": {
+      "daily": 5,
+      "weekly": 14,
+      "monthly": 45
+    }
+  },
   "quality": {
     "minimum_window_completeness": 0.8,
     "minimum_seasonal_samples": 3,
     "maximum_seasons": 5,
     "maximum_seven_day_coverage_drop_pct": 20,
-    "required_analyzed_source_systems": [
+    "required_analyzed_source_systems": [],
+    "required_context_source_systems": [
       "SRC_US_CDC_RESP_NREVSS"
-    ]
+    ],
+    "source_evidence_urls": {
+      "SRC_US_NNDSS": "https://data.cdc.gov/resource/x9gk-5huc",
+      "SRC_JP_NIID": "https://id-info.jihs.go.jp/en/surveillance/idwr/rapid/index.html",
+      "SRC_NZ_PHS": "https://www.phfscience.nz/digital-library/"
+    }
   },
   "thresholds": {
     "minimum_observations": {
@@ -63,6 +126,8 @@
     "minimum_current_cases": 20,
     "minimum_absolute_increase": 10,
     "minimum_relative_increase_pct": 25,
+    "metric_effects": {},
+    "special_thresholds": [],
     "low_base_previous_cases": 10,
     "minimum_detector_votes": 2,
     "robust_z_elevated": 2.0,

@@ -3,17 +3,36 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import ReportLayout from '../../../layouts/ReportLayout.astro';
 import researchData from '../../../data/research/index.json';
+import { integrityAlertLabel, normalizeIntegrityAlerts } from '../../../lib/research-integrity';
 
 export function getStaticPaths() {
-  return (researchData.articles ?? []).map((article: any) => ({ params: { slug: article.slug } }));
+  const data: any = researchData;
+  return [...(data.articles ?? []), ...(data.preprints ?? [])]
+    .map((article: any) => ({ params: { slug: article.slug } }));
 }
 
 const { slug } = Astro.params;
 const file = resolve(`./src/data/research/articles/${slug}.json`);
 const article: any = existsSync(file)
   ? JSON.parse(readFileSync(file, 'utf-8'))
-  : (researchData.articles ?? []).find((item: any) => item.slug === slug);
+  : [...((researchData as any).articles ?? []), ...((researchData as any).preprints ?? [])]
+    .find((item: any) => item.slug === slug);
 if (!article) return Astro.redirect('/research/');
+const isPreprint = article.peer_review_status === 'preprint';
+const versionRelation = (article.version_relations ?? []).find((relation: any) => (
+  isPreprint
+    ? relation.preprint_doi === article.doi && relation.peer_reviewed_doi
+    : relation.peer_reviewed_doi === article.doi && relation.preprint_doi
+));
+const versionTargetUrl = versionRelation
+  ? (isPreprint
+      ? versionRelation.peer_reviewed_url ?? `https://doi.org/${versionRelation.peer_reviewed_doi}`
+      : versionRelation.preprint_url ?? `https://doi.org/${versionRelation.preprint_doi}`)
+  : null;
+const integrityEvents = normalizeIntegrityAlerts(article.integrity_events);
+const showCorrectionHistory = article.integrity_status === 'corrected'
+  && article.indexable === true
+  && integrityEvents.length > 0;
 const summaryEn = article.summary?.en ?? {};
 const summaryZh = article.summary?.zh ?? {};
 const evidenceSections = [
@@ -47,8 +66,18 @@ const structuredArticle = {
 };
 const graph = article.knowledge_graph ?? { stats: {}, edges: [] };
 const summaryProvenance = summaryEn.provenance ?? summaryZh.provenance ?? null;
+const provenanceDisclosureEn = summaryProvenance?.editorially_approved
+  ? 'This bilingual evidence summary was AI-assisted and subsequently editorially approved.'
+  : 'This bilingual evidence summary was generated with AI and passed an automated quality gate; it has not been editorially approved.';
+const provenanceDisclosureZh = summaryProvenance?.editorially_approved
+  ? '本双语证据摘要由 AI 辅助生成，随后已通过编辑审核。'
+  : '本双语证据摘要由 AI 生成并通过自动质量门控；尚未经过编辑审核。';
 const relatedSurveillance = article.related_surveillance ?? [];
 const relatedSignals = (article.related_signals ?? []).filter((signal: any) => signal.visibility === 'public' || import.meta.env.DEV);
+const relatedArticles = article.related_articles ?? [];
+const isIndexableEvidencePage = article.indexable !== false
+  && Boolean(article.summary?.en)
+  && Boolean(article.summary?.zh);
 ---
 
 <ReportLayout
@@ -61,12 +90,15 @@ const relatedSignals = (article.related_signals ?? []).filter((signal: any) => s
     canonicalPath: `/research/articles/${article.slug}/`,
     alternatePaths: { en: `/research/articles/${article.slug}/` },
     pageType: 'MedicalWebPage',
+    image: `/research/cards/${article.slug}.png`,
+    noindex: !isIndexableEvidencePage,
     datePublished: article.published_at,
     dateModified: article.updated_at,
   }}
   structuredData={structuredArticle}
   breadcrumbs={[
     { label: 'Research Radar', labelZh: '研究雷达', href: '/research/' },
+    ...(isPreprint ? [{ label: 'Preprints', labelZh: '预印本', href: '/research/preprints/' }] : []),
     { label: 'Evidence summary', labelZh: '证据摘要' },
   ]}
 >
@@ -74,6 +106,8 @@ const relatedSignals = (article.related_signals ?? []).filter((signal: any) => s
     <header class="academic-hero evidence-header">
       <div class="evidence-badges">
         <span data-lang-en={article.peer_review_status === 'peer_reviewed' ? 'Peer reviewed' : 'Preprint'} data-lang-zh={article.peer_review_status === 'peer_reviewed' ? '同行评议' : '预印本'}>{article.peer_review_status === 'peer_reviewed' ? 'Peer reviewed' : 'Preprint'}</span>
+        {isPreprint && versionRelation && <span class="version-available" data-lang-en="Peer-reviewed version available" data-lang-zh="已有同行评议版本">Peer-reviewed version available</span>}
+        {showCorrectionHistory && <span class="integrity-corrected" data-lang-en="Correction recorded" data-lang-zh="已记录更正">Correction recorded</span>}
         {isHistoricalBaseline && <span class="history" data-lang-en="Historical baseline" data-lang-zh="历史基线">Historical baseline</span>}
         {article.open_access_status === 'open' && <span class="oa" data-lang-en="Open access" data-lang-zh="开放获取">Open access</span>}
         {(article.diseases ?? []).map((disease: any) => <span data-lang-en={disease.name_en} data-lang-zh={disease.name_zh ?? disease.name_en}>{disease.name_en}</span>)}
@@ -84,10 +118,36 @@ const relatedSignals = (article.related_signals ?? []).filter((signal: any) => s
       <dl class="evidence-register">
         <div><dt>DOI</dt><dd>{article.doi ?? '—'}</dd></div>
         <div><dt>PMID</dt><dd>{article.pmid ?? '—'}</dd></div>
+        <div><dt>PMCID</dt><dd>{article.pmcid ?? '—'}</dd></div>
+        <div><dt>OpenAlex</dt><dd>{article.openalex_id ?? '—'}</dd></div>
         <div><dt data-lang-en="Study type" data-lang-zh="研究类型">Study type</dt><dd>{article.study_type ?? 'Journal article'}</dd></div>
-        <div><dt data-lang-en="Integrity" data-lang-zh="完整性状态">Integrity</dt><dd>{article.integrity_status}</dd></div>
+        <div><dt data-lang-en="Publisher" data-lang-zh="出版商">Publisher</dt><dd data-lang-en={article.publisher ?? 'Publisher unavailable'} data-lang-zh={article.publisher ?? '出版商暂缺'}>{article.publisher ?? 'Publisher unavailable'}</dd></div>
+        <div><dt data-lang-en="Article type" data-lang-zh="文章类型">Article type</dt><dd>{article.article_type ?? 'journal-article'}</dd></div>
+        <div><dt data-lang-en="Integrity" data-lang-zh="完整性状态">Integrity</dt><dd data-lang-en={article.integrity_status === 'corrected' ? 'Corrected' : article.integrity_status} data-lang-zh={article.integrity_status === 'corrected' ? '已更正' : article.integrity_status}>{article.integrity_status === 'corrected' ? 'Corrected' : article.integrity_status}</dd></div>
       </dl>
     </header>
+
+    {showCorrectionHistory && (
+      <section class="integrity-correction-notice" aria-labelledby="correction-notice-title">
+        <div>
+          <p class="evidence-kicker" data-lang-en="Integrity update" data-lang-zh="完整性更新">Integrity update</p>
+          <h2 id="correction-notice-title" data-lang-en="This public record has a correction history" data-lang-zh="此公开记录存在更正历史">This public record has a correction history</h2>
+        </div>
+        <p data-lang-en="Review the dated events and verify the linked source record before using the findings." data-lang-zh="使用研究结论前，请查看带日期的事件并核对所链接的来源记录。">Review the dated events and verify the linked source record before using the findings.</p>
+        <a href="/research/integrity/" data-lang-en="All integrity alerts →" data-lang-zh="查看全部完整性通知 →">All integrity alerts →</a>
+      </section>
+    )}
+
+    {versionRelation && versionTargetUrl && (
+      <section class="version-link-notice" aria-labelledby="version-link-title">
+        <div>
+          <p class="evidence-kicker" data-lang-en="Publication version" data-lang-zh="发表版本">Publication version</p>
+          <h2 id="version-link-title" data-lang-en={isPreprint ? 'A peer-reviewed version is available' : 'This article has a linked preprint'} data-lang-zh={isPreprint ? '已有同行评议版本' : '本文关联一个预印本版本'}>{isPreprint ? 'A peer-reviewed version is available' : 'This article has a linked preprint'}</h2>
+        </div>
+        <p data-lang-en="The relationship comes from Crossref version metadata. Compare both records because findings and wording may have changed between versions." data-lang-zh="该关系来自 Crossref 版本元数据。不同版本之间的结果与表述可能变化，请对照核验。">The relationship comes from Crossref version metadata. Compare both records because findings and wording may have changed between versions.</p>
+        <a href={versionTargetUrl} target={versionTargetUrl.startsWith('http') ? '_blank' : undefined} rel={versionTargetUrl.startsWith('http') ? 'noopener noreferrer' : undefined} data-lang-en={isPreprint ? 'Open peer-reviewed version →' : 'Open linked preprint →'} data-lang-zh={isPreprint ? '查看同行评议版本 →' : '查看关联预印本 →'}>{isPreprint ? 'Open peer-reviewed version →' : 'Open linked preprint →'}</a>
+      </section>
+    )}
 
     <div class="evidence-layout">
       <main>
@@ -95,6 +155,30 @@ const relatedSignals = (article.related_signals ?? []).filter((signal: any) => s
           <p class="evidence-kicker" data-lang-en="Why this research matters now" data-lang-zh="为何这项研究现在值得关注">Why this research matters now</p>
           <p data-lang-en={article.why_it_matters_en} data-lang-zh={article.why_it_matters_zh}>{article.why_it_matters_en}</p>
         </section>
+        {showCorrectionHistory && (
+          <section class="evidence-surveillance article-integrity-history" aria-labelledby="article-integrity-title">
+            <div class="section-title"><span>!</span><h2 id="article-integrity-title" data-lang-en="Correction event history" data-lang-zh="更正事件历史">Correction event history</h2></div>
+            <ol>
+              {integrityEvents.map(event => {
+                const labelEn = integrityAlertLabel(event.event_type);
+                const labelZh = integrityAlertLabel(event.event_type, 'zh');
+                const dateValue = event.effective_at ?? event.recorded_at;
+                const parsedDate = dateValue ? new Date(dateValue) : null;
+                const dateEn = parsedDate && !Number.isNaN(parsedDate.getTime())
+                  ? parsedDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' })
+                  : 'Date unavailable';
+                const dateZh = parsedDate && !Number.isNaN(parsedDate.getTime())
+                  ? parsedDate.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' })
+                  : '日期暂缺';
+                return <li>
+                  <div><strong data-lang-en={labelEn} data-lang-zh={labelZh}>{labelEn}</strong><time datetime={dateValue} data-lang-en={dateEn} data-lang-zh={dateZh}>{dateEn}</time></div>
+                  <span>{event.source}</span>
+                  {event.source_url && <a href={event.source_url} target="_blank" rel="noopener noreferrer" data-lang-en="Verify source record ↗" data-lang-zh="核对来源记录 ↗">Verify source record ↗</a>}
+                </li>;
+              })}
+            </ol>
+          </section>
+        )}
         <section class="evidence-sections">
           <div class="section-title"><span>01</span><h2 data-lang-en="Structured evidence summary" data-lang-zh="结构化证据摘要">Structured evidence summary</h2></div>
           {evidenceSections.map(([labelEn, labelZh, key]) => {
@@ -140,14 +224,30 @@ const relatedSignals = (article.related_signals ?? []).filter((signal: any) => s
           <p data-lang-en={`This article has ${graph.stats?.edges ?? 0} auditable classifier relationships to diseases, places, topics, and study design.`} data-lang-zh={`本文与疾病、地区、主题及研究设计之间有 ${graph.stats?.edges ?? 0} 条可审计分类关系。`}>This article has {graph.stats?.edges ?? 0} auditable classifier relationships to diseases, places, topics, and study design.</p>
           <div class="relationship-list">{(graph.edges ?? []).map((edge: any) => <span>{String(edge.relation).replaceAll('_', ' ').toLowerCase()}</span>)}</div>
         </section>
+        {relatedArticles.length > 0 && (
+          <section class="evidence-surveillance related-research" aria-labelledby="related-research-title">
+            <div class="section-title"><span>04</span><h2 id="related-research-title" data-lang-en="Related research" data-lang-zh="相关文章">Related research</h2></div>
+            <p class="related-research-method" data-lang-en="Ranked deterministically by shared disease, geography, topic, study design, and publication proximity. This is a discovery aid, not a quality judgment." data-lang-zh="根据相同疾病、地区、主题、研究设计和发表时间邻近性进行确定性排序。该功能仅用于文献发现，不代表质量判断。">Ranked deterministically by shared disease, geography, topic, study design, and publication proximity. This is a discovery aid, not a quality judgment.</p>
+            <ol>
+              {relatedArticles.map((related: any) => (
+                <li>
+                  <a href={`/research/articles/${related.slug}/`}><strong>{related.title}</strong><span>{related.journal ?? 'Journal unavailable'} · {related.study_type ?? 'Journal article'}</span></a>
+                  <p data-lang-en={(related.reasons_en ?? []).join(' · ')} data-lang-zh={(related.reasons_zh ?? related.reasons_en ?? []).join(' · ')}>{(related.reasons_en ?? []).join(' · ')}</p>
+                </li>
+              ))}
+            </ol>
+          </section>
+        )}
       </main>
 
       <aside>
         <div class="evidence-aside-block"><p class="evidence-kicker" data-lang-en="Topics" data-lang-zh="主题">Topics</p><div class="topic-tags">{(article.topics ?? []).map((topic: any) => <a href={`/research/topics/${String(topic.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')}/`}>{topic.name}</a>)}</div></div>
+        {(article.pathogens ?? []).length > 0 && <div class="evidence-aside-block"><p class="evidence-kicker" data-lang-en="Pathogens" data-lang-zh="病原体">Pathogens</p><ul>{article.pathogens.map((pathogen: any) => <li>{pathogen.name}</li>)}</ul></div>}
+        {(article.populations ?? []).length > 0 && <div class="evidence-aside-block"><p class="evidence-kicker" data-lang-en="Populations" data-lang-zh="研究人群">Populations</p><ul>{article.populations.map((population: any) => <li>{population.name}</li>)}</ul></div>}
         {(article.countries ?? []).length > 0 && <div class="evidence-aside-block"><p class="evidence-kicker" data-lang-en="Geographic scope" data-lang-zh="地理范围">Geographic scope</p><ul>{article.countries.map((country: any) => <li><a href={`/research/countries/${country.code.toLowerCase()}/`}>{country.name_en} <span>→</span></a></li>)}</ul></div>}
         <div class="evidence-aside-block"><p class="evidence-kicker" data-lang-en="Original sources" data-lang-zh="原始来源">Original sources</p><div class="source-links">{article.doi && <a href={`https://doi.org/${article.doi}`} target="_blank" rel="noopener noreferrer">DOI record ↗</a>}{article.source_urls?.pubmed && <a href={article.source_urls.pubmed} target="_blank" rel="noopener noreferrer">PubMed ↗</a>}{article.open_access_url && <a href={article.open_access_url} target="_blank" rel="noopener noreferrer">Open access ↗</a>}</div></div>
         <div class="evidence-aside-block evidence-score"><p class="evidence-kicker">GIDS Discovery Score</p><strong>{Math.round((article.discovery_score ?? 0) * 100)}</strong><p data-lang-en="A transparent discovery ranking, not a scientific quality or credibility score." data-lang-zh="这是透明的发现排序，并非科学质量或可信度评分。">A transparent discovery ranking, not a scientific quality or credibility score.</p></div>
-        {summaryProvenance && <div class="evidence-aside-block"><p class="evidence-kicker" data-lang-en="Summary provenance" data-lang-zh="摘要来源">Summary provenance</p><ul><li data-lang-en={summaryProvenance.automatically_approved ? 'Automatically quality gated' : 'Editorially approved'} data-lang-zh={summaryProvenance.automatically_approved ? '已通过自动质量门控' : '已通过编辑审核'}>{summaryProvenance.automatically_approved ? 'Automatically quality gated' : 'Editorially approved'}</li>{summaryProvenance.model && <li>{summaryProvenance.model}</li>}{summaryProvenance.quality_score != null && <li>{Math.round(summaryProvenance.quality_score * 100)} / 100</li>}{summaryProvenance.automation_policy_version && <li>{summaryProvenance.automation_policy_version}</li>}</ul></div>}
+        {summaryProvenance && <div class="evidence-aside-block evidence-provenance"><p class="evidence-kicker" data-lang-en="AI-assisted summary provenance" data-lang-zh="AI 辅助摘要来源">AI-assisted summary provenance</p><p data-lang-en={provenanceDisclosureEn} data-lang-zh={provenanceDisclosureZh}>{provenanceDisclosureEn}</p><dl><div><dt data-lang-en="Generator" data-lang-zh="生成器">Generator</dt><dd>{summaryProvenance.generated_by ?? 'AI evidence pipeline'}</dd></div>{(summaryProvenance.provider || summaryProvenance.model) && <div><dt data-lang-en="Provider / model" data-lang-zh="提供商 / 模型">Provider / model</dt><dd>{[summaryProvenance.provider, summaryProvenance.model].filter(Boolean).join(' · ')}</dd></div>}{summaryProvenance.quality_score != null && <div><dt data-lang-en="Quality score" data-lang-zh="质量分">Quality score</dt><dd>{Math.round(summaryProvenance.quality_score * 100)} / 100</dd></div>}{summaryProvenance.publication_gate && <div><dt data-lang-en="Publication gate" data-lang-zh="发布门控">Publication gate</dt><dd>{summaryProvenance.publication_gate}</dd></div>}{summaryProvenance.automation_policy_version && <div><dt data-lang-en="Policy" data-lang-zh="策略">Policy</dt><dd>{summaryProvenance.automation_policy_version}</dd></div>}</dl></div>}
       </aside>
     </div>
   </article>
@@ -160,6 +260,8 @@ const relatedSignals = (article.related_signals ?? []).filter((signal: any) => s
   .evidence-badges span { border: 1px solid rgb(var(--border)); padding: .2rem .5rem; color: rgb(var(--text-muted)); font-size: .67rem; font-weight: 650; }
   .evidence-badges .history { border-color: rgb(var(--color-accent) / .58); color: rgb(var(--color-accent)); background: rgb(var(--color-accent) / .08); }
   .evidence-badges .oa { border-color: rgb(var(--color-teal) / .55); color: rgb(var(--color-teal)); }
+  .evidence-badges .integrity-corrected { border-color: rgb(var(--color-teal) / .58); color: rgb(var(--color-teal)); background: rgb(var(--color-teal) / .08); }
+  .evidence-badges .version-available { border-color: rgb(var(--color-brand) / .58); color: rgb(var(--color-brand)); background: rgb(var(--color-brand) / .08); }
   .evidence-header h1 { max-width: 55rem; margin-top: 1.2rem; font: 600 clamp(2rem, 5vw, 3.9rem)/1.04 'Source Serif 4', serif; letter-spacing: -.035em; color: rgb(var(--text-strong)); }
   .evidence-citation { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1.15rem; color: rgb(var(--text-muted)); font-size: .85rem; }
   .evidence-authors { max-width: 52rem; margin-top: .8rem; color: rgb(var(--text-faint)); font-size: .76rem; line-height: 1.6; }
@@ -171,6 +273,21 @@ const relatedSignals = (article.related_signals ?? []).filter((signal: any) => s
   .evidence-context, .evidence-sections, .evidence-surveillance, .evidence-aside-block { border: 1px solid rgb(var(--border) / .72); background: rgb(var(--surface)); }
   .evidence-context { padding: 1.5rem; border-left: 3px solid rgb(var(--color-accent)); }
   .evidence-context > p:last-child { margin-top: .65rem; color: rgb(var(--text)); font-size: .94rem; line-height: 1.7; }
+  .integrity-correction-notice { display: grid; grid-template-columns: minmax(15rem, .65fr) minmax(0, 1fr) auto; gap: 1.25rem; align-items: center; margin-top: 1.5rem; padding: 1.1rem 1.25rem; border: 1px solid rgb(var(--color-teal) / .38); border-left: 3px solid rgb(var(--color-teal)); background: rgb(var(--color-teal) / .045); }
+  .integrity-correction-notice h2 { margin-top: .3rem; color: rgb(var(--text-strong)); font: 600 1.15rem/1.2 'Source Serif 4', serif; }
+  .integrity-correction-notice > p { color: rgb(var(--text-muted)); font-size: .76rem; line-height: 1.6; }
+  .integrity-correction-notice > a { color: rgb(var(--color-teal)); font-size: .7rem; font-weight: 700; white-space: nowrap; }
+  .version-link-notice { display: grid; grid-template-columns: minmax(15rem, .65fr) minmax(0, 1fr) auto; gap: 1.25rem; align-items: center; margin-top: 1.5rem; padding: 1.1rem 1.25rem; border: 1px solid rgb(var(--color-brand) / .38); border-left: 3px solid rgb(var(--color-brand)); background: rgb(var(--color-brand) / .045); }
+  .version-link-notice h2 { margin-top: .3rem; color: rgb(var(--text-strong)); font: 600 1.15rem/1.2 'Source Serif 4', serif; }
+  .version-link-notice > p { color: rgb(var(--text-muted)); font-size: .76rem; line-height: 1.6; }
+  .version-link-notice > a { color: rgb(var(--color-brand)); font-size: .7rem; font-weight: 700; white-space: nowrap; }
+  .article-integrity-history ol { list-style: none; margin: 1rem 0 0; padding: 0; }
+  .article-integrity-history li { display: grid; grid-template-columns: minmax(13rem, 1fr) minmax(8rem, .6fr) auto; gap: 1rem; align-items: center; padding: .85rem 0; border-top: 1px solid rgb(var(--border) / .55); }
+  .article-integrity-history li:first-child { border-top: 0; }
+  .article-integrity-history li > div { display: flex; flex-wrap: wrap; gap: .6rem; align-items: baseline; }
+  .article-integrity-history strong { color: rgb(var(--color-teal)); font-size: .72rem; }
+  .article-integrity-history time, .article-integrity-history li > span { color: rgb(var(--text-faint)); font-size: .67rem; }
+  .article-integrity-history a { color: rgb(var(--color-brand)); font-size: .68rem; font-weight: 700; }
   .evidence-sections, .evidence-surveillance { margin-top: 1.5rem; padding: clamp(1.35rem, 3vw, 2.2rem); }
   .section-title { display: flex; align-items: baseline; gap: .9rem; padding-bottom: 1rem; border-bottom: 1px solid rgb(var(--border) / .7); }
   .section-title span { color: rgb(var(--color-accent)); font: 500 .65rem/1 'JetBrains Mono', monospace; }
@@ -199,6 +316,12 @@ const relatedSignals = (article.related_signals ?? []).filter((signal: any) => s
   .evidence-graph > p { margin-top: 1rem; color: rgb(var(--text-muted)); font-size: .82rem; line-height: 1.65; }
   .relationship-list { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .9rem; }
   .relationship-list span { border: 1px solid rgb(var(--border) / .72); background: rgb(var(--surface-raised) / .48); padding: .25rem .5rem; color: rgb(var(--text-muted)); font-size: .66rem; }
+  .related-research-method { margin-top: 1rem; color: rgb(var(--text-faint)); font-size: .7rem; line-height: 1.55; }
+  .related-research ol { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; margin-top: 1rem; }
+  .related-research li { border: 1px solid rgb(var(--border) / .68); background: rgb(var(--surface-raised) / .28); padding: .9rem; }
+  .related-research strong { display: block; color: rgb(var(--text-strong)); font: 600 .95rem/1.3 'Source Serif 4', serif; }
+  .related-research a:hover strong { color: rgb(var(--color-brand)); }
+  .related-research a span, .related-research li > p { display: block; margin-top: .4rem; color: rgb(var(--text-faint)); font-size: .64rem; line-height: 1.45; }
   .evidence-layout aside { display: flex; flex-direction: column; gap: 1rem; }
   .evidence-aside-block { padding: 1.2rem; }
   .topic-tags { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .7rem; }
@@ -208,6 +331,10 @@ const relatedSignals = (article.related_signals ?? []).filter((signal: any) => s
   .evidence-aside-block a:hover { color: rgb(var(--color-brand)); }
   .evidence-score strong { display: block; margin-top: .65rem; font: 600 3rem/1 'Source Serif 4', serif; color: rgb(var(--text-strong)); }
   .evidence-score > p:last-child { margin-top: .65rem; color: rgb(var(--text-faint)); font-size: .68rem; line-height: 1.55; }
-  @media (max-width: 820px) { .evidence-layout { grid-template-columns: 1fr; } .evidence-register { grid-template-columns: repeat(2, 1fr); } .evidence-layout aside { display: grid; grid-template-columns: repeat(2, 1fr); } }
-  @media (max-width: 560px) { .evidence-page { width: min(100% - 1rem, 1120px); } .evidence-header h1 { font-size: 2rem; } .evidence-section { grid-template-columns: 1fr; gap: .45rem; } .surveillance-links, .evidence-layout aside { grid-template-columns: 1fr; } .related-signal-list a { grid-template-columns: 1fr auto; } .related-signal-list em { grid-column: 1 / -1; justify-self: start; } }
+  .evidence-provenance > p { margin-top: .7rem; color: rgb(var(--text-muted)); font-size: .72rem; line-height: 1.55; }
+  .evidence-provenance dl { display: grid; gap: .58rem; margin-top: .85rem; }
+  .evidence-provenance dt { color: rgb(var(--text-faint)); font-size: .58rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
+  .evidence-provenance dd { margin-top: .15rem; overflow-wrap: anywhere; color: rgb(var(--text)); font-size: .68rem; line-height: 1.4; }
+  @media (max-width: 820px) { .evidence-layout { grid-template-columns: 1fr; } .evidence-register { grid-template-columns: repeat(2, 1fr); } .evidence-layout aside { display: grid; grid-template-columns: repeat(2, 1fr); } .integrity-correction-notice, .version-link-notice, .article-integrity-history li { grid-template-columns: 1fr; gap: .6rem; } }
+  @media (max-width: 560px) { .evidence-page { width: min(100% - 1rem, 1120px); } .evidence-header h1 { font-size: 2rem; } .evidence-section { grid-template-columns: 1fr; gap: .45rem; } .surveillance-links, .evidence-layout aside, .related-research ol { grid-template-columns: 1fr; } .related-signal-list a { grid-template-columns: 1fr auto; } .related-signal-list em { grid-column: 1 / -1; justify-self: start; } }
 </style>

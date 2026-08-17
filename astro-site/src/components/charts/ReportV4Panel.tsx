@@ -107,7 +107,7 @@ function changePct(value: unknown): string {
   return `${parsed > 0 ? '+' : ''}${parsed.toFixed(digits)}%`;
 }
 
-function riskLabel(value: unknown, lang: Lang): string {
+function attentionLabel(value: unknown, lang: Lang): string {
   const key = String(value || 'low').toLowerCase();
   if (lang === 'en') return key;
   return ({ critical: '极高', high: '高', moderate: '中等', low: '低' } as Record<string, string>)[key] || key;
@@ -160,12 +160,12 @@ function categoryLabel(value: unknown, lang: Lang): string {
   } as Record<string, string>)[key] || '其他';
 }
 
-function riskRank(value: unknown): number {
+function attentionRank(value: unknown): number {
   const key = String(value || 'low').toLowerCase();
   return ({ critical: 4, high: 3, moderate: 2, low: 1 } as Record<string, number>)[key] || 1;
 }
 
-function riskClass(value: unknown): string {
+function attentionClass(value: unknown): string {
   const key = String(value || 'low').toLowerCase();
   if (key === 'critical') return 'border-red-500/50 bg-red-500/10 text-red-700 dark:text-red-300';
   if (key === 'high') return 'border-orange-500/50 bg-orange-500/10 text-orange-700 dark:text-orange-300';
@@ -198,7 +198,7 @@ function directionFromChange(value: unknown): string {
   return 'stable';
 }
 
-function riskScore(value: unknown): string {
+function attentionScore(value: unknown): string {
   const parsed = typeof value === 'number' ? value : Number(value);
   if (!Number.isFinite(parsed)) return '—';
   return parsed.toFixed(0);
@@ -381,7 +381,7 @@ export default function ReportV4Panel({ report, countryDataUrl, sparklineSeries 
   const metrics = asRecord(document.metrics);
   const deathReporting = asRecord(document.death_reporting);
   const dataQuality = asRecord(document.data_quality);
-  const riskRanking = asArray(document.risk_ranking).slice(0, 8);
+  const attentionRanking = asArray(document.attention_ranking || document.risk_ranking).slice(0, 8);
   const diseaseDirectory = asArray(document.disease_directory);
   const [showAudit, setShowAudit] = useState(false);
   useEffect(() => {
@@ -395,14 +395,14 @@ export default function ReportV4Panel({ report, countryDataUrl, sparklineSeries 
   const countryCode = String(report.country_code || metrics.country_code || '').toLowerCase();
   const directoryRows = diseaseDirectory.length > 0
     ? diseaseDirectory
-    : riskRanking.map((row) => ({
+    : attentionRanking.map((row) => ({
         ...row,
         slug: String(row.name_en || row.disease_id || 'disease').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
         mom_change_pct: row.change_pct,
         trend: { zh: '待观察', en: 'Watch' },
       }));
   const [directoryQuery, setDirectoryQuery] = useState('');
-  const [directoryRiskFilter, setDirectoryRiskFilter] = useState('all');
+  const [directoryAttentionFilter, setDirectoryAttentionFilter] = useState('all');
   const [directoryTrendFilter, setDirectoryTrendFilter] = useState('all');
   const [countrySeries, setCountrySeries] = useState<Record<string, SparklineSeriesEntry> | undefined>(sparklineSeries);
   useEffect(() => {
@@ -426,17 +426,18 @@ export default function ReportV4Panel({ report, countryDataUrl, sparklineSeries 
     };
   }, [countryDataUrl, sparklineSeries]);
   const directoryStats = useMemo(() => {
-    const elevatedRisk = directoryRows.filter((row) => riskRank(row.risk_level) >= 3).length;
+    const elevatedAttention = directoryRows.filter((row) => attentionRank(row.attention_level || row.risk_level) >= 3).length;
     const rising = directoryRows.filter((row) => trendDirection(row) === 'up').length;
-    return { elevatedRisk, rising };
+    return { elevatedAttention, rising };
   }, [directoryRows]);
   const visibleDirectoryRows = useMemo(() => {
     const query = directoryQuery.trim().toLowerCase();
     return directoryRows
       .filter((row) => {
-        if (directoryRiskFilter === 'elevated' && riskRank(row.risk_level) < 3) return false;
-        if (directoryRiskFilter === 'moderate' && String(row.risk_level || '').toLowerCase() !== 'moderate') return false;
-        if (directoryRiskFilter === 'low' && String(row.risk_level || '').toLowerCase() !== 'low') return false;
+        const level = row.attention_level || row.risk_level;
+        if (directoryAttentionFilter === 'elevated' && attentionRank(level) < 3) return false;
+        if (directoryAttentionFilter === 'moderate' && String(level || '').toLowerCase() !== 'moderate') return false;
+        if (directoryAttentionFilter === 'low' && String(level || '').toLowerCase() !== 'low') return false;
 
         const direction = trendDirection(row);
         if (directoryTrendFilter === 'rising' && direction !== 'up') return false;
@@ -451,17 +452,17 @@ export default function ReportV4Panel({ report, countryDataUrl, sparklineSeries 
           row.name_en,
           row.category,
           categoryLabel(row.category, lang),
-          riskLabel(row.risk_level, lang),
+          attentionLabel(row.attention_level || row.risk_level, lang),
           trendLabel(row, lang),
         ].join(' ').toLowerCase();
         return searchable.includes(query);
       })
       .sort((left, right) => (
-        Number(right.risk_score || 0) - Number(left.risk_score || 0)
-        || riskRank(right.risk_level) - riskRank(left.risk_level)
+        Number(right.attention_score ?? right.risk_score ?? 0) - Number(left.attention_score ?? left.risk_score ?? 0)
+        || attentionRank(right.attention_level || right.risk_level) - attentionRank(left.attention_level || left.risk_level)
         || Number(right.latest_cases || 0) - Number(left.latest_cases || 0)
       ));
-  }, [directoryRows, directoryQuery, directoryRiskFilter, directoryTrendFilter, lang]);
+  }, [directoryRows, directoryQuery, directoryAttentionFilter, directoryTrendFilter, lang]);
 
   return (
     <div className="space-y-8">
@@ -510,7 +511,7 @@ export default function ReportV4Panel({ report, countryDataUrl, sparklineSeries 
               </div>
               <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
                 <DirectoryStat label={lang === 'zh' ? '当前' : 'Shown'} value={`${visibleDirectoryRows.length}/${directoryRows.length}`} />
-                <DirectoryStat label={lang === 'zh' ? '高风险' : 'High risk+'} value={fmtNumber(directoryStats.elevatedRisk)} tone="risk" />
+                <DirectoryStat label={lang === 'zh' ? '高关注' : 'High attention+'} value={fmtNumber(directoryStats.elevatedAttention)} tone="risk" />
                 <DirectoryStat label={lang === 'zh' ? '上升' : 'Rising'} value={fmtNumber(directoryStats.rising)} tone="up" />
               </div>
             </div>
@@ -528,16 +529,16 @@ export default function ReportV4Panel({ report, countryDataUrl, sparklineSeries 
               />
             </label>
             <label className="block">
-              <span className="sr-only">{lang === 'zh' ? '风险筛选' : 'Risk filter'}</span>
+              <span className="sr-only">{lang === 'zh' ? '监测关注优先级筛选' : 'Attention-priority filter'}</span>
               <select
-                value={directoryRiskFilter}
-                onChange={(event) => setDirectoryRiskFilter(event.target.value)}
+                value={directoryAttentionFilter}
+                onChange={(event) => setDirectoryAttentionFilter(event.target.value)}
                 className="site-control-input w-full rounded-none border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
               >
-                <option value="all">{lang === 'zh' ? '全部风险' : 'All risks'}</option>
-                <option value="elevated">{lang === 'zh' ? '高风险及以上' : 'High risk+'}</option>
-                <option value="moderate">{lang === 'zh' ? '中等风险' : 'Moderate'}</option>
-                <option value="low">{lang === 'zh' ? '低风险' : 'Low'}</option>
+                <option value="all">{lang === 'zh' ? '全部关注等级' : 'All attention bands'}</option>
+                <option value="elevated">{lang === 'zh' ? '高关注及以上' : 'High attention+'}</option>
+                <option value="moderate">{lang === 'zh' ? '中等关注' : 'Moderate attention'}</option>
+                <option value="low">{lang === 'zh' ? '低关注' : 'Low attention'}</option>
               </select>
             </label>
             <label className="block">
@@ -556,6 +557,12 @@ export default function ReportV4Panel({ report, countryDataUrl, sparklineSeries 
             </label>
           </div>
 
+          <p className="mt-3 text-xs leading-5 text-slate-500 dark:text-slate-400">
+            {lang === 'zh'
+              ? '监测关注分（0–100）只用于安排信号复核顺序，由报告病例负担、变化、可用死亡线索、异常标记、历史位置和数据质量组成；未经概率校准，不代表感染、重症、死亡或暴发风险。'
+              : 'The 0–100 surveillance attention score only orders signal review. It combines reported burden, change, mortality signals when available, anomaly markers, historical position, and data quality; it is uncalibrated and is not infection, severity, mortality, or outbreak risk.'}
+          </p>
+
           <div className="mt-4 h-[560px] overflow-auto border border-slate-200 dark:border-slate-800">
             <table className="w-[990px] min-w-[990px] table-fixed text-sm">
               <colgroup>
@@ -571,7 +578,7 @@ export default function ReportV4Panel({ report, countryDataUrl, sparklineSeries 
                 <tr>
                   <th className="sticky top-0 z-10 bg-slate-50 px-3 py-3 text-left dark:bg-slate-900">#</th>
                   <th className="sticky top-0 z-10 bg-slate-50 px-3 py-3 text-left dark:bg-slate-900">{lang === 'zh' ? '疾病目录' : 'Disease'}</th>
-                  <th className="sticky top-0 z-10 bg-slate-50 px-3 py-3 text-left dark:bg-slate-900">{lang === 'zh' ? '风险分级' : 'Risk grade'}</th>
+                  <th className="sticky top-0 z-10 bg-slate-50 px-3 py-3 text-left dark:bg-slate-900">{lang === 'zh' ? '监测关注级' : 'Attention band'}</th>
                   <th className="sticky top-0 z-10 bg-slate-50 px-3 py-3 text-right dark:bg-slate-900">{lang === 'zh' ? '病例（环比）' : 'Cases (MoM)'}</th>
                   <th className="sticky top-0 z-10 bg-slate-50 px-3 py-3 text-right dark:bg-slate-900">{lang === 'zh' ? '报告期病例' : 'Period cases'}</th>
                   <th className="sticky top-0 z-10 bg-slate-50 px-3 py-3 text-right dark:bg-slate-900">{lang === 'zh' ? '年累计病例' : 'YTD cumulative'}</th>
@@ -615,9 +622,9 @@ export default function ReportV4Panel({ report, countryDataUrl, sparklineSeries 
                         </div>
                       </td>
                       <td className="px-3 py-3">
-                        <span className={`inline-flex items-center border px-2 py-1 text-xs font-semibold ${riskClass(row.risk_level)}`}>
-                          {riskLabel(row.risk_level, lang)}
-                          <span className="ml-1 font-normal opacity-75">{riskScore(row.risk_score)}</span>
+                        <span className={`inline-flex items-center border px-2 py-1 text-xs font-semibold ${attentionClass(row.attention_level || row.risk_level)}`}>
+                          {attentionLabel(row.attention_level || row.risk_level, lang)}
+                          <span className="ml-1 font-normal opacity-75">{attentionScore(row.attention_score ?? row.risk_score)}</span>
                         </span>
                       </td>
                       <CasesMoMCell

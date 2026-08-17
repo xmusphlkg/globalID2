@@ -14,7 +14,7 @@ from typing import Any, List, Optional
 from sqlalchemy import Column, DateTime, Float, ForeignKey, Index, Integer, JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .base import BaseModel
+from .base import BaseModel, utc_now
 
 
 class AgentWorkflowRun(BaseModel):
@@ -265,7 +265,9 @@ class AgentWorkflowConversation(BaseModel):
     )
     agent_role: Mapped[str] = mapped_column(String(50), nullable=False, comment="Agent role")
     phase: Mapped[Optional[str]] = mapped_column(String(50), comment="Workflow phase")
-    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, nullable=False)
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, nullable=False
+    )
     prompt: Mapped[Optional[str]] = mapped_column(Text, comment="Prompt sent to model")
     system_prompt: Mapped[Optional[str]] = mapped_column(Text, comment="System prompt")
     response: Mapped[Optional[str]] = mapped_column(Text, comment="Model response")

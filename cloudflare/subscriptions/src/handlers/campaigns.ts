@@ -3,12 +3,14 @@ import { insertEmailDelivery, updateEmailDelivery } from "../lib/db.ts";
 import { json, publicBaseUrl, requireAdmin, type JsonValue } from "../lib/http.ts";
 import { boundedText, isRecord, normalizeCode, normalizeLocale, valueAsString } from "../lib/input.ts";
 import { cleanHeaderValue } from "../lib/markdown.ts";
-import { maskEmail } from "../lib/subscriptions.ts";
+import { FREQUENCIES, maskEmail, normalizeFilters } from "../lib/subscriptions.ts";
 import {
+  campaignContentFingerprint,
   campaignProgressFromRows,
   campaignStatusFromProgress,
   localizedNotificationContent,
   normalizeCampaignListCodes,
+  normalizeCampaignIdempotencyKey,
   normalizeNotificationContents,
   normalizeTargetLocales,
   notificationCampaignDeliveryProjection,
@@ -79,32 +81,89 @@ export function createCampaignHandlers(deps: Dependencies) {
     if (!defaultContent?.subject || !defaultContent.markdown) {
       return json({ error: "notification_content_required" }, request, env, 400);
     }
-    const listCodes = normalizeCampaignListCodes(payload);
+    const requestedListCodes = normalizeCampaignListCodes(payload);
+    const listCodes = requestedListCodes.length ? requestedListCodes : ["reports"];
+    if (listCodes.includes("alerts")) {
+      return json({ error: "verified_situation_alert_endpoint_required" }, request, env, 422);
+    }
     const listId = await campaignListId(env, listCodes[0] || "reports");
     if (!listId) return json({ error: "notification_list_not_found" }, request, env, 400);
     const rawMax = Number(payload.max_recipients ?? 10000);
     const maxRecipients = Math.min(Math.max(Number.isFinite(rawMax) ? Math.trunc(rawMax) : 10000, 1), 50000);
-    const recipients = await audience(env, listCodes, maxRecipients);
+    const audienceFilters = normalizeFilters(payload);
+    const sourceLocale = normalizeLocale(valueAsString(payload.source_locale), fallbackLocale);
+    const targetLocales = normalizeTargetLocales(payload, contents);
+    const idempotencyKeySupplied = payload.idempotency_key !== undefined && payload.idempotency_key !== null;
+    const rawIdempotencyKey = valueAsString(payload.idempotency_key).trim();
+    const idempotencyKey = normalizeCampaignIdempotencyKey(rawIdempotencyKey);
+    if (idempotencyKeySupplied && !idempotencyKey) {
+      return json({ error: "invalid_notification_idempotency_key" }, request, env, 400);
+    }
+    const frequencySupplied = payload.frequency !== undefined && payload.frequency !== null;
+    const rawFrequency = valueAsString(payload.frequency).trim().toLowerCase();
+    if (frequencySupplied && !FREQUENCIES.has(rawFrequency)) {
+      return json({ error: "invalid_notification_frequency" }, request, env, 400);
+    }
+    const sourceRef = boundedText(valueAsString(payload.source_ref), "", 2048);
+    const contentFingerprint = await campaignContentFingerprint({
+      audience_filters: [...audienceFilters].sort((a, b) => `${a.type}:${a.value}`.localeCompare(`${b.type}:${b.value}`)),
+      contents,
+      default_locale: fallbackLocale,
+      frequency: rawFrequency,
+      list_codes: [...listCodes].sort(),
+      max_recipients: maxRecipients,
+      source_locale: sourceLocale,
+      source_ref: sourceRef,
+      target_locales: [...targetLocales].sort(),
+    });
+    const contentRef = idempotencyKey ? `idempotency:${idempotencyKey}` : "metadata_json.contents";
+    if (idempotencyKey) {
+      const existing = await loadRowByContentRef(env, contentRef);
+      if (existing) {
+        const prior = parseNotificationMetadata(existing.metadata_json || "");
+        if (prior.content_fingerprint !== contentFingerprint) {
+          return json({ error: "notification_idempotency_conflict" }, request, env, 409);
+        }
+        return json({ ok: true, duplicate: true, campaign: await summary(env, existing) }, request, env);
+      }
+    }
+    const recipients = await audience(env, listCodes, maxRecipients, audienceFilters, rawFrequency);
     const now = new Date().toISOString();
     const campaignId = crypto.randomUUID();
-    const sourceLocale = normalizeLocale(valueAsString(payload.source_locale), fallbackLocale);
     const metadata: NotificationMetadata = {
       source_locale: sourceLocale,
       default_locale: fallbackLocale,
-      target_locales: normalizeTargetLocales(payload, contents),
+      target_locales: targetLocales,
       list_codes: listCodes,
       contents,
       template_version: "admin-notification-v1",
       created_by: boundedText(valueAsString(payload.created_by), "dashboard", 80),
       audience_count: recipients.length,
+      audience_filters: audienceFilters,
+      idempotency_key: idempotencyKey || undefined,
+      content_fingerprint: contentFingerprint,
+      source_ref: sourceRef || undefined,
+      frequency: rawFrequency || undefined,
       ai: isRecord(payload.ai) ? payload.ai as JsonValue : undefined,
     };
-    await env.DB.prepare(
-      `INSERT INTO message_campaigns (
-         id, list_id, trigger_type, subject, content_ref, metadata_json, status, created_at, scheduled_at, sent_at
-       ) VALUES (?, ?, 'admin_notification', ?, 'metadata_json.contents', ?, ?, ?, NULL, NULL)`,
-    ).bind(campaignId, listId, cleanHeaderValue(defaultContent.subject, 200), JSON.stringify(metadata),
-      recipients.length > 0 ? "queued" : "sent", now).run();
+    const subject = cleanHeaderValue(defaultContent.subject, 200);
+    const status = recipients.length > 0 ? "queued" : "sent";
+    try {
+      await env.DB.prepare(
+        `INSERT INTO message_campaigns (
+           id, list_id, trigger_type, subject, metadata_json, content_ref, status, created_at, scheduled_at, sent_at
+         ) VALUES (?, ?, 'admin_notification', ?, ?, ?, ?, ?, NULL, NULL)`,
+      ).bind(campaignId, listId, subject, JSON.stringify(metadata), contentRef, status, now).run();
+    } catch (error) {
+      if (!idempotencyKey) throw error;
+      const existing = await loadRowByContentRef(env, contentRef);
+      if (!existing) throw error;
+      const prior = parseNotificationMetadata(existing.metadata_json || "");
+      if (prior.content_fingerprint !== contentFingerprint) {
+        return json({ error: "notification_idempotency_conflict" }, request, env, 409);
+      }
+      return json({ ok: true, duplicate: true, campaign: await summary(env, existing) }, request, env);
+    }
     for (const recipient of recipients) {
       await env.DB.prepare(
         `INSERT INTO message_deliveries (
@@ -112,7 +171,14 @@ export function createCampaignHandlers(deps: Dependencies) {
          ) VALUES (?, ?, ?, ?, 'queued', 'smtp', 0, ?)`,
       ).bind(crypto.randomUUID(), campaignId, recipient.subscription_id, recipient.contact_id, now).run();
     }
-    return json({ ok: true, campaign: await detail(env, campaignId, 25) }, request, env, 201);
+    return json({
+      ok: true,
+      duplicate: false,
+      campaign: await summary(env, {
+        id: campaignId, subject, content_ref: contentRef, metadata_json: JSON.stringify(metadata),
+        status, created_at: now, scheduled_at: null, sent_at: null,
+      }),
+    }, request, env, 201);
   }
 
   async function process(request: Request, env: Env, campaignId: string): Promise<Response> {
@@ -195,15 +261,39 @@ async function campaignListId(env: Env, code: string): Promise<string | null> {
   const row = await env.DB.prepare("SELECT id FROM subscription_lists WHERE code = ?")
     .bind(normalizeCode(code || "reports")).first<{ id: string }>();
   if (row?.id) return row.id;
-  const fallback = await env.DB.prepare("SELECT id FROM subscription_lists ORDER BY sort_order ASC, created_at ASC LIMIT 1")
-    .first<{ id: string }>();
-  return fallback?.id || null;
+  return null;
 }
 
-async function audience(env: Env, codes: string[], limit: number) {
+async function audience(
+  env: Env,
+  codes: string[],
+  limit: number,
+  filters: Array<{ type: string; value: string }> = [],
+  frequency = "",
+) {
   const clauses = ["s.status = 'active'", "c.channel = 'email'", "c.status = 'active'", "sub.status = 'active'"];
   const binds: unknown[] = [];
   if (codes.length) { clauses.push(`l.code IN (${codes.map(() => "?").join(", ")})`); binds.push(...codes); }
+  if (frequency) { clauses.push("s.frequency = ?"); binds.push(frequency); }
+  const grouped = new Map<string, string[]>();
+  for (const filter of filters) {
+    const values = grouped.get(filter.type) || [];
+    if (!values.includes(filter.value)) values.push(filter.value);
+    grouped.set(filter.type, values);
+  }
+  for (const [type, values] of grouped) {
+    clauses.push(
+      `(NOT EXISTS (
+        SELECT 1 FROM subscription_filters f
+        WHERE f.subscription_id = s.id AND f.filter_type = ?
+      ) OR EXISTS (
+        SELECT 1 FROM subscription_filters f
+        WHERE f.subscription_id = s.id AND f.filter_type = ?
+          AND f.filter_value IN (${values.map(() => "?").join(", ")})
+      ))`,
+    );
+    binds.push(type, type, ...values);
+  }
   binds.push(limit);
   const rows = await env.DB.prepare(
     `SELECT MIN(s.id) AS subscription_id, MIN(s.subscriber_id) AS subscriber_id, s.contact_id AS contact_id,
@@ -221,6 +311,13 @@ async function loadRow(env: Env, id: string): Promise<CampaignRow | null> {
     `SELECT id, subject, content_ref, metadata_json, status, created_at, scheduled_at, sent_at
      FROM message_campaigns WHERE id = ? AND trigger_type = 'admin_notification'`,
   ).bind(id).first<CampaignRow>();
+}
+
+async function loadRowByContentRef(env: Env, contentRef: string): Promise<CampaignRow | null> {
+  return env.DB.prepare(
+    `SELECT id, subject, content_ref, metadata_json, status, created_at, scheduled_at, sent_at
+     FROM message_campaigns WHERE trigger_type = 'admin_notification' AND content_ref = ?`,
+  ).bind(contentRef).first<CampaignRow>();
 }
 
 async function progress(env: Env, id: string): Promise<CampaignProgress> {

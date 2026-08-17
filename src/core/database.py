@@ -74,3 +74,20 @@ async def init_database():
         await ensure_disease_knowledge_schema(db)
         await ensure_task_type_enum_schema(db)
     logger.info("Database tables created")
+
+
+async def dispose_database() -> None:
+    """Close the shared pool and clear cached factories.
+
+    Reset the module state as part of disposal so a later application/test
+    lifecycle cannot accidentally reuse an engine whose asyncpg connections
+    belonged to an already-closed event loop.
+    """
+
+    global _engine, _session_maker
+    engine = _engine
+    _engine = None
+    _session_maker = None
+    if engine is not None:
+        await engine.dispose()
+        logger.info("Database engine disposed")

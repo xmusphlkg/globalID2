@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy import Text, cast, func, select
@@ -412,7 +412,9 @@ class TaskOperationsService:
         metadata = dict(task.metadata_ or {})
         for key in ("cancel_requested", "cancel_requested_at", "cancel_reason"):
             metadata.pop(key, None)
-        metadata["retried_at"] = datetime.utcnow().isoformat() + "Z"
+        metadata["retried_at"] = (
+            datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        )
         task.metadata_ = metadata
         task.status = TaskStatus.QUEUED
         task.progress = 0

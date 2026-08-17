@@ -1825,6 +1825,107 @@
         "title": "AgentWorkflowStepOut",
         "type": "object"
       },
+      "AnomalyAssessment": {
+        "additionalProperties": false,
+        "properties": {
+          "detector_tier": {
+            "default": "common_count",
+            "enum": [
+              "common_count",
+              "rare_count",
+              "rate",
+              "context_only"
+            ],
+            "title": "Detector Tier",
+            "type": "string"
+          },
+          "diagnostics": {
+            "additionalProperties": true,
+            "title": "Diagnostics",
+            "type": "object"
+          },
+          "dispersion": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dispersion"
+          },
+          "effect_threshold_passed": {
+            "title": "Effect Threshold Passed",
+            "type": "boolean"
+          },
+          "fit_status": {
+            "title": "Fit Status",
+            "type": "string"
+          },
+          "model": {
+            "title": "Model",
+            "type": "string"
+          },
+          "q_value": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Q Value"
+          },
+          "raw_p_value": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw P Value"
+          },
+          "standardized_exceedance": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Standardized Exceedance"
+          },
+          "state": {
+            "enum": [
+              "routine",
+              "watch",
+              "alert",
+              "strong",
+              "not_modeled"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "model",
+          "state",
+          "fit_status",
+          "effect_threshold_passed"
+        ],
+        "title": "AnomalyAssessment",
+        "type": "object"
+      },
       "AutomationConfigOut": {
         "properties": {
           "admin_emails": {
@@ -2012,6 +2113,11 @@
       },
       "AutomationJobOut": {
         "properties": {
+          "automatic_retry": {
+            "additionalProperties": true,
+            "title": "Automatic Retry",
+            "type": "object"
+          },
           "country_code": {
             "title": "Country Code",
             "type": "string"
@@ -2038,6 +2144,26 @@
           "force": {
             "title": "Force",
             "type": "boolean"
+          },
+          "health_reason": {
+            "default": "health has not been evaluated",
+            "title": "Health Reason",
+            "type": "string"
+          },
+          "health_status": {
+            "default": "unknown",
+            "enum": [
+              "healthy",
+              "active",
+              "recovering",
+              "failed",
+              "stale",
+              "never_run",
+              "disabled",
+              "unknown"
+            ],
+            "title": "Health Status",
+            "type": "string"
           },
           "include_current_month": {
             "title": "Include Current Month",
@@ -2094,6 +2220,28 @@
           "last_status": {
             "title": "Last Status",
             "type": "string"
+          },
+          "last_success_age_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Success Age Minutes"
+          },
+          "last_success_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Success At"
           },
           "last_task_uuid": {
             "anyOf": [
@@ -2165,6 +2313,11 @@
           "source": {
             "title": "Source",
             "type": "string"
+          },
+          "stale_after_minutes": {
+            "default": 2880,
+            "title": "Stale After Minutes",
+            "type": "integer"
           },
           "timezone": {
             "anyOf": [
@@ -2591,6 +2744,137 @@
         "title": "CompletenessItem",
         "type": "object"
       },
+      "ContextMetric": {
+        "additionalProperties": false,
+        "properties": {
+          "data_through": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Through"
+          },
+          "label": {
+            "$ref": "#/components/schemas/LocalizedText"
+          },
+          "metric_type": {
+            "title": "Metric Type",
+            "type": "string"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "metric_type",
+          "label",
+          "value",
+          "unit"
+        ],
+        "title": "ContextMetric",
+        "type": "object"
+      },
+      "ContextPanel": {
+        "additionalProperties": false,
+        "properties": {
+          "disease_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disease Id"
+          },
+          "disease_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disease Name"
+          },
+          "geography": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Geography"
+          },
+          "metrics": {
+            "items": {
+              "$ref": "#/components/schemas/ContextMetric"
+            },
+            "title": "Metrics",
+            "type": "array"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LocalizedText"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "panel_id": {
+            "title": "Panel Id",
+            "type": "string"
+          },
+          "topic": {
+            "title": "Topic",
+            "type": "string"
+          }
+        },
+        "required": [
+          "panel_id",
+          "topic",
+          "metrics"
+        ],
+        "title": "ContextPanel",
+        "type": "object"
+      },
       "ControlPlaneOverviewOut": {
         "properties": {
           "action_items": {
@@ -2806,6 +3090,222 @@
           "default_source"
         ],
         "title": "CountrySourceConfigOut",
+        "type": "object"
+      },
+      "Coverage": {
+        "additionalProperties": false,
+        "properties": {
+          "disease_count": {
+            "minimum": 0.0,
+            "title": "Disease Count",
+            "type": "integer"
+          },
+          "evaluated_series_count": {
+            "minimum": 0.0,
+            "title": "Evaluated Series Count",
+            "type": "integer"
+          },
+          "jurisdiction_count": {
+            "minimum": 0.0,
+            "title": "Jurisdiction Count",
+            "type": "integer"
+          },
+          "modeled_series_count": {
+            "minimum": 0.0,
+            "title": "Modeled Series Count",
+            "type": "integer"
+          },
+          "note": {
+            "$ref": "#/components/schemas/LocalizedText"
+          },
+          "published_signal_count": {
+            "minimum": 0.0,
+            "title": "Published Signal Count",
+            "type": "integer"
+          },
+          "registered_series_count": {
+            "minimum": 0.0,
+            "title": "Registered Series Count",
+            "type": "integer"
+          },
+          "rejected_series_count": {
+            "minimum": 0.0,
+            "title": "Rejected Series Count",
+            "type": "integer"
+          },
+          "rejection_reasons": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Rejection Reasons",
+            "type": "object"
+          }
+        },
+        "required": [
+          "registered_series_count",
+          "evaluated_series_count",
+          "modeled_series_count",
+          "rejected_series_count",
+          "published_signal_count",
+          "jurisdiction_count",
+          "disease_count",
+          "note"
+        ],
+        "title": "Coverage",
+        "type": "object"
+      },
+      "CurrencySlice": {
+        "additionalProperties": false,
+        "properties": {
+          "analyzed_series_count": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Analyzed Series Count",
+            "type": "integer"
+          },
+          "cadence": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cadence"
+          },
+          "comparable_through": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comparable Through"
+          },
+          "delayed_series_count": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Delayed Series Count",
+            "type": "integer"
+          },
+          "earliest_data_through": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Earliest Data Through"
+          },
+          "held_back_series_count": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Held Back Series Count",
+            "type": "integer"
+          },
+          "latest_available_through": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Available Through"
+          },
+          "latest_data_through": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Data Through"
+          },
+          "readiness_ratio": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Readiness Ratio"
+          },
+          "source_system": {
+            "title": "Source System",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "fresh",
+              "partial",
+              "stale",
+              "failed",
+              "not_checked"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_system",
+          "status"
+        ],
+        "title": "CurrencySlice",
+        "type": "object"
+      },
+      "DataCurrency": {
+        "additionalProperties": false,
+        "properties": {
+          "by_source": {
+            "items": {
+              "$ref": "#/components/schemas/CurrencySlice"
+            },
+            "title": "By Source",
+            "type": "array"
+          },
+          "earliest_data_through": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Earliest Data Through"
+          },
+          "latest_data_through": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Data Through"
+          }
+        },
+        "title": "DataCurrency",
         "type": "object"
       },
       "DataReleaseChecksOut": {
@@ -5572,6 +6072,71 @@
         "title": "EventDecision",
         "type": "object"
       },
+      "EventUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "published_at": {
+            "format": "date",
+            "title": "Published At",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "update_id": {
+            "title": "Update Id",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "update_id",
+          "source",
+          "title",
+          "url",
+          "published_at"
+        ],
+        "title": "EventUpdate",
+        "type": "object"
+      },
+      "EvidenceLink": {
+        "additionalProperties": false,
+        "properties": {
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "url"
+        ],
+        "title": "EvidenceLink",
+        "type": "object"
+      },
       "GithubSettingsOut": {
         "properties": {
           "default_github_branch": {
@@ -6901,6 +7466,95 @@
         "title": "LiteratureSyncRequest",
         "type": "object"
       },
+      "LocalizedText": {
+        "additionalProperties": false,
+        "properties": {
+          "en": {
+            "title": "En",
+            "type": "string"
+          },
+          "zh": {
+            "title": "Zh",
+            "type": "string"
+          }
+        },
+        "required": [
+          "en",
+          "zh"
+        ],
+        "title": "LocalizedText",
+        "type": "object"
+      },
+      "MethodMetadata": {
+        "additionalProperties": false,
+        "properties": {
+          "alert_q": {
+            "default": 0.05,
+            "exclusiveMaximum": 1.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Alert Q",
+            "type": "number"
+          },
+          "code_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code Version"
+          },
+          "config_hash": {
+            "title": "Config Hash",
+            "type": "string"
+          },
+          "fdr_family": {
+            "default": "detector_tier_metric_type_cadence",
+            "enum": [
+              "metric_type_cadence",
+              "detector_tier_metric_type_cadence"
+            ],
+            "title": "Fdr Family",
+            "type": "string"
+          },
+          "fdr_method": {
+            "const": "benjamini_hochberg",
+            "default": "benjamini_hochberg",
+            "title": "Fdr Method",
+            "type": "string"
+          },
+          "model": {
+            "const": "robust_quasi_poisson_v1",
+            "title": "Model",
+            "type": "string"
+          },
+          "parameters": {
+            "additionalProperties": true,
+            "title": "Parameters",
+            "type": "object"
+          },
+          "strong_q": {
+            "default": 0.01,
+            "exclusiveMaximum": 1.0,
+            "exclusiveMinimum": 0.0,
+            "title": "Strong Q",
+            "type": "number"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version",
+          "model",
+          "config_hash"
+        ],
+        "title": "MethodMetadata",
+        "type": "object"
+      },
       "ModelCreateRequest": {
         "properties": {
           "api_style": {
@@ -7399,6 +8053,133 @@
           "markdown"
         ],
         "title": "NotificationCreateRequest",
+        "type": "object"
+      },
+      "ObservationComparison": {
+        "additionalProperties": false,
+        "properties": {
+          "absolute_change": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Absolute Change"
+          },
+          "analysis_lag_days": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Analysis Lag Days",
+            "type": "integer"
+          },
+          "completeness": {
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Completeness",
+            "type": "number"
+          },
+          "current": {
+            "title": "Current",
+            "type": "number"
+          },
+          "data_status": {
+            "default": "current",
+            "enum": [
+              "current",
+              "held_back",
+              "delayed"
+            ],
+            "title": "Data Status",
+            "type": "string"
+          },
+          "data_through": {
+            "format": "date",
+            "title": "Data Through",
+            "type": "string"
+          },
+          "expected": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected"
+          },
+          "latest_available_period": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Available Period"
+          },
+          "predictive_upper_95": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Predictive Upper 95"
+          },
+          "previous": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous"
+          },
+          "relative_change_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relative Change Pct"
+          },
+          "reporting_lag_days": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Reporting Lag Days",
+            "type": "integer"
+          },
+          "window_label": {
+            "title": "Window Label",
+            "type": "string"
+          },
+          "window_periods": {
+            "minimum": 1.0,
+            "title": "Window Periods",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "window_label",
+          "window_periods",
+          "data_through",
+          "current",
+          "completeness"
+        ],
+        "title": "ObservationComparison",
         "type": "object"
       },
       "OverviewSummary": {
@@ -7945,6 +8726,156 @@
         "title": "ProviderUpdateRequest",
         "type": "object"
       },
+      "PublicHealthRisk": {
+        "additionalProperties": false,
+        "properties": {
+          "evidence_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Url"
+          },
+          "level": {
+            "anyOf": [
+              {
+                "enum": [
+                  "low",
+                  "moderate",
+                  "high",
+                  "very_high"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Level"
+          },
+          "rationale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rationale"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "enum": [
+                  "official_agency",
+                  "audited_expert"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "status": {
+            "default": "not_assessed",
+            "enum": [
+              "not_assessed",
+              "assessed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "title": "PublicHealthRisk",
+        "type": "object"
+      },
+      "QualityCheck": {
+        "additionalProperties": false,
+        "properties": {
+          "details": {
+            "additionalProperties": true,
+            "title": "Details",
+            "type": "object"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "passed": {
+            "title": "Passed",
+            "type": "boolean"
+          },
+          "severity": {
+            "default": "blocking",
+            "enum": [
+              "blocking",
+              "warning"
+            ],
+            "title": "Severity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "passed"
+        ],
+        "title": "QualityCheck",
+        "type": "object"
+      },
+      "QualityGate": {
+        "additionalProperties": false,
+        "properties": {
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/QualityCheck"
+            },
+            "title": "Checks",
+            "type": "array"
+          },
+          "failed_checks": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Failed Checks",
+            "type": "array"
+          },
+          "passed": {
+            "title": "Passed",
+            "type": "boolean"
+          },
+          "status": {
+            "enum": [
+              "passed",
+              "degraded",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "warning_checks": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warning Checks",
+            "type": "array"
+          }
+        },
+        "required": [
+          "status",
+          "passed",
+          "failed_checks",
+          "checks"
+        ],
+        "title": "QualityGate",
+        "type": "object"
+      },
       "QualityStats": {
         "properties": {
           "earliest_date": {
@@ -8001,6 +8932,48 @@
           }
         },
         "title": "QualityStats",
+        "type": "object"
+      },
+      "RecentPoint": {
+        "additionalProperties": false,
+        "properties": {
+          "expected": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected"
+          },
+          "period": {
+            "format": "date",
+            "title": "Period",
+            "type": "string"
+          },
+          "predictive_upper_95": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Predictive Upper 95"
+          },
+          "value": {
+            "title": "Value",
+            "type": "number"
+          }
+        },
+        "required": [
+          "period",
+          "value"
+        ],
+        "title": "RecentPoint",
         "type": "object"
       },
       "RecentTaskOut": {
@@ -8325,6 +9298,81 @@
           "created_at"
         ],
         "title": "ReportDetailOut",
+        "type": "object"
+      },
+      "ReportMetadata": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "format": "date-time",
+            "title": "As Of",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "daily",
+              "weekly",
+              "monthly"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "period_end": {
+            "format": "date",
+            "title": "Period End",
+            "type": "string"
+          },
+          "period_key": {
+            "title": "Period Key",
+            "type": "string"
+          },
+          "period_start": {
+            "format": "date",
+            "title": "Period Start",
+            "type": "string"
+          },
+          "report_id": {
+            "title": "Report Id",
+            "type": "string"
+          },
+          "revision": {
+            "minimum": 1.0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "draft",
+              "gate_failed",
+              "published",
+              "suppressed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "supersedes_report_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supersedes Report Id"
+          }
+        },
+        "required": [
+          "report_id",
+          "kind",
+          "period_key",
+          "period_start",
+          "period_end",
+          "as_of",
+          "revision",
+          "status"
+        ],
+        "title": "ReportMetadata",
         "type": "object"
       },
       "ReportOut": {
@@ -8737,6 +9785,63 @@
         "title": "ReportSectionRunOut",
         "type": "object"
       },
+      "ReportSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "active_at_period_end_count": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Active At Period End Count",
+            "type": "integer"
+          },
+          "alert_count": {
+            "minimum": 0.0,
+            "title": "Alert Count",
+            "type": "integer"
+          },
+          "new_count": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "New Count",
+            "type": "integer"
+          },
+          "official_event_count": {
+            "minimum": 0.0,
+            "title": "Official Event Count",
+            "type": "integer"
+          },
+          "persistent_count": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Persistent Count",
+            "type": "integer"
+          },
+          "resolved_count": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Resolved Count",
+            "type": "integer"
+          },
+          "strong_count": {
+            "minimum": 0.0,
+            "title": "Strong Count",
+            "type": "integer"
+          },
+          "unique_signal_count": {
+            "minimum": 0.0,
+            "title": "Unique Signal Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "unique_signal_count",
+          "alert_count",
+          "strong_count",
+          "official_event_count"
+        ],
+        "title": "ReportSummary",
+        "type": "object"
+      },
       "ResponseMeta": {
         "properties": {
           "pagination": {
@@ -8762,6 +9867,89 @@
           }
         },
         "title": "ResponseMeta",
+        "type": "object"
+      },
+      "ReviewDecisionRequest": {
+        "properties": {
+          "action": {
+            "enum": [
+              "publish",
+              "verify",
+              "reject",
+              "suppress",
+              "correct",
+              "merge",
+              "rollback"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "actor": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "minLength": 3,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "dashboard",
+            "title": "Actor"
+          },
+          "note": {
+            "maxLength": 4000,
+            "minLength": 3,
+            "title": "Note",
+            "type": "string"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "title": "Payload",
+            "type": "object"
+          }
+        },
+        "required": [
+          "action",
+          "note"
+        ],
+        "title": "ReviewDecisionRequest",
+        "type": "object"
+      },
+      "RollbackRequest": {
+        "properties": {
+          "actor": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "dashboard",
+            "title": "Actor"
+          },
+          "note": {
+            "maxLength": 4000,
+            "minLength": 3,
+            "title": "Note",
+            "type": "string"
+          },
+          "report_id": {
+            "maxLength": 140,
+            "minLength": 3,
+            "title": "Report Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "report_id",
+          "note"
+        ],
+        "title": "RollbackRequest",
         "type": "object"
       },
       "RuntimeRouteOut": {
@@ -9202,6 +10390,308 @@
         "title": "ScheduleRunOut",
         "type": "object"
       },
+      "SignalAssessment": {
+        "additionalProperties": false,
+        "properties": {
+          "evidence_gaps": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Gaps",
+            "type": "array"
+          },
+          "public_health_risk": {
+            "$ref": "#/components/schemas/PublicHealthRisk"
+          },
+          "review_priority": {
+            "enum": [
+              "routine",
+              "standard",
+              "high"
+            ],
+            "title": "Review Priority",
+            "type": "string"
+          },
+          "signal_type": {
+            "default": "statistical_signal",
+            "enum": [
+              "statistical_signal",
+              "officially_correlated_signal"
+            ],
+            "title": "Signal Type",
+            "type": "string"
+          },
+          "temporal_relevance": {
+            "default": "current",
+            "enum": [
+              "current",
+              "lagged",
+              "historical"
+            ],
+            "title": "Temporal Relevance",
+            "type": "string"
+          },
+          "verification_basis": {
+            "default": "not_verified",
+            "enum": [
+              "not_verified",
+              "automated_policy",
+              "analyst_review"
+            ],
+            "title": "Verification Basis",
+            "type": "string"
+          },
+          "verification_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verification Note"
+          },
+          "verification_policy_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verification Policy Version"
+          },
+          "verification_status": {
+            "default": "unreviewed",
+            "enum": [
+              "unreviewed",
+              "under_review",
+              "verified",
+              "rejected"
+            ],
+            "title": "Verification Status",
+            "type": "string"
+          },
+          "verified_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified At"
+          },
+          "verified_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified By"
+          }
+        },
+        "required": [
+          "review_priority"
+        ],
+        "title": "SignalAssessment",
+        "type": "object"
+      },
+      "SignalIdentity": {
+        "additionalProperties": false,
+        "properties": {
+          "cadence": {
+            "enum": [
+              "daily",
+              "weekly",
+              "monthly"
+            ],
+            "title": "Cadence",
+            "type": "string"
+          },
+          "canonical_geography_key": {
+            "title": "Canonical Geography Key",
+            "type": "string"
+          },
+          "country_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country Code"
+          },
+          "country_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country Name"
+          },
+          "dimension_key": {
+            "title": "Dimension Key",
+            "type": "string"
+          },
+          "dimensions": {
+            "additionalProperties": true,
+            "title": "Dimensions",
+            "type": "object"
+          },
+          "disease_id": {
+            "title": "Disease Id",
+            "type": "string"
+          },
+          "disease_name": {
+            "title": "Disease Name",
+            "type": "string"
+          },
+          "disease_slug": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disease Slug"
+          },
+          "metric_label": {
+            "title": "Metric Label",
+            "type": "string"
+          },
+          "metric_type": {
+            "title": "Metric Type",
+            "type": "string"
+          },
+          "series_code": {
+            "title": "Series Code",
+            "type": "string"
+          },
+          "signal_id": {
+            "title": "Signal Id",
+            "type": "string"
+          },
+          "source_geography_keys": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Geography Keys",
+            "type": "array"
+          },
+          "source_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Label"
+          },
+          "source_system": {
+            "title": "Source System",
+            "type": "string"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "signal_id",
+          "disease_id",
+          "disease_name",
+          "canonical_geography_key",
+          "source_geography_keys",
+          "dimension_key",
+          "series_code",
+          "source_system",
+          "metric_type",
+          "metric_label",
+          "unit",
+          "cadence"
+        ],
+        "title": "SignalIdentity",
+        "type": "object"
+      },
+      "SignalLifecycle": {
+        "additionalProperties": false,
+        "properties": {
+          "active_run_count": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Active Run Count",
+            "type": "integer"
+          },
+          "first_seen_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Seen At"
+          },
+          "last_seen_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Seen At"
+          },
+          "peak_q_value": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Peak Q Value"
+          },
+          "status": {
+            "default": "routine",
+            "enum": [
+              "new",
+              "persistent",
+              "resolved",
+              "active",
+              "routine"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "title": "SignalLifecycle",
+        "type": "object"
+      },
       "SiteSettingsOut": {
         "properties": {
           "ga4_configured": {
@@ -9240,6 +10730,220 @@
           }
         },
         "title": "SiteSettingsUpdate",
+        "type": "object"
+      },
+      "SituationEventClusterV3": {
+        "additionalProperties": false,
+        "properties": {
+          "cluster_id": {
+            "title": "Cluster Id",
+            "type": "string"
+          },
+          "disease_id": {
+            "title": "Disease Id",
+            "type": "string"
+          },
+          "disease_name": {
+            "title": "Disease Name",
+            "type": "string"
+          },
+          "first_published_at": {
+            "format": "date",
+            "title": "First Published At",
+            "type": "string"
+          },
+          "geographies": {
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "title": "Geographies",
+            "type": "array"
+          },
+          "last_published_at": {
+            "format": "date",
+            "title": "Last Published At",
+            "type": "string"
+          },
+          "matched_signal_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Matched Signal Ids",
+            "type": "array"
+          },
+          "status": {
+            "default": "active",
+            "enum": [
+              "active",
+              "suppressed",
+              "corrected",
+              "merged"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "updates": {
+            "items": {
+              "$ref": "#/components/schemas/EventUpdate"
+            },
+            "title": "Updates",
+            "type": "array"
+          }
+        },
+        "required": [
+          "cluster_id",
+          "disease_id",
+          "disease_name",
+          "geographies",
+          "first_published_at",
+          "last_published_at",
+          "updates"
+        ],
+        "title": "SituationEventClusterV3",
+        "type": "object"
+      },
+      "SituationReportV3": {
+        "additionalProperties": false,
+        "properties": {
+          "context_panels": {
+            "items": {
+              "$ref": "#/components/schemas/ContextPanel"
+            },
+            "title": "Context Panels",
+            "type": "array"
+          },
+          "coverage": {
+            "$ref": "#/components/schemas/Coverage"
+          },
+          "data_currency": {
+            "$ref": "#/components/schemas/DataCurrency"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/SituationEventClusterV3"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "limitations": {
+            "$ref": "#/components/schemas/LocalizedText"
+          },
+          "method": {
+            "$ref": "#/components/schemas/MethodMetadata"
+          },
+          "narrative": {
+            "$ref": "#/components/schemas/LocalizedText"
+          },
+          "public_enabled": {
+            "title": "Public Enabled",
+            "type": "boolean"
+          },
+          "quality_gate": {
+            "$ref": "#/components/schemas/QualityGate"
+          },
+          "report": {
+            "$ref": "#/components/schemas/ReportMetadata"
+          },
+          "schema_version": {
+            "const": "situation_room.v3",
+            "default": "situation_room.v3",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "signals": {
+            "items": {
+              "$ref": "#/components/schemas/SituationSignalV3"
+            },
+            "title": "Signals",
+            "type": "array"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceStatus"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/ReportSummary"
+          }
+        },
+        "required": [
+          "public_enabled",
+          "report",
+          "method",
+          "data_currency",
+          "coverage",
+          "summary",
+          "signals",
+          "events",
+          "context_panels",
+          "sources",
+          "narrative",
+          "limitations",
+          "quality_gate"
+        ],
+        "title": "SituationReportV3",
+        "type": "object"
+      },
+      "SituationSignalV3": {
+        "additionalProperties": false,
+        "properties": {
+          "anomaly": {
+            "$ref": "#/components/schemas/AnomalyAssessment"
+          },
+          "assessment": {
+            "$ref": "#/components/schemas/SignalAssessment"
+          },
+          "evidence_links": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceLink"
+            },
+            "title": "Evidence Links",
+            "type": "array"
+          },
+          "identity": {
+            "$ref": "#/components/schemas/SignalIdentity"
+          },
+          "lifecycle": {
+            "$ref": "#/components/schemas/SignalLifecycle"
+          },
+          "observation": {
+            "$ref": "#/components/schemas/ObservationComparison"
+          },
+          "recent_points": {
+            "items": {
+              "$ref": "#/components/schemas/RecentPoint"
+            },
+            "title": "Recent Points",
+            "type": "array"
+          },
+          "tags": {
+            "items": {
+              "enum": [
+                "increasing",
+                "unusual",
+                "respiratory",
+                "severity",
+                "official_match"
+              ],
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          }
+        },
+        "required": [
+          "identity",
+          "observation",
+          "anomaly",
+          "assessment",
+          "tags"
+        ],
+        "title": "SituationSignalV3",
         "type": "object"
       },
       "SmtpSettingsOut": {
@@ -9755,6 +11459,84 @@
           }
         },
         "title": "SourceRunCreate",
+        "type": "object"
+      },
+      "SourceStatus": {
+        "additionalProperties": false,
+        "properties": {
+          "checked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checked At"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "item_count": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Item Count"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "last_success_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Success At"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "fresh",
+              "partial",
+              "stale",
+              "failed",
+              "not_checked"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_id",
+          "label",
+          "status"
+        ],
+        "title": "SourceStatus",
         "type": "object"
       },
       "StageInfo": {
@@ -24978,6 +26760,1330 @@
         "summary": "Get Settings Section",
         "tags": [
           "Settings"
+        ]
+      }
+    },
+    "/api/v1/situation/v3/audit": {
+      "get": {
+        "operationId": "audit_v3_api_v1_situation_v3_audit_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "target_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Target Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 250,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "items": {
+                        "additionalProperties": true,
+                        "type": "object"
+                      },
+                      "title": "Response Audit V3 Api V1 Situation V3 Audit Get",
+                      "type": "array"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/ResponseMeta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          }
+        },
+        "summary": "Audit V3",
+        "tags": [
+          "Situation Room v3"
+        ]
+      }
+    },
+    "/api/v1/situation/v3/events": {
+      "get": {
+        "operationId": "events_v3_api_v1_situation_v3_events_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "review_state",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Review State"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 250,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "items": {
+                        "additionalProperties": true,
+                        "type": "object"
+                      },
+                      "title": "Response Events V3 Api V1 Situation V3 Events Get",
+                      "type": "array"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/ResponseMeta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          }
+        },
+        "summary": "Events V3",
+        "tags": [
+          "Situation Room v3"
+        ]
+      }
+    },
+    "/api/v1/situation/v3/overview": {
+      "get": {
+        "operationId": "overview_v3_api_v1_situation_v3_overview_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "additionalProperties": true,
+                      "title": "Response Overview V3 Api V1 Situation V3 Overview Get",
+                      "type": "object"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/ResponseMeta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          }
+        },
+        "summary": "Overview V3",
+        "tags": [
+          "Situation Room v3"
+        ]
+      }
+    },
+    "/api/v1/situation/v3/publication/{channel}/rollback": {
+      "post": {
+        "operationId": "rollback_v3_api_v1_situation_v3_publication__channel__rollback_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "channel",
+            "required": true,
+            "schema": {
+              "title": "Channel",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RollbackRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "additionalProperties": true,
+                      "title": "Response Rollback V3 Api V1 Situation V3 Publication  Channel  Rollback Post",
+                      "type": "object"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/ResponseMeta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          }
+        },
+        "summary": "Rollback V3",
+        "tags": [
+          "Situation Room v3"
+        ]
+      }
+    },
+    "/api/v1/situation/v3/reports": {
+      "get": {
+        "operationId": "reports_v3_api_v1_situation_v3_reports_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "daily",
+                    "weekly",
+                    "monthly"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 250,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "items": {
+                        "additionalProperties": true,
+                        "type": "object"
+                      },
+                      "title": "Response Reports V3 Api V1 Situation V3 Reports Get",
+                      "type": "array"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/ResponseMeta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          }
+        },
+        "summary": "Reports V3",
+        "tags": [
+          "Situation Room v3"
+        ]
+      }
+    },
+    "/api/v1/situation/v3/reports/compare": {
+      "get": {
+        "operationId": "compare_reports_v3_api_v1_situation_v3_reports_compare_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "from_report",
+            "required": true,
+            "schema": {
+              "title": "From Report",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to_report",
+            "required": true,
+            "schema": {
+              "title": "To Report",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "additionalProperties": true,
+                      "title": "Response Compare Reports V3 Api V1 Situation V3 Reports Compare Get",
+                      "type": "object"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/ResponseMeta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          }
+        },
+        "summary": "Compare Reports V3",
+        "tags": [
+          "Situation Room v3"
+        ]
+      }
+    },
+    "/api/v1/situation/v3/reports/{report_id}": {
+      "get": {
+        "operationId": "report_v3_api_v1_situation_v3_reports__report_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "report_id",
+            "required": true,
+            "schema": {
+              "title": "Report Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/SituationReportV3"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/ResponseMeta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          }
+        },
+        "summary": "Report V3",
+        "tags": [
+          "Situation Room v3"
+        ]
+      }
+    },
+    "/api/v1/situation/v3/review/{target_type}/{target_id}": {
+      "post": {
+        "operationId": "review_v3_api_v1_situation_v3_review__target_type___target_id__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "target_type",
+            "required": true,
+            "schema": {
+              "enum": [
+                "event",
+                "signal",
+                "report"
+              ],
+              "title": "Target Type",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "target_id",
+            "required": true,
+            "schema": {
+              "title": "Target Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewDecisionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "additionalProperties": true,
+                      "title": "Response Review V3 Api V1 Situation V3 Review  Target Type   Target Id  Post",
+                      "type": "object"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/ResponseMeta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          }
+        },
+        "summary": "Review V3",
+        "tags": [
+          "Situation Room v3"
+        ]
+      }
+    },
+    "/api/v1/situation/v3/runs": {
+      "get": {
+        "operationId": "runs_v3_api_v1_situation_v3_runs_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 250,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "items": {
+                        "additionalProperties": true,
+                        "type": "object"
+                      },
+                      "title": "Response Runs V3 Api V1 Situation V3 Runs Get",
+                      "type": "array"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/ResponseMeta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          }
+        },
+        "summary": "Runs V3",
+        "tags": [
+          "Situation Room v3"
+        ]
+      }
+    },
+    "/api/v1/situation/v3/signals": {
+      "get": {
+        "operationId": "signals_v3_api_v1_situation_v3_signals_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "run_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Run Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          {
+            "in": "query",
+            "name": "source_system",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source System"
+            }
+          },
+          {
+            "in": "query",
+            "name": "rejection_reason",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Rejection Reason"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "items": {
+                        "additionalProperties": true,
+                        "type": "object"
+                      },
+                      "title": "Response Signals V3 Api V1 Situation V3 Signals Get",
+                      "type": "array"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/ResponseMeta"
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "401": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "404": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "409": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "500": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            },
+            "description": "Problem detail"
+          }
+        },
+        "summary": "Signals V3",
+        "tags": [
+          "Situation Room v3"
         ]
       }
     },

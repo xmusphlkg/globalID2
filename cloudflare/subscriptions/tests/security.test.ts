@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  secureTextEqual,
   sha256Hex,
   signSubscriptionToken,
   verifySubscriptionToken,
@@ -31,4 +32,10 @@ test("produces the expected SHA-256 digest", async () => {
     await sha256Hex("abc"),
     "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
   );
+});
+
+test("compares ingest secrets after fixed-length hashing", async () => {
+  assert.equal(await secureTextEqual("same-secret", "same-secret"), true);
+  assert.equal(await secureTextEqual("short", "a-different-and-longer-secret"), false);
+  assert.equal(await secureTextEqual("", "expected"), false);
 });

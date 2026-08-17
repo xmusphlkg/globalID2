@@ -29,6 +29,25 @@ COMPLETION_TAIL_LINES = 12
 ANSI_ESCAPE_RE = re.compile(r"\x1b(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
 
 
+class ReleaseCommandError(RuntimeError):
+    """A failed release subprocess with machine-readable stage context."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        release_stage: str | None,
+        title: str,
+        returncode: int | None = None,
+        timed_out: bool = False,
+    ) -> None:
+        super().__init__(message)
+        self.release_stage = release_stage
+        self.title = title
+        self.returncode = returncode
+        self.timed_out = timed_out
+
+
 def clean_output_line(value: str) -> str:
     """Remove terminal control sequences before persisting command output."""
 
@@ -207,7 +226,13 @@ async def run_logged_command(
             )
         except Exception as exc:  # pragma: no cover - lifecycle records the error.
             logger.warning("Failed to write command timeout workbook entry: %s", exc)
-        raise RuntimeError(message)
+        raise ReleaseCommandError(
+            message,
+            release_stage=str(metadata.get("event") or "").strip() or None,
+            title=title,
+            returncode=proc.returncode,
+            timed_out=True,
+        )
 
     while True:
         if await task_manager.is_cancel_requested(task_uuid):
@@ -254,8 +279,11 @@ async def run_logged_command(
     await flush_chunk(force=True)
 
     if returncode != 0:
-        raise RuntimeError(
-            f"{title} failed with exit code {returncode}.\n" + "\n".join(output_tail[-40:])
+        raise ReleaseCommandError(
+            f"{title} failed with exit code {returncode}.\n" + "\n".join(output_tail[-40:]),
+            release_stage=str(metadata.get("event") or "").strip() or None,
+            title=title,
+            returncode=returncode,
         )
 
     completion_metadata = {

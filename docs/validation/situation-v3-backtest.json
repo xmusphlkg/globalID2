@@ -1,0 +1,1258 @@
+{
+  "method": "stratified_seasonal_overdispersed_weekly_simulation_v3",
+  "config_hash": "df0603b1ea11101e756fb443497b39bf3e3ab0f8d555ebf515f4c5e4ccab220f",
+  "simulation_protocol_hash": "480eb9574fcde0185436630a7c912b625a41dda7a6bff20a32a25fae83394cf6",
+  "evaluation_workers": 1,
+  "seed": 20260817,
+  "batches_per_scenario": 20,
+  "scenario_count": 4,
+  "series_per_class_per_batch": 16,
+  "total_complete_null_series": 2560,
+  "total_true_anomaly_series": 1280,
+  "primary_scenario": "common_sustained_2x",
+  "scenarios": {
+    "common_sustained_2x": {
+      "profile": {
+        "key": "common_sustained_2x",
+        "description": "Common weekly counts with a two-period 2x increase.",
+        "baseline_range": [
+          24.0,
+          90.0
+        ],
+        "dispersion_size_range": [
+          22.0,
+          45.0
+        ],
+        "historical_zero_probability": 0.015,
+        "anomaly_factor": 2.0,
+        "anomaly_duration_source_periods": 2,
+        "minimum_sensitivity": 0.8
+      },
+      "complete_null": {
+        "family_empirical_fdr": 0.05,
+        "family_empirical_fdr_ci_95": {
+          "method": "wilson_score",
+          "confidence_level": 0.95,
+          "successes": 1,
+          "trials": 20,
+          "estimate": 0.05,
+          "lower": 0.008881,
+          "upper": 0.236131
+        },
+        "families_with_any_discovery": 1,
+        "family_trials": 20,
+        "false_positive_rate": 0.001563,
+        "false_positive_rate_ci_95": {
+          "method": "wilson_score",
+          "confidence_level": 0.95,
+          "successes": 1,
+          "trials": 640,
+          "estimate": 0.001563,
+          "lower": 0.000276,
+          "upper": 0.008797
+        },
+        "false_alerts": 1,
+        "series_trials": 640
+      },
+      "mixed_anomaly": {
+        "mean_empirical_fdr": 0.003571,
+        "sensitivity": 0.8625,
+        "sensitivity_ci_95": {
+          "method": "wilson_score",
+          "confidence_level": 0.95,
+          "successes": 276,
+          "trials": 320,
+          "estimate": 0.8625,
+          "lower": 0.820447,
+          "upper": 0.895953
+        },
+        "first_cycle_sensitivity": 0.153125,
+        "first_cycle_sensitivity_ci_95": {
+          "method": "wilson_score",
+          "confidence_level": 0.95,
+          "successes": 49,
+          "trials": 320,
+          "estimate": 0.153125,
+          "lower": 0.117804,
+          "upper": 0.196676
+        },
+        "detected_true_anomalies": 276,
+        "true_anomaly_trials": 320,
+        "null_series_trials": 320,
+        "median_detection_delay_source_periods": 1.0,
+        "minimum_sensitivity": 0.8,
+        "meets_sensitivity_target": true
+      },
+      "guarded_auto": {
+        "complete_null_family_discovery_rate": 0.0,
+        "complete_null_family_discovery_rate_ci_95": {
+          "method": "wilson_score",
+          "confidence_level": 0.95,
+          "successes": 0,
+          "trials": 20,
+          "estimate": 0.0,
+          "lower": 0.0,
+          "upper": 0.161125
+        },
+        "complete_null_false_candidates": 0,
+        "complete_null_false_candidate_rate": 0.0,
+        "complete_null_false_candidate_rate_ci_95": {
+          "method": "wilson_score",
+          "confidence_level": 0.95,
+          "successes": 0,
+          "trials": 640,
+          "estimate": 0.0,
+          "lower": 0.0,
+          "upper": 0.005966
+        },
+        "sensitivity": 0.753125,
+        "sensitivity_ci_95": {
+          "method": "wilson_score",
+          "confidence_level": 0.95,
+          "successes": 241,
+          "trials": 320,
+          "estimate": 0.753125,
+          "lower": 0.703064,
+          "upper": 0.797181
+        },
+        "first_cycle_sensitivity": 0.04375,
+        "first_cycle_sensitivity_ci_95": {
+          "method": "wilson_score",
+          "confidence_level": 0.95,
+          "successes": 14,
+          "trials": 320,
+          "estimate": 0.04375,
+          "lower": 0.026237,
+          "upper": 0.072087
+        },
+        "detected_true_anomalies": 241,
+        "sensitivity_change_vs_review_pp": -10.938
+      }
+    },
+    "common_subtle_1_5x": {
+      "profile": {
+        "key": "common_subtle_1_5x",
+        "description": "Common weekly counts with a subtler two-period 1.5x increase.",
+        "baseline_range": [
+          24.0,
+          90.0
+        ],
+        "dispersion_size_range": [
+          22.0,
+          45.0
+        ],
+        "historical_zero_probability": 0.015,
+        "anomaly_factor": 1.5,
+        "anomaly_duration_source_periods": 2,
+        "minimum_sensitivity": null
+      },
+      "complete_null": {
+        "family_empirical_fdr": 0.0,
+        "family_empirical_fdr_ci_95": {
+          "method": "wilson_score",
+          "confidence_level": 0.95,
+          "successes": 0,
+          "trials": 20,
+          "estimate": 0.0,
+          "lower": 0.0,
+          "upper": 0.161125
+        },
+        "families_with_any_discovery": 0,
+        "family_trials": 20,
+        "false_positive_rate": 0.0,
+        "false_positive_rate_ci_95": {
+          "method": "wilson_score",
+          "confidence_level": 0.95,
+          "successes": 0,
+          "trials": 640,
+          "estimate": 0.0,
+          "lower": 0.0,
+          "upper": 0.005966
+        },
+        "false_alerts": 0,
+        "series_trials": 640
+      },
+      "mixed_anomaly": {
+        "mean_empirical_fdr": 0.0,
+        "sensitivity": 0.128125,
+        "sensitivity_ci_95": {
+          "method": "wilson_score",
+          "confidence_level": 0.95,
+          "successes": 41,
+          "trials": 320,
+          "estimate": 0.128125,
+          "lower": 0.095868,
+          "upper": 0.169205
+        },
+        "first_cycle_sensitivity": 0.00625,
+        "first_cycle_sensitivity_ci_95": {
+          "method": "wilson_score",
+          "confidence_level": 0.95,
+          "successes": 2,
+          "trials": 320,
+          "estimate": 0.00625,
+          "lower": 0.001716,
+          "upper": 0.022498
+        },
+        "detected_true_anomalies": 41,
+        "true_anomaly_trials": 320,
+        "null_series_trials": 320,
+        "median_detection_delay_source_periods": 1.0,
+        "minimum_sensitivity": null,
+        "meets_sensitivity_target": null
+      },
+      "guarded_auto": {
+        "complete_null_family_discovery_rate": 0.0,
+        "complete_null_family_discovery_rate_ci_95": {
+          "method": "wilson_score",
+          "confidence_level": 0.95,
+          "successes": 0,
+          "trials": 20,
+          "estimate": 0.0,
+          "lower": 0.0,
+          "upper": 0.161125
+        },
+        "complete_null_false_candidates": 0,
+        "complete_null_false_candidate_rate": 0.0,
+        "complete_null_false_candidate_rate_ci_95": {
+          "method": "wilson_score",
+          "confidence_level": 0.95,
+          "successes": 0,
+          "trials": 640,
+          "estimate": 0.0,
+          "lower": 0.0,
+          "upper": 0.005966
+        },
+        "sensitivity": 0.021875,
+        "sensitivity_ci_95": {
+          "method": "wilson_score",
+          "confidence_level": 0.95,
+          "successes": 7,
+          "trials": 320,
+          "estimate": 0.021875,
+          "lower": 0.010636,
+          "upper": 0.044457
+        },
+        "first_cycle_sensitivity": 0.003125,
+        "first_cycle_sensitivity_ci_95": {
+          "method": "wilson_score",
+          "confidence_level": 0.95,
+          "successes": 1,
+          "trials": 320,
+          "estimate": 0.003125,
+          "lower": 0.000552,
+          "upper": 0.017486
+        },
+        "detected_true_anomalies": 7,
+        "sensitivity_change_vs_review_pp": -10.625
+      }
+    },
+    "common_single_cycle_2x": {
+      "profile": {
+        "key": "common_single_cycle_2x",
+        "description": "Common weekly counts with a transient one-period 2x increase.",
+        "baseline_range": [
+          24.0,
+          90.0
+        ],
+        "dispersion_size_range": [
+          22.0,
+          45.0
+        ],
+        "historical_zero_probability": 0.015,
+        "anomaly_factor": 2.0,
+        "anomaly_duration_source_periods": 1,
+        "minimum_sensitivity": null
+      },
+      "complete_null": {
+        "family_empirical_fdr": 0.0,
+        "family_empirical_fdr_ci_95": {
+          "method": "wilson_score",
+          "confidence_level": 0.95,
+          "successes": 0,
+          "trials": 20,
+          "estimate": 0.0,
+          "lower": 0.0,
+          "upper": 0.161125
+        },
+        "families_with_any_discovery": 0,
+        "family_trials": 20,
+        "false_positive_rate": 0.0,
+        "false_positive_rate_ci_95": {
+          "method": "wilson_score",
+          "confidence_level": 0.95,
+          "successes": 0,
+          "trials": 640,
+          "estimate": 0.0,
+          "lower": 0.0,
+          "upper": 0.005966
+        },
+        "false_alerts": 0,
+        "series_trials": 640
+      },
+      "mixed_anomaly": {
+        "mean_empirical_fdr": 0.01,
+        "sensitivity": 0.153125,
+        "sensitivity_ci_95": {
+          "method": "wilson_score",
+          "confidence_level": 0.95,
+          "successes": 49,
+          "trials": 320,
+          "estimate": 0.153125,
+          "lower": 0.117804,
+          "upper": 0.196676
+        },
+        "first_cycle_sensitivity": 0.153125,
+        "first_cycle_sensitivity_ci_95": {
+          "method": "wilson_score",
+          "confidence_level": 0.95,
+          "successes": 49,
+          "trials": 320,
+          "estimate": 0.153125,
+          "lower": 0.117804,
+          "upper": 0.196676
+        },
+        "detected_true_anomalies": 49,
+        "true_anomaly_trials": 320,
+        "null_series_trials": 320,
+        "median_detection_delay_source_periods": 0.0,
+        "minimum_sensitivity": null,
+        "meets_sensitivity_target": null
+      },
+      "guarded_auto": {
+        "complete_null_family_discovery_rate": 0.0,
+        "complete_null_family_discovery_rate_ci_95": {
+          "method": "wilson_score",
+          "confidence_level": 0.95,
+          "successes": 0,
+          "trials": 20,
+          "estimate": 0.0,
+          "lower": 0.0,
+          "upper": 0.161125
+        },
+        "complete_null_false_candidates": 0,
+        "complete_null_false_candidate_rate": 0.0,
+        "complete_null_false_candidate_rate_ci_95": {
+          "method": "wilson_score",
+          "confidence_level": 0.95,
+          "successes": 0,
+          "trials": 640,
+          "estimate": 0.0,
+          "lower": 0.0,
+          "upper": 0.005966
+        },
+        "sensitivity": 0.05625,
+        "sensitivity_ci_95": {
+          "method": "wilson_score",
+          "confidence_level": 0.95,
+          "successes": 18,
+          "trials": 320,
+          "estimate": 0.05625,
+          "lower": 0.035874,
+          "upper": 0.087154
+        },
+        "first_cycle_sensitivity": 0.05625,
+        "first_cycle_sensitivity_ci_95": {
+          "method": "wilson_score",
+          "confidence_level": 0.95,
+          "successes": 18,
+          "trials": 320,
+          "estimate": 0.05625,
+          "lower": 0.035874,
+          "upper": 0.087154
+        },
+        "detected_true_anomalies": 18,
+        "sensitivity_change_vs_review_pp": -9.688
+      }
+    },
+    "rare_sustained_4x": {
+      "profile": {
+        "key": "rare_sustained_4x",
+        "description": "Low-count weekly series with a two-period 4x cluster.",
+        "baseline_range": [
+          1.0,
+          8.0
+        ],
+        "dispersion_size_range": [
+          10.0,
+          25.0
+        ],
+        "historical_zero_probability": 0.08,
+        "anomaly_factor": 4.0,
+        "anomaly_duration_source_periods": 2,
+        "minimum_sensitivity": null
+      },
+      "complete_null": {
+        "family_empirical_fdr": 0.1,
+        "family_empirical_fdr_ci_95": {
+          "method": "wilson_score",
+          "confidence_level": 0.95,
+          "successes": 2,
+          "trials": 20,
+          "estimate": 0.1,
+          "lower": 0.027866,
+          "upper": 0.301034
+        },
+        "families_with_any_discovery": 2,
+        "family_trials": 20,
+        "false_positive_rate": 0.003125,
+        "false_positive_rate_ci_95": {
+          "method": "wilson_score",
+          "confidence_level": 0.95,
+          "successes": 2,
+          "trials": 640,
+          "estimate": 0.003125,
+          "lower": 0.000857,
+          "upper": 0.011322
+        },
+        "false_alerts": 2,
+        "series_trials": 640
+      },
+      "mixed_anomaly": {
+        "mean_empirical_fdr": 0.006275,
+        "sensitivity": 0.859375,
+        "sensitivity_ci_95": {
+          "method": "wilson_score",
+          "confidence_level": 0.95,
+          "successes": 275,
+          "trials": 320,
+          "estimate": 0.859375,
+          "lower": 0.817011,
+          "upper": 0.893213
+        },
+        "first_cycle_sensitivity": 0.396875,
+        "first_cycle_sensitivity_ci_95": {
+          "method": "wilson_score",
+          "confidence_level": 0.95,
+          "successes": 127,
+          "trials": 320,
+          "estimate": 0.396875,
+          "lower": 0.344798,
+          "upper": 0.451398
+        },
+        "detected_true_anomalies": 275,
+        "true_anomaly_trials": 320,
+        "null_series_trials": 320,
+        "median_detection_delay_source_periods": 1.0,
+        "minimum_sensitivity": null,
+        "meets_sensitivity_target": null
+      },
+      "guarded_auto": {
+        "complete_null_family_discovery_rate": 0.0,
+        "complete_null_family_discovery_rate_ci_95": {
+          "method": "wilson_score",
+          "confidence_level": 0.95,
+          "successes": 0,
+          "trials": 20,
+          "estimate": 0.0,
+          "lower": 0.0,
+          "upper": 0.161125
+        },
+        "complete_null_false_candidates": 0,
+        "complete_null_false_candidate_rate": 0.0,
+        "complete_null_false_candidate_rate_ci_95": {
+          "method": "wilson_score",
+          "confidence_level": 0.95,
+          "successes": 0,
+          "trials": 640,
+          "estimate": 0.0,
+          "lower": 0.0,
+          "upper": 0.005966
+        },
+        "sensitivity": 0.79375,
+        "sensitivity_ci_95": {
+          "method": "wilson_score",
+          "confidence_level": 0.95,
+          "successes": 254,
+          "trials": 320,
+          "estimate": 0.79375,
+          "lower": 0.74606,
+          "upper": 0.834471
+        },
+        "first_cycle_sensitivity": 0.21875,
+        "first_cycle_sensitivity_ci_95": {
+          "method": "wilson_score",
+          "confidence_level": 0.95,
+          "successes": 70,
+          "trials": 320,
+          "estimate": 0.21875,
+          "lower": 0.176938,
+          "upper": 0.267234
+        },
+        "detected_true_anomalies": 254,
+        "sensitivity_change_vs_review_pp": -6.563
+      }
+    }
+  },
+  "precision": {
+    "binary_interval_method": "wilson_score",
+    "confidence_level": 0.95,
+    "complete_null_family_trials": 80,
+    "minimum_complete_null_families": 80,
+    "minimum_nonzero_empirical_fdr_step": 0.0125,
+    "sufficient_family_trials": true,
+    "note": "Complete-null family FDR is binary per independent scenario batch; mixed-family FDR is descriptive because discovery counts vary by batch."
+  },
+  "fdr_assessment": {
+    "nominal_fdr": 0.05,
+    "point_estimate_decision": "passed",
+    "confidence_bound_decision": "inconclusive",
+    "overall_calibration_decision": "failed",
+    "diagnosis": "possible_pvalue_anti_conservatism_requires_investigation",
+    "nominal_rate_within_observed_ci_95": true,
+    "expected_families_with_discovery_at_nominal": 4.0,
+    "observed_families_with_discovery": 3,
+    "probability_of_exact_observed_count_under_independent_nominal_model": 0.197828,
+    "binomial_reference_note": "Diagnostic reference only: simulated series and batches are independent; the four scenario strata intentionally have different count distributions.",
+    "projected_family_trials_for_upper_95_lte_nominal": 1196,
+    "upper_bound_projection_status": "finite_projection_available",
+    "upper_bound_projection_reason": null,
+    "projected_batches_per_scenario": 299,
+    "projection_assumption": "Holds the observed family-discovery rate fixed, rounds projected discoveries upward, and is a planning estimate rather than a guarantee.",
+    "estimation_precision_plan": {
+      "planning_rate": 0.05,
+      "maximum_wilson_95_half_width": 0.015,
+      "required_family_trials": 824,
+      "purpose": "Estimates the family-discovery rate to about +/-1.5 percentage points; it does not make an upper-bound acceptance claim."
+    },
+    "null_discoveries": [
+      {
+        "scenario": "common_sustained_2x",
+        "batch_index": 10,
+        "seed": 20260827,
+        "series_code": "N011",
+        "detector_tier": "common_count",
+        "model": "robust_quasi_poisson_v1",
+        "fit_status": "completed",
+        "fallback_used": false,
+        "guarded_auto_candidate": false,
+        "state": "alert",
+        "raw_p_value": 0.00086971,
+        "q_value": 0.02783072,
+        "current": 523.0,
+        "previous": 331.0,
+        "expected": 378.146,
+        "predictive_upper_95": 454.233,
+        "absolute_change": 192.0,
+        "relative_change_pct": 58.01,
+        "dispersion": 2.4038,
+        "standardized_exceedance": 3.1315,
+        "effect_threshold_passed": true,
+        "history_mean": 49.665584,
+        "history_variance": 413.988779,
+        "history_zero_fraction": 0.003247,
+        "recent_12_values": [
+          98.0,
+          80.0,
+          94.0,
+          94.0,
+          76.0,
+          101.0,
+          67.0,
+          87.0,
+          134.0,
+          149.0,
+          123.0,
+          117.0
+        ],
+        "supporting_cusum": {
+          "score": 7.4104,
+          "reference": 0.5,
+          "decision_role": "supporting_only"
+        }
+      },
+      {
+        "scenario": "rare_sustained_4x",
+        "batch_index": 7,
+        "seed": 20560824,
+        "series_code": "A002",
+        "detector_tier": "rare_count",
+        "model": "robust_quasi_poisson_v1",
+        "fit_status": "completed",
+        "fallback_used": false,
+        "guarded_auto_candidate": false,
+        "state": "alert",
+        "raw_p_value": 0.00236007,
+        "q_value": 0.04484133,
+        "current": 41.0,
+        "previous": 18.0,
+        "expected": 19.728,
+        "predictive_upper_95": 33.556,
+        "absolute_change": 23.0,
+        "relative_change_pct": 127.78,
+        "dispersion": 1.6191,
+        "standardized_exceedance": 2.5303,
+        "effect_threshold_passed": true,
+        "history_mean": 5.025974,
+        "history_variance": 8.689877,
+        "history_zero_fraction": 0.068182,
+        "recent_12_values": [
+          5.0,
+          4.0,
+          8.0,
+          9.0,
+          8.0,
+          0.0,
+          5.0,
+          5.0,
+          12.0,
+          4.0,
+          9.0,
+          16.0
+        ],
+        "supporting_cusum": {
+          "score": 5.4234,
+          "reference": 0.5,
+          "decision_role": "supporting_only"
+        }
+      },
+      {
+        "scenario": "rare_sustained_4x",
+        "batch_index": 9,
+        "seed": 20560826,
+        "series_code": "A012",
+        "detector_tier": "rare_count",
+        "model": "robust_quasi_poisson_v1",
+        "fit_status": "completed",
+        "fallback_used": false,
+        "guarded_auto_candidate": false,
+        "state": "alert",
+        "raw_p_value": 0.00077699,
+        "q_value": 0.01320883,
+        "current": 43.0,
+        "previous": 20.0,
+        "expected": 19.951,
+        "predictive_upper_95": 33.199,
+        "absolute_change": 23.0,
+        "relative_change_pct": 115.0,
+        "dispersion": 1.4073,
+        "standardized_exceedance": 2.8617,
+        "effect_threshold_passed": true,
+        "history_mean": 3.292208,
+        "history_variance": 6.50717,
+        "history_zero_fraction": 0.126623,
+        "recent_12_values": [
+          5.0,
+          0.0,
+          4.0,
+          7.0,
+          6.0,
+          4.0,
+          5.0,
+          5.0,
+          8.0,
+          14.0,
+          13.0,
+          8.0
+        ],
+        "supporting_cusum": {
+          "score": 6.5329,
+          "reference": 0.5,
+          "decision_role": "supporting_only"
+        }
+      }
+    ],
+    "discoveries_using_empirical_fallback": 0,
+    "p_value_calibration": {
+      "common_single_cycle_2x|common_count:robust_quasi_poisson_v1": {
+        "series_trials": 640,
+        "fit_status_counts": {
+          "completed": 640
+        },
+        "thresholds": {
+          "0.001": {
+            "nominal_rate": 0.001,
+            "observed_rate": 0.0,
+            "observed_rate_ci_95": {
+              "method": "wilson_score",
+              "confidence_level": 0.95,
+              "successes": 0,
+              "trials": 640,
+              "estimate": 0.0,
+              "lower": 0.0,
+              "upper": 0.005966
+            },
+            "compatible_with_super_uniform_null": true
+          },
+          "0.005": {
+            "nominal_rate": 0.005,
+            "observed_rate": 0.004687,
+            "observed_rate_ci_95": {
+              "method": "wilson_score",
+              "confidence_level": 0.95,
+              "successes": 3,
+              "trials": 640,
+              "estimate": 0.004687,
+              "lower": 0.001595,
+              "upper": 0.01369
+            },
+            "compatible_with_super_uniform_null": true
+          },
+          "0.01": {
+            "nominal_rate": 0.01,
+            "observed_rate": 0.004687,
+            "observed_rate_ci_95": {
+              "method": "wilson_score",
+              "confidence_level": 0.95,
+              "successes": 3,
+              "trials": 640,
+              "estimate": 0.004687,
+              "lower": 0.001595,
+              "upper": 0.01369
+            },
+            "compatible_with_super_uniform_null": true
+          },
+          "0.05": {
+            "nominal_rate": 0.05,
+            "observed_rate": 0.029687,
+            "observed_rate_ci_95": {
+              "method": "wilson_score",
+              "confidence_level": 0.95,
+              "successes": 19,
+              "trials": 640,
+              "estimate": 0.029687,
+              "lower": 0.019087,
+              "upper": 0.045901
+            },
+            "compatible_with_super_uniform_null": true
+          }
+        }
+      },
+      "common_subtle_1_5x|common_count:robust_quasi_poisson_v1": {
+        "series_trials": 640,
+        "fit_status_counts": {
+          "completed": 640
+        },
+        "thresholds": {
+          "0.001": {
+            "nominal_rate": 0.001,
+            "observed_rate": 0.0,
+            "observed_rate_ci_95": {
+              "method": "wilson_score",
+              "confidence_level": 0.95,
+              "successes": 0,
+              "trials": 640,
+              "estimate": 0.0,
+              "lower": 0.0,
+              "upper": 0.005966
+            },
+            "compatible_with_super_uniform_null": true
+          },
+          "0.005": {
+            "nominal_rate": 0.005,
+            "observed_rate": 0.0,
+            "observed_rate_ci_95": {
+              "method": "wilson_score",
+              "confidence_level": 0.95,
+              "successes": 0,
+              "trials": 640,
+              "estimate": 0.0,
+              "lower": 0.0,
+              "upper": 0.005966
+            },
+            "compatible_with_super_uniform_null": true
+          },
+          "0.01": {
+            "nominal_rate": 0.01,
+            "observed_rate": 0.001563,
+            "observed_rate_ci_95": {
+              "method": "wilson_score",
+              "confidence_level": 0.95,
+              "successes": 1,
+              "trials": 640,
+              "estimate": 0.001563,
+              "lower": 0.000276,
+              "upper": 0.008797
+            },
+            "compatible_with_super_uniform_null": true
+          },
+          "0.05": {
+            "nominal_rate": 0.05,
+            "observed_rate": 0.014063,
+            "observed_rate_ci_95": {
+              "method": "wilson_score",
+              "confidence_level": 0.95,
+              "successes": 9,
+              "trials": 640,
+              "estimate": 0.014063,
+              "lower": 0.007416,
+              "upper": 0.026508
+            },
+            "compatible_with_super_uniform_null": true
+          }
+        }
+      },
+      "common_sustained_2x|common_count:robust_quasi_poisson_v1": {
+        "series_trials": 640,
+        "fit_status_counts": {
+          "completed": 640
+        },
+        "thresholds": {
+          "0.001": {
+            "nominal_rate": 0.001,
+            "observed_rate": 0.001563,
+            "observed_rate_ci_95": {
+              "method": "wilson_score",
+              "confidence_level": 0.95,
+              "successes": 1,
+              "trials": 640,
+              "estimate": 0.001563,
+              "lower": 0.000276,
+              "upper": 0.008797
+            },
+            "compatible_with_super_uniform_null": true
+          },
+          "0.005": {
+            "nominal_rate": 0.005,
+            "observed_rate": 0.004687,
+            "observed_rate_ci_95": {
+              "method": "wilson_score",
+              "confidence_level": 0.95,
+              "successes": 3,
+              "trials": 640,
+              "estimate": 0.004687,
+              "lower": 0.001595,
+              "upper": 0.01369
+            },
+            "compatible_with_super_uniform_null": true
+          },
+          "0.01": {
+            "nominal_rate": 0.01,
+            "observed_rate": 0.00625,
+            "observed_rate_ci_95": {
+              "method": "wilson_score",
+              "confidence_level": 0.95,
+              "successes": 4,
+              "trials": 640,
+              "estimate": 0.00625,
+              "lower": 0.002433,
+              "upper": 0.015959
+            },
+            "compatible_with_super_uniform_null": true
+          },
+          "0.05": {
+            "nominal_rate": 0.05,
+            "observed_rate": 0.025,
+            "observed_rate_ci_95": {
+              "method": "wilson_score",
+              "confidence_level": 0.95,
+              "successes": 16,
+              "trials": 640,
+              "estimate": 0.025,
+              "lower": 0.015446,
+              "upper": 0.040222
+            },
+            "compatible_with_super_uniform_null": true
+          }
+        }
+      },
+      "rare_sustained_4x|common_count:robust_quasi_poisson_v1": {
+        "series_trials": 310,
+        "fit_status_counts": {
+          "completed": 310
+        },
+        "thresholds": {
+          "0.001": {
+            "nominal_rate": 0.001,
+            "observed_rate": 0.0,
+            "observed_rate_ci_95": {
+              "method": "wilson_score",
+              "confidence_level": 0.95,
+              "successes": 0,
+              "trials": 310,
+              "estimate": 0.0,
+              "lower": 0.0,
+              "upper": 0.01224
+            },
+            "compatible_with_super_uniform_null": true
+          },
+          "0.005": {
+            "nominal_rate": 0.005,
+            "observed_rate": 0.0,
+            "observed_rate_ci_95": {
+              "method": "wilson_score",
+              "confidence_level": 0.95,
+              "successes": 0,
+              "trials": 310,
+              "estimate": 0.0,
+              "lower": 0.0,
+              "upper": 0.01224
+            },
+            "compatible_with_super_uniform_null": true
+          },
+          "0.01": {
+            "nominal_rate": 0.01,
+            "observed_rate": 0.0,
+            "observed_rate_ci_95": {
+              "method": "wilson_score",
+              "confidence_level": 0.95,
+              "successes": 0,
+              "trials": 310,
+              "estimate": 0.0,
+              "lower": 0.0,
+              "upper": 0.01224
+            },
+            "compatible_with_super_uniform_null": true
+          },
+          "0.05": {
+            "nominal_rate": 0.05,
+            "observed_rate": 0.025806,
+            "observed_rate_ci_95": {
+              "method": "wilson_score",
+              "confidence_level": 0.95,
+              "successes": 8,
+              "trials": 310,
+              "estimate": 0.025806,
+              "lower": 0.013133,
+              "upper": 0.050088
+            },
+            "compatible_with_super_uniform_null": true
+          }
+        }
+      },
+      "rare_sustained_4x|rare_count:robust_quasi_poisson_v1": {
+        "series_trials": 330,
+        "fit_status_counts": {
+          "completed": 330
+        },
+        "thresholds": {
+          "0.001": {
+            "nominal_rate": 0.001,
+            "observed_rate": 0.00303,
+            "observed_rate_ci_95": {
+              "method": "wilson_score",
+              "confidence_level": 0.95,
+              "successes": 1,
+              "trials": 330,
+              "estimate": 0.00303,
+              "lower": 0.000535,
+              "upper": 0.016963
+            },
+            "compatible_with_super_uniform_null": true
+          },
+          "0.005": {
+            "nominal_rate": 0.005,
+            "observed_rate": 0.012121,
+            "observed_rate_ci_95": {
+              "method": "wilson_score",
+              "confidence_level": 0.95,
+              "successes": 4,
+              "trials": 330,
+              "estimate": 0.012121,
+              "lower": 0.004724,
+              "upper": 0.030747
+            },
+            "compatible_with_super_uniform_null": true
+          },
+          "0.01": {
+            "nominal_rate": 0.01,
+            "observed_rate": 0.027273,
+            "observed_rate_ci_95": {
+              "method": "wilson_score",
+              "confidence_level": 0.95,
+              "successes": 9,
+              "trials": 330,
+              "estimate": 0.027273,
+              "lower": 0.014413,
+              "upper": 0.051011
+            },
+            "compatible_with_super_uniform_null": false
+          },
+          "0.05": {
+            "nominal_rate": 0.05,
+            "observed_rate": 0.078788,
+            "observed_rate_ci_95": {
+              "method": "wilson_score",
+              "confidence_level": 0.95,
+              "successes": 26,
+              "trials": 330,
+              "estimate": 0.078788,
+              "lower": 0.054332,
+              "upper": 0.112938
+            },
+            "compatible_with_super_uniform_null": false
+          }
+        }
+      }
+    },
+    "anti_conservative_pvalue_strata": [
+      "rare_sustained_4x|rare_count:robust_quasi_poisson_v1"
+    ],
+    "rare_count_zero_inflation_control": {
+      "purpose": "Paired null-only diagnostic using the same rare-count seeds and parameters but no structural-zero replacement. It is excluded from acceptance and sensitivity estimates.",
+      "family_discovery_rate": 0.05,
+      "family_discovery_rate_ci_95": {
+        "method": "wilson_score",
+        "confidence_level": 0.95,
+        "successes": 1,
+        "trials": 20,
+        "estimate": 0.05,
+        "lower": 0.008881,
+        "upper": 0.236131
+      },
+      "families_with_discovery": 1,
+      "family_trials": 20,
+      "p_value_calibration": {
+        "rare_no_structural_zero_control|common_count:robust_quasi_poisson_v1": {
+          "series_trials": 348,
+          "fit_status_counts": {
+            "completed": 348
+          },
+          "thresholds": {
+            "0.001": {
+              "nominal_rate": 0.001,
+              "observed_rate": 0.0,
+              "observed_rate_ci_95": {
+                "method": "wilson_score",
+                "confidence_level": 0.95,
+                "successes": 0,
+                "trials": 348,
+                "estimate": 0.0,
+                "lower": 0.0,
+                "upper": 0.010918
+              },
+              "compatible_with_super_uniform_null": true
+            },
+            "0.005": {
+              "nominal_rate": 0.005,
+              "observed_rate": 0.002874,
+              "observed_rate_ci_95": {
+                "method": "wilson_score",
+                "confidence_level": 0.95,
+                "successes": 1,
+                "trials": 348,
+                "estimate": 0.002874,
+                "lower": 0.000507,
+                "upper": 0.016095
+              },
+              "compatible_with_super_uniform_null": true
+            },
+            "0.01": {
+              "nominal_rate": 0.01,
+              "observed_rate": 0.008621,
+              "observed_rate_ci_95": {
+                "method": "wilson_score",
+                "confidence_level": 0.95,
+                "successes": 3,
+                "trials": 348,
+                "estimate": 0.008621,
+                "lower": 0.002936,
+                "upper": 0.025035
+              },
+              "compatible_with_super_uniform_null": true
+            },
+            "0.05": {
+              "nominal_rate": 0.05,
+              "observed_rate": 0.031609,
+              "observed_rate_ci_95": {
+                "method": "wilson_score",
+                "confidence_level": 0.95,
+                "successes": 11,
+                "trials": 348,
+                "estimate": 0.031609,
+                "lower": 0.01774,
+                "upper": 0.055706
+              },
+              "compatible_with_super_uniform_null": true
+            }
+          }
+        },
+        "rare_no_structural_zero_control|rare_count:robust_quasi_poisson_v1": {
+          "series_trials": 292,
+          "fit_status_counts": {
+            "completed": 292
+          },
+          "thresholds": {
+            "0.001": {
+              "nominal_rate": 0.001,
+              "observed_rate": 0.003425,
+              "observed_rate_ci_95": {
+                "method": "wilson_score",
+                "confidence_level": 0.95,
+                "successes": 1,
+                "trials": 292,
+                "estimate": 0.003425,
+                "lower": 0.000605,
+                "upper": 0.01914
+              },
+              "compatible_with_super_uniform_null": true
+            },
+            "0.005": {
+              "nominal_rate": 0.005,
+              "observed_rate": 0.006849,
+              "observed_rate_ci_95": {
+                "method": "wilson_score",
+                "confidence_level": 0.95,
+                "successes": 2,
+                "trials": 292,
+                "estimate": 0.006849,
+                "lower": 0.00188,
+                "upper": 0.024625
+              },
+              "compatible_with_super_uniform_null": true
+            },
+            "0.01": {
+              "nominal_rate": 0.01,
+              "observed_rate": 0.010274,
+              "observed_rate_ci_95": {
+                "method": "wilson_score",
+                "confidence_level": 0.95,
+                "successes": 3,
+                "trials": 292,
+                "estimate": 0.010274,
+                "lower": 0.0035,
+                "upper": 0.029766
+              },
+              "compatible_with_super_uniform_null": true
+            },
+            "0.05": {
+              "nominal_rate": 0.05,
+              "observed_rate": 0.061644,
+              "observed_rate_ci_95": {
+                "method": "wilson_score",
+                "confidence_level": 0.95,
+                "successes": 18,
+                "trials": 292,
+                "estimate": 0.061644,
+                "lower": 0.039345,
+                "upper": 0.095327
+              },
+              "compatible_with_super_uniform_null": true
+            }
+          }
+        }
+      },
+      "anti_conservative_pvalue_strata": []
+    },
+    "model_misspecification_assessment": "rare_tail_anti_conservatism_specific_to_zero_inflation_stress",
+    "fallback_bias_assessment": "not_identified_in_null_discoveries"
+  },
+  "guarded_auto": {
+    "purpose": "Candidate gate for minimizing manual intervention; it does not change the q<=0.05 review-signal calibration or publication policy.",
+    "criteria": [
+      "current data",
+      "stable completed primary fit (empirical fallback excluded)",
+      "effect threshold passed",
+      "syntactically valid HTTP(S) evidence link",
+      "q_value <= 0.01"
+    ],
+    "evidence_fixture_note": "Simulation uses a deterministic syntactically valid evidence URL; the backtest does not test source authority or network availability.",
+    "nominal_q": 0.01,
+    "complete_null_family_discovery_rate": 0.0,
+    "complete_null_family_discovery_rate_ci_95": {
+      "method": "wilson_score",
+      "confidence_level": 0.95,
+      "successes": 0,
+      "trials": 80,
+      "estimate": 0.0,
+      "lower": 0.0,
+      "upper": 0.045818
+    },
+    "families_with_candidate": 0,
+    "family_trials": 80,
+    "projected_family_trials_for_upper_95_lte_nominal": 384,
+    "upper_bound_projection_status": "finite_projection_available",
+    "sensitivity_preserved_within_5pp": {
+      "common_sustained_2x": false,
+      "rare_sustained_4x": false
+    },
+    "false_candidate_control_supported": false,
+    "automation_evidence_decision": "not_yet_supported",
+    "reason": "Both the 95% false-candidate bound and primary/rare sensitivity retention must pass; a zero point estimate alone is insufficient."
+  },
+  "v3": {
+    "empirical_fdr_complete_null": 0.0375,
+    "empirical_fdr_complete_null_ci_95": {
+      "method": "wilson_score",
+      "confidence_level": 0.95,
+      "successes": 3,
+      "trials": 80,
+      "estimate": 0.0375,
+      "lower": 0.012835,
+      "upper": 0.104547
+    },
+    "mean_empirical_fdr_mixed": 0.004961,
+    "false_positive_rate": 0.001172,
+    "false_positive_rate_ci_95": {
+      "method": "wilson_score",
+      "confidence_level": 0.95,
+      "successes": 3,
+      "trials": 2560,
+      "estimate": 0.001172,
+      "lower": 0.000399,
+      "upper": 0.00344
+    },
+    "sensitivity": 0.8625,
+    "sensitivity_ci_95": {
+      "method": "wilson_score",
+      "confidence_level": 0.95,
+      "successes": 276,
+      "trials": 320,
+      "estimate": 0.8625,
+      "lower": 0.820447,
+      "upper": 0.895953
+    },
+    "median_detection_delay_source_periods": 1.0,
+    "detected_true_anomalies": 276,
+    "false_alerts_complete_null": 3
+  },
+  "v2_comparator": {
+    "scope": "common_sustained_2x",
+    "false_positive_rate": 0.054688,
+    "false_positive_rate_ci_95": {
+      "method": "wilson_score",
+      "confidence_level": 0.95,
+      "successes": 35,
+      "trials": 640,
+      "estimate": 0.054688,
+      "lower": 0.039582,
+      "upper": 0.075107
+    },
+    "sensitivity": 0.821875,
+    "sensitivity_ci_95": {
+      "method": "wilson_score",
+      "confidence_level": 0.95,
+      "successes": 263,
+      "trials": 320,
+      "estimate": 0.821875,
+      "lower": 0.77621,
+      "upper": 0.859904
+    },
+    "detected_true_anomalies": 263,
+    "false_alerts_complete_null": 35
+  },
+  "comparison": {
+    "scope": "common_sustained_2x",
+    "false_positive_reduction": 0.97142,
+    "sensitivity_change_percentage_points": 4.063
+  },
+  "latency_guard": {
+    "provisional_true_alerts_after_cutoff": 0,
+    "delayed_feed_current_alerts": 0,
+    "source_period_coverage_required": 0.8
+  },
+  "diagnostic_model_evaluation_calls": 20,
+  "acceptance": {
+    "empirical_fdr_point_lte_5pct": true,
+    "empirical_fdr_upper_95_lte_5pct": false,
+    "complete_null_precision_sufficient": true,
+    "primary_scenario_detection_gte_80pct": true,
+    "median_delay_lte_1_cycle": true,
+    "false_positive_reduction_gte_30pct": true,
+    "sensitivity_drop_lte_5pp": true,
+    "provisional_period_does_not_leak": true,
+    "delayed_feed_does_not_create_current_alert": true
+  },
+  "passed": false,
+  "execution": {
+    "observed_wall_clock_seconds": 160.761,
+    "observed_model_evaluation_calls": 282,
+    "projected_family_trials": 1196,
+    "projected_full_protocol_wall_clock_minutes": 39.79,
+    "projected_null_only_wall_clock_minutes": 11.36,
+    "guarded_auto_projected_null_only_wall_clock_minutes": 3.65,
+    "estimation_precision_projected_full_wall_clock_minutes": 27.42,
+    "estimation_precision_projected_null_only_wall_clock_minutes": 7.83,
+    "runtime_projection_note": "Hardware-specific linear scaling from this run's model-evaluation count; the null-only estimate excludes anomaly and v2 comparator evaluations."
+  }
+}
